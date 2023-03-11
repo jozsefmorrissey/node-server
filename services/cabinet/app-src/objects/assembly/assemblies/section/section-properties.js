@@ -56,6 +56,12 @@ class SectionProperties extends KeyValue{
       if (is !== undefined && curr !== is) removeCachedValues();
       return curr;
     }
+    const getPartFunc = (partCode) => () => instance.getAssembly(partCode);
+    this.top = getPartFunc('T');
+    this.bottom = getPartFunc('B');
+    this.left = getPartFunc('L');
+    this.right = getPartFunc('R');
+    this.back = getPartFunc('B');
     this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
     this.verticalDivisions = () => {
       const parent = this.parentAssembly();
@@ -491,10 +497,11 @@ class SectionProperties extends KeyValue{
 
     this.updateCoordinates = (newCoords) => {
       let change = updateCoordinates(coordinates.outer, newCoords.outer) | updateCoordinates(coordinates.inner, newCoords.inner);
-      if (change) {
+      // TODO: need to detect child config changes aswell...
+      // if (change) {
         removeCachedValues();
         setSectionCoordinates();
-      }
+      // }
     }
 
     this.setSection = (constructorIdOobject) => {

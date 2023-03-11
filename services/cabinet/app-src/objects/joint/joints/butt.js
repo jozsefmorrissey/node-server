@@ -4,14 +4,10 @@
 const Joint = require('../joint.js');
 
 class Butt extends Joint {
-  constructor(joinStr) {
-    super(joinStr);
+  constructor(malePartCode, femalePartCode) {
+    super(malePartCode, femalePartCode);
   }
 }
 
 Joint.register(Butt);
 module.exports = Butt
-
-
-
-

@@ -72,5 +72,5 @@ const Cutter = require('./assemblies/cutter.js');
 new Cutter();
 
 Assembly.components = {
-  Door, DrawerBox, DrawerFront, Frame, Panel, Cutter,
+  Divider, Panel, Cutter, Door, DrawerBox, DrawerFront, Frame,
 };

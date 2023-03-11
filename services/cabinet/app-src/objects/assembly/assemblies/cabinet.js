@@ -12,6 +12,7 @@ const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/l
 const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex');
 const Vertex3D = require('../../../three-d/objects/vertex.js');
 const CSG = require('../../../../public/js/3d-modeling/csg.js');
+const AutoToekick = require('./auto/toekick.js');
 
 const OVERLAY = {};
 OVERLAY.FULL = 'Full';
@@ -24,7 +25,7 @@ class Cabinet extends Assembly {
   constructor(partCode, partName) {
     super(partCode, partName);
     // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
-    Object.getSet(this, 'propertyId', 'name', 'currentPosition');
+    Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick');
     const instance = this;
     let toeKickHeight = 4;
     this.part = false;
@@ -53,6 +54,17 @@ class Cabinet extends Assembly {
         calculatedValue = propConfig.overlay();
       }
       return calculatedValue < definedValue ? calculatedValue : definedValue;
+    }
+
+    const parentGetSubAssems = this.getSubassemblies;
+    let toeKick;
+    this.getSubassemblies = () => {
+      const subs = parentGetSubAssems();
+      if (this.autoToeKick()) {
+        if (toeKick === undefined) toeKick = new AutoToekick(this);
+        return subs.concat(toeKick);
+      }
+      return subs;
     }
 
     function bordersByIds(borderIds) {
@@ -191,6 +203,7 @@ Cabinet.build = (type, group, config) => {
   const cabinet = new Cabinet('c', type);
   cabinet.group(group);
   config ||= cabinetBuildConfig[type];
+  cabinet.autoToeKick(config.autoToeKick);
   cabinet.length(config.height);
   cabinet.width(config.width);
   cabinet.thickness(config.thickness);
@@ -200,9 +213,9 @@ Cabinet.build = (type, group, config) => {
   config.subassemblies.forEach((subAssemConfig) => {
     const type = subAssemConfig.type;
     const name = subAssemConfig.name;
-    const demStr = subAssemConfig.demensions.join(',');
-    const centerConfig = subAssemConfig.center.join(',');
-    const rotationConfig = subAssemConfig.rotation.join(',');
+    const demStr = subAssemConfig.demensions.join(':');
+    const centerConfig = subAssemConfig.center.join(':');
+    const rotationConfig = subAssemConfig.rotation.join(':');
     const subAssem = Assembly.new(type, subAssemConfig.code, name, centerConfig, demStr, rotationConfig);
     subAssem.partCode(subAssemConfig.code);
     cabinet.addSubAssembly(subAssem);

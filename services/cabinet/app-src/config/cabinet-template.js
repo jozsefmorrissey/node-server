@@ -12,11 +12,11 @@ class CabinetTemplate extends Lookup {
       type, values: [], subassemblies: [], joints: [], dividerJoint: {},
       shape: 'square',
       width: 18 * 2.54,
-
       height: 34 * 2.54,
       thickness: 24 * 2.54,
       fromFloor: 0,
-      openings: [CabinetTemplate.defaultPartCodeOpening()]
+      openings: [CabinetTemplate.defaultPartCodeOpening()],
+      autoToeKick: false
     };
     Object.getSet(this, initialVals);
     CabinetTemplate.map[type] = this;

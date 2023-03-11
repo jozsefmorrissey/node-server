@@ -80,6 +80,7 @@ class Polygon3D {
     this.inXZ = () => this.perpendicular(xzPoly);
 
     this.parrelle = (poly) => {
+      const normal = this.normal();
       if (normal === undefined || poly.normal() === undefined) return false;
       return normal.parrelle(poly.normal());
     }
@@ -104,6 +105,15 @@ class Polygon3D {
         vertices[index].translate(scaled);
       }
       return new Polygon3D(vertices);
+    }
+
+    this.parrelleNear = (target, distance) => {
+      distance ||= 100;
+      const center = this.center();
+      const targetDistance = center.distance(target);
+      const posPlane = this.parrelleAt(distance);
+      if (posPlane.center().distance(target) < targetDistance) return posPlane;
+      return this.parrelleAt(-distance);
     }
 
     this.vertices = () => {

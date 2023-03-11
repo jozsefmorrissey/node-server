@@ -395,15 +395,19 @@ const openingPointTemplate = new $t('managers/template/openings/points');
 function onOpeningTypeChange(elem) {
   const opening = ExpandableList.get(elem);
   if (opening._Type !== elem.value) {
-    const isLocation = elem.checked;
+    const isLocation = elem.value === 'location';
+    const isSlice = elem.value === 'slice';
     const defaultFunc = isLocation ? 'defaultLocationOpening' : 'defaultPartCodeOpening';
     const def = CabinetTemplate[defaultFunc]();
     Object.merge(opening, def, true);
-    opening._Type = isLocation ? 'location' : undefined;
+    opening._Type = isLocation ? 'location' : (isSlice ? 'slice' : undefined);
     if (opening._Type === 'location' && opening.coordinates === undefined)
       opening.coordinates = defalutCustomCoords();
+    if (opening._Type === 'slice' && opening.leftDepth === undefined)
+      opening.rightDepth = opening.leftDepth = 'c.t';
 
     du.find.closest('.border-location-cnt', elem).hidden = !isLocation;
+    du.find.closest('.border-slice-cnt', elem).hidden = !isSlice;
     updateOpeningPartCode(du.find.closest('select', elem));
   }
 }
@@ -478,14 +482,17 @@ function validateOpenTemplate (elem) {
     const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
     subRotInputs.forEach(xyzEqnCheck(template, cabinet));
     updateOpeningPoints(template, cabinet);
-    const model = threeView.update(cabinet);
     setTimeout(updatePartsDataList, 500);
   } catch (e) {
     console.log(e);
   }
-
-
 }
+
+du.on.match('enter', '*', () => {
+  const templateBody = du.find('.template-body');
+  const cabinet = getCabinet(templateBody);
+  threeView.update(cabinet);
+});
 
 function getEqn(select, values) {
   return values && values[select.value()];
@@ -619,7 +626,7 @@ function getScope(type, obj) {
 }
 
 const getObjects = {
-    subassemblies: () => (      {
+    subassemblies: () => ({
       type: "Panel",
       center: [0,0,0],
       demensions: [1,1,1],
@@ -787,15 +794,25 @@ const radioDisplay = new RadioDisplay('cabinet-template-input-cnt', 'template-id
 radioDisplay.afterSwitch(function (header){
   const coordinateInput = du.find.closest('[name="opening-coordinate-value"]', header);
   const opening = ExpandableList.get(coordinateInput);
-  if (opening && opening._Type === 'location') {
-    updateState(coordinateInput);
-    sectionState.value(coordinateInput.value);
+  if (opening && opening._Type) {
+    if (opening._Type === 'location') {
+      updateState(coordinateInput);
+      sectionState.value(coordinateInput.value);
+    }
   }
 });
 
 du.on.match('focusout:enter', '[name="opening-coordinate-value"]', (elem) => {
   sectionState.value(elem.value || undefined);
 });
+
+function sliceDepthUpdate(elem) {
+  const opening = ExpandableList.get(elem);
+  opening[elem.name] = elem.value;
+}
+
+du.on.match('focusout:enter', '[name="leftDepth"]', sliceDepthUpdate);
+du.on.match('focusout:enter', '[name="rightDepth"]', sliceDepthUpdate);
 
 TemplateManager.inputTree = () => {
   const dit = new DecisionInputTree();

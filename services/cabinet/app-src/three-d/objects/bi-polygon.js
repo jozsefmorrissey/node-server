@@ -36,6 +36,15 @@ class BiPolygon {
     this.normalTop = () => face2[3].distanceVector(face2[0]).unit();
     this.normalRight = () => face2[1].distanceVector(face2[0]).unit();
 
+    this.furthestOrder = (vertex) => {
+      const front = this.front();
+      const back = this.back();
+      return front.center().distance(vertex) > back.center().distance(vertex) ?
+              [front, back] : [back, front];
+    }
+
+    this.closestOrder = (vertex) => this.furthesOrder(vertex).reverse();
+
     this.translate = (vector) => {
       for (let index = 0; index < face1.length; index++) {
         face1[index].translate(vector);
@@ -134,6 +143,7 @@ class BiPolygon {
 
 BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   offset ||= {};
+  distance2 ||= 0;
   const verts = polygon.vertices();
   if (verts.length < 4) return undefined;
   const verts1 = JSON.clone(verts);

@@ -18,6 +18,7 @@ class Plane extends Array {
   constructor(...points) {
     super();
     let equation;
+    const instance = this;
     if (Array.isArray(points[0])) points = points[0];
     if (isDefined(points[0], points[0].a, points[0].b, points[0].c, points[0].d)) {
       equation = points[0];
@@ -178,6 +179,16 @@ class Plane extends Array {
       const vector2 = points[2].minus(points[0]);
       const normVect = vector1.crossProduct(vector2);
       return normVect.scale(1 / normVect.magnitude());
+    }
+
+    this.distance = (vertex) => {
+      if (!(vertex instanceof Vertex3D)) throw new Error('Sorry... I only implemented this relitive to a Vertex3D');
+      const v = vertex;
+      const eqn = this.equation();
+      const c = this.center();
+      const num = Math.abs(eqn.a*(v.x-c.x)+eqn.b*(v.y-c.y)+eqn.c*(v.z-c.z));
+      const denom = Math.sqrt(eqn.a*eqn.a+eqn.b*eqn.b+eqn.c*eqn.c);
+      return num/denom;
     }
 
     this.center = () => Vertex3D.center.apply(null, this);

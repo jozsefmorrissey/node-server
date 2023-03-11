@@ -6,9 +6,18 @@
   </div>
   <h4>Opening Border Locations</h4>
   <div class='tab'>
-    Custom Vertex Formula:
-    <input class='opening-type-selector' type="checkbox" name="custom-formula"
-          {{obj._Type === 'location' ? 'checked' : ''}}>
+    Definition Type:
+    <div class='tab'>
+      <label>Default</label>
+      <input class='opening-type-selector' type='radio' name="definitionType-{{obj.id}}" value='Default'
+            {{obj._Type === undefined ? 'checked' : ''}}>
+      <label>Manual</label>
+      <input class='opening-type-selector' type='radio' name="definitionType-{{obj.id}}" value='location'
+            {{obj._Type === 'location' ? 'checked' : ''}}>
+      <label>Slice (L/R)</label>
+      <input class='opening-type-selector' type='radio' name="definitionType-{{obj.id}}" value='slice'
+            {{obj._Type === 'slice' ? 'checked' : ''}}>
+    </div>
     <div class='border-location-cnt' {{obj._Type === 'location' ? '' : 'hidden'}}>
       <label>Inner</label>
       <input type="radio" name="innerOouter-{{obj.id}}" value="true"
@@ -38,6 +47,13 @@
           {{state.xOyOz === 'z' ? 'checked' : ''}}>
       <br><br>
       <input type='text' name='opening-coordinate-value' value=''>
+    </div>
+    <div class='border-slice-cnt' {{obj._Type === 'slice' ? '' : 'hidden'}}>
+      Left Side Depth
+      <input type='text' name='leftDepth' value='{{leftDepth}}'>
+      <br>
+      Right Side Depth
+      <input type='text' name='rightDepth' value='{{rightDepth}}'>
     </div>
     <div class='opening-location-value-cnt'></div>
     <div class='opening-location-description-cnt'></div>

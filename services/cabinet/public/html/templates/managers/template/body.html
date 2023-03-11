@@ -6,9 +6,9 @@
       <button class='paste-template right'>Paste</button>
     </div>
   </div>
-  <div></div>
-  <div></div>
-
+  <label>Automatic Toekick</label>
+  <input type="checkbox" name="autoToeKick" {{template.autoToeKick() ? 'checked' : ''}}>
+  <br>
   <label>Height from floor:</label>
   <input class='cabinet-input dem' type="text" name="fromFloor" value="{{template.fromFloor()}}">
   <input class='cabinet-input' type="text" name="fromFloorValue" disabled>

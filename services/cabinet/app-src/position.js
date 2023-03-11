@@ -25,14 +25,14 @@ class Position {
     let rotCoords = {};
 
     if ((typeof assembly.rotationConfig) !== 'function') {
-      rotCoords = Position.parseCoordinates(assembly.rotationConfig, '0,0,0');
+      rotCoords = Position.parseCoordinates(assembly.rotationConfig, '0:0:0');
       rotation = (attr) => getSme(attr, rotCoords);
     } else {
       rotation = assembly.rotationConfig;
     }
 
     if ((typeof assembly.centerConfig) !== 'function') {
-      centerCoords = Position.parseCoordinates(assembly.centerConfig, '0,0,0');
+      centerCoords = Position.parseCoordinates(assembly.centerConfig, '0:0:0');
       center = (attr) => getSme(attr, centerCoords);
     } else {
       center = assembly.centerConfig;
@@ -41,8 +41,8 @@ class Position {
     if ((typeof assembly.demensionConfig) !== 'function') {
       const defSizes = getDefaultSize(assembly);
       demCoords = Position.parseCoordinates(assembly.demensionConfig,
-      `${defSizes.width},${defSizes.length},${defSizes.thickness}`,
-      '0,0,0');
+      `${defSizes.width}:${defSizes.length}:${defSizes.thickness}`,
+      '0:0:0');
       demension = (attr) => getSme(attr, demCoords);
     } else new Promise(function(resolve, reject) {
       demension = assembly.demensionConfig
@@ -144,6 +144,7 @@ class Position {
       return getter(type);
     }
 
+    this.parseCoordinates = (...args) => Position.parseCoordinates(...args);
     this.setDemension = (type, value) => this.set(demCoords, type, value, demension);
     this.setCenter = (type, value) => this.set(centerCoords, type, value, center);
     this.setRotation = (type, value) => this.set(rotCoords, type, value, rotation);
@@ -195,9 +196,6 @@ Position.parseCoordinates = function() {
   let coordinateMatch = null;
   for (let index = 0; coordinateMatch === null && index < arguments.length; index += 1) {
     const str = arguments[index];
-    if (index > 0 && arguments.length - 1 === index) {
-      //console.error(`Attempted to parse invalid coordinateStr: '${JSON.stringify(arguments)}'`);
-    }
     if (typeof str === 'string') {
       coordinateMatch = str.match(Position.demsRegex);
     }
@@ -211,5 +209,6 @@ Position.parseCoordinates = function() {
     z: coordinateMatch[3]
   }
 }
-Position.demsRegex = /([^,]{1,}?),([^,]{1,}?),([^,]{1,})/;
+
+Position.demsRegex = /([^:]{1,}?):([^:]{1,}?):([^:]{1,})/;
 module.exports = Position

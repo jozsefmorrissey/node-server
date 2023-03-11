@@ -11,4 +11,14 @@ class Cutter extends Assembly {
 }
 Cutter.abbriviation = 'cut';
 
+class CutterModel extends Cutter {
+  constructor(partCode, partNameFunc, toModel) {
+    super(partCode);
+    this.toModel = toModel;
+    this.partName = partNameFunc;
+  }
+}
+
+Cutter.Model = CutterModel;
+
 module.exports = Cutter;

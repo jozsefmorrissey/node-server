@@ -6136,7 +6136,10 @@ const Line2d = require('../objects/line');
 	      };
 	
 	      const isClosest = (origin, curr, prospective, originToEndDist) => {
-	        if (!prospective instanceof Vertex2d) return false;
+	        if (!(prospective instanceof Vertex2d)) return false;
+	        if ((typeof prospective.distance) !== 'function') {
+	          console.log('here')
+	        }
 	        const prospectDist = prospective.distance(origin) - originToEndDist;
 	        // const validDistance = prospectDist > 0 || withinTol(prospectDist, 0);
 	        // if (!validDistance) return false;

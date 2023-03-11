@@ -201,9 +201,9 @@ class RequireJS {
     const nameReg = /^(.*)\/(.*)$/;
     function guessFilePath (wrongPath, currFile) {
       const guesses = [];
-      const fileName = wrongPath.replace(nameReg, '$2');
+      const fileName = wrongPath.replace(nameReg, '$2').toLowerCase();
       Object.keys(scripts).forEach((path) => {
-        const name = path.replace(nameReg, '$2');
+        const name = path.replace(nameReg, '$2').toLowerCase();
         if (name === fileName) {
           guesses.push(determinRelitivePath(currFile, path));
         }
@@ -7058,64 +7058,602 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/approximate.js',
+RequireJS.addFunction('./public/js/utils/$t.js',
 function (require, exports, module) {
 	
 
 	
-	let defaultAccuracy;
 	
-	class Approximate {
-	  constructor(accuracy) {
-	    if ((typeof accuracy) !== 'number' || accuracy === defaultAccuracy) return Approximate.default;
 	
-	    function approximate(value) {
-	      return Math.round(value * accuracy) / accuracy;
+	const CustomEvent = require('./custom-event');
+	const ExprDef = require('./expression-definition');
+	
+	class $t {
+		constructor(template, id, selector) {
+			if (selector) {
+				const afterRenderEvent = new CustomEvent('afterRender');
+				const beforeRenderEvent = new CustomEvent('beforeRender');
+			}
+	
+			function varReg(prefix, suffix) {
+			  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
+			  prefix = prefix ? prefix : '';
+			  suffix = suffix ? suffix : '';
+			  return new RegExp(`${prefix}${vReg}${suffix}`)
+			};
+	
+			function replace(needleRegEx, replaceStr, exceptions) {
+			  return function (sub) {
+			    if (!exceptions || exceptions.indexOf(sub) === -1) {
+			      return sub.replace(needleRegEx, replaceStr)
+			    } else {
+			      return sub;
+			    }
+			  }
+			}
+	
+			const signProps = {opening: /([-+\!])/};
+			const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
+			const ternaryProps = {opening: /\?/};
+			const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
+			const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
+			const commaProps = {opening: /,/};
+			const colonProps = {opening: /:/};
+			const multiplierProps = {opening: /(===|[-+=*\/](=|))/};
+			const stringProps = {opening: /('|"|`)(\1|.*?([^\\]((\\\\)*?|[^\\])(\1)))/};
+			const spaceProps = {opening: /\s{1}/};
+			const numberProps = {opening: /([0-9]*((\.)[0-9]{1,})|[0-9]{1,})/};
+			const objectProps = {opening: '{', closing: '}'};
+			const objectLabelProps = {opening: varReg(null, '\\:')};
+			const groupProps = {opening: /\(/, closing: /\)/};
+			const expressionProps = {opening: null, closing: null};
+			const attrProps = {opening: varReg('(\\.', '){1,}')};
+	
+			// const funcProps = {
+			//   opening: varReg(null, '\\('),
+			//   onOpen: replace(varReg(null, '\\('), 'get("$1")('),
+			//   closing: /\)/
+			// };
+			const arrayProps = {
+			  opening: varReg(null, '\\['),
+			  onOpen: replace(varReg(null, '\\['), 'get("$1")['),
+			  closing: /\]/
+			};
+			const funcRefProps = {
+				opening: /\[|\(/,
+				closing: /\]|\)/
+			};
+			const memberRefProps = {
+				opening: varReg('\\.', ''),
+			};
+			const variableProps = {
+			  opening: varReg(),
+			  onOpen: replace(varReg(), 'get("$1")'),
+			};
+			const objectShorthandProps = {
+			  opening: varReg(),
+			  onOpen: replace(varReg(), '$1: get("$1")'),
+			};
+	
+	
+			const expression = new ExprDef('expression', expressionProps);
+			const ternary = new ExprDef('ternary', ternaryProps);
+			const relational = new ExprDef('relational', relationalProps);
+			const comma = new ExprDef('comma', commaProps);
+			const colon = new ExprDef('colon', colonProps);
+			const attr = new ExprDef('attr', attrProps);
+			// const func = new ExprDef('func', funcProps);
+			const funcRef = new ExprDef('funcRef', funcRefProps);
+			const memberRef = new ExprDef('memberRef', memberRefProps);
+			const string = new ExprDef('string', stringProps);
+			const space = new ExprDef('space', spaceProps);
+			const keyWord = new ExprDef('keyWord', keyWordProps);
+			const group = new ExprDef('group', groupProps);
+			const object = new ExprDef('object', objectProps);
+			const array = new ExprDef('array', arrayProps);
+			const number = new ExprDef('number', numberProps);
+			const multiplier = new ExprDef('multiplier', multiplierProps);
+			const sign = new ExprDef('sign', signProps);
+			const ignore = new ExprDef('ignore', ignoreProps);
+			const variable = new ExprDef('variable', variableProps);
+			const objectLabel = new ExprDef('objectLabel', objectLabelProps);
+			const objectShorthand = new ExprDef('objectShorthand', objectShorthandProps);
+	
+			expression.always(space, ignore, keyWord);
+			expression.if(string, number, group, array, variable, funcRef, memberRef)
+			      .then(multiplier, sign, relational, group)
+			      .repeat();
+			expression.if(string, group, array, variable, funcRef, memberRef)
+						.then(attr)
+			      .then(multiplier, sign, relational, expression, funcRef, memberRef)
+						.repeat();
+			expression.if(string, group, array, variable, funcRef, memberRef)
+						.then(attr)
+						.end();
+	
+			funcRef.if(expression).then(comma).repeat();
+			funcRef.if(expression).end();
+			memberRef.if(expression).then(comma).repeat();
+			memberRef.if(expression).end();
+	
+			expression.if(sign)
+			      .then(expression)
+			      .then(multiplier, sign, relational, group)
+			      .repeat();
+			expression.if(string, number, group, array, variable)
+			      .then(ternary)
+			      .then(expression)
+			      .then(colon)
+			      .then(expression)
+			      .end();
+			expression.if(ternary)
+			      .then(expression)
+			      .then(colon)
+			      .then(expression)
+			      .end();
+			expression.if(object, string, number, group, array, variable)
+			      .end();
+			expression.if(sign)
+			      .then(number)
+			      .end();
+	
+			object.always(space, ignore, keyWord);
+			object.if(objectLabel).then(expression).then(comma).repeat();
+			object.if(objectShorthand).then(comma).repeat();
+			object.if(objectLabel).then(expression).end();
+			object.if(objectShorthand).end();
+	
+			group.always(space, ignore, keyWord);
+			group.if(expression).then(comma).repeat();
+			group.if(expression).end();
+	
+			array.always(space, ignore, keyWord);
+			array.if(expression).then(comma).repeat();
+			array.if(expression).end();
+	
+			function getter(scope, parentScope) {
+				parentScope = parentScope || function () {return undefined};
+				function get(name) {
+					if (name === 'scope') return scope;
+					const split = new String(name).split('.');
+					let currObj = scope;
+					for (let index = 0; currObj != undefined && index < split.length; index += 1) {
+						currObj = currObj[split[index]];
+					}
+					if (currObj !== undefined) return currObj;
+					const parentScopeVal = parentScope(name);
+					if (parentScopeVal !== undefined) return parentScopeVal;
+	        else {
+	          const globalVal = $t.global(name);
+	          return globalVal === undefined ? '' : globalVal;
+	        }
+				}
+				return get;
+			}
+	
+			function defaultArray(elemName, get) {
+				let resp = '';
+				for (let index = 0; index < get('scope').length; index += 1) {
+					if (elemName) {
+						const obj = {};
+	          obj.$index = index;
+						obj[elemName] = get(index);
+						resp += new $t(template).render(obj, undefined, get);
+					} else {
+						resp += new $t(template).render(get(index), undefined, get);
+					}
+				}
+				return `${resp}`;
+			}
+	
+			function arrayExp(varName, get) {
+				varName = varName.trim();
+				const array = get('scope');
+				let built = '';
+				for (let index = 0; index < array.length; index += 1) {
+					const obj = {};
+					obj[varName] = array[index];
+					obj.$index = index;
+					built += new $t(template).render(obj, undefined, get);
+				}
+				return built;
+			}
+	
+			function itOverObject(varNames, get) {
+				const match = varNames.match($t.objectNameReg);
+				const keyName = match[1];
+				const valueName = match[2];
+				const obj = get('scope');
+				const keys = Object.keys(obj);
+				const isArray = Array.isArray(obj);
+				let built = '';
+				for (let index = 0; index < keys.length; index += 1) {
+					const key = keys[index];
+					if (!isArray || key.match(/^[0-9]{1,}$/)) {
+						const childScope = {};
+						childScope[keyName] = key;
+						childScope[valueName] = obj[key];
+						childScope.$index = index;
+						built += new $t(template).render(childScope, undefined, get);
+					}
+				}
+	      return built;
+			}
+	
+			function rangeExp(elemName, rangeItExpr, get) {
+				const match = rangeItExpr.match($t.rangeItExpReg);
+				let startIndex = match[1].match(/^[0-9]{1,}$/) ?
+							match[1] : get(match[1]);
+				let endIndex = match[2].match(/^[0-9]*$/) ?
+							match[2] : get(match[2]);
+				if (((typeof startIndex) !== 'string' &&
+								(typeof	startIndex) !== 'number') ||
+									(typeof endIndex) !== 'string' &&
+									(typeof endIndex) !== 'number') {
+										throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+	
+				try {
+					startIndex = Number.parseInt(startIndex);
+				} catch (e) {
+					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+				try {
+					endIndex = Number.parseInt(endIndex);
+				} catch (e) {
+					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+	
+				let index = startIndex;
+				let built = '';
+				while (true) {
+					let increment = 1;
+					if (startIndex > endIndex) {
+						if (index <= endIndex) {
+							break;
+						}
+						increment = -1;
+					} else if (index >= endIndex) {
+						break;
+					}
+					const obj = {$index: index};
+					obj[elemName] = index;
+					built += new $t(template).render(obj, undefined, get);
+					index += increment;
+				}
+				return built;
+			}
+	
+			function evaluate(get) {
+				if ($t.functions[id]) {
+					try {
+						return $t.functions[id](get, $t);
+					} catch (e) {
+					  console.error(e);
+					}
+				} else {
+					return eval($t.templates[id])
+				}
+			}
+	
+			function type(scope, expression) {
+				if ((typeof scope) === 'string' && scope.match($t.rangeAttemptExpReg)) {
+					if (scope.match($t.rangeItExpReg)) {
+						return 'rangeExp'
+					}
+					return 'rangeExpFormatError';
+				} else if (Array.isArray(scope)) {
+					if (expression === undefined) {
+						return 'defaultArray';
+					} else if (expression.match($t.nameScopeExpReg)) {
+						return 'nameArrayExp';
+					}
+				}
+	
+				if ((typeof scope) === 'object') {
+					if (expression === undefined) {
+						return 'defaultObject';
+					} else if (expression.match($t.objectNameReg)){
+						return 'itOverObject';
+					} else if (expression.match($t.arrayNameReg)){
+						return 'arrayExp';
+					} else {
+						return 'invalidObject';
+					}
+				} else {
+					return 'defaultObject';
+				}
+			}
+	
+			// TODO: itExp is not longer an iteration expression. fix!!!!
+			function render(scope, itExp, parentScope) {
+	      if (scope === undefined) return '';
+				let rendered = '';
+				const get = getter(scope, parentScope);
+				switch (type(scope, itExp)) {
+					case 'rangeExp':
+						rendered = rangeExp(itExp, scope, get);
+						break;
+					case 'rangeExpFormatError':
+						throw new Error(`Invalid range itteration expression "${scope}"`);
+					case 'defaultArray':
+						rendered = defaultArray(itExp, get);
+						break;
+					case 'nameArrayExp':
+						rendered = defaultArray(itExp, get);
+						break;
+					case 'arrayExp':
+						rendered = arrayExp(itExp, get);
+						break;
+					case 'invalidArray':
+						throw new Error(`Invalid iterative expression for an array "${itExp}"`);
+					case 'defaultObject':
+						rendered = evaluate(get);
+						break;
+					case 'itOverObject':
+						rendered = itOverObject(itExp, get);
+						break;
+					case 'invalidObject':
+						throw new Error(`Invalid iterative expression for an object "${itExp}"`);
+					default:
+						throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
+				}
+	
+	      if (selector) {
+	        const elem = document.querySelector(selector);
+	        if (elem !== null) {
+	          beforeRenderEvent.trigger();
+	          elem.innerHTML = rendered;
+	          afterRenderEvent.trigger();
+	        }
+	      }
+				return rendered;
+			}
+	
+	
+	//---------------------  Compile Functions ---------------//
+	
+			function stringHash(string) {
+				let hashString = string;
+				let hash = 0;
+				for (let i = 0; i < hashString.length; i += 1) {
+					const character = hashString.charCodeAt(i);
+					hash = ((hash << 5) - hash) + character;
+					hash &= hash; // Convert to 32bit integer
+				}
+				return hash;
+			}
+	
+			function isolateBlocks(template) {
+				let inBlock = false;
+				let openBracketCount = 0;
+				let block = '';
+				let blocks = [];
+				let str = template;
+				for (let index = 0; index < str.length; index += 1) {
+					if (inBlock) {
+						block += str[index];
+					}
+					if (!inBlock && index > 0 &&
+						str[index] == '{' && str[index - 1] == '{') {
+						inBlock = true;
+					} else if (inBlock && str[index] == '{') {
+						openBracketCount++;
+					} else if (openBracketCount > 0 && str[index] == '}') {
+						openBracketCount--;
+					} else if (str[index + 1] == '}' && str[index] == '}' ) {
+						inBlock = false;
+						blocks.push(`${block.substr(0, block.length - 1)}`);
+						block = '';
+					}
+				}
+				return blocks;
+			}
+	
+			function compile() {
+				const blocks = isolateBlocks(template);
+				let str = template;
+				for (let index = 0; index < blocks.length; index += 1) {
+					const block = blocks[index];
+					const parced = ExprDef.parse(expression, block);
+					str = str.replace(`{{${block}}}`, `\` + $t.clean(${parced}) + \``);
+				}
+				return `\`${str}\``;
+			}
+	
+	
+					const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
+					function formatRepeat(string) {
+						// tagname:1 prefix:2 quote:4 exlpression:5 suffix:6
+						// string = string.replace(/<([^\s^:^-^>]*)/g, '<$1-ce');
+						let match;
+						while (match = string.match(repeatReg)) {
+							let tagContents = match[2] + match[8];
+	            let tagName = match[1];
+	            let varNames = match[6];
+	            let realScope = match[7];
+							let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+							let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+							let scope = 'scope';
+							template = templateName !== tagContents ? templateName : template;
+							const t = eval(`new $t(\`${template}\`)`);
+	            let resolvedScope = "get('scope')";;
+	            try {
+	              // console.log('tagName', tagName);
+	              // console.log('varNames', varNames);
+	              // console.log('realScope', realScope);
+	              // console.log('tagContents', tagContents);
+								if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
+	                resolvedScope = `'${realScope}'`;
+	              } else {
+	                resolvedScope = ExprDef.parse(expression, realScope);
+	              }
+	            } catch (e) {}
+	            string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
+						}
+						return string;
+					}
+	
+			if (id) {
+				$t.templates[id] = undefined;
+				$t.functions[id] = undefined;
+			}
+	
+			template = template.replace(/\s{1,}/g, ' ');
+			id = $t.functions[template] ? template : id || stringHash(template);
+			if (!$t.functions[id]) {
+				if (!$t.templates[id]) {
+					template = template.replace(/\s{2,}|\n/g, ' ');
+					template = formatRepeat(template);
+					$t.templates[id] = compile();
+				}
+			}
+			this.compiled = function () { return $t.templates[id];}
+			this.render = render;
+	    this.afterRender = (func) => afterRenderEvent.on(func);
+	    this.beforeRender = (func) => beforeRenderEvent.on(func);
+			this.type = type;
+			this.isolateBlocks = isolateBlocks;
+	    this.id = () => id;
+		}
+	}
+	
+	$t.templates = {};//{"-1554135584": '<h1>{{greeting}}</h1>'};
+	$t.functions = {};
+	$t.loadFunctions = (functions) => {
+		Object.keys(functions).forEach((name) => {
+			$t.functions[name] = functions[name];
+		});
+	
+	}
+	$t.isTemplate = (id) => $t.functions[id] !== undefined;
+	$t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.rangeAttemptExpReg = /^\s*(.*\.\..*)\s*$/;
+	$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*\.\.\s*([a-z0-9A-Z]*)\s*$/;
+	$t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.quoteStr = function (str) {
+			str = str.replace(/\\`/g, '\\\\\\`')
+			str = str.replace(/([^\\])`/g, '$1\\\`')
+			return `\`${str.replace(/``/g, '`\\`')}\``;
+		}
+	$t.formatName = function (string) {
+	    function toCamel(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
+	    return string.replace(/([a-z])[^a-z^A-Z]{1,}([a-zA-Z])/g, toCamel);
+	}
+	$t.dumpTemplates = function (debug) {
+		let templateFunctions = '';
+		let tempNames = Object.keys($t.templates);
+		for (let index = 0; index < tempNames.length; index += 1) {
+			const tempName = tempNames[index];
+			if (tempName) {
+				let template = $t.templates[tempName];
+	      if (debug === true) {
+	        const endTagReg = /( \+) /g;
+	        template = template.replace(endTagReg, '$1\n\t\t');
+	      }
+				templateFunctions += `\nexports['${tempName}'] = (get, $t) => \n\t\t${template}\n`;
+			}
+		}
+		return templateFunctions;
+	}
+	
+	$t.clean = (val) => val === undefined ? '' : val;
+	
+	function createGlobalsInterface() {
+	  const GLOBALS = {};
+	  const isMotifiable = (name) => GLOBALS[name] === undefined ||
+	        GLOBALS[name].imutable !== 'true';
+	  $t.global = function (name, value, imutable) {
+	    if (value === undefined) return GLOBALS[name] ? GLOBALS[name].value : undefined;
+	    if (isMotifiable(name)) GLOBALS[name] = {value, imutable};
+	  }
+	  $t.rmGlobal = function(name) {
+	    if (isMotifiable(name)) delete GLOBALS[name];
+	  }
+	}
+	createGlobalsInterface();
+	
+	module.exports = $t;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/endpoints.js',
+function (require, exports, module) {
+	
+class Endpoints {
+	  constructor(config, host) {
+	    const instance = this;
+	    let environment;
+	
+	    if ((typeof config) !== 'object') {
+	      host = config;
+	      config = Endpoints.defaultConfig;
 	    }
 	
-	    function approximateFunc(test) {
+	    host = host || '';
+	    this.setHost = (newHost) => {
+	      if ((typeof newHost) === 'string') {
+	        if (config._envs[newHost]) environment = newHost;
+	        host = config._envs[newHost] || newHost;
+	      }
+	    };
+	    this.setHost(host);
+	    this.getHost = (env) => env === undefined ? host : config._envs[env];
+	    this.getEnv = () => environment;
+	
+	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
+	    this.getFuncObj = function () {return endPointFuncs;};
+	
+	
+	    function build(str) {
+	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
+	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
 	      return function () {
-	        if (arguments.length === 2) return test(approximate(arguments[0]), approximate(arguments[1]));
-	        for (let index = 1; index < arguments.length; index++) {
-	          if (!test(approximate(arguments[index - 1]), approximate(arguments[index]))) return false;
+	        let values = [];
+	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
+	          values = arguments;
+	        } else {
+	          const obj = arguments[0];
+	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
 	        }
-	        return true;
+	        let endpoint = '';
+	        for (let index = 0; index < pieces.length; index += 1) {
+	          const arg = values[index];
+	          let value = '';
+	          if (index < pieces.length - 1) {
+	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
+	          }
+	          endpoint += pieces[index] + value;
+	        }
+	        return `${host}${endpoint}`;
 	      }
 	    }
-	    const af = approximateFunc;
-	    approximate.eq = af((one, two) => one === two);
-	    approximate.neq = af((one, two) => one !== two);
-	    approximate.gt = af((one, two) => one > two);
-	    approximate.lt = af((one, two) => one < two);
-	    approximate.gteq = af((one, two) => one >= two);
-	    approximate.lteq = af((one, two) => one <= two);
-	    approximate.eqAbs = af((one, two) => Math.abs(one) === Math.abs(two));
-	    approximate.neqAbs = af((one, two) => Math.abs(one) !== Math.abs(two));
-	    approximate.abs = (value) => Math.abs(approximate(value));
-	    approximate.object = (obj) => {
-	      const approx = {};
-	      return Object.forAllRecursive(obj,
-	            (value) => (typeof value) === 'number' ? approximate(value) : value);
+	
+	    function configRecurse(currConfig, currFunc) {
+	      const keys = Object.keys(currConfig);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        const value = currConfig[key];
+	        if (key.indexOf('_') !== 0) {
+	          if (value instanceof Object) {
+	            currFunc[key] = {};
+	            configRecurse(value, currFunc[key]);
+	          } else {
+	            currFunc[key] = build(value);
+	          }
+	        } else {
+	          currFunc[key] = value;
+	        }
+	      }
 	    }
-	    approximate.sameSign = af((value1, value2) => (value1 === 0 && value2 === 0) ||
-	                                                      (value2 > 0 && value1 > 0) ||
-	                                                      (value2 < 0 && value1 < 0));
-	    return approximate;
+	
+	    configRecurse(config, endPointFuncs);
 	  }
 	}
 	
-	
-	Approximate.setDefault = (accuracy) => {
-	  if ((typeof accuracy) !== 'number') throw new Error('Must enter a number for accuracy: hint must be a power of 10');
-	  Approximate.default = new Approximate(accuracy);
-	  defaultAccuracy = accuracy;
-	  Approximate.default.new = (acc) => new Approximate(acc);
-	  Approximate.default.setDefault = Approximate.default;
-	}
-	
-	Approximate.setDefault(1000000);
-	
-	module.exports  = Approximate.default;
+	module.exports = Endpoints;
 	
 });
 
@@ -7231,85 +7769,6 @@ const du = require('dom-utils');
 	}
 	
 	module.exports = AutoSave;
-	
-});
-
-
-RequireJS.addFunction('./public/js/utils/endpoints.js',
-function (require, exports, module) {
-	
-class Endpoints {
-	  constructor(config, host) {
-	    const instance = this;
-	    let environment;
-	
-	    if ((typeof config) !== 'object') {
-	      host = config;
-	      config = Endpoints.defaultConfig;
-	    }
-	
-	    host = host || '';
-	    this.setHost = (newHost) => {
-	      if ((typeof newHost) === 'string') {
-	        if (config._envs[newHost]) environment = newHost;
-	        host = config._envs[newHost] || newHost;
-	      }
-	    };
-	    this.setHost(host);
-	    this.getHost = (env) => env === undefined ? host : config._envs[env];
-	    this.getEnv = () => environment;
-	
-	    const endPointFuncs = {setHost: this.setHost, getHost: this.getHost, getEnv: this.getEnv};
-	    this.getFuncObj = function () {return endPointFuncs;};
-	
-	
-	    function build(str) {
-	      const pieces = str.split(/:[a-zA-Z0-9]*/g);
-	      const labels = str.match(/:[a-zA-Z0-9]*/g) || [];
-	      return function () {
-	        let values = [];
-	        if (arguments[0] === null || (typeof arguments[0]) !== 'object') {
-	          values = arguments;
-	        } else {
-	          const obj = arguments[0];
-	          labels.map((value) => values.push(obj[value.substr(1)] !== undefined ? obj[value.substr(1)] : value))
-	        }
-	        let endpoint = '';
-	        for (let index = 0; index < pieces.length; index += 1) {
-	          const arg = values[index];
-	          let value = '';
-	          if (index < pieces.length - 1) {
-	            value = arg !== undefined ? encodeURIComponent(arg) : labels[index];
-	          }
-	          endpoint += pieces[index] + value;
-	        }
-	        return `${host}${endpoint}`;
-	      }
-	    }
-	
-	    function configRecurse(currConfig, currFunc) {
-	      const keys = Object.keys(currConfig);
-	      for (let index = 0; index < keys.length; index += 1) {
-	        const key = keys[index];
-	        const value = currConfig[key];
-	        if (key.indexOf('_') !== 0) {
-	          if (value instanceof Object) {
-	            currFunc[key] = {};
-	            configRecurse(value, currFunc[key]);
-	          } else {
-	            currFunc[key] = build(value);
-	          }
-	        } else {
-	          currFunc[key] = value;
-	        }
-	      }
-	    }
-	
-	    configRecurse(config, endPointFuncs);
-	  }
-	}
-	
-	module.exports = Endpoints;
 	
 });
 
@@ -10145,523 +10604,64 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/$t.js',
+RequireJS.addFunction('./public/js/utils/approximate.js',
 function (require, exports, module) {
 	
 
 	
+	let defaultAccuracy;
 	
+	class Approximate {
+	  constructor(accuracy) {
+	    if ((typeof accuracy) !== 'number' || accuracy === defaultAccuracy) return Approximate.default;
 	
-	const CustomEvent = require('./custom-event');
-	const ExprDef = require('./expression-definition');
+	    function approximate(value) {
+	      return Math.round(value * accuracy) / accuracy;
+	    }
 	
-	class $t {
-		constructor(template, id, selector) {
-			if (selector) {
-				const afterRenderEvent = new CustomEvent('afterRender');
-				const beforeRenderEvent = new CustomEvent('beforeRender');
-			}
-	
-			function varReg(prefix, suffix) {
-			  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
-			  prefix = prefix ? prefix : '';
-			  suffix = suffix ? suffix : '';
-			  return new RegExp(`${prefix}${vReg}${suffix}`)
-			};
-	
-			function replace(needleRegEx, replaceStr, exceptions) {
-			  return function (sub) {
-			    if (!exceptions || exceptions.indexOf(sub) === -1) {
-			      return sub.replace(needleRegEx, replaceStr)
-			    } else {
-			      return sub;
-			    }
-			  }
-			}
-	
-			const signProps = {opening: /([-+\!])/};
-			const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
-			const ternaryProps = {opening: /\?/};
-			const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
-			const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
-			const commaProps = {opening: /,/};
-			const colonProps = {opening: /:/};
-			const multiplierProps = {opening: /(===|[-+=*\/](=|))/};
-			const stringProps = {opening: /('|"|`)(\1|.*?([^\\]((\\\\)*?|[^\\])(\1)))/};
-			const spaceProps = {opening: /\s{1}/};
-			const numberProps = {opening: /([0-9]*((\.)[0-9]{1,})|[0-9]{1,})/};
-			const objectProps = {opening: '{', closing: '}'};
-			const objectLabelProps = {opening: varReg(null, '\\:')};
-			const groupProps = {opening: /\(/, closing: /\)/};
-			const expressionProps = {opening: null, closing: null};
-			const attrProps = {opening: varReg('(\\.', '){1,}')};
-	
-			// const funcProps = {
-			//   opening: varReg(null, '\\('),
-			//   onOpen: replace(varReg(null, '\\('), 'get("$1")('),
-			//   closing: /\)/
-			// };
-			const arrayProps = {
-			  opening: varReg(null, '\\['),
-			  onOpen: replace(varReg(null, '\\['), 'get("$1")['),
-			  closing: /\]/
-			};
-			const funcRefProps = {
-				opening: /\[|\(/,
-				closing: /\]|\)/
-			};
-			const memberRefProps = {
-				opening: varReg('\\.', ''),
-			};
-			const variableProps = {
-			  opening: varReg(),
-			  onOpen: replace(varReg(), 'get("$1")'),
-			};
-			const objectShorthandProps = {
-			  opening: varReg(),
-			  onOpen: replace(varReg(), '$1: get("$1")'),
-			};
-	
-	
-			const expression = new ExprDef('expression', expressionProps);
-			const ternary = new ExprDef('ternary', ternaryProps);
-			const relational = new ExprDef('relational', relationalProps);
-			const comma = new ExprDef('comma', commaProps);
-			const colon = new ExprDef('colon', colonProps);
-			const attr = new ExprDef('attr', attrProps);
-			// const func = new ExprDef('func', funcProps);
-			const funcRef = new ExprDef('funcRef', funcRefProps);
-			const memberRef = new ExprDef('memberRef', memberRefProps);
-			const string = new ExprDef('string', stringProps);
-			const space = new ExprDef('space', spaceProps);
-			const keyWord = new ExprDef('keyWord', keyWordProps);
-			const group = new ExprDef('group', groupProps);
-			const object = new ExprDef('object', objectProps);
-			const array = new ExprDef('array', arrayProps);
-			const number = new ExprDef('number', numberProps);
-			const multiplier = new ExprDef('multiplier', multiplierProps);
-			const sign = new ExprDef('sign', signProps);
-			const ignore = new ExprDef('ignore', ignoreProps);
-			const variable = new ExprDef('variable', variableProps);
-			const objectLabel = new ExprDef('objectLabel', objectLabelProps);
-			const objectShorthand = new ExprDef('objectShorthand', objectShorthandProps);
-	
-			expression.always(space, ignore, keyWord);
-			expression.if(string, number, group, array, variable, funcRef, memberRef)
-			      .then(multiplier, sign, relational, group)
-			      .repeat();
-			expression.if(string, group, array, variable, funcRef, memberRef)
-						.then(attr)
-			      .then(multiplier, sign, relational, expression, funcRef, memberRef)
-						.repeat();
-			expression.if(string, group, array, variable, funcRef, memberRef)
-						.then(attr)
-						.end();
-	
-			funcRef.if(expression).then(comma).repeat();
-			funcRef.if(expression).end();
-			memberRef.if(expression).then(comma).repeat();
-			memberRef.if(expression).end();
-	
-			expression.if(sign)
-			      .then(expression)
-			      .then(multiplier, sign, relational, group)
-			      .repeat();
-			expression.if(string, number, group, array, variable)
-			      .then(ternary)
-			      .then(expression)
-			      .then(colon)
-			      .then(expression)
-			      .end();
-			expression.if(ternary)
-			      .then(expression)
-			      .then(colon)
-			      .then(expression)
-			      .end();
-			expression.if(object, string, number, group, array, variable)
-			      .end();
-			expression.if(sign)
-			      .then(number)
-			      .end();
-	
-			object.always(space, ignore, keyWord);
-			object.if(objectLabel).then(expression).then(comma).repeat();
-			object.if(objectShorthand).then(comma).repeat();
-			object.if(objectLabel).then(expression).end();
-			object.if(objectShorthand).end();
-	
-			group.always(space, ignore, keyWord);
-			group.if(expression).then(comma).repeat();
-			group.if(expression).end();
-	
-			array.always(space, ignore, keyWord);
-			array.if(expression).then(comma).repeat();
-			array.if(expression).end();
-	
-			function getter(scope, parentScope) {
-				parentScope = parentScope || function () {return undefined};
-				function get(name) {
-					if (name === 'scope') return scope;
-					const split = new String(name).split('.');
-					let currObj = scope;
-					for (let index = 0; currObj != undefined && index < split.length; index += 1) {
-						currObj = currObj[split[index]];
-					}
-					if (currObj !== undefined) return currObj;
-					const parentScopeVal = parentScope(name);
-					if (parentScopeVal !== undefined) return parentScopeVal;
-	        else {
-	          const globalVal = $t.global(name);
-	          return globalVal === undefined ? '' : globalVal;
+	    function approximateFunc(test) {
+	      return function () {
+	        if (arguments.length === 2) return test(approximate(arguments[0]), approximate(arguments[1]));
+	        for (let index = 1; index < arguments.length; index++) {
+	          if (!test(approximate(arguments[index - 1]), approximate(arguments[index]))) return false;
 	        }
-				}
-				return get;
-			}
-	
-			function defaultArray(elemName, get) {
-				let resp = '';
-				for (let index = 0; index < get('scope').length; index += 1) {
-					if (elemName) {
-						const obj = {};
-	          obj.$index = index;
-						obj[elemName] = get(index);
-						resp += new $t(template).render(obj, undefined, get);
-					} else {
-						resp += new $t(template).render(get(index), undefined, get);
-					}
-				}
-				return `${resp}`;
-			}
-	
-			function arrayExp(varName, get) {
-				varName = varName.trim();
-				const array = get('scope');
-				let built = '';
-				for (let index = 0; index < array.length; index += 1) {
-					const obj = {};
-					obj[varName] = array[index];
-					obj.$index = index;
-					built += new $t(template).render(obj, undefined, get);
-				}
-				return built;
-			}
-	
-			function itOverObject(varNames, get) {
-				const match = varNames.match($t.objectNameReg);
-				const keyName = match[1];
-				const valueName = match[2];
-				const obj = get('scope');
-				const keys = Object.keys(obj);
-				const isArray = Array.isArray(obj);
-				let built = '';
-				for (let index = 0; index < keys.length; index += 1) {
-					const key = keys[index];
-					if (!isArray || key.match(/^[0-9]{1,}$/)) {
-						const childScope = {};
-						childScope[keyName] = key;
-						childScope[valueName] = obj[key];
-						childScope.$index = index;
-						built += new $t(template).render(childScope, undefined, get);
-					}
-				}
-	      return built;
-			}
-	
-			function rangeExp(elemName, rangeItExpr, get) {
-				const match = rangeItExpr.match($t.rangeItExpReg);
-				let startIndex = match[1].match(/^[0-9]{1,}$/) ?
-							match[1] : get(match[1]);
-				let endIndex = match[2].match(/^[0-9]*$/) ?
-							match[2] : get(match[2]);
-				if (((typeof startIndex) !== 'string' &&
-								(typeof	startIndex) !== 'number') ||
-									(typeof endIndex) !== 'string' &&
-									(typeof endIndex) !== 'number') {
-										throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
-				}
-	
-				try {
-					startIndex = Number.parseInt(startIndex);
-				} catch (e) {
-					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
-				}
-				try {
-					endIndex = Number.parseInt(endIndex);
-				} catch (e) {
-					throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
-				}
-	
-				let index = startIndex;
-				let built = '';
-				while (true) {
-					let increment = 1;
-					if (startIndex > endIndex) {
-						if (index <= endIndex) {
-							break;
-						}
-						increment = -1;
-					} else if (index >= endIndex) {
-						break;
-					}
-					const obj = {$index: index};
-					obj[elemName] = index;
-					built += new $t(template).render(obj, undefined, get);
-					index += increment;
-				}
-				return built;
-			}
-	
-			function evaluate(get) {
-				if ($t.functions[id]) {
-					try {
-						return $t.functions[id](get, $t);
-					} catch (e) {
-					  console.error(e);
-					}
-				} else {
-					return eval($t.templates[id])
-				}
-			}
-	
-			function type(scope, expression) {
-				if ((typeof scope) === 'string' && scope.match($t.rangeAttemptExpReg)) {
-					if (scope.match($t.rangeItExpReg)) {
-						return 'rangeExp'
-					}
-					return 'rangeExpFormatError';
-				} else if (Array.isArray(scope)) {
-					if (expression === undefined) {
-						return 'defaultArray';
-					} else if (expression.match($t.nameScopeExpReg)) {
-						return 'nameArrayExp';
-					}
-				}
-	
-				if ((typeof scope) === 'object') {
-					if (expression === undefined) {
-						return 'defaultObject';
-					} else if (expression.match($t.objectNameReg)){
-						return 'itOverObject';
-					} else if (expression.match($t.arrayNameReg)){
-						return 'arrayExp';
-					} else {
-						return 'invalidObject';
-					}
-				} else {
-					return 'defaultObject';
-				}
-			}
-	
-			// TODO: itExp is not longer an iteration expression. fix!!!!
-			function render(scope, itExp, parentScope) {
-	      if (scope === undefined) return '';
-				let rendered = '';
-				const get = getter(scope, parentScope);
-				switch (type(scope, itExp)) {
-					case 'rangeExp':
-						rendered = rangeExp(itExp, scope, get);
-						break;
-					case 'rangeExpFormatError':
-						throw new Error(`Invalid range itteration expression "${scope}"`);
-					case 'defaultArray':
-						rendered = defaultArray(itExp, get);
-						break;
-					case 'nameArrayExp':
-						rendered = defaultArray(itExp, get);
-						break;
-					case 'arrayExp':
-						rendered = arrayExp(itExp, get);
-						break;
-					case 'invalidArray':
-						throw new Error(`Invalid iterative expression for an array "${itExp}"`);
-					case 'defaultObject':
-						rendered = evaluate(get);
-						break;
-					case 'itOverObject':
-						rendered = itOverObject(itExp, get);
-						break;
-					case 'invalidObject':
-						throw new Error(`Invalid iterative expression for an object "${itExp}"`);
-					default:
-						throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
-				}
-	
-	      if (selector) {
-	        const elem = document.querySelector(selector);
-	        if (elem !== null) {
-	          beforeRenderEvent.trigger();
-	          elem.innerHTML = rendered;
-	          afterRenderEvent.trigger();
-	        }
+	        return true;
 	      }
-				return rendered;
-			}
-	
-	
-	//---------------------  Compile Functions ---------------//
-	
-			function stringHash(string) {
-				let hashString = string;
-				let hash = 0;
-				for (let i = 0; i < hashString.length; i += 1) {
-					const character = hashString.charCodeAt(i);
-					hash = ((hash << 5) - hash) + character;
-					hash &= hash; // Convert to 32bit integer
-				}
-				return hash;
-			}
-	
-			function isolateBlocks(template) {
-				let inBlock = false;
-				let openBracketCount = 0;
-				let block = '';
-				let blocks = [];
-				let str = template;
-				for (let index = 0; index < str.length; index += 1) {
-					if (inBlock) {
-						block += str[index];
-					}
-					if (!inBlock && index > 0 &&
-						str[index] == '{' && str[index - 1] == '{') {
-						inBlock = true;
-					} else if (inBlock && str[index] == '{') {
-						openBracketCount++;
-					} else if (openBracketCount > 0 && str[index] == '}') {
-						openBracketCount--;
-					} else if (str[index + 1] == '}' && str[index] == '}' ) {
-						inBlock = false;
-						blocks.push(`${block.substr(0, block.length - 1)}`);
-						block = '';
-					}
-				}
-				return blocks;
-			}
-	
-			function compile() {
-				const blocks = isolateBlocks(template);
-				let str = template;
-				for (let index = 0; index < blocks.length; index += 1) {
-					const block = blocks[index];
-					const parced = ExprDef.parse(expression, block);
-					str = str.replace(`{{${block}}}`, `\` + $t.clean(${parced}) + \``);
-				}
-				return `\`${str}\``;
-			}
-	
-	
-					const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
-					function formatRepeat(string) {
-						// tagname:1 prefix:2 quote:4 exlpression:5 suffix:6
-						// string = string.replace(/<([^\s^:^-^>]*)/g, '<$1-ce');
-						let match;
-						while (match = string.match(repeatReg)) {
-							let tagContents = match[2] + match[8];
-	            let tagName = match[1];
-	            let varNames = match[6];
-	            let realScope = match[7];
-							let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
-							let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
-							let scope = 'scope';
-							template = templateName !== tagContents ? templateName : template;
-							const t = eval(`new $t(\`${template}\`)`);
-	            let resolvedScope = "get('scope')";;
-	            try {
-	              // console.log('tagName', tagName);
-	              // console.log('varNames', varNames);
-	              // console.log('realScope', realScope);
-	              // console.log('tagContents', tagContents);
-								if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
-	                resolvedScope = `'${realScope}'`;
-	              } else {
-	                resolvedScope = ExprDef.parse(expression, realScope);
-	              }
-	            } catch (e) {}
-	            string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
-						}
-						return string;
-					}
-	
-			if (id) {
-				$t.templates[id] = undefined;
-				$t.functions[id] = undefined;
-			}
-	
-			template = template.replace(/\s{1,}/g, ' ');
-			id = $t.functions[template] ? template : id || stringHash(template);
-			if (!$t.functions[id]) {
-				if (!$t.templates[id]) {
-					template = template.replace(/\s{2,}|\n/g, ' ');
-					template = formatRepeat(template);
-					$t.templates[id] = compile();
-				}
-			}
-			this.compiled = function () { return $t.templates[id];}
-			this.render = render;
-	    this.afterRender = (func) => afterRenderEvent.on(func);
-	    this.beforeRender = (func) => beforeRenderEvent.on(func);
-			this.type = type;
-			this.isolateBlocks = isolateBlocks;
-	    this.id = () => id;
-		}
-	}
-	
-	$t.templates = {};//{"-1554135584": '<h1>{{greeting}}</h1>'};
-	$t.functions = {};
-	$t.loadFunctions = (functions) => {
-		Object.keys(functions).forEach((name) => {
-			$t.functions[name] = functions[name];
-		});
-	
-	}
-	$t.isTemplate = (id) => $t.functions[id] !== undefined;
-	$t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-	$t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-	$t.rangeAttemptExpReg = /^\s*(.*\.\..*)\s*$/;
-	$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*\.\.\s*([a-z0-9A-Z]*)\s*$/;
-	$t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-	$t.quoteStr = function (str) {
-			str = str.replace(/\\`/g, '\\\\\\`')
-			str = str.replace(/([^\\])`/g, '$1\\\`')
-			return `\`${str.replace(/``/g, '`\\`')}\``;
-		}
-	$t.formatName = function (string) {
-	    function toCamel(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
-	    return string.replace(/([a-z])[^a-z^A-Z]{1,}([a-zA-Z])/g, toCamel);
-	}
-	$t.dumpTemplates = function (debug) {
-		let templateFunctions = '';
-		let tempNames = Object.keys($t.templates);
-		for (let index = 0; index < tempNames.length; index += 1) {
-			const tempName = tempNames[index];
-			if (tempName) {
-				let template = $t.templates[tempName];
-	      if (debug === true) {
-	        const endTagReg = /( \+) /g;
-	        template = template.replace(endTagReg, '$1\n\t\t');
-	      }
-				templateFunctions += `\nexports['${tempName}'] = (get, $t) => \n\t\t${template}\n`;
-			}
-		}
-		return templateFunctions;
-	}
-	
-	$t.clean = (val) => val === undefined ? '' : val;
-	
-	function createGlobalsInterface() {
-	  const GLOBALS = {};
-	  const isMotifiable = (name) => GLOBALS[name] === undefined ||
-	        GLOBALS[name].imutable !== 'true';
-	  $t.global = function (name, value, imutable) {
-	    if (value === undefined) return GLOBALS[name] ? GLOBALS[name].value : undefined;
-	    if (isMotifiable(name)) GLOBALS[name] = {value, imutable};
-	  }
-	  $t.rmGlobal = function(name) {
-	    if (isMotifiable(name)) delete GLOBALS[name];
+	    }
+	    const af = approximateFunc;
+	    approximate.eq = af((one, two) => one === two);
+	    approximate.neq = af((one, two) => one !== two);
+	    approximate.gt = af((one, two) => one > two);
+	    approximate.lt = af((one, two) => one < two);
+	    approximate.gteq = af((one, two) => one >= two);
+	    approximate.lteq = af((one, two) => one <= two);
+	    approximate.eqAbs = af((one, two) => Math.abs(one) === Math.abs(two));
+	    approximate.neqAbs = af((one, two) => Math.abs(one) !== Math.abs(two));
+	    approximate.abs = (value) => Math.abs(approximate(value));
+	    approximate.object = (obj) => {
+	      const approx = {};
+	      return Object.forAllRecursive(obj,
+	            (value) => (typeof value) === 'number' ? approximate(value) : value);
+	    }
+	    approximate.sameSign = af((value1, value2) => (value1 === 0 && value2 === 0) ||
+	                                                      (value2 > 0 && value1 > 0) ||
+	                                                      (value2 < 0 && value1 < 0));
+	    return approximate;
 	  }
 	}
-	createGlobalsInterface();
 	
-	module.exports = $t;
+	
+	Approximate.setDefault = (accuracy) => {
+	  if ((typeof accuracy) !== 'number') throw new Error('Must enter a number for accuracy: hint must be a power of 10');
+	  Approximate.default = new Approximate(accuracy);
+	  defaultAccuracy = accuracy;
+	  Approximate.default.new = (acc) => new Approximate(acc);
+	  Approximate.default.setDefault = Approximate.default;
+	}
+	
+	Approximate.setDefault(1000000);
+	
+	module.exports  = Approximate.default;
 	
 });
 
@@ -15067,6 +15067,53 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./public/js/utils/test/tests/star-line-map.js',
+function (require, exports, module) {
+	
+
+	const Test = require('../test.js').Test;
+	const EscapeMap = require('../../canvas/two-d/maps/escape');
+	const Vertex2d = require('../../canvas/two-d/objects/vertex');
+	const Line2d = require('../../canvas/two-d/objects/line');
+	const Polygon2d = require('../../canvas/two-d/objects/polygon');
+	
+	// [new Vertex2d(10,50),new Vertex2d(10,10),new Vertex2d(50,10),new Vertex2d(50,40),new Vertex2d(20,40),new Vertex2d(20,15),new Vertex2d(40,15), new Vertex2d(40,35), new Vertex2d(35,35), new Vertex2d(35,20),new Vertex2d(25,20),new Vertex2d(25,37.5), new Vertex2d(45,37.5),new Vertex2d(45,12.5),new Vertex2d(15,12.5), new Vertex2d(15,45),new Vertex2d(50,45), new Vertex2d(50,50),new Vertex2d(10,50)]
+	//
+	// [new Vertex2d(20,14),new Vertex2d(15,8),new Vertex2d(24,3),new Vertex2d(20,14)]
+	
+	const spiral = Polygon2d.fromString('[(10,50),(10,10),(50,10),(50,40),(20,40),(20,15),(40,15), (40,35), (35,35), (35,20),(25,20),(25,37.5), (45,37.5),(45,12.5),(15,12.5), (15,45),(50,45), (50,50)]');
+	const triangle = Polygon2d.fromString('[(20,14),(15,8),(24,3),(20,14)]');
+	const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
+	const innerLines = [new Line2d(new Vertex2d(40,47), new Vertex2d(40,48)),
+	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,25)),
+	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,15))]
+	
+	// star.forEach(l => l.translate(new Line2d(new Vertex2d(0,0),new Vertex2d(10,12))));
+	
+	Test.add('StarLineMap: escape',(ts) => {
+	  // const escapeMap = new EscapeMap(spiral.lines().concat(triangle.lines()).concat(innerLines));
+	  let lines = spiral.lines().concat(triangle.lines()).concat(star).concat(innerLines);
+	  const escapeMap = new EscapeMap(lines);
+	  const parimeterAns = Polygon2d.fromString(`(10, 50) => (10, 10) => (16.666666666666668, 10) => (15, 8) => (24, 3) => (21.454545454545453, 10) => (50, 10) => (50, 40) => (20, 40) => (20, 15) => (40, 15) => (40, 35) => (35, 35) => (35, 20) => (25, 20) => (25, 37.5) => (45, 37.5) => (45, 12.5) => (20.545454545454547, 12.5) => (20, 14) => (18.75, 12.5) => (15, 12.5) => (15, 21.18181818181818) => (16.5, 20.5) => (15.556603773584905, 22.198113207547173) => (17, 23) => (15.111111111111112, 23) => (15, 23.200000000000003) => (15, 45) => (50, 45) => (50, 50)`);
+	  const parimeter = EscapeMap.parimeter(lines);
+	  ts.assertTrue(parimeter.equals(parimeterAns), 'Use canvas buddy to isolate issue: /canvas-buddy/html/index.html\n\t\tIt seams like there is an error somewhere in the merging of groups... I would focus your investigation there.');
+	  ts.success();
+	});
+	
+	Test.add('Polygon: build', (ts) => {
+	  const polyAns = Polygon2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5)]');
+	  for (let index = 0; index < 5; index++) {
+	    const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
+	    star.shuffle();
+	    const poly = Polygon2d.build(star);
+	    ts.assertTrue(poly.equals(polyAns));
+	  }
+	  ts.success();
+	});
+	
+});
+
+
 RequireJS.addFunction('./public/js/utils/canvas/two-d/draw.js',
 function (require, exports, module) {
 	
@@ -15368,104 +15415,6 @@ const Circle2d = require('./objects/circle');
 });
 
 
-RequireJS.addFunction('./public/js/utils/canvas/two-d/hover-map.js',
-function (require, exports, module) {
-	
-const Line2d = require('./objects/line')
-	const Vertex2d = require('./objects/vertex')
-	class HoverObject2d {
-	  constructor(lineOrVertex, tolerance, target) {
-	    tolerance ||= 2;
-	    const toleranceFunction = (typeof tolerance) === 'function';
-	    const targetFunction = (typeof lineOrVertex) === 'function';
-	    function getTolerence() {
-	      if (toleranceFunction) return tolerance();
-	      return tolerance;
-	    }
-	    function vertexHovered(targetVertex, hoverVertex) {
-	      if(targetVertex.distance(hoverVertex) < getTolerence())
-	        return targetVertex.distance(hoverVertex);
-	    }
-	
-	    function lineHovered(targetLine, hoverVertex) {
-	      const tol = getTolerence();
-	      const hv = hoverVertex;
-	      const sv = targetLine.startVertex();
-	      const ev = targetLine.endVertex();
-	      let toleranceAcceptible = false;
-	      if (targetLine.isVertical()) {
-	        toleranceAcceptible = Math.abs(sv.x() - hv.x()) < tol &&
-	              ((sv.y() > hv.y() && ev.y() < hv.y()) ||
-	              (sv.y() < hv.y() && ev.y() > hv.y()));
-	      } else if (targetLine.isHorizontal()) {
-	        toleranceAcceptible = Math.abs(sv.y() - hv.y()) < tol &&
-	              ((sv.x() > hv.x() && ev.x() < hv.x()) ||
-	              (sv.x() < hv.x() && ev.x() > hv.x()));
-	      } else if (Math.abs(sv.y() - ev.y()) < Math.abs(sv.x() - ev.x())) {
-	        const yValue = targetLine.y(hv.x());
-	        toleranceAcceptible = yValue + tol > hv.y() && yValue - tol < hv.y();
-	      } else {
-	        const xValue = targetLine.x(hv.y());
-	        toleranceAcceptible = xValue + tol > hv.x() && xValue - tol < hv.x();
-	      }
-	
-	      if (toleranceAcceptible) {
-	        const closestPoint = targetLine.closestPointOnLine(hoverVertex);
-	        if (targetLine.withinSegmentBounds(closestPoint)) {
-	          return closestPoint.distance(hoverVertex) + .1;
-	        }
-	      }
-	      return false;
-	    }
-	
-	    this.target = () => target || lineOrVertex;
-	
-	    this.hovering = (hoverVertex) => {
-	      const lov = targetFunction ? lineOrVertex() : lineOrVertex;
-	      if (lov instanceof Line2d)
-	        return lineHovered(lov, hoverVertex);
-	      return vertexHovered(lov, hoverVertex);
-	    }
-	  }
-	}
-	
-	class HoverMap2d {
-	  constructor() {
-	    let hoverObjects = [];
-	
-	    this.clear = () => hoverObjects = [] || true;
-	    this.add = (object, tolerance, target) => {
-	      const hovObj = new HoverObject2d(object, tolerance, target);
-	      if (object instanceof Line2d) {
-	        hoverObjects.push(hovObj);
-	      } else {
-	        hoverObjects = [hovObj].concat(hoverObjects);
-	      }
-	    }
-	    this.hovering = (x, y) => {
-	      const vertex = x instanceof Vertex2d ? x : new Vertex2d(x, y);
-	      let hoveringObj = null;
-	      for (let index = 0; index < hoverObjects.length; index++) {
-	        const hoverObj = hoverObjects[index];
-	        const distance = hoverObj.hovering(vertex);
-	        if (distance) {
-	          const target = hoverObj.target();
-	          if (hoveringObj === null || distance < hoveringObj.distance) {
-	            hoveringObj = {target, distance};
-	          }
-	        }
-	      }
-	      return hoveringObj && hoveringObj.target;
-	    }
-	  }
-	}
-	
-	HoverMap2d.HoverObject2d = HoverObject2d;
-	module.exports = HoverMap2d;
-	
-});
-
-
 RequireJS.addFunction('./public/js/utils/input/decision/decision.js',
 function (require, exports, module) {
 	
@@ -15758,49 +15707,100 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/test/tests/star-line-map.js',
+RequireJS.addFunction('./public/js/utils/canvas/two-d/hover-map.js',
 function (require, exports, module) {
 	
-
-	const Test = require('../test.js').Test;
-	const EscapeMap = require('../../canvas/two-d/maps/escape');
-	const Vertex2d = require('../../canvas/two-d/objects/vertex');
-	const Line2d = require('../../canvas/two-d/objects/line');
-	const Polygon2d = require('../../canvas/two-d/objects/polygon');
+const Line2d = require('./objects/line')
+	const Vertex2d = require('./objects/vertex')
+	class HoverObject2d {
+	  constructor(lineOrVertex, tolerance, target) {
+	    tolerance ||= 2;
+	    const toleranceFunction = (typeof tolerance) === 'function';
+	    const targetFunction = (typeof lineOrVertex) === 'function';
+	    function getTolerence() {
+	      if (toleranceFunction) return tolerance();
+	      return tolerance;
+	    }
+	    function vertexHovered(targetVertex, hoverVertex) {
+	      if(targetVertex.distance(hoverVertex) < getTolerence())
+	        return targetVertex.distance(hoverVertex);
+	    }
 	
-	// [new Vertex2d(10,50),new Vertex2d(10,10),new Vertex2d(50,10),new Vertex2d(50,40),new Vertex2d(20,40),new Vertex2d(20,15),new Vertex2d(40,15), new Vertex2d(40,35), new Vertex2d(35,35), new Vertex2d(35,20),new Vertex2d(25,20),new Vertex2d(25,37.5), new Vertex2d(45,37.5),new Vertex2d(45,12.5),new Vertex2d(15,12.5), new Vertex2d(15,45),new Vertex2d(50,45), new Vertex2d(50,50),new Vertex2d(10,50)]
-	//
-	// [new Vertex2d(20,14),new Vertex2d(15,8),new Vertex2d(24,3),new Vertex2d(20,14)]
+	    function lineHovered(targetLine, hoverVertex) {
+	      const tol = getTolerence();
+	      const hv = hoverVertex;
+	      const sv = targetLine.startVertex();
+	      const ev = targetLine.endVertex();
+	      let toleranceAcceptible = false;
+	      if (targetLine.isVertical()) {
+	        toleranceAcceptible = Math.abs(sv.x() - hv.x()) < tol &&
+	              ((sv.y() > hv.y() && ev.y() < hv.y()) ||
+	              (sv.y() < hv.y() && ev.y() > hv.y()));
+	      } else if (targetLine.isHorizontal()) {
+	        toleranceAcceptible = Math.abs(sv.y() - hv.y()) < tol &&
+	              ((sv.x() > hv.x() && ev.x() < hv.x()) ||
+	              (sv.x() < hv.x() && ev.x() > hv.x()));
+	      } else if (Math.abs(sv.y() - ev.y()) < Math.abs(sv.x() - ev.x())) {
+	        const yValue = targetLine.y(hv.x());
+	        toleranceAcceptible = yValue + tol > hv.y() && yValue - tol < hv.y();
+	      } else {
+	        const xValue = targetLine.x(hv.y());
+	        toleranceAcceptible = xValue + tol > hv.x() && xValue - tol < hv.x();
+	      }
 	
-	const spiral = Polygon2d.fromString('[(10,50),(10,10),(50,10),(50,40),(20,40),(20,15),(40,15), (40,35), (35,35), (35,20),(25,20),(25,37.5), (45,37.5),(45,12.5),(15,12.5), (15,45),(50,45), (50,50)]');
-	const triangle = Polygon2d.fromString('[(20,14),(15,8),(24,3),(20,14)]');
-	const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
-	const innerLines = [new Line2d(new Vertex2d(40,47), new Vertex2d(40,48)),
-	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,25)),
-	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,15))]
+	      if (toleranceAcceptible) {
+	        const closestPoint = targetLine.closestPointOnLine(hoverVertex);
+	        if (targetLine.withinSegmentBounds(closestPoint)) {
+	          return closestPoint.distance(hoverVertex) + .1;
+	        }
+	      }
+	      return false;
+	    }
 	
-	// star.forEach(l => l.translate(new Line2d(new Vertex2d(0,0),new Vertex2d(10,12))));
+	    this.target = () => target || lineOrVertex;
 	
-	Test.add('StarLineMap: escape',(ts) => {
-	  // const escapeMap = new EscapeMap(spiral.lines().concat(triangle.lines()).concat(innerLines));
-	  let lines = spiral.lines().concat(triangle.lines()).concat(star).concat(innerLines);
-	  const escapeMap = new EscapeMap(lines);
-	  const parimeterAns = Polygon2d.fromString(`(10, 50) => (10, 10) => (16.666666666666668, 10) => (15, 8) => (24, 3) => (21.454545454545453, 10) => (50, 10) => (50, 40) => (20, 40) => (20, 15) => (40, 15) => (40, 35) => (35, 35) => (35, 20) => (25, 20) => (25, 37.5) => (45, 37.5) => (45, 12.5) => (20.545454545454547, 12.5) => (20, 14) => (18.75, 12.5) => (15, 12.5) => (15, 21.18181818181818) => (16.5, 20.5) => (15.556603773584905, 22.198113207547173) => (17, 23) => (15.111111111111112, 23) => (15, 23.200000000000003) => (15, 45) => (50, 45) => (50, 50)`);
-	  const parimeter = EscapeMap.parimeter(lines);
-	  ts.assertTrue(parimeter.equals(parimeterAns), 'Use canvas buddy to isolate issue: /canvas-buddy/html/index.html\n\t\tIt seams like there is an error somewhere in the merging of groups... I would focus your investigation there.');
-	  ts.success();
-	});
-	
-	Test.add('Polygon: build', (ts) => {
-	  const polyAns = Polygon2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5)]');
-	  for (let index = 0; index < 5; index++) {
-	    const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
-	    star.shuffle();
-	    const poly = Polygon2d.build(star);
-	    ts.assertTrue(poly.equals(polyAns));
+	    this.hovering = (hoverVertex) => {
+	      const lov = targetFunction ? lineOrVertex() : lineOrVertex;
+	      if (lov instanceof Line2d)
+	        return lineHovered(lov, hoverVertex);
+	      return vertexHovered(lov, hoverVertex);
+	    }
 	  }
-	  ts.success();
-	});
+	}
+	
+	class HoverMap2d {
+	  constructor() {
+	    let hoverObjects = [];
+	
+	    this.clear = () => hoverObjects = [] || true;
+	    this.add = (object, tolerance, target) => {
+	      const hovObj = new HoverObject2d(object, tolerance, target);
+	      if (object instanceof Line2d) {
+	        hoverObjects.push(hovObj);
+	      } else {
+	        hoverObjects = [hovObj].concat(hoverObjects);
+	      }
+	    }
+	    this.hovering = (x, y) => {
+	      const vertex = x instanceof Vertex2d ? x : new Vertex2d(x, y);
+	      let hoveringObj = null;
+	      for (let index = 0; index < hoverObjects.length; index++) {
+	        const hoverObj = hoverObjects[index];
+	        const distance = hoverObj.hovering(vertex);
+	        if (distance) {
+	          const target = hoverObj.target();
+	          if (hoveringObj === null || distance < hoveringObj.distance) {
+	            hoveringObj = {target, distance};
+	          }
+	        }
+	      }
+	      return hoveringObj && hoveringObj.target;
+	    }
+	  }
+	}
+	
+	HoverMap2d.HoverObject2d = HoverObject2d;
+	module.exports = HoverMap2d;
 	
 });
 
@@ -16691,129 +16691,188 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/corner.js',
+RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/line-measurement.js',
 function (require, exports, module) {
-	//
-	// const Vertex2d = require('vertex');
-	//
-	// class Corner {
-	//   constructor(center, height, width, radians) {
-	//     width = width === undefined ? 121.92 : width;
-	//     height = height === undefined ? 60.96 : height;
-	//     radians = radians === undefined ? 0 : radians;
-	//     const instance = this;
-	//     Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
-	//     if ((typeof center) === 'function') this.center = center;
-	//     const startPoint = new Vertex2d(null);
-	//
-	//     const getterHeight = this.height;
-	//     this.height = (v) => {
-	//       notify(getterHeight(), v);
-	//       return getterHeight(v);
-	//     }
-	//     const getterWidth = this.width;
-	//     this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
-	//
-	//     const changeFuncs = [];
-	//     this.onChange = (func) => {
-	//       if ((typeof func) === 'function') {
-	//         changeFuncs.push(func);
-	//       }
-	//     }
-	//
-	//     let lastNotificationId = 0;
-	//     function notify(currentValue, newValue) {
-	//       if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
-	//       if (newValue !== currentValue) {
-	//         const id = ++lastNotificationId;
-	//         setTimeout(() => {
-	//           if (id === lastNotificationId)
-	//             for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
-	//         }, 100);
-	//       }
-	//     }
-	//
-	//     this.radians = (newValue) => {
-	//       if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-	//         notify(radians, newValue);
-	//         radians = newValue;
-	//       }
-	//       return radians;
-	//     };
-	//     this.startPoint = () => {
-	//       startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
-	//       return startPoint;
-	//     }
-	//     this.angle = (value) => {
-	//       if (value !== undefined) this.radians(Math.toRadians(value));
-	//       return Math.toDegrees(this.radians());
-	//     }
-	//
-	//     // this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
-	//     // this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
-	//     this.x = (val) => {
-	//       if (val !== undefined) this.center().x(val);
-	//       return this.center().x();
-	//     }
-	//     this.y = (val) => {
-	//       if (val !== undefined) this.center().y(val);
-	//       return this.center().y();
-	//     }
-	//     this.minDem = () => this.width() > this.height() ? this.width() : this.height();
-	//     this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
-	//
-	//     this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
-	//     this.move = (position, theta) => {
-	//       const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
-	//       if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
-	//       if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
-	//       if (position.minX !== undefined) center.x = position.minX + this.offsetX();
-	//       if (position.minY !== undefined) center.y = position.minY + this.offsetY();
-	//       this.radians(position.theta);
-	//       this.center().point(center);
-	//       return true;
-	//     };
-	//
-	//     function centerMethod(widthMultiplier, heightMultiplier, position) {
-	//       const center = instance.center();
-	//       const rads = instance.radians();
-	//       const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
-	//                         instance.height() * heightMultiplier * Math.sin(rads);
-	//       const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
-	//                         instance.width() * widthMultiplier * Math.sin(rads);
-	//
-	//       if (position !== undefined) {
-	//         const posCenter = new Vertex2d(position.center);
-	//         return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
-	//       }
-	//       const backLeftLocation = {
-	//             x: instance.center().x() - offsetX ,
-	//             y: instance.center().y() - offsetY
-	//       };
-	//       return new Vertex2d(backLeftLocation);
-	//     }
-	//
-	//
-	//     this.frontCenter = (position) => centerMethod(0, -.5, position);
-	//     this.backCenter = (position) => centerMethod(0, .5, position);
-	//     this.leftCenter = (position) => centerMethod(.5, 0, position);
-	//     this.rightCenter = (position) => centerMethod(-.5, 0, position);
-	//
-	//     this.backLeft = (position) => centerMethod(.5, .5, position);
-	//     this.backRight = (position) => centerMethod(-.5, .5, position);
-	//     this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
-	//     this.frontRight = (position) => centerMethod(-.5, -.5, position);
-	//
-	//     this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
-	//     this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-	//
-	//     this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
-	//   }
-	// }
-	//
-	// new Square2d();
-	//
-	// module.exports = Square2d;
+	
+const Circle2d = require('circle');
+	const Vertex2d = require('vertex');
+	const Line2d = require('line');
+	const Lookup = require('../../../object/lookup');
+	const Measurement = require('../../../measurement.js');
+	const approximate = require('../../../approximate.js');
+	const ToleranceMap = require('../../../tolerance-map.js');
+	
+	class LineMeasurement2d {
+	  constructor(line, center, layer, modificationFunction) {
+	    const offset = 3;
+	    this.line = () => line;
+	
+	    function modifyMeasurment(offsetLine, line, buffer, takenLocations) {
+	      const startLength = line.startLine.length();
+	      line.startLine.length(startLength + buffer);
+	      line.endLine.length(startLength + buffer);
+	      line.translate(offsetLine);
+	      let notTaken = true;
+	      const point = line.midpoint();
+	      for (let index = 0; index < takenLocations.length; index++) {
+	        const locationInfo = takenLocations[index];
+	        const takenPoint = locationInfo.point;
+	        const biggestBuffer = locationInfo.buffer < buffer ? locationInfo.buffer : buffer;
+	        if (takenPoint.distance(point) < biggestBuffer) {
+	          if (takenPoint.length === length) return;
+	          notTaken = false;
+	        }
+	      }
+	      return notTaken === true ? point : undefined;
+	    }
+	
+	    function notTaken(obj) {
+	      return (buffer) => {
+	        buffer ||= 7.5;
+	        const closer = obj.closerLine();
+	        const further = obj.furtherLine();
+	        const cStartL = further.startLine
+	        const cEndL = further.endLine
+	        const offsetLine = cStartL.copy();
+	        offsetLine.length(buffer);
+	        const length = approximate(further.length());
+	        do {
+	          const point = modifyMeasurment(offsetLine, further, buffer, obj.takenLocations);
+	          if (point) {
+	            obj.takenLocations.push({point, buffer, length});
+	            return further;
+	          }
+	        } while (buffer < 1000);
+	      }
+	    }
+	    this.I = (l, takenLocations) => {
+	      takenLocations ||= [];
+	      l = l || layer || 1;
+	      const termDist = (l + 1) * offset;
+	      const measureDist = l * offset;
+	      const startLine = line.perpendicular(termDist * 2, line.startVertex(), true);
+	      const endLine = line.perpendicular(termDist * 2, line.endVertex(), true);
+	      const startCircle = new Circle2d(measureDist, line.startVertex());
+	      const endCircle = new Circle2d(measureDist, line.endVertex());
+	      const startTerminationCircle = new Circle2d(termDist - 2.5, line.startVertex());
+	      const endTerminationCircle = new Circle2d(termDist - 2.5, line.endVertex());
+	      const startVertices = startCircle.intersections(startLine);
+	      const endVertices = endCircle.intersections(endLine);
+	      let l1, l2;
+	      if (startVertices.length > 0 && endVertices.length > 0) {
+	        const startTerminationVertices = startTerminationCircle.intersections(startLine);
+	        const endTerminationVertices = endTerminationCircle.intersections(endLine);
+	        let startTerminationLine, endTerminationLine, measurementLine;
+	
+	        l1 = new Line2d(startVertices[1], endVertices[1]);
+	        l1.startLine = new Line2d(line.startVertex(), startTerminationVertices[1]);
+	        l1.endLine = new Line2d(line.endVertex(), endTerminationVertices[1]);
+	
+	        l2 = new Line2d(startVertices[0], endVertices[0]);
+	        l2.startLine = new Line2d(line.startVertex(), startTerminationVertices[0]);
+	        l2.endLine = new Line2d(line.endVertex(), endTerminationVertices[0]);
+	        const furtherLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center);
+	        const closerLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center, true);
+	        const obj = {furtherLine, closerLine, takenLocations};
+	        obj.midpointClear = notTaken(obj);
+	        return obj;
+	      } else {
+	        throw new Error('No Intersection???');
+	        return {};
+	      }
+	    }
+	
+	    this.copy = (modFunc) => new LineMeasurement2d(line, modFunc);
+	    this.modificationFunction = (func) => {
+	      if ((typeof func) === 'function') {
+	        if ((typeof this.id) !== 'function') Lookup.convert(this);
+	        modificationFunction = func;
+	      }
+	      return modificationFunction;
+	    }
+	
+	    this.toString = () => `|--${this.line()}--|`;
+	    this.display = () => new Measurement(line.length()).display();
+	
+	    this.modify = (value) => modificationFunction(new Measurement(value, true).decimal());
+	
+	    this.modificationFunction(modificationFunction);
+	  }
+	}
+	
+	function measurementLevel(line) {
+	  if ((typeof line.length) !== 'function')
+	    console.log(line);
+	
+	  return Math.log(line.length()*line.length())*2;
+	}
+	
+	const lengthSortFunc = (center) => (l1, l2) => {
+	  const lengthDiff = l1.length() - l2.length();
+	  if (lengthDiff !== 0)
+	    return lengthDiff;
+	  return center.distance(l2.midpoint()) - center.distance(l1.midpoint());
+	}
+	LineMeasurement2d.measurements = (lines) => {
+	  const verts = Line2d.vertices(lines);
+	  const center = Vertex2d.center(...verts);
+	  lines.sort(lengthSortFunc(center));
+	  // lines.sort(lengthSortFunc(center));
+	  const measurements = [];
+	  const lengthMap = new ToleranceMap({length: .00001});
+	  for (let tIndex = 0; tIndex < lines.length; tIndex += 1) {
+	    const tarVerts = lines[tIndex].liesOn(verts);
+	    if (tarVerts.length > 2) {
+	      for (let index = 1; index < tarVerts.length; index += 1) {
+	        const sv = tarVerts[index - 1];
+	        const ev = tarVerts[index];
+	        const line = new Line2d(sv,ev);
+	        lengthMap.add(line);
+	      }
+	    }
+	    if (tarVerts.length > 1) {
+	      const sv = tarVerts[0];
+	      const ev = tarVerts[tarVerts.length - 1];
+	      const line = new Line2d(sv,ev);
+	      lengthMap.add(line);
+	    }
+	  }
+	
+	
+	  const lengths = Object.keys(lengthMap.map());
+	  const slopeMap = new ToleranceMap({length: .00001, slope: .1});
+	  for (index = 0; index < lengths.length; index += 1) {
+	    let lines = lengthMap.map()[lengths[index]];
+	    //TODO: possibly restrict the measurements that display....
+	    for(let li = 0; li < lines.length; li++) {
+	      const line = lines[li];
+	      const perpLine = line.perpendicular();
+	      if (slopeMap.matches(perpLine).length === 0) {
+	        slopeMap.add(perpLine);
+	      } else {
+	        lines.splice(li, 1);
+	        li--;
+	      }
+	    }
+	    measurements.concatInPlace(lines);
+	  }
+	
+	  for (let index = 0; index < measurements.length; index++)
+	    if (approximate.abs(measurements[index].length()) !== 0)
+	      measurements[index] = new LineMeasurement2d(measurements[index], center, measurementLevel(measurements[index]));
+	    else
+	      measurements.splice(index--, 1);
+	
+	  return measurements;
+	}
+	
+	LineMeasurement2d.furtherLine = (l1, l2, point, closer) =>
+	    point === undefined ? (closer ? l1 : l2) :
+	    (l1.midpoint().distance(point) > l2.midpoint().distance(point) ?
+	      (closer ? l2 : l1) :
+	      (closer ? l1 : l2));
+	
+	module.exports = LineMeasurement2d;
 	
 });
 
@@ -17705,7 +17764,10 @@ const Line2d = require('../objects/line');
 	      };
 	
 	      const isClosest = (origin, curr, prospective, originToEndDist) => {
-	        if (!prospective instanceof Vertex2d) return false;
+	        if (!(prospective instanceof Vertex2d)) return false;
+	        if ((typeof prospective.distance) !== 'function') {
+	          console.log('here')
+	        }
 	        const prospectDist = prospective.distance(origin) - originToEndDist;
 	        // const validDistance = prospectDist > 0 || withinTol(prospectDist, 0);
 	        // if (!validDistance) return false;
@@ -18939,6 +19001,319 @@ const Vertex2d = require('./vertex');
 });
 
 
+RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/vertex.js',
+function (require, exports, module) {
+	
+const approximate10 = require('../../../approximate.js').new(10);
+	const ToleranceMap = require('../../../tolerance-map.js');
+	const Tolerance = require('../../../tolerance.js');
+	const tol = .001;
+	const within = Tolerance.within(tol);
+	
+	
+	class Vertex2d {
+	  constructor(point) {
+	    if (arguments.length === 2) point = {x:arguments[0], y: arguments[1]};
+	    if (Array.isArray(point)) point = {x: point[0], y: point[1]};
+	    if (point instanceof Vertex2d) return point;
+	    let modificationFunction;
+	    let id = String.random();
+	    this.id = () => id;
+	    point = point || {x:0,y:0};
+	    Object.getSet(this, {point});
+	    this.layer = point.layer;
+	    const instance = this;
+	    this.move = (center) => {
+	      this.point(center);
+	      return true;
+	    };
+	
+	    this.translate = (xOffset, yOffset, doNotModify) => {
+	      const vertex = doNotModify ? this.copy() : this;
+	      vertex.point().x += xOffset;
+	      vertex.point().y += yOffset;
+	      return vertex;
+	    }
+	
+	    this.rotate = (radians, pivot, doNotModify) => {
+	      const vertex = doNotModify ? this.copy() : this;
+	      const point = vertex.point();
+	      pivot ||= new Vertex2d(0,0);
+	      const s = Math.sin(radians);
+	      const c = Math.cos(radians);
+	      point.x -= pivot.x();
+	      point.y -= pivot.y();
+	      const newX = point.x * c - point.y * s;
+	      const newY = point.x * s + point.y * c;
+	      point.x = newX + pivot.x();
+	      point.y = newY + pivot.y();
+	      return vertex;
+	    }
+	    this.point = (newPoint) => {
+	      newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;
+	      if (newPoint) this.x(newPoint.x);
+	      if (newPoint) this.y(newPoint.y);
+	      return point;
+	    }
+	
+	    this.modificationFunction = (func) => {
+	      if ((typeof func) === 'function') {
+	        if ((typeof this.id) !== 'function') Lookup.convert(this);
+	        modificationFunction = func;
+	      }
+	      return modificationFunction;
+	    }
+	
+	    this.equals = (other, tol) => {
+	      if (!(other instanceof Vertex2d)) return false;
+	      const wi = tol ? Tolerance.within(tol) : within;
+	      return wi(other.x(), this.x()) && wi(other.y(), this.y());
+	    }
+	    this.x = (val) => {
+	      if ((typeof val) === 'number') point.x = val;
+	      return this.point().x;
+	    }
+	    this.y = (val) => {
+	      if ((typeof val) === 'number') this.point().y = val;
+	      return this.point().y;
+	    }
+	
+	    const dummyFunc = () => true;
+	    this.forEach = (func, backward) => {
+	      let currVert = this;
+	      let lastVert;
+	      do {
+	        lastVert = currVert;
+	        func(currVert);
+	        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
+	      } while (currVert && currVert !== this);
+	      return currVert || lastVert;
+	    }
+	
+	    this.distance = (vertex) => {
+	      vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
+	      const xDiff = vertex.x() - this.x();
+	      const yDiff = vertex.y() - this.y();
+	      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+	    }
+	
+	    const barelyRound = (value) => Math.round(value * 10000000000000) / 10000000000000;
+	    this.toString = () => `(${barelyRound(this.x())}, ${barelyRound(this.y())})`;
+	    this.approxToString = () => `(${approximate10(this.x())}, ${approximate10(this.y())})`;
+	    const parentToJson = this.toJson;
+	
+	    this.offset = (x, y) => {
+	      if (x instanceof Vertex2d) {
+	        y = x.y();
+	        x = x.x();
+	      }
+	      const copy = this.toJson().point;
+	      if (y !== undefined) copy.y += y;
+	      if (x !== undefined) copy.x += x;
+	      return new Vertex2d(copy);
+	    }
+	
+	    this.copy = () => new Vertex2d([this.x(), this.y()]);
+	
+	    this.differance = (x, y) => {
+	      if (x instanceof Vertex2d) {
+	        y = x.y();
+	        x = x.x();
+	      }
+	      return new Vertex2d({x: this.x() - x, y: this.y() - y});
+	    }
+	
+	    this.point(point);
+	  }
+	}
+	
+	Vertex2d.fromJson = (json) => {
+	  return new Vertex2d(json.point);
+	}
+	
+	Vertex2d.minMax = (...vertices) => {
+	  if (Array.isArray(vertices[0])) vertices = vertices[0];
+	  const max = new Vertex2d(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
+	  const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+	  for (let index = 0; index < vertices.length; index += 1) {
+	    const vert = vertices[index];
+	    if (max.x() < vert.x()) max.x(vert.x());
+	    if (max.y() < vert.y()) max.y(vert.y());
+	    if (min.x() > vert.x()) min.x(vert.x());
+	    if (min.y() > vert.y()) min.y(vert.y());
+	  }
+	  return {min, max, diff: new Vertex2d(max.x() - min.x(), max.y() - min.y())};
+	}
+	
+	Vertex2d.center = (...vertices) => {
+	  if (Array.isArray(vertices[0])) vertices = vertices[0];
+	  const minMax = Vertex2d.minMax(...vertices);
+	  const centerX = minMax.min.x() + (minMax.max.x() - minMax.min.x())/2;
+	  const centerY = minMax.min.y() + (minMax.max.y() - minMax.min.y())/2;
+	  return new Vertex2d(centerX, centerY);
+	}
+	
+	Vertex2d.weightedCenter = (...vertices) => {
+	  if (Array.isArray(vertices[0])) vertices = vertices[0];
+	  let x = 0;
+	  let y = 0;
+	  let count = 0;
+	  vertices.forEach((vertex) => {
+	    if (Number.isFinite(vertex.x() + vertex.y())) {
+	      count++;
+	      x += vertex.x();
+	      y += vertex.y();
+	    }
+	  });
+	  return new Vertex2d({x: x/count, y: y/count});
+	}
+	
+	// Vertex2d.center = Vertex2d.weightedCenter;
+	
+	Vertex2d.sort = (a, b) =>
+	    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
+	
+	const ignoreVerySmall = (v) => Math.abs(v) < .000001 ? 0 : v;
+	Vertex2d.sortByMax = (verts) => {
+	  let max;
+	  const center = Vertex2d.center(verts);
+	  for (let index = 0; index < verts.length; index++) {
+	    let v = verts[index];
+	    let curr = {v, distance: v.distance(center)};
+	    if (max === undefined || max.distance < curr.distance) {
+	      max = curr;
+	    }
+	  }
+	  return verts.sort((v1, v2) => {
+	    const d1 = v1.distance(max.v);
+	    const d2 = v2.distance(max.v);
+	    return d2 - d1;
+	  });
+	}
+	
+	Vertex2d.centerOn = (newCenter, vertices) => {
+	  newCenter = new Vertex2d(newCenter);
+	  const center = Vertex2d.center(...vertices);
+	  const diff = newCenter.copy().differance(center);
+	  for (let index = 0; index < vertices.length; index++) {
+	    const vert = vertices[index];
+	    vert.translate(diff.x(), diff.y());
+	  }
+	}
+	
+	Vertex2d.scale = (scaleX, scaleY, vertices) => {
+	  const center = Vertex2d.center(vertices);
+	  Vertex2d.centerOn(new Vertex2d(0,0), vertices);
+	  for (let index = 0; index < vertices.length; index++) {
+	    const vert = vertices[index];
+	    vert.x(vert.x() * 1);
+	    vert.y(vert.y() * -1);
+	  }
+	  Vertex2d.centerOn(center, vertices);
+	}
+	
+	Vertex2d.toleranceMap = (tolerance, vertices) => {
+	  tolerance ||= tol;
+	  vertices = [];
+	  const map = new ToleranceMap({x: tolerance, y: tolerance});
+	  for (let index = 0; index < vertices.length; index++) {
+	    map.add(vertices[index]);
+	  }
+	  return map;
+	}
+	
+	Vertex2d.reusable = true;
+	new Vertex2d();
+	
+	module.exports = Vertex2d;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/canvas/two-d/maps/star-line-map.js',
+function (require, exports, module) {
+	
+const Vertex2d = require('../objects/vertex');
+	const Line2d = require('../objects/line');
+	const ExtremeSector = require('./star-sectors/extreme');
+	
+	
+	
+	class StarLineMap {
+	  constructor(type, sectorCount, center) {
+	    type = type.toLowerCase();
+	    let sectors;
+	    let compiled;
+	    const lines = [];
+	    const instance = this;
+	    sectorCount ||= 1000;
+	
+	    this.center = () => center ||= Vertex2d.center(...Line2d.vertices(lines));
+	
+	    function getSector(t) {
+	      const args = Array.from(arguments).slice(1);
+	      t ||= type;
+	      switch (t) {
+	        case 'extreme':
+	          return new ExtremeSector(...args);
+	        default:
+	          throw new Error(`Unknown sector type '${t}'`);
+	      }
+	    }
+	
+	    function buildSectors(type, center, count) {
+	      count ||= sectorCount;
+	      sectors = [];
+	      center ||= instance.center();
+	      const thetaDiff = 2*Math.PI / count;
+	      for (let index = 0; index < count; index++) {
+	        const sector = getSector(type, center, thetaDiff * (index));
+	        sectors.push(sector);
+	        for (let sIndex = 0; sIndex < lines.length; sIndex++) {
+	          sector.add(lines[sIndex]);
+	        }
+	      }
+	    }
+	
+	    this.isSupported = (obj) => obj instanceof Line2d;
+	
+	    this.add = (obj) => {
+	      if (!this.isSupported(obj)) throw new Error(`obj of type ${obj.constructor.name} is not supported`);
+	      lines.push(obj);
+	    }
+	
+	    this.addAll = (lines) => {
+	      for(let index = 0; index < lines.length; index++)this.add(lines[index]);
+	    }
+	
+	    this.filter = (type, center, count) => {
+	      buildSectors(type, center, count);
+	      const extremes = {};
+	      for (let index = 0; index < sectors.length; index++) {
+	        sectors[index].filter(extremes);
+	      }
+	      return Object.values(extremes);
+	    }
+	
+	    this.sectorLines = () => buildSectors() || sectors.map((s) => s.line());
+	    this.toDrawString = (sectorCount) => {
+	      buildSectors(null, sectorCount || 24);
+	      const center = this.center();
+	      let str = `//center ${center.approxToString()}`;
+	      str += '\n//lines\n' + Line2d.toDrawString(lines, 'black');
+	      str += '\n\n//Sectors\n';
+	      sectors.forEach(s => str += s.toDrawString(String.nextColor()));
+	      return str;
+	    }
+	  }
+	}
+	
+	
+	module.exports = StarLineMap;
+	
+});
+
+
 RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/snap.js',
 function (require, exports, module) {
 	
@@ -19552,86 +19927,198 @@ const Vertex2d = require('vertex');
 });
 
 
-RequireJS.addFunction('./public/js/utils/canvas/two-d/maps/star-line-map.js',
+RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/corner.js',
+function (require, exports, module) {
+	//
+	// const Vertex2d = require('vertex');
+	//
+	// class Corner {
+	//   constructor(center, height, width, radians) {
+	//     width = width === undefined ? 121.92 : width;
+	//     height = height === undefined ? 60.96 : height;
+	//     radians = radians === undefined ? 0 : radians;
+	//     const instance = this;
+	//     Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
+	//     if ((typeof center) === 'function') this.center = center;
+	//     const startPoint = new Vertex2d(null);
+	//
+	//     const getterHeight = this.height;
+	//     this.height = (v) => {
+	//       notify(getterHeight(), v);
+	//       return getterHeight(v);
+	//     }
+	//     const getterWidth = this.width;
+	//     this.width = (v) => notify(getterWidth(), v) || getterWidth(v);
+	//
+	//     const changeFuncs = [];
+	//     this.onChange = (func) => {
+	//       if ((typeof func) === 'function') {
+	//         changeFuncs.push(func);
+	//       }
+	//     }
+	//
+	//     let lastNotificationId = 0;
+	//     function notify(currentValue, newValue) {
+	//       if (changeFuncs.length === 0 || (typeof newValue) !== 'number') return;
+	//       if (newValue !== currentValue) {
+	//         const id = ++lastNotificationId;
+	//         setTimeout(() => {
+	//           if (id === lastNotificationId)
+	//             for (let i = 0; i < changeFuncs.length; i++) changeFuncs[i](instance);
+	//         }, 100);
+	//       }
+	//     }
+	//
+	//     this.radians = (newValue) => {
+	//       if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	//         notify(radians, newValue);
+	//         radians = newValue;
+	//       }
+	//       return radians;
+	//     };
+	//     this.startPoint = () => {
+	//       startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
+	//       return startPoint;
+	//     }
+	//     this.angle = (value) => {
+	//       if (value !== undefined) this.radians(Math.toRadians(value));
+	//       return Math.toDegrees(this.radians());
+	//     }
+	//
+	//     // this.x = (val) => notify(this.center().x(), val) || this.center().x(val);
+	//     // this.y = (val) => notify(this.center().y(), val) || this.center().y(val);
+	//     this.x = (val) => {
+	//       if (val !== undefined) this.center().x(val);
+	//       return this.center().x();
+	//     }
+	//     this.y = (val) => {
+	//       if (val !== undefined) this.center().y(val);
+	//       return this.center().y();
+	//     }
+	//     this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+	//     this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
+	//
+	//     this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
+	//     this.move = (position, theta) => {
+	//       const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
+	//       if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
+	//       if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
+	//       if (position.minX !== undefined) center.x = position.minX + this.offsetX();
+	//       if (position.minY !== undefined) center.y = position.minY + this.offsetY();
+	//       this.radians(position.theta);
+	//       this.center().point(center);
+	//       return true;
+	//     };
+	//
+	//     function centerMethod(widthMultiplier, heightMultiplier, position) {
+	//       const center = instance.center();
+	//       const rads = instance.radians();
+	//       const offsetX = instance.width() * widthMultiplier * Math.cos(rads) -
+	//                         instance.height() * heightMultiplier * Math.sin(rads);
+	//       const offsetY = instance.height() * heightMultiplier * Math.cos(rads) +
+	//                         instance.width() * widthMultiplier * Math.sin(rads);
+	//
+	//       if (position !== undefined) {
+	//         const posCenter = new Vertex2d(position.center);
+	//         return new Vertex2d({x: posCenter.x() + offsetX, y: posCenter.y() + offsetY});
+	//       }
+	//       const backLeftLocation = {
+	//             x: instance.center().x() - offsetX ,
+	//             y: instance.center().y() - offsetY
+	//       };
+	//       return new Vertex2d(backLeftLocation);
+	//     }
+	//
+	//
+	//     this.frontCenter = (position) => centerMethod(0, -.5, position);
+	//     this.backCenter = (position) => centerMethod(0, .5, position);
+	//     this.leftCenter = (position) => centerMethod(.5, 0, position);
+	//     this.rightCenter = (position) => centerMethod(-.5, 0, position);
+	//
+	//     this.backLeft = (position) => centerMethod(.5, .5, position);
+	//     this.backRight = (position) => centerMethod(-.5, .5, position);
+	//     this.frontLeft = (position) =>  centerMethod(.5, -.5, position);
+	//     this.frontRight = (position) => centerMethod(-.5, -.5, position);
+	//
+	//     this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
+	//     this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
+	//
+	//     this.toString = () => `[${this.frontLeft()} - ${this.frontRight()}]\n[${this.backLeft()} - ${this.backRight()}]`
+	//   }
+	// }
+	//
+	// new Square2d();
+	//
+	// module.exports = Square2d;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/square.js',
 function (require, exports, module) {
 	
-const Vertex2d = require('../objects/vertex');
-	const Line2d = require('../objects/line');
-	const ExtremeSector = require('./star-sectors/extreme');
+const Vertex2d = require('vertex');
 	
-	
-	
-	class StarLineMap {
-	  constructor(type, sectorCount, center) {
-	    type = type.toLowerCase();
-	    let sectors;
-	    let compiled;
-	    const lines = [];
+	class Square2d {
+	  constructor(center, height, width, radians) {
+	    width = width === undefined ? 121.92 : width;
+	    height = height === undefined ? 60.96 : height;
+	    radians = radians === undefined ? 0 : radians;
+	    const id = String.random();
 	    const instance = this;
-	    sectorCount ||= 1000;
+	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
+	    if ((typeof center) === 'function') this.center = center;
+	    const startPoint = new Vertex2d(null);
 	
-	    this.center = () => center ||= Vertex2d.center(...Line2d.vertices(lines));
 	
-	    function getSector(t) {
-	      const args = Array.from(arguments).slice(1);
-	      t ||= type;
-	      switch (t) {
-	        case 'extreme':
-	          return new ExtremeSector(...args);
-	        default:
-	          throw new Error(`Unknown sector type '${t}'`);
+	    this.radians = (newValue) => {
+	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
+	        radians = newValue;
 	      }
+	      return radians;
+	    };
+	    this.startPoint = () => {
+	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
+	      return startPoint;
+	    }
+	    this.angle = (value) => {
+	      if (value !== undefined) this.radians(Math.toRadians(value));
+	      return Math.toDegrees(this.radians());
 	    }
 	
-	    function buildSectors(type, center, count) {
-	      count ||= sectorCount;
-	      sectors = [];
-	      center ||= instance.center();
-	      const thetaDiff = 2*Math.PI / count;
-	      for (let index = 0; index < count; index++) {
-	        const sector = getSector(type, center, thetaDiff * (index));
-	        sectors.push(sector);
-	        for (let sIndex = 0; sIndex < lines.length; sIndex++) {
-	          sector.add(lines[sIndex]);
-	        }
-	      }
+	    this.x = (val) => {
+	      if (val !== undefined) this.center().x(val);
+	      return this.center().x();
 	    }
-	
-	    this.isSupported = (obj) => obj instanceof Line2d;
-	
-	    this.add = (obj) => {
-	      if (!this.isSupported(obj)) throw new Error(`obj of type ${obj.constructor.name} is not supported`);
-	      lines.push(obj);
+	    this.y = (val) => {
+	      if (val !== undefined) this.center().y(val);
+	      return this.center().y();
 	    }
+	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
+	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
 	
-	    this.addAll = (lines) => {
-	      for(let index = 0; index < lines.length; index++)this.add(lines[index]);
-	    }
+	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
+	    this.move = (position) => {
+	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
+	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
+	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
+	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
+	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
+	      this.radians(position.theta);
+	      this.center().point(center);
+	      return true;
+	    };
 	
-	    this.filter = (type, center, count) => {
-	      buildSectors(type, center, count);
-	      const extremes = {};
-	      for (let index = 0; index < sectors.length; index++) {
-	        sectors[index].filter(extremes);
-	      }
-	      return Object.values(extremes);
-	    }
+	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
+	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
 	
-	    this.sectorLines = () => buildSectors() || sectors.map((s) => s.line());
-	    this.toDrawString = (sectorCount) => {
-	      buildSectors(null, sectorCount || 24);
-	      const center = this.center();
-	      let str = `//center ${center.approxToString()}`;
-	      str += '\n//lines\n' + Line2d.toDrawString(lines, 'black');
-	      str += '\n\n//Sectors\n';
-	      sectors.forEach(s => str += s.toDrawString(String.nextColor()));
-	      return str;
-	    }
+	    this.toString = () => `Square2d(${id}): ${this.width()} X ${this.height()}] @ ${this.center()}`
 	  }
 	}
 	
+	new Square2d();
 	
-	module.exports = StarLineMap;
+	module.exports = Square2d;
 	
 });
 
@@ -19875,192 +20362,6 @@ const Vertex2d = require('vertex');
 });
 
 
-RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/line-measurement.js',
-function (require, exports, module) {
-	
-const Circle2d = require('circle');
-	const Vertex2d = require('vertex');
-	const Line2d = require('line');
-	const Lookup = require('../../../object/lookup');
-	const Measurement = require('../../../measurement.js');
-	const approximate = require('../../../approximate.js');
-	const ToleranceMap = require('../../../tolerance-map.js');
-	
-	class LineMeasurement2d {
-	  constructor(line, center, layer, modificationFunction) {
-	    const offset = 3;
-	    this.line = () => line;
-	
-	    function modifyMeasurment(offsetLine, line, buffer, takenLocations) {
-	      const startLength = line.startLine.length();
-	      line.startLine.length(startLength + buffer);
-	      line.endLine.length(startLength + buffer);
-	      line.translate(offsetLine);
-	      let notTaken = true;
-	      const point = line.midpoint();
-	      for (let index = 0; index < takenLocations.length; index++) {
-	        const locationInfo = takenLocations[index];
-	        const takenPoint = locationInfo.point;
-	        const biggestBuffer = locationInfo.buffer < buffer ? locationInfo.buffer : buffer;
-	        if (takenPoint.distance(point) < biggestBuffer) {
-	          if (takenPoint.length === length) return;
-	          notTaken = false;
-	        }
-	      }
-	      return notTaken === true ? point : undefined;
-	    }
-	
-	    function notTaken(obj) {
-	      return (buffer) => {
-	        buffer ||= 7.5;
-	        const closer = obj.closerLine();
-	        const further = obj.furtherLine();
-	        const cStartL = further.startLine
-	        const cEndL = further.endLine
-	        const offsetLine = cStartL.copy();
-	        offsetLine.length(buffer);
-	        const length = approximate(further.length());
-	        do {
-	          const point = modifyMeasurment(offsetLine, further, buffer, obj.takenLocations);
-	          if (point) {
-	            obj.takenLocations.push({point, buffer, length});
-	            return further;
-	          }
-	        } while (buffer < 1000);
-	      }
-	    }
-	    this.I = (l, takenLocations) => {
-	      takenLocations ||= [];
-	      l = l || layer || 1;
-	      const termDist = (l + 1) * offset;
-	      const measureDist = l * offset;
-	      const startLine = line.perpendicular(termDist * 2, line.startVertex(), true);
-	      const endLine = line.perpendicular(termDist * 2, line.endVertex(), true);
-	      const startCircle = new Circle2d(measureDist, line.startVertex());
-	      const endCircle = new Circle2d(measureDist, line.endVertex());
-	      const startTerminationCircle = new Circle2d(termDist - 2.5, line.startVertex());
-	      const endTerminationCircle = new Circle2d(termDist - 2.5, line.endVertex());
-	      const startVertices = startCircle.intersections(startLine);
-	      const endVertices = endCircle.intersections(endLine);
-	      let l1, l2;
-	      if (startVertices.length > 0 && endVertices.length > 0) {
-	        const startTerminationVertices = startTerminationCircle.intersections(startLine);
-	        const endTerminationVertices = endTerminationCircle.intersections(endLine);
-	        let startTerminationLine, endTerminationLine, measurementLine;
-	
-	        l1 = new Line2d(startVertices[1], endVertices[1]);
-	        l1.startLine = new Line2d(line.startVertex(), startTerminationVertices[1]);
-	        l1.endLine = new Line2d(line.endVertex(), endTerminationVertices[1]);
-	
-	        l2 = new Line2d(startVertices[0], endVertices[0]);
-	        l2.startLine = new Line2d(line.startVertex(), startTerminationVertices[0]);
-	        l2.endLine = new Line2d(line.endVertex(), endTerminationVertices[0]);
-	        const furtherLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center);
-	        const closerLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center, true);
-	        const obj = {furtherLine, closerLine, takenLocations};
-	        obj.midpointClear = notTaken(obj);
-	        return obj;
-	      } else {
-	        throw new Error('No Intersection???');
-	        return {};
-	      }
-	    }
-	
-	    this.copy = (modFunc) => new LineMeasurement2d(line, modFunc);
-	    this.modificationFunction = (func) => {
-	      if ((typeof func) === 'function') {
-	        if ((typeof this.id) !== 'function') Lookup.convert(this);
-	        modificationFunction = func;
-	      }
-	      return modificationFunction;
-	    }
-	
-	    this.toString = () => `|--${this.line()}--|`;
-	    this.display = () => new Measurement(line.length()).display();
-	
-	    this.modify = (value) => modificationFunction(new Measurement(value, true).decimal());
-	
-	    this.modificationFunction(modificationFunction);
-	  }
-	}
-	
-	function measurementLevel(line) {
-	  if ((typeof line.length) !== 'function')
-	    console.log(line);
-	
-	  return Math.log(line.length()*line.length())*2;
-	}
-	
-	const lengthSortFunc = (center) => (l1, l2) => {
-	  const lengthDiff = l1.length() - l2.length();
-	  if (lengthDiff !== 0)
-	    return lengthDiff;
-	  return center.distance(l2.midpoint()) - center.distance(l1.midpoint());
-	}
-	LineMeasurement2d.measurements = (lines) => {
-	  const verts = Line2d.vertices(lines);
-	  const center = Vertex2d.center(...verts);
-	  lines.sort(lengthSortFunc(center));
-	  // lines.sort(lengthSortFunc(center));
-	  const measurements = [];
-	  const lengthMap = new ToleranceMap({length: .00001});
-	  for (let tIndex = 0; tIndex < lines.length; tIndex += 1) {
-	    const tarVerts = lines[tIndex].liesOn(verts);
-	    if (tarVerts.length > 2) {
-	      for (let index = 1; index < tarVerts.length; index += 1) {
-	        const sv = tarVerts[index - 1];
-	        const ev = tarVerts[index];
-	        const line = new Line2d(sv,ev);
-	        lengthMap.add(line);
-	      }
-	    }
-	    if (tarVerts.length > 1) {
-	      const sv = tarVerts[0];
-	      const ev = tarVerts[tarVerts.length - 1];
-	      const line = new Line2d(sv,ev);
-	      lengthMap.add(line);
-	    }
-	  }
-	
-	
-	  const lengths = Object.keys(lengthMap.map());
-	  const slopeMap = new ToleranceMap({length: .00001, slope: .1});
-	  for (index = 0; index < lengths.length; index += 1) {
-	    let lines = lengthMap.map()[lengths[index]];
-	    //TODO: possibly restrict the measurements that display....
-	    for(let li = 0; li < lines.length; li++) {
-	      const line = lines[li];
-	      const perpLine = line.perpendicular();
-	      if (slopeMap.matches(perpLine).length === 0) {
-	        slopeMap.add(perpLine);
-	      } else {
-	        lines.splice(li, 1);
-	        li--;
-	      }
-	    }
-	    measurements.concatInPlace(lines);
-	  }
-	
-	  for (let index = 0; index < measurements.length; index++)
-	    if (approximate.abs(measurements[index].length()) !== 0)
-	      measurements[index] = new LineMeasurement2d(measurements[index], center, measurementLevel(measurements[index]));
-	    else
-	      measurements.splice(index--, 1);
-	
-	  return measurements;
-	}
-	
-	LineMeasurement2d.furtherLine = (l1, l2, point, closer) =>
-	    point === undefined ? (closer ? l1 : l2) :
-	    (l1.midpoint().distance(point) > l2.midpoint().distance(point) ?
-	      (closer ? l2 : l1) :
-	      (closer ? l1 : l2));
-	
-	module.exports = LineMeasurement2d;
-	
-});
-
-
 RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/three-view.js',
 function (require, exports, module) {
 	
@@ -20156,304 +20457,6 @@ const Polygon3D = require('../../../../../../services/cabinet/app-src/three-d/ob
 	}
 	
 	module.exports = ThreeView;
-	
-});
-
-
-RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/vertex.js',
-function (require, exports, module) {
-	
-const approximate10 = require('../../../approximate.js').new(10);
-	const ToleranceMap = require('../../../tolerance-map.js');
-	const Tolerance = require('../../../tolerance.js');
-	const tol = .001;
-	const within = Tolerance.within(tol);
-	
-	
-	class Vertex2d {
-	  constructor(point) {
-	    if (arguments.length === 2) point = {x:arguments[0], y: arguments[1]};
-	    if (Array.isArray(point)) point = {x: point[0], y: point[1]};
-	    if (point instanceof Vertex2d) return point;
-	    let modificationFunction;
-	    let id = String.random();
-	    this.id = () => id;
-	    point = point || {x:0,y:0};
-	    Object.getSet(this, {point});
-	    this.layer = point.layer;
-	    const instance = this;
-	    this.move = (center) => {
-	      this.point(center);
-	      return true;
-	    };
-	
-	    this.translate = (xOffset, yOffset, doNotModify) => {
-	      const vertex = doNotModify ? this.copy() : this;
-	      vertex.point().x += xOffset;
-	      vertex.point().y += yOffset;
-	      return vertex;
-	    }
-	
-	    this.rotate = (radians, pivot, doNotModify) => {
-	      const vertex = doNotModify ? this.copy() : this;
-	      const point = vertex.point();
-	      pivot ||= new Vertex2d(0,0);
-	      const s = Math.sin(radians);
-	      const c = Math.cos(radians);
-	      point.x -= pivot.x();
-	      point.y -= pivot.y();
-	      const newX = point.x * c - point.y * s;
-	      const newY = point.x * s + point.y * c;
-	      point.x = newX + pivot.x();
-	      point.y = newY + pivot.y();
-	      return vertex;
-	    }
-	    this.point = (newPoint) => {
-	      newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;
-	      if (newPoint) this.x(newPoint.x);
-	      if (newPoint) this.y(newPoint.y);
-	      return point;
-	    }
-	
-	    this.modificationFunction = (func) => {
-	      if ((typeof func) === 'function') {
-	        if ((typeof this.id) !== 'function') Lookup.convert(this);
-	        modificationFunction = func;
-	      }
-	      return modificationFunction;
-	    }
-	
-	    this.equals = (other, tol) => {
-	      if (!(other instanceof Vertex2d)) return false;
-	      const wi = tol ? Tolerance.within(tol) : within;
-	      return wi(other.x(), this.x()) && wi(other.y(), this.y());
-	    }
-	    this.x = (val) => {
-	      if ((typeof val) === 'number') point.x = val;
-	      return this.point().x;
-	    }
-	    this.y = (val) => {
-	      if ((typeof val) === 'number') this.point().y = val;
-	      return this.point().y;
-	    }
-	
-	    const dummyFunc = () => true;
-	    this.forEach = (func, backward) => {
-	      let currVert = this;
-	      let lastVert;
-	      do {
-	        lastVert = currVert;
-	        func(currVert);
-	        currVert = backward ? currVert.prevVertex() : currVert.nextVertex();
-	      } while (currVert && currVert !== this);
-	      return currVert || lastVert;
-	    }
-	
-	    this.distance = (vertex) => {
-	      vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
-	      const xDiff = vertex.x() - this.x();
-	      const yDiff = vertex.y() - this.y();
-	      return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
-	    }
-	
-	    const barelyRound = (value) => Math.round(value * 10000000000000) / 10000000000000;
-	    this.toString = () => `(${barelyRound(this.x())}, ${barelyRound(this.y())})`;
-	    this.approxToString = () => `(${approximate10(this.x())}, ${approximate10(this.y())})`;
-	    const parentToJson = this.toJson;
-	
-	    this.offset = (x, y) => {
-	      if (x instanceof Vertex2d) {
-	        y = x.y();
-	        x = x.x();
-	      }
-	      const copy = this.toJson().point;
-	      if (y !== undefined) copy.y += y;
-	      if (x !== undefined) copy.x += x;
-	      return new Vertex2d(copy);
-	    }
-	
-	    this.copy = () => new Vertex2d([this.x(), this.y()]);
-	
-	    this.differance = (x, y) => {
-	      if (x instanceof Vertex2d) {
-	        y = x.y();
-	        x = x.x();
-	      }
-	      return new Vertex2d({x: this.x() - x, y: this.y() - y});
-	    }
-	
-	    this.point(point);
-	  }
-	}
-	
-	Vertex2d.fromJson = (json) => {
-	  return new Vertex2d(json.point);
-	}
-	
-	Vertex2d.minMax = (...vertices) => {
-	  if (Array.isArray(vertices[0])) vertices = vertices[0];
-	  const max = new Vertex2d(Number.MIN_SAFE_INTEGER,Number.MIN_SAFE_INTEGER);
-	  const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
-	  for (let index = 0; index < vertices.length; index += 1) {
-	    const vert = vertices[index];
-	    if (max.x() < vert.x()) max.x(vert.x());
-	    if (max.y() < vert.y()) max.y(vert.y());
-	    if (min.x() > vert.x()) min.x(vert.x());
-	    if (min.y() > vert.y()) min.y(vert.y());
-	  }
-	  return {min, max, diff: new Vertex2d(max.x() - min.x(), max.y() - min.y())};
-	}
-	
-	Vertex2d.center = (...vertices) => {
-	  if (Array.isArray(vertices[0])) vertices = vertices[0];
-	  const minMax = Vertex2d.minMax(...vertices);
-	  const centerX = minMax.min.x() + (minMax.max.x() - minMax.min.x())/2;
-	  const centerY = minMax.min.y() + (minMax.max.y() - minMax.min.y())/2;
-	  return new Vertex2d(centerX, centerY);
-	}
-	
-	Vertex2d.weightedCenter = (...vertices) => {
-	  if (Array.isArray(vertices[0])) vertices = vertices[0];
-	  let x = 0;
-	  let y = 0;
-	  let count = 0;
-	  vertices.forEach((vertex) => {
-	    if (Number.isFinite(vertex.x() + vertex.y())) {
-	      count++;
-	      x += vertex.x();
-	      y += vertex.y();
-	    }
-	  });
-	  return new Vertex2d({x: x/count, y: y/count});
-	}
-	
-	// Vertex2d.center = Vertex2d.weightedCenter;
-	
-	Vertex2d.sort = (a, b) =>
-	    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
-	
-	const ignoreVerySmall = (v) => Math.abs(v) < .000001 ? 0 : v;
-	Vertex2d.sortByMax = (verts) => {
-	  let max;
-	  const center = Vertex2d.center(verts);
-	  for (let index = 0; index < verts.length; index++) {
-	    let v = verts[index];
-	    let curr = {v, distance: v.distance(center)};
-	    if (max === undefined || max.distance < curr.distance) {
-	      max = curr;
-	    }
-	  }
-	  return verts.sort((v1, v2) => {
-	    const d1 = v1.distance(max.v);
-	    const d2 = v2.distance(max.v);
-	    return d2 - d1;
-	  });
-	}
-	
-	Vertex2d.centerOn = (newCenter, vertices) => {
-	  newCenter = new Vertex2d(newCenter);
-	  const center = Vertex2d.center(...vertices);
-	  const diff = newCenter.copy().differance(center);
-	  for (let index = 0; index < vertices.length; index++) {
-	    const vert = vertices[index];
-	    vert.translate(diff.x(), diff.y());
-	  }
-	}
-	
-	Vertex2d.scale = (scaleX, scaleY, vertices) => {
-	  const center = Vertex2d.center(vertices);
-	  Vertex2d.centerOn(new Vertex2d(0,0), vertices);
-	  for (let index = 0; index < vertices.length; index++) {
-	    const vert = vertices[index];
-	    vert.x(vert.x() * 1);
-	    vert.y(vert.y() * -1);
-	  }
-	  Vertex2d.centerOn(center, vertices);
-	}
-	
-	Vertex2d.toleranceMap = (tolerance, vertices) => {
-	  tolerance ||= tol;
-	  vertices = [];
-	  const map = new ToleranceMap({x: tolerance, y: tolerance});
-	  for (let index = 0; index < vertices.length; index++) {
-	    map.add(vertices[index]);
-	  }
-	  return map;
-	}
-	
-	Vertex2d.reusable = true;
-	new Vertex2d();
-	
-	module.exports = Vertex2d;
-	
-});
-
-
-RequireJS.addFunction('./public/js/utils/canvas/two-d/objects/square.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('vertex');
-	
-	class Square2d {
-	  constructor(center, height, width, radians) {
-	    width = width === undefined ? 121.92 : width;
-	    height = height === undefined ? 60.96 : height;
-	    radians = radians === undefined ? 0 : radians;
-	    const id = String.random();
-	    const instance = this;
-	    Object.getSet(this, {center: new Vertex2d(center), height, width, radians});
-	    if ((typeof center) === 'function') this.center = center;
-	    const startPoint = new Vertex2d(null);
-	
-	
-	    this.radians = (newValue) => {
-	      if (newValue !== undefined && !Number.isNaN(Number.parseFloat(newValue))) {
-	        radians = newValue;
-	      }
-	      return radians;
-	    };
-	    this.startPoint = () => {
-	      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
-	      return startPoint;
-	    }
-	    this.angle = (value) => {
-	      if (value !== undefined) this.radians(Math.toRadians(value));
-	      return Math.toDegrees(this.radians());
-	    }
-	
-	    this.x = (val) => {
-	      if (val !== undefined) this.center().x(val);
-	      return this.center().x();
-	    }
-	    this.y = (val) => {
-	      if (val !== undefined) this.center().y(val);
-	      return this.center().y();
-	    }
-	    this.minDem = () => this.width() > this.height() ? this.width() : this.height();
-	    this.maxDem = () => this.width() > this.height() ? this.width() : this.height();
-	
-	    this.shorterSideLength = () => this.height() < this.width() ? this.height() : this.width();
-	    this.move = (position) => {
-	      const center = position.center instanceof Vertex2d ? position.center.point() : position.center;
-	      if (position.maxX !== undefined) center.x = position.maxX - this.offsetX();
-	      if (position.maxY !== undefined) center.y = position.maxY - this.offsetY();
-	      if (position.minX !== undefined) center.x = position.minX + this.offsetX();
-	      if (position.minY !== undefined) center.y = position.minY + this.offsetY();
-	      this.radians(position.theta);
-	      this.center().point(center);
-	      return true;
-	    };
-	
-	    this.offsetX = (negitive) => negitive ? this.width() / -2 : this.width() / 2;
-	    this.offsetY = (negitive) => negitive ? this.height() / -2 : this.height() / 2;
-	
-	    this.toString = () => `Square2d(${id}): ${this.width()} X ${this.height()}] @ ${this.center()}`
-	  }
-	}
-	
-	new Square2d();
-	
-	module.exports = Square2d;
 	
 });
 
@@ -21026,42 +21029,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
-	exports['input/data-list'] = (get, $t) => 
-			`` +
-			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
-			` `
-	
-	exports['-994603408'] = (get, $t) => 
-			`<option value="` +
-			$t.clean(get("item")) +
-			`" ></option>`
-	
-	exports['expandable/top-add-list'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> <div class='expand-input-cnt' hidden has-input-tree='` +
-			$t.clean(get("hasInputTree")()) +
-			`'>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <div class='input-open-cnt'><button>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</button></div> ` +
-			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
-			` </div> `
-	
-	exports['input/decision/decision'] = (get, $t) => 
-			` <span class='decision-input-cnt' node-id='` +
-			$t.clean(get("_nodeId")) +
-			`' ` +
-			$t.clean(get("reachable")() ? '' : 'hidden') +
-			`> <span id='` +
-			$t.clean(get("id")) +
-			`'> ` +
-			$t.clean( new $t('101748844').render(get("inputArray"), 'input', get)) +
-			` </span> </span> `
-	
 	exports['expandable/sidebar'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -21103,6 +21070,42 @@ exports['101748844'] = (get, $t) =>
 			`'> ` +
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
+	
+	exports['expandable/top-add-list'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> <div class='expand-input-cnt' hidden has-input-tree='` +
+			$t.clean(get("hasInputTree")()) +
+			`'>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> ` +
+			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
+			` </div> `
+	
+	exports['input/data-list'] = (get, $t) => 
+			`` +
+			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+			` `
+	
+	exports['-994603408'] = (get, $t) => 
+			`<option value="` +
+			$t.clean(get("item")) +
+			`" ></option>`
+	
+	exports['input/decision/decision'] = (get, $t) => 
+			` <span class='decision-input-cnt' node-id='` +
+			$t.clean(get("_nodeId")) +
+			`' ` +
+			$t.clean(get("reachable")() ? '' : 'hidden') +
+			`> <span id='` +
+			$t.clean(get("id")) +
+			`'> ` +
+			$t.clean( new $t('101748844').render(get("inputArray"), 'input', get)) +
+			` </span> </span> `
 	
 	exports['input/decision/decisionTree'] = (get, $t) => 
 			`<div class='` +
@@ -21251,19 +21254,6 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("display")(get("target").fromFloor())) +
 			`'></td> </tr> <tr> <td> <button class='hinge-btn transparent'>Hinge</button> </td> <td><button class='remove-btn-2d transparent'>Remove</button></td> </tr> </table> </div> `
 	
-	exports['2d/pop-up/layout-2d'] = (get, $t) => 
-			`<div type-2d='` +
-			$t.clean(get("target").constructor.name) +
-			`' id='` +
-			$t.clean(get("target").id()) +
-			`' x='` +
-			$t.clean(get("lastImagePoint").x) +
-			`' y='` +
-			$t.clean(get("lastImagePoint").y) +
-			`'> <label>Ceiling Height</label> <input class='value-2d' type="text" key="ceilingHeight" convert='false' value="` +
-			$t.clean(get("display")(get("target").ceilingHeight())) +
-			`"> </div> `
-	
 	exports['2d/pop-up/line-measurement-2d'] = (get, $t) => 
 			`<div type-2d='` +
 			$t.clean(get("target").constructor.name) +
@@ -21279,32 +21269,46 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("target").display()) +
 			`'> </div> `
 	
-	exports['2d/pop-up/snap-2d'] = (get, $t) => 
+	exports['2d/pop-up/layout-2d'] = (get, $t) => 
 			`<div type-2d='` +
-			$t.clean(get("target").parent().constructor.name) +
+			$t.clean(get("target").constructor.name) +
 			`' id='` +
-			$t.clean(get("target").parent().id()) +
+			$t.clean(get("target").id()) +
 			`' x='` +
 			$t.clean(get("lastImagePoint").x) +
 			`' y='` +
 			$t.clean(get("lastImagePoint").y) +
-			`'> <label>Name</label> <input class='value-2d' member='object' type="text" key="name" value="` +
-			$t.clean(get("target").parent().name()) +
-			`"> <br><br> <label>Width</label> <input class='value-2d' member='cabinet' type="text" key="width" value="` +
-			$t.clean(get("display")(get("target").width())) +
-			`"> <br> <label>Depth</label> <input class='value-2d' member='cabinet' type="text" key="thickness" value="` +
+			`'> <label>Ceiling Height</label> <input class='value-2d' type="text" key="ceilingHeight" convert='false' value="` +
+			$t.clean(get("display")(get("target").ceilingHeight())) +
+			`"> </div> `
+	
+	exports['2d/pop-up/wall-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <button class='add-door-btn-2d transparent'>Add Door</button> <button class='add-window-btn-2d transparent'>Add Window</button> <button class='add-vertex-btn-2d transparent'>Add Vertex</button> <button class='add-object-btn-2d transparent'>Add Object</button> <button class='remove-btn-2d transparent'>Remove</button> </div> `
+	
+	exports['2d/pop-up/window-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <table> <tr> <td><label>Height</label></td> <td><input class='value-2d' key='height' value='` +
 			$t.clean(get("display")(get("target").height())) +
-			`"> <br> <label>Angle</label> <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="` +
-			$t.clean(get("target").angle()) +
-			`"> <br> <label>X</label> <input class='value-2d' member='snap' type="text" key="x" value="` +
-			$t.clean(get("display")(get("target").x())) +
-			`"> <br> <label>Y</label> <input class='value-2d' member='snap' type="text" key="y" value="` +
-			$t.clean(get("display")(get("target").y())) +
-			`"> <br> <label>From Floor</label> <input class='value-2d' member='bridge' type="text" key="fromFloor" cascade='fromCeiling' value="` +
-			$t.clean(get("display")(get("target").parent().fromFloor())) +
-			`"> <br> <label>From Ceiling</label> <input class='value-2d' member='bridge' type="text" key="fromCeiling" cascade='fromFloor' value="` +
-			$t.clean(get("display")(get("target").parent().fromCeiling())) +
-			`"> <br> <button class='remove-btn-2d transparent'>Remove</button> </div> `
+			`'></td> </tr> <tr> <td><label>Width</label></td> <td><input class='value-2d' key='width' value='` +
+			$t.clean(get("display")(get("target").width())) +
+			`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
+			$t.clean(get("display")(get("target").fromFloor())) +
+			`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
 	
 	exports['2d/pop-up/snap-location-2d'] = (get, $t) => 
 			`<div type-2d='` +
@@ -21337,33 +21341,32 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(!get("scope").snapPartner() ? '' : ' hidden') +
 			`> <label>Fix</label> <input member='snap-loc' type="checkbox" name="fix" value=""> </span> </div> `
 	
-	exports['2d/pop-up/wall-2d'] = (get, $t) => 
+	exports['2d/pop-up/snap-2d'] = (get, $t) => 
 			`<div type-2d='` +
-			$t.clean(get("target").constructor.name) +
+			$t.clean(get("target").parent().constructor.name) +
 			`' id='` +
-			$t.clean(get("target").id()) +
+			$t.clean(get("target").parent().id()) +
 			`' x='` +
 			$t.clean(get("lastImagePoint").x) +
 			`' y='` +
 			$t.clean(get("lastImagePoint").y) +
-			`'> <button class='add-door-btn-2d transparent'>Add Door</button> <button class='add-window-btn-2d transparent'>Add Window</button> <button class='add-vertex-btn-2d transparent'>Add Vertex</button> <button class='add-object-btn-2d transparent'>Add Object</button> <button class='remove-btn-2d transparent'>Remove</button> </div> `
-	
-	exports['2d/pop-up/window-2d'] = (get, $t) => 
-			`<div type-2d='` +
-			$t.clean(get("target").constructor.name) +
-			`' id='` +
-			$t.clean(get("target").id()) +
-			`' x='` +
-			$t.clean(get("lastImagePoint").x) +
-			`' y='` +
-			$t.clean(get("lastImagePoint").y) +
-			`'> <table> <tr> <td><label>Height</label></td> <td><input class='value-2d' key='height' value='` +
-			$t.clean(get("display")(get("target").height())) +
-			`'></td> </tr> <tr> <td><label>Width</label></td> <td><input class='value-2d' key='width' value='` +
+			`'> <label>Name</label> <input class='value-2d' member='object' type="text" key="name" value="` +
+			$t.clean(get("target").parent().name()) +
+			`"> <br><br> <label>Width</label> <input class='value-2d' member='cabinet' type="text" key="width" value="` +
 			$t.clean(get("display")(get("target").width())) +
-			`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
-			$t.clean(get("display")(get("target").fromFloor())) +
-			`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
+			`"> <br> <label>Depth</label> <input class='value-2d' member='cabinet' type="text" key="thickness" value="` +
+			$t.clean(get("display")(get("target").height())) +
+			`"> <br> <label>Angle</label> <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="` +
+			$t.clean(get("target").angle()) +
+			`"> <br> <label>X</label> <input class='value-2d' member='snap' type="text" key="x" value="` +
+			$t.clean(get("display")(get("target").x())) +
+			`"> <br> <label>Y</label> <input class='value-2d' member='snap' type="text" key="y" value="` +
+			$t.clean(get("display")(get("target").y())) +
+			`"> <br> <label>From Floor</label> <input class='value-2d' member='bridge' type="text" key="fromFloor" cascade='fromCeiling' value="` +
+			$t.clean(get("display")(get("target").parent().fromFloor())) +
+			`"> <br> <label>From Ceiling</label> <input class='value-2d' member='bridge' type="text" key="fromCeiling" cascade='fromFloor' value="` +
+			$t.clean(get("display")(get("target").parent().fromCeiling())) +
+			`"> <br> <button class='remove-btn-2d transparent'>Remove</button> </div> `
 	
 	exports['cabinet/body'] = (get, $t) => 
 			`<div> <div class='center'> <div class='left'> <label>Show Left</label> <select class="show-left-select"> ` +
@@ -21382,31 +21385,6 @@ exports['101748844'] = (get, $t) =>
 			`<option >` +
 			$t.clean(get("showType").name) +
 			`</option>`
-	
-	exports['display-manager'] = (get, $t) => 
-			`<div class='display-manager' id='` +
-			$t.clean(get("id")) +
-			`'> ` +
-			$t.clean( new $t('-533097724').render(get("list"), 'item', get)) +
-			` </div> `
-	
-	exports['-533097724'] = (get, $t) => 
-			`<span class='display-manager-item'> <button class='display-manager-input` +
-			$t.clean(get("$index") === 0 ? " active" : "") +
-			`' type='button' display-id='` +
-			$t.clean(get("item").id) +
-			`' link='` +
-			$t.clean(get("link")) +
-			`'>` +
-			$t.clean(get("item").name) +
-			`</button> </span>`
-	
-	exports['divide/body'] = (get, $t) => 
-			`<h2>` +
-			$t.clean(get("list").activeKey()) +
-			`</h2> val: ` +
-			$t.clean(get("list").value()('selected')) +
-			` `
 	
 	exports['cabinet/head'] = (get, $t) => 
 			`<div class='cabinet-header' cabinet-id='` +
@@ -21443,10 +21421,35 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("displayValue")(get("cabinet").thickness())) +
 			`'> </div> </div> `
 	
+	exports['display-manager'] = (get, $t) => 
+			`<div class='display-manager' id='` +
+			$t.clean(get("id")) +
+			`'> ` +
+			$t.clean( new $t('-533097724').render(get("list"), 'item', get)) +
+			` </div> `
+	
+	exports['-533097724'] = (get, $t) => 
+			`<span class='display-manager-item'> <button class='display-manager-input` +
+			$t.clean(get("$index") === 0 ? " active" : "") +
+			`' type='button' display-id='` +
+			$t.clean(get("item").id) +
+			`' link='` +
+			$t.clean(get("link")) +
+			`'>` +
+			$t.clean(get("item").name) +
+			`</button> </span>`
+	
 	exports['divide/head'] = (get, $t) => 
 			`<div> <div class='open-divider-select` +
 			$t.clean(get("sections").length === 0 ? '' : ' hidden') +
 			`'> S </div> </div> `
+	
+	exports['divide/body'] = (get, $t) => 
+			`<h2>` +
+			$t.clean(get("list").activeKey()) +
+			`</h2> val: ` +
+			$t.clean(get("list").value()('selected')) +
+			` `
 	
 	exports['divider-controls'] = (get, $t) => 
 			`<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` +
@@ -21518,6 +21521,16 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("body")) +
 			`</div> </div> <br> `
 	
+	exports['login/confirmation-message'] = (get, $t) => 
+			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
+	
+	exports['login/create-account'] = (get, $t) => 
+			`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
+			$t.clean(get("email")) +
+			`'> <input type='password' placeholder="password" name='password' value='` +
+			$t.clean(get("password")) +
+			`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
+	
 	exports['index'] = (get, $t) => 
 			`<html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <style> /* #two-d-model { width: 500px; height:500px;} */ div { font-size:x-small; } </style> <script type="text/javascript" src='/cabinet/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>Estimate</title> </head> <body> <button id='menu-btn'>&#8801;</button> <div id='menu' hidden></div> <div id='login'><div id='login-cnt' class='center-all'></div></div> <div id='display-ctn'> <div id='app' name='Orders' ` +
 			$t.clean(get("id") !== 'home' ? "link='/cabinet/home'" : '') +
@@ -21531,15 +21544,12 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("id") !== 'home' ? "link='/cabinet/pattern'" : '') +
 			` hidden>Pat Man</div> </div> <div id='property-select-cnt'></div> </body> </html> `
 	
-	exports['login/confirmation-message'] = (get, $t) => 
-			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
-	
-	exports['login/create-account'] = (get, $t) => 
-			`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
+	exports['login/login'] = (get, $t) => 
+			`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
 			$t.clean(get("email")) +
 			`'> <input type='password' placeholder="password" name='password' value='` +
 			$t.clean(get("password")) +
-			`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
+			`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
 	
 	exports['login/reset-password'] = (get, $t) => 
 			`<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` +
@@ -21547,13 +21557,6 @@ exports['101748844'] = (get, $t) =>
 			`'> <input type='password' placeholder="password" name='password' value='` +
 			$t.clean(get("password")) +
 			`'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
-	
-	exports['login/login'] = (get, $t) => 
-			`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
-			$t.clean(get("email")) +
-			`'> <input type='password' placeholder="password" name='password' value='` +
-			$t.clean(get("password")) +
-			`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
 	
 	exports['managers/abstract-manager'] = (get, $t) => 
 			`<div> <div class="center"> <h2 id='` +
@@ -21673,7 +21676,9 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("template").id()) +
 			`> <div class='inline-flex full-width'> <h4 class='nowrap'>` +
 			$t.clean(get("template").type()) +
-			`</h4> <div class='full-width'> <button class='copy-template right'>Copy</button> <button class='paste-template right'>Paste</button> </div> </div> <div></div> <div></div> <label>Height from floor:</label> <input class='cabinet-input dem' type="text" name="fromFloor" value="` +
+			`</h4> <div class='full-width'> <button class='copy-template right'>Copy</button> <button class='paste-template right'>Paste</button> </div> </div> <label>Automatic Toekick</label> <input type="checkbox" name="autoToeKick" ` +
+			$t.clean(get("template").autoToeKick() ? 'checked' : '') +
+			`> <br> <label>Height from floor:</label> <input class='cabinet-input dem' type="text" name="fromFloor" value="` +
 			$t.clean(get("template").fromFloor()) +
 			`"> <input class='cabinet-input' type="text" name="fromFloorValue" disabled> <br> <div class='inline-flex'> <label>Demensions: </label> <span> <input class='cabinet-input dem' type="text" name="width" value="` +
 			$t.clean(get("toDisplay")(get("template").width())) +
@@ -21744,9 +21749,19 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("select").html()) +
 			` <input class='opening-part-code-input' attr='openings' name='partCode' value="` +
 			$t.clean(get("obj")[get("select").value()]) +
-			`"> </div> <h4>Opening Border Locations</h4> <div class='tab'> Custom Vertex Formula: <input class='opening-type-selector' type="checkbox" name="custom-formula" ` +
+			`"> </div> <h4>Opening Border Locations</h4> <div class='tab'> Definition Type: <div class='tab'> <label>Default</label> <input class='opening-type-selector' type='radio' name="definitionType-` +
+			$t.clean(get("obj").id) +
+			`" value='Default' ` +
+			$t.clean(get("obj")._Type === undefined ? 'checked' : '') +
+			`> <label>Manual</label> <input class='opening-type-selector' type='radio' name="definitionType-` +
+			$t.clean(get("obj").id) +
+			`" value='location' ` +
 			$t.clean(get("obj")._Type === 'location' ? 'checked' : '') +
-			`> <div class='border-location-cnt' ` +
+			`> <label>Slice (L/R)</label> <input class='opening-type-selector' type='radio' name="definitionType-` +
+			$t.clean(get("obj").id) +
+			`" value='slice' ` +
+			$t.clean(get("obj")._Type === 'slice' ? 'checked' : '') +
+			`> </div> <div class='border-location-cnt' ` +
 			$t.clean(get("obj")._Type === 'location' ? '' : 'hidden') +
 			`> <label>Inner</label> <input type="radio" name="innerOouter-` +
 			$t.clean(get("obj").id) +
@@ -21770,7 +21785,13 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("obj").id) +
 			`" value="z" ` +
 			$t.clean(get("state").xOyOz === 'z' ? 'checked' : '') +
-			`> <br><br> <input type='text' name='opening-coordinate-value' value=''> </div> <div class='opening-location-value-cnt'></div> <div class='opening-location-description-cnt'></div> </div> </div> `
+			`> <br><br> <input type='text' name='opening-coordinate-value' value=''> </div> <div class='border-slice-cnt' ` +
+			$t.clean(get("obj")._Type === 'slice' ? '' : 'hidden') +
+			`> Left Side Depth <input type='text' name='leftDepth' value='` +
+			$t.clean(get("leftDepth")) +
+			`'> <br> Right Side Depth <input type='text' name='rightDepth' value='` +
+			$t.clean(get("rightDepth")) +
+			`'> </div> <div class='opening-location-value-cnt'></div> <div class='opening-location-description-cnt'></div> </div> </div> `
 	
 	exports['-182533851'] = (get, $t) => 
 			`<span class='border-location-cnt'> <label>` +
@@ -22199,18 +22220,15 @@ function (require, exports, module) {
 	  "values": [
 	    {
 	      "key": "brh",
-	      "eqn": "tkb.w + BACK.t + brr",
-	      "id": "zn9s3yn"
+	      "eqn": "tkb.w + BACK.t + brr"
 	    },
 	    {
 	      "key": "innerWidth",
-	      "eqn": "c.w - pwt34 * 2",
-	      "id": "fr06xh6"
+	      "eqn": "c.w - pwt34 * 2"
 	    },
 	    {
 	      "key": "innerWidthCenter",
-	      "eqn": "innerWidth + pwt34",
-	      "id": "23sioup"
+	      "eqn": "innerWidth + pwt34"
 	    }
 	  ],
 	  "subassemblies": [
@@ -22232,8 +22250,7 @@ function (require, exports, module) {
 	        0,
 	        0,
 	        90
-	      ],
-	      "id": "pbzb85z"
+	      ]
 	    },
 	    {
 	      "name": "Panel.Right",
@@ -22253,8 +22270,7 @@ function (require, exports, module) {
 	        0,
 	        90,
 	        0
-	      ],
-	      "id": "zqixdkw"
+	      ]
 	    },
 	    {
 	      "name": "Panel.Left",
@@ -22274,8 +22290,7 @@ function (require, exports, module) {
 	        0,
 	        90,
 	        0
-	      ],
-	      "id": "az890de"
+	      ]
 	    },
 	    {
 	      "name": "Back",
@@ -22295,12 +22310,11 @@ function (require, exports, module) {
 	        0,
 	        0,
 	        "0"
-	      ],
-	      "id": "7r8330c"
+	      ]
 	    },
 	    {
 	      "name": "Bottom",
-	      "type": "Panel",
+	      "type": "Divider",
 	      "code": "B",
 	      "center": [
 	        "c.w / 2",
@@ -22316,12 +22330,11 @@ function (require, exports, module) {
 	        90,
 	        90,
 	        0
-	      ],
-	      "id": "yb1ykef"
+	      ]
 	    },
 	    {
 	      "name": "Top",
-	      "type": "Panel",
+	      "type": "Divider",
 	      "code": "T",
 	      "center": [
 	        "c.w / 2",
@@ -22337,8 +22350,7 @@ function (require, exports, module) {
 	        90,
 	        90,
 	        0
-	      ],
-	      "id": "8fyo3vw"
+	      ]
 	    },
 	    {
 	      "name": "Top",
@@ -22358,8 +22370,7 @@ function (require, exports, module) {
 	        90,
 	        90,
 	        0
-	      ],
-	      "id": "1kogfay"
+	      ]
 	    }
 	  ],
 	  "joints": [
@@ -22369,8 +22380,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "-x",
-	      "id": "bnry03s"
+	      "centerAxis": "-x"
 	    },
 	    {
 	      "malePartCode": "T",
@@ -22378,8 +22388,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "+x",
-	      "id": "qw8ntxn"
+	      "centerAxis": "+x"
 	    },
 	    {
 	      "malePartCode": "pt2",
@@ -22387,8 +22396,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "-x",
-	      "id": "4asdflo"
+	      "centerAxis": "-x"
 	    },
 	    {
 	      "malePartCode": "pt2",
@@ -22396,8 +22404,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "+x",
-	      "id": "rv9rgh5"
+	      "centerAxis": "+x"
 	    },
 	    {
 	      "malePartCode": "BACK",
@@ -22405,8 +22412,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": "0.9525",
 	      "demensionAxis": "x",
-	      "centerAxis": "+x",
-	      "id": "uhxvhb4"
+	      "centerAxis": "+x"
 	    },
 	    {
 	      "malePartCode": "BACK",
@@ -22414,8 +22420,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": "0.9525",
 	      "demensionAxis": "x",
-	      "centerAxis": "-x",
-	      "id": "ra3enbz"
+	      "centerAxis": "-x"
 	    },
 	    {
 	      "malePartCode": "tkb",
@@ -22423,8 +22428,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "-x",
-	      "id": "t4euv6m"
+	      "centerAxis": "-x"
 	    },
 	    {
 	      "malePartCode": "tkb",
@@ -22432,8 +22436,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "+x",
-	      "id": "5v9runa"
+	      "centerAxis": "+x"
 	    },
 	    {
 	      "malePartCode": "B",
@@ -22441,8 +22444,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "-x",
-	      "id": "pddob1x"
+	      "centerAxis": "-x"
 	    },
 	    {
 	      "malePartCode": "B",
@@ -22450,8 +22452,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "+x",
-	      "id": "b8be52z"
+	      "centerAxis": "+x"
 	    },
 	    {
 	      "malePartCode": "tkb",
@@ -22459,8 +22460,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "x",
-	      "centerAxis": "+y",
-	      "id": "hjvr62f"
+	      "centerAxis": "+y"
 	    }
 	  ],
 	  "dividerJoint": {
@@ -22478,8 +22478,7 @@ function (require, exports, module) {
 	      "bottom": "B",
 	      "left": "L",
 	      "right": "R",
-	      "back": "BACK",
-	      "id": "234wz2j"
+	      "back": "BACK"
 	    }
 	  ]
 	},
@@ -22491,153 +22490,123 @@ function (require, exports, module) {
 	    "values": [
 	      {
 	        "key": "bo",
-	        "eqn": "4*2.54",
-	        "id": "pz0usts"
+	        "eqn": "4*2.54"
 	      },
 	      {
 	        "key": "fwr",
-	        "eqn": "c.w - lw",
-	        "id": "v47f8o3"
+	        "eqn": "c.w - lw"
 	      },
 	      {
 	        "key": "fwl",
-	        "eqn": "c.t - rw",
-	        "id": "ammy5c5"
+	        "eqn": "c.t - rw"
 	      },
 	      {
 	        "key": "lw",
-	        "eqn": "30.48",
-	        "id": "r8els3r"
+	        "eqn": "30.48"
 	      },
 	      {
 	        "key": "rw",
-	        "eqn": "30.48",
-	        "id": "zoxsnu9"
+	        "eqn": "30.48"
 	      },
 	      {
 	        "key": "cnrD",
-	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
-	        "id": "vju4ekg"
+	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)"
 	      },
 	      {
 	        "key": "pbw",
-	        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
-	        "id": "bg3l1cw"
+	        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)"
 	      },
 	      {
 	        "key": "backhyp",
-	        "eqn": "Math.sqrt((R.t*R.t)*2)",
-	        "id": "zmra3po"
+	        "eqn": "Math.sqrt((R.t*R.t)*2)"
 	      },
 	      {
 	        "key": "frontLeftTheta",
-	        "eqn": "Math.atan(fwl/fwr)",
-	        "id": "woqnfe1"
+	        "eqn": "Math.atan(fwl/fwr)"
 	      },
 	      {
 	        "key": "frontHype",
-	        "eqn": "Math.sqrt(fwr*fwr + fwl*fwl)",
-	        "id": "u1sgalg"
+	        "eqn": "Math.sqrt(fwr*fwr + fwl*fwl)"
 	      },
 	      {
 	        "key": "cutWidth",
-	        "eqn": "frontHype * 2",
-	        "id": "egcyi4x"
+	        "eqn": "frontHype * 2"
 	      },
 	      {
 	        "key": "frontHypeCenterD",
-	        "eqn": "fwl/2",
-	        "id": "fwll2bq"
+	        "eqn": "fwl/2"
 	      },
 	      {
 	        "key": "frontHypeCenterX",
-	        "eqn": "fwr/2",
-	        "id": "c0gj6ud"
+	        "eqn": "fwr/2"
 	      },
 	      {
 	        "key": "cutCenterX",
-	        "eqn": "frontHypeCenterX - frontHype * Math.sin(frontLeftTheta)",
-	        "id": "otayvu9"
+	        "eqn": "frontHypeCenterX - frontHype * Math.sin(frontLeftTheta)"
 	      },
 	      {
 	        "key": "cutCenterD",
-	        "eqn": "frontHypeCenterD - frontHype * Math.cos(frontLeftTheta)",
-	        "id": "ekillpb"
+	        "eqn": "frontHypeCenterD - frontHype * Math.cos(frontLeftTheta)"
 	      },
 	      {
 	        "key": "backCutterDem",
-	        "eqn": "bo*2*Math.sin(Math.toRadians(BACK.r.y))",
-	        "id": "nvnsugh"
+	        "eqn": "bo*2*Math.sin(Math.toRadians(BACK.r.y))"
 	      },
 	      {
 	        "key": "topInnerLimit",
-	        "eqn": "c.h - tid - T.t",
-	        "id": "zj8uuj1"
+	        "eqn": "c.h - tid - T.t"
 	      },
 	      {
 	        "key": "topOuterLimit",
-	        "eqn": "T.c.y + T.t/2",
-	        "id": "3liro7c"
+	        "eqn": "T.c.y + T.t/2"
 	      },
 	      {
 	        "key": "bottomInnerLimit",
-	        "eqn": "bid + B.t",
-	        "id": "ddjl8d0"
+	        "eqn": "bid + B.t"
 	      },
 	      {
 	        "key": "bottomOuterLimit",
-	        "eqn": "B.c.y + T.t/2",
-	        "id": "0y39vqw"
+	        "eqn": "B.c.y - B.t/2"
 	      },
 	      {
 	        "key": "leftInnerLimit",
-	        "eqn": "R.t",
-	        "id": "oto8hml"
+	        "eqn": "R.t"
 	      },
 	      {
 	        "key": "leftOuterLimit",
-	        "eqn": "0",
-	        "id": "s0ynin6"
+	        "eqn": "0"
 	      },
 	      {
 	        "key": "leftCutTheta",
-	        "eqn": "Math.PI - frontLeftTheta - Math.PI12",
-	        "id": "d91x5l5"
+	        "eqn": "Math.PI - frontLeftTheta - Math.PI12"
 	      },
 	      {
 	        "key": "leftCutT",
-	        "eqn": "R.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)",
-	        "id": "c1zmc1s"
+	        "eqn": "R.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)"
 	      },
 	      {
 	        "key": "rightCutTheta",
-	        "eqn": "frontLeftTheta",
-	        "id": "moxhnw5"
+	        "eqn": "frontLeftTheta"
 	      },
 	      {
 	        "key": "rightCutX",
-	        "eqn": "L.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)",
-	        "id": "476p6b2"
+	        "eqn": "L.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)"
 	      },
 	      {
 	        "key": "rightInnerLimit",
-	        "eqn": "fwr - leftCutT",
-	        "id": "dnmesi3"
+	        "eqn": "fwr - leftCutT"
 	      },
 	      {
 	        "key": "rightOuterLimit",
-	        "eqn": "fwr",
-	        "id": "9syndoq"
+	        "eqn": "fwr"
 	      },
 	      {
 	        "key": "frontDepthMin",
-	        "eqn": 0,
-	        "id": "2pfov96"
+	        "eqn": 0
 	      },
 	      {
 	        "key": "frontDepthMax",
-	        "eqn": "fwl",
-	        "id": "eflejko"
+	        "eqn": "fwl"
 	      }
 	    ],
 	    "subassemblies": [
@@ -22659,8 +22628,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Back",
-	        "code": "BACK",
-	        "id": "ly2p41u"
+	        "code": "BACK"
 	      },
 	      {
 	        "type": "Cutter",
@@ -22680,8 +22648,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Cutter.Back",
-	        "code": "cb",
-	        "id": "ly2p41z"
+	        "code": "cb"
 	      },
 	      {
 	        "type": "Divider",
@@ -22701,8 +22668,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Left",
-	        "code": "R",
-	        "id": "67tkjp5"
+	        "code": "R"
 	      },
 	      {
 	        "type": "Divider",
@@ -22722,13 +22688,12 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Right",
-	        "code": "L",
-	        "id": "kfuwf6d"
+	        "code": "L"
 	      },
 	      {
 	        "type": "Panel",
 	        "center": [
-	          "pbr.w / 2 + R.t ",
+	          "pbl.w / 2 + R.t ",
 	          "c.h/2",
 	          "-(c.t - t / 2)"
 	        ],
@@ -22742,58 +22707,15 @@ function (require, exports, module) {
 	          0,
 	          0
 	        ],
-	        "name": "Panel.Back.Right",
-	        "code": "pbr",
-	        "id": "a1yypp5"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "pbl.c.x + cpbl.t",
-	          "pbl.c.y",
-	          "pbl.c.z"
-	        ],
-	        "demensions": [
-	          "pbl.d.x",
-	          "pbl.d.y",
-	          "pbl.d.z"
-	        ],
-	        "rotation": [
-	          "pbl.r.x",
-	          "pbl.r.y",
-	          "pbl.r.z"
-	        ],
-	        "name": "Cutter.Back.Left",
-	        "code": "cpbl",
-	        "id": "qnpktr2"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "c.w - pbr.t/2",
-	          "c.h/2",
-	          "-(pbl.w/2 + L.t)"
-	        ],
-	        "demensions": [
-	          "c.t - bo",
-	          "c.h",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          0,
-	          "90",
-	          0
-	        ],
 	        "name": "Panel.Back.Left",
-	        "code": "pbl",
-	        "id": "qnpktr8"
+	        "code": "pbl"
 	      },
 	      {
 	        "type": "Cutter",
 	        "center": [
-	          "pbr.c.x",
+	          "pbr.c.x + cpbl.t",
 	          "pbr.c.y",
-	          "pbr.c.z - cpbr.t"
+	          "pbr.c.z"
 	        ],
 	        "demensions": [
 	          "pbr.d.x",
@@ -22805,20 +22727,59 @@ function (require, exports, module) {
 	          "pbr.r.y",
 	          "pbr.r.z"
 	        ],
-	        "name": "Cutter.Back.Right",
-	        "code": "cpbr",
-	        "id": "qnpktw2"
+	        "name": "Cutter.Back.Left",
+	        "code": "cpbl"
 	      },
 	      {
 	        "type": "Panel",
+	        "center": [
+	          "c.w - pbl.t/2",
+	          "c.h/2",
+	          "-(pbr.w/2 + L.t)"
+	        ],
+	        "demensions": [
+	          "c.t - bo",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          "90",
+	          0
+	        ],
+	        "name": "Panel.Back.Right",
+	        "code": "pbr"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "pbl.c.x",
+	          "pbl.c.y",
+	          "pbl.c.z - cpbr.t"
+	        ],
+	        "demensions": [
+	          "pbl.d.x",
+	          "pbl.d.y",
+	          "pbl.d.z"
+	        ],
+	        "rotation": [
+	          "pbl.r.x",
+	          "pbl.r.y",
+	          "pbl.r.z"
+	        ],
+	        "name": "Cutter.Back.Right",
+	        "code": "cpbr"
+	      },
+	      {
+	        "type": "Divider",
 	        "center": [
 	          "c.w / 2",
 	          "c.h - tid - T.t / 2",
 	          "c.t / -2"
 	        ],
 	        "demensions": [
-	          "c.w - pbr.t - R.t",
-	          "c.t - pbl.t - L.t",
+	          "c.w - pbl.t - R.t",
+	          "c.t - pbr.t - L.t",
 	          "pwt34"
 	        ],
 	        "rotation": [
@@ -22827,19 +22788,18 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Top",
-	        "code": "T",
-	        "id": "0p8zyq0"
+	        "code": "T"
 	      },
 	      {
-	        "type": "Panel",
+	        "type": "Divider",
 	        "center": [
 	          "c.w / 2",
 	          "bid + B.t / 2",
 	          "c.t / -2"
 	        ],
 	        "demensions": [
-	          "c.w - pbr.t - R.t",
-	          "c.t - pbl.t - L.t",
+	          "c.w - pbl.t - R.t",
+	          "c.t - pbr.t - L.t",
 	          "pwt34"
 	        ],
 	        "rotation": [
@@ -22848,8 +22808,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Bottom",
-	        "code": "B",
-	        "id": "uqb7ksc"
+	        "code": "B"
 	      },
 	      {
 	        "type": "Cutter",
@@ -22869,28 +22828,24 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Cutter.Front",
-	        "code": "cut",
-	        "id": "t2nx210"
+	        "code": "cut"
 	      }
 	    ],
 	    "joints": [
 	      {
 	        "malePartCode": "BACK",
 	        "femalePartCode": "B",
-	        "type": "Butt",
-	        "id": "jhdiitu"
-	      },
-	      {
-	        "malePartCode": "BACK",
-	        "femalePartCode": "pbr",
-	        "type": "Butt",
-	        "id": "tfovv9r"
+	        "type": "Butt"
 	      },
 	      {
 	        "malePartCode": "BACK",
 	        "femalePartCode": "pbl",
-	        "type": "Butt",
-	        "id": "i49ifbe"
+	        "type": "Butt"
+	      },
+	      {
+	        "malePartCode": "BACK",
+	        "femalePartCode": "pbr",
+	        "type": "Butt"
 	      },
 	      {
 	        "type": "Dado",
@@ -22898,8 +22853,7 @@ function (require, exports, module) {
 	        "femalePartCode": "L",
 	        "maleOffset": "L.t / 2",
 	        "demensionAxis": "y",
-	        "centerAxis": "-z",
-	        "id": "0zszlb9"
+	        "centerAxis": "-z"
 	      },
 	      {
 	        "type": "Dado",
@@ -22907,26 +22861,23 @@ function (require, exports, module) {
 	        "femalePartCode": "R",
 	        "maleOffset": "R.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "vbwtc6l"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "B",
-	        "femalePartCode": "pbl",
-	        "maleOffset": "pbl.t/2",
-	        "demensionAxis": "y",
-	        "centerAxis": "+z",
-	        "id": "x8qno2z"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "type": "Dado",
 	        "malePartCode": "B",
 	        "femalePartCode": "pbr",
 	        "maleOffset": "pbr.t/2",
+	        "demensionAxis": "y",
+	        "centerAxis": "+z"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "B",
+	        "femalePartCode": "pbl",
+	        "maleOffset": "pbl.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "+x",
-	        "id": "3zyqkyg"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "type": "Dado",
@@ -22934,8 +22885,7 @@ function (require, exports, module) {
 	        "femalePartCode": "L",
 	        "maleOffset": "L.t / 2",
 	        "demensionAxis": "y",
-	        "centerAxis": "-z",
-	        "id": "ho44x8c"
+	        "centerAxis": "-z"
 	      },
 	      {
 	        "type": "Dado",
@@ -22943,110 +22893,94 @@ function (require, exports, module) {
 	        "femalePartCode": "R",
 	        "maleOffset": "R.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "f2yqowv"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "T",
-	        "femalePartCode": "pbl",
-	        "maleOffset": "pbl.t/2",
-	        "demensionAxis": "y",
-	        "centerAxis": "+z",
-	        "id": "xlic9x8"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "type": "Dado",
 	        "malePartCode": "T",
 	        "femalePartCode": "pbr",
 	        "maleOffset": "pbr.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "+x",
-	        "id": "dv1u67c"
+	        "demensionAxis": "y",
+	        "centerAxis": "+z"
 	      },
 	      {
 	        "type": "Dado",
-	        "malePartCode": "pbl",
-	        "femalePartCode": "R",
+	        "malePartCode": "T",
+	        "femalePartCode": "pbl",
 	        "maleOffset": "pbl.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "-z",
-	        "id": "861ea5i"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "type": "Dado",
 	        "malePartCode": "pbr",
+	        "femalePartCode": "R",
+	        "maleOffset": "pbr.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "-z"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pbl",
 	        "femalePartCode": "L",
 	        "maleOffset": "L.t / 2",
 	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "t0ywrvc"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "BACK",
-	        "femalePartCode": "T",
-	        "id": "e3z7qur"
+	        "femalePartCode": "T"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cut",
-	        "femalePartCode": "T",
-	        "id": "k0atwnf"
+	        "femalePartCode": "T"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cut",
-	        "femalePartCode": "B",
-	        "id": "4ke3jn9"
+	        "femalePartCode": "B"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cut",
-	        "femalePartCode": "L",
-	        "id": "lr1xqx8"
+	        "femalePartCode": "L"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cut",
-	        "femalePartCode": "R",
-	        "id": "bk2rjwz"
+	        "femalePartCode": "R"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "T",
-	        "id": "1l5u1lk"
+	        "femalePartCode": "T"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "B",
-	        "id": "1zp5rfv"
+	        "femalePartCode": "B"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "pbr",
-	        "id": "rs2316q"
+	        "femalePartCode": "pbl"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "pbl",
-	        "id": "m9e5p7l"
+	        "femalePartCode": "pbr"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbl",
-	        "femalePartCode": "BACK",
-	        "id": "l85jpd3"
+	        "femalePartCode": "BACK"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbr",
-	        "femalePartCode": "BACK",
-	        "id": "h3xmpm4"
+	        "femalePartCode": "BACK"
 	      }
 	    ],
 	    "dividerJoint": {
@@ -23116,8 +23050,7 @@ function (require, exports, module) {
 	          "innerOouter": true,
 	          "index": 0,
 	          "xOyOz": "z"
-	        },
-	        "id": "hofivl0"
+	        }
 	      }
 	    ]
 	  },
@@ -23129,193 +23062,155 @@ function (require, exports, module) {
 	    "values": [
 	      {
 	        "key": "bo",
-	        "eqn": "4*2.54",
-	        "id": "pz0usts"
+	        "eqn": "4*2.54"
 	      },
 	      {
 	        "key": "fwl",
-	        "eqn": "c.w - lw",
-	        "id": "v47f8o3"
+	        "eqn": "c.w - lw"
 	      },
 	      {
 	        "key": "fwr",
-	        "eqn": "c.t - rw",
-	        "id": "ammy5c5"
+	        "eqn": "c.t - rw"
 	      },
 	      {
 	        "key": "lw",
-	        "eqn": "30.48",
-	        "id": "r8els3r"
+	        "eqn": "based"
 	      },
 	      {
 	        "key": "rw",
-	        "eqn": "30.48",
-	        "id": "zoxsnu9"
+	        "eqn": "based"
 	      },
 	      {
 	        "key": "cnrD",
-	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
-	        "id": "vju4ekg"
+	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)"
 	      },
 	      {
 	        "key": "pbw",
-	        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
-	        "id": "bg3l1cw"
+	        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)"
 	      },
 	      {
 	        "key": "backhyp",
-	        "eqn": "Math.sqrt((R.t*R.t)*2)",
-	        "id": "zmra3po"
+	        "eqn": "Math.sqrt((R.t*R.t)*2)"
 	      },
 	      {
 	        "key": "frontLeftTheta",
-	        "eqn": "Math.atan(fwl/fwr)",
-	        "id": "woqnfe1"
+	        "eqn": "Math.atan(fwl/fwr)"
 	      },
 	      {
 	        "key": "frontRightTheta",
-	        "eqn": "Math.PI/2  - frontLeftTheta",
-	        "id": "woqnfd3"
+	        "eqn": "Math.PI/2  - frontLeftTheta"
 	      },
 	      {
 	        "key": "frontHype",
-	        "eqn": "Math.sqrt(fwl*fwl + fwr*fwr)",
-	        "id": "u1sgalg"
+	        "eqn": "Math.sqrt(fwl*fwl + fwr*fwr)"
 	      },
 	      {
 	        "key": "cutWidth",
-	        "eqn": "frontHype * 2",
-	        "id": "egcyi4x"
+	        "eqn": "frontHype * 2"
 	      },
 	      {
 	        "key": "frontHypeCenterD",
-	        "eqn": "fwr/2 + R.t",
-	        "id": "fwll2bq"
+	        "eqn": "fwr/2"
 	      },
 	      {
 	        "key": "frontHypeCenterX",
-	        "eqn": "fwl/2 + L.t",
-	        "id": "c0gj6ud"
+	        "eqn": "fwl/2"
 	      },
 	      {
 	        "key": "cutCenterX",
-	        "eqn": "frontHypeCenterX - frontHype * Math.sin(frontRightTheta)",
-	        "id": "otayvu9"
+	        "eqn": "frontHypeCenterX - frontHype * Math.sin(frontRightTheta)"
 	      },
 	      {
 	        "key": "cutCenterD",
-	        "eqn": "frontHypeCenterD - frontHype * Math.cos(frontRightTheta)",
-	        "id": "ekillpb"
+	        "eqn": "frontHypeCenterD - frontHype * Math.cos(frontRightTheta)"
 	      },
 	      {
 	        "key": "backCutterDem",
-	        "eqn": "bo*2*Math.sin(Math.toRadians(BACK.r.y))",
-	        "id": "nvnsugh"
+	        "eqn": "bo*2*Math.sin(Math.toRadians(BACK.r.y))"
 	      },
 	      {
 	        "key": "topInnerLimit",
-	        "eqn": "T.c.y - T.t/2",
-	        "id": "zj8uuj1"
+	        "eqn": "T.c.y - T.t/2"
 	      },
 	      {
 	        "key": "topOuterLimit",
-	        "eqn": "T.c.y + T.t/2",
-	        "id": "3liro7c"
+	        "eqn": "T.c.y + T.t/2"
 	      },
 	      {
 	        "key": "bottomInnerLimit",
-	        "eqn": "B.c.y + B.t/2",
-	        "id": "ddjl8d0"
+	        "eqn": "B.c.y + B.t/2"
 	      },
 	      {
 	        "key": "bottomOuterLimit",
-	        "eqn": "B.c.y - B.t/2",
-	        "id": "0y39vqw"
+	        "eqn": "B.c.y - B.t/2"
 	      },
 	      {
 	        "key": "leftInnerLimit",
-	        "eqn": "R.t",
-	        "id": "oto8hml"
+	        "eqn": "R.t"
 	      },
 	      {
 	        "key": "leftOuterLimit",
-	        "eqn": "0",
-	        "id": "s0ynin6"
+	        "eqn": "0"
 	      },
 	      {
 	        "key": "leftCutTheta",
-	        "eqn": "Math.PI - frontRightTheta - Math.PI12",
-	        "id": "d91x5l5"
+	        "eqn": "Math.PI - frontRightTheta - Math.PI12"
 	      },
 	      {
 	        "key": "leftCutT",
-	        "eqn": "R.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)",
-	        "id": "c1zmc1s"
+	        "eqn": "R.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)"
 	      },
 	      {
 	        "key": "rightCutTheta",
-	        "eqn": "frontRightTheta",
-	        "id": "moxhnw5"
+	        "eqn": "frontRightTheta"
 	      },
 	      {
 	        "key": "rightCutX",
-	        "eqn": "L.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)",
-	        "id": "476p6b2"
+	        "eqn": "L.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)"
 	      },
 	      {
 	        "key": "rightInnerLimit",
-	        "eqn": "fwl - leftCutT",
-	        "id": "dnmesi3"
+	        "eqn": "fwl - leftCutT"
 	      },
 	      {
 	        "key": "rightOuterLimit",
-	        "eqn": "fwl",
-	        "id": "9syndoq"
+	        "eqn": "fwl"
 	      },
 	      {
 	        "key": "frontDepthMin",
-	        "eqn": 0,
-	        "id": "2pfov96"
+	        "eqn": 0
 	      },
 	      {
 	        "key": "frontDepthMax",
-	        "eqn": "fwr",
-	        "id": "eflejko"
+	        "eqn": "fwr"
 	      },
 	      {
 	        "key": "tkLeftT",
-	        "eqn": ".5/Math.sin(frontRightTheta)",
-	        "id": "fi3bwts"
+	        "eqn": ".5/Math.sin(frontRightTheta)"
 	      },
 	      {
 	        "key": "tkRightT",
-	        "eqn": ".5/Math.sin(frontLeftTheta)",
-	        "id": "m0p2fnx"
+	        "eqn": ".5/Math.sin(frontLeftTheta)"
 	      },
 	      {
 	        "key": "tkLeftD",
-	        "eqn": "frontHypeCenterX + (tkd + tkb.t/2)*Math.sin(frontRightTheta)",
-	        "id": "xd2g25i"
+	        "eqn": "frontHypeCenterX + (tkd + tkb.t/2)*Math.sin(frontRightTheta)"
 	      },
 	      {
 	        "key": "tkRightD",
-	        "eqn": "frontHypeCenterD + (tkd + tkb.t/2)*Math.sin(frontLeftTheta)",
-	        "id": "e2tcn5p"
+	        "eqn": "frontHypeCenterD + (tkd + tkb.t/2)*Math.sin(frontLeftTheta)"
 	      },
 	      {
 	        "key": "toeKickBackerLen",
-	        "eqn": "2*Math.sqrt((triX+tkb.t/2)*(triX+tkb.t/2)+(triY+tkb.t\\2)*(triY+tkb.t\\2))",
-	        "id": "6d7a07i"
+	        "eqn": "2*Math.sqrt((triX+tkb.t/2)*(triX+tkb.t/2)+(triY+tkb.t\\2)*(triY+tkb.t\\2))"
 	      },
 	      {
 	        "key": "triX",
-	        "eqn": "frontDepthMax +  (tkd + tkb.t/2)/Math.sin(frontLeftTheta)",
-	        "id": "9sfgikr"
+	        "eqn": "frontDepthMax +  (tkd + tkb.t/2)/Math.sin(frontLeftTheta)"
 	      },
 	      {
 	        "key": "triY",
-	        "eqn": "rightInnerLimit + (tkd + tkb.t/2)/Math.sin(frontLeftTheta)",
-	        "id": "fcwcnb9"
+	        "eqn": "rightInnerLimit + (tkd + tkb.t/2)/Math.sin(frontLeftTheta)"
 	      }
 	    ],
 	    "subassemblies": [
@@ -23337,8 +23232,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Back",
-	        "code": "BACK",
-	        "id": "ly2p41u"
+	        "code": "BACK"
 	      },
 	      {
 	        "name": "ToeKickBacker",
@@ -23358,8 +23252,7 @@ function (require, exports, module) {
 	          "90+Math.toDegrees(frontLeftTheta)",
 	          "0",
 	          90
-	        ],
-	        "id": "zojblha"
+	        ]
 	      },
 	      {
 	        "type": "Cutter",
@@ -23379,8 +23272,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Cutter.Back",
-	        "code": "cb",
-	        "id": "ly2p41z"
+	        "code": "cb"
 	      },
 	      {
 	        "type": "Divider",
@@ -23400,8 +23292,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Right",
-	        "code": "R",
-	        "id": "67tkjp5"
+	        "code": "R"
 	      },
 	      {
 	        "type": "Cutter",
@@ -23411,781 +23302,7 @@ function (require, exports, module) {
 	          "L.c.z"
 	        ],
 	        "demensions": [
-	          "L.d.x",
-	          "L.d.y + 1",
-	          "toeKickBackerLen"
-	        ],
-	        "rotation": [
-	          "L.r.x",
-	          "L.r.y",
-	          "L.r.z"
-	        ],
-	        "name": "CutterTBLeft",
-	        "code": "ctbl",
-	        "id": "67tskke5"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "pbr.c.x + toeKickBackerLen/2",
-	          "pbr.c.y",
-	          "pbr.c.z"
-	        ],
-	        "demensions": [
-	          "pbr.d.x",
-	          "pbr.d.y + 1",
-	          "toeKickBackerLen"
-	        ],
-	        "rotation": [
-	          "pbr.r.x",
-	          "pbr.r.y",
-	          "pbr.r.z"
-	        ],
-	        "name": "CutterTBRight",
-	        "code": "ctbr",
-	        "id": "67tskjp5"
-	      },
-	      {
-	        "type": "Divider",
-	        "center": [
-	          "L.t/2",
-	          "c.h/2",
-	          "L.w/-2"
-	        ],
-	        "demensions": [
-	          "c.t",
-	          "c.h",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          0,
-	          "90",
-	          0
-	        ],
-	        "name": "Panel.Left",
-	        "code": "L",
-	        "id": "kfuwf6d"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "pbr.w / 2 + R.t ",
-	          "c.h/2",
-	          "-(c.t - t / 2)"
-	        ],
-	        "demensions": [
-	          "c.w - bo",
-	          "c.h",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          0,
-	          0,
-	          0
-	        ],
-	        "name": "Panel.Back.Right",
-	        "code": "pbr",
-	        "id": "a1yypp5"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "pbl.c.x + cpbl.t",
-	          "pbl.c.y",
-	          "pbl.c.z"
-	        ],
-	        "demensions": [
-	          "pbl.d.x",
-	          "pbl.d.y",
-	          "pbl.d.z"
-	        ],
-	        "rotation": [
-	          "pbl.r.x",
-	          "pbl.r.y",
-	          "pbl.r.z"
-	        ],
-	        "name": "Cutter.Back.Left",
-	        "code": "cpbl",
-	        "id": "qnpktr2"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "c.w - pbr.t/2",
-	          "c.h/2",
-	          "-(pbl.w/2 + L.t)"
-	        ],
-	        "demensions": [
-	          "c.t - bo",
-	          "c.h",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          0,
-	          "90",
-	          0
-	        ],
-	        "name": "Panel.Back.Left",
-	        "code": "pbl",
-	        "id": "qnpktr8"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "pbr.c.x",
-	          "pbr.c.y",
-	          "pbr.c.z - cpbr.t"
-	        ],
-	        "demensions": [
-	          "pbr.d.x",
-	          "pbr.d.y",
-	          "pbr.d.z"
-	        ],
-	        "rotation": [
-	          "pbr.r.x",
-	          "pbr.r.y",
-	          "pbr.r.z"
-	        ],
-	        "name": "Cutter.Back.Right",
-	        "code": "cpbr",
-	        "id": "qnpktw2"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "c.w / 2",
-	          "c.h - T.t / 2",
-	          "c.t / -2"
-	        ],
-	        "demensions": [
-	          "c.w - pbr.t - R.t",
-	          "c.t - pbl.t - L.t",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          "90",
-	          "0",
-	          0
-	        ],
-	        "name": "Panel.Top",
-	        "code": "T",
-	        "id": "0p8zyq0"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "c.w / 2",
-	          "tkh + B.t / 2",
-	          "c.t / -2"
-	        ],
-	        "demensions": [
-	          "c.w - pbr.t - R.t",
-	          "c.t - pbl.t - L.t",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          "90",
-	          "0",
-	          0
-	        ],
-	        "name": "Panel.Bottom",
-	        "code": "B",
-	        "id": "uqb7ksc"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "cutCenterX",
-	          "c.h/2",
-	          "-cutCenterD"
-	        ],
-	        "demensions": [
-	          "frontHype * 2",
-	          "frontHype*2",
-	          "c.h"
-	        ],
-	        "rotation": [
-	          "90",
-	          "Math.toDegrees(Math.PI - frontRightTheta)",
-	          0
-	        ],
-	        "name": "Cutter.Front",
-	        "code": "cut",
-	        "id": "t2nx210"
-	      }
-	    ],
-	    "joints": [
-	      {
-	        "malePartCode": "BACK",
-	        "femalePartCode": "B",
-	        "type": "Butt",
-	        "id": "jhdiitu"
-	      },
-	      {
-	        "malePartCode": "BACK",
-	        "femalePartCode": "pbr",
-	        "type": "Butt",
-	        "id": "tfovv9r"
-	      },
-	      {
-	        "malePartCode": "BACK",
-	        "femalePartCode": "pbl",
-	        "type": "Butt",
-	        "id": "i49ifbe"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "B",
-	        "femalePartCode": "L",
-	        "maleOffset": "L.t / 2",
-	        "demensionAxis": "y",
-	        "centerAxis": "-z",
-	        "id": "0zszlb9"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "B",
-	        "femalePartCode": "R",
-	        "maleOffset": "R.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "vbwtc6l"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "B",
-	        "femalePartCode": "pbl",
-	        "maleOffset": "pbl.t/2",
-	        "demensionAxis": "y",
-	        "centerAxis": "+z",
-	        "id": "x8qno2z"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "B",
-	        "femalePartCode": "pbr",
-	        "maleOffset": "pbr.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "+x",
-	        "id": "3zyqkyg"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "T",
-	        "femalePartCode": "L",
-	        "maleOffset": "L.t / 2",
-	        "demensionAxis": "y",
-	        "centerAxis": "-z",
-	        "id": "ho44x8c"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "T",
-	        "femalePartCode": "R",
-	        "maleOffset": "R.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "f2yqowv"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "T",
-	        "femalePartCode": "pbl",
-	        "maleOffset": "pbl.t/2",
-	        "demensionAxis": "y",
-	        "centerAxis": "+z",
-	        "id": "xlic9x8"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "T",
-	        "femalePartCode": "pbr",
-	        "maleOffset": "pbr.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "+x",
-	        "id": "dv1u67c"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pbl",
-	        "femalePartCode": "R",
-	        "maleOffset": "pbl.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "-z",
-	        "id": "861ea5i"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "pbr",
-	        "femalePartCode": "L",
-	        "maleOffset": "L.t / 2",
-	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "t0ywrvc"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "BACK",
-	        "femalePartCode": "T",
-	        "id": "e3z7qur"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cut",
-	        "femalePartCode": "T",
-	        "id": "k0atwnf"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cut",
-	        "femalePartCode": "B",
-	        "id": "4ke3jn9"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cut",
-	        "femalePartCode": "L",
-	        "id": "lr1xqx8"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cut",
-	        "femalePartCode": "R",
-	        "id": "bk2rjwz"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "T",
-	        "id": "1l5u1lk"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "B",
-	        "id": "1zp5rfv"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "pbr",
-	        "id": "rs2316q"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "pbl",
-	        "id": "m9e5p7l"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cpbl",
-	        "femalePartCode": "BACK",
-	        "id": "l85jpd3"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cpbr",
-	        "femalePartCode": "BACK",
-	        "id": "h3xmpm4"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "tkb",
-	        "femalePartCode": "B",
-	        "maleOffset": "B.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "+y",
-	        "id": "06h37x8"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "tkb",
-	        "femalePartCode": "L",
-	        "id": "5pwgans"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "tkb",
-	        "femalePartCode": "R",
-	        "id": "3s90xye"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "ctbl",
-	        "femalePartCode": "tkb",
-	        "id": "tdlm7y6"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "ctbr",
-	        "femalePartCode": "tkb",
-	        "id": "t30gphe"
-	      }
-	    ],
-	    "dividerJoint": {
-	      "type": "Dado",
-	      "maleOffset": "33"
-	    },
-	    "shape": "corner",
-	    "width": "60 * 2.54",
-	    "height": "wallh",
-	    "thickness": "walld*2",
-	    "fromFloor": "walle",
-	    "openings": [
-	      {
-	        "_Type": "location",
-	        "rotation": {
-	          "x": 0,
-	          "z": 0,
-	          "y": "270+ Math.toDegrees(frontRightTheta)"
-	        },
-	        "coordinates": {
-	          "inner": [
-	            {
-	              "x": "leftInnerLimit",
-	              "y": "topInnerLimit",
-	              "z": "-(frontDepthMax - rightCutX)"
-	            },
-	            {
-	              "x": "rightInnerLimit",
-	              "y": "topInnerLimit",
-	              "z": "-(frontDepthMin + R.t)"
-	            },
-	            {
-	              "x": "rightInnerLimit",
-	              "y": "bottomInnerLimit",
-	              "z": "-(frontDepthMin + R.t)"
-	            },
-	            {
-	              "x": "leftInnerLimit",
-	              "y": "bottomInnerLimit",
-	              "z": "-(frontDepthMax - rightCutX)"
-	            }
-	          ],
-	          "outer": [
-	            {
-	              "x": "leftOuterLimit",
-	              "y": "topOuterLimit",
-	              "z": "-frontDepthMax"
-	            },
-	            {
-	              "x": "rightOuterLimit",
-	              "y": "topOuterLimit",
-	              "z": "-frontDepthMin"
-	            },
-	            {
-	              "x": "rightOuterLimit",
-	              "y": "bottomOuterLimit",
-	              "z": "-frontDepthMin"
-	            },
-	            {
-	              "x": "leftOuterLimit",
-	              "y": "bottomOuterLimit",
-	              "z": "-frontDepthMax"
-	            }
-	          ]
-	        },
-	        "state": {
-	          "innerOouter": true,
-	          "index": 0,
-	          "xOyOz": "z"
-	        },
-	        "id": "holektl0"
-	      }
-	    ]
-	  },
-	  "corner-ut": {
-	    "_TYPE": "CabinetTemplate",
-	
-	    "ID_ATTRIBUTE": "id",
-	    "type": "corner-ut",
-	    "values": [
-	      {
-	        "key": "bo",
-	        "eqn": "4*2.54",
-	        "id": "pz0usts"
-	      },
-	      {
-	        "key": "fwl",
-	        "eqn": "c.w - lw",
-	        "id": "v47f8o3"
-	      },
-	      {
-	        "key": "fwr",
-	        "eqn": "c.t - rw",
-	        "id": "ammy5c5"
-	      },
-	      {
-	        "key": "lw",
-	        "eqn": "30.48",
-	        "id": "r8els3r"
-	      },
-	      {
-	        "key": "rw",
-	        "eqn": "30.48",
-	        "id": "zoxsnu9"
-	      },
-	      {
-	        "key": "cnrD",
-	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
-	        "id": "vju4ekg"
-	      },
-	      {
-	        "key": "pbw",
-	        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
-	        "id": "bg3l1cw"
-	      },
-	      {
-	        "key": "backhyp",
-	        "eqn": "Math.sqrt((R.t*R.t)*2)",
-	        "id": "zmra3po"
-	      },
-	      {
-	        "key": "frontLeftTheta",
-	        "eqn": "Math.atan(fwl/fwr)",
-	        "id": "woqnfe1"
-	      },
-	      {
-	        "key": "frontRightTheta",
-	        "eqn": "Math.PI/2  - frontLeftTheta",
-	        "id": "woqnfd3"
-	      },
-	      {
-	        "key": "frontHype",
-	        "eqn": "Math.sqrt(fwl*fwl + fwr*fwr)",
-	        "id": "u1sgalg"
-	      },
-	      {
-	        "key": "cutWidth",
-	        "eqn": "frontHype * 2",
-	        "id": "egcyi4x"
-	      },
-	      {
-	        "key": "frontHypeCenterD",
-	        "eqn": "fwr/2 + R.t",
-	        "id": "fwll2bq"
-	      },
-	      {
-	        "key": "frontHypeCenterX",
-	        "eqn": "fwl/2 + L.t",
-	        "id": "c0gj6ud"
-	      },
-	      {
-	        "key": "cutCenterX",
-	        "eqn": "frontHypeCenterX - frontHype * Math.sin(frontRightTheta)",
-	        "id": "otayvu9"
-	      },
-	      {
-	        "key": "cutCenterD",
-	        "eqn": "frontHypeCenterD - frontHype * Math.cos(frontRightTheta)",
-	        "id": "ekillpb"
-	      },
-	      {
-	        "key": "backCutterDem",
-	        "eqn": "bo*2*Math.sin(Math.toRadians(BACK.r.y))",
-	        "id": "nvnsugh"
-	      },
-	      {
-	        "key": "topInnerLimit",
-	        "eqn": "T.c.y - T.t/2",
-	        "id": "zj8uuj1"
-	      },
-	      {
-	        "key": "topOuterLimit",
-	        "eqn": "T.c.y + T.t/2",
-	        "id": "3liro7c"
-	      },
-	      {
-	        "key": "bottomInnerLimit",
-	        "eqn": "B.c.y + B.t/2",
-	        "id": "ddjl8d0"
-	      },
-	      {
-	        "key": "bottomOuterLimit",
-	        "eqn": "B.c.y - B.t/2",
-	        "id": "0y39vqw"
-	      },
-	      {
-	        "key": "leftInnerLimit",
-	        "eqn": "R.t",
-	        "id": "oto8hml"
-	      },
-	      {
-	        "key": "leftOuterLimit",
-	        "eqn": "0",
-	        "id": "s0ynin6"
-	      },
-	      {
-	        "key": "leftCutTheta",
-	        "eqn": "Math.PI - frontRightTheta - Math.PI12",
-	        "id": "d91x5l5"
-	      },
-	      {
-	        "key": "leftCutT",
-	        "eqn": "R.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)",
-	        "id": "c1zmc1s"
-	      },
-	      {
-	        "key": "rightCutTheta",
-	        "eqn": "frontRightTheta",
-	        "id": "moxhnw5"
-	      },
-	      {
-	        "key": "rightCutX",
-	        "eqn": "L.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)",
-	        "id": "476p6b2"
-	      },
-	      {
-	        "key": "rightInnerLimit",
-	        "eqn": "fwl - leftCutT",
-	        "id": "dnmesi3"
-	      },
-	      {
-	        "key": "rightOuterLimit",
-	        "eqn": "fwl",
-	        "id": "9syndoq"
-	      },
-	      {
-	        "key": "frontDepthMin",
-	        "eqn": 0,
-	        "id": "2pfov96"
-	      },
-	      {
-	        "key": "frontDepthMax",
-	        "eqn": "fwr",
-	        "id": "eflejko"
-	      },
-	      {
-	        "key": "tkLeftT",
-	        "eqn": ".5/Math.sin(frontRightTheta)",
-	        "id": "fi3bwts"
-	      },
-	      {
-	        "key": "tkRightT",
-	        "eqn": ".5/Math.sin(frontLeftTheta)",
-	        "id": "m0p2fnx"
-	      },
-	      {
-	        "key": "tkLeftD",
-	        "eqn": "frontHypeCenterX + (tkd + tkb.t/2)*Math.sin(frontRightTheta)",
-	        "id": "xd2g25i"
-	      },
-	      {
-	        "key": "tkRightD",
-	        "eqn": "frontHypeCenterD + (tkd + tkb.t/2)*Math.sin(frontLeftTheta)",
-	        "id": "e2tcn5p"
-	      },
-	      {
-	        "key": "toeKickBackerLen",
-	        "eqn": "2*Math.sqrt((triX+tkb.t/2)*(triX+tkb.t/2)+(triY+tkb.t\\2)*(triY+tkb.t\\2))",
-	        "id": "6d7a07i"
-	      },
-	      {
-	        "key": "triX",
-	        "eqn": "frontDepthMax +  (tkd + tkb.t/2)/Math.sin(frontLeftTheta)",
-	        "id": "9sfgikr"
-	      },
-	      {
-	        "key": "triY",
-	        "eqn": "rightInnerLimit + (tkd + tkb.t/2)/Math.sin(frontLeftTheta)",
-	        "id": "fcwcnb9"
-	      }
-	    ],
-	    "subassemblies": [
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
-	          "c.h/2",
-	          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
-	        ],
-	        "demensions": [
-	          "pbw",
-	          "c.h",
-	          "pwt14"
-	        ],
-	        "rotation": [
-	          0,
-	          "135",
-	          0
-	        ],
-	        "name": "Panel.Back",
-	        "code": "BACK",
-	        "id": "ly2p41u"
-	      },
-	      {
-	        "name": "ToeKickBacker",
-	        "type": "Panel",
-	        "code": "tkb",
-	        "center": [
-	          "tkLeftD",
-	          "w / 2",
-	          "-1 *(tkRightD)"
-	        ],
-	        "demensions": [
-	          "tkh",
 	          "toeKickBackerLen",
-	          "tkbw"
-	        ],
-	        "rotation": [
-	          "90+Math.toDegrees(frontLeftTheta)",
-	          "0",
-	          90
-	        ],
-	        "id": "zojblha"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "c.w + bo/4*Math.sin(Math.PI/2)",
-	          "c.h/2",
-	          "-(c.t + bo/4*Math.sin(Math.PI/2))"
-	        ],
-	        "demensions": [
-	          "bo*2",
-	          "c.h",
-	          "bo*2"
-	        ],
-	        "rotation": [
-	          0,
-	          "135",
-	          0
-	        ],
-	        "name": "Cutter.Back",
-	        "code": "cb",
-	        "id": "ly2p41z"
-	      },
-	      {
-	        "type": "Divider",
-	        "center": [
-	          "R.w/2",
-	          "c.h / 2",
-	          "R.t/-2"
-	        ],
-	        "demensions": [
-	          "c.w",
-	          "c.h",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          0,
-	          "0",
-	          0
-	        ],
-	        "name": "Panel.Right",
-	        "code": "R",
-	        "id": "67tkjp5"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "L.c.x - toeKickBackerLen/2",
-	          "L.c.y",
-	          "L.c.z"
-	        ],
-	        "demensions": [
-	          "L.d.x",
 	          "L.d.y + 1",
 	          "toeKickBackerLen"
 	        ],
@@ -24195,8 +23312,27 @@ function (require, exports, module) {
 	          "L.r.z"
 	        ],
 	        "name": "CutterTBLeft",
-	        "code": "ctbl",
-	        "id": "67tskke5"
+	        "code": "ctbl"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "pbl.c.x",
+	          "pbl.c.y",
+	          "pbl.c.z - toeKickBackerLen/2"
+	        ],
+	        "demensions": [
+	          "toeKickBackerLen",
+	          "pbl.d.y + 1",
+	          "toeKickBackerLen"
+	        ],
+	        "rotation": [
+	          "pbl.r.x",
+	          "pbl.r.y",
+	          "pbl.r.z"
+	        ],
+	        "name": "CutterTBLeft2",
+	        "code": "ctbl2"
 	      },
 	      {
 	        "type": "Cutter",
@@ -24206,7 +23342,7 @@ function (require, exports, module) {
 	          "pbr.c.z"
 	        ],
 	        "demensions": [
-	          "pbr.d.x",
+	          "toeKickBackerLen",
 	          "pbr.d.y + 1",
 	          "toeKickBackerLen"
 	        ],
@@ -24216,8 +23352,27 @@ function (require, exports, module) {
 	          "pbr.r.z"
 	        ],
 	        "name": "CutterTBRight",
-	        "code": "ctbr",
-	        "id": "67tskjp5"
+	        "code": "ctbr"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "R.c.x",
+	          "R.c.y",
+	          "R.c.z + toeKickBackerLen/2"
+	        ],
+	        "demensions": [
+	          "toeKickBackerLen",
+	          "R.d.y + 1",
+	          "toeKickBackerLen"
+	        ],
+	        "rotation": [
+	          "R.r.x",
+	          "R.r.y",
+	          "R.r.z"
+	        ],
+	        "name": "CutterTBRight2",
+	        "code": "ctbr2"
 	      },
 	      {
 	        "type": "Divider",
@@ -24237,13 +23392,12 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Left",
-	        "code": "L",
-	        "id": "kfuwf6d"
+	        "code": "L"
 	      },
 	      {
 	        "type": "Panel",
 	        "center": [
-	          "pbr.w / 2 + R.t ",
+	          "pbl.w / 2 + R.t ",
 	          "c.h/2",
 	          "-(c.t - t / 2)"
 	        ],
@@ -24257,58 +23411,15 @@ function (require, exports, module) {
 	          0,
 	          0
 	        ],
-	        "name": "Panel.Back.Right",
-	        "code": "pbr",
-	        "id": "a1yypp5"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "pbl.c.x + cpbl.t",
-	          "pbl.c.y",
-	          "pbl.c.z"
-	        ],
-	        "demensions": [
-	          "pbl.d.x",
-	          "pbl.d.y",
-	          "pbl.d.z"
-	        ],
-	        "rotation": [
-	          "pbl.r.x",
-	          "pbl.r.y",
-	          "pbl.r.z"
-	        ],
-	        "name": "Cutter.Back.Left",
-	        "code": "cpbl",
-	        "id": "qnpktr2"
-	      },
-	      {
-	        "type": "Panel",
-	        "center": [
-	          "c.w - pbr.t/2",
-	          "c.h/2",
-	          "-(pbl.w/2 + L.t)"
-	        ],
-	        "demensions": [
-	          "c.t - bo",
-	          "c.h",
-	          "pwt34"
-	        ],
-	        "rotation": [
-	          0,
-	          "90",
-	          0
-	        ],
 	        "name": "Panel.Back.Left",
-	        "code": "pbl",
-	        "id": "qnpktr8"
+	        "code": "pbl"
 	      },
 	      {
 	        "type": "Cutter",
 	        "center": [
-	          "pbr.c.x",
+	          "pbr.c.x + cpbl.t",
 	          "pbr.c.y",
-	          "pbr.c.z - cpbr.t"
+	          "pbr.c.z"
 	        ],
 	        "demensions": [
 	          "pbr.d.x",
@@ -24320,20 +23431,59 @@ function (require, exports, module) {
 	          "pbr.r.y",
 	          "pbr.r.z"
 	        ],
-	        "name": "Cutter.Back.Right",
-	        "code": "cpbr",
-	        "id": "qnpktw2"
+	        "name": "Cutter.Back.Left",
+	        "code": "cpbl"
 	      },
 	      {
 	        "type": "Panel",
+	        "center": [
+	          "c.w - pbl.t/2",
+	          "c.h/2",
+	          "-(pbr.w/2 + L.t)"
+	        ],
+	        "demensions": [
+	          "c.t - bo",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          "90",
+	          0
+	        ],
+	        "name": "Panel.Back.Right",
+	        "code": "pbr"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "pbl.c.x",
+	          "pbl.c.y",
+	          "pbl.c.z - cpbr.t"
+	        ],
+	        "demensions": [
+	          "pbl.d.x",
+	          "pbl.d.y",
+	          "pbl.d.z"
+	        ],
+	        "rotation": [
+	          "pbl.r.x",
+	          "pbl.r.y",
+	          "pbl.r.z"
+	        ],
+	        "name": "Cutter.Back.Right",
+	        "code": "cpbr"
+	      },
+	      {
+	        "type": "Divider",
 	        "center": [
 	          "c.w / 2",
 	          "c.h - T.t / 2",
 	          "c.t / -2"
 	        ],
 	        "demensions": [
-	          "c.w - pbr.t - R.t",
-	          "c.t - pbl.t - L.t",
+	          "c.w - pbl.t - R.t",
+	          "c.t - pbr.t - L.t",
 	          "pwt34"
 	        ],
 	        "rotation": [
@@ -24342,19 +23492,18 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Top",
-	        "code": "T",
-	        "id": "0p8zyq0"
+	        "code": "T"
 	      },
 	      {
-	        "type": "Panel",
+	        "type": "Divider",
 	        "center": [
 	          "c.w / 2",
 	          "tkh + B.t / 2",
 	          "c.t / -2"
 	        ],
 	        "demensions": [
-	          "c.w - pbr.t - R.t",
-	          "c.t - pbl.t - L.t",
+	          "c.w - pbl.t - R.t",
+	          "c.t - pbr.t - L.t",
 	          "pwt34"
 	        ],
 	        "rotation": [
@@ -24363,8 +23512,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Bottom",
-	        "code": "B",
-	        "id": "uqb7ksc"
+	        "code": "B"
 	      },
 	      {
 	        "type": "Cutter",
@@ -24384,28 +23532,24 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Cutter.Front",
-	        "code": "cut",
-	        "id": "t2nx210"
+	        "code": "cut"
 	      }
 	    ],
 	    "joints": [
 	      {
 	        "malePartCode": "BACK",
 	        "femalePartCode": "B",
-	        "type": "Butt",
-	        "id": "jhdiitu"
-	      },
-	      {
-	        "malePartCode": "BACK",
-	        "femalePartCode": "pbr",
-	        "type": "Butt",
-	        "id": "tfovv9r"
+	        "type": "Butt"
 	      },
 	      {
 	        "malePartCode": "BACK",
 	        "femalePartCode": "pbl",
-	        "type": "Butt",
-	        "id": "i49ifbe"
+	        "type": "Butt"
+	      },
+	      {
+	        "malePartCode": "BACK",
+	        "femalePartCode": "pbr",
+	        "type": "Butt"
 	      },
 	      {
 	        "type": "Dado",
@@ -24413,8 +23557,7 @@ function (require, exports, module) {
 	        "femalePartCode": "L",
 	        "maleOffset": "L.t / 2",
 	        "demensionAxis": "y",
-	        "centerAxis": "-z",
-	        "id": "0zszlb9"
+	        "centerAxis": "-z"
 	      },
 	      {
 	        "type": "Dado",
@@ -24422,26 +23565,23 @@ function (require, exports, module) {
 	        "femalePartCode": "R",
 	        "maleOffset": "R.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "vbwtc6l"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "B",
-	        "femalePartCode": "pbl",
-	        "maleOffset": "pbl.t/2",
-	        "demensionAxis": "y",
-	        "centerAxis": "+z",
-	        "id": "x8qno2z"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "type": "Dado",
 	        "malePartCode": "B",
 	        "femalePartCode": "pbr",
 	        "maleOffset": "pbr.t/2",
+	        "demensionAxis": "y",
+	        "centerAxis": "+z"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "B",
+	        "femalePartCode": "pbl",
+	        "maleOffset": "pbl.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "+x",
-	        "id": "3zyqkyg"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "type": "Dado",
@@ -24449,8 +23589,7 @@ function (require, exports, module) {
 	        "femalePartCode": "L",
 	        "maleOffset": "L.t / 2",
 	        "demensionAxis": "y",
-	        "centerAxis": "-z",
-	        "id": "ho44x8c"
+	        "centerAxis": "-z"
 	      },
 	      {
 	        "type": "Dado",
@@ -24458,110 +23597,94 @@ function (require, exports, module) {
 	        "femalePartCode": "R",
 	        "maleOffset": "R.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "f2yqowv"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "T",
-	        "femalePartCode": "pbl",
-	        "maleOffset": "pbl.t/2",
-	        "demensionAxis": "y",
-	        "centerAxis": "+z",
-	        "id": "xlic9x8"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "type": "Dado",
 	        "malePartCode": "T",
 	        "femalePartCode": "pbr",
 	        "maleOffset": "pbr.t/2",
-	        "demensionAxis": "x",
-	        "centerAxis": "+x",
-	        "id": "dv1u67c"
+	        "demensionAxis": "y",
+	        "centerAxis": "+z"
 	      },
 	      {
 	        "type": "Dado",
-	        "malePartCode": "pbl",
-	        "femalePartCode": "R",
+	        "malePartCode": "T",
+	        "femalePartCode": "pbl",
 	        "maleOffset": "pbl.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "-z",
-	        "id": "861ea5i"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "type": "Dado",
 	        "malePartCode": "pbr",
+	        "femalePartCode": "R",
+	        "maleOffset": "pbr.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "-z"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pbl",
 	        "femalePartCode": "L",
 	        "maleOffset": "L.t / 2",
 	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "t0ywrvc"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "BACK",
-	        "femalePartCode": "T",
-	        "id": "e3z7qur"
+	        "femalePartCode": "T"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cut",
-	        "femalePartCode": "T",
-	        "id": "k0atwnf"
+	        "femalePartCode": "T"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cut",
-	        "femalePartCode": "B",
-	        "id": "4ke3jn9"
+	        "femalePartCode": "B"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cut",
-	        "femalePartCode": "L",
-	        "id": "lr1xqx8"
+	        "femalePartCode": "L"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cut",
-	        "femalePartCode": "R",
-	        "id": "bk2rjwz"
+	        "femalePartCode": "R"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "T",
-	        "id": "1l5u1lk"
+	        "femalePartCode": "T"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "B",
-	        "id": "1zp5rfv"
+	        "femalePartCode": "B"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "pbr",
-	        "id": "rs2316q"
+	        "femalePartCode": "pbl"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "pbl",
-	        "id": "m9e5p7l"
+	        "femalePartCode": "pbr"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbl",
-	        "femalePartCode": "BACK",
-	        "id": "l85jpd3"
+	        "femalePartCode": "BACK"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbr",
-	        "femalePartCode": "BACK",
-	        "id": "h3xmpm4"
+	        "femalePartCode": "BACK"
 	      },
 	      {
 	        "type": "Dado",
@@ -24569,35 +23692,37 @@ function (require, exports, module) {
 	        "femalePartCode": "B",
 	        "maleOffset": "B.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "+y",
-	        "id": "06h37x8"
-	      },
-	      {
-	        "type": "Dado",
-	        "malePartCode": "tkb",
-	        "femalePartCode": "L",
-	        "maleOffset": ".1",
-	        "demensionAxis": "x",
-	        "centerAxis": "+x",
-	        "id": "5pwgans"
+	        "centerAxis": "+y"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "tkb",
-	        "femalePartCode": "R",
-	        "id": "3s90xye"
+	        "femalePartCode": "L"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "tkb",
+	        "femalePartCode": "R"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "ctbl",
-	        "femalePartCode": "tkb",
-	        "id": "fugx5ot"
+	        "femalePartCode": "tkb"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "ctbr",
-	        "femalePartCode": "tkb",
-	        "id": "nj279yo"
+	        "femalePartCode": "tkb"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "ctbl2",
+	        "femalePartCode": "tkb"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "ctbr2",
+	        "femalePartCode": "tkb"
 	      }
 	    ],
 	    "dividerJoint": {
@@ -24605,9 +23730,9 @@ function (require, exports, module) {
 	      "maleOffset": "33"
 	    },
 	    "shape": "corner",
-	    "width": "walld*2",
-	    "height": "maxHeight(c.w,c.t,ceilh)",
-	    "thickness": "walld*2",
+	    "width": "based*1.5",
+	    "height": "baseh",
+	    "thickness": "based*1.5",
 	    "fromFloor": 0,
 	    "openings": [
 	      {
@@ -24667,8 +23792,752 @@ function (require, exports, module) {
 	          "innerOouter": true,
 	          "index": 0,
 	          "xOyOz": "z"
+	        }
+	      }
+	    ]
+	  },
+	  "corner-ut": {
+	    "_TYPE": "CabinetTemplate",
+	
+	    "ID_ATTRIBUTE": "id",
+	    "type": "corner-ut",
+	    "values": [
+	      {
+	        "key": "bo",
+	        "eqn": "4*2.54"
+	      },
+	      {
+	        "key": "fwl",
+	        "eqn": "c.w - lw"
+	      },
+	      {
+	        "key": "fwr",
+	        "eqn": "c.t - rw"
+	      },
+	      {
+	        "key": "lw",
+	        "eqn": "based"
+	      },
+	      {
+	        "key": "rw",
+	        "eqn": "based"
+	      },
+	      {
+	        "key": "cnrD",
+	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)"
+	      },
+	      {
+	        "key": "pbw",
+	        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)"
+	      },
+	      {
+	        "key": "backhyp",
+	        "eqn": "Math.sqrt((R.t*R.t)*2)"
+	      },
+	      {
+	        "key": "frontLeftTheta",
+	        "eqn": "Math.atan(fwl/fwr)"
+	      },
+	      {
+	        "key": "frontRightTheta",
+	        "eqn": "Math.PI/2  - frontLeftTheta"
+	      },
+	      {
+	        "key": "frontHype",
+	        "eqn": "Math.sqrt(fwl*fwl + fwr*fwr)"
+	      },
+	      {
+	        "key": "cutWidth",
+	        "eqn": "frontHype * 2"
+	      },
+	      {
+	        "key": "frontHypeCenterD",
+	        "eqn": "fwr/2"
+	      },
+	      {
+	        "key": "frontHypeCenterX",
+	        "eqn": "fwl/2"
+	      },
+	      {
+	        "key": "cutCenterX",
+	        "eqn": "frontHypeCenterX - frontHype * Math.sin(frontRightTheta)"
+	      },
+	      {
+	        "key": "cutCenterD",
+	        "eqn": "frontHypeCenterD - frontHype * Math.cos(frontRightTheta)"
+	      },
+	      {
+	        "key": "backCutterDem",
+	        "eqn": "bo*2*Math.sin(Math.toRadians(BACK.r.y))"
+	      },
+	      {
+	        "key": "topInnerLimit",
+	        "eqn": "T.c.y - T.t/2"
+	      },
+	      {
+	        "key": "topOuterLimit",
+	        "eqn": "T.c.y + T.t/2"
+	      },
+	      {
+	        "key": "bottomInnerLimit",
+	        "eqn": "B.c.y + B.t/2"
+	      },
+	      {
+	        "key": "bottomOuterLimit",
+	        "eqn": "B.c.y - B.t/2"
+	      },
+	      {
+	        "key": "leftInnerLimit",
+	        "eqn": "R.t"
+	      },
+	      {
+	        "key": "leftOuterLimit",
+	        "eqn": "0"
+	      },
+	      {
+	        "key": "leftCutTheta",
+	        "eqn": "Math.PI - frontRightTheta - Math.PI12"
+	      },
+	      {
+	        "key": "leftCutT",
+	        "eqn": "R.t * Math.sin(leftCutTheta)/ Math.sin(Math.PI12 - leftCutTheta)"
+	      },
+	      {
+	        "key": "rightCutTheta",
+	        "eqn": "frontRightTheta"
+	      },
+	      {
+	        "key": "rightCutX",
+	        "eqn": "L.t * Math.sin(rightCutTheta)/ Math.sin(Math.PI12 - rightCutTheta)"
+	      },
+	      {
+	        "key": "rightInnerLimit",
+	        "eqn": "fwl - leftCutT"
+	      },
+	      {
+	        "key": "rightOuterLimit",
+	        "eqn": "fwl"
+	      },
+	      {
+	        "key": "frontDepthMin",
+	        "eqn": 0
+	      },
+	      {
+	        "key": "frontDepthMax",
+	        "eqn": "fwr"
+	      },
+	      {
+	        "key": "tkLeftT",
+	        "eqn": ".5/Math.sin(frontRightTheta)"
+	      },
+	      {
+	        "key": "tkRightT",
+	        "eqn": ".5/Math.sin(frontLeftTheta)"
+	      },
+	      {
+	        "key": "tkLeftD",
+	        "eqn": "frontHypeCenterX + (tkd + tkb.t/2)*Math.sin(frontRightTheta)"
+	      },
+	      {
+	        "key": "tkRightD",
+	        "eqn": "frontHypeCenterD + (tkd + tkb.t/2)*Math.sin(frontLeftTheta)"
+	      },
+	      {
+	        "key": "toeKickBackerLen",
+	        "eqn": "2*Math.sqrt((triX+tkb.t/2)*(triX+tkb.t/2)+(triY+tkb.t\\2)*(triY+tkb.t\\2))"
+	      },
+	      {
+	        "key": "triX",
+	        "eqn": "frontDepthMax +  (tkd + tkb.t/2)/Math.sin(frontLeftTheta)"
+	      },
+	      {
+	        "key": "triY",
+	        "eqn": "rightInnerLimit + (tkd + tkb.t/2)/Math.sin(frontLeftTheta)"
+	      }
+	    ],
+	    "subassemblies": [
+	      {
+	        "type": "Panel",
+	        "center": [
+	          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+	          "c.h/2",
+	          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+	        ],
+	        "demensions": [
+	          "pbw",
+	          "c.h",
+	          "pwt14"
+	        ],
+	        "rotation": [
+	          0,
+	          "135",
+	          0
+	        ],
+	        "name": "Panel.Back",
+	        "code": "BACK"
+	      },
+	      {
+	        "name": "ToeKickBacker",
+	        "type": "Panel",
+	        "code": "tkb",
+	        "center": [
+	          "tkLeftD",
+	          "w / 2",
+	          "-1 *(tkRightD)"
+	        ],
+	        "demensions": [
+	          "tkh",
+	          "toeKickBackerLen",
+	          "tkbw"
+	        ],
+	        "rotation": [
+	          "90+Math.toDegrees(frontLeftTheta)",
+	          "0",
+	          90
+	        ]
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "c.w + bo/4*Math.sin(Math.PI/2)",
+	          "c.h/2",
+	          "-(c.t + bo/4*Math.sin(Math.PI/2))"
+	        ],
+	        "demensions": [
+	          "bo*2",
+	          "c.h",
+	          "bo*2"
+	        ],
+	        "rotation": [
+	          0,
+	          "135",
+	          0
+	        ],
+	        "name": "Cutter.Back",
+	        "code": "cb"
+	      },
+	      {
+	        "type": "Divider",
+	        "center": [
+	          "R.w/2",
+	          "c.h / 2",
+	          "R.t/-2"
+	        ],
+	        "demensions": [
+	          "c.w",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          "0",
+	          0
+	        ],
+	        "name": "Panel.Right",
+	        "code": "R"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "L.c.x - toeKickBackerLen/2",
+	          "L.c.y",
+	          "L.c.z"
+	        ],
+	        "demensions": [
+	          "toeKickBackerLen",
+	          "L.d.y + 1",
+	          "toeKickBackerLen"
+	        ],
+	        "rotation": [
+	          "L.r.x",
+	          "L.r.y",
+	          "L.r.z"
+	        ],
+	        "name": "CutterTBLeft",
+	        "code": "ctbl"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "pbl.c.x",
+	          "pbl.c.y",
+	          "pbl.c.z - toeKickBackerLen/2"
+	        ],
+	        "demensions": [
+	          "toeKickBackerLen",
+	          "pbl.d.y + 1",
+	          "toeKickBackerLen"
+	        ],
+	        "rotation": [
+	          "pbl.r.x",
+	          "pbl.r.y",
+	          "pbl.r.z"
+	        ],
+	        "name": "CutterTBLeft2",
+	        "code": "ctbl2"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "pbr.c.x + toeKickBackerLen/2",
+	          "pbr.c.y",
+	          "pbr.c.z"
+	        ],
+	        "demensions": [
+	          "toeKickBackerLen",
+	          "pbr.d.y + 1",
+	          "toeKickBackerLen"
+	        ],
+	        "rotation": [
+	          "pbr.r.x",
+	          "pbr.r.y",
+	          "pbr.r.z"
+	        ],
+	        "name": "CutterTBRight",
+	        "code": "ctbr"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "R.c.x",
+	          "R.c.y",
+	          "R.c.z + toeKickBackerLen/2"
+	        ],
+	        "demensions": [
+	          "toeKickBackerLen",
+	          "R.d.y + 1",
+	          "toeKickBackerLen"
+	        ],
+	        "rotation": [
+	          "R.r.x",
+	          "R.r.y",
+	          "R.r.z"
+	        ],
+	        "name": "CutterTBRight2",
+	        "code": "ctbr2"
+	      },
+	      {
+	        "type": "Divider",
+	        "center": [
+	          "L.t/2",
+	          "c.h/2",
+	          "L.w/-2"
+	        ],
+	        "demensions": [
+	          "c.t",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          "90",
+	          0
+	        ],
+	        "name": "Panel.Left",
+	        "code": "L"
+	      },
+	      {
+	        "type": "Panel",
+	        "center": [
+	          "pbl.w / 2 + R.t ",
+	          "c.h/2",
+	          "-(c.t - t / 2)"
+	        ],
+	        "demensions": [
+	          "c.w - bo",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          0,
+	          0
+	        ],
+	        "name": "Panel.Back.Left",
+	        "code": "pbl"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "pbr.c.x + cpbl.t",
+	          "pbr.c.y",
+	          "pbr.c.z"
+	        ],
+	        "demensions": [
+	          "pbr.d.x",
+	          "pbr.d.y",
+	          "pbr.d.z"
+	        ],
+	        "rotation": [
+	          "pbr.r.x",
+	          "pbr.r.y",
+	          "pbr.r.z"
+	        ],
+	        "name": "Cutter.Back.Left",
+	        "code": "cpbl"
+	      },
+	      {
+	        "type": "Panel",
+	        "center": [
+	          "c.w - pbl.t/2",
+	          "c.h/2",
+	          "-(pbr.w/2 + L.t)"
+	        ],
+	        "demensions": [
+	          "c.t - bo",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          "90",
+	          0
+	        ],
+	        "name": "Panel.Back.Right",
+	        "code": "pbr"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "pbl.c.x",
+	          "pbl.c.y",
+	          "pbl.c.z - cpbr.t"
+	        ],
+	        "demensions": [
+	          "pbl.d.x",
+	          "pbl.d.y",
+	          "pbl.d.z"
+	        ],
+	        "rotation": [
+	          "pbl.r.x",
+	          "pbl.r.y",
+	          "pbl.r.z"
+	        ],
+	        "name": "Cutter.Back.Right",
+	        "code": "cpbr"
+	      },
+	      {
+	        "type": "Divider",
+	        "center": [
+	          "c.w / 2",
+	          "c.h -  tid - T.t / 2",
+	          "c.t / -2"
+	        ],
+	        "demensions": [
+	          "c.w - pbl.t - R.t",
+	          "c.t - pbr.t - L.t",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          "90",
+	          "0",
+	          0
+	        ],
+	        "name": "Panel.Top",
+	        "code": "T"
+	      },
+	      {
+	        "type": "Divider",
+	        "center": [
+	          "c.w / 2",
+	          "tkh + B.t / 2",
+	          "c.t / -2"
+	        ],
+	        "demensions": [
+	          "c.w - pbl.t - R.t",
+	          "c.t - pbr.t - L.t",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          "90",
+	          "0",
+	          0
+	        ],
+	        "name": "Panel.Bottom",
+	        "code": "B"
+	      },
+	      {
+	        "type": "Cutter",
+	        "center": [
+	          "cutCenterX",
+	          "c.h/2",
+	          "-cutCenterD"
+	        ],
+	        "demensions": [
+	          "frontHype * 2",
+	          "frontHype*2",
+	          "c.h"
+	        ],
+	        "rotation": [
+	          "90",
+	          "Math.toDegrees(Math.PI - frontRightTheta)",
+	          0
+	        ],
+	        "name": "Cutter.Front",
+	        "code": "cut"
+	      }
+	    ],
+	    "joints": [
+	      {
+	        "malePartCode": "BACK",
+	        "femalePartCode": "B",
+	        "type": "Butt"
+	      },
+	      {
+	        "malePartCode": "BACK",
+	        "femalePartCode": "pbl",
+	        "type": "Butt"
+	      },
+	      {
+	        "malePartCode": "BACK",
+	        "femalePartCode": "pbr",
+	        "type": "Butt"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "B",
+	        "femalePartCode": "L",
+	        "maleOffset": "L.t / 2",
+	        "demensionAxis": "y",
+	        "centerAxis": "-z"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "B",
+	        "femalePartCode": "R",
+	        "maleOffset": "R.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "-x"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "B",
+	        "femalePartCode": "pbr",
+	        "maleOffset": "pbr.t/2",
+	        "demensionAxis": "y",
+	        "centerAxis": "+z"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "B",
+	        "femalePartCode": "pbl",
+	        "maleOffset": "pbl.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "+x"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "T",
+	        "femalePartCode": "L",
+	        "maleOffset": "L.t / 2",
+	        "demensionAxis": "y",
+	        "centerAxis": "-z"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "T",
+	        "femalePartCode": "R",
+	        "maleOffset": "R.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "-x"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "T",
+	        "femalePartCode": "pbr",
+	        "maleOffset": "pbr.t/2",
+	        "demensionAxis": "y",
+	        "centerAxis": "+z"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "T",
+	        "femalePartCode": "pbl",
+	        "maleOffset": "pbl.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "+x"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pbr",
+	        "femalePartCode": "R",
+	        "maleOffset": "pbr.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "-z"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "pbl",
+	        "femalePartCode": "L",
+	        "maleOffset": "L.t / 2",
+	        "demensionAxis": "x",
+	        "centerAxis": "-x"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "T"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cut",
+	        "femalePartCode": "T"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cut",
+	        "femalePartCode": "B"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cut",
+	        "femalePartCode": "L"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cut",
+	        "femalePartCode": "R"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cb",
+	        "femalePartCode": "T"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cb",
+	        "femalePartCode": "B"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cb",
+	        "femalePartCode": "pbl"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cb",
+	        "femalePartCode": "pbr"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cpbl",
+	        "femalePartCode": "BACK"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "cpbr",
+	        "femalePartCode": "BACK"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "tkb",
+	        "femalePartCode": "B",
+	        "maleOffset": "B.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "+y"
+	      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "tkb",
+	        "femalePartCode": "L",
+	        "maleOffset": ".1",
+	        "demensionAxis": "x",
+	        "centerAxis": "+x"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "tkb",
+	        "femalePartCode": "R"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "ctbl",
+	        "femalePartCode": "tkb"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "ctbr",
+	        "femalePartCode": "tkb"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "ctbl2",
+	        "femalePartCode": "tkb"
+	      },
+	      {
+	        "type": "Butt",
+	        "malePartCode": "ctbr2",
+	        "femalePartCode": "tkb"
+	      }
+	    ],
+	    "dividerJoint": {
+	      "type": "Dado",
+	      "maleOffset": "33"
+	    },
+	    "shape": "corner",
+	    "width": "based*1.5",
+	    "height": "maxHeight(c.w,c.t,ceilh)",
+	    "thickness": "based*1.5",
+	    "fromFloor": 0,
+	    "openings": [
+	      {
+	        "_Type": "location",
+	        "rotation": {
+	          "x": 0,
+	          "z": 0,
+	          "y": "270+ Math.toDegrees(frontRightTheta)"
 	        },
-	        "id": "hoeigtl0"
+	        "coordinates": {
+	          "inner": [
+	            {
+	              "x": "leftInnerLimit",
+	              "y": "topInnerLimit",
+	              "z": "-(frontDepthMax - rightCutX)"
+	            },
+	            {
+	              "x": "rightInnerLimit",
+	              "y": "topInnerLimit",
+	              "z": "-(frontDepthMin + R.t)"
+	            },
+	            {
+	              "x": "rightInnerLimit",
+	              "y": "bottomInnerLimit",
+	              "z": "-(frontDepthMin + R.t)"
+	            },
+	            {
+	              "x": "leftInnerLimit",
+	              "y": "bottomInnerLimit",
+	              "z": "-(frontDepthMax - rightCutX)"
+	            }
+	          ],
+	          "outer": [
+	            {
+	              "x": "leftOuterLimit",
+	              "y": "topOuterLimit",
+	              "z": "-frontDepthMax"
+	            },
+	            {
+	              "x": "rightOuterLimit",
+	              "y": "topOuterLimit",
+	              "z": "-frontDepthMin"
+	            },
+	            {
+	              "x": "rightOuterLimit",
+	              "y": "bottomOuterLimit",
+	              "z": "-frontDepthMin"
+	            },
+	            {
+	              "x": "leftOuterLimit",
+	              "y": "bottomOuterLimit",
+	              "z": "-frontDepthMax"
+	            }
+	          ]
+	        },
+	        "state": {
+	          "innerOouter": true,
+	          "index": 0,
+	          "xOyOz": "z"
+	        }
 	      }
 	    ]
 	  },
@@ -24680,23 +24549,19 @@ function (require, exports, module) {
 	  "values": [
 	    {
 	      "key": "brh",
-	      "eqn": "tkb.w + BACK.t + brr",
-	      "id": "buu70v5"
+	      "eqn": "tkb.w + BACK.t + brr"
 	    },
 	    {
 	      "key": "innerWidth",
-	      "eqn": "c.w - pwt34 * 2",
-	      "id": "v0rrgn4"
+	      "eqn": "c.w - pwt34 * 2"
 	    },
 	    {
 	      "key": "innerWidthCenter",
-	      "eqn": "innerWidth + pwt34",
-	      "id": "9ahavm9"
+	      "eqn": "innerWidth + pwt34"
 	    },
 	    {
 	      "key": "insetTop",
-	      "eqn": "4*2.54",
-	      "id": "89whzbr"
+	      "eqn": "4*2.54"
 	    }
 	  ],
 	  "subassemblies": [
@@ -24718,12 +24583,11 @@ function (require, exports, module) {
 	        0,
 	        0,
 	        90
-	      ],
-	      "id": "hy0mb2f"
+	      ]
 	    },
 	    {
 	      "name": "Right",
-	      "type": "Panel",
+	      "type": "Divider",
 	      "code": "R",
 	      "center": [
 	        "c.w - (R.t / 2)",
@@ -24739,12 +24603,11 @@ function (require, exports, module) {
 	        0,
 	        90,
 	        0
-	      ],
-	      "id": "1gadqgr"
+	      ]
 	    },
 	    {
 	      "name": "Left",
-	      "type": "Panel",
+	      "type": "Divider",
 	      "code": "L",
 	      "center": [
 	        "(t / 2)",
@@ -24760,8 +24623,7 @@ function (require, exports, module) {
 	        0,
 	        90,
 	        0
-	      ],
-	      "id": "u9vq149"
+	      ]
 	    },
 	    {
 	      "name": "Back",
@@ -24781,12 +24643,11 @@ function (require, exports, module) {
 	        0,
 	        0,
 	        90
-	      ],
-	      "id": "czc2oh9"
+	      ]
 	    },
 	    {
 	      "name": "Bottom",
-	      "type": "Panel",
+	      "type": "Divider",
 	      "code": "B",
 	      "center": [
 	        "c.w / 2",
@@ -24802,12 +24663,11 @@ function (require, exports, module) {
 	        90,
 	        90,
 	        0
-	      ],
-	      "id": "dghshql"
+	      ]
 	    },
 	    {
 	      "name": "Top",
-	      "type": "Panel",
+	      "type": "Divider",
 	      "code": "T",
 	      "center": [
 	        "c.w / 2",
@@ -24823,8 +24683,7 @@ function (require, exports, module) {
 	        90,
 	        90,
 	        0
-	      ],
-	      "id": "m1duwg6"
+	      ]
 	    },
 	    {
 	      "type": "Panel",
@@ -24844,8 +24703,7 @@ function (require, exports, module) {
 	        "90"
 	      ],
 	      "name": "Panel.Top.Filler",
-	      "code": "tf",
-	      "id": "jg9xsbp"
+	      "code": "tf"
 	    }
 	  ],
 	  "joints": [
@@ -24855,8 +24713,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "-x",
-	      "id": "p7vfvh8"
+	      "centerAxis": "-x"
 	    },
 	    {
 	      "malePartCode": "T",
@@ -24864,8 +24721,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "+x",
-	      "id": "b5qazbk"
+	      "centerAxis": "+x"
 	    },
 	    {
 	      "malePartCode": "BACK",
@@ -24873,8 +24729,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "-x",
-	      "id": "06o0nvb"
+	      "centerAxis": "-x"
 	    },
 	    {
 	      "malePartCode": "BACK",
@@ -24882,8 +24737,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "+x",
-	      "id": "85go7cv"
+	      "centerAxis": "+x"
 	    },
 	    {
 	      "malePartCode": "tkb",
@@ -24891,8 +24745,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "-x",
-	      "id": "pk88j7o"
+	      "centerAxis": "-x"
 	    },
 	    {
 	      "malePartCode": "tkb",
@@ -24900,8 +24753,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "+x",
-	      "id": "oygww1d"
+	      "centerAxis": "+x"
 	    },
 	    {
 	      "malePartCode": "B",
@@ -24909,8 +24761,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "-x",
-	      "id": "70b26qf"
+	      "centerAxis": "-x"
 	    },
 	    {
 	      "malePartCode": "B",
@@ -24918,8 +24769,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "y",
-	      "centerAxis": "+x",
-	      "id": "v2ic7qf"
+	      "centerAxis": "+x"
 	    },
 	    {
 	      "malePartCode": "tkb",
@@ -24927,8 +24777,7 @@ function (require, exports, module) {
 	      "type": "Dado",
 	      "maleOffset": 0.9525,
 	      "demensionAxis": "x",
-	      "centerAxis": "+y",
-	      "id": "y0kns4a"
+	      "centerAxis": "+y"
 	    },
 	    {
 	      "type": "Dado",
@@ -24936,8 +24785,7 @@ function (require, exports, module) {
 	      "femalePartCode": "T",
 	      "maleOffset": "T.t/2",
 	      "demensionAxis": "x",
-	      "centerAxis": "+y",
-	      "id": "f31dvhq"
+	      "centerAxis": "+y"
 	    }
 	  ],
 	  "dividerJoint": {
@@ -24955,8 +24803,7 @@ function (require, exports, module) {
 	      "bottom": "B",
 	      "left": "L",
 	      "right": "R",
-	      "back": "BACK",
-	      "id": "z57re4i"
+	      "back": "BACK"
 	    }
 	  ]
 	},
@@ -24985,8 +24832,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Right",
-	        "code": "R",
-	        "id": "ulybhe4"
+	        "code": "R"
 	      },
 	      {
 	        "type": "Divider",
@@ -25006,8 +24852,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Left",
-	        "code": "L",
-	        "id": "c491atd"
+	        "code": "L"
 	      },
 	      {
 	        "type": "Panel",
@@ -25027,11 +24872,10 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.back",
-	        "code": "BACK",
-	        "id": "1w1qwce"
+	        "code": "BACK"
 	      },
 	      {
-	        "type": "Panel",
+	        "type": "Divider",
 	        "center": [
 	          "L.t + T.w / 2",
 	          "c.h - tid - T.t/2",
@@ -25048,11 +24892,10 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Top",
-	        "code": "T",
-	        "id": "sllmw58"
+	        "code": "T"
 	      },
 	      {
-	        "type": "Panel",
+	        "type": "Divider",
 	        "center": [
 	          "B.w /2 + L.t",
 	          "bid + B.t/2",
@@ -25069,8 +24912,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panal.Bottom",
-	        "code": "B",
-	        "id": "5qr8v9c"
+	        "code": "B"
 	      }
 	    ],
 	    "joints": [
@@ -25080,8 +24922,7 @@ function (require, exports, module) {
 	        "femalePartCode": "T",
 	        "maleOffset": "T.t/2",
 	        "demensionAxis": "y",
-	        "centerAxis": "+y",
-	        "id": "vrku9a3"
+	        "centerAxis": "+y"
 	      },
 	      {
 	        "type": "Dado",
@@ -25089,8 +24930,7 @@ function (require, exports, module) {
 	        "femalePartCode": "R",
 	        "maleOffset": "R.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "+x",
-	        "id": "j8wjpdy"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "type": "Dado",
@@ -25098,8 +24938,7 @@ function (require, exports, module) {
 	        "femalePartCode": "B",
 	        "maleOffset": "B.t/2",
 	        "demensionAxis": "y",
-	        "centerAxis": "-y",
-	        "id": "6ig0rph"
+	        "centerAxis": "-y"
 	      },
 	      {
 	        "type": "Dado",
@@ -25107,8 +24946,7 @@ function (require, exports, module) {
 	        "femalePartCode": "L",
 	        "maleOffset": "L.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "-x",
-	        "id": "d2mneq5"
+	        "centerAxis": "-x"
 	      }
 	    ],
 	    "dividerJoint": {
@@ -25126,8 +24964,7 @@ function (require, exports, module) {
 	        "bottom": "B",
 	        "left": "L",
 	        "right": "R",
-	        "back": "BACK",
-	        "id": "e3jma2l"
+	        "back": "BACK"
 	      }
 	    ]
 	  },
@@ -25139,28 +24976,23 @@ function (require, exports, module) {
 	    "values": [
 	      {
 	        "key": "brh",
-	        "eqn": "tkb.w + BACK.t + brr",
-	        "id": "rytasvx"
+	        "eqn": "tkb.w + BACK.t + brr"
 	      },
 	      {
 	        "key": "innerWidth",
-	        "eqn": "c.w - pwt34 * 2",
-	        "id": "eirxtek"
+	        "eqn": "c.w - pwt34 * 2"
 	      },
 	      {
 	        "key": "innerWidthCenter",
-	        "eqn": "innerWidth + pwt34",
-	        "id": "j4e8h6b"
+	        "eqn": "innerWidth + pwt34"
 	      },
 	      {
 	        "key": "blindDepth",
-	        "eqn": "24*2.54",
-	        "id": "efbkt8b"
+	        "eqn": "24*2.54"
 	      },
 	      {
 	        "key": "innerHeight",
-	        "eqn": "c.h - tkh - B.t",
-	        "id": "m8ntul7"
+	        "eqn": "c.h - tkh - B.t"
 	      }
 	    ],
 	    "subassemblies": [
@@ -25182,12 +25014,11 @@ function (require, exports, module) {
 	          0,
 	          0,
 	          90
-	        ],
-	        "id": "a5qdqn0"
+	        ]
 	      },
 	      {
 	        "name": "Right",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "R",
 	        "center": [
 	          "c.w - (R.t / 2)",
@@ -25203,12 +25034,11 @@ function (require, exports, module) {
 	          0,
 	          90,
 	          0
-	        ],
-	        "id": "92ph35l"
+	        ]
 	      },
 	      {
 	        "name": "Left",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "L",
 	        "center": [
 	          "(t / 2)",
@@ -25224,8 +25054,7 @@ function (require, exports, module) {
 	          0,
 	          90,
 	          0
-	        ],
-	        "id": "m3qw835"
+	        ]
 	      },
 	      {
 	        "name": "Back",
@@ -25245,12 +25074,11 @@ function (require, exports, module) {
 	          0,
 	          0,
 	          90
-	        ],
-	        "id": "xtnagor"
+	        ]
 	      },
 	      {
 	        "name": "Bottom",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "B",
 	        "center": [
 	          "c.w / 2",
@@ -25266,12 +25094,11 @@ function (require, exports, module) {
 	          90,
 	          90,
 	          0
-	        ],
-	        "id": "hqd66l3"
+	        ]
 	      },
 	      {
 	        "name": "Top",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "T",
 	        "center": [
 	          "c.w / 2",
@@ -25287,8 +25114,7 @@ function (require, exports, module) {
 	          90,
 	          90,
 	          0
-	        ],
-	        "id": "23jhkbo"
+	        ]
 	      },
 	      {
 	        "name": "Top2",
@@ -25308,8 +25134,7 @@ function (require, exports, module) {
 	          90,
 	          90,
 	          0
-	        ],
-	        "id": "xurl216"
+	        ]
 	      },
 	      {
 	        "type": "Panel",
@@ -25329,8 +25154,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Blind.MiddleSupport",
-	        "code": "bms",
-	        "id": "xu3co3t"
+	        "code": "bms"
 	      }
 	    ],
 	    "joints": [
@@ -25340,8 +25164,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "5iua8fj"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "malePartCode": "T",
@@ -25349,8 +25172,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "tdgb6kj"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "malePartCode": "pt2",
@@ -25358,8 +25180,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "omdnri7"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "malePartCode": "pt2",
@@ -25367,8 +25188,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "kkh5047"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "malePartCode": "BACK",
@@ -25376,8 +25196,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "xe729tv"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "malePartCode": "BACK",
@@ -25385,8 +25204,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "x653in7"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "malePartCode": "tkb",
@@ -25394,8 +25212,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "juufon2"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "malePartCode": "tkb",
@@ -25403,8 +25220,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "4sd9jd8"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "malePartCode": "B",
@@ -25412,8 +25228,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "navlp2j"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "malePartCode": "B",
@@ -25421,8 +25236,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "iw7sb6w"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "malePartCode": "tkb",
@@ -25430,8 +25244,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "x",
-	        "centerAxis": "+y",
-	        "id": "wsui626"
+	        "centerAxis": "+y"
 	      }
 	    ],
 	    "dividerJoint": {
@@ -25501,8 +25314,7 @@ function (require, exports, module) {
 	          "innerOouter": true,
 	          "index": 0,
 	          "xOyOz": "z"
-	        },
-	        "id": "hofivl0"
+	        }
 	      },
 	      {
 	        "_Type": "location",
@@ -25604,8 +25416,7 @@ function (require, exports, module) {
 	              "z": "0"
 	            }
 	          ]
-	        },
-	        "id": "zt9qh07"
+	        }
 	      }
 	    ]
 	  },
@@ -25617,28 +25428,23 @@ function (require, exports, module) {
 	    "values": [
 	      {
 	        "key": "brh",
-	        "eqn": "tkb.w + BACK.t + brr",
-	        "id": "rytasvx"
+	        "eqn": "tkb.w + BACK.t + brr"
 	      },
 	      {
 	        "key": "innerWidth",
-	        "eqn": "c.w - pwt34 * 2",
-	        "id": "eirxtek"
+	        "eqn": "c.w - pwt34 * 2"
 	      },
 	      {
 	        "key": "innerWidthCenter",
-	        "eqn": "innerWidth + pwt34",
-	        "id": "j4e8h6b"
+	        "eqn": "innerWidth + pwt34"
 	      },
 	      {
 	        "key": "blindDepth",
-	        "eqn": "24*2.54",
-	        "id": "efbkt8b"
+	        "eqn": "12*2.54"
 	      },
 	      {
 	        "key": "innerHeight",
-	        "eqn": "c.h - tkh - B.t",
-	        "id": "m8ntul7"
+	        "eqn": "c.h - tkh - B.t"
 	      }
 	    ],
 	    "subassemblies": [
@@ -25660,12 +25466,11 @@ function (require, exports, module) {
 	          0,
 	          0,
 	          90
-	        ],
-	        "id": "a5qdqn0"
+	        ]
 	      },
 	      {
 	        "name": "Right",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "R",
 	        "center": [
 	          "c.w - (R.t / 2)",
@@ -25681,12 +25486,11 @@ function (require, exports, module) {
 	          0,
 	          90,
 	          0
-	        ],
-	        "id": "92ph35l"
+	        ]
 	      },
 	      {
 	        "name": "Left",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "L",
 	        "center": [
 	          "(t / 2)",
@@ -25702,8 +25506,7 @@ function (require, exports, module) {
 	          0,
 	          90,
 	          0
-	        ],
-	        "id": "m3qw835"
+	        ]
 	      },
 	      {
 	        "name": "Back",
@@ -25723,12 +25526,11 @@ function (require, exports, module) {
 	          0,
 	          0,
 	          90
-	        ],
-	        "id": "xtnagor"
+	        ]
 	      },
 	      {
 	        "name": "Bottom",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "B",
 	        "center": [
 	          "c.w / 2",
@@ -25744,12 +25546,11 @@ function (require, exports, module) {
 	          90,
 	          90,
 	          0
-	        ],
-	        "id": "hqd66l3"
+	        ]
 	      },
 	      {
 	        "name": "Top",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "T",
 	        "center": [
 	          "c.w / 2",
@@ -25765,8 +25566,7 @@ function (require, exports, module) {
 	          90,
 	          90,
 	          0
-	        ],
-	        "id": "23jhkbo"
+	        ]
 	      },
 	      {
 	        "name": "Top2",
@@ -25786,18 +25586,17 @@ function (require, exports, module) {
 	          90,
 	          90,
 	          0
-	        ],
-	        "id": "xurl216"
+	        ]
 	      },
 	      {
 	        "type": "Panel",
 	        "center": [
-	          "blindDepth + 2*2.54 - bms.w/2",
+	          "blindDepth",
 	          "tkh + B.t + bms.h/2",
 	          "bms.t/-2"
 	        ],
 	        "demensions": [
-	          "6*2.54",
+	          "3*2.54",
 	          "innerHeight",
 	          "pwt34"
 	        ],
@@ -25807,8 +25606,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Blind.MiddleSupport",
-	        "code": "bms",
-	        "id": "xu3co3t"
+	        "code": "bms"
 	      }
 	    ],
 	    "joints": [
@@ -25818,8 +25616,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "5iua8fj"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "malePartCode": "T",
@@ -25827,8 +25624,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "tdgb6kj"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "malePartCode": "pt2",
@@ -25836,8 +25632,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "omdnri7"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "malePartCode": "pt2",
@@ -25845,8 +25640,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "kkh5047"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "malePartCode": "BACK",
@@ -25854,8 +25648,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "xe729tv"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "malePartCode": "BACK",
@@ -25863,8 +25656,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "x653in7"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "malePartCode": "tkb",
@@ -25872,8 +25664,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "juufon2"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "malePartCode": "tkb",
@@ -25881,8 +25672,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "4sd9jd8"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "malePartCode": "B",
@@ -25890,8 +25680,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "navlp2j"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "malePartCode": "B",
@@ -25899,8 +25688,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "iw7sb6w"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "malePartCode": "tkb",
@@ -25908,8 +25696,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "x",
-	        "centerAxis": "+y",
-	        "id": "wsui626"
+	        "centerAxis": "+y"
 	      }
 	    ],
 	    "dividerJoint": {
@@ -25917,9 +25704,9 @@ function (require, exports, module) {
 	      "maleOffset": 0.9525
 	    },
 	    "shape": "square",
-	    "width": 121.92,
-	    "height": "baseh",
-	    "thickness": "based",
+	    "width": 60.96,
+	    "height": "wallh",
+	    "thickness": "walld",
 	    "fromFloor": 0,
 	    "openings": [
 	      {
@@ -25979,8 +25766,7 @@ function (require, exports, module) {
 	          "innerOouter": true,
 	          "index": 0,
 	          "xOyOz": "z"
-	        },
-	        "id": "hofivl0"
+	        }
 	      },
 	      {
 	        "_Type": "location",
@@ -26082,8 +25868,7 @@ function (require, exports, module) {
 	              "z": "0"
 	            }
 	          ]
-	        },
-	        "id": "zt3jh07"
+	        }
 	      }
 	    ]
 	  },
@@ -26095,94 +25880,58 @@ function (require, exports, module) {
 	    "values": [
 	      {
 	        "key": "bo",
-	        "eqn": "4*2.54",
-	        "id": "pz0usts"
-	      },
+	        "eqn": "4*2.54"      },
 	      {
 	        "key": "cnrD",
-	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
-	        "id": "vju4ekg"
-	      },
+	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)"      },
 	      {
 	        "key": "pbw",
-	        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
-	        "id": "bg3l1cw"
-	      },
+	        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)"      },
 	      {
 	        "key": "innerWidth",
-	        "eqn": "c.w - R.t",
-	        "id": "r1am35q"
-	      },
+	        "eqn": "c.w - R.t"      },
 	      {
 	        "key": "innerWidthCenter",
-	        "eqn": "innerWidth + pwt34",
-	        "id": "zrglub8"
-	      },
+	        "eqn": "innerWidth + pwt34"      },
 	      {
 	        "key": "frontHype",
-	        "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)",
-	        "id": "r01pswe"
-	      },
+	        "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)"      },
 	      {
 	        "key": "frontCenterX",
-	        "eqn": "frontHype/2 * Math.cos(frontLeftTheta)",
-	        "id": "u5ycphk"
-	      },
+	        "eqn": "frontHype/2 * Math.cos(frontLeftTheta)"      },
 	      {
 	        "key": "frontCenterZ",
-	        "eqn": "-frontHype/2 * Math.cos(frontRightTheta)",
-	        "id": "dnca3mh"
-	      },
+	        "eqn": "-frontHype/2 * Math.cos(frontRightTheta)"      },
 	      {
 	        "key": "frontLeftTheta",
-	        "eqn": "Math.atan(c.t/c.w)",
-	        "id": "b16j601"
-	      },
+	        "eqn": "Math.atan(c.t/c.w)"      },
 	      {
 	        "key": "frontRightTheta",
-	        "eqn": "Math.PI/2  - frontLeftTheta",
-	        "id": "61umfwr"
-	      },
+	        "eqn": "Math.PI/2  - frontLeftTheta"      },
 	      {
 	        "key": "toeKickBackerLen",
-	        "eqn": "Math.sqrt((c.w-tkLeftD-tkLeftT-R.t)*(c.w-tkLeftD-tkLeftT-R.t)+(c.t-tkRightD-tkRightT-L.t)*(c.t-tkRightD-tkRightT-L.t))",
-	        "id": "6d7a07i"
-	      },
+	        "eqn": "Math.sqrt((c.w-tkLeftD-tkLeftT-R.t)*(c.w-tkLeftD-tkLeftT-R.t)+(c.t-tkRightD-tkRightT-L.t)*(c.t-tkRightD-tkRightT-L.t))"      },
 	      {
 	        "key": "innerDepth",
-	        "eqn": "c.t - L.t",
-	        "id": "c89p2y8"
-	      },
+	        "eqn": "c.t - L.t"      },
 	      {
 	        "key": "tkLeftT",
-	        "eqn": ".5/Math.sin(frontLeftTheta)",
-	        "id": "fi3bwts"
-	      },
+	        "eqn": "(tkb.t/2)*Math.sin(frontLeftTheta)"      },
 	      {
 	        "key": "tkRightT",
-	        "eqn": ".5/Math.sin(frontRightTheta)",
-	        "id": "m0p2fnx"
-	      },
+	        "eqn": "(tkb.t/2)*Math.sin(frontRightTheta)"      },
 	      {
 	        "key": "tkLeftD",
-	        "eqn": "tkd/Math.sin(frontLeftTheta)",
-	        "id": "xd2g25i"
-	      },
+	        "eqn": "tkd*Math.sin(frontLeftTheta)"      },
 	      {
 	        "key": "tkRightD",
-	        "eqn": "tkd/Math.sin(frontRightTheta)",
-	        "id": "e2tcn5p"
-	      },
+	        "eqn": "tkd*Math.sin(frontRightTheta)"      },
 	      {
 	        "key": "triX",
-	        "eqn": "c.w - tkLeftD - tkLeftT/2",
-	        "id": "9sfgikr"
-	      },
+	        "eqn": "frontCenterX + tkLeftD + tkLeftT"      },
 	      {
 	        "key": "triY",
-	        "eqn": "c.t - tkRightD - tkRightT/2",
-	        "id": "fcwcnb9"
-	      }
+	        "eqn": "frontCenterZ - tkRightD - tkRightT"      }
 	    ],
 	    "subassemblies": [
 	      {
@@ -26203,9 +25952,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Back",
-	        "code": "BACK",
-	        "id": "ly2p41u"
-	      },
+	        "code": "BACK"      },
 	      {
 	        "type": "Cutter",
 	        "center": [
@@ -26224,9 +25971,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Cutter.Back",
-	        "code": "cb",
-	        "id": "ly2p41z"
-	      },
+	        "code": "cb"      },
 	      {
 	        "type": "Cutter",
 	        "center": [
@@ -26245,9 +25990,7 @@ function (require, exports, module) {
 	          "R.r.z"
 	        ],
 	        "name": "Cutter.Back.Right",
-	        "code": "cpbr",
-	        "id": "qnpktw2"
-	      },
+	        "code": "cpbr"      },
 	      {
 	        "type": "Cutter",
 	        "center": [
@@ -26266,17 +26009,15 @@ function (require, exports, module) {
 	          "L.r.z"
 	        ],
 	        "name": "Cutter.Back.Left",
-	        "code": "cpbl",
-	        "id": "qnpktr2"
-	      },
+	        "code": "cpbl"      },
 	      {
 	        "name": "ToeKickBacker",
 	        "type": "Panel",
 	        "code": "tkb",
 	        "center": [
-	          "c.w - triX/2",
+	          "triX",
 	          "w / 2",
-	          "-1 *(c.t - triY/2)"
+	          "triY"
 	        ],
 	        "demensions": [
 	          "tkh",
@@ -26287,9 +26028,7 @@ function (require, exports, module) {
 	          "90+Math.toDegrees(frontRightTheta)",
 	          "0",
 	          90
-	        ],
-	        "id": "zojblha"
-	      },
+	        ]      },
 	      {
 	        "name": "Panel.Right",
 	        "type": "Divider",
@@ -26308,9 +26047,7 @@ function (require, exports, module) {
 	          0,
 	          90,
 	          0
-	        ],
-	        "id": "i27zjxi"
-	      },
+	        ]      },
 	      {
 	        "name": "Panel.Left",
 	        "type": "Divider",
@@ -26329,12 +26066,10 @@ function (require, exports, module) {
 	          0,
 	          "0",
 	          0
-	        ],
-	        "id": "ly1lmzs"
-	      },
+	        ]      },
 	      {
 	        "name": "Bottom",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "B",
 	        "center": [
 	          "B.w / 2",
@@ -26350,12 +26085,10 @@ function (require, exports, module) {
 	          "90",
 	          "0",
 	          0
-	        ],
-	        "id": "dx1l40m"
-	      },
+	        ]      },
 	      {
 	        "name": "Top",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "T",
 	        "center": [
 	          "T.w / 2",
@@ -26371,9 +26104,7 @@ function (require, exports, module) {
 	          90,
 	          "0",
 	          0
-	        ],
-	        "id": "lcj2axc"
-	      },
+	        ]      },
 	      {
 	        "type": "Cutter",
 	        "center": [
@@ -26393,9 +26124,7 @@ function (require, exports, module) {
 	        ],
 	        "include": "All",
 	        "name": "frontCutter",
-	        "code": "fc",
-	        "id": "uzqg2vs"
-	      }
+	        "code": "fc"      }
 	    ],
 	    "joints": [
 	      {
@@ -26404,149 +26133,105 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": "0.9525",
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "7whh25x"
-	      },
+	        "centerAxis": "+x"      },
 	      {
 	        "malePartCode": "T",
 	        "femalePartCode": "L",
 	        "type": "Dado",
 	        "maleOffset": "0.9525",
 	        "demensionAxis": "x",
-	        "centerAxis": "-z",
-	        "id": "w3lyip6"
-	      },
+	        "centerAxis": "-z"      },
 	      {
 	        "malePartCode": "tkb",
 	        "femalePartCode": "R",
 	        "type": "Butt",
-	        "maleOffset": "0.9525",
-	        "id": "5ay7hu7"
-	      },
+	        "maleOffset": "0.9525"      },
 	      {
 	        "malePartCode": "tkb",
 	        "femalePartCode": "L",
 	        "type": "Butt",
-	        "maleOffset": "0.9525",
-	        "id": "modbdha"
-	      },
+	        "maleOffset": "0.9525"      },
 	      {
 	        "malePartCode": "B",
 	        "femalePartCode": "R",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "eetmyfu"
-	      },
+	        "centerAxis": "-x"      },
 	      {
 	        "malePartCode": "B",
 	        "femalePartCode": "L",
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "z8sqwwt"
-	      },
+	        "centerAxis": "+x"      },
 	      {
 	        "malePartCode": "tkb",
 	        "femalePartCode": "B",
 	        "type": "Dado",
 	        "maleOffset": "0.9525",
 	        "demensionAxis": "x",
-	        "centerAxis": "+y",
-	        "id": "84e6woh"
-	      },
+	        "centerAxis": "+y"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "fc",
-	        "femalePartCode": "T",
-	        "id": "i2h32py"
-	      },
+	        "femalePartCode": "T"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "fc",
-	        "femalePartCode": "R",
-	        "id": "5h7i27p"
-	      },
+	        "femalePartCode": "R"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "fc",
-	        "femalePartCode": "L",
-	        "id": "on59hxn"
-	      },
+	        "femalePartCode": "L"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "fc",
-	        "femalePartCode": "B",
-	        "id": "kxec5xg"
-	      },
+	        "femalePartCode": "B"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "BACK",
-	        "femalePartCode": "T",
-	        "id": "e3z7qur"
-	      },
+	        "femalePartCode": "T"      },
 	      {
 	        "malePartCode": "BACK",
 	        "femalePartCode": "B",
-	        "type": "Butt",
-	        "id": "jhdiitu"
-	      },
+	        "type": "Butt"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbr",
-	        "femalePartCode": "BACK",
-	        "id": "l85jpd3"
-	      },
+	        "femalePartCode": "BACK"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "BACK",
-	        "femalePartCode": "R",
-	        "id": "h3xmpm4"
-	      },
+	        "femalePartCode": "R"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbl",
-	        "femalePartCode": "L",
-	        "id": "l85jpd3"
-	      },
+	        "femalePartCode": "L"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbr",
-	        "femalePartCode": "BACK",
-	        "id": "h3xmpm4"
-	      },
+	        "femalePartCode": "BACK"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbl",
-	        "femalePartCode": "BACK",
-	        "id": "h3xmpm4"
-	      },
+	        "femalePartCode": "BACK"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "R",
-	        "id": "rs2316q"
-	      },
+	        "femalePartCode": "R"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "L",
-	        "id": "m9e5p7l"
-	      },
+	        "femalePartCode": "L"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "T",
-	        "id": "oydpp1n"
-	      },
+	        "femalePartCode": "T"      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "B",
-	        "id": "j0y7z5u"
-	      }
+	        "femalePartCode": "B"      }
 	    ],
 	    "dividerJoint": {
 	      "type": "Dado",
@@ -26663,9 +26348,7 @@ function (require, exports, module) {
 	              "z": "L.c.z - L.t/2"
 	            }
 	          ]
-	        },
-	        "id": "4fdqq24"
-	      }
+	        }      }
 	    ]
 	  },
 	  "corner-wall-triangle": {
@@ -26676,93 +26359,75 @@ function (require, exports, module) {
 	    "values": [
 	      {
 	        "key": "bo",
-	        "eqn": "4*2.54",
-	        "id": "pz0usts"
+	        "eqn": "4*2.54"
 	      },
 	      {
 	        "key": "cnrD",
-	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
-	        "id": "vju4ekg"
+	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)"
 	      },
 	      {
 	        "key": "pbw",
-	        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
-	        "id": "bg3l1cw"
+	        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)"
 	      },
 	      {
 	        "key": "innerWidth",
-	        "eqn": "c.w - R.t",
-	        "id": "r1am35q"
+	        "eqn": "c.w - R.t"
 	      },
 	      {
 	        "key": "innerWidthCenter",
-	        "eqn": "innerWidth + pwt34",
-	        "id": "zrglub8"
+	        "eqn": "innerWidth + pwt34"
 	      },
 	      {
 	        "key": "frontHype",
-	        "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)",
-	        "id": "r01pswe"
+	        "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)"
 	      },
 	      {
 	        "key": "frontCenterX",
-	        "eqn": "frontHype/2 * Math.cos(frontLeftTheta)",
-	        "id": "u5ycphk"
+	        "eqn": "frontHype/2 * Math.cos(frontLeftTheta)"
 	      },
 	      {
 	        "key": "frontCenterZ",
-	        "eqn": "-frontHype/2 * Math.cos(frontRightTheta)",
-	        "id": "dnca3mh"
+	        "eqn": "-frontHype/2 * Math.cos(frontRightTheta)"
 	      },
 	      {
 	        "key": "frontLeftTheta",
-	        "eqn": "Math.atan(c.t/c.w)",
-	        "id": "b16j601"
+	        "eqn": "Math.atan(c.t/c.w)"
 	      },
 	      {
 	        "key": "frontRightTheta",
-	        "eqn": "Math.PI/2  - frontLeftTheta",
-	        "id": "61umfwr"
+	        "eqn": "Math.PI/2  - frontLeftTheta"
 	      },
 	      {
 	        "key": "toeKickBackerLen",
-	        "eqn": "Math.sqrt((c.w-tkLeftD-tkLeftT-R.t)*(c.w-tkLeftD-tkLeftT-R.t)+(c.t-tkRightD-tkRightT-L.t)*(c.t-tkRightD-tkRightT-L.t))",
-	        "id": "6d7a07i"
+	        "eqn": "Math.sqrt((c.w-tkLeftD-tkLeftT-R.t)*(c.w-tkLeftD-tkLeftT-R.t)+(c.t-tkRightD-tkRightT-L.t)*(c.t-tkRightD-tkRightT-L.t))"
 	      },
 	      {
 	        "key": "innerDepth",
-	        "eqn": "c.t - L.t",
-	        "id": "c89p2y8"
+	        "eqn": "c.t - L.t"
 	      },
 	      {
 	        "key": "tkLeftT",
-	        "eqn": ".5/Math.sin(frontLeftTheta)",
-	        "id": "fi3bwts"
+	        "eqn": ".5/Math.sin(frontLeftTheta)"
 	      },
 	      {
 	        "key": "tkRightT",
-	        "eqn": ".5/Math.sin(frontRightTheta)",
-	        "id": "m0p2fnx"
+	        "eqn": ".5/Math.sin(frontRightTheta)"
 	      },
 	      {
 	        "key": "tkLeftD",
-	        "eqn": "tkd/Math.sin(frontLeftTheta)",
-	        "id": "xd2g25i"
+	        "eqn": "tkd/Math.sin(frontLeftTheta)"
 	      },
 	      {
 	        "key": "tkRightD",
-	        "eqn": "tkd/Math.sin(frontRightTheta)",
-	        "id": "e2tcn5p"
+	        "eqn": "tkd/Math.sin(frontRightTheta)"
 	      },
 	      {
 	        "key": "triX",
-	        "eqn": "c.w - tkLeftD - tkLeftT/2",
-	        "id": "9sfgikr"
+	        "eqn": "frontCenterX + tkLeftD + tkLeftT"
 	      },
 	      {
 	        "key": "triY",
-	        "eqn": "c.t - tkRightD - tkRightT/2",
-	        "id": "fcwcnb9"
+	        "eqn": "frontCenterZ - tkRightD - tkRightT"
 	      }
 	    ],
 	    "subassemblies": [
@@ -26784,8 +26449,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Panel.Back",
-	        "code": "BACK",
-	        "id": "ly2p41u"
+	        "code": "BACK"
 	      },
 	      {
 	        "type": "Cutter",
@@ -26805,8 +26469,7 @@ function (require, exports, module) {
 	          0
 	        ],
 	        "name": "Cutter.Back",
-	        "code": "cb",
-	        "id": "ly2p41z"
+	        "code": "cb"
 	      },
 	      {
 	        "type": "Cutter",
@@ -26826,8 +26489,7 @@ function (require, exports, module) {
 	          "R.r.z"
 	        ],
 	        "name": "Cutter.Back.Right",
-	        "code": "cpbr",
-	        "id": "qnpktw2"
+	        "code": "cpbr"
 	      },
 	      {
 	        "type": "Cutter",
@@ -26847,8 +26509,7 @@ function (require, exports, module) {
 	          "L.r.z"
 	        ],
 	        "name": "Cutter.Back.Left",
-	        "code": "cpbl",
-	        "id": "qnpktr2"
+	        "code": "cpbl"
 	      },
 	      {
 	        "name": "Panel.Right",
@@ -26868,8 +26529,7 @@ function (require, exports, module) {
 	          0,
 	          90,
 	          0
-	        ],
-	        "id": "i27zjxi"
+	        ]
 	      },
 	      {
 	        "name": "Panel.Left",
@@ -26889,12 +26549,11 @@ function (require, exports, module) {
 	          0,
 	          "0",
 	          0
-	        ],
-	        "id": "ly1lmzs"
+	        ]
 	      },
 	      {
 	        "name": "Bottom",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "B",
 	        "center": [
 	          "B.w / 2",
@@ -26910,12 +26569,11 @@ function (require, exports, module) {
 	          "90",
 	          "0",
 	          0
-	        ],
-	        "id": "dx1l40m"
+	        ]
 	      },
 	      {
 	        "name": "Top",
-	        "type": "Panel",
+	        "type": "Divider",
 	        "code": "T",
 	        "center": [
 	          "T.w / 2",
@@ -26931,8 +26589,7 @@ function (require, exports, module) {
 	          90,
 	          "0",
 	          0
-	        ],
-	        "id": "lcj2axc"
+	        ]
 	      },
 	      {
 	        "type": "Cutter",
@@ -26953,8 +26610,7 @@ function (require, exports, module) {
 	        ],
 	        "include": "All",
 	        "name": "frontCutter",
-	        "code": "fc",
-	        "id": "uzqg2vs"
+	        "code": "fc"
 	      }
 	    ],
 	    "joints": [
@@ -26964,8 +26620,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": "0.9525",
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "7whh25x"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "malePartCode": "T",
@@ -26973,8 +26628,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": "0.9525",
 	        "demensionAxis": "x",
-	        "centerAxis": "-z",
-	        "id": "w3lyip6"
+	        "centerAxis": "-z"
 	      },
 	      {
 	        "malePartCode": "B",
@@ -26982,8 +26636,7 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "eetmyfu"
+	        "centerAxis": "-x"
 	      },
 	      {
 	        "malePartCode": "B",
@@ -26991,98 +26644,82 @@ function (require, exports, module) {
 	        "type": "Dado",
 	        "maleOffset": 0.9525,
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "z8sqwwt"
+	        "centerAxis": "+x"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "fc",
-	        "femalePartCode": "T",
-	        "id": "i2h32py"
+	        "femalePartCode": "T"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "fc",
-	        "femalePartCode": "R",
-	        "id": "5h7i27p"
+	        "femalePartCode": "R"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "fc",
-	        "femalePartCode": "L",
-	        "id": "on59hxn"
+	        "femalePartCode": "L"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "fc",
-	        "femalePartCode": "B",
-	        "id": "kxec5xg"
+	        "femalePartCode": "B"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "BACK",
-	        "femalePartCode": "T",
-	        "id": "e3z7qur"
+	        "femalePartCode": "T"
 	      },
 	      {
 	        "malePartCode": "BACK",
 	        "femalePartCode": "B",
-	        "type": "Butt",
-	        "id": "jhdiitu"
+	        "type": "Butt"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbr",
-	        "femalePartCode": "BACK",
-	        "id": "l85jpd3"
+	        "femalePartCode": "BACK"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "BACK",
-	        "femalePartCode": "R",
-	        "id": "h3xmpm4"
+	        "femalePartCode": "R"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbl",
-	        "femalePartCode": "L",
-	        "id": "l85jpd3"
+	        "femalePartCode": "L"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbr",
-	        "femalePartCode": "BACK",
-	        "id": "h3xmpm4"
+	        "femalePartCode": "BACK"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cpbl",
-	        "femalePartCode": "BACK",
-	        "id": "h3xmpm4"
+	        "femalePartCode": "BACK"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "R",
-	        "id": "rs2316q"
+	        "femalePartCode": "R"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "L",
-	        "id": "m9e5p7l"
+	        "femalePartCode": "L"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "T",
-	        "id": "oydpp1n"
+	        "femalePartCode": "T"
 	      },
 	      {
 	        "type": "Butt",
 	        "malePartCode": "cb",
-	        "femalePartCode": "B",
-	        "id": "j0y7z5u"
+	        "femalePartCode": "B"
 	      }
 	    ],
 	    "dividerJoint": {
@@ -27200,268 +26837,626 @@ function (require, exports, module) {
 	              "z": "L.c.z - L.t/2"
 	            }
 	          ]
-	        },
-	        "id": "4fdqq24"
+	        }
 	      }
 	    ]
 	  },
 	  "corner-ut-triangle": {
-	    "_TYPE": "CabinetTemplate",
+	  "_TYPE": "CabinetTemplate",
 	
+	  "ID_ATTRIBUTE": "id",
+	  "type": "corner-ut-triangle",
+	  "values": [
+	    {
+	      "key": "bo",
+	      "eqn": "4*2.54"
+	    },
+	    {
+	      "key": "cnrD",
+	      "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)"
+	    },
+	    {
+	      "key": "pbw",
+	      "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)"
+	    },
+	    {
+	      "key": "innerWidth",
+	      "eqn": "c.w - R.t"
+	    },
+	    {
+	      "key": "innerWidthCenter",
+	      "eqn": "innerWidth + pwt34"
+	    },
+	    {
+	      "key": "frontHype",
+	      "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)"
+	    },
+	    {
+	      "key": "frontCenterX",
+	      "eqn": "frontHype/2 * Math.cos(frontLeftTheta)"
+	    },
+	    {
+	      "key": "frontCenterZ",
+	      "eqn": "-frontHype/2 * Math.cos(frontRightTheta)"
+	    },
+	    {
+	      "key": "frontLeftTheta",
+	      "eqn": "Math.atan(c.t/c.w)"
+	    },
+	    {
+	      "key": "frontRightTheta",
+	      "eqn": "Math.PI/2  - frontLeftTheta"
+	    },
+	    {
+	      "key": "toeKickBackerLen",
+	      "eqn": "Math.sqrt((c.w-tkLeftD-tkLeftT-R.t)*(c.w-tkLeftD-tkLeftT-R.t)+(c.t-tkRightD-tkRightT-L.t)*(c.t-tkRightD-tkRightT-L.t))"
+	    },
+	    {
+	      "key": "innerDepth",
+	      "eqn": "c.t - L.t"
+	    },
+	    {
+	      "key": "tkLeftT",
+	      "eqn": "(tkb.t/2)*Math.sin(frontLeftTheta)"
+	    },
+	    {
+	      "key": "tkRightT",
+	      "eqn": "(tkb.t/2)*Math.sin(frontRightTheta)"
+	    },
+	    {
+	      "key": "tkLeftD",
+	      "eqn": "tkd*Math.sin(frontLeftTheta)"
+	    },
+	    {
+	      "key": "tkRightD",
+	      "eqn": "tkd*Math.sin(frontRightTheta)"
+	    },
+	    {
+	      "key": "triX",
+	      "eqn": "frontCenterX + tkLeftD + tkLeftT"
+	    },
+	    {
+	      "key": "triY",
+	      "eqn": "frontCenterZ - tkRightD - tkRightT"
+	    }
+	  ],
+	  "subassemblies": [
+	    {
+	      "type": "Panel",
+	      "center": [
+	        "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+	        "c.h/2",
+	        "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+	      ],
+	      "demensions": [
+	        "pbw",
+	        "c.h",
+	        "pwt14"
+	      ],
+	      "rotation": [
+	        0,
+	        "135",
+	        0
+	      ],
+	      "name": "Panel.Back",
+	      "code": "BACK"
+	    },
+	    {
+	      "type": "Cutter",
+	      "center": [
+	        "c.w + bo/4*Math.sin(Math.PI/2)",
+	        "c.h/2",
+	        "-(c.t + bo/4*Math.sin(Math.PI/2))"
+	      ],
+	      "demensions": [
+	        "bo*2",
+	        "c.h",
+	        "bo*2"
+	      ],
+	      "rotation": [
+	        0,
+	        "135",
+	        0
+	      ],
+	      "name": "Cutter.Back",
+	      "code": "cb"
+	    },
+	    {
+	      "type": "Cutter",
+	      "center": [
+	        "R.c.x + R.t",
+	        "R.c.y",
+	        "R.c.z - cpbr.t"
+	      ],
+	      "demensions": [
+	        "R.d.x",
+	        "R.d.y",
+	        "R.d.z"
+	      ],
+	      "rotation": [
+	        "R.r.x",
+	        "R.r.y",
+	        "R.r.z"
+	      ],
+	      "name": "Cutter.Back.Right",
+	      "code": "cpbr"
+	    },
+	    {
+	      "type": "Cutter",
+	      "center": [
+	        "L.c.x + cpbl.t",
+	        "L.c.y",
+	        "L.c.z - L.t"
+	      ],
+	      "demensions": [
+	        "L.d.x",
+	        "L.d.y",
+	        "L.d.z"
+	      ],
+	      "rotation": [
+	        "L.r.x",
+	        "L.r.y",
+	        "L.r.z"
+	      ],
+	      "name": "Cutter.Back.Left",
+	      "code": "cpbl"
+	    },
+	    {
+	      "name": "ToeKickBacker",
+	      "type": "Panel",
+	      "code": "tkb",
+	      "center": [
+	        "triX",
+	        "w / 2",
+	        "triY"
+	      ],
+	      "demensions": [
+	        "tkh",
+	        "toeKickBackerLen",
+	        "tkbw"
+	      ],
+	      "rotation": [
+	        "90+Math.toDegrees(frontRightTheta)",
+	        "0",
+	        90
+	      ]
+	    },
+	    {
+	      "name": "Panel.Right",
+	      "type": "Divider",
+	      "code": "R",
+	      "center": [
+	        "c.w - (R.t / 2)",
+	        "R.l / 2",
+	        "(w / -2)"
+	      ],
+	      "demensions": [
+	        "c.t",
+	        "c.l",
+	        "pwt34"
+	      ],
+	      "rotation": [
+	        0,
+	        90,
+	        0
+	      ]
+	    },
+	    {
+	      "name": "Panel.Left",
+	      "type": "Divider",
+	      "code": "L",
+	      "center": [
+	        "L.w/2",
+	        "L.l / 2",
+	        "-(c.t - L.t/2)"
+	      ],
+	      "demensions": [
+	        "c.w - R.t",
+	        "c.l",
+	        "pwt34"
+	      ],
+	      "rotation": [
+	        0,
+	        "0",
+	        0
+	      ]
+	    },
+	    {
+	      "name": "Bottom",
+	      "type": "Divider",
+	      "code": "B",
+	      "center": [
+	        "B.w / 2",
+	        "tkh + (t/2)",
+	        "B.h / -2"
+	      ],
+	      "demensions": [
+	        "innerWidth",
+	        "innerDepth",
+	        "pwt34"
+	      ],
+	      "rotation": [
+	        "90",
+	        "0",
+	        0
+	      ]
+	    },
+	    {
+	      "name": "Top",
+	      "type": "Divider",
+	      "code": "T",
+	      "center": [
+	        "T.w / 2",
+	        "c.h - tid - pwt34/2",
+	        "T.h /-2"
+	      ],
+	      "demensions": [
+	        "innerWidth",
+	        "innerDepth",
+	        "pwt34"
+	      ],
+	      "rotation": [
+	        90,
+	        "0",
+	        0
+	      ]
+	    },
+	    {
+	      "type": "Cutter",
+	      "center": [
+	        "frontCenterX - fc.t/2*Math.sin(frontLeftTheta)",
+	        "c.h/2",
+	        "frontCenterZ + fc.t/2*Math.sin(frontRightTheta)"
+	      ],
+	      "demensions": [
+	        "frontHype",
+	        "c.h",
+	        "frontHype"
+	      ],
+	      "rotation": [
+	        0,
+	        "Math.toDegrees(frontRightTheta)",
+	        0
+	      ],
+	      "include": "All",
+	      "name": "frontCutter",
+	      "code": "fc"
+	    }
+	  ],
+	  "joints": [
+	    {
+	      "malePartCode": "T",
+	      "femalePartCode": "R",
+	      "type": "Dado",
+	      "maleOffset": "0.9525",
+	      "demensionAxis": "y",
+	      "centerAxis": "+x"
+	    },
+	    {
+	      "malePartCode": "T",
+	      "femalePartCode": "L",
+	      "type": "Dado",
+	      "maleOffset": "0.9525",
+	      "demensionAxis": "x",
+	      "centerAxis": "-z"
+	    },
+	    {
+	      "malePartCode": "tkb",
+	      "femalePartCode": "R",
+	      "type": "Butt",
+	      "maleOffset": "0.9525"
+	    },
+	    {
+	      "malePartCode": "tkb",
+	      "femalePartCode": "L",
+	      "type": "Butt",
+	      "maleOffset": "0.9525"
+	    },
+	    {
+	      "malePartCode": "B",
+	      "femalePartCode": "R",
+	      "type": "Dado",
+	      "maleOffset": 0.9525,
+	      "demensionAxis": "y",
+	      "centerAxis": "-x"
+	    },
+	    {
+	      "malePartCode": "B",
+	      "femalePartCode": "L",
+	      "type": "Dado",
+	      "maleOffset": 0.9525,
+	      "demensionAxis": "y",
+	      "centerAxis": "+x"
+	    },
+	    {
+	      "malePartCode": "tkb",
+	      "femalePartCode": "B",
+	      "type": "Dado",
+	      "maleOffset": "0.9525",
+	      "demensionAxis": "x",
+	      "centerAxis": "+y"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "fc",
+	      "femalePartCode": "T"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "fc",
+	      "femalePartCode": "R"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "fc",
+	      "femalePartCode": "L"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "fc",
+	      "femalePartCode": "B"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "BACK",
+	      "femalePartCode": "T"
+	    },
+	    {
+	      "malePartCode": "BACK",
+	      "femalePartCode": "B",
+	      "type": "Butt"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "cpbr",
+	      "femalePartCode": "BACK"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "BACK",
+	      "femalePartCode": "R"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "cpbl",
+	      "femalePartCode": "L"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "cpbr",
+	      "femalePartCode": "BACK"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "cpbl",
+	      "femalePartCode": "BACK"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "cb",
+	      "femalePartCode": "R"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "cb",
+	      "femalePartCode": "L"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "cb",
+	      "femalePartCode": "T"
+	    },
+	    {
+	      "type": "Butt",
+	      "malePartCode": "cb",
+	      "femalePartCode": "B"
+	    }
+	  ],
+	  "dividerJoint": {
+	    "type": "Dado",
+	    "maleOffset": 0.9525
+	  },
+	  "shape": "square",
+	  "width": "based",
+	  "height": "maxHeight(c.w,c.t,ceilh)",
+	  "thickness": "based",
+	  "fromFloor": 0,
+	  "openings": [
+	    {
+	      "top": "T",
+	      "bottom": "B",
+	      "left": "L",
+	      "right": "R",
+	      "back": "BACK",
+	      "_Type": "location",
+	      "zRotation": 0,
+	      "inner": {
+	        "top": {
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        },
+	        "bottom": {
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        }
+	      },
+	      "outer": {
+	        "top": {
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        },
+	        "bottom": {
+	          "right": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          },
+	          "left": {
+	            "x": 0,
+	            "y": 0,
+	            "z": 0
+	          }
+	        }
+	      },
+	      "coordinates": {
+	        "inner": [
+	          {
+	            "x": "R.t",
+	            "y": "T.c.y - T.t/2",
+	            "z": "L.c.z + L.t/2"
+	          },
+	          {
+	            "x": "c.w - L.t",
+	            "y": "T.c.y - T.t/2",
+	            "z": "R.t/-2"
+	          },
+	          {
+	            "x": "c.w - L.t",
+	            "y": "B.c.y + B.t/2",
+	            "z": "R.t/-2"
+	          },
+	          {
+	            "x": "R.t",
+	            "y": "B.c.y + B.t/2",
+	            "z": "L.c.z + L.t/2"
+	          }
+	        ],
+	        "outer": [
+	          {
+	            "x": "0",
+	            "y": "c.h",
+	            "z": "L.c.z - L.t/2"
+	          },
+	          {
+	            "x": "c.w",
+	            "y": "c.h",
+	            "z": "0"
+	          },
+	          {
+	            "x": "c.w",
+	            "y": "B.c.y - B.t/2",
+	            "z": "0"
+	          },
+	          {
+	            "x": "0",
+	            "y": "B.c.y - B.t/2",
+	            "z": "L.c.z - L.t/2"
+	          }
+	        ]
+	      }
+	    }
+	  ]
+	},
+	  "transition-wall": {
+	    "_TYPE": "CabinetTemplate",
+	    "autoToeKick": false,
 	    "ID_ATTRIBUTE": "id",
-	    "type": "corner-ut-triangle",
+	    "type": "transition-wall",
 	    "values": [
 	      {
-	        "key": "bo",
-	        "eqn": "4*2.54",
-	        "id": "pz0usts"
-	      },
+	        "key": "cwl",
+	        "eqn": "12*2.54"      },
 	      {
-	        "key": "cnrD",
-	        "eqn": "Math.sqrt(pbw*pbw/2 - bo*bo)",
-	        "id": "vju4ekg"
-	      },
+	        "key": "cwr",
+	        "eqn": "24*2.54"      },
 	      {
-	        "key": "pbw",
-	        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
-	        "id": "bg3l1cw"
-	      },
-	      {
-	        "key": "innerWidth",
-	        "eqn": "c.w - R.t",
-	        "id": "r1am35q"
-	      },
-	      {
-	        "key": "innerWidthCenter",
-	        "eqn": "innerWidth + pwt34",
-	        "id": "zrglub8"
-	      },
-	      {
-	        "key": "frontHype",
-	        "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)",
-	        "id": "r01pswe"
-	      },
-	      {
-	        "key": "frontCenterX",
-	        "eqn": "frontHype/2 * Math.cos(frontLeftTheta)",
-	        "id": "u5ycphk"
-	      },
-	      {
-	        "key": "frontCenterZ",
-	        "eqn": "-frontHype/2 * Math.cos(frontRightTheta)",
-	        "id": "dnca3mh"
-	      },
-	      {
-	        "key": "frontLeftTheta",
-	        "eqn": "Math.atan(c.t/c.w)",
-	        "id": "b16j601"
-	      },
-	      {
-	        "key": "frontRightTheta",
-	        "eqn": "Math.PI/2  - frontLeftTheta",
-	        "id": "61umfwr"
-	      },
-	      {
-	        "key": "toeKickBackerLen",
-	        "eqn": "Math.sqrt((c.w-tkLeftD-tkLeftT-R.t)*(c.w-tkLeftD-tkLeftT-R.t)+(c.t-tkRightD-tkRightT-L.t)*(c.t-tkRightD-tkRightT-L.t))",
-	        "id": "6d7a07i"
-	      },
-	      {
-	        "key": "innerDepth",
-	        "eqn": "c.t - L.t",
-	        "id": "c89p2y8"
-	      },
-	      {
-	        "key": "tkLeftT",
-	        "eqn": ".5/Math.sin(frontLeftTheta)",
-	        "id": "fi3bwts"
-	      },
-	      {
-	        "key": "tkRightT",
-	        "eqn": ".5/Math.sin(frontRightTheta)",
-	        "id": "m0p2fnx"
-	      },
-	      {
-	        "key": "tkLeftD",
-	        "eqn": "tkd/Math.sin(frontLeftTheta)",
-	        "id": "xd2g25i"
-	      },
-	      {
-	        "key": "tkRightD",
-	        "eqn": "tkd/Math.sin(frontRightTheta)",
-	        "id": "e2tcn5p"
-	      },
-	      {
-	        "key": "triX",
-	        "eqn": "c.w - tkLeftD - tkLeftT/2",
-	        "id": "9sfgikr"
-	      },
-	      {
-	        "key": "triY",
-	        "eqn": "c.t - tkRightD - tkRightT/2",
-	        "id": "fcwcnb9"
+	
+	        "key": "maxSide",
+	        "eqn": "Math.max(cwl,cwr)"
 	      }
 	    ],
 	    "subassemblies": [
 	      {
-	        "type": "Panel",
+	        "type": "Divider",
 	        "center": [
-	          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
-	          "c.h/2",
-	          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+	          "c.w - R.t/2",
+	          "c.h / 2",
+	          "R.w / -2"
 	        ],
 	        "demensions": [
-	          "pbw",
+	          "maxSide",
 	          "c.h",
-	          "pwt14"
+	          "pwt34"
 	        ],
 	        "rotation": [
 	          0,
-	          "135",
+	          "90",
 	          0
 	        ],
-	        "name": "Panel.Back",
-	        "code": "BACK",
-	        "id": "ly2p41u"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "c.w + bo/4*Math.sin(Math.PI/2)",
-	          "c.h/2",
-	          "-(c.t + bo/4*Math.sin(Math.PI/2))"
-	        ],
-	        "demensions": [
-	          "bo*2",
-	          "c.h",
-	          "bo*2"
-	        ],
-	        "rotation": [
-	          0,
-	          "135",
-	          0
-	        ],
-	        "name": "Cutter.Back",
-	        "code": "cb",
-	        "id": "ly2p41z"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "R.c.x + R.t",
-	          "R.c.y",
-	          "R.c.z - cpbr.t"
-	        ],
-	        "demensions": [
-	          "R.d.x",
-	          "R.d.y",
-	          "R.d.z"
-	        ],
-	        "rotation": [
-	          "R.r.x",
-	          "R.r.y",
-	          "R.r.z"
-	        ],
-	        "name": "Cutter.Back.Right",
-	        "code": "cpbr",
-	        "id": "qnpktw2"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "L.c.x + cpbl.t",
-	          "L.c.y",
-	          "L.c.z - L.t"
-	        ],
-	        "demensions": [
-	          "L.d.x",
-	          "L.d.y",
-	          "L.d.z"
-	        ],
-	        "rotation": [
-	          "L.r.x",
-	          "L.r.y",
-	          "L.r.z"
-	        ],
-	        "name": "Cutter.Back.Left",
-	        "code": "cpbl",
-	        "id": "qnpktr2"
-	      },
-	      {
-	        "name": "ToeKickBacker",
-	        "type": "Panel",
-	        "code": "tkb",
-	        "center": [
-	          "c.w - triX/2",
-	          "w / 2",
-	          "-1 *(c.t - triY/2)"
-	        ],
-	        "demensions": [
-	          "tkh",
-	          "toeKickBackerLen",
-	          "tkbw"
-	        ],
-	        "rotation": [
-	          "90+Math.toDegrees(frontRightTheta)",
-	          "0",
-	          90
-	        ],
-	        "id": "zojblha"
-	      },
-	      {
 	        "name": "Panel.Right",
+	        "code": "R"      },
+	      {
 	        "type": "Divider",
-	        "code": "R",
 	        "center": [
-	          "c.w - (R.t / 2)",
-	          "R.l / 2",
-	          "(w / -2)"
+	          "L.t/2",
+	          "c.h/2",
+	          "R.c.z - R.w/2 + L.w/2"
 	        ],
 	        "demensions": [
-	          "c.t",
-	          "c.l",
+	          "maxSide",
+	          "c.h",
 	          "pwt34"
 	        ],
 	        "rotation": [
 	          0,
-	          90,
+	          "90",
 	          0
 	        ],
-	        "id": "i27zjxi"
-	      },
-	      {
 	        "name": "Panel.Left",
-	        "type": "Divider",
-	        "code": "L",
+	        "code": "L"      },
+	      {
+	        "type": "Panel",
 	        "center": [
-	          "L.w/2",
-	          "L.l / 2",
-	          "-(c.t - L.t/2)"
+	          "L.t + BACK.w/2",
+	          "BACK.h/2 + B.t",
+	          "L.c.z -L.w/2 + BACK.t /2"
 	        ],
 	        "demensions": [
-	          "c.w - R.t",
-	          "c.l",
+	          "c.w - L.t - R.t",
+	          "c.h - B.t -T.t",
 	          "pwt34"
 	        ],
 	        "rotation": [
 	          0,
-	          "0",
+	          0,
 	          0
 	        ],
-	        "id": "ly1lmzs"
-	      },
+	        "name": "Panel.back",
+	        "code": "BACK"      },
 	      {
-	        "name": "Bottom",
-	        "type": "Panel",
-	        "code": "B",
+	        "type": "Divider",
 	        "center": [
-	          "B.w / 2",
-	          "tkh + (t/2)",
-	          "B.h / -2"
+	          "L.t + T.w / 2",
+	          "c.h - tid - T.t/2",
+	          "T.l/-2 "
 	        ],
 	        "demensions": [
-	          "innerWidth",
-	          "innerDepth",
+	          "c.w - L.t - R.t",
+	          "Math.max(cwl,  cwr)",
 	          "pwt34"
 	        ],
 	        "rotation": [
@@ -27469,211 +27464,67 @@ function (require, exports, module) {
 	          "0",
 	          0
 	        ],
-	        "id": "dx1l40m"
-	      },
-	      {
-	        "name": "Top",
-	        "type": "Panel",
+	        "name": "Panel.Top",
 	        "code": "T",
+	        "include": "All"      },
+	      {
+	        "type": "Divider",
 	        "center": [
-	          "T.w / 2",
-	          "c.h - tid - pwt34/2",
-	          "T.h /-2"
+	          "B.w /2 + L.t",
+	          "bid + B.t/2",
+	          "B.h / -2"
 	        ],
 	        "demensions": [
-	          "innerWidth",
-	          "innerDepth",
+	          "c.w - L.t - R.t",
+	          "T.h",
 	          "pwt34"
 	        ],
 	        "rotation": [
-	          90,
+	          "90",
 	          "0",
 	          0
 	        ],
-	        "id": "lcj2axc"
-	      },
-	      {
-	        "type": "Cutter",
-	        "center": [
-	          "frontCenterX - fc.t/2*Math.sin(frontLeftTheta)",
-	          "c.h/2",
-	          "frontCenterZ + fc.t/2*Math.sin(frontRightTheta)"
-	        ],
-	        "demensions": [
-	          "frontHype",
-	          "c.h",
-	          "frontHype"
-	        ],
-	        "rotation": [
-	          0,
-	          "Math.toDegrees(frontRightTheta)",
-	          0
-	        ],
-	        "include": "All",
-	        "name": "frontCutter",
-	        "code": "fc",
-	        "id": "uzqg2vs"
-	      }
+	        "name": "Panal.Bottom",
+	        "code": "B"      }
 	    ],
 	    "joints": [
 	      {
-	        "malePartCode": "T",
-	        "femalePartCode": "R",
 	        "type": "Dado",
-	        "maleOffset": "0.9525",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "T",
+	        "maleOffset": "T.t/2",
 	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "7whh25x"
-	      },
+	        "centerAxis": "+y"      },
 	      {
-	        "malePartCode": "T",
-	        "femalePartCode": "L",
 	        "type": "Dado",
-	        "maleOffset": "0.9525",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "R",
+	        "maleOffset": "R.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "-z",
-	        "id": "w3lyip6"
-	      },
+	        "centerAxis": "+x"      },
 	      {
-	        "malePartCode": "tkb",
-	        "femalePartCode": "R",
-	        "type": "Butt",
-	        "maleOffset": "0.9525",
-	        "id": "5ay7hu7"
-	      },
-	      {
-	        "malePartCode": "tkb",
-	        "femalePartCode": "L",
-	        "type": "Butt",
-	        "maleOffset": "0.9525",
-	        "id": "modbdha"
-	      },
-	      {
-	        "malePartCode": "B",
-	        "femalePartCode": "R",
 	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis": "y",
-	        "centerAxis": "-x",
-	        "id": "eetmyfu"
-	      },
-	      {
-	        "malePartCode": "B",
-	        "femalePartCode": "L",
-	        "type": "Dado",
-	        "maleOffset": 0.9525,
-	        "demensionAxis": "y",
-	        "centerAxis": "+x",
-	        "id": "z8sqwwt"
-	      },
-	      {
-	        "malePartCode": "tkb",
+	        "malePartCode": "BACK",
 	        "femalePartCode": "B",
+	        "maleOffset": "B.t/2",
+	        "demensionAxis": "y",
+	        "centerAxis": "-y"      },
+	      {
 	        "type": "Dado",
-	        "maleOffset": "0.9525",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "L",
+	        "maleOffset": "L.t/2",
 	        "demensionAxis": "x",
-	        "centerAxis": "+y",
-	        "id": "84e6woh"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "fc",
-	        "femalePartCode": "T",
-	        "id": "i2h32py"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "fc",
-	        "femalePartCode": "R",
-	        "id": "5h7i27p"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "fc",
-	        "femalePartCode": "L",
-	        "id": "on59hxn"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "fc",
-	        "femalePartCode": "B",
-	        "id": "kxec5xg"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "BACK",
-	        "femalePartCode": "T",
-	        "id": "e3z7qur"
-	      },
-	      {
-	        "malePartCode": "BACK",
-	        "femalePartCode": "B",
-	        "type": "Butt",
-	        "id": "jhdiitu"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cpbr",
-	        "femalePartCode": "BACK",
-	        "id": "l85jpd3"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "BACK",
-	        "femalePartCode": "R",
-	        "id": "h3xmpm4"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cpbl",
-	        "femalePartCode": "L",
-	        "id": "l85jpd3"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cpbr",
-	        "femalePartCode": "BACK",
-	        "id": "h3xmpm4"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cpbl",
-	        "femalePartCode": "BACK",
-	        "id": "h3xmpm4"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "R",
-	        "id": "rs2316q"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "L",
-	        "id": "m9e5p7l"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "T",
-	        "id": "oydpp1n"
-	      },
-	      {
-	        "type": "Butt",
-	        "malePartCode": "cb",
-	        "femalePartCode": "B",
-	        "id": "j0y7z5u"
-	      }
+	        "centerAxis": "-x"      }
 	    ],
 	    "dividerJoint": {
 	      "type": "Dado",
-	      "maleOffset": 0.9525
+	      "maleOffset": "33"
 	    },
 	    "shape": "square",
-	    "width": "based",
-	    "height": "maxHeight(c.w,c.t,ceilh)",
-	    "thickness": "based",
+	    "width": 45.72,
+	    "height": "wallh",
+	    "thickness": "walld",
 	    "fromFloor": 0,
 	    "openings": [
 	      {
@@ -27682,7 +27533,7 @@ function (require, exports, module) {
 	        "left": "L",
 	        "right": "R",
 	        "back": "BACK",
-	        "_Type": "location",
+	        "_Type": "slice",
 	        "zRotation": 0,
 	        "inner": {
 	          "top": {
@@ -27739,31 +27590,31 @@ function (require, exports, module) {
 	        "coordinates": {
 	          "inner": [
 	            {
-	              "x": "R.t",
-	              "y": "T.c.y - T.t/2",
-	              "z": "L.c.z + L.t/2"
+	              "x": "L.c.x-L.t",
+	              "y": "L.c.y + L.h/2",
+	              "z": "L.c.z + L.w/2"
 	            },
 	            {
-	              "x": "c.w - L.t",
+	              "x": "L.c.y + L.h",
 	              "y": "T.c.y - T.t/2",
-	              "z": "R.t/-2"
+	              "z": "0"
 	            },
 	            {
 	              "x": "c.w - L.t",
 	              "y": "B.c.y + B.t/2",
-	              "z": "R.t/-2"
+	              "z": "0"
 	            },
 	            {
 	              "x": "R.t",
 	              "y": "B.c.y + B.t/2",
-	              "z": "L.c.z + L.t/2"
+	              "z": "0"
 	            }
 	          ],
 	          "outer": [
 	            {
 	              "x": "0",
 	              "y": "c.h",
-	              "z": "L.c.z - L.t/2"
+	              "z": "0"
 	            },
 	            {
 	              "x": "c.w",
@@ -27778,13 +27629,280 @@ function (require, exports, module) {
 	            {
 	              "x": "0",
 	              "y": "B.c.y - B.t/2",
-	              "z": "L.c.z - L.t/2"
+	              "z": "0"
 	            }
 	          ]
 	        },
-	        "id": "4fdqq24"
+	
+	        "leftDepth": "cwl",
+	        "rightDepth": "cwr"
 	      }
 	    ]
+	  },
+	  "transition-base": {
+	    "_TYPE": "CabinetTemplate",
+	
+	    "ID_ATTRIBUTE": "id",
+	    "type": "transition-base",
+	    "values": [
+	      {
+	        "key": "cwl",
+	        "eqn": "12*2.54"      },
+	      {
+	        "key": "cwr",
+	        "eqn": "24*2.54"      },
+	      {
+	        "key": "maxSide",
+	        "eqn": "Math.max(cwl,cwr)"      }
+	    ],
+	    "subassemblies": [
+	      {
+	        "type": "Divider",
+	        "center": [
+	          "c.w - R.t/2",
+	          "c.h / 2",
+	          "R.w / -2"
+	        ],
+	        "demensions": [
+	          "maxSide",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          "90",
+	          0
+	        ],
+	        "name": "Panel.Right",
+	        "code": "R"      },
+	      {
+	        "type": "Divider",
+	        "center": [
+	          "L.t/2",
+	          "c.h/2",
+	          "R.c.z - R.w/2 + L.w/2"
+	        ],
+	        "demensions": [
+	          "maxSide",
+	          "c.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          "90",
+	          0
+	        ],
+	        "name": "Panel.Left",
+	        "code": "L"      },
+	      {
+	        "type": "Panel",
+	        "center": [
+	          "L.t + BACK.w/2",
+	          "BACK.h/2 + B.t",
+	          "L.c.z -L.w/2 + BACK.t /2"
+	        ],
+	        "demensions": [
+	          "c.w - L.t - R.t",
+	          "c.h - B.t -T.t",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          0,
+	          0,
+	          0
+	        ],
+	        "name": "Panel.back",
+	        "code": "BACK"      },
+	      {
+	        "type": "Divider",
+	        "center": [
+	          "L.t + T.w / 2",
+	          "c.h - T.t/2",
+	          "T.l/-2 "
+	        ],
+	        "demensions": [
+	          "c.w - L.t - R.t",
+	          "Math.max(cwl,  cwr)",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          "90",
+	          "0",
+	          0
+	        ],
+	        "name": "Panel.Top",
+	        "code": "T",
+	        "include": "All"      },
+	      {
+	        "type": "Divider",
+	        "center": [
+	          "B.w /2 + L.t",
+	          "tkh + B.t/2",
+	          "B.h / -2"
+	        ],
+	        "demensions": [
+	          "c.w - L.t - R.t",
+	          "T.h",
+	          "pwt34"
+	        ],
+	        "rotation": [
+	          "90",
+	          "0",
+	          0
+	        ],
+	        "name": "Panal.Bottom",
+	        "code": "B"      }
+	    ],
+	    "joints": [
+	      {
+	        "type": "Dado",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "T",
+	        "maleOffset": "T.t/2",
+	        "demensionAxis": "y",
+	        "centerAxis": "+y"      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "R",
+	        "maleOffset": "R.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "+x"      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "B",
+	        "maleOffset": "B.t/2",
+	        "demensionAxis": "y",
+	        "centerAxis": "-y"      },
+	      {
+	        "type": "Dado",
+	        "malePartCode": "BACK",
+	        "femalePartCode": "L",
+	        "maleOffset": "L.t/2",
+	        "demensionAxis": "x",
+	        "centerAxis": "-x"      }
+	    ],
+	    "dividerJoint": {
+	      "type": "Dado",
+	      "maleOffset": "33"
+	    },
+	    "shape": "square",
+	    "width": 45.72,
+	    "height": "wallh",
+	    "thickness": "walld",
+	    "fromFloor": 0,
+	    "openings": [
+	      {
+	        "top": "T",
+	        "bottom": "B",
+	        "left": "L",
+	        "right": "R",
+	        "back": "BACK",
+	        "_Type": "slice",
+	        "zRotation": 0,
+	        "inner": {
+	          "top": {
+	            "left": {
+	              "x": 0,
+	              "y": 0,
+	              "z": 0
+	            },
+	            "right": {
+	              "x": 0,
+	              "y": 0,
+	              "z": 0
+	            }
+	          },
+	          "bottom": {
+	            "right": {
+	              "x": 0,
+	              "y": 0,
+	              "z": 0
+	            },
+	            "left": {
+	              "x": 0,
+	              "y": 0,
+	              "z": 0
+	            }
+	          }
+	        },
+	        "outer": {
+	          "top": {
+	            "left": {
+	              "x": 0,
+	              "y": 0,
+	              "z": 0
+	            },
+	            "right": {
+	              "x": 0,
+	              "y": 0,
+	              "z": 0
+	            }
+	          },
+	          "bottom": {
+	            "right": {
+	              "x": 0,
+	              "y": 0,
+	              "z": 0
+	            },
+	            "left": {
+	              "x": 0,
+	              "y": 0,
+	              "z": 0
+	            }
+	          }
+	        },
+	        "coordinates": {
+	          "inner": [
+	            {
+	              "x": "L.c.x-L.t",
+	              "y": "L.c.y + L.h/2",
+	              "z": "L.c.z + L.w/2"
+	            },
+	            {
+	              "x": "L.c.y + L.h",
+	              "y": "T.c.y - T.t/2",
+	              "z": "0"
+	            },
+	            {
+	              "x": "c.w - L.t",
+	              "y": "B.c.y + B.t/2",
+	              "z": "0"
+	            },
+	            {
+	              "x": "R.t",
+	              "y": "B.c.y + B.t/2",
+	              "z": "0"
+	            }
+	          ],
+	          "outer": [
+	            {
+	              "x": "0",
+	              "y": "c.h",
+	              "z": "0"
+	            },
+	            {
+	              "x": "c.w",
+	              "y": "c.h",
+	              "z": "0"
+	            },
+	            {
+	              "x": "c.w",
+	              "y": "B.c.y - B.t/2",
+	              "z": "0"
+	            },
+	            {
+	              "x": "0",
+	              "y": "B.c.y - B.t/2",
+	              "z": "0"
+	            }
+	          ]
+	        },
+	        "leftDepth": "cwl",
+	        "rightDepth": "cwr"      }
+	    ],
+	    "autoToeKick": true
 	  }
 	}
 	
@@ -27820,14 +27938,14 @@ function (require, exports, module) {
 	    let rotCoords = {};
 	
 	    if ((typeof assembly.rotationConfig) !== 'function') {
-	      rotCoords = Position.parseCoordinates(assembly.rotationConfig, '0,0,0');
+	      rotCoords = Position.parseCoordinates(assembly.rotationConfig, '0:0:0');
 	      rotation = (attr) => getSme(attr, rotCoords);
 	    } else {
 	      rotation = assembly.rotationConfig;
 	    }
 	
 	    if ((typeof assembly.centerConfig) !== 'function') {
-	      centerCoords = Position.parseCoordinates(assembly.centerConfig, '0,0,0');
+	      centerCoords = Position.parseCoordinates(assembly.centerConfig, '0:0:0');
 	      center = (attr) => getSme(attr, centerCoords);
 	    } else {
 	      center = assembly.centerConfig;
@@ -27836,8 +27954,8 @@ function (require, exports, module) {
 	    if ((typeof assembly.demensionConfig) !== 'function') {
 	      const defSizes = getDefaultSize(assembly);
 	      demCoords = Position.parseCoordinates(assembly.demensionConfig,
-	      `${defSizes.width},${defSizes.length},${defSizes.thickness}`,
-	      '0,0,0');
+	      `${defSizes.width}:${defSizes.length}:${defSizes.thickness}`,
+	      '0:0:0');
 	      demension = (attr) => getSme(attr, demCoords);
 	    } else new Promise(function(resolve, reject) {
 	      demension = assembly.demensionConfig
@@ -27939,6 +28057,7 @@ function (require, exports, module) {
 	      return getter(type);
 	    }
 	
+	    this.parseCoordinates = (...args) => Position.parseCoordinates(...args);
 	    this.setDemension = (type, value) => this.set(demCoords, type, value, demension);
 	    this.setCenter = (type, value) => this.set(centerCoords, type, value, center);
 	    this.setRotation = (type, value) => this.set(rotCoords, type, value, rotation);
@@ -27990,9 +28109,6 @@ function (require, exports, module) {
 	  let coordinateMatch = null;
 	  for (let index = 0; coordinateMatch === null && index < arguments.length; index += 1) {
 	    const str = arguments[index];
-	    if (index > 0 && arguments.length - 1 === index) {
-	      //console.error(`Attempted to parse invalid coordinateStr: '${JSON.stringify(arguments)}'`);
-	    }
 	    if (typeof str === 'string') {
 	      coordinateMatch = str.match(Position.demsRegex);
 	    }
@@ -28006,7 +28122,8 @@ function (require, exports, module) {
 	    z: coordinateMatch[3]
 	  }
 	}
-	Position.demsRegex = /([^,]{1,}?),([^,]{1,}?),([^,]{1,})/;
+	
+	Position.demsRegex = /([^:]{1,}?):([^:]{1,}?):([^:]{1,})/;
 	module.exports = Position
 	
 });
@@ -28901,8 +29018,8 @@ const Vertex3D = require('./objects/vertex');
 	      return complexModel;
 	    }
 	
-	    this.topVector = () => Line3D.fromVector(this.normal(), {x:90,y:0,z:0}).vector();
-	    this.rightVector = () => Line3D.fromVector(this.normal(), {x:0,y:90,z:0}).vector();
+	    this.topVector = () => Line3D.fromVector(this.normal(), undefined, {x:90,y:0,z:0}).vector();
+	    this.rightVector = () => Line3D.fromVector(this.normal(), undefined, {x:0,y:90,z:0}).vector();
 	
 	    this.frontView = () => this.viewFromVector(this.normal(), true);
 	    this.topView = () => this.viewFromVector(this.topVector(), true);
@@ -28911,106 +29028,6 @@ const Vertex3D = require('./objects/vertex');
 	}
 	
 	module.exports = CabinetModel;
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/config/cabinet-layouts.js',
-function (require, exports, module) {
-	
-const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
-	
-	const map = {};
-	const list = () => Object.keys(map);
-	
-	class CabinetLayout {
-	  constructor(name, build) {
-	    this.name = () => name;
-	    this.build = build;
-	    if (map[name]) throw new Error(`CabinetLayout '${name}' already exists`);
-	    map[name] = this;
-	  }
-	}
-	
-	
-	module.exports = {map, list};
-	
-	new CabinetLayout('1dDD', (cabinet) => {
-	  cabinet.width(18*2.54);
-	
-	  const opening = cabinet.openings[0];
-	
-	  opening.divide(2);
-	  opening.vertical(false);
-	  opening.sections[0].setSection("DrawerSection");
-	  opening.sections[1].setSection("DualDoorSection");
-	  opening.pattern('ab').value('a', 6);
-	});
-	
-	new CabinetLayout('1dD', (cabinet) => {
-	  cabinet.width(18*2.54);
-	
-	  const opening = cabinet.openings[0];
-	
-	  opening.divide(1);
-	  opening.vertical(false);
-	  opening.sections[0].setSection("DrawerSection");
-	  opening.sections[1].setSection("DoorSection");
-	  opening.pattern('ab').value('a', 6);
-	});
-	
-	new CabinetLayout('3d', (cabinet) => {
-	  cabinet.width(18*2.54);
-	
-	  const opening = cabinet.openings[0];
-	
-	  opening.divide(2);
-	  opening.vertical(false);
-	  opening.sections[0].setSection("DrawerSection");
-	  opening.sections[1].setSection("DrawerSection");
-	  opening.sections[2].setSection("DrawerSection");
-	  opening.pattern('abb').value('a', 6);
-	});
-	
-	new CabinetLayout('3dsb3d', (cabinet) => {
-	  cabinet.width(60*2.54);
-	
-	  const opening = cabinet.openings[0];
-	  opening.divide(2);
-	  opening.sectionProperties().pattern('bab').value('a', 30*2.54);
-	  const left = opening.sections[0];
-	  const center = opening.sections[1];
-	  const right = opening.sections[2];
-	  const a = 6*2.54
-	
-	  left.divide(2);
-	  left.vertical(false);
-	  left.sections[0].setSection("DrawerSection");
-	  left.sections[1].setSection("DrawerSection");
-	  left.sections[2].setSection("DrawerSection");
-	  left.pattern('abb').value('a', a);
-	
-	  center.divide(1);
-	  center.vertical(false);
-	  center.sections[1].setSection('DualDoorSection');
-	  center.pattern('ab').value('a', a);
-	  const centerTop = center.sections[0];
-	
-	  centerTop.divide(2);
-	  centerTop.sections[0].setSection("DoorSection");
-	  centerTop.sections[1].setSection("FalseFrontSection");
-	  centerTop.sections[2].setSection("DoorSection");
-	  centerTop.pattern('ztz').value('t', 15*2.54);
-	  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
-	  centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
-	
-	  right.divide(2);
-	  right.vertical(false);
-	  right.sections[0].setSection("DrawerSection");
-	  right.sections[1].setSection("DrawerSection");
-	  right.sections[2].setSection("DrawerSection");
-	  right.pattern('abb').value('a', a);
-	});
 	
 });
 
@@ -29109,6 +29126,153 @@ function (require, exports, module) {
 	  DisplayManager.instances[displayManagerId].open(displayId);
 	});
 	module.exports = DisplayManager
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/displays/group.js',
+function (require, exports, module) {
+	
+
+	
+	const Group = require('../objects/group.js');
+	const PropertyConfig = require('../config/property/config.js');
+	const Properties = require('../config/properties.js');
+	const CabinetDisplay = require('./cabinet.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Select = require('../../../../public/js/utils/input/styles/select.js');
+	const Input = require('../../../../public/js/utils/input/input.js');
+	const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const bind = require('../../../../public/js/utils/input/bind.js');
+	const ThreeDMain = require('../displays/three-d-main.js');
+	
+	const currentStyleState = {};
+	
+	function disableButton(values, dit, elem) {
+	  const nId = dit.node.constructor.decode(dit.root().id()).id;
+	  const currState = currentStyleState[nId];
+	  const rootId = dit.node.constructor.decode(dit.root().id()).id;
+	  const button = du.find(`button[root-id='${rootId}']`);
+	  if (button) button.hidden = Object.equals(currState, values);
+	  const headers = du.find.downAll('.group-header', du.find.up('.group-cnt', button));
+	  headers.forEach((header) => {
+	    header.hidden = currState.style !== header.getAttribute("cab-style");
+	    if (!header.hidden) du.find.down('.group-key', header).innerText = currState.subStyle;
+	  });
+	}
+	
+	class GroupDisplay extends Lookup {
+	  constructor(group) {
+	    super();
+	    function setCurrentStyleState(values) {
+	      values = values || dit.values();
+	      const nId = dit.node.constructor.decode(dit.root().id()).id;
+	      currentStyleState[nId] = values;
+	      disableButton(values, dit);
+	      return values;
+	    }
+	    function onCabinetStyleSubmit(values) {
+	      setCurrentStyleState(values);
+	      group.propertyConfig.set(values.style, values.subStyle);
+	      ThreeDMain.update();
+	    }
+	
+	    let initialized = false;
+	    function initializeDitButton() {
+	      if (initialized) disableButton(dit.values(), dit);
+	      else {
+	        disableButton(setCurrentStyleState(), dit);
+	        initialized = true;
+	      }
+	    }
+	    const dit = GroupDisplay.DecisionInputTree(onCabinetStyleSubmit, group.propertyConfig);
+	    function styleSelector() {
+	      return dit.root().payload().html();
+	    }
+	    function propertyHtml() {return GroupDisplay.propertyMenuTemplate.render({styleSelector})};
+	    this.bodyHtml = () =>  {
+	      setTimeout(initializeDitButton, 200);
+	      return GroupDisplay.bodyTemplate.render({group, propertyHtml});
+	    }
+	    this.html = () => {
+	      return GroupDisplay.headTemplate.render({group, propertyHtml, groupDisplay: this, body: this.bodyHtml()});
+	    }
+	
+	    this.cabinetDisplay = new CabinetDisplay(`[group-id="${group.id()}"].cabinet-cnt`, group);
+	    this.cabinet = () => this.cabinetDisplay().active();
+	  }
+	}
+	
+	GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
+	  const dit = new DecisionInputTree(undefined, {buttonText: 'Change'});
+	  dit.onChange(disableButton);
+	  dit.onSubmit(onSubmit);
+	  const propertyConfig = new PropertyConfig();
+	  const styles = propertyConfig.cabinetStyles();
+	  const cabinetStyles = new Select({
+	    name: 'style',
+	    list: styles,
+	    inline: true,
+	    label: 'Style',
+	    value: propertyConfigInst.cabinetStyle()
+	  });
+	
+	  const hasFrame = new Select({
+	      name: 'FrameStyle',
+	      inline: true,
+	      list: ['Frameless', 'Framed', 'Frame Only'],
+	      value: 'Frameless'
+	    });
+	
+	  const style = dit.branch('style', [hasFrame, cabinetStyles]);
+	  styles.forEach((styleName) => {
+	    const properties = Properties.groupList(styleName);
+	    const selectObj = Object.keys(properties);
+	    const select = new Select({
+	      name: 'subStyle',
+	      inline: true,
+	      list: selectObj,
+	      value: propertyConfigInst.cabinetStyleName()
+	    });
+	    const condtionalPayload = new DecisionInputTree.ValueCondition('style', [styleName], [select]);
+	    style.conditional(styleName, condtionalPayload);
+	  });
+	
+	  return dit;
+	}
+	
+	du.on.match('click', `.group-display-header`, (target) => {
+	  const allBodys = du.find.all('.group-display-body');
+	  for (let index = 0; index < allBodys.length; index += 1) {
+	    allBodys[index].hidden = true;
+	  }
+	  const allHeaders = du.find.all('.group-display-header');
+	  for (let index = 0; index < allHeaders.length; index += 1) {
+	    du.class.remove(allHeaders[index], 'active');
+	  }
+	  du.class.add(target, 'active');
+	  const body = du.find.closest('.group-display-body', target);
+	  const groupDisplayId = du.find.up('[group-display-id]', target).getAttribute('group-display-id');
+	  const groupDisplay = GroupDisplay.get(groupDisplayId);
+	  body.innerHTML = groupDisplay.bodyHtml();
+	  groupDisplay.cabinetDisplay.refresh();
+	  body.hidden = false;
+	});
+	
+	GroupDisplay.valueUpdate = (target) => {
+	  const group = Group.get(target.getAttribute('group-id'));
+	  const value = target.value;
+	  group.name(value);
+	}
+	
+	du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);
+	
+	GroupDisplay.headTemplate = new $t('group/head');
+	GroupDisplay.bodyTemplate = new $t('group/body');
+	GroupDisplay.propertyMenuTemplate = new $t('properties/property-menu');
+	module.exports = GroupDisplay
 	
 });
 
@@ -29594,155 +29758,196 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./services/cabinet/app-src/config/cabinet-configs.js',
+RequireJS.addFunction('./services/cabinet/app-src/config/cabinet-template.js',
 function (require, exports, module) {
 	
-
+const cabinetsJson = require('../../public/json/cabinets.json');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js')
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const PropertyConfig = require('./property/config');
 	
-	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
-	const Select = require('../../../../public/js/utils/input/styles/select.js');
-	const Input = require('../../../../public/js/utils/input/input.js');
-	const Inputs = require('../input/inputs.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-	const Request = require('../../../../public/js/utils/request.js');
-	const EPNTS = require('../../generated/EPNTS.js');
-	const CabinetTemplate = require('./cabinet-template');
-	const ValueCondition = require('../../../../public/js/utils/input/decision/decision.js').ValueCondition;
-	const Cabinets = require('./cabinets.json');
-	const CabinetLayouts = require('./cabinet-layouts');
-	
-	const configs = {};
-	class CabinetConfig {
-	  constructor(cabinets, id) {
-	    let cabinetList = {};
-	    let cabinetKeys = {};
-	    let configKeys;
-	
-	    this.valid = (type, id) => (!id ?
-	                  cabinets[type] : cabinetKeys[type][id]) !== undefined;
-	
-	    this.inputTree = () => {
-	      const types = JSON.parse(JSON.stringify(configKeys));
-	      const typeInput = new Select({
-	        name: 'type',
-	        label: 'Type',
-	        inline: false,
-	        class: 'center',
-	        list: types
-	      });
-	      const nameInput = new Input({
-	        name: 'name',
-	        inline: true,
-	        label: 'Name (optional)',
-	        class: 'center',
-	      });
-	      const layoutInput = new Input({
-	        label: 'Layout (Optional)',
-	        name: 'layout',
-	        inline: true,
-	        class: 'center',
-	        clearOnDblClick: true,
-	        list: CabinetLayouts.list()
-	      });
-	
-	      const inputs = [layoutInput, nameInput, typeInput];
-	      const inputTree = new DecisionInputTree();
-	      // inputTree.onSubmit((t) => {
-	      //   inputTree.payload().inputArray[1].setValue('', true)
-	      //   inputTree.children()[0].payload().inputArray[0].setValue('', true)
-	      // });
-	      inputTree.leaf('Cabinet', inputs);
-	
-	      return inputTree;
+	class CabinetTemplate extends Lookup {
+	  constructor(type) {
+	    super();
+	    const instance = this;
+	    const initialVals = (typeof type) === 'object' ? type : {
+	      type, values: [], subassemblies: [], joints: [], dividerJoint: {},
+	      shape: 'square',
+	      width: 18 * 2.54,
+	      height: 34 * 2.54,
+	      thickness: 24 * 2.54,
+	      fromFloor: 0,
+	      openings: [CabinetTemplate.defaultPartCodeOpening()],
+	      autoToeKick: false
 	    };
-	    this.get = (group, type, layout, name) => {
-	      let cabinet = Cabinet.build(type, group);
-	      if (layout && CabinetLayouts.map[layout]) CabinetLayouts.map[layout].build(cabinet);
-	      cabinet.name(name);
+	    Object.getSet(this, initialVals);
+	    CabinetTemplate.map[type] = this;
+	
+	    function getCabinet(length, width, thickness, pc) {
+	      const cabinet = Cabinet.build(instance.type(), undefined, instance.toJson());
+	      cabinet.length(length || this.height());
+	      cabinet.width(width || this.width());
+	      cabinet.thickness(thickness || this.thickness());
+	
+	      cabinet.propertyConfig(pc instanceof PropertyConfig ? pc : new PropertyConfig());
 	      return cabinet;
-	    };
+	    }
+	    this.getCabinet = getCabinet;
 	
-	    const allCabinetKeys = Object.keys(cabinets);
-	    allCabinetKeys.forEach((key) => {
-	      const type = cabinets[key].partName;
-	      if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
-	      if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
-	      cabinetKeys[type][key] = cabinets[key];
-	    });
+	    this.codeMap = () => {
+	      let codeMap = {};
+	      Object.values(this.subassemblies()).forEach((sa) => codeMap[sa.code] = sa);
+	      return codeMap;
+	    }
 	
-	    cabinetList = cabinets;
-	    configKeys = Object.keys(cabinets);
-	    configs[id] = this;
+	    this.validPartCode = (code) => this.codeMap()[code] !== undefined;
+	    const vpc = this.validPartCode;
+	
+	    this.validOpenings = () => {
+	      const bms = this.openings();
+	      for (let index = 0; index < bms.length; index += 1) {
+	        const bm = bms[index];
+	        if (!(vpc(bm.top) && vpc(bm.bottom) && vpc(bm.right) &&
+	                vpc(bm.left) && vpc(bm.bottom))) {
+	          return false;
+	        }
+	      }
+	      return true;
+	    }
+	    this.validateDividerJoint = () => {
+	      const j = this.dividerJoint();
+	      return j.type === 'Butt' || (j.type === 'Dado' && j.maleOffset > 0);
+	    }
+	
+	    const offsetReg = /(-|\+|)[xyz]/;
+	    this.validOffset = (offset) => offset && offset.match(offsetReg) !== null;
+	    const vo = this.validOffset;
+	
+	    this.validateJoint = (joint, malePartCode, femalePartCode) => {
+	      let isValid = vpc(malePartCode) && vpc(femalePartCode);
+	      switch (joint.type) {
+	        case "Dado":
+	          return isValid && joint.maleOffset > 0 && vo(joint.demensionToOffset) &&
+	                  vo(joint.centerOffset);
+	        default:
+	          return true;
+	      }
+	    }
+	    this.validateJoints = () => {
+	      let joints = this.joints();
+	      for (let index = 0; index < joints.length; index += 1) {
+	        if (!this.validateJoint(joints[index])) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.evalEqn = (eqn, cab) => {
+	      cab ||= getCabinet();
+	      return cab.eval(eqn);
+	    }
+	
+	    this.evalObject = (eqn, cab) => {
+	      cab ||= getCabinet();
+	      return cab.evalObject(eqn);
+	    }
+	
+	    this.validateEquation = (eqn, cab) => {
+	      return !Number.isNaN(this.evalEqn(eqn, cab));
+	    }
+	    const veq = this.validateEquation;
+	
+	    this.validateValues = (cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	      const values = Object.values(this.values());
+	      for (let index = 0; index < values.length; index += 1) {
+	        if (!veq(values[index].eqn, cab)) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.validateSubassembly = (subAssem, cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	
+	      const c = subAssem.center;
+	      const d = subAssem.demensions;
+	      const r = subAssem.rotation;
+	      return vpc(subAssem.code) &&
+	              r.length === 3 && veq(r[0], cab) && veq(r[1], cab) && veq(r[2], cab) &&
+	              veq(c[0], cab) && veq(c[1], cab) && veq(c[2], cab) &&
+	              veq(d[0], cab) && veq(d[1], cab) && veq(d[2], cab);
+	    }
+	
+	    this.validateSubassemblies = (cab) => {
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }      const subAssems = Object.values(this.subassemblies());
+	      for (let index = 0; index < subAssems.length; index += 1) {
+	        if (!this.validateSubassembly(subAssems[index])) return false;
+	      }
+	      return true;
+	    }
+	
+	    this.valid = () => {
+	      let cab;
+	      try {
+	        cab ||= getCabinet();
+	      } catch (e) {
+	        return false;
+	      }
+	      return this.validateValues(cab) && this.validOpenings() &&
+	              this.validateDividerJoint() && this.validateJoints() &&
+	              this.validateSubassemblies(cab);
+	    }
 	  }
 	}
 	
-	let currConfig = new CabinetConfig(Cabinets, 'default');
-	const updateEvent = new CustomEvent('update');
-	
-	module.exports = {
-	  switch: (configId) => {
-	    if (configs[configId] !== undefined) {
-	      currConfig = configs[configId];
-	      updateEvent.trigger();
-	    }
-	  },
-	  configList: () => Object.keys(configs),
-	  valid: (...args) => currConfig.valid(...args),
-	  onUpdate: (func) => updateEvent.on(func),
-	  inputTree: (...args) => currConfig.inputTree(...args),
-	  get: (...args) => currConfig.get(...args),
-	  new: (json, id) => new CabinetConfig(json, id)
+	CabinetTemplate.map = {};
+	CabinetTemplate.defaultList = () => {
+	  const list = [];
+	  const keys = Object.keys(cabinetsJson);
+	  // comment out to get corner-wall to be the first.
+	  // keys.sort();
+	  for (let index = 0; index < keys.length; index += 1) {
+	    list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
+	  }
+	  return list;
 	}
 	
-	// Request.get(EPNTS.cabinet.list(), (cabinets) => {
-	//   new CabinetConfig(cabinets, 'user');
-	//   module.exports.switch('user');
-	// }, console.error);
+	CabinetTemplate.typeUndefined = (type) => CabinetTemplate.map[type] === undefined;
+	CabinetTemplate.defaultPartCodeOpening = () => ({
+	    _Type: "part-code",
+	    top: "pt",
+	    bottom: "pb",
+	    left: "pl",
+	    right: "pr",
+	    back: "pback"
+	  }
+	);
 	
+	CabinetTemplate.defaultLocationOpening = () => ({
+	  _Type: "location",
+	  zRotation: 0,
+	  inner: {
+	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
+	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
+	  },
+	  outer: {
+	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
+	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
+	  }
+	});
 	
-	
-	
-	
-	
-	// ---------------------- Layout Specific Input Tree -----------------------//
-	// this.inputTree = () => {
-	//   const types = JSON.parse(JSON.stringify(configKeys));
-	//   const typeInput = new Select({
-	//     name: 'type',
-	//     label: 'Type',
-	//     inline: false,
-	//     class: 'center',
-	//     list: types
-	//   });
-	//   const nameInput = new Input({
-	//     name: 'name',
-	//     inline: false,
-	//     label: 'Name (optional)',
-	//     class: 'center',
-	//   });
-	//   const inputs = [typeInput, nameInput];
-	//   const inputTree = new DecisionInputTree();
-	//   inputTree.onSubmit((t) => {
-	//     inputTree.payload().inputArray[1].setValue('', true)
-	//     inputTree.children()[0].payload().inputArray[0].setValue('', true)
-	//   });
-	//   const cabinet = inputTree.branch('Cabinet', inputs);
-	//   const cabinetTypes = Object.keys(cabinetKeys);
-	//   types.forEach((type) => {
-	//
-	//     const cabinetInput = new Input({
-	//       label: 'Layout (Optional)',
-	//       name: 'id',
-	//       inline: false,
-	//       class: 'center',
-	//       clearOnDblClick: true,
-	//       list: [''].concat(cabinetKeys[type] ? Object.keys(cabinetKeys[type]) : [])
-	//     });
-	//     cabinet.conditional(type, new ValueCondition('type', type, [cabinetInput]));
-	//   });
-	//   return inputTree;
-	// };
+	module.exports = CabinetTemplate;
 	
 });
 
@@ -32383,200 +32588,6 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 });
 
 
-RequireJS.addFunction('./services/cabinet/app-src/config/cabinet-template.js',
-function (require, exports, module) {
-	
-const cabinetsJson = require('../../public/json/cabinets.json');
-	const Cabinet = require('../objects/assembly/assemblies/cabinet.js')
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const PropertyConfig = require('./property/config');
-	
-	class CabinetTemplate extends Lookup {
-	  constructor(type) {
-	    super();
-	    const instance = this;
-	    const initialVals = (typeof type) === 'object' ? type : {
-	      type, values: [], subassemblies: [], joints: [], dividerJoint: {},
-	      shape: 'square',
-	      width: 18 * 2.54,
-	
-	      height: 34 * 2.54,
-	      thickness: 24 * 2.54,
-	      fromFloor: 0,
-	      openings: [CabinetTemplate.defaultPartCodeOpening()]
-	    };
-	    Object.getSet(this, initialVals);
-	    CabinetTemplate.map[type] = this;
-	
-	    function getCabinet(length, width, thickness, pc) {
-	      const cabinet = Cabinet.build(instance.type(), undefined, instance.toJson());
-	      cabinet.length(length || this.height());
-	      cabinet.width(width || this.width());
-	      cabinet.thickness(thickness || this.thickness());
-	
-	      cabinet.propertyConfig(pc instanceof PropertyConfig ? pc : new PropertyConfig());
-	      return cabinet;
-	    }
-	    this.getCabinet = getCabinet;
-	
-	    this.codeMap = () => {
-	      let codeMap = {};
-	      Object.values(this.subassemblies()).forEach((sa) => codeMap[sa.code] = sa);
-	      return codeMap;
-	    }
-	
-	    this.validPartCode = (code) => this.codeMap()[code] !== undefined;
-	    const vpc = this.validPartCode;
-	
-	    this.validOpenings = () => {
-	      const bms = this.openings();
-	      for (let index = 0; index < bms.length; index += 1) {
-	        const bm = bms[index];
-	        if (!(vpc(bm.top) && vpc(bm.bottom) && vpc(bm.right) &&
-	                vpc(bm.left) && vpc(bm.bottom))) {
-	          return false;
-	        }
-	      }
-	      return true;
-	    }
-	    this.validateDividerJoint = () => {
-	      const j = this.dividerJoint();
-	      return j.type === 'Butt' || (j.type === 'Dado' && j.maleOffset > 0);
-	    }
-	
-	    const offsetReg = /(-|\+|)[xyz]/;
-	    this.validOffset = (offset) => offset && offset.match(offsetReg) !== null;
-	    const vo = this.validOffset;
-	
-	    this.validateJoint = (joint, malePartCode, femalePartCode) => {
-	      let isValid = vpc(malePartCode) && vpc(femalePartCode);
-	      switch (joint.type) {
-	        case "Dado":
-	          return isValid && joint.maleOffset > 0 && vo(joint.demensionToOffset) &&
-	                  vo(joint.centerOffset);
-	        default:
-	          return true;
-	      }
-	    }
-	    this.validateJoints = () => {
-	      let joints = this.joints();
-	      for (let index = 0; index < joints.length; index += 1) {
-	        if (!this.validateJoint(joints[index])) return false;
-	      }
-	      return true;
-	    }
-	
-	    this.evalEqn = (eqn, cab) => {
-	      cab ||= getCabinet();
-	      return cab.eval(eqn);
-	    }
-	
-	    this.evalObject = (eqn, cab) => {
-	      cab ||= getCabinet();
-	      return cab.evalObject(eqn);
-	    }
-	
-	    this.validateEquation = (eqn, cab) => {
-	      return !Number.isNaN(this.evalEqn(eqn, cab));
-	    }
-	    const veq = this.validateEquation;
-	
-	    this.validateValues = (cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }
-	      const values = Object.values(this.values());
-	      for (let index = 0; index < values.length; index += 1) {
-	        if (!veq(values[index].eqn, cab)) return false;
-	      }
-	      return true;
-	    }
-	
-	    this.validateSubassembly = (subAssem, cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }
-	
-	      const c = subAssem.center;
-	      const d = subAssem.demensions;
-	      const r = subAssem.rotation;
-	      return vpc(subAssem.code) &&
-	              r.length === 3 && veq(r[0], cab) && veq(r[1], cab) && veq(r[2], cab) &&
-	              veq(c[0], cab) && veq(c[1], cab) && veq(c[2], cab) &&
-	              veq(d[0], cab) && veq(d[1], cab) && veq(d[2], cab);
-	    }
-	
-	    this.validateSubassemblies = (cab) => {
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }      const subAssems = Object.values(this.subassemblies());
-	      for (let index = 0; index < subAssems.length; index += 1) {
-	        if (!this.validateSubassembly(subAssems[index])) return false;
-	      }
-	      return true;
-	    }
-	
-	    this.valid = () => {
-	      let cab;
-	      try {
-	        cab ||= getCabinet();
-	      } catch (e) {
-	        return false;
-	      }
-	      return this.validateValues(cab) && this.validOpenings() &&
-	              this.validateDividerJoint() && this.validateJoints() &&
-	              this.validateSubassemblies(cab);
-	    }
-	  }
-	}
-	
-	CabinetTemplate.map = {};
-	CabinetTemplate.defaultList = () => {
-	  const list = [];
-	  const keys = Object.keys(cabinetsJson);
-	  // comment out to get corner-wall to be the first.
-	  // keys.sort();
-	  for (let index = 0; index < keys.length; index += 1) {
-	    list.push(new CabinetTemplate().fromJson(cabinetsJson[keys[index]]));
-	  }
-	  return list;
-	}
-	
-	CabinetTemplate.typeUndefined = (type) => CabinetTemplate.map[type] === undefined;
-	CabinetTemplate.defaultPartCodeOpening = () => ({
-	    _Type: "part-code",
-	    top: "pt",
-	    bottom: "pb",
-	    left: "pl",
-	    right: "pr",
-	    back: "pback"
-	  }
-	);
-	
-	CabinetTemplate.defaultLocationOpening = () => ({
-	  _Type: "location",
-	  zRotation: 0,
-	  inner: {
-	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
-	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
-	  },
-	  outer: {
-	    top: {left: {x: 0, y: 0, z: 0}, right: {x: 0, y: 0, z: 0}},
-	    bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
-	  }
-	});
-	
-	module.exports = CabinetTemplate;
-	
-});
-
-
 RequireJS.addFunction('./services/cabinet/app-src/config/properties.js',
 function (require, exports, module) {
 	
@@ -32829,149 +32840,255 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./services/cabinet/app-src/displays/group.js',
+RequireJS.addFunction('./services/cabinet/app-src/config/cabinet-configs.js',
 function (require, exports, module) {
 	
 
 	
-	const Group = require('../objects/group.js');
-	const PropertyConfig = require('../config/property/config.js');
-	const Properties = require('../config/properties.js');
-	const CabinetDisplay = require('./cabinet.js');
-	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 	const Select = require('../../../../public/js/utils/input/styles/select.js');
 	const Input = require('../../../../public/js/utils/input/input.js');
-	const $t = require('../../../../public/js/utils/$t.js');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	const Lookup = require('../../../../public/js/utils/object/lookup.js');
-	const bind = require('../../../../public/js/utils/input/bind.js');
-	const ThreeDMain = require('../displays/three-d-main.js');
+	const Inputs = require('../input/inputs.js');
+	const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+	const Request = require('../../../../public/js/utils/request.js');
+	const EPNTS = require('../../generated/EPNTS.js');
+	const CabinetTemplate = require('./cabinet-template');
+	const ValueCondition = require('../../../../public/js/utils/input/decision/decision.js').ValueCondition;
+	const Cabinets = require('./cabinets.json');
+	const CabinetLayouts = require('./cabinet-layouts');
 	
-	const currentStyleState = {};
+	const configs = {};
+	class CabinetConfig {
+	  constructor(cabinets, id) {
+	    let cabinetList = {};
+	    let cabinetKeys = {};
+	    let configKeys;
 	
-	function disableButton(values, dit, elem) {
-	  const nId = dit.node.constructor.decode(dit.root().id()).id;
-	  const currState = currentStyleState[nId];
-	  const rootId = dit.node.constructor.decode(dit.root().id()).id;
-	  const button = du.find(`button[root-id='${rootId}']`);
-	  if (button) button.hidden = Object.equals(currState, values);
-	  const headers = du.find.downAll('.group-header', du.find.up('.group-cnt', button));
-	  headers.forEach((header) => {
-	    header.hidden = currState.style !== header.getAttribute("cab-style");
-	    if (!header.hidden) du.find.down('.group-key', header).innerText = currState.subStyle;
-	  });
-	}
+	    this.valid = (type, id) => (!id ?
+	                  cabinets[type] : cabinetKeys[type][id]) !== undefined;
 	
-	class GroupDisplay extends Lookup {
-	  constructor(group) {
-	    super();
-	    function setCurrentStyleState(values) {
-	      values = values || dit.values();
-	      const nId = dit.node.constructor.decode(dit.root().id()).id;
-	      currentStyleState[nId] = values;
-	      disableButton(values, dit);
-	      return values;
-	    }
-	    function onCabinetStyleSubmit(values) {
-	      setCurrentStyleState(values);
-	      group.propertyConfig.set(values.style, values.subStyle);
-	      ThreeDMain.update();
-	    }
+	    this.inputTree = () => {
+	      const types = JSON.parse(JSON.stringify(configKeys));
+	      const typeInput = new Select({
+	        name: 'type',
+	        label: 'Type',
+	        inline: false,
+	        class: 'center',
+	        list: types
+	      });
+	      const nameInput = new Input({
+	        name: 'name',
+	        inline: true,
+	        label: 'Name (optional)',
+	        class: 'center',
+	      });
+	      const layoutInput = new Input({
+	        label: 'Layout (Optional)',
+	        name: 'layout',
+	        inline: true,
+	        class: 'center',
+	        clearOnDblClick: true,
+	        list: CabinetLayouts.list()
+	      });
 	
-	    let initialized = false;
-	    function initializeDitButton() {
-	      if (initialized) disableButton(dit.values(), dit);
-	      else {
-	        disableButton(setCurrentStyleState(), dit);
-	        initialized = true;
-	      }
-	    }
-	    const dit = GroupDisplay.DecisionInputTree(onCabinetStyleSubmit, group.propertyConfig);
-	    function styleSelector() {
-	      return dit.root().payload().html();
-	    }
-	    function propertyHtml() {return GroupDisplay.propertyMenuTemplate.render({styleSelector})};
-	    this.bodyHtml = () =>  {
-	      setTimeout(initializeDitButton, 200);
-	      return GroupDisplay.bodyTemplate.render({group, propertyHtml});
-	    }
-	    this.html = () => {
-	      return GroupDisplay.headTemplate.render({group, propertyHtml, groupDisplay: this, body: this.bodyHtml()});
-	    }
+	      const inputs = [layoutInput, nameInput, typeInput];
+	      const inputTree = new DecisionInputTree();
+	      // inputTree.onSubmit((t) => {
+	      //   inputTree.payload().inputArray[1].setValue('', true)
+	      //   inputTree.children()[0].payload().inputArray[0].setValue('', true)
+	      // });
+	      inputTree.leaf('Cabinet', inputs);
 	
-	    this.cabinetDisplay = new CabinetDisplay(`[group-id="${group.id()}"].cabinet-cnt`, group);
-	    this.cabinet = () => this.cabinetDisplay().active();
-	  }
-	}
+	      return inputTree;
+	    };
+	    this.get = (group, type, layout, name) => {
+	      let cabinet = Cabinet.build(type, group);
+	      if (layout && CabinetLayouts.map[layout]) CabinetLayouts.map[layout].build(cabinet);
+	      cabinet.name(name);
+	      return cabinet;
+	    };
 	
-	GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
-	  const dit = new DecisionInputTree(undefined, {buttonText: 'Change'});
-	  dit.onChange(disableButton);
-	  dit.onSubmit(onSubmit);
-	  const propertyConfig = new PropertyConfig();
-	  const styles = propertyConfig.cabinetStyles();
-	  const cabinetStyles = new Select({
-	    name: 'style',
-	    list: styles,
-	    inline: true,
-	    label: 'Style',
-	    value: propertyConfigInst.cabinetStyle()
-	  });
-	
-	  const hasFrame = new Select({
-	      name: 'FrameStyle',
-	      inline: true,
-	      list: ['Frameless', 'Framed', 'Frame Only'],
-	      value: 'Frameless'
+	    const allCabinetKeys = Object.keys(cabinets);
+	    allCabinetKeys.forEach((key) => {
+	      const type = cabinets[key].partName;
+	      if (cabinetKeys[type] === undefined)  cabinetKeys[type] = {};
+	      if (cabinetKeys[type][key] === undefined)  cabinetKeys[type][key] = {};
+	      cabinetKeys[type][key] = cabinets[key];
 	    });
 	
-	  const style = dit.branch('style', [hasFrame, cabinetStyles]);
-	  styles.forEach((styleName) => {
-	    const properties = Properties.groupList(styleName);
-	    const selectObj = Object.keys(properties);
-	    const select = new Select({
-	      name: 'subStyle',
-	      inline: true,
-	      list: selectObj,
-	      value: propertyConfigInst.cabinetStyleName()
-	    });
-	    const condtionalPayload = new DecisionInputTree.ValueCondition('style', [styleName], [select]);
-	    style.conditional(styleName, condtionalPayload);
-	  });
-	
-	  return dit;
+	    cabinetList = cabinets;
+	    configKeys = Object.keys(cabinets);
+	    configs[id] = this;
+	  }
 	}
 	
-	du.on.match('click', `.group-display-header`, (target) => {
-	  const allBodys = du.find.all('.group-display-body');
-	  for (let index = 0; index < allBodys.length; index += 1) {
-	    allBodys[index].hidden = true;
+	let currConfig = new CabinetConfig(Cabinets, 'default');
+	const updateEvent = new CustomEvent('update');
+	
+	module.exports = {
+	  switch: (configId) => {
+	    if (configs[configId] !== undefined) {
+	      currConfig = configs[configId];
+	      updateEvent.trigger();
+	    }
+	  },
+	  configList: () => Object.keys(configs),
+	  valid: (...args) => currConfig.valid(...args),
+	  onUpdate: (func) => updateEvent.on(func),
+	  inputTree: (...args) => currConfig.inputTree(...args),
+	  get: (...args) => currConfig.get(...args),
+	  new: (json, id) => new CabinetConfig(json, id)
+	}
+	
+	// Request.get(EPNTS.cabinet.list(), (cabinets) => {
+	//   new CabinetConfig(cabinets, 'user');
+	//   module.exports.switch('user');
+	// }, console.error);
+	
+	
+	
+	
+	
+	
+	// ---------------------- Layout Specific Input Tree -----------------------//
+	// this.inputTree = () => {
+	//   const types = JSON.parse(JSON.stringify(configKeys));
+	//   const typeInput = new Select({
+	//     name: 'type',
+	//     label: 'Type',
+	//     inline: false,
+	//     class: 'center',
+	//     list: types
+	//   });
+	//   const nameInput = new Input({
+	//     name: 'name',
+	//     inline: false,
+	//     label: 'Name (optional)',
+	//     class: 'center',
+	//   });
+	//   const inputs = [typeInput, nameInput];
+	//   const inputTree = new DecisionInputTree();
+	//   inputTree.onSubmit((t) => {
+	//     inputTree.payload().inputArray[1].setValue('', true)
+	//     inputTree.children()[0].payload().inputArray[0].setValue('', true)
+	//   });
+	//   const cabinet = inputTree.branch('Cabinet', inputs);
+	//   const cabinetTypes = Object.keys(cabinetKeys);
+	//   types.forEach((type) => {
+	//
+	//     const cabinetInput = new Input({
+	//       label: 'Layout (Optional)',
+	//       name: 'id',
+	//       inline: false,
+	//       class: 'center',
+	//       clearOnDblClick: true,
+	//       list: [''].concat(cabinetKeys[type] ? Object.keys(cabinetKeys[type]) : [])
+	//     });
+	//     cabinet.conditional(type, new ValueCondition('type', type, [cabinetInput]));
+	//   });
+	//   return inputTree;
+	// };
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/config/cabinet-layouts.js',
+function (require, exports, module) {
+	
+const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
+	
+	const map = {};
+	const list = () => Object.keys(map);
+	
+	class CabinetLayout {
+	  constructor(name, build) {
+	    this.name = () => name;
+	    this.build = build;
+	    if (map[name]) throw new Error(`CabinetLayout '${name}' already exists`);
+	    map[name] = this;
 	  }
-	  const allHeaders = du.find.all('.group-display-header');
-	  for (let index = 0; index < allHeaders.length; index += 1) {
-	    du.class.remove(allHeaders[index], 'active');
-	  }
-	  du.class.add(target, 'active');
-	  const body = du.find.closest('.group-display-body', target);
-	  const groupDisplayId = du.find.up('[group-display-id]', target).getAttribute('group-display-id');
-	  const groupDisplay = GroupDisplay.get(groupDisplayId);
-	  body.innerHTML = groupDisplay.bodyHtml();
-	  groupDisplay.cabinetDisplay.refresh();
-	  body.hidden = false;
+	}
+	
+	
+	module.exports = {map, list};
+	
+	new CabinetLayout('1dDD', (cabinet) => {
+	  cabinet.width(18*2.54);
+	
+	  const opening = cabinet.openings[0];
+	
+	  opening.divide(2);
+	  opening.vertical(false);
+	  opening.sections[0].setSection("DrawerSection");
+	  opening.sections[1].setSection("DualDoorSection");
+	  opening.pattern('ab').value('a', 6);
 	});
 	
-	GroupDisplay.valueUpdate = (target) => {
-	  const group = Group.get(target.getAttribute('group-id'));
-	  const value = target.value;
-	  group.name(value);
-	}
+	new CabinetLayout('1dD', (cabinet) => {
+	  cabinet.width(18*2.54);
 	
-	du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);
+	  const opening = cabinet.openings[0];
 	
-	GroupDisplay.headTemplate = new $t('group/head');
-	GroupDisplay.bodyTemplate = new $t('group/body');
-	GroupDisplay.propertyMenuTemplate = new $t('properties/property-menu');
-	module.exports = GroupDisplay
+	  opening.divide(1);
+	  opening.vertical(false);
+	  opening.sections[0].setSection("DrawerSection");
+	  opening.sections[1].setSection("DoorSection");
+	  opening.pattern('ab').value('a', 6);
+	});
+	
+	new CabinetLayout('3d', (cabinet) => {
+	  cabinet.width(18*2.54);
+	
+	  const opening = cabinet.openings[0];
+	
+	  opening.divide(2);
+	  opening.vertical(false);
+	  opening.sections[0].setSection("DrawerSection");
+	  opening.sections[1].setSection("DrawerSection");
+	  opening.sections[2].setSection("DrawerSection");
+	  opening.pattern('abb').value('a', 6);
+	});
+	
+	new CabinetLayout('3dsb3d', (cabinet) => {
+	  cabinet.width(60*2.54);
+	
+	  const opening = cabinet.openings[0];
+	  opening.divide(2);
+	  opening.sectionProperties().pattern('bab').value('a', 30*2.54);
+	  const left = opening.sections[0];
+	  const center = opening.sections[1];
+	  const right = opening.sections[2];
+	  const a = 6*2.54
+	
+	  left.divide(2);
+	  left.vertical(false);
+	  left.sections[0].setSection("DrawerSection");
+	  left.sections[1].setSection("DrawerSection");
+	  left.sections[2].setSection("DrawerSection");
+	  left.pattern('abb').value('a', a);
+	
+	  center.divide(1);
+	  center.vertical(false);
+	  center.sections[1].setSection('DualDoorSection');
+	  center.pattern('ab').value('a', a);
+	  const centerTop = center.sections[0];
+	
+	  centerTop.divide(2);
+	  centerTop.sections[0].setSection("DoorSection");
+	  centerTop.sections[1].setSection("FalseFrontSection");
+	  centerTop.sections[2].setSection("DoorSection");
+	  centerTop.pattern('ztz').value('t', 15*2.54);
+	  centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
+	  centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
+	
+	  right.divide(2);
+	  right.vertical(false);
+	  right.sections[0].setSection("DrawerSection");
+	  right.sections[1].setSection("DrawerSection");
+	  right.sections[2].setSection("DrawerSection");
+	  right.pattern('abb').value('a', a);
+	});
 	
 });
 
@@ -33316,11 +33433,18 @@ function (require, exports, module) {
 RequireJS.addFunction('./services/cabinet/app-src/services/cabinet-opening-coordinates.js',
 function (require, exports, module) {
 	
-
+const Line3D = require('../three-d/objects/line.js');
+	const Vertex3D = require('../three-d/objects/vertex.js');
+	const Polygon3D = require('../three-d/objects/polygon.js');
+	const BiPolygon = require('../three-d/objects/bi-polygon.js');
+	const Cutter = require('../objects/assembly/assemblies/cutter.js');
+	const Panel = require('../objects/assembly/assemblies/panel.js');
+	const Butt = require('../objects/joint/joints/butt.js');
 	// TODO: fix required coordinate layout leftTop, rightTop, RightBottom, leftBottom
 	class CabinetOpeningCorrdinates {
 	  constructor(cabinet, sectionProperties) {
 	    const config = sectionProperties.config();
+	    let subassemblies = [];
 	
 	    this.divide = sectionProperties.divide;
 	    this.setSection = sectionProperties.setSection;
@@ -33329,40 +33453,162 @@ function (require, exports, module) {
 	    this.normal = sectionProperties.normal;
 	    this.sectionProperties = () => sectionProperties;
 	    this.pattern = sectionProperties.pattern;
+	    this.top = sectionProperties.top;
+	    this.bottom = sectionProperties.bottom;
+	    this.left = sectionProperties.left;
+	    this.right = sectionProperties.right;
+	    this.back = sectionProperties.back;
+	    this.coordinates = sectionProperties.coordinates;
+	
+	    const origGetSub = sectionProperties.getSubassemblies;
+	    sectionProperties.getSubassemblies = () => {
+	      if (subassemblies.length)
+	        return origGetSub().concat(subassemblies);
+	      return origGetSub();
+	    }
+	
+	    function defaultCoordinates() {
+	      const right = cabinet.getAssembly(config.right);
+	      const left = cabinet.getAssembly(config.left);
+	      const top = cabinet.getAssembly(config.top);
+	      const bottom = cabinet.getAssembly(config.bottom);
+	
+	      const topMax = top.position().centerAdjust('y', '+z');
+	      const topMin = top.position().centerAdjust('y', '-z');
+	      const leftMax = left.position().centerAdjust('x', '+z');
+	      const leftMin = left.position().centerAdjust('x', '-z');
+	      const rightMin = right.position().centerAdjust('x', '-z');
+	      const rightMax = right.position().centerAdjust('x', '+z');
+	      const bottomMin = bottom.position().centerAdjust('y', '-z');
+	      const bottomMax = bottom.position().centerAdjust('y', '+z');
+	
+	      return {
+	        inner: [
+	          {x: leftMax, y: topMin, z: 0},
+	          {x: rightMin, y: topMin, z: 0},
+	          {x: rightMin, y: bottomMax, z: 0},
+	          {x: leftMax, y: bottomMax, z: 0}
+	        ],
+	        outer: [
+	          {x: leftMin, y: topMax, z: 0},
+	          {x: rightMax, y: topMax, z: 0},
+	          {x: rightMax, y: bottomMin, z: 0},
+	          {x: leftMin, y: bottomMin, z: 0}
+	        ]
+	      }
+	    }
+	
+	    function manualCoordinates(object) {
+	      return cabinet.evalObject(object);;
+	    }
+	
+	    let printVerts = (verts) => '(' + leftPlane[0].vertices().join('),(') + ')';
+	
+	    function backCoordinates() {
+	      const right = cabinet.getAssembly(config.right);
+	      const left = cabinet.getAssembly(config.left);
+	      const top = cabinet.getAssembly(config.top);
+	      const bottom = cabinet.getAssembly(config.bottom);
+	      const back = cabinet.getAssembly(config.back);
+	      const center = Vertex3D.center(bottom.position().center(), top.position().center());
+	
+	      const biPolyLeft = left.position().toBiPolygon();
+	      const biPolyRight = right.position().toBiPolygon();
+	      const biPolyTop = top.position().toBiPolygon();
+	      const biPolyBottom = bottom.position().toBiPolygon();
+	      const leftPolys = biPolyLeft.furthestOrder(center);
+	      const rightPolys = biPolyRight.furthestOrder(center);
+	      const topPolys = biPolyTop.furthestOrder(center);
+	      const bottomPolys = biPolyBottom.furthestOrder(center);
+	
+	      const backCenter = back.position().center();
+	      const outLineLeft = Line3D.centerClosestTo(backCenter, leftPolys[0].lines());
+	      const outLineRight = Line3D.centerClosestTo(backCenter, rightPolys[0].lines());
+	
+	      const inLineLeft = Line3D.centerClosestTo(backCenter, leftPolys[1].lines());
+	      const inLineRight = Line3D.centerClosestTo(backCenter, rightPolys[1].lines());
+	
+	      const topTopPlane = topPolys[0].toPlane();
+	      const bottomTopPlane = topPolys[1].toPlane();
+	      const bottomBottomPlane = bottomPolys[0].toPlane();
+	      const topBottomPlane = bottomPolys[1].toPlane();
+	
+	      const topLeftOut = topTopPlane.lineIntersection(outLineLeft);
+	      const topRightOut = topTopPlane.lineIntersection(outLineRight);
+	      const bottomRightOut = bottomBottomPlane.lineIntersection(outLineRight);
+	      const bottomLeftOut = bottomBottomPlane.lineIntersection(outLineLeft);
+	
+	      const topLeftIn = bottomTopPlane.lineIntersection(inLineLeft);
+	      const topRightIn = bottomTopPlane.lineIntersection(inLineRight);
+	      const bottomRightIn = topBottomPlane.lineIntersection(inLineRight);
+	      const bottomLeftIn = topBottomPlane.lineIntersection(inLineLeft);
+	
+	      return {
+	        in: new Polygon3D([topLeftIn, topRightIn, bottomRightIn, bottomLeftIn]),
+	        out: new Polygon3D([topLeftOut, topRightOut, bottomRightOut, bottomLeftOut]),
+	        center
+	      }
+	    }
+	
+	    // TODO-maybe: centerOffset was intended to enable rotation of the planes...
+	    function sliceCoordinates(leftLen, rightLen, centerOffset) {
+	      const backCoords = backCoordinates();
+	      const outerBackPoly = backCoords.out;
+	      const innerBackPoly = backCoords.in;
+	      const innerDirPoly = innerBackPoly.parrelleNear(backCoords.center);
+	
+	      const oflpv = outerBackPoly.parrelleAt(-leftLen).vertices();
+	      const ofrpv = outerBackPoly.parrelleAt(-rightLen).vertices();
+	      const outer = [oflpv[0], ofrpv[1], ofrpv[2], oflpv[3]];
+	      const outerPoly = new Polygon3D([oflpv[0], ofrpv[1], ofrpv[2], oflpv[3]]);
+	      const outerPlane = outerPoly.toPlane();
+	
+	      const ibpv = innerBackPoly.vertices();
+	      const idpv = innerDirPoly.vertices();
+	      const i0 = outerPlane.lineIntersection(new Line3D(ibpv[0], idpv[0]));
+	      const i1 = outerPlane.lineIntersection(new Line3D(ibpv[1], idpv[1]));
+	      const i2 = outerPlane.lineIntersection(new Line3D(ibpv[2], idpv[2]));
+	      const i3 = outerPlane.lineIntersection(new Line3D(ibpv[3], idpv[3]));
+	
+	      const corner2corner = outer[0].distance(outer[2]);
+	      const outerOffsetPoly = outerPoly.parrelleAt(corner2corner/-2);
+	      const center = Vertex3D.center(...outerOffsetPoly.vertices());
+	      const dem = {x: corner2corner, y: corner2corner, z: corner2corner};
+	      const rot = {x: 0, y: 0, z: 0};
+	      // subassemblies = [new Panel('gerf', 'Gerf', () => center, () => dem, () => rot)];
+	
+	      const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2, 0, {x: corner2corner, y: corner2corner});
+	      const partCode = 'gerf';
+	      const partName = 'Gerf';
+	      const cutter = new Cutter.Model(partCode, () => partName, biPoly.toModel);
+	      subassemblies = [cutter];
+	      const joint = (otherPartCode) => new Butt(partCode, otherPartCode);
+	      cutter.addJoints(joint('T'), joint('B'), joint('R'), joint('L'));
+	
+	
+	
+	      return {inner: [i0,i1,i2,i3], outer};
+	    }
+	
+	
+	
+	
 	    this.update = () => {
 	      let coords;
-	      if (config._Type === 'location') {
-	        coords = cabinet.evalObject(config.coordinates);
-	      } else {
-	        const right = cabinet.getAssembly(config.right);
-	        const left = cabinet.getAssembly(config.left);
-	        const top = cabinet.getAssembly(config.top);
-	        const bottom = cabinet.getAssembly(config.bottom);
-	
-	        const topMax = top.position().centerAdjust('y', '+z');
-	        const topMin = top.position().centerAdjust('y', '-z');
-	        const leftMax = left.position().centerAdjust('x', '+z');
-	        const leftMin = left.position().centerAdjust('x', '-z');
-	        const rightMin = right.position().centerAdjust('x', '-z');
-	        const rightMax = right.position().centerAdjust('x', '+z');
-	        const bottomMin = bottom.position().centerAdjust('y', '-z');
-	        const bottomMax = bottom.position().centerAdjust('y', '+z');
-	
-	        coords = {
-	          inner: [
-	            {x: leftMax, y: topMin, z: 0},
-	            {x: rightMin, y: topMin, z: 0},
-	            {x: rightMin, y: bottomMax, z: 0},
-	            {x: leftMax, y: bottomMax, z: 0}
-	          ],
-	          outer: [
-	            {x: leftMin, y: topMax, z: 0},
-	            {x: rightMax, y: topMax, z: 0},
-	            {x: rightMax, y: bottomMin, z: 0},
-	            {x: leftMin, y: bottomMin, z: 0}
-	          ]
+	      try {
+	        switch (config._Type) {
+	          case 'location':
+	          coords = manualCoordinates(config.coordinates);
+	          case 'slice':
+	          coords = sliceCoordinates(cabinet.eval(config.leftDepth), cabinet.eval(config.rightDepth));
 	        }
+	      } catch (e) {
+	        console.warn(`Failed to determine coordinates of the specified type: '${config._Type}'`);
+	        console.warn(e);
 	      }
+	
+	      if (coords === undefined) coords = defaultCoordinates();
+	
 	      sectionProperties.updateCoordinates(coords);
 	      return coords;
 	    }
@@ -33997,725 +34243,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./services/cabinet/app-src/two-d/layout/on-wall.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../../public/js/utils/object/lookup.js');
-	const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
-	const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
-	
-	class OnWall extends Lookup {
-	  constructor(wall, fromPreviousWall, fromFloor, height, width) {
-	    super();
-	    Object.getSet(this, {width, height, fromFloor, fromPreviousWall}, 'wallId');
-	    let start = new Vertex2d();
-	    let end = new Vertex2d();
-	    this.wallId = () => wall.id();
-	    this.endpoints2D = () => {
-	      const wallStartPoint = wall.startVertex();
-	      const dist = this.fromPreviousWall();
-	      const total = dist + this.width();
-	      const theta = wall.radians();
-	      const startPoint = {};
-	      startPoint.x = wallStartPoint.x() + dist * Math.cos(theta);
-	      startPoint.y = wallStartPoint.y() + dist * Math.sin(theta);
-	      start.point(startPoint);
-	
-	      const endPoint = {};
-	      endPoint.x = (wallStartPoint.x() + total * Math.cos(theta));
-	      endPoint.y = (wallStartPoint.y() + total * Math.sin(theta));
-	      end.point(endPoint);
-	
-	      return { start, end, toString: () => `${start.toString()} => ${end.toString()}`};
-	    }
-	    this.fromPreviousWall = (value) => {
-	      value = Number.parseFloat(value);
-	      if (!Number.isNaN(value)) fromPreviousWall = value;
-	      return fromPreviousWall;
-	    }
-	    this.fromNextWall = (value) => {
-	      value = Number.parseFloat(value);
-	      if (value) {
-	        this.fromPreviousWall(wall.length() - this.width() - value);
-	      }
-	      return wall.length() - this.width() - this.fromPreviousWall();
-	    }
-	    this.startVertex = () => {
-	      const startpoint = wall.startVertex().point();
-	      const theta = wall.radians();
-	      const distLeft = this.fromPreviousWall() + width;
-	      return new Vertex2d({x: startpoint.x + distLeft * Math.cos(theta),
-	                    y: startpoint.y + distLeft * Math.sin(theta)});
-	    }
-	    this.endVertex = () => {
-	      const startpoint = wall.startVertex().point();
-	      const theta = wall.radians();
-	      const distRight = this.fromPreviousWall();
-	      return new Vertex2d({x: startpoint.x + distRight * Math.cos(theta),
-	                            y: startpoint.y + distRight * Math.sin(theta)});
-	    }
-	    this.toLine = () => new Line2d(this.startVertex(), this.endVertex());
-	    this.wall = () => wall;
-	    this.setWall = (w) => wall = w;
-	    this.move = (center) => {
-	      const point = wall.closestPointOnLine(center);
-	      const onLine = wall.closestPointOnLine(point, true);
-	      let distanceStart = wall.startVertex().distance(point);
-	      if (!onLine) {
-	        let distanceEnd = wall.endVertex().distance(point);
-	        if (distanceStart < distanceEnd) this.fromPreviousWall(0);
-	        else this.fromPreviousWall(wall.length() - this.width());
-	      } else {
-	        const max = wall.length() - this.width();
-	        distanceStart = distanceStart > max ? max : distanceStart;
-	        this.fromPreviousWall(distanceStart);
-	      }
-	    };
-	    this.toString = () => `${this.constructor.name}:${wall}, ${fromPreviousWall}, ${fromFloor}, ${height}, ${width}`
-	  }
-	}
-	OnWall.sort = (ow1, ow2) => ow1.fromPreviousWall() - ow2.fromPreviousWall();
-	OnWall.fromJson = (json) => {
-	  const cxtr = Lookup.decode(json.id).constructor;
-	  const instance = new cxtr(null, json.fromPreviousWall, json.fromFloor, json.height, json.width);
-	  instance.id(json.id);
-	  return instance;
-	}
-	
-	
-	module.exports = OnWall;
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/two-d/layout/door.js',
-function (require, exports, module) {
-	
-const OnWall = require('on-wall');
-	const HoverObject2d = require('../../../../../public/js/utils/canvas/two-d/hover-map.js').HoverObject2d;
-	
-	class Door2D extends OnWall {
-	  constructor() {
-	    super(...arguments);
-	    this.width(this.width() || 91.44);
-	    this.height(this.height() || 198.12);
-	    this.fromPreviousWall(this.fromPreviousWall() || 150);
-	    this.fromFloor(this.fromFloor() || 0);
-	    let hinge = 0;
-	    Object.getSet(this, 'hinge');
-	    this.toString = () => `${this.id()}:${this.endpoints2D().toString()}:${hinge}`;
-	    this.remove = () => this.wall().removeDoor(this);
-	    this.hinge = (val) => val === undefined ? hinge :
-	      hinge = ((typeof val) === 'number' ? val : hinge + 1) % 5;
-	
-	    this.hovering = new HoverObject2d(this.toLine, 20).hovering;
-	  }
-	}
-	
-	Door2D.fromJson = (json) => {
-	  const inst = OnWall.fromJson(json);
-	  inst.hinge(json.hinge);
-	  return inst;
-	}
-	
-	new Door2D();
-	module.exports = Door2D;
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/two-d/layout/corner.js',
-function (require, exports, module) {
-	
-const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
-	const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
-	const Wall2D = require('wall');
-	
-	class Corner2d extends Vertex2d {
-	  constructor(layout, point) {
-	    if (point instanceof Vertex2d) {
-	      point = point.point();
-	    }
-	    super(point);
-	    Lookup.convert(this);
-	    let angleLock = false;
-	    let angleInc = 22.5;
-	    let lengthInc = 2.54;
-	    const instance = this;
-	
-	    this.nextWall = () => layout.nextWall(this, 1);
-	    this.prevWall = () => layout.prevWall(this, -1);
-	    this.angleLock = (on) => {
-	      if (on === true || on === false) angleLock = on;
-	      return angleLock;
-	    }
-	    this.isFree = () => layout.isFreeCorner(this);
-	    this.angleInc = (increment) => {
-	      if (increment > .01 && increment <= 45) angleInc = on;
-	      return angleLock;
-	    }
-	    this.lengthInc = (increment) => {
-	      if (increment > .01 && increment < 10) angleInc = on;
-	      return angleLock;
-	    }
-	    this.angle = (degrees) => {
-	      const currDeg = (this.nextWall().degrees() - this.prevWall().degrees() + 360) % 360;
-	      if (Number.isFinite(degrees)) {
-	        const offset = Math.toRadians((degrees - currDeg)/2);
-	
-	        const prev = this.prevWall();
-	        const newPrev = Line2d.startAndTheta(this, prev.negitive().radians() - offset);
-	        const prevStartVert = newPrev.findIntersection(prev.startVertex().prevWall());
-	        prev.startVertex().point(prevStartVert);
-	
-	        const next = this.nextWall();
-	        const newNext = Line2d.startAndTheta(this, next.radians() + offset);
-	        const nextEndVert = newNext.findIntersection(next.endVertex().nextWall());
-	        next.endVertex().point(nextEndVert);
-	        angleLock = true;
-	      }
-	      return Math.round(currDeg * 10) / 10;
-	    }
-	
-	    const angleDist = (angle1, angle2) => {
-	      angle1 = angle1 % 360;
-	      angle2 = angle2 % 360;
-	      const dist1 = Math.abs(angle1 - angle2);
-	      const dist2 = Math.abs(angle1 - 360 - angle2);
-	      return dist1 < dist2 ? dist1 : dist2;
-	    }
-	    const cleanAngle = (degrees) => {
-	      let offset = degrees%angleInc;
-	      offset = offset > angleInc/2 ? angleInc - offset : -1*offset;
-	      return (degrees + offset) % 360
-	    }
-	
-	    function determineAngle(prevWall, currAngle) {
-	      const angle = currAngle === undefined ? prevWall.angle() : currAngle;
-	      const currRads = Math.toRadians(angle);
-	
-	      const smallerAngle = cleanAngle(angle - angleInc);
-	      const adjustedAngle = cleanAngle(angle);
-	      const biggerAngle = cleanAngle(angle + angleInc);
-	      const smDist = angleDist(angle, smallerAngle);
-	      const adjDist = angleDist(angle, adjustedAngle);
-	      const bigDist = angleDist(angle, biggerAngle);
-	      const chooseAdj =  adjDist < smDist && adjDist < bigDist;
-	      const newAngle = chooseAdj ? adjustedAngle : (smDist < bigDist ? smallerAngle : biggerAngle);
-	      return newAngle;
-	    }
-	
-	    this.straightenUp = () => {
-	      const corners = layout.vertices();
-	      let freeCount = 0;
-	      let currAngle;
-	      let currLength;
-	      for (let index = 0; freeCount < 2 && index < corners.length*2; index++) {
-	        const corner = corners[index % corners.length];
-	        const prevWall = corner.prevWall();
-	        if (freeCount > 0 && !corner.isFree()) {
-	          const length = currLength === undefined ? prevWall.length() : currLength;
-	          const newAngle = determineAngle(prevWall, currAngle);
-	          const rads = Math.toRadians(newAngle);
-	          const newLine = Line2d.startAndTheta(prevWall.startVertex(), rads, length);
-	          const newEndPoint = newLine.endVertex();
-	          const before = corner.angle();
-	          currAngle = corner.nextWall().angle();
-	          currLength = corner.nextWall().length();
-	          prevWall.endVertex().point(newEndPoint);
-	        } else if (corner.isFree()) {
-	          freeCount++;
-	        }
-	      }
-	    }
-	
-	    const toRads = (degrees) => Math.toRadians(degrees - degrees%angleInc)
-	
-	    this.bisector = (dist) => this.prevWall().bisector(this.nextWall(), dist);
-	  }
-	}
-	
-	module.exports = Corner2d;
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/three-d/layout/object.js',
-function (require, exports, module) {
-	
-const Lookup = require('../../../../../public/js/utils/object/lookup.js');
-	const Vertex3D = require('../../three-d/objects/vertex.js');
-	const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
-	const SnapSquare = require('../../../../../public/js/utils/canvas/two-d/objects/snap/square.js');
-	
-	class Bridge2dTo3D {
-	  constructor(obj3D, xCoord, xDem, yCoord, yDem) {
-	    const axis = 'z' !== xCoord && 'z' !== yCoord ? 'z' :
-	                  ('x' !== xCoord && 'x' !== yCoord ? 'x' : 'y');
-	    function setXYZ(x, y, z) {
-	      if (x instanceof Vertex2d) {
-	        y = x.y();
-	        x = x.x();
-	      }
-	      if (x instanceof Vertex3D) {
-	        y = x.y;
-	        zs = x.z;
-	        x = x.x;
-	      }
-	      const center3D = obj3D.center();
-	      let updated = false;
-	      if (x !== undefined) {
-	        center3D[xCoord] = x;
-	        updated = true;
-	      }
-	      if (y !== undefined) {
-	        center3D[yCoord] = y;
-	        updated = true;
-	      }
-	      if (z !== undefined) {
-	        center3D[axis] = z;
-	        updated = true;
-	      }
-	
-	      if (updated) {
-	        obj3D.center(center3D);
-	      }
-	      return obj3D.center();
-	    }
-	
-	    this.layout = obj3D.layout;
-	    this.id = obj3D.id;
-	    this.name = obj3D.name;
-	    this.x = (x) => setXYZ(x)[xCoord];
-	    this.y = (y) => setXYZ(undefined, y)[yCoord];
-	    this.center = (newCenter) => {
-	      const center3D = setXYZ(newCenter);
-	      return new Vertex2d(center3D[xCoord], center3D[yCoord]);
-	    }
-	    this.fromFloor = (distance) => setXYZ(undefined, undefined, distance)[axis];
-	    this.fromCeiling = (distance) => {
-	      const fromFloor = this.fromFloor();
-	      const ceilh = obj3D.layout().ceilingHeight();
-	      const height = obj3D.height();
-	      if (Number.isFinite(distance)) {
-	        const fromFloor = ceilh - height - distance;
-	        this.fromFloor(fromFloor);
-	      }
-	      return ceilh - (this.fromFloor() + height);
-	    }
-	    this.height = (value) => {
-	      if(value) obj3D[yDem](value);
-	      return obj3D[yDem]();
-	    }
-	    this.width = (value) => {
-	      if(value) obj3D[xDem](value);
-	      return obj3D[xDem]();
-	    }
-	    this.radians = (rads) => {
-	      if (rads !== undefined && rads > 0) {
-	        console.log('rads:', this.radians());
-	      }
-	      const rotation = obj3D.rotation();
-	      if (rads !== undefined) {
-	        const radDiff = rads - Math.toRadians(rotation[axis]);
-	        rotation[axis] = Math.toDegrees(rads);
-	        obj3D.rotation(rotation);
-	      }
-	      return Math.toRadians(rotation[axis]);
-	    }
-	    this.angle = (angle) => {
-	      if (angle !== undefined) this.radians(Math.toRadians(angle));
-	      return Math.toDegrees(this.radians());
-	    }
-	    this.rotate = (rads) => this.radians(rads + Math.toRadians(obj3D.rotation()[axis]));
-	  }
-	}
-	
-	class Object3D extends Lookup {
-	  constructor(layout, payload) {
-	    // super(undefined, undefined, true);
-	    super();
-	    this.layout = () => layout;
-	    this.snap2d = {};
-	    this.bridge = {};
-	    Object.getSet(this, {center: new Vertex3D(),
-	                          height: 34*2.54,
-	                          width: 32*2.54,
-	                          thickness: 24*2.54,
-	                          rotation: {x: 0, y: 0, z:0},
-	                          name: ``});
-	
-	    this.payload = () => payload;
-	
-	    // Consider simplifying bridge, should only need the rotation axis as argument;
-	
-	    this.bridge.top = () => new Bridge2dTo3D(this, 'x', 'width', 'z', 'thickness');
-	    let topview = new SnapSquare(this.bridge.top(), 10);
-	    this.snap2d.top = () => topview;
-	    this.shouldSave = () => true;
-	
-	    this.toString = () => `${this.constructor.name}: at${this.center()} ${payload}`;
-	  }
-	}
-	
-	const objectClasses = [Object3D];
-	
-	Object3D.register = (clazz) => {
-	  objectClasses.push(clazz);
-	}
-	
-	Object3D.new = (...args) => {
-	  for (let index = objectClasses.length - 1; index > -1; index--) {
-	    const object = new (objectClasses[index])(...args);
-	    if (object) return object;
-	  }
-	  throw new Error('something went wrong...');
-	}
-	
-	new Object3D();
-	module.exports = Object3D;
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/three-d/models/drawer-box.js',
-function (require, exports, module) {
-	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	const Polygon3D = require('../objects/polygon.js');
-	const BiPolygon = require('../objects/bi-polygon.js');
-	
-	function drawerBox(length, width, depth) {
-	  const bottomHeight = 7/8;
-	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
-	  box.setColor(1, 0, 0);
-	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
-	  inside.setColor(0, 0, 1);
-	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
-	  bInside.setColor(0, 0, 1);
-	
-	  return box.subtract(bInside).subtract(inside);
-	}
-	
-	function unionAll(...polygons) {
-	  let model = polygons[0].toModel();
-	  for (let index = 1; index < polygons.length; index++) {
-	    model = model.union(polygons[index].toModel());
-	  }
-	  return model;
-	}
-	
-	function drawerBox(frontPoly, normal, length, props) {
-	  const sideThickness = props.dbst.value();
-	  const bottomThickness = props.dbbt.value();
-	  const bottomHeight = props.dbid.value();
-	  const norm = normal;
-	
-	  // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: vertices are if facing polygon topLeft, topRight, bottomRight, bottomLeft
-	  const fP = frontPoly;
-	  const fPm = fP.translate(norm.scale(-length));
-	  const bP = new Polygon3D([fPm.vertex(1), fPm.vertex(0), fPm.vertex(3), fPm.vertex(2)]);
-	  const lP = new Polygon3D([bP.vertex(1), fP.vertex(0), fP.vertex(3), bP.vertex(2)]);
-	  const rP = new Polygon3D([fP.vertex(1), bP.vertex(0), bP.vertex(3), fP.vertex(2)]);
-	  const tP = new Polygon3D([bP.vertex(1), bP.vertex(0), fP.vertex(1), bP.vertex(0)]);
-	  const btmP = new Polygon3D([bP.vertex(2), bP.vertex(3), fP.vertex(2), fP.vertex(3)]);
-	
-	  const front = BiPolygon.fromPolygon(fP, 0, sideThickness);
-	  const back = BiPolygon.fromPolygon(bP, 0, sideThickness);
-	  const left = BiPolygon.fromPolygon(lP, 0, sideThickness);
-	  const right = BiPolygon.fromPolygon(rP, 0, sideThickness);
-	  const bottom = BiPolygon.fromPolygon(btmP, -bottomHeight, -bottomHeight-bottomThickness);
-	  return unionAll(front, back, left, right, bottom);
-	}
-	module.exports = drawerBox
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/config/property/config.js',
-function (require, exports, module) {
-	
-const Properties = require('../properties');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	const IMPERIAL_US = Measurement.units()[1];
-	
-	class PropertyConfig {
-	  constructor(props) {
-	    Object.getSet(this);
-	    props = props || Properties.instance();
-	    let style = props.style || PropertyConfig.lastStyle;
-	    let styleName = props.styleName || PropertyConfig.lastStyleName ||
-	                    Object.keys(Properties.groupList(style))[0];
-	    if (styleName)
-	      props[style] = Properties.getSet(style, styleName);
-	
-	    function isReveal() {return style === 'Reveal';}
-	    function isInset() {return style === 'Inset';}
-	    function isOverlay() {return !isReveal() && !isInset();}
-	    function overlay() {return props['Overlay'].ov.value()}
-	    function reveal() {return props['Reveal']};
-	    function wallHeight() {return props['baseh'] + props['basewallgap']}
-	
-	    function cabinetStyles() {
-	      return ['Overlay', 'Inset', 'Reveal'];
-	    }
-	    function cabinetStyle() {
-	      return style;
-	    }
-	    function cabinetStyleName() {
-	      return styleName;
-	    }
-	
-	    function set(group, name) {
-	      if (cabinetStyles().indexOf(group) !== -1) {
-	        style = group;
-	        styleName = name;
-	      } else {
-	        const newSet = Properties.getSet(group, name);
-	        newSet.__KEY = name;
-	        if (newSet === undefined) throw new Error(`Attempting to switch '${group}' to unknown property set '${name}'`);
-	        props[group] = newSet;
-	      }
-	    }
-	
-	    const panelThicknessRegMetric = /^pwt([0-9]{1,})([0-9][0-9])$/;
-	    const panelThicknessRegImperial = /^pwt([0-9])([0-9])$/;
-	    const resolvePanelThickness = (code) => {
-	      let match = code.match(panelThicknessRegImperial);
-	      if (match) return new Measurement(match[1]/match[2], IMPERIAL_US).value();
-	      match = code.match(panelThicknessRegMetric);
-	      if (match) return new Measurement(`${match[1]}.${match[2]}`).value();
-	      return undefined;
-	    }
-	
-	    const outerCodeReg = /^(rrv|lrv|brv|trv)$/;
-	    const resolveOuterReveal = (code, props) => {
-	      if (!code.match(outerCodeReg)) return undefined;
-	      switch (code) {
-	        case 'rrv':
-	          return 0.3175
-	        case 'lrv':
-	          return 0.3175
-	        case 'brv':
-	          return 0.3175
-	        case 'trv':
-	          return 0.3175
-	        default:
-	          return 0.3175
-	      }
-	    }
-	
-	    const resolveStyleStatus = (code) => {
-	      switch (code) {
-	        case 'isReveal': return isReveal();
-	        case 'isInset': return isInset();
-	        case 'isOverlay': return isOverlay();
-	      }
-	    }
-	
-	    const resolveReveals = (code, props) => {
-	      switch (code) {
-	        case 'frorl': return new Measurement(1/8, IMPERIAL_US).value();
-	        case 'frorr': return new Measurement(1/8, IMPERIAL_US).value();
-	        case 'r': if (isInset()) return 0;
-	          if (isReveal()) return new Measurement(props.Reveal.r.value()).value();
-	          return new Measurement(props.Cabinet.frw.value() - 2 * props.Overlay.ov.value()).value();
-	        default: return resolveCostProps(code, props);
-	      }
-	    }
-	
-	    const resolveComplexProps = (code, props) => {
-	      if (code === undefined) return undefined;
-	      let value = resolvePanelThickness(code, props);
-	      if (value !== undefined) return value;
-	      value = resolveOuterReveal(code, props);
-	      if (value !== undefined) return value;
-	      value = resolveStyleStatus(code);
-	      // if (value !== undefined) return value;
-	      // value = resolveReveals(code, props);
-	      return value;
-	    }
-	
-	    const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
-	    function getProperties(clazz, code) {
-	      clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
-	      const classProps = props[clazz] || {};
-	      if (code === undefined) return classProps;
-	      return classProps[code] === undefined ? resolveComplexProps(code, props) : classProps[code].value();
-	    }
-	
-	    function toJson() {
-	      const json = {style, styleName};
-	      const keys = Object.keys(props).filter((key) => key.match(/^[A-Z]/));
-	      keys.forEach((key) => {
-	        json[key] = [];
-	        const propKeys = Object.keys(props[key]);
-	        propKeys.forEach((propKey) => {
-	          if (props[key][propKey] && (typeof props[key][propKey].toJson) === 'function')
-	            json[key].push(props[key][propKey].toJson())
-	        });
-	      });
-	      return json;
-	    }
-	
-	    getProperties.wallHeight = wallHeight;
-	    getProperties.isReveal = isReveal;
-	    getProperties.isInset = isInset;
-	    getProperties.overlay = overlay;
-	    getProperties.reveal = reveal;
-	    getProperties.toJson = toJson;
-	    getProperties.cabinetStyles = cabinetStyles;
-	    getProperties.cabinetStyle = cabinetStyle;
-	    getProperties.cabinetStyleName = cabinetStyleName;
-	    getProperties.set = set;
-	
-	    return getProperties;
-	  }
-	}
-	
-	PropertyConfig.lastStyle = 'Overlay';
-	
-	PropertyConfig.fromJson = (json) => {
-	  const propConfig = {style: json.style, styleName: json.styleName};
-	  const keys = Object.keys(json).filter((key) => key.match(/^[A-Z]/));
-	  keys.forEach((key) => {
-	    const propKeys = Object.keys(json[key]);
-	    propConfig[key] = {};
-	    propKeys.forEach((propKey) =>
-	                propConfig[key][json[key][propKey].code] = Object.fromJson(json[key][propKey]));
-	  });
-	  return new PropertyConfig(propConfig);
-	}
-	
-	module.exports = PropertyConfig;
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/two-d/layout/window.js',
-function (require, exports, module) {
-	
-const OnWall = require('./on-wall');
-	const HoverObject2d = require('../../../../../public/js/utils/canvas/two-d/hover-map.js').HoverObject2d;
-	
-	class Window2D extends OnWall {
-	  constructor(wall, fromPreviousWall, fromFloor, height, width) {
-	    width = width || 81.28;
-	    height = height || 91.44;
-	    fromFloor = fromFloor || 101.6;
-	    fromPreviousWall = fromPreviousWall || 20;
-	    super(wall, fromPreviousWall, fromFloor, height, width);
-	    const instance = this;
-	    this.remove = () => this.wall().removeWindow(this);
-	    this.toString = () => `${this.id()}:${this.endpoints2D().toString()}`;
-	
-	    this.hovering = new HoverObject2d(this.toLine, 5).hovering;
-	  }
-	}
-	
-	new Window2D();
-	module.exports = Window2D;
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/two-d/layout/wall.js',
-function (require, exports, module) {
-	const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
-	const OnWall = require('./on-wall');
-	const Door2D = require('./door');
-	const Window2D = require('./window');
-	const HoverObject2d = require('../../../../../public/js/utils/canvas/two-d/hover-map').HoverObject2d;
-	
-	function modifyVertex(vertex) {
-	  return (props) => {
-	      console.log('DummyFuncNotIntendedToBeCalled');
-	  }
-	}
-	
-	class Wall2D extends Line2d {
-	  constructor(startVertex, endVertex, height, windows, doors) {
-	    super(startVertex, endVertex);
-	    this.startVertex().modificationFunction(modifyVertex(this.startVertex()));
-	    this.endVertex().modificationFunction(modifyVertex(this.endVertex()));
-	    Lookup.convert(this);
-	    windows = windows || [];
-	    windows.forEach((win) => win.setWall(this));
-	    doors = doors || [];
-	    doors.forEach((door) => door.setWall(this));
-	    const wall = this;
-	
-	    height = height || 243.84;
-	    Object.getSet(this, {height, windows, doors});
-	    // this.copy = () => new Wall2D(this.length(), this.radians());
-	    this.windows = () => windows;
-	    this.addWindow = (fromPreviousWall) => windows.push(new Window2D(this, fromPreviousWall));
-	    this.doors = () => doors;
-	    this.addDoor = (fromPreviousWall) => doors.push(new Door2D(this, fromPreviousWall));
-	    this.vertices = () => {
-	      const verts = [this.startVertex()];
-	      const doorsAndWindows = doors.concat(windows);
-	      doorsAndWindows.sort(OnWall.sort);
-	      doorsAndWindows.forEach((onWall) => {
-	        const endpoints = onWall.endpoints2D();
-	        verts.push(endpoints.start);
-	        verts.push(endpoints.end);
-	      });
-	      verts.push(this.endVertex());
-	      return verts;
-	    }
-	
-	    this.remove = () => {
-	        const prevWall = this.startVertex().prevLine();
-	        const nextLine = this.endVertex().nextLine();
-	        const startVertex = this.startVertex();
-	        nextLine.startVertex(startVertex);
-	        startVertex.nextLine(nextLine);
-	    }
-	
-	    const hoveringStart = new HoverObject2d(() => this.startVertex(), 24).hovering;
-	    const hoveringEnd = new HoverObject2d(() => this.endVertex(), 24).hovering;
-	    const hoveringWall = new HoverObject2d(() => this, 10).hovering;
-	    this.hovering = (v) => {
-	      if (hoveringStart(v)) return this.startVertex();
-	      if (hoveringEnd(v)) return this.endVertex();
-	      for (let index = 0; index < windows.length; index++) {
-	        if (windows[index].hovering(v)) return windows[index];
-	      }
-	      for (let index = 0; index < doors.length; index++) {
-	        if (doors[index].hovering(v)) return doors[index];
-	      }
-	      return hoveringWall(v) && this;
-	    }
-	
-	    this.removeDoor = (door) => doors.splice(doors.indexOf(door), 1);
-	    this.removeWindow = (window) => windows.splice(windows.indexOf(window), 1);
-	  }
-	}
-	Wall2D.fromJson = (json, vertexMap) => {
-	  vertexMap ||= {};
-	  const newSv = Object.fromJson(json.startVertex);
-	  const svStr = newSv.toString();
-	  const newEv = Object.fromJson(json.endVertex);
-	  const evStr = newEv.toString();
-	  if (vertexMap[svStr] === undefined) vertexMap[svStr] = newSv;
-	  if (vertexMap[evStr] === undefined) vertexMap[evStr] = newEv;
-	  const sv = vertexMap[svStr];
-	  const ev = vertexMap[evStr];
-	  const windows = Object.fromJson(json.windows);
-	  const doors = Object.fromJson(json.doors);
-	  const inst = new Wall2D(sv, ev, json.height, windows, doors);
-	  inst.id(json.id);
-	  return inst;
-	}
-	
-	new Wall2D();
-	module.exports = Wall2D;
-	
-});
-
-
 RequireJS.addFunction('./services/cabinet/app-src/two-d/layout/layout.js',
 function (require, exports, module) {
 	
@@ -35286,6 +34813,763 @@ const approximate = require('../../../../../public/js/utils/approximate.js').new
 });
 
 
+RequireJS.addFunction('./services/cabinet/app-src/two-d/layout/door.js',
+function (require, exports, module) {
+	
+const OnWall = require('on-wall');
+	const HoverObject2d = require('../../../../../public/js/utils/canvas/two-d/hover-map.js').HoverObject2d;
+	
+	class Door2D extends OnWall {
+	  constructor() {
+	    super(...arguments);
+	    this.width(this.width() || 91.44);
+	    this.height(this.height() || 198.12);
+	    this.fromPreviousWall(this.fromPreviousWall() || 150);
+	    this.fromFloor(this.fromFloor() || 0);
+	    let hinge = 0;
+	    Object.getSet(this, 'hinge');
+	    this.toString = () => `${this.id()}:${this.endpoints2D().toString()}:${hinge}`;
+	    this.remove = () => this.wall().removeDoor(this);
+	    this.hinge = (val) => val === undefined ? hinge :
+	      hinge = ((typeof val) === 'number' ? val : hinge + 1) % 5;
+	
+	    this.hovering = new HoverObject2d(this.toLine, 20).hovering;
+	  }
+	}
+	
+	Door2D.fromJson = (json) => {
+	  const inst = OnWall.fromJson(json);
+	  inst.hinge(json.hinge);
+	  return inst;
+	}
+	
+	new Door2D();
+	module.exports = Door2D;
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/two-d/layout/corner.js',
+function (require, exports, module) {
+	
+const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+	const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
+	const Wall2D = require('wall');
+	
+	class Corner2d extends Vertex2d {
+	  constructor(layout, point) {
+	    if (point instanceof Vertex2d) {
+	      point = point.point();
+	    }
+	    super(point);
+	    Lookup.convert(this);
+	    let angleLock = false;
+	    let angleInc = 22.5;
+	    let lengthInc = 2.54;
+	    const instance = this;
+	
+	    this.nextWall = () => layout.nextWall(this, 1);
+	    this.prevWall = () => layout.prevWall(this, -1);
+	    this.angleLock = (on) => {
+	      if (on === true || on === false) angleLock = on;
+	      return angleLock;
+	    }
+	    this.isFree = () => layout.isFreeCorner(this);
+	    this.angleInc = (increment) => {
+	      if (increment > .01 && increment <= 45) angleInc = on;
+	      return angleLock;
+	    }
+	    this.lengthInc = (increment) => {
+	      if (increment > .01 && increment < 10) angleInc = on;
+	      return angleLock;
+	    }
+	    this.angle = (degrees) => {
+	      const currDeg = (this.nextWall().degrees() - this.prevWall().degrees() + 360) % 360;
+	      if (Number.isFinite(degrees)) {
+	        const offset = Math.toRadians((degrees - currDeg)/2);
+	
+	        const prev = this.prevWall();
+	        const newPrev = Line2d.startAndTheta(this, prev.negitive().radians() - offset);
+	        const prevStartVert = newPrev.findIntersection(prev.startVertex().prevWall());
+	        prev.startVertex().point(prevStartVert);
+	
+	        const next = this.nextWall();
+	        const newNext = Line2d.startAndTheta(this, next.radians() + offset);
+	        const nextEndVert = newNext.findIntersection(next.endVertex().nextWall());
+	        next.endVertex().point(nextEndVert);
+	        angleLock = true;
+	      }
+	      return Math.round(currDeg * 10) / 10;
+	    }
+	
+	    const angleDist = (angle1, angle2) => {
+	      angle1 = angle1 % 360;
+	      angle2 = angle2 % 360;
+	      const dist1 = Math.abs(angle1 - angle2);
+	      const dist2 = Math.abs(angle1 - 360 - angle2);
+	      return dist1 < dist2 ? dist1 : dist2;
+	    }
+	    const cleanAngle = (degrees) => {
+	      let offset = degrees%angleInc;
+	      offset = offset > angleInc/2 ? angleInc - offset : -1*offset;
+	      return (degrees + offset) % 360
+	    }
+	
+	    function determineAngle(prevWall, currAngle) {
+	      const angle = currAngle === undefined ? prevWall.angle() : currAngle;
+	      const currRads = Math.toRadians(angle);
+	
+	      const smallerAngle = cleanAngle(angle - angleInc);
+	      const adjustedAngle = cleanAngle(angle);
+	      const biggerAngle = cleanAngle(angle + angleInc);
+	      const smDist = angleDist(angle, smallerAngle);
+	      const adjDist = angleDist(angle, adjustedAngle);
+	      const bigDist = angleDist(angle, biggerAngle);
+	      const chooseAdj =  adjDist < smDist && adjDist < bigDist;
+	      const newAngle = chooseAdj ? adjustedAngle : (smDist < bigDist ? smallerAngle : biggerAngle);
+	      return newAngle;
+	    }
+	
+	    this.straightenUp = () => {
+	      const corners = layout.vertices();
+	      let freeCount = 0;
+	      let currAngle;
+	      let currLength;
+	      for (let index = 0; freeCount < 2 && index < corners.length*2; index++) {
+	        const corner = corners[index % corners.length];
+	        const prevWall = corner.prevWall();
+	        if (freeCount > 0 && !corner.isFree()) {
+	          const length = currLength === undefined ? prevWall.length() : currLength;
+	          const newAngle = determineAngle(prevWall, currAngle);
+	          const rads = Math.toRadians(newAngle);
+	          const newLine = Line2d.startAndTheta(prevWall.startVertex(), rads, length);
+	          const newEndPoint = newLine.endVertex();
+	          const before = corner.angle();
+	          currAngle = corner.nextWall().angle();
+	          currLength = corner.nextWall().length();
+	          prevWall.endVertex().point(newEndPoint);
+	        } else if (corner.isFree()) {
+	          freeCount++;
+	        }
+	      }
+	    }
+	
+	    const toRads = (degrees) => Math.toRadians(degrees - degrees%angleInc)
+	
+	    this.bisector = (dist) => this.prevWall().bisector(this.nextWall(), dist);
+	  }
+	}
+	
+	module.exports = Corner2d;
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/two-d/layout/window.js',
+function (require, exports, module) {
+	
+const OnWall = require('./on-wall');
+	const HoverObject2d = require('../../../../../public/js/utils/canvas/two-d/hover-map.js').HoverObject2d;
+	
+	class Window2D extends OnWall {
+	  constructor(wall, fromPreviousWall, fromFloor, height, width) {
+	    width = width || 81.28;
+	    height = height || 91.44;
+	    fromFloor = fromFloor || 101.6;
+	    fromPreviousWall = fromPreviousWall || 20;
+	    super(wall, fromPreviousWall, fromFloor, height, width);
+	    const instance = this;
+	    this.remove = () => this.wall().removeWindow(this);
+	    this.toString = () => `${this.id()}:${this.endpoints2D().toString()}`;
+	
+	    this.hovering = new HoverObject2d(this.toLine, 5).hovering;
+	  }
+	}
+	
+	new Window2D();
+	module.exports = Window2D;
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/three-d/layout/object.js',
+function (require, exports, module) {
+	
+const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+	const Vertex3D = require('../../three-d/objects/vertex.js');
+	const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+	const SnapSquare = require('../../../../../public/js/utils/canvas/two-d/objects/snap/square.js');
+	
+	class Bridge2dTo3D {
+	  constructor(obj3D, xCoord, xDem, yCoord, yDem) {
+	    const axis = 'z' !== xCoord && 'z' !== yCoord ? 'z' :
+	                  ('x' !== xCoord && 'x' !== yCoord ? 'x' : 'y');
+	    function setXYZ(x, y, z) {
+	      if (x instanceof Vertex2d) {
+	        y = x.y();
+	        x = x.x();
+	      }
+	      if (x instanceof Vertex3D) {
+	        y = x.y;
+	        zs = x.z;
+	        x = x.x;
+	      }
+	      const center3D = obj3D.center();
+	      let updated = false;
+	      if (x !== undefined) {
+	        center3D[xCoord] = x;
+	        updated = true;
+	      }
+	      if (y !== undefined) {
+	        center3D[yCoord] = y;
+	        updated = true;
+	      }
+	      if (z !== undefined) {
+	        center3D[axis] = z;
+	        updated = true;
+	      }
+	
+	      if (updated) {
+	        obj3D.center(center3D);
+	      }
+	      return obj3D.center();
+	    }
+	
+	    this.layout = obj3D.layout;
+	    this.id = obj3D.id;
+	    this.name = obj3D.name;
+	    this.x = (x) => setXYZ(x)[xCoord];
+	    this.y = (y) => setXYZ(undefined, y)[yCoord];
+	    this.center = (newCenter) => {
+	      const center3D = setXYZ(newCenter);
+	      return new Vertex2d(center3D[xCoord], center3D[yCoord]);
+	    }
+	    this.fromFloor = (distance) => setXYZ(undefined, undefined, distance)[axis];
+	    this.fromCeiling = (distance) => {
+	      const fromFloor = this.fromFloor();
+	      const ceilh = obj3D.layout().ceilingHeight();
+	      const height = obj3D.height();
+	      if (Number.isFinite(distance)) {
+	        const fromFloor = ceilh - height - distance;
+	        this.fromFloor(fromFloor);
+	      }
+	      return ceilh - (this.fromFloor() + height);
+	    }
+	    this.height = (value) => {
+	      if(value) obj3D[yDem](value);
+	      return obj3D[yDem]();
+	    }
+	    this.width = (value) => {
+	      if(value) obj3D[xDem](value);
+	      return obj3D[xDem]();
+	    }
+	    this.radians = (rads) => {
+	      if (rads !== undefined && rads > 0) {
+	        console.log('rads:', this.radians());
+	      }
+	      const rotation = obj3D.rotation();
+	      if (rads !== undefined) {
+	        const radDiff = rads - Math.toRadians(rotation[axis]);
+	        rotation[axis] = Math.toDegrees(rads);
+	        obj3D.rotation(rotation);
+	      }
+	      return Math.toRadians(rotation[axis]);
+	    }
+	    this.angle = (angle) => {
+	      if (angle !== undefined) this.radians(Math.toRadians(angle));
+	      return Math.toDegrees(this.radians());
+	    }
+	    this.rotate = (rads) => this.radians(rads + Math.toRadians(obj3D.rotation()[axis]));
+	  }
+	}
+	
+	class Object3D extends Lookup {
+	  constructor(layout, payload) {
+	    // super(undefined, undefined, true);
+	    super();
+	    this.layout = () => layout;
+	    this.snap2d = {};
+	    this.bridge = {};
+	    Object.getSet(this, {center: new Vertex3D(),
+	                          height: 34*2.54,
+	                          width: 32*2.54,
+	                          thickness: 24*2.54,
+	                          rotation: {x: 0, y: 0, z:0},
+	                          name: ``});
+	
+	    this.payload = () => payload;
+	
+	    // Consider simplifying bridge, should only need the rotation axis as argument;
+	
+	    this.bridge.top = () => new Bridge2dTo3D(this, 'x', 'width', 'z', 'thickness');
+	    let topview = new SnapSquare(this.bridge.top(), 10);
+	    this.snap2d.top = () => topview;
+	    this.shouldSave = () => true;
+	
+	    this.toString = () => `${this.constructor.name}: at${this.center()} ${payload}`;
+	  }
+	}
+	
+	const objectClasses = [Object3D];
+	
+	Object3D.register = (clazz) => {
+	  objectClasses.push(clazz);
+	}
+	
+	Object3D.new = (...args) => {
+	  for (let index = objectClasses.length - 1; index > -1; index--) {
+	    const object = new (objectClasses[index])(...args);
+	    if (object) return object;
+	  }
+	  throw new Error('something went wrong...');
+	}
+	
+	new Object3D();
+	module.exports = Object3D;
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/config/property/definitions.js',
+function (require, exports, module) {
+	const Property = require('../property');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const IMPERIAL_US = Measurement.units()[1];
+	
+	const defs = {};
+	
+	defs.h = new Property('h', 'height', null);
+	defs.w = new Property('w', 'width', null);
+	defs.d = new Property('d', 'depth', null);
+	defs.t = new Property('t', 'thickness', null);
+	defs.l = new Property('l', 'length', null);
+	
+	//   Overlay
+	defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US});
+	
+	//   Reveal
+	defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US});
+	defs.rvr = new Property('rvr', 'Reveal Right', {value: 1/8, notMetric: IMPERIAL_US});
+	defs.rvl = new Property('rvl', 'Reveal Left', {value: 1/8, notMetric: IMPERIAL_US});
+	defs.rvt = new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US});
+	defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US});
+	
+	//   Inset
+	defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US});
+	
+	//   Cabinet
+	defs.sr = new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US});
+	defs.sl = new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US});
+	defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US});
+	defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US});
+	defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US});
+	defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US});
+	defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US});
+	defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US});
+	defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US});
+	defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US});
+	defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US});
+	defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US});
+	defs.bid = new Property('bid', 'Bottom Inset Depth', {value: 0, notMetric: IMPERIAL_US});
+	defs.tid = new Property('tid', 'Top Inset Depth', {value: 0, notMetric: IMPERIAL_US});
+	
+	// Cabinet.AngledBackCorner
+	defs.rbo = new Property('bo', 'Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US});
+	defs.lbo = new Property('lbo', 'Left Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US});
+	defs.rbo = new Property('rbo', 'Right Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US});
+	
+	// Cabinet.Lshaped
+	defs.lw = new Property('lw', 'Distance from Front to Back on the Left', {value: 24, notMetric: IMPERIAL_US});
+	defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value: 24, notMetric: IMPERIAL_US});
+	
+	//   Panel
+	
+	//   Guides
+	defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', .5*2.54);
+	defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', 3*2.54/8);
+	defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', 2.54/2);
+	
+	//   DoorAndFront
+	defs.daffrw = new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US});
+	defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null});
+	
+	//   Door
+	
+	//   DrawerBox
+	defs.dbst = new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US});
+	defs.dbbt = new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US});
+	defs.dbid = new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US});
+	defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US});
+	
+	//   DrawerFront
+	defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
+	
+	//   Frame
+	
+	//   Handle
+	defs.c2c = new Property('c2c', 'Center To Center', null);
+	defs.proj = new Property('proj', 'Projection', null);
+	
+	//   Hinge
+	defs.maxtab = new Property('maxtab', 'Max Spacing from bore to edge of door', null);
+	defs.mintab = new Property('mintab', 'Minimum Spacing from bore to edge of door', null);
+	defs.maxol = new Property('maxol', 'Max Door Overlay', null);
+	defs.minol = new Property('minol', 'Minimum Door Overlay', null)
+	
+	//   Opening
+	
+	module.exports = defs;
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/two-d/layout/wall.js',
+function (require, exports, module) {
+	const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
+	const OnWall = require('./on-wall');
+	const Door2D = require('./door');
+	const Window2D = require('./window');
+	const HoverObject2d = require('../../../../../public/js/utils/canvas/two-d/hover-map').HoverObject2d;
+	
+	function modifyVertex(vertex) {
+	  return (props) => {
+	      console.log('DummyFuncNotIntendedToBeCalled');
+	  }
+	}
+	
+	class Wall2D extends Line2d {
+	  constructor(startVertex, endVertex, height, windows, doors) {
+	    super(startVertex, endVertex);
+	    this.startVertex().modificationFunction(modifyVertex(this.startVertex()));
+	    this.endVertex().modificationFunction(modifyVertex(this.endVertex()));
+	    Lookup.convert(this);
+	    windows = windows || [];
+	    windows.forEach((win) => win.setWall(this));
+	    doors = doors || [];
+	    doors.forEach((door) => door.setWall(this));
+	    const wall = this;
+	
+	    height = height || 243.84;
+	    Object.getSet(this, {height, windows, doors});
+	    // this.copy = () => new Wall2D(this.length(), this.radians());
+	    this.windows = () => windows;
+	    this.addWindow = (fromPreviousWall) => windows.push(new Window2D(this, fromPreviousWall));
+	    this.doors = () => doors;
+	    this.addDoor = (fromPreviousWall) => doors.push(new Door2D(this, fromPreviousWall));
+	    this.vertices = () => {
+	      const verts = [this.startVertex()];
+	      const doorsAndWindows = doors.concat(windows);
+	      doorsAndWindows.sort(OnWall.sort);
+	      doorsAndWindows.forEach((onWall) => {
+	        const endpoints = onWall.endpoints2D();
+	        verts.push(endpoints.start);
+	        verts.push(endpoints.end);
+	      });
+	      verts.push(this.endVertex());
+	      return verts;
+	    }
+	
+	    this.remove = () => {
+	        const prevWall = this.startVertex().prevLine();
+	        const nextLine = this.endVertex().nextLine();
+	        const startVertex = this.startVertex();
+	        nextLine.startVertex(startVertex);
+	        startVertex.nextLine(nextLine);
+	    }
+	
+	    const hoveringStart = new HoverObject2d(() => this.startVertex(), 24).hovering;
+	    const hoveringEnd = new HoverObject2d(() => this.endVertex(), 24).hovering;
+	    const hoveringWall = new HoverObject2d(() => this, 10).hovering;
+	    this.hovering = (v) => {
+	      if (hoveringStart(v)) return this.startVertex();
+	      if (hoveringEnd(v)) return this.endVertex();
+	      for (let index = 0; index < windows.length; index++) {
+	        if (windows[index].hovering(v)) return windows[index];
+	      }
+	      for (let index = 0; index < doors.length; index++) {
+	        if (doors[index].hovering(v)) return doors[index];
+	      }
+	      return hoveringWall(v) && this;
+	    }
+	
+	    this.removeDoor = (door) => doors.splice(doors.indexOf(door), 1);
+	    this.removeWindow = (window) => windows.splice(windows.indexOf(window), 1);
+	  }
+	}
+	Wall2D.fromJson = (json, vertexMap) => {
+	  vertexMap ||= {};
+	  const newSv = Object.fromJson(json.startVertex);
+	  const svStr = newSv.toString();
+	  const newEv = Object.fromJson(json.endVertex);
+	  const evStr = newEv.toString();
+	  if (vertexMap[svStr] === undefined) vertexMap[svStr] = newSv;
+	  if (vertexMap[evStr] === undefined) vertexMap[evStr] = newEv;
+	  const sv = vertexMap[svStr];
+	  const ev = vertexMap[evStr];
+	  const windows = Object.fromJson(json.windows);
+	  const doors = Object.fromJson(json.doors);
+	  const inst = new Wall2D(sv, ev, json.height, windows, doors);
+	  inst.id(json.id);
+	  return inst;
+	}
+	
+	new Wall2D();
+	module.exports = Wall2D;
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/two-d/layout/on-wall.js',
+function (require, exports, module) {
+	
+const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+	const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+	const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
+	
+	class OnWall extends Lookup {
+	  constructor(wall, fromPreviousWall, fromFloor, height, width) {
+	    super();
+	    Object.getSet(this, {width, height, fromFloor, fromPreviousWall}, 'wallId');
+	    let start = new Vertex2d();
+	    let end = new Vertex2d();
+	    this.wallId = () => wall.id();
+	    this.endpoints2D = () => {
+	      const wallStartPoint = wall.startVertex();
+	      const dist = this.fromPreviousWall();
+	      const total = dist + this.width();
+	      const theta = wall.radians();
+	      const startPoint = {};
+	      startPoint.x = wallStartPoint.x() + dist * Math.cos(theta);
+	      startPoint.y = wallStartPoint.y() + dist * Math.sin(theta);
+	      start.point(startPoint);
+	
+	      const endPoint = {};
+	      endPoint.x = (wallStartPoint.x() + total * Math.cos(theta));
+	      endPoint.y = (wallStartPoint.y() + total * Math.sin(theta));
+	      end.point(endPoint);
+	
+	      return { start, end, toString: () => `${start.toString()} => ${end.toString()}`};
+	    }
+	    this.fromPreviousWall = (value) => {
+	      value = Number.parseFloat(value);
+	      if (!Number.isNaN(value)) fromPreviousWall = value;
+	      return fromPreviousWall;
+	    }
+	    this.fromNextWall = (value) => {
+	      value = Number.parseFloat(value);
+	      if (value) {
+	        this.fromPreviousWall(wall.length() - this.width() - value);
+	      }
+	      return wall.length() - this.width() - this.fromPreviousWall();
+	    }
+	    this.startVertex = () => {
+	      const startpoint = wall.startVertex().point();
+	      const theta = wall.radians();
+	      const distLeft = this.fromPreviousWall() + width;
+	      return new Vertex2d({x: startpoint.x + distLeft * Math.cos(theta),
+	                    y: startpoint.y + distLeft * Math.sin(theta)});
+	    }
+	    this.endVertex = () => {
+	      const startpoint = wall.startVertex().point();
+	      const theta = wall.radians();
+	      const distRight = this.fromPreviousWall();
+	      return new Vertex2d({x: startpoint.x + distRight * Math.cos(theta),
+	                            y: startpoint.y + distRight * Math.sin(theta)});
+	    }
+	    this.toLine = () => new Line2d(this.startVertex(), this.endVertex());
+	    this.wall = () => wall;
+	    this.setWall = (w) => wall = w;
+	    this.move = (center) => {
+	      const point = wall.closestPointOnLine(center);
+	      const onLine = wall.closestPointOnLine(point, true);
+	      let distanceStart = wall.startVertex().distance(point);
+	      if (!onLine) {
+	        let distanceEnd = wall.endVertex().distance(point);
+	        if (distanceStart < distanceEnd) this.fromPreviousWall(0);
+	        else this.fromPreviousWall(wall.length() - this.width());
+	      } else {
+	        const max = wall.length() - this.width();
+	        distanceStart = distanceStart > max ? max : distanceStart;
+	        this.fromPreviousWall(distanceStart);
+	      }
+	    };
+	    this.toString = () => `${this.constructor.name}:${wall}, ${fromPreviousWall}, ${fromFloor}, ${height}, ${width}`
+	  }
+	}
+	OnWall.sort = (ow1, ow2) => ow1.fromPreviousWall() - ow2.fromPreviousWall();
+	OnWall.fromJson = (json) => {
+	  const cxtr = Lookup.decode(json.id).constructor;
+	  const instance = new cxtr(null, json.fromPreviousWall, json.fromFloor, json.height, json.width);
+	  instance.id(json.id);
+	  return instance;
+	}
+	
+	
+	module.exports = OnWall;
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/config/property/config.js',
+function (require, exports, module) {
+	
+const Properties = require('../properties');
+	const Measurement = require('../../../../../public/js/utils/measurement.js');
+	const IMPERIAL_US = Measurement.units()[1];
+	
+	class PropertyConfig {
+	  constructor(props) {
+	    Object.getSet(this);
+	    props = props || Properties.instance();
+	    let style = props.style || PropertyConfig.lastStyle;
+	    let styleName = props.styleName || PropertyConfig.lastStyleName ||
+	                    Object.keys(Properties.groupList(style))[0];
+	    if (styleName)
+	      props[style] = Properties.getSet(style, styleName);
+	
+	    function isReveal() {return style === 'Reveal';}
+	    function isInset() {return style === 'Inset';}
+	    function isOverlay() {return !isReveal() && !isInset();}
+	    function overlay() {return props['Overlay'].ov.value()}
+	    function reveal() {return props['Reveal']};
+	    function wallHeight() {return props['baseh'] + props['basewallgap']}
+	
+	    function cabinetStyles() {
+	      return ['Overlay', 'Inset', 'Reveal'];
+	    }
+	    function cabinetStyle() {
+	      return style;
+	    }
+	    function cabinetStyleName() {
+	      return styleName;
+	    }
+	
+	    function set(group, name) {
+	      if (cabinetStyles().indexOf(group) !== -1) {
+	        style = group;
+	        styleName = name;
+	      } else {
+	        const newSet = Properties.getSet(group, name);
+	        newSet.__KEY = name;
+	        if (newSet === undefined) throw new Error(`Attempting to switch '${group}' to unknown property set '${name}'`);
+	        props[group] = newSet;
+	      }
+	    }
+	
+	    const panelThicknessRegMetric = /^pwt([0-9]{1,})([0-9][0-9])$/;
+	    const panelThicknessRegImperial = /^pwt([0-9])([0-9])$/;
+	    const resolvePanelThickness = (code) => {
+	      let match = code.match(panelThicknessRegImperial);
+	      if (match) return new Measurement(match[1]/match[2], IMPERIAL_US).value();
+	      match = code.match(panelThicknessRegMetric);
+	      if (match) return new Measurement(`${match[1]}.${match[2]}`).value();
+	      return undefined;
+	    }
+	
+	    const outerCodeReg = /^(rrv|lrv|brv|trv)$/;
+	    const resolveOuterReveal = (code, props) => {
+	      if (!code.match(outerCodeReg)) return undefined;
+	      switch (code) {
+	        case 'rrv':
+	          return 0.3175
+	        case 'lrv':
+	          return 0.3175
+	        case 'brv':
+	          return 0.3175
+	        case 'trv':
+	          return 0.3175
+	        default:
+	          return 0.3175
+	      }
+	    }
+	
+	    const resolveStyleStatus = (code) => {
+	      switch (code) {
+	        case 'isReveal': return isReveal();
+	        case 'isInset': return isInset();
+	        case 'isOverlay': return isOverlay();
+	      }
+	    }
+	
+	    const resolveReveals = (code, props) => {
+	      switch (code) {
+	        case 'frorl': return new Measurement(1/8, IMPERIAL_US).value();
+	        case 'frorr': return new Measurement(1/8, IMPERIAL_US).value();
+	        case 'r': if (isInset()) return 0;
+	          if (isReveal()) return new Measurement(props.Reveal.r.value()).value();
+	          return new Measurement(props.Cabinet.frw.value() - 2 * props.Overlay.ov.value()).value();
+	        default: return resolveCostProps(code, props);
+	      }
+	    }
+	
+	    const resolveComplexProps = (code, props) => {
+	      if (code === undefined) return undefined;
+	      let value = resolvePanelThickness(code, props);
+	      if (value !== undefined) return value;
+	      value = resolveOuterReveal(code, props);
+	      if (value !== undefined) return value;
+	      value = resolveStyleStatus(code);
+	      // if (value !== undefined) return value;
+	      // value = resolveReveals(code, props);
+	      return value;
+	    }
+	
+	    const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
+	    function getProperties(clazz, code) {
+	      clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
+	      const classProps = props[clazz] || {};
+	      if (code === undefined) return classProps;
+	      return classProps[code] === undefined ? resolveComplexProps(code, props) : classProps[code].value();
+	    }
+	
+	    function toJson() {
+	      const json = {style, styleName};
+	      const keys = Object.keys(props).filter((key) => key.match(/^[A-Z]/));
+	      keys.forEach((key) => {
+	        json[key] = [];
+	        const propKeys = Object.keys(props[key]);
+	        propKeys.forEach((propKey) => {
+	          if (props[key][propKey] && (typeof props[key][propKey].toJson) === 'function')
+	            json[key].push(props[key][propKey].toJson())
+	        });
+	      });
+	      return json;
+	    }
+	
+	    getProperties.wallHeight = wallHeight;
+	    getProperties.isReveal = isReveal;
+	    getProperties.isInset = isInset;
+	    getProperties.overlay = overlay;
+	    getProperties.reveal = reveal;
+	    getProperties.toJson = toJson;
+	    getProperties.cabinetStyles = cabinetStyles;
+	    getProperties.cabinetStyle = cabinetStyle;
+	    getProperties.cabinetStyleName = cabinetStyleName;
+	    getProperties.set = set;
+	
+	    return getProperties;
+	  }
+	}
+	
+	PropertyConfig.lastStyle = 'Overlay';
+	
+	PropertyConfig.fromJson = (json) => {
+	  const propConfig = {style: json.style, styleName: json.styleName};
+	  const keys = Object.keys(json).filter((key) => key.match(/^[A-Z]/));
+	  keys.forEach((key) => {
+	    const propKeys = Object.keys(json[key]);
+	    propConfig[key] = {};
+	    propKeys.forEach((propKey) =>
+	                propConfig[key][json[key][propKey].code] = Object.fromJson(json[key][propKey]));
+	  });
+	  return new PropertyConfig(propConfig);
+	}
+	
+	module.exports = PropertyConfig;
+	
+});
+
+
 RequireJS.addFunction('./services/cabinet/app-src/objects/assembly/assembly.js',
 function (require, exports, module) {
 	
@@ -35689,7 +35973,7 @@ const Assembly = require('./assembly.js');
 	new Cutter();
 	
 	Assembly.components = {
-	  Door, DrawerBox, DrawerFront, Frame, Panel, Cutter,
+	  Divider, Panel, Cutter, Door, DrawerBox, DrawerFront, Frame,
 	};
 	
 });
@@ -35766,99 +36050,6 @@ const Lookup = require('../../../../../public/js/utils/object/lookup.js')
 	  return new Joint.classes[id]().fromJson(json);
 	}
 	module.exports = Joint
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/config/property/definitions.js',
-function (require, exports, module) {
-	const Property = require('../property');
-	const Measurement = require('../../../../../public/js/utils/measurement.js');
-	const IMPERIAL_US = Measurement.units()[1];
-	
-	const defs = {};
-	
-	defs.h = new Property('h', 'height', null);
-	defs.w = new Property('w', 'width', null);
-	defs.d = new Property('d', 'depth', null);
-	defs.t = new Property('t', 'thickness', null);
-	defs.l = new Property('l', 'length', null);
-	
-	//   Overlay
-	defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US});
-	
-	//   Reveal
-	defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US});
-	defs.rvr = new Property('rvr', 'Reveal Right', {value: 1/8, notMetric: IMPERIAL_US});
-	defs.rvl = new Property('rvl', 'Reveal Left', {value: 1/8, notMetric: IMPERIAL_US});
-	defs.rvt = new Property('rvt', 'Reveal Top', {value: 1/2, notMetric: IMPERIAL_US});
-	defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_US});
-	
-	//   Inset
-	defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US});
-	
-	//   Cabinet
-	defs.sr = new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US});
-	defs.sl = new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US});
-	defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US});
-	defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US});
-	defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US});
-	defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US});
-	defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US});
-	defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US});
-	defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US});
-	defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US});
-	defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US});
-	defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US});
-	defs.bid = new Property('bid', 'Bottom Inset Depth', {value: 5, notMetric: IMPERIAL_US});
-	defs.tid = new Property('tid', 'Top Inset Depth', {value: 3, notMetric: IMPERIAL_US});
-	
-	// Cabinet.AngledBackCorner
-	defs.rbo = new Property('bo', 'Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US});
-	defs.lbo = new Property('lbo', 'Left Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US});
-	defs.rbo = new Property('rbo', 'Right Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US});
-	
-	// Cabinet.Lshaped
-	defs.lw = new Property('lw', 'Distance from Front to Back on the Left', {value: 24, notMetric: IMPERIAL_US});
-	defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value: 24, notMetric: IMPERIAL_US});
-	
-	//   Panel
-	
-	//   Guides
-	defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', .5*2.54);
-	defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', 3*2.54/8);
-	defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', 2.54/2);
-	
-	//   DoorAndFront
-	defs.daffrw = new Property('daffrw', 'Door and front frame rail width', {value: '2 3/8', notMetric: IMPERIAL_US});
-	defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null});
-	
-	//   Door
-	
-	//   DrawerBox
-	defs.dbst = new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US});
-	defs.dbbt = new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US});
-	defs.dbid = new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US});
-	defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US});
-	
-	//   DrawerFront
-	defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
-	
-	//   Frame
-	
-	//   Handle
-	defs.c2c = new Property('c2c', 'Center To Center', null);
-	defs.proj = new Property('proj', 'Projection', null);
-	
-	//   Hinge
-	defs.maxtab = new Property('maxtab', 'Max Spacing from bore to edge of door', null);
-	defs.mintab = new Property('mintab', 'Minimum Spacing from bore to edge of door', null);
-	defs.maxol = new Property('maxol', 'Max Door Overlay', null);
-	defs.minol = new Property('minol', 'Minimum Door Overlay', null)
-	
-	//   Opening
-	
-	module.exports = defs;
 	
 });
 
@@ -36085,6 +36276,61 @@ const Matrix = require('./matrix');
 });
 
 
+RequireJS.addFunction('./services/cabinet/app-src/three-d/models/drawer-box.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	const Polygon3D = require('../objects/polygon.js');
+	const BiPolygon = require('../objects/bi-polygon.js');
+	
+	function drawerBox(length, width, depth) {
+	  const bottomHeight = 7/8;
+	  const box = CSG.cube({demensions: [width, length, depth], center: [0,0,0]});
+	  box.setColor(1, 0, 0);
+	  const inside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, bottomHeight, 0]});
+	  inside.setColor(0, 0, 1);
+	  const bInside = CSG.cube({demensions: [width-1.5, length, depth - 1.5], center: [0, (-length) + (bottomHeight) - 1/4, 0]});
+	  bInside.setColor(0, 0, 1);
+	
+	  return box.subtract(bInside).subtract(inside);
+	}
+	
+	function unionAll(...polygons) {
+	  let model = polygons[0].toModel();
+	  for (let index = 1; index < polygons.length; index++) {
+	    model = model.union(polygons[index].toModel());
+	  }
+	  return model;
+	}
+	
+	function drawerBox(frontPoly, normal, length, props) {
+	  const sideThickness = props.dbst.value();
+	  const bottomThickness = props.dbbt.value();
+	  const bottomHeight = props.dbid.value();
+	  const norm = normal;
+	
+	  // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: vertices are if facing polygon topLeft, topRight, bottomRight, bottomLeft
+	  const fP = frontPoly;
+	  const fPm = fP.translate(norm.scale(-length));
+	  const bP = new Polygon3D([fPm.vertex(1), fPm.vertex(0), fPm.vertex(3), fPm.vertex(2)]);
+	  const lP = new Polygon3D([bP.vertex(1), fP.vertex(0), fP.vertex(3), bP.vertex(2)]);
+	  const rP = new Polygon3D([fP.vertex(1), bP.vertex(0), bP.vertex(3), fP.vertex(2)]);
+	  const tP = new Polygon3D([bP.vertex(1), bP.vertex(0), fP.vertex(1), bP.vertex(0)]);
+	  const btmP = new Polygon3D([bP.vertex(2), bP.vertex(3), fP.vertex(2), fP.vertex(3)]);
+	
+	  const front = BiPolygon.fromPolygon(fP, 0, sideThickness);
+	  const back = BiPolygon.fromPolygon(bP, 0, sideThickness);
+	  const left = BiPolygon.fromPolygon(lP, 0, sideThickness);
+	  const right = BiPolygon.fromPolygon(rP, 0, sideThickness);
+	  const bottom = BiPolygon.fromPolygon(btmP, -bottomHeight, -bottomHeight-bottomThickness);
+	  return unionAll(front, back, left, right, bottom);
+	}
+	module.exports = drawerBox
+	
+});
+
+
 RequireJS.addFunction('./services/cabinet/app-src/three-d/objects/vector.js',
 function (require, exports, module) {
 	
@@ -36277,6 +36523,7 @@ const Polygon2D = require('../../../../../public/js/utils/canvas/two-d/objects/p
 	    this.inXZ = () => this.perpendicular(xzPoly);
 	
 	    this.parrelle = (poly) => {
+	      const normal = this.normal();
 	      if (normal === undefined || poly.normal() === undefined) return false;
 	      return normal.parrelle(poly.normal());
 	    }
@@ -36301,6 +36548,15 @@ const Polygon2D = require('../../../../../public/js/utils/canvas/two-d/objects/p
 	        vertices[index].translate(scaled);
 	      }
 	      return new Polygon3D(vertices);
+	    }
+	
+	    this.parrelleNear = (target, distance) => {
+	      distance ||= 100;
+	      const center = this.center();
+	      const targetDistance = center.distance(target);
+	      const posPlane = this.parrelleAt(distance);
+	      if (posPlane.center().distance(target) < targetDistance) return posPlane;
+	      return this.parrelleAt(-distance);
 	    }
 	
 	    this.vertices = () => {
@@ -36743,6 +36999,7 @@ function (require, exports, module) {
 	  constructor(...points) {
 	    super();
 	    let equation;
+	    const instance = this;
 	    if (Array.isArray(points[0])) points = points[0];
 	    if (isDefined(points[0], points[0].a, points[0].b, points[0].c, points[0].d)) {
 	      equation = points[0];
@@ -36903,6 +37160,16 @@ function (require, exports, module) {
 	      const vector2 = points[2].minus(points[0]);
 	      const normVect = vector1.crossProduct(vector2);
 	      return normVect.scale(1 / normVect.magnitude());
+	    }
+	
+	    this.distance = (vertex) => {
+	      if (!(vertex instanceof Vertex3D)) throw new Error('Sorry... I only implemented this relitive to a Vertex3D');
+	      const v = vertex;
+	      const eqn = this.equation();
+	      const c = this.center();
+	      const num = Math.abs(eqn.a*(v.x-c.x)+eqn.b*(v.y-c.y)+eqn.c*(v.z-c.z));
+	      const denom = Math.sqrt(eqn.a*eqn.a+eqn.b*eqn.b+eqn.c*eqn.c);
+	      return num/denom;
 	    }
 	
 	    this.center = () => Vertex3D.center.apply(null, this);
@@ -37480,23 +37747,22 @@ const Vector3D = require('./vector');
 	const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
 	const Plane = require('./plane');
 	
+	// TODO: It would be nice if this[0] === this.startvertex && this[1] === endVertex
 	class Line3D {
 	  constructor(startVertex, endVertex) {
 	    if (startVertex === undefined || endVertex === undefined) throw new Error('Lines must have a start and an end point');
-	    startVertex = new Vertex3D(startVertex);
-	    endVertex = new Vertex3D(endVertex);
-	    this.startVertex = startVertex;
-	    this.endVertex = endVertex;
+	    this.startVertex = new Vertex3D(startVertex);
+	    this.endVertex = new Vertex3D(endVertex);
 	
-	    this.clone = () => new Line3D(startVertex.clone(), endVertex.clone());
+	    this.clone = () => new Line3D(this.startVertex.clone(), this.endVertex.clone());
 	
-	    this.negitive = () => new Line3D(endVertex, startVertex);
-	    this.equals = (other) => startVertex && endVertex && other &&
-	        startVertex.equals(other.startVertex) && endVertex.equals(other.endVertex);
+	    this.negitive = () => new Line3D(this.endVertex, this.startVertex);
+	    this.equals = (other) => this.startVertex && this.endVertex && other &&
+	        this.startVertex.equals(other.startVertex) && this.endVertex.equals(other.endVertex);
 	    this.vector = () => {
-	      let i = endVertex.x - startVertex.x;
-	      let j = endVertex.y - startVertex.y;
-	      let k = endVertex.z - startVertex.z;
+	      let i = this.endVertex.x - this.startVertex.x;
+	      let j = this.endVertex.y - this.startVertex.y;
+	      let k = this.endVertex.z - this.startVertex.z;
 	      return new Vector3D(i,j,k);
 	    };
 	
@@ -37508,11 +37774,11 @@ const Vector3D = require('./vector');
 	    this.isPoint = () => this.startVertex.equals(this.endVertex);
 	
 	    this.planeAt = (rotation) => {
-	      const two = new Vertex3D({x: startVertex.x + 1, y: startVertex.y, z: startVertex.z});
-	      two.rotate(rotation, startVertex);
-	      const three = {x: endVertex.x + 1, y: endVertex.y, z: endVertex.z};
-	      thtee.rotate(rotation, endVertex);
-	      return new Plane(startVertex.copy(), two, three, endVertex.copy());
+	      const two = new Vertex3D({x: this.startVertex.x + 1, y: this.startVertex.y, z: this.startVertex.z});
+	      two.rotate(rotation, this.startVertex);
+	      const three = {x: this.endVertex.x + 1, y: this.endVertex.y, z: this.endVertex.z};
+	      thtee.rotate(rotation, this.endVertex);
+	      return new Plane(this.startVertex.copy(), two, three, this.endVertex.copy());
 	    }
 	
 	    this.on = (vertex, tolerance) => {
@@ -37523,7 +37789,7 @@ const Vector3D = require('./vector');
 	      const returnValue = {};
 	      for (let i = 0; i < 3; i++) {
 	        let coord = String.fromCharCode(i + 120);
-	        let t = (endVertex[coord] - startVertex[coord]) / 1;
+	        let t = (this.endVertex[coord] - this.startVertex[coord]) / 1;
 	        if (t !== 0) {
 	          let coef = String.fromCharCode(i + 97);
 	          returnValue[coef] = 1;
@@ -37531,12 +37797,12 @@ const Vector3D = require('./vector');
 	          let offset = ((i + 1) % 3);
 	          coord = String.fromCharCode(offset + 120);
 	          coef = String.fromCharCode(offset + 97);
-	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
+	          returnValue[coef] = (this.endVertex[coord] - this.startVertex[coord]) / t;
 	
 	          offset = ((i + 2) % 3);
 	          coord = String.fromCharCode(offset + 120);
 	          coef = String.fromCharCode(offset + 97);
-	          returnValue[coef] = (endVertex[coord] - startVertex[coord]) / t;
+	          returnValue[coef] = (this.endVertex[coord] - this.startVertex[coord]) / t;
 	          break;
 	        }
 	      }
@@ -37548,9 +37814,9 @@ const Vector3D = require('./vector');
 	    this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
 	
 	    this.midpoint = () => new Vertex3D(
-	      (endVertex.x + startVertex.x) / 2,
-	      (endVertex.y + startVertex.y) / 2,
-	      (endVertex.z + startVertex.z) / 2
+	      (this.endVertex.x +this.startVertex.x) / 2,
+	      (this.endVertex.y +this.startVertex.y) / 2,
+	      (this.endVertex.z +this.startVertex.z) / 2
 	    );
 	
 	    this.length = () => this.vector().magnitude();
@@ -37568,13 +37834,22 @@ const Vector3D = require('./vector');
 	        const len = this.length();
 	        const halfChangeMag = change/2;
 	        const halfDistVec = unitVec.scale(halfChangeMag);
-	        startVertex.translate(halfDistVec.inverse());
-	        endVertex.translate(halfDistVec);
+	       this.startVertex.translate(halfDistVec.inverse());
+	       this.endVertex.translate(halfDistVec);
 	      }
 	    }
 	
+	    this.polarize = (vertex) => {
+	      if (this.startVertex.distance(vertex) > this.endVertex.distance(vertex)) {
+	        const temp = this.startVertex;
+	        this.startVertex = this.endVertex;
+	        this.endVertex = temp;
+	      }
+	      return this;
+	    }
+	
 	    this.pointAtDistance = (distance) => {
-	      const point = startVertex.copy();
+	      const point =this.startVertex.copy();
 	      const unitVec = this.vector().unit();
 	      point.translate(unitVec.scale(distance));
 	      return point;
@@ -37582,18 +37857,25 @@ const Vector3D = require('./vector');
 	
 	    this.rotate = (rotation, center) => {
 	      center ||= this.midpoint();
-	      startVertex.rotate(rotation, center);
-	      endVertex.rotate(rotation, center);
+	     this.startVertex.rotate(rotation, center);
+	     this.endVertex.rotate(rotation, center);
 	    }
 	
 	    this.reverseRotate = (rotation, center) => {
 	      center ||= this.midpoint();
-	      startVertex.reverseRotate(rotation, center);
-	      endVertex.reverseRotate(rotation, center);
+	     this.startVertex.reverseRotate(rotation, center);
+	     this.endVertex.reverseRotate(rotation, center);
 	    }
 	
 	    this.to2D = (x,y) => Line3D.to2D([this], x, y)[0];
 	
+	    this.acquiescent = (trendSetter) => {
+	      if (!(trendSetter instanceof Line2d)) return this;
+	      const shouldReverse = trendSetter.endVertex.distance(this.endVertex) <
+	                            trendSetter.endVertex.distance(this.startVertex);
+	      if (shouldReverse) return this.negitive();
+	      return this;
+	    }
 	  }
 	}
 	
@@ -37637,9 +37919,11 @@ const Vector3D = require('./vector');
 	  return lines2d;
 	}
 	
-	Line3D.fromVector = (vector, rotation) => {
-	  const line = new Line3D(new Vertex3D(), new Vertex3D(vector));
-	  line.rotate(rotation);
+	Line3D.fromVector = (vector, startVertex, rotation) => {
+	  const sv = new Vertex3D(startVertex);
+	  const ev = sv.translate(vector, true)
+	  const line = new Line3D(sv, ev);
+	  if (rotation) line.rotate(rotation);
 	  return line;
 	}
 	
@@ -37661,6 +37945,55 @@ const Vector3D = require('./vector');
 	    reversed.push(list[index].negitive());
 	  }
 	  return reversed;
+	}
+	
+	Line3D.centerFurthestFrom = (vertex, list) => {
+	  let furthest;
+	  for (let index = 1; index < list.length; index++) {
+	    const line = list[index];
+	    const dist = list[index].midpoint().distance(vertex);
+	    if (!furthest || furthest.dist < dist) furthest = {line, dist};
+	  }
+	  return closest;
+	}
+	
+	Line3D.centerClosestTo = (vertex, list) => {
+	  let closest;
+	  for (let index = 1; index < list.length; index++) {
+	    const line = list[index];
+	    const dist = list[index].midpoint().distance(vertex);
+	    if (!closest || closest.dist > dist) closest = {line, dist};
+	  }
+	  return closest.line;
+	}
+	
+	Line3D.endpointClosestTo = (vertex, list) => {
+	  let closest;
+	  for (let index = 1; index < list.length; index++) {
+	    const line = list[index];
+	    const sdist = list[index].endVertex.distance(vertex);
+	    const edist = list[index].startVertex.distance(vertex);
+	    const dist = sdist < edist ? sdist : edist;
+	    if (!closest || closest.dist > dist) closest = {line, dist};
+	  }
+	  return closest.line;
+	}
+	
+	Line3D.sharedEndpoint = (...lines) => {
+	  const vertices = Line3D.vertices(lines);
+	  if (vertices.length === 2) return vertices;
+	  for (let index = 0; index < vertices.length; index++) {
+	    const vertex = vertices[index];
+	    let existsInAll = true;
+	    for (let lIndex = 0; existsInAll && lIndex > lines.length; lIndex++) {
+	      const line = lines[lIndex];
+	      const startEq = line.startVertex.equals(vertex);
+	      const endEq = line.endVertex.equals(vertex);
+	      existsInAll = startEq || endEq;
+	    }
+	    if (existsInAll) return vertex;
+	  }
+	  return null;
 	}
 	
 	module.exports = Line3D;
@@ -38067,15 +38400,19 @@ function (require, exports, module) {
 	function onOpeningTypeChange(elem) {
 	  const opening = ExpandableList.get(elem);
 	  if (opening._Type !== elem.value) {
-	    const isLocation = elem.checked;
+	    const isLocation = elem.value === 'location';
+	    const isSlice = elem.value === 'slice';
 	    const defaultFunc = isLocation ? 'defaultLocationOpening' : 'defaultPartCodeOpening';
 	    const def = CabinetTemplate[defaultFunc]();
 	    Object.merge(opening, def, true);
-	    opening._Type = isLocation ? 'location' : undefined;
+	    opening._Type = isLocation ? 'location' : (isSlice ? 'slice' : undefined);
 	    if (opening._Type === 'location' && opening.coordinates === undefined)
 	      opening.coordinates = defalutCustomCoords();
+	    if (opening._Type === 'slice' && opening.leftDepth === undefined)
+	      opening.rightDepth = opening.leftDepth = 'c.t';
 	
 	    du.find.closest('.border-location-cnt', elem).hidden = !isLocation;
+	    du.find.closest('.border-slice-cnt', elem).hidden = !isSlice;
 	    updateOpeningPartCode(du.find.closest('select', elem));
 	  }
 	}
@@ -38150,14 +38487,17 @@ function (require, exports, module) {
 	    const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
 	    subRotInputs.forEach(xyzEqnCheck(template, cabinet));
 	    updateOpeningPoints(template, cabinet);
-	    const model = threeView.update(cabinet);
 	    setTimeout(updatePartsDataList, 500);
 	  } catch (e) {
 	    console.log(e);
 	  }
-	
-	
 	}
+	
+	du.on.match('enter', '*', () => {
+	  const templateBody = du.find('.template-body');
+	  const cabinet = getCabinet(templateBody);
+	  threeView.update(cabinet);
+	});
 	
 	function getEqn(select, values) {
 	  return values && values[select.value()];
@@ -38291,7 +38631,7 @@ function (require, exports, module) {
 	}
 	
 	const getObjects = {
-	    subassemblies: () => (      {
+	    subassemblies: () => ({
 	      type: "Panel",
 	      center: [0,0,0],
 	      demensions: [1,1,1],
@@ -38459,15 +38799,25 @@ function (require, exports, module) {
 	radioDisplay.afterSwitch(function (header){
 	  const coordinateInput = du.find.closest('[name="opening-coordinate-value"]', header);
 	  const opening = ExpandableList.get(coordinateInput);
-	  if (opening && opening._Type === 'location') {
-	    updateState(coordinateInput);
-	    sectionState.value(coordinateInput.value);
+	  if (opening && opening._Type) {
+	    if (opening._Type === 'location') {
+	      updateState(coordinateInput);
+	      sectionState.value(coordinateInput.value);
+	    }
 	  }
 	});
 	
 	du.on.match('focusout:enter', '[name="opening-coordinate-value"]', (elem) => {
 	  sectionState.value(elem.value || undefined);
 	});
+	
+	function sliceDepthUpdate(elem) {
+	  const opening = ExpandableList.get(elem);
+	  opening[elem.name] = elem.value;
+	}
+	
+	du.on.match('focusout:enter', '[name="leftDepth"]', sliceDepthUpdate);
+	du.on.match('focusout:enter', '[name="rightDepth"]', sliceDepthUpdate);
 	
 	TemplateManager.inputTree = () => {
 	  const dit = new DecisionInputTree();
@@ -38864,6 +39214,74 @@ const Object3D = require('./object');
 });
 
 
+RequireJS.addFunction('./services/cabinet/app-src/three-d/models/pull.js',
+function (require, exports, module) {
+	
+
+	const CSG = require('../../../public/js/3d-modeling/csg');
+	const Polygon3D = require('../objects/polygon.js');
+	const BiPolygon = require('../objects/bi-polygon.js');
+	
+	function pull(length, height) {
+	  var rspx = length - .75;
+	  var h = height-.125;
+	  var gerth = 2.54/4;
+	  // var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
+	  // var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
+	  // var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
+	  var rCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/2, 0, h/-2]});
+	  var lCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/-2, 0, h/-2]});
+	  var mainCyl = CSG.cube({demensions: [length, gerth, gerth], center: [0, 0, 0]});
+	
+	  return mainCyl.union(lCyl).union(rCyl);
+	}
+	
+	function getVectorObj(line, normal) {
+	  const midNormOffset = line.midpoint().translate(normal);
+	  const lineNormPoly = new Polygon3D([line.startVertex.copy(), line.endVertex.copy(), midNormOffset]);
+	  return {
+	    depth: normal,
+	    width: line.vector().unit(),
+	    height: lineNormPoly.normal(),
+	  };
+	}
+	
+	function pull(baseCenter, line, normal, projection, cTOc) {
+	  var gerth = 2.54/4;
+	  let length = cTOc + gerth;
+	  const vecObj = getVectorObj(line, normal);
+	
+	  let sideProjection = projection - gerth;
+	  const centerRL = baseCenter.translate(vecObj.depth.scale(sideProjection/2), true);
+	  const centerLeft = centerRL.translate(vecObj.width.scale(cTOc/-2), true);
+	  const centerRight = centerRL.translate(vecObj.width.scale(cTOc/2), true);
+	  const centerMain = baseCenter.translate(vecObj.depth.scale(projection - gerth/2));
+	
+	  var lCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerLeft, vecObj);
+	  var rCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerRight, vecObj);
+	  var mainCyl = BiPolygon.fromVectorObject(length, gerth, gerth, centerMain, vecObj);
+	
+	  return mainCyl.toModel().union(lCyl.toModel()).union(rCyl.toModel());
+	}
+	
+	function simple(baseCenter, line, normal, projection, cTOc) {
+	  var gerth = 2.54/4;
+	  let length = cTOc + gerth;
+	  const vecObj = getVectorObj(line, normal);
+	
+	  let sideProjection = projection - gerth;
+	  const center = baseCenter.translate(vecObj.depth.scale((sideProjection + gerth) /2), true);
+	
+	  return BiPolygon.fromVectorObject(length, gerth, projection, center, vecObj).toModel();
+	}
+	
+	pull.simple = simple;
+	
+	module.exports = pull
+	
+});
+
+
 RequireJS.addFunction('./services/cabinet/app-src/three-d/objects/bi-polygon.js',
 function (require, exports, module) {
 	
@@ -38903,6 +39321,15 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	    this.normal = () => face2[0].distanceVector(face1[0]).unit();
 	    this.normalTop = () => face2[3].distanceVector(face2[0]).unit();
 	    this.normalRight = () => face2[1].distanceVector(face2[0]).unit();
+	
+	    this.furthestOrder = (vertex) => {
+	      const front = this.front();
+	      const back = this.back();
+	      return front.center().distance(vertex) > back.center().distance(vertex) ?
+	              [front, back] : [back, front];
+	    }
+	
+	    this.closestOrder = (vertex) => this.furthesOrder(vertex).reverse();
 	
 	    this.translate = (vector) => {
 	      for (let index = 0; index < face1.length; index++) {
@@ -39002,6 +39429,7 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	
 	BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
 	  offset ||= {};
+	  distance2 ||= 0;
 	  const verts = polygon.vertices();
 	  if (verts.length < 4) return undefined;
 	  const verts1 = JSON.clone(verts);
@@ -39031,221 +39459,29 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 });
 
 
-RequireJS.addFunction('./services/cabinet/app-src/three-d/models/pull.js',
+RequireJS.addFunction('./services/cabinet/app-src/objects/joint/joints/dado.js',
 function (require, exports, module) {
 	
-
-	const CSG = require('../../../public/js/3d-modeling/csg');
-	const Polygon3D = require('../objects/polygon.js');
-	const BiPolygon = require('../objects/bi-polygon.js');
+const Joint = require('../joint.js');
 	
-	function pull(length, height) {
-	  var rspx = length - .75;
-	  var h = height-.125;
-	  var gerth = 2.54/4;
-	  // var rCyl = CSG.cylinder({start: [rspx, .125, .125-height], end: [rspx, .125, .125], radius: .25})
-	  // var lCyl = CSG.cylinder({start: [.75, .125, .125 - height], end: [.75, .125, .125], radius: .25})
-	  // var mainCyl = CSG.cylinder({start: [0, .125, .125], end: [length, .125, .125], radius: .25})
-	  var rCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/2, 0, h/-2]});
-	  var lCyl = CSG.cube({demensions: [gerth, gerth, h], center: [rspx/-2, 0, h/-2]});
-	  var mainCyl = CSG.cube({demensions: [length, gerth, gerth], center: [0, 0, 0]});
-	
-	  return mainCyl.union(lCyl).union(rCyl);
-	}
-	
-	function getVectorObj(line, normal) {
-	  const midNormOffset = line.midpoint().translate(normal);
-	  const lineNormPoly = new Polygon3D([line.startVertex.copy(), line.endVertex.copy(), midNormOffset]);
-	  return {
-	    depth: normal,
-	    width: line.vector().unit(),
-	    height: lineNormPoly.normal(),
-	  };
-	}
-	
-	function pull(baseCenter, line, normal, projection, cTOc) {
-	  var gerth = 2.54/4;
-	  let length = cTOc + gerth;
-	  const vecObj = getVectorObj(line, normal);
-	
-	  let sideProjection = projection - gerth;
-	  const centerRL = baseCenter.translate(vecObj.depth.scale(sideProjection/2), true);
-	  const centerLeft = centerRL.translate(vecObj.width.scale(cTOc/-2), true);
-	  const centerRight = centerRL.translate(vecObj.width.scale(cTOc/2), true);
-	  const centerMain = baseCenter.translate(vecObj.depth.scale(projection - gerth/2));
-	
-	  var lCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerLeft, vecObj);
-	  var rCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerRight, vecObj);
-	  var mainCyl = BiPolygon.fromVectorObject(length, gerth, gerth, centerMain, vecObj);
-	
-	  return mainCyl.toModel().union(lCyl.toModel()).union(rCyl.toModel());
-	}
-	
-	function simple(baseCenter, line, normal, projection, cTOc) {
-	  var gerth = 2.54/4;
-	  let length = cTOc + gerth;
-	  const vecObj = getVectorObj(line, normal);
-	
-	  let sideProjection = projection - gerth;
-	  const center = baseCenter.translate(vecObj.depth.scale((sideProjection + gerth) /2), true);
-	
-	  return BiPolygon.fromVectorObject(length, gerth, projection, center, vecObj).toModel();
-	}
-	
-	pull.simple = simple;
-	
-	module.exports = pull
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/objects/joint/joints/miter.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Miter extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
-	  }
-	}
-	
-	Joint.register(Miter);
-	module.exports = Miter
-	
-	
-	
-	
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/three-d/layout/objects/assembly.js',
-function (require, exports, module) {
-	const Object3D = require('../object');
-	const Vertex3D = require('../../objects/vertex.js');
-	const Assembly = require('../../../objects/assembly/assembly.js');
-	const SnapPolygon = require('../../../../../../public/js/utils/canvas/two-d/objects/snap/polygon.js');
-	
-	class Assembly3D extends Object3D {
-	  constructor(assembly) {
-	    super(assembly.id(), assembly);
-	    if (!(assembly instanceof Assembly)) return undefined;
-	
-	    this.layout = assembly.layout;
-	    this.center = (vertex3D) => {
-	      const position = assembly.position();
-	      if (vertex3D instanceof Vertex3D) {
-	        position.setCenter('x', vertex3D.x);
-	        position.setCenter('y', vertex3D.y);
-	        position.setCenter('z', vertex3D.z);
-	      }
-	      return new Vertex3D(position.center());
-	    }
-	    this.height = assembly.length;
-	    this.width = assembly.width;
-	    this.thickness = assembly.thickness;
-	    this.name = assembly.name;
-	    this.snap2d.top = () => topSnap;
-	    this.shouldSave = () => false;
-	
-	    this.rotation = (rotation) => {
-	      if (rotation) assembly.position().setRotation(rotation);
-	      return assembly.position().rotation();
-	    }
-	
-	    const topSnap = new SnapPolygon(this.bridge.top(), assembly.view.top, 10);
-	  }
-	}
-	
-	Object3D.register(Assembly);
-	
-	module.exports = Assembly3D;
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/objects/assembly/assemblies/frame.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Frame extends Assembly {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
-	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-	  }
-	}
-	
-	Frame.abbriviation = 'fr';
-	
-	
-	module.exports = Frame
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/objects/assembly/assemblies/divider.js',
-function (require, exports, module) {
-	
-
-	
-	const Assembly = require('../assembly.js');
-	
-	class Divider extends Assembly {
-	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, toModel) {
-	    if (toModel) {
-	      super(partCode, partName);
-	      this.toModel = toModel;
-	      this.partName = partName;
-	    } else super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
-	
-	  }
-	}
-	
-	Divider.count = 0;
-	
-	Divider.abbriviation = 'dv';
-	
-	module.exports = Divider
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/app-src/objects/joint/joints/rabbet.js',
-function (require, exports, module) {
-	
-
-	
-	const Joint = require('../joint.js');
-	
-	class Rabbet extends Joint {
-	  constructor(joinStr, defaultDepth, axis, centerOffset) {
-	    super(joinStr);
-	    this.maleOffset = (assembly) => {
-	      return defaultDepth;
-	    }
-	
-	    if (axis === undefined) return;
+	class Dado extends Joint {
+	  constructor(malePartCode, femalePartCode) {
+	    super(malePartCode, femalePartCode);
 	
 	    this.updatePosition = (position) => {
-	      const direction = centerOffset[0] === '-' ? -1 : 1;
-	      const centerAxis = centerOffset[1];
-	      position.demension[axis] += defaultDepth;
-	      position.center[centerAxis] += defaultDepth/2 * direction;
+	      const direction = this.centerAxis()[0] === '-' ? -1 : 1;
+	      const centerAxis = this.centerAxis()[1].toLowerCase();
+	      const offset = this.parentAssembly().eval(this.maleOffset());
+	      const demAxis = this.demensionAxis().toLowerCase();
+	      position.demension[demAxis] = position.demension[demAxis] + offset;
+	      position.center[centerAxis] = position.center[centerAxis] + (offset/2 * direction);
 	    };
+	
 	  }
 	}
 	
-	Joint.register(Rabbet);
-	module.exports = Rabbet
-	
-	
-	
-	
+	Joint.register(Dado);
+	module.exports = Dado
 	
 });
 
@@ -39266,6 +39502,7 @@ function (require, exports, module) {
 	const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex');
 	const Vertex3D = require('../../../three-d/objects/vertex.js');
 	const CSG = require('../../../../public/js/3d-modeling/csg.js');
+	const AutoToekick = require('./auto/toekick.js');
 	
 	const OVERLAY = {};
 	OVERLAY.FULL = 'Full';
@@ -39278,7 +39515,7 @@ function (require, exports, module) {
 	  constructor(partCode, partName) {
 	    super(partCode, partName);
 	    // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
-	    Object.getSet(this, 'propertyId', 'name', 'currentPosition');
+	    Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick');
 	    const instance = this;
 	    let toeKickHeight = 4;
 	    this.part = false;
@@ -39307,6 +39544,17 @@ function (require, exports, module) {
 	        calculatedValue = propConfig.overlay();
 	      }
 	      return calculatedValue < definedValue ? calculatedValue : definedValue;
+	    }
+	
+	    const parentGetSubAssems = this.getSubassemblies;
+	    let toeKick;
+	    this.getSubassemblies = () => {
+	      const subs = parentGetSubAssems();
+	      if (this.autoToeKick()) {
+	        if (toeKick === undefined) toeKick = new AutoToekick(this);
+	        return subs.concat(toeKick);
+	      }
+	      return subs;
 	    }
 	
 	    function bordersByIds(borderIds) {
@@ -39445,6 +39693,7 @@ function (require, exports, module) {
 	  const cabinet = new Cabinet('c', type);
 	  cabinet.group(group);
 	  config ||= cabinetBuildConfig[type];
+	  cabinet.autoToeKick(config.autoToeKick);
 	  cabinet.length(config.height);
 	  cabinet.width(config.width);
 	  cabinet.thickness(config.thickness);
@@ -39454,9 +39703,9 @@ function (require, exports, module) {
 	  config.subassemblies.forEach((subAssemConfig) => {
 	    const type = subAssemConfig.type;
 	    const name = subAssemConfig.name;
-	    const demStr = subAssemConfig.demensions.join(',');
-	    const centerConfig = subAssemConfig.center.join(',');
-	    const rotationConfig = subAssemConfig.rotation.join(',');
+	    const demStr = subAssemConfig.demensions.join(':');
+	    const centerConfig = subAssemConfig.center.join(':');
+	    const rotationConfig = subAssemConfig.rotation.join(':');
 	    const subAssem = Assembly.new(type, subAssemConfig.code, name, centerConfig, demStr, rotationConfig);
 	    subAssem.partCode(subAssemConfig.code);
 	    cabinet.addSubAssembly(subAssem);
@@ -39600,29 +39849,108 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./services/cabinet/app-src/objects/joint/joints/dado.js',
+RequireJS.addFunction('./services/cabinet/app-src/objects/assembly/assemblies/divider.js',
 function (require, exports, module) {
 	
-const Joint = require('../joint.js');
+
 	
-	class Dado extends Joint {
-	  constructor(malePartCode, femalePartCode) {
-	    super(malePartCode, femalePartCode);
+	const Assembly = require('../assembly.js');
 	
-	    this.updatePosition = (position) => {
-	      const direction = this.centerAxis()[0] === '-' ? -1 : 1;
-	      const centerAxis = this.centerAxis()[1].toLowerCase();
-	      const offset = this.parentAssembly().eval(this.maleOffset());
-	      const demAxis = this.demensionAxis().toLowerCase();
-	      position.demension[demAxis] = position.demension[demAxis] + offset;
-	      position.center[centerAxis] = position.center[centerAxis] + (offset/2 * direction);
-	    };
+	class Divider extends Assembly {
+	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, toModel) {
+	    if (toModel) {
+	      super(partCode, partName);
+	      this.toModel = toModel;
+	      this.partName = partName;
+	    } else super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
 	
 	  }
 	}
 	
-	Joint.register(Dado);
-	module.exports = Dado
+	Divider.count = 0;
+	
+	Divider.abbriviation = 'dv';
+	
+	module.exports = Divider
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/objects/joint/joints/rabbet.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Rabbet extends Joint {
+	  constructor(joinStr, defaultDepth, axis, centerOffset) {
+	    super(joinStr);
+	    this.maleOffset = (assembly) => {
+	      return defaultDepth;
+	    }
+	
+	    if (axis === undefined) return;
+	
+	    this.updatePosition = (position) => {
+	      const direction = centerOffset[0] === '-' ? -1 : 1;
+	      const centerAxis = centerOffset[1];
+	      position.demension[axis] += defaultDepth;
+	      position.center[centerAxis] += defaultDepth/2 * direction;
+	    };
+	  }
+	}
+	
+	Joint.register(Rabbet);
+	module.exports = Rabbet
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/objects/joint/joints/miter.js',
+function (require, exports, module) {
+	
+
+	
+	const Joint = require('../joint.js');
+	
+	class Miter extends Joint {
+	  constructor(joinStr) {
+	    super(joinStr);
+	  }
+	}
+	
+	Joint.register(Miter);
+	module.exports = Miter
+	
+	
+	
+	
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/objects/assembly/assemblies/frame.js',
+function (require, exports, module) {
+	
+
+	
+	const Assembly = require('../assembly.js');
+	
+	class Frame extends Assembly {
+	  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
+	    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+	  }
+	}
+	
+	Frame.abbriviation = 'fr';
+	
+	
+	module.exports = Frame
 	
 });
 
@@ -39635,17 +39963,58 @@ function (require, exports, module) {
 	const Joint = require('../joint.js');
 	
 	class Butt extends Joint {
-	  constructor(joinStr) {
-	    super(joinStr);
+	  constructor(malePartCode, femalePartCode) {
+	    super(malePartCode, femalePartCode);
 	  }
 	}
 	
 	Joint.register(Butt);
 	module.exports = Butt
 	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/three-d/layout/objects/assembly.js',
+function (require, exports, module) {
+	const Object3D = require('../object');
+	const Vertex3D = require('../../objects/vertex.js');
+	const Assembly = require('../../../objects/assembly/assembly.js');
+	const SnapPolygon = require('../../../../../../public/js/utils/canvas/two-d/objects/snap/polygon.js');
 	
+	class Assembly3D extends Object3D {
+	  constructor(assembly) {
+	    super(assembly.id(), assembly);
+	    if (!(assembly instanceof Assembly)) return undefined;
 	
+	    this.layout = assembly.layout;
+	    this.center = (vertex3D) => {
+	      const position = assembly.position();
+	      if (vertex3D instanceof Vertex3D) {
+	        position.setCenter('x', vertex3D.x);
+	        position.setCenter('y', vertex3D.y);
+	        position.setCenter('z', vertex3D.z);
+	      }
+	      return new Vertex3D(position.center());
+	    }
+	    this.height = assembly.length;
+	    this.width = assembly.width;
+	    this.thickness = assembly.thickness;
+	    this.name = assembly.name;
+	    this.snap2d.top = () => topSnap;
+	    this.shouldSave = () => false;
 	
+	    this.rotation = (rotation) => {
+	      if (rotation) assembly.position().setRotation(rotation);
+	      return assembly.position().rotation();
+	    }
+	
+	    const topSnap = new SnapPolygon(this.bridge.top(), assembly.view.top, 10);
+	  }
+	}
+	
+	Object3D.register(Assembly);
+	
+	module.exports = Assembly3D;
 	
 });
 
@@ -39733,6 +40102,16 @@ function (require, exports, module) {
 	  }
 	}
 	Cutter.abbriviation = 'cut';
+	
+	class CutterModel extends Cutter {
+	  constructor(partCode, partNameFunc, toModel) {
+	    super(partCode);
+	    this.toModel = toModel;
+	    this.partName = partNameFunc;
+	  }
+	}
+	
+	Cutter.Model = CutterModel;
 	
 	module.exports = Cutter;
 	
@@ -39945,6 +40324,12 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	      if (is !== undefined && curr !== is) removeCachedValues();
 	      return curr;
 	    }
+	    const getPartFunc = (partCode) => () => instance.getAssembly(partCode);
+	    this.top = getPartFunc('T');
+	    this.bottom = getPartFunc('B');
+	    this.left = getPartFunc('L');
+	    this.right = getPartFunc('R');
+	    this.back = getPartFunc('B');
 	    this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
 	    this.verticalDivisions = () => {
 	      const parent = this.parentAssembly();
@@ -40380,10 +40765,11 @@ const Vertex3D = require('../../../../three-d/objects/vertex.js');
 	
 	    this.updateCoordinates = (newCoords) => {
 	      let change = updateCoordinates(coordinates.outer, newCoords.outer) | updateCoordinates(coordinates.inner, newCoords.inner);
-	      if (change) {
+	      // TODO: need to detect child config changes aswell...
+	      // if (change) {
 	        removeCachedValues();
 	        setSectionCoordinates();
-	      }
+	      // }
 	    }
 	
 	    this.setSection = (constructorIdOobject) => {
@@ -40656,6 +41042,88 @@ function (require, exports, module) {
 	
 	
 	module.exports = Screw
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/app-src/objects/assembly/assemblies/auto/toekick.js',
+function (require, exports, module) {
+	
+const Assembly = require('../../assembly');
+	const Vertex3D = require('../../../../three-d/objects/vertex');
+	const Line3D = require('../../../../three-d/objects/line');
+	const Polygon3D = require('../../../../three-d/objects/polygon');
+	const BiPolygon = require('../../../../three-d/objects/bi-polygon');
+	const Butt = require('../../../joint/joints/butt.js');
+	
+	class AutoToekick extends Assembly {
+	  constructor(cabinet) {
+	    super('AUTOTK', 'AutoToeKick');
+	    function cornerLines(side, openingCenter, targetCorner, innerPoly) {
+	      const biPoly = side.position().toBiPolygon();
+	      const poly = biPoly.furthestOrder(openingCenter)[1];
+	      let front = Line3D.centerClosestTo(openingCenter, poly.lines()).polarize(targetCorner);
+	      const withoutUp = poly.lines().filter(l => !l.equals(front));
+	      let longBottom = Line3D.endpointClosestTo(targetCorner, withoutUp).polarize(targetCorner);
+	
+	      let innerFront = Line3D.centerClosestTo(openingCenter, innerPoly.lines()).clone().polarize(targetCorner);
+	
+	      let newStart = innerPoly.toPlane().lineIntersection(longBottom);
+	
+	      longBottom.startVertex = newStart;
+	      const shortBottom = longBottom.clone();
+	
+	      const tkh = cabinet.value('tkh');
+	      const tkd = cabinet.value('tkd');
+	      const targetFront = Line3D.fromVector(innerFront.vector().unit().scale(tkh), newStart);
+	      shortBottom.adjustLength(tkd, true);
+	      longBottom.adjustLength(tkd + cabinet.value('tkbw'), true);
+	      const shortVector = shortBottom.vector();
+	      const longVector = longBottom.vector();
+	      const shortTop = Line3D.fromVector(shortVector, targetFront.endVertex);
+	      const longTop = Line3D.fromVector(longVector, targetFront.endVertex);
+	
+	      console.log("(" + [targetFront.endVertex, targetFront.startVertex, shortTop.endVertex, shortBottom.endVertex, newStart,
+	                    longTop.endVertex, longBottom.endVertex].join('),(') + ")")
+	
+	      return {void: [targetFront.endVertex, shortTop.endVertex,
+	                    shortBottom.endVertex, newStart],
+	              tkb: [shortTop.endVertex, longTop.endVertex,
+	                longBottom.endVertex, shortBottom.endVertex]};
+	    }
+	
+	    function openingToeKick(opening) {
+	      const right = opening.right();
+	      const left = opening.left();
+	      const coords = opening.coordinates();
+	      const center = Vertex3D.center(coords.inner);
+	      const innerPoly = new Polygon3D(coords.inner);
+	
+	      const rightLines = cornerLines(right, center, coords.inner[2], innerPoly);
+	      const leftLines = cornerLines(left, center, coords.inner[3], innerPoly);
+	
+	      const leftPoly = new Polygon3D(leftLines.tkb);
+	      const rightPoly = new Polygon3D(rightLines.tkb);
+	      return new BiPolygon(rightPoly, leftPoly);
+	    }
+	
+	    this.toBiPolygon = () => {
+	      const openings = cabinet.openings;
+	      let opening;
+	      if (openings.length > 1) throw new Error('Not yet implemented for multiple openings...');
+	      for (let index = 0; index < openings.length; index++) {
+	        opening = openingToeKick(openings[index]);
+	      }
+	      return opening;
+	    }
+	
+	    const joint = (otherPartCode) => new Butt(this.partCode(), otherPartCode);
+	    this.addJoints(joint('R'), joint('B'), joint('L'));
+	    this.toModel = () => this.toBiPolygon().toModel();
+	  }
+	}
+	
+	module.exports = AutoToekick;
 	
 });
 
@@ -41276,6 +41744,245 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./services/cabinet/test/tests/line-consolidate.js',
+function (require, exports, module) {
+	
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
+	const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
+	const Line3D = require('../../app-src/three-d/objects/line.js');
+	const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+	const approximate = require('../../../../public/js/utils/approximate.js');
+	
+	const extraLinePoly = new Polygon2d([[0,0],[0,1],[0,2],[0,3],
+	                [1,3],[1,4],[0,4],[0,5],[0,6],[1,6],[2,6],[3,6],
+	                [3,5],[4,5],[5,4],[6,3],[5,3],[5,2],[6,2],[6,1],
+	                [6,0],[5,0],[4,0],[4,-1],[4,-2],[1,0]]);
+	
+	const consisePoly = new Polygon2d([[0,0],[0,3],[1,3],[1,4],
+	                [0,4],[0,6],[3,6],[3,5],[4,5],[6,3],[5,3],[5,2],
+	                [6,2],[6,0],[4,0],[4,-2],[1,0]]);
+	
+	const root2 = Math.sqrt(2);
+	
+	
+	// const A = new Polygon3D([[,],[,],[,],[,]])
+	Test.add('Line2d: consolidate',(ts) => {
+	  const lines = Polygon2d.lines(extraLinePoly);
+	  ts.assertTrue(lines.length === consisePoly.lines().length);
+	  ts.success();
+	});
+	
+	
+	Test.add('Line2d: perpendicular', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:1, y:0});
+	  let perp = line.perpendicular(1, null, true);
+	  let expectedMidpoint = new Vertex2d({x: .5, y: 0});
+	  let expectedLine = new Line2d({x: .5, y: .5}, {x: .5, y: -.5});
+	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  perp = line.perpendicular(-2, null, true);
+	  expectedLine = new Line2d({x: .5, y: 1}, {x: .5, y: -1});
+	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  perp = line.perpendicular(1);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 1});
+	  expectedMidpoint = new Vertex2d({x: .5, y: .5});
+	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  perp = line.perpendicular(-2);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -2});
+	  expectedMidpoint = new Vertex2d({x: .5, y: -1});
+	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  perp = line.perpendicular(-1);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -1});
+	  expectedMidpoint = new Vertex2d({x: .5, y: -.5});
+	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  perp = line.perpendicular(2);
+	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 2});
+	  expectedMidpoint = new Vertex2d({x: .5, y: 1});
+	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  line = new Line2d({x:0,y:0}, {x:2, y:2});
+	  perp = line.perpendicular(root2);
+	  expectedLine = new Line2d({x: 1, y: 1}, {x: 0, y: 2});
+	  expectedMidpoint = new Vertex2d({x: .5, y: 1.5});
+	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  line = new Line2d({x:0,y:0}, {x:2, y:2});
+	  perp = line.perpendicular(-1 * root2);
+	  expectedLine = new Line2d({x: 1, y: 1}, {x: 2, y: 0});
+	  expectedMidpoint = new Vertex2d({x: 1.5, y: .5});
+	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(perp.equals(expectedLine),
+	        `Line not equal: ${perp} !== ${expectedLine}`);
+	
+	  ts.success();
+	});
+	
+	Test.add('Line2d: parrelle', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:2, y:2});
+	  let expectedLine = new Line2d({x: -1, y: 1}, {x: 1, y: 3});
+	  let expectedMidpoint = new Vertex2d({x: 0, y: 2});
+	  let parrelle = line.parrelle(-1 * root2);
+	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  expectedLine = new Line2d({x: 1, y: -1}, {x: 3, y: 1});
+	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
+	  parrelle = line.parrelle(root2);
+	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  line = new Line2d({x:2, y:2}, {x:0,y:0});
+	  expectedLine = new Line2d({x: 1, y: 3}, {x: -1, y: 1});
+	  expectedMidpoint = new Vertex2d({x: 0, y: 2});
+	  parrelle = line.parrelle(root2);
+	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  expectedLine = new Line2d({x: 3, y: 1}, {x: 1, y: -1});
+	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
+	  parrelle = line.parrelle(-1 * root2);
+	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  line = new Line2d({x:3,y:1}, {x:8, y:4});
+	  expectedMidpoint = new Vertex2d({x: -.5, y: 12.5});
+	  expectedLine = new Line2d({x: -3, y: 11}, {x: 2, y: 14});
+	  parrelle = line.parrelle(-1 * expectedMidpoint.distance(line.midpoint()));
+	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  expectedMidpoint = new Vertex2d({x: 11.5, y: -7.5});
+	  expectedLine = new Line2d({x: 9, y: -9}, {x: 14, y: -6});
+	  parrelle = line.parrelle(expectedMidpoint.distance(line.midpoint()));
+	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
+	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
+	  ts.assertTrue(parrelle.equals(expectedLine),
+	        `Line not equal: ${parrelle} !== ${expectedLine}`);
+	
+	  ts.success();
+	});
+	
+	Test.add('Line2d: trimmed', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:0, y:8});
+	
+	  let trimmed = line.trimmed(.5);
+	  let expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 8});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(-.5);
+	  expectedLine = new Line2d({x: 0, y: 0}, {x: 0, y: 7.5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(.5, true);
+	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(-.5, true);
+	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  line = new Line2d({x:-4,y:-8}, {x:0, y:-4});
+	  trimmed = line.trimmed(root2, true);
+	  expectedLine = new Line2d({x: -3, y: -7}, {x: -1, y: -5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(root2);
+	  expectedLine = new Line2d({x: -3, y: -7}, {x: 0, y: -4});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  trimmed = line.trimmed(-1 * root2);
+	  expectedLine = new Line2d({x: -4, y: -8}, {x: -1, y: -5});
+	  ts.assertTrue(trimmed.equals(expectedLine),
+	        `Line not equal: ${trimmed} !== ${expectedLine}`);
+	
+	  ts.success();
+	});
+	
+	Test.add('Line2d: thetaBetween', (ts) => {
+	  let line = new Line2d({x:0,y:0}, {x:0, y:10});
+	  let line2 = new Line2d({x:0,y:10}, {x:10, y:20});
+	  let line3 = new Line2d({x:10,y:20}, {x:10, y:30})
+	
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 135);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line3))), 225);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 225);
+	  ts.assertEquals(approximate(Math.toDegrees(line3.thetaBetween(line2))), 135);
+	
+	  let origin = {x:3, y:22};
+	  line = Line2d.startAndTheta(origin, Math.toRadians(16), 10);
+	  line2 = Line2d.startAndTheta(origin, Math.toRadians(251), 10);
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
+	
+	  line2 = line2.negitive();
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
+	
+	  line = line.negitive();
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
+	
+	  line2 = line2.negitive();
+	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
+	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
+	
+	  ts.success();
+	});
+	
+	// Test.add('Line3D: intersects', (ts) => {
+	//   const line1 = new Line3D({x: 10, y: 10, z: 10}, {x: 5, y: 5, z: 5});
+	//   const line2 = new Line3D({x: 10, y: 10, z: -10}, {x: 5, y: 5, z: -5});
+	//   let intersection = line1.intersects(line2);
+	//   ts.assertTrue(intersection.equals({x: 0, y:0, z:0}));
+	//   ts.success();
+	// });
+	
+});
+
+
 RequireJS.addFunction('./services/cabinet/test/tests/array-math.js',
 function (require, exports, module) {
 	const Test = require('../../../../public/js/utils/test/test').Test;
@@ -41724,6 +42431,200 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./services/cabinet/test/tests/RelationInput.js',
+function (require, exports, module) {
+	
+
+	
+	const RelationInput = require('../../../../public/js/utils/input/styles/select/relation.js');
+	
+	
+	
+	Test.add('RelationInput: Equal',(ts) => {
+	  ts.assertEquals(RelationInput.eval('Equal', [1,4,3,5,6,4,8,9], 6), 4);
+	  ts.assertEquals(RelationInput.eval('equal', [1,4,3,5,6,4,8,9], 7), undefined);
+	  ts.assertEquals(RelationInput.eval('EQual', [1,4,3,5,6,4,8,9], 1), 0);
+	  ts.assertEquals(RelationInput.eval('EqUAL', [1,4,3,5,6,4,8,9], 9), 7);
+	  ts.assertEquals(RelationInput.eval('EquaL', [1,4,3,5,6,4,8,9], 4), 1);
+	  ts.assertEquals(RelationInput.eval('EqUal', [1,4,3,5,6,undefined,8,9], 8), 6);
+	  ts.success();
+	});
+	
+	
+	Test.add('RelationInput: Less Than',(ts) => {
+	  ts.assertEquals(RelationInput.eval('Less ThAn', [1,4,3,5,6,4,8,9], 6), 3);
+	  ts.assertEquals(RelationInput.eval('LeSs_Than', [1,4,3,5,6,4,8,9], 1), undefined);
+	  ts.assertEquals(RelationInput.eval('LeSS Than', [1,4,3,5,6,4,8,9], 200), 7);
+	  ts.assertEquals(RelationInput.eval('less than', [1,4,3,5,6,4,8,9], 9), 6);
+	  ts.assertEquals(RelationInput.eval('Less Than', [1,4,3,5,6,4,8,9], -2), undefined);
+	  ts.assertEquals(RelationInput.eval('Less Than', [1,4,3,5,6,undefined,8,9], 8), 4);
+	  ts.success();
+	});
+	
+	Test.add('RelationInput: Greater Than',(ts) => {
+	  ts.assertEquals(RelationInput.eval('Greater ThAn', [1,4,3,5,6,4,8,9], 6), 6);
+	  ts.assertEquals(RelationInput.eval('Greater_Than', [1,4,3,5,6,4,8,9], 1), 2);
+	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,4,8,9], 200), undefined);
+	  ts.assertEquals(RelationInput.eval('Greater than', [1,4,3,5,6,4,8,9], 9), undefined);
+	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,4,8,9], -2), 0);
+	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,undefined,8,9], 8), 7);
+	  ts.success();
+	});
+	
+	Test.add('RelationInput: Less Than Or Equal',(ts) => {
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 6), 4);
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 2), 0);
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 200), 7);
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 9), 7);
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], -2), undefined);
+	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,undefined,8,9], 7.5), 4);
+	  ts.success();
+	});
+	
+	Test.add('RelationInput: Greater Than Or Equal',(ts) => {
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 6), 4);
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 1.01), 2);
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 200), undefined);
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 9), 7);
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], -2), 0);
+	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,undefined,8,9], 8), 6);
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/test/tests/polygon-merge.js',
+function (require, exports, module) {
+	
+const Test = require('../../../../public/js/utils/test/test').Test;
+	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
+	
+	
+	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]].reverse())
+	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
+	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
+	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
+	const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
+	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
+	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
+	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
+	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]].reverse());
+	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
+	
+	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
+	const polyIF = new Polygon3D([[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
+	const polyABCDEGHJ = new Polygon3D([[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
+	                                          [6,0,0],[4,0,0],[0,0,0],[0,1,0],[0,3,0],[1,3,0],[1,1,0],
+	                                          [4,1,0],[4,4,0],[2,4,0],[0,4,0],[0,6,0],[0,8,0]]);
+	
+	// const A = new Polygon3D(null, [[,],[,],[,],[,]])
+	Test.add('Polygon3D merge',(ts) => {
+	  // const poly = A.merge(B).merge(J);
+	  const AB = A.merge(B);
+	  const IF = [F,I];
+	  Polygon3D.merge(IF);
+	  const ABCDEFGHIJ = [A,B,C,D,E,F,G,H,I,J];
+	  ABCDEFGHIJ.shuffle();
+	  Polygon3D.merge(ABCDEFGHIJ);
+	
+	  ts.assertTrue(polyAB.equals(AB), 'merge or equals is malfunctioning');
+	  ts.assertTrue(AB.equals(polyAB), 'merge or equals is malfunctioning');
+	  ts.assertFalse(polyAB.equals(undefined));
+	  ts.assertFalse(polyAB.equals(A));
+	  ts.assertTrue(IF[0].equals(polyIF));
+	  ts.assertTrue(polyIF.equals(IF[0]));
+	  ts.assertTrue(ABCDEFGHIJ.length === 2);
+	  // This use to be part of the merge/build process until errors were found.
+	  // TODO: Repair removeLoops... reinstate its use on all polygons.
+	  ABCDEFGHIJ[0].removeLoops();
+	  ABCDEFGHIJ[1].removeLoops();
+	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]) || polyABCDEGHJ.equals(ABCDEFGHIJ[1]));
+	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]) || polyIF.equals(ABCDEFGHIJ[0]))
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/test/tests/imposter.js',
+function (require, exports, module) {
+	
+const Test = require('../../../../public/js/utils/test/test').Test;
+	
+	class JustTryAndCopyMe {
+	  constructor() {
+	    Object.getSet(this, {one: 1, two: 2, override1: 'unchanged1'});
+	    this.three = 3;
+	    this.four = 4;
+	    this.override2 = 'unchanged2'
+	    this.array = [1,2,3,4];
+	    this.object = {one: 1, two: 2, three: 3};
+	
+	    this.equals = () => false;
+	  }
+	}
+	
+	Test.add('Imposter: fooled me',(ts) => {
+	  const orig = new JustTryAndCopyMe();
+	  const imposter = new Imposter(orig, {override1: () => 'changed1', override2: 'changed2'});
+	  ts.assertTrue(imposter instanceof JustTryAndCopyMe);
+	  ts.assertEquals(orig.one(), imposter.one());
+	  ts.assertEquals(orig.two(), imposter.two());
+	  ts.assertEquals(orig.three, imposter.three);
+	  ts.assertEquals(orig.four, imposter.four);
+	
+	  ts.assertEquals(orig.one(4), imposter.one());
+	  ts.assertEquals(orig.two(3), imposter.two());
+	  orig.three = 7;
+	  ts.assertEquals(orig.three, imposter.three);
+	  orig.four = 8;
+	  ts.assertEquals(orig.four, imposter.four);
+	
+	  ts.assertEquals(imposter.one(2), orig.one());
+	  ts.assertEquals(imposter.two(1), orig.two());
+	  imposter.three = 5;
+	  ts.assertEquals(orig.three, imposter.three);
+	  imposter.four = 0;
+	  ts.assertEquals(orig.four, imposter.four);
+	
+	  ts.assertEquals(orig.array, imposter.array);
+	  ts.assertEquals(orig.object, imposter.object);
+	  orig.array[0] = 44;
+	  imposter.object.one = 66;
+	  ts.assertEquals(orig.array[0], imposter.array[0]);
+	  ts.assertEquals(orig.object.one, imposter.object.one);
+	
+	  ts.assertFalse(orig === imposter);
+	  ts.assertFalse(orig.equals(imposter));
+	  ts.assertTrue(imposter.equals(orig));
+	
+	  // Test initial values
+	  ts.assertEquals(imposter.override1(), 'changed1');
+	  ts.assertEquals(imposter.override2, 'changed2');
+	  ts.assertEquals(orig.override1(), 'unchanged1');
+	  ts.assertEquals(orig.override2, 'unchanged2');
+	
+	  // Test function changes
+	  ts.assertEquals(imposter.override1('changed3'), 'changed1');
+	  ts.assertEquals(imposter.override2, 'changed2');
+	  ts.assertEquals(orig.override1('unchanged3'), 'unchanged3');
+	  ts.assertEquals(orig.override2, 'unchanged2');
+	
+	  // Test field assinments
+	  imposter.override2 = 'changed4';
+	  ts.assertEquals(imposter.override2, 'changed4');
+	  ts.assertEquals(imposter.override1(), 'changed1');
+	  orig.override2 = 'unchanged5';
+	  ts.assertEquals(orig.override2, 'unchanged5');
+	  ts.assertEquals(orig.override1(), 'unchanged3');
+	
+	  ts.success();
+	});
+	
+});
+
+
 RequireJS.addFunction('./services/cabinet/test/tests/cabinet.js',
 function (require, exports, module) {
 	
@@ -41878,357 +42779,85 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 });
 
 
-RequireJS.addFunction('./services/cabinet/test/tests/RelationInput.js',
-function (require, exports, module) {
-	
-
-	
-	const RelationInput = require('../../../../public/js/utils/input/styles/select/relation.js');
-	
-	
-	
-	Test.add('RelationInput: Equal',(ts) => {
-	  ts.assertEquals(RelationInput.eval('Equal', [1,4,3,5,6,4,8,9], 6), 4);
-	  ts.assertEquals(RelationInput.eval('equal', [1,4,3,5,6,4,8,9], 7), undefined);
-	  ts.assertEquals(RelationInput.eval('EQual', [1,4,3,5,6,4,8,9], 1), 0);
-	  ts.assertEquals(RelationInput.eval('EqUAL', [1,4,3,5,6,4,8,9], 9), 7);
-	  ts.assertEquals(RelationInput.eval('EquaL', [1,4,3,5,6,4,8,9], 4), 1);
-	  ts.assertEquals(RelationInput.eval('EqUal', [1,4,3,5,6,undefined,8,9], 8), 6);
-	  ts.success();
-	});
-	
-	
-	Test.add('RelationInput: Less Than',(ts) => {
-	  ts.assertEquals(RelationInput.eval('Less ThAn', [1,4,3,5,6,4,8,9], 6), 3);
-	  ts.assertEquals(RelationInput.eval('LeSs_Than', [1,4,3,5,6,4,8,9], 1), undefined);
-	  ts.assertEquals(RelationInput.eval('LeSS Than', [1,4,3,5,6,4,8,9], 200), 7);
-	  ts.assertEquals(RelationInput.eval('less than', [1,4,3,5,6,4,8,9], 9), 6);
-	  ts.assertEquals(RelationInput.eval('Less Than', [1,4,3,5,6,4,8,9], -2), undefined);
-	  ts.assertEquals(RelationInput.eval('Less Than', [1,4,3,5,6,undefined,8,9], 8), 4);
-	  ts.success();
-	});
-	
-	Test.add('RelationInput: Greater Than',(ts) => {
-	  ts.assertEquals(RelationInput.eval('Greater ThAn', [1,4,3,5,6,4,8,9], 6), 6);
-	  ts.assertEquals(RelationInput.eval('Greater_Than', [1,4,3,5,6,4,8,9], 1), 2);
-	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,4,8,9], 200), undefined);
-	  ts.assertEquals(RelationInput.eval('Greater than', [1,4,3,5,6,4,8,9], 9), undefined);
-	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,4,8,9], -2), 0);
-	  ts.assertEquals(RelationInput.eval('Greater Than', [1,4,3,5,6,undefined,8,9], 8), 7);
-	  ts.success();
-	});
-	
-	Test.add('RelationInput: Less Than Or Equal',(ts) => {
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 6), 4);
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 2), 0);
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 200), 7);
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], 9), 7);
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,4,8,9], -2), undefined);
-	  ts.assertEquals(RelationInput.eval('Less Than Or Equal', [1,4,3,5,6,undefined,8,9], 7.5), 4);
-	  ts.success();
-	});
-	
-	Test.add('RelationInput: Greater Than Or Equal',(ts) => {
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 6), 4);
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 1.01), 2);
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 200), undefined);
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], 9), 7);
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,4,8,9], -2), 0);
-	  ts.assertEquals(RelationInput.eval('Greater Than Or Equal', [1,4,3,5,6,undefined,8,9], 8), 6);
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/test/tests/polygon-merge.js',
+RequireJS.addFunction('./services/cabinet/test/tests/line2d.js',
 function (require, exports, module) {
 	
 const Test = require('../../../../public/js/utils/test/test').Test;
-	const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
-	
-	
-	const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]].reverse())
-	const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
-	const A = new Polygon3D([[0,0,0],[0,1,0],[1,1,0],[4,1,0],[4,0,0]]);
-	const D = new Polygon3D([[0,6,0],[0,8,0],[3,8,0],[3,7,0],[3,6,0],[2,6,0]]);
-	const E = new Polygon3D([[3,8,0],[1,10,0],[0,8,0]]);
-	const F = new Polygon3D([[6,7,0],[6,8,0],[6,10,0],[8,10,0],[8,7,0]]);
-	const G = new Polygon3D([[4,7,0],[4,6,0],[3,6,0],[3,7,0]]);
-	const H = new Polygon3D([[6,4,0],[4,4,0],[2,4,0],[2,6,0],[3,6,0],[4,6,0],[6,6,0]]);
-	const I = new Polygon3D([[4,7,0],[4,8,0],[6,8,0],[6,7,0]].reverse());
-	const J = new Polygon3D([[4,0,0],[4,1,0],[4,4,0],[6,4,0],[6,0,0]])
-	
-	const polyAB = new Polygon3D([[1,3,0],[0,3,0],[0,1,0],[0,0,0],[4,0,0],[4,1,0],[1,1,0]]);
-	const polyIF = new Polygon3D([[6,10,0],[6,8,0],[4,8,0],[4,7,0],[6,7,0],[8,7,0],[8,10,0]]);
-	const polyABCDEGHJ = new Polygon3D([[1,10,0],[3,8,0],[3,7,0],[4,7,0],[4,6,0],[6,6,0],[6,4,0],
-	                                          [6,0,0],[4,0,0],[0,0,0],[0,1,0],[0,3,0],[1,3,0],[1,1,0],
-	                                          [4,1,0],[4,4,0],[2,4,0],[0,4,0],[0,6,0],[0,8,0]]);
-	
-	// const A = new Polygon3D(null, [[,],[,],[,],[,]])
-	Test.add('Polygon3D merge',(ts) => {
-	  // const poly = A.merge(B).merge(J);
-	  const AB = A.merge(B);
-	  const IF = [F,I];
-	  Polygon3D.merge(IF);
-	  const ABCDEFGHIJ = [A,B,C,D,E,F,G,H,I,J];
-	  ABCDEFGHIJ.shuffle();
-	  Polygon3D.merge(ABCDEFGHIJ);
-	
-	  ts.assertTrue(polyAB.equals(AB), 'merge or equals is malfunctioning');
-	  ts.assertTrue(AB.equals(polyAB), 'merge or equals is malfunctioning');
-	  ts.assertFalse(polyAB.equals(undefined));
-	  ts.assertFalse(polyAB.equals(A));
-	  ts.assertTrue(IF[0].equals(polyIF));
-	  ts.assertTrue(polyIF.equals(IF[0]));
-	  ts.assertTrue(ABCDEFGHIJ.length === 2);
-	  // This use to be part of the merge/build process until errors were found.
-	  // TODO: Repair removeLoops... reinstate its use on all polygons.
-	  ABCDEFGHIJ[0].removeLoops();
-	  ABCDEFGHIJ[1].removeLoops();
-	  ts.assertTrue(polyABCDEGHJ.equals(ABCDEFGHIJ[0]) || polyABCDEGHJ.equals(ABCDEFGHIJ[1]));
-	  ts.assertTrue(polyIF.equals(ABCDEFGHIJ[1]) || polyIF.equals(ABCDEFGHIJ[0]))
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/test/tests/line-consolidate.js',
-function (require, exports, module) {
-	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 	const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
-	const Line3D = require('../../app-src/three-d/objects/line.js');
 	const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
-	const approximate = require('../../../../public/js/utils/approximate.js');
-	
-	const extraLinePoly = new Polygon2d([[0,0],[0,1],[0,2],[0,3],
-	                [1,3],[1,4],[0,4],[0,5],[0,6],[1,6],[2,6],[3,6],
-	                [3,5],[4,5],[5,4],[6,3],[5,3],[5,2],[6,2],[6,1],
-	                [6,0],[5,0],[4,0],[4,-1],[4,-2],[1,0]]);
-	
-	const consisePoly = new Polygon2d([[0,0],[0,3],[1,3],[1,4],
-	                [0,4],[0,6],[3,6],[3,5],[4,5],[6,3],[5,3],[5,2],
-	                [6,2],[6,0],[4,0],[4,-2],[1,0]]);
-	
-	const root2 = Math.sqrt(2);
+	const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 	
 	
-	// const A = new Polygon3D([[,],[,],[,],[,]])
-	Test.add('Line2d: consolidate',(ts) => {
-	  const lines = Polygon2d.lines(extraLinePoly);
-	  ts.assertTrue(lines.length === consisePoly.lines().length);
+	const vertices = [
+	  null, // Didnt zero index my drawing;
+	  new Vertex2d(0,0), // 1
+	  new Vertex2d(0,1), // 2
+	  new Vertex2d(1,1), // 3
+	  new Vertex2d(2,1), // 4
+	  new Vertex2d(2,4), // 5
+	  new Vertex2d(1,4), // 6
+	  new Vertex2d(0,4), // 7
+	  new Vertex2d(0,2), // 8
+	  new Vertex2d(-1,2), // 9
+	  new Vertex2d(-1,5), // 10
+	  new Vertex2d(1,5), // 11
+	  new Vertex2d(3,5), // 12
+	  new Vertex2d(3,3), // 13
+	  new Vertex2d(3,-1), // 14
+	  new Vertex2d(2,-1), // 15
+	  new Vertex2d(2,0) // 16
+	];
+	
+	const parimeter = new Polygon2d(vertices.slice(1));
+	
+	const getLine = (index1, index2) => new Line2d(vertices[index1],vertices[index2]);
+	const noise = [
+	  getLine(1,3),
+	  getLine(2,16),
+	  getLine(3,16),
+	  getLine(4,16),
+	  getLine(16,14),
+	  getLine(16,13),
+	  getLine(13,15),
+	  getLine(4,13),
+	  getLine(13,5),
+	  getLine(5,12),
+	  // getLine(11,5),
+	  // getLine(6,11),
+	  // getLine(7,11),
+	  getLine(10,7),
+	  getLine(10,8),
+	  getLine(9,7)
+	];
+	
+	
+	Test.add('Line2d parimeter',(ts) => {
+	  ts.assertEquals(parimeter.area(), 13);
 	  ts.success();
 	});
 	
-	
-	Test.add('Line2d: perpendicular', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:1, y:0});
-	  let perp = line.perpendicular(1, null, true);
-	  let expectedMidpoint = new Vertex2d({x: .5, y: 0});
-	  let expectedLine = new Line2d({x: .5, y: .5}, {x: .5, y: -.5});
-	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(-2, null, true);
-	  expectedLine = new Line2d({x: .5, y: 1}, {x: .5, y: -1});
-	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(1);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 1});
-	  expectedMidpoint = new Vertex2d({x: .5, y: .5});
-	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(-2);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -2});
-	  expectedMidpoint = new Vertex2d({x: .5, y: -1});
-	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(-1);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: -1});
-	  expectedMidpoint = new Vertex2d({x: .5, y: -.5});
-	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  perp = line.perpendicular(2);
-	  expectedLine = new Line2d({x: .5, y: 0}, {x: .5, y: 2});
-	  expectedMidpoint = new Vertex2d({x: .5, y: 1});
-	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:0,y:0}, {x:2, y:2});
-	  perp = line.perpendicular(root2);
-	  expectedLine = new Line2d({x: 1, y: 1}, {x: 0, y: 2});
-	  expectedMidpoint = new Vertex2d({x: .5, y: 1.5});
-	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:0,y:0}, {x:2, y:2});
-	  perp = line.perpendicular(-1 * root2);
-	  expectedLine = new Line2d({x: 1, y: 1}, {x: 2, y: 0});
-	  expectedMidpoint = new Vertex2d({x: 1.5, y: .5});
-	  ts.assertTrue(perp.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${perp.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(perp.equals(expectedLine),
-	        `Line not equal: ${perp} !== ${expectedLine}`);
-	
+	Test.add('Line2d parimeterArea',(ts) => {
+	  let p = Polygon2d.toParimeter(parimeter.lines(), undefined, true);
+	  ts.assertEquals(p.area(), 13);
+	  ts.assertTrue(p.equals(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
+	  let keepGoing = false;
+	  while (keepGoing) {
+	    noise.shuffle();
+	    const randNoise = noise.slice(0, Math.floor(Math.random() * noise.length));
+	    let lines = parimeter.lines().concat(randNoise);
+	    lines.shuffle();
+	    p = Polygon2d.toParimeter(lines);
+	    try {
+	      ts.assertEquals(p.area(), 13);
+	      ts.assertTrue(p.equals(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
+	    } catch (e) {
+	      console.log('error');
+	      Polygon2d.toParimeter(lines, undefined, true);
+	      Polygon2d.toParimeter(lines, undefined, true);
+	    }
+	  }
 	  ts.success();
 	});
-	
-	Test.add('Line2d: parrelle', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:2, y:2});
-	  let expectedLine = new Line2d({x: -1, y: 1}, {x: 1, y: 3});
-	  let expectedMidpoint = new Vertex2d({x: 0, y: 2});
-	  let parrelle = line.parrelle(-1 * root2);
-	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  expectedLine = new Line2d({x: 1, y: -1}, {x: 3, y: 1});
-	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
-	  parrelle = line.parrelle(root2);
-	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:2, y:2}, {x:0,y:0});
-	  expectedLine = new Line2d({x: 1, y: 3}, {x: -1, y: 1});
-	  expectedMidpoint = new Vertex2d({x: 0, y: 2});
-	  parrelle = line.parrelle(root2);
-	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  expectedLine = new Line2d({x: 3, y: 1}, {x: 1, y: -1});
-	  expectedMidpoint = new Vertex2d({x: 2, y: 0});
-	  parrelle = line.parrelle(-1 * root2);
-	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:3,y:1}, {x:8, y:4});
-	  expectedMidpoint = new Vertex2d({x: -.5, y: 12.5});
-	  expectedLine = new Line2d({x: -3, y: 11}, {x: 2, y: 14});
-	  parrelle = line.parrelle(-1 * expectedMidpoint.distance(line.midpoint()));
-	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  expectedMidpoint = new Vertex2d({x: 11.5, y: -7.5});
-	  expectedLine = new Line2d({x: 9, y: -9}, {x: 14, y: -6});
-	  parrelle = line.parrelle(expectedMidpoint.distance(line.midpoint()));
-	  ts.assertTrue(parrelle.midpoint().equals(expectedMidpoint),
-	        `Midpoint not equal: ${parrelle.midpoint()} !== ${expectedMidpoint}`);
-	  ts.assertTrue(parrelle.equals(expectedLine),
-	        `Line not equal: ${parrelle} !== ${expectedLine}`);
-	
-	  ts.success();
-	});
-	
-	Test.add('Line2d: trimmed', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:0, y:8});
-	
-	  let trimmed = line.trimmed(.5);
-	  let expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 8});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(-.5);
-	  expectedLine = new Line2d({x: 0, y: 0}, {x: 0, y: 7.5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(.5, true);
-	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(-.5, true);
-	  expectedLine = new Line2d({x: 0, y: .5}, {x: 0, y: 7.5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  line = new Line2d({x:-4,y:-8}, {x:0, y:-4});
-	  trimmed = line.trimmed(root2, true);
-	  expectedLine = new Line2d({x: -3, y: -7}, {x: -1, y: -5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(root2);
-	  expectedLine = new Line2d({x: -3, y: -7}, {x: 0, y: -4});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  trimmed = line.trimmed(-1 * root2);
-	  expectedLine = new Line2d({x: -4, y: -8}, {x: -1, y: -5});
-	  ts.assertTrue(trimmed.equals(expectedLine),
-	        `Line not equal: ${trimmed} !== ${expectedLine}`);
-	
-	  ts.success();
-	});
-	
-	Test.add('Line2d: thetaBetween', (ts) => {
-	  let line = new Line2d({x:0,y:0}, {x:0, y:10});
-	  let line2 = new Line2d({x:0,y:10}, {x:10, y:20});
-	  let line3 = new Line2d({x:10,y:20}, {x:10, y:30})
-	
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 135);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line3))), 225);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 225);
-	  ts.assertEquals(approximate(Math.toDegrees(line3.thetaBetween(line2))), 135);
-	
-	  let origin = {x:3, y:22};
-	  line = Line2d.startAndTheta(origin, Math.toRadians(16), 10);
-	  line2 = Line2d.startAndTheta(origin, Math.toRadians(251), 10);
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
-	
-	  line2 = line2.negitive();
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
-	
-	  line = line.negitive();
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
-	
-	  line2 = line2.negitive();
-	  ts.assertEquals(approximate(Math.toDegrees(line.thetaBetween(line2))), 235);
-	  ts.assertEquals(approximate(Math.toDegrees(line2.thetaBetween(line))), 125);
-	
-	  ts.success();
-	});
-	
-	// Test.add('Line3D: intersects', (ts) => {
-	//   const line1 = new Line3D({x: 10, y: 10, z: 10}, {x: 5, y: 5, z: 5});
-	//   const line2 = new Line3D({x: 10, y: 10, z: -10}, {x: 5, y: 5, z: -5});
-	//   let intersection = line1.intersects(line2);
-	//   ts.assertTrue(intersection.equals({x: 0, y:0, z:0}));
-	//   ts.success();
-	// });
 	
 });
 
@@ -42407,167 +43036,6 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 	  const xyPlane = Plane.fromPointNormal({x: 12, y: 41, z: 0}, new Vector3D(1, 1, 1));
 	  const yzPlane = Plane.fromPointNormal({x: 0, y: 41, z: 1}, new Vector3D(0, 3, -1));
 	  const xzPlane = Plane.fromPointNormal({x: 12, y: 0, z: 50}, new Vector3D(5, 0, 13));
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/test/tests/imposter.js',
-function (require, exports, module) {
-	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	
-	class JustTryAndCopyMe {
-	  constructor() {
-	    Object.getSet(this, {one: 1, two: 2, override1: 'unchanged1'});
-	    this.three = 3;
-	    this.four = 4;
-	    this.override2 = 'unchanged2'
-	    this.array = [1,2,3,4];
-	    this.object = {one: 1, two: 2, three: 3};
-	
-	    this.equals = () => false;
-	  }
-	}
-	
-	Test.add('Imposter: fooled me',(ts) => {
-	  const orig = new JustTryAndCopyMe();
-	  const imposter = new Imposter(orig, {override1: () => 'changed1', override2: 'changed2'});
-	  ts.assertTrue(imposter instanceof JustTryAndCopyMe);
-	  ts.assertEquals(orig.one(), imposter.one());
-	  ts.assertEquals(orig.two(), imposter.two());
-	  ts.assertEquals(orig.three, imposter.three);
-	  ts.assertEquals(orig.four, imposter.four);
-	
-	  ts.assertEquals(orig.one(4), imposter.one());
-	  ts.assertEquals(orig.two(3), imposter.two());
-	  orig.three = 7;
-	  ts.assertEquals(orig.three, imposter.three);
-	  orig.four = 8;
-	  ts.assertEquals(orig.four, imposter.four);
-	
-	  ts.assertEquals(imposter.one(2), orig.one());
-	  ts.assertEquals(imposter.two(1), orig.two());
-	  imposter.three = 5;
-	  ts.assertEquals(orig.three, imposter.three);
-	  imposter.four = 0;
-	  ts.assertEquals(orig.four, imposter.four);
-	
-	  ts.assertEquals(orig.array, imposter.array);
-	  ts.assertEquals(orig.object, imposter.object);
-	  orig.array[0] = 44;
-	  imposter.object.one = 66;
-	  ts.assertEquals(orig.array[0], imposter.array[0]);
-	  ts.assertEquals(orig.object.one, imposter.object.one);
-	
-	  ts.assertFalse(orig === imposter);
-	  ts.assertFalse(orig.equals(imposter));
-	  ts.assertTrue(imposter.equals(orig));
-	
-	  // Test initial values
-	  ts.assertEquals(imposter.override1(), 'changed1');
-	  ts.assertEquals(imposter.override2, 'changed2');
-	  ts.assertEquals(orig.override1(), 'unchanged1');
-	  ts.assertEquals(orig.override2, 'unchanged2');
-	
-	  // Test function changes
-	  ts.assertEquals(imposter.override1('changed3'), 'changed1');
-	  ts.assertEquals(imposter.override2, 'changed2');
-	  ts.assertEquals(orig.override1('unchanged3'), 'unchanged3');
-	  ts.assertEquals(orig.override2, 'unchanged2');
-	
-	  // Test field assinments
-	  imposter.override2 = 'changed4';
-	  ts.assertEquals(imposter.override2, 'changed4');
-	  ts.assertEquals(imposter.override1(), 'changed1');
-	  orig.override2 = 'unchanged5';
-	  ts.assertEquals(orig.override2, 'unchanged5');
-	  ts.assertEquals(orig.override1(), 'unchanged3');
-	
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('./services/cabinet/test/tests/line2d.js',
-function (require, exports, module) {
-	
-const Test = require('../../../../public/js/utils/test/test').Test;
-	const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
-	const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
-	const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
-	
-	
-	const vertices = [
-	  null, // Didnt zero index my drawing;
-	  new Vertex2d(0,0), // 1
-	  new Vertex2d(0,1), // 2
-	  new Vertex2d(1,1), // 3
-	  new Vertex2d(2,1), // 4
-	  new Vertex2d(2,4), // 5
-	  new Vertex2d(1,4), // 6
-	  new Vertex2d(0,4), // 7
-	  new Vertex2d(0,2), // 8
-	  new Vertex2d(-1,2), // 9
-	  new Vertex2d(-1,5), // 10
-	  new Vertex2d(1,5), // 11
-	  new Vertex2d(3,5), // 12
-	  new Vertex2d(3,3), // 13
-	  new Vertex2d(3,-1), // 14
-	  new Vertex2d(2,-1), // 15
-	  new Vertex2d(2,0) // 16
-	];
-	
-	const parimeter = new Polygon2d(vertices.slice(1));
-	
-	const getLine = (index1, index2) => new Line2d(vertices[index1],vertices[index2]);
-	const noise = [
-	  getLine(1,3),
-	  getLine(2,16),
-	  getLine(3,16),
-	  getLine(4,16),
-	  getLine(16,14),
-	  getLine(16,13),
-	  getLine(13,15),
-	  getLine(4,13),
-	  getLine(13,5),
-	  getLine(5,12),
-	  // getLine(11,5),
-	  // getLine(6,11),
-	  // getLine(7,11),
-	  getLine(10,7),
-	  getLine(10,8),
-	  getLine(9,7)
-	];
-	
-	
-	Test.add('Line2d parimeter',(ts) => {
-	  ts.assertEquals(parimeter.area(), 13);
-	  ts.success();
-	});
-	
-	Test.add('Line2d parimeterArea',(ts) => {
-	  let p = Polygon2d.toParimeter(parimeter.lines(), undefined, true);
-	  ts.assertEquals(p.area(), 13);
-	  ts.assertTrue(p.equals(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
-	  let keepGoing = false;
-	  while (keepGoing) {
-	    noise.shuffle();
-	    const randNoise = noise.slice(0, Math.floor(Math.random() * noise.length));
-	    let lines = parimeter.lines().concat(randNoise);
-	    lines.shuffle();
-	    p = Polygon2d.toParimeter(lines);
-	    try {
-	      ts.assertEquals(p.area(), 13);
-	      ts.assertTrue(p.equals(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
-	    } catch (e) {
-	      console.log('error');
-	      Polygon2d.toParimeter(lines, undefined, true);
-	      Polygon2d.toParimeter(lines, undefined, true);
-	    }
-	  }
 	  ts.success();
 	});
 	

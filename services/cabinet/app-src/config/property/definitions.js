@@ -36,8 +36,8 @@ defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMP
 defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US});
 defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US});
 defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US});
-defs.bid = new Property('bid', 'Bottom Inset Depth', {value: 5, notMetric: IMPERIAL_US});
-defs.tid = new Property('tid', 'Top Inset Depth', {value: 3, notMetric: IMPERIAL_US});
+defs.bid = new Property('bid', 'Bottom Inset Depth', {value: 0, notMetric: IMPERIAL_US});
+defs.tid = new Property('tid', 'Top Inset Depth', {value: 0, notMetric: IMPERIAL_US});
 
 // Cabinet.AngledBackCorner
 defs.rbo = new Property('bo', 'Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US});

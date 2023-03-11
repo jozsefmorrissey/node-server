@@ -201,9 +201,9 @@ class RequireJS {
     const nameReg = /^(.*)\/(.*)$/;
     function guessFilePath (wrongPath, currFile) {
       const guesses = [];
-      const fileName = wrongPath.replace(nameReg, '$2');
+      const fileName = wrongPath.replace(nameReg, '$2').toLowerCase();
       Object.keys(scripts).forEach((path) => {
-        const name = path.replace(nameReg, '$2');
+        const name = path.replace(nameReg, '$2').toLowerCase();
         if (name === fileName) {
           guesses.push(determinRelitivePath(currFile, path));
         }
