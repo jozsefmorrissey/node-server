@@ -3,6 +3,12 @@ const Vector3D = require('./vector');
 const Vertex3D = require('./vertex');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
 const Plane = require('./plane');
+const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(.00000001).within;
+
+const zero = (val) => {
+  if (withinTol(val, 0)) return 0
+  return val;
+}
 
 // TODO: It would be nice if this[0] === this.startvertex && this[1] === endVertex
 class Line3D {
@@ -54,12 +60,12 @@ class Line3D {
           let offset = ((i + 1) % 3);
           coord = String.fromCharCode(offset + 120);
           coef = String.fromCharCode(offset + 97);
-          returnValue[coef] = (this.endVertex[coord] - this.startVertex[coord]) / t;
+          returnValue[coef] = zero((this.endVertex[coord] - this.startVertex[coord]) / t);
 
           offset = ((i + 2) % 3);
           coord = String.fromCharCode(offset + 120);
           coef = String.fromCharCode(offset + 97);
-          returnValue[coef] = (this.endVertex[coord] - this.startVertex[coord]) / t;
+          returnValue[coef] = zero((this.endVertex[coord] - this.startVertex[coord]) / t);
           break;
         }
       }

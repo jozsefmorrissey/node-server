@@ -11,6 +11,7 @@ const Group = require('../../group');
 const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line');
 const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex');
 const Vertex3D = require('../../../three-d/objects/vertex.js');
+const Line3D = require('../../../three-d/objects/line.js');
 const CSG = require('../../../../public/js/3d-modeling/csg.js');
 const AutoToekick = require('./auto/toekick.js');
 
@@ -65,6 +66,53 @@ class Cabinet extends Assembly {
         return subs.concat(toeKick);
       }
       return subs;
+    }
+
+    this.partCenter = () => {
+      const centers = [];
+      for (let index = 0; index < this.subassemblies.length; index++) {
+        const assem = this.subassemblies[index];
+        if (!(assem instanceof SectionProperties))
+          centers.push(assem.position().center());
+      }
+      return Vertex3D.center(...centers);
+    }
+
+    // TODO: ???? It is possible to have inner/outer intersections from
+    //       different parts..... not suure its worth the extra calculations
+    this.planeIntersection = (line) => {
+      const center = this.partCenter();
+      const vector = line.vector();
+      let closest = {};
+      const subAssems = Object.values(this.subassemblies);
+      for (let index = 0; index < subAssems.length; index++) {
+        const assem = subAssems[index];
+        if ((typeof assem.position) === 'function') {
+          const biPoly = assem.position().toBiPolygon();
+          const faces = biPoly.closestOrder(center);
+          const plane = faces[0].toPlane();
+          const intersection = plane.lineIntersection(line);
+          if (intersection) {
+            const dist = line.midpoint().distance(intersection);
+            const intersectLine = new Line3D(line.startVertex, intersection);
+            const intersectVector = intersectLine.vector();
+            const direction = vector.sameDirection(intersectVector) ? 'positive' : 'negitive';
+            if (closest[direction] === undefined || closest[direction].inner.dist > dist) {
+              const oplane = faces[1].toPlane();
+              plane.lineIntersection(line)
+              const ointer = oplane.lineIntersection(line);
+              const odist = ointer.distance(line.midpoint());
+              closest[direction] = {assem, inner: {dist, plane, intersection},
+              outer: {dist: odist, plane: oplane, intersection: ointer}};
+            };
+          }
+        }
+      }
+      try{
+        console.log('positive', closest.positive.assem.partCode(), closest.positive.inner.dist, closest.positive.outer.dist);
+        console.log('negitive', closest.negitive.assem.partCode(), closest.negitive.inner.dist, closest.negitive.outer.dist, '\n');
+      }catch(e){}
+      return closest;
     }
 
     function bordersByIds(borderIds) {

@@ -43,7 +43,7 @@ class BiPolygon {
               [front, back] : [back, front];
     }
 
-    this.closestOrder = (vertex) => this.furthesOrder(vertex).reverse();
+    this.closestOrder = (vertex) => this.furthestOrder(vertex).reverse();
 
     this.translate = (vector) => {
       for (let index = 0; index < face1.length; index++) {

@@ -1,6 +1,10 @@
 
 const Approximate = require('../../../../../public/js/utils/approximate.js');
-const within = require('../../../../../public/js/utils/tolerance.js').within(.0001);
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const within = Tolerance.within(.0001);
+
+const withinTight = Tolerance.within(.000000001);
+const isZero = (val) => withinTight(val, 0);
 
 function findRowColumnCount (array) {
   let rows = array.length;
@@ -100,6 +104,117 @@ class Matrix extends Array {
       return this.remove(0, index);
     }
 
+    this.toArray = () => JSON.copy(this);
+
+    const nonZeroIndex = (cIndex, matrix, startRowIndex) => {
+      for (let index = startRowIndex; index < rows; index++) {
+        if (!isZero(matrix[index][cIndex])) return index;
+      }
+      return null;
+    }
+
+    this.fixedColumns = () => {
+      const fixed = [];
+      let found = false;
+      for (let cIndex = 0; cIndex < columns; cIndex++) {
+        let firstVal = this[0][cIndex];
+        let isFixed = true;
+        for (let rIndex = 1; isFixed && rIndex < rows; rIndex++) {
+          isFixed = within(firstVal, this[rIndex][cIndex]);
+        }
+        if (isFixed === true) found = true;
+        fixed[cIndex] = isFixed;
+      }
+      if (found) return fixed;
+      return null;
+    }
+
+    this.square = () => this.rows() === this.columns();
+
+    this.solvable = () => {
+      const uniqRows = this.uniqueRows();
+      if (!uniqRows.square()) return false;
+      const rref = this.rowEchelon(true);
+      return rref.equals(Matrix.identity(uniqRows.rows()));
+    }
+
+    this.uniqueRows = () => {
+      const unique = [];
+      for (let index = 0; index < rows; index++) {
+        let isUnique = true;
+        for (let uRow = 0; uRow < unique.length; uRow++) {
+          let same = true;
+          for (let uCol = 0; uCol < columns; uCol++) {
+            if (!within(unique[uRow][uCol], this[index][uCol]))
+              same = false;
+          }
+          if (same) isUnique = false;
+        }
+        if (isUnique)  unique.push(Array.from(this[index]));
+      }
+      return new Matrix(unique);
+    }
+
+    function eliminateConfusion(matrix) {
+      for(let cIndex = 0; matrix.rows() > matrix.columns() && cIndex < matrix.columns(); cIndex++) {
+        let values = {};
+        for(let rIndex = 0; rIndex < matrix.rows(); rIndex++) {
+          if (values[matrix[rIndex][cIndex]] !== undefined) {
+            matrix = matrix.remove(rIndex);
+            break;
+          } else values[matrix[rIndex][cIndex]] = true;
+        }
+      }
+      while(matrix.rows() > matrix.columns()) matrix = matrix.remove(matrix.rows()-1);
+      return matrix;
+    }
+
+    this.properDemension = () => {
+      const info = {fixedValues: []};
+      let rowReduced = this.uniqueRows();
+      const fixedColumns = rowReduced.fixedColumns();
+      for (let index = columns; fixedColumns && index >= 0; index--) {
+         if (fixedColumns[index]) {
+           info.fixedValues[index] = rowReduced[0][index];
+           rowReduced = rowReduced.remove(null, index);
+         }
+      }
+      info.matrix = eliminateConfusion(rowReduced);
+      return info;
+    }
+
+    this.rowEchelon = (reduced) => {
+      const echelon = this.toArray();
+      let pivot = 0;
+      for (let rIndex = 0; pivot < columns && rIndex < rows; rIndex++) {
+        const eRow = echelon[rIndex];
+        const firstValidIndex = nonZeroIndex(pivot, echelon, rIndex);
+        if (firstValidIndex !== rIndex) {
+          if (firstValidIndex === null) pivot++;
+          else echelon.swap(rIndex, firstValidIndex);
+          rIndex--;
+        } else {
+          let startIndex = rIndex;
+          if (reduced) {
+            startIndex = 0;
+            eRow.scale(1/eRow[pivot]);
+          }
+          const pivotValue = eRow[pivot];
+          for (let r2Index = startIndex; r2Index < rows; r2Index++) {
+            if (r2Index !== rIndex) {
+              const row = echelon[r2Index];
+              if (row[pivot] !== 0) {
+                const pivotRatio = row[pivot] / -pivotValue;
+                row.add((val, index) => pivotRatio * eRow[index]);
+              }
+            }
+          }
+        }
+      }
+
+      return new Matrix(echelon);
+    }
+
     const bigEnough = (val) => Math.abs(val) > .00000001;
     this.consise = () => {
       const removedColumns = [];
@@ -122,7 +237,7 @@ class Matrix extends Array {
         for (let i = 0; i < keepRows.length; i++) {
           const kRow = keepRows[i];
           for (let j = 0; j < kRow.length; j++) {
-            if (!changes[j] && kRow[j] != row[j]) {
+            if (!changes[j] && !within(kRow[j], row[j])) {
               changes[j] = true;
               keepRows.push(row);
               return;
@@ -152,7 +267,7 @@ class Matrix extends Array {
       return sum;
     }
 
-    this.solve = (answer) => {
+    this.solve2 = (answer) => {
       const consiseObj = this.consise();
       const consiseMatrix = consiseObj.matrix;
       const removedColumns = consiseObj.removedColumns;
@@ -167,6 +282,28 @@ class Matrix extends Array {
           const matrix = consiseMatrix.copy()
           matrix.replaceColumn(consiseIndex++, answer);
           const matrixDeterminate = matrix.determinate();
+          value = matrixDeterminate / determinate;
+        }
+        solution[j][0] = value;
+      }
+      return solution;
+    }
+
+    this.solve = (answer) => {
+      const properDemension = this.properDemension();
+      const matrix = properDemension.matrix;
+      const fixedValues = properDemension.fixedValues;
+      const solution = new Matrix(null, columns, 1);
+      answer ||= new Array(columns).fill(0);
+      let consiseIndex = 0;
+      const determinate = matrix.determinate();
+      for (let j = 0; j < columns; j++) {
+        let value;
+        if (fixedValues[j] !== undefined) value = fixedValues[j];//new Number(fixedValues[j]);
+        else {
+          const detMat = matrix.copy()
+          detMat.replaceColumn(consiseIndex++, answer);
+          const matrixDeterminate = detMat.determinate();
           value = matrixDeterminate / determinate;
         }
         solution[j][0] = value;
@@ -400,6 +537,18 @@ Matrix.fromVertex = (vertex) => {
                       [vertex.y],
                       [vertex.z],
                       [1]]);
+}
+
+Matrix.mapObjects = (objects, attrs) => {
+  const matrix = new Matrix(null, attrs.length, attrs.length);
+  const val = (funcOval) => (typeof funcOval) === 'function' ? funcOval() : funcOval;
+  for (let i = 0; i < objects.length; i++) {
+    const obj = objects[i];
+    for (let j = 0; j < attrs.length; j++) {
+      matrix[i][j] = Function.orVal(obj[attrs[j]]);
+    }
+  }
+  return matrix;
 }
 
 module.exports = Matrix;

@@ -217,6 +217,114 @@ Test.add('Matrix: identity',(ts) => {
   ts.success();
 });
 
+Test.add('Matrix: rowEchelon', (ts) => {
+  let matrix = new Matrix([
+    [1,2,3,1],
+    [5,6,7,1],
+    [9,10,11,1],
+  ]);
+
+  let rowEsch = matrix.rowEchelon();
+  let reduced = matrix.rowEchelon(true);
+  ts.assertTrue(reduced.equals(new Matrix([[1,0,-1,-1],[0,1,2,1],[0,0,0,0]])));
+  ts.assertTrue(rowEsch.equals(new Matrix([[1,2,3,1],[0,-4,-8,-4],[0,0,0,0]])));
+
+  matrix = new Matrix([
+    [5,3,2,1],
+    [9,6,8,1],
+    [1,4,7,1],
+  ]);
+
+  rowEsch = matrix.rowEchelon();
+  reduced = matrix.rowEchelon(true);
+  ts.assertTrue(reduced.equals(new Matrix([[1,0,0,-9/55],[0,1,0,4/5],[0,0,1,-16/55]])));
+  ts.assertTrue(rowEsch.equals(new Matrix([[5,3,2,1],[0,3/5,22/5,-4/5],[0,0,-275/15,16/3]])));
+
+  ts.success();
+});
+
+Test.add('Matrix: fixedColumns', (ts) => {
+  let matrix = new Matrix([
+    [8,3,1],
+    [8,6,1],
+    [1,4,1],
+  ]);
+
+  let fixedColumns = matrix.fixedColumns();
+  ts.assertTrue(fixedColumns.equals([false, false, true]));
+
+  matrix = new Matrix([
+    [8,3,1],
+    [7.99999999999,6,1],
+    [8.000001,4,1],
+  ]);
+
+  fixedColumns = matrix.fixedColumns();
+  ts.assertTrue(fixedColumns.equals([true, false, true]));
+
+  ts.success();
+});
+
+Test.add('Matrix: uniqueRows', (ts) => {
+  let matrix = new Matrix([
+    [8,6,1],
+    [8,6,1],
+    [1,4,1],
+  ]);
+
+  let uniqueRows = matrix.uniqueRows();
+  ts.assertTrue(uniqueRows.equals(new Matrix([[8,6,1],[1,4,1]])));
+
+  matrix = new Matrix([
+    [0,0,3,-5,4,0,0,1],
+    [0,0,3,-5,4,0,0,1],
+    [0,0,5,2,1,0,0,1],
+    [0,0,5,2,1,0,0,1],
+    [0,0,2,3,-2,0,0,1],
+  ]);
+
+  uniqueRows = matrix.uniqueRows();
+  ts.assertTrue(uniqueRows.equals(new Matrix([[0,0,3,-5,4,0,0,1],[0,0,5,2,1,0,0,1],[0,0,2,3,-2,0,0,1]])));
+
+  ts.success();
+});
+
+Test.add('Matrix: properDemension', (ts) => {
+  let matrix = new Matrix([
+    [8,6,1],
+    [8,6,1],
+    [1,4,1],
+  ]);
+
+  let properDemension = matrix.properDemension();
+  ts.assertTrue(properDemension.matrix.equals(new Matrix([[8,6],[1,4]])));
+  ts.assertTrue(properDemension.fixedValues.equals([,,1]));
+
+  matrix = new Matrix([
+    [0,0,3,-5,4,0,0,1],
+    [0,0,3,-5,4,0,0,1],
+    [0,0,5,2,1,0,0,1],
+    [0,0,5,2,1,0,0,1],
+    [0,0,2,3,-2,0,0,1],
+  ]);
+
+  properDemension = matrix.properDemension(true);
+  ts.assertTrue(properDemension.matrix.equals(new Matrix([[3,-5,4],[5,2,1],[2,3,-2]])));
+  ts.assertTrue(properDemension.fixedValues.equals([0,0,,,,0,0,1]));
+
+  matrix = new Matrix([
+    [8,7,1],
+    [8,7,1],
+    [1,4,1],
+  ]);
+
+  properDemension = matrix.properDemension();
+  ts.assertTrue(properDemension.matrix.equals(new Matrix([[8,7],[1,4]])));
+  ts.assertTrue(properDemension.fixedValues.equals([,,1]));
+
+  ts.success();
+});
+
 Test.add('Matrix: consise',(ts) => {
   let cloudyMatirx = new Matrix([
     [0,0,3,-5,4,0,0],

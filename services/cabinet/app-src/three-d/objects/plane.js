@@ -122,17 +122,7 @@ class Plane extends Array {
 
     this.equation = () => {
       if (equation && this.length < 3) return equation;
-      const pts = this.points();
-      const include = ['x','y','z'];
-
-      const systemOfEquations = new Matrix(null, include.length, include.length);
-
-      for (let i = 0; i < include.length; i++) {
-        const point = pts[i];
-        for (let j = 0; j < include.length; j++) {
-          systemOfEquations[i][j] = point[include[j]];
-        }
-      }
+      const systemOfEquations = Matrix.mapObjects(this.points(), ['x','y','z']);
 
       try {
         const answer = systemOfEquations.solve([1,1,1]);
@@ -193,21 +183,21 @@ class Plane extends Array {
 
     this.center = () => Vertex3D.center.apply(null, this);
 
-    this.lineIntersection = (line) => {
+    this.lineIntersection = (line, directional) => {
       const eqn = this.equation();
       const lEqn = line.equation();
-      const x0 = line.startVertex.x;
-      const y0 = line.startVertex.y;
-      const z0 = line.startVertex.z;
+      let x0 = line.startVertex.x;
+      let y0 = line.startVertex.y;
+      let z0 = line.startVertex.z;
 
-      const a1 = eqn.a;
-      const b1 = eqn.b;
-      const c1 = eqn.c;
-      const d = eqn.d;
+      let a1 = eqn.a;
+      let b1 = eqn.b;
+      let c1 = eqn.c;
+      let d = eqn.d;
 
-      const a2 = lEqn.a;
-      const b2 = lEqn.b;
-      const c2 = lEqn.c;
+      let a2 = lEqn.a;
+      let b2 = lEqn.b;
+      let c2 = lEqn.c;
 
       const sv = line.startVertex;
       const p = this.points()[0];
@@ -215,12 +205,28 @@ class Plane extends Array {
       if (a2 === 0 && c2 === 0 && b1 === 0) return new Vertex3D(sv.x, p.y, sv.z);
       if (b2 === 0 && c2 === 0 && a1 === 0) return new Vertex3D(p.x, sv.y, sv.z);
 
-      const t = -(a1*x0+b1*y0+c1*z0-d)/(a1*a2+b1*b2+c1*c2);
+      let t = -(a1*x0+b1*y0+c1*z0-d)/(a1*a2+b1*b2+c1*c2);
+      // if (Number.NaNfinity(t)) {
+      //   const round = (val) => Math.round(val * 1000000000000) / 100000000000;
+      //   let tiny = .0000000001;
+      //   x0=round(x0);y0=round(y0;z0=round(z0);
+      //   // a1+=tiny;b1+=tiny;c1+=tiny;d+=tiny;
+      //   //a2=round(a2tiny;b2+=tiny;c2+=tiny;
+      //   t = -(a1*x0+b1*y0+c1*z0-d)/(a1*a2+b1*b2+c1*c2);
+      // }
 
       const x = x0+t*a2;
       const y = y0+t*b2;
       const z = z0+t*c2;
-      return new Vertex3D(x,y,z);
+      if (Number.NaNfinity(x,y,z)) return null;
+
+      const intersection = new Vertex3D(x,y,z);
+      if (directional) {
+        const endDist = line.endVertex.distance(intersection);
+        const startDist = line.startVertex.distance(intersection);
+        if (endDist > line.length() && endDist > startDist) return null;
+      }
+      return intersection;
     }
 
     this.equals = (other) => {

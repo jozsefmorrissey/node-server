@@ -11,7 +11,7 @@ const Request = require('../../../../public/js/utils/request.js');
 const EPNTS = require('../../generated/EPNTS.js');
 const CabinetTemplate = require('./cabinet-template');
 const ValueCondition = require('../../../../public/js/utils/input/decision/decision.js').ValueCondition;
-const Cabinets = require('./cabinets.json');
+const Cabinets = require('../../public/json/cabinets.json');
 const CabinetLayouts = require('./cabinet-layouts');
 
 const configs = {};

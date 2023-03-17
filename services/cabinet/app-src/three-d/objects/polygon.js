@@ -6,9 +6,23 @@ const Vector3D = require('./vector');
 const Plane = require('./plane');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const within = Tolerance.within(.0000001);
 
 const CSG = require('../../../public/js/3d-modeling/csg.js');
 let lastMi;
+
+const place = (vert, no, one, two, three) => {
+  let count = 0;
+  if (within(vert.x, 0)) count++;
+  if (within(vert.y, 0)) count++;
+  if (within(vert.z, 0)) count++;
+  switch (count) {
+    case 0: return no.push(vert);
+    case 1: return one.push(vert);
+    case 2: return two.push(vert);
+    case 3: return three.push(vert);
+  }
+}
 
 class Polygon3D {
   constructor(initialVertices) {
@@ -17,8 +31,24 @@ class Polygon3D {
     let normal;
     let instance = this;
 
+    function planePoints() {
+      const noZeros = [];
+      const oneZero = [];
+      const twoZeros = [];
+      const origin = [];
+
+      for (let index = 0; index < lines.length; index++) {
+        const line = lines[index];
+        const sv = line.startVertex;
+        const mp = line.midpoint();
+        place(sv, noZeros, oneZero, twoZeros, origin);
+        place(mp, noZeros, oneZero, twoZeros, origin);
+      }
+      return noZeros.concat(oneZero).concat(twoZeros).concat(origin);
+    }
+
     function getPlane() {
-      let points = this.vertices();
+      let points = planePoints();
       let parrelle = true;
       let index = 2;
       const point1 = points[0];

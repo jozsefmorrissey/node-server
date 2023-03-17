@@ -11,6 +11,7 @@ class CabinetOpeningCorrdinates {
   constructor(cabinet, sectionProperties) {
     const config = sectionProperties.config();
     let subassemblies = [];
+    const instance = this;
 
     this.divide = sectionProperties.divide;
     this.setSection = sectionProperties.setSection;
@@ -34,10 +35,10 @@ class CabinetOpeningCorrdinates {
     }
 
     function defaultCoordinates() {
-      const right = cabinet.getAssembly(config.right);
-      const left = cabinet.getAssembly(config.left);
-      const top = cabinet.getAssembly(config.top);
-      const bottom = cabinet.getAssembly(config.bottom);
+      const right = instance.right();
+      const left = instance.left();
+      const top = instance.top();
+      const bottom = instance.bottom();
 
       const topMax = top.position().centerAdjust('y', '+z');
       const topMin = top.position().centerAdjust('y', '-z');
@@ -71,10 +72,10 @@ class CabinetOpeningCorrdinates {
     let printVerts = (verts) => '(' + leftPlane[0].vertices().join('),(') + ')';
 
     function backCoordinates() {
-      const right = cabinet.getAssembly(config.right);
-      const left = cabinet.getAssembly(config.left);
-      const top = cabinet.getAssembly(config.top);
-      const bottom = cabinet.getAssembly(config.bottom);
+      const right = instance.right();
+      const left = instance.left();
+      const top = instance.top();
+      const bottom = instance.bottom();
       const back = cabinet.getAssembly(config.back);
       const center = Vertex3D.center(bottom.position().center(), top.position().center());
 
@@ -146,7 +147,7 @@ class CabinetOpeningCorrdinates {
       const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2, 0, {x: corner2corner, y: corner2corner});
       const partCode = 'gerf';
       const partName = 'Gerf';
-      const cutter = new Cutter.Model(partCode, () => partName, biPoly.toModel);
+      const cutter = new Panel.Model(partCode, () => partName, biPoly.toModel);
       subassemblies = [cutter];
       const joint = (otherPartCode) => new Butt(partCode, otherPartCode);
       cutter.addJoints(joint('T'), joint('B'), joint('R'), joint('L'));
@@ -164,9 +165,9 @@ class CabinetOpeningCorrdinates {
       try {
         switch (config._Type) {
           case 'location':
-          coords = manualCoordinates(config.coordinates);
+          coords = manualCoordinates(config.coordinates); break;
           case 'slice':
-          coords = sliceCoordinates(cabinet.eval(config.leftDepth), cabinet.eval(config.rightDepth));
+          coords = sliceCoordinates(cabinet.eval(config.leftDepth), cabinet.eval(config.rightDepth));break;
         }
       } catch (e) {
         console.warn(`Failed to determine coordinates of the specified type: '${config._Type}'`);

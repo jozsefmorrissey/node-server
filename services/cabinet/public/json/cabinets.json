@@ -4676,7 +4676,7 @@ module.exports = {
     },
     {
       "key": "toeKickBackerLen",
-      "eqn": "Math.sqrt((c.w-tkLeftD-tkLeftT-R.t)*(c.w-tkLeftD-tkLeftT-R.t)+(c.t-tkRightD-tkRightT-L.t)*(c.t-tkRightD-tkRightT-L.t))"
+      "eqn": "Math.sqrt((c.w-tkLeftD-tkLeftT-R.t)*(c.w-tkLeftD-tkLeftT-R.t)+(c.t-tkRightD-tkRightT-L.t)*(c.t-tkRightD-tkRightT-L.t)) * .5"
     },
     {
       "key": "innerDepth",
@@ -5689,6 +5689,6 @@ module.exports = {
         "leftDepth": "cwl",
         "rightDepth": "cwr"      }
     ],
-    "autoToeKick": true
+    "autoToeKick": false
   }
 }

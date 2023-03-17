@@ -319,6 +319,16 @@ Function.safeStdLibAddition(Array, 'shuffle', function() {
   return this;
 });
 
+Function.safeStdLibAddition(Array, 'count', function(func) {
+  let count = 0;
+  for (let index = 0; index < this.length; index++) {
+    const retVal = func(this[index]);
+    count += (typeof retVal) === 'number' ? retVal : (retVal ? 1 : 0);
+  }
+  return count;
+});
+
+
 const primes = [3,5,7,11,17,19,23,29];
 const firstNotInList = (targetList, ignoreList) => {
   for (let index = 0; index < targetList.length; index++) {
@@ -845,6 +855,43 @@ Function.safeStdLibAddition(Array, 'inverse', function (doNotModify) {
   for (let index = 0; index < arr.length; index += 1) {
     arr[index] *= -1;
   }
+  return arr;
+});
+
+Function.safeStdLibAddition(Array, 'remap', function (func) {
+  for (let index = 0; index < this.length; index += 1) {
+    this[index] = func(this[index], index);
+  }
+});
+
+Function.safeStdLibAddition(Array, 'swap', function (i, j, doNotModify) {
+  const arr = doNotModify === true ? Array.from(this) : this;
+  const temp = arr[i];
+  arr[i] = arr[j];
+  arr[j] = temp;
+});
+
+Function.safeStdLibAddition(Array, 'scale', function (valueOfuncOarray, doNotModify) {
+  const arr = doNotModify === true ? Array.from(this) : this;
+  let func;
+  switch (typeof valueOfuncOarray) {
+    case 'function': func = (val, index) => val * valueOfuncOarray(val, index); break;
+    case 'object': func = (val, index) => val * valueOfuncOarray[index]; break;
+    default: func = (val, index) => val * valueOfuncOarray;
+  }
+  arr.remap(func);
+  return arr;
+});
+
+Function.safeStdLibAddition(Array, 'add', function (valueOfuncOarray, doNotModify) {
+  const arr = doNotModify === true ? Array.from(this) : this;
+  let func;
+  switch (typeof valueOfuncOarray) {
+    case 'function': func = (val, index) => val + valueOfuncOarray(val, index); break;
+    case 'object': func = (val, index) => val + valueOfuncOarray[index]; break;
+    default: func = (val, index) => val + valueOfuncOarray;
+  }
+  arr.remap(func);
   return arr;
 });
 

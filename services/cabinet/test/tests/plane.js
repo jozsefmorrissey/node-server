@@ -110,13 +110,21 @@ Test.add('Plane: normal',(ts) => {
 });
 
 Test.add('Plane: lineIntersection',(ts) => {
-  const p1 = {x: 1, y: 2, z: 4};
-  const p3 = {x: 4, y: 2, z: 4};
-  const p2 = {x: 4, y: 1, z: 4};
+  let p1 = {x: 1, y: 0, z: 4};
+  let p3 = {x: 0, y: 0, z: 4};
+  let p2 = {x: 0, y: 1, z: 4};
 
   let plane = new Plane(p1,p2,p3);
   let line = new Line3D({x:0,y:0,z:0}, {x:0,y:0,z:2});
   let intersection = plane.lineIntersection(line);
+  ts.assertTrue(intersection.equals({x: 0, y: 0, z: 4}));
+  plane = new Plane(p2,p3,p1);
+  line = new Line3D({x:0,y:0,z:0}, {x:0,y:0,z:2});
+  intersection = plane.lineIntersection(line);
+  ts.assertTrue(intersection.equals({x: 0, y: 0, z: 4}));
+  plane = new Plane(p3,p1,p2);
+  line = new Line3D({x:0,y:0,z:0}, {x:0,y:0,z:2});
+  intersection = plane.lineIntersection(line);
   ts.assertTrue(intersection.equals({x: 0, y: 0, z: 4}));
 
   line = new Line3D({x:0,y:0,z:0}, {x:0,y:1,z:1});
@@ -130,6 +138,26 @@ Test.add('Plane: lineIntersection',(ts) => {
   line = new Line3D({x:-1,y:-1,z:-1}, {x:1,y:1,z:1});
   intersection = plane.lineIntersection(line);
   ts.assertTrue(intersection.equals({x: 4, y: 4, z: 4}));
+
+  p1 = {x: 43.8, y: 0, z: -12.7};
+  p3 = {x: 43.8, y: 0, z: -12.1};
+  p2 = {x: 22.9, y: 0, z: -26};
+
+  plane = new Plane(p1,p2,p3);
+  line = new Line3D({x:1.9,y:12.1,z:-29.2}, {x:1.9,y:84.5,z:-29.2});
+  intersection = plane.lineIntersection(line);
+  ts.assertTrue(intersection.equals({x: 1.9, y: 0, z: -29.2}));
+
+
+  p1 = new Vertex3D(43.815,0,-12.69999999999996);
+  p2 = new Vertex3D(43.815,0,-12.06499999999996);
+  p3 = new Vertex3D(22.96,0,-26.034999999999975);
+
+  plane = new Plane(p1,p2,p3);
+  line = new Line3D({x:1.9050000000000018,y:12.064999999999998,z:-29.21000000000001}, {x:1.9050000000000018,y:84.455,z:-29.209999999999997});
+  intersection = plane.lineIntersection(line);
+  ts.assertTrue(intersection.equals({x: 1.905, y: 0, z: -29.21}));
+
 
   ts.success();
 });

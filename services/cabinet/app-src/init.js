@@ -26,6 +26,11 @@ const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');
 const utils = require('./utils.js');
 
+// TODO: remove
+const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
+FunctionCache.disable();
+
+
 // Run Tests
 if (EPNTS.getEnv() === 'local') {
   require('../test/run');

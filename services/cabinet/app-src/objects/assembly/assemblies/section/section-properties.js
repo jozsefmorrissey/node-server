@@ -155,6 +155,7 @@ class SectionProperties extends KeyValue{
       return undefined;
     }
 
+    // TODO: innerOffset - proorly named and implemented values produced are in the ball park but not correct.
     function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset) {
       const coords = {};
       const fresh = instance.coordinates();
@@ -166,10 +167,10 @@ class SectionProperties extends KeyValue{
         const leftInnerLine = new Line3D(inner[0], inner[3]);
         const rightOutLine = new Line3D(outer[1], outer[2]);
         const rightInnerLine = new Line3D(inner[1], inner[2]);
-        coords.outer = [leftOutLine.pointAtDistance(startOuter),
-                        rightOutLine.pointAtDistance(startOuter),
-                        rightOutLine.pointAtDistance(endOuter),
-                        leftOutLine.pointAtDistance(endOuter)];
+        coords.outer = [leftOutLine.pointAtDistance(startOuter - innerOffset),
+                        rightOutLine.pointAtDistance(startOuter - innerOffset),
+                        rightOutLine.pointAtDistance(endOuter - innerOffset),
+                        leftOutLine.pointAtDistance(endOuter - innerOffset)];
         coords.inner = [
                         leftInnerLine.pointAtDistance((startInner - innerOffset)),
                         rightInnerLine.pointAtDistance((startInner - innerOffset)),
@@ -218,11 +219,14 @@ class SectionProperties extends KeyValue{
           let startOuter, startInner, endInner, endOuter;
 
           startOuter = offset;
-          if (index === 0) startInner = startOuter + dividerOffsetInfo[index].offset;
-          else startInner = startOuter + dividerOffsetInfo[index].offset/2;
+          if (index === 0) {
+            startOuter = dividerOffsetInfo[0].offset;
+            startInner = startOuter;
+          } else {
+            startInner = startOuter + dividerOffsetInfo[index].offset/2;
+          }
 
-
-          endInner = startInner + patVal[index] - overlayOffset;
+          endInner = (startInner + patVal[index] - overlayOffset);
           if (index === instance.sections.length - 1) endOuter = endInner + dividerOffsetInfo[index + 1].offset;
           else endOuter = endInner + dividerOffsetInfo[index + 1].offset / 2;
           if (index < instance.sections.length - 1) section.divideRight(true);

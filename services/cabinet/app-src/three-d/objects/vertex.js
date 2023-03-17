@@ -106,7 +106,7 @@ class Vertex3D {
     this.copy = () => new Vertex3D(this.x, this.y, this.z);
     this.clone = this.copy;
     this.equals = (other) => other && Vertex3D.tolerance.within(this, other);
-    this.toString = () => `${approx10(this.x)},${approx10(this.y)},${approx10(this.z)}`;
+    this.toString = () => `(${approx10(this.x)},${approx10(this.y)},${approx10(this.z)})`;
     this.toAccurateString = () => `${approximate(this.x)},${approximate(this.y)},${approximate(this.z)}`;
   }
 }

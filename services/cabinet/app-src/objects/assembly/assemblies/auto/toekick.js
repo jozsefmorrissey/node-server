@@ -33,13 +33,12 @@ class AutoToekick extends Assembly {
       const shortTop = Line3D.fromVector(shortVector, targetFront.endVertex);
       const longTop = Line3D.fromVector(longVector, targetFront.endVertex);
 
-      console.log("(" + [targetFront.endVertex, targetFront.startVertex, shortTop.endVertex, shortBottom.endVertex, newStart,
-                    longTop.endVertex, longBottom.endVertex].join('),(') + ")")
-
-      return {void: [targetFront.endVertex, shortTop.endVertex,
-                    shortBottom.endVertex, newStart],
-              tkb: [shortTop.endVertex, longTop.endVertex,
-                longBottom.endVertex, shortBottom.endVertex]};
+      return {
+        void: [targetFront.endVertex, shortTop.endVertex,
+                shortBottom.endVertex, newStart],
+        tkb: [shortTop.endVertex, longTop.endVertex,
+              longBottom.endVertex, shortBottom.endVertex],
+      };
     }
 
     function openingToeKick(opening) {
@@ -54,7 +53,36 @@ class AutoToekick extends Assembly {
 
       const leftPoly = new Polygon3D(leftLines.tkb);
       const rightPoly = new Polygon3D(rightLines.tkb);
-      return new BiPolygon(rightPoly, leftPoly);
+
+      const tkh = cabinet.value('tkh');
+      const tkd = cabinet.value('tkd');
+      const tkbw = cabinet.value('tkbw');
+
+      const leftLine = innerPoly.lines()[3];
+      const rightLine = innerPoly.lines()[1].negitive();
+      const bottomPlane = new Polygon3D([rightLines.tkb[2], rightLines.tkb[3], leftLines.tkb[2], leftLines.tkb[3]]).toPlane();
+      const leftStart = bottomPlane.lineIntersection(leftLine);
+      const rightStart = bottomPlane.lineIntersection(rightLine);
+      const leftTkLine = Line3D.fromVector(leftLine.vector().unit().scale(tkh), leftStart);
+      const rightTkLine = Line3D.fromVector(rightLine.vector().unit().scale(tkh), rightStart);
+      const tkSpacePoly = new Polygon3D([leftTkLine.endVertex, rightTkLine.endVertex, rightTkLine.startVertex, leftTkLine.startVertex]);
+      const tkVoid = BiPolygon.fromPolygon(tkSpacePoly, tkd);
+      const tkBiPoly = BiPolygon.fromPolygon(tkSpacePoly, tkd, tkd+tkbw);
+
+      const print = (stuff, dir, side) => console.log(dir, '-', side, ':', stuff[dir][side].dist, '->', stuff[dir][side].intersection.toString());
+      const printAll = (stuff) => print(stuff, 'positive', 'inner') || print(stuff, 'positive', 'outer') || print(stuff, 'negitive', 'inner') || print(stuff, 'negitive', 'outer');
+
+      const faces = tkBiPoly.closestOrder(tkSpacePoly.center());
+      const topInner = cabinet.planeIntersection(faces[0].lines()[0]);
+      // printAll(topInner);
+      const bottomInner = cabinet.planeIntersection(faces[0].lines()[2]);
+      // printAll(bottomInner);
+      const topOuter = cabinet.planeIntersection(faces[1].lines()[0]);
+      // printAll(topOuter);
+      const bottomOuter = cabinet.planeIntersection(faces[1].lines()[2]);
+      // printAll(bottomOuter);
+
+      return tkBiPoly || tkVoid || new BiPolygon(rightPoly, leftPoly);
     }
 
     this.toBiPolygon = () => {
