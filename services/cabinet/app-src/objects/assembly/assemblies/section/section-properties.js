@@ -239,7 +239,7 @@ class SectionProperties extends KeyValue{
     function perpendicularDistance(point, line) {
       if (instance.sectionCount() !== 0) {
         const plane = Plane.fromPointNormal(point, line.vector());
-        const intersection = plane.lineIntersection(line);
+        const intersection = plane.intersection.line(line);
         const distance = line.startVertex.distance(intersection);
         return distance;
       }

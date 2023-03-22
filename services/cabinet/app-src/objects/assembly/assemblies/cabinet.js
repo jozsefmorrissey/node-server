@@ -70,8 +70,9 @@ class Cabinet extends Assembly {
 
     this.partCenter = () => {
       const centers = [];
-      for (let index = 0; index < this.subassemblies.length; index++) {
-        const assem = this.subassemblies[index];
+      const subAssems = Object.values(this.subassemblies);
+      for (let index = 0; index < subAssems.length; index++) {
+        const assem = subAssems[index];
         if (!(assem instanceof SectionProperties))
           centers.push(assem.position().center());
       }
@@ -91,16 +92,16 @@ class Cabinet extends Assembly {
           const biPoly = assem.position().toBiPolygon();
           const faces = biPoly.closestOrder(center);
           const plane = faces[0].toPlane();
-          const intersection = plane.lineIntersection(line);
+          const intersection = plane.intersection.line(line);
           if (intersection) {
             const dist = line.midpoint().distance(intersection);
-            const intersectLine = new Line3D(line.startVertex, intersection);
+            const intersectLine = new Line3D(line.midpoint(), intersection);
             const intersectVector = intersectLine.vector();
             const direction = vector.sameDirection(intersectVector) ? 'positive' : 'negitive';
             if (closest[direction] === undefined || closest[direction].inner.dist > dist) {
               const oplane = faces[1].toPlane();
-              plane.lineIntersection(line)
-              const ointer = oplane.lineIntersection(line);
+              plane.intersection.line(line)
+              const ointer = oplane.intersection.line(line);
               const odist = ointer.distance(line.midpoint());
               closest[direction] = {assem, inner: {dist, plane, intersection},
               outer: {dist: odist, plane: oplane, intersection: ointer}};
@@ -108,10 +109,6 @@ class Cabinet extends Assembly {
           }
         }
       }
-      try{
-        console.log('positive', closest.positive.assem.partCode(), closest.positive.inner.dist, closest.positive.outer.dist);
-        console.log('negitive', closest.negitive.assem.partCode(), closest.negitive.inner.dist, closest.negitive.outer.dist, '\n');
-      }catch(e){}
       return closest;
     }
 

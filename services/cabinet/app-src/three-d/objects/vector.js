@@ -91,7 +91,7 @@ class Vector3D {
     this.positive = () =>
       i > 0 || (isZero(i) && j > 0) || (isZeros(i,j) && k > 0) ||
       isZeros(i, j, k);
-    this.equals = (vector) => Vector.tolerance.within(vector, this);
+    this.equals = (vector) => Vector3D.tolerance.within(vector, this);
     this.toString = () => `<${i},  ${j},  ${k}>`;
   }
 }

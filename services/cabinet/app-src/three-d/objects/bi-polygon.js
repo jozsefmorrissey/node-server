@@ -10,6 +10,7 @@ class BiPolygon {
   constructor(polygon1, polygon2) {
     const face1 = polygon1.vertices();
     const face2 = polygon2.vertices();
+    const instance = this;
     if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of vertices');
 
     let normal = {};
@@ -32,9 +33,37 @@ class BiPolygon {
 
     this.front = () => new Polygon3D(face1);
     this.back = () => new Polygon3D(face2);
-    this.normal = () => face2[0].distanceVector(face1[0]).unit();
-    this.normalTop = () => face2[3].distanceVector(face2[0]).unit();
-    this.normalRight = () => face2[1].distanceVector(face2[0]).unit();
+
+    function testNormal(suffix) {
+      const zero = instance[`normal${suffix}0`];
+      const one = instance[`normal${suffix}1`];
+      return () => {
+        const res0 = zero();
+        const res1 = one();
+        if (!res0.equals(res1)) {
+          console.warn('somthin up', suffix);
+        }
+        return res0;
+      }
+    }
+
+    this.normal0 = () => face2[0].distanceVector(face1[0]).unit();
+    this.normalTop0 = () => face2[3].distanceVector(face2[0]).unit();
+    this.normalRight0 = () => face2[1].distanceVector(face2[0]).unit();
+
+    this.normal1 = () => polygon1.normal().inverse();
+    this.normalTop1 = () => polygon1.lines()[1].vector().unit();
+    this.normalRight1 = () => this.normalTop1().crossProduct(this.normal1()).unit();
+
+    this.normal = testNormal('');
+    this.normalTop = testNormal('Top');
+    this.normalRight = testNormal('Right');
+
+    this.normals = () => ({
+      top: this.normalTop(),
+      front: this.normal(),
+      right: this.normalRight()
+    });
 
     this.furthestOrder = (vertex) => {
       const front = this.front();
@@ -146,11 +175,15 @@ BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   distance2 ||= 0;
   const verts = polygon.vertices();
   if (verts.length < 4) return undefined;
+  // if (verts.length < 3) return undefined;
   const verts1 = JSON.clone(verts);
-  Line3D.adjustVertices(verts1[0], verts1[1], offset.x);
-  Line3D.adjustVertices(verts1[1], verts1[2], offset.y);
-  Line3D.adjustVertices(verts1[2], verts1[3], offset.x);
-  Line3D.adjustVertices(verts1[3], verts1[0], offset.y);
+  // TODO: consider moving
+  // if (offset) {
+    Line3D.adjustVertices(verts1[0], verts1[1], offset.x);
+    Line3D.adjustVertices(verts1[1], verts1[2], offset.y);
+    Line3D.adjustVertices(verts1[2], verts1[3], offset.x);
+    Line3D.adjustVertices(verts1[3], verts1[0], offset.y);
+  // }
   const verts2 = JSON.clone(verts1);
   const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
   const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);

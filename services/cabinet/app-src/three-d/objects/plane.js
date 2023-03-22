@@ -35,7 +35,7 @@ class Plane extends Array {
       return -1;
     }
 
-    this.points = () => this.length > 2 ? points.slice(0,3) : this.findPoints();
+    this.points = () => this.length > 2 ? this : this.findPoints();
 
     this.equivalent = (other) => {
       if (!(other instanceof Plane)) return false;
@@ -164,9 +164,9 @@ class Plane extends Array {
     }
 
     this.normal = () => {
-      const points = this.findPoints();
-      const vector1 = points[1].minus(points[0]);
-      const vector2 = points[2].minus(points[0]);
+      const points = this.points();
+      const vector1 = points[1].vector().minus(points[0]);
+      const vector2 = points[2].vector().minus(points[0]);
       const normVect = vector1.crossProduct(vector2);
       return normVect.scale(1 / normVect.magnitude());
     }
@@ -183,51 +183,40 @@ class Plane extends Array {
 
     this.center = () => Vertex3D.center.apply(null, this);
 
-    this.lineIntersection = (line, directional) => {
-      const eqn = this.equation();
-      const lEqn = line.equation();
-      let x0 = line.startVertex.x;
-      let y0 = line.startVertex.y;
-      let z0 = line.startVertex.z;
+    const epsilon = 1e-6;
+    function lineIntersection(line, segment, directional) {
+      const vect0 = line.startVertex.vector();
+      const vect1 = line.endVertex.vector();
+      const planePoint = instance.points()[0];
+      const planeNormal = instance.normal();
+      let u = vect1.minus(vect0);
+      let dot = planeNormal.dot(u);
 
-      let a1 = eqn.a;
-      let b1 = eqn.b;
-      let c1 = eqn.c;
-      let d = eqn.d;
-
-      let a2 = lEqn.a;
-      let b2 = lEqn.b;
-      let c2 = lEqn.c;
-
-      const sv = line.startVertex;
-      const p = this.points()[0];
-      if (a2 === 0 && b2 === 0 && c1 === 0) return new Vertex3D(sv.x, sv.y, p.z);
-      if (a2 === 0 && c2 === 0 && b1 === 0) return new Vertex3D(sv.x, p.y, sv.z);
-      if (b2 === 0 && c2 === 0 && a1 === 0) return new Vertex3D(p.x, sv.y, sv.z);
-
-      let t = -(a1*x0+b1*y0+c1*z0-d)/(a1*a2+b1*b2+c1*c2);
-      // if (Number.NaNfinity(t)) {
-      //   const round = (val) => Math.round(val * 1000000000000) / 100000000000;
-      //   let tiny = .0000000001;
-      //   x0=round(x0);y0=round(y0;z0=round(z0);
-      //   // a1+=tiny;b1+=tiny;c1+=tiny;d+=tiny;
-      //   //a2=round(a2tiny;b2+=tiny;c2+=tiny;
-      //   t = -(a1*x0+b1*y0+c1*z0-d)/(a1*a2+b1*b2+c1*c2);
-      // }
-
-      const x = x0+t*a2;
-      const y = y0+t*b2;
-      const z = z0+t*c2;
-      if (Number.NaNfinity(x,y,z)) return null;
-
-      const intersection = new Vertex3D(x,y,z);
-      if (directional) {
-        const endDist = line.endVertex.distance(intersection);
-        const startDist = line.startVertex.distance(intersection);
-        if (endDist > line.length() && endDist > startDist) return null;
+      if (Math.abs(dot) > epsilon) {
+        let w = vect0.minus(planePoint);
+        let fac = -planeNormal.dot(w) / dot;
+        u = u.scale(fac);
+        const intersection = new Vertex3D(vect0.add(u));
+        if (segment) {
+          if (frac <= 1 && frac >= 0) return intersection;
+          return null;
+        }
+        if (directional) {
+          const endDist = line.endVertex.distance(intersection);
+          const startDist = line.startVertex.distance(intersection);
+          if (endDist > line.length() && endDist > startDist) return null;
+        }
+        return intersection;
       }
-      return intersection;
+
+      return null;
     }
+
+    this.intersection = {};
+
+    this.intersection.line = (line) => lineIntersection(line);
+    this.intersection.line.segment = (line) => lineIntersection(line, true);
+    this.intersection.line.directional = (line) => lineIntersection(line, null, true);
 
     this.equals = (other) => {
       if (!Array.isArray(other) || this.length !== other.length) return false;

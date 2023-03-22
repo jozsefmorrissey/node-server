@@ -100,15 +100,15 @@ class CabinetOpeningCorrdinates {
       const bottomBottomPlane = bottomPolys[0].toPlane();
       const topBottomPlane = bottomPolys[1].toPlane();
 
-      const topLeftOut = topTopPlane.lineIntersection(outLineLeft);
-      const topRightOut = topTopPlane.lineIntersection(outLineRight);
-      const bottomRightOut = bottomBottomPlane.lineIntersection(outLineRight);
-      const bottomLeftOut = bottomBottomPlane.lineIntersection(outLineLeft);
+      const topLeftOut = topTopPlane.intersection.line(outLineLeft);
+      const topRightOut = topTopPlane.intersection.line(outLineRight);
+      const bottomRightOut = bottomBottomPlane.intersection.line(outLineRight);
+      const bottomLeftOut = bottomBottomPlane.intersection.line(outLineLeft);
 
-      const topLeftIn = bottomTopPlane.lineIntersection(inLineLeft);
-      const topRightIn = bottomTopPlane.lineIntersection(inLineRight);
-      const bottomRightIn = topBottomPlane.lineIntersection(inLineRight);
-      const bottomLeftIn = topBottomPlane.lineIntersection(inLineLeft);
+      const topLeftIn = bottomTopPlane.intersection.line(inLineLeft);
+      const topRightIn = bottomTopPlane.intersection.line(inLineRight);
+      const bottomRightIn = topBottomPlane.intersection.line(inLineRight);
+      const bottomLeftIn = topBottomPlane.intersection.line(inLineLeft);
 
       return {
         in: new Polygon3D([topLeftIn, topRightIn, bottomRightIn, bottomLeftIn]),
@@ -132,22 +132,17 @@ class CabinetOpeningCorrdinates {
 
       const ibpv = innerBackPoly.vertices();
       const idpv = innerDirPoly.vertices();
-      const i0 = outerPlane.lineIntersection(new Line3D(ibpv[0], idpv[0]));
-      const i1 = outerPlane.lineIntersection(new Line3D(ibpv[1], idpv[1]));
-      const i2 = outerPlane.lineIntersection(new Line3D(ibpv[2], idpv[2]));
-      const i3 = outerPlane.lineIntersection(new Line3D(ibpv[3], idpv[3]));
+      const i0 = outerPlane.intersection.line(new Line3D(ibpv[0], idpv[0]));
+      const i1 = outerPlane.intersection.line(new Line3D(ibpv[1], idpv[1]));
+      const i2 = outerPlane.intersection.line(new Line3D(ibpv[2], idpv[2]));
+      const i3 = outerPlane.intersection.line(new Line3D(ibpv[3], idpv[3]));
 
       const corner2corner = outer[0].distance(outer[2]);
-      const outerOffsetPoly = outerPoly.parrelleAt(corner2corner/-2);
-      const center = Vertex3D.center(...outerOffsetPoly.vertices());
-      const dem = {x: corner2corner, y: corner2corner, z: corner2corner};
-      const rot = {x: 0, y: 0, z: 0};
-      // subassemblies = [new Panel('gerf', 'Gerf', () => center, () => dem, () => rot)];
 
       const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2, 0, {x: corner2corner, y: corner2corner});
       const partCode = 'gerf';
       const partName = 'Gerf';
-      const cutter = new Panel.Model(partCode, () => partName, biPoly.toModel);
+      const cutter = new Cutter.Model(partCode, () => partName, biPoly.toModel);
       subassemblies = [cutter];
       const joint = (otherPartCode) => new Butt(partCode, otherPartCode);
       cutter.addJoints(joint('T'), joint('B'), joint('R'), joint('L'));

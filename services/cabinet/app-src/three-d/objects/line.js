@@ -3,6 +3,7 @@ const Vector3D = require('./vector');
 const Vertex3D = require('./vertex');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
 const Plane = require('./plane');
+const FixedValue = require('./fixed-value');
 const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(.00000001).within;
 
 const zero = (val) => {
@@ -16,6 +17,7 @@ class Line3D {
     if (startVertex === undefined || endVertex === undefined) throw new Error('Lines must have a start and an end point');
     this.startVertex = new Vertex3D(startVertex);
     this.endVertex = new Vertex3D(endVertex);
+    const instance = this;
 
     this.clone = () => new Line3D(this.startVertex.clone(), this.endVertex.clone());
 
@@ -48,24 +50,25 @@ class Line3D {
       tolerance ||= .01;
     }
 
+    const setCoef = (index, obj, t) => {
+      let offset = ((index + 1) % 3);
+      let coord = String.fromCharCode(offset + 120);
+      let coef = String.fromCharCode(offset + 97);
+      if (withinTol(instance.endVertex[coord], instance.startVertex[coord]))
+        obj[coef] = new FixedValue(instance.startVertex[coord]);
+      else
+        obj[coef] = (instance.endVertex[coord] - instance.startVertex[coord]) / t;
+    }
+
     this.equation = () => {
       const returnValue = {};
       for (let i = 0; i < 3; i++) {
         let coord = String.fromCharCode(i + 120);
-        let t = (this.endVertex[coord] - this.startVertex[coord]) / 1;
+        let t = this.endVertex[coord] - this.startVertex[coord];
         if (t !== 0) {
-          let coef = String.fromCharCode(i + 97);
-          returnValue[coef] = 1;
-
-          let offset = ((i + 1) % 3);
-          coord = String.fromCharCode(offset + 120);
-          coef = String.fromCharCode(offset + 97);
-          returnValue[coef] = zero((this.endVertex[coord] - this.startVertex[coord]) / t);
-
-          offset = ((i + 2) % 3);
-          coord = String.fromCharCode(offset + 120);
-          coef = String.fromCharCode(offset + 97);
-          returnValue[coef] = zero((this.endVertex[coord] - this.startVertex[coord]) / t);
+          setCoef(i, returnValue, t);
+          setCoef(i + 1, returnValue, t);
+          setCoef(i + 2, returnValue, t);
           break;
         }
       }

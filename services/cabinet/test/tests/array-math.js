@@ -7,6 +7,7 @@ const approximate = require('../../../../public/js/utils/approximate.js');
 
 const CSG = require('../../public/js/3d-modeling/csg');
 const GL = require('../../public/js/3d-modeling/lightgl');
+const FixedValue = require('../../app-src/three-d/objects/fixed-value');
 
 
 Test.add('Array: translate',(ts) => {
@@ -296,9 +297,11 @@ Test.add('Matrix: properDemension', (ts) => {
     [1,4,1],
   ]);
 
+  const zero = new FixedValue(0);
+  const one = new FixedValue(1);
   let properDemension = matrix.properDemension();
   ts.assertTrue(properDemension.matrix.equals(new Matrix([[8,6],[1,4]])));
-  ts.assertTrue(properDemension.fixedValues.equals([,,1]));
+  ts.assertTrue(properDemension.fixedValues.equals([,,one]));
 
   matrix = new Matrix([
     [0,0,3,-5,4,0,0,1],
@@ -310,7 +313,7 @@ Test.add('Matrix: properDemension', (ts) => {
 
   properDemension = matrix.properDemension(true);
   ts.assertTrue(properDemension.matrix.equals(new Matrix([[3,-5,4],[5,2,1],[2,3,-2]])));
-  ts.assertTrue(properDemension.fixedValues.equals([0,0,,,,0,0,1]));
+  ts.assertTrue(properDemension.fixedValues.equals([zero,zero,,,,zero,zero,one]));
 
   matrix = new Matrix([
     [8,7,1],
@@ -320,7 +323,7 @@ Test.add('Matrix: properDemension', (ts) => {
 
   properDemension = matrix.properDemension();
   ts.assertTrue(properDemension.matrix.equals(new Matrix([[8,7],[1,4]])));
-  ts.assertTrue(properDemension.fixedValues.equals([,,1]));
+  ts.assertTrue(properDemension.fixedValues.equals([,,one]));
 
   ts.success();
 });

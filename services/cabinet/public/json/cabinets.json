@@ -5689,6 +5689,6 @@ module.exports = {
         "leftDepth": "cwl",
         "rightDepth": "cwr"      }
     ],
-    "autoToeKick": false
+    "autoToeKick": true
   }
 }

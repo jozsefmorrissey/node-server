@@ -1,6 +1,7 @@
 
 const Approximate = require('../../../../../public/js/utils/approximate.js');
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const FixedValue = require('./fixed-value');
 const within = Tolerance.within(.0001);
 
 const withinTight = Tolerance.within(.000000001);
@@ -21,7 +22,7 @@ function columnValidator (min, max) {
     if (key > max || key < min) {
       throw new Error('An assignment error was made or you need to resize your matrix');
     }
-    if ((typeof value) !== 'number') {
+    if ((typeof value) !== 'number' && !(value instanceof Number)) {
       throw new Error('Matrix must be filled with numbers');
     }
     target[key] = value;
@@ -175,7 +176,7 @@ class Matrix extends Array {
       const fixedColumns = rowReduced.fixedColumns();
       for (let index = columns; fixedColumns && index >= 0; index--) {
          if (fixedColumns[index]) {
-           info.fixedValues[index] = rowReduced[0][index];
+           info.fixedValues[index] = new FixedValue(rowReduced[0][index], index);
            rowReduced = rowReduced.remove(null, index);
          }
       }
