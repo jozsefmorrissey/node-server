@@ -33165,9 +33165,11 @@ function (require, exports, module) {
 	        // a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
 	        a.setColor(...getColor());
 	        assem.getJoints().female.forEach((joint) => {
-	          const male = joint.getMale();
-	          const m = male.toModel();
-	          a = a.subtract(m);
+	          if (joint.apply()) {
+	            const male = joint.getMale();
+	            const m = male.toModel();
+	            a = a.subtract(m);
+	          }
 	        });
 	        // else a.setColor(1, 0, 0);
 	        a.normals = normals;
@@ -33180,6 +33182,9 @@ function (require, exports, module) {
 	      partMap = {};
 	      for (let index = 0; index < assemblies.length; index += 1) {
 	        const assem = assemblies[index];
+	        if ((typeof assem.partName) !== 'function') {
+	          console.log('here')
+	        }
 	        partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
 	        const b = buildObject(assem);
 	        cabinetModel.add(assem, b);
@@ -34615,6 +34620,18 @@ const Matrix = require('./matrix');
 	  return orthoVerts;
 	}
 	
+	Vertex3D.nearest = (vertices, target) => {
+	  let closest;
+	  for (let index = 0; index < vertices.length; index++) {
+	    const vertex = vertices[index];
+	    const dist = target.distance(vertex);
+	    if (closest === undefined || closest.dist > dist) {
+	      closest = {dist, vertex};
+	    }
+	  }
+	  return closest.vertex;
+	}
+	
 	Vertex3D.sortByCenter = (center) => {
 	  return (v1, v2) => {
 	    const d1 = v1.distance(v2);
@@ -34815,6 +34832,20 @@ const approximate = require('../../../../../public/js/utils/approximate.js').new
 	
 	const tol = .00000001;
 	Vector3D.tolerance = new Tolerance({i: tol, j: tol, k: tol});
+	
+	Vector3D.mostInLine = (vectors, target) => {
+	  let closest;
+	  target = target.unit();
+	  for (let index = 0; index < vectors.length; index++) {
+	    const vector = vectors[index];
+	    const dist = vector.minus(target).magnitude();
+	    if (closest === undefined || closest.dist > dist) {
+	      closest = {dist, vector};
+	    }
+	  }
+	  return closest.vector;
+	}
+	
 	
 	module.exports = Vector3D;
 	
@@ -36536,6 +36567,9 @@ const Vector3D = require('./vector');
 	
 	    this.length = () => this.vector().magnitude();
 	
+	    this.fromStart = (distance) => this.startVertex.translate(this.vector().unit().scale(distance), true);
+	    this.fromEnd = (distance) => this.endVertex.translate(this.vector().unit().scale(distance), true);
+	
 	    this.adjustLength = (change, fromStartVertex) => {
 	      if ((typeof change) !== 'number' || change === 0) return;
 	      const unitVec = this.vector().unit();
@@ -36569,6 +36603,13 @@ const Vector3D = require('./vector');
 	      point.translate(unitVec.scale(distance));
 	      return point;
 	    }
+	
+	    // this.mirror = (degrees, vertices) => {
+	    //   const axis =
+	    //   for (let index = 0; index < vertices.length; index++) {
+	    //     CSG.ArbitraryRotate(vert, degrees, axis);
+	    //   }
+	    // }
 	
 	    this.rotate = (rotation, center) => {
 	      center ||= this.midpoint();
@@ -36751,33 +36792,16 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	      return normal;
 	    }
 	
+	    this.copy = () => new BiPolygon(polygon1.copy(), polygon2.copy());
+	
 	    this.front = () => new Polygon3D(face1);
 	    this.back = () => new Polygon3D(face2);
 	
-	    function testNormal(suffix) {
-	      const zero = instance[`normal${suffix}0`];
-	      const one = instance[`normal${suffix}1`];
-	      return () => {
-	        const res0 = zero();
-	        const res1 = one();
-	        if (!res0.equals(res1)) {
-	          console.warn('somthin up', suffix);
-	        }
-	        return res0;
-	      }
-	    }
+	    this.faceNormal = (index) => face2[index || 0].distanceVector(face1[index || 0]).unit();
 	
-	    this.normal0 = () => face2[0].distanceVector(face1[0]).unit();
-	    this.normalTop0 = () => face2[3].distanceVector(face2[0]).unit();
-	    this.normalRight0 = () => face2[1].distanceVector(face2[0]).unit();
-	
-	    this.normal1 = () => polygon1.normal().inverse();
-	    this.normalTop1 = () => polygon1.lines()[1].vector().unit();
-	    this.normalRight1 = () => this.normalTop1().crossProduct(this.normal1()).unit();
-	
-	    this.normal = testNormal('');
-	    this.normalTop = testNormal('Top');
-	    this.normalRight = testNormal('Right');
+	    this.normal = () => this.flippedNormal() ? polygon1.normal() : polygon1.normal().inverse();
+	    this.normalTop = () => polygon1.lines()[1].vector().unit().inverse();
+	    this.normalRight = () => this.normalTop().crossProduct(this.normal()).unit().inverse();
 	
 	    this.normals = () => ({
 	      top: this.normalTop(),
@@ -36823,7 +36847,7 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	
 	    this.flippedNormal = () => {
 	      const face1Norm = new Polygon3D(face1).normal();
-	      return this.normal().sameDirection(face1Norm);
+	      return this.faceNormal().sameDirection(face1Norm);
 	    }
 	
 	
@@ -36891,19 +36915,18 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 	}
 	
 	BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
-	  offset ||= {};
 	  distance2 ||= 0;
 	  const verts = polygon.vertices();
-	  if (verts.length < 4) return undefined;
-	  // if (verts.length < 3) return undefined;
+	  // if (verts.length < 4) return undefined;
+	  if (verts.length < 3) return undefined;
 	  const verts1 = JSON.clone(verts);
 	  // TODO: consider moving
-	  // if (offset) {
+	  if (offset) {
 	    Line3D.adjustVertices(verts1[0], verts1[1], offset.x);
 	    Line3D.adjustVertices(verts1[1], verts1[2], offset.y);
 	    Line3D.adjustVertices(verts1[2], verts1[3], offset.x);
 	    Line3D.adjustVertices(verts1[3], verts1[0], offset.y);
-	  // }
+	  }
 	  const verts2 = JSON.clone(verts1);
 	  const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
 	  const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);
@@ -38751,13 +38774,15 @@ const Lookup = require('../../../../../public/js/utils/object/lookup.js')
 	
 	
 	class Joint {
-	  constructor(malePartCode, femalePartCode) {
+	  constructor(malePartCode, femalePartCode, condition) {
 	    let parentAssembly;
 	    const initialVals = {
 	      maleOffset: 0, femaleOffset: 0, parentAssemblyId:  undefined,
 	      malePartCode, femalePartCode, demensionAxis: '', centerAxis: ''
 	    }
 	    Object.getSet(this, initialVals);
+	
+	    this.apply = () => (typeof condition === 'function') ? condition(this) : true;
 	
 	    this.parentAssembly = () => {
 	      if (!parentAssembly && this.parentAssemblyId()) {
@@ -39860,8 +39885,8 @@ function (require, exports, module) {
 const Joint = require('../joint.js');
 	
 	class Dado extends Joint {
-	  constructor(malePartCode, femalePartCode) {
-	    super(malePartCode, femalePartCode);
+	  constructor(malePartCode, femalePartCode, condition) {
+	    super(malePartCode, femalePartCode, condition);
 	
 	    this.updatePosition = (position) => {
 	      const direction = this.centerAxis()[0] === '-' ? -1 : 1;
@@ -39889,8 +39914,8 @@ function (require, exports, module) {
 	const Joint = require('../joint.js');
 	
 	class Butt extends Joint {
-	  constructor(malePartCode, femalePartCode) {
-	    super(malePartCode, femalePartCode);
+	  constructor(malePartCode, femalePartCode, condition) {
+	    super(malePartCode, femalePartCode, condition);
 	  }
 	}
 	
@@ -39967,6 +39992,7 @@ function (require, exports, module) {
 	      const subs = parentGetSubAssems();
 	      if (this.autoToeKick()) {
 	        if (toeKick === undefined) toeKick = new AutoToekick(this);
+	        subs.concatInPlace(toeKick.getSubassemblies());
 	        return subs.concat(toeKick);
 	      }
 	      return subs;
@@ -40513,7 +40539,7 @@ function (require, exports, module) {
 	  constructor(partCode, partNameFunc, toModel) {
 	    super(partCode);
 	    this.toModel = toModel;
-	    this.partName = partNameFunc;
+	    this.partName = (typeof partNameFunc) === 'function' ? partNameFunc : () => partNameFunc;
 	  }
 	}
 	
@@ -40869,34 +40895,80 @@ RequireJS.addFunction('./services/cabinet/app-src/objects/assembly/assemblies/au
 function (require, exports, module) {
 	
 const Assembly = require('../../assembly');
+	const PanelModel = require('../panel').Model;
+	const CutterModel = require('../cutter').Model;
 	const Vertex3D = require('../../../../three-d/objects/vertex');
+	const Vector3D = require('../../../../three-d/objects/vector');
 	const Line3D = require('../../../../three-d/objects/line');
 	const Polygon3D = require('../../../../three-d/objects/polygon');
 	const BiPolygon = require('../../../../three-d/objects/bi-polygon');
 	const Butt = require('../../../joint/joints/butt.js');
 	
+	const so = 3*2.54;
+	
+	const tkCounters = {};
+	const getId = (cab) => {
+	  if (tkCounters[cab.id()] === undefined) tkCounters[cab.id()] = 0;
+	  return tkCounters[cab.id()]++;
+	}
+	
 	class AutoToekick extends Assembly {
 	  constructor(cabinet) {
-	    super('AUTOTK', 'AutoToeKick');
+	    const id = getId(cabinet);
+	    const atkid = `AutoToeKick${id}`;
+	    super(`AUTOTK`, atkid);
 	
-	    Object.getSet(this, {rightEndStyle: false, leftEndStyle: true});
+	    Object.getSet(this, {rightEndStyle: true, leftEndStyle: false});
 	    const instance = this;
 	    let lastSize = new Vertex3D();
 	    let toeKick;
 	    let vOid;
-	    let leftBlock;
-	    let rightBlock;
 	    let offsetToeKickPoly;
+	    let supports;
+	    let supportPanels = [];
+	
+	    const children = {}
+	
+	    function toModel(name, index) {
+	      return () => {
+	        instance.update();
+	        return children[name].toModel();
+	      }
+	    }
+	
+	    const joint = (part) => (otherPartCode, condition) =>
+	      part.addJoints(new Butt(part.partCode(), otherPartCode, condition));
+	    const toeKickPanel = new PanelModel('tkb', `${atkid}.Backer`, toModel('toeKick'));
+	    joint(toeKickPanel)('R');
+	    joint(toeKickPanel)('B');
+	    joint(toeKickPanel)('L');
+	    const cutter = new CutterModel('tkc', `${atkid}.Cutter`, toModel('vOid'));
+	    joint(cutter)('R', () => !this.rightEndStyle());
+	    joint(cutter)('L', () => !this.leftEndStyle());
+	    const assems = [toeKickPanel, cutter];
+	
+	    // function updateSupports() {
+	    //   supportPanels = [];
+	    //   for (let index = 0; supports && index < supports.length; index++) {
+	    //     const panel = new PanelModel('tks', `${atkid}.ToeKickCutter`, toModel('supports', index));
+	    //     supportPanels.push(panel);
+	    //   }
+	    //   return supportPanels;
+	    // }
+	
+	    this.part = () => false;
+	    this.children = () => this.getSubassemblies();
+	    this.getSubassemblies = () => assems;
 	
 	    this.update = () => {
 	      if (!lastSize.equals(cabinet.position().demension())) {
 	        try{
-	          updateStuff();
+	          lastSize = new Vertex3D(cabinet.position().demension());
+	          this.toBiPolygon();
 	        } catch (e) {
 	          console.error('AutoToeKick: update exception');
 	          console.error(e);
 	        }
-	        lastSize = new Vertex3D(cabinet.position().demension());
 	      }
 	    }
 	
@@ -40967,22 +41039,77 @@ const Assembly = require('../../assembly');
 	      const buttToePoly2 = toPoly(topInner, bottomInner);
 	      const buttToePoly1 = toPoly(topOuter, bottomOuter);
 	      toeKick = new BiPolygon(buttToePoly1, buttToePoly2);
+	      children.toeKick = toeKick;
 	    }
 	
-	    function buildSupports() {
-	      const normal = toeKick.normal();
-	      const back = toeKick.back();
-	      const topLine = back.lines()[0];
-	      const length = topLine.length;
-	      const supportCount = Math.ceil(length / 24 * 2.54);
+	    // function addExtraSupports(supports) {
+	    //   const back = toeKick.back();
+	    //   const topLine = back.lines()[0];
+	    //   const length = topLine.length();
+	    //   const supportCount = Math.ceil(length / (5 * 2.54)) - 2;
+	    //   if (supportCount < 1) return;
+	    //
+	    //   const offsetLength = length/(supportCount + 1);
+	    //   const backVect = toeKick.normal();
+	    //   const downVect = toeKick.front().lines()[1].vector().unit();
+	    //   const half34 = so/8;
+	    //   const getSupport = (at) => {
+	    //     const point2 = at.translate(backVect.scale(so), true);
+	    //     const point3 = at.translate(downVect.scale(so), true);
+	    //     const triangle = new Polygon3D([at, point2, point3]);
+	    //     return BiPolygon.fromPolygon(triangle, half34, -half34);
+	    //   }
+	    //
+	    //
+	    //   for (let index = 0; index < supportCount; index++) {
+	    //     const dist = offsetLength * (index + 1);
+	    //     const point = topLine.fromStart(dist);
+	    //     supports.push(getSupport(point));
+	    //   }
+	    // }
 	
-	      const vFront = vOid.front().vertices();
-	      const vBack = vOid.back().vertices();
-	      const vert1 = vFront[3]
-	      const triangle = new Polygon3D([vFront[0], vBack[0], vFront[3]]);
-	      const support = BiPolygon.fromPolygon(triangle, 3 * 2.54 / 4);
-	      return support;
+	    function sidePoly(assem, targetPoint, trendSetter) {
+	      const side = assem.toBiPolygon().closestOrder(targetPoint)[0];
+	      const verts = side.vertices();
+	      const closestPoint = Vertex3D.nearest(verts, targetPoint);
+	      let vects;
+	      for (let index = 0; index < verts.length; index += 1) {
+	        const vert = verts[index];
+	        if (vert.equals(closestPoint)) {
+	          const next = verts[(index + 1) % verts.length];
+	          const prev = verts[(index + verts.length - 1) % verts.length];
+	          vects = [new Line3D(vert, next).vector().unit(), new Line3D(vert, prev).vector().unit()];
+	          if (Vector3D.mostInLine(vects, trendSetter).equals(vects[1])) vects.reverse();
+	          break;
+	        }
+	      }
+	      const depthVector = vects[0];
+	      const heightVector = vects[1];
+	      const tkw = cabinet.eval('tkbw');
+	      const tkh = cabinet.eval('tkh');
+	      const tkd = cabinet.eval('tkd');
+	      const point1 = closestPoint.translate(heightVector.scale(tkh), true)
+	                                  .translate(depthVector.scale(tkw + tkd));
+	      const point2 = point1.translate(depthVector.scale(so), true);
+	      const point3 = point1.translate(heightVector.inverse().scale(so), true);
+	      const triangle = new Polygon3D([point1, point2, point3]);
+	      return BiPolygon.fromPolygon(triangle, so/2);
 	    }
+	
+	    // function buildSupports(right, left, coords) {
+	    //   supports = [];
+	    //   const center = Vertex3D.center(coords.inner);
+	    //   const leftBottom = coords.inner[3];
+	    //   const rightBottom = coords.inner[2];
+	    //
+	    //   const rightTrendSetter = toeKick.faceNormal(1);
+	    //   const leftTrendSetter = toeKick.faceNormal(0);
+	    //   supports.push(sidePoly(left, leftBottom, leftTrendSetter));
+	    //   addExtraSupports(supports);
+	    //   supports.push(sidePoly(right, rightBottom, rightTrendSetter));
+	    //   children.supports = supports;
+	    //   return supports[0];
+	    // }
 	
 	    function openingToeKick(opening) {
 	      const right = opening.right();
@@ -40996,15 +41123,17 @@ const Assembly = require('../../assembly');
 	      const dem = cabinet.position().demension();
 	      const xyOffset = {x: dem.x + dem.z + dem.y, y: 0};
 	      vOid = buildOffset(right, left, center, coords, innerPoly, tkh, sdepth, null, xyOffset);
+	      children.vOid = vOid;
 	
 	      const tkd1 = sdepth;
 	      const tkd2 = tkd1 + cabinet.value('tkbw');
-	      offsetToeKickPoly = buildOffset(right, left, center, coords, innerPoly, tkh, tkd1, tkd2);
+	      const tkah = tkh + cabinet.eval('B.t')/2;
+	      offsetToeKickPoly = buildOffset(right, left, center, coords, innerPoly, tkah, tkd1, tkd2);
 	
-	      buildToeKick(offsetToeKickPoly, vOid);
-	      // return buildSupports();
+	      return buildToeKick(offsetToeKickPoly, vOid);
+	      // return buildSupports(right, left, coords);
 	
-	      return toeKick;
+	      // return toeKick;
 	    }
 	
 	    this.toBiPolygon = () => {
@@ -41017,8 +41146,6 @@ const Assembly = require('../../assembly');
 	      return opening;
 	    }
 	
-	    const joint = (otherPartCode) => new Butt(this.partCode(), otherPartCode);
-	    this.addJoints(joint('R'), joint('B'), joint('L'));
 	    this.toModel = () => this.toBiPolygon().toModel();
 	  }
 	}

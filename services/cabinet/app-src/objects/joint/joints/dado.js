@@ -2,8 +2,8 @@
 const Joint = require('../joint.js');
 
 class Dado extends Joint {
-  constructor(malePartCode, femalePartCode) {
-    super(malePartCode, femalePartCode);
+  constructor(malePartCode, femalePartCode, condition) {
+    super(malePartCode, femalePartCode, condition);
 
     this.updatePosition = (position) => {
       const direction = this.centerAxis()[0] === '-' ? -1 : 1;

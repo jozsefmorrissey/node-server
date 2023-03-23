@@ -205,6 +205,18 @@ Vertex3D.viewFromVector = (vertices, vector, filter) => {
   return orthoVerts;
 }
 
+Vertex3D.nearest = (vertices, target) => {
+  let closest;
+  for (let index = 0; index < vertices.length; index++) {
+    const vertex = vertices[index];
+    const dist = target.distance(vertex);
+    if (closest === undefined || closest.dist > dist) {
+      closest = {dist, vertex};
+    }
+  }
+  return closest.vertex;
+}
+
 Vertex3D.sortByCenter = (center) => {
   return (v1, v2) => {
     const d1 = v1.distance(v2);

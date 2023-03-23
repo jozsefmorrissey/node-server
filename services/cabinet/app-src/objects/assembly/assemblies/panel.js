@@ -18,7 +18,7 @@ class PanelModel extends Panel {
   constructor(partCode, partNameFunc, toModel) {
     super(partCode);
     this.toModel = toModel;
-    this.partName = partNameFunc;
+    this.partName = (typeof partNameFunc) === 'function' ? partNameFunc : () => partNameFunc;
   }
 }
 

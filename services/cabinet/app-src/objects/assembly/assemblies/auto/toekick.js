@@ -1,33 +1,79 @@
 
 const Assembly = require('../../assembly');
+const PanelModel = require('../panel').Model;
+const CutterModel = require('../cutter').Model;
 const Vertex3D = require('../../../../three-d/objects/vertex');
+const Vector3D = require('../../../../three-d/objects/vector');
 const Line3D = require('../../../../three-d/objects/line');
 const Polygon3D = require('../../../../three-d/objects/polygon');
 const BiPolygon = require('../../../../three-d/objects/bi-polygon');
 const Butt = require('../../../joint/joints/butt.js');
 
+const so = 3*2.54;
+
+const tkCounters = {};
+const getId = (cab) => {
+  if (tkCounters[cab.id()] === undefined) tkCounters[cab.id()] = 0;
+  return tkCounters[cab.id()]++;
+}
+
 class AutoToekick extends Assembly {
   constructor(cabinet) {
-    super('AUTOTK', 'AutoToeKick');
+    const id = getId(cabinet);
+    const atkid = `AutoToeKick${id}`;
+    super(`AUTOTK`, atkid);
 
-    Object.getSet(this, {rightEndStyle: false, leftEndStyle: true});
+    Object.getSet(this, {rightEndStyle: true, leftEndStyle: false});
     const instance = this;
     let lastSize = new Vertex3D();
     let toeKick;
     let vOid;
-    let leftBlock;
-    let rightBlock;
     let offsetToeKickPoly;
+    let supports;
+    let supportPanels = [];
+
+    const children = {}
+
+    function toModel(name, index) {
+      return () => {
+        instance.update();
+        return children[name].toModel();
+      }
+    }
+
+    const joint = (part) => (otherPartCode, condition) =>
+      part.addJoints(new Butt(part.partCode(), otherPartCode, condition));
+    const toeKickPanel = new PanelModel('tkb', `${atkid}.Backer`, toModel('toeKick'));
+    joint(toeKickPanel)('R');
+    joint(toeKickPanel)('B');
+    joint(toeKickPanel)('L');
+    const cutter = new CutterModel('tkc', `${atkid}.Cutter`, toModel('vOid'));
+    joint(cutter)('R', () => !this.rightEndStyle());
+    joint(cutter)('L', () => !this.leftEndStyle());
+    const assems = [toeKickPanel, cutter];
+
+    // function updateSupports() {
+    //   supportPanels = [];
+    //   for (let index = 0; supports && index < supports.length; index++) {
+    //     const panel = new PanelModel('tks', `${atkid}.ToeKickCutter`, toModel('supports', index));
+    //     supportPanels.push(panel);
+    //   }
+    //   return supportPanels;
+    // }
+
+    this.part = () => false;
+    this.children = () => this.getSubassemblies();
+    this.getSubassemblies = () => assems;
 
     this.update = () => {
       if (!lastSize.equals(cabinet.position().demension())) {
         try{
-          updateStuff();
+          lastSize = new Vertex3D(cabinet.position().demension());
+          this.toBiPolygon();
         } catch (e) {
           console.error('AutoToeKick: update exception');
           console.error(e);
         }
-        lastSize = new Vertex3D(cabinet.position().demension());
       }
     }
 
@@ -98,22 +144,77 @@ class AutoToekick extends Assembly {
       const buttToePoly2 = toPoly(topInner, bottomInner);
       const buttToePoly1 = toPoly(topOuter, bottomOuter);
       toeKick = new BiPolygon(buttToePoly1, buttToePoly2);
+      children.toeKick = toeKick;
     }
 
-    function buildSupports() {
-      const normal = toeKick.normal();
-      const back = toeKick.back();
-      const topLine = back.lines()[0];
-      const length = topLine.length;
-      const supportCount = Math.ceil(length / 24 * 2.54);
+    // function addExtraSupports(supports) {
+    //   const back = toeKick.back();
+    //   const topLine = back.lines()[0];
+    //   const length = topLine.length();
+    //   const supportCount = Math.ceil(length / (5 * 2.54)) - 2;
+    //   if (supportCount < 1) return;
+    //
+    //   const offsetLength = length/(supportCount + 1);
+    //   const backVect = toeKick.normal();
+    //   const downVect = toeKick.front().lines()[1].vector().unit();
+    //   const half34 = so/8;
+    //   const getSupport = (at) => {
+    //     const point2 = at.translate(backVect.scale(so), true);
+    //     const point3 = at.translate(downVect.scale(so), true);
+    //     const triangle = new Polygon3D([at, point2, point3]);
+    //     return BiPolygon.fromPolygon(triangle, half34, -half34);
+    //   }
+    //
+    //
+    //   for (let index = 0; index < supportCount; index++) {
+    //     const dist = offsetLength * (index + 1);
+    //     const point = topLine.fromStart(dist);
+    //     supports.push(getSupport(point));
+    //   }
+    // }
 
-      const vFront = vOid.front().vertices();
-      const vBack = vOid.back().vertices();
-      const vert1 = vFront[3]
-      const triangle = new Polygon3D([vFront[0], vBack[0], vFront[3]]);
-      const support = BiPolygon.fromPolygon(triangle, 3 * 2.54 / 4);
-      return support;
+    function sidePoly(assem, targetPoint, trendSetter) {
+      const side = assem.toBiPolygon().closestOrder(targetPoint)[0];
+      const verts = side.vertices();
+      const closestPoint = Vertex3D.nearest(verts, targetPoint);
+      let vects;
+      for (let index = 0; index < verts.length; index += 1) {
+        const vert = verts[index];
+        if (vert.equals(closestPoint)) {
+          const next = verts[(index + 1) % verts.length];
+          const prev = verts[(index + verts.length - 1) % verts.length];
+          vects = [new Line3D(vert, next).vector().unit(), new Line3D(vert, prev).vector().unit()];
+          if (Vector3D.mostInLine(vects, trendSetter).equals(vects[1])) vects.reverse();
+          break;
+        }
+      }
+      const depthVector = vects[0];
+      const heightVector = vects[1];
+      const tkw = cabinet.eval('tkbw');
+      const tkh = cabinet.eval('tkh');
+      const tkd = cabinet.eval('tkd');
+      const point1 = closestPoint.translate(heightVector.scale(tkh), true)
+                                  .translate(depthVector.scale(tkw + tkd));
+      const point2 = point1.translate(depthVector.scale(so), true);
+      const point3 = point1.translate(heightVector.inverse().scale(so), true);
+      const triangle = new Polygon3D([point1, point2, point3]);
+      return BiPolygon.fromPolygon(triangle, so/2);
     }
+
+    // function buildSupports(right, left, coords) {
+    //   supports = [];
+    //   const center = Vertex3D.center(coords.inner);
+    //   const leftBottom = coords.inner[3];
+    //   const rightBottom = coords.inner[2];
+    //
+    //   const rightTrendSetter = toeKick.faceNormal(1);
+    //   const leftTrendSetter = toeKick.faceNormal(0);
+    //   supports.push(sidePoly(left, leftBottom, leftTrendSetter));
+    //   addExtraSupports(supports);
+    //   supports.push(sidePoly(right, rightBottom, rightTrendSetter));
+    //   children.supports = supports;
+    //   return supports[0];
+    // }
 
     function openingToeKick(opening) {
       const right = opening.right();
@@ -127,15 +228,17 @@ class AutoToekick extends Assembly {
       const dem = cabinet.position().demension();
       const xyOffset = {x: dem.x + dem.z + dem.y, y: 0};
       vOid = buildOffset(right, left, center, coords, innerPoly, tkh, sdepth, null, xyOffset);
+      children.vOid = vOid;
 
       const tkd1 = sdepth;
       const tkd2 = tkd1 + cabinet.value('tkbw');
-      offsetToeKickPoly = buildOffset(right, left, center, coords, innerPoly, tkh, tkd1, tkd2);
+      const tkah = tkh + cabinet.eval('B.t')/2;
+      offsetToeKickPoly = buildOffset(right, left, center, coords, innerPoly, tkah, tkd1, tkd2);
 
-      buildToeKick(offsetToeKickPoly, vOid);
-      // return buildSupports();
+      return buildToeKick(offsetToeKickPoly, vOid);
+      // return buildSupports(right, left, coords);
 
-      return toeKick;
+      // return toeKick;
     }
 
     this.toBiPolygon = () => {
@@ -148,8 +251,6 @@ class AutoToekick extends Assembly {
       return opening;
     }
 
-    const joint = (otherPartCode) => new Butt(this.partCode(), otherPartCode);
-    this.addJoints(joint('R'), joint('B'), joint('L'));
     this.toModel = () => this.toBiPolygon().toModel();
   }
 }

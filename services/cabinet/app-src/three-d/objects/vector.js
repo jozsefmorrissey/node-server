@@ -99,4 +99,18 @@ class Vector3D {
 const tol = .00000001;
 Vector3D.tolerance = new Tolerance({i: tol, j: tol, k: tol});
 
+Vector3D.mostInLine = (vectors, target) => {
+  let closest;
+  target = target.unit();
+  for (let index = 0; index < vectors.length; index++) {
+    const vector = vectors[index];
+    const dist = vector.minus(target).magnitude();
+    if (closest === undefined || closest.dist > dist) {
+      closest = {dist, vector};
+    }
+  }
+  return closest.vector;
+}
+
+
 module.exports = Vector3D;

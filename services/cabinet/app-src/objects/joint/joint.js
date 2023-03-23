@@ -3,13 +3,15 @@ const Lookup = require('../../../../../public/js/utils/object/lookup.js')
 
 
 class Joint {
-  constructor(malePartCode, femalePartCode) {
+  constructor(malePartCode, femalePartCode, condition) {
     let parentAssembly;
     const initialVals = {
       maleOffset: 0, femaleOffset: 0, parentAssemblyId:  undefined,
       malePartCode, femalePartCode, demensionAxis: '', centerAxis: ''
     }
     Object.getSet(this, initialVals);
+
+    this.apply = () => (typeof condition === 'function') ? condition(this) : true;
 
     this.parentAssembly = () => {
       if (!parentAssembly && this.parentAssemblyId()) {

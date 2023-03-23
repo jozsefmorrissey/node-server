@@ -87,6 +87,9 @@ class Line3D {
 
     this.length = () => this.vector().magnitude();
 
+    this.fromStart = (distance) => this.startVertex.translate(this.vector().unit().scale(distance), true);
+    this.fromEnd = (distance) => this.endVertex.translate(this.vector().unit().scale(distance), true);
+
     this.adjustLength = (change, fromStartVertex) => {
       if ((typeof change) !== 'number' || change === 0) return;
       const unitVec = this.vector().unit();
@@ -120,6 +123,13 @@ class Line3D {
       point.translate(unitVec.scale(distance));
       return point;
     }
+
+    // this.mirror = (degrees, vertices) => {
+    //   const axis =
+    //   for (let index = 0; index < vertices.length; index++) {
+    //     CSG.ArbitraryRotate(vert, degrees, axis);
+    //   }
+    // }
 
     this.rotate = (rotation, center) => {
       center ||= this.midpoint();

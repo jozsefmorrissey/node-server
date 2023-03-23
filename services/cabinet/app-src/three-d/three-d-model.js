@@ -226,9 +226,11 @@ class ThreeDModel {
         // a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
         a.setColor(...getColor());
         assem.getJoints().female.forEach((joint) => {
-          const male = joint.getMale();
-          const m = male.toModel();
-          a = a.subtract(m);
+          if (joint.apply()) {
+            const male = joint.getMale();
+            const m = male.toModel();
+            a = a.subtract(m);
+          }
         });
         // else a.setColor(1, 0, 0);
         a.normals = normals;
@@ -241,6 +243,9 @@ class ThreeDModel {
       partMap = {};
       for (let index = 0; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
+        if ((typeof assem.partName) !== 'function') {
+          console.log('here')
+        }
         partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
         const b = buildObject(assem);
         cabinetModel.add(assem, b);

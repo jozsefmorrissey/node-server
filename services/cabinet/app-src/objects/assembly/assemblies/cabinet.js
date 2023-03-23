@@ -63,6 +63,7 @@ class Cabinet extends Assembly {
       const subs = parentGetSubAssems();
       if (this.autoToeKick()) {
         if (toeKick === undefined) toeKick = new AutoToekick(this);
+        subs.concatInPlace(toeKick.getSubassemblies());
         return subs.concat(toeKick);
       }
       return subs;
