@@ -69,87 +69,84 @@ class CabinetOpeningCorrdinates {
       return cabinet.evalObject(object);;
     }
 
-    let printVerts = (verts) => '(' + leftPlane[0].vertices().join('),(') + ')';
+    function panelInfo(len, biPoly, center, limitPlanes) {
+      const polys = biPoly.furthestOrder(center);
+      const outerPoly = polys[0];
+      const innerPoly = polys[1];
+      const backOutLine = outerPoly.lines()[1];
+      const backInLine = innerPoly.lines()[1];
 
-    function backCoordinates() {
-      const right = instance.right();
-      const left = instance.left();
-      const top = instance.top();
-      const bottom = instance.bottom();
-      const back = cabinet.getAssembly(config.back);
-      const center = Vertex3D.center(bottom.position().center(), top.position().center());
+      const topOutStart = limitPlanes.top.out.intersection.line(backOutLine);
+      const botOutStart = limitPlanes.bottom.out.intersection.line(backOutLine);
+      const bottomVector = outerPoly.lines()[2].vector().unit();
+      const topVector = outerPoly.lines()[0].vector().unit().inverse();
 
-      const biPolyLeft = left.position().toBiPolygon();
-      const biPolyRight = right.position().toBiPolygon();
-      const biPolyTop = top.position().toBiPolygon();
-      const biPolyBottom = bottom.position().toBiPolygon();
-      const leftPolys = biPolyLeft.furthestOrder(center);
-      const rightPolys = biPolyRight.furthestOrder(center);
-      const topPolys = biPolyTop.furthestOrder(center);
-      const bottomPolys = biPolyBottom.furthestOrder(center);
+      const outerTop = Line3D.fromVector(topVector.scale(len), topOutStart).endVertex;
+      const outerBot = Line3D.fromVector(bottomVector.scale(len), botOutStart).endVertex;
 
-      const backCenter = back.position().center();
-      const outLineLeft = Line3D.centerClosestTo(backCenter, leftPolys[0].lines());
-      const outLineRight = Line3D.centerClosestTo(backCenter, rightPolys[0].lines());
-
-      const inLineLeft = Line3D.centerClosestTo(backCenter, leftPolys[1].lines());
-      const inLineRight = Line3D.centerClosestTo(backCenter, rightPolys[1].lines());
-
-      const topTopPlane = topPolys[0].toPlane();
-      const bottomTopPlane = topPolys[1].toPlane();
-      const bottomBottomPlane = bottomPolys[0].toPlane();
-      const topBottomPlane = bottomPolys[1].toPlane();
-
-      const topLeftOut = topTopPlane.intersection.line(outLineLeft);
-      const topRightOut = topTopPlane.intersection.line(outLineRight);
-      const bottomRightOut = bottomBottomPlane.intersection.line(outLineRight);
-      const bottomLeftOut = bottomBottomPlane.intersection.line(outLineLeft);
-
-      const topLeftIn = bottomTopPlane.intersection.line(inLineLeft);
-      const topRightIn = bottomTopPlane.intersection.line(inLineRight);
-      const bottomRightIn = topBottomPlane.intersection.line(inLineRight);
-      const bottomLeftIn = topBottomPlane.intersection.line(inLineLeft);
+      const topInStart = limitPlanes.top.in.intersection.line(backInLine);
+      const botInStart = limitPlanes.bottom.in.intersection.line(backInLine);
+      const topInVect = innerPoly.lines()[0].vector();
+      const botInVect = innerPoly.lines()[2].vector();
+      const topInLine = Line3D.fromVector(topInVect, topInStart);
+      const botInLine = Line3D.fromVector(botInVect, botInStart);
 
       return {
-        in: new Polygon3D([topLeftIn, topRightIn, bottomRightIn, bottomLeftIn]),
-        out: new Polygon3D([topLeftOut, topRightOut, bottomRightOut, bottomLeftOut]),
-        center
-      }
+        innerLines: {top: topInLine, bottom: botInLine},
+        outer: {top: outerTop, bottom: outerBot}
+      };
     }
 
-    // TODO-maybe: centerOffset was intended to enable rotation of the planes...
-    function sliceCoordinates(leftLen, rightLen, centerOffset) {
-      const backCoords = backCoordinates();
-      const outerBackPoly = backCoords.out;
-      const innerBackPoly = backCoords.in;
-      const innerDirPoly = innerBackPoly.parrelleNear(backCoords.center);
+    function openingCenter(top, bottom, right, left) {
+      const center = Vertex3D.center(bottom.center(), top.center());
+      const rightFaces = right.closestOrder(center)[0].vertices();
+      const leftFaces = left.closestOrder(center)[0].vertices();
+      return Vertex3D.center(rightFaces[0], rightFaces[3], leftFaces[0], leftFaces[3]);
+    }
 
-      const oflpv = outerBackPoly.parrelleAt(-leftLen).vertices();
-      const ofrpv = outerBackPoly.parrelleAt(-rightLen).vertices();
-      const outer = [oflpv[0], ofrpv[1], ofrpv[2], oflpv[3]];
-      const outerPoly = new Polygon3D([oflpv[0], ofrpv[1], ofrpv[2], oflpv[3]]);
-      const outerPlane = outerPoly.toPlane();
+    function limitPlanes(biPoly, center) {
+      const faces = biPoly.closestOrder(center);
+      return {in: faces[0].toPlane(), out: faces[1].toPlane()};
+    }
 
-      const ibpv = innerBackPoly.vertices();
-      const idpv = innerDirPoly.vertices();
-      const i0 = outerPlane.intersection.line(new Line3D(ibpv[0], idpv[0]));
-      const i1 = outerPlane.intersection.line(new Line3D(ibpv[1], idpv[1]));
-      const i2 = outerPlane.intersection.line(new Line3D(ibpv[2], idpv[2]));
-      const i3 = outerPlane.intersection.line(new Line3D(ibpv[3], idpv[3]));
-
+    function addCutter(outer) {
+      const outerPoly = new Polygon3D(outer);
       const corner2corner = outer[0].distance(outer[2]);
 
-      const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2, 0, {x: corner2corner, y: corner2corner});
+      const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2, 0);
       const partCode = 'gerf';
       const partName = 'Gerf';
       const cutter = new Cutter.Model(partCode, () => partName, biPoly.toModel);
       subassemblies = [cutter];
       const joint = (otherPartCode) => new Butt(partCode, otherPartCode);
       cutter.addJoints(joint('T'), joint('B'), joint('R'), joint('L'));
+    }
 
+    function sliceCoordinates(leftLen, rightLen) {
+      const top = instance.top().toBiPolygon();
+      const bottom = instance.bottom().toBiPolygon();
+      const left = instance.left().toBiPolygon();
+      const right = instance.right().toBiPolygon();
+      right.orderBy.biPolygon(left);
 
+      const center = openingCenter(top, bottom, right, left);
+      const topPlanes = limitPlanes(top, center);
+      const bottomPlanes = limitPlanes(bottom, center);
+      const limits = {top: topPlanes, bottom: bottomPlanes};
+      const lInfo = panelInfo(leftLen, left, center, limits);
+      const rInfo = panelInfo(rightLen, right, center, limits);
 
-      return {inner: [i0,i1,i2,i3], outer};
+      const outer = [lInfo.outer.top, rInfo.outer.top, rInfo.outer.bottom, lInfo.outer.bottom];
+      const outerPlane = new Polygon3D(outer).toPlane();
+
+      const topLeft = outerPlane.intersection.line(lInfo.innerLines.top);
+      const topRight = outerPlane.intersection.line(rInfo.innerLines.top);
+      const bottomRight = outerPlane.intersection.line(rInfo.innerLines.bottom);
+      const bottomLeft = outerPlane.intersection.line(lInfo.innerLines.bottom);
+      const inner = [topLeft, topRight, bottomRight, bottomLeft];
+
+      addCutter(outer);
+      return {inner, outer};
     }
 
 
@@ -160,9 +157,9 @@ class CabinetOpeningCorrdinates {
       try {
         switch (config._Type) {
           case 'location':
-          coords = manualCoordinates(config.coordinates); break;
+            coords = manualCoordinates(config.coordinates); break;
           case 'slice':
-          coords = sliceCoordinates(cabinet.eval(config.leftDepth), cabinet.eval(config.rightDepth));break;
+            coords = sliceCoordinates(cabinet.eval(config.leftDepth), cabinet.eval(config.rightDepth));break;
         }
       } catch (e) {
         console.warn(`Failed to determine coordinates of the specified type: '${config._Type}'`);

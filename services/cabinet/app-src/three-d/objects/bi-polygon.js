@@ -48,6 +48,20 @@ class BiPolygon {
       right: this.normalRight()
     });
 
+    this.orderBy = {};
+    this.orderBy.polygon = (polygon) => {
+      const faces = this.closestOrder(polygon.center());
+      const closest = faces[0];
+      const shift = closest.orderBy.polygon(polygon);
+      if (shift === null) return;
+      faces[1].shift(shift);
+      return shift;
+    }
+    this.orderBy.biPolygon = (biPolygon) => {
+      const closestFace = biPolygon.closestOrder(this.center())[0];
+      return this.orderBy.polygon(closestFace);
+    }
+
     this.furthestOrder = (vertex) => {
       const front = this.front();
       const back = this.back();

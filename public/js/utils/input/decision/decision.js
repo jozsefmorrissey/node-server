@@ -1,5 +1,6 @@
 
-
+// TODO IMPORTANT: refactor this garbage!!!!!!
+// ... its extreamly unIntuitive.
 
 
 
@@ -42,6 +43,7 @@ class DecisionInput {
   constructor(name, inputArrayOinstance, tree, isRoot) {
     Object.getSet(this, 'name', 'id', 'childCntId', 'inputArray', 'class', 'condition');
     this.clone = () => this;
+    const instance = this;
 
     this.tree = () => tree;
     if (inputArrayOinstance instanceof ValueCondition) {
@@ -63,12 +65,12 @@ class DecisionInput {
     }
 
     const getWrapper = (wrapperOid) => wrapperOid instanceof LogicWrapper ?
-        wrapperOid : (LogicWrapper.get(wrapperId) || this.root());
+        wrapperOid : (LogicWrapper.get(wrapperOid));
 
     this.branch = (wrapperId, inputs) =>
-            get(wrapperId).branch(String.random(), new DecisionInput(name));
+            getWrapper(wrapperId).branch(String.random(), new DecisionInput(name));
     this.conditional = (wrapperId, inputs, name, selector) =>
-            get(wrapperId).conditional(String.random(), new DecisionInput(name, relation, formula));
+            getWrapper(wrapperId).conditional(String.random(), new DecisionInput(name, relation, formula));
 
     this.update = tree.update;
     this.addValues = (values) => {
@@ -87,6 +89,8 @@ class DecisionInput {
       return valid;
     }
     this.isRoot = () => isRoot;
+    this.tag = () =>
+      tree.block() ? 'div' : 'span';
 
     this.html = (parentCalling) => {
       if (this.isRoot() && parentCalling !== true) return tree.html();
@@ -148,7 +152,7 @@ class DecisionInputTree extends LogicTree {
       wrapper.forAll((wrapper) => {
         inputHtml += wrapper.payload().html(true);
       });
-      const scope = {wrapper, inputHtml, DecisionInputTree, tree};
+      const scope = {wrapper, inputHtml, DecisionInputTree, inputTree: this, tree};
       if (wrapper === root) {
         return DecisionInputTree.template.render(scope);
       }
@@ -219,6 +223,15 @@ class DecisionInputTree extends LogicTree {
       }
       return true;
     }
+
+    let block = false;
+    tree.block = (is) => {
+      if (is === true || is === false) {
+        block = is;
+      }
+      return block;
+    }
+    this.block = tree.block;
 
     this.onComplete(onComplete);
 

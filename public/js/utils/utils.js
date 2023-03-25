@@ -91,6 +91,17 @@ Function.safeStdLibAddition(String, 'random',  function (len) {
     return str.substr(0, len);
 }, true);
 
+const specialRegChars = /[-[\]{}()*+?.,\\^$|#\\s]/g;
+Function.safeStdLibAddition(RegExp, 'escape',  function (str) {
+  return str.replace(specialRegChars, '\\$&');
+}, true);
+
+Function.safeStdLibAddition(String, 'count',  function (len) {
+  const clean = RegExp.escape(this);
+  return clean.replace(/[^-]/g, '').length
+});
+
+
 const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
 const decimalReg = new RegExp(`^${decimalRegStr}$`);
 Function.safeStdLibAddition(String, 'isNumber', function (len) {

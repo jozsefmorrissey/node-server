@@ -24,15 +24,44 @@ class CabinetConfig {
     this.valid = (type, id) => (!id ?
                   cabinets[type] : cabinetKeys[type][id]) !== undefined;
 
-    this.inputTree = () => {
-      const types = JSON.parse(JSON.stringify(configKeys));
-      const typeInput = new Select({
-        name: 'type',
-        label: 'Type',
-        inline: false,
-        class: 'center',
-        list: types
+    let typeCount = 0;
+    const typeSelect = (name) => {
+      return new Select({
+        name,
+        inline: true,
+        list: ['']
       });
+    }
+
+    function typeTree(types, tree) {
+      for(let index = 0; index < types.length; index++) {
+        const type = types[index];
+        const splitPath = type.split('-').reverse();
+        let branch = tree;
+        let prevPath = tree.node.name;
+        for (let pIndex = 0; pIndex < splitPath.length; pIndex++) {
+          const name = splitPath[pIndex];
+          const path = `${prevPath}-${name}`;
+          let nextBranch = tree.node.getByName(path);
+          if (pIndex !== splitPath.length - 1) {
+            if (nextBranch === undefined) {
+              const select = typeSelect(path);
+              const valueCond = new ValueCondition(prevPath, name, [select]);
+              nextBranch = branch.conditional(path, valueCond);
+            }
+          }
+          const inputArray = branch.payload ? branch.payload().inputArray : branch.inputArray;
+          const selectList = inputArray[0].list();
+          if (selectList.indexOf(name) === -1) selectList.push(name);
+          branch = nextBranch;
+          prevPath = path;
+        }
+      }
+    }
+
+    this.inputTree = () => {
+      const typeInput = typeSelect('Cabinet');
+      typeInput.list().copy([]);
       const nameInput = new Input({
         name: 'name',
         inline: true,
@@ -48,13 +77,23 @@ class CabinetConfig {
         list: CabinetLayouts.list()
       });
 
-      const inputs = [layoutInput, nameInput, typeInput];
+      const inputs = [typeInput, layoutInput, nameInput];
       const inputTree = new DecisionInputTree();
-      // inputTree.onSubmit((t) => {
-      //   inputTree.payload().inputArray[1].setValue('', true)
-      //   inputTree.children()[0].payload().inputArray[0].setValue('', true)
-      // });
+      inputTree.block(true);
+      inputTree.onSubmit((values) => {
+        const targetKey = Object.keys(values)
+                              .filter(str => str.indexOf('Cabinet') === 0)
+                              .filter(str => values[str])
+                              .sort((str1, str2) => str2.count('-') - str1.count())[0];
+        let suffix = targetKey.replace(/Cabinet(\-|$)/, '');
+        suffix &&= '-' + suffix.split('-').reverse().join('-');
+        values.type = `${values[targetKey]}${suffix}`;
+        // inputTree.payload().inputArray[1].setValue('', true)
+        // inputTree.children()[0].payload().inputArray[0].setValue('', true)
+        return 'poop';
+      });
       inputTree.leaf('Cabinet', inputs);
+      typeTree(configKeys, inputTree);
 
       return inputTree;
     };

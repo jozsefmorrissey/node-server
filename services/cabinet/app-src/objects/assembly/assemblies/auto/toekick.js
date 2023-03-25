@@ -23,7 +23,7 @@ class AutoToekick extends Assembly {
     const atkid = `AutoToeKick${id}`;
     super(`AUTOTK`, atkid);
 
-    Object.getSet(this, {rightEndStyle: true, leftEndStyle: false});
+    Object.getSet(this, {rightEndStyle: false, leftEndStyle: false});
     const instance = this;
     let lastSize = new Vertex3D();
     let toeKick;
@@ -227,7 +227,7 @@ class AutoToekick extends Assembly {
       const sdepth = cabinet.value('tkd');
       const dem = cabinet.position().demension();
       const xyOffset = {x: dem.x + dem.z + dem.y, y: 0};
-      vOid = buildOffset(right, left, center, coords, innerPoly, tkh, sdepth, null, xyOffset);
+      vOid = buildOffset(right, left, center, coords, innerPoly, tkh, sdepth, -10000, xyOffset);
       children.vOid = vOid;
 
       const tkd1 = sdepth;

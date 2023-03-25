@@ -309,7 +309,9 @@ exports['-688234735'] = (get, $t) =>
 		` </div> </div> </div>`
 
 exports['input/decision/decision'] = (get, $t) => 
-		` <span class='decision-input-cnt' node-id='` +
+		` <` +
+		$t.clean(get("tag")()) +
+		` class='decision-input-cnt' node-id='` +
 		$t.clean(get("_nodeId")) +
 		`' ` +
 		$t.clean(get("reachable")() ? '' : 'hidden') +
@@ -317,7 +319,9 @@ exports['input/decision/decision'] = (get, $t) =>
 		$t.clean(get("id")) +
 		`'> ` +
 		$t.clean( new $t('101748844').render(get("inputArray"), 'input', get)) +
-		` </span> </span> `
+		` </span> </` +
+		$t.clean(get("tag")()) +
+		`> `
 
 exports['input/input'] = (get, $t) => 
 		`<` +

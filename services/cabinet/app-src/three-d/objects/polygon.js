@@ -292,6 +292,52 @@ class Polygon3D {
       this.addVertices(newVertices);
     }
 
+    this.shift = (startVertexIndex) => {
+      lines.slice(startVertexIndex).concat(lines.slice(0,startVertexIndex))
+    }
+
+    this.orderBy = {};
+    this.orderBy.polygon = (other) => {
+      if (!(other instanceof Polygon3D)) return;
+      const verts = this.vertices();
+      const otherVerts = other.vertices();
+      const vertLen = verts.length;
+      if (otherVerts.length !== vertLen)
+        throw new Error('When using a Polygon3D to order another they must have an equal number of verticies');
+      let shortest;
+      for (let shift = 0; shift < vertLen; shift++) {
+        let dist = 0;
+        for (let index = 0; index < vertLen; index++) {
+          dist += otherVerts[index].distance(verts[(index + shift) % vertLen]);
+        }
+        if (shift === 0 || dist < shortest.dist) {
+          shortest = {dist, shift};
+        }
+      }
+      if (shortest.shift === 0) return null;
+      this.shift(shortest.shift);
+      return shortest.shift;
+    }
+
+    this.orderBy.vertex = (startTarget) => {
+      if (!(startTarget instanceof Vertex3D)) return;
+      const verts = this.vertices();
+      const vertLen = verts.length;
+      let shortest;
+      for (let shift = 0; shift < vertLen; shift++) {
+        let dist = 0;
+        for (let index = 0; index < vertLen; index++) {
+          dist += startTarget.distance(verts[index + shift]);
+        }
+        if (shift === 0 || dist < shortest.dist) {
+          shortest = {dist, shift};
+        }
+      }
+      if (shortest.shift === 0) return null;
+      this.shift(shortest.shift);
+      return shortest.shift;
+    }
+
     this.removeLoops = () => {
       let removed = true;
       const orig = lines;

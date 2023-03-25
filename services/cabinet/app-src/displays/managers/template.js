@@ -424,8 +424,9 @@ function updateOpeningPoints(template, cabinet) {
       const size = modifyingOpening ? 1 : .25;
       const state = sectionState;
       const i = state.index;
-      const vertexColor = (io, i) => io !== state.innerOouter ? 'black' :
-            (modifyingOpening && i === state.index ? 'green' : 'white');
+      const vertexColor = (io, i) => !modifyingOpening ? 'black' :
+                      ((io !== state.innerOouter) ? 'black' :
+                      (i === state.index ? 'green' : 'white'));
 
       const vertexSize = (io) => modifyingOpening && io === state.innerOouter ? size*2 : size;
 
