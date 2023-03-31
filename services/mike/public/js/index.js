@@ -4616,6 +4616,46 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/input/styles/table.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Table extends Input {
+	  constructor(props) {
+	    super(props);
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
+	    }
+	    props.type ||= 'radio';
+	    props.value = undefined;
+	    this.setValue(value);
+	    this.isArray = () => isArray;
+	    this.list = () => props.list;
+	    this.columns = () => props.columns;
+	    this.rows = () => props.rows;
+	    this.description = () => props.description;
+	    // const parentValue = this.value;
+	    // this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
+	
+	    this.selected = (value) => value === this.value();
+	  }
+	}
+	
+	Table.template = new $t('input/table');
+	Table.html = (instance) => () => Table.template.render(instance);
+	
+	module.exports = Table;
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
 function (require, exports, module) {
 	
@@ -4974,43 +5014,45 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
+RequireJS.addFunction('../../public/js/utils/input/styles/radio0.js',
 function (require, exports, module) {
 	
-
-	
-	
-	const Input = require('../input');
+const Input = require('../input');
 	const $t = require('../../$t');
-	const Measurement = require('../../measurement');
 	
-	class MeasurementInput extends Input {
+	class Radio extends Input {
 	  constructor(props) {
-	    let value = new Measurement(props.value, true);
-	    props.value = () => value;
 	    super(props);
-	    props.validation = (val) =>
-	        !Number.isNaN(val && val.display ? value : new Measurement(val).value());
-	    props.errorMsg = 'Invalid Mathematical Expression';
-	    this.value = () => {
-	      return value.display();
+	    if (props.list === undefined) throw new Error('Radio Input is useless without a list of possible values');
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
 	    }
-	    const parentSetVal = this.setValue;
-	    this.setValue = (val) => {
-	      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
-	                        val : new Measurement(val, true)) : value;
-	      const updated = newVal !== value;
-	      value = newVal;
-	      return updated;
-	    }
+	    props.value = undefined;
+	    this.setValue(value);
+	    this.isArray = () => isArray;
+	    this.list = () => props.list;
+	    this.description = () => props.description;
+	    // const parentValue = this.value;
+	    // this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
+	    const parentHidden = this.hidden;
+	    this.hidden = () => props.list.length < 2 || parentHidden();
+	
+	    this.selected = (value) => value === this.value();
 	  }
 	}
 	
-	MeasurementInput.template = new $t('input/measurement');
-	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
+	Radio.template = new $t('input/radio');
+	Radio.html = (instance) => () => Radio.template.render(instance);
 	
+	Radio.yes_no = (props) => (props.list = ['Yes', 'No']) && new Radio(props);
+	Radio.true_false = (props) => (props.list = ['True', 'False']) && new Radio(props);
 	
-	module.exports = MeasurementInput;
+	module.exports = Radio;
 	
 });
 
@@ -5056,6 +5098,135 @@ function (require, exports, module) {
 	Select.html = (instance) => () => Select.template.render(instance);
 	
 	module.exports = Select;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/radio.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Radio extends Input {
+	  constructor(props) {
+	    super(props);
+	    if (props.list === undefined) throw new Error('Radio Input is useless without a list of possible values');
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
+	    }
+	    props.value = undefined;
+	    this.setValue(value);
+	    this.isArray = () => isArray;
+	    this.list = () => props.list;
+	    this.description = () => props.description;
+	    // const parentValue = this.value;
+	    // this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
+	    const parentHidden = this.hidden;
+	    this.hidden = () => props.list.length < 2 || parentHidden();
+	
+	    this.selected = (value) => value === this.value();
+	  }
+	}
+	
+	Radio.template = new $t('input/radio');
+	Radio.html = (instance) => () => Radio.template.render(instance);
+	
+	Radio.yes_no = (props) => (props.list = ['Yes', 'No']) && new Radio(props);
+	Radio.true_false = (props) => (props.list = ['True', 'False']) && new Radio(props);
+	
+	module.exports = Radio;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/select0.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Select extends Input {
+	  constructor(props) {
+	    super(props);
+	    if (props.list === undefined) props.list = [];
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.index && props.list[props.index] ?
+	      props.list[props.index] : props.list[0];
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
+	    }
+	    props.value = undefined;
+	    this.setValue(value);
+	    this.isArray = () => isArray;
+	    this.list = () => props.list;
+	    const parentValue = this.value;
+	    this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
+	    const parentHidden = this.hidden;
+	    this.hidden = () => props.list.length < 2 || parentHidden();
+	
+	    this.selected = (value) => value === this.value();
+	  }
+	}
+	
+	Select.template = new $t('input/select');
+	Select.html = (instance) => () => Select.template.render(instance);
+	
+	module.exports = Select;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const Measurement = require('../../measurement');
+	
+	class MeasurementInput extends Input {
+	  constructor(props) {
+	    let value = new Measurement(props.value, true);
+	    props.value = () => value;
+	    super(props);
+	    props.validation = (val) =>
+	        !Number.isNaN(val && val.display ? value : new Measurement(val).value());
+	    props.errorMsg = 'Invalid Mathematical Expression';
+	    this.value = () => {
+	      return value.display();
+	    }
+	    const parentSetVal = this.setValue;
+	    this.setValue = (val) => {
+	      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
+	                        val : new Measurement(val, true)) : value;
+	      const updated = newVal !== value;
+	      value = newVal;
+	      return updated;
+	    }
+	  }
+	}
+	
+	MeasurementInput.template = new $t('input/measurement');
+	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
+	
+	
+	module.exports = MeasurementInput;
 	
 });
 
@@ -5126,7 +5297,13 @@ function (require, exports, module) {
 RequireJS.addFunction('./generated/html-templates.js',
 function (require, exports, module) {
 	
-exports['101748844'] = (get, $t) => 
+exports['14589589'] = (get, $t) => 
+			`<td > <input type='checkbox'> </td>`
+	
+	exports['94156316'] = (get, $t) => 
+			`<td > <input type='input'> </td>`
+	
+	exports['101748844'] = (get, $t) => 
 			`<span class='pad ` +
 			$t.clean(get("class")) +
 			`' index='` +
@@ -5134,6 +5311,11 @@ exports['101748844'] = (get, $t) =>
 			`'> ` +
 			$t.clean(get("input").html()) +
 			` </span>`
+	
+	exports['450668834'] = (get, $t) => 
+			`<tr > <td>row</td> ` +
+			$t.clean( new $t('14589589').render(get("columns")(), 'colIndex, col', get)) +
+			` </tr>`
 	
 	exports['550500469'] = (get, $t) => 
 			`<span > <input list='auto-fill-list-` +
@@ -5151,6 +5333,16 @@ exports['101748844'] = (get, $t) =>
 			$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 			` </datalist> </span>`
 	
+	exports['680173222'] = (get, $t) => 
+			`<tr > <td>row</td> ` +
+			$t.clean( new $t('-1330466483').render(get("columns")(), 'colIndex, col', get)) +
+			` </tr>`
+	
+	exports['830877709'] = (get, $t) => 
+			`<tr > <td>row</td> ` +
+			$t.clean( new $t('-1258061900').render(get("columns")(), 'colIndex, col', get)) +
+			` </tr>`
+	
 	exports['837969265'] = (get, $t) => 
 			`<span class='pad ` +
 			$t.clean(get("class")) +
@@ -5163,6 +5355,13 @@ exports['101748844'] = (get, $t) =>
 			` = ` +
 			$t.clean(get("input").value()) +
 			` </button> <br> </span>`
+	
+	exports['877547683'] = (get, $t) => 
+			`<td > <input type='` +
+			$t.clean(get("type")) +
+			`' name='` +
+			$t.clean(get("id")()-get("row")) +
+			`'> </td>`
 	
 	exports['1447370576'] = (get, $t) => 
 			`<div class="expandable-list-body" key='` +
@@ -5189,6 +5388,33 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("getBody") && get("getBody")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
+	exports['1591500900'] = (get, $t) => 
+			`<td > <input type='` +
+			$t.clean(get("type")()) +
+			`' name='` +
+			$t.clean(get("id")()) +
+			`-` +
+			$t.clean(get("row")) +
+			`'> </td>`
+	
+	exports['1709244846'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("key")) +
+			`</label> <input type='radio' ` +
+			$t.clean((get("isArray")() ? get("val") : get("key")) === get("value")() ? 'checked' : '') +
+			` class='` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`'> </span>`
+	
+	exports['1798392880'] = (get, $t) => 
+			`<tr > <td>row</td> ` +
+			$t.clean( new $t('877547683').render(get("columns")(), 'colIndex, col', get)) +
+			` </tr>`
+	
 	exports['1835219150'] = (get, $t) => 
 			`<option value='` +
 			$t.clean(get("isArray")() ? get("value") : get("key")) +
@@ -5197,6 +5423,11 @@ exports['101748844'] = (get, $t) =>
 			`> ` +
 			$t.clean(get("value")) +
 			` </option>`
+	
+	exports['1981775641'] = (get, $t) => 
+			`<tr > <td>row</td> ` +
+			$t.clean( new $t('-1281991796').render(get("columns")(), 'colIndex, col', get)) +
+			` </tr>`
 	
 	exports['auto-save'] = (get, $t) => 
 			`<div> <button type="button" class='auto-save-btn' name="button">Auto Save</button> <span class='status'></span> </div> `
@@ -5459,7 +5690,7 @@ exports['101748844'] = (get, $t) =>
 			`> `
 	
 	exports['configure'] = (get, $t) => 
-			`<div id='config-body'></div> `
+			`<div id='config-body'></div> <div id='test-ground'></div> `
 	
 	exports['index'] = (get, $t) => 
 			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mike/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/mike/styles/mike.css"> <title></title> </head> <body> ` +
@@ -5562,6 +5793,113 @@ exports['101748844'] = (get, $t) =>
 			$t.clean(get("input").value()) +
 			` </button> </span> </span>`
 	
+	exports['../../public/html/templates/input/radio.js'] = (get, $t) => 
+			``
+	
+	exports['input/radio'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			`> <label>` +
+			$t.clean(get("description")()) +
+			`</label> <br> <div class='tab'> ` +
+			$t.clean( new $t('-1983906216').render(get("list")(), 'key, val', get)) +
+			` </div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['-1983906216'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("isArray")() ? get("val") : get("key")) +
+			`</label> <input type='radio' ` +
+			$t.clean((get("isArray")() ? get("val") : get("key")) === get("value")() ? 'checked' : '') +
+			` class='` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`'> </span>`
+	
+	exports['input/radio0'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			`> <label>` +
+			$t.clean(get("description")()) +
+			`</label> <br> <div class='tab'> ` +
+			$t.clean( new $t('-1983906216').render(get("list")(), 'key, val', get)) +
+			` </div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['input/table'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			`> <label>` +
+			$t.clean(get("description")()) +
+			`</label> <br> <div class='tab'> <table> <tbody> <tr> <td></td> ` +
+			$t.clean( new $t('-706519867').render(get("columns")(), 'col', get)) +
+			` </tr> ` +
+			$t.clean( new $t('-498428047').render(get("rows")(), 'rowIndex, row', get)) +
+			` </tbody> </table> </div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['-706519867'] = (get, $t) => 
+			`<td >col</td>`
+	
+	exports['-2021380955'] = (get, $t) => 
+			`<td > </td>`
+	
+	exports['-1258061900'] = (get, $t) => 
+			`<td > (` +
+			$t.clean(get("rowIndex")) +
+			`, ` +
+			$t.clean(get("colIndex")) +
+			`) </td>`
+	
+	exports['-1171141142'] = (get, $t) => 
+			`<tr > ` +
+			$t.clean( new $t('-1258061900').render(get("columns")(), 'colIndex, col', get)) +
+			` </tr>`
+	
+	exports['-1330466483'] = (get, $t) => 
+			`<td > <input type='radio'> </td>`
+	
+	exports['-393845643'] = (get, $t) => 
+			`<tr > <td>row</td> ` +
+			$t.clean( new $t('94156316').render(get("columns")(), 'colIndex, col', get)) +
+			` </tr>`
+	
+	exports['-1281991796'] = (get, $t) => 
+			`<td > <input type='` +
+			$t.clean(get("type")) +
+			`'> </td>`
+	
+	exports['-935319005'] = (get, $t) => 
+			`<td > <input type='` +
+			$t.clean(get("type")) +
+			`' name='` +
+			$t.clean(get("id")()) +
+			`-` +
+			$t.clean(get("row")) +
+			`'> </td>`
+	
+	exports['-2073315152'] = (get, $t) => 
+			`<tr > <td>row</td> ` +
+			$t.clean( new $t('-935319005').render(get("columns")(), 'colIndex, col', get)) +
+			` </tr>`
+	
+	exports['-498428047'] = (get, $t) => 
+			`<tr > <td>row</td> ` +
+			$t.clean( new $t('1591500900').render(get("columns")(), 'colIndex, col', get)) +
+			` </tr>`
+	
 });
 
 
@@ -5612,6 +5950,8 @@ function (require, exports, module) {
 	
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 	const Input = require('../../../../public/js/utils/input/input');
+	const Radio = require('../../../../public/js/utils/input/styles/radio');
+	const Table = require('../../../../public/js/utils/input/styles/table');
 	const du = require('../../../../public/js/utils/dom-utils.js');
 	
 	let count = 0;
@@ -5648,6 +5988,24 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	  tree.leaf('root', [input1, input2, input3]);
 	  updateEntireTree();
 	}
+	
+	const radio = new Radio({
+	  name: 'radeo',
+	  description: 'Pussy farts',
+	  list: ['one', 2, 3, 'four']
+	});
+	du.id('test-ground').innerHTML = radio.html();
+	// du.id('test-ground').innerHTML = Radio.yes_no({name: 'yn'}).html();
+	// du.id('test-ground').innerHTML = Radio.true_false({name: 'tf'}).html();
+	
+	const table = new Table({
+	  name: 'tabal',
+	  description: 'Pussy fartsss',
+	  columns: ['one', 2, 3, 'four'],
+	  rows: ['bill', 'scott', 'joe', 'fred']
+	});
+	du.id('test-ground').innerHTML = table.html();
+	
 	
 	exports.proccess = proccess;
 	

@@ -1,0 +1,11 @@
+<{{inline() ? 'span' : 'div'}}  class='input-cnt'{{hidden() ? ' hidden' : ''}}>
+  <label>{{description()}}</label>
+  <br>
+  <div class='tab'>
+    <span:t repeat='key, val in list()'>
+      <label>{{isArray() ? val : key}}</label>
+      <input type='radio' {{(isArray() ? val : key) === value() ? 'checked' : ''}}
+             class='{{class()}}' id='{{id()}}' name='{{name()}}'>
+    </span:t>
+  </div>
+</{{inline() ? 'span' : 'div'}}>
