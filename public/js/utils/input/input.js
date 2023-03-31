@@ -178,6 +178,10 @@ Input.forAll = (id) => {
   }
 }
 
+Input.getFromElem = (elem) => {
+  return Input.get(elem.id);
+}
+
 Input.template = new $t('input/input');
 Input.html = (instance) => () => Input.template.render(instance);
 Input.flagAttrs = ['checked', 'selected'];

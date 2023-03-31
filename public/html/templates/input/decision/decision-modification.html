@@ -1,0 +1,15 @@
+
+<{{tag()}} class='decision-input-cnt mod' node-id='{{_nodeId}}' {{reachable() ? '' : 'hidden'}}>
+  <span id='{{id}}'>
+    <span:t repeat='input in inputArray' class='pad {{class}}' index='{{$index}}'>
+      {{input.html()}}
+      <button class='conditional-button'>
+        If {{input.name()}} = {{input.value()}}
+      </button>
+      <br>
+    </span:t>
+  </span>
+  <div>
+    <button class='add-btn'>Add Input</button>
+  </div>
+</{{tag()}}>

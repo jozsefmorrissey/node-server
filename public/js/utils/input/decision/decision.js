@@ -92,14 +92,18 @@ class DecisionInput {
     this.tag = () =>
       tree.block() ? 'div' : 'span';
 
-    this.html = (parentCalling) => {
-      if (this.isRoot() && parentCalling !== true) return tree.html();
+    this.html = (parentCalling, editDisplay) => {
+      if (this.isRoot() && parentCalling !== true) return tree.html(null, editDisplay);
+      if (editDisplay) {
+        return DecisionInput.modTemplate.render(this);
+      }
       return DecisionInput.template.render(this);
     }
     this.treeHtml = (wrapper) => tree.html(wrapper);
   }
 }
 DecisionInput.template = new $t('input/decision/decision');
+DecisionInput.modTemplate = new $t('input/decision/decision-modification');
 
 
 // properties
@@ -146,11 +150,12 @@ class DecisionInputTree extends LogicTree {
     const onCompletion = [];
     const onChange = [];
     const onSubmit = [];
-    tree.html = (wrapper) => {
+    tree.id = this.id;
+    tree.html = (wrapper, editDisplay) => {
       wrapper = wrapper || root;
       let inputHtml = '';
       wrapper.forAll((wrapper) => {
-        inputHtml += wrapper.payload().html(true);
+        inputHtml += wrapper.payload().html(true, editDisplay);
       });
       const scope = {wrapper, inputHtml, DecisionInputTree, inputTree: this, tree};
       if (wrapper === root) {
@@ -252,6 +257,13 @@ DecisionInputTree.validate = (wrapper) => {
   return valid;
 }
 
+DecisionInputTree.getNode = (elem) => {
+  const cnt = du.find.closest('[node-id]', elem);
+  const parent = cnt.parentElement;
+  const nodeId = cnt.getAttribute('node-id');
+  return LogicWrapper.get(nodeId);
+}
+
 DecisionInputTree.update = (soft) =>
   (elem) => {
     const cnt = du.find.closest('[node-id]', elem);
@@ -277,10 +289,44 @@ DecisionInputTree.submit = (elem) => {
   wrapper.submit();
 }
 
+function updateModBtn(elem) {
+  const value = elem.value;
+  const button = du.find.closest('.conditional-button', elem);
+  button.innerText = `If ${elem.name} = ${value}`;
+}
+
+let count = 999;
+const getInput = () => new Input({
+  label: `Label${++count}`,
+  name: `Name${count}`,
+  inline: true,
+  class: 'center',
+});
+
+function modifyBtnPressed(elem) {
+  const node = DecisionInputTree.getNode(elem);
+  const inputArray = node.payload().inputArray;
+  const inputElem = du.find.closest('input,select,textarea', elem);
+  const input = Input.getFromElem(inputElem);
+  console.log('elm')
+  const tree = DecisionInputTree.getTree(elem);
+
+  const newInput = getInput();
+  const branch = tree.getByPath(node.name);
+
+  const newNodeName = String.random();
+  const valueCond = new ValueCondition(input.name(), input.value(), [newInput]);
+  nextBranch = node.root().conditional(newNodeName, valueCond);
+  
+}
+
 du.on.match('keyup', `.${ROOT_CLASS}`, DecisionInputTree.update(true));
 du.on.match('change', `.${ROOT_CLASS}`, DecisionInputTree.update());
 du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
-
+du.on.match('keyup', '.decision-input-cnt.mod input', updateModBtn);
+du.on.match('keyup', '.decision-input-cnt.mod select', updateModBtn);
+du.on.match('keyup', '.decision-input-cnt.mod textarea', updateModBtn);
+du.on.match('click', '.conditional-button', modifyBtnPressed);
 
 DecisionInputTree.DO_NOT_CLONE = true;
 DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
@@ -292,6 +338,13 @@ DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
   }
   inputArrayOinstance.childCntId = `decision-child-ctn-${String.random()}`
   return [inputArrayOinstance];
+}
+
+DecisionInputTree.getTree = (elem) => {
+  const rootElem = du.find.up("[tree-id]", elem);
+  const rootId = rootElem.getAttribute('tree-id');
+  const tree = DecisionInputTree.get(rootId);
+  return tree;
 }
 
 DecisionInputTree.template = new $t('input/decision/decisionTree');

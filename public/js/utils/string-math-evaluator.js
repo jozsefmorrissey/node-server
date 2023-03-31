@@ -219,10 +219,11 @@ class StringMathEvaluator {
         if (prevWasOpperand) {
           try {
             let newIndex = isolateNumber(expr, index, values, operands, scope);
-            if (!newIndex && isolateOperand(char, operands))
-                throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
-            newIndex ||= isolateParenthesis(expr, index, values, operands, scope) ||
-                (allowVars && isolateVar(expr, index, values, operands, scope));
+            if (!newIndex && isolateOperand(char, operands)) {
+              throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
+            }
+            newIndex = newIndex || (isolateParenthesis(expr, index, values, operands, scope) ||
+                (allowVars && isolateVar(expr, index, values, operands, scope)));
             if (Number.isInteger(newIndex)) {
               index = newIndex - 1;
               prevWasOpperand = false;

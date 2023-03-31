@@ -386,6 +386,7 @@ function onKeycombo(event, func, args) {
   return {event: 'keydown', func: keydown};
 }
 
+// TODO: add custom function selectors.
 const argEventReg = /^(.*?)(|:(.*))$/;
 function filterCustomEvent(event, func) {
   const split = event.split(/[\(\),]/).filter(str => str);;

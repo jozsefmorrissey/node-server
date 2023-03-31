@@ -24,6 +24,19 @@ exports['550500469'] = (get, $t) =>
 		$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 		` </datalist> </span>`
 
+exports['837969265'] = (get, $t) => 
+		`<span class='pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <button class='conditional-button'> If ` +
+		$t.clean(get("input").name()) +
+		` = ` +
+		$t.clean(get("input").value()) +
+		` </button> <br> </span>`
+
 exports['1447370576'] = (get, $t) => 
 		`<div class="expandable-list-body" key='` +
 		$t.clean(get("key")) +
@@ -58,6 +71,9 @@ exports['1835219150'] = (get, $t) =>
 		$t.clean(get("value")) +
 		` </option>`
 
+exports['auto-save'] = (get, $t) => 
+		`<div> <button type="button" class='auto-save-btn' name="button">Auto Save</button> <span class='status'></span> </div> `
+
 exports['expandable/input-repeat'] = (get, $t) => 
 		`<div> ` +
 		$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
@@ -90,9 +106,6 @@ exports['expandable/list'] = (get, $t) =>
 		`</div> <div class='input-open-cnt'><button>Add ` +
 		$t.clean(get("listElemLable")()) +
 		`</button></div> </div> `
-
-exports['auto-save'] = (get, $t) => 
-		`<div> <button type="button" class='auto-save-btn' name="button">Auto Save</button> <span class='status'></span> </div> `
 
 exports['expandable/pill'] = (get, $t) => 
 		` <div class="expandable-list ` +
@@ -218,6 +231,25 @@ exports['input/decision/decision'] = (get, $t) =>
 		$t.clean(get("tag")()) +
 		`> `
 
+exports['input/decision/decisionTree'] = (get, $t) => 
+		`<div class='` +
+		$t.clean(get("DecisionInputTree").class) +
+		`' tree-id='` +
+		$t.clean(get("tree").id()) +
+		`' root-id='` +
+		$t.clean(get("wrapper").nodeId()) +
+		`'> ` +
+		$t.clean(get("inputHtml")) +
+		` <button class='` +
+		$t.clean(get("DecisionInputTree").buttonClass) +
+		`' root-id='` +
+		$t.clean(get("wrapper").nodeId()) +
+		`' ` +
+		$t.clean(get("tree").hideButton ? 'hidden' : '') +
+		`> ` +
+		$t.clean(get("tree").buttonText()) +
+		` </button> </div> `
+
 exports['input/input'] = (get, $t) => 
 		`<` +
 		$t.clean(get("inline")() ? 'span' : 'div') +
@@ -299,25 +331,20 @@ exports['input/select'] = (get, $t) =>
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		`> `
 
-exports['input/decision/decisionTree'] = (get, $t) => 
-		`<div class='` +
-		$t.clean(get("DecisionInputTree").class) +
-		`' root-id='` +
-		$t.clean(get("wrapper").nodeId()) +
-		`'> ` +
-		$t.clean(get("inputHtml")) +
-		` <button class='` +
-		$t.clean(get("DecisionInputTree").buttonClass) +
-		`' root-id='` +
-		$t.clean(get("wrapper").nodeId()) +
-		`' ` +
-		$t.clean(get("tree").hideButton ? 'hidden' : '') +
-		`> ` +
-		$t.clean(get("tree").buttonText()) +
-		` </button> </div> `
-
 exports['configure'] = (get, $t) => 
-		`<div> CONFIGURE === ` +
+		`<div id='config-body'></div> `
+
+exports['index'] = (get, $t) => 
+		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mike/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/mike/styles/mike.css"> <title></title> </head> <body> ` +
+		$t.clean(get("header")) +
+		` ` +
+		$t.clean(get("main")) +
+		` ` +
+		$t.clean(get("footer")) +
+		` </body> </html> `
+
+exports['report'] = (get, $t) => 
+		`<div> REPORT === ` +
 		$t.clean(get("name")) +
 		` </div> `
 
@@ -326,7 +353,84 @@ exports['reports'] = (get, $t) =>
 		$t.clean(get("name")) +
 		` </div> `
 
-exports['report'] = (get, $t) => 
-		`<div> REPORT === ` +
-		$t.clean(get("name")) +
-		` </div> `
+exports['input/decision/decision0'] = (get, $t) => 
+		` <` +
+		$t.clean(get("tag")()) +
+		` class='decision-input-cnt' node-id='` +
+		$t.clean(get("_nodeId")) +
+		`' ` +
+		$t.clean(get("reachable")() ? '' : 'hidden') +
+		`> <span id='` +
+		$t.clean(get("id")) +
+		`'> ` +
+		$t.clean( new $t('101748844').render(get("inputArray"), 'input', get)) +
+		` </span> </` +
+		$t.clean(get("tag")()) +
+		`> `
+
+exports['input/decision/decision-modification'] = (get, $t) => 
+		` <` +
+		$t.clean(get("tag")()) +
+		` class='decision-input-cnt mod' node-id='` +
+		$t.clean(get("_nodeId")) +
+		`' ` +
+		$t.clean(get("reachable")() ? '' : 'hidden') +
+		`> <span id='` +
+		$t.clean(get("id")) +
+		`'> ` +
+		$t.clean( new $t('837969265').render(get("inputArray"), 'input', get)) +
+		` </span> <div> <button class='add-btn'>Add Input</button> </div> </` +
+		$t.clean(get("tag")()) +
+		`> `
+
+exports['-582967449'] = (get, $t) => 
+		`<span class='pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <button class='conditional-button'>If ` +
+		$t.clean(get("input").name()) +
+		` = ` +
+		$t.clean(get("input").value()) +
+		`</button> </span>`
+
+exports['-1925226717'] = (get, $t) => 
+		`<span class='pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <button class='conditional-button'> If ` +
+		$t.clean(get("input").name()) +
+		` = ` +
+		$t.clean(get("input").value()) +
+		` </button> </span>`
+
+exports['-463611009'] = (get, $t) => 
+		`<span class='pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <br> <button class='conditional-button'> If ` +
+		$t.clean(get("input").name()) +
+		` = ` +
+		$t.clean(get("input").value()) +
+		` </button> </span>`
+
+exports['-1298625746'] = (get, $t) => 
+		`<span class='pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> <span> ` +
+		$t.clean(get("input").html()) +
+		` <br> <button class='conditional-button'> If ` +
+		$t.clean(get("input").name()) +
+		` = ` +
+		$t.clean(get("input").value()) +
+		` </button> </span> </span>`

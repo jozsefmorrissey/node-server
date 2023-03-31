@@ -193,8 +193,9 @@ class LeafLogic extends LogicType {
 }
 
 LogicType.types = {SelectLogic, MultiselectLogic, ConditionalLogic, BranchLogic, LeafLogic};
-class LogicTree {
-  constructor(formatPayload) {
+class LogicTree extends Lookup {
+  constructor(formatPayload, id) {
+    super(id);
     Object.getSet(this);
     const tree = this;
     let root;
