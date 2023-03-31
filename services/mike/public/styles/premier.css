@@ -1,0 +1,20 @@
+
+
+.options-cnt {
+  display: inline-flex;
+}
+
+.tab {
+  padding-left: 20pt;
+}
+
+.options-cnt>h4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+@media print {
+  .dont-print {
+    display: none;
+  }
+}
