@@ -1,7 +1,6 @@
 
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
-const Wall2D = require('wall');
 
 class Corner2d extends Vertex2d {
   constructor(layout, point) {
@@ -105,6 +104,10 @@ class Corner2d extends Vertex2d {
 
     this.bisector = (dist) => this.prevWall().bisector(this.nextWall(), dist);
   }
+}
+
+Corner2d.fromJson = (json) => {
+  return new Corner2d(json.layout, json.point);
 }
 
 module.exports = Corner2d;

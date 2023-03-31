@@ -169,11 +169,16 @@ class CabinetModel {
       return topview;
     }
 
+    let modifiableStr;
+    const shouldBuild = (c) => !c.snapObject ||
+              c.width() !== c.snapObject.width ||
+              c.thickness() !== c.snapObject.thickness ||
+              modifiableStr !== c.modifiableString();
+
     this.topviewSnap = () => {
       const c = cabinet;
-      const shouldBuild = !c.snapObject || c.width() !== c.snapObject.width ||
-        c.thickness() !== c.snapObject.thickness;
-      if (shouldBuild)  {
+      if (shouldBuild(c))  {
+        modifiableStr = c.modifiableString();
         const topview = build();
         topview.mirrorY();
         c.view.top =  topview;

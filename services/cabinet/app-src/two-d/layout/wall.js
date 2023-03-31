@@ -2,6 +2,7 @@ const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line
 const OnWall = require('./on-wall');
 const Door2D = require('./door');
 const Window2D = require('./window');
+const Corner2d = require('./corner');
 const HoverObject2d = require('../../../../../public/js/utils/canvas/two-d/hover-map').HoverObject2d;
 
 function modifyVertex(vertex) {
@@ -69,11 +70,13 @@ class Wall2D extends Line2d {
     this.removeWindow = (window) => windows.splice(windows.indexOf(window), 1);
   }
 }
-Wall2D.fromJson = (json, vertexMap) => {
+Wall2D.fromJson = (json, layout, vertexMap) => {
   vertexMap ||= {};
-  const newSv = Object.fromJson(json.startVertex);
+  json.startVertex.layout = layout;
+  const newSv = Corner2d.fromJson(json.startVertex);
   const svStr = newSv.toString();
-  const newEv = Object.fromJson(json.endVertex);
+  json.endVertex.layout = layout;
+  const newEv = Corner2d.fromJson(json.endVertex);
   const evStr = newEv.toString();
   if (vertexMap[svStr] === undefined) vertexMap[svStr] = newSv;
   if (vertexMap[evStr] === undefined) vertexMap[evStr] = newEv;

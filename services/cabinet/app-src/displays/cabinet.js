@@ -40,12 +40,16 @@ class CabinetDisplay {
     const getHeader = (cabinet, $index) =>
         CabinetDisplay.headTemplate.render({cabinet, $index, displayValue, displayId});
     const showTypes = Show.listTypes();
+    const display = (value) => new Measurement(value).display();
     const getBody = (cabinet, $index) => {
       if (expandList.activeKey() === $index) {
         TwoDLayout.panZoom.once();
         ThreeDMain.update(cabinet);
       }
-      const scope = {$index, cabinet, showTypes, OpenSectionDisplay};
+      const valueObj = cabinet.value.values;
+      const keys = Object.keys(valueObj);
+      const modifiableValues = cabinet.modifiableValues();
+      const scope = {$index, cabinet, showTypes, OpenSectionDisplay, modifiableValues, display};
       return CabinetDisplay.bodyTemplate.render(scope);
     }
 
@@ -149,12 +153,21 @@ class CabinetDisplay {
       }
     }
 
+    function updateValue(elem) {
+      const cabinet = ExpandableList.get(elem);
+      const key = elem.previousElementSibling.innerText;
+      const evaluated = cabinet.eval(elem.value);
+      const value = "" + new Measurement(evaluated, true).decimal();
+      cabinet.value(key, value);
+    }
+
     // WTFs
     // CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
     bind(`.cabinet-input`, valueUpdate,
                   {validation: Measurement.validation('(0,)')});
     bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
     du.on.match('click', '.save-cabinet-btn', save);
+    du.on.match('focusout', '.modifiable-value-input', updateValue);
   }
 }
 CabinetDisplay.bodyTemplate = new $t('cabinet/body');

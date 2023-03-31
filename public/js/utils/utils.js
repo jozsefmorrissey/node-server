@@ -677,6 +677,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
         return json;
       } catch(e) {
         console.warn(e.message);
+        throw e;
         return e.message;
       }
     }

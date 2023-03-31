@@ -24,6 +24,8 @@ class Select extends Input {
     this.setValue(value);
     this.isArray = () => isArray;
     this.list = () => props.list;
+    const parentValue = this.value;
+    this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
     const parentHidden = this.hidden;
     this.hidden = () => props.list.length < 2 || parentHidden();
 

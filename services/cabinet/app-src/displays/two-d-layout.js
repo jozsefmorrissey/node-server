@@ -406,7 +406,7 @@ popUp.onClose((elem, event) => {
   clickHolding = false;
   interactionState.mouseupId = ++mouseupId;
   interactionState.mousedownId = undefined;
-  if (layout) layout.history().newState();
+  // if (layout) layout.history().newState();
 });
 
 function onMouseup(event, stdEvent) {
@@ -419,12 +419,12 @@ function onMouseup(event, stdEvent) {
       interactionState.mouseupId = ++mouseupId;
       interactionState.mousedownId = undefined;
       hovering = undefined;
-      if (layout) layout.history().newState();
+      // if (layout) layout.history().newState();
       return clickWasHolding;
     }
   } else {
     console.log('rightClick: do stuff!!');
-    if (layout) layout.history().newState();
+    // if (layout) layout.history().newState();
   }
 }
 

@@ -113,7 +113,7 @@ class CabinetOpeningCorrdinates {
       const outerPoly = new Polygon3D(outer);
       const corner2corner = outer[0].distance(outer[2]);
 
-      const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2, 0);
+      const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2, 0, {x:0, y:1000});
       const partCode = 'gerf';
       const partName = 'Gerf';
       const cutter = new Cutter.Model(partCode, () => partName, biPoly.toModel);

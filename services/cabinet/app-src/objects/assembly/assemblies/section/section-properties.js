@@ -21,13 +21,13 @@ class SectionProperties extends KeyValue{
     // TODO: consider getting rid of, sections and cover are the only ones that matter.
     this.subassemblies = [];
 
-    index ||= 0;
-    this.index = () => index;
+    // index ||= 0;
     const coordinates = {inner: [v(),v(),v(),v()], outer: [v(),v(),v(),v()]};
     let rotation, innerCenter, outerCenter, outerLength, innerLength, outerWidth, innerWidth = null;
     const temporaryInitialVals = {parent, _TEMPORARY: true};
     Object.getSet(this, temporaryInitialVals, 'parentAssembly');
-    Object.getSet(this, {divideRight: false, config}, 'divider', 'cover');
+    Object.getSet(this, {divideRight: false, config, index}, 'divider', 'cover');
+    this.index = () => index;
     const instance = this;
     pattern ||= new Pattern('a');
 

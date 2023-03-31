@@ -15,6 +15,12 @@
     </div>
   </div>
   <br>
+  <div>
+    <span:t repeat='obj in modifiableValues'>
+      <label>{{obj.key}}</label>
+      <input type='text' value='{{display(obj.value)}}' class='modifiable-value-input'>
+    </span:t>
+  </div>
   <div class='center'>
     <button class='save-cabinet-btn' index='{{$index}}'>Save</button>
   </div>

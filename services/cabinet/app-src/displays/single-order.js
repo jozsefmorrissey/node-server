@@ -25,6 +25,25 @@ order.addRoom('kitchen');
 const RoomDisplay = require('./room');
 let roomDisplay = new RoomDisplay('#room-cnt', order);
 
+du.on.match('click', '#copy-order', (elem) => {
+  du.copy(JSON.stringify(order.toJson()));
+});
+du.on.match('click', '#paste-order', async (elem) => {
+  navigator.clipboard.readText()
+    .then(text => {
+      try {
+        const order = Object.fromJson(JSON.parse(text));
+        switchOrder(elem, order);
+        if (!(order instanceof Order)) throw new Error();
+      } catch (e) {
+        alert('clipboard does not contain a valid Order');
+      }
+    })
+    .catch(err => {
+      console.error('Failed to read clipboard contents: ', err);
+    });
+});
+
 
 const saveCntId = 'order-select-cnt';
 const getAutoSaveElem = (selector) => () => du.find.down(selector, du.id(saveCntId));
@@ -154,12 +173,14 @@ function switchOrder(elem, details) {
   updateOrderInput();
   if (details.contents === '') return order = new Order(details.orderName, details.versionId);
   try {
-    order = Object.fromJson(JSON.parse(details.contents));
+    if (details.contents) {
+      order = Object.fromJson(JSON.parse(details.contents));
+    } if (details instanceof Order) order = details;
+    else throw new Error('unknown order format');
     roomDisplay.order(order);
-    orderNameInput.value = order.name(details.orderName);
-    orderVersionInput.value = order.versionId(details.versionId);
+    orderNameInput.value = order.name(order.name());
+    orderVersionInput.value = order.versionId(order.versionId());
     resetOrderAndVersion();
-    console.log('details');
   } catch (e) {
     console.warn(e);
   }

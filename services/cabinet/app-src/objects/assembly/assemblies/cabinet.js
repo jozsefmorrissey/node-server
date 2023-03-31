@@ -80,6 +80,18 @@ class Cabinet extends Assembly {
       return Vertex3D.center(...centers);
     }
 
+    this.modifiableValues = () => {
+      const valueObj = this.value.values;
+      const keys = Object.keys(valueObj);
+      return keys.filter(str => !valueObj[str].match(/[a-zA-Z]/))
+                  .map(str => ({key: str, value: this.eval(valueObj[str])}));
+    }
+
+    this.modifiableString = () => {
+      const keys = Object.values(this.modifiableValues());
+      return keys.map(obj => `${obj.key}=${obj.value}`).join();
+    }
+
     // TODO: ???? It is possible to have inner/outer intersections from
     //       different parts..... not suure its worth the extra calculations
     this.planeIntersection = (line) => {

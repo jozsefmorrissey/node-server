@@ -167,6 +167,7 @@ class BiPolygon {
   }
 }
 
+// TODO: Fix offset!... is it broken??? yes it is need to expand consitantly regaurdless of line angle.
 BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   distance2 ||= 0;
   const verts = polygon.vertices();

@@ -30,8 +30,11 @@ function withinTolerance(point, map) {
 
 const ww = 500;
 class Layout2D extends Lookup {
-  constructor(walls) {
+  constructor(wallJson) {
     super();
+    let walls = [];
+    const vertexMap = {};
+    Array.isArray(wallJson) && wallJson.forEach((wallJson) => walls.push(Wall2D.fromJson(wallJson, this, vertexMap)));
     let history;
     const addEvent = new CustomEvent('add');
     const removeEvent = new CustomEvent('remove');
@@ -40,7 +43,6 @@ class Layout2D extends Lookup {
     this.onRemove = (func) => removeEvent.on(func);
     this.onStateChange = (func) => stateChangeEvent.on(func);
 
-    walls = walls || [];
     Object.getSet(this, {objects: [], walls});
     const initialized = walls.length > 0;
     const instance = this;
@@ -225,7 +227,7 @@ class Layout2D extends Lookup {
       obj.bridge.top().center(center);
       obj.id(id);
       this.objects().push(obj);
-      history.newState();
+      // history.newState();
       addEvent.trigger(undefined, payload);
       return obj;
     }
@@ -488,7 +490,7 @@ class Layout2D extends Lookup {
     // if (!initialized) this.push({x:-250, y:-250}, {x:250, y:-250}, {x:250,y:250}, {x:-250,y:250});
     this.walls = () => walls;
 
-    history = new StateHistory(this.toJson, this.fromJson);
+    // history = new StateHistory(this.toJson, this.fromJson);
     this.history = () => history;
 
     this.snapAt = (vertex, excuded) => {
@@ -526,10 +528,7 @@ class Layout2D extends Lookup {
 // Needs to be internal!!!!
 Layout2D.fromJson = (json) => {
   const walls = [];
-  const vertexMap = {};
-  json.walls.forEach((wallJson) => walls.push(Wall2D.fromJson(wallJson, vertexMap)));
-
-  const layout = new Layout2D(walls);
+  const layout = new Layout2D(json.walls);
   layout.id(json.id);
 
   const objects = [];

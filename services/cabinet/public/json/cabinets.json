@@ -3597,7 +3597,7 @@ module.exports = {
 		"width": 45.72,
 		"height": "wallh",
 		"thickness": "walld",
-		"fromFloor": 0,
+		"fromFloor": "walle",
 		"openings": [{
 			"top": "T",
 			"bottom": "B",
