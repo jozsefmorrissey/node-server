@@ -5,7 +5,9 @@ const EPNTS = require('../generated/EPNTS.js');
 const Test = require('../../../public/js/utils/test/test').Test;
 
 if (EPNTS.getEnv() === 'local') {
+  require('../../../public/js/utils/test/tests/navigator');
   require('../../../public/js/utils/test/tests/compress-string');
+  require('../../../public/js/utils/test/tests/json-utils');
   require('../../../public/js/utils/test/tests/utils');
   require('../../../public/js/utils/test/tests/imposter');
   require('./tests/cabinet');

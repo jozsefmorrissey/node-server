@@ -1,81 +1,102 @@
 
+// I dont really understand most of this.....
+// Sites Referenced to Construct this class
+//      https://rosettacode.org/wiki/LZW_compression#JavaScript
+//      https://developer.chrome.com/blog/how-to-convert-arraybuffer-to-and-from-string/
 
+//  TODO: should consider making a utility, I dont think a class structor makes sense.
 class CompressedString {
-  constructor(string, keyCharacter, maxReplaceLength) {
-    const keyChar = keyCharacter || '^';
-    const mrl = maxReplaceLength || 10;
-
-    const startMap = [];
-    const countMap = {};
-    for (let i = 0; i < string.length - 3; i++) {
-      startMap[i] = [];
-      for (let j = 3; j < mrl && i + j < string.length + 1; j++) {
-        let str = string.substring(i, i + j);
-        if (countMap[str] === undefined) countMap[str] = 0;
-        countMap[str]++;
-        startMap[i].push(str);
-      }
-    }
-
-    function biggestNumerousStr(i, winner) {
-      let newLeader = false;
-      for (let j = 0; j < startMap[i].length; j++) {
-        const str = startMap[i][j];
-        const score = countMap[str] * str.length;
-        if (winner === undefined || winner.score < score) {
-          newLeader = true;
-          winner = {str, score, start: i};
+  constructor(string) {
+    function compress(uncompressed) {
+        "use strict";
+        // Build the dictionary.
+        var i,
+            dictionary = {},
+            c,
+            wc,
+            w = "",
+            result = [],
+            dictSize = 256;
+        for (i = 0; i < 256; i += 1) {
+            dictionary[String.fromCharCode(i)] = i;
         }
-      }
-      winner.newLeader = newLeader;
-      return winner;
-    }
 
-    function updateRange(i, str, range) {
-      range ||= {};
-      for (let index = i; index < i + str.length; index++) {
-        if (!range[i]) range[i] =  true;
-      }
-      return range;
-    }
-
-    const replaceKeys = [];
-    let i = 2;
-    while (i < string.length) {
-      let winner = biggestNumerousStr(i);
-      const range = updateRange(i, winner.str);
-      let keys;
-      do {
-        keys = Object.keys(range).filter((key) => range[key]);
-        for (let j = 0; j < keys.length; j++) {
-          winner = biggestNumerousStr(keys[j], winner);
-          range[keys[j]] = false;
-          if (winner.newLeader) updateRange(j, winner.str, range);
+        for (i = 0; i < uncompressed.length; i += 1) {
+            c = uncompressed.charAt(i);
+            wc = w + c;
+            //Do not use dictionary[wc] because javascript arrays
+            //will return values for array['pop'], array['push'] etc
+           // if (dictionary[wc]) {
+            if (dictionary.hasOwnProperty(wc)) {
+                w = wc;
+            } else {
+                result.push(dictionary[w]);
+                // Add wc to the dictionary.
+                dictionary[wc] = dictSize++;
+                w = String(c);
+            }
         }
-        i = winner.start + winner.str.length;
-      } while (keys.length > 0);
 
-      replaceKeys.push(winner);
+        // Output the code for w.
+        if (w !== "") {
+            result.push(dictionary[w]);
+        }
+        return result;
     }
 
-    let charIndex = 65;
-    const newKey = () => `${keyChar}${String.fromCharCode(charIndex++)}`;
+    const array = compress(string);
+    const buffer = Uint16Array.from(array);
 
-    replaceKeys.sort((w1, w2) => w2.score > w1.score);
-    replaceKeys.forEach(w => w.key = newKey());
-
-    this.replaceKeys = () => replaceKeys;
-
-    this.toString = () => {
-      let str = string;
-      for (let i = 0; i < replaceKeys.length; i++) {
-        const rStr = replaceKeys[i].str;
-        const rKey = replaceKeys[i].key;
-        str = str.replaceAll(rStr, rKey);
-      }
-      return str;
-    }
+    this.toString = () => String.fromCharCode.apply(null, buffer);
+    this.toBuffer = () => buffer;
   }
 }
+
+CompressedString.fromString = function (str) {
+    var buf = new ArrayBuffer(str.length*2);
+    var bufView = new Uint16Array(buf);
+    for (var i=0, strLen=str.length; i < strLen; i++) {
+    bufView[i] = str.charCodeAt(i);
+    }
+    return CompressedString.decompress(new Int16Array(buf));
+}
+
+CompressedString.decompress = function (compressed) {
+    "use strict";
+    // Build the dictionary.
+    var i,
+        dictionary = [],
+        w,
+        result,
+        k,
+        entry = "",
+        dictSize = 256;
+    for (i = 0; i < 256; i += 1) {
+        dictionary[i] = String.fromCharCode(i);
+    }
+
+    w = String.fromCharCode(compressed[0]);
+    result = w;
+    for (i = 1; i < compressed.length; i += 1) {
+        k = compressed[i];
+        if (dictionary[k]) {
+            entry = dictionary[k];
+        } else {
+            if (k === dictSize) {
+                entry = w + w.charAt(0);
+            } else {
+                return null;
+            }
+        }
+
+        result += entry;
+
+        // Add w+entry[0] to the dictionary.
+        dictionary[dictSize++] = w + entry.charAt(0);
+
+        w = entry;
+    }
+    return result;
+};
 
 module.exports = CompressedString;

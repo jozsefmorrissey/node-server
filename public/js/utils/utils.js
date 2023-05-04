@@ -38,6 +38,78 @@ function safeStdLibAddition() {
 }
 safeStdLibAddition();
 
+Function.safeStdLibAddition(Object, 'definedPropertyNames', function(object) {
+  const names = [];
+  for (var key in object) names.push(key);
+  return names;
+}, true);
+
+Function.safeStdLibAddition(Function, 'AsyncRunIgnoreSuccessPrintError', function(afunc, args) {
+  afunc(args).then(() => {}, (e) => console.error(e));
+
+}, true);
+
+Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify) {
+  if (!modify) complement = JSON.copy(complement);
+  if (func(complement)) return {filtered: complement};
+  if (!(complement instanceof Object)) return {complement};
+  let filtered = Array.isArray(complement) ? [] : {};
+  const keys = Object.keys(complement);
+  let setOne = false;
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const seperated = Object.filter(complement[key], func, true);
+    if (seperated.filtered) filtered[key] = seperated.filtered;
+    setOne = true;
+    if (seperated.complement === undefined) delete complement[key];
+    else complement[key] = seperated.complement;;
+  }
+  if (Object.keys(filtered).length === 0) filtered = undefined;
+  return {complement, filtered};
+}, true);
+
+Function.safeStdLibAddition(Object, 'filter', function(func) {
+  return Object.filter(this, func, true).filtered;
+});
+
+Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
+  if (!(obj instanceof Object)) return obj;
+  return JSON.parse(JSON.stringify(obj));
+}, true);
+
+Function.safeStdLibAddition(Object, 'copy', function(arr) {
+  if (Array.isArray(arr)) throw new Error('point to merge...');
+  const root = Array.isArray(this) ? [] : {};
+  const keys = Object.keys(this);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const value = this[key];
+    if (!(value instanceof Object)) root[key] = value;
+    else root[key] = value.copy();
+  }
+  return root;
+});
+
+
+
+
+Function.safeStdLibAddition(Object, 'foreach', function(obj, func, filter, pathPrefix) {
+  pathPrefix ||= '';
+  if((typeof filter) !== 'function' || filter(obj, pathPrefix)) func(obj, pathPrefix);
+  const keys = Object.keys(obj);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const path = pathPrefix === '' ? key : `${pathPrefix}.${key}`;
+    const value = obj[key];
+    if (value instanceof Object) {
+      Object.foreach(value, func, filter, path);
+    }
+  }
+}, true);
+
+Function.safeStdLibAddition(Object, 'foreach', function(func, filter) {
+  Object.foreach(this, func, filter);
+});
 Function.safeStdLibAddition(Object, 'map',   function (obj, func) {
   if ((typeof func) !== 'function') return console.warn('Object.map requires a function argument');
   const keys = Object.keys(obj);
@@ -84,6 +156,24 @@ function processValue(value) {
   return retVal;
 }
 
+Function.safeStdLibAddition(Array, 'equals', function (other, startIndex, endIndex) {
+    startIndex =  startIndex > -1 ? startIndex : 0;
+    endIndex = endIndex < this.length ? endIndex : this.length;
+    if (endIndex < other.length) return false;
+    let equal = true;
+    for (let index = startIndex; equal && index < endIndex; index += 1) {
+      const elem = this[index];
+      if (elem && (typeof elem.equals) === 'function') {
+        if (!elem.equals(other[index])) {
+          return index;
+        }
+      } else if (elem !== other[index]) {
+        equal = false;
+      }
+    }
+    return equal;
+});
+
 Function.safeStdLibAddition(String, 'random',  function (len) {
     len = len || 7;
     let str = '';
@@ -96,14 +186,22 @@ Function.safeStdLibAddition(RegExp, 'escape',  function (str) {
   return str.replace(specialRegChars, '\\$&');
 }, true);
 
-Function.safeStdLibAddition(String, 'count',  function (len) {
-  const clean = RegExp.escape(this);
-  return clean.replace(/[^-]/g, '').length
+Function.safeStdLibAddition(String, 'replaceIterativly',  function (exp, replace) {
+  let str = this;
+  let next;
+  while ((next = str.replace(exp, replace)) !== str) str = next;
+  return str;
+});
+
+Function.safeStdLibAddition(String, 'count',  function (needle, length) {
+  const clean = RegExp.escape(this.substring(0, length));
+  const reg = new RegExp(`[^${RegExp.escape(needle)}]`, 'g');
+  return clean.replace(reg, '').length
 });
 
 
-const decimalRegStr = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
-const decimalReg = new RegExp(`^${decimalRegStr}$`);
+const decimalRegString = "((-|)(([0-9]{1,}\\.[0-9]{1,})|[0-9]{1,}(\\.|)|(\\.)[0-9]{1,}))";
+const decimalReg = new RegExp(`^${decimalRegString}$`);
 Function.safeStdLibAddition(String, 'isNumber', function (len) {
   return this.trim().match(decimalReg) !== null;
 });
@@ -236,11 +334,16 @@ clazz.filter = (filterFunc) => {
   return obj;
 }
 
+const filterOutUndefined = (obj) => (key) => obj[key] !== undefined;
 function objEq(obj1, obj2) {
-  if (!(obj1 instanceof Object)) return false;
-  if (!(obj2 instanceof Object)) return false;
-  const obj1Keys = Object.keys(obj1);
-  const obj2Keys = Object.keys(obj2);
+  const isObj1 = obj1 instanceof Object;
+  const isObj2 = obj2 instanceof Object;
+  if (!isObj1 && !isObj2) return obj1 === obj2;
+  if (!isObj1) return false;
+  if (!isObj2) return false;
+  if (Array.isArray(obj1) !== Array.isArray(obj2)) return false;
+  const obj1Keys = Object.keys(obj1).filter(filterOutUndefined(obj1));
+  const obj2Keys = Object.keys(obj2).filter(filterOutUndefined(obj2));
   if (obj1Keys.length !== obj2Keys.length) return false;
   obj1Keys.sort();
   obj2Keys.sort();
@@ -251,7 +354,7 @@ function objEq(obj1, obj2) {
     const obj1Val = obj1[obj1Key];
     const obj2Val = obj2[obj2Key];
     if (obj1Val instanceof Object) {
-      if (!obj1Val.equals(obj2)) return false;
+      if (!Object.equals(obj1Val, obj2Val)) return false;
     } else if (obj1[obj1Key] !== obj2[obj2Key]) return false;
   }
   return true;
@@ -260,14 +363,52 @@ function objEq(obj1, obj2) {
 Function.safeStdLibAddition(Object, 'merge', (target, object, soft) => {
   if (!(target instanceof Object)) return;
   if (!(object instanceof Object)) return;
+  if (soft !== false) soft === true;
   const objKeys = Object.keys(object);
+  if (!soft) target.deleteAll();
   for (let index = 0; index < objKeys.length; index++) {
     const key = objKeys[index];
-    if (!soft || target[key] === undefined) {
-      target[key] = object[key];
+    const value = object[key];
+    if (value instanceof Object && target[key] instanceof Object) {
+      Object.merge(target[key], value, soft);
+    } else if (!soft || target[key] === undefined) {
+      target[key] = value;
     }
   }
 }, true);
+
+Function.safeStdLibAddition(Object, 'merge', function () {
+  const lastArg = arguments[arguments.length - 1];
+  let soft = true;
+  let args = arguments;
+  if (lastArg === false || lastArg === true) {
+    soft = lastArg;
+    args = Array.from(arguments).slice(0, arguments.length - 1);
+  }
+  for (let index = 0; index < args.length; index++) {
+    const object = args[index];
+    if (object instanceof Object) {
+      Object.merge(this, object, soft);
+    } else {
+      console.error('Attempting to merge a non-object');
+    }
+  }
+});
+
+Function.safeStdLibAddition(Array, 'removeAll', function (arr) {
+  for (let index = 0; index < arr.length; index += 1) {
+    this.remove(arr[index]);
+  }
+});
+
+Function.safeStdLibAddition(Array, 'deleteAll', function () {
+  this.forEach((v, i) => delete this[i]);
+  this.length = 0;
+});
+
+Function.safeStdLibAddition(Object, 'deleteAll', function () {
+  Object.keys(this).forEach(key => delete this[key]);
+});
 
 Function.safeStdLibAddition(Object, 'forAllRecursive', (object, func) => {
   if (!(object instanceof Object)) return;
@@ -330,15 +471,21 @@ Function.safeStdLibAddition(Array, 'shuffle', function() {
   return this;
 });
 
-Function.safeStdLibAddition(Array, 'count', function(func) {
+Function.safeStdLibAddition(Array, 'count', function(funcOrVal, max) {
   let count = 0;
+  const call = (typeof funcOrVal) === 'function';
   for (let index = 0; index < this.length; index++) {
-    const retVal = func(this[index]);
+    const retVal = call ? funcOrVal(this[index]) : funcOrVal === this[index];
     count += (typeof retVal) === 'number' ? retVal : (retVal ? 1 : 0);
+    if (count >= max) return max;
   }
   return count;
 });
 
+Function.safeStdLibAddition(Array, 'contains', function(value, max) {
+  const funcOrVal = value && (typeof value.equals) === 'function' ? value.equals : value;
+  return this.count(funcOrVal, 1) === 1;
+});
 
 const primes = [3,5,7,11,17,19,23,29];
 const firstNotInList = (targetList, ignoreList) => {
@@ -408,30 +555,6 @@ Function.safeStdLibAddition(Array, 'equalIndexOf', function (elem, startIndex, e
       }
     }
     return -1;
-});
-
-Function.safeStdLibAddition(Array, 'equals', function (other, startIndex, endIndex) {
-    startIndex =  startIndex > -1 ? startIndex : 0;
-    endIndex = endIndex < this.length ? endIndex : this.length;
-    if (endIndex < other.length) return false;
-    let equal = true;
-    for (let index = startIndex; equal && index < endIndex; index += 1) {
-      const elem = this[index];
-      if (elem && (typeof elem.equals) === 'function') {
-        if (!elem.equals(other[index])) {
-          return index;
-        }
-      } else if (elem !== other[index]) {
-        equal = false;
-      }
-    }
-    return equal;
-});
-
-Function.safeStdLibAddition(Array, 'removeAll', function (arr) {
-  for (let index = 0; index < arr.length; index += 1) {
-    this.remove(arr[index]);
-  }
 });
 
 Function.safeStdLibAddition(Array, 'condition', function (initalValue, conditionFunc) {
@@ -548,18 +671,6 @@ Function.safeStdLibAddition(Array, 'sortByAttr', function(stringOfunc) {
   if ((typeof stringOfunc) === 'string')
     return this.sort.apply(this, [sortByAttr(stringOfunc)]);
   return this.sort.apply(this, arguments);
-});
-
-Function.safeStdLibAddition(Array, 'copy', function (arr) {
-  this.length = 0;
-  // const keys = Object.keys(this);
-  // for (let index = 0; index < keys.length; index += 1) delete this[keys[index]];
-  const newKeys = Object.keys(arr);
-  for (let index = 0; index < newKeys.length; index += 1) {
-    const key = newKeys[index];
-    this[key] = arr[key];
-  }
-  return this;
 });
 
 Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
@@ -782,11 +893,6 @@ Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
   return clone;
 }, true);
 
-Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
-  if (!(obj instanceof Object)) return obj;
-  return JSON.parse(JSON.stringify(obj));
-}, true);
-
 const defaultInterval = 1000;
 const lastTimeStamps = {};
 function intervalFunction() {
@@ -827,25 +933,65 @@ const colors = [
 let colorIndex = 0;
 Function.safeStdLibAddition(String, 'nextColor', () => colors[index++ % colors.length], true);
 
-Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
+const numberReg = /^[0-9]{1,}$/;
+Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
   const attrs = path.split('.');
-  const lastIndex = attrs.length - 1;
-  let currObj = obj;
-  for (let index = 0; index < lastIndex; index += 1) {
+  const lastAttr = attrs[attrs.length - 1];
+  let target = this;
+  let parent;
+  let created = false;
+  for (let index = 0; index < attrs.length; index += 1) {
     let attr = attrs[index];
-    if (currObj[attr] === undefined) currObj[attr] = {};
-    currObj = (typeof currObj[attr]) === 'function' ? currObj[attr]() : currObj[attr];
+    const nextIsIndex = new String(attrs[index + 1]).match(numberReg);
+    if (target[attr] === undefined) {
+      if (create) {
+        created = true;
+        target[attr] = nextIsIndex ? [] : {};
+      } else {
+        return;
+      }
+    }
+    parent = target;
+    target = (typeof target[attr]) === 'function' ? target[attr]() : target[attr];
   }
+  return {parent, target, attr: lastAttr, created}
+});
 
-  const lastAttr = attrs[lastIndex];
-  if ((typeof currObj[lastAttr]) === 'function') {
-    return currObj[lastAttr](value);
-  } else if (value !== undefined) {
-    currObj[lastAttr] = value;
+// TODO: should remove this non instance method. its a relic
+Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
+  const valueDefined = value !== undefined;
+  const pathInfo = obj.pathInfo(path, valueDefined);
+  if (!valueDefined && pathInfo === undefined) return;
+  const parent = pathInfo.parent;
+  const attr = pathInfo.attr;
+  if ((typeof parent[attr]) === 'function') {
+    return parent[attr](value);
+  } else if (valueDefined) {
+    parent[attr] = value;
   }
-  return currObj[lastAttr];
+  return parent[attr];
 }, true);
 
+Function.safeStdLibAddition(Object, 'pathValue', function (path, value) {
+  return Object.pathInfo(this, path, value);
+});
+
+Function.safeStdLibAddition(Object, 'deletePath', function (path) {
+  if ((typeof path) !== 'string' || path === '') throw new Error('path(arg1) must be defined as a non empty string');
+  const pathInfo = this.pathInfo(path);
+  if (pathInfo === undefined) return;
+  const parent = pathInfo.parent;
+  const attr = pathInfo.attr;
+  delete parent[attr];
+});
+
+Function.safeStdLibAddition(Array, 'empty', function (func) {
+  let empty = true;
+  for (let index = 0; index < this.length; index += 1) {
+    if (this[index] !== undefined) return false;
+  }
+  return true;
+});
 
 /////////////////////////////////// Matrix Equations //////////////////////////
 

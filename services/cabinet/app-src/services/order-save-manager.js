@@ -1,6 +1,12 @@
 
 const du = require('../../../../public/js/utils/dom-utils.js');
 const CustomEvent = require('../../../../public/js/utils/custom-event');
+const AutoSave = require('../../../../public/js/utils/local-file/auto-save');
+const Navigator = require('../../../../public/js/utils/local-file/navigator');
+const Imposter = require('../../../../public/js/utils/object/imposter');
+
+const isDir = Navigator.isDirectory;
+const autoSavers = {};
 
 class OrderSaveManager {
   constructor(contentFunc, initialOrderName, initialVersionId) {
@@ -13,6 +19,7 @@ class OrderSaveManager {
     let counter = 0;
     let autoSaveOn = null;
     const instance = this;
+    let autoSaver;
 
     const loadingEvent = new CustomEvent('loading');
     const loadedEvent = new CustomEvent('loaded');
@@ -107,19 +114,10 @@ class OrderSaveManager {
       }
     }
 
-    const decoder = new TextDecoder();
-    async function read(versionHandle) {
-      const file = await (versionHandle || activeVersion).getFile();
-      const stream = file.stream()
-      const reader = stream.getReader();
-      const fileSize = file.size;
-      const buffer = new DataView(new ArrayBuffer(fileSize));
-      const gibberish = await reader.read(buffer);
-      const text = decoder.decode(gibberish.value);
-      return text;
+    this.read = async (fileHandle) => {
+      const autoSave = await getAutoSaver(fileHandle);
+      const contents = await Navigator.read(fileHandle);
     }
-
-    this.read = read;
 
     this.switch = async function (orderName, versionId) {
       const opened = await this.open(orderName, versionId);
@@ -127,7 +125,7 @@ class OrderSaveManager {
       orderName = activeOrderDir.name;
       activeVersion = opened.versionFileHandle;
       versionId = clean(activeVersion.name);
-      const contents = await read();
+      const contents = await Navigator.read(versionHandle || activeVersion);
       versionChangeEvent.trigger(null, {orderName, versionId, contents});
       return contents;
     }
@@ -160,7 +158,7 @@ class OrderSaveManager {
       const versionHandlers = await versionList(activeOrderDir);
       for (let index = 0; index < versionHandlers.length; index++) {
         const vHandle = versionHandlers[index];
-        const contents = await read(vHandle);
+        const contents = await Navigator.read(vHandle);
         const vId = vHandle.name;
         await this.save(newOrderName, vId, contents);
         await activeOrderDir.removeEntry(format(vId));
@@ -173,30 +171,27 @@ class OrderSaveManager {
     let initialized = false;
     this.initialized = () => initialized;
     async function init() {
-      workingDir = await window.showDirectoryPicker();
-      let perms = await workingDir.queryPermission();
-      ordersDir = await workingDir.getDirectoryHandle('orders', {create: true});
-      ordersDir = await workingDir.getDirectoryHandle('orders', {create: true});
-      loadingEvent.trigger(null, instance);
-      cabinetConfig = await workingDir.getFileHandle('cabinet.json', { create: true });
-      propertyConfig = await workingDir.getFileHandle('property.json', { create: true });
-      costConfig = await workingDir.getFileHandle('cost.json', { create: true });
-      const values = await ordersDir.values();
-      let next;
-      do {
-        next = await values.next();
-        if (next.value && next.value.kind === 'directory') {
-          const orderHandler = next.value;
-          orderVersionObj[orderHandler.name] = await versionList(orderHandler, true);
-        }
-      } while(!next.done);
-      await instance.switch(initialOrderName, initialVersionId);
-      const text = await read();
-      loadedEvent.trigger(null, instance);
-      fileSystemChangeEvent.trigger(null, instance);
-      autoSaveOn = true;
-      initialized = true;
-      autoSave();
+      await Navigator.init();
+      const navH = Navigator.helper();
+      let orderHelper = await navH.getDirectory('orders', true);
+      let orderHelpers = await orderHelper.ls();
+      // const orderDir = Navigator.getDirectory('orders');
+      // autoSaver = new AutoSave('orders');
+      // orderDir = await autoSave.workingDir()
+      // loadingEvent.trigger(null, instance);
+      // const orders = await Navigator.ls(ordersDir);
+      // orders.forEach((orderHandler) => {
+      //   const versions = Navigator.ls(orderHandler, null, isDir);
+      //   orderVersionObj[orderHandler.name] = versions.map(vh => vh.name);
+      // });
+      //
+      // await instance.switch(initialOrderName, initialVersionId);
+      // const text = await Navigator.read(versionHandle || activeVersion);
+      // loadedEvent.trigger(null, instance);
+      // fileSystemChangeEvent.trigger(null, instance);
+      // autoSaveOn = true;
+      // initialized = true;
+      // autoSave();
     }
     this.init = init;
   }

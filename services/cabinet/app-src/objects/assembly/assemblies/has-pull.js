@@ -11,7 +11,7 @@ class HasPull extends Assembly {
       this.addSubAssembly(pulls[pulls.length - 1]);
     }
     this.setPulls = (locations) => {
-      pulls.copy([]);
+      pulls.deleteAll();
       this.subassemblies.deleteAll();
       locations.forEach((location) => this.addPull(location));
     }

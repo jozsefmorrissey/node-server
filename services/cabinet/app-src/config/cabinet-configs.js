@@ -61,7 +61,7 @@ class CabinetConfig {
 
     this.inputTree = () => {
       const typeInput = typeSelect('Cabinet');
-      typeInput.list().copy([]);
+      typeInput.list().deleteAll();
       const nameInput = new Input({
         name: 'name',
         inline: true,

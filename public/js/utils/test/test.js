@@ -126,6 +126,15 @@ class TestStatus {
     let fail = false;
     let failOnError = true;
     let instance = this;
+
+    this.failed = () => fail;
+    this.succeed = () => success;
+    this.name = () => testName;
+
+    let cleanUp;
+    this.onCleanUp = (func) => cleanUp = func;
+    this.cleanUp = () => (typeof cleanUp) === 'function' && cleanUp(this);
+
     function printError(msg, stackOffset) {
       stackOffset = stackOffset || 4;
       console.error(`%c${Error.reducedStack(msg, stackOffset)}`, 'color: red');
@@ -146,24 +155,29 @@ class TestStatus {
     }
     const possiblyFail = (msg) => failOnError ? instance.fail(msg, 6) : printError(msg, 5);
 
-    this.assertTrue = (b, msg) => !assert(b) &&
+    this.assertTrue = (b, msg) => assert(b) ||
                             possiblyFail(`${msg}\n\t\t'${b}' should be true`);
-    this.assertFalse = (b, msg) => !assert(b === false) &&
+    this.assertFalse = (b, msg) => assert(b === false) ||
                             possiblyFail(`${msg}\n\t\t'${b}' should be false`);
-    this.assertEquals = (a, b, msg, acc) => !assert(round(a, acc) === round(b, acc)) &&
+    this.assertEquals = (a, b, msg, acc) => assert(round(a, acc) === round(b, acc)) ||
                             possiblyFail(`${msg}\n\t\t'${a}' === '${b}' should be true`);
-    this.assertNotEquals = (a, b, msg, acc) => !assert(round(a, acc) !== round(b, acc)) &&
+    this.assertNotEquals = (a, b, msg, acc) => assert(round(a, acc) !== round(b, acc)) ||
                             possiblyFail(`${msg}\n\t\t'${a}' !== '${b}' should be true`);
     this.assertTolerance = (n1, n2, tol, msg, stackOffset) => {
-      !assert(Math.abs(n1-n2) < tol) &&
+      return assert(Math.abs(n1-n2) < tol) ||
       possiblyFail(`${msg}\n\t\t${n1} and ${n2} are not within tolerance ${tol}`, stackOffset);
     }
     this.fail = (msg, stackOffset) => {
       fail = true;
       printError(msg, stackOffset);
+      Test.reportIn(this);
       throw failureError;
     };
-    this.success = (msg, stackOffset) => (success = true) && successStr(msg, stackOffset);
+    this.success = (msg, stackOffset) => {
+      success = true;
+      Test.reportIn(this);
+      return successStr(msg, stackOffset);
+    }
   }
 }
 
@@ -172,6 +186,7 @@ TestStatus.failCount = 0;
 TestStatus.successAssertions = 0;
 TestStatus.failAssertions = 0;
 
+const ran = {};
 const Test = {
   tests: {},
   add: (name, func) => {
@@ -180,24 +195,71 @@ const Test = {
       Test.tests[name].push(func);
     }
   },
+  list: () => Object.keys(Test.tests),
+  count: () => Test.list().length,
   run: () => {
     const testNames = Object.keys(Test.tests);
     for (let index = 0; index < testNames.length; index += 1) {
       const testName = testNames[index];
-      try {
-        Test.tests[testName].forEach((testFunc) => testFunc(new TestStatus(testName)));
-        TestStatus.successCount++;
-      } catch (e) {
-        TestStatus.failCount++;
-        if (e !== failureError)
-          console.log(`%c ${e.stack}`, 'color: red')
+      if (!ran[testName]) {
+        try {
+          Test.tests[testName].forEach((testFunc) => {
+            const ts = new TestStatus(testName);
+            const isAsync = testFunc.constructor.name === "AsyncFunction";
+            if (isAsync) {
+              testFunc(ts).then(() => {}, (e) => ts.fail(e));
+            } else {
+              testFunc(new TestStatus(testName));
+            }
+          });
+        } catch (e) {
+          if (e !== failureError) try {ts.fail(e);} catch(e) {}
+        }
+        ran[testName] = true;
       }
     }
-    const failed = (TestStatus.failCount + TestStatus.failAssertions) > 0;
-    console.log(`\n%c Successfull Tests:${TestStatus.successCount} Successful Assertions: ${TestStatus.successAssertions}`, 'color: green');
-    console.log(`%c Failed Tests:${TestStatus.failCount} Failed Assertions: ${TestStatus.failAssertions}`, !failed ? 'color:green' : 'color: red');
+  },
+  results: () => ({
+    tests: {
+      success: TestStatus.successCount,
+      failed: TestStatus.failCount
+    },
+    asserts: {
+      success: TestStatus.successAssertions,
+      failed: TestStatus.failAssertions
+    }
+  }),
+  printResults: (imPending) => {
+    if (imPending !== true && pending) return;
+    const res = Test.results();
+    if (Object.equals(res, lastResults)) {
+      pending = false;
+      const failedColor = (res.tests.failed + res.asserts.failed) > 0 ? 'color:red' : 'color:green';
+      console.log(`\n%c Successfull Tests:${res.tests.success} Successful Assertions: ${res.asserts.success}`, 'color: green');
+      console.log(`%c Failed Tests:${res.tests.failed} Failed Assertions: ${res.asserts.failed}`, failedColor);
+    } else {
+      pending = true;
+      lastResults = res;
+      setTimeout(() => Test.printResults(true), 1000);
+    }
+  },
+  allReportsIn: () => {
+    const ranNames = Object.keys(ran).sort();
+    const reportNames = Object.keys(reported).sort();
+    return ranNames.equals(reportNames);
+  },
+  reportIn: (ts) => {
+    if (reported[ts.name()]) throw new Error(`Test: '${ts.name()}' is double reporting.\n\t\tonly one call should be made to fail || success`);
+    if (ts.failed() || !ts.succeed()) TestStatus.failCount++;
+    else TestStatus.successCount++;
+    Test.printResults();
+    ts.cleanUp();
+    //runCollectiveCleanup(); ... implement
   }
 }
+let lastResults;
+let pending = false;
+let reported = {};
 
 exports.ArgumentAttributeTest = ArgumentAttributeTest;
 exports.FunctionArgumentTestError = FunctionArgumentTestError;
