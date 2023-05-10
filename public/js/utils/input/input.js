@@ -65,9 +65,11 @@ class Input extends Lookup {
     const idSelector = `#${this.id()}`;
 
     const html = this.constructor.html(this);
+    this.isInitialized = () => true;
     if ((typeof html) !== 'function') throw new Error('props.html must be defined as a function');
-    this.html = () =>
-     html();
+    this.html = () => {
+      return html(this);
+    }
 
     function valuePriority (func) {
       return (elem, event) => func(elem[instance.targetAttr()], elem, event);

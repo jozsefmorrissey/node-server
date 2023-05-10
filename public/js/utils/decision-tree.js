@@ -3,150 +3,179 @@
 const Lookup = require('./object/lookup')
 const REMOVAL_PASSWORD = String.random();
 
+function getByName(node, ...namePath) {
+  for (let index = 0; index < namePath.length; index++) {
+    node = node.next(namePath[index]);
+    if (node === undefined) return;
+  }
+  return node;
+}
+
+function getById(node, ...idPath) {
+  for (let index = 0; index < endIndex; index++) {
+    node = node.child(idPath[index]);
+    if (node === undefined) return;
+  }
+  return node;
+}
+
+function formatName(name) {
+  if (name === undefined || name === '') return;
+  return new String(name).toString();
+}
+class StateConfig extends Lookup {
+  constructor(name, payload) {
+    super();
+    name = formatName(name)
+    Object.getSet(this, {name, payload});
+    const states = [];
+    payload = payload || {};
+    const instance = this;
+    this.setValue = (key, value) => payload[key] = value;
+    this.states = () => Array.from(states);
+    this.payload = () => JSON.clone(payload);
+    this.isLeaf = () => states.length === 0;
+    this.stateNames = () => states.map(s => s.name());
+    this.stateMap = () => states.idObject('name');
+    this.validState = (n) => !!this.stateMap()[n];
+    this.remove = (stateConfig) => states.remove(stateConfig);
+    this.then = (stateConfig) => {
+      if (this.validState(stateConfig.name())) return null;
+      states.push(stateConfig);
+    }
+
+    this.toString = (tabs) => {
+      const tab = new Array(tabs).fill('  ').join('');
+      return `${tab}name: ${this.name()}\n${tab}states: ${this.stateNames()}`;
+    }
+  }
+}
+
+StateConfig.fromJson = (json) => {
+  const id = json.id;
+  const existing = StateConfig.get(id);
+  if (existing) return existing;
+  return new StateConfig(json.name, json.payload);
+}
+
+
+const payloadMap = {};
 // terminology
 // name - String to define state;
 // payload - data returned for a given state
-//             - @_UNIQUE_NAME_GROUP - An Identifier used to insure all nodes of multople trees have a unique name.
-//                          note: only applicable on root node. governs entire tree
-// stateObject - object defining states {name: [payload]...}
-// states - array of availible state names.
-// node - {name, states, payload, then, addState, addStates};
-// then(name) - a function to set a following state.
+// node - {name, states, payload, then};
+// then(name, payload:optional) - a function to set a following state.
 // next(name) - a function to get the next state.
 // back() - a function to move back up the tree.
-// top() - a function to get root;
-// subtree(conditions, parent) - returns a subtree.
-//    @conditions - object identifying conditions for each name or _DEFAULT for undefined
-//    @parent - can be used to atach a copy to another branch or tree
-// returns all functions return current node;
-class DecisionNode extends Lookup{
-  constructor(tree, name, instancePayload, parent) {
-    super(instancePayload && instancePayload._nodeId ?
-              instancePayload._nodeId : String.random(7));
-    Object.getSet(this, 'name');
-    const stateMap = {};
-    let jump;
-    let isComplete = false; // null : requires evaluation
-    instancePayload = instancePayload || {};
-    const formatId = (nodeId) =>
-      nodeId.replace(/^decision-node-(.*)$/, '$1') || nodeId;
+// root() - a function to get root;
+class DecisionNode extends Lookup {
+  constructor(stateConfig, payload, parent) {
+    super();
     const instance = this;
-    this.nodeId = () => DecisionNode.decode(this.id()).id;
-    instancePayload._nodeId = this.nodeId();
-    tree.nodeMap[this.nodeId()];
-    // tree.nodeMap[instancePayload._nodeId] = this;
-    this.isTree = (t) => t === tree;
-    this.setValue = (key, value) => instancePayload[key] = value;
-    this.getByName = (n) => tree.stateTemplates[n];
-    this.tree = () => tree;
-    this.getNode = (nodeOid) => nodeOid instanceof DecisionNode ? nodeOid : tree.idMap[formatId(nodeOid)];
-    this.name = name.toString();
-    this.states = () => Object.values(stateMap);
-    this.instancePayload = () => instancePayload;
-    this.set = (key, value) => instancePayload[key] = value;
-    this.fromJson = undefined;
-    this.instanceCount = (n) => tree.instanceCount(n || this.name);
-    this.lastInstance = () => tree.instanceCount(this.name) === 1;
-    this.stateDefined = tree.stateDefined;
-    this.payload = () => {
-      const copy = JSON.clone(tree.stateConfigs[name]) || {};
-      Object.keys(instancePayload).forEach((key) => {
-        copy[key] = instancePayload[key];
+    const stateMap = {};
+    payload = payload || {};
+    if (payloadMap[payload.PAYLOAD_ID]) payload = payloadMap[payload.PAYLOAD_ID];
+    else {
+      payload.PAYLOAD_ID ||= String.random();
+      payloadMap[payload.PAYLOAD_ID] = payload;
+    }
+    this.parent = () => parent;
+
+    this.stateConfig = () => stateConfig;
+    this.name = stateConfig.name;
+    this.states = stateConfig.states;
+    this.stateMap = () => stateMap;
+    this.isLeaf = stateConfig.isLeaf;
+    this.stateNames = stateConfig.stateNames;
+    this.getById = (...idPath) => getById(this, ...idPath);
+    this.getByName = (...namePath) => getByName(this, ...namePath);
+
+    this.setValue = (key, value) => payload[key] = value;
+
+    this.payload = (noConfig) => {
+      if (noConfig) return payload;
+      const copy = stateConfig.payload();
+      Object.keys(payload).forEach((key) => {
+        copy[key] = payload[key];
       });
+      copy.node = this;
       return copy;
     };
-    this.jump = (name) => {
-      if (name) jump = tree.getState(name, parent);
-      return jump;
-    };
-    this.getNodeByPath = tree.getNodeByPath;
-    this.isLeaf = () => Object.keys(stateMap).length === 0;
-    this.stateNames = () => Object.keys(stateMap);
-    this.structureChanged = () => {
-      isComplete = null;
-      if (parent) parent.structureChanged();
-    }
-    this.remove = (node, password) => {
-      if (node === undefined) {
-        tree.remove(this, REMOVAL_PASSWORD);
-        tree = undefined;
-      } else if (REMOVAL_PASSWORD !== password) {
-        throw new Error('Attempting to remove node without going through the proper process find the node object you want to remove and call node.remove()');
-      } else {
-        let removed = false;
-        Object.keys(stateMap).forEach((name) => {
-          const realNode = stateMap[name];
-          if (realNode === node) {
-            delete stateMap[name];
-            removed = true;
-          }
-        });
+
+    const shouldRecurse = () => Object.keys(stateMap) > 0 || !instance.selfReferencingPath();
+
+    function attachTree(treeOnode) {
+      if (shouldRecurse()) {
+        const node = treeOnode instanceof DecisionNode ? treeOnode : treeOnode.root();
+        return node.subtree(instance);
       }
     }
 
-    this.validState = (name) => name !== undefined && instance.stateNames().indexOf(name.toString()) !== -1;
-
-    function attachTree(t) {
-      return t.subtree(null, instance, tree);
+    function createNode(name, payload) {
+      const node = stateMap[name];
+      if (node) return node;
+      const tree = instance.tree();
+      const stateCreated = !tree.stateConfigs()[name];
+      const stateConfig = tree.getState(name, payload);
+      instance.stateConfig().then(stateConfig);
+      if (stateCreated) payload = {};
+      return new (tree.constructor.Node)(stateConfig, payload, instance)
     }
 
-    this.then = (name, instancePayload, conditional) => {
+    this.then = (name, payload) => {
       if (name instanceof DecisionNode) return attachTree(name);
       if (Array.isArray(name)) {
         const returnNodes = [];
         for (let index = 0; index < name.length; index += 1) {
-          returnNodes.push(this.then(name[index]));
+          returnNodes.push(this.then(formatName(name[index])));
         }
         return returnNodes;
       }
-      this.structureChanged();
-      const newState = tree.getState(name, this, instancePayload);
-      if ((typeof conditional) === 'string') {
-        const stateId = `${this.name}:${conditional}`;
-        stateMap[stateId] = tree.getState(stateId, this, instancePayload);
-        stateMap[stateId].jump(newState);
-      } else {
-        stateMap[name] = newState;
-      }
-      if (tree.stateTemplates[name] === undefined)
-        tree.stateTemplates[name] = newState;
-      return newState === undefined ? undefined : newState.jump() || newState;
-    }
-    this.addState = (name, payload) => tree.addState(name, payload) && this;
-    this.addStates = (sts) => tree.addStates(sts) && this;
-    this.next = (name) => {
-      const state = stateMap[name];
-      return state === undefined ? undefined : state.jump() || state;
+      name = formatName(name);
+      const newState = createNode(name, payload);
+      stateMap[name] = newState;
+
+      return newState;
     }
 
-    this.nameTaken = tree.nameTaken;
+    this.remove = () => this.back().stateConfig().remove(this.stateConfig());
 
     this.back = () => parent;
-    this.top = () => tree.rootNode;
-    this.isRoot = () => !(parent instanceof DecisionNode)
-
-    this.getRoot = () => {
-      const root = this;
-      while (!root.isRoot()) root = root.back();
-      return root;
-    }
-
-    this.copy = (t) => new DecisionNode(t || tree, this.name, instancePayload);
+    this.tree = () => {
+      let curr = this;
+      while (!(curr instanceof DecisionTree)) curr = curr.back();
+      return curr;
+    };
+    this.root = () => this.tree().root();
+    this.isRoot = () => parent instanceof DecisionTree;
 
     // Breath First Search
-    this.forEach = (func) => {
-      const stateKeys = Object.keys(stateMap);
-      func(this);
-      for(let index = 0; index < stateKeys.length; index += 1) {
-        const state = stateMap[stateKeys[index]];
-        state.forEach(func);
+    this.forEach = (func, conditions) => {
+      if (this.reachable(conditions)) {
+        const stateKeys = this.stateNames();
+        func(this);
+        if (shouldRecurse()) {
+          for(let index = 0; index < stateKeys.length; index += 1) {
+              const state = this.next(stateKeys[index]);
+              state.forEach(func, conditions);
+          }
+        }
       }
     }
 
-    this.forEachChild = (func) => {
-      const stateKeys = Object.keys(stateMap);
+    this.next = (name) => {
+      name = formatName(name);
+      if (!stateConfig.validState(name)) throw new Error(`Invalid State: ${name}`);
+      if (stateMap[name] === undefined) {
+        stateMap[name] = createNode(name, null);
+      }
+      return stateMap[name];
+    }
+
+    this.forEachChild = (func, conditions) => {
+      const stateKeys = this.stateNames();
       for(let index = 0; index < stateKeys.length; index += 1) {
-        const state = stateMap[stateKeys[index]];
+        const state = this.next([stateKeys[index]]);
         func(state);
       }
     }
@@ -155,269 +184,266 @@ class DecisionNode extends Lookup{
       this.forEachChild((child) => children.push(child));
       return children;
     }
-
-    this.map = (func) => {
-      const ids = [];
-      this.forEach((node) => ids.push(func(node)));
-      return ids;
-    }
-
-    this.nodes = () => {
-      return this.map((node) => node);
-    }
-
-    this.leaves = () => {
-      const leaves = [];
+    this.list = (filter, map, conditions) => {
+      const list = [];
+      const should = {filter: (typeof filter) === 'function', map: (typeof map) === 'function'};
       this.forEach((node) => {
-        if (node.isLeaf()) leaves.push(node);
+        if (should.filter ? filter(node) : true) {
+          list.push((should.map ? map(node) : node));
+        }
+      }, conditions);
+      return list;
+    };
+    this.nodes = (conditions) => this.list(null, (node) => node, conditions);
+    this.leaves = (conditions) => this.list((node) => node.isLeaf(), null, conditions);
+    this.addChildren = (nodeOnameOstate) => {
+      const nns = nodeOnameOstate;
+      const stateConfig = nns instanceof DecisionNode ? nns.stateConfig() :
+                nns instanceof StateConfig ? nns : this.tree().stateConfigs()[nns];
+      if (!(stateConfig instanceof StateConfig)) throw new Error(`Invalid nodeOnameOstate '${nns}'`);
+      const tree = this.tree();
+      const states = stateConfig.states();
+      states.forEach((state) => {
+        tree.addState(stateConfig);
+        this.then(state.name());
       });
-      return leaves;
-    }
-
-    this.addChildren = (nodeId) => {
-      const orig = this.getNode(nodeId);
-      const states = orig.states();
-      states.forEach((state) => this.then(state));
       return this;
     }
-
-    this.stealChildren = (nodeOid) => {
-      return this.getNode(nodeOid).addChildren(this);
+    this.reachable = (conditions) => {
+      if (this.isRoot()) return true;
+      const parent = this.back();
+      conditions = conditions || {};
+      const cond = conditions[parent.name()] === undefined ?
+                    conditions._DEFAULT : conditions[parent.name()];
+      return DecisionTree.conditionSatisfied(cond, this)
     }
-
-    this.conditionsSatisfied = tree.conditionsSatisfied;
-
-    this.change = (name) => {
-      const newNode = this.back().then(name);
-      const root = this.top();
-      newNode.stealChildren(this);
-      this.remove();
+    this.child = (nodeId) => {
+      const children = this.children();
+      for (let index = 0; index < children.length; index++) {
+        if (children[index].id() === nodeId) return children[index];
+      }
     }
-
-    this.subtree = (conditions, parent, t) => {
-      if (parent && !parent.conditionsSatisfied(conditions, this)) return undefined
-      conditions = conditions instanceof Object ? conditions : {};
-      const stateKeys = Object.keys(stateMap);
-      let copy;
-      if (parent === undefined) copy = this.copy(t);
-      else {
-        const target = t === undefined ? parent : t;
-        const nameTaken = target.nameTaken(this.name);
-        try {
-          if (!nameTaken) target.addState(this.name, tree.stateConfigs[this.name] || {});
-        } catch (e) {
-          target.nameTaken(this.name);
-          throw e;
+    function reached(node, nodeMap, conditions) {
+      let reachable;
+      do {
+        reachable = node.reachable(conditions);
+        if (reachable) {
+          if (nodeMap[node.id()]) return true;
+          nodeMap[node.id()] = node;
+          node = node.back();
         }
-        copy = parent.then(this.name, instancePayload);
+      } while (reachable && node);
+    }
+    this.reachableFrom = (conditions, node) => {
+      node ||= this.root();
+      const nodeMap = {};
+      nodeMap[node.id()] = node;
+      return reached(this, nodeMap, conditions) || reached(node.back(), nodeMap, conditions);
+    }
+    this.subtree = (node) => {
+      if (node === undefined) {
+        const tree = new (this.tree().constructor)(this.name(), payload, this.tree().stateConfigs());
+        tree.root().addSubtree(this, true);
+        return tree.root();
       }
-
-      for(let index = 0; index < stateKeys.length; index += 1) {
-        const state = stateMap[stateKeys[index]];
-        state.subtree(conditions, copy, t);
-      }
-      return copy;
-    }
-
-    this.nodeOnlyToJson = (noStates) => {
-      const json = {nodeId: this.nodeId(), name, states: [],
-                    payload: Object.fromJson(instancePayload)};
-      if (noStates !== true) {
-        this.states().forEach((state) =>
-          json.states.push(state.nodeOnlyToJson()));
-      }
-      return json;
-    }
-    this.toJson = (noStates) => {
-      const json = tree.toJson(this, noStates);
-      json.name = this.name;
-      json.payload = Object.fromJson(instancePayload);
-      json.nodes = this.nodeOnlyToJson(noStates);
-      return json;
-    }
-
-    this.declairedName = tree.declairedName;
-    this.toString = (tabs, attr) => {
-      tabs = tabs || 0;
-      const tab = new Array(tabs).fill('  ').join('');
-      let str = `${tab}${this.name}`;
-      str += attr ? `) ${this.payload()[attr]}\n` : '\n';
-      const stateKeys = Object.keys(stateMap);
-      for(let index = 0; index < stateKeys.length; index += 1) {
-        str += stateMap[stateKeys[index]].toString(tabs + 1, attr);
-      }
-      return str;
-    }
-    this.attachTree = attachTree;
-    this.treeToJson = tree.toJson;
-    this.conditionsSatisfied = tree.conditionsSatisfied;
-  }
-}
-DecisionNode.DO_NOT_CLONE = true;
-DecisionNode.stateMap = {};
-
-
-class DecisionTree {
-  constructor(name, payload) {
-    let json;
-    if (name._TYPE === 'DecisionTree') {
-      json = name;
-      payload = json.payload;
-      name = json.name;
-    }
-    const names = {};
-    name = name || String.random();
-    payload = payload || {};
-    const stateConfigs = {};
-    const idMap = {};
-    this.idMap = idMap;
-    const nodeMap = {};
-    Object.getSet(this, {name, stateConfigs, payload});
-    const tree = this;
-    tree.stateTemplates = {};
-
-    this.nameTaken = (n) => Object.keys(tree.stateConfigs).indexOf(n) !== -1;
-
-    function addState(name, payload) {
-      if (tree.declairedName(name)) {
-        throw new Error('Name already declared: This requires unique naming possibly relitive to other trees use DecisionTree.undeclairedName(name) to validate names')
-      }
-      tree.declareName(name);
-      return stateConfigs[name] = payload;
-    }
-
-    function stateDefined(name) {
-      const exists = false;
-      tree.rootNode.forEach((node) =>
-        exists = exists || node.name === name);
-      return exists;
-    }
-
-    function instanceCount(name) {
-      let count = 0;
-      tree.rootNode.forEach((node) =>
-        count += node.name === name ? 1 : 0);
-      return count;
-    }
-
-    function remove(node, password) {
-      if (!node.isTree(tree)) throw new Error('Node has already been removed');
-      let removeList = [node];
-      let index = 0;
-      let currNode;
-      while (currNode = removeList[index]) {
-          currNode.back().remove(currNode, password);
-          removeList = removeList.concat(currNode.states());
-          index += 1;
-      }
-      names[node.name] = undefined;
-    }
-
-    function addStates(sts) {
-      if ((typeof sts) !== 'object') throw new Error('Argument must be an object\nFormat: {[name]: payload...}');
-      const keys = Object.keys(sts);
-      keys.forEach((key) => addState(key, sts[key]));
-    }
-
-    function getState(name, parent, instancePayload) {
-      const node = new DecisionNode(tree, name, instancePayload, parent);
-      idMap[node.nodeId()] = node;
+      node.addSubtree(this);
       return node;
     }
+    this.path = () => {
+      let path = [];
+      let curr = this;
+      while (!(curr instanceof DecisionTree)) {
+        path.push(curr.name());
+        curr = curr.back();
+      }
+      return path.reverse();
+    }
+    this.addSubtree = (node, recursive) => {
+      if (!recursive) {
+        node.tree().addStates(this.tree().stateConfigs());
+      }
+      const stateKeys = this.stateNames();
 
-    const toJson = this.toJson;
-    this.toJson = (node, noStates) => {
-      node = node || this.rootNode;
-      const json = {stateConfigs: {}, _TYPE: this.constructor.name};
-      if (noStates) {
-        json.stateConfigs[name] = stateConfigs[node.name];
-      } else {
-        const names = Array.isArray(node) ? node : node.map((n) => n.name);
-        names.forEach((name) => {
-          const s = stateConfigs[name];
-          json.stateConfigs[name] = s && s.toJson ? s.toJson() : s;
+      if (shouldRecurse()) {
+        shouldRecurse();
+        for(let index = 0; index < stateKeys.length; index += 1) {
+          const childNode = this.next(stateKeys[index]);
+          const alreadyPresent = childNode.stateNames().indexOf(childNode.name());
+          if (! alreadyPresent && !childNode.selfReferencingPath()) {
+            node.then(childNode).addSubtree(childNode, true);
+          }
+        }
+      }
+      return node;
+    }
+    this.nodeOnlyToJson = () => {
+      if (payload.toJson) payload = payload.toJson();
+      const json = {name: this.name(), payload};
+
+      json.children = {};
+      if (shouldRecurse()) {
+        this.children().forEach((child) => {
+          json.children[child.name()] = child.nodeOnlyToJson();
         });
       }
-
       return json;
     }
-
-    function conditionsSatisfied(conditions, state) {
-      const parent = state.back()
-      if (parent === null) return true;
-      conditions = conditions || {};
-      const cond = conditions[state.name] === undefined ?
-                    conditions._DEFAULT : conditions[state.name];
-      const func = (typeof cond) === 'function' ? cond : null;
-      if (func && !func(state)) {
-        return false;
-      }
-      return parentConditionsSatisfied(conditions, state);
+    this.toJson = () => {
+      const treeJson = this.tree().toJson(this);
+      return treeJson;
     }
-
-    function parentConditionsSatisfied(conditions, state) {
-      if ((typeof state.back) !== 'function') {
-        console.log('here')
+    this.equals = function (other) {
+      if (!other || !(other instanceof DecisionNode)) return false;
+      const config = this.stateConfig();
+      const otherConfig = other.stateConfig();
+      if (config !== otherConfig) return false;
+      if (shouldRecurse()) {
+        const states = config.stateNames();
+        for (let index = 0; index < states.length; index++) {
+          const state = states[index];
+          if (!this.next(state).equals(other.next(state))) return false;
+        }
       }
-      const parent = state.back();
-      if (parent === null) return true;
-      conditions = conditions || {};
-      const cond = conditions[parent.name] === undefined ?
-                    conditions._DEFAULT : conditions[parent.name];
-      const noRestrictions = cond === undefined;
-      const regex = cond instanceof RegExp ? cond : null;
-      const target = (typeof cond) === 'string' ? cond : null;
-      const func = (typeof cond) === 'function' ? cond : null;
-      if (noRestrictions || (regex && state.name.match(regex)) ||
-              (target !== null && state.name === target) ||
-              (func && func(state))) {
-        return parentConditionsSatisfied(conditions, parent);
+      return true;
+    }
+    this.parentCount = (name) => {
+      let count = 0;
+      let curr = this.back();
+      while(!(curr instanceof DecisionTree)) {
+        if (curr.name() === name) count++;
+        curr = curr.back();
+      }
+      return count;
+    }
+    this.selfReferencingPath = () => {
+      let names = {};
+      let curr = this.back();
+      while(!(curr instanceof DecisionTree)) {
+        if (names[curr.name()]) return true;
+        names[curr.name()] = true;
+        curr = curr.back();
       }
       return false;
     }
-
-    function getNodeByPath(...path) {
-      let currNode = tree.rootNode;
-      path.forEach((name) => currNode = currNode.next(name));
-      return currNode;
-    }
-
-    this.remove = remove;
-    this.getNodeByPath = getNodeByPath;
-    this.conditionsSatisfied = conditionsSatisfied;
-    this.getState = getState;
-    this.addState = addState;
-    this.addStates = addStates;
-    this.nodeMap = nodeMap;
-    this.instanceCount = instanceCount;
-    this.stateConfigs = stateConfigs;
-
-    this.rootNode = new DecisionNode(tree, name, payload, null);
-    idMap[this.rootNode.nodeId()] = this.rootNode;
-    payload._nodeId = this.rootNode.nodeId();
-    tree.declareName = (name) => names[name] = true;
-    tree.declairedName = (name) => !!names[name];
-
-    if (json !== undefined) {
-      addStates(Object.fromJson(json.stateConfigs));
-      let index = 0;
-      let jsons = [json.nodes];
-      let currJson;
-      nodeMap[jsons[index].name] = this.rootNode;
-      while (currJson = jsons[index]) {
-        currJson.states.forEach((state) => {
-          jsons.push(state);
-          state.instancePayload = state.instancePayload || {};
-          state.instancePayload._nodeId = state.nodeId;
-          nodeMap[state.name] = nodeMap[currJson.name].then(state.name, state.instancePayload);
-        });
-        index++;
+    this.toString = (tabs, attr) => {
+      tabs = tabs || 0;
+      const tab = new Array(tabs).fill('  ').join('');
+      let str = `${tab}${this.name()}`;
+      let attrStr = this.payload()[attr];
+      str += attrStr ? `) ${this.payload()[attr]}\n` : '\n';
+      const stateKeys = this.stateNames();
+      for(let index = 0; index < stateKeys.length; index += 1) {
+        const stateName = stateKeys[index];
+        const nextState = this.next(stateName);
+        if (nextState.parentCount(stateName) < 2) {
+          str += nextState.toString(tabs + 1, attr);
+        }
       }
+      return str;
     }
-
-    return this.rootNode;
   }
 }
 
+
+class DecisionTree {
+  constructor(name, payload, stateConfigs) {
+    name = formatName(name);
+    Object.getSet(this, {stateConfigs});
+    const names = {};
+    name = name || String.random();
+    stateConfigs ||= {};
+    this.stateConfigs = () => stateConfigs;
+    const tree = this;
+
+    const parentToJson = this.toJson;
+    this.toJson = (node) => {
+      node ||= this.root();
+      const json = parentToJson();
+      json.name = node.name();
+      json.root = node.nodeOnlyToJson();
+      return json;
+    }
+
+    this.nameTaken = (name) => stateConfigs[formatName(name)] !== undefined;
+
+    function change(from, to) {
+      const state = stateConfig[from];
+      if (!state) throw new Error(`Invalid state name '${to}'`);
+      state.name(to);
+    }
+
+    function getState(name, payload) {
+      const stateConfig = stateConfigs[name];
+      if (stateConfig) return stateConfig;
+      return (stateConfigs[name] = new StateConfig(name, payload));
+    }
+
+    function addState(name, payload) {
+      if (name instanceof StateConfig) {
+        if (stateConfigs[name.name()] === undefined)
+          return (stateConfigs[name.name()] = name);
+        if (stateConfigs[name.name()] === name) return name;
+        throw new Error(`Attempting to add a new state with name '${name.name()}' which is already defined`);
+      }
+      return getState(name, payload);
+    }
+
+    function addStates(states) {
+      Object.keys(states).forEach((name) => getState(name, states[name]));
+    }
+
+    this.getById = (...idPath) => getById(this.root(), ...idPath);
+    this.getByName = (...namePath) => getByName(this.root(), ...namePath);
+    this.change = change;
+    this.getState = getState;
+    this.addState = addState;
+    this.addStates = addStates;
+    this.stateConfigs = () => stateConfigs;
+    tree.declairedName = (name) => !!stateConfigs[formatName(name)];
+
+
+    let instPld = payload;
+    if (!this.nameTaken(name)) {
+      instPld = {};
+    }
+
+    const rootNode = new (this.constructor.Node)(getState(name, payload), instPld, this);
+    this.root = () => rootNode
+
+    this.toString = (...args) => this.root().toString(...args);
+    return this;
+  }
+}
+
+DecisionTree.conditionSatisfied = (condition, state, value) => {
+  value = value ? new String(value).toString() : state.name();
+  const noRestrictions = condition === undefined;
+  const regex = condition instanceof RegExp ? condition : null;
+  const target = (typeof condition) === 'string' ? condition : null;
+  const func = (typeof condition) === 'function' ? condition : null;
+  return noRestrictions || (regex && value.match(regex)) ||
+          (target !== null && value === target) ||
+          (func && func(state, value));
+}
+
+function addChildren(node, json) {
+  const childNames = Object.keys(json);
+  for (let index = 0; index < childNames.length; index++) {
+    const name = childNames[index];
+    const payload = Object.fromJson(json[name].payload);
+    const child = node.then(name, payload);
+    addChildren(child, json[name].children);
+  }
+}
+
+DecisionTree.fromJson = (json) => {
+  const constructor = Object.class.get(json._TYPE);
+  const stateConfigs = Object.fromJson(json.stateConfigs);
+  const tree = new constructor(json.root.name, json.root.payload, stateConfigs);
+  addChildren(tree.root(), json.root.children);
+  return tree;
+}
+
 DecisionTree.DecisionNode = DecisionNode;
+DecisionTree.Node = DecisionNode;
 module.exports = DecisionTree;

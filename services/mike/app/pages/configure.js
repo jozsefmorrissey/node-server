@@ -3,6 +3,7 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 const Input = require('../../../../public/js/utils/input/input');
 const Radio = require('../../../../public/js/utils/input/styles/radio');
 const Table = require('../../../../public/js/utils/input/styles/table');
+const MultipleEntries = require('../../../../public/js/utils/input/styles/multiple-entries');
 const du = require('../../../../public/js/utils/dom-utils.js');
 
 let count = 0;
@@ -29,14 +30,33 @@ function addInput(elem) {
   }
 }
 
-du.on.match('click', '.add-btn', addInput);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+du.on.match('click', '.add-btn', addInput);
 function proccess() {
-  tree = new DecisionInputTree()
   const input1 = getInput();
   const input2 = getInput();
   const input3 = getInput();
-  tree.leaf('root', [input1, input2, input3]);
+  tree = new DecisionInputTree('root', [input1, input2, input3]);
   updateEntireTree();
 }
 
@@ -49,13 +69,18 @@ du.id('test-ground').innerHTML = radio.html();
 // du.id('test-ground').innerHTML = Radio.yes_no({name: 'yn'}).html();
 // du.id('test-ground').innerHTML = Radio.true_false({name: 'tf'}).html();
 
-const table = new Table({
-  name: 'tabal',
-  description: 'Pussy fartsss',
-  columns: ['one', 2, 3, 'four'],
-  rows: ['bill', 'scott', 'joe', 'fred']
-});
-du.id('test-ground').innerHTML = table.html();
+// const table = new Table({
+//   name: 'tabal',
+//   description: 'Pussy fartsss',
+//   columns: ['one', 2, 3, 'four'],
+//   rows: ['bill', 'scott', 'joe', 'fred']
+// });
+// du.id('test-ground').innerHTML = table.html();
 
+const input1 = getInput();
+const input2 = getInput();
+const input3 = getInput();
+const me = new MultipleEntries([input1, input2, input3], {label: 'oneTwoThree'});
+du.id('test-ground').innerHTML = me.html();
 
 exports.proccess = proccess;

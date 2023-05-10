@@ -1,15 +1,20 @@
 
 <{{tag()}} class='decision-input-cnt mod' node-id='{{_nodeId}}' {{reachable() ? '' : 'hidden'}}>
   <span id='{{id}}'>
-    <span:t repeat='input in inputArray' class='pad {{class}}' index='{{$index}}'>
+    <span:t repeat='input in inputArray'
+          class='decision-input-array-cnt pad {{class}}' index='{{$index}}'>
       {{input.html()}}
-      <button class='conditional-button'>
-        If {{input.name()}} = {{input.value()}}
-      </button>
+      <span>
+        <button class='conditional-button' target-id='{{input.id()}}'>
+          If {{input.name()}} = {{input.value()}}
+        </button>
+        <div class='condition-input-tree tab'></div>
+        <div class='children-recurse-cnt' value='{{input.value()}}'>{{childrenHtml(input.name(), true)}}</div>
+      </span>
       <br>
     </span:t>
   </span>
-  <div>
-    <button class='add-btn'>Add Input</button>
+  <div class='modification-add-input'>
+    {{inputTree().html()}}
   </div>
 </{{tag()}}>

@@ -249,7 +249,7 @@ app.delete('/print/body', printCall('DELETE'));
 
 var ip = '192.168.254.10';
 var services = shell.ls('./services/');
-var exclude = ['uss', 'uus', 'weather-fax', 'content-explained', 'premier', 'info-directory'];
+var exclude = ['uss', 'uus', 'weather-fax', 'content-explained', 'premier', 'info-directory', 'cabinet'];
 try {
   for (let i = 0; i < services.length; i += 1) {
     var id = services[i];
@@ -265,8 +265,8 @@ try {
 
 var httpServer = http.createServer(app);
 var httpsServer = https.createServer(https_options, app);
-httpServer.listen(3000);
-httpsServer.listen(3001);
+httpServer.listen(3002);
+httpsServer.listen(3003);
 
 var user = getUser();
 //shell.exec("xdg-open \"https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.id=" + user + "\"");
