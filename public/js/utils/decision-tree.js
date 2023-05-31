@@ -3,7 +3,12 @@
 const Lookup = require('./object/lookup')
 const REMOVAL_PASSWORD = String.random();
 
-function getByName(node, ...namePath) {
+const nameEquals = (name) => (node) => node.name() === name;
+const selectorFunc = (nameOfunc) => (typeof nameOfunc) === 'function' ?
+                          nameOfunc : nameEquals(nameOfunc);
+
+
+function getByPath(node, ...namePath) {
   for (let index = 0; index < namePath.length; index++) {
     node = node.next(namePath[index]);
     if (node === undefined) return;
@@ -11,9 +16,10 @@ function getByName(node, ...namePath) {
   return node;
 }
 
-function getById(node, ...idPath) {
-  for (let index = 0; index < endIndex; index++) {
-    node = node.child(idPath[index]);
+function getByName(node, ...namePath) {
+  for (let index = 0; index < namePath.length; index++) {
+    const name = namePath[index];
+    node = node.breathFirst(n => n.name() === name);
     if (node === undefined) return;
   }
   return node;
@@ -33,7 +39,7 @@ class StateConfig extends Lookup {
     const instance = this;
     this.setValue = (key, value) => payload[key] = value;
     this.states = () => Array.from(states);
-    this.payload = () => JSON.clone(payload);
+    this.payload = () => Object.merge({}, payload);
     this.isLeaf = () => states.length === 0;
     this.stateNames = () => states.map(s => s.name());
     this.stateMap = () => states.idObject('name');
@@ -57,7 +63,63 @@ StateConfig.fromJson = (json) => {
   if (existing) return existing;
   return new StateConfig(json.name, json.payload);
 }
+const defaultResolver = (node) => node.name();
+class DecisionCondition {
+  constructor(condition, details, resolveValue) {
+    Object.getSet(this, {condition, details, _IMMUTABLE: true});
+    this.resolveValue = (typeof resolveValue) === 'function' ? resolveValue :
+            defaultResolver;
+  }
+}
 
+class DecisionEqualCondition extends DecisionCondition {
+  constructor(condition, details, resolveValue) {
+    super(condition, details, resolveValue);
+    this.satisfied = (node) => Object.equals(this.resolveValue(node, this.details()), condition);
+  }
+}
+
+class DecisionFunctionCondition extends DecisionCondition {
+  constructor(func, details, resolveValue) {
+    if ((typeof func) !== 'function') throw new Error('arg 2 is not of type function');
+    super(func, details, resolveValue);
+    this.satisfied = (node) => func(this.resolveValue(node, this.details()));
+  }
+}
+
+class DecisionRegexCondition extends DecisionCondition {
+  constructor(regex, details, resolveValue) {
+    super(regex, details, resolveValue);
+    this.satisfied = (node) => {
+      const val = this.resolveValue(node, this.details());
+      return val.match(regex);
+    }
+  }
+}
+
+DecisionCondition.getter = (resolveValue) => (condition, details) => {
+  let cxtr = DecisionEqualCondition;
+  if ((typeof condition) === 'function') cxtr = DecisionFunctionCondition;
+  if (condition instanceof RegExp) cxtr = DecisionRegexCondition;
+  return new cxtr(condition, details, resolveValue);
+}
+
+// class DecisionConditionList {
+//   constructor() {
+//     const list = [];
+//     this.push = (dc) => {
+//       if (dc instanceof DecisionCondition) list.push(dc);
+//     }
+//     this.list = () => [].copy(list);
+//     this.at = (index) => list[index];
+//   }
+// }
+//
+// DecisionConditionList.fromObject = (obj, getter) => {
+//   getter ||= DecisionCondition.getter();
+//   const list = new DecisionConditionList();
+//
+// }
 
 const payloadMap = {};
 // terminology
@@ -66,7 +128,7 @@ const payloadMap = {};
 // node - {name, states, payload, then};
 // then(name, payload:optional) - a function to set a following state.
 // next(name) - a function to get the next state.
-// back() - a function to move back up the tree.
+// parent() - a function to move back up the tree.
 // root() - a function to get root;
 class DecisionNode extends Lookup {
   constructor(stateConfig, payload, parent) {
@@ -79,7 +141,6 @@ class DecisionNode extends Lookup {
       payload.PAYLOAD_ID ||= String.random();
       payloadMap[payload.PAYLOAD_ID] = payload;
     }
-    this.parent = () => parent;
 
     this.stateConfig = () => stateConfig;
     this.name = stateConfig.name;
@@ -87,7 +148,7 @@ class DecisionNode extends Lookup {
     this.stateMap = () => stateMap;
     this.isLeaf = stateConfig.isLeaf;
     this.stateNames = stateConfig.stateNames;
-    this.getById = (...idPath) => getById(this, ...idPath);
+    this.getByPath = (...idPath) => getByPath(this, ...idPath);
     this.getByName = (...namePath) => getByName(this, ...namePath);
 
     this.setValue = (key, value) => payload[key] = value;
@@ -103,13 +164,32 @@ class DecisionNode extends Lookup {
     };
 
     const shouldRecurse = () => Object.keys(stateMap) > 0 || !instance.selfReferencingPath();
+    this.shouldRecurse = shouldRecurse;
 
-    function attachTree(treeOnode) {
+    function attach(treeOnode) {
       if (shouldRecurse()) {
         const node = treeOnode instanceof DecisionNode ? treeOnode : treeOnode.root();
-        return node.subtree(instance);
+
+        const stateKeys = instance.stateNames();
+        if (stateKeys[node.name()]) throw new Error(`Attempting to add node whos template alread exists as a child. You must create another node so that it maintains a unique path`);
+        const nodeConfig = node.stateConfig();
+        tree.addState(nodeConfig);
+
+        if (shouldRecurse()) {
+          shouldRecurse();
+          for(let index = 0; index < stateKeys.length; index += 1) {
+            const childNode = node.next(stateKeys[index]);
+            const alreadyPresent = childNode.stateNames().indexOf(childNode.name());
+            if (! alreadyPresent && !childNode.selfReferencingPath()) {
+              instance.then(childNode).attach(childNode, true);
+            }
+          }
+        }
+        return node;
       }
     }
+
+    this.attach = attach
 
     function createNode(name, payload) {
       const node = stateMap[name];
@@ -123,7 +203,7 @@ class DecisionNode extends Lookup {
     }
 
     this.then = (name, payload) => {
-      if (name instanceof DecisionNode) return attachTree(name);
+      if (name instanceof DecisionNode) return attach(name);
       if (Array.isArray(name)) {
         const returnNodes = [];
         for (let index = 0; index < name.length; index += 1) {
@@ -138,28 +218,111 @@ class DecisionNode extends Lookup {
       return newState;
     }
 
-    this.remove = () => this.back().stateConfig().remove(this.stateConfig());
+    this.remove = () => this.parent().stateConfig().remove(this.stateConfig());
 
-    this.back = () => parent;
     this.tree = () => {
       let curr = this;
-      while (!(curr instanceof DecisionTree)) curr = curr.back();
+      while (!(curr instanceof DecisionTree)) curr = curr.parent();
       return curr;
     };
     this.root = () => this.tree().root();
     this.isRoot = () => parent instanceof DecisionTree;
 
-    // Breath First Search
-    this.forEach = (func, conditions) => {
-      if (this.reachable(conditions)) {
-        const stateKeys = this.stateNames();
-        func(this);
-        if (shouldRecurse()) {
-          for(let index = 0; index < stateKeys.length; index += 1) {
-              const state = this.next(stateKeys[index]);
-              state.forEach(func, conditions);
+    function addReachableChildren(node, nodes) {
+      if (node.shouldRecurse()) {
+        const stateKeys = node.stateNames();
+        for(let index = 0; index < stateKeys.length; index += 1) {
+          const stateName = stateKeys[index];
+          if (node.reachable(stateName)) {
+            const child = node.next(stateName);
+            if (child && node.reachable(child.name())) {
+              nodes.push(child);
+            }
           }
         }
+      }
+    }
+
+    // iff func returns true function stops and returns node;
+    this.breathFirst = (func) => {
+      const nodes = [this];
+      const runFunc = (typeof func) === 'function';
+      let nIndex = 0;
+      while (nodes[nIndex]) {
+        let node = nodes[nIndex];
+        if (node.reachable()) {
+          const val = func(node);
+          if (val === true) return node;
+          if (val) return val;
+          addReachableChildren(node, nodes);
+        }
+        nIndex++;
+      }
+    }
+
+    this.depthFirst = (func) => {
+      if (instance.reachable()) {
+        if (func(instance)) return true;
+        if (shouldRecurse()) {
+          const stateKeys = instance.stateNames();
+          for(let index = 0; index < stateKeys.length; index += 1) {
+              const child = instance.next(stateKeys[index]);
+              if (instance.reachable(child.name())) {
+                child.depthFirst(func);
+              }
+          }
+        }
+      }
+    }
+
+    function decendent(nameOfunc) {
+      return instance.breathFirst(selectorFunc(nameOfunc));
+    }
+    function findParent(nameOfunc) {
+      if (nameOfunc === undefined) return parent;
+      const selector = selectorFunc(nameOfunc);
+      const curr = instance;
+      while(!curr.isRoot()) {
+        if (selector(curr)) return curr;
+        curr = curr.parent();
+      }
+    }
+    function closest(nameOfunc) {
+      const selector = selectorFunc(nameOfunc);
+      const nodes = [instance];
+      let index = 0;
+      while (nodes.length > index) {
+        const node = nodes[index];
+        if (selector(node)) return node;
+        const parent = nodes.parent();
+        if (parent.reachable() && parent.reachable(node.name())) {
+          nodes.push(parent);
+        }
+        addReachableChildren(node, nodes);
+      }
+    }
+
+    this.find = decendent;
+    this.parent = findParent;
+    this.closest = closest;
+
+    // Breath First Search
+    this.forEach = (func, depthFirst) => {
+      if (depthFirst) this.depthFirst(func);
+      else this.breathFirst(func);
+    }
+
+    this.forPath = (func) => {
+      const nodes = [];
+      let node = this;
+      while (!node.isRoot()) {
+        nodes.push(node);
+        node = node.parent();
+      }
+      for (let index = nodes.length - 1; index > -1; index--) {
+        const val = func(nodes[index]);
+        if (val === true) return nodes[index];
+        if (val) return val;
       }
     }
 
@@ -172,11 +335,13 @@ class DecisionNode extends Lookup {
       return stateMap[name];
     }
 
-    this.forEachChild = (func, conditions) => {
+    this.forEachChild = (func) => {
       const stateKeys = this.stateNames();
       for(let index = 0; index < stateKeys.length; index += 1) {
-        const state = this.next([stateKeys[index]]);
-        func(state);
+        const childNode = this.next(stateKeys[index]);
+        if (childNode.shouldRecurse()) {
+          func(childNode);
+        }
       }
     }
     this.children = () => {
@@ -184,18 +349,18 @@ class DecisionNode extends Lookup {
       this.forEachChild((child) => children.push(child));
       return children;
     }
-    this.list = (filter, map, conditions) => {
+    this.list = (filter, map) => {
       const list = [];
       const should = {filter: (typeof filter) === 'function', map: (typeof map) === 'function'};
       this.forEach((node) => {
         if (should.filter ? filter(node) : true) {
           list.push((should.map ? map(node) : node));
         }
-      }, conditions);
+      });
       return list;
     };
-    this.nodes = (conditions) => this.list(null, (node) => node, conditions);
-    this.leaves = (conditions) => this.list((node) => node.isLeaf(), null, conditions);
+    this.nodes = () => this.list(null, (node) => node);
+    this.leaves = () => this.list((node) => node.isLeaf(), null);
     this.addChildren = (nodeOnameOstate) => {
       const nns = nodeOnameOstate;
       const stateConfig = nns instanceof DecisionNode ? nns.stateConfig() :
@@ -209,76 +374,121 @@ class DecisionNode extends Lookup {
       });
       return this;
     }
-    this.reachable = (conditions) => {
-      if (this.isRoot()) return true;
-      const parent = this.back();
-      conditions = conditions || {};
-      const cond = conditions[parent.name()] === undefined ?
-                    conditions._DEFAULT : conditions[parent.name()];
-      return DecisionTree.conditionSatisfied(cond, this)
+
+    this.values = (values) => {};
+
+    const conditions = [];
+    const childConditions = {};
+    this.conditions = () => [].copy(conditions);
+
+    this.conditions.add = (condition, details) => {
+      let dc = condition instanceof DecisionCondition ? condition :
+                this.tree().constructor.getCondition(condition, details);
+      conditions.push(dc);
     }
-    this.child = (nodeId) => {
-      const children = this.children();
-      for (let index = 0; index < children.length; index++) {
-        if (children[index].id() === nodeId) return children[index];
+    this.conditions.addAll = (conds) => {
+      for (let index = 0; index < conds.length; index++) {
+        const cond = conds[index];
+        if (!(cond instanceof DecisionCondition)) throw new Error('WTF(sorry its been a long week): this needs to be a DecisionCondition');
+        conditions.push(cond);
       }
     }
-    function reached(node, nodeMap, conditions) {
+    this.conditions.remove = (cond) => conditions.remove(cond);
+
+    this.conditions.child = (name) => {
+      let copy = [];
+      if (name !== undefined && childConditions[name]) {
+        copy.concatInPlace(childConditions[name]);
+      }
+      if (childConditions[undefined]) copy.concatInPlace(childConditions[undefined]);
+      return copy;
+    }
+    this.conditions.child.add = (condition, details, targetNodeName) => {
+      let dc = this.tree().constructor.getCondition(condition, details);
+      if (!childConditions[targetNodeName]) childConditions[targetNodeName] = [];
+      childConditions[targetNodeName].push(dc);
+    }
+    this.conditions.child.addAll = (conds) => {
+      const keys = Object.keys(conds);
+      for (let index = 0; index < keys.length; index++) {
+        const key = keys[index];
+        const condList = conds[key];
+        for (let index = 0; index < condList.length; index++) {
+          const cond = condList[index];
+          if (!(cond instanceof DecisionCondition)) throw new Error('WTF(sorry its been a long week): this needs to be a DecisionCondition');
+          if (!childConditions[key]) childConditions[key] = [];
+          childConditions[key].push(cond);
+        }
+      }
+    }
+    this.conditions.child.remove = (cond) => {
+      if (!(cond instanceof DecisionCondition)) return;
+      if (!childConditions[cond.name()]) return;
+      return childConditions[cond.name()].remove(cond);
+    }
+
+    this.canReachChild = (name) => {
+      if(this.stateNames().indexOf(name) === -1) return false;
+      let nodeConds = this.conditions.child(name);
+      if (nodeConds.length === 0) return true;
+      for (let index = 0; index < nodeConds.length; index++) {
+        if (nodeConds[index].satisfied(this.child(name))) return true;
+      }
+      return false;
+    }
+
+    this.canReach = () => {
+      if (conditions.length === 0) return true;
+      for (let index = 0; index < conditions.length; index++) {
+        if (conditions[index].satisfied(this)) return true;
+      }
+      return false;
+    }
+
+    this.reachable = (childName) => {
+      if (this.isRoot()) return true;
+      if (childName !== undefined) return this.canReachChild(childName);
+      else  return this.canReach();
+    }
+    this.child = (name) => {
+      const children = this.children();
+      for (let index = 0; index < children.length; index++) {
+        if (children[index].name() === name) return children[index];
+      }
+    }
+    function reached(node, nodeMap, other) {
       let reachable;
       do {
-        reachable = node.reachable(conditions);
+        reachable = node.reachable();
         if (reachable) {
-          if (nodeMap[node.id()]) return true;
+          if (node.parent().reachable(node.name())) break;
+          if (nodeMap[node.id()] && nodeMap[other.id()]) return true;
           nodeMap[node.id()] = node;
-          node = node.back();
+          node = node.parent();
         }
-      } while (reachable && node);
+      } while (reachable && node && node instanceof DecisionNode);
     }
-    this.reachableFrom = (conditions, node) => {
+    this.reachableFrom = (node) => {
       node ||= this.root();
       const nodeMap = {};
       nodeMap[node.id()] = node;
-      return reached(this, nodeMap, conditions) || reached(node.back(), nodeMap, conditions);
-    }
-    this.subtree = (node) => {
-      if (node === undefined) {
-        const tree = new (this.tree().constructor)(this.name(), payload, this.tree().stateConfigs());
-        tree.root().addSubtree(this, true);
-        return tree.root();
-      }
-      node.addSubtree(this);
-      return node;
+      return reached(this, nodeMap, other) || reached(node.parent(), nodeMap, other);
     }
     this.path = () => {
       let path = [];
       let curr = this;
       while (!(curr instanceof DecisionTree)) {
         path.push(curr.name());
-        curr = curr.back();
+        curr = curr.parent();
       }
       return path.reverse();
     }
-    this.addSubtree = (node, recursive) => {
-      if (!recursive) {
-        node.tree().addStates(this.tree().stateConfigs());
-      }
-      const stateKeys = this.stateNames();
-
-      if (shouldRecurse()) {
-        shouldRecurse();
-        for(let index = 0; index < stateKeys.length; index += 1) {
-          const childNode = this.next(stateKeys[index]);
-          const alreadyPresent = childNode.stateNames().indexOf(childNode.name());
-          if (! alreadyPresent && !childNode.selfReferencingPath()) {
-            node.then(childNode).addSubtree(childNode, true);
-          }
-        }
-      }
-      return node;
-    }
     this.nodeOnlyToJson = () => {
-      if (payload.toJson) payload = payload.toJson();
-      const json = {name: this.name(), payload};
+      let pl = Object.toJson(payload);
+      const conds = Array.toJson(conditions);
+      const childConds = Object.toJson(Object.values(childConditions));
+      const json = {name: this.name(), payload: pl, conditions: conds,
+                    childConditions: childConds};
 
       json.children = {};
       if (shouldRecurse()) {
@@ -308,24 +518,47 @@ class DecisionNode extends Lookup {
     }
     this.parentCount = (name) => {
       let count = 0;
-      let curr = this.back();
+      let curr = this.parent();
       while(!(curr instanceof DecisionTree)) {
         if (curr.name() === name) count++;
-        curr = curr.back();
+        curr = curr.parent();
       }
       return count;
     }
     this.selfReferencingPath = () => {
       let names = {};
-      let curr = this.back();
+      let curr = this.parent();
       while(!(curr instanceof DecisionTree)) {
         if (names[curr.name()]) return true;
         names[curr.name()] = true;
-        curr = curr.back();
+        curr = curr.parent();
       }
       return false;
     }
+
     this.toString = (tabs, attr) => {
+      if (this.reachable()) {
+        tabs = tabs || 0;
+        const tab = new Array(tabs).fill('  ').join('');
+        let str = `${tab}${this.name()}`;
+        let attrStr = this.payload()[attr];
+        str += attrStr ? `) ${this.payload()[attr]}\n` : '\n';
+        const stateKeys = this.stateNames();
+        for(let index = 0; index < stateKeys.length; index += 1) {
+          const stateName = stateKeys[index];
+          if (this.reachable(stateName)) {
+            const nextState = this.next(stateName);
+            if (nextState.parentCount(stateName) < 2) {
+              str += nextState.toString(tabs + 1, attr);
+            }
+          }
+        }
+        return str;
+      }
+      return '';
+    }
+
+    this.structure = (tabs, attr) => {
       tabs = tabs || 0;
       const tab = new Array(tabs).fill('  ').join('');
       let str = `${tab}${this.name()}`;
@@ -336,7 +569,7 @@ class DecisionNode extends Lookup {
         const stateName = stateKeys[index];
         const nextState = this.next(stateName);
         if (nextState.parentCount(stateName) < 2) {
-          str += nextState.toString(tabs + 1, attr);
+          str += nextState.structure(tabs + 1, attr);
         }
       }
       return str;
@@ -345,8 +578,9 @@ class DecisionNode extends Lookup {
 }
 
 
-class DecisionTree {
+class DecisionTree extends Lookup {
   constructor(name, payload, stateConfigs) {
+    super();
     name = formatName(name);
     Object.getSet(this, {stateConfigs});
     const names = {};
@@ -385,14 +619,14 @@ class DecisionTree {
         if (stateConfigs[name.name()] === name) return name;
         throw new Error(`Attempting to add a new state with name '${name.name()}' which is already defined`);
       }
-      return getState(name, payload);
+      return tree.getState(name, payload);
     }
 
     function addStates(states) {
-      Object.keys(states).forEach((name) => getState(name, states[name]));
+      Object.keys(states).forEach((name) => tree.getState(name, states[name]));
     }
 
-    this.getById = (...idPath) => getById(this.root(), ...idPath);
+    this.getByPath = (...idPath) => getByPath(this.root(), ...idPath);
     this.getByName = (...namePath) => getByName(this.root(), ...namePath);
     this.change = change;
     this.getState = getState;
@@ -407,7 +641,7 @@ class DecisionTree {
       instPld = {};
     }
 
-    const rootNode = new (this.constructor.Node)(getState(name, payload), instPld, this);
+    const rootNode = new (this.constructor.Node)(this.getState(name, payload), instPld, this);
     this.root = () => rootNode
 
     this.toString = (...args) => this.root().toString(...args);
@@ -432,6 +666,8 @@ function addChildren(node, json) {
     const name = childNames[index];
     const payload = Object.fromJson(json[name].payload);
     const child = node.then(name, payload);
+    child.conditions.addAll(Object.fromJson(json[name].conditions));
+    child.conditions.child.addAll(Object.fromJson(json[name].childConditions));
     addChildren(child, json[name].children);
   }
 }
@@ -446,4 +682,13 @@ DecisionTree.fromJson = (json) => {
 
 DecisionTree.DecisionNode = DecisionNode;
 DecisionTree.Node = DecisionNode;
+DecisionTree.Condition = DecisionCondition;
+DecisionTree.getCondition = DecisionCondition.getter();
 module.exports = DecisionTree;
+
+
+// Messaging_App
+// set Max characters for you and them
+// you cannot text more than Max characters.
+// if (incomingMessage.length > Max) autoRespond: Recepiant can only recieve Max chanracters
+// if (only allow two messages without achnowledgement)

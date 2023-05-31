@@ -27,6 +27,7 @@ class Input extends Lookup {
     super(id);
     props.hidden = props.hide || false;
     props.list = props.list || [];
+    props.optional = props.optional === undefined ? false : props.optional;
     Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'placeholder',
                             'class', 'list', 'value', 'inline');
 
@@ -86,16 +87,21 @@ class Input extends Lookup {
       let val = value;
       if (elem) val = elem[instance.targetAttr()];
       if (val === undefined) val = props.default;
+      if (instance.type() === 'checkbox') return val == true;
       return val;
     }
+
+    this.getValue = getValue;
     this.updateDisplay = () => {
       const elem = getElem(instance.id());
       if (elem) elem[instance.targetAttr()] = this.value();
     };
-    this.setValue = (val, force) => {
-      if (val === undefined) val = getValue();
+    let chosen = false;
+    this.setValue = (val, force, eventTriggered) => {
+      if (val === undefined) val = this.getValue();
       if(force || this.validation(val)) {
         valid = true;
+        if (!chosen && eventTriggered) chosen = true;
         value = val;
         const elem = getElem(instance.id());
         if (elem) elem.value = value;
@@ -105,8 +111,17 @@ class Input extends Lookup {
       value = undefined;
       return false;
     }
+
+    this.chosen = () => props.mustChoose ? chosen : true;
+
     this.value = () => {
-      const unformatted = (typeof value === 'function') ? value() : getValue() || '';
+      let unformatted;
+      if (typeof value === 'function') unformatted = value();
+      else {
+        unformatted = this.getValue();
+        if (unformatted === undefined) unformatted = '';
+      }
+
       return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
     }
     this.doubleCheck = () => {
@@ -133,16 +148,20 @@ class Input extends Lookup {
       return valValid;
     };
 
-    this.validate = (target) => {
+    function setValid(vld) {
+      valid = vld;
+      const elem = getElem(instance.errorMsgId());
+      if (elem) {
+        elem.hidden = vld;
+      }
+    }
+
+    this.validate = (target, eventTriggered) => {
       target = target || getElem(instance.id());
       if (target) {
-        if (this.setValue(target[this.targetAttr()])) {
-          getElem(this.errorMsgId()).hidden = true;
-          valid = true;
-        } else {
-          getElem(this.errorMsgId()).hidden = false;
-          valid = false;
-        }
+        if (this.setValue(target[this.targetAttr()], false, eventTriggered)) {
+          setValid(true);
+        } else setValid(false);
       }
     }
 
@@ -160,11 +179,12 @@ class Input extends Lookup {
   }
 }
 
-function runValidate(elem) {
+function runValidate(elem, event) {
   const input = Lookup.get(elem.id);
-  if (input) input.validate(elem);
+  if (input) input.validate(elem, true);
 }
 
+du.on.match(`click`, `input`, runValidate);
 du.on.match(`change`, `input`, runValidate);
 du.on.match(`keyup`, `input`, runValidate);
 du.on.match(`change`, `select`, runValidate);

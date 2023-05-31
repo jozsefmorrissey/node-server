@@ -1,15 +1,15 @@
 <{{inline() ? 'span' : 'div'}}  class='input-cnt'{{hidden() ? ' hidden' : ''}}>
-  <label>{{description()}}</label>
+  <label>{{label()}}</label>
   <br>
   <div class='tab'>
     <table>
       <tbody>
         <tr>
           <td></td>
-          <td:t repeat='col in columns()'>col</td:t>
+          <td:t repeat='col in columns()'>{{col}}</td:t>
         </tr>
         <tr:t repeat='rowIndex, row in rows()'>
-          <td>row</td>
+          <td>{{row}}</td>
           <td:t repeat='colIndex, col in columns()'>
             <input type='{{type()}}' name='{{id()}}-{{row}}'>
           </td:t>

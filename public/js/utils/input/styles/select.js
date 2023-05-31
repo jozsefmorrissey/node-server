@@ -8,6 +8,7 @@ const $t = require('../../$t');
 
 class Select extends Input {
   constructor(props) {
+    props ||= {};
     super(props);
     if (props.list === undefined) props.list = [];
     const isArray = Array.isArray(props.list);
@@ -33,6 +34,7 @@ class Select extends Input {
   }
 }
 
+new Select();
 Select.template = new $t('input/select');
 Select.html = (instance) => () => Select.template.render(instance);
 

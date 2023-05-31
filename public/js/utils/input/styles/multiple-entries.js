@@ -8,50 +8,59 @@ const $t = require('../../$t');
 const du = require('../../dom-utils');
 
 class MultipleEntries extends Input {
-  constructor(inputArray, props) {
+  constructor(inputTemplate, props) {
     props ||= {};
-    super(props);
-    let inputArrayFunc;
-    if ((typeof inputArray) === 'function') {
-      inputArrayFunc = inputArray;
-      inputArray = [];
+    props.validation ||= (list) => list.length > 0;
+    if (props.list === undefined) {
+      const list = [];
+      props.list = list;
+      props.list.forEach((i) =>
+        list.push(i.clone()));
     }
+
+    super(props);
     props.list ||= [];
+    this.clone = () =>
+        new MultipleEntries(inputTemplate, JSON.clone(props));
+
     this.set = (index) => {
       if (props.list[index] === undefined) {
-        const list = [];
-        props.list[index] = list;
-        inputArray.forEach((i) =>
-          list.push(i.clone()));
+        props.list[index] = inputTemplate.clone();
       }
       return props.list[index];
     }
     this.set(0);
-    // Allows for recursion.
-    let hasInit = false;
-    this.isInitialized = () => hasInit;
-    this.initialize = () => {
-      if (hasInit) return;
-      if (inputArrayFunc) {
-        props.list.copy([]);
-        inputArray.copy(inputArrayFunc());
-        this.set(0);
-      }
-      hasInit = true;
-    }
-    this.value = (val) => {
-      const values = [];
-      const list = this.list();
-      for (let i = 0; i < list.length; i++) {
-        const inputArr = list[i]
-        values[i] = {};
-        for(let index = 0; index < inputArr.length; index++) {
-          const input = inputArr[index];
-          values[i][input.name()] = input.value();
+
+    this.tag = () => props.inline() ? 'span' : 'div';
+
+    this.input = (nameOindexOfunc) => {
+      const nif = nameOindexOfunc;
+      if ((typeof nif) === 'number') return props.list[nif];
+      const runFunc = (typeof nif) === 'function';
+      for (let index = 0; index < props.list.length; index++) {
+        const input = props.list[index];
+        if (runFunc) {
+          const val = nif(input);
+          if (val) return val;
+        } else if (input.name() === nif) return input;
+
+        if (input instanceof MultipleEntries) {
+          const mInput = input.input(nif);
+          if (mInput) return mInput;
         }
       }
+    }
+    this.getValue = () => {
+      const values = [];
+      for (let index = 0; index < props.list.length; index++) {
+        const input = props.list[index];
+        if (input.valid()) values.push(input);
+      }
       return values;
-    };
+    }
+
+    this.value = this.getValue;
+
     this.length = () => this.list().length;
     this.setHtml = (index) =>
         MultipleEntries.singleTemplate.render(this.set(index));
@@ -74,10 +83,9 @@ function meInfo(elem) {
   info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
   info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
   info.length = info.multiInput.length();
-  info.inputs = du.find.downAll('input,select,textarea', info.indexCnt);
+  info.inputs = du.find.downAll('input,select,textarea', info.multiCnt);
   info.last = info.index === info.length - 1;
-  info.empty = true;
-  info.multiInput.set(info.index).forEach(i => info.empty &&= (i.value() == false));
+  info.empty = info.inputs[info.index].value === '';
   return info;
 }
 

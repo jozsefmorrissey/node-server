@@ -1,7 +1,7 @@
-<div class='{{DecisionInputTree.class}}' tree-id='{{tree.id()}}' root-id='{{wrapper.nodeId()}}'>
+<div class='{{DecisionInputTree.class}}' tree-id='{{node.tree().id()}}'>
   {{inputHtml}}
-  <button class='{{DecisionInputTree.buttonClass}}' root-id='{{wrapper.nodeId()}}'
-        {{tree.hideButton ? 'hidden' : ''}}>
-    {{tree.buttonText()}}
+  <button class='{{DecisionInputTree.buttonClass}}' tree-id='{{node.tree().id()}}'
+        {{node.tree().hideButton ? 'hidden' : ''}}>
+    {{node.root().inputTree().buttonText()}}
   </button>
 </div>

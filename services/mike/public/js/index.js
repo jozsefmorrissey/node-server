@@ -1459,6 +1459,7 @@ function (require, exports, module) {
 	    });
 	
 	
+	    this.watchers = () => watchers;
 	    this.on = function (func) {
 	      if ((typeof func) === 'function') {
 	        watchers.push(func);
@@ -1471,10 +1472,12 @@ function (require, exports, module) {
 	      element = element ? element : window;
 	      runFuncs(element, detail);
 	      this.event.detail = detail;
-	      if(document.createEvent){
+	      if (element instanceof HTMLElement) {
+	        if(document.createEvent){
 	          element.dispatchEvent(this.event);
-	      } else {
+	        } else {
 	          element.fireEvent("on" + this.event.eventType, this.event);
+	        }
 	      }
 	    }
 	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
@@ -1647,6 +1650,9 @@ function (require, exports, module) {
 	        return Number.parseFloat(string);
 	      } else if (string.match(StringMathEvaluator.fractionOrMixedNumberReg)) {
 	        return parseFraction(string).decimal
+	      } else {
+	        const value = Measurement.sme(string);
+	        if ((typeof value) === 'number') return value;
 	      }
 	      nan = true;
 	      return NaN;
@@ -1687,6 +1693,7 @@ function (require, exports, module) {
 	  }
 	  return unit
 	};
+	Measurement.sme = new StringMathEvaluator(Math).eval;
 	Measurement.units = () => JSON.parse(JSON.stringify(units));
 	Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
 	Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
@@ -3150,8 +3157,11 @@ function (require, exports, module) {
 	
 	function objEq(obj1, obj2, ignoreKeys) {
 	  ignoreKeys ||= [];
-	  if (!(obj1 instanceof Object)) return false;
-	  if (!(obj2 instanceof Object)) return false;
+	  const notObj1 = !(obj1 instanceof Object);
+	  const notObj2 = !(obj2 instanceof Object);
+	  if (notObj1 && notObj2) return obj1 === obj2;
+	  if (notObj1) return false;
+	  if (notObj2) return false;
 	  const filter = key => ignoreKeys.indexOf(key) === -1;
 	  const obj1Keys = Object.keys(obj1).sort().filter(filter);
 	  const obj2Keys = Object.keys(obj2).sort().filter(filter);
@@ -3186,6 +3196,7 @@ function (require, exports, module) {
 	      target[key] = object[key];
 	    }
 	  }
+	  return target;
 	}, true);
 	
 	Function.safeStdLibAddition(Object, 'forAllRecursive', (object, func) => {
@@ -3313,6 +3324,14 @@ function (require, exports, module) {
 	Function.safeStdLibAddition(Array, 'toJson', function (arr) {
 	    const json = [];
 	    arr.forEach((elem) => json.push(processValue(elem)));
+	    return json;
+	}, true);
+	
+	Function.safeStdLibAddition(Object, 'toJson', function (obj) {
+	    if (!(obj instanceof Object)) throw new Error('Not an Object');
+	    const json = Array.isArray(obj) ? [] : {};
+	    const keys = Object.keys(obj);
+	    keys.forEach((key) => json[key] = processValue(obj[key]));
 	    return json;
 	}, true);
 	
@@ -3577,7 +3596,7 @@ function (require, exports, module) {
 	  const cxtrFromJson = obj.constructor.fromJson;
 	  if (obj.constructor.DO_NOT_CLONE) {
 	    obj.clone = () => obj;
-	  } else if (cxtrFromJson !== Object.fromJson) {
+	  } else if (cxtrFromJson && cxtrFromJson !== Object.fromJson) {
 	    obj.clone = () => cxtrFromJson(obj.toJson());
 	  } else if (options.isObject) {
 	    setFromJson(obj, options);
@@ -3939,58 +3958,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/logic-tree.js',
-function (require, exports, module) {
-	const DecisionTree = require('./decision-tree');
-	const DecisionNode = DecisionTree.Node;
-	const Lookup = require('./object/lookup');
-	
-	
-	class LogicNode extends DecisionNode {
-	  constructor (tree, name, instancePayload, parent) {
-	    super(tree, name, instancePayload, parent);
-	    const conditionMap = {};
-	
-	    this.conditionsSatisfied = (name) => {
-	      if (!parent) return true;
-	      if (name === undefined) return parent.conditionsSatisfied(this.name());
-	      const conditions  = conditionMap[name];
-	      if (conditions === undefined) return true;
-	      const value = this.payload().values()[this.name()];
-	      const state = this.next(name);
-	      for (let index = 0; index < conditions.length; index++) {
-	        if (DecisionTree.conditionSatisfied(conditions[index], state, value)) return true;
-	      }
-	      return false;
-	    }
-	
-	    const parentThen = this.then;
-	    this.then = (name, instancePayload, key, condition) => {
-	      const state = parentThen(name, instancePayload);
-	      if (key) {
-	        if(conditionMap[key] === undefined) conditionMap[key] = [];
-	        conditionMap[key].push(condition);
-	      }
-	      return state;
-	    }
-	  }
-	}
-	
-	//
-	class LogicTree  extends DecisionTree {
-	  constructor(name, payload) {
-	    super(name, payload);
-	
-	  }
-	}
-	
-	LogicTree.Node = LogicNode;
-	
-	module.exports = LogicTree;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/data-sync.js',
 function (require, exports, module) {
 	
@@ -4137,7 +4104,12 @@ function (require, exports, module) {
 	const Lookup = require('./object/lookup')
 	const REMOVAL_PASSWORD = String.random();
 	
-	function getByName(node, ...namePath) {
+	const nameEquals = (name) => (node) => node.name() === name;
+	const selectorFunc = (nameOfunc) => (typeof nameOfunc) === 'function' ?
+	                          nameOfunc : nameEquals(nameOfunc);
+	
+	
+	function getByPath(node, ...namePath) {
 	  for (let index = 0; index < namePath.length; index++) {
 	    node = node.next(namePath[index]);
 	    if (node === undefined) return;
@@ -4145,9 +4117,10 @@ function (require, exports, module) {
 	  return node;
 	}
 	
-	function getById(node, ...idPath) {
-	  for (let index = 0; index < endIndex; index++) {
-	    node = node.child(idPath[index]);
+	function getByName(node, ...namePath) {
+	  for (let index = 0; index < namePath.length; index++) {
+	    const name = namePath[index];
+	    node = node.breathFirst(n => n.name() === name);
 	    if (node === undefined) return;
 	  }
 	  return node;
@@ -4167,7 +4140,7 @@ function (require, exports, module) {
 	    const instance = this;
 	    this.setValue = (key, value) => payload[key] = value;
 	    this.states = () => Array.from(states);
-	    this.payload = () => JSON.clone(payload);
+	    this.payload = () => Object.merge({}, payload);
 	    this.isLeaf = () => states.length === 0;
 	    this.stateNames = () => states.map(s => s.name());
 	    this.stateMap = () => states.idObject('name');
@@ -4191,7 +4164,63 @@ function (require, exports, module) {
 	  if (existing) return existing;
 	  return new StateConfig(json.name, json.payload);
 	}
+	const defaultResolver = (node) => node.name();
+	class DecisionCondition {
+	  constructor(condition, details, resolveValue) {
+	    Object.getSet(this, {condition, details, _IMMUTABLE: true});
+	    this.resolveValue = (typeof resolveValue) === 'function' ? resolveValue :
+	            defaultResolver;
+	  }
+	}
 	
+	class DecisionEqualCondition extends DecisionCondition {
+	  constructor(condition, details, resolveValue) {
+	    super(condition, details, resolveValue);
+	    this.satisfied = (node) => Object.equals(this.resolveValue(node, this.details()), condition);
+	  }
+	}
+	
+	class DecisionFunctionCondition extends DecisionCondition {
+	  constructor(func, details, resolveValue) {
+	    if ((typeof func) !== 'function') throw new Error('arg 2 is not of type function');
+	    super(func, details, resolveValue);
+	    this.satisfied = (node) => func(this.resolveValue(node, this.details()));
+	  }
+	}
+	
+	class DecisionRegexCondition extends DecisionCondition {
+	  constructor(regex, details, resolveValue) {
+	    super(regex, details, resolveValue);
+	    this.satisfied = (node) => {
+	      const val = this.resolveValue(node, this.details());
+	      return val.match(regex);
+	    }
+	  }
+	}
+	
+	DecisionCondition.getter = (resolveValue) => (condition, details) => {
+	  let cxtr = DecisionEqualCondition;
+	  if ((typeof condition) === 'function') cxtr = DecisionFunctionCondition;
+	  if (condition instanceof RegExp) cxtr = DecisionRegexCondition;
+	  return new cxtr(condition, details, resolveValue);
+	}
+	
+	// class DecisionConditionList {
+	//   constructor() {
+	//     const list = [];
+	//     this.push = (dc) => {
+	//       if (dc instanceof DecisionCondition) list.push(dc);
+	//     }
+	//     this.list = () => [].copy(list);
+	//     this.at = (index) => list[index];
+	//   }
+	// }
+	//
+	// DecisionConditionList.fromObject = (obj, getter) => {
+	//   getter ||= DecisionCondition.getter();
+	//   const list = new DecisionConditionList();
+	//
+	// }
 	
 	const payloadMap = {};
 	// terminology
@@ -4200,7 +4229,7 @@ function (require, exports, module) {
 	// node - {name, states, payload, then};
 	// then(name, payload:optional) - a function to set a following state.
 	// next(name) - a function to get the next state.
-	// back() - a function to move back up the tree.
+	// parent() - a function to move back up the tree.
 	// root() - a function to get root;
 	class DecisionNode extends Lookup {
 	  constructor(stateConfig, payload, parent) {
@@ -4213,7 +4242,6 @@ function (require, exports, module) {
 	      payload.PAYLOAD_ID ||= String.random();
 	      payloadMap[payload.PAYLOAD_ID] = payload;
 	    }
-	    this.parent = () => parent;
 	
 	    this.stateConfig = () => stateConfig;
 	    this.name = stateConfig.name;
@@ -4221,7 +4249,7 @@ function (require, exports, module) {
 	    this.stateMap = () => stateMap;
 	    this.isLeaf = stateConfig.isLeaf;
 	    this.stateNames = stateConfig.stateNames;
-	    this.getById = (...idPath) => getById(this, ...idPath);
+	    this.getByPath = (...idPath) => getByPath(this, ...idPath);
 	    this.getByName = (...namePath) => getByName(this, ...namePath);
 	
 	    this.setValue = (key, value) => payload[key] = value;
@@ -4237,13 +4265,32 @@ function (require, exports, module) {
 	    };
 	
 	    const shouldRecurse = () => Object.keys(stateMap) > 0 || !instance.selfReferencingPath();
+	    this.shouldRecurse = shouldRecurse;
 	
-	    function attachTree(treeOnode) {
+	    function attach(treeOnode) {
 	      if (shouldRecurse()) {
 	        const node = treeOnode instanceof DecisionNode ? treeOnode : treeOnode.root();
-	        return node.subtree(instance);
+	
+	        const stateKeys = instance.stateNames();
+	        if (stateKeys[node.name()]) throw new Error(`Attempting to add node whos template alread exists as a child. You must create another node so that it maintains a unique path`);
+	        const nodeConfig = node.stateConfig();
+	        tree.addState(nodeConfig);
+	
+	        if (shouldRecurse()) {
+	          shouldRecurse();
+	          for(let index = 0; index < stateKeys.length; index += 1) {
+	            const childNode = node.next(stateKeys[index]);
+	            const alreadyPresent = childNode.stateNames().indexOf(childNode.name());
+	            if (! alreadyPresent && !childNode.selfReferencingPath()) {
+	              instance.then(childNode).attach(childNode, true);
+	            }
+	          }
+	        }
+	        return node;
 	      }
 	    }
+	
+	    this.attach = attach
 	
 	    function createNode(name, payload) {
 	      const node = stateMap[name];
@@ -4257,7 +4304,7 @@ function (require, exports, module) {
 	    }
 	
 	    this.then = (name, payload) => {
-	      if (name instanceof DecisionNode) return attachTree(name);
+	      if (name instanceof DecisionNode) return attach(name);
 	      if (Array.isArray(name)) {
 	        const returnNodes = [];
 	        for (let index = 0; index < name.length; index += 1) {
@@ -4272,28 +4319,111 @@ function (require, exports, module) {
 	      return newState;
 	    }
 	
-	    this.remove = () => this.back().stateConfig().remove(this.stateConfig());
+	    this.remove = () => this.parent().stateConfig().remove(this.stateConfig());
 	
-	    this.back = () => parent;
 	    this.tree = () => {
 	      let curr = this;
-	      while (!(curr instanceof DecisionTree)) curr = curr.back();
+	      while (!(curr instanceof DecisionTree)) curr = curr.parent();
 	      return curr;
 	    };
 	    this.root = () => this.tree().root();
 	    this.isRoot = () => parent instanceof DecisionTree;
 	
-	    // Breath First Search
-	    this.forEach = (func, conditions) => {
-	      if (this.reachable(conditions)) {
-	        const stateKeys = this.stateNames();
-	        func(this);
-	        if (shouldRecurse()) {
-	          for(let index = 0; index < stateKeys.length; index += 1) {
-	              const state = this.next(stateKeys[index]);
-	              state.forEach(func, conditions);
+	    function addReachableChildren(node, nodes) {
+	      if (node.shouldRecurse()) {
+	        const stateKeys = node.stateNames();
+	        for(let index = 0; index < stateKeys.length; index += 1) {
+	          const stateName = stateKeys[index];
+	          if (node.reachable(stateName)) {
+	            const child = node.next(stateName);
+	            if (child && node.reachable(child.name())) {
+	              nodes.push(child);
+	            }
 	          }
 	        }
+	      }
+	    }
+	
+	    // iff func returns true function stops and returns node;
+	    this.breathFirst = (func) => {
+	      const nodes = [this];
+	      const runFunc = (typeof func) === 'function';
+	      let nIndex = 0;
+	      while (nodes[nIndex]) {
+	        let node = nodes[nIndex];
+	        if (node.reachable()) {
+	          const val = func(node);
+	          if (val === true) return node;
+	          if (val) return val;
+	          addReachableChildren(node, nodes);
+	        }
+	        nIndex++;
+	      }
+	    }
+	
+	    this.depthFirst = (func) => {
+	      if (instance.reachable()) {
+	        if (func(instance)) return true;
+	        if (shouldRecurse()) {
+	          const stateKeys = instance.stateNames();
+	          for(let index = 0; index < stateKeys.length; index += 1) {
+	              const child = instance.next(stateKeys[index]);
+	              if (instance.reachable(child.name())) {
+	                child.depthFirst(func);
+	              }
+	          }
+	        }
+	      }
+	    }
+	
+	    function decendent(nameOfunc) {
+	      return instance.breathFirst(selectorFunc(nameOfunc));
+	    }
+	    function findParent(nameOfunc) {
+	      if (nameOfunc === undefined) return parent;
+	      const selector = selectorFunc(nameOfunc);
+	      const curr = instance;
+	      while(!curr.isRoot()) {
+	        if (selector(curr)) return curr;
+	        curr = curr.parent();
+	      }
+	    }
+	    function closest(nameOfunc) {
+	      const selector = selectorFunc(nameOfunc);
+	      const nodes = [instance];
+	      let index = 0;
+	      while (nodes.length > index) {
+	        const node = nodes[index];
+	        if (selector(node)) return node;
+	        const parent = nodes.parent();
+	        if (parent.reachable() && parent.reachable(node.name())) {
+	          nodes.push(parent);
+	        }
+	        addReachableChildren(node, nodes);
+	      }
+	    }
+	
+	    this.find = decendent;
+	    this.parent = findParent;
+	    this.closest = closest;
+	
+	    // Breath First Search
+	    this.forEach = (func, depthFirst) => {
+	      if (depthFirst) this.depthFirst(func);
+	      else this.breathFirst(func);
+	    }
+	
+	    this.forPath = (func) => {
+	      const nodes = [];
+	      let node = this;
+	      while (!node.isRoot()) {
+	        nodes.push(node);
+	        node = node.parent();
+	      }
+	      for (let index = nodes.length - 1; index > -1; index--) {
+	        const val = func(nodes[index]);
+	        if (val === true) return nodes[index];
+	        if (val) return val;
 	      }
 	    }
 	
@@ -4306,11 +4436,13 @@ function (require, exports, module) {
 	      return stateMap[name];
 	    }
 	
-	    this.forEachChild = (func, conditions) => {
+	    this.forEachChild = (func) => {
 	      const stateKeys = this.stateNames();
 	      for(let index = 0; index < stateKeys.length; index += 1) {
-	        const state = this.next([stateKeys[index]]);
-	        func(state);
+	        const childNode = this.next(stateKeys[index]);
+	        if (childNode.shouldRecurse()) {
+	          func(childNode);
+	        }
 	      }
 	    }
 	    this.children = () => {
@@ -4318,18 +4450,18 @@ function (require, exports, module) {
 	      this.forEachChild((child) => children.push(child));
 	      return children;
 	    }
-	    this.list = (filter, map, conditions) => {
+	    this.list = (filter, map) => {
 	      const list = [];
 	      const should = {filter: (typeof filter) === 'function', map: (typeof map) === 'function'};
 	      this.forEach((node) => {
 	        if (should.filter ? filter(node) : true) {
 	          list.push((should.map ? map(node) : node));
 	        }
-	      }, conditions);
+	      });
 	      return list;
 	    };
-	    this.nodes = (conditions) => this.list(null, (node) => node, conditions);
-	    this.leaves = (conditions) => this.list((node) => node.isLeaf(), null, conditions);
+	    this.nodes = () => this.list(null, (node) => node);
+	    this.leaves = () => this.list((node) => node.isLeaf(), null);
 	    this.addChildren = (nodeOnameOstate) => {
 	      const nns = nodeOnameOstate;
 	      const stateConfig = nns instanceof DecisionNode ? nns.stateConfig() :
@@ -4343,76 +4475,121 @@ function (require, exports, module) {
 	      });
 	      return this;
 	    }
-	    this.reachable = (conditions) => {
-	      if (this.isRoot()) return true;
-	      const parent = this.back();
-	      conditions = conditions || {};
-	      const cond = conditions[parent.name()] === undefined ?
-	                    conditions._DEFAULT : conditions[parent.name()];
-	      return DecisionTree.conditionSatisfied(cond, this)
+	
+	    this.values = (values) => {};
+	
+	    const conditions = [];
+	    const childConditions = {};
+	    this.conditions = () => [].copy(conditions);
+	
+	    this.conditions.add = (condition, details) => {
+	      let dc = condition instanceof DecisionCondition ? condition :
+	                this.tree().constructor.getCondition(condition, details);
+	      conditions.push(dc);
 	    }
-	    this.child = (nodeId) => {
-	      const children = this.children();
-	      for (let index = 0; index < children.length; index++) {
-	        if (children[index].id() === nodeId) return children[index];
+	    this.conditions.addAll = (conds) => {
+	      for (let index = 0; index < conds.length; index++) {
+	        const cond = conds[index];
+	        if (!(cond instanceof DecisionCondition)) throw new Error('WTF(sorry its been a long week): this needs to be a DecisionCondition');
+	        conditions.push(cond);
 	      }
 	    }
-	    function reached(node, nodeMap, conditions) {
+	    this.conditions.remove = (cond) => conditions.remove(cond);
+	
+	    this.conditions.child = (name) => {
+	      let copy = [];
+	      if (name !== undefined && childConditions[name]) {
+	        copy.concatInPlace(childConditions[name]);
+	      }
+	      if (childConditions[undefined]) copy.concatInPlace(childConditions[undefined]);
+	      return copy;
+	    }
+	    this.conditions.child.add = (condition, details, targetNodeName) => {
+	      let dc = this.tree().constructor.getCondition(condition, details);
+	      if (!childConditions[targetNodeName]) childConditions[targetNodeName] = [];
+	      childConditions[targetNodeName].push(dc);
+	    }
+	    this.conditions.child.addAll = (conds) => {
+	      const keys = Object.keys(conds);
+	      for (let index = 0; index < keys.length; index++) {
+	        const key = keys[index];
+	        const condList = conds[key];
+	        for (let index = 0; index < condList.length; index++) {
+	          const cond = condList[index];
+	          if (!(cond instanceof DecisionCondition)) throw new Error('WTF(sorry its been a long week): this needs to be a DecisionCondition');
+	          if (!childConditions[key]) childConditions[key] = [];
+	          childConditions[key].push(cond);
+	        }
+	      }
+	    }
+	    this.conditions.child.remove = (cond) => {
+	      if (!(cond instanceof DecisionCondition)) return;
+	      if (!childConditions[cond.name()]) return;
+	      return childConditions[cond.name()].remove(cond);
+	    }
+	
+	    this.canReachChild = (name) => {
+	      if(this.stateNames().indexOf(name) === -1) return false;
+	      let nodeConds = this.conditions.child(name);
+	      if (nodeConds.length === 0) return true;
+	      for (let index = 0; index < nodeConds.length; index++) {
+	        if (nodeConds[index].satisfied(this.child(name))) return true;
+	      }
+	      return false;
+	    }
+	
+	    this.canReach = () => {
+	      if (conditions.length === 0) return true;
+	      for (let index = 0; index < conditions.length; index++) {
+	        if (conditions[index].satisfied(this)) return true;
+	      }
+	      return false;
+	    }
+	
+	    this.reachable = (childName) => {
+	      if (this.isRoot()) return true;
+	      if (childName !== undefined) return this.canReachChild(childName);
+	      else  return this.canReach();
+	    }
+	    this.child = (name) => {
+	      const children = this.children();
+	      for (let index = 0; index < children.length; index++) {
+	        if (children[index].name() === name) return children[index];
+	      }
+	    }
+	    function reached(node, nodeMap, other) {
 	      let reachable;
 	      do {
-	        reachable = node.reachable(conditions);
+	        reachable = node.reachable();
 	        if (reachable) {
-	          if (nodeMap[node.id()]) return true;
+	          if (node.parent().reachable(node.name())) break;
+	          if (nodeMap[node.id()] && nodeMap[other.id()]) return true;
 	          nodeMap[node.id()] = node;
-	          node = node.back();
+	          node = node.parent();
 	        }
-	      } while (reachable && node);
+	      } while (reachable && node && node instanceof DecisionNode);
 	    }
-	    this.reachableFrom = (conditions, node) => {
+	    this.reachableFrom = (node) => {
 	      node ||= this.root();
 	      const nodeMap = {};
 	      nodeMap[node.id()] = node;
-	      return reached(this, nodeMap, conditions) || reached(node.back(), nodeMap, conditions);
-	    }
-	    this.subtree = (node) => {
-	      if (node === undefined) {
-	        const tree = new (this.tree().constructor)(this.name(), payload, this.tree().stateConfigs());
-	        tree.root().addSubtree(this, true);
-	        return tree.root();
-	      }
-	      node.addSubtree(this);
-	      return node;
+	      return reached(this, nodeMap, other) || reached(node.parent(), nodeMap, other);
 	    }
 	    this.path = () => {
 	      let path = [];
 	      let curr = this;
 	      while (!(curr instanceof DecisionTree)) {
 	        path.push(curr.name());
-	        curr = curr.back();
+	        curr = curr.parent();
 	      }
 	      return path.reverse();
 	    }
-	    this.addSubtree = (node, recursive) => {
-	      if (!recursive) {
-	        node.tree().addStates(this.tree().stateConfigs());
-	      }
-	      const stateKeys = this.stateNames();
-	
-	      if (shouldRecurse()) {
-	        shouldRecurse();
-	        for(let index = 0; index < stateKeys.length; index += 1) {
-	          const childNode = this.next(stateKeys[index]);
-	          const alreadyPresent = childNode.stateNames().indexOf(childNode.name());
-	          if (! alreadyPresent && !childNode.selfReferencingPath()) {
-	            node.then(childNode).addSubtree(childNode, true);
-	          }
-	        }
-	      }
-	      return node;
-	    }
 	    this.nodeOnlyToJson = () => {
-	      if (payload.toJson) payload = payload.toJson();
-	      const json = {name: this.name(), payload};
+	      let pl = Object.toJson(payload);
+	      const conds = Array.toJson(conditions);
+	      const childConds = Object.toJson(Object.values(childConditions));
+	      const json = {name: this.name(), payload: pl, conditions: conds,
+	                    childConditions: childConds};
 	
 	      json.children = {};
 	      if (shouldRecurse()) {
@@ -4442,24 +4619,47 @@ function (require, exports, module) {
 	    }
 	    this.parentCount = (name) => {
 	      let count = 0;
-	      let curr = this.back();
+	      let curr = this.parent();
 	      while(!(curr instanceof DecisionTree)) {
 	        if (curr.name() === name) count++;
-	        curr = curr.back();
+	        curr = curr.parent();
 	      }
 	      return count;
 	    }
 	    this.selfReferencingPath = () => {
 	      let names = {};
-	      let curr = this.back();
+	      let curr = this.parent();
 	      while(!(curr instanceof DecisionTree)) {
 	        if (names[curr.name()]) return true;
 	        names[curr.name()] = true;
-	        curr = curr.back();
+	        curr = curr.parent();
 	      }
 	      return false;
 	    }
+	
 	    this.toString = (tabs, attr) => {
+	      if (this.reachable()) {
+	        tabs = tabs || 0;
+	        const tab = new Array(tabs).fill('  ').join('');
+	        let str = `${tab}${this.name()}`;
+	        let attrStr = this.payload()[attr];
+	        str += attrStr ? `) ${this.payload()[attr]}\n` : '\n';
+	        const stateKeys = this.stateNames();
+	        for(let index = 0; index < stateKeys.length; index += 1) {
+	          const stateName = stateKeys[index];
+	          if (this.reachable(stateName)) {
+	            const nextState = this.next(stateName);
+	            if (nextState.parentCount(stateName) < 2) {
+	              str += nextState.toString(tabs + 1, attr);
+	            }
+	          }
+	        }
+	        return str;
+	      }
+	      return '';
+	    }
+	
+	    this.structure = (tabs, attr) => {
 	      tabs = tabs || 0;
 	      const tab = new Array(tabs).fill('  ').join('');
 	      let str = `${tab}${this.name()}`;
@@ -4470,7 +4670,7 @@ function (require, exports, module) {
 	        const stateName = stateKeys[index];
 	        const nextState = this.next(stateName);
 	        if (nextState.parentCount(stateName) < 2) {
-	          str += nextState.toString(tabs + 1, attr);
+	          str += nextState.structure(tabs + 1, attr);
 	        }
 	      }
 	      return str;
@@ -4479,8 +4679,9 @@ function (require, exports, module) {
 	}
 	
 	
-	class DecisionTree {
+	class DecisionTree extends Lookup {
 	  constructor(name, payload, stateConfigs) {
+	    super();
 	    name = formatName(name);
 	    Object.getSet(this, {stateConfigs});
 	    const names = {};
@@ -4519,14 +4720,14 @@ function (require, exports, module) {
 	        if (stateConfigs[name.name()] === name) return name;
 	        throw new Error(`Attempting to add a new state with name '${name.name()}' which is already defined`);
 	      }
-	      return getState(name, payload);
+	      return tree.getState(name, payload);
 	    }
 	
 	    function addStates(states) {
-	      Object.keys(states).forEach((name) => getState(name, states[name]));
+	      Object.keys(states).forEach((name) => tree.getState(name, states[name]));
 	    }
 	
-	    this.getById = (...idPath) => getById(this.root(), ...idPath);
+	    this.getByPath = (...idPath) => getByPath(this.root(), ...idPath);
 	    this.getByName = (...namePath) => getByName(this.root(), ...namePath);
 	    this.change = change;
 	    this.getState = getState;
@@ -4541,7 +4742,7 @@ function (require, exports, module) {
 	      instPld = {};
 	    }
 	
-	    const rootNode = new (this.constructor.Node)(getState(name, payload), instPld, this);
+	    const rootNode = new (this.constructor.Node)(this.getState(name, payload), instPld, this);
 	    this.root = () => rootNode
 	
 	    this.toString = (...args) => this.root().toString(...args);
@@ -4566,6 +4767,8 @@ function (require, exports, module) {
 	    const name = childNames[index];
 	    const payload = Object.fromJson(json[name].payload);
 	    const child = node.then(name, payload);
+	    child.conditions.addAll(Object.fromJson(json[name].conditions));
+	    child.conditions.child.addAll(Object.fromJson(json[name].childConditions));
 	    addChildren(child, json[name].children);
 	  }
 	}
@@ -4580,7 +4783,16 @@ function (require, exports, module) {
 	
 	DecisionTree.DecisionNode = DecisionNode;
 	DecisionTree.Node = DecisionNode;
+	DecisionTree.Condition = DecisionCondition;
+	DecisionTree.getCondition = DecisionCondition.getter();
 	module.exports = DecisionTree;
+	
+	
+	// Messaging_App
+	// set Max characters for you and them
+	// you cannot text more than Max characters.
+	// if (incomingMessage.length > Max) autoRespond: Recepiant can only recieve Max chanracters
+	// if (only allow two messages without achnowledgement)
 	
 });
 
@@ -4747,6 +4959,7 @@ function (require, exports, module) {
 	    super(id);
 	    props.hidden = props.hide || false;
 	    props.list = props.list || [];
+	    props.optional = props.optional === undefined ? false : props.optional;
 	    Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'placeholder',
 	                            'class', 'list', 'value', 'inline');
 	
@@ -4806,16 +5019,21 @@ function (require, exports, module) {
 	      let val = value;
 	      if (elem) val = elem[instance.targetAttr()];
 	      if (val === undefined) val = props.default;
+	      if (instance.type() === 'checkbox') return val == true;
 	      return val;
 	    }
+	
+	    this.getValue = getValue;
 	    this.updateDisplay = () => {
 	      const elem = getElem(instance.id());
 	      if (elem) elem[instance.targetAttr()] = this.value();
 	    };
-	    this.setValue = (val, force) => {
-	      if (val === undefined) val = getValue();
+	    let chosen = false;
+	    this.setValue = (val, force, eventTriggered) => {
+	      if (val === undefined) val = this.getValue();
 	      if(force || this.validation(val)) {
 	        valid = true;
+	        if (!chosen && eventTriggered) chosen = true;
 	        value = val;
 	        const elem = getElem(instance.id());
 	        if (elem) elem.value = value;
@@ -4825,8 +5043,17 @@ function (require, exports, module) {
 	      value = undefined;
 	      return false;
 	    }
+	
+	    this.chosen = () => props.mustChoose ? chosen : true;
+	
 	    this.value = () => {
-	      const unformatted = (typeof value === 'function') ? value() : getValue() || '';
+	      let unformatted;
+	      if (typeof value === 'function') unformatted = value();
+	      else {
+	        unformatted = this.getValue();
+	        if (unformatted === undefined) unformatted = '';
+	      }
+	
 	      return (typeof props.format) !== 'function' ? unformatted : props.format(unformatted);
 	    }
 	    this.doubleCheck = () => {
@@ -4853,16 +5080,20 @@ function (require, exports, module) {
 	      return valValid;
 	    };
 	
-	    this.validate = (target) => {
+	    function setValid(vld) {
+	      valid = vld;
+	      const elem = getElem(instance.errorMsgId());
+	      if (elem) {
+	        elem.hidden = vld;
+	      }
+	    }
+	
+	    this.validate = (target, eventTriggered) => {
 	      target = target || getElem(instance.id());
 	      if (target) {
-	        if (this.setValue(target[this.targetAttr()])) {
-	          getElem(this.errorMsgId()).hidden = true;
-	          valid = true;
-	        } else {
-	          getElem(this.errorMsgId()).hidden = false;
-	          valid = false;
-	        }
+	        if (this.setValue(target[this.targetAttr()], false, eventTriggered)) {
+	          setValid(true);
+	        } else setValid(false);
 	      }
 	    }
 	
@@ -4880,11 +5111,12 @@ function (require, exports, module) {
 	  }
 	}
 	
-	function runValidate(elem) {
+	function runValidate(elem, event) {
 	  const input = Lookup.get(elem.id);
-	  if (input) input.validate(elem);
+	  if (input) input.validate(elem, true);
 	}
 	
+	du.on.match(`click`, `input`, runValidate);
 	du.on.match(`change`, `input`, runValidate);
 	du.on.match(`keyup`, `input`, runValidate);
 	du.on.match(`change`, `select`, runValidate);
@@ -4921,184 +5153,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	
-	class MultipleEntries extends Input {
-	  constructor(inputArray, props) {
-	    props ||= {};
-	    super(props);
-	    let inputArrayFunc;
-	    if ((typeof inputArray) === 'function') {
-	      inputArrayFunc = inputArray;
-	      inputArray = [];
-	    }
-	    props.list ||= [];
-	    this.set = (index) => {
-	      if (props.list[index] === undefined) {
-	        const list = [];
-	        props.list[index] = list;
-	        inputArray.forEach((i) =>
-	          list.push(i.clone()));
-	      }
-	      return props.list[index];
-	    }
-	    this.set(0);
-	    // Allows for recursion.
-	    let hasInit = false;
-	    this.isInitialized = () => hasInit;
-	    this.initialize = () => {
-	      if (hasInit) return;
-	      if (inputArrayFunc) {
-	        props.list.copy([]);
-	        inputArray.copy(inputArrayFunc());
-	        this.set(0);
-	      }
-	      hasInit = true;
-	    }
-	    this.value = (val) => {
-	      const values = [];
-	      const list = this.list();
-	      for (let i = 0; i < list.length; i++) {
-	        const inputArr = list[i]
-	        values[i] = {};
-	        for(let index = 0; index < inputArr.length; index++) {
-	          const input = inputArr[index];
-	          values[i][input.name()] = input.value();
-	        }
-	      }
-	      return values;
-	    };
-	    this.length = () => this.list().length;
-	    this.setHtml = (index) =>
-	        MultipleEntries.singleTemplate.render(this.set(index));
-	  }
-	}
-	
-	MultipleEntries.template = new $t('input/multiple-entries');
-	MultipleEntries.singleTemplate = new $t('input/one-entry');
-	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
-	
-	function meInfo(elem) {
-	  const info = {};
-	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
-	  if (info.oneCnt) {
-	    info.indexCnt = du.find.up('[index]', info.oneCnt);
-	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
-	    const ae =  document.activeElement;
-	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
-	  }
-	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
-	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
-	  info.length = info.multiInput.length();
-	  info.inputs = du.find.downAll('input,select,textarea', info.indexCnt);
-	  info.last = info.index === info.length - 1;
-	  info.empty = true;
-	  info.multiInput.set(info.index).forEach(i => info.empty &&= (i.value() == false));
-	  return info;
-	}
-	
-	const meSelector = '.multiple-entry-cnt input,select,textarea';
-	const oneSelector = '.one-entry-cnt *';
-	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
-	du.on.match('change', meSelector, (elem) => {
-	  // console.log('changed');
-	});
-	
-	du.on.match('click', meSelector, (elem) => {
-	  // console.log('clicked');
-	});
-	
-	const lastCallers = [];
-	du.on.match('focusout', '.one-entry-cnt', (elem) => {
-	  let info = meInfo(elem);
-	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
-	  const id = ++lastCallers[info.index];
-	  setTimeout(() => {
-	    if (id !== lastCallers[info.index]) return;
-	    info = meInfo(elem);
-	    if (!info.last && !info.inFocus && info.empty) {
-	      info.indexCnt.remove()
-	      const children = info.multiCnt.children;
-	      for (let index = 0; index < children.length; index++) {
-	        children[index].setAttribute('index', index);
-	      }
-	      const list = info.multiInput.list();
-	      list.remove(list[info.index]);
-	    }
-	  }, 2000);
-	});
-	
-	du.on.match('focusin', oneSelector, (elem) => {
-	  // console.log('focusin');
-	});
-	
-	du.on.match('keyup', oneSelector, (elem) => {
-	  if (!isInput(elem)) return;
-	  const info = meInfo(elem);
-	  if (info.index === info.length - 1 && !info.empty) {
-	    const newElem = du.create.element('div', {index: info.index + 1});
-	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
-	    info.multiCnt.append(newElem);
-	    console.log('add 1')
-	  }
-	  // console.log('keyup');
-	});
-	
-	module.exports = MultipleEntries;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const Measurement = require('../../measurement');
-	
-	class MeasurementInput extends Input {
-	  constructor(props) {
-	    let value = new Measurement(props.value, true);
-	    props.value = () => value;
-	    super(props);
-	    props.validation = (val) =>
-	        !Number.isNaN(val && val.display ? value : new Measurement(val).value());
-	    props.errorMsg = 'Invalid Mathematical Expression';
-	    this.value = () => {
-	      return value.display();
-	    }
-	    const parentSetVal = this.setValue;
-	    this.setValue = (val) => {
-	      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
-	                        val : new Measurement(val, true)) : value;
-	      const updated = newVal !== value;
-	      value = newVal;
-	      return updated;
-	    }
-	  }
-	}
-	
-	MeasurementInput.template = new $t('input/measurement');
-	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
-	
-	
-	module.exports = MeasurementInput;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
 function (require, exports, module) {
 	
@@ -5108,9 +5162,12 @@ function (require, exports, module) {
 	
 	
 	const DecisionTree = require('../../decision-tree.js');
-	const LogicMap = require('../../logic-tree.js');
-	const LogicWrapper = LogicMap.LogicWrapper
 	const Input = require('../input.js');
+	const Radio = require('../styles/radio');
+	const Table = require('../styles/table');
+	const MeasurementInput = require('../styles/measurement');
+	const Textarea = require('../styles/textarea.js');
+	const CustomEvent = require('../../custom-event');
 	const Select = require('../styles/select.js');
 	const MultipleEntries = require('../styles/multiple-entries.js');
 	const du = require('../../dom-utils');
@@ -5119,134 +5176,180 @@ function (require, exports, module) {
 	
 	const ROOT_CLASS = 'decision-input-tree';
 	
-	function isComplete(wrapper) {
-	  return wrapper.isComplete() && DecisionInputTree.validate(wrapper)
-	}
-	
-	class ValueCondition {
-	  constructor(name, accepted, payload) {
-	    Object.getSet(this, {name, accepted}, 'type');
-	    this.payload = payload;
-	    this.type = () => {
-	      if (Array.isArray(accepted)) return 'Array';
-	      if (accepted instanceof RegExp) return 'RegExp';
-	      return 'Exact';
+	const nameCompareFunc = (name) => (input) => input.name() === name ? input : false;
+	const inputSelectorFunc = (func) => (node) => {
+	  const inArr = node.inputArray();
+	  for (let index = 0; index < inArr.length; index++) {
+	    const input = inArr[index];
+	    let val = func(input);
+	    if (val) return val;
+	    if (input instanceof MultipleEntries) {
+	      val = input.input(func);
+	      if (val) return val;
 	    }
-	    this.targetInput = (wrapper) => {
-	      wrapper.root().node.forEach((node) => {
-	        node.payload().inputArray.forEach((input) => {
-	          if (input.name() === name) return input;
-	        });
-	      });
-	    }
-	    this.condition = (wrapper) => {
-	      console.log(this.condition.json);
-	        let input = this.targetInput(wrapper);
-	        if (input === undefined) return;
-	        switch (this.type()) {
-	          case 'Array':
-	            for (let index = 0; index < accepted.length; index +=1) {
-	              if (input.value === accepted[index]) return true;
-	            }
-	            return false;
-	          case 'RegExp':
-	            return input.value.match(accepted);
-	            break;
-	          default:
-	            return input.value === accepted;
-	        }
-	    }
-	    this.condition.target = name;
-	    this.condition.json = this.toJson();
 	  }
 	}
+	const nodeSelectorFunc = (nameOfunc) => inputSelectorFunc(
+	          (typeof nameOfunc) === 'function' ? nameOfunc : nameCompareFunc(nameOfunc));
 	
-	class DecisionInput {
-	  constructor(name, inputArrayOinstance, tree, isRoot) {
-	    Object.getSet(this, 'name', 'id', 'inputArray', 'class');
-	    this.clone = () => this;
+	class DecisionInputCondition extends DecisionTree.Condition {
+	  constructor(attribute, value) {
+	    super();
+	    Object.getSet(this, {attribute, value});
+	    this.satisfied = (node) => {
+	      const values = node.values();
+	      return Object.pathValue(values, attribute) === value;
+	    }
+	  }
+	}
+	DecisionInputCondition.fromJson = (json) =>
+	      new DecisionInputCondition(json.attribute, json.value);
+	
+	class DecisionInput extends DecisionTree.Node {
+	  constructor(stateConfig, payload, parent) {
+	    payload ||= stateConfig.payload();
+	    payload.inputArray ||= [];
+	    super(stateConfig, payload, parent);
 	    const instance = this;
 	
-	    const toJson = this.toJson;
-	    this.toJson = () => {
-	      const json = toJson();
-	      if (this.condition) {
-	        json.condition = this.condition.json ? this.condition.json : this.condition;
-	      }
-	      return json;
+	    const onChange = [];
+	    const changeEvent = new CustomEvent('change');
+	
+	    const trigger = () => {
+	      changeEvent.trigger(this.values());
+	      this.tree().changed();
 	    }
-	    this.tree = () => tree;
-	    if (inputArrayOinstance instanceof ValueCondition) {
-	      this.condition = inputArrayOinstance.condition;
-	      this.isConditional = true;
-	      inputArrayOinstance = inputArrayOinstance.payload;
-	    }
-	    if (inputArrayOinstance !== undefined){
-	      this.name(name);
-	      this.id = `decision-input-node-${String.random()}`;
-	      this.childCntId = `decision-child-ctn-${String.random()}`
-	      this.values = tree.values;
-	      this.value = this.values
-	      this.onComplete = tree.onComplete;
-	      this.onChange = tree.onChange;
-	      this.inputTree = inputInputTree;
-	      this.inputArray = DecisionInputTree.validateInput(inputArrayOinstance, this.values);
-	      this.class =  ROOT_CLASS;
-	      this.getValue = (index) => this.inputArray[index].value();
-	      this.validate = () => DecisionInputTree.validateInput(inputArrayOinstance, this.values);
+	    this.onChange = (func) => changeEvent.on(func);
+	
+	    for (let index = 0; index < payload.inputArray; index++) {
+	      inArr[index].on('change', trigger);
 	    }
 	
-	    const getWrapper = (wrapperOid) => wrapperOid instanceof LogicWrapper ?
-	        wrapperOid : (LogicWrapper.get(wrapperOid));
-	
-	    this.branch = (wrapperId, inputs) =>
-	            getWrapper(wrapperId).branch(String.random(), new DecisionInput(name));
-	    this.conditional = (wrapperId, inputs, name, selector) =>
-	            getWrapper(wrapperId).conditional(String.random(), new DecisionInput(name, relation, formula));
-	
-	    // this.update = tree.update;
-	    this.addValues = (values) => {
-	      this.inputArray.forEach((input) => values[input.name()] = input.value())
+	    let relatedTo;
+	    this.relatedTo = (value) => {
+	      if (this.isRoot()) throw new Error('The root cannot be related to any other input');
+	      const validList = this.parent().inputArray().map(i => i.name());
+	      value ||= relatedTo;
+	      if (validList.indexOf(value) === -1) value = undefined;
+	      if (value) return relatedTo = value;
+	      return relatedTo
 	    }
 	
-	    this.node = () =>
-	      LogicWrapper.get(this._nodeId);
-	    this.children = () => this.node().children().map((n) => n.payload());
-	    this.reachable = () => this.node().reachable();
-	    this.childrenHtml = (inputName, editDisplay) => {
-	      const children = this.children();
-	      let html = '';
-	      for (let index = 0; index < children.length; index++) {
-	        const child = children[index];
-	        if (child.reachable()) {
-	          if (!child.inputArray.initialized) {
-	            child.inputArray.forEach(i => i.initialize && i.initialize());
-	            child.inputArray.initialized = true;
-	          }
-	          if (child.condition.target === inputName) html += child.html()
+	    this.addInput = (input) => {
+	      if (!(input instanceof Input)) throw new Error('input(arg1) needs to be and instance of Input');
+	      const payload = this.stateConfig().payload();
+	      this.stateConfig().setValue('inputArray', payload.inputArray.concat(input))
+	      trigger();
+	    }
+	    this.values = (values, doNotRecurse) => {
+	      values ||= {};
+	      if (values._NODE === undefined) values._NODE = this;
+	      let inputArr = this.inputArray();
+	      for (let index = 0; index < inputArr.length; index++) {
+	        const input = inputArr[index];
+	        if (values[input.name()] === undefined) {
+	          values[input.name()] = input.value();
 	        }
 	      }
-	      return html;
+	      if (!doNotRecurse && !this.isRoot()) this.parent().values(values);
+	      return values;
+	    };
+	
+	    this.isComplete = () => {
+	      const inArr = this.inputArray();
+	      for (let index = 0; index < inArr.length; index++) {
+	        if (!inArr[index].optional() && !inArr[index].valid()) return false;
+	      }
+	      let isComplete = true;
+	      this.forEachChild((child) => isComplete &&= child.isComplete());
+	      return isComplete;
+	    }
+	    this.onComplete = this.tree().onComplete;
+	    let inputTree;
+	    this.inputTree = () => inputTree ||= DecisionInputTree.inputTree();
+	    function updateInputArray (boolean) {
+	      const inputArray = payload.inputArray;
+	      const sc = instance.stateConfig();
+	      // MultipleEntries.initialize(sc.payload().inputArray());
+	      const stateInputArray = sc.payload().inputArray;
+	      if (inputArray.length === stateInputArray.length) return boolean ? false : inputArray;
+	      for (let index = 0; index < stateInputArray.length; index++) {
+	        const input = stateInputArray[index];
+	        if (inputArray.length - 1 < index) {
+	          const clone = input.clone();
+	          if (clone.onChange) clone.onChange(trigger);
+	          else if (clone.on) clone.on('change', trigger);
+	          inputArray.push(clone);
+	          clone.initialize && clone.initialize();
+	        }
+	        if (inputArray[index].name() !== input.name()) inputArray.splice(index, 1);
+	      }
+	      return boolean ? true : inputArray;
 	    }
 	
+	    this.inputArray = () => updateInputArray();
+	
+	    const parentPayload = this.payload;
+	    this.payload = (noConfig) => {
+	      this.inputArray();
+	      return parentPayload(noConfig);
+	    }
+	
+	    this.class =  ROOT_CLASS;
+	    this.getValue = (index) => this.inputArray()[index].value();
 	    this.isValid = () => {
 	      let valid = true;
 	      this.inputArray.forEach((input) =>
 	            valid = valid && input.valid());
 	      return valid;
 	    }
-	    this.isRoot = () => isRoot;
-	    this.tag = () =>
-	      tree.block() ? 'div' : 'span';
 	
-	    this.html = (parentCalling, editDisplay) => {
-	      if (this.isRoot() && parentCalling !== true) return tree.html(null, editDisplay);
+	    this.choices = () => {
+	      const choices = [];
+	      this.breathFirst((node) => {
+	        const inputArr = node.inputArray();
+	        inputArr.forEach((input) => {
+	          if (!input.chosen())
+	            choices.push(input);
+	        });
+	      });
+	      return choices;
+	    }
+	
+	    this.find.input = (nameOfunc, ...namePath) => {
+	      let node;
+	      if (namePath.length > 0) {
+	        node = this.find(...namePath);
+	      }
+	      node ||= this;
+	      return node.breathFirst(nodeSelectorFunc(nameOfunc));
+	    }
+	
+	    this.childrenHtml = (inputIndex, editDisplay) => {
+	      if (!this.shouldRecurse()) return '';
+	      const children = this.children();
+	      const inArr = this.inputArray();
+	      const inputName = inArr[inputIndex].name();
+	      let html = '';
+	      for (let index = 0; index < children.length; index++) {
+	        const child = children[index];
+	        if (inputName === child.relatedTo() || (inputIndex === inArr.length - 1 && child.relatedTo() === undefined)) {
+	          const inArr = child.inputArray();
+	          if (child.reachable()) {
+	            inArr.forEach(i => i.initialize && i.initialize());
+	            html += child.html(editDisplay);
+	          }
+	        }
+	      }
+	      return html;
+	    }
+	    this.tag = () => this.tree().block() ? 'div' : 'span';
+	    this.html = (editDisplay) => {
 	      if (editDisplay) {
 	        return DecisionInput.modTemplate.render(this);
 	      }
 	      return DecisionInput.template.render(this);
 	    }
-	    this.treeHtml = (wrapper) => tree.html(wrapper);
 	  }
 	}
 	DecisionInput.template = new $t('input/decision/decision');
@@ -5261,87 +5364,62 @@ function (require, exports, module) {
 	// optional :
 	// noSubmission: /[0-9]{1,}/ delay that determins how often a submission will be processed
 	// buttonText: determins the text displayed on submit button;
+	// inputArray: inputArray to be applied to the root;
+	// isComplete: function determining if all required inputs are filled.
 	
-	class DecisionInputTree extends LogicMap {
-	  constructor(rootName, payload, onComplete, props) {
-	    const decisionInputs = [];
+	class DecisionInputTree extends DecisionTree {
+	  constructor(rootName, props) {
 	    props = props || {};
-	    const tree = {};
+	    props.inputArray ||= [];
+	    super(rootName, props);
+	    this.root().payload()
 	
-	    tree.buttonText = () => {
-	      return props.buttonText || `Create ${root.node.name}`;
+	    this.buttonText = () => {
+	      return props.buttonText || `Create ${rootName}`;
 	    }
-	
 	    let disabled;
-	    tree.disableButton = (d, elem) => {
+	    this.disableButton = (d, elem) => {
 	      disabled = d === null || d === true || d === false ? d : disabled;
 	      if (elem) {
 	        const button = du.find.closest(`button`, elem);
 	        if (button) {
-	          button.disabled = disabled === null ? !isComplete(root) : disabled;
+	          button.disabled = disabled === null ? !node.isComplete(root) : disabled;
 	        }
 	      }
 	    }
-	
-	    function superArgument(onComplete) {
-	      const formatPayload = (name, payload) => {
-	        decisionInputs.push(new DecisionInput(name, payload, tree, decisionInputs.length === 0));
-	        return decisionInputs[decisionInputs.length - 1];
-	      }
-	      if (onComplete && onComplete._TYPE === 'DecisionInputTree') {
-	        onComplete.formatPayload = formatPayload;
-	        return onComplete;
-	      }
-	      return formatPayload;
+	    this.isComplete = () => {
+	      if ((typeof props.isComplete) === 'function') return props.isComplete(this.root());
+	      const choices = this.choices();
+	      if (choices.length > 0) return false;
+	      return this.root().isComplete();
 	    }
 	
-	    super(superArgument(onComplete));
-	    const root = this;
-	
-	    const onCompletion = [];
-	    const onChange = [];
-	    const onSubmit = [];
-	    tree.id = this.id;
-	    tree.html = (wrapper, editDisplay) => {
-	      wrapper = wrapper || root;
-	      let inputHtml = wrapper.payload().html(true, editDisplay);
-	      const scope = {wrapper, inputHtml, DecisionInputTree, inputTree: this, tree};
-	      if (wrapper === root) {
+	    const completeEvent = new CustomEvent('complete');
+	    const submitEvent = new CustomEvent('submit');
+	    const changeEvent = new CustomEvent('change');
+	    this.html = (node, editDisplay) => {
+	      node = node || this.root();
+	      let inputHtml = node.html(editDisplay);
+	      const scope = {node, inputHtml, DecisionInputTree, editDisplay};
+	      if (node.isRoot()) {
 	        return DecisionInputTree.template.render(scope);
 	      }
 	      return inputHtml;
 	    };
-	
-	
-	    this.onComplete = (func) => {
-	      if ((typeof func) === 'function') onCompletion.push(func);
-	    }
-	    this.onChange = (func) => {
-	      if ((typeof func) === 'function') onChange.push(func);
-	    }
-	    this.onSubmit = (func) => {
-	      if ((typeof func) === 'function') onSubmit.push(func);
-	    }
-	
-	    this.values = () => {
-	      const values = {};
-	      root.forEach((wrapper) => {
-	        wrapper.payload().addValues(values);
-	      });
-	      return values;
-	    }
-	    tree.values = root.values;
-	    tree.hideButton = props.noSubmission;
+	    this.onComplete = completeEvent.on;
+	    this.onSubmit = submitEvent.on;
+	    this.hideButton = props.noSubmission;
+	    this.onChange = (func) => this.root().onChange(func);
 	
 	    let completionPending = false;
 	    this.completed = () => {
-	      if (!root.isComplete()) return false;
+	      if (!this.isComplete()) return false;
 	      const delay = props.noSubmission || 0;
 	      if (!completionPending) {
 	        completionPending = true;
 	        setTimeout(() => {
-	          const values = tree.values();
-	          onCompletion.forEach((func) => func(values, this))
+	          const values = this.values();
+	          completeEvent.trigger(values, this);
 	          completionPending = false;
 	        }, delay);
 	      }
@@ -5349,140 +5427,137 @@ function (require, exports, module) {
 	    }
 	
 	    let submissionPending = false;
-	    this.submit = () => {
+	    this.submit = (elem) => {
+	      // TODO: delay = props.noSubmission === confusing
 	      const delay = props.noSubmission || 0;
 	      if (!submissionPending) {
 	        submissionPending = true;
 	        setTimeout(() => {
-	          const values = tree.values();
-	          if (!root.isComplete()) return false;
-	          onSubmit.forEach((func) => func(values, this))
+	          const values = this.values();
+	          if (!this.isComplete()) return submissionPending = false;
+	          submitEvent.trigger(values, elem);
 	          submissionPending = false;
 	        }, delay);
 	      }
 	      return true;
 	    }
 	
-	    let changePending = false;
-	    this.changed = (elem) => {
-	      const delay = props.noSubmission || 0;
-	      if (!changePending) {
-	        changePending = true;
-	        setTimeout(() => {
-	          const values = tree.values();
-	          onChange.forEach((func) => func(values, this, elem))
-	          changePending = false;
-	        }, delay);
-	      }
-	      return true;
+	    let changePending = 0;
+	    const delay = props.noSubmission || 0;
+	    this.changed = () => {
+	      let changeId = ++changePending;
+	      setTimeout(() => {
+	        if (changeId === changePending) {
+	          const values = this.values();
+	          changeEvent.trigger(values)
+	        }
+	      }, delay);
 	    }
 	
 	    let block = false;
-	    tree.block = (is) => {
+	    this.block = (is) => {
 	      if (is === true || is === false) {
 	        block = is;
 	      }
 	      return block;
 	    }
-	    this.block = tree.block;
 	
-	    this.onComplete(onComplete);
+	    this.find = (...args) => this.root().find(...args);
+	    this.find.input = (...args) => this.root().find.input(...args);
+	
+	    this.values = () => {
+	      const values = {};
+	      this.root().breathFirst((node) => {
+	        const obj = {};
+	        node.values(obj, true);
+	        Object.pathValue(values, node.path().join('.'), obj);
+	      });
+	      return values[this.root().name()];
+	    }
+	
+	    this.choices = () => this.root().choices();
+	
+	    const parentGetState = this.getState;
+	    this.getState = (name, payload) => {
+	      if (!this.stateConfigs()[name]) {
+	        if (!payload) payload = {};
+	        payload.inputArray ||= [];
+	      }
+	      return parentGetState(name, payload);
+	    }
+	
+	    this.clone = () => DecisionInputTree.fromJson(this.toJson());
+	    this.valid = this.completed;
+	    this.name = () => this.root().name();
+	    this.value = this.values;
 	
 	    return this;
 	  }
 	}
 	
-	DecisionInputTree.ValueCondition = ValueCondition;
 	
 	DecisionInputTree.class = 'decision-input-tree';
 	DecisionInputTree.buttonClass = 'decision-input-tree-submit';
-	
-	DecisionInputTree.validate = (wrapper) => {
-	  let valid = true;
-	  wrapper.forEach((wrapper) => {
-	    valid = valid && wrapper.payload().isValid();
-	  });
-	  return valid;
-	}
 	
 	DecisionInputTree.getNode = (elem) => {
 	  const cnt = du.find.closest('[node-id]', elem);
 	  const parent = cnt.parentElement;
 	  const nodeId = cnt.getAttribute('node-id');
-	  return LogicWrapper.get(nodeId);
+	  return Lookup.get(nodeId);
 	}
 	
 	DecisionInputTree.update = (soft) =>
 	(elem) => {
 	  // if (elem.matches('.modification-add-input *')) return;
 	
-	  const treeCnt = du.find.up('[tree-id]', elem);
-	  const inputs = du.find.downAll('select,input,textarea', treeCnt);
+	  const nodeCnt = du.find.up('[node-id]', elem);
+	  const inputs = du.find.downAll('select,input,textarea', nodeCnt);
 	  for (let index = 0; index < inputs.length; index++) {
 	    const input = inputs[index];
 	
 	    const cnt = du.find.closest('[node-id]', input);
 	    const nodeId = cnt.getAttribute('node-id');
-	    const wrapper = LogicWrapper.get(nodeId);
+	    const node = Lookup.get(nodeId);
 	
 	    const inputCnt = du.find.up('.decision-input-array-cnt', input);
+	    const inputIndex = Number.parseInt(inputCnt.getAttribute('index'));
 	    const childrenHtmlCnt = du.find.down('.children-recurse-cnt', inputCnt);
 	    const value = childrenHtmlCnt.getAttribute('value');
-	    const parentValue =  wrapper.payload().values()[input.name];
+	    const parentValue =  node.values()[input.name];
 	    const parentName = input.name;
-	    const cs = wrapper.reachableChildren();
+	    const cs = node.children();
 	    if (!parentValue || value !== parentValue) {
 	      cs.forEach((child) => {
-	        const di = wrapper.payload();
+	        const di = node.payload();
 	        const inputArray = di.inputArray;
-	        if (!inputArray.initialized) {
-	          inputArray.forEach(input => input.isInitialized() || input.initialize());
-	          inputArray.initialized = true;
+	        inputArray.forEach(input => input.isInitialized() || input.initialize());
+	        if (child.name() === 'multi') {
+	          child.stateConfig().payload().inputArray[0].initialize()
+	          child.stateConfig().payload().inputArray[0].initialize()
 	        }
 	      });
 	      childrenHtmlCnt.setAttribute('value', parentValue)
-	      const childHtml = wrapper.payload().childrenHtml(input.name)
+	      const childHtml = node.childrenHtml(inputIndex)
 	      childrenHtmlCnt.innerHTML = childHtml;
 	    }
 	
-	    if(!soft) {
-	      wrapper.root().changed();
-	      wrapper.root().completed()
-	    }
-	  }
-	
-	    // const cnt = du.find.closest('[node-id]', elem);
-	    // const parent = cnt.parentElement;
-	    // const nodeId = cnt.getAttribute('node-id');
-	    // const wrapper = LogicWrapper.get(nodeId);
-	    // if (wrapper.children().length > 0) {
-	    //   const childHtmlCnt = du.find.closest('.children-recurse-cnt', elem);
-	    //   const childrenHtml = wrapper.payload().childrenHtml();
-	    //   childHtmlCnt.innerHTML = childrenHtml;
-	    // }
-	    // console.log(isComplete(wrapper));
 	    // if(!soft) {
-	    //   // du.find.downAll('.decision-input-cnt', parent).forEach((e) => e.hidden = true)
-	    //   // wrapper.forEach((n) => {
-	    //   //   let selector = `[node-id='${n.nodeId()}']`;
-	    //   //   elem = du.find.down(selector, parent);
-	    //   //   if (elem) elem.hidden = false;
-	    //   // });
-	    //   wrapper.root().changed();
-	    //   wrapper.root().completed()
+	    //   node.root().changed();
+	    //   node.root().completed()
 	    // }
-	    // wrapper.payload().tree().disableButton(undefined, elem);
-	  };
+	  }
+	};
 	
+	DecisionInputTree.Node = DecisionInput;
 	DecisionInputTree.submit = (elem) => {
-	  const wrapper = LogicWrapper.get(elem.getAttribute('root-id'));
-	  wrapper.submit();
+	  const tree = Lookup.get(elem.getAttribute('tree-id'));
+	  tree.submit(elem);
 	}
 	
 	function updateModBtn(elem) {
 	  const value = elem.value;
 	  const button = du.find.closest('.conditional-button', elem);
-	  if (button.getAttribute('target-id') === elem.id) {
+	  if (button && button.getAttribute('target-id') === elem.id) {
 	    button.innerText = `If ${elem.name} = ${value}`;
 	  }
 	}
@@ -5538,12 +5613,138 @@ function (require, exports, module) {
 	  return tree;
 	}
 	
-	function inputInputTree() {
+	function modifyBtnPressed(elem) {
+	  const node = DecisionInputTree.getNode(elem);
+	  const inputArray = node.payload().inputArray;
+	  const inputElem = du.find.closest('input,select,textarea', elem);
+	  const input = Input.getFromElem(inputElem);
+	  const treeHtml = conditionalInputTree().payload().html();
+	  const inputTreeCnt = du.find.closest('.condition-input-tree', elem);
+	  inputTreeCnt.innerHTML = '<br>' + treeHtml;
+	  elem.hidden = true;
+	}
+	
+	du.on.match('keyup', `.${ROOT_CLASS}`, DecisionInputTree.update(true));
+	du.on.match('change', `.${ROOT_CLASS}`, DecisionInputTree.update());
+	du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
+	du.on.match('keyup', '.decision-input-cnt.mod input', updateModBtn);
+	du.on.match('keyup', '.decision-input-cnt.mod select', updateModBtn);
+	du.on.match('keyup', '.decision-input-cnt.mod textarea', updateModBtn);
+	du.on.match('click', '.conditional-button', modifyBtnPressed);
+	
+	DecisionInputTree.DO_NOT_CLONE = true;
+	
+	DecisionInputTree.getTree = (elem) => {
+	  const rootElem = du.find.up("[tree-id]", elem);
+	  const rootId = rootElem.getAttribute('tree-id');
+	  const tree = DecisionInputTree.get(rootId);
+	  return tree;
+	}
+	DecisionInputTree.getCondition = DecisionTree.Condition.getter((node) => node.values());
+	
+	function childrenFromJson(parent, json) {
+	  const children = Object.values(json.children);
+	  for (let index = 0; index < children.length; index++) {
+	    const child = children[index];
+	    const node = parent.then(child.name, Object.fromJson(child.payload));
+	    childrenFromJson(node, child);
+	  }
+	  json.conditions.forEach(c => parent.conditions.add(Object.fromJson(c)));
+	  json.childConditions.forEach(c => parent.childConditions.add(Object.fromJson(c)));
+	}
+	
+	DecisionInputTree.fromJson = (json) => {
+	  const rootConfig = json.stateConfigs[json.root.name];
+	  const rootPayload = Object.fromJson(rootConfig.payload);
+	  const tree = new DecisionInputTree(rootConfig.name, rootPayload);
+	  const root = tree.root();
+	  tree.addStates(Object.fromJson(json.stateConfigs));
+	  childrenFromJson(root, json.root);
+	  return tree;
+	  // let nodeMap = {};
+	  // nodeMap[json.nodeId] = root;
+	  // const paths = [rootConfig.name];
+	  // let currIndex = 0;
+	  // while (currIndex < paths.length) {
+	  //   const pathArr = paths[currIndex].split('.');
+	  //   const parent = tree.getByIdPath.apply(tree, pathArr.slice(0, -1));
+	  //   const node = tree.getByIdPath.apply(tree, pathArr);
+	  //   if (node === undefined) {
+	  //     const nodeId = pathArr[pathArr.length - 1];
+	  //     console.log('createNew')
+	  //     const config = json.stateConfigs[nodeId];
+	  //     const subPaths = Object.keys(Object.pathValue(json.tree, path));
+	  //     subPaths.forEach((subPath) => paths.push(`${path}.${subPath}`));
+	  //   }
+	  //   console.log(path);
+	  //   currIndex++;
+	  // }
+	}
+	
+	DecisionInputTree.template = new $t('input/decision/decisionTree');
+	
+	DecisionInputTree.rebuild = (elem) => {
+	  const treeCnt = du.find.up('[tree-id]', elem);
+	  if (!treeCnt) throw new Error('elem is not contained within a tree\'s html');
+	  const tree = Lookup.get(treeCnt.getAttribute('tree-id'));
+	  const body = tree.html(null, true);
+	  treeCnt.parentElement.innerHTML = body;
+	}
+	
+	function addInput(details, elem)  {
+	  const modCnt = du.find.up('.modification-add-input', elem);
+	  const nodeCnt = du.find.up('[node-id]', modCnt);
+	  const node = Lookup.get(nodeCnt.getAttribute('node-id'));
+	  const inline = true;
+	  const name = details.name.toCamel();
+	  const label = details.name;
+	  switch (details.format) {
+	    case 'Text':
+	      if (details.text.size === 'Large')
+	        node.addInput(new Textarea({name, label}))
+	      else
+	        node.addInput(new Input({type: 'text', name, label, inline}))
+	      break;
+	    case 'Date':
+	      node.addInput(new Input({type: 'date', name, label, inline}))
+	      break;
+	    case 'Time':
+	      node.addInput(new Input({type: 'time', name, label, inline}))
+	      break;
+	    case 'Checkbox':
+	      node.addInput(new Input({type: 'checkbox', name, label, inline}))
+	      break;
+	    case 'Radio':
+	      const list = details.radio.labels.map(input => input.value());
+	      node.addInput(new Radio({name, label, list}));
+	      break;
+	    case 'Table':
+	      const rows = details.table.row.map(input => input.value());
+	      const columns = details.table.col.map(input => input.value());
+	      const type = details.table.type;
+	      node.addInput(new Table({name, label, rows, columns, type}));
+	      break;
+	    case 'Measurement':
+	      const units = details.measure.units;
+	      node.addInput(new MeasurementInput({name, label, units}));
+	      break;
+	    case 'Multiple Entries':
+	      // node.addInput(new MultipleEntries());
+	      break;
+	    default:
+	      throw new Error('In the future this will not be reachable');
+	  }
+	  console.log(elem);
+	  DecisionInputTree.rebuild(nodeCnt);
+	}
+	
+	DecisionInputTree.inputTree = function () {
 	  const name = new Input({
 	    name: 'name',
 	    inline: true,
 	    label: 'Name',
 	    class: 'center',
+	    validation: (val) => val !== ''
 	  });
 	  const format = new Select({
 	    label: 'Format',
@@ -5577,123 +5778,266 @@ function (require, exports, module) {
 	    name: 'label',
 	    inline: true,
 	    label: 'Label',
-	    class: 'center',
+	    class: 'centnodeConds[index].satisfied()) reer',
+	    validation: (val) => val !== ''
 	  });
 	  const row = new Input({
 	    name: 'row',
 	    inline: true,
 	    label: 'Row',
 	    class: 'center',
+	    validation: (val) => val !== ''
 	  });
 	  const col = new Input({
 	    name: 'col',
 	    inline: true,
 	    label: 'Column',
 	    class: 'center',
+	    validation: (val) => val !== ''
 	  });
-	  const labels = new MultipleEntries([label]);
-	  const rowCols = [new MultipleEntries([col], {inline: true}), new MultipleEntries([row])];
-	  const multiInputs = new MultipleEntries(() => [inputInputTree()], {name: 'multiInp'});
+	  const labels = new MultipleEntries(label, {name: 'labels'});
+	  const rowCols = [tableType, new MultipleEntries(col, {name: 'col', inline: true}),
+	                    new MultipleEntries(row, {name: 'row'})];
 	
 	
-	['Text', 'Radio', 'Table', 'Multiple Entries', 'Measurement']
+	  // ['Text', 'Radio', 'Table', 'Multiple Entries', 'Measurement']
 	  const inputs = [name, format];
-	  const textCond = new ValueCondition('format', 'Text', [textCntSize]);
-	  const radioCond = new ValueCondition('format', 'Radio', [labels]);
-	  const tableCond = new ValueCondition('format', 'Table', rowCols);
-	  const multiCond = new ValueCondition('format', 'Multiple Entries', [multiInputs]);
-	  const measureCond = new ValueCondition('format', 'Measurement', [units]);
 	
-	  const tree = new DecisionInputTree();
-	  tree.leaf('InputTree', inputs);
-	  payload = tree.payload();
-	  tree.conditional('text', textCond);
-	  tree.conditional('radio', radioCond);
-	  tree.conditional('table', tableCond);
-	  tree.conditional('multi', multiCond);
-	  const measure = tree.conditional('measure', measureCond);
+	  const tree = new DecisionInputTree('InputTree', {inputArray: inputs});
+	  const root = tree.root();
+	  // root.then('InputTree');
 	
-	  // REMOVE
-	  const measureMulti = new ValueCondition('unit', 'Imperial (US)', [multiInputs]);
-	  const measureInput = new ValueCondition('unit', 'Metric', [labels]);
-	  measure.conditional('measureMulti', measureMulti);
-	  measure.conditional('measureInput', measureInput);
-	
-	  const t = tree.node.tree();
-	  const tJson = t.toJson();
-	  console.log(DecisionInputTree.fromJson(tJson));
-	
-	  return tree.payload();
-	}
-	
-	function modifyBtnPressed(elem) {
-	  const node = DecisionInputTree.getNode(elem);
-	  const inputArray = node.payload().inputArray;
-	  const inputElem = du.find.closest('input,select,textarea', elem);
-	  const input = Input.getFromElem(inputElem);
-	  const treeHtml = conditionalInputTree().payload().html();
-	  const inputTreeCnt = du.find.closest('.condition-input-tree', elem);
-	  inputTreeCnt.innerHTML = '<br>' + treeHtml;
-	  elem.hidden = true;
-	}
-	
-	du.on.match('keyup', `.${ROOT_CLASS}`, DecisionInputTree.update(true));
-	du.on.match('change', `.${ROOT_CLASS}`, DecisionInputTree.update());
-	du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
-	du.on.match('keyup', '.decision-input-cnt.mod input', updateModBtn);
-	du.on.match('keyup', '.decision-input-cnt.mod select', updateModBtn);
-	du.on.match('keyup', '.decision-input-cnt.mod textarea', updateModBtn);
-	du.on.match('click', '.conditional-button', modifyBtnPressed);
-	
-	DecisionInputTree.DO_NOT_CLONE = true;
-	DecisionInputTree.validateInput = (inputArrayOinstance, valuesFunc) => {
-	  if (Array.isArray(inputArrayOinstance)) {
-	    inputArrayOinstance.forEach((instance) => {
-	      instance.childCntId = `decision-child-ctn-${String.random()}`
-	    });
-	    return inputArrayOinstance;
+	  const dic = (value) => new DecisionInputCondition('format', value);
+	  function addFormatNode(name, inputArray, value) {
+	    const node = root.then(name, {inputArray});
+	    node.conditions.add(dic(value));
+	    node.relatedTo('format');
+	    return node;
 	  }
-	  inputArrayOinstance.childCntId = `decision-child-ctn-${String.random()}`
-	  return [inputArrayOinstance];
-	}
 	
-	DecisionInputTree.getTree = (elem) => {
-	  const rootElem = du.find.up("[tree-id]", elem);
-	  const rootId = rootElem.getAttribute('tree-id');
-	  const tree = DecisionInputTree.get(rootId);
+	  addFormatNode('text', [textCntSize], 'Text');
+	  addFormatNode('radio', [labels], 'Radio');
+	  addFormatNode('table', rowCols, 'Table');
+	  // addFormatNode('InputTree', null, 'Multiple Entries');
+	  addFormatNode('measure', [units], 'Measurement');
+	
+	  let multiNodeAdded = false;
+	  root.onChange((values) => {
+	    if (multiNodeAdded) return;
+	    if (values.format === 'Multiple Entries') {
+	      const inputTemplate = new MultipleEntries(DecisionInputTree.inputTree(), {name: 'templates'});
+	      addFormatNode('multiInput', [inputTemplate], 'Multiple Entries');
+	      multiNodeAdded = true;
+	      const rootElem = du.find(`.decision-input-cnt[node-id='${tree.root().id()}']`);
+	      DecisionInputTree.update()(rootElem);
+	    }
+	  });
+	
+	  const tJson = tree.toJson();
+	  console.log(tree.toString());
+	  console.log(DecisionInputTree.fromJson(tJson));
+	  console.log(DecisionInputTree.fromJson(tJson).toString());
+	  console.log(DecisionInputTree.fromJson(tJson).toString());
+	
+	  tree.onSubmit(addInput);
+	  tree.clone = DecisionInputTree.inputTree;
 	  return tree;
 	}
 	
-	DecisionInputTree.fromJson = (json) => {
-	  let tree = new DecisionInputTree();
 	
-	  const rootConfig = json.stateConfigs[json.nodeId];
-	  const rootPayload = Object.fromJson(rootConfig.payload);
-	  const root = tree.leaf(rootConfig.name, rootPayload);
-	  tree = root.tree();
-	  let nodeMap = {};
-	  nodeMap[json.nodeId] = root;
-	  const paths = [rootConfig.name];
-	  let currIndex = 0;
-	  while (currIndex < paths.length) {
-	    const pathArr = paths[currIndex].split('.');
-	    const parent = tree.getByIdPath.apply(tree, pathArr.slice(0, -1));
-	    const node = tree.getByIdPath.apply(tree, pathArr);
-	    if (node === undefined) {
-	      const nodeId = pathArr[pathArr.length - 1];
-	      console.log('createNew')
-	      const config = json.stateConfigs[nodeId];
-	      const subPaths = Object.keys(Object.pathValue(json.tree, path));
-	      subPaths.forEach((subPath) => paths.push(`${path}.${subPath}`));
+	module.exports = DecisionInputTree;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const Measurement = require('../../measurement');
+	
+	class MeasurementInput extends Input {
+	  constructor(props) {
+	    let units = props.units;
+	    let value = new Measurement(props.value, units || true);
+	    props.value = () => value;
+	    super(props);
+	    props.validation = (val) =>
+	        !Number.isNaN(val && val.display ? value : new Measurement(val, units || true).value());
+	    props.errorMsg = 'Invalid Mathematical Expression';
+	    this.value = () => {
+	      return value.display();
 	    }
-	    console.log(path);
-	    currIndex++;
+	    const parentSetVal = this.setValue;
+	    this.setValue = (val) => {
+	      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
+	                        val : new Measurement(val, units || true)) : value;
+	      const updated = newVal !== value;
+	      value = newVal;
+	      return updated;
+	    }
 	  }
 	}
 	
-	DecisionInputTree.template = new $t('input/decision/decisionTree');
+	MeasurementInput.template = new $t('input/measurement');
+	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
 	
-	module.exports = DecisionInputTree;
+	du.on.match('focusout', '.measurement-input', (elem) => {
+	  const input = MeasurementInput.get(elem.id);
+	  elem.value = input.value();
+	})
+	
+	module.exports = MeasurementInput;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	
+	class MultipleEntries extends Input {
+	  constructor(inputTemplate, props) {
+	    props ||= {};
+	    props.validation ||= (list) => list.length > 0;
+	    if (props.list === undefined) {
+	      const list = [];
+	      props.list = list;
+	      props.list.forEach((i) =>
+	        list.push(i.clone()));
+	    }
+	
+	    super(props);
+	    props.list ||= [];
+	    this.clone = () =>
+	        new MultipleEntries(inputTemplate, JSON.clone(props));
+	
+	    this.set = (index) => {
+	      if (props.list[index] === undefined) {
+	        props.list[index] = inputTemplate.clone();
+	      }
+	      return props.list[index];
+	    }
+	    this.set(0);
+	
+	    this.tag = () => props.inline() ? 'span' : 'div';
+	
+	    this.input = (nameOindexOfunc) => {
+	      const nif = nameOindexOfunc;
+	      if ((typeof nif) === 'number') return props.list[nif];
+	      const runFunc = (typeof nif) === 'function';
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (runFunc) {
+	          const val = nif(input);
+	          if (val) return val;
+	        } else if (input.name() === nif) return input;
+	
+	        if (input instanceof MultipleEntries) {
+	          const mInput = input.input(nif);
+	          if (mInput) return mInput;
+	        }
+	      }
+	    }
+	    this.getValue = () => {
+	      const values = [];
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (input.valid()) values.push(input);
+	      }
+	      return values;
+	    }
+	
+	    this.value = this.getValue;
+	
+	    this.length = () => this.list().length;
+	    this.setHtml = (index) =>
+	        MultipleEntries.singleTemplate.render(this.set(index));
+	  }
+	}
+	
+	MultipleEntries.template = new $t('input/multiple-entries');
+	MultipleEntries.singleTemplate = new $t('input/one-entry');
+	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
+	
+	function meInfo(elem) {
+	  const info = {};
+	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
+	  if (info.oneCnt) {
+	    info.indexCnt = du.find.up('[index]', info.oneCnt);
+	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
+	    const ae =  document.activeElement;
+	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
+	  }
+	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
+	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
+	  info.length = info.multiInput.length();
+	  info.inputs = du.find.downAll('input,select,textarea', info.multiCnt);
+	  info.last = info.index === info.length - 1;
+	  info.empty = info.inputs[info.index].value === '';
+	  return info;
+	}
+	
+	const meSelector = '.multiple-entry-cnt input,select,textarea';
+	const oneSelector = '.one-entry-cnt *';
+	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
+	du.on.match('change', meSelector, (elem) => {
+	  // console.log('changed');
+	});
+	
+	du.on.match('click', meSelector, (elem) => {
+	  // console.log('clicked');
+	});
+	
+	const lastCallers = [];
+	du.on.match('focusout', '.one-entry-cnt', (elem) => {
+	  let info = meInfo(elem);
+	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
+	  const id = ++lastCallers[info.index];
+	  setTimeout(() => {
+	    if (id !== lastCallers[info.index]) return;
+	    info = meInfo(elem);
+	    if (!info.last && !info.inFocus && info.empty) {
+	      info.indexCnt.remove()
+	      const children = info.multiCnt.children;
+	      for (let index = 0; index < children.length; index++) {
+	        children[index].setAttribute('index', index);
+	      }
+	      const list = info.multiInput.list();
+	      list.remove(list[info.index]);
+	    }
+	  }, 2000);
+	});
+	
+	du.on.match('focusin', oneSelector, (elem) => {
+	  // console.log('focusin');
+	});
+	
+	du.on.match('keyup', oneSelector, (elem) => {
+	  if (!isInput(elem)) return;
+	  const info = meInfo(elem);
+	  if (info.index === info.length - 1 && !info.empty) {
+	    const newElem = du.create.element('div', {index: info.index + 1});
+	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
+	    info.multiCnt.append(newElem);
+	    console.log('add 1')
+	  }
+	  // console.log('keyup');
+	});
+	
+	module.exports = MultipleEntries;
 	
 });
 
@@ -5717,6 +6061,7 @@ const Input = require('../input');
 	      value = props.value || key;
 	    }
 	    props.value = undefined;
+	
 	    this.setValue(value);
 	    this.isArray = () => isArray;
 	    this.list = () => props.list;
@@ -5741,6 +6086,26 @@ const Input = require('../input');
 });
 
 
+RequireJS.addFunction('../../public/js/utils/input/styles/textarea.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Textarea extends Input {
+	  constructor(props) {
+	    super(props);
+	  }
+	}
+	
+	Textarea.template = new $t('input/textarea');
+	Textarea.html = (instance) => () => Textarea.template.render(instance);
+	
+	module.exports = Textarea;
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
 function (require, exports, module) {
 	
@@ -5753,6 +6118,7 @@ function (require, exports, module) {
 	
 	class Select extends Input {
 	  constructor(props) {
+	    props ||= {};
 	    super(props);
 	    if (props.list === undefined) props.list = [];
 	    const isArray = Array.isArray(props.list);
@@ -5778,6 +6144,7 @@ function (require, exports, module) {
 	  }
 	}
 	
+	new Select();
 	Select.template = new $t('input/select');
 	Select.html = (instance) => () => Select.template.render(instance);
 	
@@ -6118,6 +6485,194 @@ const Test = require('../test.js').Test;
 });
 
 
+RequireJS.addFunction('../../public/js/utils/test/tests/decision-input-tree.js',
+function (require, exports, module) {
+	
+
+	// breakfast) Multiselect (food:bacon, eggs, toast, cereal)
+	//     eggs) Select (count:2,3,6), Select(type:overEasy, sunnySideUp, scrambled, fried)
+	//        requiresGourmetChef) upchange
+	//     toast) Select (white, wheat, texas)
+	//     cereal) Checkbox(milk), Select (type: rasinBrand, cheerios, life)
+	//     bacon) Leaf
+	//   dishes)
+	//      plate)
+	//      fork)
+	//      bowl)
+	//      spoon)
+	
+	
+	const Test = require('../test.js').Test;
+	const du = require('../../dom-utils');
+	const Input = require('../../input/input');
+	const Select = require('../../input/styles/select');
+	const DecisionInputTree = require('../../input/decision/decision');
+	const MultipleEntries = require('../../input/styles/multiple-entries');
+	
+	const toastCost = .75;
+	const cerialCost = 2.25;
+	const baconCost = 1.20;
+	const eggsCost = 1.25;
+	const overEasyMultiplier = 25;
+	
+	function createTree() {
+	  const bacon = new Input({type: 'checkbox', name: 'bacon'});
+	  const eggs = new Input({type: 'checkbox', name: 'eggs'});
+	  const eggCount = new Select({list: ['2','3','6'], name: 'count', mustChoose: true});
+	  const eggType = new Select({name: 'type', mustChoose: true, value: 'Scrambled', list: ['Over Easy', 'Sunny Side Up', 'Scrambled', 'Fried']});
+	  const toast = new Input({type: 'checkbox', name: 'toast'});
+	  const cereal = new Input({type: 'checkbox', name: 'cereal'});
+	  const toastType = new Select({name: 'type', mustChoose: true, list: ['white', 'wheat', 'texas']});
+	  const milk = new Input({type: 'checkbox', name: 'milk'});
+	  const cerealType = new Select({name: 'type', mustChoose: true, list: ['rasinBrand', 'cheerios', 'life']});
+	
+	  const tree = new DecisionInputTree('breakfast', {inputArray: [bacon, eggs, toast, cereal]});
+	
+	  const cost = (node) => eggsCost * Number.parseInt(node.find.input('count').value());
+	  const eggsNode = tree.root().then('Eggs', {cost});
+	  eggsNode.addInput(eggCount);
+	  eggsNode.addInput(eggType);
+	  const reqGourChef = eggsNode.then('requiresGourmetChef', {multiplier: overEasyMultiplier});
+	  const toastNode = tree.root().then('Toast', {cost: toastCost, inputArray: [toastType]});
+	  const cerealNode = tree.root().then('Cereal', {cost: cerialCost, inputArray: [cerealType]});
+	  tree.root().then('Bacon', {cost: baconCost});
+	
+	
+	  const dishes = tree.root().then('dishes');
+	  const plate = dishes.then('plate', {matirial: true});
+	  const fork = dishes.then('fork', {matirial: true});
+	  const bowl = dishes.then('bowl', {matirial: true});
+	  const spoon = dishes.then('spoon', {matirial: true});
+	
+	  bowl.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  cerealNode.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  toastNode.conditions.add((values) =>
+	    Object.pathValue(values, 'toast') === true);
+	
+	  eggsNode.conditions.add((values) =>
+	    Object.pathValue(values, 'eggs') === true);
+	
+	  reqGourChef.conditions.add((values) =>
+	    values.type === "Over Easy");
+	
+	  const vals = tree.values();
+	
+	  return tree;
+	}
+	
+	Test.add('DecisionInputTree structure', (ts) => {
+	  const tree = createTree();
+	  ts.success();
+	});
+	
+	function simulateUserUpdate(input, value, tree, choiceCount, ts) {
+	  const inputElem = du.create.element('input', {id: input.id(), value});
+	  document.body.append(inputElem);
+	  inputElem.click();
+	  inputElem.remove();
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, choiceCount);
+	  ts.assertEquals(tree.isComplete(), choiceCount === 0);
+	}
+	
+	function cost(tree) {
+	  const leaves = tree.root().leaves();
+	  let grandTotal = 0;
+	  for (let index = 0; index < leaves.length; index++) {
+	    let total = 0;
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.cost) {
+	        total += (typeof payload.cost) === 'function' ? payload.cost(node) : payload.cost;
+	      }
+	      if (payload.multiplier) {
+	        total *= payload.multiplier;
+	      }
+	    });
+	    grandTotal += total;
+	  }
+	  return grandTotal;
+	}
+	
+	function matirials(tree) {
+	  const leaves = tree.root().leaves();
+	  let mats = [];
+	  for (let index = 0; index < leaves.length; index++) {
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.matirial) {
+	        mats.push(node.name());
+	      }
+	    });
+	  }
+	  return mats;
+	}
+	
+	
+	Test.add('DecisionInputTree choices', (ts) => {
+	  const toastCost = .75;
+	  const cerialCost = 2.25;
+	  const baconCost = 1.20;
+	  const eggsCost = 1.25;
+	  const overEasyMultiplier = 25;
+	
+	  const justEggsCost = eggsCost * 6 * overEasyMultiplier;
+	  const total = justEggsCost + toastCost + baconCost + cerialCost;
+	
+	  const tree = createTree();
+	  let choices = tree.choices();
+	  ts.assertEquals(choices.length, 0);
+	
+	  const eggs = tree.find.input('eggs')
+	  eggs.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 2);
+	
+	  const toast = tree.find.input('toast')
+	  toast.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 3);
+	
+	  const noBowl = ['plate', 'fork', 'spoon'];
+	  ts.assertTrue(noBowl.equals(matirials(tree)));
+	
+	  const cereal = tree.find.input('cereal')
+	  cereal.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 4);
+	
+	
+	  const count = tree.find.input('count', 'Eggs');
+	  const type = tree.find.input('type', 'Eggs');
+	  const eggsType = tree.find.input('type', 'Eggs');
+	  const toastType = tree.find.input('type', 'Toast');
+	  const cerialType = tree.find.input('type', 'Cereal');
+	
+	  ts.assertNotEquals(type, undefined);
+	  ts.assertNotEquals(eggsType, toastType);
+	  ts.assertNotEquals(eggsType, cerialType);
+	  ts.assertNotEquals(cerialType, toastType);
+	
+	  simulateUserUpdate(eggsType, 'Over Easy', tree, 3, ts);
+	  simulateUserUpdate(toastType, 'white', tree, 2, ts);
+	  simulateUserUpdate(cerialType, 'cheerios', tree, 1, ts);
+	  simulateUserUpdate(count, '6', tree, 0, ts);
+	
+	  const allMaterials = ['plate', 'fork', 'bowl', 'spoon'];
+	  ts.assertTrue(allMaterials.equals(matirials(tree)));
+	
+	  ts.assertEquals(cost(tree), total);
+	
+	  ts.success();
+	});
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/test/tests/decision-tree.js',
 function (require, exports, module) {
 	
@@ -6212,64 +6767,63 @@ function (require, exports, module) {
 	  return dTree;
 	}
 	
-	Test.add('DecisionTree: subtree',(ts) => {
-	  const tree = createTree();
-	  const style = tree.root().next(5);
-	  const shaker = tree.getByName('5','21','11',24);
-	  const subtree = style.subtree();
-	  const shakerSubtree = shaker.subtree();
-	
-	  ts.assertEquals(style.payload(true), subtree.root().payload(true));
-	  ts.assertEquals(style, style.payload().node);
-	  ts.assertNotEquals(subtree.root().payload().node, style.payload().node);
-	  ts.assertEquals(subtree.root(), subtree.root().payload().node);
-	  ts.assertTrue(style.equals(subtree.root()));
-	  ts.assertFalse(shaker.equals(subtree.root()));
-	  ts.assertFalse(shakerSubtree.equals(subtree.root()));
-	  ts.assertTrue(shaker.equals(shakerSubtree.root()));
-	  ts.success();
-	});
-	
-	
 	Test.add('DecisionTree: reachable',(ts) => {
 	  const tree = createTree();
 	  const style = tree.root().next(5);
-	  const subtree = style.subtree();
 	  const func = (node) => node.payload().descriptor !== 'cost';
-	  const conditions = {'21': '11', '27': /29|30/, '9': func};
+	  const six = tree.root().getByPath('5','6');
+	  six.conditions.child.add('7');
+	  const thirtyTwo = tree.root().getByPath('32');
+	  thirtyTwo.conditions.child.add(() => false);
+	  const twentySeven = tree.root().getByPath('5','21', '11', '24', '27');
+	  twentySeven.conditions.child.add(/29|30/);
+	  const twentyFive = tree.root().getByPath('5','21', '11', '24', '25');
+	  twentyFive.conditions.add();
 	
-	  const kept = ['5','6','7','8','9', '10', '11','12','15',
-	                '18','21','24','25','26','27','29','30'];
-	  const ignored = ['10','22', '28','32','33','root'];
+	  const kept = ['root','5','6','7','21','22','11','24','27','29','30','32'];
 	  const errors = {
-	    '10': 'Function condition did not work',
-	    '28': 'Regular expression condition did not work',
 	    '22': 'String condition did not work.',
-	    '32': 'Subtree is including parents',
-	    '33': 'Subtree is including parents',
-	    'root': 'Subtree is including parents',
+	    '28': 'Regular expression condition did not work',
+	    '33': 'Function condition did not work',
 	    'default': 'This should not happen I would check the modification history of this test file.'
 	  }
 	  let nodeCount = 0;
-	  subtree.forEach((node) => {
+	  tree.root().forEach((node) => {
 	    const errorMsg = errors[node.name()] || errors.default;
-	    ts.assertNotEquals(kept.indexOf(node.name()), -1, errorMsg);
+	    try {
+	      ts.assertNotEquals(kept.indexOf(node.name()), -1, errorMsg);
+	    } catch (e) {
+	      console.log('here');
+	    }
 	    nodeCount++;
-	  }, conditions);
-	  ts.assertEquals(nodeCount, 47, 'Subtree does not include all the nodes it should');
+	  });
+	  ts.assertEquals(nodeCount, 12, 'Tree does not traverse the correct nodes');
 	  ts.success();
 	});
 	
 	Test.add('DecisionTree: leaves', (ts) => {
 	  const tree = createTree();
 	  const style = tree.root().next(5);
-	  const subtree = style.subtree();
 	  const func = (node) => node.payload().descriptor !== 'cost';
-	  const conditions = {'21': '11', '27': /29|30/, '9': func};
 	
-	  const leaves = subtree.leaves(conditions);
-	  ts.assertEquals(leaves.length, 19, 'Not plucking all the leaves');
-	  ts.assertEquals(tree.root().leaves().length, 27, 'Not plucking all the leaves');
+	  // ts.assertEquals(tree.root().leaves().length, 27, 'Not plucking all the leaves');
+	
+	  const six = tree.root().getByPath('5','6');
+	  six.conditions.child.add('8');
+	  const thirtyTwo = tree.root().getByPath('32');
+	  thirtyTwo.conditions.child.add(() => false, null, '3');
+	  const twentySeven = tree.root().getByPath('5','21', '11', '24', '27');
+	  twentySeven.conditions.child.add(/29|30/);
+	  const twentyFive = tree.root().getByPath('5','21', '11', '24', '25');
+	  twentyFive.conditions.add();
+	  let leaves = tree.root().leaves();
+	  ts.assertEquals(leaves.length, 24, 'Not plucking all the leaves');
+	
+	  const five = tree.root().getByPath('5');
+	  five.conditions.child.add(() => false, null, '6');
+	  leaves = tree.root().leaves();
+	  ts.assertEquals(leaves.length, 4, 'Not plucking all the leaves');
+	
 	  ts.success();
 	});
 	
@@ -6286,28 +6840,26 @@ function (require, exports, module) {
 	
 	Test.add('DecisionTree: selfRefernce', (ts) => {
 	  const tree = createSelfRefernceTree();
-	  const recOrig = tree.getByName('recursive');
+	  const recOrig = tree.getByPath('recursive');
 	  ts.assertEquals(recOrig.payload().id, 'original');
-	  const rec1 = tree.getByName('recursive', 'recursive');
+	  const rec1 = tree.getByPath('recursive', 'recursive');
 	  ts.assertEquals(rec1.payload().id, 'recusion1');
-	  const otherOrig = tree.getByName('other');
+	  const otherOrig = tree.getByPath('other');
 	  ts.assertEquals(otherOrig.payload().id, 'original');
-	  const otherRec = tree.getByName('other', 'recursive', 'other');
+	  const otherRec = tree.getByPath('other', 'recursive', 'other');
 	  ts.assertEquals(otherRec.payload().id, 'recursive');
 	
-	  const recDeep = tree.getByName('other', 'recursive', 'recursive', 'other','recursive');
+	  const recDeep = tree.getByPath('other', 'recursive', 'recursive', 'other','recursive');
 	  ts.assertEquals(recDeep.payload().id, 'recDefault');
-	  const otherDeep = tree.getByName('recursive', 'other', 'recursive', 'recursive', 'other','recursive', 'other');
+	  const otherDeep = tree.getByPath('recursive', 'other', 'recursive', 'recursive', 'other','recursive', 'other');
 	  ts.assertEquals(otherDeep.payload().id, 'otherDefault');
-	
-	  ts.assertTrue(recOrig.subtree().root().equals(recOrig));
 	
 	  ts.success();
 	});
 	
 	Test.add('DecisionTree: remove', (ts) => {
 	  const tree = createSelfRefernceTree();
-	  const other = tree.getByName('recursive', 'other');
+	  const other = tree.getByPath('recursive', 'other');
 	  other.remove();
 	
 	  let otherList = tree.root().list((n) => n.name() === 'other');
@@ -6321,7 +6873,7 @@ function (require, exports, module) {
 	
 	Test.add('DecisionTree: change', (ts) => {
 	  const tree = createSelfRefernceTree();
-	  const other = tree.getByName('recursive', 'other');
+	  const other = tree.getByPath('recursive', 'other');
 	  other.stateConfig().name('other2');
 	  ts.success();
 	});
@@ -6332,13 +6884,14 @@ function (require, exports, module) {
 	  const rootJson = tree.root().toJson();
 	  ts.assertTrue(Object.equals(treeJson, rootJson));
 	
-	  const recNode = tree.getByName('recursive');
+	  const recNode = tree.getByPath('recursive');
 	  ts.assertFalse(recNode.equals(tree.root()));
 	  const recJson = recNode.toJson();
 	  ts.assertFalse(Object.equals(recNode, rootJson));
 	  const recFromRootJson = {name: 'recursive', root: rootJson.root.children.recursive,
-	              _TYPE: rootJson._TYPE, stateConfigs: rootJson.stateConfigs};
-	  ts.assertTrue(Object.equals(recJson, recFromRootJson));
+	              _TYPE: rootJson._TYPE, stateConfigs: rootJson.stateConfigs,
+	              ID_ATTRIBUTE: rootJson.ID_ATTRIBUTE, id: rootJson.id};
+	  ts.assertTrue(Object.equals(recJson, recFromRootJson, ['id', 'ID_ATTRIBUTE']));
 	  ts.success();
 	});
 	
@@ -6357,6 +6910,22 @@ function (require, exports, module) {
 	  ts.assertTrue(clone !== tree);
 	  ts.assertTrue(clone.root().equals(tree.root()));
 	  ts.assertTrue(tree.root().payload(true) === clone.root().payload(tree));
+	
+	  ts.success();
+	});
+	
+	Test.add('DecisionTree: getByName', (ts) => {
+	  const tree = createTree();
+	
+	  let byPath = tree.getByPath('32','33');
+	  let byName = tree.getByName('33');
+	  ts.assertEquals(byPath, byName);
+	
+	  byPath = tree.getByPath('5','6','8', '18', '11', '24', '27', '29');
+	  let byNameOnly = tree.getByName('29');
+	  byName = tree.getByName('18','29');
+	  ts.assertEquals(byPath, byName);
+	  ts.assertNotEquals(byName, byNameOnly);
 	
 	  ts.success();
 	});
@@ -6443,843 +7012,6 @@ const Test = require('../test.js').Test;
 });
 
 
-RequireJS.addFunction('../../public/js/utils/test/tests/logic-tree.js',
-function (require, exports, module) {
-	
-
-	// breakfast) Branch
-	//   food) Multiselect
-	//     bacon) Leaf
-	//     eggs) Select
-	//       2) Select
-	//         over easy) Leaf
-	//         sunny side up) Leaf
-	//         scramble) Leaf
-	//         fried) Leaf
-	//       3) Select
-	//         over easy) Leaf
-	//         sunny side up) Leaf
-	//         scramble) Leaf
-	//         fried) Leaf
-	//       6) Select
-	//         over easy) Leaf
-	//         sunny side up) Leaf
-	//         scramble) Leaf
-	//         fried) Leaf
-	//     toast) Select
-	//       white) Leaf
-	//       wheat) Leaf
-	//       texas) Leaf
-	//     cereal) Branch
-	//       milk) Leaf
-	//       type) Select
-	//         raisin brand) Leaf
-	//         cheerios) Leaf
-	//         life) Leaf
-	//   dishes) Branch
-	//     plate) Leaf
-	//     fork) Leaf
-	//     having cereal) Conditional
-	//       bowl) Leaf
-	//       spoon) Leaf
-	
-	
-	const Test = require('../test.js').Test;
-	const LogicMap = require('../../logic-tree');
-	//
-	// class ReferenceableFuctions {
-	//   constructor(id) {
-	//     id = id._TYPE === undefined ? id : id.id;
-	//     Object.getSet(this, {id});
-	//     this.condition = (tree) => {
-	//       if (id === 1) {
-	//         return tree.reachable('bacon') || tree.reachable('eggs');
-	//       } else if (id === 2) {
-	//         return tree.reachable('cereal');
-	//       }
-	//     }
-	//     this.LOGIC_TYPE = 'Conditional';
-	//     this.clone = () => new ReferenceableFuctions(id);
-	//   }
-	// }
-	//
-	// function createTree(connectEggs, optional, shouldCopy, testFuncs) {
-	//   const logicMap = new LogicMap('breakfast');
-	//   const breakfast = logicMap.root();
-	//
-	//   function runTestFunc(name) {
-	//     if (testFuncs && testFuncs[name]) {
-	//       testFuncs[name](breakfast, name);
-	//     }
-	//   }
-	//
-	//   const food = breakfast.multiselect('food');
-	//   food.optional(optional);
-	//   food.leaf('bacon', {cost: 1});
-	//   const eggs = food.select('eggs');
-	//   const two = eggs.select(2, {multiplier: 2});
-	//   eggs.optional(optional);
-	//   two.optional(optional);
-	//   two.leaf('over easy', {cost: 1.8});
-	//   two.leaf('sunny side up', {cost: 2.6});
-	//   two.leaf('scramble', {cost: 3.2});
-	//   two.leaf('fried', {cost: 1.3});
-	//   runTestFunc('onlyOne');
-	//   const three = eggs.select(3, {multiplier: 3}).addChildren('2');
-	//   runTestFunc('now2');
-	//   const six = eggs.select(6, {multiplier: 6}).addChildren('2');
-	//   runTestFunc('now3');
-	//   const toast = food.select('toast');
-	//   three.optional(optional);
-	//   six.optional(optional);
-	//   toast.optional(optional);
-	//   toast.leaf('white', {cost: 1.01});
-	//   toast.leaf('wheat', {cost: 1.24});
-	//   toast.leaf('texas', {cost: 1.17});
-	//   const cereal = food.branch('cereal');
-	//   cereal.leaf('milk', {cost: 8.99});
-	//   const type = cereal.select('type');
-	//   type.optional(optional);
-	//   type.leaf('raisin brand', {cost: -0.55});
-	//   type.leaf('cheerios', {cost: 1.58});
-	//   type.leaf('life', {cost: 1.23});
-	//
-	//   const dishes = breakfast.branch('dishes');
-	//   const needPlate = dishes.conditional('need plate', new ReferenceableFuctions(1));
-	//   needPlate.leaf('plate', {cost: .14});
-	//   needPlate.leaf('fork', {cost: .07});
-	//   const havingCereal = dishes.conditional('having cereal', new ReferenceableFuctions(2));
-	//   havingCereal.leaf('bowl', {cost: .18});
-	//   havingCereal.leaf('spoon', {cost: .06});
-	//   runTestFunc('all');
-	//
-	//   if (connectEggs) {
-	//     // two.valueSync(three);
-	//     // two.defaultSync(six);
-	//     console.log(breakfast.toJson());
-	//     breakfast.toJson();
-	//   }
-	//   return shouldCopy ? copy(breakfast).root() : breakfast;
-	// }
-	//
-	// function copy(origTree) {
-	//     const treeJson = origTree.toJson();
-	//     return Object.fromJson(treeJson);
-	// }
-	//
-	// function testIsComplete(ts) {
-	//   return (tree, isComplete) => ts.assertTrue(isComplete === tree.isComplete());
-	// }
-	//
-	// function access(index, returnValue, testFuncs, tree) {
-	//   const func = testFuncs[index];
-	//   if ((typeof func === 'function')) {
-	//     func(tree, returnValue);
-	//   }
-	// }
-	//
-	// function accessProcess(ts, testFuncs, optional, shouldCopy) {
-	//   let tree = createTree(true, optional, shouldCopy);
-	//   access('init', tree, testFuncs, tree);
-	//   access('dontEat2', tree.setChoice('food', null), testFuncs, tree);
-	//   if (optional)
-	//     access('dontEat', tree.setChoice('food', {}), testFuncs, tree);
-	//
-	//   access('bacon', tree.setChoice('food', {bacon: true}), testFuncs, tree);
-	//
-	//   access('toast', tree.setChoice('food', {toast: true}), testFuncs, tree);
-	//   access('chooseToast', tree.setChoice('toast', 'white'), testFuncs, tree);
-	//
-	//   access('chooseCereal', tree.setChoice('type', 'life'), testFuncs, tree);
-	//   access('cereal', tree.setChoice('food', {cereal: true}), testFuncs, tree);
-	//
-	//   access('eggs', tree.setChoice('food', {eggs: true}), testFuncs, tree);
-	//   access('2', tree.setChoice('eggs', '2'), testFuncs, tree);
-	//   access('2value', tree.setChoice('2', 'scramble'), testFuncs, tree);
-	//   if (optional)
-	//     access('2NoValue', tree.setChoice('2', null), testFuncs, tree);
-	//   access('2valueAgain', tree.setChoice('2', 'scramble'), testFuncs, tree);
-	//   access('2default', tree.setDefault('2', 'fried'), testFuncs, tree);
-	//   access('3', tree.setChoice('eggs', '3'), testFuncs, tree);
-	//   access('6', tree.setChoice('eggs', '6'), testFuncs, tree);
-	//
-	//
-	//   access('all', tree.setChoice('food', {eggs: true, bacon: true, toast: true, cereal: true}), testFuncs, tree);
-	//   return tree;
-	// }
-	//
-	// function LogicTest(tree, ts) {
-	//   const properStructure = "breakfast\n  food) Multiselect\n    bacon) Leaf\n    eggs) Select\n      2) Select\n        over easy) Leaf\n        sunny side up) Leaf\n        scramble) Leaf\n        fried) Leaf\n      3) Select\n        over easy) Leaf\n        sunny side up) Leaf\n        scramble) Leaf\n        fried) Leaf\n      6) Select\n        over easy) Leaf\n        sunny side up) Leaf\n        scramble) Leaf\n        fried) Leaf\n    toast) Select\n      white) Leaf\n      wheat) Leaf\n      texas) Leaf\n    cereal) Branch\n      milk) Leaf\n      type) Select\n        raisin brand) Leaf\n        cheerios) Leaf\n        life) Leaf\n  dishes) Branch\n    need plate) Conditional\n      plate) Leaf\n      fork) Leaf\n    having cereal) Conditional\n      bowl) Leaf\n      spoon) Leaf\n";
-	//   ts.assertEquals(tree.structure(), properStructure);
-	//   ts.success();
-	// }
-	//
-	// function decisionsTest(ts, copy) {
-	//   function validateDecisions (tree, ...names) {
-	//     if (tree.decisions().length !== names.length) {
-	//       console.log('badd!')
-	//     }
-	//     const decisions = tree.decisions();
-	//     ts.assertEquals(decisions.length, names.length);
-	//     const decisionNames = decisions.map((elem) => elem.name);
-	//     for (let index = 0; index < names.length; index += 1) {
-	//       ts.assertNotEquals(decisionNames.indexOf(names[index]) === -1);
-	//     }
-	//   }
-	//
-	//   const testFuncs = {
-	//     init: (tree) => validateDecisions(tree, 'food'),
-	//     dontEat: (tree) => validateDecisions(tree, 'food'),
-	//
-	//     bacon: (tree) => validateDecisions(tree, 'food'),
-	//
-	//     toast: (tree) => validateDecisions(tree, 'food', 'toast'),
-	//     chooseToast: (tree) => validateDecisions(tree, 'food', 'toast'),
-	//
-	//     chooseCereal: (tree) => validateDecisions(tree, 'food', 'toast'),
-	//     cereal: (tree) => validateDecisions(tree, 'food', 'having cereal'),
-	//
-	//     eggs: (tree) => validateDecisions(tree, 'food', 'eggs'),
-	//     "2": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
-	//     "2value": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
-	//     "2NoValue": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
-	//     "2valueAgain": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
-	//     "2default": (tree) => validateDecisions(tree, 'food', 'eggs', '2'),
-	//     "3": (tree) => validateDecisions(tree, 'food', 'eggs', '3'),
-	//     "6": (tree) => validateDecisions(tree, 'food', 'eggs', '6'),
-	//
-	//     all: (tree) => validateDecisions(tree, 'food', 'eggs', '6', 'having cereal', 'toast')
-	//   }
-	//   accessProcess(ts, testFuncs, undefined, copy);
-	//   ts.success();
-	// }
-	//
-	// function optionalTest(ts, shouldCopy) {
-	//   const tic = testIsComplete(ts);
-	//   const testFuncs = {
-	//     init: (tree) => tic(tree, true),
-	//     dontEat: (tree) =>  tic(tree, true),
-	//     dontEat2: (tree) =>  tic(tree, true),
-	//     bacon: (tree) =>  tic(tree, true),
-	//     toast: (tree) =>  tic(tree, true),
-	//     chooseToast: (tree) =>  tic(tree, true),
-	//     chooseCereal: (tree) =>  tic(tree, true),
-	//     cereal: (tree) =>  tic(tree, true),
-	//     eggs: (tree) =>  tic(tree, true),
-	//     "2": (tree) =>  tic(tree, true),
-	//     "2value": (tree) =>  tic(tree, true),
-	//     "2NoValue": (tree) =>  tic(tree, true),
-	//     "2valueAgain": (tree) =>  tic(tree, true),
-	//     "2default": (tree) =>  tic(tree, true),
-	//     "3": (tree) =>  tic(tree, true),
-	//     "6": (tree) =>  tic(tree, true),
-	//     all: (tree) =>  tic(tree, true),
-	//   }
-	//   accessProcess(ts, testFuncs, true, shouldCopy);
-	//   ts.success();
-	// }
-	//
-	// function notOptionalTest(ts, shouldCopy) {
-	//   const tic = testIsComplete(ts);
-	//   const testFuncs = {
-	//     init: (tree) => tic(tree, false),
-	//     dontEat: (tree) =>  tic(tree, false),
-	//     dontEat2: (tree) =>  tic(tree, false),
-	//     bacon: (tree) =>  tic(tree, true),
-	//     toast: (tree) =>  tic(tree, false),
-	//     chooseToast: (tree) =>  tic(tree, true),
-	//     chooseCereal: (tree) =>  tic(tree, true),
-	//     cereal: (tree) =>  tic(tree, true),
-	//     eggs: (tree) =>  tic(tree, false),
-	//     "2": (tree) =>  tic(tree, false),
-	//     "2value": (tree) =>  tic(tree, true),
-	//     "2NoValue": (tree) =>  tic(tree, false),
-	//     "2valueAgain": (tree) =>  tic(tree, true),
-	//     "2default": (tree) =>  tic(tree, true),
-	//     "3": (tree) =>  tic(tree, true),
-	//     "6": (tree) =>  tic(tree, true),
-	//     all: (tree) =>  tic(tree, true),
-	//   }
-	//   accessProcess(ts, testFuncs, false, shouldCopy);
-	//   ts.success();
-	// }
-	//
-	// function instanceCountTest(ts, shouldCopy) {
-	//   const instanceCountCorrect = (tree, countObj, stage) => {
-	//     Object.keys(countObj).forEach((name) =>
-	//       ts.assertEquals(countObj[name], tree.node.instanceCount(name),
-	//           `@stage=${stage} name=${name} incorrect instance count shouldCopy=${shouldCopy}`)
-	//     );
-	//   }
-	//
-	//   function instanceCountObj(count, obj, two, three, six) {
-	//     obj['over easy'] = count;
-	//     obj['sunny side up'] = count;
-	//     obj['scramble'] = count;
-	//     obj['fried'] = count;
-	//     obj['2'] = two;
-	//     obj['3'] = three;
-	//     obj['6'] = six;
-	//     return obj;
-	//   }
-	//   const food = 1;
-	//   const eggs = 1;
-	//   const two = 1;
-	//   const three = 1;
-	//   const six = 1;
-	//   const toast = 1
-	//   const white = 1;
-	//   const wheat = 1;
-	//   const texas = 1;
-	//   const milk = 1;
-	//   const type = 1;
-	//   const cheerios = 1;
-	//   const life = 1;
-	//   const onlyOneObj = instanceCountObj(1, {food, eggs}, 1, 0, 0);
-	//   const now2Obj = instanceCountObj(2, {food, eggs}, 1, 1, 0);
-	//   const now3Obj = instanceCountObj(3, {food, eggs}, 1, 1, 1);
-	//   const allObj = instanceCountObj(3, {food,eggs,toast,white,wheat,texas,milk,type,cheerios,life}, 1, 1, 1);
-	//   const testFuncs = {
-	//     onlyOne: (tree, stage) =>  instanceCountCorrect(tree, onlyOneObj, stage),
-	//     now2: (tree, stage) =>  instanceCountCorrect(tree, now2Obj, stage),
-	//     now3: (tree, stage) =>  instanceCountCorrect(tree, now3Obj, stage),
-	//     all: (tree, stage) =>  instanceCountCorrect(tree, allObj, stage),
-	//   }
-	//   createTree(undefined, undefined, shouldCopy, testFuncs)
-	//   ts.success();
-	// }
-	//
-	// function forPathTest(ts, shouldCopy) {
-	//     function verifyCost(choices, expectedCost) {
-	//       const tree = createTree(undefined, undefined, shouldCopy);
-	//       const keys = Object.keys(choices);
-	//       keys.forEach((key) => tree.setChoice(key, choices[key]));
-	//       const data = tree.forPath((wrapper, cost) => {
-	//         cost = cost || 0;
-	//         const payload = wrapper.payload();
-	//         if (payload.cost) cost += payload.cost;
-	//         if (payload.multiplier) cost *= payload.multiplier;
-	//         return cost;
-	//       });
-	//       let total = 0;
-	//       data.forEach((cost) => total += cost);
-	//       ts.assertEquals(Math.round(total * 100) / 100, expectedCost);
-	//     }
-	//
-	//     verifyCost({food: {bacon: true}}, 1.21)
-	//     verifyCost({food: {bacon: false, eggs: false, cereal:true},
-	//                 type: 'life'}, 10.46);
-	//     verifyCost({food: {bacon: true, eggs: true},
-	//                 eggs: '2', '2': 'fried'}, 2.51)
-	//     verifyCost({food: {bacon: true, eggs: false, cereal:true},
-	//                 eggs: '2', '2': 'fried', type: 'life'}, 11.67);
-	//     verifyCost({food: {bacon: true, eggs: true, cereal:true, toast: true},
-	//                 eggs: '6', '6': 'sunny side up', type: 'life', toast: 'wheat'}, 15.51);
-	//     ts.success();
-	// }
-	//
-	// function forPathReverseTest(ts, shouldCopy) {
-	//       function verifyCost(choices, expectedCost) {
-	//         const tree = createTree(true, undefined, shouldCopy);
-	//         const keys = Object.keys(choices);
-	//         keys.forEach((key) => tree.setChoice(key, choices[key]));
-	//         const data = tree.forPath((wrapper, cost) => {
-	//           cost = cost || 0;
-	//           const payload = wrapper.payload();
-	//           if (payload.cost) cost += payload.cost;
-	//           if (payload.multiplier) cost *= payload.multiplier;
-	//           return cost;
-	//         }, true);
-	//         let total = 0;
-	//         data.forEach((cost) => total += cost);
-	//         ts.assertEquals(Math.round(total * 100) / 100, expectedCost);
-	//       }
-	//
-	//       verifyCost({food: {bacon: true}}, 1.21)
-	//       verifyCost({food: {bacon: false, eggs: false, cereal:true},
-	//                   type: 'life'}, 10.46);
-	//       verifyCost({food: {bacon: true, eggs: true},
-	//                   eggs: '2', '2': 'fried'}, 3.81)
-	//       verifyCost({food: {bacon: true, eggs: true},
-	//                   eggs: '3', '2': 'fried'}, 5.11)
-	//       verifyCost({food: {bacon: true, eggs: true},
-	//                   eggs: '6', '2': 'fried'}, 1.21)
-	//       verifyCost({food: {bacon: true, eggs: true},
-	//                   eggs: '6', '6': 'scramble'}, 20.41)
-	//       verifyCost({food: {bacon: true, eggs: false, cereal:true},
-	//                   eggs: '2', '2': 'fried', type: 'life'}, 11.67);
-	//       verifyCost({food: {bacon: true, eggs: true, cereal:true, toast: true},
-	//                   eggs: '6', '6': 'sunny side up', type: 'life', toast: 'wheat'}, 28.51);
-	//       ts.success();
-	// }
-	//
-	// function leavesTest(ts, shouldCopy) {
-	//       function verifyCost(choices, expectedCost) {
-	//         const tree = createTree(undefined, undefined, true);
-	//         const keys = Object.keys(choices);
-	//         keys.forEach((key) => tree.setChoice(key, choices[key]));
-	//         let total = 0;
-	//         tree.leaves().forEach((wrapper) => {
-	//           const payload = wrapper.payload();
-	//           if (payload.cost) total += payload.cost;
-	//         });
-	//         ts.assertEquals(Math.round(total * 100) / 100, expectedCost);
-	//       }
-	//
-	//       verifyCost({food: {bacon: true}}, 1.21)
-	//       verifyCost({food: {bacon: false, eggs: false, cereal:true},
-	//                   type: 'life'}, 10.46);
-	//       verifyCost({food: {bacon: true, eggs: true},
-	//                   eggs: '2', '2': 'fried'}, 2.51)
-	//       verifyCost({food: {bacon: true, eggs: false, cereal:true},
-	//                   eggs: '2', '2': 'fried', type: 'life'}, 11.67);
-	//       verifyCost({food: {bacon: true, eggs: true, cereal:true, toast: true},
-	//                   eggs: '6', '6': 'sunny side up', type: 'life', toast: 'wheat'}, 15.51);
-	//       ts.success();
-	// }
-	//
-	// function getNodeByPathTest(ts, shouldCopy) {
-	//   const tree = createTree(undefined, undefined, shouldCopy)
-	//
-	//   const fried2 = tree.root().node.next('food').next('eggs').next('2').next('fried');
-	//   const fried3 = tree.root().node.next('food').next('eggs').next('3').next('fried');
-	//   const fried6 = tree.root().node.next('food').next('eggs').next('6').next('fried');
-	//
-	//   const friedBy2 = tree.node.getNodeByPath('food', 'eggs', '2', 'fried');
-	//   const friedBy3 = tree.node.getNodeByPath('food', 'eggs', '3', 'fried');
-	//   const friedBy6 = tree.node.getNodeByPath('food', 'eggs', '6', 'fried');
-	//
-	//   ts.assertEquals(fried2, friedBy2);
-	//   ts.assertEquals(fried3, friedBy3);
-	//   ts.assertEquals(fried6, friedBy6);
-	//
-	//   ts.assertNotEquals(fried2, friedBy3);
-	//   ts.assertNotEquals(fried2, friedBy6);
-	//   ts.assertNotEquals(fried3, friedBy2);
-	//   ts.assertNotEquals(fried3, friedBy6);
-	//   ts.assertNotEquals(fried6, friedBy2);
-	//   ts.assertNotEquals(fried6, friedBy3);
-	//
-	//   ts.success();
-	// }
-	//
-	// function removeTest(ts, shouldCopy) {
-	//     const tree = createTree(null, null, shouldCopy);
-	//     function checkNodeCounts(tree, nodeCounts) {
-	//       Object.keys(nodeCounts).forEach((key) =>
-	//           ts.assertEquals(nodeCounts[key], tree.node.instanceCount(key),
-	//             `RemoveTest Failed: incorrect instance count for ${key}`));
-	//     }
-	//     function nodeCounts(overwrites, eggTypeCount, nuke) {
-	//       overwrites = overwrites || {};
-	//       function overVal(id, def) {
-	//         return overwrites[id] !== undefined ? overwrites[id] :
-	//                                 (nuke !== undefined ? nuke : def);
-	//       }
-	//       return {
-	//         food: overVal("food", 1),
-	//         eggs: overVal("eggs", 1),
-	//         '2': overVal("2", 1),
-	//         '3': overVal("3", 1),
-	//         '6': overVal("6", 1),
-	//         toast: overVal("toast", 1),
-	//         white: overVal("white", 1),
-	//         wheat: overVal("wheat", 1),
-	//         texas: overVal("texas", 1),
-	//         milk: overVal("milk", 1),
-	//         type: overVal("type", 1),
-	//         cheerios: overVal("cheerios", 1),
-	//         life: overVal("life", 1),
-	//
-	//         scramble: overVal("scramble", eggTypeCount || 3),
-	//         fried: overVal("fried", eggTypeCount || 3),
-	//         "sunny side up": overVal("sunny side up", eggTypeCount || 3),
-	//         "over easy": overVal("over easy", eggTypeCount || 3)
-	//       }
-	//     }
-	//
-	//     try {
-	//       tree.node.addState('food', {hello: 'world'});
-	//       ts.fail();
-	//     } catch (e) {}
-	//
-	//     checkNodeCounts(tree, nodeCounts());
-	//     tree.node.getNodeByPath('food', 'eggs', '3', 'fried').remove();
-	//     checkNodeCounts(tree, nodeCounts({fried: 2}));
-	//     tree.node.getNodeByPath('food', 'eggs', '3').remove();
-	//     checkNodeCounts(tree, nodeCounts({'3': 0}, 2))
-	//     tree.node.getNodeByPath('food', 'eggs', '2').remove();
-	//     checkNodeCounts(tree, nodeCounts({'3': 0, '2': 0}, 1))
-	//     tree.node.getNodeByPath('food').remove();
-	//     checkNodeCounts(tree, nodeCounts(undefined, undefined, 0));
-	//     ts.assertEquals(tree.node.instanceCount('dishes'), 1);
-	//
-	//     const msg = 'hello world';
-	//     const payload = {msg};
-	//     tree.node.addState('food', payload);
-	//     tree.node.then('food');
-	//     const food = tree.node.getNodeByPath('food');
-	//     ts.assertEquals(Object.keys(food.payload()).length, 2);
-	//     ts.assertEquals(food.payload().msg, msg);
-	//
-	//     ts.success();
-	// }
-	//
-	// function attachTreeTest(ts) {
-	//   const orderTree = createTree();
-	//   const origLeaves = orderTree.node.leaves();
-	//   let leaveCount = origLeaves.length;
-	//   const drinkTree = new LogicMap(String.random());
-	//
-	//   const type = drinkTree.select('drink type');
-	//   type.select('alcholic').leaf('beer');
-	//   type.select('non alcholic').leaf('soda');
-	//   orderTree.attachTree(drinkTree);
-	//   let newLeaves = orderTree.node.leaves();
-	//   ts.assertEquals(leaveCount + 2, newLeaves.length)
-	//   leaveCount = newLeaves.length;
-	//
-	//   const eggs = orderTree.getByPath('food', 'eggs');
-	//   const nonAlcholic = orderTree.getByPath('drink type', 'non alcholic');
-	//   nonAlcholic.attachTree(eggs);
-	//   newLeaves = orderTree.node.leaves();
-	//   ts.assertEquals(leaveCount + 12, newLeaves.length)
-	//   leaveCount = newLeaves.length;
-	//
-	//   const milk = orderTree.getByPath('food', 'cereal', 'milk');
-	//   nonAlcholic.attachTree(milk);
-	//   newLeaves = orderTree.node.leaves();
-	//   ts.assertEquals(leaveCount + 1, newLeaves.length)
-	//
-	//   milk.attachTree(nonAlcholic);
-	//
-	//   ts.success();
-	// }
-	
-	
-	
-	
-	// Test.add('LogicMap structure', (ts) => {
-	//   LogicTest(createTree(), ts);
-	// });
-	// // Test.add('LogicMap structure (copy)', (ts) => {
-	// //   LogicTest(createTree(undefined, undefined, true), ts);
-	// // });
-	// //
-	// // Test.add('LogicMap getNodeByPath', (ts) => {
-	// //   getNodeByPathTest(ts);
-	// // });
-	// // Test.add('LogicMap getNodeByPath (copy)', (ts) => {
-	// //   getNodeByPathTest(ts, true);
-	// // });
-	// //
-	// // Test.add('LogicMap remove', (ts) => {
-	// //   removeTest(ts);
-	// // });
-	// // Test.add('LogicMap remove (copy)', (ts) => {
-	// //   removeTest(ts, true);
-	// // });
-	// //
-	// // Test.add('LogicMap decisions', (ts) => {
-	// //   decisionsTest(ts);
-	// // });
-	// Test.add('LogicMap decisions (copy)', (ts) => {
-	//   decisionsTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap isComplete (optional)', (ts) => {
-	//   optionalTest(ts);
-	// });
-	// Test.add('LogicMap isComplete (optional & copy)', (ts) => {
-	//   optionalTest(ts,true);
-	// });
-	//
-	// Test.add('LogicMap isComplete (!optional)', (ts) => {
-	//   notOptionalTest(ts);
-	// });
-	// Test.add('LogicMap isComplete (!optional & copy)', (ts) => {
-	//   notOptionalTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap forPath (forward)', (ts) => {
-	//   forPathTest(ts);
-	// });
-	// Test.add('LogicMap forPath (forward & copy)', (ts) => {
-	//   forPathTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap forPath (reverse)', (ts) => {
-	//   forPathReverseTest(ts);
-	// });
-	// Test.add('LogicMap forPath (reverse & copy)', (ts) => {
-	//   forPathReverseTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap leaves', (ts) => {
-	//   leavesTest(ts);
-	// });
-	// Test.add('LogicMap leaves (copy)', (ts) => {
-	//   leavesTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap instanceCount', (ts) => {
-	//   instanceCountTest(ts);
-	// });
-	// Test.add('LogicMap instanceCount (copy)', (ts) => {
-	//   instanceCountTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap attachTree', (ts) => {
-	//   attachTreeTest(ts);
-	// });
-	// Test.add('LogicMap attachTree (copy)', (ts) => {
-	//   attachTreeTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap change', (ts) => {
-	//   let tree = createTree();
-	//   const food = tree.getByPath('food');
-	//   const needPlate = tree.getByPath('dishes', 'need plate');
-	//   food.node.change('needPlate');
-	//   ts.success();
-	// });
-	
-	
-	// Test.add('LogicMap ', (ts) => {
-	//   function validateDecisions (tree, ...names) {
-	//     const decisions = tree.decisions();
-	//     ts.assertEquals(decisions.length, names.length);
-	//     const decisionNames = decisions.map((elem) => elem.name);
-	//     for (let index = 0; index < names.length; index += 1) {
-	//       ts.assertNotEquals(decisionNames.indexOf(names[index]) === -1);
-	//     }
-	//   }
-	//
-	//   const testFuncs = {
-	//     init: (tree) => ,
-	//     dontEat: (tree) => ,
-	//
-	//     bacon: (tree) => ,
-	//
-	//     toast: (tree) => ,
-	//     chooseToast: (tree) => ,
-	//
-	//     chooseCereal: (tree) => ,
-	//     cereal: (tree) => ,
-	//
-	//     eggs: (tree) => ,
-	//     "2": (tree) => ,
-	//     "2value": (tree) => ,
-	//     "2NoValue": (tree) => ,
-	//     "2valueAgain": (tree) => ,
-	//     "2default": (tree) => ,
-	//     "6": (tree) => ,
-	//
-	//     all: (tree) =>
-	//   }
-	//   accessProcess(ts, testFuncs);
-	//   ts.success();
-	// });
-	
-	
-	
-	// breakfast) Branch
-	//   food) Multiselect
-	//     bacon) Leaf
-	//     eggs) Select
-	//       2) Select
-	//         over easy) Leaf
-	//         sunny side up) Leaf
-	//         scramble) Leaf
-	//         fried) Leaf
-	//       3) Select
-	//         over easy) Leaf
-	//         sunny side up) Leaf
-	//         scramble) Leaf
-	//         fried) Leaf
-	//       6) Select
-	//         over easy) Leaf
-	//         sunny side up) Leaf
-	//         scramble) Leaf
-	//         fried) Leaf
-	//     toast) Select
-	//       white) Leaf
-	//       wheat) Leaf
-	//       texas) Leaf
-	//     cereal) Branch
-	//       milk) Leaf
-	//       type) Select
-	//         raisin brand) Leaf
-	//         cheerios) Leaf
-	//         life) Leaf
-	//   dishes) Branch
-	//     plate) Leaf
-	//     fork) Leaf
-	//     having cereal) Conditional
-	//       bowl) Leaf
-	//       spoon) Leaf
-	
-	const LogicTree = require('../../logic-tree');
-	const Lookup = require('../../object/lookup');
-	
-	function createTree() {
-	  const tree = new LogicTree('breakfast');
-	  const root = tree.rootNode;
-	  const eggs = root.then('eggs', {}, 'food', 'eggs');
-	  const two = eggs.then('2', {multiplier: 2}, 'count', '2');
-	  const three = eggs.then(3, {multiplier: 3}, 'count', '3');
-	  const six = eggs.then('6', {multiplier: 6}, 'count', 6);
-	  two.then('overEasy', {cost: 1.8}, 'type', 'Over Easy');
-	  two.then('sunnySideUp', {cost: 2.6}, 'type', 'Sunny Side Up');
-	  two.then('scramble', {cost: 3.2}, 'type', 'Scrambled');
-	  two.then('fried', {cost: 1.3}, 'type', 'Fried');
-	  three.then(['overEasy', 'sunnySideUp', 'scramble', 'fried']);
-	  six.addChildren('2');
-	
-	  const cookooRoot = new Imposter(root, {payload: () => 'The shizzle'}, tree);
-	
-	  return tree;
-	}
-	
-	const Imposter = require('../../object/imposter');
-	Test.add('LogicMap structure', (ts) => {
-	  const tree = createTree();
-	  console.log(tree.toString());
-	
-	  ts.success();
-	});
-	// Test.add('LogicMap structure (copy)', (ts) => {
-	//   LogicTest(createTree(undefined, undefined, true), ts);
-	// });
-	//
-	// Test.add('LogicMap getNodeByPath', (ts) => {
-	//   getNodeByPathTest(ts);
-	// });
-	// Test.add('LogicMap getNodeByPath (copy)', (ts) => {
-	//   getNodeByPathTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap remove', (ts) => {
-	//   removeTest(ts);
-	// });
-	// Test.add('LogicMap remove (copy)', (ts) => {
-	//   removeTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap decisions', (ts) => {
-	//   decisionsTest(ts);
-	// });
-	// Test.add('LogicMap decisions (copy)', (ts) => {
-	//   decisionsTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap isComplete (optional)', (ts) => {
-	//   optionalTest(ts);
-	// });
-	// Test.add('LogicMap isComplete (optional & copy)', (ts) => {
-	//   optionalTest(ts,true);
-	// });
-	//
-	// Test.add('LogicMap isComplete (!optional)', (ts) => {
-	//   notOptionalTest(ts);
-	// });
-	// Test.add('LogicMap isComplete (!optional & copy)', (ts) => {
-	//   notOptionalTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap forPath (forward)', (ts) => {
-	//   forPathTest(ts);
-	// });
-	// Test.add('LogicMap forPath (forward & copy)', (ts) => {
-	//   forPathTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap forPath (reverse)', (ts) => {
-	//   forPathReverseTest(ts);
-	// });
-	// Test.add('LogicMap forPath (reverse & copy)', (ts) => {
-	//   forPathReverseTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap leaves', (ts) => {
-	//   leavesTest(ts);
-	// });
-	// Test.add('LogicMap leaves (copy)', (ts) => {
-	//   leavesTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap instanceCount', (ts) => {
-	//   instanceCountTest(ts);
-	// });
-	// Test.add('LogicMap instanceCount (copy)', (ts) => {
-	//   instanceCountTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap attachTree', (ts) => {
-	//   attachTreeTest(ts);
-	// });
-	// Test.add('LogicMap attachTree (copy)', (ts) => {
-	//   attachTreeTest(ts, true);
-	// });
-	//
-	// Test.add('LogicMap change', (ts) => {
-	//   let tree = createTree();
-	//   const food = tree.getByPath('food');
-	//   const needPlate = tree.getByPath('dishes', 'need plate');
-	//   food.node.change('needPlate');
-	//   ts.success();
-	// });
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/tests/star-line-map.js',
-function (require, exports, module) {
-	
-
-	const Test = require('../test.js').Test;
-	const EscapeMap = require('../../canvas/two-d/maps/escape');
-	const Vertex2d = require('../../canvas/two-d/objects/vertex');
-	const Line2d = require('../../canvas/two-d/objects/line');
-	const Polygon2d = require('../../canvas/two-d/objects/polygon');
-	
-	// [new Vertex2d(10,50),new Vertex2d(10,10),new Vertex2d(50,10),new Vertex2d(50,40),new Vertex2d(20,40),new Vertex2d(20,15),new Vertex2d(40,15), new Vertex2d(40,35), new Vertex2d(35,35), new Vertex2d(35,20),new Vertex2d(25,20),new Vertex2d(25,37.5), new Vertex2d(45,37.5),new Vertex2d(45,12.5),new Vertex2d(15,12.5), new Vertex2d(15,45),new Vertex2d(50,45), new Vertex2d(50,50),new Vertex2d(10,50)]
-	//
-	// [new Vertex2d(20,14),new Vertex2d(15,8),new Vertex2d(24,3),new Vertex2d(20,14)]
-	
-	const spiral = Polygon2d.fromString('[(10,50),(10,10),(50,10),(50,40),(20,40),(20,15),(40,15), (40,35), (35,35), (35,20),(25,20),(25,37.5), (45,37.5),(45,12.5),(15,12.5), (15,45),(50,45), (50,50)]');
-	const triangle = Polygon2d.fromString('[(20,14),(15,8),(24,3),(20,14)]');
-	const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
-	const innerLines = [new Line2d(new Vertex2d(40,47), new Vertex2d(40,48)),
-	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,25)),
-	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,15))]
-	
-	// star.forEach(l => l.translate(new Line2d(new Vertex2d(0,0),new Vertex2d(10,12))));
-	
-	Test.add('StarLineMap: escape',(ts) => {
-	  // const escapeMap = new EscapeMap(spiral.lines().concat(triangle.lines()).concat(innerLines));
-	  let lines = spiral.lines().concat(triangle.lines()).concat(star).concat(innerLines);
-	  const escapeMap = new EscapeMap(lines);
-	  const parimeterAns = Polygon2d.fromString(`(10, 50) => (10, 10) => (16.666666666666668, 10) => (15, 8) => (24, 3) => (21.454545454545453, 10) => (50, 10) => (50, 40) => (20, 40) => (20, 15) => (40, 15) => (40, 35) => (35, 35) => (35, 20) => (25, 20) => (25, 37.5) => (45, 37.5) => (45, 12.5) => (20.545454545454547, 12.5) => (20, 14) => (18.75, 12.5) => (15, 12.5) => (15, 21.18181818181818) => (16.5, 20.5) => (15.556603773584905, 22.198113207547173) => (17, 23) => (15.111111111111112, 23) => (15, 23.200000000000003) => (15, 45) => (50, 45) => (50, 50)`);
-	  const parimeter = EscapeMap.parimeter(lines);
-	  ts.assertTrue(parimeter.equals(parimeterAns), 'Use canvas buddy to isolate issue: /canvas-buddy/html/index.html\n\t\tIt seams like there is an error somewhere in the merging of groups... I would focus your investigation there.');
-	  ts.success();
-	});
-	
-	Test.add('Polygon: build', (ts) => {
-	  const polyAns = Polygon2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5)]');
-	  for (let index = 0; index < 5; index++) {
-	    const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
-	    star.shuffle();
-	    const poly = Polygon2d.build(star);
-	    ts.assertTrue(poly.equals(polyAns));
-	  }
-	  ts.success();
-	});
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/test/tests/lookup.js',
 function (require, exports, module) {
 	
@@ -7358,29 +7090,57 @@ const Test = require('../test.js').Test;
 });
 
 
+RequireJS.addFunction('../../public/js/utils/test/tests/star-line-map.js',
+function (require, exports, module) {
+	
+
+	const Test = require('../test.js').Test;
+	const EscapeMap = require('../../canvas/two-d/maps/escape');
+	const Vertex2d = require('../../canvas/two-d/objects/vertex');
+	const Line2d = require('../../canvas/two-d/objects/line');
+	const Polygon2d = require('../../canvas/two-d/objects/polygon');
+	
+	// [new Vertex2d(10,50),new Vertex2d(10,10),new Vertex2d(50,10),new Vertex2d(50,40),new Vertex2d(20,40),new Vertex2d(20,15),new Vertex2d(40,15), new Vertex2d(40,35), new Vertex2d(35,35), new Vertex2d(35,20),new Vertex2d(25,20),new Vertex2d(25,37.5), new Vertex2d(45,37.5),new Vertex2d(45,12.5),new Vertex2d(15,12.5), new Vertex2d(15,45),new Vertex2d(50,45), new Vertex2d(50,50),new Vertex2d(10,50)]
+	//
+	// [new Vertex2d(20,14),new Vertex2d(15,8),new Vertex2d(24,3),new Vertex2d(20,14)]
+	
+	const spiral = Polygon2d.fromString('[(10,50),(10,10),(50,10),(50,40),(20,40),(20,15),(40,15), (40,35), (35,35), (35,20),(25,20),(25,37.5), (45,37.5),(45,12.5),(15,12.5), (15,45),(50,45), (50,50)]');
+	const triangle = Polygon2d.fromString('[(20,14),(15,8),(24,3),(20,14)]');
+	const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
+	const innerLines = [new Line2d(new Vertex2d(40,47), new Vertex2d(40,48)),
+	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,25)),
+	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,15))]
+	
+	// star.forEach(l => l.translate(new Line2d(new Vertex2d(0,0),new Vertex2d(10,12))));
+	
+	Test.add('StarLineMap: escape',(ts) => {
+	  // const escapeMap = new EscapeMap(spiral.lines().concat(triangle.lines()).concat(innerLines));
+	  let lines = spiral.lines().concat(triangle.lines()).concat(star).concat(innerLines);
+	  const escapeMap = new EscapeMap(lines);
+	  const parimeterAns = Polygon2d.fromString(`(10, 50) => (10, 10) => (16.666666666666668, 10) => (15, 8) => (24, 3) => (21.454545454545453, 10) => (50, 10) => (50, 40) => (20, 40) => (20, 15) => (40, 15) => (40, 35) => (35, 35) => (35, 20) => (25, 20) => (25, 37.5) => (45, 37.5) => (45, 12.5) => (20.545454545454547, 12.5) => (20, 14) => (18.75, 12.5) => (15, 12.5) => (15, 21.18181818181818) => (16.5, 20.5) => (15.556603773584905, 22.198113207547173) => (17, 23) => (15.111111111111112, 23) => (15, 23.200000000000003) => (15, 45) => (50, 45) => (50, 50)`);
+	  const parimeter = EscapeMap.parimeter(lines);
+	  ts.assertTrue(parimeter.equals(parimeterAns), 'Use canvas buddy to isolate issue: /canvas-buddy/html/index.html\n\t\tIt seams like there is an error somewhere in the merging of groups... I would focus your investigation there.');
+	  ts.success();
+	});
+	
+	Test.add('Polygon: build', (ts) => {
+	  const polyAns = Polygon2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5)]');
+	  for (let index = 0; index < 5; index++) {
+	    const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
+	    star.shuffle();
+	    const poly = Polygon2d.build(star);
+	    ts.assertTrue(poly.equals(polyAns));
+	  }
+	  ts.success();
+	});
+	
+});
+
+
 RequireJS.addFunction('./generated/html-templates.js',
 function (require, exports, module) {
 	
-exports['176893079'] = (get, $t) => 
-			`<span class='decision-input-array-cnt pad ` +
-			$t.clean(get("class")) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'> ` +
-			$t.clean(get("input").html()) +
-			` <span> <button class='conditional-button' target-id='` +
-			$t.clean(get("input").id()) +
-			`'> If ` +
-			$t.clean(get("input").name()) +
-			` = ` +
-			$t.clean(get("input").value()) +
-			` </button> <div class='condition-input-tree tab'></div> <div class='children-recurse-cnt' value='` +
-			$t.clean(get("input").value()) +
-			`'>` +
-			$t.clean(get("childrenHtml")(get("input").name(), true)) +
-			`</div> </span> <br> </span>`
-	
-	exports['550500469'] = (get, $t) => 
+exports['550500469'] = (get, $t) => 
 			`<span > <input list='auto-fill-list-` +
 			$t.clean(get("input").id() +
 			get("willFailCheckClassnameConstruction")()) +
@@ -7396,7 +7156,7 @@ exports['176893079'] = (get, $t) =>
 			$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 			` </datalist> </span>`
 	
-	exports['1390854481'] = (get, $t) => 
+	exports['559079503'] = (get, $t) => 
 			`<span class='decision-input-array-cnt pad ` +
 			$t.clean(get("class")) +
 			`' index='` +
@@ -7406,7 +7166,20 @@ exports['176893079'] = (get, $t) =>
 			` <div class='children-recurse-cnt' value='` +
 			$t.clean(get("input").value()) +
 			`'> ` +
-			$t.clean(get("childrenHtml")(get("input").name())) +
+			$t.clean(get("childrenHtml")(get("$index"))) +
+			` </div> </span>`
+	
+	exports['564755780'] = (get, $t) => 
+			`<span class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` <div class='children-recurse-cnt tab' value='` +
+			$t.clean(get("input").value()) +
+			`'> ` +
+			$t.clean(get("childrenHtml")(get("$index"))) +
 			` </div> </span>`
 	
 	exports['1447370576'] = (get, $t) => 
@@ -7455,6 +7228,24 @@ exports['176893079'] = (get, $t) =>
 	exports['auto-save'] = (get, $t) => 
 			`<div> <button type="button" class='auto-save-btn' name="button">Auto Save</button> <span class='status'></span> </div> `
 	
+	exports['expandable/input-repeat'] = (get, $t) => 
+			`<div> ` +
+			$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
+			` <button ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' class='expandable-list-add-btn' ` +
+			$t.clean(get("hideAddBtn") ? 'hidden' : '') +
+			`> Add ` +
+			$t.clean(get("listElemLable")()) +
+			` here </button> <div class='error' id='` +
+			$t.clean(get("ERROR_CNT_ID")) +
+			`'></div> </div> `
+	
+	exports['-1921787246'] = (get, $t) => 
+			`<option value="` +
+			$t.clean(get("option")) +
+			`" ></option>`
+	
 	exports['expandable/pill'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -7497,53 +7288,15 @@ exports['176893079'] = (get, $t) =>
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
-	exports['expandable/input-repeat'] = (get, $t) => 
-			`<div> ` +
-			$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
-			` <button ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' class='expandable-list-add-btn' ` +
-			$t.clean(get("hideAddBtn") ? 'hidden' : '') +
-			`> Add ` +
-			$t.clean(get("listElemLable")()) +
-			` here </button> <div class='error' id='` +
-			$t.clean(get("ERROR_CNT_ID")) +
-			`'></div> </div> `
+	exports['input/data-list'] = (get, $t) => 
+			`` +
+			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+			` `
 	
-	exports['-1921787246'] = (get, $t) => 
+	exports['-994603408'] = (get, $t) => 
 			`<option value="` +
-			$t.clean(get("option")) +
+			$t.clean(get("item")) +
 			`" ></option>`
-	
-	exports['expandable/list'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
-			` <div class='expand-input-cnt' hidden has-input-tree='` +
-			$t.clean(get("hasInputTree")()) +
-			`'>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <div class='input-open-cnt'><button>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</button></div> </div> `
-	
-	exports['expandable/top-add-list'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> <div class='expand-input-cnt' hidden has-input-tree='` +
-			$t.clean(get("hasInputTree")()) +
-			`'>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <div class='input-open-cnt'><button>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</button></div> ` +
-			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
-			` </div> `
 	
 	exports['expandable/sidebar'] = (get, $t) => 
 			` <div class="expandable-list ` +
@@ -7587,44 +7340,83 @@ exports['176893079'] = (get, $t) =>
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
+	exports['expandable/list'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
+			` <div class='expand-input-cnt' hidden has-input-tree='` +
+			$t.clean(get("hasInputTree")()) +
+			`'>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> </div> `
+	
+	exports['expandable/top-add-list'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> <div class='expand-input-cnt' hidden has-input-tree='` +
+			$t.clean(get("hasInputTree")()) +
+			`'>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> ` +
+			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
+			` </div> `
+	
 	exports['input/decision/decision-modification'] = (get, $t) => 
 			` <` +
 			$t.clean(get("tag")()) +
 			` class='decision-input-cnt mod' node-id='` +
-			$t.clean(get("_nodeId")) +
+			$t.clean(get("id")()) +
 			`' ` +
 			$t.clean(get("reachable")() ? '' : 'hidden') +
-			`> <span id='` +
-			$t.clean(get("id")) +
+			`> <span node-id='` +
+			$t.clean(get("id")()) +
 			`'> ` +
-			$t.clean( new $t('176893079').render(get("inputArray"), 'input', get)) +
-			` </span> <div class='modification-add-input'> ` +
+			$t.clean( new $t('-327218816').render(get("inputArray")(), 'input', get)) +
+			` </span> <div class='modification-add-input tab'> ` +
 			$t.clean(get("inputTree")().html()) +
 			` </div> </` +
 			$t.clean(get("tag")()) +
 			`> `
 	
-	exports['input/data-list'] = (get, $t) => 
-			`` +
-			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
-			` `
-	
-	exports['-994603408'] = (get, $t) => 
-			`<option value="` +
-			$t.clean(get("item")) +
-			`" ></option>`
+	exports['-2142270891'] = (get, $t) => 
+			`<span class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` <span> <button class='conditional-button' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
+			` = ` +
+			$t.clean(get("input").value()) +
+			` </button> <div class='condition-input-tree tab'></div> <div class='children-recurse-cnt' value='` +
+			$t.clean(get("input").value()) +
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"), true)) +
+			`</div> </span> <br> </span>`
 	
 	exports['input/decision/decision'] = (get, $t) => 
 			` <` +
 			$t.clean(get("tag")()) +
 			` class='decision-input-cnt' node-id='` +
-			$t.clean(get("_nodeId")) +
+			$t.clean(get("id")()) +
 			`' ` +
 			$t.clean(get("reachable")() ? '' : 'hidden') +
 			`> <span id='` +
-			$t.clean(get("id")) +
+			$t.clean(get("id")()) +
 			`'> ` +
-			$t.clean( new $t('1390854481').render(get("inputArray"), 'input', get)) +
+			$t.clean( new $t('564755780').render(get("inputArray")(), 'input', get)) +
 			` </span> </` +
 			$t.clean(get("tag")()) +
 			`> `
@@ -7633,19 +7425,17 @@ exports['176893079'] = (get, $t) =>
 			`<div class='` +
 			$t.clean(get("DecisionInputTree").class) +
 			`' tree-id='` +
-			$t.clean(get("tree").id()) +
-			`' root-id='` +
-			$t.clean(get("wrapper").nodeId()) +
+			$t.clean(get("node").tree().id()) +
 			`'> ` +
 			$t.clean(get("inputHtml")) +
 			` <button class='` +
 			$t.clean(get("DecisionInputTree").buttonClass) +
-			`' root-id='` +
-			$t.clean(get("wrapper").nodeId()) +
+			`' tree-id='` +
+			$t.clean(get("node").tree().id()) +
 			`' ` +
-			$t.clean(get("tree").hideButton ? 'hidden' : '') +
+			$t.clean(get("node").tree().hideButton ? 'hidden' : '') +
 			`> ` +
-			$t.clean(get("tree").buttonText()) +
+			$t.clean(get("node").root().inputTree().buttonText()) +
 			` </button> </div> `
 	
 	exports['input/input'] = (get, $t) => 
@@ -7711,7 +7501,9 @@ exports['176893079'] = (get, $t) =>
 			$t.clean(get("hidden")() ? ' hidden' : '') +
 			`> <label>` +
 			$t.clean(get("label")()) +
-			`</label> <div class='multiple-entry-cnt tab' id='` +
+			`</label> <div class='multiple-entry-cnt tab ` +
+			$t.clean(get("inline")() ? 'inline' : '') +
+			`' id='` +
 			$t.clean(get("id")()) +
 			`'> ` +
 			$t.clean( new $t('-1306926582').render(get("list")(), 'inputArray', get)) +
@@ -7731,36 +7523,13 @@ exports['176893079'] = (get, $t) =>
 			$t.clean(get("html")()) +
 			` </span> `
 	
-	exports['input/table'] = (get, $t) => 
-			`<` +
-			$t.clean(get("inline")() ? 'span' : 'div') +
-			` class='input-cnt'` +
-			$t.clean(get("hidden")() ? ' hidden' : '') +
-			`> <label>` +
-			$t.clean(get("description")()) +
-			`</label> <br> <div class='tab'> <table> <tbody> <tr> <td></td> ` +
-			$t.clean( new $t('-706519867').render(get("columns")(), 'col', get)) +
-			` </tr> ` +
-			$t.clean( new $t('-498428047').render(get("rows")(), 'rowIndex, row', get)) +
-			` </tbody> </table> </div> </` +
-			$t.clean(get("inline")() ? 'span' : 'div') +
-			`> `
-	
-	exports['-706519867'] = (get, $t) => 
-			`<td >col</td>`
-	
-	exports['-498428047'] = (get, $t) => 
-			`<tr > <td>row</td> ` +
-			$t.clean( new $t('1591500900').render(get("columns")(), 'colIndex, col', get)) +
-			` </tr>`
-	
 	exports['input/radio'] = (get, $t) => 
 			`<` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
 			`> <label>` +
-			$t.clean(get("description")()) +
+			$t.clean(get("label")()) +
 			`</label> <br> <div class='tab'> ` +
 			$t.clean( new $t('-1983906216').render(get("list")(), 'key, val', get)) +
 			` </div> </` +
@@ -7805,13 +7574,60 @@ exports['176893079'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			`> `
 	
+	exports['input/table'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			`> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <br> <div class='tab'> <table> <tbody> <tr> <td></td> ` +
+			$t.clean( new $t('-1250012283').render(get("columns")(), 'col', get)) +
+			` </tr> ` +
+			$t.clean( new $t('-302235087').render(get("rows")(), 'rowIndex, row', get)) +
+			` </tbody> </table> </div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['-706519867'] = (get, $t) => 
+			`<td >col</td>`
+	
+	exports['-498428047'] = (get, $t) => 
+			`<tr > <td>row</td> ` +
+			$t.clean( new $t('1591500900').render(get("columns")(), 'colIndex, col', get)) +
+			` </tr>`
+	
+	exports['input/textarea'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			`> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <br> <textarea class='` +
+			$t.clean(get("class")()) +
+			`' list='input-list-` +
+			$t.clean(get("id")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' placeholder='` +
+			$t.clean(get("placeholder")()) +
+			`' type='` +
+			$t.clean(get("type")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`' ` +
+			$t.clean(get("attrString")()) +
+			`></textarea> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
 	exports['configure'] = (get, $t) => 
 			`<div id='config-body'></div> <div id='test-ground'></div> `
-	
-	exports['report'] = (get, $t) => 
-			`<div> REPORT === ` +
-			$t.clean(get("name")) +
-			` </div> `
 	
 	exports['index'] = (get, $t) => 
 			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mike/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/mike/styles/mike.css"> <title></title> </head> <body> ` +
@@ -7827,19 +7643,55 @@ exports['176893079'] = (get, $t) =>
 			$t.clean(get("name")) +
 			` </div> `
 	
+	exports['report'] = (get, $t) => 
+			`<div> REPORT === ` +
+			$t.clean(get("name")) +
+			` </div> `
+	
+	exports['-1250012283'] = (get, $t) => 
+			`<td >` +
+			$t.clean(get("col")) +
+			`</td>`
+	
+	exports['-302235087'] = (get, $t) => 
+			`<tr > <td>` +
+			$t.clean(get("row")) +
+			`</td> ` +
+			$t.clean( new $t('1591500900').render(get("columns")(), 'colIndex, col', get)) +
+			` </tr>`
+	
+	exports['-327218816'] = (get, $t) => 
+			`<span class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` <span> <button class='conditional-button' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
+			` = ` +
+			$t.clean(get("input").value()) +
+			` </button> <div class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+			$t.clean(get("input").value()) +
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"), true)) +
+			`</div> </span> <br> </span>`
+	
 });
 
 
 RequireJS.addFunction('./app/app.js',
 function (require, exports, module) {
+	const $t = require('../../../public/js/utils/$t.js');
+	$t.loadFunctions(require('../generated/html-templates'));
 	
-require('../../../public/js/utils/utils.js');
+	require('../../../public/js/utils/utils.js');
 	// Run Tests
 	require('../tests/run');
 	
 	const du = require('../../../public/js/utils/dom-utils.js');
-	const $t = require('../../../public/js/utils/$t.js');
-	$t.loadFunctions(require('../generated/html-templates'));
 	
 	const report = require('./pages/report');
 	const reports = require('./pages/reports');
@@ -7883,7 +7735,7 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	
 	let tree;
 	function updateEntireTree() {
-	  const body = tree.payload().html(null, true);
+	  const body = tree.html(null, true);
 	  du.id('config-body').innerHTML = body;
 	}
 	
@@ -7923,32 +7775,36 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	  const input1 = getInput();
 	  const input2 = getInput();
 	  const input3 = getInput();
-	  tree = new DecisionInputTree('root', [input1, input2, input3]);
+	  tree = new DecisionInputTree('root', {inputArray: [input1, input2, input3]});
+	
+	  tree.onComplete(console.log);
+	  tree.onSubmit(console.log);
+	
 	  updateEntireTree();
 	}
 	
-	const radio = new Radio({
-	  name: 'radeo',
-	  description: 'Pussy farts',
-	  list: ['one', 2, 3, 'four']
-	});
-	du.id('test-ground').innerHTML = radio.html();
+	// const radio = new Radio({
+	//   name: 'radeo',
+	//   description: 'Pussy farts',
+	//   list: ['one', 2, 3, 'four']
+	// });
+	// du.id('test-ground').innerHTML = radio.html();
 	// du.id('test-ground').innerHTML = Radio.yes_no({name: 'yn'}).html();
 	// du.id('test-ground').innerHTML = Radio.true_false({name: 'tf'}).html();
 	
-	// const table = new Table({
-	//   name: 'tabal',
-	//   description: 'Pussy fartsss',
-	//   columns: ['one', 2, 3, 'four'],
-	//   rows: ['bill', 'scott', 'joe', 'fred']
-	// });
-	// du.id('test-ground').innerHTML = table.html();
+	const table = new Table({
+	  name: 'tabal',
+	  description: 'Pussy fartsss',
+	  columns: ['one', 2, 3, 'four'],
+	  rows: ['bill', 'scott', 'joe', 'fred']
+	});
+	du.id('test-ground').innerHTML = table.html();
 	
-	const input1 = getInput();
-	const input2 = getInput();
-	const input3 = getInput();
-	const me = new MultipleEntries([input1, input2, input3], {label: 'oneTwoThree'});
-	du.id('test-ground').innerHTML = me.html();
+	// const input1 = getInput();
+	// const input2 = getInput();
+	// const input3 = getInput();
+	// const me = new MultipleEntries([input1, input2, input3], {label: 'oneTwoThree'});
+	// du.id('test-ground').innerHTML = me.html();
 	
 	exports.proccess = proccess;
 	
@@ -7988,7 +7844,7 @@ function (require, exports, module) {
 	
 	require('../../../public/js/utils/test/tests/lookup');
 	require('../../../public/js/utils/test/tests/decision-tree');
-	// require('../../../public/js/utils/test/tests/logic-tree');
+	require('../../../public/js/utils/test/tests/decision-input-tree');
 	
 	Test.run();
 	

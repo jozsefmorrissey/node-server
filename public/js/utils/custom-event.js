@@ -17,6 +17,7 @@ class CustomEvent {
     });
 
 
+    this.watchers = () => watchers;
     this.on = function (func) {
       if ((typeof func) === 'function') {
         watchers.push(func);
@@ -29,10 +30,12 @@ class CustomEvent {
       element = element ? element : window;
       runFuncs(element, detail);
       this.event.detail = detail;
-      if(document.createEvent){
+      if (element instanceof HTMLElement) {
+        if(document.createEvent){
           element.dispatchEvent(this.event);
-      } else {
+        } else {
           element.fireEvent("on" + this.event.eventType, this.event);
+        }
       }
     }
 //https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript

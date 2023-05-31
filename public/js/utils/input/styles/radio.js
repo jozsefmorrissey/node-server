@@ -15,6 +15,7 @@ class Radio extends Input {
       value = props.value || key;
     }
     props.value = undefined;
+
     this.setValue(value);
     this.isArray = () => isArray;
     this.list = () => props.list;

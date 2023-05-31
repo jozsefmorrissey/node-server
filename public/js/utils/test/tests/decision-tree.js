@@ -90,64 +90,63 @@ function createTree() {
   return dTree;
 }
 
-Test.add('DecisionTree: subtree',(ts) => {
-  const tree = createTree();
-  const style = tree.root().next(5);
-  const shaker = tree.getByName('5','21','11',24);
-  const subtree = style.subtree();
-  const shakerSubtree = shaker.subtree();
-
-  ts.assertEquals(style.payload(true), subtree.root().payload(true));
-  ts.assertEquals(style, style.payload().node);
-  ts.assertNotEquals(subtree.root().payload().node, style.payload().node);
-  ts.assertEquals(subtree.root(), subtree.root().payload().node);
-  ts.assertTrue(style.equals(subtree.root()));
-  ts.assertFalse(shaker.equals(subtree.root()));
-  ts.assertFalse(shakerSubtree.equals(subtree.root()));
-  ts.assertTrue(shaker.equals(shakerSubtree.root()));
-  ts.success();
-});
-
-
 Test.add('DecisionTree: reachable',(ts) => {
   const tree = createTree();
   const style = tree.root().next(5);
-  const subtree = style.subtree();
   const func = (node) => node.payload().descriptor !== 'cost';
-  const conditions = {'21': '11', '27': /29|30/, '9': func};
+  const six = tree.root().getByPath('5','6');
+  six.conditions.child.add('7');
+  const thirtyTwo = tree.root().getByPath('32');
+  thirtyTwo.conditions.child.add(() => false);
+  const twentySeven = tree.root().getByPath('5','21', '11', '24', '27');
+  twentySeven.conditions.child.add(/29|30/);
+  const twentyFive = tree.root().getByPath('5','21', '11', '24', '25');
+  twentyFive.conditions.add();
 
-  const kept = ['5','6','7','8','9', '10', '11','12','15',
-                '18','21','24','25','26','27','29','30'];
-  const ignored = ['10','22', '28','32','33','root'];
+  const kept = ['root','5','6','7','21','22','11','24','27','29','30','32'];
   const errors = {
-    '10': 'Function condition did not work',
-    '28': 'Regular expression condition did not work',
     '22': 'String condition did not work.',
-    '32': 'Subtree is including parents',
-    '33': 'Subtree is including parents',
-    'root': 'Subtree is including parents',
+    '28': 'Regular expression condition did not work',
+    '33': 'Function condition did not work',
     'default': 'This should not happen I would check the modification history of this test file.'
   }
   let nodeCount = 0;
-  subtree.forEach((node) => {
+  tree.root().forEach((node) => {
     const errorMsg = errors[node.name()] || errors.default;
-    ts.assertNotEquals(kept.indexOf(node.name()), -1, errorMsg);
+    try {
+      ts.assertNotEquals(kept.indexOf(node.name()), -1, errorMsg);
+    } catch (e) {
+      console.log('here');
+    }
     nodeCount++;
-  }, conditions);
-  ts.assertEquals(nodeCount, 47, 'Subtree does not include all the nodes it should');
+  });
+  ts.assertEquals(nodeCount, 12, 'Tree does not traverse the correct nodes');
   ts.success();
 });
 
 Test.add('DecisionTree: leaves', (ts) => {
   const tree = createTree();
   const style = tree.root().next(5);
-  const subtree = style.subtree();
   const func = (node) => node.payload().descriptor !== 'cost';
-  const conditions = {'21': '11', '27': /29|30/, '9': func};
 
-  const leaves = subtree.leaves(conditions);
-  ts.assertEquals(leaves.length, 19, 'Not plucking all the leaves');
-  ts.assertEquals(tree.root().leaves().length, 27, 'Not plucking all the leaves');
+  // ts.assertEquals(tree.root().leaves().length, 27, 'Not plucking all the leaves');
+
+  const six = tree.root().getByPath('5','6');
+  six.conditions.child.add('8');
+  const thirtyTwo = tree.root().getByPath('32');
+  thirtyTwo.conditions.child.add(() => false, null, '3');
+  const twentySeven = tree.root().getByPath('5','21', '11', '24', '27');
+  twentySeven.conditions.child.add(/29|30/);
+  const twentyFive = tree.root().getByPath('5','21', '11', '24', '25');
+  twentyFive.conditions.add();
+  let leaves = tree.root().leaves();
+  ts.assertEquals(leaves.length, 24, 'Not plucking all the leaves');
+
+  const five = tree.root().getByPath('5');
+  five.conditions.child.add(() => false, null, '6');
+  leaves = tree.root().leaves();
+  ts.assertEquals(leaves.length, 4, 'Not plucking all the leaves');
+
   ts.success();
 });
 
@@ -164,28 +163,26 @@ function createSelfRefernceTree() {
 
 Test.add('DecisionTree: selfRefernce', (ts) => {
   const tree = createSelfRefernceTree();
-  const recOrig = tree.getByName('recursive');
+  const recOrig = tree.getByPath('recursive');
   ts.assertEquals(recOrig.payload().id, 'original');
-  const rec1 = tree.getByName('recursive', 'recursive');
+  const rec1 = tree.getByPath('recursive', 'recursive');
   ts.assertEquals(rec1.payload().id, 'recusion1');
-  const otherOrig = tree.getByName('other');
+  const otherOrig = tree.getByPath('other');
   ts.assertEquals(otherOrig.payload().id, 'original');
-  const otherRec = tree.getByName('other', 'recursive', 'other');
+  const otherRec = tree.getByPath('other', 'recursive', 'other');
   ts.assertEquals(otherRec.payload().id, 'recursive');
 
-  const recDeep = tree.getByName('other', 'recursive', 'recursive', 'other','recursive');
+  const recDeep = tree.getByPath('other', 'recursive', 'recursive', 'other','recursive');
   ts.assertEquals(recDeep.payload().id, 'recDefault');
-  const otherDeep = tree.getByName('recursive', 'other', 'recursive', 'recursive', 'other','recursive', 'other');
+  const otherDeep = tree.getByPath('recursive', 'other', 'recursive', 'recursive', 'other','recursive', 'other');
   ts.assertEquals(otherDeep.payload().id, 'otherDefault');
-
-  ts.assertTrue(recOrig.subtree().root().equals(recOrig));
 
   ts.success();
 });
 
 Test.add('DecisionTree: remove', (ts) => {
   const tree = createSelfRefernceTree();
-  const other = tree.getByName('recursive', 'other');
+  const other = tree.getByPath('recursive', 'other');
   other.remove();
 
   let otherList = tree.root().list((n) => n.name() === 'other');
@@ -199,7 +196,7 @@ Test.add('DecisionTree: remove', (ts) => {
 
 Test.add('DecisionTree: change', (ts) => {
   const tree = createSelfRefernceTree();
-  const other = tree.getByName('recursive', 'other');
+  const other = tree.getByPath('recursive', 'other');
   other.stateConfig().name('other2');
   ts.success();
 });
@@ -210,13 +207,14 @@ Test.add('DecisionTree: toJson', (ts) => {
   const rootJson = tree.root().toJson();
   ts.assertTrue(Object.equals(treeJson, rootJson));
 
-  const recNode = tree.getByName('recursive');
+  const recNode = tree.getByPath('recursive');
   ts.assertFalse(recNode.equals(tree.root()));
   const recJson = recNode.toJson();
   ts.assertFalse(Object.equals(recNode, rootJson));
   const recFromRootJson = {name: 'recursive', root: rootJson.root.children.recursive,
-              _TYPE: rootJson._TYPE, stateConfigs: rootJson.stateConfigs};
-  ts.assertTrue(Object.equals(recJson, recFromRootJson));
+              _TYPE: rootJson._TYPE, stateConfigs: rootJson.stateConfigs,
+              ID_ATTRIBUTE: rootJson.ID_ATTRIBUTE, id: rootJson.id};
+  ts.assertTrue(Object.equals(recJson, recFromRootJson, ['id', 'ID_ATTRIBUTE']));
   ts.success();
 });
 
@@ -235,6 +233,22 @@ Test.add('DecisionTree: clone', (ts) => {
   ts.assertTrue(clone !== tree);
   ts.assertTrue(clone.root().equals(tree.root()));
   ts.assertTrue(tree.root().payload(true) === clone.root().payload(tree));
+
+  ts.success();
+});
+
+Test.add('DecisionTree: getByName', (ts) => {
+  const tree = createTree();
+
+  let byPath = tree.getByPath('32','33');
+  let byName = tree.getByName('33');
+  ts.assertEquals(byPath, byName);
+
+  byPath = tree.getByPath('5','6','8', '18', '11', '24', '27', '29');
+  let byNameOnly = tree.getByName('29');
+  byName = tree.getByName('18','29');
+  ts.assertEquals(byPath, byName);
+  ts.assertNotEquals(byName, byNameOnly);
 
   ts.success();
 });

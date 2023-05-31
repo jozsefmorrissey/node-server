@@ -238,8 +238,11 @@ clazz.filter = (filterFunc) => {
 
 function objEq(obj1, obj2, ignoreKeys) {
   ignoreKeys ||= [];
-  if (!(obj1 instanceof Object)) return false;
-  if (!(obj2 instanceof Object)) return false;
+  const notObj1 = !(obj1 instanceof Object);
+  const notObj2 = !(obj2 instanceof Object);
+  if (notObj1 && notObj2) return obj1 === obj2;
+  if (notObj1) return false;
+  if (notObj2) return false;
   const filter = key => ignoreKeys.indexOf(key) === -1;
   const obj1Keys = Object.keys(obj1).sort().filter(filter);
   const obj2Keys = Object.keys(obj2).sort().filter(filter);
@@ -274,6 +277,7 @@ Function.safeStdLibAddition(Object, 'merge', (target, object, soft) => {
       target[key] = object[key];
     }
   }
+  return target;
 }, true);
 
 Function.safeStdLibAddition(Object, 'forAllRecursive', (object, func) => {
@@ -401,6 +405,14 @@ Function.safeStdLibAddition(Array, 'reorder', function () {
 Function.safeStdLibAddition(Array, 'toJson', function (arr) {
     const json = [];
     arr.forEach((elem) => json.push(processValue(elem)));
+    return json;
+}, true);
+
+Function.safeStdLibAddition(Object, 'toJson', function (obj) {
+    if (!(obj instanceof Object)) throw new Error('Not an Object');
+    const json = Array.isArray(obj) ? [] : {};
+    const keys = Object.keys(obj);
+    keys.forEach((key) => json[key] = processValue(obj[key]));
     return json;
 }, true);
 
@@ -665,7 +677,7 @@ function setClone(obj, options) {
   const cxtrFromJson = obj.constructor.fromJson;
   if (obj.constructor.DO_NOT_CLONE) {
     obj.clone = () => obj;
-  } else if (cxtrFromJson !== Object.fromJson) {
+  } else if (cxtrFromJson && cxtrFromJson !== Object.fromJson) {
     obj.clone = () => cxtrFromJson(obj.toJson());
   } else if (options.isObject) {
     setFromJson(obj, options);

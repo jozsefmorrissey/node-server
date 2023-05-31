@@ -13,6 +13,10 @@
   margin-bottom: 0;
 }
 
+.inline {
+  display: inline-flex;
+}
+
 @media print {
   .dont-print {
     display: none;
