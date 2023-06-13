@@ -1,0 +1,21 @@
+<{{inline() ? 'span' : 'div'}}  class='input-cnt'{{hidden() ? ' hidden' : ''}}
+      input-id={{id()}}>
+  <label>{{label()}}</label>
+  <br>
+  <div class='tab'>
+    <table border="1">
+      <tbody>
+        <tr>
+          <td></td>
+          <td:t repeat='name in columnNames()'>{{name}}</td:t>
+        </tr>
+        <tr:t repeat='rowIndex, row in rows()'>
+          <td>{{row}}</td>
+          <td:t repeat='col in columns(rowIndex)'>
+            {{col.html()}}
+          </td:t>
+        </tr:t>
+      </tbody>
+    </table>
+  </div>
+</{{inline() ? 'span' : 'div'}}>

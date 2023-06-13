@@ -1,0 +1,9 @@
+<div class='input-cnt{{inline() ? ' inline' : ''}}'{{hidden() ? ' hidden' : ''}}
+      input-id={{id()}}>
+  <label>{{label()}}</label>
+  <div:t id="input-input-list-{{id()}}" repeat='input in list()'>
+    {{input.html()}}
+    <br>
+  </div:t>
+  <div class='error' id='{{errorMsgId()}}' hidden>{{errorMsg()}}</div>
+</div>

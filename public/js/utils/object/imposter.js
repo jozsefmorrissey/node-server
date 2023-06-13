@@ -1,19 +1,16 @@
 
 class Imposter {
-  constructor(object, cuckooEggs) {
-    let imposter = this;
-    try {
-      imposter = new (object.constructor)();
-    } catch (e) {}
+  constructor(object, cuckooEggs, ...args) {
+    const imposter = new (object.constructor)(...args);
     cuckooEggs ||= {};
-    const cuckooKeys = Object.keys(cuckooEggs);
+    const cuckooKeys = Object.getOwnPropertyNames(cuckooEggs);
 
     const keys = Object.definedPropertyNames(object);
     for (let index = 0; index < keys.length; index++) {
       const key = keys[index];
-      if (cuckooEggs[key] === undefined) {
+      if (cuckooKeys.indexOf(key) === -1) {
         if ((typeof object[key]) === 'function') {
-          imposter[key] = object[key];
+          imposter[key] = (...args) => object[key].apply(object, args);
         } else {
           Object.defineProperty(imposter, key, {
             get() {

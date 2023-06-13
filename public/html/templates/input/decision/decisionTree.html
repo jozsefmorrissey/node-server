@@ -1,7 +1,11 @@
-<div class='{{DecisionInputTree.class}}' root-id='{{wrapper.nodeId()}}'>
+<div class='{{node.tree().class()}} {{DecisionInputTree.class}}' tree-id='{{node.tree().id()}}'
+      input-id={{node.tree().id()}} node-id='{{node.id()}}'>
+  {{header}}
   {{inputHtml}}
-  <button class='{{DecisionInputTree.buttonClass}}' root-id='{{wrapper.nodeId()}}'
-        {{tree.hideButton ? 'hidden' : ''}}>
-    {{tree.buttonText()}}
-  </button>
+  <div {{node.tree().hideButton ? 'hidden' : ''}}>
+    <br>
+    <button class='{{node.tree().buttonClass()}} {{DecisionInputTree.buttonClass}}' tree-id='{{node.tree().id()}}'>
+      {{node.tree().buttonText()}}
+    </button>
+  </div>
 </div>

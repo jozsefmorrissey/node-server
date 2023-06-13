@@ -1,0 +1,9 @@
+<{{inline() ? 'span' : 'div'}} class='input-cnt'{{hidden() ? ' hidden' : ''}}
+      input-id={{id()}}>
+  <label>{{label()}}</label>
+  <br>
+  <textarea class='{{class()}}' list='input-list-{{id()}}' id='{{id()}}'
+      placeholder='{{placeholder()}}' type='{{type()}}' name='{{name()}}'
+      {{attrString()}}></textarea>
+  <div class='error' id='{{errorMsgId()}}' hidden>{{errorMsg()}}</div>
+</{{inline() ? 'span' : 'div'}}>

@@ -17,10 +17,9 @@ const ThreeDMain = require('../displays/three-d-main.js');
 const currentStyleState = {};
 
 function disableButton(values, dit, elem) {
-  const nId = dit.node.constructor.decode(dit.root().id()).id;
+  const nId = dit.root().id();
   const currState = currentStyleState[nId];
-  const rootId = dit.node.constructor.decode(dit.root().id()).id;
-  const button = du.find(`button[root-id='${rootId}']`);
+  const button = du.find(`button[tree-id='${dit.id()}']`);
   if (button) button.hidden = Object.equals(currState, values);
   const headers = du.find.downAll('.group-header', du.find.up('.group-cnt', button));
   headers.forEach((header) => {

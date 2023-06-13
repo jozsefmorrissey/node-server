@@ -37,7 +37,7 @@ CostManager.headTemplate = new $t('managers/cost/head');
 CostManager.bodyTemplate = new $t('managers/cost/body');
 CostManager.propertySelectTemplate = new $t('managers/cost/property-select');
 CostManager.costInputTree = (costTypes, objId, onUpdate) => {
-  const logicTree = new LogicTree();
+  const logicTree = new LogicMap();
   return logicTree;
 }
 CostManager.nodeInput = () => {

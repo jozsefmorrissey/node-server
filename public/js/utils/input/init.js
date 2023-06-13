@@ -1,0 +1,9 @@
+Object.class.register(require('./decision/decision'));
+Object.class.register(require('./styles/multiple-entries'));
+Object.class.register(require('./styles/textarea'));
+Object.class.register(require('./styles/measurement'));
+Object.class.register(require('./styles/radio'));
+Object.class.register(require('./styles/select'));
+Object.class.register(require('./styles/table'));
+Object.class.register(require('./styles/list'));
+Object.class.register(require('./styles/select/relation'));

@@ -6,14 +6,11 @@ class IdString extends String {
       id += `${ids[index]}_`;
     }
     id = id.substring(0, id.length - 1);
-    if (id.length === 0) {
-      console.warn('Not sure if this is a problem');
-    }
     super(id);
     this.split = () => {
       return id.split('_');
     }
-    this.toJson = () => new String(id);
+    this.toJson = () => new String(id).toString();
     this.index = (index) => this.split().at(index);
     this.equals = (other) => `${this}` ===`${other}`;
     this.equivalent = (other, ...indicies) => {
@@ -33,6 +30,10 @@ class IdString extends String {
 
 class Lookup {
   constructor(id, attr, singleton) {
+    if (id && id._TYPE) {
+      attr = id.ID_ATTRIBUTE;
+      id = id.id;
+    }
     Lookup.convert(this, attr, id, singleton);
   }
 }
@@ -56,7 +57,10 @@ Lookup.convert = function (obj, attr, id, singleton) {
   let constructedAt = new Date().getTime();
   let modificationWindowOpen = true;
   attr = attr || 'id';
-    Object.getSet(obj, attr, Lookup.ID_ATTRIBUTE);
+  if (obj.constructor.name === 'Object' && !obj.toJson) {
+    obj.toJson = () => JSON.copy(obj);
+  }
+  Object.getSet(obj, attr, Lookup.ID_ATTRIBUTE);
   obj.lookupGroup = (g) => {
     if (group === undefined && g !== undefined) {
       if (Lookup.groups[g] === undefined) Lookup.groups[g] = [];
@@ -100,11 +104,13 @@ Lookup.convert = function (obj, attr, id, singleton) {
   }
 
   function addSelectListFuncToConstructor() {
-    if(cxtr.selectList === Lookup.selectList) {
-      cxtr.get = (id) => Lookup.get(id, cxtr);
-      if (cxtr.instance === undefined) cxtr.instance = () => Lookup.instance(cxtr.name);
-      Lookup.byId[cxtr.name] = {};
-      cxtr.selectList = () => Lookup.selectList(cxtr.name);
+    if (cxtr !== Lookup) {
+      if(cxtr.selectList === Lookup.selectList) {
+        cxtr.get = (id) => Lookup.get(id, cxtr);
+        if (cxtr.instance === undefined) cxtr.instance = () => Lookup.instance(cxtr.name);
+        Lookup.byId[cxtr.name] = {};
+        cxtr.selectList = () => Lookup.selectList(cxtr.name);
+      }
     }
   }
 
@@ -112,13 +118,16 @@ Lookup.convert = function (obj, attr, id, singleton) {
   addSelectListFuncToConstructor();
 
 
-  Lookup.byId[cxtrName][id.index(-1)] = obj;
+  if (!Lookup.byId[cxtrName][id.index(-1)])
+    Lookup.byId[cxtrName][id.index(-1)] = obj;
+  else
+    console.warn(`Lookup id '${id}' object has been created more than once.`);
   if (obj.toString === undefined) obj.toString = () => obj[attr]();
 }
 
 Lookup.ID_ATTRIBUTE = 'ID_ATTRIBUTE';
 Lookup.byId = {Lookup};
-Lookup.constructorMap = {};
+Lookup.constructorMap = {Lookup: Lookup};
 Lookup.groups = {};
 Lookup.freeAgents = {};
 
@@ -149,7 +158,7 @@ Lookup.instance = (cxtrName) => {
   return agent;
 }
 Lookup.decode = (id) => {
-  if ((typeof id) === 'string') id = new IdString(id);
+  if ((typeof id) === 'string') id = new IdString(...id.split('_'));
   if (!(id instanceof IdString)) return;
   const cxtrId = id.index(0);
   const objId = id.index(-1);
@@ -165,6 +174,24 @@ Lookup.release = (group) => {
   for (let index = 0; index < groupList.length; index += 1) {
     groupList[index].release();
   }
+}
+
+Lookup.fromJson = (json) => {
+  const attr = json[Lookup.ID_ATTRIBUTE];
+  if (attr) {
+    const obj = Lookup.get(json[attr]);
+    if(obj) return obj;
+  }
+
+  const type = json._TYPE;
+  if (type && type === 'Lookup') return new Lookup(json);
+  const obj = Object.fromJson(json);
+  if (obj instanceof Lookup) return obj;
+  if (attr) {
+    Lookup.convert(obj, obj[attr], attr)
+    return obj;
+  }
+  return null;
 }
 
 try {

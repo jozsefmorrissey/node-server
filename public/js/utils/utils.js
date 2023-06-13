@@ -122,6 +122,9 @@ Function.safeStdLibAddition(Object, 'map',   function (obj, func) {
   return map;
 }, true);
 
+Function.safeStdLibAddition(Object, 'hash',
+  (obj) => JSON.stringify(obj === undefined ? 'undefined' : obj).hash(), true);
+
 function processValue(value) {
   let retVal;
   if ((typeof value) === 'object' && value !== null) {
@@ -345,8 +348,6 @@ function objEq(obj1, obj2) {
   const obj1Keys = Object.keys(obj1).filter(filterOutUndefined(obj1));
   const obj2Keys = Object.keys(obj2).filter(filterOutUndefined(obj2));
   if (obj1Keys.length !== obj2Keys.length) return false;
-  obj1Keys.sort();
-  obj2Keys.sort();
   for (let index = 0; index < obj1Keys.length; index += 1) {
     const obj1Key = obj1Keys[index];
     const obj2Key = obj2Keys[index];
@@ -354,7 +355,14 @@ function objEq(obj1, obj2) {
     const obj1Val = obj1[obj1Key];
     const obj2Val = obj2[obj2Key];
     if (obj1Val instanceof Object) {
-      if (!Object.equals(obj1Val, obj2Val)) return false;
+      if ((typeof obj1Val.equals) !== 'function') {
+        if(!objEq(obj1Val, obj2Val)) {
+          console.log('failed!')
+          objEq(obj1Val, obj2Val)
+          return false;
+        }
+      }
+      else if (!obj1Val.equals(obj2Val)) return false;
     } else if (obj1[obj1Key] !== obj2[obj2Key]) return false;
   }
   return true;
@@ -375,6 +383,7 @@ Function.safeStdLibAddition(Object, 'merge', (target, object, soft) => {
       target[key] = value;
     }
   }
+  return target;
 }, true);
 
 Function.safeStdLibAddition(Object, 'merge', function () {
@@ -541,6 +550,14 @@ Function.safeStdLibAddition(Array, 'reorder', function () {
 Function.safeStdLibAddition(Array, 'toJson', function (arr) {
     const json = [];
     arr.forEach((elem) => json.push(processValue(elem)));
+    return json;
+}, true);
+
+Function.safeStdLibAddition(Object, 'toJson', function (obj) {
+    if (!(obj instanceof Object)) throw new Error('Not an Object');
+    const json = Array.isArray(obj) ? [] : {};
+    const keys = Object.keys(obj);
+    keys.forEach((key) => json[key] = processValue(obj[key]));
     return json;
 }, true);
 
@@ -721,69 +738,19 @@ Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
   return interpretValue(rootJson);
 }, true);
 
-Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
-  const cxtrName = obj.constructor.name;
-  if (classLookup[cxtrName] === undefined) {
-    classLookup[cxtrName] = obj.constructor;
-  } else if (classLookup[cxtrName] !== obj.constructor) {
-    console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
-  }
-  if (initialVals === undefined) return;
-  if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
-  let values = {};
-  let temporary = false;
-  let immutable = false;
-  let doNotOverwrite = false;
-  if ((typeof initialVals) === 'object') {
-    values = initialVals;
-    immutable = values[immutableAttr] === true;
-    temporary = values[temporaryAttr] === true;
-    doNotOverwrite = values[doNotOverwriteAttr] === true;
-    if (immutable) {
-      attrs = Object.keys(values);
-    } else {
-      attrs = Object.keys(values).concat(attrs);
-    }
-  } else {
-    attrs = [initialVals].concat(attrs);
-  }
-  if (attrMap[cxtrName] === undefined) attrMap[cxtrName] = [];
-  attrs.forEach((attr) => {
-    if (!attr.match(/^_[A-Z]*[A-Z_]*$/))
-      attrMap[cxtrName][attr] = true;
-  });
-
-  for (let index = 0; !doNotOverwrite && index < attrs.length; index += 1) {
-    const attr = attrs[index];
-    if (attr !== immutableAttr) {
-      if (immutable) obj[attr] = () => values[attr];
-      else {
-        obj[attr] = (value) => {
-          if (value === undefined) {
-            const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
-            if (values[attr] !== undefined || noDefaults)
-            return values[attr];
-            return obj.defaultGetterValue(attr);
-          }
-          return values[attr] = value;
-        }
-      }
-    }
-  }
-  if (!temporary) {
+function setToJson(obj, options) {
+  if (!options.temporary) {
     const origToJson = obj.toJson;
     obj.toJson = (members, exclusive) => {
       try {
         const restrictions = Array.isArray(members) && members.length;
         const json = (typeof origToJson === 'function') ? origToJson() : {};
-        json[identifierAttr] = obj.constructor.name;
-        for (let index = 0; index < attrs.length; index += 1) {
-          const attr = attrs[index];
+        if (!options.isObject) json[identifierAttr] = obj.constructor.name;
+        for (let index = 0; index < options.attrs.length; index += 1) {
+          const attr = options.attrs[index];
           const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
           const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
           if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
-            // if (obj.constructor.name === 'SnapLocation2D')
-            //   console.log('foundit!');
             const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
             json[attr] = processValue(value);
           }
@@ -796,9 +763,12 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
       }
     }
   }
+}
+
+function setFromJson(obj, options) {
   obj.fromJson = (json) => {
-    for (let index = 0; index < attrs.length; index += 1) {
-      const attr = attrs[index];
+    for (let index = 0; index < options.attrs.length; index += 1) {
+      const attr = options.attrs[index];
       if (attr !== immutableAttr) {
         if ((typeof obj[attr]) === 'function') {
           if(Array.isArray(obj[attr]())){
@@ -813,16 +783,100 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
     };
     return obj;
   }
+}
+
+function setClone(obj, options) {
+  const cxtrFromJson = obj.constructor.fromJson;
   if (obj.constructor.DO_NOT_CLONE) {
     obj.clone = () => obj;
+  } else if (cxtrFromJson && cxtrFromJson !== Object.fromJson) {
+    obj.clone = () => cxtrFromJson(obj.toJson());
+  } else if (options.isObject) {
+    setFromJson(obj, options);
+    obj.clone = () => {
+      const clone = Object.fromJson(obj.toJson());
+      Object.getSet(clone, clone);
+      return clone;
+    }
   } else {
     obj.clone = () => {
       const clone = new obj.constructor(obj.toJson());
+      setFromJson(obj, options);
       clone.fromJson(obj.toJson());
       return clone;
     }
   }
-  return attrs;
+}
+
+function getOptions(obj, initialVals, attrs) {
+  const options = {};
+  options.temporary = false;
+  options.immutable = false;
+  options.doNotOverwrite = false;
+  if ((typeof initialVals) === 'object') {
+    options.values = initialVals;
+    options.immutable = options.values[immutableAttr] === true;
+    options.temporary = options.values[temporaryAttr] === true;
+    options.doNotOverwrite = options.values[doNotOverwriteAttr] === true;
+    if (options.immutable) {
+      options.attrs = Object.keys(options.values);
+    } else {
+      options.attrs = Object.keys(options.values).concat(attrs);
+    }
+  } else {
+    options.values = {};
+    options.attrs = [initialVals].concat(attrs);
+  }
+  return options;
+}
+
+function setGettersAndSetters(obj, options) {
+  for (let index = 0; !options.doNotOverwrite && index < options.attrs.length; index += 1) {
+    const attr = options.attrs[index];
+    if (attr !== immutableAttr) {
+      if (options.immutable) obj[attr] = () => options.values[attr];
+      else {
+        obj[attr] = (value) => {
+          if (value === undefined) {
+            const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
+            if (options.values[attr] !== undefined || noDefaults)
+            return options.values[attr];
+            return obj.defaultGetterValue(attr);
+          }
+          return options.values[attr] = value;
+        }
+      }
+    }
+  }
+}
+
+// TODO: test/fix for normal Object(s);
+Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
+  const cxtrName = obj.constructor.name;
+  const isObject = cxtrName === 'Object'
+  if (!isObject) {
+    if (classLookup[cxtrName] === undefined) {
+      classLookup[cxtrName] = obj.constructor;
+    } else if (classLookup[cxtrName] !== obj.constructor) {
+      console.warn(`Object.fromJson will not work for the following class due to name conflict\n\taffected class: ${obj.constructor}\n\taready registered: ${classLookup[cxtrName]}`);
+    }
+  }
+  if (initialVals === undefined) return;
+  if (!(obj instanceof Object)) throw new Error('arg0 must be an instace of an Object');
+  const options = getOptions(obj, initialVals, attrs);
+  options.isObject = isObject;
+  if (!isObject) {
+    if (attrMap[cxtrName] === undefined) attrMap[cxtrName] = [];
+    options.attrs.forEach((attr) => {
+      if (!attr.match(/^_[A-Z]*[A-Z_]*$/))
+        attrMap[cxtrName][attr] = true;
+    });
+  }
+
+  setGettersAndSetters(obj, options);
+  setToJson(obj, options);
+  setClone(obj, options);
+  return options.attrs;
 }, true);
 Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
 
@@ -895,6 +949,21 @@ Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
   }
   return clone;
 }, true);
+
+Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
+  if (!(obj instanceof Object)) return obj;
+  return JSON.parse(JSON.stringify(obj));
+}, true);
+
+Function.safeStdLibAddition(Array, 'idObject',   function  (idAttr) {
+  const obj = {};
+  for (let index = 0; index < this.length; index++) {
+    const elem = this[index];
+    const id = (typeof elem[idAttr] === 'function') ? elem[idAttr]() : elem[idAttr];
+    obj[id] = elem;
+  }
+  return obj;
+});
 
 const defaultInterval = 1000;
 const lastTimeStamps = {};

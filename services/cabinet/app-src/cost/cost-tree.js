@@ -1,8 +1,8 @@
 
 const Properties = require('../config/properties.js');
 const Assembly = require('../objects/assembly/assembly.js');
-const LogicTree = require('../../../../public/js/utils/logic-tree.js');
-const LogicWrapper = LogicTree.LogicWrapper;
+const LogicMap = require('../../../../public/js/utils/logic-tree.js');
+const LogicWrapper = LogicMap.LogicWrapper;
 
 class CostDecision {
   constructor(type, name, relation, formula) {
@@ -49,7 +49,7 @@ CostTree.propertyList = Properties.all();
 CostTree.types = ['branch', 'select', 'conditional', 'multiselect', 'leaf'];
 CostTree.suplement = (logicTree) => {
   if (!(logicTree instanceof LogicWrapper)) {
-    logicTree = new LogicTree();
+    logicTree = new LogicMap();
     logicTree.branch('root');
   }
   const root = logicTree.root();

@@ -1,0 +1,31 @@
+
+<div class='decision-input-cnt mod' node-id='{{id()}}' {{reachable() ? '' : 'hidden'}}>
+  <div node-id='{{id()}}' class='card'>
+    <div class='payload-cnt'>{{payloadHtml()}}</div>
+    <button class='then-button modify'>
+      Then...
+    </button>
+    <div class='then-input-tree tab'></div>
+    <div:t repeat='input in inputArray()'
+          class='decision-input-array-cnt pad {{class}}' index='{{$index}}'>
+      {{input.html()}}
+      <div class='edit-input-cnt'><button>
+        <i class="fas fa-pencil-alt"></i>
+      </button></div>
+      <span>
+        <button class='conditional-button modify' target-id='{{input.id()}}'>
+          If {{input.name()}}
+        </button>
+        <div hidden class='condition-input-tree tab'></div>
+        <div class='children-recurse-cnt tab' value='{{input.value()}}'>{{childrenHtml($index, true)}}</div>
+      </span>
+    </div:t>
+    <div class='tab'>{{childrenHtml(-1, true)}}</div>
+    <br>
+    <br>
+    <div class='modification-add-input tab'>
+      {{inputTree().html()}}
+    </div>
+    <div class='remove-btn-cnt'><button class='rm-node'>X</button></div>
+  </div>
+</div>

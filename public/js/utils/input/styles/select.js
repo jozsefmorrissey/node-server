@@ -8,6 +8,7 @@ const $t = require('../../$t');
 
 class Select extends Input {
   constructor(props) {
+    props ||= {};
     super(props);
     if (props.list === undefined) props.list = [];
     const isArray = Array.isArray(props.list);
@@ -29,10 +30,12 @@ class Select extends Input {
     const parentHidden = this.hidden;
     this.hidden = () => props.list.length < 2 || parentHidden();
 
+    this.empty = () => true;
     this.selected = (value) => value === this.value();
   }
 }
 
+new Select();
 Select.template = new $t('input/select');
 Select.html = (instance) => () => Select.template.render(instance);
 
