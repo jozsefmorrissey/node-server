@@ -23,6 +23,7 @@ errorMsg: Message that shows when validation fails.
 */
 class Input extends Lookup {
   constructor(props) {
+    props ||= {};
     const id = props.id || `input-${String.random(7)}`;
     super(id);
     props.hidden = props.hide || false;
@@ -39,12 +40,20 @@ class Input extends Lookup {
     }
     Object.getSet(this, immutableProps)
 
-    this.clone = (properties) => {
-      const json = this.toJson();
-      json.validation = props.validation;
+    const parentToJson = this.toJson;
+    this.toJson = () => {
+      const json = parentToJson();
       delete json.id;
       delete json.errorMsgId;
+      json.validation = props.validation;
+      return json;
+    }
+
+    this.clone = (properties) => {
+      const json = this.toJson();
       Object.set(json, properties);
+      if (this.constructor.fromJson)
+        return this.constructor.fromJson(json);
       return new this.constructor(json);
     }
 
@@ -87,9 +96,16 @@ class Input extends Lookup {
       let val = value;
       if (elem) val = elem[instance.targetAttr()];
       if (val === undefined) val = props.default;
-      if (instance.type() === 'checkbox') return val == true;
+      if (instance.type() === 'checkbox') {
+        if (elem) val = elem.checked;
+        return val == true;
+      }
       return val;
     }
+
+    // TODO: this should probably be a seperate class.... whatever
+    this.checked = () => this.type() === 'checkbox' && this.value() == true ?
+                                'checked' : '';
 
     this.getValue = getValue;
     this.updateDisplay = () => {
@@ -99,12 +115,13 @@ class Input extends Lookup {
     let chosen = false;
     this.setValue = (val, force, eventTriggered) => {
       if (val === undefined) val = this.getValue();
+      if (this.optional() && val === '') return true;
       if(force || this.validation(val)) {
         valid = true;
         if (!chosen && eventTriggered) chosen = true;
         value = val;
         const elem = getElem(instance.id());
-        if (elem) elem.value = value;
+        if (elem && elem.type !== 'radio') elem.value = value;
         return true;
       }
       valid = false;
@@ -130,10 +147,10 @@ class Input extends Lookup {
       return valid;
     }
     this.validation = function(val) {
-      const elem = getElem(instance.id);
+      const elem = getElem(instance.id());
       val = val === undefined && elem ? elem.value : val;
       if (val === undefined) return false;
-      if (valid !== undefined && val === value) return valid;
+      // if (valid !== undefined && val === value) return valid;
       let valValid = true;
       if (props.validation instanceof RegExp) {
         valValid = val.match(props.validation) !== null;
@@ -143,18 +160,30 @@ class Input extends Lookup {
       }
       else if (Array.isArray(props.validation)) {
         valValid = props.validation.indexOf(val) !== -1;
+      } else {
+        valValid = val !== '';
       }
 
+      setValid(valValid);
       return valValid;
     };
 
     function setValid(vld) {
       valid = vld;
-      const elem = getElem(instance.errorMsgId());
+      const errorElem = getElem(instance.errorMsgId());
+      if (errorElem) {
+        const hideMsg = !(!valid && instance.value() !== '');
+        errorElem.hidden = hideMsg;
+      }
+
+      const elem = getElem(instance.id());
       if (elem) {
-        elem.hidden = vld;
+        if (!valid) du.class.add(elem, 'error');
+        else du.class.remove(elem, 'error');
       }
     }
+
+    this.indicateValidity = setValid;
 
     this.validate = (target, eventTriggered) => {
       target = target || getElem(instance.id());
@@ -164,6 +193,8 @@ class Input extends Lookup {
         } else setValid(false);
       }
     }
+
+    this.empty = () => this.value() === '';
 
     if (props.clearOnDblClick) {
       du.on.match(`dblclick`, `#${this.id()}`, () => {
@@ -184,11 +215,9 @@ function runValidate(elem, event) {
   if (input) input.validate(elem, true);
 }
 
-du.on.match(`click`, `input`, runValidate);
-du.on.match(`change`, `input`, runValidate);
-du.on.match(`keyup`, `input`, runValidate);
-du.on.match(`change`, `select`, runValidate);
-du.on.match(`keyup`, `select`, runValidate);
+du.on.match(`click`, `input,select,textarea`, runValidate);
+du.on.match(`change`, `input,select,textarea`, runValidate);
+du.on.match(`keyup`, `input,select,textarea`, runValidate);
 
 Input.forAll = (id) => {
   const idStr = `#${id}`;
@@ -201,8 +230,13 @@ Input.forAll = (id) => {
 }
 
 Input.getFromElem = (elem) => {
-  return Input.get(elem.id);
+  const closest = du.find.closest('[input-id]', elem);
+  if (closest === undefined) return undefined;
+  const id = closest.getAttribute('input-id');
+  return Input.get(id);
 }
+
+Input.fromJson = (json) => new (Object.class.get(json._TYPE))(json);
 
 Input.template = new $t('input/input');
 Input.html = (instance) => () => Input.template.render(instance);

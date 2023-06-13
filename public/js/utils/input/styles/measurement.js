@@ -13,15 +13,25 @@ class MeasurementInput extends Input {
     let value = new Measurement(props.value, units || true);
     props.value = () => value;
     super(props);
-    props.validation = (val) =>
-        !Number.isNaN(val && val.display ? value : new Measurement(val, units || true).value());
+
+    this.valid = (val) => {
+      let testVal;
+      if (val) {
+        if (val instanceof MeasurementInput) testVal = val.value();
+        else testVal = val;
+      } else testVal = value.value();
+      const valid = !Number.isNaN(testVal);
+      this.indicateValidity(valid);
+      return valid;
+    }
+
     props.errorMsg = 'Invalid Mathematical Expression';
     this.value = () => {
       return value.display();
     }
     const parentSetVal = this.setValue;
     this.setValue = (val) => {
-      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
+      let newVal = this.valid(val) ? ((val instanceof Measurement) ?
                         val : new Measurement(val, units || true)) : value;
       const updated = newVal !== value;
       value = newVal;

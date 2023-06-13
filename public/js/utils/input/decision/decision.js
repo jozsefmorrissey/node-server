@@ -6,6 +6,8 @@
 
 const DecisionTree = require('../../decision-tree.js');
 const Input = require('../input.js');
+const NumberInput = require('../styles/number.js');
+const InputList = require('../styles/list');
 const Radio = require('../styles/radio');
 const Table = require('../styles/table');
 const MeasurementInput = require('../styles/measurement');
@@ -17,7 +19,6 @@ const du = require('../../dom-utils');
 const $t = require('../../$t');
 const Measurement = require('../../measurement');
 
-const ROOT_CLASS = 'decision-input-tree';
 
 const nameCompareFunc = (name) => (input) => input.name() === name ? input : false;
 const inputSelectorFunc = (func) => (node) => {
@@ -35,18 +36,7 @@ const inputSelectorFunc = (func) => (node) => {
 const nodeSelectorFunc = (nameOfunc) => inputSelectorFunc(
           (typeof nameOfunc) === 'function' ? nameOfunc : nameCompareFunc(nameOfunc));
 
-class DecisionInputCondition extends DecisionTree.Condition {
-  constructor(attribute, value) {
-    super();
-    Object.getSet(this, {attribute, value});
-    this.satisfied = (node) => {
-      const values = node.values();
-      return Object.pathValue(values, attribute) === value;
-    }
-  }
-}
-DecisionInputCondition.fromJson = (json) =>
-      new DecisionInputCondition(json.attribute, json.value);
+
 
 class DecisionInput extends DecisionTree.Node {
   constructor(stateConfig, payload, parent) {
@@ -54,6 +44,13 @@ class DecisionInput extends DecisionTree.Node {
     payload.inputArray ||= [];
     super(stateConfig, payload, parent);
     const instance = this;
+
+    const parentToJson = this.nodeOnlyToJson;
+    this.nodeOnlyToJson = () => {
+      const json = parentToJson();
+      json.relatedTo = this.relatedTo();
+      return json;
+    }
 
     const onChange = [];
     const changeEvent = new CustomEvent('change');
@@ -68,14 +65,16 @@ class DecisionInput extends DecisionTree.Node {
       inArr[index].on('change', trigger);
     }
 
-    let relatedTo;
     this.relatedTo = (value) => {
-      if (this.isRoot()) throw new Error('The root cannot be related to any other input');
+      if (this.isRoot()) {
+        if (value) throw new Error('The root cannot be related to any other input');
+        return;
+      }
       const validList = this.parent().inputArray().map(i => i.name());
-      value ||= relatedTo;
-      if (validList.indexOf(value) === -1) value = undefined;
-      if (value) return relatedTo = value;
-      return relatedTo
+      const prevValue = this.metadata('relatedTo');
+      value = this.metadata('relatedTo', value);
+      if (validList.indexOf(value) === -1) this.metadata('relatedTo', prevValue);
+      return value;
     }
 
     this.addInput = (input) => {
@@ -100,20 +99,20 @@ class DecisionInput extends DecisionTree.Node {
 
     this.isComplete = () => {
       const inArr = this.inputArray();
+      let complete = true;
       for (let index = 0; index < inArr.length; index++) {
-        if (!inArr[index].optional() && !inArr[index].valid()) return false;
+        complete &= inArr[index].optional() || inArr[index].valid();
       }
-      let isComplete = true;
-      this.forEachChild((child) => isComplete &&= child.isComplete());
-      return isComplete;
+      this.forEachChild((child) => complete &=
+                !child.reachable() || child.isComplete());
+      return complete == 1;
     }
     this.onComplete = this.tree().onComplete;
     let inputTree;
-    this.inputTree = () => inputTree ||= DecisionInputTree.inputTree();
+    this.inputTree = () => inputTree ||= DecisionInputTree.inputTree(this);
     function updateInputArray (boolean) {
       const inputArray = payload.inputArray;
       const sc = instance.stateConfig();
-      // MultipleEntries.initialize(sc.payload().inputArray());
       const stateInputArray = sc.payload().inputArray;
       if (inputArray.length === stateInputArray.length) return boolean ? false : inputArray;
       for (let index = 0; index < stateInputArray.length; index++) {
@@ -123,7 +122,6 @@ class DecisionInput extends DecisionTree.Node {
           if (clone.onChange) clone.onChange(trigger);
           else if (clone.on) clone.on('change', trigger);
           inputArray.push(clone);
-          clone.initialize && clone.initialize();
         }
         if (inputArray[index].name() !== input.name()) inputArray.splice(index, 1);
       }
@@ -138,7 +136,6 @@ class DecisionInput extends DecisionTree.Node {
       return parentPayload(noConfig);
     }
 
-    this.class =  ROOT_CLASS;
     this.getValue = (index) => this.inputArray()[index].value();
     this.isValid = () => {
       let valid = true;
@@ -172,14 +169,13 @@ class DecisionInput extends DecisionTree.Node {
       if (!this.shouldRecurse()) return '';
       const children = this.children();
       const inArr = this.inputArray();
-      const inputName = inArr[inputIndex].name();
+      const inputName = inArr[inputIndex] ? inArr[inputIndex].name() : null;
       let html = '';
       for (let index = 0; index < children.length; index++) {
         const child = children[index];
-        if (inputName === child.relatedTo() || (inputIndex === inArr.length - 1 && child.relatedTo() === undefined)) {
+        if (inputName === child.relatedTo() || (inputIndex === -1 && child.relatedTo() === undefined)) {
           const inArr = child.inputArray();
           if (child.reachable()) {
-            inArr.forEach(i => i.initialize && i.initialize());
             html += child.html(editDisplay);
           }
         }
@@ -192,6 +188,12 @@ class DecisionInput extends DecisionTree.Node {
         return DecisionInput.modTemplate.render(this);
       }
       return DecisionInput.template.render(this);
+    }
+
+    this.payloadHtml = () => {
+      const pld = this.payload();
+      if ((typeof pld.html) === 'function') return pld.html();
+      return this.tree().payloadHtml(pld);
     }
   }
 }
@@ -211,11 +213,38 @@ du.on.match('click', '.conditional-button', (elem) => {
 // isComplete: function determining if all required inputs are filled.
 
 class DecisionInputTree extends DecisionTree {
-  constructor(rootName, props) {
+  constructor(rootName, props, stateConfigs) {
     props = props || {};
     props.inputArray ||= [];
-    super(rootName, props);
-    this.root().payload()
+    super(rootName, props, stateConfigs);
+    Object.getSet(this, 'payloadHandler');
+
+    this.payloadHtml = (payload) => {
+      const handler = this.payloadHandler();
+      if (handler) return handler.html(payload);
+    }
+
+    this.payloadInput = () => {
+      const handler = this.payloadHandler();
+      if (handler) return handler.input();
+    }
+
+    this.inputHtml = () => {
+      const handler = this.payloadHandler();
+      if (handler) return handler.inputHtml();
+    }
+
+    let payloadTemplate
+    let payloadTemplateName
+    this.payloadTemplateName = (name) => {
+      if (name && $t.functions[name]) {
+        payloadTemplateName = name;
+        payloadTemplate = new $t(name);
+      }
+      return payloadTemplateName;
+    }
+
+    this.payloadTemplate = () => payloadTemplate;
 
     this.buttonText = () => {
       return props.buttonText || `Create ${rootName}`;
@@ -230,6 +259,8 @@ class DecisionInputTree extends DecisionTree {
         }
       }
     }
+    this.class = () => props.class || 'card';
+    this.buttonClass = () => props.buttonClass;
     this.isComplete = () => {
       if ((typeof props.isComplete) === 'function') return props.isComplete(this.root());
       const choices = this.choices();
@@ -242,8 +273,9 @@ class DecisionInputTree extends DecisionTree {
     const changeEvent = new CustomEvent('change');
     this.html = (node, editDisplay) => {
       node = node || this.root();
-      let inputHtml = node.html(editDisplay);
-      const scope = {node, inputHtml, DecisionInputTree, editDisplay};
+      const header = props.header;
+      const inputHtml = node.html(editDisplay);
+      const scope = {node, inputHtml, DecisionInputTree, editDisplay, header};
       if (node.isRoot()) {
         return DecisionInputTree.template.render(scope);
       }
@@ -349,8 +381,16 @@ DecisionInputTree.getNode = (elem) => {
   return Lookup.get(nodeId);
 }
 
+DecisionInputTree.hardUpdate = (elem) => {
+  const tree = DecisionInputTree.getTree(elem);
+  const treeCnt = du.find.up('[tree-id]', elem);
+  const cnt = treeCnt.parentElement;
+  const modCnt = du.find.down('.decision-input-cnt', elem);
+  const mod = du.class.has(modCnt, 'mod');
+  cnt.innerHTML = tree.html(null, mod);
+}
 DecisionInputTree.update = (soft) =>
-(elem) => {
+(elem, force) => {
   // if (elem.matches('.modification-add-input *')) return;
 
   const nodeCnt = du.find.up('[node-id]', elem);
@@ -365,24 +405,22 @@ DecisionInputTree.update = (soft) =>
     const inputCnt = du.find.up('.decision-input-array-cnt', input);
     const inputIndex = Number.parseInt(inputCnt.getAttribute('index'));
     const childrenHtmlCnt = du.find.down('.children-recurse-cnt', inputCnt);
-    const value = childrenHtmlCnt.getAttribute('value');
-    const parentValue =  node.values()[input.name];
+    const prevHash = childrenHtmlCnt.getAttribute('hash-value');
+    const currHash =  '' + Object.hash(node.values()[input.name]);
     const parentName = input.name;
     const cs = node.children();
-    if (!parentValue || value !== parentValue) {
+    if (force === true || prevHash !== currHash) {
       cs.forEach((child) => {
         const di = node.payload();
         const inputArray = di.inputArray;
-        inputArray.forEach(input => input.isInitialized() || input.initialize());
-        if (child.name() === 'multi') {
-          child.stateConfig().payload().inputArray[0].initialize()
-          child.stateConfig().payload().inputArray[0].initialize()
-        }
       });
-      childrenHtmlCnt.setAttribute('value', parentValue)
-      const childHtml = node.childrenHtml(inputIndex)
+      childrenHtmlCnt.setAttribute('hash-value', currHash);
+      const parentCnt = du.find.up('.decision-input-cnt', childrenHtmlCnt)
+      const mod = du.class.has(parentCnt, 'mod');
+      const childHtml = node.childrenHtml(inputIndex, mod);
       childrenHtmlCnt.innerHTML = childHtml;
     }
+
 
     // if(!soft) {
     //   node.root().changed();
@@ -398,35 +436,94 @@ DecisionInputTree.submit = (elem) => {
 }
 
 function updateModBtn(elem) {
-  const value = elem.value;
   const button = du.find.closest('.conditional-button', elem);
-  if (button && button.getAttribute('target-id') === elem.id) {
-    button.innerText = `If ${elem.name} = ${value}`;
+  const input = Input.getFromElem(button);
+  if (input) {
+    const value = input.value();
+    if (value instanceof Object) button.innerText = `If ${input.name()}`;
+    else if (button && button.getAttribute('target-id') === elem.id) {
+      button.innerText = `If ${elem.name} = ${value}`;
+    }
   }
 }
 
 let count = 999;
-const getInput = () => new Input({
-  label: `Label${++count}`,
-  name: `Name${count}`,
-  inline: true,
-  class: 'center',
-});
+// const getInput = () => new Input({
+//   label: `Label${++count}`,
+//   name: `Name${count}`,
+//   inline: true,
+//   class: 'center',
+// });
 
-function conditionalInputTree() {
+function andHandlerInput(node, inputs) {
+  const handlerInput = node.tree().payloadInput();
+  if (handlerInput) inputs = [handlerInput].concat(inputs);
+  return inputs
+}
+
+
+function conditionalInputTree(node, input, props) {
+  function createNode(values, elem) {
+    const attribute = input.name();
+    const type = `${values.type}Type`;
+    let value = values.condition;
+    if (values.type === 'Number') value = Number.parseFloat(value);
+    if (values.type === 'List') value = value.split(',');
+    const condition = new DecisionInputTree.Conditions.node(attribute, value, type);
+    const name = values.group;
+    const newNode = node.then(name, values.payload);
+    newNode.conditions.add(condition);
+    newNode.relatedTo(attribute);
+    const condCnt = du.find.up('.condition-input-tree', elem);
+    const condBtn = du.find.closest('.conditional-button', condCnt)
+    condCnt.hidden = true;
+    condBtn.hidden = false;
+    const inputElem = du.find.closest(`[input-id="${input.id()}"]`, elem)
+    DecisionInputTree.update()(inputElem, true);
+  }
+
   const group = new Input({
     name: 'group',
-    inline: true,
     label: 'Group',
     class: 'center',
   });
 
+  function updateGroupList(node) {
+    if (node._NODE) node = node._NODE;
+    const list = Object.keys(node.tree().stateConfigs());
+    group.list(list);
+    }
+  updateGroupList(node);
+
   const type = new Select({
     label: 'Type',
     name: 'type',
-    inline: true,
     class: 'center',
-    list: ['Any', 'Exact', 'Except', 'Reference', 'List(commaSep)', 'Exclude List(commaSep)', 'Regex']
+    list: ['String', 'Number', 'Reference', 'List', 'Regex']
+  });
+
+  const stringType = new Select({
+    name: 'stringType',
+    class: 'center',
+    list: ['Any', 'Exact', 'Except', 'Contains']
+  });
+
+  const numberType = new Select({
+    name: 'numberType',
+    class: 'center',
+    list: ['Equal', 'Less Than', 'Greater Than', 'Less Than or Equal', 'Greater Than or Equal']
+  });
+
+  const referenceType = new Select({
+    name: 'type',
+    class: 'center',
+    list: ['need', 'to', 'dynamically update']
+  });
+
+  const listType = new Select({
+    name: 'listType',
+    class: 'center',
+    list: ['Inclusive', 'Exclusive']
   });
 
   const condition = new Input({
@@ -436,44 +533,168 @@ function conditionalInputTree() {
     class: 'center',
   });
 
-  const reference = new Input({
-    label: 'Reference',
-    name: 'reference',
-    inline: true,
-    class: 'center',
-  });
+  props.inputArray = andHandlerInput(node, [group, type, condition]);
 
-  const inputs = [group, type];
-  const condCond = new ValueCondition('type', /^(?!(Reference)$).*$/, [condition]);
-  const refCond = new ValueCondition('type', 'Reference', [reference]);
+  const tree = new DecisionInputTree('Question Group', props);
+  const root = tree.root();
 
-  const tree = new DecisionInputTree();
-  tree.leaf('Question Group', inputs);
-  payload = tree.payload();
-  tree.conditional('condition', condCond);
-  tree.conditional('reference', refCond);
+  const dic = (value, type) => new DecisionInputTree.Conditions.node('type', value, type);
+  function addTypeNode(name, inputArray, value, type) {
+    const node = root.then(name, {inputArray});
+    node.conditions.add(dic(value, type));
+    node.relatedTo('type');
+    return node;
+  }
+
+  addTypeNode('reference', [referenceType], 'Reference');
+  addTypeNode('string', [stringType], 'String')
+  addTypeNode('number', [numberType], 'Number')
+  addTypeNode('list', [listType], 'List')
+
+  tree.onChange(updateGroupList);
+
+  tree.onSubmit(createNode);
 
   return tree;
 }
 
-function modifyBtnPressed(elem) {
-  const node = DecisionInputTree.getNode(elem);
-  const inputArray = node.payload().inputArray;
-  const inputElem = du.find.closest('input,select,textarea', elem);
-  const input = Input.getFromElem(inputElem);
-  const treeHtml = conditionalInputTree().payload().html();
-  const inputTreeCnt = du.find.closest('.condition-input-tree', elem);
-  inputTreeCnt.innerHTML = '<br>' + treeHtml;
-  elem.hidden = true;
+const thenInput = (node) => {
+  const group = new Input({
+    name: 'group',
+    label: 'Group',
+    class: 'center',
+  });
+
+  function updateGroupList(node) {
+    if (node._NODE) node = node._NODE;
+    const list = Object.keys(node.tree().stateConfigs());
+    group.list(list);
+  }
+  updateGroupList(node);
+
+  const props = {inputArray: andHandlerInput(node, group)};
+  const tree = new DecisionInputTree('Next', props);
+  tree.onSubmit((values, elem) => {
+    const name = values.group;
+    const newNode = node.then(name, values.payload);
+    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
+    const btnCnt = du.find.closest('.then-button', elem);
+    const inputCnt = du.find.closest('.then-input-tree', btnCnt);
+    inputCnt.hidden = true;
+    btnCnt.hidden = false;
+    DecisionInputTree.hardUpdate(treeCnt);
+  });
+  return tree;
 }
 
-du.on.match('keyup', `.${ROOT_CLASS}`, DecisionInputTree.update(true));
-du.on.match('change', `.${ROOT_CLASS}`, DecisionInputTree.update());
+du.on.match('click', '.then-button', (elem, two, three) => {
+  console.log('ThEn?');
+  const node = DecisionInputTree.getNode(elem);
+  const thenPut = thenInput(node);
+  const inputCnt = du.find.closest('.then-input-tree', elem);
+  inputCnt.innerHTML = thenPut.html();
+  elem.hidden = true;
+  inputCnt.hidden = false;
+});
+
+function addObjectKeys(node, object, conditions) {
+  conditions ||= new DecisionInputTree.Conditions.And([]);
+  const keys = ['*'].concat(Object.keys(object));
+  const list = [];
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const value = object[key];
+    list.push(key);
+  }
+  const select = new Select({name: node.name(), list})
+  node.addInput(select);
+  const paths = {};
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const value = object[key];
+    let path = node.path().join() + `${key}`;
+    if (value instanceof Object) {
+      const child = node.then(path);
+      const cond = new DecisionInputTree.Conditions.node(node.name(), key);
+      const childConds = conditions.clone();
+      childConds.add(cond);
+      child.conditions.add(cond);
+      addObjectKeys(child, value, childConds);
+    } else if (path !== '*'){
+      let child = node.stateMap()[path];
+      if (child === undefined) {
+        const childConds = conditions.clone();
+        child = node.then(path);
+        if (paths[path] === undefined) {
+          child.addInput(new Input({name: 'condition', label: 'Condition', value}))
+          const cond = new DecisionInputTree.Conditions.node(node.name(), key);
+          childConds.add(cond);
+          child.conditions.add(childConds);
+          paths[path] = true;
+        }
+      }
+    }
+  }
+}
+
+function objectConditionTree(values, node, input, props) {
+  const tree = new DecisionInputTree('Question Groupy', props);
+  addObjectKeys(tree.root(), values);
+  return tree;
+}
+
+function getConditionTree(values, node, input, props) {
+  if (values instanceof Object)
+    return objectConditionTree(values, node, input, props);
+  return conditionalInputTree(node, input, props);
+}
+
+function updateConditionTree(elem) {
+  const conditionCnt = du.find.up('.condition-input-tree', elem);
+  if (conditionCnt) return;
+  const node = DecisionInputTree.getNode(elem);
+  const inputArray = node.payload().inputArray;
+  const input = Input.getFromElem(elem);
+  const val = input.value();
+  const props = {header: `If ${input.name()} <br>`};
+  const condTree = getConditionTree(val, node, input, props);
+  const value = input.value();
+  if ((typeof value) === 'string') {
+    condTree.find.input('condition').setValue(value);
+  }
+  const treeHtml = condTree.html();
+  const inputTreeCnt = du.find.closest('.condition-input-tree', elem);
+  if (inputTreeCnt) {
+    inputTreeCnt.innerHTML = treeHtml;
+    return inputTreeCnt;
+  }
+}
+
+function modifyBtnPressed(elem) {
+  const inputTreeCnt = updateConditionTree(elem);
+  elem.hidden = true;
+  inputTreeCnt.hidden = false;
+}
+
+function removeNodeBtnPressed(elem) {
+  const node = DecisionInputTree.getNode(elem);
+  if (confirm(`Are you sure you want to remove node '${node.name()}'`) == true) {
+    node.remove();
+    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
+    DecisionInputTree.hardUpdate(treeCnt);
+  }
+}
+
+const treeSelector = `.${DecisionInputTree.class}`;
+du.on.match('keyup', treeSelector, DecisionInputTree.update(true));
+du.on.match('change', treeSelector, DecisionInputTree.update());
+du.on.match('change', treeSelector,     updateConditionTree);
 du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
-du.on.match('keyup', '.decision-input-cnt.mod input', updateModBtn);
-du.on.match('keyup', '.decision-input-cnt.mod select', updateModBtn);
-du.on.match('keyup', '.decision-input-cnt.mod textarea', updateModBtn);
+du.on.match('keyup:change', '.decision-input-cnt.mod input', updateModBtn);
+du.on.match('keyup:change', '.decision-input-cnt.mod select', updateModBtn);
+du.on.match('keyup:change', '.decision-input-cnt.mod textarea', updateModBtn);
 du.on.match('click', '.conditional-button', modifyBtnPressed);
+du.on.match('click', '.remove-btn-cnt>.rm-node', removeNodeBtnPressed);
 
 DecisionInputTree.DO_NOT_CLONE = true;
 
@@ -485,6 +706,7 @@ DecisionInputTree.getTree = (elem) => {
 }
 DecisionInputTree.getCondition = DecisionTree.Condition.getter((node) => node.values());
 
+// TODO: merge this with parent... duplications
 function childrenFromJson(parent, json) {
   const children = Object.values(json.children);
   for (let index = 0; index < children.length; index++) {
@@ -492,17 +714,20 @@ function childrenFromJson(parent, json) {
     const node = parent.then(child.name, Object.fromJson(child.payload));
     childrenFromJson(node, child);
   }
+  if (json.metadata)
+    Object.keys(json.metadata).forEach((key) =>
+        parent.metadata(key, Object.fromJson(json.metadata[key])));
+
   json.conditions.forEach(c => parent.conditions.add(Object.fromJson(c)));
   json.childConditions.forEach(c => parent.childConditions.add(Object.fromJson(c)));
 }
 
 DecisionInputTree.fromJson = (json) => {
-  const rootConfig = json.stateConfigs[json.root.name];
-  const rootPayload = Object.fromJson(rootConfig.payload);
-  const tree = new DecisionInputTree(rootConfig.name, rootPayload);
+  const stateConfigs = Object.fromJson(json.stateConfigs);
+  const tree = new DecisionInputTree(json.root.name, null, stateConfigs);
   const root = tree.root();
-  tree.addStates(Object.fromJson(json.stateConfigs));
   childrenFromJson(root, json.root);
+
   return tree;
   // let nodeMap = {};
   // nodeMap[json.nodeId] = root;
@@ -534,123 +759,158 @@ DecisionInputTree.rebuild = (elem) => {
   treeCnt.parentElement.innerHTML = body;
 }
 
-function addInput(details, elem)  {
-  const modCnt = du.find.up('.modification-add-input', elem);
-  const nodeCnt = du.find.up('[node-id]', modCnt);
-  const node = Lookup.get(nodeCnt.getAttribute('node-id'));
-  const inline = true;
+function getInput(details)  {
   const name = details.name.toCamel();
   const label = details.name;
+  let inline = details.inline;
+  let list;
   switch (details.format) {
     case 'Text':
       if (details.text.size === 'Large')
-        node.addInput(new Textarea({name, label}))
+        return new Textarea({name, label});
       else
-        node.addInput(new Input({type: 'text', name, label, inline}))
-      break;
+        return new Input({type: 'text', name, label, inline});
+    case 'Number':
+      const step = details.number.step;
+      const min = details.number.min;
+      const max = details.number.max;
+      return new NumberInput({name, label, min, max, step});
     case 'Date':
-      node.addInput(new Input({type: 'date', name, label, inline}))
-      break;
+      return new Input({type: 'date', name, label, inline});
     case 'Time':
-      node.addInput(new Input({type: 'time', name, label, inline}))
-      break;
+      return new Input({type: 'time', name, label, inline});
     case 'Checkbox':
-      node.addInput(new Input({type: 'checkbox', name, label, inline}))
-      break;
+      return new Input({type: 'checkbox', name, label, inline});
     case 'Radio':
-      const list = details.radio.labels.map(input => input.value());
-      node.addInput(new Radio({name, label, list}));
-      break;
+      inline = details.radio.inline;
+      list = details.radio.labels;
+      return new Radio({name, label, list, inline});
+    case 'Select':
+      list = details.select.options.map(input => input.value());
+      return new Select({name, label, list});
     case 'Table':
       const rows = details.table.row.map(input => input.value());
-      const columns = details.table.col.map(input => input.value());
+      const columns = [];
+      details.table.columns.forEach(dit => columns.push(getInput(dit.values())))
       const type = details.table.type;
-      node.addInput(new Table({name, label, rows, columns, type}));
-      break;
+      return new Table({name, label, rows, columns, type});
     case 'Measurement':
       const units = details.measure.units;
-      node.addInput(new MeasurementInput({name, label, units}));
-      break;
+      return new MeasurementInput({name, label, units});
     case 'Multiple Entries':
-      // node.addInput(new MultipleEntries());
-      break;
+      const templates = details.multi.templates;
+      list = [];
+      inline = details.multi.inline;
+      for (let index = 0; index < templates.length; index++) {
+        const values = templates[index].values();
+        values.inline = inline;
+        const input = getInput(values);
+        list.push(input);
+      }
+      return new MultipleEntries(new InputList({name, list, inline}));
     default:
       throw new Error('In the future this will not be reachable');
   }
-  console.log(elem);
+}
+
+function addInput(details, elem)  {
+  const input = getInput(details);
+  const modCnt = du.find.up('.modification-add-input', elem);
+  const nodeCnt = du.find.up('[node-id]', modCnt);
+  const node = Lookup.get(nodeCnt.getAttribute('node-id'));
+  node.addInput(input);
   DecisionInputTree.rebuild(nodeCnt);
 }
 
-DecisionInputTree.inputTree = function () {
+const noSubmitInputTree = (node) => () =>
+      DecisionInputTree.inputTree(node, true);
+DecisionInputTree.inputTree = function (node, noSubmission) {
+  const targetTree = node.tree();
   const name = new Input({
     name: 'name',
-    inline: true,
     label: 'Name',
     class: 'center',
-    validation: (val) => val !== ''
+    validation: (value) => {
+      if (value === '') return false;
+      const camel = value.toCamel();
+      const inputs = node.payload().inputArray;
+      for (let index = 0; index < inputs.length; index++) {
+        if (inputs[index].name() === camel) return false;
+      }
+      return node.stateNames().indexOf(camel) === -1;
+    }
+  });
+  const inline = new Input({
+    name: 'inline',
+    value: true,
+    label: 'Inline',
+    class: 'center',
+    type: 'checkbox'
   });
   const format = new Select({
     label: 'Format',
     name: 'format',
-    inline: true,
     class: 'center',
-    list: ['Text', 'Checkbox', 'Radio', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement']
+    list: ['Text', 'Checkbox', 'Number', 'Radio', 'Select', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement']
   });
+  const step = new NumberInput({name: 'step', optional: true, label: 'Step'});
+  const min = new NumberInput({name: 'min', optional: true, label: 'Minimum'});
+  const max = new NumberInput({name: 'max', optional: true, label: 'Maximum'});
   const tableType = new Select({
     label: 'Type',
     name: 'type',
-    inline: true,
     class: 'center',
     list: ['Text', 'checkbox', 'radio', 'date', 'time']
   });
   const textCntSize = new Select({
     label: 'Size',
     name: 'size',
-    inline: true,
     class: 'center',
     list: ['Small', 'Large']
   });
   const units = new Select({
     label: 'Units',
     name: 'units',
-    inline: true,
     class: 'center',
     list: Measurement.units()
   });
   const label = new Input({
     name: 'label',
-    inline: true,
     label: 'Label',
+    class: 'centnodeConds[index].satisfied()) reer',
+    validation: (val) => val !== ''
+  });
+  const option = new Input({
+    name: 'option',
+    label: 'Option',
     class: 'centnodeConds[index].satisfied()) reer',
     validation: (val) => val !== ''
   });
   const row = new Input({
     name: 'row',
-    inline: true,
-    label: 'Row',
     class: 'center',
     validation: (val) => val !== ''
   });
   const col = new Input({
     name: 'col',
-    inline: true,
-    label: 'Column',
     class: 'center',
     validation: (val) => val !== ''
   });
   const labels = new MultipleEntries(label, {name: 'labels'});
-  const rowCols = [tableType, new MultipleEntries(col, {name: 'col', inline: true}),
-                    new MultipleEntries(row, {name: 'row'})];
+  const options = new MultipleEntries(option, {name: 'options'});
+  // const colType = new InputList({name: 'cols', list: [col, tableType]});
+  const colType = new MultipleEntries(noSubmitInputTree(node), {name: 'columns'});
+  const rowCols = [tableType, colType,
+                    new MultipleEntries(row, {name: 'row', label: 'Rows'})];
 
 
-  // ['Text', 'Radio', 'Table', 'Multiple Entries', 'Measurement']
   const inputs = [name, format];
+  const multiEnt = new MultipleEntries(noSubmitInputTree(node), {name: 'templates'});
 
-  const tree = new DecisionInputTree('InputTree', {inputArray: inputs});
+  const tree = new DecisionInputTree('Input', {inputArray: inputs, noSubmission, class: 'modify'});
   const root = tree.root();
-  // root.then('InputTree');
 
-  const dic = (value) => new DecisionInputCondition('format', value);
+  const dic = (value) => new DecisionInputTree.Conditions.node('format', value);
   function addFormatNode(name, inputArray, value) {
     const node = root.then(name, {inputArray});
     node.conditions.add(dic(value));
@@ -659,33 +919,31 @@ DecisionInputTree.inputTree = function () {
   }
 
   addFormatNode('text', [textCntSize], 'Text');
-  addFormatNode('radio', [labels], 'Radio');
+  addFormatNode('select', [options], 'Select');
+  addFormatNode('radio', [inline, labels], 'Radio');
   addFormatNode('table', rowCols, 'Table');
-  // addFormatNode('InputTree', null, 'Multiple Entries');
+  addFormatNode('multi', [inline, multiEnt], 'Multiple Entries');
   addFormatNode('measure', [units], 'Measurement');
+  addFormatNode('number', [step, min, max], 'Number');
 
-  let multiNodeAdded = false;
-  root.onChange((values) => {
-    if (multiNodeAdded) return;
-    if (values.format === 'Multiple Entries') {
-      const inputTemplate = new MultipleEntries(DecisionInputTree.inputTree(), {name: 'templates'});
-      addFormatNode('multiInput', [inputTemplate], 'Multiple Entries');
-      multiNodeAdded = true;
-      const rootElem = du.find(`.decision-input-cnt[node-id='${tree.root().id()}']`);
-      DecisionInputTree.update()(rootElem);
-    }
-  });
 
-  const tJson = tree.toJson();
-  console.log(tree.toString());
-  console.log(DecisionInputTree.fromJson(tJson));
-  console.log(DecisionInputTree.fromJson(tJson).toString());
-  console.log(DecisionInputTree.fromJson(tJson).toString());
+  // const tJson = tree.toJson();
+  // console.log(tree.toString());
+  // console.log(DecisionInputTree.fromJson(tJson));
+  // console.log(DecisionInputTree.fromJson(tJson).toString());
+  // console.log(DecisionInputTree.fromJson(tJson).toString());
 
   tree.onSubmit(addInput);
-  tree.clone = DecisionInputTree.inputTree;
+  tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
+  tree.empty = () => {
+    let empty = true;
+    tree.root().forEach((node) =>
+      node.payload().inputArray.forEach(input => empty &&= input.empty()));
+    return empty;
+  }
   return tree;
 }
 
+DecisionInputTree.Conditions = require('./conditions');
 
 module.exports = DecisionInputTree;

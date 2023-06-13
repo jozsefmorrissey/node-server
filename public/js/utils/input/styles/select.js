@@ -30,6 +30,7 @@ class Select extends Input {
     const parentHidden = this.hidden;
     this.hidden = () => props.list.length < 2 || parentHidden();
 
+    this.empty = () => true;
     this.selected = (value) => value === this.value();
   }
 }

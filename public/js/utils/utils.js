@@ -50,6 +50,9 @@ Function.safeStdLibAddition(Object, 'map',   function (obj, func) {
   return map;
 }, true);
 
+Function.safeStdLibAddition(Object, 'hash',
+  (obj) => JSON.stringify(obj === undefined ? 'undefined' : obj).hash(), true);
+
 function processValue(value) {
   let retVal;
   if ((typeof value) === 'object' && value !== null) {
@@ -237,7 +240,7 @@ clazz.filter = (filterFunc) => {
 }
 
 function objEq(obj1, obj2, ignoreKeys) {
-  ignoreKeys ||= [];
+  ignoreKeys = ignoreKeys || [];
   const notObj1 = !(obj1 instanceof Object);
   const notObj2 = !(obj2 instanceof Object);
   if (notObj1 && notObj2) return obj1 === obj2;

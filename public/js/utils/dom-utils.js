@@ -41,6 +41,20 @@ du.create.element = function (tagname, attributes) {
   return elem;
 }
 
+du.create.event = (eventName) => {
+  let event;
+  if(document.createEvent){
+      event = document.createEvent("HTMLEvents");
+      event.initEvent(eventName, true, true);
+      event.eventName = eventName;
+  } else {
+      event = document.createEventObject();
+      event.eventName = eventName;
+      event.eventType = eventName;
+  }
+  return event;
+}
+
 // Ripped off of: https://ourcodeworld.com/articles/read/189/how-to-create-a-file-and-generate-a-download-with-javascript-in-the-browser-without-a-server
 du.download = (filename, contents) => {
   var element = document.createElement('a');
@@ -331,7 +345,7 @@ du.class.remove = function(target, clazz) {
 }
 
 du.class.has = function(target, clazz) {
-  return target.className.match(classReg(clazz));
+  return target.className.match(classReg(clazz)) !== null;
 }
 
 du.class.toggle = function(target, clazz) {
@@ -429,6 +443,18 @@ du.on.match = function(event, selector, func, target) {
   // if (selectorArray.indexOf(func) !== -1) {
     selectorArray.push(filter.func);
   // }
+}
+
+du.trigger = (eventName, elemOid) => {
+  const elem = (typeof elemOid) === 'string' ? du.id(elemOid) : elemOid;
+  if (elem instanceof HTMLElement) {
+    const event = du.create.event(eventName);
+    if(document.createEvent){
+      element.dispatchEvent(this.event);
+    } else {
+      element.fireEvent("on" + this.event.eventType, this.event);
+    }
+  }
 }
 
 du.cookie.set = function(name, value, lifeMilliSecs) {

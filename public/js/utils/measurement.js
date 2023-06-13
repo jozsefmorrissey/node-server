@@ -114,7 +114,7 @@ class Measurement extends Lookup {
     this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
 
     this.display = (accuracy) => {
-      switch (unit) {
+      switch (determineUnit()) {
         case units[0]: return new String(this.decimal(10));
         case units[1]: return this.standardUS(accuracy);
         default:

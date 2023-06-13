@@ -1,3 +1,25 @@
+.card {
+  padding: 5pt;
+  border: 1px solid;
+  border-radius: 5pt;
+  box-shadow: 3px 3px 6px black, 3px 3px 6px grey, 3px 3px 6px lightgrey;
+  position: relative;
+}
+
+.edit-input-cnt {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.decision-input-array-cnt {
+  width: fit-content;
+  position: relative;
+  padding: 0 45pt;
+}
+--TODO: make its own file
+
+
 
 .expandable-list {
     border-style: solid;

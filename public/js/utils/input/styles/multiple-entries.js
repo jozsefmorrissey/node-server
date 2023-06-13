@@ -7,10 +7,26 @@ const Input = require('../input');
 const $t = require('../../$t');
 const du = require('../../dom-utils');
 
+const validation = () => true;
 class MultipleEntries extends Input {
   constructor(inputTemplate, props) {
+
+
     props ||= {};
-    props.validation ||= (list) => list.length > 0;
+    props.validation ||= (event, details) => {
+      const list = props.list;
+      let allEmpty = true;
+      let valid = true;
+      for (let index = 0; index < list.length; index++) {
+        const empty = list[index].empty();
+        if (!empty) {
+          list[index].optional(false);
+          valid &= list[index].valid();
+        }
+        allEmpty &= empty;
+      }
+      return !allEmpty && valid;
+    }
     if (props.list === undefined) {
       const list = [];
       props.list = list;
@@ -18,18 +34,39 @@ class MultipleEntries extends Input {
         list.push(i.clone()));
     }
 
-    super(props);
     props.list ||= [];
+    super(props);
+    Object.getSet(this, 'inputTemplate');
+    let template;
+    const instance = this;
+    this.inputTemplate = () => {
+      if (!template) {
+        if ((typeof inputTemplate) === 'function') {
+          template = inputTemplate();
+        } else template = inputTemplate;
+      }
+      return template;
+    }
+
+    this.empty = () => {
+      if (props.list.length > 1) return false;
+      const inputs = props.list[0];
+      for (let index = 0; index < inputs.length; index++) {
+        if (!inputs[index].empty()) return false;
+      }
+      return true;
+    }
+
     this.clone = () =>
         new MultipleEntries(inputTemplate, JSON.clone(props));
 
     this.set = (index) => {
       if (props.list[index] === undefined) {
-        props.list[index] = inputTemplate.clone();
+        props.list[index] = this.inputTemplate().clone({optional: true});
+        props.list[index].on('change', this.validation);
       }
       return props.list[index];
     }
-    this.set(0);
 
     this.tag = () => props.inline() ? 'span' : 'div';
 
@@ -54,22 +91,33 @@ class MultipleEntries extends Input {
       const values = [];
       for (let index = 0; index < props.list.length; index++) {
         const input = props.list[index];
-        if (input.valid()) values.push(input);
+        if (!input.empty() && input.valid()) values.push(input.value());
       }
       return values;
     }
 
     this.value = this.getValue;
 
+    const parentHtml = this.html;
+    this.html = () => {
+      if (props.list.length === 0) this.set(0);
+      return parentHtml();
+    }
+
     this.length = () => this.list().length;
-    this.setHtml = (index) =>
-        MultipleEntries.singleTemplate.render(this.set(index));
+    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
   }
 }
 
 MultipleEntries.template = new $t('input/multiple-entries');
 MultipleEntries.singleTemplate = new $t('input/one-entry');
 MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
+
+MultipleEntries.fromJson = (json) => {
+  const inputTemplate = Object.fromJson(json.inputTemplate);
+  return new MultipleEntries(inputTemplate, json);
+
+}
 
 function meInfo(elem) {
   const info = {};
@@ -83,9 +131,9 @@ function meInfo(elem) {
   info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
   info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
   info.length = info.multiInput.length();
-  info.inputs = du.find.downAll('input,select,textarea', info.multiCnt);
+  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
   info.last = info.index === info.length - 1;
-  info.empty = info.inputs[info.index].value === '';
+  info.empty = info.multiInput.list()[info.index].empty();
   return info;
 }
 
@@ -124,7 +172,7 @@ du.on.match('focusin', oneSelector, (elem) => {
   // console.log('focusin');
 });
 
-du.on.match('keyup', oneSelector, (elem) => {
+du.on.match('keyup:change', oneSelector, (elem) => {
   if (!isInput(elem)) return;
   const info = meInfo(elem);
   if (info.index === info.length - 1 && !info.empty) {

@@ -1,4 +1,21 @@
 
+exports['91901353'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <span> <button class='conditional-button modify' target-id='` +
+		$t.clean(get("input").id()) +
+		`'> If ` +
+		$t.clean(get("input").name()) +
+		` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+		$t.clean(get("input").value()) +
+		`'>` +
+		$t.clean(get("childrenHtml")(get("$index"), true)) +
+		`</div> </span> <br> </div>`
+
 exports['550500469'] = (get, $t) => 
 		`<span > <input list='auto-fill-list-` +
 		$t.clean(get("input").id() +
@@ -15,31 +32,66 @@ exports['550500469'] = (get, $t) =>
 		$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 		` </datalist> </span>`
 
-exports['559079503'] = (get, $t) => 
-		`<span class='decision-input-array-cnt pad ` +
+exports['637244436'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
 		$t.clean(get("class")) +
 		`' index='` +
 		$t.clean(get("$index")) +
 		`'> ` +
 		$t.clean(get("input").html()) +
-		` <div class='children-recurse-cnt' value='` +
+		` <div class='edit-input-cnt'><button> <i class="fas fa-pencil-alt"></i> </button></div> <span> <button class='conditional-button modify' target-id='` +
+		$t.clean(get("input").id()) +
+		`'> If ` +
+		$t.clean(get("input").name()) +
+		` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
 		$t.clean(get("input").value()) +
-		`'> ` +
-		$t.clean(get("childrenHtml")(get("$index"))) +
-		` </div> </span>`
+		`'>` +
+		$t.clean(get("childrenHtml")(get("$index"), true)) +
+		`</div> </span> </div>`
 
-exports['564755780'] = (get, $t) => 
-		`<span class='decision-input-array-cnt pad ` +
+exports['921382487'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
 		$t.clean(get("class")) +
 		`' index='` +
 		$t.clean(get("$index")) +
 		`'> ` +
 		$t.clean(get("input").html()) +
-		` <div class='children-recurse-cnt tab' value='` +
+		` <span> <button class='conditional-button modify' target-id='` +
+		$t.clean(get("input").id()) +
+		`'> If ` +
+		$t.clean(get("input").name()) +
+		` </button> <div class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
 		$t.clean(get("input").value()) +
+		`'>` +
+		$t.clean(get("childrenHtml")(get("$index"), true)) +
+		`</div> </span> <br> </div>`
+
+exports['976176139'] = (get, $t) => 
+		`<td > ` +
+		$t.clean(get("col").html()) +
+		` </td>`
+
+exports['1028563052'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
 		`'> ` +
-		$t.clean(get("childrenHtml")(get("$index"))) +
-		` </div> </span>`
+		$t.clean(get("input").html()) +
+		` <div class='edit-input-cnt'><button> <i class="fas fa-broadcast-tower"></i> </button></div> <span> <button class='conditional-button modify' target-id='` +
+		$t.clean(get("input").id()) +
+		`'> If ` +
+		$t.clean(get("input").name()) +
+		` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+		$t.clean(get("input").value()) +
+		`'>` +
+		$t.clean(get("childrenHtml")(get("$index"), true)) +
+		`</div> </span> </div>`
+
+exports['1254550278'] = (get, $t) => 
+		`<td >` +
+		$t.clean(get("name")) +
+		`</td>`
 
 exports['1447370576'] = (get, $t) => 
 		`<div class="expandable-list-body" key='` +
@@ -66,14 +118,84 @@ exports['1447370576'] = (get, $t) =>
 		$t.clean(get("getBody") && get("getBody")(get("item"), get("key"))) +
 		` </div> </div> </div>`
 
-exports['1591500900'] = (get, $t) => 
-		`<td > <input type='` +
-		$t.clean(get("type")()) +
-		`' name='` +
+exports['1457465509'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <span> <button class='conditional-button modify' target-id='` +
+		$t.clean(get("input").id()) +
+		`'> If ` +
+		$t.clean(get("input").name()) +
+		` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+		$t.clean(get("input").value()) +
+		`'>` +
+		$t.clean(get("childrenHtml")(get("$index"), true)) +
+		`</div> </span> </div>`
+
+exports['1603146643'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <div class='edit-input-cnt'><button> <i class="fas fa-edit"></i> </button></div> <span> <button class='conditional-button modify' target-id='` +
+		$t.clean(get("input").id()) +
+		`'> If ` +
+		$t.clean(get("input").name()) +
+		` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+		$t.clean(get("input").value()) +
+		`'>` +
+		$t.clean(get("childrenHtml")(get("$index"), true)) +
+		`</div> </span> </div>`
+
+exports['1682356664'] = (get, $t) => 
+		`<div id="input-input-list-` +
 		$t.clean(get("id")()) +
-		`-` +
-		$t.clean(get("row")) +
-		`'> </td>`
+		`" > ` +
+		$t.clean(get("input").html()) +
+		` <br> </div>`
+
+exports['1690403329'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <span> <button class='conditional-button modify' target-id='` +
+		$t.clean(get("input").id()) +
+		`'> If ` +
+		$t.clean(get("input").name()) +
+		` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+		$t.clean(get("input").value()) +
+		`'>` +
+		$t.clean(get("childrenHtml")(get("$index"), true)) +
+		`</div> </span> <span class='tab'>` +
+		$t.clean(get("childrenHtml")(-1, true)) +
+		`</span> <br> </div>`
+
+exports['1746132333'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <span> <button class='conditional-button modify' target-id='` +
+		$t.clean(get("input").id()) +
+		`'> If ` +
+		$t.clean(get("input").name()) +
+		` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+		$t.clean(get("input").value()) +
+		`'>` +
+		$t.clean(get("childrenHtml")(get("$index"), true)) +
+		`</div> </span> <span>` +
+		$t.clean(get("childrenHtml")(-1, true)) +
+		`</span> <br> </div>`
 
 exports['1835219150'] = (get, $t) => 
 		`<option value='` +
@@ -83,6 +205,36 @@ exports['1835219150'] = (get, $t) =>
 		`> ` +
 		$t.clean(get("value")) +
 		` </option>`
+
+exports['1850064707'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <div class='edit-input-cnt'><button>&#xf044;</button></div> <span> <button class='conditional-button modify' target-id='` +
+		$t.clean(get("input").id()) +
+		`'> If ` +
+		$t.clean(get("input").name()) +
+		` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+		$t.clean(get("input").value()) +
+		`'>` +
+		$t.clean(get("childrenHtml")(get("$index"), true)) +
+		`</div> </span> </div>`
+
+exports['2103134604'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <div class='children-recurse-cnt tab' value='` +
+		$t.clean(get("input").value()) +
+		`'> ` +
+		$t.clean(get("childrenHtml")(get("$index"))) +
+		` </div> </div>`
 
 exports['auto-save'] = (get, $t) => 
 		`<div> <button type="button" class='auto-save-btn' name="button">Auto Save</button> <span class='status'></span> </div> `
@@ -104,6 +256,21 @@ exports['-1921787246'] = (get, $t) =>
 		`<option value="` +
 		$t.clean(get("option")) +
 		`" ></option>`
+
+exports['expandable/list'] = (get, $t) => 
+		` <div class="expandable-list ` +
+		$t.clean(get("type")()) +
+		`" ex-list-id='` +
+		$t.clean(get("id")()) +
+		`'> ` +
+		$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
+		` <div class='expand-input-cnt' hidden has-input-tree='` +
+		$t.clean(get("hasInputTree")()) +
+		`'>` +
+		$t.clean(get("inputHtml")()) +
+		`</div> <div class='input-open-cnt'><button>Add ` +
+		$t.clean(get("listElemLable")()) +
+		`</button></div> </div> `
 
 exports['expandable/pill'] = (get, $t) => 
 		` <div class="expandable-list ` +
@@ -147,16 +314,6 @@ exports['-2108278621'] = (get, $t) =>
 		$t.clean(get("getHeader")(get("item"), get("key"))) +
 		` </div> </div> </div>`
 
-exports['input/data-list'] = (get, $t) => 
-		`` +
-		$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
-		` `
-
-exports['-994603408'] = (get, $t) => 
-		`<option value="` +
-		$t.clean(get("item")) +
-		`" ></option>`
-
 exports['expandable/sidebar'] = (get, $t) => 
 		` <div class="expandable-list ` +
 		$t.clean(get("type")()) +
@@ -199,21 +356,6 @@ exports['-688234735'] = (get, $t) =>
 		$t.clean(get("getHeader")(get("item"), get("key"))) +
 		` </div> </div> </div>`
 
-exports['expandable/list'] = (get, $t) => 
-		` <div class="expandable-list ` +
-		$t.clean(get("type")()) +
-		`" ex-list-id='` +
-		$t.clean(get("id")()) +
-		`'> ` +
-		$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
-		` <div class='expand-input-cnt' hidden has-input-tree='` +
-		$t.clean(get("hasInputTree")()) +
-		`'>` +
-		$t.clean(get("inputHtml")()) +
-		`</div> <div class='input-open-cnt'><button>Add ` +
-		$t.clean(get("listElemLable")()) +
-		`</button></div> </div> `
-
 exports['expandable/top-add-list'] = (get, $t) => 
 		` <div class="expandable-list ` +
 		$t.clean(get("type")()) +
@@ -229,79 +371,80 @@ exports['expandable/top-add-list'] = (get, $t) =>
 		$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
 		` </div> `
 
-exports['input/decision/decision-modification'] = (get, $t) => 
-		` <` +
-		$t.clean(get("tag")()) +
-		` class='decision-input-cnt mod' node-id='` +
-		$t.clean(get("id")()) +
-		`' ` +
-		$t.clean(get("reachable")() ? '' : 'hidden') +
-		`> <span node-id='` +
-		$t.clean(get("id")()) +
-		`'> ` +
-		$t.clean( new $t('-327218816').render(get("inputArray")(), 'input', get)) +
-		` </span> <div class='modification-add-input tab'> ` +
-		$t.clean(get("inputTree")().html()) +
-		` </div> </` +
-		$t.clean(get("tag")()) +
-		`> `
+exports['input/data-list'] = (get, $t) => 
+		`` +
+		$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+		` `
 
-exports['-2142270891'] = (get, $t) => 
-		`<span class='decision-input-array-cnt pad ` +
-		$t.clean(get("class")) +
-		`' index='` +
-		$t.clean(get("$index")) +
-		`'> ` +
-		$t.clean(get("input").html()) +
-		` <span> <button class='conditional-button' target-id='` +
-		$t.clean(get("input").id()) +
-		`'> If ` +
-		$t.clean(get("input").name()) +
-		` = ` +
-		$t.clean(get("input").value()) +
-		` </button> <div class='condition-input-tree tab'></div> <div class='children-recurse-cnt' value='` +
-		$t.clean(get("input").value()) +
-		`'>` +
-		$t.clean(get("childrenHtml")(get("$index"), true)) +
-		`</div> </span> <br> </span>`
+exports['-994603408'] = (get, $t) => 
+		`<option value="` +
+		$t.clean(get("item")) +
+		`" ></option>`
 
 exports['input/decision/decision'] = (get, $t) => 
-		` <` +
-		$t.clean(get("tag")()) +
-		` class='decision-input-cnt' node-id='` +
+		` <div class='decision-input-cnt' node-id='` +
 		$t.clean(get("id")()) +
 		`' ` +
 		$t.clean(get("reachable")() ? '' : 'hidden') +
 		`> <span id='` +
 		$t.clean(get("id")()) +
-		`'> ` +
-		$t.clean( new $t('564755780').render(get("inputArray")(), 'input', get)) +
-		` </span> </` +
-		$t.clean(get("tag")()) +
-		`> `
+		`'> <div class='payload-cnt'>` +
+		$t.clean(get("payloadHtml")()) +
+		`</div> ` +
+		$t.clean( new $t('2103134604').render(get("inputArray")(), 'input', get)) +
+		` </span> </div> `
+
+exports['input/decision/decision-modification'] = (get, $t) => 
+		` <div class='decision-input-cnt mod' node-id='` +
+		$t.clean(get("id")()) +
+		`' ` +
+		$t.clean(get("reachable")() ? '' : 'hidden') +
+		`> <div node-id='` +
+		$t.clean(get("id")()) +
+		`' class='card'> <div class='payload-cnt'>` +
+		$t.clean(get("payloadHtml")()) +
+		`</div> <button class='then-button modify'> Then... </button> <div class='then-input-tree tab'></div> ` +
+		$t.clean( new $t('637244436').render(get("inputArray")(), 'input', get)) +
+		` <div class='tab'>` +
+		$t.clean(get("childrenHtml")(-1, true)) +
+		`</div> <br> <br> <div class='modification-add-input tab'> ` +
+		$t.clean(get("inputTree")().html()) +
+		` </div> <div class='remove-btn-cnt'><button class='rm-node'>X</button></div> </div> </div> `
 
 exports['input/decision/decisionTree'] = (get, $t) => 
 		`<div class='` +
+		$t.clean(get("node").tree().class()) +
+		` ` +
 		$t.clean(get("DecisionInputTree").class) +
 		`' tree-id='` +
 		$t.clean(get("node").tree().id()) +
+		`' input-id=` +
+		$t.clean(get("node").tree().id()) +
+		` node-id='` +
+		$t.clean(get("node").id()) +
 		`'> ` +
+		$t.clean(get("header")) +
+		` ` +
 		$t.clean(get("inputHtml")) +
-		` <button class='` +
+		` <div ` +
+		$t.clean(get("node").tree().hideButton ? 'hidden' : '') +
+		`> <br> <button class='` +
+		$t.clean(get("node").tree().buttonClass()) +
+		` ` +
 		$t.clean(get("DecisionInputTree").buttonClass) +
 		`' tree-id='` +
 		$t.clean(get("node").tree().id()) +
-		`' ` +
-		$t.clean(get("node").tree().hideButton ? 'hidden' : '') +
-		`> ` +
-		$t.clean(get("node").root().inputTree().buttonText()) +
-		` </button> </div> `
+		`'> ` +
+		$t.clean(get("node").tree().buttonText()) +
+		` </button> </div> </div> `
 
 exports['input/input'] = (get, $t) => 
 		`<` +
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		` class='input-cnt'` +
 		$t.clean(get("hidden")() ? ' hidden' : '') +
+		` input-id=` +
+		$t.clean(get("id")()) +
 		`> <label>` +
 		$t.clean(get("label")()) +
 		`</label> <input class='` +
@@ -318,6 +461,8 @@ exports['input/input'] = (get, $t) =>
 		$t.clean(get("name")()) +
 		`' ` +
 		$t.clean(get("attrString")()) +
+		` ` +
+		$t.clean(get("checked")()) +
 		`> <datalist id="input-list-` +
 		$t.clean(get("id")()) +
 		`"> ` +
@@ -330,9 +475,28 @@ exports['input/input'] = (get, $t) =>
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		`> `
 
+exports['input/list'] = (get, $t) => 
+		`<div class='input-cnt` +
+		$t.clean(get("inline")() ? ' inline' : '') +
+		`'` +
+		$t.clean(get("hidden")() ? ' hidden' : '') +
+		` input-id=` +
+		$t.clean(get("id")()) +
+		`> <label>` +
+		$t.clean(get("label")()) +
+		`</label> ` +
+		$t.clean( new $t('1682356664').render(get("list")(), 'input', get)) +
+		` <div class='error' id='` +
+		$t.clean(get("errorMsgId")()) +
+		`' hidden>` +
+		$t.clean(get("errorMsg")()) +
+		`</div> </div> `
+
 exports['input/measurement'] = (get, $t) => 
 		`<div class='fit input-cnt'` +
 		$t.clean(get("hidden")() ? ' hidden' : '') +
+		` input-id=` +
+		$t.clean(get("id")()) +
 		`> <label>` +
 		$t.clean(get("label")()) +
 		`</label> <input class='measurement-input ` +
@@ -358,9 +522,11 @@ exports['input/multiple-entries'] = (get, $t) =>
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		` class='input-cnt multi'` +
 		$t.clean(get("hidden")() ? ' hidden' : '') +
+		` input-id=` +
+		$t.clean(get("id")()) +
 		`> <label>` +
 		$t.clean(get("label")()) +
-		`</label> <div class='multiple-entry-cnt tab ` +
+		`</label> <div class='multiple-entry-cnt tab card ` +
 		$t.clean(get("inline")() ? 'inline' : '') +
 		`' id='` +
 		$t.clean(get("id")()) +
@@ -377,6 +543,39 @@ exports['-1306926582'] = (get, $t) =>
 		$t.clean(get("setHtml")(get("$index"))) +
 		` </div>`
 
+exports['input/number'] = (get, $t) => 
+		`<` +
+		$t.clean(get("inline")() ? 'span' : 'div') +
+		` class='input-cnt'` +
+		$t.clean(get("hidden")() ? ' hidden' : '') +
+		` input-id=` +
+		$t.clean(get("id")()) +
+		`> <label>` +
+		$t.clean(get("label")()) +
+		`</label> <input class='` +
+		$t.clean(get("class")()) +
+		`' list='input-list-` +
+		$t.clean(get("id")()) +
+		`' id='` +
+		$t.clean(get("id")()) +
+		`' placeholder='` +
+		$t.clean(get("placeholder")()) +
+		`' type='number' name='` +
+		$t.clean(get("name")()) +
+		`' max='` +
+		$t.clean(get("max")()) +
+		`' min='` +
+		$t.clean(get("min")()) +
+		`' step='` +
+		$t.clean(get("step")()) +
+		`'> <div class='error' id='` +
+		$t.clean(get("errorMsgId")()) +
+		`' hidden>` +
+		$t.clean(get("errorMsg")()) +
+		`</div> </` +
+		$t.clean(get("inline")() ? 'span' : 'div') +
+		`> `
+
 exports['input/one-entry'] = (get, $t) => 
 		`<span class='one-entry-cnt'> ` +
 		$t.clean(get("html")()) +
@@ -387,15 +586,17 @@ exports['input/radio'] = (get, $t) =>
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		` class='input-cnt'` +
 		$t.clean(get("hidden")() ? ' hidden' : '') +
+		` input-id=` +
+		$t.clean(get("id")()) +
 		`> <label>` +
 		$t.clean(get("label")()) +
-		`</label> <br> <div class='tab'> ` +
-		$t.clean( new $t('-1983906216').render(get("list")(), 'key, val', get)) +
+		`:</label> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <div class='inline tab'> ` +
+		$t.clean( new $t('-2140138526').render(get("list")(), 'key, val', get)) +
 		` </div> </` +
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		`> `
 
-exports['-1983906216'] = (get, $t) => 
+exports['-1641603401'] = (get, $t) => 
 		`<span > <label>` +
 		$t.clean(get("isArray")() ? get("val") : get("key")) +
 		`</label> <input type='radio' ` +
@@ -406,6 +607,8 @@ exports['-1983906216'] = (get, $t) =>
 		$t.clean(get("id")()) +
 		`' name='` +
 		$t.clean(get("name")()) +
+		`' value='` +
+		$t.clean(get("val")) +
 		`'> </span>`
 
 exports['input/select'] = (get, $t) => 
@@ -413,6 +616,8 @@ exports['input/select'] = (get, $t) =>
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		` class='input-cnt'` +
 		$t.clean(get("hidden")() ? ' hidden' : '') +
+		` input-id=` +
+		$t.clean(get("id")()) +
 		`> <label>` +
 		$t.clean(get("label")()) +
 		`</label> <select class='` +
@@ -438,22 +643,23 @@ exports['input/table'] = (get, $t) =>
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		` class='input-cnt'` +
 		$t.clean(get("hidden")() ? ' hidden' : '') +
+		` input-id=` +
+		$t.clean(get("id")()) +
 		`> <label>` +
 		$t.clean(get("label")()) +
-		`</label> <br> <div class='tab'> <table> <tbody> <tr> <td></td> ` +
-		$t.clean( new $t('-1250012283').render(get("columns")(), 'col', get)) +
+		`</label> <br> <div class='tab'> <table border="1"> <tbody> <tr> <td></td> ` +
+		$t.clean( new $t('1254550278').render(get("columnNames")(), 'name', get)) +
 		` </tr> ` +
-		$t.clean( new $t('-302235087').render(get("rows")(), 'rowIndex, row', get)) +
+		$t.clean( new $t('-808712670').render(get("rows")(), 'rowIndex, row', get)) +
 		` </tbody> </table> </div> </` +
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		`> `
 
-exports['-706519867'] = (get, $t) => 
-		`<td >col</td>`
-
-exports['-498428047'] = (get, $t) => 
-		`<tr > <td>row</td> ` +
-		$t.clean( new $t('1591500900').render(get("columns")(), 'colIndex, col', get)) +
+exports['-808712670'] = (get, $t) => 
+		`<tr > <td>` +
+		$t.clean(get("row")) +
+		`</td> ` +
+		$t.clean( new $t('976176139').render(get("columns")(get("rowIndex")), 'col', get)) +
 		` </tr>`
 
 exports['input/textarea'] = (get, $t) => 
@@ -461,6 +667,8 @@ exports['input/textarea'] = (get, $t) =>
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		` class='input-cnt'` +
 		$t.clean(get("hidden")() ? ' hidden' : '') +
+		` input-id=` +
+		$t.clean(get("id")()) +
 		`> <label>` +
 		$t.clean(get("label")()) +
 		`</label> <br> <textarea class='` +
@@ -485,11 +693,16 @@ exports['input/textarea'] = (get, $t) =>
 		$t.clean(get("inline")() ? 'span' : 'div') +
 		`> `
 
+exports['ancestry'] = (get, $t) => 
+		`<div> ` +
+		$t.clean(get("name")) +
+		` </div> `
+
 exports['configure'] = (get, $t) => 
-		`<div id='config-body'></div> <div id='test-ground'></div> `
+		`<div> <button id='modify-btn'>Modify</button> </div> <div id='config-body'></div> <div id='test-ground'></div> `
 
 exports['index'] = (get, $t) => 
-		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mike/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/mike/styles/mike.css"> <title></title> </head> <body> ` +
+		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mike/js/index.js'></script> <script src="https://kit.fontawesome.com/234ae94193.js" crossorigin="anonymous"></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/mike/styles/mike.css"> <title></title> </head> <body> ` +
 		$t.clean(get("header")) +
 		` ` +
 		$t.clean(get("main")) +
@@ -497,43 +710,110 @@ exports['index'] = (get, $t) =>
 		$t.clean(get("footer")) +
 		` </body> </html> `
 
-exports['reports'] = (get, $t) => 
-		`<div> REPORTS === ` +
-		$t.clean(get("name")) +
-		` </div> `
-
 exports['report'] = (get, $t) => 
 		`<div> REPORT === ` +
 		$t.clean(get("name")) +
 		` </div> `
 
-exports['-1250012283'] = (get, $t) => 
-		`<td >` +
-		$t.clean(get("col")) +
-		`</td>`
+exports['reports'] = (get, $t) => 
+		`<div> REPORTS === ` +
+		$t.clean(get("name")) +
+		` </div> `
 
-exports['-302235087'] = (get, $t) => 
-		`<tr > <td>` +
-		$t.clean(get("row")) +
-		`</td> ` +
-		$t.clean( new $t('1591500900').render(get("columns")(), 'colIndex, col', get)) +
-		` </tr>`
+exports['input/list0'] = (get, $t) => 
+		`<div class='input-cnt` +
+		$t.clean(get("inline")() ? ' inline' : '') +
+		`'` +
+		$t.clean(get("hidden")() ? ' hidden' : '') +
+		` input-id=` +
+		$t.clean(get("id")()) +
+		`> <label>` +
+		$t.clean(get("label")()) +
+		`</label> ` +
+		$t.clean( new $t('1682356664').render(get("list")(), 'input', get)) +
+		` <div class='error' id='` +
+		$t.clean(get("errorMsgId")()) +
+		`' hidden>` +
+		$t.clean(get("errorMsg")()) +
+		`</div> </div> `
 
-exports['-327218816'] = (get, $t) => 
-		`<span class='decision-input-array-cnt pad ` +
+exports['input/object'] = (get, $t) => 
+		`<div class='input-cnt` +
+		$t.clean(get("inline")() ? ' inline' : '') +
+		`'` +
+		$t.clean(get("hidden")() ? ' hidden' : '') +
+		` input-id=` +
+		$t.clean(get("id")()) +
+		`> <label>` +
+		$t.clean(get("label")()) +
+		`</label> ` +
+		$t.clean( new $t('1682356664').render(get("list")(), 'input', get)) +
+		` <div class='error' id='` +
+		$t.clean(get("errorMsgId")()) +
+		`' hidden>` +
+		$t.clean(get("errorMsg")()) +
+		`</div> </div> `
+
+exports['-2055734055'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
 		$t.clean(get("class")) +
 		`' index='` +
 		$t.clean(get("$index")) +
 		`'> ` +
 		$t.clean(get("input").html()) +
-		` <span> <button class='conditional-button' target-id='` +
+		` <span> <button class='conditional-button modify' target-id='` +
 		$t.clean(get("input").id()) +
 		`'> If ` +
 		$t.clean(get("input").name()) +
-		` = ` +
+		` </button> <div class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
 		$t.clean(get("input").value()) +
+		`'>` +
+		$t.clean(get("childrenHtml")(get("$index"))) +
+		`</div> </span> <br> </div>`
+
+exports['-1087743733'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` <span> <button hidden class='conditional-button modify' target-id='` +
+		$t.clean(get("input").id()) +
+		`'> If ` +
+		$t.clean(get("input").name()) +
 		` </button> <div class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
 		$t.clean(get("input").value()) +
 		`'>` +
 		$t.clean(get("childrenHtml")(get("$index"), true)) +
-		`</div> </span> <br> </span>`
+		`</div> </span> <br> </div>`
+
+exports['-1087665304'] = (get, $t) => 
+		`<span > <label>` +
+		$t.clean(get("isArray")() ? get("val") : get("key")) +
+		`</label> <input type='radio' ` +
+		$t.clean((get("isArray")() ? get("val") : get("key")) === get("value")() ? 'checked' : '') +
+		` class='` +
+		$t.clean(get("class")()) +
+		`' id='` +
+		$t.clean(get("id")()) +
+		`' name='` +
+		$t.clean(get("uniqueName")()) +
+		`' value='` +
+		$t.clean(get("val")) +
+		`'> </span>`
+
+exports['-2140138526'] = (get, $t) => 
+		`<span > <label>` +
+		$t.clean(get("isArray")() ? get("val") : get("key")) +
+		`</label> <input type='radio' ` +
+		$t.clean((get("isArray")() ? get("val") : get("key")) === get("value")() ? 'checked' : '') +
+		` class='` +
+		$t.clean(get("class")()) +
+		`' id='` +
+		$t.clean(get("id")()) +
+		`' name='` +
+		$t.clean(get("uniqueName")()) +
+		`' value='` +
+		$t.clean(get("val")) +
+		`'> &nbsp;&nbsp; </span>`

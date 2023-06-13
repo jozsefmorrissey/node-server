@@ -63,4 +63,19 @@ CustomEvent.all = (obj, ...eventNames) => {
   }
 }
 
+CustomEvent.dynamic = () => {
+  const events = {};
+  return {
+    on: (eventType, func) => {
+      if (events[eventType] === undefined)
+        events[eventType] = new CustomEvent(eventType);
+      events[eventType].on(func);
+    },
+    trigger: (event, detail) => {
+      if (events[event.type] === undefined) return;
+      events[event.type].trigger(event, detail);
+    }
+  }
+}
+
 module.exports = CustomEvent;

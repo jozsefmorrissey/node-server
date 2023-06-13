@@ -1,6 +1,7 @@
 
 const Input = require('../input');
 const $t = require('../../$t');
+const du = require('../../dom-utils');
 
 class Radio extends Input {
   constructor(props) {
@@ -18,14 +19,33 @@ class Radio extends Input {
 
     this.setValue(value);
     this.isArray = () => isArray;
+    this.uniqueName = () => `${this.name()}-${this.id()}`
     this.list = () => props.list;
     this.description = () => props.description;
-    // const parentValue = this.value;
-    // this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
+
+    this.getValue = (val) => {
+      return this.setValue();
+    }
+    const parentSetVal = this.setValue;
+    this.setValue = (val) => {
+      const all = du.find.all(`[name='${this.uniqueName()}']`);
+      for (let index = 0; index < all.length; index++) {
+        const input = all[index];
+        if (input.value === val || input.checked) {
+          value = input.value;
+        }
+      }
+      return value;
+    }
+
     const parentHidden = this.hidden;
     this.hidden = () => props.list.length < 2 || parentHidden();
 
     this.selected = (value) => value === this.value();
+
+    du.on.match('change', `#${this.id()}`, (elem) => {
+      this.setValue(elem.value);
+    });
   }
 }
 

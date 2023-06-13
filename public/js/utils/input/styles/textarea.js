@@ -5,6 +5,7 @@ const $t = require('../../$t');
 class Textarea extends Input {
   constructor(props) {
     super(props);
+    Object.getSet(this);
   }
 }
 

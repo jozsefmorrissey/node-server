@@ -1505,6 +1505,21 @@ function (require, exports, module) {
 	  }
 	}
 	
+	CustomEvent.dynamic = () => {
+	  const events = {};
+	  return {
+	    on: (eventType, func) => {
+	      if (events[eventType] === undefined)
+	        events[eventType] = new CustomEvent(eventType);
+	      events[eventType].on(func);
+	    },
+	    trigger: (event, detail) => {
+	      if (events[event.type] === undefined) return;
+	      events[event.type].trigger(event, detail);
+	    }
+	  }
+	}
+	
 	module.exports = CustomEvent;
 	
 });
@@ -1628,7 +1643,7 @@ function (require, exports, module) {
 	    this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
 	
 	    this.display = (accuracy) => {
-	      switch (unit) {
+	      switch (determineUnit()) {
 	        case units[0]: return new String(this.decimal(10));
 	        case units[1]: return this.standardUS(accuracy);
 	        default:
@@ -2228,6 +2243,20 @@ const frag = document.createDocumentFragment();
 	  return elem;
 	}
 	
+	du.create.event = (eventName) => {
+	  let event;
+	  if(document.createEvent){
+	      event = document.createEvent("HTMLEvents");
+	      event.initEvent(eventName, true, true);
+	      event.eventName = eventName;
+	  } else {
+	      event = document.createEventObject();
+	      event.eventName = eventName;
+	      event.eventType = eventName;
+	  }
+	  return event;
+	}
+	
 	// Ripped off of: https://ourcodeworld.com/articles/read/189/how-to-create-a-file-and-generate-a-download-with-javascript-in-the-browser-without-a-server
 	du.download = (filename, contents) => {
 	  var element = document.createElement('a');
@@ -2518,7 +2547,7 @@ const frag = document.createDocumentFragment();
 	}
 	
 	du.class.has = function(target, clazz) {
-	  return target.className.match(classReg(clazz));
+	  return target.className.match(classReg(clazz)) !== null;
 	}
 	
 	du.class.toggle = function(target, clazz) {
@@ -2616,6 +2645,18 @@ const frag = document.createDocumentFragment();
 	  // if (selectorArray.indexOf(func) !== -1) {
 	    selectorArray.push(filter.func);
 	  // }
+	}
+	
+	du.trigger = (eventName, elemOid) => {
+	  const elem = (typeof elemOid) === 'string' ? du.id(elemOid) : elemOid;
+	  if (elem instanceof HTMLElement) {
+	    const event = du.create.event(eventName);
+	    if(document.createEvent){
+	      element.dispatchEvent(this.event);
+	    } else {
+	      element.fireEvent("on" + this.event.eventType, this.event);
+	    }
+	  }
 	}
 	
 	du.cookie.set = function(name, value, lifeMilliSecs) {
@@ -2969,6 +3010,9 @@ function (require, exports, module) {
 	  return map;
 	}, true);
 	
+	Function.safeStdLibAddition(Object, 'hash',
+	  (obj) => JSON.stringify(obj === undefined ? 'undefined' : obj).hash(), true);
+	
 	function processValue(value) {
 	  let retVal;
 	  if ((typeof value) === 'object' && value !== null) {
@@ -3156,7 +3200,7 @@ function (require, exports, module) {
 	}
 	
 	function objEq(obj1, obj2, ignoreKeys) {
-	  ignoreKeys ||= [];
+	  ignoreKeys = ignoreKeys || [];
 	  const notObj1 = !(obj1 instanceof Object);
 	  const notObj2 = !(obj2 instanceof Object);
 	  if (notObj1 && notObj2) return obj1 === obj2;
@@ -4102,6 +4146,7 @@ function (require, exports, module) {
 	
 
 	const Lookup = require('./object/lookup')
+	const CustomEvent = require('./custom-event')
 	const REMOVAL_PASSWORD = String.random();
 	
 	const nameEquals = (name) => (node) => node.name() === name;
@@ -4157,12 +4202,14 @@ function (require, exports, module) {
 	    }
 	  }
 	}
+	Object.class.register(StateConfig);
 	
 	StateConfig.fromJson = (json) => {
 	  const id = json.id;
 	  const existing = StateConfig.get(id);
 	  if (existing) return existing;
-	  return new StateConfig(json.name, json.payload);
+	  const payload = Object.fromJson(json.payload);
+	  return new StateConfig(json.name, payload);
 	}
 	const defaultResolver = (node) => node.name();
 	class DecisionCondition {
@@ -4254,6 +4301,13 @@ function (require, exports, module) {
 	
 	    this.setValue = (key, value) => payload[key] = value;
 	
+	    const metadata = {};
+	    this.metadata = (attribute, value) => {
+	        if (attribute === undefined) return Object.merge({}, metadata);
+	        if (value !== undefined) return metadata[attribute] = value;
+	        return metadata[attribute];
+	    }
+	
 	    this.payload = (noConfig) => {
 	      if (noConfig) return payload;
 	      const copy = stateConfig.payload();
@@ -4304,7 +4358,11 @@ function (require, exports, module) {
 	    }
 	
 	    this.then = (name, payload) => {
-	      if (name instanceof DecisionNode) return attach(name);
+	      if (name instanceof DecisionNode) {
+	        const attached = attach(name);
+	        this.tree().changed()
+	        return attached;
+	      }
 	      if (Array.isArray(name)) {
 	        const returnNodes = [];
 	        for (let index = 0; index < name.length; index += 1) {
@@ -4314,12 +4372,39 @@ function (require, exports, module) {
 	      }
 	      name = formatName(name);
 	      const newState = createNode(name, payload);
+	      this.tree().changed()
 	      stateMap[name] = newState;
 	
 	      return newState;
 	    }
 	
-	    this.remove = () => this.parent().stateConfig().remove(this.stateConfig());
+	    const onChange = [];
+	    const changeEvent = new CustomEvent('change');
+	
+	    const trigger = () => {
+	      changeEvent.trigger(this.values());
+	      this.tree().changed();
+	    }
+	    this.onChange = (func) => changeEvent.on(func);
+	    let changePending = 0;
+	    const delay = 100;
+	    this.changed = () => {
+	      let changeId = ++changePending;
+	      setTimeout(() => {
+	        if (changeId === changePending) {
+	          const values = this.values();
+	          changeEvent.trigger(values)
+	        }
+	      }, delay);
+	    }
+	
+	    this.remove = (child) => {
+	      if (child === undefined) return this.parent().remove(this);
+	      const state = stateMap[child.name()];
+	      delete stateMap[child.name()];
+	      this.stateConfig().remove(child.stateConfig());
+	      return state;
+	    }
 	
 	    this.tree = () => {
 	      let curr = this;
@@ -4592,6 +4677,7 @@ function (require, exports, module) {
 	                    childConditions: childConds};
 	
 	      json.children = {};
+	      json.metadata = Object.toJson(this.metadata());
 	      if (shouldRecurse()) {
 	        this.children().forEach((child) => {
 	          json.children[child.name()] = child.nodeOnlyToJson();
@@ -4724,7 +4810,12 @@ function (require, exports, module) {
 	    }
 	
 	    function addStates(states) {
-	      Object.keys(states).forEach((name) => tree.getState(name, states[name]));
+	      if (Array.isArray(states)) {
+	        states.forEach((state) => tree.addState(state));
+	      } else if (states instanceof Object){
+	        Object.keys(states).forEach((name) => tree.addState(name, states[name]));
+	      }
+	      throw new Error('states must be and array of StateConfigs or an Object of key => payload mapping');
 	    }
 	
 	    this.getByPath = (...idPath) => getByPath(this.root(), ...idPath);
@@ -4767,6 +4858,9 @@ function (require, exports, module) {
 	    const name = childNames[index];
 	    const payload = Object.fromJson(json[name].payload);
 	    const child = node.then(name, payload);
+	    if (json.metadata)
+	      Object.keys(json.metadata).forEach((key) =>
+	          child.metadata(key, Object.fromJson(json.metadata[key])));
 	    child.conditions.addAll(Object.fromJson(json[name].conditions));
 	    child.conditions.child.addAll(Object.fromJson(json[name].childConditions));
 	    addChildren(child, json[name].children);
@@ -4928,6 +5022,21 @@ const $t = require('../$t');
 });
 
 
+RequireJS.addFunction('../../public/js/utils/input/init.js',
+function (require, exports, module) {
+	Object.class.register(require('./decision/decision'));
+	Object.class.register(require('./styles/multiple-entries'));
+	Object.class.register(require('./styles/textarea'));
+	Object.class.register(require('./styles/measurement'));
+	Object.class.register(require('./styles/radio'));
+	Object.class.register(require('./styles/select'));
+	Object.class.register(require('./styles/table'));
+	Object.class.register(require('./styles/list'));
+	Object.class.register(require('./styles/select/relation'));
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/input/input.js',
 function (require, exports, module) {
 	
@@ -4955,6 +5064,7 @@ function (require, exports, module) {
 	*/
 	class Input extends Lookup {
 	  constructor(props) {
+	    props ||= {};
 	    const id = props.id || `input-${String.random(7)}`;
 	    super(id);
 	    props.hidden = props.hide || false;
@@ -4971,12 +5081,20 @@ function (require, exports, module) {
 	    }
 	    Object.getSet(this, immutableProps)
 	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      json.validation = props.validation;
+	    const parentToJson = this.toJson;
+	    this.toJson = () => {
+	      const json = parentToJson();
 	      delete json.id;
 	      delete json.errorMsgId;
+	      json.validation = props.validation;
+	      return json;
+	    }
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
 	      Object.set(json, properties);
+	      if (this.constructor.fromJson)
+	        return this.constructor.fromJson(json);
 	      return new this.constructor(json);
 	    }
 	
@@ -5019,9 +5137,16 @@ function (require, exports, module) {
 	      let val = value;
 	      if (elem) val = elem[instance.targetAttr()];
 	      if (val === undefined) val = props.default;
-	      if (instance.type() === 'checkbox') return val == true;
+	      if (instance.type() === 'checkbox') {
+	        if (elem) val = elem.checked;
+	        return val == true;
+	      }
 	      return val;
 	    }
+	
+	    // TODO: this should probably be a seperate class.... whatever
+	    this.checked = () => this.type() === 'checkbox' && this.value() == true ?
+	                                'checked' : '';
 	
 	    this.getValue = getValue;
 	    this.updateDisplay = () => {
@@ -5031,12 +5156,13 @@ function (require, exports, module) {
 	    let chosen = false;
 	    this.setValue = (val, force, eventTriggered) => {
 	      if (val === undefined) val = this.getValue();
+	      if (this.optional() && val === '') return true;
 	      if(force || this.validation(val)) {
 	        valid = true;
 	        if (!chosen && eventTriggered) chosen = true;
 	        value = val;
 	        const elem = getElem(instance.id());
-	        if (elem) elem.value = value;
+	        if (elem && elem.type !== 'radio') elem.value = value;
 	        return true;
 	      }
 	      valid = false;
@@ -5062,10 +5188,10 @@ function (require, exports, module) {
 	      return valid;
 	    }
 	    this.validation = function(val) {
-	      const elem = getElem(instance.id);
+	      const elem = getElem(instance.id());
 	      val = val === undefined && elem ? elem.value : val;
 	      if (val === undefined) return false;
-	      if (valid !== undefined && val === value) return valid;
+	      // if (valid !== undefined && val === value) return valid;
 	      let valValid = true;
 	      if (props.validation instanceof RegExp) {
 	        valValid = val.match(props.validation) !== null;
@@ -5075,18 +5201,30 @@ function (require, exports, module) {
 	      }
 	      else if (Array.isArray(props.validation)) {
 	        valValid = props.validation.indexOf(val) !== -1;
+	      } else {
+	        valValid = val !== '';
 	      }
 	
+	      setValid(valValid);
 	      return valValid;
 	    };
 	
 	    function setValid(vld) {
 	      valid = vld;
-	      const elem = getElem(instance.errorMsgId());
+	      const errorElem = getElem(instance.errorMsgId());
+	      if (errorElem) {
+	        const hideMsg = !(!valid && instance.value() !== '');
+	        errorElem.hidden = hideMsg;
+	      }
+	
+	      const elem = getElem(instance.id());
 	      if (elem) {
-	        elem.hidden = vld;
+	        if (!valid) du.class.add(elem, 'error');
+	        else du.class.remove(elem, 'error');
 	      }
 	    }
+	
+	    this.indicateValidity = setValid;
 	
 	    this.validate = (target, eventTriggered) => {
 	      target = target || getElem(instance.id());
@@ -5096,6 +5234,8 @@ function (require, exports, module) {
 	        } else setValid(false);
 	      }
 	    }
+	
+	    this.empty = () => this.value() === '';
 	
 	    if (props.clearOnDblClick) {
 	      du.on.match(`dblclick`, `#${this.id()}`, () => {
@@ -5116,11 +5256,9 @@ function (require, exports, module) {
 	  if (input) input.validate(elem, true);
 	}
 	
-	du.on.match(`click`, `input`, runValidate);
-	du.on.match(`change`, `input`, runValidate);
-	du.on.match(`keyup`, `input`, runValidate);
-	du.on.match(`change`, `select`, runValidate);
-	du.on.match(`keyup`, `select`, runValidate);
+	du.on.match(`click`, `input,select,textarea`, runValidate);
+	du.on.match(`change`, `input,select,textarea`, runValidate);
+	du.on.match(`keyup`, `input,select,textarea`, runValidate);
 	
 	Input.forAll = (id) => {
 	  const idStr = `#${id}`;
@@ -5133,8 +5271,13 @@ function (require, exports, module) {
 	}
 	
 	Input.getFromElem = (elem) => {
-	  return Input.get(elem.id);
+	  const closest = du.find.closest('[input-id]', elem);
+	  if (closest === undefined) return undefined;
+	  const id = closest.getAttribute('input-id');
+	  return Input.get(id);
 	}
+	
+	Input.fromJson = (json) => new (Object.class.get(json._TYPE))(json);
 	
 	Input.template = new $t('input/input');
 	Input.html = (instance) => () => Input.template.render(instance);
@@ -5153,6 +5296,607 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/input/decision/payload-handler.js',
+function (require, exports, module) {
+	
+const $t = require('../../$t');
+	const InputObject = require('../styles/object');
+	
+	class PayloadHandler {
+	  constructor(templateName, ...inputs) {
+	    Object.getSet(this, {templateName, inputs});
+	    const template = new $t(this.templateName());
+	
+	    this.html = (payload) => template.render(payload);
+	    this.input = () => new InputObject({name: 'payload', list: inputs});
+	    this.toJson = () => ({inputs: Object.toJson(inputs), templateName});
+	  }
+	}
+	
+	module.exports = PayloadHandler;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/decision/conditions.js',
+function (require, exports, module) {
+	const DecisionTree = require('../../decision-tree.js');
+	
+	const CONDITIONS = {};
+	
+	class Condition extends DecisionTree.Condition {
+	  constructor() {super();}
+	}
+	
+	class AttributeCondition extends Condition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    Object.getSet(this, {attribute, value, deligator});
+	    this.resolveValue = (val, attribute) => deligator.resolveValue(val, attribute);
+	  }
+	}
+	
+	class NumberCondition extends AttributeCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    Object.getSet(this, {attribute, value});
+	    this.resolveValue = (val, attribute) => Number.parseFloat(deligator.resolveValue(val, attribute));
+	  }
+	}
+	
+	class LessThanOrEqualCondition extends NumberCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    this.satisfied = (val) => {
+	      return this.resolveValue(val, attribute) <= value;
+	    }
+	  }
+	}
+	class GreaterThanOrEqualCondition extends NumberCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    this.satisfied = (val) => {
+	      return this.resolveValue(val, attribute) >= value;
+	    }
+	  }
+	}
+	class LessThanCondition extends NumberCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    this.satisfied = (val) => {
+	      return this.resolveValue(val, attribute) < value;
+	    }
+	  }
+	}
+	class GreaterThanCondition extends NumberCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    this.satisfied = (val) => {
+	      return this.resolveValue(val, attribute) > value;
+	    }
+	  }
+	}
+	class EqualCondition extends NumberCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    this.satisfied = (val) => {
+	      return this.resolveValue(val, attribute) === value;
+	    }
+	  }
+	}
+	
+	class AnyCondition extends AttributeCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    this.satisfied = (val) => {
+	      return this.resolveValue(val, attribute) != '';
+	    }
+	  }
+	}
+	class ExactCondition extends AttributeCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    this.satisfied = (val) => {
+	      return this.resolveValue(val, attribute) === value;
+	    }
+	  }
+	}
+	class ExceptCondition extends AttributeCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    this.satisfied = (val) => {
+	      return this.resolveValue(val, attribute) !== value;
+	    }
+	  }
+	}
+	class ContainsCondition extends AttributeCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    this.satisfied = (val) => {
+	      return value.indexOf(this.resolveValue(val, attribute)) !== -1;
+	    }
+	  }
+	}
+	
+	class AndCondition extends Condition {
+	  constructor(conditions) {
+	    super();
+	    Object.getSet(this, 'conditions');
+	    this.conditions = () => Object.merge([], conditions);
+	    this.add = (cond) => (cond instanceof Condition) && conditions.push(cond);
+	    this.clone = () => new AndCondition(this.conditions());
+	    this.satisfied = (val) => {
+	      for (let index = 0; index < conditions.length; index++) {
+	        if (!conditions[index].satisfied(val)) return false;
+	      }
+	      return true;
+	    }
+	  }
+	}
+	
+	class OrCondition extends Condition{
+	  constructor(conditions) {
+	    super();
+	    Object.getSet(this, 'conditions');
+	    this.conditions = () => Object.merge([], conditions);
+	    this.add = (cond) => (cond instanceof Condition) && conditions.push(cond);
+	    this.clone = () => new OrCondition(this.conditions());
+	    this.satisfied = (val) => {
+	      for (let index = 0; index < conditions.length; index++) {
+	        if (conditions[index].satisfied(val)) return true;
+	      }
+	      return false;
+	    }
+	  }
+	}
+	
+	class ExclusiveCondition extends AttributeCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    this.satisfied = (val) => {
+	      return value.indexOf(this.resolveValue(val, attribute)) === -1;
+	    }
+	  }
+	}
+	class InclusiveCondition extends AttributeCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    this.satisfied = (val) => {
+	      return value.indexOf(this.resolveValue(val, attribute)) !== -1;
+	    }
+	  }
+	}
+	
+	class RegexCondition extends AttributeCondition {
+	  constructor(attribute, value, deligator) {
+	    super(attribute, value, deligator);
+	    const regex = (typeof value) === 'string' ? new RegExp(value) : value;
+	    if (!(regex instanceof RegExp)) throw new Error('Something went wrong, this object requires a regular expression');
+	    this.value(regex.toString());
+	    this.satisfied = (val) => {
+	      val = this.resolveValue(val, attribute);
+	      if ((typeof val) !== 'string') return false;
+	      return val.match(regex);
+	    }
+	  }
+	}
+	
+	function getCondition(attribute, value, type, deligator) {
+	  if (value instanceof RegExp) return new RegexCondition(attribute, value, deligator);
+	  if ((typeof value) === 'number') {
+	    if (type === 'lessThanOrEqual') return new LessThanOrEqualCondition(attribute, value, deligator);
+	    if (type === 'greaterThanOrEqual') return new GreaterThanOrEqualCondition(attribute, value, deligator);
+	    if (type === 'lessThan') return new LessThanCondition(attribute, value, deligator);
+	    if (type === 'greaterThan') return new GreaterThanCondition(attribute, value, deligator);
+	    return new EqualCondition(attribute, value, deligator);
+	  }
+	  if ((typeof value) === 'string') {
+	    if (type === 'any') return new AnyCondition(attribute, value, deligator);
+	    if (type === 'except') return new ExceptCondition(attribute, value, deligator);
+	    if (type === 'contains') return new ContainsCondition(attribute, value, deligator);
+	    return new ExactCondition(attribute, value, deligator);
+	  }
+	  if (Array.isArray(value)) {
+	    if (type === 'and') return new AndCondition(attribute, value, deligator);
+	    if (type === 'or') return new OrCondition(attribute, value, deligator);
+	    if (type === 'exclusive') return new ExclusiveCondition(attribute, value, deligator);
+	    return new InclusiveCondition(attribute, value, deligator);
+	  }
+	  throw new Error('This should not be reachable Condition must not be defined');
+	}
+	
+	class NodeCondition {
+	  constructor(attribute, value, type) {
+	    this.toJson = () => ({_TYPE: 'NodeCondition'});
+	    this.resolveValue = (node, attribute) => {
+	      const values = node.values();
+	      return Object.pathValue(values, attribute);
+	    }
+	    if (attribute._TYPE === 'NodeCondition') return this;
+	
+	    type &&= type.toCamel();
+	    return getCondition(attribute, value, type, this);
+	  }
+	}
+	
+	Object.class.register(LessThanOrEqualCondition);
+	Object.class.register(GreaterThanOrEqualCondition);
+	Object.class.register(LessThanCondition);
+	Object.class.register(GreaterThanCondition);
+	Object.class.register(EqualCondition);
+	Object.class.register(AnyCondition);
+	Object.class.register(ExactCondition);
+	Object.class.register(ExceptCondition);
+	Object.class.register(ContainsCondition);
+	Object.class.register(ExclusiveCondition);
+	Object.class.register(InclusiveCondition);
+	Object.class.register(RegexCondition);
+	Object.class.register(NodeCondition);
+	
+	Condition.fromJson = (json) => {
+	  const deligator = Object.fromJson(json.deligator);
+	  const attribute = Object.fromJson(json.attribute);
+	  const value = Object.fromJson(json.value);
+	  return new (Object.class.get(json._TYPE))(attribute, value, deligator);
+	}
+	
+	
+	CONDITIONS.node = NodeCondition;
+	CONDITIONS.And = AndCondition;
+	CONDITIONS.Or = OrCondition;
+	module.exports = CONDITIONS;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/object.js',
+function (require, exports, module) {
+	
+const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const CustomEvent = require('../../custom-event');
+	const Input = require('../input');
+	
+	class InputObject extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
+	    const instance = this;
+	    const optionalConfig = [];
+	    props.list.forEach(input => optionalConfig.push(input.optional()));
+	
+	
+	    this.value = () => {
+	      const values = {};
+	      props.list.forEach(input => input.validation() && (values[input.name()] = input.value()));
+	      return values;
+	    }
+	
+	    const dynamicEvent = CustomEvent.dynamic();
+	    this.on = dynamicEvent.on;
+	
+	    function triggerEvent(value, input, event) {
+	      dynamicEvent.trigger(event, {value, input});
+	    }
+	    props.list.forEach(input => input.on('change:click:keyup', triggerEvent));
+	
+	    this.setValue = () => {
+	      throw new Error('This function should never get called');
+	    }
+	
+	    this.valid = () => {
+	      if (this.optional()) return true;
+	      let valid = true;
+	      props.list.forEach(input => valid &&= input.optional() || input.valid());
+	      return valid;
+	    }
+	
+	    let optional;
+	    this.optional = (value) => {
+	      if (value !== true && value !== false) return optional;
+	      optional = value;
+	      if (optional)
+	        props.list.forEach(input => input.optional(true));
+	      else
+	        props.list.forEach((input, index) => input.optional(optionalConfig[index]));
+	    }
+	    this.optional(props.optional || false);
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      json.validation = (properties || props).validation;
+	      json.list.forEach(i => delete i.id);
+	      Object.set(json, properties);
+	      return InputObject.fromJson(json);
+	    }
+	
+	    this.empty = () => {
+	      for (let index = 0; index < props.list.length; index++) {
+	        if (!props.list[index].empty()) return false
+	      }
+	      return true;
+	    }
+	
+	  }
+	}
+	
+	InputObject.fromJson = (json) => {
+	  json.list = Object.fromJson(json.list);
+	  return new InputObject(json);
+	}
+	
+	InputObject.template = new $t('input/object');
+	InputObject.html = (instance) => () => InputObject.template.render(instance);
+	
+	
+	
+	module.exports = InputObject;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/input-input.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const Select = require('./select');
+	const Measurement = require('./measurement');
+	const MultipleEntries = require('./multiple-entries');
+	const DecisionInputTree = require('../decision/decision');
+	
+	class InputInput extends Input {
+	  constructor(name, props) {
+	    super(name, props);
+	    const labels = new MultipleEntries(label, {name: 'labels'});
+	    const rowCols = [tableType, new MultipleEntries(col, {name: 'col', inline: true}),
+	                      new MultipleEntries(row, {name: 'row'})];
+	
+	
+	    // ['Text', 'Radio', 'Table', 'Multiple Entries', 'Measurement']
+	    const inputs = [name, format];
+	
+	    const tree = new DecisionInputTree('InputTree', {inputArray: inputs, noSubmission: true});
+	    const root = tree.root();
+	    // root.then('InputTree');
+	
+	    const dic = (value) => new DecisionInputTree.Condition('format', value);
+	    function addFormatNode(name, inputArray, value) {
+	      const node = root.then(name, {inputArray});
+	      node.conditions.add(dic(value));
+	      node.relatedTo('format');
+	      return node;
+	    }
+	
+	    addFormatNode('text', [textCntSize], 'Text');
+	    addFormatNode('radio', [labels], 'Radio');
+	    addFormatNode('table', rowCols, 'Table');
+	    // addFormatNode('InputTree', null, 'Multiple Entries');
+	    addFormatNode('measure', [units], 'Measurement');
+	
+	    let multiNodeAdded = false;
+	    root.onChange((values) => {
+	      if (multiNodeAdded) return;
+	      if (values.format === 'Multiple Entries') {
+	        const inputTemplate = new MultipleEntries(DecisionInputTree.inputTree(), {name: 'templates'});
+	        addFormatNode('multiInput', [inputTemplate], 'Multiple Entries');
+	        multiNodeAdded = true;
+	        const rootElem = du.find(`.decision-input-cnt[node-id='${tree.root().id()}']`);
+	        DecisionInputTree.update()(rootElem);
+	      }
+	    });
+	
+	    const tJson = tree.toJson();
+	    console.log(tree.toString());
+	    console.log(DecisionInputTree.fromJson(tJson));
+	    console.log(DecisionInputTree.fromJson(tJson).toString());
+	    console.log(DecisionInputTree.fromJson(tJson).toString());
+	
+	    this.valid = tree.completed;
+	    tree.clone = DecisionInputTree.inputTree;
+	    this.value = tree.value();
+	  }
+	}
+	
+	const name = new Input({
+	  name: 'name',
+	  inline: true,
+	  label: 'Name',
+	  class: 'center',
+	  validation: (val) => val !== ''
+	});
+	const format = new Select({
+	  label: 'Format',
+	  name: 'format',
+	  inline: true,
+	  class: 'center',
+	  list: ['Text', 'Checkbox', 'Radio', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement']
+	});
+	const tableType = new Select({
+	  label: 'Type',
+	  name: 'type',
+	  inline: true,
+	  class: 'center',
+	  list: ['Text', 'checkbox', 'radio', 'date', 'time']
+	});
+	const textCntSize = new Select({
+	  label: 'Size',
+	  name: 'size',
+	  inline: true,
+	  class: 'center',
+	  list: ['Small', 'Large']
+	});
+	const units = new Select({
+	  label: 'Units',
+	  name: 'units',
+	  inline: true,
+	  class: 'center',
+	  list: Measurement.units()
+	});
+	const label = new Input({
+	  name: 'label',
+	  inline: true,
+	  label: 'Label',
+	  class: 'centnodeConds[index].satisfied()) reer',
+	  validation: (val) => val !== ''
+	});
+	const row = new Input({
+	  name: 'row',
+	  inline: true,
+	  label: 'Row',
+	  class: 'center',
+	  validation: (val) => val !== ''
+	});
+	const col = new Input({
+	  name: 'col',
+	  inline: true,
+	  label: 'Column',
+	  class: 'center',
+	  validation: (val) => val !== ''
+	});
+	
+	module.exports = InputInput;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/list.js',
+function (require, exports, module) {
+	
+const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const CustomEvent = require('../../custom-event');
+	const Input = require('../input');
+	
+	// TODO: extend InputObject (class functionality overlap)
+	class InputList extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
+	    const instance = this;
+	
+	    this.value = () => {
+	      const values = [];
+	      props.list.forEach(input => input.validation() && values.push(input.value()));
+	      return values;
+	    }
+	
+	    const dynamicEvent = CustomEvent.dynamic();
+	    this.on = dynamicEvent.on;
+	
+	    function triggerChangeEvent(value, input, event) {
+	      dynamicEvent.trigger(event, {value, input});
+	    }
+	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
+	
+	    this.setValue = () => {
+	      throw new Error('This function should never get called');
+	    }
+	
+	    this.valid = () => {
+	      if (this.optional()) return true;
+	      let valid = true;
+	      props.list.forEach(input => valid &&= input.optional() || input.valid());
+	      return valid;
+	    }
+	
+	    let optional;
+	    this.optional = (value) => {
+	      if (value !== true && value !== false) return optional;
+	      optional = value;
+	      props.list.forEach(input => input.optional(optional));
+	    }
+	    this.optional(props.optional || false);
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      json.validation = (properties || props).validation;
+	      json.list.forEach(i => delete i.id);
+	      Object.set(json, properties);
+	      return InputList.fromJson(json);
+	    }
+	
+	    this.empty = () => {
+	      for (let index = 0; index < props.list.length; index++) {
+	        if (!props.list[index].empty()) return false
+	      }
+	      return true;
+	    }
+	
+	  }
+	}
+	
+	InputList.fromJson = (json) => {
+	  json.list = Object.fromJson(json.list);
+	  return new InputList(json);
+	}
+	
+	InputList.template = new $t('input/list');
+	InputList.html = (instance) => () => InputList.template.render(instance);
+	
+	
+	
+	module.exports = InputList;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const Measurement = require('../../measurement');
+	
+	class MeasurementInput extends Input {
+	  constructor(props) {
+	    let units = props.units;
+	    let value = new Measurement(props.value, units || true);
+	    props.value = () => value;
+	    super(props);
+	
+	    this.valid = (val) => {
+	      let testVal;
+	      if (val) {
+	        if (val instanceof MeasurementInput) testVal = val.value();
+	        else testVal = val;
+	      } else testVal = value.value();
+	      const valid = !Number.isNaN(testVal);
+	      this.indicateValidity(valid);
+	      return valid;
+	    }
+	
+	    props.errorMsg = 'Invalid Mathematical Expression';
+	    this.value = () => {
+	      return value.display();
+	    }
+	    const parentSetVal = this.setValue;
+	    this.setValue = (val) => {
+	      let newVal = this.valid(val) ? ((val instanceof Measurement) ?
+	                        val : new Measurement(val, units || true)) : value;
+	      const updated = newVal !== value;
+	      value = newVal;
+	      return updated;
+	    }
+	  }
+	}
+	
+	MeasurementInput.template = new $t('input/measurement');
+	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
+	
+	du.on.match('focusout', '.measurement-input', (elem) => {
+	  const input = MeasurementInput.get(elem.id);
+	  elem.value = input.value();
+	})
+	
+	module.exports = MeasurementInput;
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
 function (require, exports, module) {
 	
@@ -5163,6 +5907,8 @@ function (require, exports, module) {
 	
 	const DecisionTree = require('../../decision-tree.js');
 	const Input = require('../input.js');
+	const NumberInput = require('../styles/number.js');
+	const InputList = require('../styles/list');
 	const Radio = require('../styles/radio');
 	const Table = require('../styles/table');
 	const MeasurementInput = require('../styles/measurement');
@@ -5174,7 +5920,6 @@ function (require, exports, module) {
 	const $t = require('../../$t');
 	const Measurement = require('../../measurement');
 	
-	const ROOT_CLASS = 'decision-input-tree';
 	
 	const nameCompareFunc = (name) => (input) => input.name() === name ? input : false;
 	const inputSelectorFunc = (func) => (node) => {
@@ -5192,18 +5937,7 @@ function (require, exports, module) {
 	const nodeSelectorFunc = (nameOfunc) => inputSelectorFunc(
 	          (typeof nameOfunc) === 'function' ? nameOfunc : nameCompareFunc(nameOfunc));
 	
-	class DecisionInputCondition extends DecisionTree.Condition {
-	  constructor(attribute, value) {
-	    super();
-	    Object.getSet(this, {attribute, value});
-	    this.satisfied = (node) => {
-	      const values = node.values();
-	      return Object.pathValue(values, attribute) === value;
-	    }
-	  }
-	}
-	DecisionInputCondition.fromJson = (json) =>
-	      new DecisionInputCondition(json.attribute, json.value);
+	
 	
 	class DecisionInput extends DecisionTree.Node {
 	  constructor(stateConfig, payload, parent) {
@@ -5211,6 +5945,13 @@ function (require, exports, module) {
 	    payload.inputArray ||= [];
 	    super(stateConfig, payload, parent);
 	    const instance = this;
+	
+	    const parentToJson = this.nodeOnlyToJson;
+	    this.nodeOnlyToJson = () => {
+	      const json = parentToJson();
+	      json.relatedTo = this.relatedTo();
+	      return json;
+	    }
 	
 	    const onChange = [];
 	    const changeEvent = new CustomEvent('change');
@@ -5225,14 +5966,16 @@ function (require, exports, module) {
 	      inArr[index].on('change', trigger);
 	    }
 	
-	    let relatedTo;
 	    this.relatedTo = (value) => {
-	      if (this.isRoot()) throw new Error('The root cannot be related to any other input');
+	      if (this.isRoot()) {
+	        if (value) throw new Error('The root cannot be related to any other input');
+	        return;
+	      }
 	      const validList = this.parent().inputArray().map(i => i.name());
-	      value ||= relatedTo;
-	      if (validList.indexOf(value) === -1) value = undefined;
-	      if (value) return relatedTo = value;
-	      return relatedTo
+	      const prevValue = this.metadata('relatedTo');
+	      value = this.metadata('relatedTo', value);
+	      if (validList.indexOf(value) === -1) this.metadata('relatedTo', prevValue);
+	      return value;
 	    }
 	
 	    this.addInput = (input) => {
@@ -5257,20 +6000,20 @@ function (require, exports, module) {
 	
 	    this.isComplete = () => {
 	      const inArr = this.inputArray();
+	      let complete = true;
 	      for (let index = 0; index < inArr.length; index++) {
-	        if (!inArr[index].optional() && !inArr[index].valid()) return false;
+	        complete &= inArr[index].optional() || inArr[index].valid();
 	      }
-	      let isComplete = true;
-	      this.forEachChild((child) => isComplete &&= child.isComplete());
-	      return isComplete;
+	      this.forEachChild((child) => complete &=
+	                !child.reachable() || child.isComplete());
+	      return complete == 1;
 	    }
 	    this.onComplete = this.tree().onComplete;
 	    let inputTree;
-	    this.inputTree = () => inputTree ||= DecisionInputTree.inputTree();
+	    this.inputTree = () => inputTree ||= DecisionInputTree.inputTree(this);
 	    function updateInputArray (boolean) {
 	      const inputArray = payload.inputArray;
 	      const sc = instance.stateConfig();
-	      // MultipleEntries.initialize(sc.payload().inputArray());
 	      const stateInputArray = sc.payload().inputArray;
 	      if (inputArray.length === stateInputArray.length) return boolean ? false : inputArray;
 	      for (let index = 0; index < stateInputArray.length; index++) {
@@ -5280,7 +6023,6 @@ function (require, exports, module) {
 	          if (clone.onChange) clone.onChange(trigger);
 	          else if (clone.on) clone.on('change', trigger);
 	          inputArray.push(clone);
-	          clone.initialize && clone.initialize();
 	        }
 	        if (inputArray[index].name() !== input.name()) inputArray.splice(index, 1);
 	      }
@@ -5295,7 +6037,6 @@ function (require, exports, module) {
 	      return parentPayload(noConfig);
 	    }
 	
-	    this.class =  ROOT_CLASS;
 	    this.getValue = (index) => this.inputArray()[index].value();
 	    this.isValid = () => {
 	      let valid = true;
@@ -5329,14 +6070,13 @@ function (require, exports, module) {
 	      if (!this.shouldRecurse()) return '';
 	      const children = this.children();
 	      const inArr = this.inputArray();
-	      const inputName = inArr[inputIndex].name();
+	      const inputName = inArr[inputIndex] ? inArr[inputIndex].name() : null;
 	      let html = '';
 	      for (let index = 0; index < children.length; index++) {
 	        const child = children[index];
-	        if (inputName === child.relatedTo() || (inputIndex === inArr.length - 1 && child.relatedTo() === undefined)) {
+	        if (inputName === child.relatedTo() || (inputIndex === -1 && child.relatedTo() === undefined)) {
 	          const inArr = child.inputArray();
 	          if (child.reachable()) {
-	            inArr.forEach(i => i.initialize && i.initialize());
 	            html += child.html(editDisplay);
 	          }
 	        }
@@ -5349,6 +6089,12 @@ function (require, exports, module) {
 	        return DecisionInput.modTemplate.render(this);
 	      }
 	      return DecisionInput.template.render(this);
+	    }
+	
+	    this.payloadHtml = () => {
+	      const pld = this.payload();
+	      if ((typeof pld.html) === 'function') return pld.html();
+	      return this.tree().payloadHtml(pld);
 	    }
 	  }
 	}
@@ -5368,11 +6114,38 @@ function (require, exports, module) {
 	// isComplete: function determining if all required inputs are filled.
 	
 	class DecisionInputTree extends DecisionTree {
-	  constructor(rootName, props) {
+	  constructor(rootName, props, stateConfigs) {
 	    props = props || {};
 	    props.inputArray ||= [];
-	    super(rootName, props);
-	    this.root().payload()
+	    super(rootName, props, stateConfigs);
+	    Object.getSet(this, 'payloadHandler');
+	
+	    this.payloadHtml = (payload) => {
+	      const handler = this.payloadHandler();
+	      if (handler) return handler.html(payload);
+	    }
+	
+	    this.payloadInput = () => {
+	      const handler = this.payloadHandler();
+	      if (handler) return handler.input();
+	    }
+	
+	    this.inputHtml = () => {
+	      const handler = this.payloadHandler();
+	      if (handler) return handler.inputHtml();
+	    }
+	
+	    let payloadTemplate
+	    let payloadTemplateName
+	    this.payloadTemplateName = (name) => {
+	      if (name && $t.functions[name]) {
+	        payloadTemplateName = name;
+	        payloadTemplate = new $t(name);
+	      }
+	      return payloadTemplateName;
+	    }
+	
+	    this.payloadTemplate = () => payloadTemplate;
 	
 	    this.buttonText = () => {
 	      return props.buttonText || `Create ${rootName}`;
@@ -5387,6 +6160,8 @@ function (require, exports, module) {
 	        }
 	      }
 	    }
+	    this.class = () => props.class || 'card';
+	    this.buttonClass = () => props.buttonClass;
 	    this.isComplete = () => {
 	      if ((typeof props.isComplete) === 'function') return props.isComplete(this.root());
 	      const choices = this.choices();
@@ -5399,8 +6174,9 @@ function (require, exports, module) {
 	    const changeEvent = new CustomEvent('change');
 	    this.html = (node, editDisplay) => {
 	      node = node || this.root();
-	      let inputHtml = node.html(editDisplay);
-	      const scope = {node, inputHtml, DecisionInputTree, editDisplay};
+	      const header = props.header;
+	      const inputHtml = node.html(editDisplay);
+	      const scope = {node, inputHtml, DecisionInputTree, editDisplay, header};
 	      if (node.isRoot()) {
 	        return DecisionInputTree.template.render(scope);
 	      }
@@ -5506,8 +6282,16 @@ function (require, exports, module) {
 	  return Lookup.get(nodeId);
 	}
 	
+	DecisionInputTree.hardUpdate = (elem) => {
+	  const tree = DecisionInputTree.getTree(elem);
+	  const treeCnt = du.find.up('[tree-id]', elem);
+	  const cnt = treeCnt.parentElement;
+	  const modCnt = du.find.down('.decision-input-cnt', elem);
+	  const mod = du.class.has(modCnt, 'mod');
+	  cnt.innerHTML = tree.html(null, mod);
+	}
 	DecisionInputTree.update = (soft) =>
-	(elem) => {
+	(elem, force) => {
 	  // if (elem.matches('.modification-add-input *')) return;
 	
 	  const nodeCnt = du.find.up('[node-id]', elem);
@@ -5522,24 +6306,22 @@ function (require, exports, module) {
 	    const inputCnt = du.find.up('.decision-input-array-cnt', input);
 	    const inputIndex = Number.parseInt(inputCnt.getAttribute('index'));
 	    const childrenHtmlCnt = du.find.down('.children-recurse-cnt', inputCnt);
-	    const value = childrenHtmlCnt.getAttribute('value');
-	    const parentValue =  node.values()[input.name];
+	    const prevHash = childrenHtmlCnt.getAttribute('hash-value');
+	    const currHash =  '' + Object.hash(node.values()[input.name]);
 	    const parentName = input.name;
 	    const cs = node.children();
-	    if (!parentValue || value !== parentValue) {
+	    if (force === true || prevHash !== currHash) {
 	      cs.forEach((child) => {
 	        const di = node.payload();
 	        const inputArray = di.inputArray;
-	        inputArray.forEach(input => input.isInitialized() || input.initialize());
-	        if (child.name() === 'multi') {
-	          child.stateConfig().payload().inputArray[0].initialize()
-	          child.stateConfig().payload().inputArray[0].initialize()
-	        }
 	      });
-	      childrenHtmlCnt.setAttribute('value', parentValue)
-	      const childHtml = node.childrenHtml(inputIndex)
+	      childrenHtmlCnt.setAttribute('hash-value', currHash);
+	      const parentCnt = du.find.up('.decision-input-cnt', childrenHtmlCnt)
+	      const mod = du.class.has(parentCnt, 'mod');
+	      const childHtml = node.childrenHtml(inputIndex, mod);
 	      childrenHtmlCnt.innerHTML = childHtml;
 	    }
+	
 	
 	    // if(!soft) {
 	    //   node.root().changed();
@@ -5555,35 +6337,94 @@ function (require, exports, module) {
 	}
 	
 	function updateModBtn(elem) {
-	  const value = elem.value;
 	  const button = du.find.closest('.conditional-button', elem);
-	  if (button && button.getAttribute('target-id') === elem.id) {
-	    button.innerText = `If ${elem.name} = ${value}`;
+	  const input = Input.getFromElem(button);
+	  if (input) {
+	    const value = input.value();
+	    if (value instanceof Object) button.innerText = `If ${input.name()}`;
+	    else if (button && button.getAttribute('target-id') === elem.id) {
+	      button.innerText = `If ${elem.name} = ${value}`;
+	    }
 	  }
 	}
 	
 	let count = 999;
-	const getInput = () => new Input({
-	  label: `Label${++count}`,
-	  name: `Name${count}`,
-	  inline: true,
-	  class: 'center',
-	});
+	// const getInput = () => new Input({
+	//   label: `Label${++count}`,
+	//   name: `Name${count}`,
+	//   inline: true,
+	//   class: 'center',
+	// });
 	
-	function conditionalInputTree() {
+	function andHandlerInput(node, inputs) {
+	  const handlerInput = node.tree().payloadInput();
+	  if (handlerInput) inputs = [handlerInput].concat(inputs);
+	  return inputs
+	}
+	
+	
+	function conditionalInputTree(node, input, props) {
+	  function createNode(values, elem) {
+	    const attribute = input.name();
+	    const type = `${values.type}Type`;
+	    let value = values.condition;
+	    if (values.type === 'Number') value = Number.parseFloat(value);
+	    if (values.type === 'List') value = value.split(',');
+	    const condition = new DecisionInputTree.Conditions.node(attribute, value, type);
+	    const name = values.group;
+	    const newNode = node.then(name, values.payload);
+	    newNode.conditions.add(condition);
+	    newNode.relatedTo(attribute);
+	    const condCnt = du.find.up('.condition-input-tree', elem);
+	    const condBtn = du.find.closest('.conditional-button', condCnt)
+	    condCnt.hidden = true;
+	    condBtn.hidden = false;
+	    const inputElem = du.find.closest(`[input-id="${input.id()}"]`, elem)
+	    DecisionInputTree.update()(inputElem, true);
+	  }
+	
 	  const group = new Input({
 	    name: 'group',
-	    inline: true,
 	    label: 'Group',
 	    class: 'center',
 	  });
 	
+	  function updateGroupList(node) {
+	    if (node._NODE) node = node._NODE;
+	    const list = Object.keys(node.tree().stateConfigs());
+	    group.list(list);
+	    }
+	  updateGroupList(node);
+	
 	  const type = new Select({
 	    label: 'Type',
 	    name: 'type',
-	    inline: true,
 	    class: 'center',
-	    list: ['Any', 'Exact', 'Except', 'Reference', 'List(commaSep)', 'Exclude List(commaSep)', 'Regex']
+	    list: ['String', 'Number', 'Reference', 'List', 'Regex']
+	  });
+	
+	  const stringType = new Select({
+	    name: 'stringType',
+	    class: 'center',
+	    list: ['Any', 'Exact', 'Except', 'Contains']
+	  });
+	
+	  const numberType = new Select({
+	    name: 'numberType',
+	    class: 'center',
+	    list: ['Equal', 'Less Than', 'Greater Than', 'Less Than or Equal', 'Greater Than or Equal']
+	  });
+	
+	  const referenceType = new Select({
+	    name: 'type',
+	    class: 'center',
+	    list: ['need', 'to', 'dynamically update']
+	  });
+	
+	  const listType = new Select({
+	    name: 'listType',
+	    class: 'center',
+	    list: ['Inclusive', 'Exclusive']
 	  });
 	
 	  const condition = new Input({
@@ -5593,44 +6434,168 @@ function (require, exports, module) {
 	    class: 'center',
 	  });
 	
-	  const reference = new Input({
-	    label: 'Reference',
-	    name: 'reference',
-	    inline: true,
-	    class: 'center',
-	  });
+	  props.inputArray = andHandlerInput(node, [group, type, condition]);
 	
-	  const inputs = [group, type];
-	  const condCond = new ValueCondition('type', /^(?!(Reference)$).*$/, [condition]);
-	  const refCond = new ValueCondition('type', 'Reference', [reference]);
+	  const tree = new DecisionInputTree('Question Group', props);
+	  const root = tree.root();
 	
-	  const tree = new DecisionInputTree();
-	  tree.leaf('Question Group', inputs);
-	  payload = tree.payload();
-	  tree.conditional('condition', condCond);
-	  tree.conditional('reference', refCond);
+	  const dic = (value, type) => new DecisionInputTree.Conditions.node('type', value, type);
+	  function addTypeNode(name, inputArray, value, type) {
+	    const node = root.then(name, {inputArray});
+	    node.conditions.add(dic(value, type));
+	    node.relatedTo('type');
+	    return node;
+	  }
+	
+	  addTypeNode('reference', [referenceType], 'Reference');
+	  addTypeNode('string', [stringType], 'String')
+	  addTypeNode('number', [numberType], 'Number')
+	  addTypeNode('list', [listType], 'List')
+	
+	  tree.onChange(updateGroupList);
+	
+	  tree.onSubmit(createNode);
 	
 	  return tree;
 	}
 	
-	function modifyBtnPressed(elem) {
-	  const node = DecisionInputTree.getNode(elem);
-	  const inputArray = node.payload().inputArray;
-	  const inputElem = du.find.closest('input,select,textarea', elem);
-	  const input = Input.getFromElem(inputElem);
-	  const treeHtml = conditionalInputTree().payload().html();
-	  const inputTreeCnt = du.find.closest('.condition-input-tree', elem);
-	  inputTreeCnt.innerHTML = '<br>' + treeHtml;
-	  elem.hidden = true;
+	const thenInput = (node) => {
+	  const group = new Input({
+	    name: 'group',
+	    label: 'Group',
+	    class: 'center',
+	  });
+	
+	  function updateGroupList(node) {
+	    if (node._NODE) node = node._NODE;
+	    const list = Object.keys(node.tree().stateConfigs());
+	    group.list(list);
+	  }
+	  updateGroupList(node);
+	
+	  const props = {inputArray: andHandlerInput(node, group)};
+	  const tree = new DecisionInputTree('Next', props);
+	  tree.onSubmit((values, elem) => {
+	    const name = values.group;
+	    const newNode = node.then(name, values.payload);
+	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
+	    const btnCnt = du.find.closest('.then-button', elem);
+	    const inputCnt = du.find.closest('.then-input-tree', btnCnt);
+	    inputCnt.hidden = true;
+	    btnCnt.hidden = false;
+	    DecisionInputTree.hardUpdate(treeCnt);
+	  });
+	  return tree;
 	}
 	
-	du.on.match('keyup', `.${ROOT_CLASS}`, DecisionInputTree.update(true));
-	du.on.match('change', `.${ROOT_CLASS}`, DecisionInputTree.update());
+	du.on.match('click', '.then-button', (elem, two, three) => {
+	  console.log('ThEn?');
+	  const node = DecisionInputTree.getNode(elem);
+	  const thenPut = thenInput(node);
+	  const inputCnt = du.find.closest('.then-input-tree', elem);
+	  inputCnt.innerHTML = thenPut.html();
+	  elem.hidden = true;
+	  inputCnt.hidden = false;
+	});
+	
+	function addObjectKeys(node, object, conditions) {
+	  conditions ||= new DecisionInputTree.Conditions.And([]);
+	  const keys = ['*'].concat(Object.keys(object));
+	  const list = [];
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const value = object[key];
+	    list.push(key);
+	  }
+	  const select = new Select({name: node.name(), list})
+	  node.addInput(select);
+	  const paths = {};
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const value = object[key];
+	    let path = node.path().join() + `${key}`;
+	    if (value instanceof Object) {
+	      const child = node.then(path);
+	      const cond = new DecisionInputTree.Conditions.node(node.name(), key);
+	      const childConds = conditions.clone();
+	      childConds.add(cond);
+	      child.conditions.add(cond);
+	      addObjectKeys(child, value, childConds);
+	    } else if (path !== '*'){
+	      let child = node.stateMap()[path];
+	      if (child === undefined) {
+	        const childConds = conditions.clone();
+	        child = node.then(path);
+	        if (paths[path] === undefined) {
+	          child.addInput(new Input({name: 'condition', label: 'Condition', value}))
+	          const cond = new DecisionInputTree.Conditions.node(node.name(), key);
+	          childConds.add(cond);
+	          child.conditions.add(childConds);
+	          paths[path] = true;
+	        }
+	      }
+	    }
+	  }
+	}
+	
+	function objectConditionTree(values, node, input, props) {
+	  const tree = new DecisionInputTree('Question Groupy', props);
+	  addObjectKeys(tree.root(), values);
+	  return tree;
+	}
+	
+	function getConditionTree(values, node, input, props) {
+	  if (values instanceof Object)
+	    return objectConditionTree(values, node, input, props);
+	  return conditionalInputTree(node, input, props);
+	}
+	
+	function updateConditionTree(elem) {
+	  const conditionCnt = du.find.up('.condition-input-tree', elem);
+	  if (conditionCnt) return;
+	  const node = DecisionInputTree.getNode(elem);
+	  const inputArray = node.payload().inputArray;
+	  const input = Input.getFromElem(elem);
+	  const val = input.value();
+	  const props = {header: `If ${input.name()} <br>`};
+	  const condTree = getConditionTree(val, node, input, props);
+	  const value = input.value();
+	  if ((typeof value) === 'string') {
+	    condTree.find.input('condition').setValue(value);
+	  }
+	  const treeHtml = condTree.html();
+	  const inputTreeCnt = du.find.closest('.condition-input-tree', elem);
+	  if (inputTreeCnt) {
+	    inputTreeCnt.innerHTML = treeHtml;
+	    return inputTreeCnt;
+	  }
+	}
+	
+	function modifyBtnPressed(elem) {
+	  const inputTreeCnt = updateConditionTree(elem);
+	  elem.hidden = true;
+	  inputTreeCnt.hidden = false;
+	}
+	
+	function removeNodeBtnPressed(elem) {
+	  const node = DecisionInputTree.getNode(elem);
+	  if (confirm(`Are you sure you want to remove node '${node.name()}'`) == true) {
+	    node.remove();
+	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
+	    DecisionInputTree.hardUpdate(treeCnt);
+	  }
+	}
+	
+	const treeSelector = `.${DecisionInputTree.class}`;
+	du.on.match('keyup', treeSelector, DecisionInputTree.update(true));
+	du.on.match('change', treeSelector, DecisionInputTree.update());
+	du.on.match('change', treeSelector,     updateConditionTree);
 	du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
-	du.on.match('keyup', '.decision-input-cnt.mod input', updateModBtn);
-	du.on.match('keyup', '.decision-input-cnt.mod select', updateModBtn);
-	du.on.match('keyup', '.decision-input-cnt.mod textarea', updateModBtn);
+	du.on.match('keyup:change', '.decision-input-cnt.mod input', updateModBtn);
+	du.on.match('keyup:change', '.decision-input-cnt.mod select', updateModBtn);
+	du.on.match('keyup:change', '.decision-input-cnt.mod textarea', updateModBtn);
 	du.on.match('click', '.conditional-button', modifyBtnPressed);
+	du.on.match('click', '.remove-btn-cnt>.rm-node', removeNodeBtnPressed);
 	
 	DecisionInputTree.DO_NOT_CLONE = true;
 	
@@ -5642,6 +6607,7 @@ function (require, exports, module) {
 	}
 	DecisionInputTree.getCondition = DecisionTree.Condition.getter((node) => node.values());
 	
+	// TODO: merge this with parent... duplications
 	function childrenFromJson(parent, json) {
 	  const children = Object.values(json.children);
 	  for (let index = 0; index < children.length; index++) {
@@ -5649,17 +6615,20 @@ function (require, exports, module) {
 	    const node = parent.then(child.name, Object.fromJson(child.payload));
 	    childrenFromJson(node, child);
 	  }
+	  if (json.metadata)
+	    Object.keys(json.metadata).forEach((key) =>
+	        parent.metadata(key, Object.fromJson(json.metadata[key])));
+	
 	  json.conditions.forEach(c => parent.conditions.add(Object.fromJson(c)));
 	  json.childConditions.forEach(c => parent.childConditions.add(Object.fromJson(c)));
 	}
 	
 	DecisionInputTree.fromJson = (json) => {
-	  const rootConfig = json.stateConfigs[json.root.name];
-	  const rootPayload = Object.fromJson(rootConfig.payload);
-	  const tree = new DecisionInputTree(rootConfig.name, rootPayload);
+	  const stateConfigs = Object.fromJson(json.stateConfigs);
+	  const tree = new DecisionInputTree(json.root.name, null, stateConfigs);
 	  const root = tree.root();
-	  tree.addStates(Object.fromJson(json.stateConfigs));
 	  childrenFromJson(root, json.root);
+	
 	  return tree;
 	  // let nodeMap = {};
 	  // nodeMap[json.nodeId] = root;
@@ -5691,123 +6660,158 @@ function (require, exports, module) {
 	  treeCnt.parentElement.innerHTML = body;
 	}
 	
-	function addInput(details, elem)  {
-	  const modCnt = du.find.up('.modification-add-input', elem);
-	  const nodeCnt = du.find.up('[node-id]', modCnt);
-	  const node = Lookup.get(nodeCnt.getAttribute('node-id'));
-	  const inline = true;
+	function getInput(details)  {
 	  const name = details.name.toCamel();
 	  const label = details.name;
+	  let inline = details.inline;
+	  let list;
 	  switch (details.format) {
 	    case 'Text':
 	      if (details.text.size === 'Large')
-	        node.addInput(new Textarea({name, label}))
+	        return new Textarea({name, label});
 	      else
-	        node.addInput(new Input({type: 'text', name, label, inline}))
-	      break;
+	        return new Input({type: 'text', name, label, inline});
+	    case 'Number':
+	      const step = details.number.step;
+	      const min = details.number.min;
+	      const max = details.number.max;
+	      return new NumberInput({name, label, min, max, step});
 	    case 'Date':
-	      node.addInput(new Input({type: 'date', name, label, inline}))
-	      break;
+	      return new Input({type: 'date', name, label, inline});
 	    case 'Time':
-	      node.addInput(new Input({type: 'time', name, label, inline}))
-	      break;
+	      return new Input({type: 'time', name, label, inline});
 	    case 'Checkbox':
-	      node.addInput(new Input({type: 'checkbox', name, label, inline}))
-	      break;
+	      return new Input({type: 'checkbox', name, label, inline});
 	    case 'Radio':
-	      const list = details.radio.labels.map(input => input.value());
-	      node.addInput(new Radio({name, label, list}));
-	      break;
+	      inline = details.radio.inline;
+	      list = details.radio.labels;
+	      return new Radio({name, label, list, inline});
+	    case 'Select':
+	      list = details.select.options.map(input => input.value());
+	      return new Select({name, label, list});
 	    case 'Table':
 	      const rows = details.table.row.map(input => input.value());
-	      const columns = details.table.col.map(input => input.value());
+	      const columns = [];
+	      details.table.columns.forEach(dit => columns.push(getInput(dit.values())))
 	      const type = details.table.type;
-	      node.addInput(new Table({name, label, rows, columns, type}));
-	      break;
+	      return new Table({name, label, rows, columns, type});
 	    case 'Measurement':
 	      const units = details.measure.units;
-	      node.addInput(new MeasurementInput({name, label, units}));
-	      break;
+	      return new MeasurementInput({name, label, units});
 	    case 'Multiple Entries':
-	      // node.addInput(new MultipleEntries());
-	      break;
+	      const templates = details.multi.templates;
+	      list = [];
+	      inline = details.multi.inline;
+	      for (let index = 0; index < templates.length; index++) {
+	        const values = templates[index].values();
+	        values.inline = inline;
+	        const input = getInput(values);
+	        list.push(input);
+	      }
+	      return new MultipleEntries(new InputList({name, list, inline}));
 	    default:
 	      throw new Error('In the future this will not be reachable');
 	  }
-	  console.log(elem);
+	}
+	
+	function addInput(details, elem)  {
+	  const input = getInput(details);
+	  const modCnt = du.find.up('.modification-add-input', elem);
+	  const nodeCnt = du.find.up('[node-id]', modCnt);
+	  const node = Lookup.get(nodeCnt.getAttribute('node-id'));
+	  node.addInput(input);
 	  DecisionInputTree.rebuild(nodeCnt);
 	}
 	
-	DecisionInputTree.inputTree = function () {
+	const noSubmitInputTree = (node) => () =>
+	      DecisionInputTree.inputTree(node, true);
+	DecisionInputTree.inputTree = function (node, noSubmission) {
+	  const targetTree = node.tree();
 	  const name = new Input({
 	    name: 'name',
-	    inline: true,
 	    label: 'Name',
 	    class: 'center',
-	    validation: (val) => val !== ''
+	    validation: (value) => {
+	      if (value === '') return false;
+	      const camel = value.toCamel();
+	      const inputs = node.payload().inputArray;
+	      for (let index = 0; index < inputs.length; index++) {
+	        if (inputs[index].name() === camel) return false;
+	      }
+	      return node.stateNames().indexOf(camel) === -1;
+	    }
+	  });
+	  const inline = new Input({
+	    name: 'inline',
+	    value: true,
+	    label: 'Inline',
+	    class: 'center',
+	    type: 'checkbox'
 	  });
 	  const format = new Select({
 	    label: 'Format',
 	    name: 'format',
-	    inline: true,
 	    class: 'center',
-	    list: ['Text', 'Checkbox', 'Radio', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement']
+	    list: ['Text', 'Checkbox', 'Number', 'Radio', 'Select', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement']
 	  });
+	  const step = new NumberInput({name: 'step', optional: true, label: 'Step'});
+	  const min = new NumberInput({name: 'min', optional: true, label: 'Minimum'});
+	  const max = new NumberInput({name: 'max', optional: true, label: 'Maximum'});
 	  const tableType = new Select({
 	    label: 'Type',
 	    name: 'type',
-	    inline: true,
 	    class: 'center',
 	    list: ['Text', 'checkbox', 'radio', 'date', 'time']
 	  });
 	  const textCntSize = new Select({
 	    label: 'Size',
 	    name: 'size',
-	    inline: true,
 	    class: 'center',
 	    list: ['Small', 'Large']
 	  });
 	  const units = new Select({
 	    label: 'Units',
 	    name: 'units',
-	    inline: true,
 	    class: 'center',
 	    list: Measurement.units()
 	  });
 	  const label = new Input({
 	    name: 'label',
-	    inline: true,
 	    label: 'Label',
+	    class: 'centnodeConds[index].satisfied()) reer',
+	    validation: (val) => val !== ''
+	  });
+	  const option = new Input({
+	    name: 'option',
+	    label: 'Option',
 	    class: 'centnodeConds[index].satisfied()) reer',
 	    validation: (val) => val !== ''
 	  });
 	  const row = new Input({
 	    name: 'row',
-	    inline: true,
-	    label: 'Row',
 	    class: 'center',
 	    validation: (val) => val !== ''
 	  });
 	  const col = new Input({
 	    name: 'col',
-	    inline: true,
-	    label: 'Column',
 	    class: 'center',
 	    validation: (val) => val !== ''
 	  });
 	  const labels = new MultipleEntries(label, {name: 'labels'});
-	  const rowCols = [tableType, new MultipleEntries(col, {name: 'col', inline: true}),
-	                    new MultipleEntries(row, {name: 'row'})];
+	  const options = new MultipleEntries(option, {name: 'options'});
+	  // const colType = new InputList({name: 'cols', list: [col, tableType]});
+	  const colType = new MultipleEntries(noSubmitInputTree(node), {name: 'columns'});
+	  const rowCols = [tableType, colType,
+	                    new MultipleEntries(row, {name: 'row', label: 'Rows'})];
 	
 	
-	  // ['Text', 'Radio', 'Table', 'Multiple Entries', 'Measurement']
 	  const inputs = [name, format];
+	  const multiEnt = new MultipleEntries(noSubmitInputTree(node), {name: 'templates'});
 	
-	  const tree = new DecisionInputTree('InputTree', {inputArray: inputs});
+	  const tree = new DecisionInputTree('Input', {inputArray: inputs, noSubmission, class: 'modify'});
 	  const root = tree.root();
-	  // root.then('InputTree');
 	
-	  const dic = (value) => new DecisionInputCondition('format', value);
+	  const dic = (value) => new DecisionInputTree.Conditions.node('format', value);
 	  function addFormatNode(name, inputArray, value) {
 	    const node = root.then(name, {inputArray});
 	    node.conditions.add(dic(value));
@@ -5816,83 +6820,98 @@ function (require, exports, module) {
 	  }
 	
 	  addFormatNode('text', [textCntSize], 'Text');
-	  addFormatNode('radio', [labels], 'Radio');
+	  addFormatNode('select', [options], 'Select');
+	  addFormatNode('radio', [inline, labels], 'Radio');
 	  addFormatNode('table', rowCols, 'Table');
-	  // addFormatNode('InputTree', null, 'Multiple Entries');
+	  addFormatNode('multi', [inline, multiEnt], 'Multiple Entries');
 	  addFormatNode('measure', [units], 'Measurement');
+	  addFormatNode('number', [step, min, max], 'Number');
 	
-	  let multiNodeAdded = false;
-	  root.onChange((values) => {
-	    if (multiNodeAdded) return;
-	    if (values.format === 'Multiple Entries') {
-	      const inputTemplate = new MultipleEntries(DecisionInputTree.inputTree(), {name: 'templates'});
-	      addFormatNode('multiInput', [inputTemplate], 'Multiple Entries');
-	      multiNodeAdded = true;
-	      const rootElem = du.find(`.decision-input-cnt[node-id='${tree.root().id()}']`);
-	      DecisionInputTree.update()(rootElem);
-	    }
-	  });
 	
-	  const tJson = tree.toJson();
-	  console.log(tree.toString());
-	  console.log(DecisionInputTree.fromJson(tJson));
-	  console.log(DecisionInputTree.fromJson(tJson).toString());
-	  console.log(DecisionInputTree.fromJson(tJson).toString());
+	  // const tJson = tree.toJson();
+	  // console.log(tree.toString());
+	  // console.log(DecisionInputTree.fromJson(tJson));
+	  // console.log(DecisionInputTree.fromJson(tJson).toString());
+	  // console.log(DecisionInputTree.fromJson(tJson).toString());
 	
 	  tree.onSubmit(addInput);
-	  tree.clone = DecisionInputTree.inputTree;
+	  tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
+	  tree.empty = () => {
+	    let empty = true;
+	    tree.root().forEach((node) =>
+	      node.payload().inputArray.forEach(input => empty &&= input.empty()));
+	    return empty;
+	  }
 	  return tree;
 	}
 	
+	DecisionInputTree.Conditions = require('./conditions');
 	
 	module.exports = DecisionInputTree;
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
+RequireJS.addFunction('../../public/js/utils/input/styles/radio.js',
 function (require, exports, module) {
 	
-
-	
-	
-	const Input = require('../input');
+const Input = require('../input');
 	const $t = require('../../$t');
 	const du = require('../../dom-utils');
-	const Measurement = require('../../measurement');
 	
-	class MeasurementInput extends Input {
+	class Radio extends Input {
 	  constructor(props) {
-	    let units = props.units;
-	    let value = new Measurement(props.value, units || true);
-	    props.value = () => value;
 	    super(props);
-	    props.validation = (val) =>
-	        !Number.isNaN(val && val.display ? value : new Measurement(val, units || true).value());
-	    props.errorMsg = 'Invalid Mathematical Expression';
-	    this.value = () => {
-	      return value.display();
+	    if (props.list === undefined) throw new Error('Radio Input is useless without a list of possible values');
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
+	    }
+	    props.value = undefined;
+	
+	    this.setValue(value);
+	    this.isArray = () => isArray;
+	    this.uniqueName = () => `${this.name()}-${this.id()}`
+	    this.list = () => props.list;
+	    this.description = () => props.description;
+	
+	    this.getValue = (val) => {
+	      return this.setValue();
 	    }
 	    const parentSetVal = this.setValue;
 	    this.setValue = (val) => {
-	      let newVal = props.validation(val) ? ((val instanceof Measurement) ?
-	                        val : new Measurement(val, units || true)) : value;
-	      const updated = newVal !== value;
-	      value = newVal;
-	      return updated;
+	      const all = du.find.all(`[name='${this.uniqueName()}']`);
+	      for (let index = 0; index < all.length; index++) {
+	        const input = all[index];
+	        if (input.value === val || input.checked) {
+	          value = input.value;
+	        }
+	      }
+	      return value;
 	    }
+	
+	    const parentHidden = this.hidden;
+	    this.hidden = () => props.list.length < 2 || parentHidden();
+	
+	    this.selected = (value) => value === this.value();
+	
+	    du.on.match('change', `#${this.id()}`, (elem) => {
+	      this.setValue(elem.value);
+	    });
 	  }
 	}
 	
-	MeasurementInput.template = new $t('input/measurement');
-	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
+	Radio.template = new $t('input/radio');
+	Radio.html = (instance) => () => Radio.template.render(instance);
 	
-	du.on.match('focusout', '.measurement-input', (elem) => {
-	  const input = MeasurementInput.get(elem.id);
-	  elem.value = input.value();
-	})
+	Radio.yes_no = (props) => (props.list = ['Yes', 'No']) && new Radio(props);
+	Radio.true_false = (props) => (props.list = ['True', 'False']) && new Radio(props);
 	
-	module.exports = MeasurementInput;
+	module.exports = Radio;
 	
 });
 
@@ -5908,10 +6927,26 @@ function (require, exports, module) {
 	const $t = require('../../$t');
 	const du = require('../../dom-utils');
 	
+	const validation = () => true;
 	class MultipleEntries extends Input {
 	  constructor(inputTemplate, props) {
+	
+	
 	    props ||= {};
-	    props.validation ||= (list) => list.length > 0;
+	    props.validation ||= (event, details) => {
+	      const list = props.list;
+	      let allEmpty = true;
+	      let valid = true;
+	      for (let index = 0; index < list.length; index++) {
+	        const empty = list[index].empty();
+	        if (!empty) {
+	          list[index].optional(false);
+	          valid &= list[index].valid();
+	        }
+	        allEmpty &= empty;
+	      }
+	      return !allEmpty && valid;
+	    }
 	    if (props.list === undefined) {
 	      const list = [];
 	      props.list = list;
@@ -5919,18 +6954,39 @@ function (require, exports, module) {
 	        list.push(i.clone()));
 	    }
 	
-	    super(props);
 	    props.list ||= [];
+	    super(props);
+	    Object.getSet(this, 'inputTemplate');
+	    let template;
+	    const instance = this;
+	    this.inputTemplate = () => {
+	      if (!template) {
+	        if ((typeof inputTemplate) === 'function') {
+	          template = inputTemplate();
+	        } else template = inputTemplate;
+	      }
+	      return template;
+	    }
+	
+	    this.empty = () => {
+	      if (props.list.length > 1) return false;
+	      const inputs = props.list[0];
+	      for (let index = 0; index < inputs.length; index++) {
+	        if (!inputs[index].empty()) return false;
+	      }
+	      return true;
+	    }
+	
 	    this.clone = () =>
 	        new MultipleEntries(inputTemplate, JSON.clone(props));
 	
 	    this.set = (index) => {
 	      if (props.list[index] === undefined) {
-	        props.list[index] = inputTemplate.clone();
+	        props.list[index] = this.inputTemplate().clone({optional: true});
+	        props.list[index].on('change', this.validation);
 	      }
 	      return props.list[index];
 	    }
-	    this.set(0);
 	
 	    this.tag = () => props.inline() ? 'span' : 'div';
 	
@@ -5955,22 +7011,33 @@ function (require, exports, module) {
 	      const values = [];
 	      for (let index = 0; index < props.list.length; index++) {
 	        const input = props.list[index];
-	        if (input.valid()) values.push(input);
+	        if (!input.empty() && input.valid()) values.push(input.value());
 	      }
 	      return values;
 	    }
 	
 	    this.value = this.getValue;
 	
+	    const parentHtml = this.html;
+	    this.html = () => {
+	      if (props.list.length === 0) this.set(0);
+	      return parentHtml();
+	    }
+	
 	    this.length = () => this.list().length;
-	    this.setHtml = (index) =>
-	        MultipleEntries.singleTemplate.render(this.set(index));
+	    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
 	  }
 	}
 	
 	MultipleEntries.template = new $t('input/multiple-entries');
 	MultipleEntries.singleTemplate = new $t('input/one-entry');
 	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
+	
+	MultipleEntries.fromJson = (json) => {
+	  const inputTemplate = Object.fromJson(json.inputTemplate);
+	  return new MultipleEntries(inputTemplate, json);
+	
+	}
 	
 	function meInfo(elem) {
 	  const info = {};
@@ -5984,9 +7051,9 @@ function (require, exports, module) {
 	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
 	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
 	  info.length = info.multiInput.length();
-	  info.inputs = du.find.downAll('input,select,textarea', info.multiCnt);
+	  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
 	  info.last = info.index === info.length - 1;
-	  info.empty = info.inputs[info.index].value === '';
+	  info.empty = info.multiInput.list()[info.index].empty();
 	  return info;
 	}
 	
@@ -6025,7 +7092,7 @@ function (require, exports, module) {
 	  // console.log('focusin');
 	});
 	
-	du.on.match('keyup', oneSelector, (elem) => {
+	du.on.match('keyup:change', oneSelector, (elem) => {
 	  if (!isInput(elem)) return;
 	  const info = meInfo(elem);
 	  if (info.index === info.length - 1 && !info.empty) {
@@ -6042,66 +7109,82 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/radio.js',
+RequireJS.addFunction('../../public/js/utils/input/styles/list0.js',
 function (require, exports, module) {
 	
-const Input = require('../input');
-	const $t = require('../../$t');
+const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const CustomEvent = require('../../custom-event');
+	const Input = require('../input');
 	
-	class Radio extends Input {
+	class InputList extends Input {
 	  constructor(props) {
 	    super(props);
-	    if (props.list === undefined) throw new Error('Radio Input is useless without a list of possible values');
-	    const isArray = Array.isArray(props.list);
-	    let value;
-	    if (isArray) {
-	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
-	    } else {
-	      const key = Object.keys(props.list)[0];
-	      value = props.value || key;
+	    Object.getSet(this);
+	    const instance = this;
+	
+	    this.value = () => {
+	      const values = [];
+	      props.list.forEach(input => values.push(input.value()));
+	      return values;
 	    }
-	    props.value = undefined;
 	
-	    this.setValue(value);
-	    this.isArray = () => isArray;
-	    this.list = () => props.list;
-	    this.description = () => props.description;
-	    // const parentValue = this.value;
-	    // this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
-	    const parentHidden = this.hidden;
-	    this.hidden = () => props.list.length < 2 || parentHidden();
+	    const dynamicEvent = CustomEvent.dynamic();
+	    this.on = dynamicEvent.on;
 	
-	    this.selected = (value) => value === this.value();
+	    function triggerChangeEvent(value, input, event) {
+	      dynamicEvent.trigger(event, {value, input});
+	    }
+	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
+	
+	    this.setValue = () => {
+	      throw new Error('This function should never get called');
+	    }
+	
+	    this.valid = () => {
+	      if (this.optional()) return true;
+	      let valid = true;
+	      props.list.forEach(input => valid &&= input.valid());
+	      return valid;
+	    }
+	
+	    let optional;
+	    this.optional = (value) => {
+	      if (value !== true && value !== false) return optional;
+	      optional = value;
+	      props.list.forEach(input => input.optional(optional));
+	    }
+	    this.optional(props.optional || false);
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      json.validation = (properties || props).validation;
+	      json.list.forEach(i => delete i.id);
+	      Object.set(json, properties);
+	      return InputList.fromJson(json);
+	    }
+	
+	    this.empty = () => {
+	      for (let index = 0; index < props.list.length; index++) {
+	        if (!props.list[index].empty()) return false
+	      }
+	      return true;
+	    }
+	
 	  }
 	}
 	
-	Radio.template = new $t('input/radio');
-	Radio.html = (instance) => () => Radio.template.render(instance);
-	
-	Radio.yes_no = (props) => (props.list = ['Yes', 'No']) && new Radio(props);
-	Radio.true_false = (props) => (props.list = ['True', 'False']) && new Radio(props);
-	
-	module.exports = Radio;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/textarea.js',
-function (require, exports, module) {
-	
-const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class Textarea extends Input {
-	  constructor(props) {
-	    super(props);
-	  }
+	InputList.fromJson = (json) => {
+	  json.list = Object.fromJson(json.list);
+	  return new InputList(json);
 	}
 	
-	Textarea.template = new $t('input/textarea');
-	Textarea.html = (instance) => () => Textarea.template.render(instance);
+	InputList.template = new $t('input/list');
+	InputList.html = (instance) => () => InputList.template.render(instance);
 	
-	module.exports = Textarea;
+	
+	
+	module.exports = InputList;
 	
 });
 
@@ -6140,6 +7223,7 @@ function (require, exports, module) {
 	    const parentHidden = this.hidden;
 	    this.hidden = () => props.list.length < 2 || parentHidden();
 	
+	    this.empty = () => true;
 	    this.selected = (value) => value === this.value();
 	  }
 	}
@@ -6162,20 +7246,55 @@ const Input = require('../input');
 	class Table extends Input {
 	  constructor(props) {
 	    super(props);
-	    const isArray = Array.isArray(props.list);
-	    let value;
-	    if (isArray) {
-	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
-	    } else {
-	      const key = Object.keys(props.list)[0];
-	      value = props.value || key;
-	    }
+	
+	    const inputs = [];
 	    props.type ||= 'radio';
+	    for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
+	      inputs[rIndex] = [];
+	      const row = props.rows[rIndex];
+	      for (let cIndex = 0; cIndex < props.columns.length; cIndex++) {
+	        const column = props.columns[cIndex];
+	        let input;
+	        if (column instanceof Input) input = column.clone();
+	        else input = new Input({type: props.type});
+	        input.label('');
+	        input.name(`table-${this.id()}-${rIndex}-${cIndex}`);
+	        const clone = input.clone();
+	        if (props.value) clone.value(props.value[row][input.name()]);
+	        inputs[rIndex].push(clone);
+	      }
+	    }
+	
+	    this.value = () => {
+	      const values = {};
+	      const rows = this.rows();
+	      const cols = this.columnNames();
+	      for (let rIndex = 0; rIndex < inputs.length; rIndex++) {
+	        const column = inputs[rIndex];
+	        const row = rows[rIndex];
+	        values[row] = {};
+	        for (let cIndex = 0; cIndex < column.length; cIndex++) {
+	          let input = column[cIndex];
+	          values[row][cols[cIndex]] = input.value();
+	        }
+	      }
+	      return values;
+	    }
+	
+	
 	    props.value = undefined;
-	    this.setValue(value);
-	    this.isArray = () => isArray;
 	    this.list = () => props.list;
-	    this.columns = () => props.columns;
+	    this.columns = (rowIndex) => rowIndex === undefined ?
+	          props.columns : inputs[rowIndex];
+	    this.columnNames = () => {
+	      const names = [];
+	      for (let index = 0; index < props.columns.length; index++) {
+	        const col = props.columns[index];
+	        if (col instanceof Input) names.push(col.label());
+	        else names.push(col);
+	      }
+	      return names;
+	    }
 	    this.rows = () => props.rows;
 	    this.description = () => props.description;
 	    // const parentValue = this.value;
@@ -6185,10 +7304,63 @@ const Input = require('../input');
 	  }
 	}
 	
+	Table.fromJson = (json) => {
+	  const columns = Object.fromJson(json.columns);
+	  json.columns = columns;
+	  return new Table(json);
+	}
+	
 	Table.template = new $t('input/table');
 	Table.html = (instance) => () => Table.template.render(instance);
 	
 	module.exports = Table;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/textarea.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Textarea extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
+	  }
+	}
+	
+	Textarea.template = new $t('input/textarea');
+	Textarea.html = (instance) => () => Textarea.template.render(instance);
+	
+	module.exports = Textarea;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/number.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class NumberInput extends Input {
+	  constructor(props) {
+	    super(props);
+	    props.min = Number.parseFloat(props.min) || 0;
+	    props.max = Number.parseFloat(props.max) || Number.MAX_SAFE_INTEGER;
+	    props.step = Number.parseFloat(props.step) || 1;
+	    Object.getSet(this, {min: props.min, max: props.max, step: props.step});
+	
+	    this.validation = (value) => value <= props.max && value >= props.min;
+	  }
+	}
+	
+	NumberInput.template = new $t('input/number');
+	NumberInput.html = (instance) => () => NumberInput.template.render(instance);
+	
+	module.exports = NumberInput;
 	
 });
 
@@ -6468,211 +7640,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/test/tests/compress-string.js',
-function (require, exports, module) {
-	
-const Test = require('../test.js').Test;
-	const CompressedString = require('../../object/compressed-string.js');
-	
-	Test.add('Imposter: fooled me',(ts) => {
-	  let str = 'one, two,threefour,one,twothree,four';
-	  let cStr = new CompressedString(str);
-	  ts.assertEquals(cStr, '^a ^b,^c^d,^a^b^c,^d');
-	
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/tests/decision-input-tree.js',
-function (require, exports, module) {
-	
-
-	// breakfast) Multiselect (food:bacon, eggs, toast, cereal)
-	//     eggs) Select (count:2,3,6), Select(type:overEasy, sunnySideUp, scrambled, fried)
-	//        requiresGourmetChef) upchange
-	//     toast) Select (white, wheat, texas)
-	//     cereal) Checkbox(milk), Select (type: rasinBrand, cheerios, life)
-	//     bacon) Leaf
-	//   dishes)
-	//      plate)
-	//      fork)
-	//      bowl)
-	//      spoon)
-	
-	
-	const Test = require('../test.js').Test;
-	const du = require('../../dom-utils');
-	const Input = require('../../input/input');
-	const Select = require('../../input/styles/select');
-	const DecisionInputTree = require('../../input/decision/decision');
-	const MultipleEntries = require('../../input/styles/multiple-entries');
-	
-	const toastCost = .75;
-	const cerialCost = 2.25;
-	const baconCost = 1.20;
-	const eggsCost = 1.25;
-	const overEasyMultiplier = 25;
-	
-	function createTree() {
-	  const bacon = new Input({type: 'checkbox', name: 'bacon'});
-	  const eggs = new Input({type: 'checkbox', name: 'eggs'});
-	  const eggCount = new Select({list: ['2','3','6'], name: 'count', mustChoose: true});
-	  const eggType = new Select({name: 'type', mustChoose: true, value: 'Scrambled', list: ['Over Easy', 'Sunny Side Up', 'Scrambled', 'Fried']});
-	  const toast = new Input({type: 'checkbox', name: 'toast'});
-	  const cereal = new Input({type: 'checkbox', name: 'cereal'});
-	  const toastType = new Select({name: 'type', mustChoose: true, list: ['white', 'wheat', 'texas']});
-	  const milk = new Input({type: 'checkbox', name: 'milk'});
-	  const cerealType = new Select({name: 'type', mustChoose: true, list: ['rasinBrand', 'cheerios', 'life']});
-	
-	  const tree = new DecisionInputTree('breakfast', {inputArray: [bacon, eggs, toast, cereal]});
-	
-	  const cost = (node) => eggsCost * Number.parseInt(node.find.input('count').value());
-	  const eggsNode = tree.root().then('Eggs', {cost});
-	  eggsNode.addInput(eggCount);
-	  eggsNode.addInput(eggType);
-	  const reqGourChef = eggsNode.then('requiresGourmetChef', {multiplier: overEasyMultiplier});
-	  const toastNode = tree.root().then('Toast', {cost: toastCost, inputArray: [toastType]});
-	  const cerealNode = tree.root().then('Cereal', {cost: cerialCost, inputArray: [cerealType]});
-	  tree.root().then('Bacon', {cost: baconCost});
-	
-	
-	  const dishes = tree.root().then('dishes');
-	  const plate = dishes.then('plate', {matirial: true});
-	  const fork = dishes.then('fork', {matirial: true});
-	  const bowl = dishes.then('bowl', {matirial: true});
-	  const spoon = dishes.then('spoon', {matirial: true});
-	
-	  bowl.conditions.add((values) =>
-	    Object.pathValue(values, 'cereal') === true);
-	
-	  cerealNode.conditions.add((values) =>
-	    Object.pathValue(values, 'cereal') === true);
-	
-	  toastNode.conditions.add((values) =>
-	    Object.pathValue(values, 'toast') === true);
-	
-	  eggsNode.conditions.add((values) =>
-	    Object.pathValue(values, 'eggs') === true);
-	
-	  reqGourChef.conditions.add((values) =>
-	    values.type === "Over Easy");
-	
-	  const vals = tree.values();
-	
-	  return tree;
-	}
-	
-	Test.add('DecisionInputTree structure', (ts) => {
-	  const tree = createTree();
-	  ts.success();
-	});
-	
-	function simulateUserUpdate(input, value, tree, choiceCount, ts) {
-	  const inputElem = du.create.element('input', {id: input.id(), value});
-	  document.body.append(inputElem);
-	  inputElem.click();
-	  inputElem.remove();
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, choiceCount);
-	  ts.assertEquals(tree.isComplete(), choiceCount === 0);
-	}
-	
-	function cost(tree) {
-	  const leaves = tree.root().leaves();
-	  let grandTotal = 0;
-	  for (let index = 0; index < leaves.length; index++) {
-	    let total = 0;
-	    leaves[index].forPath((node) => {
-	      const payload = node.payload();
-	      if (payload.cost) {
-	        total += (typeof payload.cost) === 'function' ? payload.cost(node) : payload.cost;
-	      }
-	      if (payload.multiplier) {
-	        total *= payload.multiplier;
-	      }
-	    });
-	    grandTotal += total;
-	  }
-	  return grandTotal;
-	}
-	
-	function matirials(tree) {
-	  const leaves = tree.root().leaves();
-	  let mats = [];
-	  for (let index = 0; index < leaves.length; index++) {
-	    leaves[index].forPath((node) => {
-	      const payload = node.payload();
-	      if (payload.matirial) {
-	        mats.push(node.name());
-	      }
-	    });
-	  }
-	  return mats;
-	}
-	
-	
-	Test.add('DecisionInputTree choices', (ts) => {
-	  const toastCost = .75;
-	  const cerialCost = 2.25;
-	  const baconCost = 1.20;
-	  const eggsCost = 1.25;
-	  const overEasyMultiplier = 25;
-	
-	  const justEggsCost = eggsCost * 6 * overEasyMultiplier;
-	  const total = justEggsCost + toastCost + baconCost + cerialCost;
-	
-	  const tree = createTree();
-	  let choices = tree.choices();
-	  ts.assertEquals(choices.length, 0);
-	
-	  const eggs = tree.find.input('eggs')
-	  eggs.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 2);
-	
-	  const toast = tree.find.input('toast')
-	  toast.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 3);
-	
-	  const noBowl = ['plate', 'fork', 'spoon'];
-	  ts.assertTrue(noBowl.equals(matirials(tree)));
-	
-	  const cereal = tree.find.input('cereal')
-	  cereal.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 4);
-	
-	
-	  const count = tree.find.input('count', 'Eggs');
-	  const type = tree.find.input('type', 'Eggs');
-	  const eggsType = tree.find.input('type', 'Eggs');
-	  const toastType = tree.find.input('type', 'Toast');
-	  const cerialType = tree.find.input('type', 'Cereal');
-	
-	  ts.assertNotEquals(type, undefined);
-	  ts.assertNotEquals(eggsType, toastType);
-	  ts.assertNotEquals(eggsType, cerialType);
-	  ts.assertNotEquals(cerialType, toastType);
-	
-	  simulateUserUpdate(eggsType, 'Over Easy', tree, 3, ts);
-	  simulateUserUpdate(toastType, 'white', tree, 2, ts);
-	  simulateUserUpdate(cerialType, 'cheerios', tree, 1, ts);
-	  simulateUserUpdate(count, '6', tree, 0, ts);
-	
-	  const allMaterials = ['plate', 'fork', 'bowl', 'spoon'];
-	  ts.assertTrue(allMaterials.equals(matirials(tree)));
-	
-	  ts.assertEquals(cost(tree), total);
-	
-	  ts.success();
-	});
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/test/tests/decision-tree.js',
 function (require, exports, module) {
 	
@@ -6933,6 +7900,148 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/test/tests/lookup.js',
+function (require, exports, module) {
+	
+const Test = require('../test.js').Test;
+	const Lookup = require('../../object/lookup');
+	
+	Test.add('Lookup structure', (ts) => {
+	  const l1 = new Lookup();
+	  const l2 = new Lookup(null, 'id2');
+	  const l3 = {};
+	  Lookup.convert(l3);
+	  const l4 = {hic: 'cups'};
+	  Lookup.convert(l4, 'id2');
+	  Object.fromJson(l4.toJson())
+	
+	  const l12 = Lookup.fromJson(l1.toJson());
+	  ts.assertTrue(l12 === l1);
+	  const l22 = Lookup.fromJson(l2.toJson());
+	  ts.assertTrue(l22 === l2);
+	  const l32 = Lookup.fromJson(l3.toJson());
+	  ts.assertTrue(l32 === l3);
+	  const l42 = Lookup.fromJson(l4.toJson());
+	  ts.assertTrue(l42 === l4);
+	
+	  const l5Json = {pickes: 'fried', id5: 'Lookup_gibberish', ID_ATTRIBUTE: 'id5'};
+	  const l5 = Lookup.fromJson(l5Json);
+	  ts.assertEquals(l5.pickes, 'fried');
+	  const l52 = Lookup.fromJson(l5.toJson());
+	  ts.assertTrue(l52 === l5);
+	  l52.pickes = 'boiled...(Ewwwwww)';
+	  ts.assertEquals(l52.pickes, 'boiled...(Ewwwwww)');
+	
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/star-line-map.js',
+function (require, exports, module) {
+	
+
+	const Test = require('../test.js').Test;
+	const EscapeMap = require('../../canvas/two-d/maps/escape');
+	const Vertex2d = require('../../canvas/two-d/objects/vertex');
+	const Line2d = require('../../canvas/two-d/objects/line');
+	const Polygon2d = require('../../canvas/two-d/objects/polygon');
+	
+	// [new Vertex2d(10,50),new Vertex2d(10,10),new Vertex2d(50,10),new Vertex2d(50,40),new Vertex2d(20,40),new Vertex2d(20,15),new Vertex2d(40,15), new Vertex2d(40,35), new Vertex2d(35,35), new Vertex2d(35,20),new Vertex2d(25,20),new Vertex2d(25,37.5), new Vertex2d(45,37.5),new Vertex2d(45,12.5),new Vertex2d(15,12.5), new Vertex2d(15,45),new Vertex2d(50,45), new Vertex2d(50,50),new Vertex2d(10,50)]
+	//
+	// [new Vertex2d(20,14),new Vertex2d(15,8),new Vertex2d(24,3),new Vertex2d(20,14)]
+	
+	const spiral = Polygon2d.fromString('[(10,50),(10,10),(50,10),(50,40),(20,40),(20,15),(40,15), (40,35), (35,35), (35,20),(25,20),(25,37.5), (45,37.5),(45,12.5),(15,12.5), (15,45),(50,45), (50,50)]');
+	const triangle = Polygon2d.fromString('[(20,14),(15,8),(24,3),(20,14)]');
+	const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
+	const innerLines = [new Line2d(new Vertex2d(40,47), new Vertex2d(40,48)),
+	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,25)),
+	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,15))]
+	
+	// star.forEach(l => l.translate(new Line2d(new Vertex2d(0,0),new Vertex2d(10,12))));
+	
+	Test.add('StarLineMap: escape',(ts) => {
+	  // const escapeMap = new EscapeMap(spiral.lines().concat(triangle.lines()).concat(innerLines));
+	  let lines = spiral.lines().concat(triangle.lines()).concat(star).concat(innerLines);
+	  const escapeMap = new EscapeMap(lines);
+	  const parimeterAns = Polygon2d.fromString(`(10, 50) => (10, 10) => (16.666666666666668, 10) => (15, 8) => (24, 3) => (21.454545454545453, 10) => (50, 10) => (50, 40) => (20, 40) => (20, 15) => (40, 15) => (40, 35) => (35, 35) => (35, 20) => (25, 20) => (25, 37.5) => (45, 37.5) => (45, 12.5) => (20.545454545454547, 12.5) => (20, 14) => (18.75, 12.5) => (15, 12.5) => (15, 21.18181818181818) => (16.5, 20.5) => (15.556603773584905, 22.198113207547173) => (17, 23) => (15.111111111111112, 23) => (15, 23.200000000000003) => (15, 45) => (50, 45) => (50, 50)`);
+	  const parimeter = EscapeMap.parimeter(lines);
+	  ts.assertTrue(parimeter.equals(parimeterAns), 'Use canvas buddy to isolate issue: /canvas-buddy/html/index.html\n\t\tIt seams like there is an error somewhere in the merging of groups... I would focus your investigation there.');
+	  ts.success();
+	});
+	
+	Test.add('Polygon: build', (ts) => {
+	  const polyAns = Polygon2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5)]');
+	  for (let index = 0; index < 5; index++) {
+	    const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
+	    star.shuffle();
+	    const poly = Polygon2d.build(star);
+	    ts.assertTrue(poly.equals(polyAns));
+	  }
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/utils.js',
+function (require, exports, module) {
+	
+const Test = require('../test.js').Test;
+	
+	Test.add('Array: scale',(ts) => {
+	  const original = [1,2,3,4];
+	  const arr = Array.from(original);
+	  const valScale = arr.scale(3, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(valScale.equals([3,6,9,12]));
+	  const funcScale = arr.scale((val, index) => index, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(funcScale.equals([0,2,6,12]));
+	  arr.scale([9,5,3,2]);
+	  ts.assertTrue(!original.equals(arr));
+	  ts.assertTrue(arr.equals([9,10,9,8]));
+	
+	  ts.success();
+	});
+	
+	Test.add('Array: add',(ts) => {
+	  const original = [1,2,3,4];
+	  const arr = Array.from(original);
+	  const valScale = arr.add(3, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(valScale.equals([4,5,6,7]));
+	  const funcScale = arr.add((val, index) => index, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(funcScale.equals([1,3,5,7]));
+	  arr.add([9,5,3,2]);
+	  ts.assertTrue(!original.equals(arr));
+	  ts.assertTrue(arr.equals([10,7,6,6]));
+	
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/compress-string.js',
+function (require, exports, module) {
+	
+const Test = require('../test.js').Test;
+	const CompressedString = require('../../object/compressed-string.js');
+	
+	Test.add('Imposter: fooled me',(ts) => {
+	  let str = 'one, two,threefour,one,twothree,four';
+	  let cStr = new CompressedString(str);
+	  ts.assertEquals(cStr, '^a ^b,^c^d,^a^b^c,^d');
+	
+	  ts.success();
+	});
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/test/tests/imposter.js',
 function (require, exports, module) {
 	
@@ -7012,125 +8121,188 @@ const Test = require('../test.js').Test;
 });
 
 
-RequireJS.addFunction('../../public/js/utils/test/tests/lookup.js',
-function (require, exports, module) {
-	
-const Test = require('../test.js').Test;
-	const Lookup = require('../../object/lookup');
-	
-	Test.add('Lookup structure', (ts) => {
-	  const l1 = new Lookup();
-	  const l2 = new Lookup(null, 'id2');
-	  const l3 = {};
-	  Lookup.convert(l3);
-	  const l4 = {hic: 'cups'};
-	  Lookup.convert(l4, 'id2');
-	  Object.fromJson(l4.toJson())
-	
-	  const l12 = Lookup.fromJson(l1.toJson());
-	  ts.assertTrue(l12 === l1);
-	  const l22 = Lookup.fromJson(l2.toJson());
-	  ts.assertTrue(l22 === l2);
-	  const l32 = Lookup.fromJson(l3.toJson());
-	  ts.assertTrue(l32 === l3);
-	  const l42 = Lookup.fromJson(l4.toJson());
-	  ts.assertTrue(l42 === l4);
-	
-	  const l5Json = {pickes: 'fried', id5: 'Lookup_gibberish', ID_ATTRIBUTE: 'id5'};
-	  const l5 = Lookup.fromJson(l5Json);
-	  ts.assertEquals(l5.pickes, 'fried');
-	  const l52 = Lookup.fromJson(l5.toJson());
-	  ts.assertTrue(l52 === l5);
-	  l52.pickes = 'boiled...(Ewwwwww)';
-	  ts.assertEquals(l52.pickes, 'boiled...(Ewwwwww)');
-	
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/tests/utils.js',
-function (require, exports, module) {
-	
-const Test = require('../test.js').Test;
-	
-	Test.add('Array: scale',(ts) => {
-	  const original = [1,2,3,4];
-	  const arr = Array.from(original);
-	  const valScale = arr.scale(3, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(valScale.equals([3,6,9,12]));
-	  const funcScale = arr.scale((val, index) => index, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(funcScale.equals([0,2,6,12]));
-	  arr.scale([9,5,3,2]);
-	  ts.assertTrue(!original.equals(arr));
-	  ts.assertTrue(arr.equals([9,10,9,8]));
-	
-	  ts.success();
-	});
-	
-	Test.add('Array: add',(ts) => {
-	  const original = [1,2,3,4];
-	  const arr = Array.from(original);
-	  const valScale = arr.add(3, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(valScale.equals([4,5,6,7]));
-	  const funcScale = arr.add((val, index) => index, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(funcScale.equals([1,3,5,7]));
-	  arr.add([9,5,3,2]);
-	  ts.assertTrue(!original.equals(arr));
-	  ts.assertTrue(arr.equals([10,7,6,6]));
-	
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/tests/star-line-map.js',
+RequireJS.addFunction('../../public/js/utils/test/tests/decision-input-tree.js',
 function (require, exports, module) {
 	
 
+	// breakfast) Multiselect (food:bacon, eggs, toast, cereal)
+	//     eggs) Select (count:2,3,6), Select(type:overEasy, sunnySideUp, scrambled, fried)
+	//        requiresGourmetChef) upchange
+	//     toast) Select (white, wheat, texas)
+	//     cereal) Checkbox(milk), Select (type: rasinBrand, cheerios, life)
+	//     bacon) Leaf
+	//   dishes)
+	//      plate)
+	//      fork)
+	//      bowl)
+	//      spoon)
+	
+	
 	const Test = require('../test.js').Test;
-	const EscapeMap = require('../../canvas/two-d/maps/escape');
-	const Vertex2d = require('../../canvas/two-d/objects/vertex');
-	const Line2d = require('../../canvas/two-d/objects/line');
-	const Polygon2d = require('../../canvas/two-d/objects/polygon');
+	const du = require('../../dom-utils');
+	const Input = require('../../input/input');
+	const Select = require('../../input/styles/select');
+	const DecisionInputTree = require('../../input/decision/decision');
+	const MultipleEntries = require('../../input/styles/multiple-entries');
 	
-	// [new Vertex2d(10,50),new Vertex2d(10,10),new Vertex2d(50,10),new Vertex2d(50,40),new Vertex2d(20,40),new Vertex2d(20,15),new Vertex2d(40,15), new Vertex2d(40,35), new Vertex2d(35,35), new Vertex2d(35,20),new Vertex2d(25,20),new Vertex2d(25,37.5), new Vertex2d(45,37.5),new Vertex2d(45,12.5),new Vertex2d(15,12.5), new Vertex2d(15,45),new Vertex2d(50,45), new Vertex2d(50,50),new Vertex2d(10,50)]
-	//
-	// [new Vertex2d(20,14),new Vertex2d(15,8),new Vertex2d(24,3),new Vertex2d(20,14)]
+	const toastCost = .75;
+	const cerialCost = 2.25;
+	const baconCost = 1.20;
+	const eggsCost = 1.25;
+	const overEasyMultiplier = 25;
 	
-	const spiral = Polygon2d.fromString('[(10,50),(10,10),(50,10),(50,40),(20,40),(20,15),(40,15), (40,35), (35,35), (35,20),(25,20),(25,37.5), (45,37.5),(45,12.5),(15,12.5), (15,45),(50,45), (50,50)]');
-	const triangle = Polygon2d.fromString('[(20,14),(15,8),(24,3),(20,14)]');
-	const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
-	const innerLines = [new Line2d(new Vertex2d(40,47), new Vertex2d(40,48)),
-	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,25)),
-	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,15))]
+	function createTree() {
+	  const bacon = new Input({type: 'checkbox', name: 'bacon'});
+	  const eggs = new Input({type: 'checkbox', name: 'eggs'});
+	  const eggCount = new Select({list: ['2','3','6'], name: 'count', mustChoose: true});
+	  const eggType = new Select({name: 'type', mustChoose: true, value: 'Scrambled', list: ['Over Easy', 'Sunny Side Up', 'Scrambled', 'Fried']});
+	  const toast = new Input({type: 'checkbox', name: 'toast'});
+	  const cereal = new Input({type: 'checkbox', name: 'cereal'});
+	  const toastType = new Select({name: 'type', mustChoose: true, list: ['white', 'wheat', 'texas']});
+	  const milk = new Input({type: 'checkbox', name: 'milk'});
+	  const cerealType = new Select({name: 'type', mustChoose: true, list: ['rasinBrand', 'cheerios', 'life']});
 	
-	// star.forEach(l => l.translate(new Line2d(new Vertex2d(0,0),new Vertex2d(10,12))));
+	  const tree = new DecisionInputTree('breakfast', {inputArray: [bacon, eggs, toast, cereal]});
 	
-	Test.add('StarLineMap: escape',(ts) => {
-	  // const escapeMap = new EscapeMap(spiral.lines().concat(triangle.lines()).concat(innerLines));
-	  let lines = spiral.lines().concat(triangle.lines()).concat(star).concat(innerLines);
-	  const escapeMap = new EscapeMap(lines);
-	  const parimeterAns = Polygon2d.fromString(`(10, 50) => (10, 10) => (16.666666666666668, 10) => (15, 8) => (24, 3) => (21.454545454545453, 10) => (50, 10) => (50, 40) => (20, 40) => (20, 15) => (40, 15) => (40, 35) => (35, 35) => (35, 20) => (25, 20) => (25, 37.5) => (45, 37.5) => (45, 12.5) => (20.545454545454547, 12.5) => (20, 14) => (18.75, 12.5) => (15, 12.5) => (15, 21.18181818181818) => (16.5, 20.5) => (15.556603773584905, 22.198113207547173) => (17, 23) => (15.111111111111112, 23) => (15, 23.200000000000003) => (15, 45) => (50, 45) => (50, 50)`);
-	  const parimeter = EscapeMap.parimeter(lines);
-	  ts.assertTrue(parimeter.equals(parimeterAns), 'Use canvas buddy to isolate issue: /canvas-buddy/html/index.html\n\t\tIt seams like there is an error somewhere in the merging of groups... I would focus your investigation there.');
+	  const cost = (node) => eggsCost * Number.parseInt(node.find.input('count').value());
+	  const eggsNode = tree.root().then('Eggs', {cost});
+	  eggsNode.addInput(eggCount);
+	  eggsNode.addInput(eggType);
+	  const reqGourChef = eggsNode.then('requiresGourmetChef', {multiplier: overEasyMultiplier});
+	  const toastNode = tree.root().then('Toast', {cost: toastCost, inputArray: [toastType]});
+	  const cerealNode = tree.root().then('Cereal', {cost: cerialCost, inputArray: [cerealType]});
+	  tree.root().then('Bacon', {cost: baconCost});
+	
+	
+	  const dishes = tree.root().then('dishes');
+	  const plate = dishes.then('plate', {matirial: true});
+	  const fork = dishes.then('fork', {matirial: true});
+	  const bowl = dishes.then('bowl', {matirial: true});
+	  const spoon = dishes.then('spoon', {matirial: true});
+	
+	  bowl.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  cerealNode.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  toastNode.conditions.add((values) =>
+	    Object.pathValue(values, 'toast') === true);
+	
+	  eggsNode.conditions.add((values) =>
+	    Object.pathValue(values, 'eggs') === true);
+	
+	  reqGourChef.conditions.add((values) =>
+	    values.type === "Over Easy");
+	
+	  const vals = tree.values();
+	
+	  return tree;
+	}
+	
+	Test.add('DecisionInputTree structure', (ts) => {
+	  const tree = createTree();
 	  ts.success();
 	});
 	
-	Test.add('Polygon: build', (ts) => {
-	  const polyAns = Polygon2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5)]');
-	  for (let index = 0; index < 5; index++) {
-	    const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
-	    star.shuffle();
-	    const poly = Polygon2d.build(star);
-	    ts.assertTrue(poly.equals(polyAns));
+	function simulateUserUpdate(input, value, tree, choiceCount, ts) {
+	  const inputElem = du.create.element('input', {id: input.id(), value});
+	  document.body.append(inputElem);
+	  inputElem.click();
+	  inputElem.remove();
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, choiceCount);
+	  ts.assertEquals(tree.isComplete(), choiceCount === 0);
+	}
+	
+	function cost(tree) {
+	  const leaves = tree.root().leaves();
+	  let grandTotal = 0;
+	  for (let index = 0; index < leaves.length; index++) {
+	    let total = 0;
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.cost) {
+	        total += (typeof payload.cost) === 'function' ? payload.cost(node) : payload.cost;
+	      }
+	      if (payload.multiplier) {
+	        total *= payload.multiplier;
+	      }
+	    });
+	    grandTotal += total;
 	  }
+	  return grandTotal;
+	}
+	
+	function matirials(tree) {
+	  const leaves = tree.root().leaves();
+	  let mats = [];
+	  for (let index = 0; index < leaves.length; index++) {
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.matirial) {
+	        mats.push(node.name());
+	      }
+	    });
+	  }
+	  return mats;
+	}
+	
+	
+	Test.add('DecisionInputTree choices', (ts) => {
+	  const toastCost = .75;
+	  const cerialCost = 2.25;
+	  const baconCost = 1.20;
+	  const eggsCost = 1.25;
+	  const overEasyMultiplier = 25;
+	
+	  const justEggsCost = eggsCost * 6 * overEasyMultiplier;
+	  const total = justEggsCost + toastCost + baconCost + cerialCost;
+	
+	  const tree = createTree();
+	  let choices = tree.choices();
+	  ts.assertEquals(choices.length, 0);
+	
+	  const eggs = tree.find.input('eggs')
+	  eggs.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 2);
+	
+	  const toast = tree.find.input('toast')
+	  toast.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 3);
+	
+	  const noBowl = ['plate', 'fork', 'spoon'];
+	  ts.assertTrue(noBowl.equals(matirials(tree)));
+	
+	  const cereal = tree.find.input('cereal')
+	  cereal.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 4);
+	
+	
+	  const count = tree.find.input('count', 'Eggs');
+	  const type = tree.find.input('type', 'Eggs');
+	  const eggsType = tree.find.input('type', 'Eggs');
+	  const toastType = tree.find.input('type', 'Toast');
+	  const cerialType = tree.find.input('type', 'Cereal');
+	
+	  ts.assertNotEquals(type, undefined);
+	  ts.assertNotEquals(eggsType, toastType);
+	  ts.assertNotEquals(eggsType, cerialType);
+	  ts.assertNotEquals(cerialType, toastType);
+	
+	  simulateUserUpdate(eggsType, 'Over Easy', tree, 3, ts);
+	  simulateUserUpdate(toastType, 'white', tree, 2, ts);
+	  simulateUserUpdate(cerialType, 'cheerios', tree, 1, ts);
+	  simulateUserUpdate(count, '6', tree, 0, ts);
+	
+	  const allMaterials = ['plate', 'fork', 'bowl', 'spoon'];
+	  ts.assertTrue(allMaterials.equals(matirials(tree)));
+	
+	  ts.assertEquals(cost(tree), total);
+	
 	  ts.success();
 	});
 	
@@ -7140,7 +8312,24 @@ function (require, exports, module) {
 RequireJS.addFunction('./generated/html-templates.js',
 function (require, exports, module) {
 	
-exports['550500469'] = (get, $t) => 
+exports['91901353'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` <span> <button class='conditional-button modify' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
+			` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+			$t.clean(get("input").value()) +
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"), true)) +
+			`</div> </span> <br> </div>`
+	
+	exports['550500469'] = (get, $t) => 
 			`<span > <input list='auto-fill-list-` +
 			$t.clean(get("input").id() +
 			get("willFailCheckClassnameConstruction")()) +
@@ -7156,31 +8345,66 @@ exports['550500469'] = (get, $t) =>
 			$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 			` </datalist> </span>`
 	
-	exports['559079503'] = (get, $t) => 
-			`<span class='decision-input-array-cnt pad ` +
+	exports['637244436'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
 			$t.clean(get("class")) +
 			`' index='` +
 			$t.clean(get("$index")) +
 			`'> ` +
 			$t.clean(get("input").html()) +
-			` <div class='children-recurse-cnt' value='` +
+			` <div class='edit-input-cnt'><button> <i class="fas fa-pencil-alt"></i> </button></div> <span> <button class='conditional-button modify' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
+			` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
 			$t.clean(get("input").value()) +
-			`'> ` +
-			$t.clean(get("childrenHtml")(get("$index"))) +
-			` </div> </span>`
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"), true)) +
+			`</div> </span> </div>`
 	
-	exports['564755780'] = (get, $t) => 
-			`<span class='decision-input-array-cnt pad ` +
+	exports['921382487'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
 			$t.clean(get("class")) +
 			`' index='` +
 			$t.clean(get("$index")) +
 			`'> ` +
 			$t.clean(get("input").html()) +
-			` <div class='children-recurse-cnt tab' value='` +
+			` <span> <button class='conditional-button modify' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
+			` </button> <div class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
 			$t.clean(get("input").value()) +
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"), true)) +
+			`</div> </span> <br> </div>`
+	
+	exports['976176139'] = (get, $t) => 
+			`<td > ` +
+			$t.clean(get("col").html()) +
+			` </td>`
+	
+	exports['1028563052'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
 			`'> ` +
-			$t.clean(get("childrenHtml")(get("$index"))) +
-			` </div> </span>`
+			$t.clean(get("input").html()) +
+			` <div class='edit-input-cnt'><button> <i class="fas fa-broadcast-tower"></i> </button></div> <span> <button class='conditional-button modify' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
+			` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+			$t.clean(get("input").value()) +
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"), true)) +
+			`</div> </span> </div>`
+	
+	exports['1254550278'] = (get, $t) => 
+			`<td >` +
+			$t.clean(get("name")) +
+			`</td>`
 	
 	exports['1447370576'] = (get, $t) => 
 			`<div class="expandable-list-body" key='` +
@@ -7207,14 +8431,84 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("getBody") && get("getBody")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
-	exports['1591500900'] = (get, $t) => 
-			`<td > <input type='` +
-			$t.clean(get("type")()) +
-			`' name='` +
+	exports['1457465509'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` <span> <button class='conditional-button modify' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
+			` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+			$t.clean(get("input").value()) +
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"), true)) +
+			`</div> </span> </div>`
+	
+	exports['1603146643'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` <div class='edit-input-cnt'><button> <i class="fas fa-edit"></i> </button></div> <span> <button class='conditional-button modify' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
+			` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+			$t.clean(get("input").value()) +
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"), true)) +
+			`</div> </span> </div>`
+	
+	exports['1682356664'] = (get, $t) => 
+			`<div id="input-input-list-` +
 			$t.clean(get("id")()) +
-			`-` +
-			$t.clean(get("row")) +
-			`'> </td>`
+			`" > ` +
+			$t.clean(get("input").html()) +
+			` <br> </div>`
+	
+	exports['1690403329'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` <span> <button class='conditional-button modify' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
+			` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+			$t.clean(get("input").value()) +
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"), true)) +
+			`</div> </span> <span class='tab'>` +
+			$t.clean(get("childrenHtml")(-1, true)) +
+			`</span> <br> </div>`
+	
+	exports['1746132333'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` <span> <button class='conditional-button modify' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
+			` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+			$t.clean(get("input").value()) +
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"), true)) +
+			`</div> </span> <span>` +
+			$t.clean(get("childrenHtml")(-1, true)) +
+			`</span> <br> </div>`
 	
 	exports['1835219150'] = (get, $t) => 
 			`<option value='` +
@@ -7224,6 +8518,36 @@ exports['550500469'] = (get, $t) =>
 			`> ` +
 			$t.clean(get("value")) +
 			` </option>`
+	
+	exports['1850064707'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` <div class='edit-input-cnt'><button>&#xf044;</button></div> <span> <button class='conditional-button modify' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
+			` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
+			$t.clean(get("input").value()) +
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"), true)) +
+			`</div> </span> </div>`
+	
+	exports['2103134604'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` <div class='children-recurse-cnt tab' value='` +
+			$t.clean(get("input").value()) +
+			`'> ` +
+			$t.clean(get("childrenHtml")(get("$index"))) +
+			` </div> </div>`
 	
 	exports['auto-save'] = (get, $t) => 
 			`<div> <button type="button" class='auto-save-btn' name="button">Auto Save</button> <span class='status'></span> </div> `
@@ -7245,6 +8569,21 @@ exports['550500469'] = (get, $t) =>
 			`<option value="` +
 			$t.clean(get("option")) +
 			`" ></option>`
+	
+	exports['expandable/list'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
+			` <div class='expand-input-cnt' hidden has-input-tree='` +
+			$t.clean(get("hasInputTree")()) +
+			`'>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> </div> `
 	
 	exports['expandable/pill'] = (get, $t) => 
 			` <div class="expandable-list ` +
@@ -7288,16 +8627,6 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
-	exports['input/data-list'] = (get, $t) => 
-			`` +
-			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
-			` `
-	
-	exports['-994603408'] = (get, $t) => 
-			`<option value="` +
-			$t.clean(get("item")) +
-			`" ></option>`
-	
 	exports['expandable/sidebar'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -7340,21 +8669,6 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
-	exports['expandable/list'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
-			` <div class='expand-input-cnt' hidden has-input-tree='` +
-			$t.clean(get("hasInputTree")()) +
-			`'>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <div class='input-open-cnt'><button>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</button></div> </div> `
-	
 	exports['expandable/top-add-list'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -7370,79 +8684,80 @@ exports['550500469'] = (get, $t) =>
 			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
 			` </div> `
 	
-	exports['input/decision/decision-modification'] = (get, $t) => 
-			` <` +
-			$t.clean(get("tag")()) +
-			` class='decision-input-cnt mod' node-id='` +
-			$t.clean(get("id")()) +
-			`' ` +
-			$t.clean(get("reachable")() ? '' : 'hidden') +
-			`> <span node-id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('-327218816').render(get("inputArray")(), 'input', get)) +
-			` </span> <div class='modification-add-input tab'> ` +
-			$t.clean(get("inputTree")().html()) +
-			` </div> </` +
-			$t.clean(get("tag")()) +
-			`> `
+	exports['input/data-list'] = (get, $t) => 
+			`` +
+			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+			` `
 	
-	exports['-2142270891'] = (get, $t) => 
-			`<span class='decision-input-array-cnt pad ` +
-			$t.clean(get("class")) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'> ` +
-			$t.clean(get("input").html()) +
-			` <span> <button class='conditional-button' target-id='` +
-			$t.clean(get("input").id()) +
-			`'> If ` +
-			$t.clean(get("input").name()) +
-			` = ` +
-			$t.clean(get("input").value()) +
-			` </button> <div class='condition-input-tree tab'></div> <div class='children-recurse-cnt' value='` +
-			$t.clean(get("input").value()) +
-			`'>` +
-			$t.clean(get("childrenHtml")(get("$index"), true)) +
-			`</div> </span> <br> </span>`
+	exports['-994603408'] = (get, $t) => 
+			`<option value="` +
+			$t.clean(get("item")) +
+			`" ></option>`
 	
 	exports['input/decision/decision'] = (get, $t) => 
-			` <` +
-			$t.clean(get("tag")()) +
-			` class='decision-input-cnt' node-id='` +
+			` <div class='decision-input-cnt' node-id='` +
 			$t.clean(get("id")()) +
 			`' ` +
 			$t.clean(get("reachable")() ? '' : 'hidden') +
 			`> <span id='` +
 			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('564755780').render(get("inputArray")(), 'input', get)) +
-			` </span> </` +
-			$t.clean(get("tag")()) +
-			`> `
+			`'> <div class='payload-cnt'>` +
+			$t.clean(get("payloadHtml")()) +
+			`</div> ` +
+			$t.clean( new $t('2103134604').render(get("inputArray")(), 'input', get)) +
+			` </span> </div> `
+	
+	exports['input/decision/decision-modification'] = (get, $t) => 
+			` <div class='decision-input-cnt mod' node-id='` +
+			$t.clean(get("id")()) +
+			`' ` +
+			$t.clean(get("reachable")() ? '' : 'hidden') +
+			`> <div node-id='` +
+			$t.clean(get("id")()) +
+			`' class='card'> <div class='payload-cnt'>` +
+			$t.clean(get("payloadHtml")()) +
+			`</div> <button class='then-button modify'> Then... </button> <div class='then-input-tree tab'></div> ` +
+			$t.clean( new $t('637244436').render(get("inputArray")(), 'input', get)) +
+			` <div class='tab'>` +
+			$t.clean(get("childrenHtml")(-1, true)) +
+			`</div> <br> <br> <div class='modification-add-input tab'> ` +
+			$t.clean(get("inputTree")().html()) +
+			` </div> <div class='remove-btn-cnt'><button class='rm-node'>X</button></div> </div> </div> `
 	
 	exports['input/decision/decisionTree'] = (get, $t) => 
 			`<div class='` +
+			$t.clean(get("node").tree().class()) +
+			` ` +
 			$t.clean(get("DecisionInputTree").class) +
 			`' tree-id='` +
 			$t.clean(get("node").tree().id()) +
+			`' input-id=` +
+			$t.clean(get("node").tree().id()) +
+			` node-id='` +
+			$t.clean(get("node").id()) +
 			`'> ` +
+			$t.clean(get("header")) +
+			` ` +
 			$t.clean(get("inputHtml")) +
-			` <button class='` +
+			` <div ` +
+			$t.clean(get("node").tree().hideButton ? 'hidden' : '') +
+			`> <br> <button class='` +
+			$t.clean(get("node").tree().buttonClass()) +
+			` ` +
 			$t.clean(get("DecisionInputTree").buttonClass) +
 			`' tree-id='` +
 			$t.clean(get("node").tree().id()) +
-			`' ` +
-			$t.clean(get("node").tree().hideButton ? 'hidden' : '') +
-			`> ` +
-			$t.clean(get("node").root().inputTree().buttonText()) +
-			` </button> </div> `
+			`'> ` +
+			$t.clean(get("node").tree().buttonText()) +
+			` </button> </div> </div> `
 	
 	exports['input/input'] = (get, $t) => 
 			`<` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id=` +
+			$t.clean(get("id")()) +
 			`> <label>` +
 			$t.clean(get("label")()) +
 			`</label> <input class='` +
@@ -7459,6 +8774,8 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("name")()) +
 			`' ` +
 			$t.clean(get("attrString")()) +
+			` ` +
+			$t.clean(get("checked")()) +
 			`> <datalist id="input-list-` +
 			$t.clean(get("id")()) +
 			`"> ` +
@@ -7471,9 +8788,28 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			`> `
 	
+	exports['input/list'] = (get, $t) => 
+			`<div class='input-cnt` +
+			$t.clean(get("inline")() ? ' inline' : '') +
+			`'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id=` +
+			$t.clean(get("id")()) +
+			`> <label>` +
+			$t.clean(get("label")()) +
+			`</label> ` +
+			$t.clean( new $t('1682356664').render(get("list")(), 'input', get)) +
+			` <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
+	
 	exports['input/measurement'] = (get, $t) => 
 			`<div class='fit input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id=` +
+			$t.clean(get("id")()) +
 			`> <label>` +
 			$t.clean(get("label")()) +
 			`</label> <input class='measurement-input ` +
@@ -7499,9 +8835,11 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt multi'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id=` +
+			$t.clean(get("id")()) +
 			`> <label>` +
 			$t.clean(get("label")()) +
-			`</label> <div class='multiple-entry-cnt tab ` +
+			`</label> <div class='multiple-entry-cnt tab card ` +
 			$t.clean(get("inline")() ? 'inline' : '') +
 			`' id='` +
 			$t.clean(get("id")()) +
@@ -7518,6 +8856,39 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("setHtml")(get("$index"))) +
 			` </div>`
 	
+	exports['input/number'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id=` +
+			$t.clean(get("id")()) +
+			`> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <input class='` +
+			$t.clean(get("class")()) +
+			`' list='input-list-` +
+			$t.clean(get("id")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' placeholder='` +
+			$t.clean(get("placeholder")()) +
+			`' type='number' name='` +
+			$t.clean(get("name")()) +
+			`' max='` +
+			$t.clean(get("max")()) +
+			`' min='` +
+			$t.clean(get("min")()) +
+			`' step='` +
+			$t.clean(get("step")()) +
+			`'> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
 	exports['input/one-entry'] = (get, $t) => 
 			`<span class='one-entry-cnt'> ` +
 			$t.clean(get("html")()) +
@@ -7528,15 +8899,17 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id=` +
+			$t.clean(get("id")()) +
 			`> <label>` +
 			$t.clean(get("label")()) +
-			`</label> <br> <div class='tab'> ` +
-			$t.clean( new $t('-1983906216').render(get("list")(), 'key, val', get)) +
+			`:</label> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <div class='inline tab'> ` +
+			$t.clean( new $t('-2140138526').render(get("list")(), 'key, val', get)) +
 			` </div> </` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			`> `
 	
-	exports['-1983906216'] = (get, $t) => 
+	exports['-1641603401'] = (get, $t) => 
 			`<span > <label>` +
 			$t.clean(get("isArray")() ? get("val") : get("key")) +
 			`</label> <input type='radio' ` +
@@ -7547,6 +8920,8 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("id")()) +
 			`' name='` +
 			$t.clean(get("name")()) +
+			`' value='` +
+			$t.clean(get("val")) +
 			`'> </span>`
 	
 	exports['input/select'] = (get, $t) => 
@@ -7554,6 +8929,8 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id=` +
+			$t.clean(get("id")()) +
 			`> <label>` +
 			$t.clean(get("label")()) +
 			`</label> <select class='` +
@@ -7579,22 +8956,23 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id=` +
+			$t.clean(get("id")()) +
 			`> <label>` +
 			$t.clean(get("label")()) +
-			`</label> <br> <div class='tab'> <table> <tbody> <tr> <td></td> ` +
-			$t.clean( new $t('-1250012283').render(get("columns")(), 'col', get)) +
+			`</label> <br> <div class='tab'> <table border="1"> <tbody> <tr> <td></td> ` +
+			$t.clean( new $t('1254550278').render(get("columnNames")(), 'name', get)) +
 			` </tr> ` +
-			$t.clean( new $t('-302235087').render(get("rows")(), 'rowIndex, row', get)) +
+			$t.clean( new $t('-808712670').render(get("rows")(), 'rowIndex, row', get)) +
 			` </tbody> </table> </div> </` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			`> `
 	
-	exports['-706519867'] = (get, $t) => 
-			`<td >col</td>`
-	
-	exports['-498428047'] = (get, $t) => 
-			`<tr > <td>row</td> ` +
-			$t.clean( new $t('1591500900').render(get("columns")(), 'colIndex, col', get)) +
+	exports['-808712670'] = (get, $t) => 
+			`<tr > <td>` +
+			$t.clean(get("row")) +
+			`</td> ` +
+			$t.clean( new $t('976176139').render(get("columns")(get("rowIndex")), 'col', get)) +
 			` </tr>`
 	
 	exports['input/textarea'] = (get, $t) => 
@@ -7602,6 +8980,8 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id=` +
+			$t.clean(get("id")()) +
 			`> <label>` +
 			$t.clean(get("label")()) +
 			`</label> <br> <textarea class='` +
@@ -7626,11 +9006,16 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			`> `
 	
+	exports['ancestry'] = (get, $t) => 
+			`<div> ` +
+			$t.clean(get("name")) +
+			` </div> `
+	
 	exports['configure'] = (get, $t) => 
-			`<div id='config-body'></div> <div id='test-ground'></div> `
+			`<div> <button id='modify-btn'>Modify</button> </div> <div id='config-body'></div> <div id='test-ground'></div> `
 	
 	exports['index'] = (get, $t) => 
-			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mike/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/mike/styles/mike.css"> <title></title> </head> <body> ` +
+			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mike/js/index.js'></script> <script src="https://kit.fontawesome.com/234ae94193.js" crossorigin="anonymous"></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/mike/styles/mike.css"> <title></title> </head> <body> ` +
 			$t.clean(get("header")) +
 			` ` +
 			$t.clean(get("main")) +
@@ -7638,46 +9023,113 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("footer")) +
 			` </body> </html> `
 	
-	exports['reports'] = (get, $t) => 
-			`<div> REPORTS === ` +
-			$t.clean(get("name")) +
-			` </div> `
-	
 	exports['report'] = (get, $t) => 
 			`<div> REPORT === ` +
 			$t.clean(get("name")) +
 			` </div> `
 	
-	exports['-1250012283'] = (get, $t) => 
-			`<td >` +
-			$t.clean(get("col")) +
-			`</td>`
+	exports['reports'] = (get, $t) => 
+			`<div> REPORTS === ` +
+			$t.clean(get("name")) +
+			` </div> `
 	
-	exports['-302235087'] = (get, $t) => 
-			`<tr > <td>` +
-			$t.clean(get("row")) +
-			`</td> ` +
-			$t.clean( new $t('1591500900').render(get("columns")(), 'colIndex, col', get)) +
-			` </tr>`
+	exports['input/list0'] = (get, $t) => 
+			`<div class='input-cnt` +
+			$t.clean(get("inline")() ? ' inline' : '') +
+			`'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id=` +
+			$t.clean(get("id")()) +
+			`> <label>` +
+			$t.clean(get("label")()) +
+			`</label> ` +
+			$t.clean( new $t('1682356664').render(get("list")(), 'input', get)) +
+			` <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
 	
-	exports['-327218816'] = (get, $t) => 
-			`<span class='decision-input-array-cnt pad ` +
+	exports['input/object'] = (get, $t) => 
+			`<div class='input-cnt` +
+			$t.clean(get("inline")() ? ' inline' : '') +
+			`'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id=` +
+			$t.clean(get("id")()) +
+			`> <label>` +
+			$t.clean(get("label")()) +
+			`</label> ` +
+			$t.clean( new $t('1682356664').render(get("list")(), 'input', get)) +
+			` <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
+	
+	exports['-2055734055'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
 			$t.clean(get("class")) +
 			`' index='` +
 			$t.clean(get("$index")) +
 			`'> ` +
 			$t.clean(get("input").html()) +
-			` <span> <button class='conditional-button' target-id='` +
+			` <span> <button class='conditional-button modify' target-id='` +
 			$t.clean(get("input").id()) +
 			`'> If ` +
 			$t.clean(get("input").name()) +
-			` = ` +
+			` </button> <div class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
 			$t.clean(get("input").value()) +
+			`'>` +
+			$t.clean(get("childrenHtml")(get("$index"))) +
+			`</div> </span> <br> </div>`
+	
+	exports['-1087743733'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` <span> <button hidden class='conditional-button modify' target-id='` +
+			$t.clean(get("input").id()) +
+			`'> If ` +
+			$t.clean(get("input").name()) +
 			` </button> <div class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
 			$t.clean(get("input").value()) +
 			`'>` +
 			$t.clean(get("childrenHtml")(get("$index"), true)) +
-			`</div> </span> <br> </span>`
+			`</div> </span> <br> </div>`
+	
+	exports['-1087665304'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("isArray")() ? get("val") : get("key")) +
+			`</label> <input type='radio' ` +
+			$t.clean((get("isArray")() ? get("val") : get("key")) === get("value")() ? 'checked' : '') +
+			` class='` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' name='` +
+			$t.clean(get("uniqueName")()) +
+			`' value='` +
+			$t.clean(get("val")) +
+			`'> </span>`
+	
+	exports['-2140138526'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("isArray")() ? get("val") : get("key")) +
+			`</label> <input type='radio' ` +
+			$t.clean((get("isArray")() ? get("val") : get("key")) === get("value")() ? 'checked' : '') +
+			` class='` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' name='` +
+			$t.clean(get("uniqueName")()) +
+			`' value='` +
+			$t.clean(get("val")) +
+			`'> &nbsp;&nbsp; </span>`
 	
 });
 
@@ -7689,7 +9141,7 @@ function (require, exports, module) {
 	
 	require('../../../public/js/utils/utils.js');
 	// Run Tests
-	require('../tests/run');
+	// require('../tests/run');
 	
 	const du = require('../../../public/js/utils/dom-utils.js');
 	
@@ -7719,6 +9171,8 @@ RequireJS.addFunction('./app/pages/configure.js',
 function (require, exports, module) {
 	
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const PayloadHandler = require('../../../../public/js/utils/input/decision/payload-handler.js');
+	require('../../../../public/js/utils/input/init');
 	const Input = require('../../../../public/js/utils/input/input');
 	const Radio = require('../../../../public/js/utils/input/styles/radio');
 	const Table = require('../../../../public/js/utils/input/styles/table');
@@ -7726,6 +9180,15 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	const du = require('../../../../public/js/utils/dom-utils.js');
 	
 	let count = 0;
+	let modify = true;
+	
+	du.on.match('click', '#modify-btn', (elem) => {
+	  modify = !modify
+	  if (modify) du.class.add(elem, 'modify');
+	  else du.class.remove(elem, 'modify');
+	  updateEntireTree();
+	});
+	
 	const getInput = () => new Input({
 	  label: `Label${++count}`,
 	  name: `Name${count}`,
@@ -7735,7 +9198,7 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	
 	let tree;
 	function updateEntireTree() {
-	  const body = tree.html(null, true);
+	  const body = tree.html(null, modify);
 	  du.id('config-body').innerHTML = body;
 	}
 	
@@ -7775,7 +9238,9 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	  const input1 = getInput();
 	  const input2 = getInput();
 	  const input3 = getInput();
-	  tree = new DecisionInputTree('root', {inputArray: [input1, input2, input3]});
+	  // tree = new DecisionInputTree('ancestry', {name: 'Ancestry'});
+	  tree = DecisionInputTree.fromJson(treeJson);
+	  tree.payloadHandler(new PayloadHandler('ancestry', new Input({name: 'name', label: 'Name', optional: true})));
 	
 	  tree.onComplete(console.log);
 	  tree.onSubmit(console.log);
@@ -7792,13 +9257,16 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	// du.id('test-ground').innerHTML = Radio.yes_no({name: 'yn'}).html();
 	// du.id('test-ground').innerHTML = Radio.true_false({name: 'tf'}).html();
 	
-	const table = new Table({
-	  name: 'tabal',
-	  description: 'Pussy fartsss',
-	  columns: ['one', 2, 3, 'four'],
-	  rows: ['bill', 'scott', 'joe', 'fred']
-	});
-	du.id('test-ground').innerHTML = table.html();
+	// const table = new Table({
+	//   name: 'tabal',
+	//   description: 'Pussy fartsss',
+	//   columns: ['one', 2, 3, 'four'],
+	//   rows: ['bill', 'scott', 'joe', 'fred']
+	// });
+	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
+	du.on.match('click', '#json', () => {
+	  du.copy(JSON.stringify(tree.toJson(), null, 2));
+	})
 	
 	// const input1 = getInput();
 	// const input2 = getInput();
@@ -7807,6 +9275,1066 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	// du.id('test-ground').innerHTML = me.html();
 	
 	exports.proccess = proccess;
+	
+	
+	
+	
+	const treeJson = {
+	  "_TYPE": "DecisionInputTree",
+	  "id": "DecisionInputTree_d8jojl9",
+	  "ID_ATTRIBUTE": "id",
+	  "stateConfigs": {
+	    "ancestry": {
+	      "_TYPE": "StateConfig",
+	      "id": "StateConfig_5lc55yw",
+	      "ID_ATTRIBUTE": "id",
+	      "name": "ancestry",
+	      "payload": {
+	        "name": "Ancestry",
+	        "inputArray": [
+	          {
+	            "_TYPE": "Input",
+	            "ID_ATTRIBUTE": "id",
+	            "type": "text",
+	            "name": "name",
+	            "label": "Name",
+	            "hidden": false,
+	            "list": [],
+	            "optional": false,
+	            "value": "",
+	            "targetAttr": "value",
+	            "errorMsg": "Error"
+	          }
+	        ]
+	      }
+	    },
+	    "jozsefMorrissey": {
+	      "_TYPE": "StateConfig",
+	      "id": "StateConfig_z2kvf4y",
+	      "ID_ATTRIBUTE": "id",
+	      "name": "jozsefMorrissey",
+	      "payload": {
+	        "name": "Jozsef Morrissey",
+	        "inputArray": []
+	      }
+	    },
+	    "jeradMorrissey": {
+	      "_TYPE": "StateConfig",
+	      "id": "StateConfig_7vdz7vu",
+	      "ID_ATTRIBUTE": "id",
+	      "name": "jeradMorrissey",
+	      "payload": {
+	        "name": "JeradMorrissey",
+	        "inputArray": []
+	      }
+	    },
+	    "relation": {
+	      "_TYPE": "StateConfig",
+	      "id": "StateConfig_9r7ewb4",
+	      "ID_ATTRIBUTE": "id",
+	      "name": "relation",
+	      "payload": {
+	        "name": "",
+	        "inputArray": [
+	          {
+	            "_TYPE": "Radio",
+	            "ID_ATTRIBUTE": "id",
+	            "name": "relations",
+	            "label": "Relations",
+	            "list": [
+	              "Spouse",
+	              "Children",
+	              "Mother",
+	              "Father",
+	              "Siblings",
+	              "Imediate Family"
+	            ],
+	            "inline": true,
+	            "hidden": false,
+	            "optional": false,
+	            "value": "Spouse",
+	            "targetAttr": "value",
+	            "errorMsg": "Error"
+	          }
+	        ]
+	      }
+	    }
+	  },
+	  "name": "ancestry",
+	  "root": {
+	    "name": "ancestry",
+	    "payload": {
+	      "inputArray": [
+	        {
+	          "_TYPE": "Input",
+	          "ID_ATTRIBUTE": "id",
+	          "type": "text",
+	          "name": "name",
+	          "label": "Name",
+	          "hidden": false,
+	          "list": [],
+	          "optional": false,
+	          "value": "Jozsef Morrissey",
+	          "targetAttr": "value",
+	          "errorMsg": "Error"
+	        }
+	      ],
+	      "PAYLOAD_ID": "qqf65e3"
+	    },
+	    "conditions": [],
+	    "childConditions": [],
+	    "children": {
+	      "jozsefMorrissey": {
+	        "name": "jozsefMorrissey",
+	        "payload": {
+	          "name": "Jozsef Morrissey",
+	          "inputArray": [],
+	          "PAYLOAD_ID": "ell2exe"
+	        },
+	        "conditions": [
+	          {
+	            "_TYPE": "ExactCondition",
+	            "attribute": "name",
+	            "value": "Jozsef Morrissey",
+	            "deligator": {
+	              "_TYPE": "NodeCondition"
+	            }
+	          }
+	        ],
+	        "childConditions": [],
+	        "children": {
+	          "relation": {
+	            "name": "relation",
+	            "payload": {
+	              "inputArray": [
+	                {
+	                  "_TYPE": "Radio",
+	                  "ID_ATTRIBUTE": "id",
+	                  "name": "relations",
+	                  "label": "Relations",
+	                  "list": [
+	                    "Spouse",
+	                    "Children",
+	                    "Mother",
+	                    "Father",
+	                    "Siblings",
+	                    "Imediate Family"
+	                  ],
+	                  "inline": true,
+	                  "hidden": false,
+	                  "optional": false,
+	                  "value": "Siblings",
+	                  "targetAttr": "value",
+	                  "errorMsg": "Error"
+	                }
+	              ],
+	              "PAYLOAD_ID": "j5we80e"
+	            },
+	            "conditions": [],
+	            "childConditions": [],
+	            "children": {
+	              "jeradMorrissey": {
+	                "name": "jeradMorrissey",
+	                "payload": {
+	                  "inputArray": [],
+	                  "PAYLOAD_ID": "qq1af4z"
+	                },
+	                "conditions": [
+	                  {
+	                    "_TYPE": "ExactCondition",
+	                    "attribute": "relations",
+	                    "value": "Siblings",
+	                    "deligator": {
+	                      "_TYPE": "NodeCondition"
+	                    }
+	                  }
+	                ],
+	                "childConditions": [],
+	                "children": {
+	                  "relation": {
+	                    "name": "relation",
+	                    "payload": {
+	                      "name": "",
+	                      "inputArray": [
+	                        {
+	                          "_TYPE": "Radio",
+	                          "ID_ATTRIBUTE": "id",
+	                          "name": "relations",
+	                          "label": "Relations",
+	                          "list": [
+	                            "Spouse",
+	                            "Children",
+	                            "Mother",
+	                            "Father",
+	                            "Siblings",
+	                            "Imediate Family"
+	                          ],
+	                          "inline": true,
+	                          "hidden": false,
+	                          "optional": false,
+	                          "value": "Spouse",
+	                          "targetAttr": "value",
+	                          "errorMsg": "Error"
+	                        }
+	                      ],
+	                      "PAYLOAD_ID": "0q27kta"
+	                    },
+	                    "conditions": [],
+	                    "childConditions": [],
+	                    "children": {},
+	                    "metadata": {}
+	                  }
+	                },
+	                "metadata": {
+	                  "relatedTo": "relations"
+	                },
+	                "relatedTo": "relations"
+	              }
+	            },
+	            "metadata": {}
+	          }
+	        },
+	        "metadata": {
+	          "relatedTo": "name"
+	        },
+	        "relatedTo": "name"
+	      },
+	      "jeradMorrissey": {
+	        "name": "jeradMorrissey",
+	        "payload": {
+	          "name": "Jerad Morrissey",
+	          "inputArray": [],
+	          "PAYLOAD_ID": "5gro1q2"
+	        },
+	        "conditions": [
+	          {
+	            "_TYPE": "ExactCondition",
+	            "attribute": "name",
+	            "value": "Jerad Morrissey",
+	            "deligator": {
+	              "_TYPE": "NodeCondition"
+	            }
+	          }
+	        ],
+	        "childConditions": [],
+	        "children": {
+	          "relation": {
+	            "name": "relation",
+	            "payload": {
+	              "name": "",
+	              "inputArray": [
+	                {
+	                  "_TYPE": "Radio",
+	                  "ID_ATTRIBUTE": "id",
+	                  "name": "relations",
+	                  "label": "Relations",
+	                  "list": [
+	                    "Spouse",
+	                    "Children",
+	                    "Mother",
+	                    "Father",
+	                    "Siblings",
+	                    "Imediate Family"
+	                  ],
+	                  "inline": true,
+	                  "hidden": false,
+	                  "optional": false,
+	                  "value": "Spouse",
+	                  "targetAttr": "value",
+	                  "errorMsg": "Error"
+	                }
+	              ],
+	              "PAYLOAD_ID": "49kjvxu"
+	            },
+	            "conditions": [],
+	            "childConditions": [],
+	            "children": {
+	              "jeradMorrissey": {
+	                "name": "jeradMorrissey",
+	                "payload": {
+	                  "name": "JeradMorrissey",
+	                  "inputArray": [],
+	                  "PAYLOAD_ID": "vu0x2wf"
+	                },
+	                "conditions": [],
+	                "childConditions": [],
+	                "children": {},
+	                "metadata": {}
+	              }
+	            },
+	            "metadata": {}
+	          }
+	        },
+	        "metadata": {
+	          "relatedTo": "name"
+	        },
+	        "relatedTo": "name"
+	      }
+	    },
+	    "metadata": {}
+	  },
+	  "payloadHandler": {
+	    "inputs": [
+	      {
+	        "_TYPE": "Input",
+	        "ID_ATTRIBUTE": "id",
+	        "name": "name",
+	        "label": "Name",
+	        "optional": true,
+	        "hidden": false,
+	        "list": [],
+	        "value": "",
+	        "targetAttr": "value",
+	        "errorMsg": "Error"
+	      }
+	    ],
+	    "templateName": "ancestry"
+	  }
+	}
+	// const treeJson = {
+	//   "_TYPE": "DecisionInputTree",
+	//   "id": "DecisionInputTree_97m8e3l",
+	//   "ID_ATTRIBUTE": "id",
+	//   "stateConfigs": {
+	//     "root": {
+	//       "_TYPE": "StateConfig",
+	//       "id": "StateConfig_bujrkj0",
+	//       "ID_ATTRIBUTE": "id",
+	//       "name": "root",
+	//       "payload": {
+	//         "inputArray": [
+	//           {
+	//             "_TYPE": "Input",
+	//             "ID_ATTRIBUTE": "id",
+	//             "type": "text",
+	//             "name": "smallText",
+	//             "label": "Small Text",
+	//             "hidden": false,
+	//             "list": [],
+	//             "optional": false,
+	//             "value": "",
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "Textarea",
+	//             "ID_ATTRIBUTE": "id",
+	//             "name": "largeText",
+	//             "label": "Large Text",
+	//             "hidden": false,
+	//             "list": [],
+	//             "optional": false,
+	//             "value": "",
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "Input",
+	//             "ID_ATTRIBUTE": "id",
+	//             "type": "checkbox",
+	//             "name": "checkbox",
+	//             "label": "Checkbox",
+	//             "hidden": false,
+	//             "list": [],
+	//             "optional": false,
+	//             "value": false,
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "Radio",
+	//             "ID_ATTRIBUTE": "id",
+	//             "name": "radioInline",
+	//             "label": "Radio Inline",
+	//             "list": [
+	//               "in",
+	//               "a",
+	//               "line"
+	//             ],
+	//             "inline": true,
+	//             "hidden": false,
+	//             "optional": false,
+	//             "value": "in",
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "Radio",
+	//             "ID_ATTRIBUTE": "id",
+	//             "name": "radio",
+	//             "label": "Radio",
+	//             "list": [
+	//               "not",
+	//               "in",
+	//               "a",
+	//               "line"
+	//             ],
+	//             "inline": false,
+	//             "hidden": false,
+	//             "optional": false,
+	//             "value": "not",
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "Select",
+	//             "ID_ATTRIBUTE": "id",
+	//             "name": "select",
+	//             "label": "Select",
+	//             "list": [
+	//               "a",
+	//               "b",
+	//               "c",
+	//               "d",
+	//               "e",
+	//               "f",
+	//               "g"
+	//             ],
+	//             "hidden": false,
+	//             "optional": false,
+	//             "value": "a",
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "Input",
+	//             "ID_ATTRIBUTE": "id",
+	//             "type": "date",
+	//             "name": "date",
+	//             "label": "Date",
+	//             "hidden": false,
+	//             "list": [],
+	//             "optional": false,
+	//             "value": "",
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "Input",
+	//             "ID_ATTRIBUTE": "id",
+	//             "type": "time",
+	//             "name": "time",
+	//             "label": "Time",
+	//             "hidden": false,
+	//             "list": [],
+	//             "optional": false,
+	//             "value": "",
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "Table",
+	//             "ID_ATTRIBUTE": "id",
+	//             "name": "t",
+	//             "label": "t",
+	//             "rows": [
+	//               "a",
+	//               "b",
+	//               "c",
+	//               "d",
+	//               "e"
+	//             ],
+	//             "columns": [
+	//               {
+	//                 "_TYPE": "Radio",
+	//                 "ID_ATTRIBUTE": "id",
+	//                 "name": "one",
+	//                 "label": "one",
+	//                 "list": [
+	//                   "1",
+	//                   "2",
+	//                   "3",
+	//                   "4"
+	//                 ],
+	//                 "inline": true,
+	//                 "hidden": false,
+	//                 "optional": false,
+	//                 "value": "1",
+	//                 "targetAttr": "value",
+	//                 "errorMsg": "Error"
+	//               },
+	//               {
+	//                 "_TYPE": "Input",
+	//                 "ID_ATTRIBUTE": "id",
+	//                 "type": "checkbox",
+	//                 "name": "checkbo",
+	//                 "label": "checkbo",
+	//                 "hidden": false,
+	//                 "list": [],
+	//                 "optional": false,
+	//                 "value": false,
+	//                 "targetAttr": "value",
+	//                 "errorMsg": "Error"
+	//               }
+	//             ],
+	//             "type": "Text",
+	//             "hidden": false,
+	//             "list": [],
+	//             "optional": false,
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "MultipleEntries",
+	//             "ID_ATTRIBUTE": "id",
+	//             "list": [],
+	//             "hidden": false,
+	//             "optional": false,
+	//             "value": [],
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error",
+	//             "inputTemplate": {
+	//               "_TYPE": "InputList",
+	//               "ID_ATTRIBUTE": "id",
+	//               "name": "children",
+	//               "list": [
+	//                 {
+	//                   "_TYPE": "Input",
+	//                   "ID_ATTRIBUTE": "id",
+	//                   "type": "text",
+	//                   "name": "first",
+	//                   "label": "First",
+	//                   "inline": true,
+	//                   "hidden": false,
+	//                   "list": [],
+	//                   "optional": false,
+	//                   "value": "",
+	//                   "targetAttr": "value",
+	//                   "errorMsg": "Error"
+	//                 },
+	//                 {
+	//                   "_TYPE": "Input",
+	//                   "ID_ATTRIBUTE": "id",
+	//                   "type": "text",
+	//                   "name": "middle",
+	//                   "label": "Middle",
+	//                   "inline": true,
+	//                   "hidden": false,
+	//                   "list": [],
+	//                   "optional": false,
+	//                   "value": "",
+	//                   "targetAttr": "value",
+	//                   "errorMsg": "Error"
+	//                 },
+	//                 {
+	//                   "_TYPE": "Input",
+	//                   "ID_ATTRIBUTE": "id",
+	//                   "type": "date",
+	//                   "name": "doB",
+	//                   "label": "DoB",
+	//                   "inline": true,
+	//                   "hidden": false,
+	//                   "list": [],
+	//                   "optional": false,
+	//                   "value": "",
+	//                   "targetAttr": "value",
+	//                   "errorMsg": "Error"
+	//                 }
+	//               ],
+	//               "inline": true,
+	//               "hidden": false,
+	//               "optional": false,
+	//               "value": [
+	//                 "",
+	//                 "",
+	//                 ""
+	//               ],
+	//               "targetAttr": "value",
+	//               "errorMsg": "Error"
+	//             }
+	//           },
+	//           {
+	//             "_TYPE": "MeasurementInput",
+	//             "ID_ATTRIBUTE": "id",
+	//             "name": "standard",
+	//             "label": "standard",
+	//             "units": "Imperial (US)",
+	//             "value": null,
+	//             "hidden": false,
+	//             "list": [],
+	//             "optional": false,
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "MeasurementInput",
+	//             "ID_ATTRIBUTE": "id",
+	//             "name": "metric",
+	//             "label": "metric",
+	//             "units": "Metric",
+	//             "value": {
+	//               "0": "N",
+	//               "1": "a",
+	//               "2": "N"
+	//             },
+	//             "hidden": false,
+	//             "list": [],
+	//             "optional": false,
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "Input",
+	//             "ID_ATTRIBUTE": "id",
+	//             "type": "text",
+	//             "name": "weatherFax",
+	//             "label": "Weather Fax",
+	//             "hidden": false,
+	//             "list": [],
+	//             "optional": false,
+	//             "value": "",
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           },
+	//           {
+	//             "_TYPE": "Input",
+	//             "ID_ATTRIBUTE": "id",
+	//             "type": "text",
+	//             "name": "eWeatherFax",
+	//             "label": "eWeather Fax",
+	//             "hidden": false,
+	//             "list": [],
+	//             "optional": false,
+	//             "value": "",
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           }
+	//         ]
+	//       }
+	//     },
+	//     "hiccups": {
+	//       "_TYPE": "StateConfig",
+	//       "id": "StateConfig_bwvdmzz",
+	//       "ID_ATTRIBUTE": "id",
+	//       "name": "hiccups",
+	//       "payload": {
+	//         "inputArray": [
+	//           {
+	//             "_TYPE": "Input",
+	//             "ID_ATTRIBUTE": "id",
+	//             "type": "text",
+	//             "name": "jozsefMorrissey",
+	//             "label": "Jozsef Morrissey",
+	//             "hidden": false,
+	//             "list": [],
+	//             "optional": false,
+	//             "value": "",
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           }
+	//         ]
+	//       }
+	//     }
+	//   },
+	//   "name": "root",
+	//   "root": {
+	//     "name": "root",
+	//     "payload": {
+	//       "inputArray": [
+	//         {
+	//           "_TYPE": "Input",
+	//           "ID_ATTRIBUTE": "id",
+	//           "type": "text",
+	//           "name": "smallText",
+	//           "label": "Small Text",
+	//           "hidden": false,
+	//           "list": [],
+	//           "optional": false,
+	//           "value": "",
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "Textarea",
+	//           "ID_ATTRIBUTE": "id",
+	//           "name": "largeText",
+	//           "label": "Large Text",
+	//           "hidden": false,
+	//           "list": [],
+	//           "optional": false,
+	//           "value": "",
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "Input",
+	//           "ID_ATTRIBUTE": "id",
+	//           "type": "checkbox",
+	//           "name": "checkbox",
+	//           "label": "Checkbox",
+	//           "hidden": false,
+	//           "list": [],
+	//           "optional": false,
+	//           "value": false,
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "Radio",
+	//           "ID_ATTRIBUTE": "id",
+	//           "name": "radioInline",
+	//           "label": "Radio Inline",
+	//           "list": [
+	//             "in",
+	//             "a",
+	//             "line"
+	//           ],
+	//           "inline": true,
+	//           "hidden": false,
+	//           "optional": false,
+	//           "value": "on",
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "Radio",
+	//           "ID_ATTRIBUTE": "id",
+	//           "name": "radio",
+	//           "label": "Radio",
+	//           "list": [
+	//             "not",
+	//             "in",
+	//             "a",
+	//             "line"
+	//           ],
+	//           "inline": false,
+	//           "hidden": false,
+	//           "optional": false,
+	//           "value": "on",
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "Select",
+	//           "ID_ATTRIBUTE": "id",
+	//           "name": "select",
+	//           "label": "Select",
+	//           "list": [
+	//             "a",
+	//             "b",
+	//             "c",
+	//             "d",
+	//             "e",
+	//             "f",
+	//             "g"
+	//           ],
+	//           "hidden": false,
+	//           "optional": false,
+	//           "value": "a",
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "Input",
+	//           "ID_ATTRIBUTE": "id",
+	//           "type": "date",
+	//           "name": "date",
+	//           "label": "Date",
+	//           "hidden": false,
+	//           "list": [],
+	//           "optional": false,
+	//           "value": "",
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "Input",
+	//           "ID_ATTRIBUTE": "id",
+	//           "type": "time",
+	//           "name": "time",
+	//           "label": "Time",
+	//           "hidden": false,
+	//           "list": [],
+	//           "optional": false,
+	//           "value": "",
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "Table",
+	//           "ID_ATTRIBUTE": "id",
+	//           "name": "t",
+	//           "label": "t",
+	//           "rows": [
+	//             "a",
+	//             "b",
+	//             "c",
+	//             "d",
+	//             "e"
+	//           ],
+	//           "columns": [
+	//             {
+	//               "_TYPE": "Radio",
+	//               "ID_ATTRIBUTE": "id",
+	//               "name": "one",
+	//               "label": "one",
+	//               "list": [
+	//                 "1",
+	//                 "2",
+	//                 "3",
+	//                 "4"
+	//               ],
+	//               "inline": true,
+	//               "hidden": false,
+	//               "optional": false,
+	//               "value": "1",
+	//               "targetAttr": "value",
+	//               "errorMsg": "Error"
+	//             },
+	//             {
+	//               "_TYPE": "Input",
+	//               "ID_ATTRIBUTE": "id",
+	//               "type": "checkbox",
+	//               "name": "checkbo",
+	//               "label": "checkbo",
+	//               "hidden": false,
+	//               "list": [],
+	//               "optional": false,
+	//               "value": false,
+	//               "targetAttr": "value",
+	//               "errorMsg": "Error"
+	//             }
+	//           ],
+	//           "type": "Text",
+	//           "hidden": false,
+	//           "list": [],
+	//           "optional": false,
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "MultipleEntries",
+	//           "ID_ATTRIBUTE": "id",
+	//           "list": [
+	//             {
+	//               "_TYPE": "InputList",
+	//               "ID_ATTRIBUTE": "id",
+	//               "name": "children",
+	//               "list": [
+	//                 {
+	//                   "_TYPE": "Input",
+	//                   "ID_ATTRIBUTE": "id",
+	//                   "type": "text",
+	//                   "name": "first",
+	//                   "label": "First",
+	//                   "inline": true,
+	//                   "hidden": false,
+	//                   "list": [],
+	//                   "optional": false,
+	//                   "value": "",
+	//                   "targetAttr": "value",
+	//                   "errorMsg": "Error"
+	//                 },
+	//                 {
+	//                   "_TYPE": "Input",
+	//                   "ID_ATTRIBUTE": "id",
+	//                   "type": "text",
+	//                   "name": "middle",
+	//                   "label": "Middle",
+	//                   "inline": true,
+	//                   "hidden": false,
+	//                   "list": [],
+	//                   "optional": false,
+	//                   "value": "",
+	//                   "targetAttr": "value",
+	//                   "errorMsg": "Error"
+	//                 },
+	//                 {
+	//                   "_TYPE": "Input",
+	//                   "ID_ATTRIBUTE": "id",
+	//                   "type": "date",
+	//                   "name": "doB",
+	//                   "label": "DoB",
+	//                   "inline": true,
+	//                   "hidden": false,
+	//                   "list": [],
+	//                   "optional": false,
+	//                   "value": "",
+	//                   "targetAttr": "value",
+	//                   "errorMsg": "Error"
+	//                 }
+	//               ],
+	//               "inline": true,
+	//               "hidden": false,
+	//               "optional": false,
+	//               "value": [
+	//                 "",
+	//                 "",
+	//                 ""
+	//               ],
+	//               "targetAttr": "value",
+	//               "errorMsg": "Error"
+	//             }
+	//           ],
+	//           "hidden": false,
+	//           "optional": false,
+	//           "value": [],
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error",
+	//           "inputTemplate": {
+	//             "_TYPE": "InputList",
+	//             "ID_ATTRIBUTE": "id",
+	//             "name": "children",
+	//             "list": [
+	//               {
+	//                 "_TYPE": "Input",
+	//                 "ID_ATTRIBUTE": "id",
+	//                 "type": "text",
+	//                 "name": "first",
+	//                 "label": "First",
+	//                 "inline": true,
+	//                 "hidden": false,
+	//                 "list": [],
+	//                 "optional": false,
+	//                 "value": "",
+	//                 "targetAttr": "value",
+	//                 "errorMsg": "Error"
+	//               },
+	//               {
+	//                 "_TYPE": "Input",
+	//                 "ID_ATTRIBUTE": "id",
+	//                 "type": "text",
+	//                 "name": "middle",
+	//                 "label": "Middle",
+	//                 "inline": true,
+	//                 "hidden": false,
+	//                 "list": [],
+	//                 "optional": false,
+	//                 "value": "",
+	//                 "targetAttr": "value",
+	//                 "errorMsg": "Error"
+	//               },
+	//               {
+	//                 "_TYPE": "Input",
+	//                 "ID_ATTRIBUTE": "id",
+	//                 "type": "date",
+	//                 "name": "doB",
+	//                 "label": "DoB",
+	//                 "inline": true,
+	//                 "hidden": false,
+	//                 "list": [],
+	//                 "optional": false,
+	//                 "value": "",
+	//                 "targetAttr": "value",
+	//                 "errorMsg": "Error"
+	//               }
+	//             ],
+	//             "inline": true,
+	//             "hidden": false,
+	//             "optional": false,
+	//             "value": [
+	//               "",
+	//               "",
+	//               ""
+	//             ],
+	//             "targetAttr": "value",
+	//             "errorMsg": "Error"
+	//           }
+	//         },
+	//         {
+	//           "_TYPE": "MeasurementInput",
+	//           "ID_ATTRIBUTE": "id",
+	//           "name": "standard",
+	//           "label": "standard",
+	//           "units": "Imperial (US)",
+	//           "value": "0",
+	//           "hidden": false,
+	//           "list": [],
+	//           "optional": false,
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "MeasurementInput",
+	//           "ID_ATTRIBUTE": "id",
+	//           "name": "metric",
+	//           "label": "metric",
+	//           "units": "Metric",
+	//           "value": {
+	//             "0": "4",
+	//             "1": "4",
+	//             "2": ".",
+	//             "3": "3"
+	//           },
+	//           "hidden": false,
+	//           "list": [],
+	//           "optional": false,
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "Input",
+	//           "ID_ATTRIBUTE": "id",
+	//           "type": "text",
+	//           "name": "weatherFax",
+	//           "label": "Weather Fax",
+	//           "hidden": false,
+	//           "list": [],
+	//           "optional": false,
+	//           "value": "",
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         },
+	//         {
+	//           "_TYPE": "Input",
+	//           "ID_ATTRIBUTE": "id",
+	//           "type": "text",
+	//           "name": "eWeatherFax",
+	//           "label": "eWeather Fax",
+	//           "hidden": false,
+	//           "list": [],
+	//           "optional": false,
+	//           "value": "",
+	//           "targetAttr": "value",
+	//           "errorMsg": "Error"
+	//         }
+	//       ],
+	//       "PAYLOAD_ID": "mdhqkxo"
+	//     },
+	//     "conditions": [],
+	//     "childConditions": [],
+	//     "children": {
+	//       "hiccups": {
+	//         "name": "hiccups",
+	//         "payload": {
+	//           "inputArray": [
+	//             {
+	//               "_TYPE": "Input",
+	//               "ID_ATTRIBUTE": "id",
+	//               "type": "text",
+	//               "name": "jozsefMorrissey",
+	//               "label": "Jozsef Morrissey",
+	//               "hidden": false,
+	//               "list": [],
+	//               "optional": false,
+	//               "value": "",
+	//               "targetAttr": "value",
+	//               "errorMsg": "Error"
+	//             }
+	//           ],
+	//           "PAYLOAD_ID": "22puejf"
+	//         },
+	//         "conditions": [
+	//           {
+	//             "_TYPE": "EqualCondition",
+	//             "condition": "metric",
+	//             "details": 44.3,
+	//             "attribute": "metric",
+	//             "value": 44.3,
+	//             "deligator": {
+	//               "_TYPE": "NodeCondition"
+	//             }
+	//           }
+	//         ],
+	//         "childConditions": [],
+	//         "children": {},
+	//         "metadata": {
+	//           "relatedTo": "metric"
+	//         }
+	//       }
+	//     }
+	//   }
+	// }
 	
 });
 

@@ -1,6 +1,7 @@
 
 
 const Lookup = require('./object/lookup')
+const CustomEvent = require('./custom-event')
 const REMOVAL_PASSWORD = String.random();
 
 const nameEquals = (name) => (node) => node.name() === name;
@@ -56,12 +57,14 @@ class StateConfig extends Lookup {
     }
   }
 }
+Object.class.register(StateConfig);
 
 StateConfig.fromJson = (json) => {
   const id = json.id;
   const existing = StateConfig.get(id);
   if (existing) return existing;
-  return new StateConfig(json.name, json.payload);
+  const payload = Object.fromJson(json.payload);
+  return new StateConfig(json.name, payload);
 }
 const defaultResolver = (node) => node.name();
 class DecisionCondition {
@@ -153,6 +156,13 @@ class DecisionNode extends Lookup {
 
     this.setValue = (key, value) => payload[key] = value;
 
+    const metadata = {};
+    this.metadata = (attribute, value) => {
+        if (attribute === undefined) return Object.merge({}, metadata);
+        if (value !== undefined) return metadata[attribute] = value;
+        return metadata[attribute];
+    }
+
     this.payload = (noConfig) => {
       if (noConfig) return payload;
       const copy = stateConfig.payload();
@@ -203,7 +213,11 @@ class DecisionNode extends Lookup {
     }
 
     this.then = (name, payload) => {
-      if (name instanceof DecisionNode) return attach(name);
+      if (name instanceof DecisionNode) {
+        const attached = attach(name);
+        this.tree().changed()
+        return attached;
+      }
       if (Array.isArray(name)) {
         const returnNodes = [];
         for (let index = 0; index < name.length; index += 1) {
@@ -213,12 +227,39 @@ class DecisionNode extends Lookup {
       }
       name = formatName(name);
       const newState = createNode(name, payload);
+      this.tree().changed()
       stateMap[name] = newState;
 
       return newState;
     }
 
-    this.remove = () => this.parent().stateConfig().remove(this.stateConfig());
+    const onChange = [];
+    const changeEvent = new CustomEvent('change');
+
+    const trigger = () => {
+      changeEvent.trigger(this.values());
+      this.tree().changed();
+    }
+    this.onChange = (func) => changeEvent.on(func);
+    let changePending = 0;
+    const delay = 100;
+    this.changed = () => {
+      let changeId = ++changePending;
+      setTimeout(() => {
+        if (changeId === changePending) {
+          const values = this.values();
+          changeEvent.trigger(values)
+        }
+      }, delay);
+    }
+
+    this.remove = (child) => {
+      if (child === undefined) return this.parent().remove(this);
+      const state = stateMap[child.name()];
+      delete stateMap[child.name()];
+      this.stateConfig().remove(child.stateConfig());
+      return state;
+    }
 
     this.tree = () => {
       let curr = this;
@@ -491,6 +532,7 @@ class DecisionNode extends Lookup {
                     childConditions: childConds};
 
       json.children = {};
+      json.metadata = Object.toJson(this.metadata());
       if (shouldRecurse()) {
         this.children().forEach((child) => {
           json.children[child.name()] = child.nodeOnlyToJson();
@@ -623,7 +665,12 @@ class DecisionTree extends Lookup {
     }
 
     function addStates(states) {
-      Object.keys(states).forEach((name) => tree.getState(name, states[name]));
+      if (Array.isArray(states)) {
+        states.forEach((state) => tree.addState(state));
+      } else if (states instanceof Object){
+        Object.keys(states).forEach((name) => tree.addState(name, states[name]));
+      }
+      throw new Error('states must be and array of StateConfigs or an Object of key => payload mapping');
     }
 
     this.getByPath = (...idPath) => getByPath(this.root(), ...idPath);
@@ -666,6 +713,9 @@ function addChildren(node, json) {
     const name = childNames[index];
     const payload = Object.fromJson(json[name].payload);
     const child = node.then(name, payload);
+    if (json.metadata)
+      Object.keys(json.metadata).forEach((key) =>
+          child.metadata(key, Object.fromJson(json.metadata[key])));
     child.conditions.addAll(Object.fromJson(json[name].conditions));
     child.conditions.child.addAll(Object.fromJson(json[name].childConditions));
     addChildren(child, json[name].children);

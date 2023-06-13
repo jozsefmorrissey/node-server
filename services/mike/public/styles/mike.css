@@ -22,3 +22,36 @@
     display: none;
   }
 }
+
+table {
+  border-collapse: collapse;
+  text-align: center;
+}
+
+td {
+  padding: 2pt 5pt;
+}
+
+.modify {
+  background-color: orange;
+  border-style: dotted;
+  border-radius: 5pt;
+}
+
+.error {
+  border-color: red;
+  border-width: 4pt;
+}
+
+.remove-btn-cnt>button {
+  color: red;
+  font-size: larger;
+  font-weight: bold;
+  background-color: transparent;
+  border-radius: 15pt;
+  padding: 0 2pt;
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 10pt;
+}
