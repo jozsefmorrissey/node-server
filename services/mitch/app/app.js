@@ -12,7 +12,7 @@ const reports = require('./pages/reports');
 const configure = require('./pages/configure');
 
 let url = du.url.breakdown().path;
-url = url.replace(/^\/mike/, '');
+url = url.replace(/^\/mitch/, '');
 
 switch (url) {
   case '/configure':
