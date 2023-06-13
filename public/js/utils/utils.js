@@ -605,13 +605,16 @@ Function.safeStdLibAddition(Array, 'exists', function (array, obj) {
 }, true);
 
 Function.safeStdLibAddition(Array, 'remove', function (elem) {
-    for (let index = 0; index < this.length; index += 1) {
-      if (elem && (typeof elem.equals) === 'function' && elem.equals(this[index])) {
-        this.splice(index--, 1);
-      } else if (elem === this[index]) {
-        this.splice(index--, 1);
-      }
+  const isFunction = elem && (typeof elem.equals) === 'function';
+  let removed = isFunction ? [] : undefined;
+  for (let index = 0; index < this.length; index += 1) {
+    if (isFunction && elem.equals(this[index])) {
+      removed.push(this.splice(index--, 1)[0]);
+    } else if (elem === this[index]) {
+      removed = this.splice(index--, 1)[0];
     }
+  }
+  return removed;
 });
 
 Function.safeStdLibAddition(Array, 'compare', function (original, neww, modify) {
