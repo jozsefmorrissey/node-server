@@ -1,6 +1,5 @@
 
 const shell = require('shelljs');
-require('./../../public/js/utils/utils.js')
 const $t = require('../../public/js/utils/$t');
 $t.loadFunctions(require('./generated/html-templates'));
 
@@ -10,7 +9,8 @@ const templates = {
   index: new $t('index'),
   report: new $t('report'),
   reports: new $t('reports'),
-  configure: new $t('configure')
+  configure: new $t('configure'),
+  ancestry: new $t('ancestry')
 };
 
 const getScope = (key) => {
@@ -18,6 +18,7 @@ const getScope = (key) => {
     case 'report': return {name: 'report'}
     case 'reports': return {name: 'reports'}
     case 'configure': return {name: 'configure'}
+    case 'ancestry': return {name: 'ancestry'}
     default: return {};
   }
 }

@@ -94,7 +94,7 @@ Function.safeStdLibAddition(Object, 'copy', function(arr) {
 
 
 Function.safeStdLibAddition(Object, 'foreach', function(obj, func, filter, pathPrefix) {
-  pathPrefix ||= '';
+  if (!pathPrefix) pathPrefix = '';
   if((typeof filter) !== 'function' || filter(obj, pathPrefix)) func(obj, pathPrefix);
   const keys = Object.keys(obj);
   for (let index = 0; index < keys.length; index++) {
@@ -159,6 +159,11 @@ function processValue(value) {
   return retVal;
 }
 
+// TODO: make moore efficient... dis es terible
+Function.safeStdLibAddition(Array, 'unique', function () {
+  return this.filter((() => {let found = []; return (e) => found.indexOf(e) === -1 && (found.push(e) || e);})());
+});
+
 Function.safeStdLibAddition(Array, 'equals', function (other, startIndex, endIndex) {
     startIndex =  startIndex > -1 ? startIndex : 0;
     endIndex = endIndex < this.length ? endIndex : this.length;
@@ -184,7 +189,9 @@ Function.safeStdLibAddition(String, 'random',  function (len) {
     return str.substr(0, len);
 }, true);
 
-const specialRegChars = /[-[\]{}()*+?.,\\^$|#\\s]/g;
+// const specialRegChars = /[-[\]{}()*+?.,\\^$|#\\s]/g;
+// TODO: Removed \\s not sure if its the right move
+const specialRegChars = /[-[\]{}()*+?.,\\^$|#]/g;
 Function.safeStdLibAddition(RegExp, 'escape',  function (str) {
   return str.replace(specialRegChars, '\\$&');
 }, true);
@@ -324,7 +331,7 @@ const doNotOverwriteAttr = '_DO_NOT_OVERWRITE';
 const clazz = {};
 clazz.object = () => JSON.clone(classLookup);
 clazz.register = (clazz) => classLookup[clazz.name] = clazz;
-clazz.get = (name) => classLookup[name];
+clazz.get = (name) => (typeof name) === 'string' ? classLookup[name] : name;
 clazz.filter = (filterFunc) => {
   const classes = clazz.object();
   if ((typeof filterFunc) !== 'function') return classes;
@@ -357,7 +364,6 @@ function objEq(obj1, obj2) {
     if (obj1Val instanceof Object) {
       if ((typeof obj1Val.equals) !== 'function') {
         if(!objEq(obj1Val, obj2Val)) {
-          console.log('failed!')
           objEq(obj1Val, obj2Val)
           return false;
         }
@@ -402,6 +408,7 @@ Function.safeStdLibAddition(Object, 'merge', function () {
       console.error('Attempting to merge a non-object');
     }
   }
+  return this;
 });
 
 Function.safeStdLibAddition(Array, 'removeAll', function (arr) {
@@ -504,10 +511,8 @@ const firstNotInList = (targetList, ignoreList) => {
   return null;
 }
 Function.safeStdLibAddition(Array, 'systematicSuffle', function (numberOfSuffles, doNotShufflePrimes) {
-  // const ps = primes;
   const ps = [];
   ps.copy(primes);
-  // if (!doNotShufflePrimes) ps.systematicSuffle(numberOfSuffles, true);
   const map = {};
   let primeCount = 0;
   let loops = 0;
@@ -527,9 +532,7 @@ Function.safeStdLibAddition(Array, 'systematicSuffle', function (numberOfSuffles
       const secondPart = this.slice(shuffleIndex, (shuffleIndex = shuffleIndex + prime));
       const thirdPart = this.slice(shuffleIndex)
       this.copy(secondPart.concat(firstPart.concat(thirdPart)));
-      // if (primeCount < shuffleIndex) this.reverse();
     }
-    // console.log(this.join());
     map[this.join().hash()] = true;
   }
   return Object.keys(map).length;
@@ -609,7 +612,6 @@ Function.safeStdLibAddition(Array, 'print', function (min, func) {
     const elem = this[index];
     const length = new String(index).length;
     const position = new Array(maxLength - length).fill(' ').join('') + index + ':';
-    console.log(position, elem && elem.toString ? elem.toString() : elem);
   }
 });
 
@@ -921,7 +923,6 @@ Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
   if ((typeof obj) != 'object') return obj;
   const keys = Object.keys(obj);
   if (!checked[obj.constructor.name]) {
-    // console.log('constructor: ' + obj.constructor.name);
     checked[obj.constructor.name] = true;
   }
 
@@ -948,11 +949,6 @@ Function.safeStdLibAddition(JSON, 'clone',   function  (obj) {
     }
   }
   return clone;
-}, true);
-
-Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
-  if (!(obj instanceof Object)) return obj;
-  return JSON.parse(JSON.stringify(obj));
 }, true);
 
 Function.safeStdLibAddition(Array, 'idObject',   function  (idAttr) {

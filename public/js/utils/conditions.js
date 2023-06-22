@@ -1,16 +1,18 @@
-const DecisionTree = require('../../decision-tree.js');
-
 const CONDITIONS = {};
 
-class Condition extends DecisionTree.Condition {
-  constructor() {super();}
-}
+class Condition {constructor() {Object.getSet(this, 'group')}}
+CONDITIONS.Condition = Condition;
 
 class AttributeCondition extends Condition {
   constructor(attribute, value, deligator) {
     super(attribute, value, deligator);
     Object.getSet(this, {attribute, value, deligator});
+    this.prefix = () => {
+      const dotIndex = attribute.indexOf('.');
+      return dotIndex === -1 ? attribute : attribute.substring(0, dotIndex);
+    }
     this.resolveValue = (val, attribute) => deligator.resolveValue(val, attribute);
+    this.toString = () => `${this.attribute()}=>${this.value()}`;
   }
 }
 
@@ -76,6 +78,52 @@ class ExactCondition extends AttributeCondition {
     super(attribute, value, deligator);
     this.satisfied = (val) => {
       return this.resolveValue(val, attribute) === value;
+    }
+  }
+}
+
+const wildCardMapFunc = (str) => new RegExp('^' + RegExp.escape(str).replace(/\\\*/g, '.*') + '$');
+class WildCardCondition extends AttributeCondition {
+  constructor(wildCard, value, deligator) {
+    super(wildCard, value, deligator);
+
+    const valueReg = wildCardMapFunc(value);
+    const paths = wildCard.split('.').map(wildCardMapFunc);
+
+    function followPath(pIndex, object, values) {
+      const keys = Object.keys(object);
+      for (let index = 0; index < keys.length; index++) {
+        const key = keys[index];
+        if (key.match(paths[pIndex])) {
+          const value = object[key];
+          if (pIndex === paths.length - 1) {
+            if (value.length > 0) values.push(value);
+          } else {
+            followPath(pIndex + 1, value, values);
+          }
+        }
+      }
+    }
+
+    this.satisfied = (val) => {
+      const valueObj = this.resolveValue(val);
+      const potentials = [];
+      followPath(0, valueObj, potentials);
+      for (let index = 0; index < potentials.length; index++) {
+        const potVal = potentials[index];
+        if (potVal.match(valueReg)) return true;
+      }
+      return false;
+    }
+  }
+}
+class CaseInsensitiveCondition extends AttributeCondition {
+  constructor(attribute, value, deligator) {
+    super(attribute, value, deligator);
+    value = value.toLowerCase();
+    this.satisfied = (val) => {
+      const resolved = this.resolveValue(val, attribute);
+      return (typeof resolved) === 'string' ? resolved.toLowerCase() === value : false;
     }
   }
 }
@@ -160,6 +208,7 @@ class RegexCondition extends AttributeCondition {
 }
 
 function getCondition(attribute, value, type, deligator) {
+  if ((typeof type) === 'string') type = type.toCamel();
   if (value instanceof RegExp) return new RegexCondition(attribute, value, deligator);
   if ((typeof value) === 'number') {
     if (type === 'lessThanOrEqual') return new LessThanOrEqualCondition(attribute, value, deligator);
@@ -172,7 +221,10 @@ function getCondition(attribute, value, type, deligator) {
     if (type === 'any') return new AnyCondition(attribute, value, deligator);
     if (type === 'except') return new ExceptCondition(attribute, value, deligator);
     if (type === 'contains') return new ContainsCondition(attribute, value, deligator);
-    return new ExactCondition(attribute, value, deligator);
+    if (type === 'exact') return new ExactCondition(attribute, value, deligator);
+    if (type === 'wildCard' || (type === undefined && (attribute + value).indexOf('*') !== -1))
+      return new WildCardCondition(attribute, value, deligator);
+    return new CaseInsensitiveCondition(attribute, value, deligator);
   }
   if (Array.isArray(value)) {
     if (type === 'and') return new AndCondition(attribute, value, deligator);
@@ -181,20 +233,6 @@ function getCondition(attribute, value, type, deligator) {
     return new InclusiveCondition(attribute, value, deligator);
   }
   throw new Error('This should not be reachable Condition must not be defined');
-}
-
-class NodeCondition {
-  constructor(attribute, value, type) {
-    this.toJson = () => ({_TYPE: 'NodeCondition'});
-    this.resolveValue = (node, attribute) => {
-      const values = node.values();
-      return Object.pathValue(values, attribute);
-    }
-    if (attribute._TYPE === 'NodeCondition') return this;
-
-    type &&= type.toCamel();
-    return getCondition(attribute, value, type, this);
-  }
 }
 
 Object.class.register(LessThanOrEqualCondition);
@@ -209,7 +247,8 @@ Object.class.register(ContainsCondition);
 Object.class.register(ExclusiveCondition);
 Object.class.register(InclusiveCondition);
 Object.class.register(RegexCondition);
-Object.class.register(NodeCondition);
+Object.class.register(CaseInsensitiveCondition);
+Object.class.register(WildCardCondition);
 
 Condition.fromJson = (json) => {
   const deligator = Object.fromJson(json.deligator);
@@ -218,8 +257,40 @@ Condition.fromJson = (json) => {
   return new (Object.class.get(json._TYPE))(attribute, value, deligator);
 }
 
+CONDITIONS.implement = (obj, conditionGetter) => {
+  conditionGetter ||= getCondition;
+  const conditions = [];
+  const groupedConditions = {};
+  const ungrouped = [];
 
-CONDITIONS.node = NodeCondition;
+  Object.getSet(obj, {conditions});
+
+  obj.conditions = (group) => [].merge((group === null ? ungrouped :
+          (typeof group === 'string') ?
+          (groupedConditions[group] ? groupedConditions[group] : []) :
+          conditions));
+
+  obj.conditions.add = (condition, group) => {
+    let dc = condition instanceof Condition ? condition : conditionGetter(condition);
+    conditions.push(dc);
+    condition.group(group);
+    if ((typeof group) === 'string') {
+      if (!groupedConditions[group]) groupedConditions[group] = [];
+      groupedConditions[group].push(dc);
+    }
+    else ungrouped.push(dc);
+  }
+  obj.conditions.addAll = (conds) => {
+    for (let index = 0; index < conds.length; index++) {
+      const cond = conds[index];
+      if (!(cond instanceof Condition)) throw new Error('WTF(sorry its been a long week): this needs to be a Condition');
+      conditions.push(cond);
+    }
+  }
+  obj.conditions.remove = (cond) => conditions.remove(cond);
+}
+
+CONDITIONS.get = getCondition;
 CONDITIONS.And = AndCondition;
 CONDITIONS.Or = OrCondition;
 module.exports = CONDITIONS;

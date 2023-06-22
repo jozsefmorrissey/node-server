@@ -4,6 +4,7 @@ var shell = require("shelljs")
 var bodyParser = require('body-parser');
 var fileUpload = require('express-fileupload');
 const cookieParser = require("cookie-parser");
+require('./public/js/utils/utils.js')
 
 const Context = require('./src/context');
 
@@ -79,7 +80,6 @@ app.get("/git", function (req, res) {
 });
 
 app.post('/upload', function(req, res) {
-  console.log(req.files.newFile); // the uploaded file object
   var file = req.files.newFile;
   fs.writeFileSync('./uploads/' + file.name, file.data);
   res.send('success');
@@ -208,7 +208,6 @@ app.post('/evan/adjust', function(req, res, next) {
 
 var dirReg = /(^.*\/).*$/;
 app.post('/copy', function(req, res) {
-  console.log(req.body.name.replace(/(^.*\/).*$/, '$1'));
   if (req.body.name.match(dirReg)) {
     shell.mkdir('-p', './uploads/' + req.body.name.replace(dirReg, '$1'));
   }
@@ -261,7 +260,7 @@ try {
       require(project).endpoints(app, loc, ip);
     }
   }
-} catch (e) { console.log('error: ', e); }
+} catch (e) { console.error(e); }
 
 var httpServer = http.createServer(app);
 var httpsServer = https.createServer(https_options, app);
@@ -271,4 +270,4 @@ httpsServer.listen(3003);
 var user = getUser();
 //shell.exec("xdg-open \"https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.id=" + user + "\"");
 
-} catch (e) { console.log('error:ssss ', e); }
+} catch (e) { console.error(e); }

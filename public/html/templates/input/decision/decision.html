@@ -1,13 +1,13 @@
 
-<div class='decision-input-cnt' node-id='{{id()}}' {{reachable() ? '' : 'hidden'}}>
+<div class='decision-input-cnt' node-id='{{id()}}'
+      recursion="disabled">
   <span id='{{id()}}'>
     <div class='payload-cnt'>{{payloadHtml()}}</div>
     <div:t repeat='input in inputArray()'
         class='decision-input-array-cnt pad {{class}}' index='{{$index}}'>
       {{input.html()}}
-      <div class='children-recurse-cnt tab' value='{{input.value()}}'>
-        {{childrenHtml($index)}}
-      </div>
+      <div class='children-recurse-cnt tab' value='{{input.value()}}'></div>
     </div:t>
+    <div class='orphan-cnt tab'></div>
   </span>
 </div>

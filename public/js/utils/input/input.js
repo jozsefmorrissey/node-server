@@ -24,6 +24,9 @@ errorMsg: Message that shows when validation fails.
 class Input extends Lookup {
   constructor(props) {
     props ||= {};
+    if (props.name === 'jozsefMorrissey') {
+      console.log('created')
+    }
     const id = props.id || `input-${String.random(7)}`;
     super(id);
     props.hidden = props.hide || false;
@@ -90,6 +93,7 @@ class Input extends Lookup {
     this.get = () => getElem(this.id());
 
     this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
+    this.trigger = (eventType) => du.trigger(eventType, this.get());
     this.valid = () => this.setValue();
     function getValue() {
       const elem = getElem(instance.id());
@@ -114,6 +118,9 @@ class Input extends Lookup {
     };
     let chosen = false;
     this.setValue = (val, force, eventTriggered) => {
+      if (val === 'me') {
+        console.log('meeeeee')
+      }
       if (val === undefined) val = this.getValue();
       if (this.optional() && val === '') return true;
       if(force || this.validation(val)) {
@@ -128,7 +135,7 @@ class Input extends Lookup {
       value = undefined;
       return false;
     }
-
+this.name()
     this.chosen = () => props.mustChoose ? chosen : true;
 
     this.value = () => {
@@ -247,7 +254,4 @@ Input.attrString = (targetAttr, value) =>{
   }
   return `${targetAttr}='${value}'`
 }
-
-Input.DO_NOT_CLONE = true;
-
 module.exports = Input;

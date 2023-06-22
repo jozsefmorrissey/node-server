@@ -10,6 +10,7 @@ const du = require('../../../public/js/utils/dom-utils.js');
 const report = require('./pages/report');
 const reports = require('./pages/reports');
 const configure = require('./pages/configure');
+const ancestry = require('./pages/ancestry');
 
 let url = du.url.breakdown().path;
 url = url.replace(/^\/mitch/, '');
@@ -23,5 +24,8 @@ switch (url) {
     break;
   case '/reports':
     reports.proccess();
+    break;
+  case '/ancestry':
+    ancestry.proccess();
     break;
 }

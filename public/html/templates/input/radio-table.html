@@ -1,0 +1,21 @@
+<div  class='input-cnt'{{hidden() ? ' hidden' : ''}} input-id={{id()}}>
+  <label>{{label()}}</label>
+  <br>
+  <div class='tab'>
+    <table border="1">
+      <tbody>
+        <tr>
+          <td></td>
+          <td:t repeat='name in columns()'>{{name}}</td:t>
+        </tr>
+        <tr:t repeat='row in rowDetail()'>
+          <td>{{row.label}}</td>
+          <td:t class='radio-table-input-cnt' repeat='col in columns(rowIndex)'>
+            <input type='radio' name='{{row.name}}' value='{{col}}'
+                  {{row.value === col ? 'checked' : ''}}/>
+          </td:t>
+        </tr:t>
+      </tbody>
+    </table>
+  </div>
+</div>

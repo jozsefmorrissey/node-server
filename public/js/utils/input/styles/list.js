@@ -12,8 +12,8 @@ class InputList extends Input {
     const instance = this;
 
     this.value = () => {
-      const values = [];
-      props.list.forEach(input => input.validation() && values.push(input.value()));
+      const values = {};
+      props.list.forEach((input, index) => input.validation() && (values[input.name() || index] = input.value()));
       return values;
     }
 

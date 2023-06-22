@@ -5,6 +5,7 @@
 
 
 const DecisionTree = require('../../decision-tree.js');
+const Conditions = require('../../conditions.js');
 const Input = require('../input.js');
 const NumberInput = require('../styles/number.js');
 const InputList = require('../styles/list');
@@ -40,7 +41,7 @@ const nodeSelectorFunc = (nameOfunc) => inputSelectorFunc(
 
 class DecisionInput extends DecisionTree.Node {
   constructor(stateConfig, payload, parent) {
-    payload ||= stateConfig.payload();
+    payload ||= {};
     payload.inputArray ||= [];
     super(stateConfig, payload, parent);
     const instance = this;
@@ -66,14 +67,32 @@ class DecisionInput extends DecisionTree.Node {
     }
 
     this.relatedTo = (value) => {
+      const currValue = this.payload().relatedTo;
+      if (value === undefined) return currValue;
       if (this.isRoot()) {
-        if (value) throw new Error('The root cannot be related to any other input');
-        return;
+        throw new Error('The root cannot be related to any other input');
       }
+
+      const stateRelatedTo = this.stateConfig().payload().relatedTo;
+      let setState = false;
+      if (stateRelatedTo === undefined) {
+        this.stateConfig().setValue('relatedTo', value);
+        setState = true;
+      } else {
+        this.setValue('relatedTo', value)
+      }
+
+      value = this.payload().relatedTo;
       const validList = this.parent().inputArray().map(i => i.name());
-      const prevValue = this.metadata('relatedTo');
-      value = this.metadata('relatedTo', value);
-      if (validList.indexOf(value) === -1) this.metadata('relatedTo', prevValue);
+      if (validList.indexOf(value) === -1) {
+        if (setState) {
+          this.stateConfig().setValue('relatedTo', currValue);
+          this.deleteValue('relatedTo');
+        } else {
+          this.setValue('relatedTo', currValue);
+        }
+      }
+
       return value;
     }
 
@@ -84,6 +103,7 @@ class DecisionInput extends DecisionTree.Node {
       trigger();
     }
     this.values = (values, doNotRecurse) => {
+      if (!this.reachable()) return {};
       values ||= {};
       if (values._NODE === undefined) values._NODE = this;
       let inputArr = this.inputArray();
@@ -103,8 +123,7 @@ class DecisionInput extends DecisionTree.Node {
       for (let index = 0; index < inArr.length; index++) {
         complete &= inArr[index].optional() || inArr[index].valid();
       }
-      this.forEachChild((child) => complete &=
-                !child.reachable() || child.isComplete());
+      this.forEachChild((child) => complete &= child.isComplete());
       return complete == 1;
     }
     this.onComplete = this.tree().onComplete;
@@ -121,6 +140,7 @@ class DecisionInput extends DecisionTree.Node {
           const clone = input.clone();
           if (clone.onChange) clone.onChange(trigger);
           else if (clone.on) clone.on('change', trigger);
+          // clone.setValue('');
           inputArray.push(clone);
         }
         if (inputArray[index].name() !== input.name()) inputArray.splice(index, 1);
@@ -165,20 +185,45 @@ class DecisionInput extends DecisionTree.Node {
       return node.breathFirst(nodeSelectorFunc(nameOfunc));
     }
 
+    const checkColectiveFilter = (nameOmap, childCond) => {
+      let nameMap = {};
+      nameOmap instanceof Object ? nameMap = nameOmap : (nameMap[nameOmap] = true);
+      if (childCond.condition.conditions) {
+        const conds = childCond.condition.conditions();
+        for (let index = 0; index < conds.length; index++) {
+          if (conds[index].attribute && nameMap[conds[index].attribute()]) return true;
+        }
+      }
+      return false;
+    }
+
+    const nameFilter = (name) => (childCond) => {
+      if (!childCond.condition instanceof Conditions.Condition) return false;
+      if (childCond.condition.attribute) return childCond.condition.attribute().indexOf(name) === 0;
+
+      return checkColectiveFilter(name, childCond);
+    }
+    const dneFilter = () => {
+      const nameMap = {};
+      this.inputArray().map(input => nameMap[input.name()] = true);
+      return (childCond) =>
+        !(childCond.condition instanceof Conditions.Condition) ||
+        !((childCond.condition.attribute && nameMap[childCond.condition.prefix()]) ||
+        checkColectiveFilter(nameMap, childCond));
+    }
+    const childMapFunc = (childCond) => childCond.child;
     this.childrenHtml = (inputIndex, editDisplay) => {
       if (!this.shouldRecurse()) return '';
-      const children = this.children();
-      const inArr = this.inputArray();
-      const inputName = inArr[inputIndex] ? inArr[inputIndex].name() : null;
+      if (inputIndex === -1 && this.children().length > 1) {
+        console.log('orphin')
+      }
+      const input = this.inputArray()[inputIndex] ;
+      const filter = input ? nameFilter(input.name()) : dneFilter();
+      const children = this.reachableChildren().filter(filter).map(childMapFunc);
       let html = '';
       for (let index = 0; index < children.length; index++) {
         const child = children[index];
-        if (inputName === child.relatedTo() || (inputIndex === -1 && child.relatedTo() === undefined)) {
-          const inArr = child.inputArray();
-          if (child.reachable()) {
-            html += child.html(editDisplay);
-          }
-        }
+        html += child.html(editDisplay);
       }
       return html;
     }
@@ -372,6 +417,7 @@ class DecisionInputTree extends DecisionTree {
 
 
 DecisionInputTree.class = 'decision-input-tree';
+DecisionInputTree.inputSelector = `.${DecisionInputTree.class} input,textarea,select`;
 DecisionInputTree.buttonClass = 'decision-input-tree-submit';
 
 DecisionInputTree.getNode = (elem) => {
@@ -389,45 +435,46 @@ DecisionInputTree.hardUpdate = (elem) => {
   const mod = du.class.has(modCnt, 'mod');
   cnt.innerHTML = tree.html(null, mod);
 }
-DecisionInputTree.update = (soft) =>
-(elem, force) => {
-  // if (elem.matches('.modification-add-input *')) return;
 
-  const nodeCnt = du.find.up('[node-id]', elem);
-  const inputs = du.find.downAll('select,input,textarea', nodeCnt);
+function updateInput(target) {
+  const cnt = du.find.closest('[node-id]', target);
+  const nodeId = cnt.getAttribute('node-id');
+  const node = Lookup.get(nodeId);
+
+  const inputCnt = du.find.up('.decision-input-array-cnt', target);
+  const inputIndex = Number.parseInt(inputCnt.getAttribute('index'));
+  const childrenHtmlCnt = du.find.down('.children-recurse-cnt', inputCnt);
+  const parentCnt = du.find.up('.decision-input-cnt', childrenHtmlCnt)
+  const mod = du.class.has(parentCnt, 'mod');
+  const childHtml = node.childrenHtml(inputIndex, mod);
+  childrenHtmlCnt.innerHTML = childHtml;
+}
+
+function updateOrphans(dicnt) {
+  const orphanCnt = du.find.down('.orphan-cnt', dicnt);
+  const node = Lookup.get(dicnt.getAttribute('node-id'));
+  const mod = du.class.has(dicnt, 'mod');
+  orphanCnt.innerHTML = node.childrenHtml(-1, mod);
+}
+
+function updateAllChildren(dicnt) {
+  dicnt = du.find.up('.decision-input-cnt', dicnt);
+  const cnt = du.find.closest('[node-id]', dicnt);
+  const nodeId = cnt.getAttribute('node-id');
+  const node = Lookup.get(nodeId);
+  const mod = du.class.has(dicnt, 'mod');
+
+  const inputs = node.inputArray();
   for (let index = 0; index < inputs.length; index++) {
     const input = inputs[index];
-
-    const cnt = du.find.closest('[node-id]', input);
-    const nodeId = cnt.getAttribute('node-id');
-    const node = Lookup.get(nodeId);
-
-    const inputCnt = du.find.up('.decision-input-array-cnt', input);
-    const inputIndex = Number.parseInt(inputCnt.getAttribute('index'));
-    const childrenHtmlCnt = du.find.down('.children-recurse-cnt', inputCnt);
-    const prevHash = childrenHtmlCnt.getAttribute('hash-value');
-    const currHash =  '' + Object.hash(node.values()[input.name]);
-    const parentName = input.name;
-    const cs = node.children();
-    if (force === true || prevHash !== currHash) {
-      cs.forEach((child) => {
-        const di = node.payload();
-        const inputArray = di.inputArray;
-      });
-      childrenHtmlCnt.setAttribute('hash-value', currHash);
-      const parentCnt = du.find.up('.decision-input-cnt', childrenHtmlCnt)
-      const mod = du.class.has(parentCnt, 'mod');
-      const childHtml = node.childrenHtml(inputIndex, mod);
-      childrenHtmlCnt.innerHTML = childHtml;
-    }
-
-
-    // if(!soft) {
-    //   node.root().changed();
-    //   node.root().completed()
-    // }
+    const childCnt = du.find.down(`[index='${index}'] .children-recurse-cnt`, dicnt);
+    childCnt.innerHTML = node.childrenHtml(index, mod);
   }
-};
+  updateOrphans(dicnt);
+}
+
+// TODO remove nested function, soft not used.... clean this please
+DecisionInputTree.update = (soft) => (target, event) => setTimeout(() => updateInput(target));
 
 DecisionInputTree.Node = DecisionInput;
 DecisionInputTree.submit = (elem) => {
@@ -442,7 +489,7 @@ function updateModBtn(elem) {
     const value = input.value();
     if (value instanceof Object) button.innerText = `If ${input.name()}`;
     else if (button && button.getAttribute('target-id') === elem.id) {
-      button.innerText = `If ${elem.name} = ${value}`;
+      button.innerText = `If ${input.name()} = ${value}`;
     }
   }
 }
@@ -461,27 +508,31 @@ function andHandlerInput(node, inputs) {
   return inputs
 }
 
-
-function conditionalInputTree(node, input, props) {
-  function createNode(values, elem) {
+function createConditionalNodeFunction(node, input) {
+  return function createNode(values, elem) {
     const attribute = input.name();
     const type = `${values.type}Type`;
+    const subType = values[values.type.toCamel()][type.toCamel()];
     let value = values.condition;
     if (values.type === 'Number') value = Number.parseFloat(value);
     if (values.type === 'List') value = value.split(',');
-    const condition = new DecisionInputTree.Conditions.node(attribute, value, type);
+    const condition = new NodeCondition(attribute, value, subType);
+    console.log(condition.satisfied(node));
+    console.log(condition.satisfied(node));
     const name = values.group;
     const newNode = node.then(name, values.payload);
-    newNode.conditions.add(condition);
-    newNode.relatedTo(attribute);
+    node.conditions.add(condition, name);
     const condCnt = du.find.up('.condition-input-tree', elem);
     const condBtn = du.find.closest('.conditional-button', condCnt)
     condCnt.hidden = true;
     condBtn.hidden = false;
     const inputElem = du.find.closest(`[input-id="${input.id()}"]`, elem)
-    DecisionInputTree.update()(inputElem, true);
+    updateAllChildren(inputElem, true);
   }
+}
 
+function conditionalInputTree(node, props) {
+  props ||= {};
   const group = new Input({
     name: 'group',
     label: 'Group',
@@ -505,7 +556,7 @@ function conditionalInputTree(node, input, props) {
   const stringType = new Select({
     name: 'stringType',
     class: 'center',
-    list: ['Any', 'Exact', 'Except', 'Contains']
+    list: ['Case Insensitive', 'Exact', 'Wild Card', 'Contains', 'Any', 'Except']
   });
 
   const numberType = new Select({
@@ -535,13 +586,13 @@ function conditionalInputTree(node, input, props) {
 
   props.inputArray = andHandlerInput(node, [group, type, condition]);
 
-  const tree = new DecisionInputTree('Question Group', props);
+  const tree = new DecisionInputTree(props.treeName, props);
   const root = tree.root();
 
-  const dic = (value, type) => new DecisionInputTree.Conditions.node('type', value, type);
+  const dic = (value, type) => new NodeCondition('type', value, type);
   function addTypeNode(name, inputArray, value, type) {
     const node = root.then(name, {inputArray});
-    node.conditions.add(dic(value, type));
+    root.conditions.add(dic(value, type), name);
     node.relatedTo('type');
     return node;
   }
@@ -553,7 +604,7 @@ function conditionalInputTree(node, input, props) {
 
   tree.onChange(updateGroupList);
 
-  tree.onSubmit(createNode);
+  // tree.onSubmit(props.onSubmit);
 
   return tree;
 }
@@ -597,64 +648,157 @@ du.on.match('click', '.then-button', (elem, two, three) => {
   inputCnt.hidden = false;
 });
 
-function addObjectKeys(node, object, conditions) {
-  conditions ||= new DecisionInputTree.Conditions.And([]);
-  const keys = ['*'].concat(Object.keys(object));
+
+const objectKeyFilter = (currObj) => (k) => (currObj[k]._NODE && !currObj.condition) || (k === 'condition' && currObj.condition);
+const valueFilter = (val) => (typeof val) === 'string';
+function getConditionKey(values) {
+  const curr = values['Question Groupy'];
+  let path = curr;
+  let attr = curr;
+  let lastKey = curr;
+  let currObj = values;
+  while (true) {
+    currObj = currObj[lastKey];
+    const validKeys = Object.keys(currObj).filter(objectKeyFilter(currObj));
+    const validPaths = Object.values(currObj).filter(valueFilter);
+    if (validPaths.length !== 1) throw new Error('There should be only one valid path');
+    if (validKeys.length !== 1) throw new Error('There should be only one valid key');
+    lastKey = validKeys[0];
+    if (!(currObj.condition instanceof Object) && currObj.condition !== undefined) break;
+    const lastHyphIndex = lastKey.indexOf('-');
+    const key =
+    path = `${path}.${lastKey}`;
+    attr = `${attr}.${validPaths[0]}`;
+  }
+  return {path, attr};
+}
+
+function createCondition(values, elem) {
+  const pathAttr = getConditionKey(values);
+  const condObj = Object.pathValue(values, pathAttr.path);
+  const value = condObj.condition;
+  const inputCnt = du.find.up('.decision-input-array-cnt', elem);
+  const inputElem = inputCnt.children[0];
+  const input = Input.getFromElem(inputElem);
+  const node = DecisionInputTree.getNode(inputCnt);
+
+  const childName = String.random();
+  const child = node.then(childName);
+  const cond = new NodeCondition(`${input.name()}.${pathAttr.attr}`, value);
+  node.conditions.add(cond, childName);
+
+  setTimeout(() => updateInput(inputElem));
+  const condCnt = du.find.up('.condition-input-tree', elem);
+  const condBtn = du.find.closest('.conditional-button', condCnt)
+  condCnt.hidden = true;
+  condBtn.hidden = false;
+}
+
+function processObject (select, key, node, object, conditions, path) {
+  const child = node.then(path);
+  const type = key === '*' ? 'exact' : undefined;
+  const cond = new NodeCondition(select.name(), key, type);
+  const childConds = conditions.clone();
+  childConds.add(cond);
+  node.conditions.add(cond, path);
+  // childKeys.concatInPlace(addObjectKeys(child, object, childConds, path));
+  addObjectKeys(child, object, childConds, path);
+}
+
+function proccessValue (select, key, node, value, conditions, path) {
+  let child = node.stateMap()[key];
+  if (child === undefined) {
+    const childConds = conditions.clone();
+      const type = key === '*' ? 'exact' : undefined;
+      // if (type !== 'exact') {
+        child = node.then(conditionalInputTree(node, {treeName: path}).root());
+        // child.addInput(conditionalInputTree(child));
+        const cond = new NodeCondition(select.name(), key, type);
+        childConds.add(cond);
+        node.conditions.add(childConds, path);
+      // }
+   }
+}
+
+const DEF_COND = 'DEFINE CONDITION';
+function superObject(object) {
+  const superObj = {};
+  const keys = Object.keys(object);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const value = object[key];
+    if (value instanceof Object) {
+      superObj[key] = superObject(value);
+      if (superObj['*']) Object.merge(superObj['*'], superObject(value), true)
+      else superObj['*'] = superObject(value);
+      superObj[DEF_COND] = '';
+    } else {
+      superObj['*'] = '';
+      superObj[key] = value;
+    }
+  }
+  return superObj;
+}
+
+const objectKeySorter = (key1, key2) => {
+  if (key1 === DEF_COND) return -1;
+  if (key2 === DEF_COND) return 0;
+  if (key1 === '*') return -1;
+  if (key2 === '*') return 0;
+  return key1 - key2;
+}
+
+function addObjectKeys(node, object, conditions, path) {
+  if (conditions === undefined) object = superObject(object);
+
+  conditions ||= new Conditions.And([]);
+  const keys = [].concat(Object.keys(object));
   const list = [];
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
     const value = object[key];
     list.push(key);
   }
+  list.sort(objectKeySorter);
   const select = new Select({name: node.name(), list})
   node.addInput(select);
   const paths = {};
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
+    let currPath = path ? path + '-' + key : key;
     const value = object[key];
-    let path = node.path().join() + `${key}`;
-    if (value instanceof Object) {
-      const child = node.then(path);
-      const cond = new DecisionInputTree.Conditions.node(node.name(), key);
-      const childConds = conditions.clone();
-      childConds.add(cond);
-      child.conditions.add(cond);
-      addObjectKeys(child, value, childConds);
-    } else if (path !== '*'){
-      let child = node.stateMap()[path];
-      if (child === undefined) {
-        const childConds = conditions.clone();
-        child = node.then(path);
-        if (paths[path] === undefined) {
-          child.addInput(new Input({name: 'condition', label: 'Condition', value}))
-          const cond = new DecisionInputTree.Conditions.node(node.name(), key);
-          childConds.add(cond);
-          child.conditions.add(childConds);
-          paths[path] = true;
-        }
-      }
-    }
+    const runObject = value instanceof Object;
+    const runValue = !runObject;
+    if (runObject) processObject(select, key, node, value, conditions, currPath);
+    if (runValue) proccessValue(select, key, node, value, conditions, currPath);
   }
+  return keys;
 }
 
 function objectConditionTree(values, node, input, props) {
-  const tree = new DecisionInputTree('Question Groupy', props);
+  const tree = new DecisionInputTree(props.treeName, props);
   addObjectKeys(tree.root(), values);
+  tree.onSubmit(createCondition);
   return tree;
 }
 
 function getConditionTree(values, node, input, props) {
   if (values instanceof Object)
     return objectConditionTree(values, node, input, props);
-  return conditionalInputTree(node, input, props);
+  props ||= {};
+  props.treeName = 'Question Groupy';
+  props.onSubmit = createConditionalNodeFunction(node, input);
+  return conditionalInputTree(node, props);
 }
 
 function updateConditionTree(elem) {
   const conditionCnt = du.find.up('.condition-input-tree', elem);
   if (conditionCnt) return;
   const node = DecisionInputTree.getNode(elem);
+  const inputCnt = du.find.up('.decision-input-array-cnt', elem);
+
   const inputArray = node.payload().inputArray;
-  const input = Input.getFromElem(elem);
+  const input = Input.getFromElem(inputCnt);
   const val = input.value();
   const props = {header: `If ${input.name()} <br>`};
   const condTree = getConditionTree(val, node, input, props);
@@ -685,16 +829,29 @@ function removeNodeBtnPressed(elem) {
   }
 }
 
+const nodeIds = {}
+function enableRecursion(elem) {
+  const node = DecisionInputTree.getNode(elem);
+  if (node.reachable()) {
+    node.children();
+    node.forEachChild((child) => child.shouldRecurse(true));
+    elem.removeAttribute('recursion');
+    updateAllChildren(elem);
+  }
+}
+
 const treeSelector = `.${DecisionInputTree.class}`;
-du.on.match('keyup', treeSelector, DecisionInputTree.update(true));
-du.on.match('change', treeSelector, DecisionInputTree.update());
-du.on.match('change', treeSelector,     updateConditionTree);
+du.on.match('keyup', DecisionInputTree.inputSelector, DecisionInputTree.update(true));
+du.on.match('change', DecisionInputTree.inputSelector, DecisionInputTree.update());
+du.on.match('change', DecisionInputTree.inputSelector,     updateConditionTree);
 du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
 du.on.match('keyup:change', '.decision-input-cnt.mod input', updateModBtn);
 du.on.match('keyup:change', '.decision-input-cnt.mod select', updateModBtn);
 du.on.match('keyup:change', '.decision-input-cnt.mod textarea', updateModBtn);
 du.on.match('click', '.conditional-button', modifyBtnPressed);
 du.on.match('click', '.remove-btn-cnt>.rm-node', removeNodeBtnPressed);
+// Consider changing for self referencing trees.
+du.on.match('mouseover', '.decision-input-cnt[recursion]', enableRecursion);
 
 DecisionInputTree.DO_NOT_CLONE = true;
 
@@ -704,7 +861,23 @@ DecisionInputTree.getTree = (elem) => {
   const tree = DecisionInputTree.get(rootId);
   return tree;
 }
-DecisionInputTree.getCondition = DecisionTree.Condition.getter((node) => node.values());
+
+class NodeCondition {
+  constructor(attribute, value, type) {
+    this.toJson = () => ({_TYPE: 'NodeCondition'});
+    this.resolveValue = (node, attribute) => {
+      const values = node.values();
+      if (attribute === undefined) return values;
+      return Object.pathValue(values, attribute);
+    }
+    if (attribute._TYPE === 'NodeCondition') return this;
+
+    return Conditions.get(attribute, value, type, this);
+  }
+}
+Object.class.register(NodeCondition);
+
+DecisionInputTree.getCondition = (...args) => new NodeCondition(...args);
 
 // TODO: merge this with parent... duplications
 function childrenFromJson(parent, json) {
@@ -717,14 +890,12 @@ function childrenFromJson(parent, json) {
   if (json.metadata)
     Object.keys(json.metadata).forEach((key) =>
         parent.metadata(key, Object.fromJson(json.metadata[key])));
-
-  json.conditions.forEach(c => parent.conditions.add(Object.fromJson(c)));
-  json.childConditions.forEach(c => parent.childConditions.add(Object.fromJson(c)));
 }
 
 DecisionInputTree.fromJson = (json) => {
   const stateConfigs = Object.fromJson(json.stateConfigs);
-  const tree = new DecisionInputTree(json.root.name, null, stateConfigs);
+  const properties = {stateConfigs, referenceNodes: json.referenceNodes};
+  const tree = new DecisionInputTree(json.root.name, null, properties);
   const root = tree.root();
   childrenFromJson(root, json.root);
 
@@ -789,10 +960,14 @@ function getInput(details)  {
       list = details.select.options.map(input => input.value());
       return new Select({name, label, list});
     case 'Table':
-      const rows = details.table.row.map(input => input.value());
-      const columns = [];
-      details.table.columns.forEach(dit => columns.push(getInput(dit.values())))
-      const type = details.table.type;
+      const props = details.table;
+      let isList = props.tableColumnList !== undefined;
+      let columns = isList ?  props.tableColumnList.columns : props.tableColumnTemplate.columns;
+      let rows = isList ? props.tableColumnList.rows : props.tableColumnTemplate.rows;
+      if (!isList) {
+        columns.forEach((definition, index) => columns[index] = getInput(definition));
+      }
+      const type = props.type;
       return new Table({name, label, rows, columns, type});
     case 'Measurement':
       const units = details.measure.units;
@@ -802,12 +977,12 @@ function getInput(details)  {
       list = [];
       inline = details.multi.inline;
       for (let index = 0; index < templates.length; index++) {
-        const values = templates[index].values();
+        const values = templates[index];
         values.inline = inline;
         const input = getInput(values);
         list.push(input);
       }
-      return new MultipleEntries(new InputList({name, list, inline}));
+      return new MultipleEntries(new InputList({list, inline}), {name});
     default:
       throw new Error('In the future this will not be reachable');
   }
@@ -860,7 +1035,7 @@ DecisionInputTree.inputTree = function (node, noSubmission) {
     label: 'Type',
     name: 'type',
     class: 'center',
-    list: ['Text', 'checkbox', 'radio', 'date', 'time']
+    list: ['Text', 'checkbox', 'radio', 'date', 'time', 'column specific']
   });
   const textCntSize = new Select({
     label: 'Size',
@@ -899,9 +1074,10 @@ DecisionInputTree.inputTree = function (node, noSubmission) {
   const labels = new MultipleEntries(label, {name: 'labels'});
   const options = new MultipleEntries(option, {name: 'options'});
   // const colType = new InputList({name: 'cols', list: [col, tableType]});
-  const colType = new MultipleEntries(noSubmitInputTree(node), {name: 'columns'});
-  const rowCols = [tableType, colType,
-                    new MultipleEntries(row, {name: 'row', label: 'Rows'})];
+  const colType = new MultipleEntries(noSubmitInputTree(node), {name: 'columns', label: 'Columns'});
+  const columns = new MultipleEntries(col, {name: 'columns', label: 'Columns'});
+  const rowCols = [tableType];
+  const rows = new MultipleEntries(row, {name: 'rows', label: 'Rows'});
 
 
   const inputs = [name, format];
@@ -910,28 +1086,24 @@ DecisionInputTree.inputTree = function (node, noSubmission) {
   const tree = new DecisionInputTree('Input', {inputArray: inputs, noSubmission, class: 'modify'});
   const root = tree.root();
 
-  const dic = (value) => new DecisionInputTree.Conditions.node('format', value);
-  function addFormatNode(name, inputArray, value) {
-    const node = root.then(name, {inputArray});
-    node.conditions.add(dic(value));
-    node.relatedTo('format');
-    return node;
+  const dic = (value, attr) => new NodeCondition(attr || 'format', value);
+  function addNode(name, inputArray, value, attr, node) {
+    const targetNode = (node || root);
+    const newNode = targetNode.then(name, {inputArray});
+    targetNode.conditions.add(dic(value, attr), name);
+    return newNode;
   }
 
-  addFormatNode('text', [textCntSize], 'Text');
-  addFormatNode('select', [options], 'Select');
-  addFormatNode('radio', [inline, labels], 'Radio');
-  addFormatNode('table', rowCols, 'Table');
-  addFormatNode('multi', [inline, multiEnt], 'Multiple Entries');
-  addFormatNode('measure', [units], 'Measurement');
-  addFormatNode('number', [step, min, max], 'Number');
+  addNode('text', [textCntSize], 'Text');
+  addNode('select', [options], 'Select');
+  addNode('radio', [inline, labels], 'Radio');
+  const tableNode = addNode('table', rowCols, 'Table');
+  addNode('tableColumnList', [columns, rows], ['Text', 'checkbox', 'radio', 'date', 'time'], 'type', tableNode);
+  addNode('tableColumnTemplate', [colType, rows], 'column specific', 'type', tableNode);
+  addNode('multi', [inline, multiEnt], 'Multiple Entries');
+  addNode('measure', [units], 'Measurement');
+  addNode('number', [step, min, max], 'Number');
 
-
-  // const tJson = tree.toJson();
-  // console.log(tree.toString());
-  // console.log(DecisionInputTree.fromJson(tJson));
-  // console.log(DecisionInputTree.fromJson(tJson).toString());
-  // console.log(DecisionInputTree.fromJson(tJson).toString());
 
   tree.onSubmit(addInput);
   tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
@@ -943,7 +1115,5 @@ DecisionInputTree.inputTree = function (node, noSubmission) {
   }
   return tree;
 }
-
-DecisionInputTree.Conditions = require('./conditions');
 
 module.exports = DecisionInputTree;

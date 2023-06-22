@@ -18,9 +18,10 @@ class MultipleEntries extends Input {
       let allEmpty = true;
       let valid = true;
       for (let index = 0; index < list.length; index++) {
-        const empty = list[index].empty();
+        const input = list[index];
+        const empty = input.empty();
         if (!empty) {
-          list[index].optional(false);
+          if (input.optional) input.optional(false);
           valid &= list[index].valid();
         }
         allEmpty &= empty;
@@ -63,7 +64,11 @@ class MultipleEntries extends Input {
     this.set = (index) => {
       if (props.list[index] === undefined) {
         props.list[index] = this.inputTemplate().clone({optional: true});
-        props.list[index].on('change', this.validation);
+        if (props.list[index].on) {
+          props.list[index].on('change', this.validation);
+        } else {
+          props.list[index].onChange(this.validation);
+        }
       }
       return props.list[index];
     }

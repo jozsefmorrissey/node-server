@@ -19,7 +19,8 @@ class Radio extends Input {
 
     this.setValue(value);
     this.isArray = () => isArray;
-    this.uniqueName = () => `${this.name()}-${this.id()}`
+    const uniqueName = String.random();
+    this.uniqueName = () => uniqueName;//`${this.name()}-${this.id()}`
     this.list = () => props.list;
     this.description = () => props.description;
 
@@ -28,6 +29,7 @@ class Radio extends Input {
     }
     const parentSetVal = this.setValue;
     this.setValue = (val) => {
+      const initialVal = value;
       const all = du.find.all(`[name='${this.uniqueName()}']`);
       for (let index = 0; index < all.length; index++) {
         const input = all[index];
@@ -35,6 +37,7 @@ class Radio extends Input {
           value = input.value;
         }
       }
+      // if (initialVal !== value) this.trigger('change');
       return value;
     }
 

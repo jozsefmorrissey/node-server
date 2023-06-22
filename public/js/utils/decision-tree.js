@@ -2,6 +2,7 @@
 
 const Lookup = require('./object/lookup')
 const CustomEvent = require('./custom-event')
+const Conditions = require('./conditions');
 const REMOVAL_PASSWORD = String.random();
 
 const nameEquals = (name) => (node) => node.name() === name;
@@ -31,10 +32,13 @@ function formatName(name) {
   return new String(name).toString();
 }
 class StateConfig extends Lookup {
-  constructor(name, payload) {
+  constructor(name, payload, treeNameOrClass) {
+    const treeClass = Object.class.get(treeNameOrClass);
+    if (treeClass === undefined) throw new Error("Must have tree a treeClass in order to determine condition getter");
+    const treeName = treeClass.name;
     super();
     name = formatName(name)
-    Object.getSet(this, {name, payload});
+    Object.getSet(this, {name, payload, treeName});
     const states = [];
     payload = payload || {};
     const instance = this;
@@ -51,6 +55,8 @@ class StateConfig extends Lookup {
       states.push(stateConfig);
     }
 
+    Conditions.implement(this, treeClass.getCondition);
+
     this.toString = (tabs) => {
       const tab = new Array(tabs).fill('  ').join('');
       return `${tab}name: ${this.name()}\n${tab}states: ${this.stateNames()}`;
@@ -64,65 +70,11 @@ StateConfig.fromJson = (json) => {
   const existing = StateConfig.get(id);
   if (existing) return existing;
   const payload = Object.fromJson(json.payload);
-  return new StateConfig(json.name, payload);
-}
-const defaultResolver = (node) => node.name();
-class DecisionCondition {
-  constructor(condition, details, resolveValue) {
-    Object.getSet(this, {condition, details, _IMMUTABLE: true});
-    this.resolveValue = (typeof resolveValue) === 'function' ? resolveValue :
-            defaultResolver;
-  }
+  const newState = new StateConfig(json.name, payload, json.treeName);
+  json.conditions.forEach(c => newState.conditions.add(Object.fromJson(c), c.group));
+  return newState;
 }
 
-class DecisionEqualCondition extends DecisionCondition {
-  constructor(condition, details, resolveValue) {
-    super(condition, details, resolveValue);
-    this.satisfied = (node) => Object.equals(this.resolveValue(node, this.details()), condition);
-  }
-}
-
-class DecisionFunctionCondition extends DecisionCondition {
-  constructor(func, details, resolveValue) {
-    if ((typeof func) !== 'function') throw new Error('arg 2 is not of type function');
-    super(func, details, resolveValue);
-    this.satisfied = (node) => func(this.resolveValue(node, this.details()));
-  }
-}
-
-class DecisionRegexCondition extends DecisionCondition {
-  constructor(regex, details, resolveValue) {
-    super(regex, details, resolveValue);
-    this.satisfied = (node) => {
-      const val = this.resolveValue(node, this.details());
-      return val.match(regex);
-    }
-  }
-}
-
-DecisionCondition.getter = (resolveValue) => (condition, details) => {
-  let cxtr = DecisionEqualCondition;
-  if ((typeof condition) === 'function') cxtr = DecisionFunctionCondition;
-  if (condition instanceof RegExp) cxtr = DecisionRegexCondition;
-  return new cxtr(condition, details, resolveValue);
-}
-
-// class DecisionConditionList {
-//   constructor() {
-//     const list = [];
-//     this.push = (dc) => {
-//       if (dc instanceof DecisionCondition) list.push(dc);
-//     }
-//     this.list = () => [].copy(list);
-//     this.at = (index) => list[index];
-//   }
-// }
-//
-// DecisionConditionList.fromObject = (obj, getter) => {
-//   getter ||= DecisionCondition.getter();
-//   const list = new DecisionConditionList();
-//
-// }
 
 const payloadMap = {};
 // terminology
@@ -134,7 +86,7 @@ const payloadMap = {};
 // parent() - a function to move back up the tree.
 // root() - a function to get root;
 class DecisionNode extends Lookup {
-  constructor(stateConfig, payload, parent) {
+  constructor(parentNodeOstateConfig, payload, parent) {
     super();
     const instance = this;
     const stateMap = {};
@@ -145,6 +97,9 @@ class DecisionNode extends Lookup {
       payloadMap[payload.PAYLOAD_ID] = payload;
     }
 
+    const parentNode = parentNodeOstateConfig instanceof DecisionNode ? parentNodeOstateConfig : undefined;
+    const stateConfig = parentNode ? parentNode.stateConfig() : parentNodeOstateConfig;
+    this.parentNode = () => parentNode;
     this.stateConfig = () => stateConfig;
     this.name = stateConfig.name;
     this.states = stateConfig.states;
@@ -165,7 +120,7 @@ class DecisionNode extends Lookup {
 
     this.payload = (noConfig) => {
       if (noConfig) return payload;
-      const copy = stateConfig.payload();
+      const copy = parentNode ? parentNode.payload() : stateConfig.payload();
       Object.keys(payload).forEach((key) => {
         copy[key] = payload[key];
       });
@@ -173,24 +128,37 @@ class DecisionNode extends Lookup {
       return copy;
     };
 
-    const shouldRecurse = () => Object.keys(stateMap) > 0 || !instance.selfReferencingPath();
-    this.shouldRecurse = shouldRecurse;
+    let recurseAway = false;
+    this.shouldRecurse = (shouldRecurse) => {
+      if (shouldRecurse === true) recurseAway = true;
+      if ((recurseAway || Object.keys(stateMap).length > 0 || !instance.selfReferencingPath()) === false) {
+        console.log('failed?')
+      }
+      return recurseAway || Object.keys(stateMap).length > 0 || !instance.selfReferencingPath();
+    };
 
     function attach(treeOnode) {
-      if (shouldRecurse()) {
+      if (instance.shouldRecurse()) {
         const node = treeOnode instanceof DecisionNode ? treeOnode : treeOnode.root();
+        const tree = node.tree();
+        const configMap = instance.stateConfig().stateMap();
 
         const stateKeys = instance.stateNames();
         if (stateKeys[node.name()]) throw new Error(`Attempting to add node whos template alread exists as a child. You must create another node so that it maintains a unique path`);
-        const nodeConfig = node.stateConfig();
-        tree.addState(nodeConfig);
+        const addState = node.tree().addState;
+        addState(stateConfig);
+        const newNode = node.then(stateConfig.name());
 
-        if (shouldRecurse()) {
-          shouldRecurse();
+        if (instance.shouldRecurse()) {
+          instance.shouldRecurse();
           for(let index = 0; index < stateKeys.length; index += 1) {
-            const childNode = node.next(stateKeys[index]);
+            const stateName = stateKeys[index];
+            if (!tree.validState(stateName)) {
+              addState(configMap[stateName]);
+            }
+            const childNode = newNode.then(stateName);
             const alreadyPresent = childNode.stateNames().indexOf(childNode.name());
-            if (! alreadyPresent && !childNode.selfReferencingPath()) {
+            if (!alreadyPresent) {
               instance.then(childNode).attach(childNode, true);
             }
           }
@@ -201,20 +169,26 @@ class DecisionNode extends Lookup {
 
     this.attach = attach
 
-    function createNode(name, payload) {
+    function createNode(name, payload, doNotCreate) {
       const node = stateMap[name];
-      if (node) return node;
+      if (node || doNotCreate) return node;
       const tree = instance.tree();
       const stateCreated = !tree.stateConfigs()[name];
       const stateConfig = tree.getState(name, payload);
       instance.stateConfig().then(stateConfig);
       if (stateCreated) payload = {};
-      return new (tree.constructor.Node)(stateConfig, payload, instance)
+      const templateNode = instance.tree().root().breathFirst(n =>
+        n.parent().name() === instance.name() && stateConfig.name() === n.name(), true);
+      if (tree.referenceNodes())
+        return templateNode ? templateNode : new (tree.constructor.Node)(stateConfig, payload, instance);
+      if (tree.nodeInheritance())
+        return new (tree.constructor.Node)(templateNode || stateConfig, payload, instance);
+      return new (tree.constructor.Node)(stateConfig, payload, instance);
     }
 
     this.then = (name, payload) => {
       if (name instanceof DecisionNode) {
-        const attached = attach(name);
+        const attached = name.attach(this);
         this.tree().changed()
         return attached;
       }
@@ -269,49 +243,47 @@ class DecisionNode extends Lookup {
     this.root = () => this.tree().root();
     this.isRoot = () => parent instanceof DecisionTree;
 
-    function addReachableChildren(node, nodes) {
+    function addReachableChildren(node, nodes, doNotCreate) {
       if (node.shouldRecurse()) {
         const stateKeys = node.stateNames();
         for(let index = 0; index < stateKeys.length; index += 1) {
           const stateName = stateKeys[index];
           if (node.reachable(stateName)) {
-            const child = node.next(stateName);
-            if (child && node.reachable(child.name())) {
-              nodes.push(child);
-            }
+            const child = node.next(stateName, doNotCreate);
+            nodes.push(child);
           }
         }
       }
     }
 
     // iff func returns true function stops and returns node;
-    this.breathFirst = (func) => {
+    this.breathFirst = (func, doNotCreate) => {
       const nodes = [this];
       const runFunc = (typeof func) === 'function';
       let nIndex = 0;
+      const nodeMap = {};
       while (nodes[nIndex]) {
         let node = nodes[nIndex];
-        if (node.reachable()) {
+        if (!nodeMap[node.id()]) {
           const val = func(node);
           if (val === true) return node;
           if (val) return val;
-          addReachableChildren(node, nodes);
+          addReachableChildren(node, nodes, doNotCreate);
+          nodeMap[node.id()] = true;
         }
         nIndex++;
       }
     }
 
-    this.depthFirst = (func) => {
-      if (instance.reachable()) {
-        if (func(instance)) return true;
-        if (shouldRecurse()) {
-          const stateKeys = instance.stateNames();
-          for(let index = 0; index < stateKeys.length; index += 1) {
-              const child = instance.next(stateKeys[index]);
-              if (instance.reachable(child.name())) {
-                child.depthFirst(func);
-              }
-          }
+    this.depthFirst = (func, doNotCreate) => {
+      if (func(instance)) return true;
+      if (this.shouldRecurse()) {
+        const stateKeys = instance.stateNames();
+        for(let index = 0; index < stateKeys.length; index += 1) {
+            const child = instance.next(stateKeys[index], doNotCreate);
+            if (instance.reachable(child.name())) {
+              child.depthFirst(func);
+            }
         }
       }
     }
@@ -336,7 +308,7 @@ class DecisionNode extends Lookup {
         const node = nodes[index];
         if (selector(node)) return node;
         const parent = nodes.parent();
-        if (parent.reachable() && parent.reachable(node.name())) {
+        if (parent.reachable(node.name())) {
           nodes.push(parent);
         }
         addReachableChildren(node, nodes);
@@ -367,27 +339,31 @@ class DecisionNode extends Lookup {
       }
     }
 
-    this.next = (name) => {
+    this.next = (name, doNotCreate) => {
       name = formatName(name);
       if (!stateConfig.validState(name)) throw new Error(`Invalid State: ${name}`);
       if (stateMap[name] === undefined) {
-        stateMap[name] = createNode(name, null);
+        stateMap[name] = createNode(name, null, doNotCreate);
       }
       return stateMap[name];
     }
 
-    this.forEachChild = (func) => {
+    this.forEachChild = (func, doNotCreate) => {
       const stateKeys = this.stateNames();
       for(let index = 0; index < stateKeys.length; index += 1) {
-        const childNode = this.next(stateKeys[index]);
-        if (childNode.shouldRecurse()) {
+        const childName = stateKeys[index];
+        if (this.reachable(childName)) {
+          const childNode = this.next(childName, doNotCreate);
           func(childNode);
         }
       }
     }
     this.children = () => {
       const children = [];
-      this.forEachChild((child) => children.push(child));
+      const stateKeys = this.stateNames();
+      for(let index = 0; index < stateKeys.length; index += 1) {
+        children.push(this.next(stateKeys[index]));
+      }
       return children;
     }
     this.list = (filter, map) => {
@@ -418,78 +394,34 @@ class DecisionNode extends Lookup {
 
     this.values = (values) => {};
 
-    const conditions = [];
-    const childConditions = {};
-    this.conditions = () => [].copy(conditions);
-
-    this.conditions.add = (condition, details) => {
-      let dc = condition instanceof DecisionCondition ? condition :
-                this.tree().constructor.getCondition(condition, details);
-      conditions.push(dc);
-    }
-    this.conditions.addAll = (conds) => {
-      for (let index = 0; index < conds.length; index++) {
-        const cond = conds[index];
-        if (!(cond instanceof DecisionCondition)) throw new Error('WTF(sorry its been a long week): this needs to be a DecisionCondition');
-        conditions.push(cond);
-      }
-    }
-    this.conditions.remove = (cond) => conditions.remove(cond);
-
-    this.conditions.child = (name) => {
-      let copy = [];
-      if (name !== undefined && childConditions[name]) {
-        copy.concatInPlace(childConditions[name]);
-      }
-      if (childConditions[undefined]) copy.concatInPlace(childConditions[undefined]);
-      return copy;
-    }
-    this.conditions.child.add = (condition, details, targetNodeName) => {
-      let dc = this.tree().constructor.getCondition(condition, details);
-      if (!childConditions[targetNodeName]) childConditions[targetNodeName] = [];
-      childConditions[targetNodeName].push(dc);
-    }
-    this.conditions.child.addAll = (conds) => {
-      const keys = Object.keys(conds);
-      for (let index = 0; index < keys.length; index++) {
-        const key = keys[index];
-        const condList = conds[key];
-        for (let index = 0; index < condList.length; index++) {
-          const cond = condList[index];
-          if (!(cond instanceof DecisionCondition)) throw new Error('WTF(sorry its been a long week): this needs to be a DecisionCondition');
-          if (!childConditions[key]) childConditions[key] = [];
-          childConditions[key].push(cond);
-        }
-      }
-    }
-    this.conditions.child.remove = (cond) => {
-      if (!(cond instanceof DecisionCondition)) return;
-      if (!childConditions[cond.name()]) return;
-      return childConditions[cond.name()].remove(cond);
-    }
+    this.conditions = this.stateConfig().conditions;
 
     this.canReachChild = (name) => {
       if(this.stateNames().indexOf(name) === -1) return false;
-      let nodeConds = this.conditions.child(name);
+      let nodeConds = this.conditions(name);
       if (nodeConds.length === 0) return true;
       for (let index = 0; index < nodeConds.length; index++) {
-        if (nodeConds[index].satisfied(this.child(name))) return true;
-      }
-      return false;
-    }
-
-    this.canReach = () => {
-      if (conditions.length === 0) return true;
-      for (let index = 0; index < conditions.length; index++) {
-        if (conditions[index].satisfied(this)) return true;
+        if (nodeConds[index].satisfied(this)) {
+          return nodeConds[index];
+        }
       }
       return false;
     }
 
     this.reachable = (childName) => {
-      if (this.isRoot()) return true;
-      if (childName !== undefined) return this.canReachChild(childName);
-      else  return this.canReach();
+      if (childName) return this.canReachChild(childName);
+      if (this.isRoot())  return true;
+      return parent.reachable(this.name()) && parent.reachable();
+    }
+    this.reachableChildren = () => {
+      const list = [];
+      const children = this.children();
+      for (let index = 0; index < children.length; index++) {
+        const child = children[index];
+        const condition = this.reachable(child.name());
+        if (condition) list.push({condition, child})
+      }
+      return list;
     }
     this.child = (name) => {
       const children = this.children();
@@ -498,16 +430,12 @@ class DecisionNode extends Lookup {
       }
     }
     function reached(node, nodeMap, other) {
-      let reachable;
       do {
-        reachable = node.reachable();
-        if (reachable) {
-          if (node.parent().reachable(node.name())) break;
-          if (nodeMap[node.id()] && nodeMap[other.id()]) return true;
-          nodeMap[node.id()] = node;
-          node = node.parent();
-        }
-      } while (reachable && node && node instanceof DecisionNode);
+        if (!node.parent().reachable(node.name())) break;
+        if (nodeMap[node.id()] && nodeMap[other.id()]) return true;
+        nodeMap[node.id()] = node;
+        node = node.parent();
+      } while (node && node instanceof DecisionNode);
     }
     this.reachableFrom = (node) => {
       node ||= this.root();
@@ -526,16 +454,14 @@ class DecisionNode extends Lookup {
     }
     this.nodeOnlyToJson = () => {
       let pl = Object.toJson(payload);
-      const conds = Array.toJson(conditions);
-      const childConds = Object.toJson(Object.values(childConditions));
-      const json = {name: this.name(), payload: pl, conditions: conds,
-                    childConditions: childConds};
+      const json = {name: this.name(), payload: pl};
 
       json.children = {};
       json.metadata = Object.toJson(this.metadata());
-      if (shouldRecurse()) {
+      if (this.shouldRecurse()) {
         this.children().forEach((child) => {
-          json.children[child.name()] = child.nodeOnlyToJson();
+          if (child.path().length > instance.path().length)
+            json.children[child.name()] = child.nodeOnlyToJson();
         });
       }
       return json;
@@ -549,7 +475,7 @@ class DecisionNode extends Lookup {
       const config = this.stateConfig();
       const otherConfig = other.stateConfig();
       if (config !== otherConfig) return false;
-      if (shouldRecurse()) {
+      if (this.shouldRecurse()) {
         const states = config.stateNames();
         for (let index = 0; index < states.length; index++) {
           const state = states[index];
@@ -579,25 +505,22 @@ class DecisionNode extends Lookup {
     }
 
     this.toString = (tabs, attr) => {
-      if (this.reachable()) {
-        tabs = tabs || 0;
-        const tab = new Array(tabs).fill('  ').join('');
-        let str = `${tab}${this.name()}`;
-        let attrStr = this.payload()[attr];
-        str += attrStr ? `) ${this.payload()[attr]}\n` : '\n';
-        const stateKeys = this.stateNames();
-        for(let index = 0; index < stateKeys.length; index += 1) {
-          const stateName = stateKeys[index];
-          if (this.reachable(stateName)) {
-            const nextState = this.next(stateName);
-            if (nextState.parentCount(stateName) < 2) {
-              str += nextState.toString(tabs + 1, attr);
-            }
+      tabs = tabs || 0;
+      const tab = new Array(tabs).fill('  ').join('');
+      let str = `${tab}${this.name()}`;
+      let attrStr = this.payload()[attr];
+      str += attrStr ? `) ${this.payload()[attr]}\n` : '\n';
+      const stateKeys = this.stateNames();
+      for(let index = 0; index < stateKeys.length; index += 1) {
+        const stateName = stateKeys[index];
+        if (this.reachable(stateName)) {
+          const nextState = this.next(stateName);
+          if (nextState.parentCount(stateName) < 2) {
+            str += nextState.toString(tabs + 1, attr);
           }
         }
-        return str;
       }
-      return '';
+      return str;
     }
 
     this.structure = (tabs, attr) => {
@@ -620,8 +543,15 @@ class DecisionNode extends Lookup {
 }
 
 
+// Properties:
+//    referenceNodes: will points to a single instance.
+//    nodeInheritance: will inhearate from a node with the same config and parent.
 class DecisionTree extends Lookup {
-  constructor(name, payload, stateConfigs) {
+  constructor(name, payload, properties) {
+    properties ||= {};
+    let stateConfigs = properties.stateConfigs;
+    let referenceNodes = properties.referenceNodes === true;
+    let nodeInheritance = properties.nodeInheritance === true;
     super();
     name = formatName(name);
     Object.getSet(this, {stateConfigs});
@@ -636,10 +566,13 @@ class DecisionTree extends Lookup {
       node ||= this.root();
       const json = parentToJson();
       json.name = node.name();
+      json.referenceNodes = this.referenceNodes();
       json.root = node.nodeOnlyToJson();
       return json;
     }
 
+    this.referenceNodes = () => referenceNodes;
+    this.nodeInheritance = () => nodeInheritance;
     this.nameTaken = (name) => stateConfigs[formatName(name)] !== undefined;
 
     function change(from, to) {
@@ -651,8 +584,10 @@ class DecisionTree extends Lookup {
     function getState(name, payload) {
       const stateConfig = stateConfigs[name];
       if (stateConfig) return stateConfig;
-      return (stateConfigs[name] = new StateConfig(name, payload));
+      return (stateConfigs[name] = new StateConfig(name, payload, tree.constructor));
     }
+
+    this.validState = (name) => stateConfigs[name] !== undefined;
 
     function addState(name, payload) {
       if (name instanceof StateConfig) {
@@ -717,7 +652,6 @@ function addChildren(node, json) {
       Object.keys(json.metadata).forEach((key) =>
           child.metadata(key, Object.fromJson(json.metadata[key])));
     child.conditions.addAll(Object.fromJson(json[name].conditions));
-    child.conditions.child.addAll(Object.fromJson(json[name].childConditions));
     addChildren(child, json[name].children);
   }
 }
@@ -725,15 +659,14 @@ function addChildren(node, json) {
 DecisionTree.fromJson = (json) => {
   const constructor = Object.class.get(json._TYPE);
   const stateConfigs = Object.fromJson(json.stateConfigs);
-  const tree = new constructor(json.root.name, json.root.payload, stateConfigs);
+  const properties = {stateConfigs, referenceNodes: json.referenceNodes};
+  const tree = new constructor(json.root.name, json.root.payload, properties);
   addChildren(tree.root(), json.root.children);
   return tree;
 }
 
 DecisionTree.DecisionNode = DecisionNode;
 DecisionTree.Node = DecisionNode;
-DecisionTree.Condition = DecisionCondition;
-DecisionTree.getCondition = DecisionCondition.getter();
 module.exports = DecisionTree;
 
 

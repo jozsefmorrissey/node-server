@@ -14,6 +14,7 @@ class NumberInput extends Input {
   }
 }
 
+Object.class.register(NumberInput);
 NumberInput.template = new $t('input/number');
 NumberInput.html = (instance) => () => NumberInput.template.render(instance);
 

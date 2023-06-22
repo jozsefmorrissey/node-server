@@ -450,9 +450,9 @@ du.trigger = (eventName, elemOid) => {
   if (elem instanceof HTMLElement) {
     const event = du.create.event(eventName);
     if(document.createEvent){
-      element.dispatchEvent(this.event);
+      elem.dispatchEvent(this.event);
     } else {
-      element.fireEvent("on" + this.event.eventType, this.event);
+      elem.fireEvent("on" + this.event.eventType, this.event);
     }
   }
 }

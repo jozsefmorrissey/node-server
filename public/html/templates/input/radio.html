@@ -1,6 +1,6 @@
 <{{inline() ? 'span' : 'div'}}  class='input-cnt'{{hidden() ? ' hidden' : ''}}
       input-id={{id()}}>
-  <label>{{label()}}:</label>
+  <label>{{label() ? label() + ':' : ''}}</label>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <div class='inline tab'>
     <span:t repeat='key, val in list()'>
