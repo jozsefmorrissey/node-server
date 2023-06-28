@@ -29,7 +29,8 @@ function parseSeperator(string, seperator, isRegex) {
 
 
 const du = {create: {}, class: {}, cookie: {}, param: {}, style: {}, is: {},
-      scroll: {}, input: {}, on: {}, move: {}, url: {}, fade: {}, position: {}};
+      scroll: {}, input: {}, on: {}, move: {}, url: {}, fade: {}, position: {},
+      bounds: {}};
 du.find = (selector) => document.querySelector(selector);
 du.find.all = (selector) => document.querySelectorAll(selector);
 du.validSelector = VS;
@@ -70,16 +71,65 @@ du.download = (filename, contents) => {
 }
 
 function keepInBounds (elem, minimum) {
-  function checkDir(dir) {
-    const rect = elem.getBoundingClientRect();
-    if (rect[dir] < minimum) {
-      elem.style[dir] = minimum + 'px';
+  if (!du.is.fixed(elem)) return;
+  const ancestors = [elem];
+  while(elem.parentElement) ancestors.push(elem = elem.parentElement);
+  while (elem && !du.is.fixed(elem = ancestors.pop()));
+  elem ||= ancestors[0];
+  minimum ||= 5;
+  const windowBounds = du.bounds.window();
+  function checkDir(dir1, dir2) {
+    const rect = du.bounds.elem(elem);
+    const dir1dist = Math.difference(rect[dir1], windowBounds[dir1]);
+    const dir2dist = Math.difference(rect[dir2], windowBounds[dir2]);
+    if (dir1dist < dir2dist) {
+      if (rect[dir1] < windowBounds[dir1] - 1) {
+        console.log('moving')
+        du.bounds.window();
+        du.bounds.window();
+        elem.style[dir1] = windowBounds[dir1] + minimum + 'px';
+        elem.style[dir2] = 'unset';
+      }
     }
+    // TODO: Need to apply scale to window bounds in order for upperLimit check
+    // else {
+    //   if (rect[dir2] > windowBounds[dir2] + 1) {
+    //     console.log('moving1');
+    //     du.bounds.window();
+    //     elem.style[dir2] = windowBounds[dir2] + minimum + 'px';
+    //     elem.style[dir1] = 'unset';
+    //   }
+    // }
   }
-  checkDir('left');
-  checkDir('right');
-  checkDir('top');
-  checkDir('bottom');
+  checkDir('left', 'right');
+  checkDir('top', 'bottom');
+}
+
+du.bounds.window = () => {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const sx = window.scrollX;
+  const sy = window.scrollY;
+  return {left: 0, right: sx+w, top: 0, bottom: sy+h};
+}
+
+du.bounds.view = () => {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  return {left: 0, right: w, top: 0, bottom: h};
+}
+
+du.bounds.elem = (elem) => {
+  const rect = elem.getBoundingClientRect();
+  const sx = window.scrollX;
+  const sy = window.scrollY;
+  rect.x += sx;
+  rect.y += sy;
+  rect.top += sy;
+  rect.bottom += sy;
+  rect.left += sx;
+  rect.right += sx;
+  return rect;
 }
 
 du.zIndex = function (elem) {
@@ -103,6 +153,8 @@ du.move.inFront = function (elem, timeout) {
   },  timeout || 0);
 }
 
+du.move.inbounds = keepInBounds;
+
 du.move.relitive = function (elem, target, direction, props) {
   props = props || {};
   const clientHeight = document.documentElement.clientHeight;
@@ -110,11 +162,9 @@ du.move.relitive = function (elem, target, direction, props) {
   const rect = target.getBoundingClientRect();
 
   const style = {};
-  const padding = props.padding || 5;
   style.cursor = props.cursor || 'unset';
-  style.padding = `${padding}px`;
   style.position = props.position || 'absolute';
-  style.backgroundColor = props.backgroundColor || 'transparent';
+  du.style(elem, style);
 
   const scrollY =  props.isFixed ? 0 : window.scrollY;
   const scrollX =  props.isFixed ? 0 : window.scrollX;
@@ -122,32 +172,54 @@ du.move.relitive = function (elem, target, direction, props) {
   const isBottom = direction.indexOf('bottom') !== -1;
   const isRight = direction.indexOf('right') !== -1;
   const isLeft = direction.indexOf('left') !== -1;
-  if (isTop) {
-    style.top = rect.top - elem.clientWidth - padding + scrollY;
-  } else { style.top = 'unset'; }
-
-  if (isBottom) {
-    style.bottom = (clientHeight - rect.bottom - elem.clientHeight) - padding - scrollY + 'px';
-  } else { style.bottom = 'unset'; }
-
-  if (!isTop && !isBottom) {
-    style.bottom = (clientHeight - rect.bottom + rect.height/2 - elem.clientHeight / 2) - padding - scrollY + 'px';
+  const isCenter = direction.indexOf('center') !== -1;
+  const isOutside = direction.indexOf('outer') !== -1;
+  const isVertical = isTop || isBottom;
+  const position = {};
+  const outOffset = isOutside ? (isVertical ? elem.clientHeight : elem.clientWidth) : 0;
+  if (isCenter) {
+    position.top = (rect.top + rect.bottom - elem.clientHeight) / 2 + scrollY + 'px';
+    position.left = (rect.left + rect.right - elem.clientWidth) / 2 + scrollX + 'px';
   }
 
-  if (isRight) {
-    style.right = clientWidth - rect.right - elem.clientWidth - padding - scrollX + 'px';
-  } else { style.right = 'unset'; }
+  if (isOutside) {
+    if (isTop) {
+      position.bottom = clientHeight - (rect.top + scrollY + outOffset) + elem.clientHeight + 'px';
+      position.top = 'unset';
+    } else { position.bottom = 'unset'; }
 
-  if (isLeft) {
-    style.left = rect.left - padding - elem.clientWidth + scrollX;
-  } else { style.left = 'unset'; }
+    if (isBottom) {
+      position.top = clientHeight - ((clientHeight - rect.bottom) + elem.clientHeight - outOffset - scrollY) + 'px';
+    } else if (!isCenter) { position.top = 'unset'; }
 
-  if (!isLeft && ! isRight) {
-    style.right = clientWidth - rect.right + rect.width/2 - elem.clientWidth/2 - padding - scrollX + 'px';
+    if (isRight) {
+      position.left = (rect.right - scrollX) + 'px';
+    } else if (!isCenter) { position.left = 'unset'; }
+
+    if (isLeft) {
+      position.right = clientWidth - (rect.left + scrollX) + 'px';
+      position.left = 'unset';
+    } else { position.right = 'unset'; }
+  } else {
+    if (isTop) {
+      position.top = rect.top + scrollY + 'px';
+    } else if (!isCenter) { position.top = 'unset'; }
+
+    if (isBottom) {
+      position.bottom = (clientHeight - rect.bottom) - scrollY + 'px';
+      position.top = 'unset';
+    } else { position.bottom = 'unset'; }
+
+    if (isRight) {
+      position.right = clientWidth - rect.right - scrollX + 'px';
+    } else { position.right = 'unset'; }
+
+    if (isLeft) {
+      position.left = rect.left + scrollX + 'px';
+    } else if (!isCenter) { position.left = 'unset'; }
   }
 
-  du.style(elem, style);
-  keepInBounds(elem, padding);
+  du.style(elem, position);
 }
 
 du.move.below = function (elem, target) {
@@ -325,6 +397,47 @@ du.is.hidden = function (target) {
   return elem !== undefined;
 }
 
+du.is.fixed = function (target) {
+  const pos = document.defaultView.getComputedStyle(target).position;
+  const isAbsolute = pos === 'absolute';
+  const isRelative = pos === 'relative';
+  const isFixed = pos === 'fixed';
+  return isAbsolute || isFixed || isRelative;
+}
+
+du.is.inView = function (elem) {
+  const rect = elem.getBoundingClientRect();
+  const winTopLim = window.scrollY;
+  const winBotLim = window.scrollY + window.innerHeight;
+  const winLeftLim = window.scrollX;
+  const winRightLim = window.scrollY + window.innerWidth;
+
+  const leftGreater = rect.left > winLeftLim;
+  const leftLess = rect.left < winRightLim;
+  const rightGreater = rect.right > winLeftLim;
+  const rightLess = rect.right < winRightLim;
+  const topGreater = rect.top > winTopLim;
+  const topLess = rect.top < winBotLim;
+  const bottomGreater = rect.bottom > winTopLim;
+  const bottomLess = rect.bottom < winBotLim;
+
+  const leftTopCornerIn =  leftGreater && leftLess && topGreater && topLess;
+  const rightTopCornerIn =  rightGreater && rightLess && topGreater && topLess;
+
+  const leftBottomCornerIn =  leftGreater && leftLess && bottomGreater && bottomLess;
+  const rightBottomCornerIn =  rightGreater && rightLess && bottomGreater && bottomLess;
+
+  return leftTopCornerIn || rightTopCornerIn || leftBottomCornerIn || rightBottomCornerIn;
+}
+
+du.is.ancestor = function (elem, ancestor) {
+  while (elem.parentElement) {
+    if(elem === ancestor) return true;
+    elem = elem.parentElement;
+  }
+  return false;
+}
+
 du.class.add = function(target, clazz) {
   du.class.remove(target, clazz);
   target.className += ` ${clazz}`;
@@ -443,6 +556,33 @@ du.on.match = function(event, selector, func, target) {
   // if (selectorArray.indexOf(func) !== -1) {
     selectorArray.push(filter.func);
   // }
+}
+
+
+
+du.switch = (selector, idAttr) => {
+  if (!VS(selector)) throw new Error('This class needs a valid selector that can grab your button and your container');
+  const btnSelector = `button${selector}`;
+  const cntSelector = `${selector}:not(button)`;
+  function onlyOne(elem) {
+    let allBtns = du.find.all(btnSelector);
+    let allCnts = du.find.all(cntSelector);
+    for (let i = 0; i < allBtns.length; i++) allBtns[i].hidden = false;
+    for (let i = 0; i < allCnts.length; i++) allCnts[i].hidden = true;
+    if (elem) {
+      let idSel = '';
+      if (idAttr) {
+        const attr = elem.getAttribute(idAttr);
+        idSel = attr ? `[${idAttr}='${attr}']` : '';
+      }
+      let cnt = du.find.closest(`${cntSelector}${idSel}`, elem);
+      if (cnt) cnt.hidden = false;
+      else console.warn('Element does not appear to have a corresponding container');
+    }
+  }
+
+  du.on.match('click', btnSelector, onlyOne);
+  return onlyOne;
 }
 
 du.trigger = (eventName, elemOid) => {

@@ -113,7 +113,9 @@ const { JsBundler } = require('../../building/bundlers/js.js');
 const jsDumpLoc = './public/js/index';
 const jsBundler = new JsBundler(jsDumpLoc, [], {projectDir: __dirname, main: 'app/app.js'});
 const jsWatcher = new Watcher(jsBundler.change, jsBundler.write)
+        .add('../../public/json/configure.json')
         .add('../../public/js/utils/$t.js')
+        .add('../../public/js/utils/request.js')
         .add('../../public/js/utils/object/lookup.js')
         .add('../../public/js/utils/object/imposter.js')
         .add('../../public/js/utils/expression-definition.js')

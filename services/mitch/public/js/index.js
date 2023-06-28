@@ -341,6 +341,12 @@ RequireJS = new RequireJS();
 
 
 
+RequireJS.addFunction('../../public/json/configure.json',
+function (require, exports, module) {
+	module.exports = {"_TYPE":"DecisionInputTree","id":"DecisionInputTree_qqcoibr","ID_ATTRIBUTE":"id","stateConfigs":{"Questionaire":{"_TYPE":"StateConfig","id":"StateConfig_z2a2evv","ID_ATTRIBUTE":"id","name":"Questionaire","payload":{"name":"Questionaire","inputArray":[]},"treeName":"DecisionInputTree","conditions":[]},"info":{"_TYPE":"StateConfig","id":"StateConfig_00yg0o7","ID_ATTRIBUTE":"id","name":"info","payload":{"sectionName":"Information","inputArray":[{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"inspector","label":"Inspector","list":["Zach","Dylan","Adam","Jon","Tucker","Mitchell"],"inline":false,"hidden":false,"optional":false,"value":"Zach","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Input","ID_ATTRIBUTE":"id","type":"date","name":"dateOfInspection","label":"Date of Inspection","hidden":false,"list":[],"optional":false,"value":"","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"NumberInput","ID_ATTRIBUTE":"id","name":"enginHours","label":"Engin Hours","min":0,"max":9007199254740991,"step":1,"hidden":false,"list":[],"optional":false,"value":"","targetAttr":"value","errorMsg":"Error"}]},"treeName":"DecisionInputTree","conditions":[]},"visual":{"_TYPE":"StateConfig","id":"StateConfig_8pcjbz3","ID_ATTRIBUTE":"id","name":"visual","payload":{"sectionName":"Visual","inputArray":[{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"doTiresVissuallyAppearToBeInflated","label":"Do tires vissually appear to be inflated","list":["Yes","No"],"inline":false,"hidden":false,"optional":false,"value":"Yes","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"areThereAnyObviousFluidPuddlesUnderTheMachineThatMayIndicateAleak?","label":"Are there any obvious fluid puddles under the machine that may indicate a leak?","list":["Yes","No"],"inline":false,"hidden":false,"optional":false,"value":"Yes","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"areAllPrimaryAndSecondaryLockingPinsInPlaceForLoaderAndImplement","label":"Are all primary and secondary locking pins in place for loader and implement","list":["Yes","No"],"inline":false,"hidden":false,"optional":false,"value":"Yes","targetAttr":"value","errorMsg":"Error"}]},"treeName":"DecisionInputTree","conditions":[{"_TYPE":"CaseInsensitiveCondition","group":"severity","attribute":"doTiresVissuallyAppearToBeInflated","value":"No","deligator":{"_TYPE":"NodeCondition"}},{"_TYPE":"CaseInsensitiveCondition","group":"severity","attribute":"areThereAnyObviousFluidPuddlesUnderTheMachineThatMayIndicateAleak?","value":"No","deligator":{"_TYPE":"NodeCondition"}},{"_TYPE":"CaseInsensitiveCondition","group":"severity","attribute":"areAllPrimaryAndSecondaryLockingPinsInPlaceForLoaderAndImplement","value":"No","deligator":{"_TYPE":"NodeCondition"}}]},"fluids":{"_TYPE":"StateConfig","id":"StateConfig_4ughk3o","ID_ATTRIBUTE":"id","name":"fluids","payload":{"sectionName":" ","inputArray":[{"_TYPE":"RadioTable","ID_ATTRIBUTE":"id","name":"checkingFluids","label":"Checking Fluids","rows":["Engine Oil","Hydraulic Oil","Antifreeze"],"columns":["All Good","Topped Off","Bulk Add"],"type":"radio","hidden":false,"list":{"engineOil":{"name":"RadioTable_input-msrep2d-engineOil","label":"Engine Oil","value":"All Good","key":"engineOil"},"hydraulicOil":{"name":"RadioTable_input-msrep2d-hydraulicOil","label":"Hydraulic Oil","value":"All Good","key":"hydraulicOil"},"antifreeze":{"name":"RadioTable_input-msrep2d-antifreeze","label":"Antifreeze","value":"All Good","key":"antifreeze"}},"optional":false,"value":{"engineOil":"All Good","hydraulicOil":"All Good","antifreeze":"All Good"},"targetAttr":"value","errorMsg":"Error"}]},"treeName":"DecisionInputTree","conditions":[{"_TYPE":"WildCardCondition","group":"severity","attribute":"checkingFluids.*","value":"Bulk Add","deligator":{"_TYPE":"NodeCondition"}}]},"greasing":{"_TYPE":"StateConfig","id":"StateConfig_zdbu4u2","ID_ATTRIBUTE":"id","name":"greasing","payload":{"inputArray":[{"_TYPE":"RadioTable","ID_ATTRIBUTE":"id","name":"greasing","label":"Greasing","rows":["Grease Zerk #1","Grease Zerk #2","Grease Zerk #3","Grease Zerk #4","Grease Zerk #5","Grease Zerk #6","Grease Zerk #7"],"columns":["Took At Least 1 Pump","Would not accept grease"],"type":"radio","hidden":false,"list":{"greaseZerk #1":{"name":"RadioTable_input-ikioson-greaseZerk #1","label":"Grease Zerk #1","value":"Took At Least 1 Pump","key":"greaseZerk #1"},"greaseZerk #2":{"name":"RadioTable_input-ikioson-greaseZerk #2","label":"Grease Zerk #2","value":"Took At Least 1 Pump","key":"greaseZerk #2"},"greaseZerk #3":{"name":"RadioTable_input-ikioson-greaseZerk #3","label":"Grease Zerk #3","value":"Took At Least 1 Pump","key":"greaseZerk #3"},"greaseZerk #4":{"name":"RadioTable_input-ikioson-greaseZerk #4","label":"Grease Zerk #4","value":"Took At Least 1 Pump","key":"greaseZerk #4"},"greaseZerk #5":{"name":"RadioTable_input-ikioson-greaseZerk #5","label":"Grease Zerk #5","value":"Took At Least 1 Pump","key":"greaseZerk #5"},"greaseZerk #6":{"name":"RadioTable_input-ikioson-greaseZerk #6","label":"Grease Zerk #6","value":"Took At Least 1 Pump","key":"greaseZerk #6"},"greaseZerk #7":{"name":"RadioTable_input-ikioson-greaseZerk #7","label":"Grease Zerk #7","value":"Took At Least 1 Pump","key":"greaseZerk #7"}},"optional":false,"value":{"greaseZerk #1":"Took At Least 1 Pump","greaseZerk #2":"Took At Least 1 Pump","greaseZerk #3":"Took At Least 1 Pump","greaseZerk #4":"Took At Least 1 Pump","greaseZerk #5":"Took At Least 1 Pump","greaseZerk #6":"Took At Least 1 Pump","greaseZerk #7":"Took At Least 1 Pump"},"targetAttr":"value","errorMsg":"Error"}]},"treeName":"DecisionInputTree","conditions":[{"_TYPE":"WildCardCondition","group":"severity","attribute":"greasing.*","value":"Took At Least 1 Pump","deligator":{"_TYPE":"NodeCondition"}}]},"hydraulic":{"_TYPE":"StateConfig","id":"StateConfig_nceps9n","ID_ATTRIBUTE":"id","name":"hydraulic","payload":{"sectionName":"","inputArray":[{"_TYPE":"RadioTable","ID_ATTRIBUTE":"id","name":"hydraulicHoseAndFittingInspection","label":"Hydraulic Hose and fitting inspection","rows":["Pump to Control Valve","Control Valve to Arm Cylinders","Control Valve to Bucket Cylinders"],"columns":["Dry","Wet"],"type":"radio","hidden":false,"list":{"pumpToControlValve":{"name":"RadioTable_input-xt091nq-pumpToControlValve","label":"Pump to Control Valve","value":"Dry","key":"pumpToControlValve"},"controlValveToArmCylinders":{"name":"RadioTable_input-xt091nq-controlValveToArmCylinders","label":"Control Valve to Arm Cylinders","value":"Dry","key":"controlValveToArmCylinders"},"controlValveToBucketCylinders":{"name":"RadioTable_input-xt091nq-controlValveToBucketCylinders","label":"Control Valve to Bucket Cylinders","value":"Dry","key":"controlValveToBucketCylinders"}},"optional":false,"value":{"pumpToControlValve":"Dry","controlValveToArmCylinders":"Dry","controlValveToBucketCylinders":"Dry"},"targetAttr":"value","errorMsg":"Error"}]},"treeName":"DecisionInputTree","conditions":[{"_TYPE":"WildCardCondition","group":"severity","attribute":"hydraulicHoseAndFittingInspection.*","value":"Wet","deligator":{"_TYPE":"NodeCondition"}}]},"controlsCheck":{"_TYPE":"StateConfig","id":"StateConfig_erqim1a","ID_ATTRIBUTE":"id","name":"controlsCheck","payload":{"sectionName":"Controls Check","inputArray":[{"_TYPE":"RadioTable","ID_ATTRIBUTE":"id","name":"startingAndOperating","label":"Starting and Operating","rows":["Parking Brake","Ignition and Key","Throttle Control","3-point Control","Loader Controls"],"columns":["Works","Kinda Works","Not Functioning"],"type":"radio","hidden":false,"list":{"parkingBrake":{"name":"RadioTable_input-w1oei74-parkingBrake","label":"Parking Brake","value":"Works","key":"parkingBrake"},"ignitionAndKey":{"name":"RadioTable_input-w1oei74-ignitionAndKey","label":"Ignition and Key","value":"Works","key":"ignitionAndKey"},"throttleControl":{"name":"RadioTable_input-w1oei74-throttleControl","label":"Throttle Control","value":"Works","key":"throttleControl"},"3-pointControl":{"name":"RadioTable_input-w1oei74-3-pointControl","label":"3-point Control","value":"Works","key":"3-pointControl"},"loaderControls":{"name":"RadioTable_input-w1oei74-loaderControls","label":"Loader Controls","value":"Works","key":"loaderControls"}},"optional":false,"value":{"parkingBrake":"Works","ignitionAndKey":"Works","throttleControl":"Works","3-pointControl":"Works","loaderControls":"Works"},"targetAttr":"value","errorMsg":"Error"},{"_TYPE":"RadioTable","ID_ATTRIBUTE":"id","name":"shiftingTransmissionAndTransferCase","label":"Shifting Transmission and Transfer Case","rows":["Transmission shifts with no issues","Transfer Case shifts with no issues"],"columns":["Yes","No"],"type":"radio","hidden":false,"list":{"transmissionShiftsWithNoIssues":{"name":"RadioTable_input-icp0pn9-transmissionShiftsWithNoIssues","label":"Transmission shifts with no issues","value":"Yes","key":"transmissionShiftsWithNoIssues"},"transferCaseShiftsWithNoIssues":{"name":"RadioTable_input-icp0pn9-transferCaseShiftsWithNoIssues","label":"Transfer Case shifts with no issues","value":"Yes","key":"transferCaseShiftsWithNoIssues"}},"optional":false,"value":{"transmissionShiftsWithNoIssues":"Yes","transferCaseShiftsWithNoIssues":"Yes"},"targetAttr":"value","errorMsg":"Error"}]},"treeName":"DecisionInputTree","conditions":[{"_TYPE":"WildCardCondition","group":"severity","attribute":"startingAndOperating.*","value":"Not Functioning","deligator":{"_TYPE":"NodeCondition"}},{"_TYPE":"WildCardCondition","group":"severity","attribute":"startingAndOperating.*","value":"Kinda Works","deligator":{"_TYPE":"NodeCondition"}},{"_TYPE":"WildCardCondition","group":"severity","attribute":"shiftingTransmissionAndTransferCase.*","value":"No","deligator":{"_TYPE":"NodeCondition"}}]},"severity":{"_TYPE":"StateConfig","id":"StateConfig_5gv0sfd","ID_ATTRIBUTE":"id","name":"severity","payload":{"sectionName":"Severity","inputArray":[{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"level","label":"Level","list":["Documenting","Keep an eye one","Action Needs Taken","Immediate Action Required"],"inline":false,"hidden":false,"optional":false,"value":"Documenting","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Textarea","ID_ATTRIBUTE":"id","name":"yourObservationsAndActions","label":"Your Observations and Actions","hidden":false,"list":[],"optional":false,"value":"","targetAttr":"value","errorMsg":"Error"}]},"treeName":"DecisionInputTree","conditions":[]}},"name":"Questionaire","referenceNodes":false,"root":{"name":"Questionaire","payload":{"inputArray":[],"PAYLOAD_ID":"wn1wtzb"},"children":{"info":{"name":"info","payload":{"inputArray":[{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"inspector","label":"Inspector","list":["Zach","Dylan","Adam","Jon","Tucker","Mitchell"],"inline":false,"hidden":false,"optional":false,"value":"Zach","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Input","ID_ATTRIBUTE":"id","type":"date","name":"dateOfInspection","label":"Date of Inspection","hidden":false,"list":[],"optional":false,"value":"","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"NumberInput","ID_ATTRIBUTE":"id","name":"enginHours","label":"Engin Hours","min":0,"max":9007199254740991,"step":1,"hidden":false,"list":[],"optional":false,"value":"","targetAttr":"value","errorMsg":"Error"}],"PAYLOAD_ID":"hfopyzt"},"children":{},"metadata":{}},"visual":{"name":"visual","payload":{"inputArray":[{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"doTiresVissuallyAppearToBeInflated","label":"Do tires vissually appear to be inflated","list":["Yes","No"],"inline":false,"hidden":false,"optional":false,"value":"Yes","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"areThereAnyObviousFluidPuddlesUnderTheMachineThatMayIndicateAleak?","label":"Are there any obvious fluid puddles under the machine that may indicate a leak?","list":["Yes","No"],"inline":false,"hidden":false,"optional":false,"value":"Yes","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"areAllPrimaryAndSecondaryLockingPinsInPlaceForLoaderAndImplement","label":"Are all primary and secondary locking pins in place for loader and implement","list":["Yes","No"],"inline":false,"hidden":false,"optional":false,"value":"Yes","targetAttr":"value","errorMsg":"Error"}],"PAYLOAD_ID":"5tk0j5e"},"children":{"severity":{"name":"severity","payload":{"inputArray":[{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"level","label":"Level","list":["Documenting","Keep an eye one","Action Needs Taken","Immediate Action Required"],"inline":false,"hidden":false,"optional":false,"value":"Action Needs Taken","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Textarea","ID_ATTRIBUTE":"id","name":"yourObservationsAndActions","label":"Your Observations and Actions","hidden":false,"list":[],"optional":false,"value":"","targetAttr":"value","errorMsg":"Error"}],"PAYLOAD_ID":"i802yy8"},"children":{},"metadata":{}}},"metadata":{}},"fluids":{"name":"fluids","payload":{"inputArray":[{"_TYPE":"RadioTable","ID_ATTRIBUTE":"id","name":"checkingFluids","label":"Checking Fluids","rows":["Engine Oil","Hydraulic Oil","Antifreeze"],"columns":["All Good","Topped Off","Bulk Add"],"type":"radio","hidden":false,"list":{"engineOil":{"name":"RadioTable_input-wiyk5yh-engineOil","label":"Engine Oil","value":"All Good","key":"engineOil"},"hydraulicOil":{"name":"RadioTable_input-wiyk5yh-hydraulicOil","label":"Hydraulic Oil","value":"All Good","key":"hydraulicOil"},"antifreeze":{"name":"RadioTable_input-wiyk5yh-antifreeze","label":"Antifreeze","value":"All Good","key":"antifreeze"}},"optional":false,"value":{"engineOil":"All Good","hydraulicOil":"All Good","antifreeze":"All Good"},"targetAttr":"value","errorMsg":"Error"}],"PAYLOAD_ID":"6z4fcwp"},"children":{"severity":{"name":"severity","payload":{"inputArray":[{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"level","label":"Level","list":["Documenting","Keep an eye one","Action Needs Taken","Immediate Action Required"],"inline":false,"hidden":false,"optional":false,"value":"Documenting","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Textarea","ID_ATTRIBUTE":"id","name":"yourObservationsAndActions","label":"Your Observations and Actions","hidden":false,"list":[],"optional":false,"value":"","targetAttr":"value","errorMsg":"Error"}],"PAYLOAD_ID":"jc5alcf"},"children":{},"metadata":{}}},"metadata":{}},"greasing":{"name":"greasing","payload":{"inputArray":[{"_TYPE":"RadioTable","ID_ATTRIBUTE":"id","name":"greasing","label":"Greasing","rows":["Grease Zerk #1","Grease Zerk #2","Grease Zerk #3","Grease Zerk #4","Grease Zerk #5","Grease Zerk #6","Grease Zerk #7"],"columns":["Took At Least 1 Pump","Would not accept grease"],"type":"radio","hidden":false,"list":{"greaseZerk #1":{"name":"RadioTable_input-2vgl8po-greaseZerk #1","label":"Grease Zerk #1","value":"Would not accept grease","key":"greaseZerk #1"},"greaseZerk #2":{"name":"RadioTable_input-2vgl8po-greaseZerk #2","label":"Grease Zerk #2","value":"Would not accept grease","key":"greaseZerk #2"},"greaseZerk #3":{"name":"RadioTable_input-2vgl8po-greaseZerk #3","label":"Grease Zerk #3","value":"Would not accept grease","key":"greaseZerk #3"},"greaseZerk #4":{"name":"RadioTable_input-2vgl8po-greaseZerk #4","label":"Grease Zerk #4","value":"Would not accept grease","key":"greaseZerk #4"},"greaseZerk #5":{"name":"RadioTable_input-2vgl8po-greaseZerk #5","label":"Grease Zerk #5","value":"Would not accept grease","key":"greaseZerk #5"},"greaseZerk #6":{"name":"RadioTable_input-2vgl8po-greaseZerk #6","label":"Grease Zerk #6","value":"Would not accept grease","key":"greaseZerk #6"},"greaseZerk #7":{"name":"RadioTable_input-2vgl8po-greaseZerk #7","label":"Grease Zerk #7","value":"Would not accept grease","key":"greaseZerk #7"}},"optional":false,"value":{"greaseZerk #1":"Would not accept grease","greaseZerk #2":"Would not accept grease","greaseZerk #3":"Would not accept grease","greaseZerk #4":"Would not accept grease","greaseZerk #5":"Would not accept grease","greaseZerk #6":"Would not accept grease","greaseZerk #7":"Would not accept grease"},"targetAttr":"value","errorMsg":"Error"}],"PAYLOAD_ID":"zkaqx7e"},"children":{"severity":{"name":"severity","payload":{"inputArray":[{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"level","label":"Level","list":["Documenting","Keep an eye one","Action Needs Taken","Immediate Action Required"],"inline":false,"hidden":false,"optional":false,"value":"Documenting","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Textarea","ID_ATTRIBUTE":"id","name":"yourObservationsAndActions","label":"Your Observations and Actions","hidden":false,"list":[],"optional":false,"value":"","targetAttr":"value","errorMsg":"Error"}],"PAYLOAD_ID":"z5y1qc1"},"children":{},"metadata":{}}},"metadata":{}},"hydraulic":{"name":"hydraulic","payload":{"inputArray":[{"_TYPE":"RadioTable","ID_ATTRIBUTE":"id","name":"hydraulicHoseAndFittingInspection","label":"Hydraulic Hose and fitting inspection","rows":["Pump to Control Valve","Control Valve to Arm Cylinders","Control Valve to Bucket Cylinders"],"columns":["Dry","Wet"],"type":"radio","hidden":false,"list":{"pumpToControlValve":{"name":"RadioTable_input-q18um2b-pumpToControlValve","label":"Pump to Control Valve","value":"Dry","key":"pumpToControlValve"},"controlValveToArmCylinders":{"name":"RadioTable_input-q18um2b-controlValveToArmCylinders","label":"Control Valve to Arm Cylinders","value":"Dry","key":"controlValveToArmCylinders"},"controlValveToBucketCylinders":{"name":"RadioTable_input-q18um2b-controlValveToBucketCylinders","label":"Control Valve to Bucket Cylinders","value":"Dry","key":"controlValveToBucketCylinders"}},"optional":false,"value":{"pumpToControlValve":"Dry","controlValveToArmCylinders":"Dry","controlValveToBucketCylinders":"Dry"},"targetAttr":"value","errorMsg":"Error"}],"PAYLOAD_ID":"xj4obhz"},"children":{"severity":{"name":"severity","payload":{"inputArray":[{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"level","label":"Level","list":["Documenting","Keep an eye one","Action Needs Taken","Immediate Action Required"],"inline":false,"hidden":false,"optional":false,"value":"Documenting","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Textarea","ID_ATTRIBUTE":"id","name":"yourObservationsAndActions","label":"Your Observations and Actions","hidden":false,"list":[],"optional":false,"value":"","targetAttr":"value","errorMsg":"Error"}],"PAYLOAD_ID":"w3ptpwr"},"children":{},"metadata":{}}},"metadata":{}},"controlsCheck":{"name":"controlsCheck","payload":{"inputArray":[{"_TYPE":"RadioTable","ID_ATTRIBUTE":"id","name":"startingAndOperating","label":"Starting and Operating","rows":["Parking Brake","Ignition and Key","Throttle Control","3-point Control","Loader Controls"],"columns":["Works","Kinda Works","Not Functioning"],"type":"radio","hidden":false,"list":{"parkingBrake":{"name":"RadioTable_input-oz90msc-parkingBrake","label":"Parking Brake","value":"Works","key":"parkingBrake"},"ignitionAndKey":{"name":"RadioTable_input-oz90msc-ignitionAndKey","label":"Ignition and Key","value":"Works","key":"ignitionAndKey"},"throttleControl":{"name":"RadioTable_input-oz90msc-throttleControl","label":"Throttle Control","value":"Works","key":"throttleControl"},"3-pointControl":{"name":"RadioTable_input-oz90msc-3-pointControl","label":"3-point Control","value":"Works","key":"3-pointControl"},"loaderControls":{"name":"RadioTable_input-oz90msc-loaderControls","label":"Loader Controls","value":"Works","key":"loaderControls"}},"optional":false,"value":{"parkingBrake":"Works","ignitionAndKey":"Works","throttleControl":"Works","3-pointControl":"Works","loaderControls":"Works"},"targetAttr":"value","errorMsg":"Error"},{"_TYPE":"RadioTable","ID_ATTRIBUTE":"id","name":"shiftingTransmissionAndTransferCase","label":"Shifting Transmission and Transfer Case","rows":["Transmission shifts with no issues","Transfer Case shifts with no issues"],"columns":["Yes","No"],"type":"radio","hidden":false,"list":{"transmissionShiftsWithNoIssues":{"name":"RadioTable_input-44t9f6t-transmissionShiftsWithNoIssues","label":"Transmission shifts with no issues","value":"Yes","key":"transmissionShiftsWithNoIssues"},"transferCaseShiftsWithNoIssues":{"name":"RadioTable_input-44t9f6t-transferCaseShiftsWithNoIssues","label":"Transfer Case shifts with no issues","value":"Yes","key":"transferCaseShiftsWithNoIssues"}},"optional":false,"value":{"transmissionShiftsWithNoIssues":"Yes","transferCaseShiftsWithNoIssues":"Yes"},"targetAttr":"value","errorMsg":"Error"}],"PAYLOAD_ID":"q69gaj0"},"children":{"severity":{"name":"severity","payload":{"inputArray":[{"_TYPE":"Radio","ID_ATTRIBUTE":"id","name":"level","label":"Level","list":["Documenting","Keep an eye one","Action Needs Taken","Immediate Action Required"],"inline":false,"hidden":false,"optional":false,"value":"Documenting","targetAttr":"value","errorMsg":"Error"},{"_TYPE":"Textarea","ID_ATTRIBUTE":"id","name":"yourObservationsAndActions","label":"Your Observations and Actions","hidden":false,"list":[],"optional":false,"value":"","targetAttr":"value","errorMsg":"Error"}],"PAYLOAD_ID":"web3489"},"children":{},"metadata":{}}},"metadata":{}}},"metadata":{}},"payloadHandler":{"inputs":[{"_TYPE":"Input","ID_ATTRIBUTE":"id","label":"Section Name","name":"sectionName","inline":true,"class":"center","hidden":false,"list":[],"optional":false,"value":"","targetAttr":"value","errorMsg":"Error"}],"templateName":"{{sectionName}}"}};
+});
+
+
 RequireJS.addFunction('../../public/js/utils/$t.js',
 function (require, exports, module) {
 	
@@ -858,6 +864,105 @@ function (require, exports, module) {
 	createGlobalsInterface();
 	
 	module.exports = $t;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/request.js',
+function (require, exports, module) {
+	
+
+	Request = {
+	    onStateChange: function (success, failure, id) {
+	      return function () {
+	        if (this.readyState === 4) {
+	          if (this.status == 200) {
+	            try {
+	              resp = JSON.parse(this.responseText);
+	            } catch (e){
+	              resp = this.responseText;
+	            }
+	            if (success) {
+	              success(resp, this);
+	            }
+	          } else if (failure) {
+	            const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
+	            if (errorMsgMatch) {
+	              this.errorMsg = errorMsgMatch[1].trim();
+	            }
+	            const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
+	            if (errorCodeMatch) {
+	              this.errorCode = errorCodeMatch[1];
+	
+	            }
+	            failure(this);
+	          }
+	          var resp = this.responseText;
+	        }
+	      }
+	    },
+	
+	    id: function (url, method) {
+	      return `request.${method}.${url.replace(/\./g, ',')}`;
+	    },
+	
+	    get: function (url, success, failure) {
+	      const xhr = new Request.xmlhr();
+	      xhr.open("GET", url, true);
+	      const id = Request.id(url, 'GET');
+	      xhr.setRequestHeader('Content-Type', 'text/pdf');
+	      xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+	      Request.setGlobalHeaders(xhr);
+	      if (success === undefined && failure === undefined) return xhr;
+	      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+	      xhr.send();
+	      return xhr;
+	    },
+	
+	    hasBody: function (method) {
+	      return function (url, body, success, failure) {
+	        const xhr = new Request.xmlhr();
+	        xhr.open(method, url, true);
+	        const id = Request.id(url, method);
+	        xhr.setRequestHeader('Content-Type', 'application/json');
+	        Request.setGlobalHeaders(xhr);
+	        if (success === undefined && failure === undefined) return xhr;
+	        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+	        xhr.send(JSON.stringify(body));
+	        return xhr;
+	      }
+	    },
+	
+	    post: function () {return Request.hasBody('POST')(...arguments)},
+	    delete: function () {return Request.hasBody('DELETE')(...arguments)},
+	    options: function () {return Request.hasBody('OPTIONS')(...arguments)},
+	    head: function () {return Request.hasBody('HEAD')(...arguments)},
+	    put: function () {return Request.hasBody('PUT')(...arguments)},
+	    connect: function () {return Request.hasBody('CONNECT')(...arguments)},
+	}
+	
+	Request.errorCodeReg = /Error Code:([a-zA-Z0-9]*)/;
+	Request.errorMsgReg = /[a-zA-Z0-9]*?:([a-zA-Z0-9 ]*)/;
+	const globalHeaders = {};
+	Request.globalHeader = (header, funcOval) => {
+	  globalHeaders[header] = funcOval;
+	}
+	Request.setGlobalHeaders = (xhr) => {
+	  const headers = Object.keys(globalHeaders);
+	  headers.forEach((header) => {
+	    const value = (typeof globalHeaders[header]) === 'function' ? globalHeaders[header]() : globalHeaders[header];
+	    xhr.setRequestHeader(header, value, xhr);
+	  });
+	}
+	try {
+	  Request.xmlhr = XMLHttpRequest;
+	} catch (e) {
+	  Request.xmlhr = require('xmlhttprequest').XMLHttpRequest;
+	}
+	
+	try {
+	  module.exports = Request;
+	} catch (e) {}
 	
 });
 
@@ -2231,7 +2336,8 @@ const frag = document.createDocumentFragment();
 	
 	
 	const du = {create: {}, class: {}, cookie: {}, param: {}, style: {}, is: {},
-	      scroll: {}, input: {}, on: {}, move: {}, url: {}, fade: {}, position: {}};
+	      scroll: {}, input: {}, on: {}, move: {}, url: {}, fade: {}, position: {},
+	      bounds: {}};
 	du.find = (selector) => document.querySelector(selector);
 	du.find.all = (selector) => document.querySelectorAll(selector);
 	du.validSelector = VS;
@@ -2272,16 +2378,65 @@ const frag = document.createDocumentFragment();
 	}
 	
 	function keepInBounds (elem, minimum) {
-	  function checkDir(dir) {
-	    const rect = elem.getBoundingClientRect();
-	    if (rect[dir] < minimum) {
-	      elem.style[dir] = minimum + 'px';
+	  if (!du.is.fixed(elem)) return;
+	  const ancestors = [elem];
+	  while(elem.parentElement) ancestors.push(elem = elem.parentElement);
+	  while (elem && !du.is.fixed(elem = ancestors.pop()));
+	  elem ||= ancestors[0];
+	  minimum ||= 5;
+	  const windowBounds = du.bounds.window();
+	  function checkDir(dir1, dir2) {
+	    const rect = du.bounds.elem(elem);
+	    const dir1dist = Math.difference(rect[dir1], windowBounds[dir1]);
+	    const dir2dist = Math.difference(rect[dir2], windowBounds[dir2]);
+	    if (dir1dist < dir2dist) {
+	      if (rect[dir1] < windowBounds[dir1] - 1) {
+	        console.log('moving')
+	        du.bounds.window();
+	        du.bounds.window();
+	        elem.style[dir1] = windowBounds[dir1] + minimum + 'px';
+	        elem.style[dir2] = 'unset';
+	      }
 	    }
+	    // TODO: Need to apply scale to window bounds in order for upperLimit check
+	    // else {
+	    //   if (rect[dir2] > windowBounds[dir2] + 1) {
+	    //     console.log('moving1');
+	    //     du.bounds.window();
+	    //     elem.style[dir2] = windowBounds[dir2] + minimum + 'px';
+	    //     elem.style[dir1] = 'unset';
+	    //   }
+	    // }
 	  }
-	  checkDir('left');
-	  checkDir('right');
-	  checkDir('top');
-	  checkDir('bottom');
+	  checkDir('left', 'right');
+	  checkDir('top', 'bottom');
+	}
+	
+	du.bounds.window = () => {
+	  const w = window.innerWidth;
+	  const h = window.innerHeight;
+	  const sx = window.scrollX;
+	  const sy = window.scrollY;
+	  return {left: 0, right: sx+w, top: 0, bottom: sy+h};
+	}
+	
+	du.bounds.view = () => {
+	  const w = window.innerWidth;
+	  const h = window.innerHeight;
+	  return {left: 0, right: w, top: 0, bottom: h};
+	}
+	
+	du.bounds.elem = (elem) => {
+	  const rect = elem.getBoundingClientRect();
+	  const sx = window.scrollX;
+	  const sy = window.scrollY;
+	  rect.x += sx;
+	  rect.y += sy;
+	  rect.top += sy;
+	  rect.bottom += sy;
+	  rect.left += sx;
+	  rect.right += sx;
+	  return rect;
 	}
 	
 	du.zIndex = function (elem) {
@@ -2305,6 +2460,8 @@ const frag = document.createDocumentFragment();
 	  },  timeout || 0);
 	}
 	
+	du.move.inbounds = keepInBounds;
+	
 	du.move.relitive = function (elem, target, direction, props) {
 	  props = props || {};
 	  const clientHeight = document.documentElement.clientHeight;
@@ -2312,11 +2469,9 @@ const frag = document.createDocumentFragment();
 	  const rect = target.getBoundingClientRect();
 	
 	  const style = {};
-	  const padding = props.padding || 5;
 	  style.cursor = props.cursor || 'unset';
-	  style.padding = `${padding}px`;
 	  style.position = props.position || 'absolute';
-	  style.backgroundColor = props.backgroundColor || 'transparent';
+	  du.style(elem, style);
 	
 	  const scrollY =  props.isFixed ? 0 : window.scrollY;
 	  const scrollX =  props.isFixed ? 0 : window.scrollX;
@@ -2324,32 +2479,54 @@ const frag = document.createDocumentFragment();
 	  const isBottom = direction.indexOf('bottom') !== -1;
 	  const isRight = direction.indexOf('right') !== -1;
 	  const isLeft = direction.indexOf('left') !== -1;
-	  if (isTop) {
-	    style.top = rect.top - elem.clientWidth - padding + scrollY;
-	  } else { style.top = 'unset'; }
-	
-	  if (isBottom) {
-	    style.bottom = (clientHeight - rect.bottom - elem.clientHeight) - padding - scrollY + 'px';
-	  } else { style.bottom = 'unset'; }
-	
-	  if (!isTop && !isBottom) {
-	    style.bottom = (clientHeight - rect.bottom + rect.height/2 - elem.clientHeight / 2) - padding - scrollY + 'px';
+	  const isCenter = direction.indexOf('center') !== -1;
+	  const isOutside = direction.indexOf('outer') !== -1;
+	  const isVertical = isTop || isBottom;
+	  const position = {};
+	  const outOffset = isOutside ? (isVertical ? elem.clientHeight : elem.clientWidth) : 0;
+	  if (isCenter) {
+	    position.top = (rect.top + rect.bottom - elem.clientHeight) / 2 + scrollY + 'px';
+	    position.left = (rect.left + rect.right - elem.clientWidth) / 2 + scrollX + 'px';
 	  }
 	
-	  if (isRight) {
-	    style.right = clientWidth - rect.right - elem.clientWidth - padding - scrollX + 'px';
-	  } else { style.right = 'unset'; }
+	  if (isOutside) {
+	    if (isTop) {
+	      position.bottom = clientHeight - (rect.top + scrollY + outOffset) + elem.clientHeight + 'px';
+	      position.top = 'unset';
+	    } else { position.bottom = 'unset'; }
 	
-	  if (isLeft) {
-	    style.left = rect.left - padding - elem.clientWidth + scrollX;
-	  } else { style.left = 'unset'; }
+	    if (isBottom) {
+	      position.top = clientHeight - ((clientHeight - rect.bottom) + elem.clientHeight - outOffset - scrollY) + 'px';
+	    } else if (!isCenter) { position.top = 'unset'; }
 	
-	  if (!isLeft && ! isRight) {
-	    style.right = clientWidth - rect.right + rect.width/2 - elem.clientWidth/2 - padding - scrollX + 'px';
+	    if (isRight) {
+	      position.left = (rect.right - scrollX) + 'px';
+	    } else if (!isCenter) { position.left = 'unset'; }
+	
+	    if (isLeft) {
+	      position.right = clientWidth - (rect.left + scrollX) + 'px';
+	      position.left = 'unset';
+	    } else { position.right = 'unset'; }
+	  } else {
+	    if (isTop) {
+	      position.top = rect.top + scrollY + 'px';
+	    } else if (!isCenter) { position.top = 'unset'; }
+	
+	    if (isBottom) {
+	      position.bottom = (clientHeight - rect.bottom) - scrollY + 'px';
+	      position.top = 'unset';
+	    } else { position.bottom = 'unset'; }
+	
+	    if (isRight) {
+	      position.right = clientWidth - rect.right - scrollX + 'px';
+	    } else { position.right = 'unset'; }
+	
+	    if (isLeft) {
+	      position.left = rect.left + scrollX + 'px';
+	    } else if (!isCenter) { position.left = 'unset'; }
 	  }
 	
-	  du.style(elem, style);
-	  keepInBounds(elem, padding);
+	  du.style(elem, position);
 	}
 	
 	du.move.below = function (elem, target) {
@@ -2527,6 +2704,47 @@ const frag = document.createDocumentFragment();
 	  return elem !== undefined;
 	}
 	
+	du.is.fixed = function (target) {
+	  const pos = document.defaultView.getComputedStyle(target).position;
+	  const isAbsolute = pos === 'absolute';
+	  const isRelative = pos === 'relative';
+	  const isFixed = pos === 'fixed';
+	  return isAbsolute || isFixed || isRelative;
+	}
+	
+	du.is.inView = function (elem) {
+	  const rect = elem.getBoundingClientRect();
+	  const winTopLim = window.scrollY;
+	  const winBotLim = window.scrollY + window.innerHeight;
+	  const winLeftLim = window.scrollX;
+	  const winRightLim = window.scrollY + window.innerWidth;
+	
+	  const leftGreater = rect.left > winLeftLim;
+	  const leftLess = rect.left < winRightLim;
+	  const rightGreater = rect.right > winLeftLim;
+	  const rightLess = rect.right < winRightLim;
+	  const topGreater = rect.top > winTopLim;
+	  const topLess = rect.top < winBotLim;
+	  const bottomGreater = rect.bottom > winTopLim;
+	  const bottomLess = rect.bottom < winBotLim;
+	
+	  const leftTopCornerIn =  leftGreater && leftLess && topGreater && topLess;
+	  const rightTopCornerIn =  rightGreater && rightLess && topGreater && topLess;
+	
+	  const leftBottomCornerIn =  leftGreater && leftLess && bottomGreater && bottomLess;
+	  const rightBottomCornerIn =  rightGreater && rightLess && bottomGreater && bottomLess;
+	
+	  return leftTopCornerIn || rightTopCornerIn || leftBottomCornerIn || rightBottomCornerIn;
+	}
+	
+	du.is.ancestor = function (elem, ancestor) {
+	  while (elem.parentElement) {
+	    if(elem === ancestor) return true;
+	    elem = elem.parentElement;
+	  }
+	  return false;
+	}
+	
 	du.class.add = function(target, clazz) {
 	  du.class.remove(target, clazz);
 	  target.className += ` ${clazz}`;
@@ -2645,6 +2863,33 @@ const frag = document.createDocumentFragment();
 	  // if (selectorArray.indexOf(func) !== -1) {
 	    selectorArray.push(filter.func);
 	  // }
+	}
+	
+	
+	
+	du.switch = (selector, idAttr) => {
+	  if (!VS(selector)) throw new Error('This class needs a valid selector that can grab your button and your container');
+	  const btnSelector = `button${selector}`;
+	  const cntSelector = `${selector}:not(button)`;
+	  function onlyOne(elem) {
+	    let allBtns = du.find.all(btnSelector);
+	    let allCnts = du.find.all(cntSelector);
+	    for (let i = 0; i < allBtns.length; i++) allBtns[i].hidden = false;
+	    for (let i = 0; i < allCnts.length; i++) allCnts[i].hidden = true;
+	    if (elem) {
+	      let idSel = '';
+	      if (idAttr) {
+	        const attr = elem.getAttribute(idAttr);
+	        idSel = attr ? `[${idAttr}='${attr}']` : '';
+	      }
+	      let cnt = du.find.closest(`${cntSelector}${idSel}`, elem);
+	      if (cnt) cnt.hidden = false;
+	      else console.warn('Element does not appear to have a corresponding container');
+	    }
+	  }
+	
+	  du.on.match('click', btnSelector, onlyOne);
+	  return onlyOne;
 	}
 	
 	du.trigger = (eventName, elemOid) => {
@@ -3009,16 +3254,17 @@ function (require, exports, module) {
 	
 	}, true);
 	
-	Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify) {
+	Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, key) {
 	  if (!modify) complement = JSON.copy(complement);
-	  if (func(complement)) return {filtered: complement};
+	  if (func(complement, key)) return {filtered: complement};
+	
 	  if (!(complement instanceof Object)) return {complement};
 	  let filtered = Array.isArray(complement) ? [] : {};
 	  const keys = Object.keys(complement);
 	  let setOne = false;
 	  for (let index = 0; index < keys.length; index++) {
 	    const key = keys[index];
-	    const seperated = Object.filter(complement[key], func, true);
+	    const seperated = Object.filter(complement[key], func, true, key);
 	    if (seperated.filtered) filtered[key] = seperated.filtered;
 	    setOne = true;
 	    if (seperated.complement === undefined) delete complement[key];
@@ -3305,6 +3551,7 @@ function (require, exports, module) {
 	}
 	
 	const filterOutUndefined = (obj) => (key) => obj[key] !== undefined;
+	// TODO: Fix i dont know what i was doint/thinking
 	function objEq(obj1, obj2) {
 	  const isObj1 = obj1 instanceof Object;
 	  const isObj2 = obj2 instanceof Object;
@@ -3406,6 +3653,11 @@ function (require, exports, module) {
 	
 	Function.safeStdLibAddition(Math, 'toDegrees', function (rads) {
 	  return Math.round(1000 * Math.mod(rads * 180/Math.PI, 360)) / 1000;
+	}, true);
+	
+	Function.safeStdLibAddition(Math, 'difference', function (val1, val2) {
+	  if (val1 > val2) return Math.abs(val1 - val2);
+	  return Math.abs(val2 - val1);
 	}, true);
 	
 	Function.safeStdLibAddition(Object, 'forEachConditional', function (obj, func, conditionFunc, modifyObject) {
@@ -4001,7 +4253,8 @@ function (require, exports, module) {
 	}, true);
 	
 	Function.safeStdLibAddition(Object, 'pathValue', function (path, value) {
-	  return Object.pathInfo(this, path, value);
+	  const info = this.pathInfo(path, value);
+	  return info ? info.target : undefined;
 	});
 	
 	Function.safeStdLibAddition(Object, 'deletePath', function (path) {
@@ -4835,21 +5088,21 @@ function (require, exports, module) {
 	    this.root = () => this.tree().root();
 	    this.isRoot = () => parent instanceof DecisionTree;
 	
-	    function addReachableChildren(node, nodes, doNotCreate) {
+	    function addReachableChildren(node, nodes, doNotCreate, searchAll) {
 	      if (node.shouldRecurse()) {
 	        const stateKeys = node.stateNames();
 	        for(let index = 0; index < stateKeys.length; index += 1) {
 	          const stateName = stateKeys[index];
-	          if (node.reachable(stateName)) {
+	          if (searchAll || node.reachable(stateName)) {
 	            const child = node.next(stateName, doNotCreate);
-	            nodes.push(child);
+	            if (child) nodes.push(child);
 	          }
 	        }
 	      }
 	    }
 	
 	    // iff func returns true function stops and returns node;
-	    this.breathFirst = (func, doNotCreate) => {
+	    this.breathFirst = (func, doNotCreate, searchAll) => {
 	      const nodes = [this];
 	      const runFunc = (typeof func) === 'function';
 	      let nIndex = 0;
@@ -4860,24 +5113,28 @@ function (require, exports, module) {
 	          const val = func(node);
 	          if (val === true) return node;
 	          if (val) return val;
-	          addReachableChildren(node, nodes, doNotCreate);
+	          addReachableChildren(node, nodes, doNotCreate, searchAll);
 	          nodeMap[node.id()] = true;
 	        }
 	        nIndex++;
 	      }
 	    }
 	
-	    this.depthFirst = (func, doNotCreate) => {
+	    this.depthFirst = (func, doNotCreate, searchAll) => {
 	      if (func(instance)) return true;
 	      if (this.shouldRecurse()) {
 	        const stateKeys = instance.stateNames();
 	        for(let index = 0; index < stateKeys.length; index += 1) {
 	            const child = instance.next(stateKeys[index], doNotCreate);
-	            if (instance.reachable(child.name())) {
+	            if (child && (searchAll || instance.reachable(child.name()))) {
 	              child.depthFirst(func);
 	            }
 	        }
 	      }
+	    }
+	
+	    this.forall = (func) => {
+	      this.breathFirst(func, true, true);
 	    }
 	
 	    function decendent(nameOfunc) {
@@ -5404,15 +5661,23 @@ const $t = require('../$t');
 
 RequireJS.addFunction('../../public/js/utils/input/init.js',
 function (require, exports, module) {
+	
+const Input = require('./input');
+	Input.styles = [];
+	Input.styles.push(Object.class.register(require('./styles/select/relation')));
+	Input.styles.push(Object.class.register(require('./styles/list')));
+	Input.styles.push(Object.class.register(require('./styles/measurement')));
+	Input.styles.push(Object.class.register(require('./styles/multiple-entries')));
+	Input.styles.push(Object.class.register(require('./styles/number')));
+	Input.styles.push(Object.class.register(require('./styles/object')));
+	Input.styles.push(Object.class.register(require('./styles/radio')));
+	Input.styles.push(Object.class.register(require('./styles/select')));
+	Input.styles.push(Object.class.register(require('./styles/list')));
+	Input.styles.push(Object.class.register(require('./styles/table')));
+	Input.styles.push(Object.class.register(require('./styles/textarea')));
+	
+	
 	Object.class.register(require('./decision/decision'));
-	Object.class.register(require('./styles/multiple-entries'));
-	Object.class.register(require('./styles/textarea'));
-	Object.class.register(require('./styles/measurement'));
-	Object.class.register(require('./styles/radio'));
-	Object.class.register(require('./styles/select'));
-	Object.class.register(require('./styles/table'));
-	Object.class.register(require('./styles/list'));
-	Object.class.register(require('./styles/select/relation'));
 	
 });
 
@@ -5510,7 +5775,7 @@ function (require, exports, module) {
 	    }
 	    this.attrString = () => Input.attrString(this.targetAttr(), this.value());
 	
-	    function getElem(id) {return document.getElementById(id);}
+	    function getElem(id) {return du.id(id)}
 	    this.get = () => getElem(this.id());
 	
 	    this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
@@ -5534,8 +5799,9 @@ function (require, exports, module) {
 	
 	    this.getValue = getValue;
 	    this.updateDisplay = () => {
-	      const elem = getElem(instance.id());
-	      if (elem) elem[instance.targetAttr()] = this.value();
+	      const elem = du.find(`[input-id="${this.id()}"]`);
+	      elem.outerHTML = this.html();
+	      // if (elem) elem[instance.targetAttr()] = this.value();
 	    };
 	    let chosen = false;
 	    this.setValue = (val, force, eventTriggered) => {
@@ -5556,7 +5822,7 @@ function (require, exports, module) {
 	      value = undefined;
 	      return false;
 	    }
-	this.name()
+	
 	    this.chosen = () => props.mustChoose ? chosen : true;
 	
 	    this.value = () => {
@@ -5574,6 +5840,8 @@ function (require, exports, module) {
 	      this.validate();
 	      return valid;
 	    }
+	
+	    this.editHtml = () => this.constructor.editHtml(this);
 	    this.validation = function(val) {
 	      const elem = getElem(instance.id());
 	      val = val === undefined && elem ? elem.value : val;
@@ -5658,16 +5926,15 @@ function (require, exports, module) {
 	}
 	
 	Input.getFromElem = (elem) => {
-	  const closest = du.find.closest('[input-id]', elem);
-	  if (closest === undefined) return undefined;
-	  const id = closest.getAttribute('input-id');
+	  const idElem = du.find.up('[input-id],[input-ref-id]', elem);
+	  if (idElem === undefined) return undefined;
+	  const id = idElem.getAttribute('input-id') || idElem.getAttribute('input-ref-id');
 	  return Input.get(id);
 	}
 	
+	Input.template = new $t('input/input');
 	Input.fromJson = (json) => new (Object.class.get(json._TYPE))(json);
 	
-	Input.template = new $t('input/input');
-	Input.html = (instance) => () => Input.template.render(instance);
 	Input.flagAttrs = ['checked', 'selected'];
 	Input.attrString = (targetAttr, value) =>{
 	  if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
@@ -5676,6 +5943,549 @@ function (require, exports, module) {
 	  return `${targetAttr}='${value}'`
 	}
 	module.exports = Input;
+	
+	
+	
+	// TODO: this shouuld be a seperate class
+	Input.editTemplate = new $t('input/edit/input');
+	Input.html = (instance) => () => Input.template.render(instance);
+	
+	const objectItemTemplate = new $t('input/edit/list/object');
+	const stringItemTemplate = new $t('input/edit/list/string');
+	function listItemHtml (item) {
+	  if (item instanceof Input) return item.editHtml();
+	  if (item instanceof Object) return objectItemTemplate.render(item);
+	  return stringItemTemplate.render({value: item});
+	}
+	Input.editHtml = (input) => Input.editTemplate.render({input, listItemHtml});
+	
+	du.on.match('change', '.input-edit-cnt[input-ref-id] input[attr]', (elem) => {
+	  const input = Input.getFromElem(elem);
+	  const attr = elem.getAttribute('attr');
+	  input[attr](elem.value);
+	  input.updateDisplay();
+	});
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/decision/modification.js',
+function (require, exports, module) {
+	
+
+	
+	const DecisionInputTree = require('./decision');
+	const InputInput = require('../decision/input-input.js');
+	const Input = require('../input.js');
+	const Select = require('../styles/select.js');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const Conditions = require('../../conditions');
+	
+	const modHideAll = du.switch('.modify-edit', 'mod-id');
+	
+	const hideAll = () => {
+	  for (let index = 0; index < all.length; index++) all[index].hidden = true;
+	};
+	
+	const toolCnt = du.create.element('div', {class: 'mod-decision-cnt'});
+	toolCnt.innerHTML = new $t('input/decision/decision-modification').render({});
+	du.find('body').append(toolCnt);
+	
+	let targetNodeElem;
+	let targetInputElem;
+	
+	const thenBtn = du.find.down('.then-btn', toolCnt);
+	const condBtn = du.find.down('.conditional-btn', toolCnt);
+	const editBtn = du.find.down('.edit-btn', toolCnt);
+	const addBtn = du.find.down('.add-btn', toolCnt);
+	const rmBtn = du.find.down('.remove-btn-cnt>button', toolCnt);
+	const closeCntBtn = du.find.down('.decision-tree-mod-cnt>.close-cnts', toolCnt);
+	
+	const thenCnt = du.find.down('.then-cnt', toolCnt);
+	const condCnt = du.find.down('.condition-cnt', toolCnt);
+	const editCnt = du.find.down('.edit-cnt', toolCnt);
+	const addCnt = du.find.down('.add-cnt', toolCnt);
+	
+	const thenAddCnt = du.find.down('.decision-tree-mod-cnt>.then-add-cnt', toolCnt);
+	const ifEditBtnCnt = du.find.down('.if-edit-cnt', toolCnt);
+	const rmCnt = du.find.down('.remove-btn-cnt', toolCnt);
+	const rmEditCnt = du.find.down('.rm-edit-cnt', toolCnt);
+	
+	const all = [closeCntBtn, thenBtn, condBtn, editBtn, addBtn, thenCnt, condCnt, editCnt, addCnt, ifEditBtnCnt, rmCnt, rmEditCnt];
+	
+	function updateConditionTree(elem) {
+	  let input = Input.getFromElem(elem);
+	  if (elem !== condBtn && input !== condTarget.input) return;
+	  if (elem === condBtn) input = Input.getFromElem(targetInputElem);
+	  const conditionCnt = du.find.up('.condition-input-tree', elem);
+	  if (conditionCnt) return;
+	  const node = condTarget.node;
+	  const inputCnt = du.find.up('.decision-input-array-cnt', elem);
+	
+	  const inputArray = node.payload().inputArray;
+	  const val = input.value();
+	  const props = {header: `If ${input.name()} <br>`};
+	  const condTree = getConditionTree(val, node, input, props);
+	  const value = input.value();
+	  if ((typeof value) === 'string') {
+	    condTree.find.input('condition').setValue(value);
+	  }
+	  const treeHtml = condTree.html();
+	  condCnt.innerHTML = treeHtml;
+	}
+	
+	class ModDecisionTree {
+	  constructor(decisionTree) {
+	    const treeId = decisionTree.id();
+	    const nodeCntSelector = `[tree-id="${treeId}"] .decision-input-cnt`;
+	    const inputCntSelector = `[tree-id="${treeId}"] .decision-input-array-cnt>.input-cnt`;
+	    const inputSelector = `[tree-id="${treeId}"] .decision-input-array-cnt input, ` +
+	                          `[tree-id="${treeId}"] .decision-input-array-cnt select, ` +
+	                          `[tree-id="${treeId}"] .decision-input-array-cnt textarea`;
+	
+	    let active = true;
+	    this.on = () => active = true;
+	    this.off = () => {
+	      hideAll();
+	      active = false;
+	    }
+	    this.toggle = () => active ? this.off() : this.on();
+	    this.active = () => active;
+	
+	    function mouseoverNode(elem) {
+	      if (!active) return;
+	      if (elem) targetNodeElem = elem;
+	      // du.move.relitive(thenBtn, elem, 'topcenter');
+	      du.move.relitive(thenAddCnt, elem, 'bottomcenter');
+	      du.move.relitive(rmCnt, elem, 'topright');
+	      thenBtn.hidden = false;
+	      rmCnt.hidden = false;
+	      addBtn.hidden = false;
+	      rmBtn.hidden = false;
+	    }
+	    function mouseoverInput(elem) {
+	      if (!active) return;
+	      ifEditBtnCnt.hidden = false;
+	      condBtn.hidden = false;
+	      editBtn.hidden = false;
+	      du.move.relitive(ifEditBtnCnt, elem, 'leftcenterouter')
+	      targetInputElem = elem;
+	    }
+	
+	
+	    // function mouseoutNode(elem) {
+	    //   if (!active) return;
+	    // }
+	    // function mouseoutInput(elem) {
+	    //   if (!active) return;
+	    //   if (!du.is.ancestor(elem, targetInputElem)) {
+	    //     ifEditBtnCnt.hidden = true;
+	    //   }
+	    // }
+	    // du.on.match('mouseout', nodeCntSelector, mouseoutNode);
+	    // du.on.match('mouseout', inputCntSelector, mouseoutInput);
+	
+	    du.on.match('mouseover', nodeCntSelector, mouseoverNode);
+	    du.on.match('mouseover', inputCntSelector, mouseoverInput);
+	    du.on.match('change', inputSelector, (elem) => {
+	      elem.matches(inputSelector);
+	      setTimeout(() => {
+	        updateConditionTree(elem);
+	        const targetCnt = rmEditCnt.hidden ? condCnt : rmEditCnt;
+	        showCloseButton(targetCnt);
+	      });
+	    });
+	  }
+	}
+	
+	function showCloseButton(elem) {
+	  closeCntBtn.hidden = false;
+	  du.move.relitive(closeCntBtn, elem, 'righttopouter');
+	}
+	
+	let addTargetNode;
+	function showAddInput(elem) {
+	  addCnt.hidden = false;
+	  addTargetNode = DecisionInputTree.getNode(targetNodeElem);
+	  const inputTree = ModDecisionTree.inputTree(addTargetNode);
+	  addCnt.innerHTML = inputTree.html();
+	  du.move.relitive(addCnt, targetNodeElem, 'bottomcenter');
+	  showCloseButton(addCnt);
+	  du.move.inbounds(addCnt)
+	}
+	du.on.match('click', '.add-btn', showAddInput);
+	
+	function addInput(details, elem)  {
+	  const input = InputInput.getInput(details);
+	  addTargetNode.addInput(input);
+	  DecisionInputTree.rebuild(targetNodeElem);
+	  addCnt.hidden = true;
+	}
+	
+	const getCondition = (...args) => DecisionInputTree.getCondition(...args);
+	
+	function createConditionalNodeFunction(node, input) {
+	  return function createNode(values, elem) {
+	    const attribute = input.name();
+	    const type = `${values.type}Type`;
+	    const subType = values[values.type.toCamel()][type.toCamel()];
+	    let value = values.condition;
+	    if (values.type === 'Number') value = Number.parseFloat(value);
+	    if (values.type === 'List') value = value.split(',');
+	    const condition = getCondition(attribute, value, subType);
+	    console.log(condition.satisfied(node));
+	    console.log(condition.satisfied(node));
+	    const name = values.group;
+	    const newNode = node.then(name, values.payload);
+	    node.conditions.add(condition, name);
+	    const condCnt = du.find.up('.condition-input-tree', elem);
+	    const condBtn = du.find.closest('.conditional-button', condCnt)
+	    hideAll();
+	    const inputElem = Input.getFromElem(elem)
+	    DecisionInputTree.update.children(inputElem);
+	  }
+	}
+	
+	function andHandlerInput(node, inputs) {
+	  const handlerInput = node.tree().payloadInput();
+	  if (handlerInput) inputs = [handlerInput].concat(inputs);
+	  return inputs
+	}
+	
+	function conditionalInputTree(node, props) {
+	  props ||= {};
+	  const group = new Input({
+	    name: 'group',
+	    label: 'Group',
+	    class: 'center',
+	  });
+	
+	  function updateGroupList(node) {
+	    if (node._NODE) node = node._NODE;
+	    const list = Object.keys(node.tree().stateConfigs());
+	    group.list(list);
+	    }
+	  updateGroupList(node);
+	
+	  const type = new Select({
+	    label: 'Type',
+	    name: 'type',
+	    class: 'center',
+	    list: ['String', 'Number', 'Reference', 'List', 'Regex']
+	  });
+	
+	  const stringType = new Select({
+	    name: 'stringType',
+	    class: 'center',
+	    list: ['Case Insensitive', 'Exact', 'Wild Card', 'Contains', 'Any', 'Except']
+	  });
+	
+	  const numberType = new Select({
+	    name: 'numberType',
+	    class: 'center',
+	    list: ['Equal', 'Less Than', 'Greater Than', 'Less Than or Equal', 'Greater Than or Equal']
+	  });
+	
+	  const referenceType = new Select({
+	    name: 'type',
+	    class: 'center',
+	    list: ['need', 'to', 'dynamically update']
+	  });
+	
+	  const listType = new Select({
+	    name: 'listType',
+	    class: 'center',
+	    list: ['Inclusive', 'Exclusive']
+	  });
+	
+	  const condition = new Input({
+	    label: 'Condition',
+	    name: 'condition',
+	    inline: true,
+	    class: 'center',
+	    value: props.conditionValue
+	  });
+	
+	  props.inputArray = andHandlerInput(node, [group, type, condition]);
+	
+	  const tree = new DecisionInputTree(props.treeName, props);
+	  const root = tree.root();
+	
+	  const dic = (value, type) => getCondition('type', value, type);
+	  function addTypeNode(name, inputArray, value, type) {
+	    const node = root.then(name, {inputArray});
+	    root.conditions.add(dic(value, type), name);
+	    node.relatedTo('type');
+	    return node;
+	  }
+	
+	  addTypeNode('reference', [referenceType], 'Reference');
+	  addTypeNode('string', [stringType], 'String')
+	  addTypeNode('number', [numberType], 'Number')
+	  addTypeNode('list', [listType], 'List')
+	
+	  tree.onChange(updateGroupList);
+	
+	  tree.onSubmit(props.onSubmit);
+	
+	  return tree;
+	}
+	
+	let thenTargetNode;
+	const thenInput = (node) => {
+	  const group = new Input({
+	    name: 'group',
+	    label: 'Group',
+	    class: 'center',
+	  });
+	
+	  function updateGroupList(node) {
+	    if (node._NODE) node = node._NODE;
+	    const list = Object.keys(node.tree().stateConfigs());
+	    group.list(list);
+	  }
+	  updateGroupList(node);
+	
+	  const props = {inputArray: andHandlerInput(node, [group])};
+	  const tree = new DecisionInputTree('Node', props);
+	  tree.onSubmit((values, elem) => {
+	    const name = values.group;
+	    const newNode = node.then(name, values.payload);
+	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
+	    const btnCnt = du.find.closest('.then-button', elem);
+	    const inputCnt = du.find.closest('.then-input-tree', btnCnt);
+	    hideAll();
+	    DecisionInputTree.hardUpdate(treeCnt);
+	  });
+	  return tree;
+	}
+	
+	du.on.match('click', '.then-btn', (elem, two, three) => {
+	  console.log('ThEn?');
+	  thenTargetNode = DecisionInputTree.getNode(targetNodeElem);
+	  const thenPut = thenInput(thenTargetNode);
+	  thenCnt.innerHTML = thenPut.html();
+	  thenCnt.hidden = false;
+	  du.move.relitive(thenCnt, targetNodeElem, 'bottomcenter');
+	  showCloseButton(thenCnt);
+	});
+	
+	const objectKeyFilter = (currObj) => (k) => (currObj[k]._NODE && !currObj.condition) || (k === 'condition' && currObj.condition);
+	const valueFilter = (val) => (typeof val) === 'string';
+	function getConditionKey(values) {
+	  const curr = values['Question Groupy'];
+	  let path, attr, lastKey;
+	  let currObj = values;
+	  while (true) {
+	    const validKeys = Object.keys(currObj).filter(objectKeyFilter(currObj));
+	    const validPaths = Object.values(currObj).filter(valueFilter);
+	    if (validPaths.length !== 1) throw new Error('There should be only one valid path');
+	    if (validKeys.length !== 1) throw new Error('There should be only one valid key');
+	    key = validKeys[0];
+	    currObj = currObj[key];
+	    const lastHyphIndex = key.indexOf('-');
+	    path = path ? `${path}.${key}` : key;
+	    attr = attr ? `${attr}.${validPaths[0]}` : validPaths[0];
+	    if (!(currObj.condition instanceof Object) && currObj.condition !== undefined) break;
+	  }
+	  return {path, attr};
+	}
+	
+	function createCondition(values, node, input) {
+	  const pathAttr = getConditionKey(values);
+	  const condObj = Object.pathValue(values, pathAttr.path);
+	  const value = condObj.condition;
+	
+	  const attribute = input.name()+'.'+pathAttr.attr;
+	  const type = `${condObj.type}Type`;
+	  const subType = condObj[condObj.type.toCamel()][type.toCamel()];
+	  let condValue = condObj.condition;
+	  if (condObj.type === 'Number') condValue = Number.parseFloat(condValue);
+	  if (condObj.type === 'List') condValue = condValue.split(',');
+	  const cond = getCondition(attribute, condValue, subType);
+	
+	  const childName = String.random();
+	  const child = node.then(condObj.group);
+	  node.conditions.add(cond, condObj.group);
+	
+	  DecisionInputTree.update()(targetInputElem);
+	  hideAll();
+	}
+	
+	function processObject (select, key, node, object, targetNode, conditions, path) {
+	  const child = node.then(path);
+	  const type = key === '*' ? 'exact' : undefined;
+	  const cond = getCondition(select.name(), key, type);
+	  const childConds = conditions.clone();
+	  childConds.add(cond);
+	  node.conditions.add(cond, path);
+	  addObjectKeys(child, object, targetNode, childConds, path);
+	}
+	
+	function proccessValue (select, key, node, value, targetNode, conditions, path) {
+	  let child = node.stateMap()[key];
+	  if (child === undefined) {
+	    const childConds = conditions.clone();
+	      const type = key === '*' ? 'exact' : undefined;
+	      const props = {treeName: path, conditionValue: value};
+	      const condInputTree = conditionalInputTree(targetNode, props);
+	      child = node.then(condInputTree.root());
+	      const cond = getCondition(select.name(), key, type);
+	      childConds.add(cond);
+	      node.conditions.add(childConds, path);
+	   }
+	}
+	
+	const DEF_COND = 'DEFINE CONDITION';
+	function superObject(object) {
+	  const superObj = {};
+	  const keys = Object.keys(object);
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const value = object[key];
+	    if (value instanceof Object) {
+	      superObj[key] = superObject(value);
+	      if (superObj['*']) Object.merge(superObj['*'], superObject(value), true)
+	      else superObj['*'] = superObject(value);
+	      superObj[DEF_COND] = '';
+	    } else {
+	      superObj['*'] = '';
+	      superObj[key] = value;
+	    }
+	  }
+	  return superObj;
+	}
+	
+	const objectKeySorter = (key1, key2) => {
+	  if (key1 === DEF_COND) return -1;
+	  if (key2 === DEF_COND) return 0;
+	  if (key1 === '*') return -1;
+	  if (key2 === '*') return 0;
+	  return key1 - key2;
+	}
+	
+	function addObjectKeys(node, object, targetNode, conditions, path) {
+	  if (conditions === undefined) object = superObject(object);
+	
+	  conditions ||= new Conditions.And([]);
+	  const keys = [].concat(Object.keys(object));
+	  const list = [];
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const value = object[key];
+	    list.push(key);
+	  }
+	  list.sort(objectKeySorter);
+	  const select = new Select({name: node.name(), list})
+	  node.addInput(select);
+	  const paths = {};
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    let currPath = path ? path + '-' + key : key;
+	    const value = object[key];
+	    const runObject = value instanceof Object;
+	    const runValue = !runObject;
+	    if (runObject) processObject(select, key, node, value, targetNode, conditions, currPath);
+	    if (runValue) proccessValue(select, key, node, value, targetNode, conditions, currPath);
+	  }
+	  return keys;
+	}
+	
+	function objectConditionTree(values, node, input, props) {
+	  const tree = new DecisionInputTree(props.treeName, props);
+	  addObjectKeys(tree.root(), values, node);
+	  tree.onSubmit((values) => createCondition(values, node, input));
+	  return tree;
+	}
+	
+	function getConditionTree(values, node, input, props) {
+	  if (values instanceof Object)
+	    return objectConditionTree(values, node, input, props);
+	  props ||= {};
+	  props.treeName = 'Question Groupy';
+	  props.onSubmit = createConditionalNodeFunction(node, input);
+	  props.conditionValue = input.value();
+	  return conditionalInputTree(node, props);
+	}
+	
+	const condTarget = {};
+	function condBtnPressed(elem) {
+	  condTarget.node = DecisionInputTree.getNode(targetNodeElem);
+	  condTarget.input = Input.getFromElem(targetInputElem);;
+	  const inputTreeCnt = updateConditionTree(elem);
+	  condCnt.hidden = false;
+	  du.move.relitive(condCnt, targetInputElem, 'bottomcenterouter');
+	  showCloseButton(condCnt);
+	}
+	
+	function removeNodeBtnPressed(elem) {
+	  const node = DecisionInputTree.getNode(targetNodeElem);
+	  if (confirm(`Are you sure you want to remove node '${node.name()}'`) == true) {
+	    node.remove();
+	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
+	    DecisionInputTree.hardUpdate(treeCnt);
+	  }
+	  hideAll();
+	}
+	
+	du.on.match('click', '.conditional-btn', condBtnPressed);
+	du.on.match('click', '.remove-btn-cnt>.rm-node', removeNodeBtnPressed);
+	
+	
+	
+	ModDecisionTree.inputTree = function (node, noSubmission) {
+	  const targetTree = node.tree();
+	  const nameVal = (value) => {
+	    if (value === '') return false;
+	    const camel = value.toCamel();
+	    const inputs = node.payload().inputArray;
+	    for (let index = 0; index < inputs.length; index++) {
+	      if (inputs[index].name() === camel) return false;
+	    }
+	    return node.stateNames().indexOf(camel) === -1;
+	  }
+	
+	  const tree = new InputInput({noSubmission, class: 'modify',
+	                  validation: {name: nameVal}});
+	  const root = tree.root();
+	
+	
+	
+	  tree.onSubmit(addInput);
+	  tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
+	  tree.empty = () => {
+	    let empty = true;
+	    tree.root().forEach((node) =>
+	      node.payload().inputArray.forEach(input => empty &&= input.empty()));
+	    return empty;
+	  }
+	  return tree;
+	}
+	
+	
+	const editTargets = {};
+	du.on.match('click', '.edit-btn', (elem) => {
+	  editTargets.input = Input.getFromElem(targetInputElem);
+	  editTargets.node = DecisionInputTree.getNode(targetNodeElem);
+	  editCnt.hidden = false;
+	  editCnt.innerHTML = editTargets.input.editHtml();
+	  du.move.relitive(rmEditCnt, targetInputElem, 'bottomcenterouter')
+	  showCloseButton(editCnt);
+	});
+	
+	du.on.match('click', '.modiy-rm-input-btn', (elem) => {
+	  const inputIdElem = du.find.closest('[input-ref-id', elem);
+	  editTargets.node.removeInput(editTargets.input.name());
+	  DecisionInputTree.hardUpdate(targetInputElem.parentElement);
+	  hideAll();
+	});
+	
+	du.on.match('click', '.decision-tree-mod-cnt>.close-cnts', hideAll);
+	
+	
+	
+	module.exports = ModDecisionTree;
 	
 });
 
@@ -5702,6 +6512,757 @@ const $t = require('../../$t');
 });
 
 
+RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	
+	const validation = () => true;
+	class MultipleEntries extends Input {
+	  constructor(inputTemplate, props) {
+	
+	
+	    props ||= {};
+	    props.validation ||= (event, details) => {
+	      const list = props.list;
+	      let allEmpty = true;
+	      let valid = true;
+	      for (let index = 0; index < list.length; index++) {
+	        const input = list[index];
+	        const empty = input.empty();
+	        if (!empty) {
+	          if (input.optional) input.optional(false);
+	          valid &= list[index].valid();
+	        }
+	        allEmpty &= empty;
+	      }
+	      return !allEmpty && valid;
+	    }
+	    if (props.list === undefined) {
+	      const list = [];
+	      props.list = list;
+	      props.list.forEach((i) =>
+	        list.push(i.clone()));
+	    }
+	
+	    props.list ||= [];
+	    super(props);
+	    Object.getSet(this, 'inputTemplate');
+	    let template;
+	    const instance = this;
+	    this.inputTemplate = () => {
+	      if (!template) {
+	        if ((typeof inputTemplate) === 'function') {
+	          template = inputTemplate();
+	        } else template = inputTemplate;
+	      }
+	      return template;
+	    }
+	
+	    this.empty = () => {
+	      if (props.list.length > 1) return false;
+	      const inputs = props.list[0];
+	      for (let index = 0; index < inputs.length; index++) {
+	        if (!inputs[index].empty()) return false;
+	      }
+	      return true;
+	    }
+	    this.valid = () => this.value().length > 0;
+	
+	    this.clone = () =>
+	        new MultipleEntries(inputTemplate, JSON.clone(props));
+	
+	    this.set = (index, value) => {
+	      if (props.list[index] === undefined) {
+	        props.list[index] = this.inputTemplate().clone({optional: true});
+	        if (props.list[index].on) {
+	          props.list[index].on('change', this.validation);
+	        } else {
+	          props.list[index].onChange(this.validation);
+	        }
+	      }
+	      return props.list[index];
+	    }
+	
+	    this.tag = () => props.inline() ? 'span' : 'div';
+	
+	    this.input = (nameOindexOfunc) => {
+	      const nif = nameOindexOfunc;
+	      if ((typeof nif) === 'number') return props.list[nif];
+	      const runFunc = (typeof nif) === 'function';
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (runFunc) {
+	          const val = nif(input);
+	          if (val) return val;
+	        } else if (input.name() === nif) return input;
+	
+	        if (input instanceof MultipleEntries) {
+	          const mInput = input.input(nif);
+	          if (mInput) return mInput;
+	        }
+	      }
+	    }
+	    this.getValue = () => {
+	      const values = [];
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (!input.empty()) {
+	          if (input.valid()) {
+	            values.push(input.value());
+	          } else {
+	            input.valid();
+	            input.valid();
+	          }
+	        }
+	      }
+	      return values;
+	    }
+	
+	    this.setValue = (list) => {
+	      if (list) {
+	        list.forEach((val, index) => {
+	            const input = this.set(index)
+	            input.setValue(val);
+	        });
+	      }
+	    }
+	
+	    this.value = this.getValue;
+	
+	    const parentHtml = this.html;
+	    this.html = () => {
+	      if (props.list.length === 0 || !props.list[props.list.length - 1].empty()) this.set(props.list.length);
+	      return parentHtml();
+	    }
+	
+	    this.length = () => this.list().length;
+	    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
+	
+	    this.setValue(props.value);
+	  }
+	}
+	
+	MultipleEntries.template = new $t('input/multiple-entries');
+	MultipleEntries.singleTemplate = new $t('input/one-entry');
+	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
+	
+	MultipleEntries.fromJson = (json) => {
+	  const inputTemplate = Object.fromJson(json.inputTemplate);
+	  return new MultipleEntries(inputTemplate, json);
+	
+	}
+	
+	function meInfo(elem) {
+	  const info = {};
+	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
+	  if (info.oneCnt) {
+	    info.indexCnt = du.find.up('[index]', info.oneCnt);
+	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
+	    const ae =  document.activeElement;
+	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
+	  }
+	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
+	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
+	  info.length = info.multiInput.length();
+	  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
+	  info.last = info.index === info.length - 1;
+	  info.empty = info.multiInput.list()[info.index].empty();
+	  return info;
+	}
+	
+	const meSelector = '.multiple-entry-cnt input,select,textarea';
+	const oneSelector = '.one-entry-cnt *';
+	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
+	du.on.match('change', meSelector, (elem) => {
+	  // console.log('changed');
+	});
+	
+	du.on.match('click', meSelector, (elem) => {
+	  // console.log('clicked');
+	});
+	
+	const lastCallers = [];
+	du.on.match('focusout', '.one-entry-cnt', (elem) => {
+	  let info = meInfo(elem);
+	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
+	  const id = ++lastCallers[info.index];
+	  setTimeout(() => {
+	    if (id !== lastCallers[info.index]) return;
+	    info = meInfo(elem);
+	    if (!info.last && !info.inFocus && info.empty) {
+	      info.indexCnt.remove()
+	      const children = info.multiCnt.children;
+	      for (let index = 0; index < children.length; index++) {
+	        children[index].setAttribute('index', index);
+	      }
+	      const list = info.multiInput.list();
+	      list.remove(list[info.index]);
+	    }
+	  }, 2000);
+	});
+	
+	du.on.match('focusin', oneSelector, (elem) => {
+	  // console.log('focusin');
+	});
+	
+	du.on.match('keyup:change', oneSelector, (elem) => {
+	  if (!isInput(elem)) return;
+	  const info = meInfo(elem);
+	  if (info.index === info.length - 1 && !info.empty) {
+	    const newElem = du.create.element('div', {index: info.index + 1});
+	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
+	    info.multiCnt.append(newElem);
+	    console.log('add 1')
+	  }
+	  // console.log('keyup');
+	});
+	
+	module.exports = MultipleEntries;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/decision/input-input.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const Select = require('../styles/select');
+	const NumberInput = require('../styles/number');
+	const Measurement = require('../../measurement');
+	const MeasurementInput = require('../styles/measurement');
+	const Textarea = require('../styles/textarea');
+	const MultipleEntries = require('../styles/multiple-entries');
+	const DecisionInputTree = require('../decision/decision');
+	const Table = require('../styles/table.js');
+	const InputList = require('../styles/list.js');
+	const RadioTable = Table.Radio;
+	const Radio = require('../styles/radio.js');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	
+	
+	
+	const noSubmitInputTree = () =>
+	  new InputInput({noSubmission: true});
+	
+	
+	class InputInput extends DecisionInputTree {
+	  constructor(props) {
+	    props ||= {};
+	    props.validation ||= {};
+	    if (props.value){
+	      console.log('gere')
+	    }
+	    let details = {};
+	    const name = new Input({
+	      name: 'name',
+	      label: 'Name',
+	      class: 'center',
+	      validation: props.validation.name
+	    });
+	    const inline = new Input({
+	      name: 'inline',
+	      value: props.inline,
+	      label: 'Inline',
+	      class: 'center',
+	      type: 'checkbox'
+	    });
+	    const format = new Select({
+	      label: 'Format',
+	      name: 'format',
+	      class: 'center',
+	      list: ['Text', 'Checkbox', 'Number', 'Radio', 'Select', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement'],
+	      validation: props.validation.format
+	    });
+	    const step = new NumberInput({name: 'step', optional: true, label: 'Step'});
+	    const min = new NumberInput({name: 'min', optional: true, label: 'Minimum'});
+	    const max = new NumberInput({name: 'max', optional: true, label: 'Maximum'});
+	    const tableType = new Select({
+	      label: 'Type',
+	      name: 'type',
+	      class: 'center',
+	      list: ['Text', 'checkbox', 'radio', 'date', 'time', 'column specific']
+	    });
+	    const textCntSize = new Select({
+	      label: 'Size',
+	      name: 'size',
+	      class: 'center',
+	      list: ['Small', 'Large']
+	    });
+	    const units = new Select({
+	      label: 'Units',
+	      name: 'units',
+	      class: 'center',
+	      list: Measurement.units()
+	    });
+	    const label = new Input({
+	      name: 'label',
+	      label: 'Label',
+	      class: 'centnodeConds[index].satisfied()) reer',
+	      validation: (val) => val !== ''
+	    });
+	    const option = new Input({
+	      name: 'option',
+	      label: 'Option',
+	    });
+	    const row = new Input({
+	      name: 'row',
+	      class: 'center',
+	    });
+	    const col = new Input({
+	      name: 'col',
+	      class: 'center',
+	    });
+	    const labels = new MultipleEntries(label, {name: 'labels'});
+	    const options = new MultipleEntries(option, {name: 'options'});
+	    const colType = new MultipleEntries(noSubmitInputTree, {name: 'columns', label: 'Columns'});
+	    const columns = new MultipleEntries(col, {name: 'columns', label: 'Columns'});
+	    const rows = new MultipleEntries(row, {name: 'rows', label: 'Rows'});
+	    const rowCols = [tableType, rows];
+	
+	
+	    const inputs = [name, format];
+	    const multiEnt = new MultipleEntries(noSubmitInputTree, {name: 'templates'});
+	
+	    super(props.name || 'Input', {inputArray: inputs, noSubmission: props.noSubmission, class: 'modify'});
+	    const root = this.root();
+	
+	    const dic = (value, attr) => DecisionInputTree.getCondition(attr || 'format', value);
+	    function addNode(name, inputArray, value, attr, node) {
+	      const targetNode = (node || root);
+	      const newNode = targetNode.then(name, {inputArray});
+	      targetNode.conditions.add(dic(value, attr), name);
+	      return newNode;
+	    }
+	
+	    addNode('text', [textCntSize], 'Text');
+	    addNode('select', [options], 'Select');
+	    addNode('radio', [inline, labels], 'Radio');
+	    const tableNode = addNode('table', rowCols, 'Table');
+	    addNode('tableColumnList', [columns], ['Text', 'checkbox', 'radio', 'date', 'time'], 'type', tableNode);
+	    addNode('tableColumnTemplate', [colType], 'column specific', 'type', tableNode);
+	    addNode('multi', [inline, multiEnt], 'Multiple Entries');
+	    addNode('measure', [units], 'Measurement');
+	    addNode('number', [step, min, max], 'Number');
+	
+	    this.setValue = (inputOrDetails) => {
+	      if (!inputOrDetails) return;
+	      let details = inputOrDetails;
+	      if (inputOrDetails instanceof Input) details = getInputDetails(details);
+	      const setValue = (path) => {
+	        const nodePath = path.split('.');
+	        const inputName = nodePath.splice(-1)[0];
+	        const node = this.getByPath.apply(this, nodePath);
+	        const input = node.find.input(inputName);
+	        input.setValue(details.pathValue(path));
+	      }
+	      setValue('name');
+	      setValue('name');
+	      // setValue('inline');
+	      setValue('format');
+	      setValue('number.step');
+	      setValue('number.min');
+	      setValue('number.max');
+	      setValue('table.type');
+	      setValue('text.size');
+	      setValue('measure.units');
+	      setValue('radio.labels');
+	      setValue('select.options');
+	      setValue('table.tableColumnTemplate.columns');
+	      setValue('multi.templates');
+	      setValue('table.tableColumnList.columns');
+	      setValue('table.rows');
+	    }
+	
+	    this.clone = () => new InputInput(props);
+	    this.empty = () => this.values().name === '';
+	    // tree.onSubmit(addInput);
+	    // tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
+	    // tree.empty = () => {
+	    //   let empty = true;
+	    //   tree.root().forEach((node) =>
+	    //     node.payload().inputArray.forEach(input => empty &&= input.empty()));
+	    //   return empty;
+	    // }
+	
+	    this.setValue(props.input);
+	  }
+	}
+	
+	function getInputDetails(input)  {
+	  const details = {};
+	  details.name = input.label();
+	  details.inline = input.inline();
+	  details.vaalue = input.value();
+	  let list;
+	  if (input instanceof Textarea) {
+	    details.format = 'Text';
+	    details.text = {size: 'Large'};
+	  }
+	
+	  else if (input instanceof NumberInput) {
+	    details.format = 'Number';
+	    details.number = {step: input.step()};
+	    details.number.min = input.min();
+	    details.number.max = input.max();
+	  }
+	
+	  else if (input instanceof Radio) {
+	    details.format = 'Radio';
+	    details.radio = {labels: input.list()};
+	  }
+	
+	  else if (input instanceof Select) {
+	    details.format = 'Select';
+	    const options = input.list();
+	    details.select = {options};
+	  }
+	
+	  else if (input instanceof MeasurementInput) {
+	    details.format = 'Measurement';
+	    details.measure = {units: input.units()};
+	  }
+	
+	  else if (input instanceof Table || input instanceof RadioTable) {
+	    details.format = 'Table';
+	    details.table = {rows: input.rows()};
+	    const isList = !(input.columns()[0] instanceof Input);
+	    if (isList) {
+	      details.table.tableColumnList = {columns: input.columns()};
+	    } else {
+	      const columns = input.columns.map((ci) => getInputDetails(ci));
+	      details.table.tableColumnTemplate = {columns};
+	    }
+	    details.table.type = input.type();
+	  }
+	
+	  else if (input instanceof MultipleEntries) {
+	    details.format = 'Multiple Entries';
+	    details.multi = {templates: []};
+	
+	    const inputList = input.inputTemplate();
+	    const list = inputList.list();
+	    for (let index = 0; index < list.length; index++) {
+	      const inp = list[index];
+	      const inpDets = getInputDetails(inp);
+	      details.multi.templates.push(inpDets);
+	    }
+	  }
+	
+	  else {
+	    switch (input.type()) {
+	      case 'date': details.format = 'Date'; break;
+	      case 'time': details.format = 'Time'; break;
+	      case 'checkbox': details.format = 'Checkbox'; break;
+	      default:
+	        details.format = 'Text';
+	        details.text = {size: 'Small'};
+	        break;
+	
+	    }
+	  }
+	
+	  return details;
+	}
+	
+	function getInput(details, validationCall)  {
+	  const name = details.name.toCamel();
+	  const label = details.name;
+	  let inline = details.inline;
+	  let list, input;
+	  switch (details.format) {
+	    case 'Text':
+	      if (details.text.size === 'Large') {
+	        input = new Textarea({name, label});
+	        break;
+	      } else {
+	        input = new Input({type: 'text', name, label, inline});
+					break;
+	      }
+	    case 'Number':
+	      const step = details.number.step;
+	      const min = details.number.min;
+	      const max = details.number.max;
+	      input = new NumberInput({name, label, min, max, step});
+				break;
+	    case 'Date':
+	      input = new Input({type: 'date', name, label, inline});
+				break;
+	    case 'Time':
+	      input = new Input({type: 'time', name, label, inline});
+				break;
+	    case 'Checkbox':
+	      input = new Input({type: 'checkbox', name, label, inline});
+				break;
+	    case 'Radio':
+	      inline = details.radio.inline;
+	      list = details.radio.labels;
+	      input = new Radio({name, label, list, inline});
+				break;
+	    case 'Select':
+	      list = details.select.options;//.map(input => input.value());
+	      input = new Select({name, label, list});
+				break;
+	    case 'Table':
+	      const props = details.table;
+	      let isList = props.tableColumnList !== undefined;
+	      let columns = isList ?  props.tableColumnList.columns : props.tableColumnTemplate.columns;
+	      let rows = props.rows;
+	      if (!isList) {
+	        columns.forEach((definition, index) => columns[index] = getInput(definition));
+	      }
+	      const type = props.type;
+	      input = new Table({name, label, rows, columns, type});
+				break;
+	    case 'Measurement':
+	      const units = details.measure.units;
+	      input = new MeasurementInput({name, label, units});
+				break;
+	    case 'Multiple Entries':
+	      const templates = details.multi.templates;
+	      list = [];
+	      inline = details.multi.inline;
+	      for (let index = 0; index < templates.length; index++) {
+	        const values = templates[index];
+	        values.inline = inline;
+	        const input = getInput(values);
+	        list.push(input);
+	      }
+	      input = new MultipleEntries(new InputList({list, inline}), {name, label});
+				break;
+	    default:
+	      throw new Error('In the future this will not be reachable');
+	  }
+	  if (!validationCall) validateGetInputDetais(details, input);
+	  return input;
+	}
+	
+	function validateGetInputDetais(details, input) {
+	  const genDets = getInputDetails(input);
+	  const genInput = getInput(genDets, true);
+	  const constructorEq = genInput.constructor === input.constructor;
+	  const typeEq = genInput.type() === input.type();
+	  if (!constructorEq || !typeEq){
+	    console.warn('invalid generated details');
+	    getInputDetails(input);
+	  }
+	}
+	
+	InputInput.getInput = getInput;
+	InputInput.getInputDetails = getInputDetails;
+	
+	
+	
+	module.exports = InputInput;
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	// TODO: Should probably locate somewhere else hacky fix. cosider making editHtml sperate for all Inputs.
+	RadioTable.editTemplate = Table.editTemplate = new $t('input/edit/table');
+	
+	const objectItemTemplate = new $t('input/edit/list/object');
+	const stringItemTemplate = new $t('input/edit/list/string');
+	function listHtml (list) {
+	  const props = {list: [], class: 'input-list-multi'};
+	  let template;
+	  for (let index = 0; index < list.length; index++) {
+	    const item = list[index];
+	    if (item instanceof Input) {
+	      const ii = new InputInput({input: item, noSubmission: true});
+	      props.list.push(ii);
+	      template ||= new InputInput({noSubmission: true});
+	    } else if (item instanceof Object) {
+	      props.list.push(new InputObject({value: item}));
+	      template ||= new InputObject();
+	    } else {
+	      props.list.push(new Input({type: 'simple-string', value: item}));
+	      template ||= new Input({type: 'simple-string'});
+	    }
+	  }
+	  const multi = new MultipleEntries(template, props);
+	  return multi.html();
+	}
+	RadioTable.editHtml = Table.editHtml = (table) => Table.editTemplate.render({table, listHtml});
+	
+	function buildList(elem) {
+	  const input = Input.getFromElem(elem);
+	  const targetInput = Input.getFromElem(elem.previousElementSibling);
+	  const columnValues = targetInput.value();
+	  const list = [];
+	  for (let index = 0; index < columnValues.length; index++) {
+	    const col = columnValues[index];
+	    if ((typeof col) === 'string') list.push(col);
+	    else list.push(InputInput.getInput(col));
+	  }
+	  return {input, list};
+	}
+	
+	du.on.match('click', '#table-column-edit-btn', (elem) => {
+	  const listput = buildList(elem)
+	  listput.input.setColumns(listput.list);
+	  listput.input.updateDisplay();
+	});
+	du.on.match('click', '#table-row-edit-btn', (elem) => {
+	  const listput = buildList(elem)
+	  listput.input.setRows(listput.list);
+	  listput.input.setColumns();
+	  listput.input.updateDisplay();
+	});
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/list.js',
+function (require, exports, module) {
+	
+const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const CustomEvent = require('../../custom-event');
+	const Input = require('../input');
+	
+	// TODO: extend InputObject (class functionality overlap)
+	class InputList extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
+	    const instance = this;
+	
+	    this.value = () => {
+	      const values = {};
+	      props.list.forEach((input, index) => input.validation() && (values[input.name() || index] = input.value()));
+	      return values;
+	    }
+	
+	    const dynamicEvent = CustomEvent.dynamic();
+	    this.on = dynamicEvent.on;
+	
+	    function triggerChangeEvent(value, input, event) {
+	      dynamicEvent.trigger(event, {value, input});
+	    }
+	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
+	
+	    this.setValue = () => {
+	      throw new Error('This function should never get called');
+	    }
+	
+	    this.valid = () => {
+	      if (this.optional()) return true;
+	      let valid = true;
+	      props.list.forEach(input => valid &&= input.optional() || input.valid());
+	      return valid;
+	    }
+	
+	    let optional;
+	    this.optional = (value) => {
+	      if (value !== true && value !== false) return optional;
+	      optional = value;
+	      props.list.forEach(input => input.optional(optional));
+	    }
+	    this.optional(props.optional || false);
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      json.validation = (properties || props).validation;
+	      json.list.forEach(i => delete i.id);
+	      Object.set(json, properties);
+	      return InputList.fromJson(json);
+	    }
+	
+	    this.empty = () => {
+	      for (let index = 0; index < props.list.length; index++) {
+	        if (!props.list[index].empty()) return false
+	      }
+	      return true;
+	    }
+	
+	  }
+	}
+	
+	InputList.fromJson = (json) => {
+	  json.list = Object.fromJson(json.list);
+	  return new InputList(json);
+	}
+	
+	InputList.template = new $t('input/list');
+	InputList.html = (instance) => () => InputList.template.render(instance);
+	
+	
+	
+	module.exports = InputList;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const Measurement = require('../../measurement');
+	
+	class MeasurementInput extends Input {
+	  constructor(props) {
+	    let units = props.units;
+	    let value = new Measurement(props.value, units || true);
+	    props.value = () => value;
+	    super(props);
+	
+	    this.valid = (val) => {
+	      let testVal;
+	      if (val) {
+	        if (val instanceof MeasurementInput) testVal = val.value();
+	        else testVal = val;
+	      } else testVal = value.value();
+	      const valid = !Number.isNaN(testVal);
+	      this.indicateValidity(valid);
+	      return valid;
+	    }
+	
+	    props.errorMsg = 'Invalid Mathematical Expression';
+	    this.value = () => {
+	      return value.display();
+	    }
+	    const parentSetVal = this.setValue;
+	    this.setValue = (val) => {
+	      let newVal = this.valid(val) ? ((val instanceof Measurement) ?
+	                        val : new Measurement(val, units || true)) : value;
+	      const updated = newVal !== value;
+	      value = newVal;
+	      return updated;
+	    }
+	  }
+	}
+	
+	MeasurementInput.template = new $t('input/measurement');
+	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
+	
+	du.on.match('focusout', '.measurement-input', (elem) => {
+	  const input = MeasurementInput.get(elem.id);
+	  elem.value = input.value();
+	})
+	
+	module.exports = MeasurementInput;
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
 function (require, exports, module) {
 	
@@ -5713,12 +7274,6 @@ function (require, exports, module) {
 	const DecisionTree = require('../../decision-tree.js');
 	const Conditions = require('../../conditions.js');
 	const Input = require('../input.js');
-	const NumberInput = require('../styles/number.js');
-	const InputList = require('../styles/list');
-	const Radio = require('../styles/radio');
-	const Table = require('../styles/table');
-	const MeasurementInput = require('../styles/measurement');
-	const Textarea = require('../styles/textarea.js');
 	const CustomEvent = require('../../custom-event');
 	const Select = require('../styles/select.js');
 	const MultipleEntries = require('../styles/multiple-entries.js');
@@ -5833,8 +7388,6 @@ function (require, exports, module) {
 	      return complete == 1;
 	    }
 	    this.onComplete = this.tree().onComplete;
-	    let inputTree;
-	    this.inputTree = () => inputTree ||= DecisionInputTree.inputTree(this);
 	    function updateInputArray (boolean) {
 	      const inputArray = payload.inputArray;
 	      const sc = instance.stateConfig();
@@ -5918,27 +7471,31 @@ function (require, exports, module) {
 	        checkColectiveFilter(nameMap, childCond));
 	    }
 	    const childMapFunc = (childCond) => childCond.child;
-	    this.childrenHtml = (inputIndex, editDisplay) => {
+	    this.childrenHtml = () => {
 	      if (!this.shouldRecurse()) return '';
-	      if (inputIndex === -1 && this.children().length > 1) {
-	        console.log('orphin')
-	      }
-	      const input = this.inputArray()[inputIndex] ;
-	      const filter = input ? nameFilter(input.name()) : dneFilter();
-	      const children = this.reachableChildren().filter(filter).map(childMapFunc);
+	      const children = this.reachableChildren().map(childMapFunc);
 	      let html = '';
 	      for (let index = 0; index < children.length; index++) {
 	        const child = children[index];
-	        html += child.html(editDisplay);
+	        html += child.html();
 	      }
-	      return html;
+	      return html + (children.length > 0 ? '<br><br>' : '');
 	    }
+	    this.empty = () => this.inputArray().length === 0;
 	    this.tag = () => this.tree().block() ? 'div' : 'span';
-	    this.html = (editDisplay) => {
-	      if (editDisplay) {
-	        return DecisionInput.modTemplate.render(this);
+	    this.html = () => DecisionInput.template.render(this);
+	
+	    this.removeInput = (inputName, localOnly) => {
+	      const ia = payload.inputArray;
+	      for (let index = 0; index < ia.length; index++) {
+	        if (ia[index].name() === inputName) {
+	          const stateName = this.stateConfig().name();
+	          ia.splice(index, 1);
+	          if (!localOnly) this.tree().removeInput(stateName, inputName);
+	          return true;
+	        }
 	      }
-	      return DecisionInput.template.render(this);
+	      return false;
 	    }
 	
 	    this.payloadHtml = () => {
@@ -5949,7 +7506,6 @@ function (require, exports, module) {
 	  }
 	}
 	DecisionInput.template = new $t('input/decision/decision');
-	DecisionInput.modTemplate = new $t('input/decision/decision-modification');
 	
 	du.on.match('click', '.conditional-button', (elem) => {
 	  console.log(elem);
@@ -6010,7 +7566,7 @@ function (require, exports, module) {
 	        }
 	      }
 	    }
-	    this.class = () => props.class || 'card';
+	    this.class = () => props.class;
 	    this.buttonClass = () => props.buttonClass;
 	    this.isComplete = () => {
 	      if ((typeof props.isComplete) === 'function') return props.isComplete(this.root());
@@ -6112,6 +7668,20 @@ function (require, exports, module) {
 	      return parentGetState(name, payload);
 	    }
 	
+	    this.removeInput = (stateName, inputName) => {
+	      const configs = this.stateConfigs();
+	      const nodes = [];
+	      this.root().forall((n) => {
+	        const sc = n.stateConfig();
+	        if (sc.name() === stateName) {
+	          const scIArr = sc.payload().inputArray.filter(i => i.name() !== inputName);
+	          sc.setValue('inputArray', scIArr);
+	          n.removeInput(inputName, true);
+	        }
+	      });
+	      console.log('rmI');
+	    }
+	
 	    this.clone = () => DecisionInputTree.fromJson(this.toJson());
 	    this.valid = this.completed;
 	    this.name = () => this.root().name();
@@ -6137,9 +7707,7 @@ function (require, exports, module) {
 	  const tree = DecisionInputTree.getTree(elem);
 	  const treeCnt = du.find.up('[tree-id]', elem);
 	  const cnt = treeCnt.parentElement;
-	  const modCnt = du.find.down('.decision-input-cnt', elem);
-	  const mod = du.class.has(modCnt, 'mod');
-	  cnt.innerHTML = tree.html(null, mod);
+	  cnt.innerHTML = tree.html();
 	}
 	
 	function updateInput(target) {
@@ -6149,55 +7717,30 @@ function (require, exports, module) {
 	
 	  const inputCnt = du.find.up('.decision-input-array-cnt', target);
 	  const inputIndex = Number.parseInt(inputCnt.getAttribute('index'));
-	  const childrenHtmlCnt = du.find.down('.children-recurse-cnt', inputCnt);
-	  const parentCnt = du.find.up('.decision-input-cnt', childrenHtmlCnt)
-	  const mod = du.class.has(parentCnt, 'mod');
-	  const childHtml = node.childrenHtml(inputIndex, mod);
-	  childrenHtmlCnt.innerHTML = childHtml;
+	  const parentCnt = du.find.up('.decision-input-cnt', inputCnt);
+	  updateOrphans(target);
 	}
 	
-	function updateOrphans(dicnt) {
+	function updateOrphans(elem) {
+	  const dicnt = du.find.up('.decision-input-cnt', elem);
 	  const orphanCnt = du.find.down('.orphan-cnt', dicnt);
-	  const node = Lookup.get(dicnt.getAttribute('node-id'));
-	  const mod = du.class.has(dicnt, 'mod');
-	  orphanCnt.innerHTML = node.childrenHtml(-1, mod);
+	  const node = DecisionInputTree.getNode(dicnt);
+	  orphanCnt.innerHTML = node.childrenHtml();
 	}
 	
 	function updateAllChildren(dicnt) {
-	  dicnt = du.find.up('.decision-input-cnt', dicnt);
-	  const cnt = du.find.closest('[node-id]', dicnt);
-	  const nodeId = cnt.getAttribute('node-id');
-	  const node = Lookup.get(nodeId);
-	  const mod = du.class.has(dicnt, 'mod');
-	
-	  const inputs = node.inputArray();
-	  for (let index = 0; index < inputs.length; index++) {
-	    const input = inputs[index];
-	    const childCnt = du.find.down(`[index='${index}'] .children-recurse-cnt`, dicnt);
-	    childCnt.innerHTML = node.childrenHtml(index, mod);
-	  }
 	  updateOrphans(dicnt);
+	  du.move.inbounds(dicnt);
 	}
 	
 	// TODO remove nested function, soft not used.... clean this please
 	DecisionInputTree.update = (soft) => (target, event) => setTimeout(() => updateInput(target));
+	DecisionInputTree.update.children = updateAllChildren;
 	
 	DecisionInputTree.Node = DecisionInput;
 	DecisionInputTree.submit = (elem) => {
 	  const tree = Lookup.get(elem.getAttribute('tree-id'));
 	  tree.submit(elem);
-	}
-	
-	function updateModBtn(elem) {
-	  const button = du.find.closest('.conditional-button', elem);
-	  const input = Input.getFromElem(button);
-	  if (input) {
-	    const value = input.value();
-	    if (value instanceof Object) button.innerText = `If ${input.name()}`;
-	    else if (button && button.getAttribute('target-id') === elem.id) {
-	      button.innerText = `If ${input.name()} = ${value}`;
-	    }
-	  }
 	}
 	
 	let count = 999;
@@ -6207,333 +7750,6 @@ function (require, exports, module) {
 	//   inline: true,
 	//   class: 'center',
 	// });
-	
-	function andHandlerInput(node, inputs) {
-	  const handlerInput = node.tree().payloadInput();
-	  if (handlerInput) inputs = [handlerInput].concat(inputs);
-	  return inputs
-	}
-	
-	function createConditionalNodeFunction(node, input) {
-	  return function createNode(values, elem) {
-	    const attribute = input.name();
-	    const type = `${values.type}Type`;
-	    const subType = values[values.type.toCamel()][type.toCamel()];
-	    let value = values.condition;
-	    if (values.type === 'Number') value = Number.parseFloat(value);
-	    if (values.type === 'List') value = value.split(',');
-	    const condition = new NodeCondition(attribute, value, subType);
-	    console.log(condition.satisfied(node));
-	    console.log(condition.satisfied(node));
-	    const name = values.group;
-	    const newNode = node.then(name, values.payload);
-	    node.conditions.add(condition, name);
-	    const condCnt = du.find.up('.condition-input-tree', elem);
-	    const condBtn = du.find.closest('.conditional-button', condCnt)
-	    condCnt.hidden = true;
-	    condBtn.hidden = false;
-	    const inputElem = du.find.closest(`[input-id="${input.id()}"]`, elem)
-	    updateAllChildren(inputElem, true);
-	  }
-	}
-	
-	function conditionalInputTree(node, props) {
-	  props ||= {};
-	  const group = new Input({
-	    name: 'group',
-	    label: 'Group',
-	    class: 'center',
-	  });
-	
-	  function updateGroupList(node) {
-	    if (node._NODE) node = node._NODE;
-	    const list = Object.keys(node.tree().stateConfigs());
-	    group.list(list);
-	    }
-	  updateGroupList(node);
-	
-	  const type = new Select({
-	    label: 'Type',
-	    name: 'type',
-	    class: 'center',
-	    list: ['String', 'Number', 'Reference', 'List', 'Regex']
-	  });
-	
-	  const stringType = new Select({
-	    name: 'stringType',
-	    class: 'center',
-	    list: ['Case Insensitive', 'Exact', 'Wild Card', 'Contains', 'Any', 'Except']
-	  });
-	
-	  const numberType = new Select({
-	    name: 'numberType',
-	    class: 'center',
-	    list: ['Equal', 'Less Than', 'Greater Than', 'Less Than or Equal', 'Greater Than or Equal']
-	  });
-	
-	  const referenceType = new Select({
-	    name: 'type',
-	    class: 'center',
-	    list: ['need', 'to', 'dynamically update']
-	  });
-	
-	  const listType = new Select({
-	    name: 'listType',
-	    class: 'center',
-	    list: ['Inclusive', 'Exclusive']
-	  });
-	
-	  const condition = new Input({
-	    label: 'Condition',
-	    name: 'condition',
-	    inline: true,
-	    class: 'center',
-	  });
-	
-	  props.inputArray = andHandlerInput(node, [group, type, condition]);
-	
-	  const tree = new DecisionInputTree(props.treeName, props);
-	  const root = tree.root();
-	
-	  const dic = (value, type) => new NodeCondition('type', value, type);
-	  function addTypeNode(name, inputArray, value, type) {
-	    const node = root.then(name, {inputArray});
-	    root.conditions.add(dic(value, type), name);
-	    node.relatedTo('type');
-	    return node;
-	  }
-	
-	  addTypeNode('reference', [referenceType], 'Reference');
-	  addTypeNode('string', [stringType], 'String')
-	  addTypeNode('number', [numberType], 'Number')
-	  addTypeNode('list', [listType], 'List')
-	
-	  tree.onChange(updateGroupList);
-	
-	  // tree.onSubmit(props.onSubmit);
-	
-	  return tree;
-	}
-	
-	const thenInput = (node) => {
-	  const group = new Input({
-	    name: 'group',
-	    label: 'Group',
-	    class: 'center',
-	  });
-	
-	  function updateGroupList(node) {
-	    if (node._NODE) node = node._NODE;
-	    const list = Object.keys(node.tree().stateConfigs());
-	    group.list(list);
-	  }
-	  updateGroupList(node);
-	
-	  const props = {inputArray: andHandlerInput(node, group)};
-	  const tree = new DecisionInputTree('Next', props);
-	  tree.onSubmit((values, elem) => {
-	    const name = values.group;
-	    const newNode = node.then(name, values.payload);
-	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
-	    const btnCnt = du.find.closest('.then-button', elem);
-	    const inputCnt = du.find.closest('.then-input-tree', btnCnt);
-	    inputCnt.hidden = true;
-	    btnCnt.hidden = false;
-	    DecisionInputTree.hardUpdate(treeCnt);
-	  });
-	  return tree;
-	}
-	
-	du.on.match('click', '.then-button', (elem, two, three) => {
-	  console.log('ThEn?');
-	  const node = DecisionInputTree.getNode(elem);
-	  const thenPut = thenInput(node);
-	  const inputCnt = du.find.closest('.then-input-tree', elem);
-	  inputCnt.innerHTML = thenPut.html();
-	  elem.hidden = true;
-	  inputCnt.hidden = false;
-	});
-	
-	
-	const objectKeyFilter = (currObj) => (k) => (currObj[k]._NODE && !currObj.condition) || (k === 'condition' && currObj.condition);
-	const valueFilter = (val) => (typeof val) === 'string';
-	function getConditionKey(values) {
-	  const curr = values['Question Groupy'];
-	  let path = curr;
-	  let attr = curr;
-	  let lastKey = curr;
-	  let currObj = values;
-	  while (true) {
-	    currObj = currObj[lastKey];
-	    const validKeys = Object.keys(currObj).filter(objectKeyFilter(currObj));
-	    const validPaths = Object.values(currObj).filter(valueFilter);
-	    if (validPaths.length !== 1) throw new Error('There should be only one valid path');
-	    if (validKeys.length !== 1) throw new Error('There should be only one valid key');
-	    lastKey = validKeys[0];
-	    if (!(currObj.condition instanceof Object) && currObj.condition !== undefined) break;
-	    const lastHyphIndex = lastKey.indexOf('-');
-	    const key =
-	    path = `${path}.${lastKey}`;
-	    attr = `${attr}.${validPaths[0]}`;
-	  }
-	  return {path, attr};
-	}
-	
-	function createCondition(values, elem) {
-	  const pathAttr = getConditionKey(values);
-	  const condObj = Object.pathValue(values, pathAttr.path);
-	  const value = condObj.condition;
-	  const inputCnt = du.find.up('.decision-input-array-cnt', elem);
-	  const inputElem = inputCnt.children[0];
-	  const input = Input.getFromElem(inputElem);
-	  const node = DecisionInputTree.getNode(inputCnt);
-	
-	  const childName = String.random();
-	  const child = node.then(childName);
-	  const cond = new NodeCondition(`${input.name()}.${pathAttr.attr}`, value);
-	  node.conditions.add(cond, childName);
-	
-	  setTimeout(() => updateInput(inputElem));
-	  const condCnt = du.find.up('.condition-input-tree', elem);
-	  const condBtn = du.find.closest('.conditional-button', condCnt)
-	  condCnt.hidden = true;
-	  condBtn.hidden = false;
-	}
-	
-	function processObject (select, key, node, object, conditions, path) {
-	  const child = node.then(path);
-	  const type = key === '*' ? 'exact' : undefined;
-	  const cond = new NodeCondition(select.name(), key, type);
-	  const childConds = conditions.clone();
-	  childConds.add(cond);
-	  node.conditions.add(cond, path);
-	  // childKeys.concatInPlace(addObjectKeys(child, object, childConds, path));
-	  addObjectKeys(child, object, childConds, path);
-	}
-	
-	function proccessValue (select, key, node, value, conditions, path) {
-	  let child = node.stateMap()[key];
-	  if (child === undefined) {
-	    const childConds = conditions.clone();
-	      const type = key === '*' ? 'exact' : undefined;
-	      // if (type !== 'exact') {
-	        child = node.then(conditionalInputTree(node, {treeName: path}).root());
-	        // child.addInput(conditionalInputTree(child));
-	        const cond = new NodeCondition(select.name(), key, type);
-	        childConds.add(cond);
-	        node.conditions.add(childConds, path);
-	      // }
-	   }
-	}
-	
-	const DEF_COND = 'DEFINE CONDITION';
-	function superObject(object) {
-	  const superObj = {};
-	  const keys = Object.keys(object);
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const value = object[key];
-	    if (value instanceof Object) {
-	      superObj[key] = superObject(value);
-	      if (superObj['*']) Object.merge(superObj['*'], superObject(value), true)
-	      else superObj['*'] = superObject(value);
-	      superObj[DEF_COND] = '';
-	    } else {
-	      superObj['*'] = '';
-	      superObj[key] = value;
-	    }
-	  }
-	  return superObj;
-	}
-	
-	const objectKeySorter = (key1, key2) => {
-	  if (key1 === DEF_COND) return -1;
-	  if (key2 === DEF_COND) return 0;
-	  if (key1 === '*') return -1;
-	  if (key2 === '*') return 0;
-	  return key1 - key2;
-	}
-	
-	function addObjectKeys(node, object, conditions, path) {
-	  if (conditions === undefined) object = superObject(object);
-	
-	  conditions ||= new Conditions.And([]);
-	  const keys = [].concat(Object.keys(object));
-	  const list = [];
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const value = object[key];
-	    list.push(key);
-	  }
-	  list.sort(objectKeySorter);
-	  const select = new Select({name: node.name(), list})
-	  node.addInput(select);
-	  const paths = {};
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    let currPath = path ? path + '-' + key : key;
-	    const value = object[key];
-	    const runObject = value instanceof Object;
-	    const runValue = !runObject;
-	    if (runObject) processObject(select, key, node, value, conditions, currPath);
-	    if (runValue) proccessValue(select, key, node, value, conditions, currPath);
-	  }
-	  return keys;
-	}
-	
-	function objectConditionTree(values, node, input, props) {
-	  const tree = new DecisionInputTree(props.treeName, props);
-	  addObjectKeys(tree.root(), values);
-	  tree.onSubmit(createCondition);
-	  return tree;
-	}
-	
-	function getConditionTree(values, node, input, props) {
-	  if (values instanceof Object)
-	    return objectConditionTree(values, node, input, props);
-	  props ||= {};
-	  props.treeName = 'Question Groupy';
-	  props.onSubmit = createConditionalNodeFunction(node, input);
-	  return conditionalInputTree(node, props);
-	}
-	
-	function updateConditionTree(elem) {
-	  const conditionCnt = du.find.up('.condition-input-tree', elem);
-	  if (conditionCnt) return;
-	  const node = DecisionInputTree.getNode(elem);
-	  const inputCnt = du.find.up('.decision-input-array-cnt', elem);
-	
-	  const inputArray = node.payload().inputArray;
-	  const input = Input.getFromElem(inputCnt);
-	  const val = input.value();
-	  const props = {header: `If ${input.name()} <br>`};
-	  const condTree = getConditionTree(val, node, input, props);
-	  const value = input.value();
-	  if ((typeof value) === 'string') {
-	    condTree.find.input('condition').setValue(value);
-	  }
-	  const treeHtml = condTree.html();
-	  const inputTreeCnt = du.find.closest('.condition-input-tree', elem);
-	  if (inputTreeCnt) {
-	    inputTreeCnt.innerHTML = treeHtml;
-	    return inputTreeCnt;
-	  }
-	}
-	
-	function modifyBtnPressed(elem) {
-	  const inputTreeCnt = updateConditionTree(elem);
-	  elem.hidden = true;
-	  inputTreeCnt.hidden = false;
-	}
-	
-	function removeNodeBtnPressed(elem) {
-	  const node = DecisionInputTree.getNode(elem);
-	  if (confirm(`Are you sure you want to remove node '${node.name()}'`) == true) {
-	    node.remove();
-	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
-	    DecisionInputTree.hardUpdate(treeCnt);
-	  }
-	}
 	
 	const nodeIds = {}
 	function enableRecursion(elem) {
@@ -6549,13 +7765,7 @@ function (require, exports, module) {
 	const treeSelector = `.${DecisionInputTree.class}`;
 	du.on.match('keyup', DecisionInputTree.inputSelector, DecisionInputTree.update(true));
 	du.on.match('change', DecisionInputTree.inputSelector, DecisionInputTree.update());
-	du.on.match('change', DecisionInputTree.inputSelector,     updateConditionTree);
 	du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
-	du.on.match('keyup:change', '.decision-input-cnt.mod input', updateModBtn);
-	du.on.match('keyup:change', '.decision-input-cnt.mod select', updateModBtn);
-	du.on.match('keyup:change', '.decision-input-cnt.mod textarea', updateModBtn);
-	du.on.match('click', '.conditional-button', modifyBtnPressed);
-	du.on.match('click', '.remove-btn-cnt>.rm-node', removeNodeBtnPressed);
 	// Consider changing for self referencing trees.
 	du.on.match('mouseover', '.decision-input-cnt[recursion]', enableRecursion);
 	
@@ -6600,7 +7810,11 @@ function (require, exports, module) {
 	
 	DecisionInputTree.fromJson = (json) => {
 	  const stateConfigs = Object.fromJson(json.stateConfigs);
-	  const properties = {stateConfigs, referenceNodes: json.referenceNodes};
+	  const properties = {
+	    stateConfigs,
+	    nodeInheritance: json.nodeInheritance,
+	    referenceNodes: json.referenceNodes
+	  };
 	  const tree = new DecisionInputTree(json.root.name, null, properties);
 	  const root = tree.root();
 	  childrenFromJson(root, json.root);
@@ -6636,653 +7850,38 @@ function (require, exports, module) {
 	  treeCnt.parentElement.innerHTML = body;
 	}
 	
-	function getInput(details)  {
-	  const name = details.name.toCamel();
-	  const label = details.name;
-	  let inline = details.inline;
-	  let list;
-	  switch (details.format) {
-	    case 'Text':
-	      if (details.text.size === 'Large')
-	        return new Textarea({name, label});
-	      else
-	        return new Input({type: 'text', name, label, inline});
-	    case 'Number':
-	      const step = details.number.step;
-	      const min = details.number.min;
-	      const max = details.number.max;
-	      return new NumberInput({name, label, min, max, step});
-	    case 'Date':
-	      return new Input({type: 'date', name, label, inline});
-	    case 'Time':
-	      return new Input({type: 'time', name, label, inline});
-	    case 'Checkbox':
-	      return new Input({type: 'checkbox', name, label, inline});
-	    case 'Radio':
-	      inline = details.radio.inline;
-	      list = details.radio.labels;
-	      return new Radio({name, label, list, inline});
-	    case 'Select':
-	      list = details.select.options.map(input => input.value());
-	      return new Select({name, label, list});
-	    case 'Table':
-	      const props = details.table;
-	      let isList = props.tableColumnList !== undefined;
-	      let columns = isList ?  props.tableColumnList.columns : props.tableColumnTemplate.columns;
-	      let rows = isList ? props.tableColumnList.rows : props.tableColumnTemplate.rows;
-	      if (!isList) {
-	        columns.forEach((definition, index) => columns[index] = getInput(definition));
-	      }
-	      const type = props.type;
-	      return new Table({name, label, rows, columns, type});
-	    case 'Measurement':
-	      const units = details.measure.units;
-	      return new MeasurementInput({name, label, units});
-	    case 'Multiple Entries':
-	      const templates = details.multi.templates;
-	      list = [];
-	      inline = details.multi.inline;
-	      for (let index = 0; index < templates.length; index++) {
-	        const values = templates[index];
-	        values.inline = inline;
-	        const input = getInput(values);
-	        list.push(input);
-	      }
-	      return new MultipleEntries(new InputList({list, inline}), {name});
-	    default:
-	      throw new Error('In the future this will not be reachable');
-	  }
-	}
-	
-	function addInput(details, elem)  {
-	  const input = getInput(details);
-	  const modCnt = du.find.up('.modification-add-input', elem);
-	  const nodeCnt = du.find.up('[node-id]', modCnt);
-	  const node = Lookup.get(nodeCnt.getAttribute('node-id'));
-	  node.addInput(input);
-	  DecisionInputTree.rebuild(nodeCnt);
-	}
-	
-	const noSubmitInputTree = (node) => () =>
-	      DecisionInputTree.inputTree(node, true);
-	DecisionInputTree.inputTree = function (node, noSubmission) {
-	  const targetTree = node.tree();
-	  const name = new Input({
-	    name: 'name',
-	    label: 'Name',
-	    class: 'center',
-	    validation: (value) => {
-	      if (value === '') return false;
-	      const camel = value.toCamel();
-	      const inputs = node.payload().inputArray;
-	      for (let index = 0; index < inputs.length; index++) {
-	        if (inputs[index].name() === camel) return false;
-	      }
-	      return node.stateNames().indexOf(camel) === -1;
-	    }
-	  });
-	  const inline = new Input({
-	    name: 'inline',
-	    value: true,
-	    label: 'Inline',
-	    class: 'center',
-	    type: 'checkbox'
-	  });
-	  const format = new Select({
-	    label: 'Format',
-	    name: 'format',
-	    class: 'center',
-	    list: ['Text', 'Checkbox', 'Number', 'Radio', 'Select', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement']
-	  });
-	  const step = new NumberInput({name: 'step', optional: true, label: 'Step'});
-	  const min = new NumberInput({name: 'min', optional: true, label: 'Minimum'});
-	  const max = new NumberInput({name: 'max', optional: true, label: 'Maximum'});
-	  const tableType = new Select({
-	    label: 'Type',
-	    name: 'type',
-	    class: 'center',
-	    list: ['Text', 'checkbox', 'radio', 'date', 'time', 'column specific']
-	  });
-	  const textCntSize = new Select({
-	    label: 'Size',
-	    name: 'size',
-	    class: 'center',
-	    list: ['Small', 'Large']
-	  });
-	  const units = new Select({
-	    label: 'Units',
-	    name: 'units',
-	    class: 'center',
-	    list: Measurement.units()
-	  });
-	  const label = new Input({
-	    name: 'label',
-	    label: 'Label',
-	    class: 'centnodeConds[index].satisfied()) reer',
-	    validation: (val) => val !== ''
-	  });
-	  const option = new Input({
-	    name: 'option',
-	    label: 'Option',
-	    class: 'centnodeConds[index].satisfied()) reer',
-	    validation: (val) => val !== ''
-	  });
-	  const row = new Input({
-	    name: 'row',
-	    class: 'center',
-	    validation: (val) => val !== ''
-	  });
-	  const col = new Input({
-	    name: 'col',
-	    class: 'center',
-	    validation: (val) => val !== ''
-	  });
-	  const labels = new MultipleEntries(label, {name: 'labels'});
-	  const options = new MultipleEntries(option, {name: 'options'});
-	  // const colType = new InputList({name: 'cols', list: [col, tableType]});
-	  const colType = new MultipleEntries(noSubmitInputTree(node), {name: 'columns', label: 'Columns'});
-	  const columns = new MultipleEntries(col, {name: 'columns', label: 'Columns'});
-	  const rowCols = [tableType];
-	  const rows = new MultipleEntries(row, {name: 'rows', label: 'Rows'});
 	
 	
-	  const inputs = [name, format];
-	  const multiEnt = new MultipleEntries(noSubmitInputTree(node), {name: 'templates'});
-	
-	  const tree = new DecisionInputTree('Input', {inputArray: inputs, noSubmission, class: 'modify'});
-	  const root = tree.root();
-	
-	  const dic = (value, attr) => new NodeCondition(attr || 'format', value);
-	  function addNode(name, inputArray, value, attr, node) {
-	    const targetNode = (node || root);
-	    const newNode = targetNode.then(name, {inputArray});
-	    targetNode.conditions.add(dic(value, attr), name);
-	    return newNode;
-	  }
-	
-	  addNode('text', [textCntSize], 'Text');
-	  addNode('select', [options], 'Select');
-	  addNode('radio', [inline, labels], 'Radio');
-	  const tableNode = addNode('table', rowCols, 'Table');
-	  addNode('tableColumnList', [columns, rows], ['Text', 'checkbox', 'radio', 'date', 'time'], 'type', tableNode);
-	  addNode('tableColumnTemplate', [colType, rows], 'column specific', 'type', tableNode);
-	  addNode('multi', [inline, multiEnt], 'Multiple Entries');
-	  addNode('measure', [units], 'Measurement');
-	  addNode('number', [step, min, max], 'Number');
 	
 	
-	  tree.onSubmit(addInput);
-	  tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
-	  tree.empty = () => {
-	    let empty = true;
-	    tree.root().forEach((node) =>
-	      node.payload().inputArray.forEach(input => empty &&= input.empty()));
-	    return empty;
-	  }
-	  return tree;
-	}
 	
 	module.exports = DecisionInputTree;
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/input-input.js',
+RequireJS.addFunction('../../public/js/utils/input/styles/number.js',
 function (require, exports, module) {
 	
 const Input = require('../input');
-	const Select = require('./select');
-	const Measurement = require('./measurement');
-	const MultipleEntries = require('./multiple-entries');
-	const DecisionInputTree = require('../decision/decision');
-	
-	class InputInput extends Input {
-	  constructor(name, props) {
-	    super(name, props);
-	    const labels = new MultipleEntries(label, {name: 'labels'});
-	    const rowCols = [tableType, new MultipleEntries(col, {name: 'col', inline: true}),
-	                      new MultipleEntries(row, {name: 'row'})];
-	
-	
-	    // ['Text', 'Radio', 'Table', 'Multiple Entries', 'Measurement']
-	    const inputs = [name, format];
-	
-	    const tree = new DecisionInputTree('InputTree', {inputArray: inputs, noSubmission: true});
-	    const root = tree.root();
-	    // root.then('InputTree');
-	
-	    const dic = (value) => new DecisionInputTree.Condition('format', value);
-	    function addFormatNode(name, inputArray, value) {
-	      const node = root.then(name, {inputArray});
-	      node.conditions.add(dic(value));
-	      node.relatedTo('format');
-	      return node;
-	    }
-	
-	    addFormatNode('text', [textCntSize], 'Text');
-	    addFormatNode('radio', [labels], 'Radio');
-	    addFormatNode('table', rowCols, 'Table');
-	    // addFormatNode('InputTree', null, 'Multiple Entries');
-	    addFormatNode('measure', [units], 'Measurement');
-	
-	    let multiNodeAdded = false;
-	    root.onChange((values) => {
-	      if (multiNodeAdded) return;
-	      if (values.format === 'Multiple Entries') {
-	        const inputTemplate = new MultipleEntries(DecisionInputTree.inputTree(), {name: 'templates'});
-	        addFormatNode('multiInput', [inputTemplate], 'Multiple Entries');
-	        multiNodeAdded = true;
-	        const rootElem = du.find(`.decision-input-cnt[node-id='${tree.root().id()}']`);
-	        DecisionInputTree.update()(rootElem);
-	      }
-	    });
-	
-	    const tJson = tree.toJson();
-	    console.log(tree.toString());
-	    console.log(DecisionInputTree.fromJson(tJson));
-	    console.log(DecisionInputTree.fromJson(tJson).toString());
-	    console.log(DecisionInputTree.fromJson(tJson).toString());
-	
-	    this.valid = tree.completed;
-	    tree.clone = DecisionInputTree.inputTree;
-	    this.value = tree.value();
-	  }
-	}
-	
-	const name = new Input({
-	  name: 'name',
-	  inline: true,
-	  label: 'Name',
-	  class: 'center',
-	  validation: (val) => val !== ''
-	});
-	const format = new Select({
-	  label: 'Format',
-	  name: 'format',
-	  inline: true,
-	  class: 'center',
-	  list: ['Text', 'Checkbox', 'Radio', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement']
-	});
-	const tableType = new Select({
-	  label: 'Type',
-	  name: 'type',
-	  inline: true,
-	  class: 'center',
-	  list: ['Text', 'checkbox', 'radio', 'date', 'time']
-	});
-	const textCntSize = new Select({
-	  label: 'Size',
-	  name: 'size',
-	  inline: true,
-	  class: 'center',
-	  list: ['Small', 'Large']
-	});
-	const units = new Select({
-	  label: 'Units',
-	  name: 'units',
-	  inline: true,
-	  class: 'center',
-	  list: Measurement.units()
-	});
-	const label = new Input({
-	  name: 'label',
-	  inline: true,
-	  label: 'Label',
-	  class: 'centnodeConds[index].satisfied()) reer',
-	  validation: (val) => val !== ''
-	});
-	const row = new Input({
-	  name: 'row',
-	  inline: true,
-	  label: 'Row',
-	  class: 'center',
-	  validation: (val) => val !== ''
-	});
-	const col = new Input({
-	  name: 'col',
-	  inline: true,
-	  label: 'Column',
-	  class: 'center',
-	  validation: (val) => val !== ''
-	});
-	
-	module.exports = InputInput;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const Input = require('../input');
 	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	const Measurement = require('../../measurement');
 	
-	class MeasurementInput extends Input {
-	  constructor(props) {
-	    let units = props.units;
-	    let value = new Measurement(props.value, units || true);
-	    props.value = () => value;
-	    super(props);
-	
-	    this.valid = (val) => {
-	      let testVal;
-	      if (val) {
-	        if (val instanceof MeasurementInput) testVal = val.value();
-	        else testVal = val;
-	      } else testVal = value.value();
-	      const valid = !Number.isNaN(testVal);
-	      this.indicateValidity(valid);
-	      return valid;
-	    }
-	
-	    props.errorMsg = 'Invalid Mathematical Expression';
-	    this.value = () => {
-	      return value.display();
-	    }
-	    const parentSetVal = this.setValue;
-	    this.setValue = (val) => {
-	      let newVal = this.valid(val) ? ((val instanceof Measurement) ?
-	                        val : new Measurement(val, units || true)) : value;
-	      const updated = newVal !== value;
-	      value = newVal;
-	      return updated;
-	    }
-	  }
-	}
-	
-	MeasurementInput.template = new $t('input/measurement');
-	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
-	
-	du.on.match('focusout', '.measurement-input', (elem) => {
-	  const input = MeasurementInput.get(elem.id);
-	  elem.value = input.value();
-	})
-	
-	module.exports = MeasurementInput;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	
-	const validation = () => true;
-	class MultipleEntries extends Input {
-	  constructor(inputTemplate, props) {
-	
-	
-	    props ||= {};
-	    props.validation ||= (event, details) => {
-	      const list = props.list;
-	      let allEmpty = true;
-	      let valid = true;
-	      for (let index = 0; index < list.length; index++) {
-	        const input = list[index];
-	        const empty = input.empty();
-	        if (!empty) {
-	          if (input.optional) input.optional(false);
-	          valid &= list[index].valid();
-	        }
-	        allEmpty &= empty;
-	      }
-	      return !allEmpty && valid;
-	    }
-	    if (props.list === undefined) {
-	      const list = [];
-	      props.list = list;
-	      props.list.forEach((i) =>
-	        list.push(i.clone()));
-	    }
-	
-	    props.list ||= [];
-	    super(props);
-	    Object.getSet(this, 'inputTemplate');
-	    let template;
-	    const instance = this;
-	    this.inputTemplate = () => {
-	      if (!template) {
-	        if ((typeof inputTemplate) === 'function') {
-	          template = inputTemplate();
-	        } else template = inputTemplate;
-	      }
-	      return template;
-	    }
-	
-	    this.empty = () => {
-	      if (props.list.length > 1) return false;
-	      const inputs = props.list[0];
-	      for (let index = 0; index < inputs.length; index++) {
-	        if (!inputs[index].empty()) return false;
-	      }
-	      return true;
-	    }
-	
-	    this.clone = () =>
-	        new MultipleEntries(inputTemplate, JSON.clone(props));
-	
-	    this.set = (index) => {
-	      if (props.list[index] === undefined) {
-	        props.list[index] = this.inputTemplate().clone({optional: true});
-	        if (props.list[index].on) {
-	          props.list[index].on('change', this.validation);
-	        } else {
-	          props.list[index].onChange(this.validation);
-	        }
-	      }
-	      return props.list[index];
-	    }
-	
-	    this.tag = () => props.inline() ? 'span' : 'div';
-	
-	    this.input = (nameOindexOfunc) => {
-	      const nif = nameOindexOfunc;
-	      if ((typeof nif) === 'number') return props.list[nif];
-	      const runFunc = (typeof nif) === 'function';
-	      for (let index = 0; index < props.list.length; index++) {
-	        const input = props.list[index];
-	        if (runFunc) {
-	          const val = nif(input);
-	          if (val) return val;
-	        } else if (input.name() === nif) return input;
-	
-	        if (input instanceof MultipleEntries) {
-	          const mInput = input.input(nif);
-	          if (mInput) return mInput;
-	        }
-	      }
-	    }
-	    this.getValue = () => {
-	      const values = [];
-	      for (let index = 0; index < props.list.length; index++) {
-	        const input = props.list[index];
-	        if (!input.empty() && input.valid()) values.push(input.value());
-	      }
-	      return values;
-	    }
-	
-	    this.value = this.getValue;
-	
-	    const parentHtml = this.html;
-	    this.html = () => {
-	      if (props.list.length === 0) this.set(0);
-	      return parentHtml();
-	    }
-	
-	    this.length = () => this.list().length;
-	    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
-	  }
-	}
-	
-	MultipleEntries.template = new $t('input/multiple-entries');
-	MultipleEntries.singleTemplate = new $t('input/one-entry');
-	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
-	
-	MultipleEntries.fromJson = (json) => {
-	  const inputTemplate = Object.fromJson(json.inputTemplate);
-	  return new MultipleEntries(inputTemplate, json);
-	
-	}
-	
-	function meInfo(elem) {
-	  const info = {};
-	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
-	  if (info.oneCnt) {
-	    info.indexCnt = du.find.up('[index]', info.oneCnt);
-	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
-	    const ae =  document.activeElement;
-	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
-	  }
-	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
-	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
-	  info.length = info.multiInput.length();
-	  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
-	  info.last = info.index === info.length - 1;
-	  info.empty = info.multiInput.list()[info.index].empty();
-	  return info;
-	}
-	
-	const meSelector = '.multiple-entry-cnt input,select,textarea';
-	const oneSelector = '.one-entry-cnt *';
-	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
-	du.on.match('change', meSelector, (elem) => {
-	  // console.log('changed');
-	});
-	
-	du.on.match('click', meSelector, (elem) => {
-	  // console.log('clicked');
-	});
-	
-	const lastCallers = [];
-	du.on.match('focusout', '.one-entry-cnt', (elem) => {
-	  let info = meInfo(elem);
-	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
-	  const id = ++lastCallers[info.index];
-	  setTimeout(() => {
-	    if (id !== lastCallers[info.index]) return;
-	    info = meInfo(elem);
-	    if (!info.last && !info.inFocus && info.empty) {
-	      info.indexCnt.remove()
-	      const children = info.multiCnt.children;
-	      for (let index = 0; index < children.length; index++) {
-	        children[index].setAttribute('index', index);
-	      }
-	      const list = info.multiInput.list();
-	      list.remove(list[info.index]);
-	    }
-	  }, 2000);
-	});
-	
-	du.on.match('focusin', oneSelector, (elem) => {
-	  // console.log('focusin');
-	});
-	
-	du.on.match('keyup:change', oneSelector, (elem) => {
-	  if (!isInput(elem)) return;
-	  const info = meInfo(elem);
-	  if (info.index === info.length - 1 && !info.empty) {
-	    const newElem = du.create.element('div', {index: info.index + 1});
-	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
-	    info.multiCnt.append(newElem);
-	    console.log('add 1')
-	  }
-	  // console.log('keyup');
-	});
-	
-	module.exports = MultipleEntries;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/list.js',
-function (require, exports, module) {
-	
-const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	const CustomEvent = require('../../custom-event');
-	const Input = require('../input');
-	
-	// TODO: extend InputObject (class functionality overlap)
-	class InputList extends Input {
+	class NumberInput extends Input {
 	  constructor(props) {
 	    super(props);
-	    Object.getSet(this);
-	    const instance = this;
+	    props.min = Number.parseFloat(props.min) || 0;
+	    props.max = Number.parseFloat(props.max) || Number.MAX_SAFE_INTEGER;
+	    props.step = Number.parseFloat(props.step) || 1;
+	    Object.getSet(this, {min: props.min, max: props.max, step: props.step});
 	
-	    this.value = () => {
-	      const values = {};
-	      props.list.forEach((input, index) => input.validation() && (values[input.name() || index] = input.value()));
-	      return values;
-	    }
-	
-	    const dynamicEvent = CustomEvent.dynamic();
-	    this.on = dynamicEvent.on;
-	
-	    function triggerChangeEvent(value, input, event) {
-	      dynamicEvent.trigger(event, {value, input});
-	    }
-	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
-	
-	    this.setValue = () => {
-	      throw new Error('This function should never get called');
-	    }
-	
-	    this.valid = () => {
-	      if (this.optional()) return true;
-	      let valid = true;
-	      props.list.forEach(input => valid &&= input.optional() || input.valid());
-	      return valid;
-	    }
-	
-	    let optional;
-	    this.optional = (value) => {
-	      if (value !== true && value !== false) return optional;
-	      optional = value;
-	      props.list.forEach(input => input.optional(optional));
-	    }
-	    this.optional(props.optional || false);
-	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      json.validation = (properties || props).validation;
-	      json.list.forEach(i => delete i.id);
-	      Object.set(json, properties);
-	      return InputList.fromJson(json);
-	    }
-	
-	    this.empty = () => {
-	      for (let index = 0; index < props.list.length; index++) {
-	        if (!props.list[index].empty()) return false
-	      }
-	      return true;
-	    }
-	
+	    this.validation = (value) => value <= props.max && value >= props.min;
 	  }
 	}
 	
-	InputList.fromJson = (json) => {
-	  json.list = Object.fromJson(json.list);
-	  return new InputList(json);
-	}
+	NumberInput.template = new $t('input/number');
+	NumberInput.html = (instance) => () => NumberInput.template.render(instance);
 	
-	InputList.template = new $t('input/list');
-	InputList.html = (instance) => () => InputList.template.render(instance);
-	
-	
-	
-	module.exports = InputList;
+	module.exports = NumberInput;
 	
 });
 
@@ -7373,33 +7972,6 @@ const $t = require('../../$t');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/number.js',
-function (require, exports, module) {
-	
-const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class NumberInput extends Input {
-	  constructor(props) {
-	    super(props);
-	    props.min = Number.parseFloat(props.min) || 0;
-	    props.max = Number.parseFloat(props.max) || Number.MAX_SAFE_INTEGER;
-	    props.step = Number.parseFloat(props.step) || 1;
-	    Object.getSet(this, {min: props.min, max: props.max, step: props.step});
-	
-	    this.validation = (value) => value <= props.max && value >= props.min;
-	  }
-	}
-	
-	Object.class.register(NumberInput);
-	NumberInput.template = new $t('input/number');
-	NumberInput.html = (instance) => () => NumberInput.template.render(instance);
-	
-	module.exports = NumberInput;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/input/styles/radio.js',
 function (require, exports, module) {
 	
@@ -7467,6 +8039,27 @@ const Input = require('../input');
 });
 
 
+RequireJS.addFunction('../../public/js/utils/input/styles/textarea.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Textarea extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
+	  }
+	}
+	
+	Textarea.template = new $t('input/textarea');
+	Textarea.html = (instance) => () => Textarea.template.render(instance);
+	
+	module.exports = Textarea;
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
 function (require, exports, module) {
 	
@@ -7515,106 +8108,45 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/textarea.js',
-function (require, exports, module) {
-	
-const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class Textarea extends Input {
-	  constructor(props) {
-	    super(props);
-	    Object.getSet(this);
-	  }
-	}
-	
-	Textarea.template = new $t('input/textarea');
-	Textarea.html = (instance) => () => Textarea.template.render(instance);
-	
-	module.exports = Textarea;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/input/styles/table.js',
 function (require, exports, module) {
 	
 const Input = require('../input');
 	const Radio = require('../styles/radio');
+	const MultipleEntries = require('../styles/multiple-entries');
 	const $t = require('../../$t');
 	const du = require('../../dom-utils');
 	
 	tableInputNameFunc = (id, rIndex, cIndex) => `table-${id}-${rIndex}-${cIndex}`;
 	
-	class RadioTable extends Input {
-	  constructor(props) {
-	    super(props);
-	    const rows = {};
-	    props.type = 'radio';
-	    for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
-	      const list = props.columns.copy();
-	      const label = props.rows[rIndex];
-	      const name = label.toCamel();
-	      const value = props.values ? props.values[name] : list[0];
-	      rows[name] = {name, label, value};
-	    }
-	
-	    this.value = () => {
-	      const values = {};
-	      for (let index = 0; index < props.rows.length; index++) {
-	        const key = props.rows[index].toCamel();
-	        values[key] = rows[key].value;
-	      }
-	      return values;
-	    }
-	
-	    this.columns = () => props.columns;
-	    props.value = undefined;
-	    this.setValue = (elem) => rows[elem.name].value = elem.value;
-	    this.list = () => rows;
-	    this.rowDetail = () => Object.values(rows);
-	    this.rows = () => props.rows;
-	    this.description = () => props.description;
-	  }
-	}
-	
-	du.on.match('change', '.radio-table-input-cnt>input', (elem) => {
-	  Input.getFromElem(elem).setValue(elem);
-	});
-	
-	Object.class.register(RadioTable);
-	RadioTable.template = new $t('input/radio-table');
-	RadioTable.html = (instance) => () => RadioTable.template.render(instance);
-	
-	
 	class Table extends Input {
 	  constructor(props) {
 	    super(props);
 	
-	    const inputs = [];
+	    let inputs = [];
 	    props.type ||= 'radio';
 	    if (props.type === 'radio') return new RadioTable(props);
-	    for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
-	      inputs[rIndex] = [];
-	      let nameFunc = tableInputNameFunc;
-	      if (props.type === 'radio') {
-	        const uniqueId = String.random();
-	        nameFunc = () => uniqueId;
-	      } else {
-	        const row = props.rows[rIndex];
-	        for (let cIndex = 0; cIndex < props.columns.length; cIndex++) {
-	          const column = props.columns[cIndex];
-	          let input;
-	          if (column instanceof Input) input = column.clone();
-	          else input = new Input({type: props.type});
-	          input.name(nameFunc(this.id(), rIndex, cIndex));
-	          const clone = input.clone();
-	          clone.label('');
-	          if (props.value) clone.value(props.value[row][input.name()]);
-	          inputs[rIndex].push(clone);
-	        }
-	      }
-	    }
+	    // for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
+	    //   inputs[rIndex] = [];
+	    //   let nameFunc = tableInputNameFunc;
+	    //   if (props.type === 'radio') {
+	    //     const uniqueId = String.random();
+	    //     nameFunc = () => uniqueId;
+	    //   } else {
+	    //     const row = props.rows[rIndex];
+	    //     for (let cIndex = 0; cIndex < props.columns.length; cIndex++) {
+	    //       const column = props.columns[cIndex];
+	    //       let input;
+	    //       if (column instanceof Input) input = column.clone();
+	    //       else input = new Input({type: props.type});
+	    //       input.name(nameFunc(this.id(), rIndex, cIndex));
+	    //       const clone = input.clone();
+	    //       clone.label('');
+	    //       if (props.value) clone.value(props.value[row][input.name()]);
+	    //       inputs[rIndex].push(clone);
+	    //     }
+	    //   }
+	    // }
 	
 	    this.value = () => {
 	      const values = {};
@@ -7634,9 +8166,46 @@ const Input = require('../input');
 	
 	
 	    props.value = undefined;
-	    this.list = () => props.list;
+	    this.list = () => props.columns;
 	    this.columns = (rowIndex) => rowIndex === undefined ?
-	          props.columns : inputs[rowIndex];
+	                        props.columns : inputs[rowIndex];
+	    this.setColumns = (cols, values) => {
+	      const defineColumns = Array.isArray(cols);
+	      cols ||= props.columns;
+	      if (defineColumns) inputs = [];
+	      for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
+	        inputs[rIndex] ||= [];
+	        let nameFunc = tableInputNameFunc;
+	        const row = props.rows[rIndex];
+	        for (let cIndex = 0; cIndex < cols.length; cIndex++) {
+	          const column = cols[cIndex];
+	          let input;
+	          if (defineColumns) {
+	            if (column instanceof Input) {
+	              input = column.clone();
+	              props.columns[cIndex] = input;
+	            } else {
+	              input = new Input({type: props.type});
+	              if ((typeof column) === 'function') {
+	                console.log('func');
+	              }
+	              props.columns[cIndex] = column;
+	            }
+	          } else input = props.columns[cIndex];
+	          if (inputs[rIndex][cIndex] === undefined) {
+	            input.name(nameFunc(this.id(), rIndex, cIndex));
+	            const clone = input.clone();
+	            clone.label('');
+	            if (values) clone.value(values[row][input.name()]);
+	            inputs[rIndex].push(clone);
+	          }
+	        }
+	      }
+	    }
+	    this.setRows = (rows) => {
+	      if (Array.isArray(props.rows)) props.rows = rows;
+	    }
+	
 	    this.columnNames = () => {
 	      const names = [];
 	      for (let index = 0; index < props.columns.length; index++) {
@@ -7652,6 +8221,8 @@ const Input = require('../input');
 	    // this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
 	
 	    this.selected = (value) => value === this.value();
+	
+	    this.setColumns(props.columns, props.value);
 	  }
 	}
 	
@@ -7664,6 +8235,69 @@ const Input = require('../input');
 	Table.template = new $t('input/table');
 	Table.html = (instance) => () => Table.template.render(instance);
 	
+	
+	class RadioTable extends Input {
+	  constructor(props) {
+	    super(props);
+	    let _rows = {};
+	    const rowName = (index) => `${this.id()}-${props.rows[index].toCamel()}`;
+	    props.type = 'radio';
+	
+	    function buildRows(values) {
+	      _rows = {};
+	      for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
+	        const list = props.columns.copy();
+	        const label = props.rows[rIndex];
+	        const name = rowName(rIndex);
+	        const key = label.toCamel();
+	        const value = values && values[key] ? props.value[key] :
+	                (_rows[key] ? _rows[key].value : list[0]);
+	        _rows[key] = {name, label, value, key};
+	      }
+	    }
+	    buildRows(props.value);
+	
+	    this.value = () => {
+	      const values = {};
+	      for (let index = 0; index < props.rows.length; index++) {
+	        const key = props.rows[index].toCamel();
+	        values[key] = _rows[key].value;
+	      }
+	      return values;
+	    }
+	
+	    this.columns = () => props.columns;
+	    this.setColumns = (cols) => {
+	      if (Array.isArray(cols)) props.columns = cols;
+	      buildRows();
+	    }
+	    this.setRows = (rows) => {
+	      if (Array.isArray(rows)) props.rows = rows;
+	      buildRows();
+	    }
+	    props.value = undefined;
+	    this.setValue = (elem) => {
+	      if (elem instanceof HTMLElement)
+	        return _rows[elem.getAttribute('key')].value = elem.value;
+	      console.log('OBJECT!');
+	    }
+	    this.list = () => _rows;
+	    this.rowDetail = () => Object.values(_rows);
+	    this.rows = () => props.rows;
+	    this.description = () => props.description;
+	  }
+	}
+	
+	du.on.match('change', '.radio-table-input-cnt>input', (elem) => {
+	  Input.getFromElem(elem).setValue(elem);
+	});
+	
+	Object.class.register(RadioTable);
+	RadioTable.template = new $t('input/radio-table');
+	RadioTable.html = (instance) => () => RadioTable.template.render(instance);
+	RadioTable.editHtml = Table.editHtml;
+	
+	Table.Radio = RadioTable;
 	
 	module.exports = Table;
 	
@@ -8007,39 +8641,212 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/test/tests/utils.js',
+RequireJS.addFunction('../../public/js/utils/test/tests/compress-string.js',
 function (require, exports, module) {
 	
 const Test = require('../test.js').Test;
+	const CompressedString = require('../../object/compressed-string.js');
 	
-	Test.add('Array: scale',(ts) => {
-	  const original = [1,2,3,4];
-	  const arr = Array.from(original);
-	  const valScale = arr.scale(3, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(valScale.equals([3,6,9,12]));
-	  const funcScale = arr.scale((val, index) => index, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(funcScale.equals([0,2,6,12]));
-	  arr.scale([9,5,3,2]);
-	  ts.assertTrue(!original.equals(arr));
-	  ts.assertTrue(arr.equals([9,10,9,8]));
+	Test.add('Imposter: fooled me',(ts) => {
+	  // let str = 'one, two,threefour,one,twothree,four';
+	  let str = 'one,one,one,one,one,one,one,one,one,one,';
+	  let noWhiteSpace = JSON.stringify(JSON.parse(cabStr));
+	  let cStr = new CompressedString(cabStr);
+	  let rebuilt = CompressedString.fromString(cStr.toString())
+	  ts.assertTrue(cabStr === rebuilt);
 	
 	  ts.success();
 	});
 	
-	Test.add('Array: add',(ts) => {
-	  const original = [1,2,3,4];
-	  const arr = Array.from(original);
-	  const valScale = arr.add(3, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(valScale.equals([4,5,6,7]));
-	  const funcScale = arr.add((val, index) => index, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(funcScale.equals([1,3,5,7]));
-	  arr.add([9,5,3,2]);
-	  ts.assertTrue(!original.equals(arr));
-	  ts.assertTrue(arr.equals([10,7,6,6]));
+	
+	
+	
+	let cabStr = `{"_TYPE":"Order","name":"peaches","id":"2wyrbg706jiqej59e4ck5u7h4hlz2o4q","rooms":{"z8qv04z":{"_TYPE":"Room","id":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","ID_ATTRIBUTE":"id","name":"peach","layout":{"verticies":[{"_TYPE":"Vertex2D","id":"Vertex2D_q924g8f","ID_ATTRIBUTE":"id","point":{"x":500,"y":0},"prevLine":"Wall2D_t4dprm3","nextLine":"Wall2D_tkgqjbx"},{"_TYPE":"Vertex2D","id":"Vertex2D_qpfc4z7","ID_ATTRIBUTE":"id","point":{"x":500,"y":500},"prevLine":"Wall2D_tkgqjbx","nextLine":"Wall2D_edw3c2w"},{"_TYPE":"Vertex2D","id":"Vertex2D_s9zy2l5","ID_ATTRIBUTE":"id","point":{"x":0,"y":500},"prevLine":"Wall2D_edw3c2w","nextLine":"Wall2D_bmdk6tv"},{"_TYPE":"Vertex2D","id":"Vertex2D_xfdbd47","ID_ATTRIBUTE":"id","point":{"x":0,"y":0},"prevLine":"Wall2D_bmdk6tv","nextLine":"Wall2D_t4dprm3"}],"walls":[{"_TYPE":"Wall2D","id":"Wall2D_bmdk6tv","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_edw3c2w","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_t4dprm3","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_tkgqjbx","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]}],"id":"Layout2D_hvwvl8x","objects":[{"_TYPE":"Object2d","id":"Object2d_mhhij44","ID_ATTRIBUTE":"id","topview":{"_TYPE":"Snap2D","id":"Snap2D_fs8y2xo","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_fs8y2xo","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"bottomView":{"_TYPE":"Snap2D","id":"Snap2D_owpui4e","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_owpui4e","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"leftview":{"_TYPE":"Snap2D","id":"Snap2D_7x9e6cl","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_7x9e6cl","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"rightview":{"_TYPE":"Snap2D","id":"Snap2D_88fkq0n","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_88fkq0n","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"frontview":{"_TYPE":"Snap2D","id":"Snap2D_h6o6yjc","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_h6o6yjc","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"backView":{"_TYPE":"Snap2D","id":"Snap2D_d03rlan","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_d03rlan","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"}}],"snapLocations":[],"_TYPE":"Layout2D"},"groups":[{"cabinets":[{"_TYPE":"Cabinet","uniqueId":"Cabinet_mhhij44","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"c","partName":"standard","values":{"brh":"tkb.w + pback.t + brr","innerWidth":"c.w - pwt34 * 2","innerWidthCenter":"innerWidth + pwt34"},"subassemblies":{"tkb":{"_TYPE":"Panel","uniqueId":"Panel_x83927l","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,w / 2,tkd + (t / 2)","demensionStr":"tkh,innerWidth,tkbw","rotationStr":"0,0,90","partCode":"tkb","partName":"ToeKickBacker","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pr":{"_TYPE":"Panel","uniqueId":"Panel_texde2a","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w - (pr.t / 2),l / 2,(w / 2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pr","partName":"Right","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pl":{"_TYPE":"Panel","uniqueId":"Panel_b00prhm","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"(t / 2), l / 2, (w/2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pl","partName":"Left","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pback":{"_TYPE":"Panel","uniqueId":"Panel_9tnsq6m","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"l / 2 + pl.t, (w / 2) + tkb.w, c.t - (t / 2)","demensionStr":"c.l - tkb.w,innerWidth,pwt34","rotationStr":"0,0,90","partCode":"pback","partName":"Back","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pb":{"_TYPE":"Panel","uniqueId":"Panel_pg8v93d","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,tkh + (t/2),w / 2","demensionStr":"c.t - pback.t,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pb","partName":"Bottom","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt":{"_TYPE":"Panel","uniqueId":"Panel_8m0m4bs","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,(w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt","partName":"Top","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt2":{"_TYPE":"Panel","uniqueId":"Panel_6b24fe2","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,c.t - pback.t - (w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt2","partName":"Top2","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"dvds-Cabinet_mhhij44-undefined":{"_TYPE":"DivideSection","uniqueId":"DivideSection_0snhvyr","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-Cabinet_mhhij44-undefined","partName":"divideSection","values":{"vertical":true},"subassemblies":[{"_TYPE":"DivideSection","uniqueId":"DivideSection_dv6snbe","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-DivideSection_0snhvyr-0","partName":"divideSection","values":{"vertical":true},"subassemblies":[],"joints":[],"index":0,"pattern":{"values":{"a":118.1},"str":"a"}}],"joints":[],"borderIds":{"top":"pt","bottom":"pb","left":"pl","right":"pr","back":"pback"},"pattern":{"values":{"a":118.1},"str":"a"}}},"joints":[{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pb","demensionAxis":"x","centerAxis":"+y"}],"length":60.96,"width":127,"thickness":53.34,"name":"peach"}],"_TYPE":"Group","name":"Group","id":"Group_qbu4mn4","roomId":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","propertyConfig":{"Overlay":[{"_TYPE":"Property","id":"Property_fqc1xic","ID_ATTRIBUTE":"id","code":"ov","name":"Overlay","value":1.27,"properties":{"value":1.27,"clone":true}}],"Reveal":[{"_TYPE":"Property","id":"Property_tfwxb8o","ID_ATTRIBUTE":"id","code":"r","name":"Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_4fhky4n","ID_ATTRIBUTE":"id","code":"rvt","name":"Reveal Top","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_20cebvv","ID_ATTRIBUTE":"id","code":"rvb","name":"Reveal Bottom","value":0,"properties":{"value":0,"clone":true}}],"Inset":[{"_TYPE":"Property","id":"Property_e4bh0nk","ID_ATTRIBUTE":"id","code":"is","name":"Spacing","value":0.24,"properties":{"value":0.24,"clone":true}}],"Cabinet":[{"_TYPE":"Property","id":"Property_qkv57k8","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_b7za1rc","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9cbd2fg","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_6859l07","ID_ATTRIBUTE":"id","code":"sr","name":"Scribe Right","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_jwysbjh","ID_ATTRIBUTE":"id","code":"sl","name":"Scribe Left","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_5iran35","ID_ATTRIBUTE":"id","code":"rvibr","name":"Reveal Inside Bottom Rail","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_pzjt3cs","ID_ATTRIBUTE":"id","code":"rvdd","name":"Reveal Dual Door","value":0.16,"properties":{"value":0.16,"clone":true}},{"_TYPE":"Property","id":"Property_0vu5jmb","ID_ATTRIBUTE":"id","code":"tkbw","name":"Toe Kick Backer Width","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_dajkb1b","ID_ATTRIBUTE":"id","code":"tkd","name":"Toe Kick Depth","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_joyygzo","ID_ATTRIBUTE":"id","code":"tkh","name":"Toe Kick Height","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_l7t9z68","ID_ATTRIBUTE":"id","code":"pbt","name":"Panel Back Thickness","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_oywqj2v","ID_ATTRIBUTE":"id","code":"iph","name":"Ideal Handle Height","value":106.68,"properties":{"value":106.68,"clone":true}},{"_TYPE":"Property","id":"Property_2i5nht2","ID_ATTRIBUTE":"id","code":"brr","name":"Bottom Rail Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_up6vwpo","ID_ATTRIBUTE":"id","code":"frw","name":"Frame Rail Width","value":3.81,"properties":{"value":3.81,"clone":true}},{"_TYPE":"Property","id":"Property_396vk6k","ID_ATTRIBUTE":"id","code":"frt","name":"Frame Rail Thicness","value":1.91,"properties":{"value":1.91,"clone":true}}],"Panel":[{"_TYPE":"Property","id":"Property_cq9johi","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_nt7v1y1","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_vkmj6jj","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Guides":[{"_TYPE":"Property","id":"Property_l2178ai","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_afojonz","ID_ATTRIBUTE":"id","code":"dbtos","name":"Drawer Box Top Offset","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_837xb64","ID_ATTRIBUTE":"id","code":"dbsos","name":"Drawer Box Side Offest","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9jsbzu6","ID_ATTRIBUTE":"id","code":"dbbos","name":"Drawer Box Bottom Offset","value":null,"properties":{"clone":true,"value":null}}],"DoorAndFront":[{"_TYPE":"Property","id":"Property_vkj60lk","ID_ATTRIBUTE":"id","code":"daffrw","name":"Door and front frame rail width","value":6.03,"properties":{"value":6.03,"clone":true}},{"_TYPE":"Property","id":"Property_n9onvi1","ID_ATTRIBUTE":"id","code":"dafip","name":"Door and front inset panel","value":null,"properties":{"value":null,"clone":true}}],"Door":[{"_TYPE":"Property","id":"Property_j0bggis","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_7dn4y4f","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_t8z4x9p","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"DrawerBox":[{"_TYPE":"Property","id":"Property_kebylx2","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_txm4stx","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_hj2tc1u","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_d1lz9qq","ID_ATTRIBUTE":"id","code":"dbst","name":"Side Thickness","value":1.59,"properties":{"value":1.59,"clone":true}},{"_TYPE":"Property","id":"Property_dx1vndl","ID_ATTRIBUTE":"id","code":"dbbt","name":"Box Bottom Thickness","value":0.64,"properties":{"value":0.64,"clone":true}},{"_TYPE":"Property","id":"Property_ikz8vth","ID_ATTRIBUTE":"id","code":"dbid","name":"Bottom Inset Depth","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_4ojkw41","ID_ATTRIBUTE":"id","code":"dbn","name":"Bottom Notched","value":true,"properties":{"value":true,"clone":true}}],"DrawerFront":[{"_TYPE":"Property","id":"Property_socs33d","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_lwlghxp","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eo3jj39","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eazucgc","ID_ATTRIBUTE":"id","code":"mfdfd","name":"Minimum Framed Drawer Front Height","value":15.24,"properties":{"value":15.24,"clone":true}}],"Frame":[{"_TYPE":"Property","id":"Property_cyu86cm","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_g2tylu9","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ncg2ucm","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Handle":[{"_TYPE":"Property","id":"Property_fy5cx43","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_v1iz9io","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_iqatpkx","ID_ATTRIBUTE":"id","code":"c2c","name":"Center To Center","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_e04kije","ID_ATTRIBUTE":"id","code":"proj","name":"Projection","value":null,"properties":{"clone":true,"value":null}}],"Hinge":[{"_TYPE":"Property","id":"Property_l4hivju","ID_ATTRIBUTE":"id","code":"maxtab","name":"Max Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_m38nj8i","ID_ATTRIBUTE":"id","code":"mintab","name":"Minimum Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_1463xdz","ID_ATTRIBUTE":"id","code":"maxol","name":"Max Door Overlay","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ks95jmk","ID_ATTRIBUTE":"id","code":"minol","name":"Minimum Door Overlay","value":null,"properties":{"clone":true,"value":null}}]}}]}}}`;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/decision-input-tree.js',
+function (require, exports, module) {
+	
+
+	// breakfast) Multiselect (food:bacon, eggs, toast, cereal)
+	//     eggs) Select (count:2,3,6), Select(type:overEasy, sunnySideUp, scrambled, fried)
+	//        requiresGourmetChef) upchange
+	//     toast) Select (white, wheat, texas)
+	//     cereal) Checkbox(milk), Select (type: rasinBrand, cheerios, life)
+	//     bacon) Leaf
+	//   dishes)
+	//      plate)
+	//      fork)
+	//      bowl)
+	//      spoon)
+	
+	
+	const Test = require('../test.js').Test;
+	const du = require('../../dom-utils');
+	const Input = require('../../input/input');
+	const Select = require('../../input/styles/select');
+	const DecisionInputTree = require('../../input/decision/decision');
+	const MultipleEntries = require('../../input/styles/multiple-entries');
+	
+	const toastCost = .75;
+	const cerialCost = 2.25;
+	const baconCost = 1.20;
+	const eggsCost = 1.25;
+	const overEasyMultiplier = 25;
+	
+	function createTree() {
+	  const bacon = new Input({type: 'checkbox', name: 'bacon'});
+	  const eggs = new Input({type: 'checkbox', name: 'eggs'});
+	  const eggCount = new Select({list: ['2','3','6'], name: 'count', mustChoose: true});
+	  const eggType = new Select({name: 'type', mustChoose: true, value: 'Scrambled', list: ['Over Easy', 'Sunny Side Up', 'Scrambled', 'Fried']});
+	  const toast = new Input({type: 'checkbox', name: 'toast'});
+	  const cereal = new Input({type: 'checkbox', name: 'cereal'});
+	  const toastType = new Select({name: 'type', mustChoose: true, list: ['white', 'wheat', 'texas']});
+	  const milk = new Input({type: 'checkbox', name: 'milk'});
+	  const cerealType = new Select({name: 'type', mustChoose: true, list: ['rasinBrand', 'cheerios', 'life']});
+	
+	  const tree = new DecisionInputTree('breakfast', {inputArray: [bacon, eggs, toast, cereal]});
+	
+	  const cost = (node) => eggsCost * Number.parseInt(node.find.input('count').value());
+	  const eggsNode = tree.root().then('Eggs', {cost});
+	  eggsNode.addInput(eggCount);
+	  eggsNode.addInput(eggType);
+	  const reqGourChef = eggsNode.then('requiresGourmetChef', {multiplier: overEasyMultiplier});
+	  const toastNode = tree.root().then('Toast', {cost: toastCost, inputArray: [toastType]});
+	  const cerealNode = tree.root().then('Cereal', {cost: cerialCost, inputArray: [cerealType]});
+	  tree.root().then('Bacon', {cost: baconCost});
+	
+	
+	  const dishes = tree.root().then('dishes');
+	  const plate = dishes.then('plate', {matirial: true});
+	  const fork = dishes.then('fork', {matirial: true});
+	  const bowl = dishes.then('bowl', {matirial: true});
+	  const spoon = dishes.then('spoon', {matirial: true});
+	
+	  bowl.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  cerealNode.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  toastNode.conditions.add((values) =>
+	    Object.pathValue(values, 'toast') === true);
+	
+	  eggsNode.conditions.add((values) =>
+	    Object.pathValue(values, 'eggs') === true);
+	
+	  reqGourChef.conditions.add((values) =>
+	    values.type === "Over Easy");
+	
+	  const vals = tree.values();
+	
+	  return tree;
+	}
+	
+	Test.add('DecisionInputTree structure', (ts) => {
+	  const tree = createTree();
+	  ts.success();
+	});
+	
+	function simulateUserUpdate(input, value, tree, choiceCount, ts) {
+	  const inputElem = du.create.element('input', {id: input.id(), value});
+	  document.body.append(inputElem);
+	  inputElem.click();
+	  inputElem.remove();
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, choiceCount);
+	  ts.assertEquals(tree.isComplete(), choiceCount === 0);
+	}
+	
+	function cost(tree) {
+	  const leaves = tree.root().leaves();
+	  let grandTotal = 0;
+	  for (let index = 0; index < leaves.length; index++) {
+	    let total = 0;
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.cost) {
+	        total += (typeof payload.cost) === 'function' ? payload.cost(node) : payload.cost;
+	      }
+	      if (payload.multiplier) {
+	        total *= payload.multiplier;
+	      }
+	    });
+	    grandTotal += total;
+	  }
+	  return grandTotal;
+	}
+	
+	function matirials(tree) {
+	  const leaves = tree.root().leaves();
+	  let mats = [];
+	  for (let index = 0; index < leaves.length; index++) {
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.matirial) {
+	        mats.push(node.name());
+	      }
+	    });
+	  }
+	  return mats;
+	}
+	
+	
+	Test.add('DecisionInputTree choices', (ts) => {
+	  const toastCost = .75;
+	  const cerialCost = 2.25;
+	  const baconCost = 1.20;
+	  const eggsCost = 1.25;
+	  const overEasyMultiplier = 25;
+	
+	  const justEggsCost = eggsCost * 6 * overEasyMultiplier;
+	  const total = justEggsCost + toastCost + baconCost + cerialCost;
+	
+	  const tree = createTree();
+	  let choices = tree.choices();
+	  ts.assertEquals(choices.length, 0);
+	
+	  const eggs = tree.find.input('eggs')
+	  eggs.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 2);
+	
+	  const toast = tree.find.input('toast')
+	  toast.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 3);
+	
+	  const noBowl = ['plate', 'fork', 'spoon'];
+	  ts.assertTrue(noBowl.equals(matirials(tree)));
+	
+	  const cereal = tree.find.input('cereal')
+	  cereal.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 4);
+	
+	
+	  const count = tree.find.input('count', 'Eggs');
+	  const type = tree.find.input('type', 'Eggs');
+	  const eggsType = tree.find.input('type', 'Eggs');
+	  const toastType = tree.find.input('type', 'Toast');
+	  const cerialType = tree.find.input('type', 'Cereal');
+	
+	  ts.assertNotEquals(type, undefined);
+	  ts.assertNotEquals(eggsType, toastType);
+	  ts.assertNotEquals(eggsType, cerialType);
+	  ts.assertNotEquals(cerialType, toastType);
+	
+	  simulateUserUpdate(eggsType, 'Over Easy', tree, 3, ts);
+	  simulateUserUpdate(toastType, 'white', tree, 2, ts);
+	  simulateUserUpdate(cerialType, 'cheerios', tree, 1, ts);
+	  simulateUserUpdate(count, '6', tree, 0, ts);
+	
+	  const allMaterials = ['plate', 'fork', 'bowl', 'spoon'];
+	  ts.assertTrue(allMaterials.equals(matirials(tree)));
+	
+	  ts.assertEquals(cost(tree), total);
 	
 	  ts.success();
 	});
@@ -8307,31 +9114,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/test/tests/compress-string.js',
-function (require, exports, module) {
-	
-const Test = require('../test.js').Test;
-	const CompressedString = require('../../object/compressed-string.js');
-	
-	Test.add('Imposter: fooled me',(ts) => {
-	  // let str = 'one, two,threefour,one,twothree,four';
-	  let str = 'one,one,one,one,one,one,one,one,one,one,';
-	  let noWhiteSpace = JSON.stringify(JSON.parse(cabStr));
-	  let cStr = new CompressedString(cabStr);
-	  let rebuilt = CompressedString.fromString(cStr.toString())
-	  ts.assertTrue(cabStr === rebuilt);
-	
-	  ts.success();
-	});
-	
-	
-	
-	
-	let cabStr = `{"_TYPE":"Order","name":"peaches","id":"2wyrbg706jiqej59e4ck5u7h4hlz2o4q","rooms":{"z8qv04z":{"_TYPE":"Room","id":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","ID_ATTRIBUTE":"id","name":"peach","layout":{"verticies":[{"_TYPE":"Vertex2D","id":"Vertex2D_q924g8f","ID_ATTRIBUTE":"id","point":{"x":500,"y":0},"prevLine":"Wall2D_t4dprm3","nextLine":"Wall2D_tkgqjbx"},{"_TYPE":"Vertex2D","id":"Vertex2D_qpfc4z7","ID_ATTRIBUTE":"id","point":{"x":500,"y":500},"prevLine":"Wall2D_tkgqjbx","nextLine":"Wall2D_edw3c2w"},{"_TYPE":"Vertex2D","id":"Vertex2D_s9zy2l5","ID_ATTRIBUTE":"id","point":{"x":0,"y":500},"prevLine":"Wall2D_edw3c2w","nextLine":"Wall2D_bmdk6tv"},{"_TYPE":"Vertex2D","id":"Vertex2D_xfdbd47","ID_ATTRIBUTE":"id","point":{"x":0,"y":0},"prevLine":"Wall2D_bmdk6tv","nextLine":"Wall2D_t4dprm3"}],"walls":[{"_TYPE":"Wall2D","id":"Wall2D_bmdk6tv","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_edw3c2w","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_t4dprm3","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_tkgqjbx","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]}],"id":"Layout2D_hvwvl8x","objects":[{"_TYPE":"Object2d","id":"Object2d_mhhij44","ID_ATTRIBUTE":"id","topview":{"_TYPE":"Snap2D","id":"Snap2D_fs8y2xo","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_fs8y2xo","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"bottomView":{"_TYPE":"Snap2D","id":"Snap2D_owpui4e","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_owpui4e","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"leftview":{"_TYPE":"Snap2D","id":"Snap2D_7x9e6cl","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_7x9e6cl","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"rightview":{"_TYPE":"Snap2D","id":"Snap2D_88fkq0n","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_88fkq0n","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"frontview":{"_TYPE":"Snap2D","id":"Snap2D_h6o6yjc","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_h6o6yjc","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"backView":{"_TYPE":"Snap2D","id":"Snap2D_d03rlan","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_d03rlan","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"}}],"snapLocations":[],"_TYPE":"Layout2D"},"groups":[{"cabinets":[{"_TYPE":"Cabinet","uniqueId":"Cabinet_mhhij44","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"c","partName":"standard","values":{"brh":"tkb.w + pback.t + brr","innerWidth":"c.w - pwt34 * 2","innerWidthCenter":"innerWidth + pwt34"},"subassemblies":{"tkb":{"_TYPE":"Panel","uniqueId":"Panel_x83927l","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,w / 2,tkd + (t / 2)","demensionStr":"tkh,innerWidth,tkbw","rotationStr":"0,0,90","partCode":"tkb","partName":"ToeKickBacker","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pr":{"_TYPE":"Panel","uniqueId":"Panel_texde2a","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w - (pr.t / 2),l / 2,(w / 2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pr","partName":"Right","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pl":{"_TYPE":"Panel","uniqueId":"Panel_b00prhm","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"(t / 2), l / 2, (w/2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pl","partName":"Left","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pback":{"_TYPE":"Panel","uniqueId":"Panel_9tnsq6m","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"l / 2 + pl.t, (w / 2) + tkb.w, c.t - (t / 2)","demensionStr":"c.l - tkb.w,innerWidth,pwt34","rotationStr":"0,0,90","partCode":"pback","partName":"Back","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pb":{"_TYPE":"Panel","uniqueId":"Panel_pg8v93d","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,tkh + (t/2),w / 2","demensionStr":"c.t - pback.t,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pb","partName":"Bottom","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt":{"_TYPE":"Panel","uniqueId":"Panel_8m0m4bs","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,(w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt","partName":"Top","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt2":{"_TYPE":"Panel","uniqueId":"Panel_6b24fe2","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,c.t - pback.t - (w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt2","partName":"Top2","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"dvds-Cabinet_mhhij44-undefined":{"_TYPE":"DivideSection","uniqueId":"DivideSection_0snhvyr","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-Cabinet_mhhij44-undefined","partName":"divideSection","values":{"vertical":true},"subassemblies":[{"_TYPE":"DivideSection","uniqueId":"DivideSection_dv6snbe","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-DivideSection_0snhvyr-0","partName":"divideSection","values":{"vertical":true},"subassemblies":[],"joints":[],"index":0,"pattern":{"values":{"a":118.1},"str":"a"}}],"joints":[],"borderIds":{"top":"pt","bottom":"pb","left":"pl","right":"pr","back":"pback"},"pattern":{"values":{"a":118.1},"str":"a"}}},"joints":[{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pb","demensionAxis":"x","centerAxis":"+y"}],"length":60.96,"width":127,"thickness":53.34,"name":"peach"}],"_TYPE":"Group","name":"Group","id":"Group_qbu4mn4","roomId":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","propertyConfig":{"Overlay":[{"_TYPE":"Property","id":"Property_fqc1xic","ID_ATTRIBUTE":"id","code":"ov","name":"Overlay","value":1.27,"properties":{"value":1.27,"clone":true}}],"Reveal":[{"_TYPE":"Property","id":"Property_tfwxb8o","ID_ATTRIBUTE":"id","code":"r","name":"Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_4fhky4n","ID_ATTRIBUTE":"id","code":"rvt","name":"Reveal Top","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_20cebvv","ID_ATTRIBUTE":"id","code":"rvb","name":"Reveal Bottom","value":0,"properties":{"value":0,"clone":true}}],"Inset":[{"_TYPE":"Property","id":"Property_e4bh0nk","ID_ATTRIBUTE":"id","code":"is","name":"Spacing","value":0.24,"properties":{"value":0.24,"clone":true}}],"Cabinet":[{"_TYPE":"Property","id":"Property_qkv57k8","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_b7za1rc","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9cbd2fg","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_6859l07","ID_ATTRIBUTE":"id","code":"sr","name":"Scribe Right","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_jwysbjh","ID_ATTRIBUTE":"id","code":"sl","name":"Scribe Left","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_5iran35","ID_ATTRIBUTE":"id","code":"rvibr","name":"Reveal Inside Bottom Rail","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_pzjt3cs","ID_ATTRIBUTE":"id","code":"rvdd","name":"Reveal Dual Door","value":0.16,"properties":{"value":0.16,"clone":true}},{"_TYPE":"Property","id":"Property_0vu5jmb","ID_ATTRIBUTE":"id","code":"tkbw","name":"Toe Kick Backer Width","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_dajkb1b","ID_ATTRIBUTE":"id","code":"tkd","name":"Toe Kick Depth","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_joyygzo","ID_ATTRIBUTE":"id","code":"tkh","name":"Toe Kick Height","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_l7t9z68","ID_ATTRIBUTE":"id","code":"pbt","name":"Panel Back Thickness","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_oywqj2v","ID_ATTRIBUTE":"id","code":"iph","name":"Ideal Handle Height","value":106.68,"properties":{"value":106.68,"clone":true}},{"_TYPE":"Property","id":"Property_2i5nht2","ID_ATTRIBUTE":"id","code":"brr","name":"Bottom Rail Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_up6vwpo","ID_ATTRIBUTE":"id","code":"frw","name":"Frame Rail Width","value":3.81,"properties":{"value":3.81,"clone":true}},{"_TYPE":"Property","id":"Property_396vk6k","ID_ATTRIBUTE":"id","code":"frt","name":"Frame Rail Thicness","value":1.91,"properties":{"value":1.91,"clone":true}}],"Panel":[{"_TYPE":"Property","id":"Property_cq9johi","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_nt7v1y1","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_vkmj6jj","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Guides":[{"_TYPE":"Property","id":"Property_l2178ai","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_afojonz","ID_ATTRIBUTE":"id","code":"dbtos","name":"Drawer Box Top Offset","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_837xb64","ID_ATTRIBUTE":"id","code":"dbsos","name":"Drawer Box Side Offest","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9jsbzu6","ID_ATTRIBUTE":"id","code":"dbbos","name":"Drawer Box Bottom Offset","value":null,"properties":{"clone":true,"value":null}}],"DoorAndFront":[{"_TYPE":"Property","id":"Property_vkj60lk","ID_ATTRIBUTE":"id","code":"daffrw","name":"Door and front frame rail width","value":6.03,"properties":{"value":6.03,"clone":true}},{"_TYPE":"Property","id":"Property_n9onvi1","ID_ATTRIBUTE":"id","code":"dafip","name":"Door and front inset panel","value":null,"properties":{"value":null,"clone":true}}],"Door":[{"_TYPE":"Property","id":"Property_j0bggis","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_7dn4y4f","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_t8z4x9p","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"DrawerBox":[{"_TYPE":"Property","id":"Property_kebylx2","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_txm4stx","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_hj2tc1u","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_d1lz9qq","ID_ATTRIBUTE":"id","code":"dbst","name":"Side Thickness","value":1.59,"properties":{"value":1.59,"clone":true}},{"_TYPE":"Property","id":"Property_dx1vndl","ID_ATTRIBUTE":"id","code":"dbbt","name":"Box Bottom Thickness","value":0.64,"properties":{"value":0.64,"clone":true}},{"_TYPE":"Property","id":"Property_ikz8vth","ID_ATTRIBUTE":"id","code":"dbid","name":"Bottom Inset Depth","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_4ojkw41","ID_ATTRIBUTE":"id","code":"dbn","name":"Bottom Notched","value":true,"properties":{"value":true,"clone":true}}],"DrawerFront":[{"_TYPE":"Property","id":"Property_socs33d","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_lwlghxp","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eo3jj39","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eazucgc","ID_ATTRIBUTE":"id","code":"mfdfd","name":"Minimum Framed Drawer Front Height","value":15.24,"properties":{"value":15.24,"clone":true}}],"Frame":[{"_TYPE":"Property","id":"Property_cyu86cm","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_g2tylu9","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ncg2ucm","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Handle":[{"_TYPE":"Property","id":"Property_fy5cx43","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_v1iz9io","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_iqatpkx","ID_ATTRIBUTE":"id","code":"c2c","name":"Center To Center","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_e04kije","ID_ATTRIBUTE":"id","code":"proj","name":"Projection","value":null,"properties":{"clone":true,"value":null}}],"Hinge":[{"_TYPE":"Property","id":"Property_l4hivju","ID_ATTRIBUTE":"id","code":"maxtab","name":"Max Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_m38nj8i","ID_ATTRIBUTE":"id","code":"mintab","name":"Minimum Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_1463xdz","ID_ATTRIBUTE":"id","code":"maxol","name":"Max Door Overlay","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ks95jmk","ID_ATTRIBUTE":"id","code":"minol","name":"Minimum Door Overlay","value":null,"properties":{"clone":true,"value":null}}]}}]}}}`;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/test/tests/imposter.js',
 function (require, exports, module) {
 	
@@ -8504,53 +9286,6 @@ require('../../object/json-utils');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/test/tests/star-line-map.js',
-function (require, exports, module) {
-	
-
-	const Test = require('../test.js').Test;
-	const EscapeMap = require('../../canvas/two-d/maps/escape');
-	const Vertex2d = require('../../canvas/two-d/objects/vertex');
-	const Line2d = require('../../canvas/two-d/objects/line');
-	const Polygon2d = require('../../canvas/two-d/objects/polygon');
-	
-	// [new Vertex2d(10,50),new Vertex2d(10,10),new Vertex2d(50,10),new Vertex2d(50,40),new Vertex2d(20,40),new Vertex2d(20,15),new Vertex2d(40,15), new Vertex2d(40,35), new Vertex2d(35,35), new Vertex2d(35,20),new Vertex2d(25,20),new Vertex2d(25,37.5), new Vertex2d(45,37.5),new Vertex2d(45,12.5),new Vertex2d(15,12.5), new Vertex2d(15,45),new Vertex2d(50,45), new Vertex2d(50,50),new Vertex2d(10,50)]
-	//
-	// [new Vertex2d(20,14),new Vertex2d(15,8),new Vertex2d(24,3),new Vertex2d(20,14)]
-	
-	const spiral = Polygon2d.fromString('[(10,50),(10,10),(50,10),(50,40),(20,40),(20,15),(40,15), (40,35), (35,35), (35,20),(25,20),(25,37.5), (45,37.5),(45,12.5),(15,12.5), (15,45),(50,45), (50,50)]');
-	const triangle = Polygon2d.fromString('[(20,14),(15,8),(24,3),(20,14)]');
-	const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
-	const innerLines = [new Line2d(new Vertex2d(40,47), new Vertex2d(40,48)),
-	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,25)),
-	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,15))]
-	
-	// star.forEach(l => l.translate(new Line2d(new Vertex2d(0,0),new Vertex2d(10,12))));
-	
-	Test.add('StarLineMap: escape',(ts) => {
-	  // const escapeMap = new EscapeMap(spiral.lines().concat(triangle.lines()).concat(innerLines));
-	  let lines = spiral.lines().concat(triangle.lines()).concat(star).concat(innerLines);
-	  const escapeMap = new EscapeMap(lines);
-	  const parimeterAns = Polygon2d.fromString(`(10, 50) => (10, 10) => (16.666666666666668, 10) => (15, 8) => (24, 3) => (21.454545454545453, 10) => (50, 10) => (50, 40) => (20, 40) => (20, 15) => (40, 15) => (40, 35) => (35, 35) => (35, 20) => (25, 20) => (25, 37.5) => (45, 37.5) => (45, 12.5) => (20.545454545454547, 12.5) => (20, 14) => (18.75, 12.5) => (15, 12.5) => (15, 21.18181818181818) => (16.5, 20.5) => (15.556603773584905, 22.198113207547173) => (17, 23) => (15.111111111111112, 23) => (15, 23.200000000000003) => (15, 45) => (50, 45) => (50, 50)`);
-	  const parimeter = EscapeMap.parimeter(lines);
-	  ts.assertTrue(parimeter.equals(parimeterAns), 'Use canvas buddy to isolate issue: /canvas-buddy/html/index.html\n\t\tIt seams like there is an error somewhere in the merging of groups... I would focus your investigation there.');
-	  ts.success();
-	});
-	
-	Test.add('Polygon: build', (ts) => {
-	  const polyAns = Polygon2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5)]');
-	  for (let index = 0; index < 5; index++) {
-	    const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
-	    star.shuffle();
-	    const poly = Polygon2d.build(star);
-	    ts.assertTrue(poly.equals(polyAns));
-	  }
-	  ts.success();
-	});
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/test/tests/lookup.js',
 function (require, exports, module) {
 	
@@ -8582,194 +9317,6 @@ const Test = require('../test.js').Test;
 	  ts.assertTrue(l52 === l5);
 	  l52.pickes = 'boiled...(Ewwwwww)';
 	  ts.assertEquals(l52.pickes, 'boiled...(Ewwwwww)');
-	
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/tests/decision-input-tree.js',
-function (require, exports, module) {
-	
-
-	// breakfast) Multiselect (food:bacon, eggs, toast, cereal)
-	//     eggs) Select (count:2,3,6), Select(type:overEasy, sunnySideUp, scrambled, fried)
-	//        requiresGourmetChef) upchange
-	//     toast) Select (white, wheat, texas)
-	//     cereal) Checkbox(milk), Select (type: rasinBrand, cheerios, life)
-	//     bacon) Leaf
-	//   dishes)
-	//      plate)
-	//      fork)
-	//      bowl)
-	//      spoon)
-	
-	
-	const Test = require('../test.js').Test;
-	const du = require('../../dom-utils');
-	const Input = require('../../input/input');
-	const Select = require('../../input/styles/select');
-	const DecisionInputTree = require('../../input/decision/decision');
-	const MultipleEntries = require('../../input/styles/multiple-entries');
-	
-	const toastCost = .75;
-	const cerialCost = 2.25;
-	const baconCost = 1.20;
-	const eggsCost = 1.25;
-	const overEasyMultiplier = 25;
-	
-	function createTree() {
-	  const bacon = new Input({type: 'checkbox', name: 'bacon'});
-	  const eggs = new Input({type: 'checkbox', name: 'eggs'});
-	  const eggCount = new Select({list: ['2','3','6'], name: 'count', mustChoose: true});
-	  const eggType = new Select({name: 'type', mustChoose: true, value: 'Scrambled', list: ['Over Easy', 'Sunny Side Up', 'Scrambled', 'Fried']});
-	  const toast = new Input({type: 'checkbox', name: 'toast'});
-	  const cereal = new Input({type: 'checkbox', name: 'cereal'});
-	  const toastType = new Select({name: 'type', mustChoose: true, list: ['white', 'wheat', 'texas']});
-	  const milk = new Input({type: 'checkbox', name: 'milk'});
-	  const cerealType = new Select({name: 'type', mustChoose: true, list: ['rasinBrand', 'cheerios', 'life']});
-	
-	  const tree = new DecisionInputTree('breakfast', {inputArray: [bacon, eggs, toast, cereal]});
-	
-	  const cost = (node) => eggsCost * Number.parseInt(node.find.input('count').value());
-	  const eggsNode = tree.root().then('Eggs', {cost});
-	  eggsNode.addInput(eggCount);
-	  eggsNode.addInput(eggType);
-	  const reqGourChef = eggsNode.then('requiresGourmetChef', {multiplier: overEasyMultiplier});
-	  const toastNode = tree.root().then('Toast', {cost: toastCost, inputArray: [toastType]});
-	  const cerealNode = tree.root().then('Cereal', {cost: cerialCost, inputArray: [cerealType]});
-	  tree.root().then('Bacon', {cost: baconCost});
-	
-	
-	  const dishes = tree.root().then('dishes');
-	  const plate = dishes.then('plate', {matirial: true});
-	  const fork = dishes.then('fork', {matirial: true});
-	  const bowl = dishes.then('bowl', {matirial: true});
-	  const spoon = dishes.then('spoon', {matirial: true});
-	
-	  bowl.conditions.add((values) =>
-	    Object.pathValue(values, 'cereal') === true);
-	
-	  cerealNode.conditions.add((values) =>
-	    Object.pathValue(values, 'cereal') === true);
-	
-	  toastNode.conditions.add((values) =>
-	    Object.pathValue(values, 'toast') === true);
-	
-	  eggsNode.conditions.add((values) =>
-	    Object.pathValue(values, 'eggs') === true);
-	
-	  reqGourChef.conditions.add((values) =>
-	    values.type === "Over Easy");
-	
-	  const vals = tree.values();
-	
-	  return tree;
-	}
-	
-	Test.add('DecisionInputTree structure', (ts) => {
-	  const tree = createTree();
-	  ts.success();
-	});
-	
-	function simulateUserUpdate(input, value, tree, choiceCount, ts) {
-	  const inputElem = du.create.element('input', {id: input.id(), value});
-	  document.body.append(inputElem);
-	  inputElem.click();
-	  inputElem.remove();
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, choiceCount);
-	  ts.assertEquals(tree.isComplete(), choiceCount === 0);
-	}
-	
-	function cost(tree) {
-	  const leaves = tree.root().leaves();
-	  let grandTotal = 0;
-	  for (let index = 0; index < leaves.length; index++) {
-	    let total = 0;
-	    leaves[index].forPath((node) => {
-	      const payload = node.payload();
-	      if (payload.cost) {
-	        total += (typeof payload.cost) === 'function' ? payload.cost(node) : payload.cost;
-	      }
-	      if (payload.multiplier) {
-	        total *= payload.multiplier;
-	      }
-	    });
-	    grandTotal += total;
-	  }
-	  return grandTotal;
-	}
-	
-	function matirials(tree) {
-	  const leaves = tree.root().leaves();
-	  let mats = [];
-	  for (let index = 0; index < leaves.length; index++) {
-	    leaves[index].forPath((node) => {
-	      const payload = node.payload();
-	      if (payload.matirial) {
-	        mats.push(node.name());
-	      }
-	    });
-	  }
-	  return mats;
-	}
-	
-	
-	Test.add('DecisionInputTree choices', (ts) => {
-	  const toastCost = .75;
-	  const cerialCost = 2.25;
-	  const baconCost = 1.20;
-	  const eggsCost = 1.25;
-	  const overEasyMultiplier = 25;
-	
-	  const justEggsCost = eggsCost * 6 * overEasyMultiplier;
-	  const total = justEggsCost + toastCost + baconCost + cerialCost;
-	
-	  const tree = createTree();
-	  let choices = tree.choices();
-	  ts.assertEquals(choices.length, 0);
-	
-	  const eggs = tree.find.input('eggs')
-	  eggs.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 2);
-	
-	  const toast = tree.find.input('toast')
-	  toast.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 3);
-	
-	  const noBowl = ['plate', 'fork', 'spoon'];
-	  ts.assertTrue(noBowl.equals(matirials(tree)));
-	
-	  const cereal = tree.find.input('cereal')
-	  cereal.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 4);
-	
-	
-	  const count = tree.find.input('count', 'Eggs');
-	  const type = tree.find.input('type', 'Eggs');
-	  const eggsType = tree.find.input('type', 'Eggs');
-	  const toastType = tree.find.input('type', 'Toast');
-	  const cerialType = tree.find.input('type', 'Cereal');
-	
-	  ts.assertNotEquals(type, undefined);
-	  ts.assertNotEquals(eggsType, toastType);
-	  ts.assertNotEquals(eggsType, cerialType);
-	  ts.assertNotEquals(cerialType, toastType);
-	
-	  simulateUserUpdate(eggsType, 'Over Easy', tree, 3, ts);
-	  simulateUserUpdate(toastType, 'white', tree, 2, ts);
-	  simulateUserUpdate(cerialType, 'cheerios', tree, 1, ts);
-	  simulateUserUpdate(count, '6', tree, 0, ts);
-	
-	  const allMaterials = ['plate', 'fork', 'bowl', 'spoon'];
-	  ts.assertTrue(allMaterials.equals(matirials(tree)));
-	
-	  ts.assertEquals(cost(tree), total);
 	
 	  ts.success();
 	});
@@ -9140,6 +9687,93 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/test/tests/star-line-map.js',
+function (require, exports, module) {
+	
+
+	const Test = require('../test.js').Test;
+	const EscapeMap = require('../../canvas/two-d/maps/escape');
+	const Vertex2d = require('../../canvas/two-d/objects/vertex');
+	const Line2d = require('../../canvas/two-d/objects/line');
+	const Polygon2d = require('../../canvas/two-d/objects/polygon');
+	
+	// [new Vertex2d(10,50),new Vertex2d(10,10),new Vertex2d(50,10),new Vertex2d(50,40),new Vertex2d(20,40),new Vertex2d(20,15),new Vertex2d(40,15), new Vertex2d(40,35), new Vertex2d(35,35), new Vertex2d(35,20),new Vertex2d(25,20),new Vertex2d(25,37.5), new Vertex2d(45,37.5),new Vertex2d(45,12.5),new Vertex2d(15,12.5), new Vertex2d(15,45),new Vertex2d(50,45), new Vertex2d(50,50),new Vertex2d(10,50)]
+	//
+	// [new Vertex2d(20,14),new Vertex2d(15,8),new Vertex2d(24,3),new Vertex2d(20,14)]
+	
+	const spiral = Polygon2d.fromString('[(10,50),(10,10),(50,10),(50,40),(20,40),(20,15),(40,15), (40,35), (35,35), (35,20),(25,20),(25,37.5), (45,37.5),(45,12.5),(15,12.5), (15,45),(50,45), (50,50)]');
+	const triangle = Polygon2d.fromString('[(20,14),(15,8),(24,3),(20,14)]');
+	const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
+	const innerLines = [new Line2d(new Vertex2d(40,47), new Vertex2d(40,48)),
+	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,25)),
+	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,15))]
+	
+	// star.forEach(l => l.translate(new Line2d(new Vertex2d(0,0),new Vertex2d(10,12))));
+	
+	Test.add('StarLineMap: escape',(ts) => {
+	  // const escapeMap = new EscapeMap(spiral.lines().concat(triangle.lines()).concat(innerLines));
+	  let lines = spiral.lines().concat(triangle.lines()).concat(star).concat(innerLines);
+	  const escapeMap = new EscapeMap(lines);
+	  const parimeterAns = Polygon2d.fromString(`(10, 50) => (10, 10) => (16.666666666666668, 10) => (15, 8) => (24, 3) => (21.454545454545453, 10) => (50, 10) => (50, 40) => (20, 40) => (20, 15) => (40, 15) => (40, 35) => (35, 35) => (35, 20) => (25, 20) => (25, 37.5) => (45, 37.5) => (45, 12.5) => (20.545454545454547, 12.5) => (20, 14) => (18.75, 12.5) => (15, 12.5) => (15, 21.18181818181818) => (16.5, 20.5) => (15.556603773584905, 22.198113207547173) => (17, 23) => (15.111111111111112, 23) => (15, 23.200000000000003) => (15, 45) => (50, 45) => (50, 50)`);
+	  const parimeter = EscapeMap.parimeter(lines);
+	  ts.assertTrue(parimeter.equals(parimeterAns), 'Use canvas buddy to isolate issue: /canvas-buddy/html/index.html\n\t\tIt seams like there is an error somewhere in the merging of groups... I would focus your investigation there.');
+	  ts.success();
+	});
+	
+	Test.add('Polygon: build', (ts) => {
+	  const polyAns = Polygon2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5)]');
+	  for (let index = 0; index < 5; index++) {
+	    const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
+	    star.shuffle();
+	    const poly = Polygon2d.build(star);
+	    ts.assertTrue(poly.equals(polyAns));
+	  }
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/utils.js',
+function (require, exports, module) {
+	
+const Test = require('../test.js').Test;
+	
+	Test.add('Array: scale',(ts) => {
+	  const original = [1,2,3,4];
+	  const arr = Array.from(original);
+	  const valScale = arr.scale(3, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(valScale.equals([3,6,9,12]));
+	  const funcScale = arr.scale((val, index) => index, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(funcScale.equals([0,2,6,12]));
+	  arr.scale([9,5,3,2]);
+	  ts.assertTrue(!original.equals(arr));
+	  ts.assertTrue(arr.equals([9,10,9,8]));
+	
+	  ts.success();
+	});
+	
+	Test.add('Array: add',(ts) => {
+	  const original = [1,2,3,4];
+	  const arr = Array.from(original);
+	  const valScale = arr.add(3, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(valScale.equals([4,5,6,7]));
+	  const funcScale = arr.add((val, index) => index, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(funcScale.equals([1,3,5,7]));
+	  arr.add([9,5,3,2]);
+	  ts.assertTrue(!original.equals(arr));
+	  ts.assertTrue(arr.equals([10,7,6,6]));
+	
+	  ts.success();
+	});
+	
+});
+
+
 RequireJS.addFunction('./generated/html-templates.js',
 function (require, exports, module) {
 	
@@ -9159,17 +9793,17 @@ exports['550500469'] = (get, $t) =>
 			$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
 			` </datalist> </span>`
 	
-	exports['849973748'] = (get, $t) => 
-			`<tr > <td>` +
-			$t.clean(get("row").label) +
-			`</td> ` +
-			$t.clean( new $t('1503980091').render(get("columns")(get("rowIndex")), 'col', get)) +
-			` </tr>`
-	
 	exports['976176139'] = (get, $t) => 
 			`<td > ` +
 			$t.clean(get("col").html()) +
 			` </td>`
+	
+	exports['1088583088'] = (get, $t) => 
+			`<div > <input type='text' value='` +
+			$t.clean(get("key")) +
+			`'/> => ` +
+			$t.clean(get("listItemHtml")(get("value"))) +
+			` <br> </div>`
 	
 	exports['1254550278'] = (get, $t) => 
 			`<td >` +
@@ -9201,25 +9835,12 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("getBody") && get("getBody")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
-	exports['1503980091'] = (get, $t) => 
-			`<td class='radio-table-input-cnt' > <input type='radio' name='` +
-			$t.clean(get("row").name) +
-			`' value='` +
-			$t.clean(get("col")) +
-			`' ` +
-			$t.clean(get("row").value === get("col") ? 'checked' : '') +
-			`/> </td>`
-	
-	exports['1601626991'] = (get, $t) => 
-			`<div class='decision-input-array-cnt pad ` +
-			$t.clean(get("class")) +
-			`' index='` +
+	exports['1507176312'] = (get, $t) => 
+			`<div class='single-entry-cnt' index='` +
 			$t.clean(get("$index")) +
 			`'> ` +
-			$t.clean(get("input").html()) +
-			` <div class='children-recurse-cnt tab' value='` +
-			$t.clean(get("input").value()) +
-			`'></div> </div>`
+			$t.clean(get("setHtml")(get("$index"))) +
+			` </div>`
 	
 	exports['1682356664'] = (get, $t) => 
 			`<div id="input-input-list-` +
@@ -9236,6 +9857,9 @@ exports['550500469'] = (get, $t) =>
 			`> ` +
 			$t.clean(get("value")) +
 			` </option>`
+	
+	exports['auto-save'] = (get, $t) => 
+			`<div> <button type="button" class='auto-save-btn' name="button">Auto Save</button> <span class='status'></span> </div> `
 	
 	exports['expandable/input-repeat'] = (get, $t) => 
 			`<div> ` +
@@ -9255,51 +9879,6 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("option")) +
 			`" ></option>`
 	
-	exports['auto-save'] = (get, $t) => 
-			`<div> <button type="button" class='auto-save-btn' name="button">Auto Save</button> <span class='status'></span> </div> `
-	
-	exports['expandable/sidebar'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> <div class="expand-list-cnt ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('-688234735').render(get("list")(), 'key, item', get)) +
-			` <div class='expand-input-cnt' hidden>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <div class='input-open-cnt'><button>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</button></div> </div> <div> </div> <div class="expand-body ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("key")) +
-			`'> Hello World! </div> </div> `
-	
-	exports['-688234735'] = (get, $t) => 
-			`<div class="expandable-list-body" key='` +
-			$t.clean(get("key")) +
-			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("key")) +
-			`'>X</button> </div> <div class="expand-header ` +
-			$t.clean(get("type")()) +
-			` ` +
-			$t.clean(get("activeKey")() === get("key") ? ' active' : '') +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`' key='` +
-			$t.clean(get("key")) +
-			`'> ` +
-			$t.clean(get("getHeader")(get("item"), get("key"))) +
-			` </div> </div> </div>`
-	
 	exports['expandable/list'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -9314,31 +9893,6 @@ exports['550500469'] = (get, $t) =>
 			`</div> <div class='input-open-cnt'><button>Add ` +
 			$t.clean(get("listElemLable")()) +
 			`</button></div> </div> `
-	
-	exports['expandable/top-add-list'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> <div class='expand-input-cnt' hidden has-input-tree='` +
-			$t.clean(get("hasInputTree")()) +
-			`'>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <div class='input-open-cnt'><button>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</button></div> ` +
-			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
-			` </div> `
-	
-	exports['input/data-list'] = (get, $t) => 
-			`` +
-			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
-			` `
-	
-	exports['-994603408'] = (get, $t) => 
-			`<option value="` +
-			$t.clean(get("item")) +
-			`" ></option>`
 	
 	exports['expandable/pill'] = (get, $t) => 
 			` <div class="expandable-list ` +
@@ -9382,33 +9936,101 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
-	exports['input/decision/decision-modification'] = (get, $t) => 
-			` <div class='decision-input-cnt mod' node-id='` +
+	exports['expandable/sidebar'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
 			$t.clean(get("id")()) +
-			`' recursion="disabled"> <div node-id='` +
+			`'> <div class="expand-list-cnt ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
 			$t.clean(get("id")()) +
-			`' class='card'> <div class='payload-cnt'>` +
-			$t.clean(get("payloadHtml")()) +
-			`</div> <button class='then-button modify'> Then... </button> <div class='then-input-tree tab'></div> ` +
-			$t.clean( new $t('-34900081').render(get("inputArray")(), 'input', get)) +
-			` <div class='orphan-cnt tab'></div> <br> <br> <div class='modification-add-input tab'> ` +
-			$t.clean(get("inputTree")().html()) +
-			` </div> <div class='remove-btn-cnt'><button class='rm-node'>X</button></div> </div> </div> `
+			`'> ` +
+			$t.clean( new $t('-688234735').render(get("list")(), 'key, item', get)) +
+			` <div class='expand-input-cnt' hidden>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> </div> <div> </div> <div class="expand-body ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'> Hello World! </div> </div> `
 	
-	exports['-34900081'] = (get, $t) => 
+	exports['-688234735'] = (get, $t) => 
+			`<div class="expandable-list-body" key='` +
+			$t.clean(get("key")) +
+			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'>X</button> </div> <div class="expand-header ` +
+			$t.clean(get("type")()) +
+			` ` +
+			$t.clean(get("activeKey")() === get("key") ? ' active' : '') +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'> ` +
+			$t.clean(get("getHeader")(get("item"), get("key"))) +
+			` </div> </div> </div>`
+	
+	exports['input/data-list'] = (get, $t) => 
+			`` +
+			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+			` `
+	
+	exports['-994603408'] = (get, $t) => 
+			`<option value="` +
+			$t.clean(get("item")) +
+			`" ></option>`
+	
+	exports['expandable/top-add-list'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> <div class='expand-input-cnt' hidden has-input-tree='` +
+			$t.clean(get("hasInputTree")()) +
+			`'>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> ` +
+			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
+			` </div> `
+	
+	exports['input/decision/decision-modification'] = (get, $t) => 
+			` <div class='decision-tree-mod-cnt'> <div class='then-add-cnt'> <button hidden class='then-btn modify-edit' mod-id='1'> Then... </button> <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button> </div> <div hidden class='if-edit-cnt'> <button class='edit-btn modify-edit' mod-id='2'> <i class="fas fa-pencil-alt"></i> </button> <button class='conditional-btn modify-edit' mod-id='3'> If </button> </div> <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div> <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div> <div hidden class='rm-edit-cnt modify-edit' mod-id='2'> <div class='edit-cnt'>Edit Tree Html!</div> <button class='modiy-rm-input-btn'>Remove</button> </div> <div hidden class='add-cnt tab modify-edit' mod-id='4'> Add Input Html! </div> <div class='remove-btn-cnt' hidden> <button class='rm-node modify-edit'>X</button> </div> <div class='close-cnts' hidden><button class='modify-edit'>X</button></div> </div> `
+	
+	exports['input/decision/decision'] = (get, $t) => 
+			` <div class='decision-input-cnt card` +
+			$t.clean(get("inputArray")().length === 0 ? ' empty' : '') +
+			`' node-id='` +
+			$t.clean(get("id")()) +
+			`' recursion="disabled"> <span id='` +
+			$t.clean(get("id")()) +
+			`'> <div class='payload-cnt'>` +
+			$t.clean(get("payloadHtml")()) +
+			`</div> ` +
+			$t.clean(get("inputArray")().length === 0 ? '<br><br>' : '') +
+			` ` +
+			$t.clean( new $t('-1551174699').render(get("inputArray")(), 'input', get)) +
+			` <div class='orphan-cnt tab'>` +
+			$t.clean(get("childrenHtml")()) +
+			`</div> </span> </div> `
+	
+	exports['-1551174699'] = (get, $t) => 
 			`<div class='decision-input-array-cnt pad ` +
 			$t.clean(get("class")) +
 			`' index='` +
 			$t.clean(get("$index")) +
 			`'> ` +
 			$t.clean(get("input").html()) +
-			` <div class='edit-input-cnt'><button> <i class="fas fa-pencil-alt"></i> </button></div> <span> <button class='conditional-button modify' target-id='` +
-			$t.clean(get("input").id()) +
-			`'> If ` +
-			$t.clean(get("input").name()) +
-			` </button> <div hidden class='condition-input-tree tab'></div> <div class='children-recurse-cnt tab' value='` +
-			$t.clean(get("input").value()) +
-			`'></div> </span> </div>`
+			` </div>`
 	
 	exports['input/decision/decisionTree'] = (get, $t) => 
 			`<div class='` +
@@ -9417,9 +10039,9 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("DecisionInputTree").class) +
 			`' tree-id='` +
 			$t.clean(get("node").tree().id()) +
-			`' input-id=` +
+			`' input-id='` +
 			$t.clean(get("node").tree().id()) +
-			` node-id='` +
+			`' node-id='` +
 			$t.clean(get("node").id()) +
 			`'> ` +
 			$t.clean(get("header")) +
@@ -9437,50 +10059,61 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("node").tree().buttonText()) +
 			` </button> </div> </div> `
 	
-	exports['input/decision/decision'] = (get, $t) => 
-			` <div class='decision-input-cnt' node-id='` +
-			$t.clean(get("id")()) +
-			`' recursion="disabled"> <span id='` +
-			$t.clean(get("id")()) +
-			`'> <div class='payload-cnt'>` +
-			$t.clean(get("payloadHtml")()) +
-			`</div> ` +
-			$t.clean( new $t('1601626991').render(get("inputArray")(), 'input', get)) +
-			` <div class='orphan-cnt tab'></div> </span> </div> `
+	exports['input/edit/input'] = (get, $t) => 
+			`<div class='input-edit-cnt' input-ref-id='` +
+			$t.clean(get("input").id()) +
+			`'> <label>Label</label> <input type='text' attr='label' value='` +
+			$t.clean(get("input").label()) +
+			`'/> <br> <label>Name</label> <input type='text' attr='name' value='` +
+			$t.clean(get("input").name()) +
+			`'/> <br> <label ` +
+			$t.clean(get("input").list().length === 0 ? 'hidden' : '') +
+			`>List</label> <div class='tab edit-input-list-cnt relative'> ` +
+			$t.clean( new $t('1088583088').render(get("input").list(), 'key, value', get)) +
+			` </div> <br> </div> `
 	
-	exports['input/measurement'] = (get, $t) => 
-			`<div class='fit input-cnt'` +
-			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id=` +
-			$t.clean(get("id")()) +
-			`> <label>` +
-			$t.clean(get("label")()) +
-			`</label> <input class='measurement-input ` +
-			$t.clean(get("class")()) +
-			`' id='` +
-			$t.clean(get("id")()) +
-			`' value='` +
-			$t.clean(get("value")() ? get("value")() : "") +
-			`' placeholder='` +
-			$t.clean(get("placeholder")()) +
-			`' type='` +
-			$t.clean(get("type")()) +
-			`' name='` +
-			$t.clean(get("name")()) +
-			`'> <div class='error' id='` +
-			$t.clean(get("errorMsgId")()) +
-			`' hidden>` +
-			$t.clean(get("errorMsg")()) +
-			`</div> </div> `
+	exports['input/edit/list/object'] = (get, $t) => 
+			`<div class='edit-input-list-obj tab'> ` +
+			$t.clean( new $t('-2045511556').render(get("scope"), 'key, value', get)) +
+			` </div> `
+	
+	exports['-2045511556'] = (get, $t) => 
+			`<div > <input type='text' value='` +
+			$t.clean(get("key")) +
+			`'/> = <input type='text' value='` +
+			$t.clean(get("value")) +
+			`'/> </div>`
+	
+	exports['input/edit/list/string'] = (get, $t) => 
+			`<input type='text' name='value' value='` +
+			$t.clean(get("value")) +
+			`'/> `
+	
+	exports['input/edit/table'] = (get, $t) => 
+			`<div class='input-edit-cnt' input-ref-id='` +
+			$t.clean(get("table").id()) +
+			`'> <label>Label</label> <input type='text' attr='label' value='` +
+			$t.clean(get("table").label()) +
+			`'/> <br> <label>Name</label> <input type='text' attr='name' value='` +
+			$t.clean(get("table").name()) +
+			`'/> <br> <div class='table-column-edit-cnt'> <label ` +
+			$t.clean(get("table").columns().length === 0 ? 'hidden' : '') +
+			`>Columns</label> ` +
+			$t.clean(get("listHtml")(get("table").columns())) +
+			`; <button id='table-column-edit-btn'>Apply</button> </div> <div class='table-row-edit-cnt'> <label ` +
+			$t.clean(get("table").rows().length === 0 ? 'hidden' : '') +
+			`>Rows</label> ` +
+			$t.clean(get("listHtml")(get("table").rows())) +
+			`; <button id='table-row-edit-btn'>Apply</button> </div> <br> </div> `
 	
 	exports['input/input'] = (get, $t) => 
 			`<` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id=` +
+			` input-id='` +
 			$t.clean(get("id")()) +
-			`> <label>` +
+			`'> <label>` +
 			$t.clean(get("label")()) +
 			`</label> <input class='` +
 			$t.clean(get("class")()) +
@@ -9510,40 +10143,14 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			`> `
 	
-	exports['input/multiple-entries'] = (get, $t) => 
-			`<` +
-			$t.clean(get("inline")() ? 'span' : 'div') +
-			` class='input-cnt multi'` +
-			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id=` +
-			$t.clean(get("id")()) +
-			`> <label>` +
-			$t.clean(get("label")()) +
-			`</label> <div class='multiple-entry-cnt tab card ` +
-			$t.clean(get("inline")() ? 'inline' : '') +
-			`' id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('-1306926582').render(get("list")(), 'inputArray', get)) +
-			` </div> </` +
-			$t.clean(get("inline")() ? 'span' : 'div') +
-			`> `
-	
-	exports['-1306926582'] = (get, $t) => 
-			`<div index='` +
-			$t.clean(get("$index")) +
-			`'> ` +
-			$t.clean(get("setHtml")(get("$index"))) +
-			` </div>`
-	
 	exports['input/list'] = (get, $t) => 
 			`<div class='input-cnt` +
 			$t.clean(get("inline")() ? ' inline' : '') +
 			`'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id=` +
+			` input-id='` +
 			$t.clean(get("id")()) +
-			`> <label>` +
+			`'> <label>` +
 			$t.clean(get("label")()) +
 			`</label> ` +
 			$t.clean( new $t('1682356664').render(get("list")(), 'input', get)) +
@@ -9553,14 +10160,58 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("errorMsg")()) +
 			`</div> </div> `
 	
+	exports['input/measurement'] = (get, $t) => 
+			`<div class='fit input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <input class='measurement-input ` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' value='` +
+			$t.clean(get("value")() ? get("value")() : "") +
+			`' placeholder='` +
+			$t.clean(get("placeholder")()) +
+			`' type='` +
+			$t.clean(get("type")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`'> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
+	
+	exports['input/multiple-entries'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt multi'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <div class='multiple-entry-cnt tab card ` +
+			$t.clean(get("inline")() ? 'inline' : '') +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('1507176312').render(get("list")(), 'inputArray', get)) +
+			` </div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
 	exports['input/number'] = (get, $t) => 
 			`<` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id=` +
+			` input-id='` +
 			$t.clean(get("id")()) +
-			`> <label>` +
+			`'> <label>` +
 			$t.clean(get("label")()) +
 			`</label> <input class='` +
 			$t.clean(get("class")()) +
@@ -9591,9 +10242,9 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? ' inline' : '') +
 			`'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id=` +
+			` input-id='` +
 			$t.clean(get("id")()) +
-			`> <label>` +
+			`'> <label>` +
 			$t.clean(get("label")()) +
 			`</label> ` +
 			$t.clean( new $t('1682356664').render(get("list")(), 'input', get)) +
@@ -9611,24 +10262,42 @@ exports['550500469'] = (get, $t) =>
 	exports['input/radio-table'] = (get, $t) => 
 			`<div class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id=` +
+			` input-id='` +
 			$t.clean(get("id")()) +
-			`> <label>` +
+			`'> <label>` +
 			$t.clean(get("label")()) +
 			`</label> <br> <div class='tab'> <table border="1"> <tbody> <tr> <td></td> ` +
 			$t.clean( new $t('1254550278').render(get("columns")(), 'name', get)) +
 			` </tr> ` +
-			$t.clean( new $t('849973748').render(get("rowDetail")(), 'row', get)) +
+			$t.clean( new $t('-44250289').render(get("rowDetail")(), 'row', get)) +
 			` </tbody> </table> </div> </div> `
+	
+	exports['-54469610'] = (get, $t) => 
+			`<td class='radio-table-input-cnt' > <input type='radio' name='` +
+			$t.clean(get("row").name) +
+			`' key='` +
+			$t.clean(get("row").key) +
+			`' value='` +
+			$t.clean(get("col")) +
+			`' ` +
+			$t.clean(get("row").value === get("col") ? 'checked' : '') +
+			`/> </td>`
+	
+	exports['-44250289'] = (get, $t) => 
+			`<tr > <td>` +
+			$t.clean(get("row").label) +
+			`</td> ` +
+			$t.clean( new $t('-54469610').render(get("columns")(get("rowIndex")), 'col', get)) +
+			` </tr>`
 	
 	exports['input/radio'] = (get, $t) => 
 			`<` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id=` +
+			` input-id='` +
 			$t.clean(get("id")()) +
-			`> <label>` +
+			`'> <label>` +
 			$t.clean(get("label")() ? get("label")() +
 			':' : '') +
 			`</label> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <div class='inline tab'> ` +
@@ -9657,9 +10326,9 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id=` +
+			` input-id='` +
 			$t.clean(get("id")()) +
-			`> <label>` +
+			`'> <label>` +
 			$t.clean(get("label")()) +
 			`</label> <select class='` +
 			$t.clean(get("class")()) +
@@ -9679,14 +10348,38 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			`> `
 	
+	exports['input/table'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <br> <div class='tab'> <table border="1"> <tbody> <tr> <td></td> ` +
+			$t.clean( new $t('1254550278').render(get("columnNames")(), 'name', get)) +
+			` </tr> ` +
+			$t.clean( new $t('-808712670').render(get("rows")(), 'rowIndex, row', get)) +
+			` </tbody> </table> </div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['-808712670'] = (get, $t) => 
+			`<tr > <td>` +
+			$t.clean(get("row")) +
+			`</td> ` +
+			$t.clean( new $t('976176139').render(get("columns")(get("rowIndex")), 'col', get)) +
+			` </tr>`
+	
 	exports['input/textarea'] = (get, $t) => 
 			`<` +
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			` class='input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id=` +
+			` input-id='` +
 			$t.clean(get("id")()) +
-			`> <label>` +
+			`'> <label>` +
 			$t.clean(get("label")()) +
 			`</label> <br> <textarea class='` +
 			$t.clean(get("class")()) +
@@ -9710,44 +10403,23 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("inline")() ? 'span' : 'div') +
 			`> `
 	
-	exports['input/table'] = (get, $t) => 
-			`<` +
-			$t.clean(get("inline")() ? 'span' : 'div') +
-			` class='input-cnt'` +
-			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id=` +
-			$t.clean(get("id")()) +
-			`> <label>` +
-			$t.clean(get("label")()) +
-			`</label> <br> <div class='tab'> <table border="1"> <tbody> <tr> <td></td> ` +
-			$t.clean( new $t('1254550278').render(get("columnNames")(), 'name', get)) +
-			` </tr> ` +
-			$t.clean( new $t('-808712670').render(get("rows")(), 'rowIndex, row', get)) +
-			` </tbody> </table> </div> </` +
-			$t.clean(get("inline")() ? 'span' : 'div') +
-			`> `
-	
-	exports['-808712670'] = (get, $t) => 
-			`<tr > <td>` +
-			$t.clean(get("row")) +
-			`</td> ` +
-			$t.clean( new $t('976176139').render(get("columns")(get("rowIndex")), 'col', get)) +
-			` </tr>`
-	
 	exports['ancestry'] = (get, $t) => 
 			`<div> <button id='modify-btn'>Modify</button> </div> <div id='config-body'></div> <div id='test-ground'></div> `
 	
 	exports['configure'] = (get, $t) => 
-			`<div> <button id='modify-btn'>Modify</button> </div> <div id='config-body'></div> <div id='test-ground'></div> `
+			`<div> <button id='update-tree-display-btn'>Update</button> <button class='modify-edit' id='modify-btn'>Modify</button> </div> <div id='config-body'></div> <div id='test-ground'></div> `
 	
 	exports['index'] = (get, $t) => 
-			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mitch/js/index.js'></script> <script src="https://kit.fontawesome.com/234ae94193.js" crossorigin="anonymous"></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/mitch/styles/mitch.css"> <title></title> </head> <body> ` +
+			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mitch/js/index.js'></script> <script src="https://kit.fontawesome.com/234ae94193.js" crossorigin="anonymous"></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/mitch/styles/mitch.css"> <title></title> </head> <body> ` +
 			$t.clean(get("header")) +
 			` ` +
 			$t.clean(get("main")) +
 			` ` +
 			$t.clean(get("footer")) +
 			` </body> </html> `
+	
+	exports['playground'] = (get, $t) => 
+			`<div> <button id='update-tree-display-btn'>Update</button> <button id='modify-btn'>Modify</button> </div> <div id='config-body'></div> <div id='test-ground'></div> `
 	
 	exports['report'] = (get, $t) => 
 			`<div> REPORT === ` +
@@ -9773,28 +10445,11 @@ function (require, exports, module) {
 	
 	const du = require('../../../public/js/utils/dom-utils.js');
 	
-	const report = require('./pages/report');
-	const reports = require('./pages/reports');
-	const configure = require('./pages/configure');
-	const ancestry = require('./pages/ancestry');
-	
 	let url = du.url.breakdown().path;
 	url = url.replace(/^\/mitch/, '');
 	
-	switch (url) {
-	  case '/configure':
-	    configure.proccess();
-	    break;
-	  case '/report':
-	    report.proccess();
-	    break;
-	  case '/reports':
-	    reports.proccess();
-	    break;
-	  case '/ancestry':
-	    ancestry.proccess();
-	    break;
-	}
+	const pageJs = require(`./pages${url}`);
+	pageJs.proccess();
 	
 });
 
@@ -9803,6 +10458,7 @@ RequireJS.addFunction('./app/pages/configure.js',
 function (require, exports, module) {
 	
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const ModDecisionTree = require('../../../../public/js/utils/input/decision/modification.js');
 	const PayloadHandler = require('../../../../public/js/utils/input/decision/payload-handler.js');
 	require('../../../../public/js/utils/input/init');
 	const Input = require('../../../../public/js/utils/input/input');
@@ -9810,15 +10466,18 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	const Table = require('../../../../public/js/utils/input/styles/table');
 	const MultipleEntries = require('../../../../public/js/utils/input/styles/multiple-entries');
 	const du = require('../../../../public/js/utils/dom-utils.js');
+	const request = require('../../../../public/js/utils/request');
 	
 	let count = 0;
+	let mod;
 	let modify = true;
 	
 	du.on.match('click', '#modify-btn', (elem) => {
-	  modify = !modify
-	  if (modify) du.class.add(elem, 'modify');
-	  else du.class.remove(elem, 'modify');
-	  updateEntireTree();
+	  mod.toggle();
+	
+	  if (mod.active()) du.class.add(elem, 'modify-edit');
+	  else du.class.remove(elem, 'modify-edit');
+	  // updateEntireTree();
 	});
 	
 	const getInput = () => new Input({
@@ -9834,2099 +10493,49 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	  du.id('config-body').innerHTML = body;
 	}
 	
-	function addInput(elem) {
-	  const node = DecisionInputTree.getNode(elem);
-	  node.payload().inputArray.push(getInput());
-	  if (node.payload().isRoot()) updateEntireTree();
-	  else {
-	    const html = node.payload().html(null, true);
-	    du.find.up('.decision-input-cnt', elem).outerHTML = html;
-	  }
-	}
+	du.on.match('click', '#update-tree-display-btn', (elem) => {
+	  updateEntireTree();
+	});
 	
 	
+	const sectionName = new Input({
+	  label: `Section Name`,
+	  name: `sectionName`,
+	  inline: true,
+	  class: 'center',
+	  validation: () => true
+	});
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	du.on.match('click', '.add-btn', addInput);
 	function proccess() {
 	  const input1 = getInput();
 	  const input2 = getInput();
 	  const input3 = getInput();
-	  // tree = new DecisionInputTree('Questionaire', {name: 'Questionaire'});
-	  tree = DecisionInputTree.fromJson(treeJson);
-	  tree.payloadHandler(new PayloadHandler('ancestry', new Input({name: 'name', label: 'Name', optional: true})));
+	  try {
+	    tree = DecisionInputTree.fromJson(require('../../../../public/json/configure.json'));
+	  } catch {
+	    tree = new DecisionInputTree('Questionaire', {name: 'Questionaire'});
+	  }
+	  const ph = new PayloadHandler("{{sectionName}}", sectionName);
+	  tree.payloadHandler(ph);
 	
 	  tree.onComplete(console.log);
 	  tree.onSubmit(console.log);
 	
 	  updateEntireTree();
+	  mod = new ModDecisionTree(tree);
 	}
 	
-	// const radio = new Radio({
-	//   name: 'radeo',
-	//   description: 'Pussy farts',
-	//   list: ['one', 2, 3, 'four']
-	// });
-	// du.id('test-ground').innerHTML = radio.html();
-	// du.id('test-ground').innerHTML = Radio.yes_no({name: 'yn'}).html();
-	// du.id('test-ground').innerHTML = Radio.true_false({name: 'tf'}).html();
-	
-	// const table = new Table({
-	//   name: 'tabal',
-	//   description: 'Pussy fartsss',
-	//   columns: ['one', 2, 3, 'four'],
-	//   rows: ['bill', 'scott', 'joe', 'fred']
-	// });
-	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
+	du.id('test-ground').innerHTML = '<button id="json">JSON</button><br><br><button id="save">Save</button>';
 	du.on.match('click', '#json', () => {
 	  du.copy(JSON.stringify(tree.toJson(), null, 2));
-	})
-	
-	// const input1 = getInput();
-	// const input2 = getInput();
-	// const input3 = getInput();
-	// const me = new MultipleEntries([input1, input2, input3], {label: 'oneTwoThree'});
-	// du.id('test-ground').innerHTML = me.html();
+	});
+	du.on.match('click', '#save', () => {
+	  if (confirm('Are you sure you want to save?')) {
+	    request.post('/save/json', {name: 'configure', json: tree.toJson()}, console.log, console.error);
+	  }
+	});
 	
 	exports.proccess = proccess;
-	
-	
-	
-	
-	const treeJson = {
-	  "_TYPE": "DecisionInputTree",
-	  "id": "DecisionInputTree_snxfhjx",
-	  "ID_ATTRIBUTE": "id",
-	  "stateConfigs": {
-	    "Questionaire": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_grxm8qe",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "Questionaire",
-	      "payload": {
-	        "name": "Questionaire",
-	        "inputArray": [
-	          {
-	            "_TYPE": "Radio",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "doTiresVisuallyApearToBeProperlyInflated?",
-	            "label": "Do Tires visually apear to be properly Inflated?",
-	            "list": [
-	              "yes",
-	              "no"
-	            ],
-	            "inline": true,
-	            "hidden": false,
-	            "optional": false,
-	            "value": "yes",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "Radio",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "areThereSignsOfFluidLeakingUnderTheVehical?",
-	            "label": "Are there signs of fluid leaking under the vehical?",
-	            "list": [
-	              "yes",
-	              "no"
-	            ],
-	            "inline": true,
-	            "hidden": false,
-	            "optional": false,
-	            "value": "yes",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "Radio",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "areAllPrimaryAndSecondaryLockingPinsInPlaceForLoaderAndImplement?",
-	            "label": "Are all primary and secondary locking pins in place for loader and implement?",
-	            "list": [
-	              "yes",
-	              "no"
-	            ],
-	            "inline": true,
-	            "hidden": false,
-	            "optional": false,
-	            "value": "yes",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "Radio",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "inspector",
-	            "label": "Inspector",
-	            "list": [
-	              "Zach",
-	              "Dylan",
-	              "Adam",
-	              "Jon",
-	              "Tucker",
-	              "Mitchell"
-	            ],
-	            "inline": true,
-	            "hidden": false,
-	            "optional": false,
-	            "value": "Zach",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "Input",
-	            "ID_ATTRIBUTE": "id",
-	            "type": "date",
-	            "name": "dateOfInspection",
-	            "label": "Date of Inspection",
-	            "hidden": false,
-	            "list": [],
-	            "optional": false,
-	            "value": "",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "NumberInput",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "engineHours",
-	            "label": "Engine Hours",
-	            "min": 0,
-	            "max": 9007199254740991,
-	            "step": 1,
-	            "hidden": false,
-	            "list": [],
-	            "optional": false,
-	            "value": "",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "RadioTable",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "checkingFluids",
-	            "label": "Checking Fluids",
-	            "rows": [
-	              "Engine Oil",
-	              "Hydraulic Oil",
-	              "Antifreeze"
-	            ],
-	            "columns": [
-	              "All Good",
-	              "Topped Off",
-	              "Bulk Add"
-	            ],
-	            "type": "radio",
-	            "hidden": false,
-	            "list": {
-	              "engineOil": {
-	                "name": "engineOil",
-	                "label": "Engine Oil",
-	                "value": "All Good"
-	              },
-	              "hydraulicOil": {
-	                "name": "hydraulicOil",
-	                "label": "Hydraulic Oil",
-	                "value": "All Good"
-	              },
-	              "antifreeze": {
-	                "name": "antifreeze",
-	                "label": "Antifreeze",
-	                "value": "All Good"
-	              }
-	            },
-	            "optional": false,
-	            "value": {
-	              "engineOil": "All Good",
-	              "hydraulicOil": "All Good",
-	              "antifreeze": "All Good"
-	            },
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "RadioTable",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "greesing",
-	            "label": "Greesing",
-	            "rows": [
-	              "Grease Zerk #1",
-	              "Grease Zerk #2",
-	              "Grease Zerk #3",
-	              "Grease Zerk #4",
-	              "Grease Zerk #5",
-	              "Grease Zerk #6",
-	              "Grease Zerk #7"
-	            ],
-	            "columns": [
-	              "Took Atleast 1 Pump",
-	              "Would Not Accept Grease"
-	            ],
-	            "type": "radio",
-	            "hidden": false,
-	            "list": {
-	              "greaseZerk #1": {
-	                "name": "greaseZerk #1",
-	                "label": "Grease Zerk #1",
-	                "value": "Took Atleast 1 Pump"
-	              },
-	              "greaseZerk #2": {
-	                "name": "greaseZerk #2",
-	                "label": "Grease Zerk #2",
-	                "value": "Took Atleast 1 Pump"
-	              },
-	              "greaseZerk #3": {
-	                "name": "greaseZerk #3",
-	                "label": "Grease Zerk #3",
-	                "value": "Took Atleast 1 Pump"
-	              },
-	              "greaseZerk #4": {
-	                "name": "greaseZerk #4",
-	                "label": "Grease Zerk #4",
-	                "value": "Took Atleast 1 Pump"
-	              },
-	              "greaseZerk #5": {
-	                "name": "greaseZerk #5",
-	                "label": "Grease Zerk #5",
-	                "value": "Took Atleast 1 Pump"
-	              },
-	              "greaseZerk #6": {
-	                "name": "greaseZerk #6",
-	                "label": "Grease Zerk #6",
-	                "value": "Took Atleast 1 Pump"
-	              },
-	              "greaseZerk #7": {
-	                "name": "greaseZerk #7",
-	                "label": "Grease Zerk #7",
-	                "value": "Took Atleast 1 Pump"
-	              }
-	            },
-	            "optional": false,
-	            "value": {
-	              "greaseZerk #1": "Took Atleast 1 Pump",
-	              "greaseZerk #2": "Took Atleast 1 Pump",
-	              "greaseZerk #3": "Took Atleast 1 Pump",
-	              "greaseZerk #4": "Took Atleast 1 Pump",
-	              "greaseZerk #5": "Took Atleast 1 Pump",
-	              "greaseZerk #6": "Took Atleast 1 Pump",
-	              "greaseZerk #7": "Took Atleast 1 Pump"
-	            },
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "RadioTable",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "hydraulicHoseAndFittingInspection",
-	            "label": "Hydraulic Hose and Fitting Inspection",
-	            "rows": [
-	              "Pump to Control Valve",
-	              "Control Valve to Arm Cylinders",
-	              "Control Valve To Bucket Cylinders"
-	            ],
-	            "columns": [
-	              "Dry",
-	              "Wet"
-	            ],
-	            "type": "radio",
-	            "hidden": false,
-	            "list": {
-	              "pumpToControlValve": {
-	                "name": "pumpToControlValve",
-	                "label": "Pump to Control Valve",
-	                "value": "Dry"
-	              },
-	              "controlValveToArmCylinders": {
-	                "name": "controlValveToArmCylinders",
-	                "label": "Control Valve to Arm Cylinders",
-	                "value": "Dry"
-	              },
-	              "controlValveToBucketCylinders": {
-	                "name": "controlValveToBucketCylinders",
-	                "label": "Control Valve To Bucket Cylinders",
-	                "value": "Dry"
-	              }
-	            },
-	            "optional": false,
-	            "value": {
-	              "pumpToControlValve": "Dry",
-	              "controlValveToArmCylinders": "Dry",
-	              "controlValveToBucketCylinders": "Dry"
-	            },
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "RadioTable",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "startingAndOperating",
-	            "label": "Starting and Operating",
-	            "rows": [
-	              "Parking Brake",
-	              "Ignitian and Key",
-	              "Throttle Control",
-	              "3-point Control",
-	              "Loader Controls"
-	            ],
-	            "columns": [
-	              "Works",
-	              "Kinda Works",
-	              "Not Fuunctioning"
-	            ],
-	            "type": "radio",
-	            "hidden": false,
-	            "list": {
-	              "parkingBrake": {
-	                "name": "parkingBrake",
-	                "label": "Parking Brake",
-	                "value": "Works"
-	              },
-	              "ignitianAndKey": {
-	                "name": "ignitianAndKey",
-	                "label": "Ignitian and Key",
-	                "value": "Works"
-	              },
-	              "throttleControl": {
-	                "name": "throttleControl",
-	                "label": "Throttle Control",
-	                "value": "Works"
-	              },
-	              "3-pointControl": {
-	                "name": "3-pointControl",
-	                "label": "3-point Control",
-	                "value": "Works"
-	              },
-	              "loaderControls": {
-	                "name": "loaderControls",
-	                "label": "Loader Controls",
-	                "value": "Works"
-	              }
-	            },
-	            "optional": false,
-	            "value": {
-	              "parkingBrake": "Works",
-	              "ignitianAndKey": "Works",
-	              "throttleControl": "Works",
-	              "3-pointControl": "Works",
-	              "loaderControls": "Works"
-	            },
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "RadioTable",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "shifftingTransmissionAndTransferCase",
-	            "label": "Shiffting Transmission and Transfer Case",
-	            "rows": [
-	              "Transmission shifts with no issues",
-	              "Transfer Case shifts with no issues"
-	            ],
-	            "columns": [
-	              "Yes",
-	              "No"
-	            ],
-	            "type": "radio",
-	            "hidden": false,
-	            "list": {
-	              "transmissionShiftsWithNoIssues": {
-	                "name": "transmissionShiftsWithNoIssues",
-	                "label": "Transmission shifts with no issues",
-	                "value": "Yes"
-	              },
-	              "transferCaseShiftsWithNoIssues": {
-	                "name": "transferCaseShiftsWithNoIssues",
-	                "label": "Transfer Case shifts with no issues",
-	                "value": "Yes"
-	              }
-	            },
-	            "optional": false,
-	            "value": {
-	              "transmissionShiftsWithNoIssues": "Yes",
-	              "transferCaseShiftsWithNoIssues": "Yes"
-	            },
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "Textarea",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "goodPllaceToTalkOorDropAreminder",
-	            "label": "Good Pllace to Talk oor Drop a Reminder",
-	            "hidden": false,
-	            "list": [],
-	            "optional": false,
-	            "value": "",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          },
-	          {
-	            "_TYPE": "Textarea",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "anythingWrongWithTheTractorThatNeedsFixed?",
-	            "label": "Anything wrong with the tractor that needs fixed?",
-	            "hidden": false,
-	            "list": [],
-	            "optional": false,
-	            "value": "",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          }
-	        ]
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": [
-	        {
-	          "_TYPE": "WildCardCondition",
-	          "group": "pr4vj5a",
-	          "attribute": "greesing.*",
-	          "value": "Would Not Accept Grease",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        }
-	      ]
-	    },
-	    "pr4vj5a": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_wmmd46r",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "pr4vj5a",
-	      "payload": {
-	        "inputArray": [
-	          {
-	            "_TYPE": "Table",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "kitchenSinkTable",
-	            "label": "kitchenSinkTable",
-	            "rows": [
-	              "one",
-	              "two",
-	              "three"
-	            ],
-	            "columns": [
-	              {
-	                "_TYPE": "Input",
-	                "ID_ATTRIBUTE": "id",
-	                "type": "text",
-	                "name": "text",
-	                "label": "text",
-	                "hidden": false,
-	                "list": [],
-	                "optional": false,
-	                "value": "",
-	                "targetAttr": "value",
-	                "errorMsg": "Error"
-	              },
-	              {
-	                "_TYPE": "Input",
-	                "ID_ATTRIBUTE": "id",
-	                "type": "checkbox",
-	                "name": "checkbox",
-	                "label": "checkbox",
-	                "hidden": false,
-	                "list": [],
-	                "optional": false,
-	                "value": false,
-	                "targetAttr": "value",
-	                "errorMsg": "Error"
-	              },
-	              {
-	                "_TYPE": "NumberInput",
-	                "ID_ATTRIBUTE": "id",
-	                "name": "table-Table_input-pb9o7ly-2-2",
-	                "label": "Value",
-	                "min": 0,
-	                "max": 9007199254740991,
-	                "step": 0.01,
-	                "hidden": false,
-	                "list": [],
-	                "optional": false,
-	                "value": "",
-	                "targetAttr": "value",
-	                "errorMsg": "Error"
-	              },
-	              {
-	                "_TYPE": "Radio",
-	                "ID_ATTRIBUTE": "id",
-	                "name": "radio",
-	                "label": "radio",
-	                "list": [
-	                  "one",
-	                  "two",
-	                  "three"
-	                ],
-	                "inline": true,
-	                "hidden": false,
-	                "optional": false,
-	                "value": "one",
-	                "targetAttr": "value",
-	                "errorMsg": "Error"
-	              },
-	              {
-	                "_TYPE": "Input",
-	                "ID_ATTRIBUTE": "id",
-	                "type": "date",
-	                "name": "date",
-	                "label": "date",
-	                "hidden": false,
-	                "list": [],
-	                "optional": false,
-	                "value": "",
-	                "targetAttr": "value",
-	                "errorMsg": "Error"
-	              },
-	              {
-	                "_TYPE": "MultipleEntries",
-	                "ID_ATTRIBUTE": "id",
-	                "list": [],
-	                "hidden": false,
-	                "optional": false,
-	                "value": [],
-	                "label": "Multi",
-	                "targetAttr": "value",
-	                "errorMsg": "Error",
-	                "inputTemplate": {
-	                  "_TYPE": "InputList",
-	                  "ID_ATTRIBUTE": "id",
-	                  "name": "me",
-	                  "list": [
-	                    {
-	                      "_TYPE": "Input",
-	                      "ID_ATTRIBUTE": "id",
-	                      "type": "text",
-	                      "name": "first",
-	                      "label": "first",
-	                      "inline": true,
-	                      "hidden": false,
-	                      "list": [],
-	                      "optional": false,
-	                      "value": "",
-	                      "targetAttr": "value",
-	                      "errorMsg": "Error"
-	                    },
-	                    {
-	                      "_TYPE": "Input",
-	                      "ID_ATTRIBUTE": "id",
-	                      "type": "text",
-	                      "name": "last",
-	                      "label": "last",
-	                      "inline": true,
-	                      "hidden": false,
-	                      "list": [],
-	                      "optional": false,
-	                      "value": "",
-	                      "targetAttr": "value",
-	                      "errorMsg": "Error"
-	                    }
-	                  ],
-	                  "inline": true,
-	                  "hidden": false,
-	                  "optional": false,
-	                  "value": [],
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                }
-	              },
-	              {
-	                "_TYPE": "Table",
-	                "ID_ATTRIBUTE": "id",
-	                "name": "nestedTable",
-	                "label": "nestedTable",
-	                "rows": [
-	                  "y0",
-	                  "y1"
-	                ],
-	                "columns": [
-	                  "x0",
-	                  "x1"
-	                ],
-	                "type": "Text",
-	                "hidden": false,
-	                "list": [],
-	                "optional": false,
-	                "value": {
-	                  "y0": {
-	                    "x0": "",
-	                    "x1": ""
-	                  },
-	                  "y1": {
-	                    "x0": "",
-	                    "x1": ""
-	                  }
-	                },
-	                "targetAttr": "value",
-	                "errorMsg": "Error"
-	              }
-	            ],
-	            "type": "column specific",
-	            "hidden": false,
-	            "list": [],
-	            "optional": false,
-	            "value": {
-	              "one": {
-	                "text": "",
-	                "checkbox": false,
-	                "": "",
-	                "radio": "one",
-	                "date": "",
-	                "undefined": [],
-	                "nestedTable": {
-	                  "y0": {
-	                    "x0": "",
-	                    "x1": ""
-	                  },
-	                  "y1": {
-	                    "x0": "",
-	                    "x1": ""
-	                  }
-	                }
-	              },
-	              "two": {
-	                "text": "",
-	                "checkbox": false,
-	                "": "",
-	                "radio": "one",
-	                "date": "",
-	                "undefined": [],
-	                "nestedTable": {
-	                  "y0": {
-	                    "x0": "",
-	                    "x1": ""
-	                  },
-	                  "y1": {
-	                    "x0": "",
-	                    "x1": ""
-	                  }
-	                }
-	              },
-	              "three": {
-	                "text": "",
-	                "checkbox": false,
-	                "": "",
-	                "radio": "one",
-	                "date": "",
-	                "undefined": [],
-	                "nestedTable": {
-	                  "y0": {
-	                    "x0": "",
-	                    "x1": ""
-	                  },
-	                  "y1": {
-	                    "x0": "",
-	                    "x1": ""
-	                  }
-	                }
-	              }
-	            },
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          }
-	        ]
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": []
-	    }
-	  },
-	  "name": "Questionaire",
-	  "referenceNodes": false,
-	  "root": {
-	    "name": "Questionaire",
-	    "payload": {
-	      "inputArray": [
-	        {
-	          "_TYPE": "Radio",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "doTiresVisuallyApearToBeProperlyInflated?",
-	          "label": "Do Tires visually apear to be properly Inflated?",
-	          "list": [
-	            "yes",
-	            "no"
-	          ],
-	          "inline": true,
-	          "hidden": false,
-	          "optional": false,
-	          "value": "yes",
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "Radio",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "areThereSignsOfFluidLeakingUnderTheVehical?",
-	          "label": "Are there signs of fluid leaking under the vehical?",
-	          "list": [
-	            "yes",
-	            "no"
-	          ],
-	          "inline": true,
-	          "hidden": false,
-	          "optional": false,
-	          "value": "yes",
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "Radio",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "areAllPrimaryAndSecondaryLockingPinsInPlaceForLoaderAndImplement?",
-	          "label": "Are all primary and secondary locking pins in place for loader and implement?",
-	          "list": [
-	            "yes",
-	            "no"
-	          ],
-	          "inline": true,
-	          "hidden": false,
-	          "optional": false,
-	          "value": "yes",
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "Radio",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "inspector",
-	          "label": "Inspector",
-	          "list": [
-	            "Zach",
-	            "Dylan",
-	            "Adam",
-	            "Jon",
-	            "Tucker",
-	            "Mitchell"
-	          ],
-	          "inline": true,
-	          "hidden": false,
-	          "optional": false,
-	          "value": "Zach",
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "Input",
-	          "ID_ATTRIBUTE": "id",
-	          "type": "date",
-	          "name": "dateOfInspection",
-	          "label": "Date of Inspection",
-	          "hidden": false,
-	          "list": [],
-	          "optional": false,
-	          "value": "",
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "NumberInput",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "engineHours",
-	          "label": "Engine Hours",
-	          "min": 0,
-	          "max": 9007199254740991,
-	          "step": 1,
-	          "hidden": false,
-	          "list": [],
-	          "optional": false,
-	          "value": "",
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "RadioTable",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "checkingFluids",
-	          "label": "Checking Fluids",
-	          "rows": [
-	            "Engine Oil",
-	            "Hydraulic Oil",
-	            "Antifreeze"
-	          ],
-	          "columns": [
-	            "All Good",
-	            "Topped Off",
-	            "Bulk Add"
-	          ],
-	          "type": "radio",
-	          "hidden": false,
-	          "list": {
-	            "engineOil": {
-	              "name": "engineOil",
-	              "label": "Engine Oil",
-	              "value": "All Good"
-	            },
-	            "hydraulicOil": {
-	              "name": "hydraulicOil",
-	              "label": "Hydraulic Oil",
-	              "value": "All Good"
-	            },
-	            "antifreeze": {
-	              "name": "antifreeze",
-	              "label": "Antifreeze",
-	              "value": "All Good"
-	            }
-	          },
-	          "optional": false,
-	          "value": {
-	            "engineOil": "All Good",
-	            "hydraulicOil": "All Good",
-	            "antifreeze": "All Good"
-	          },
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "RadioTable",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "greesing",
-	          "label": "Greesing",
-	          "rows": [
-	            "Grease Zerk #1",
-	            "Grease Zerk #2",
-	            "Grease Zerk #3",
-	            "Grease Zerk #4",
-	            "Grease Zerk #5",
-	            "Grease Zerk #6",
-	            "Grease Zerk #7"
-	          ],
-	          "columns": [
-	            "Took Atleast 1 Pump",
-	            "Would Not Accept Grease"
-	          ],
-	          "type": "radio",
-	          "hidden": false,
-	          "list": {
-	            "greaseZerk #1": {
-	              "name": "greaseZerk #1",
-	              "label": "Grease Zerk #1",
-	              "value": "Took Atleast 1 Pump"
-	            },
-	            "greaseZerk #2": {
-	              "name": "greaseZerk #2",
-	              "label": "Grease Zerk #2",
-	              "value": "Would Not Accept Grease"
-	            },
-	            "greaseZerk #3": {
-	              "name": "greaseZerk #3",
-	              "label": "Grease Zerk #3",
-	              "value": "Took Atleast 1 Pump"
-	            },
-	            "greaseZerk #4": {
-	              "name": "greaseZerk #4",
-	              "label": "Grease Zerk #4",
-	              "value": "Took Atleast 1 Pump"
-	            },
-	            "greaseZerk #5": {
-	              "name": "greaseZerk #5",
-	              "label": "Grease Zerk #5",
-	              "value": "Took Atleast 1 Pump"
-	            },
-	            "greaseZerk #6": {
-	              "name": "greaseZerk #6",
-	              "label": "Grease Zerk #6",
-	              "value": "Took Atleast 1 Pump"
-	            },
-	            "greaseZerk #7": {
-	              "name": "greaseZerk #7",
-	              "label": "Grease Zerk #7",
-	              "value": "Took Atleast 1 Pump"
-	            }
-	          },
-	          "optional": false,
-	          "value": {
-	            "greaseZerk #1": "Took Atleast 1 Pump",
-	            "greaseZerk #2": "Would Not Accept Grease",
-	            "greaseZerk #3": "Took Atleast 1 Pump",
-	            "greaseZerk #4": "Took Atleast 1 Pump",
-	            "greaseZerk #5": "Took Atleast 1 Pump",
-	            "greaseZerk #6": "Took Atleast 1 Pump",
-	            "greaseZerk #7": "Took Atleast 1 Pump"
-	          },
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "RadioTable",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "hydraulicHoseAndFittingInspection",
-	          "label": "Hydraulic Hose and Fitting Inspection",
-	          "rows": [
-	            "Pump to Control Valve",
-	            "Control Valve to Arm Cylinders",
-	            "Control Valve To Bucket Cylinders"
-	          ],
-	          "columns": [
-	            "Dry",
-	            "Wet"
-	          ],
-	          "type": "radio",
-	          "hidden": false,
-	          "list": {
-	            "pumpToControlValve": {
-	              "name": "pumpToControlValve",
-	              "label": "Pump to Control Valve",
-	              "value": "Dry"
-	            },
-	            "controlValveToArmCylinders": {
-	              "name": "controlValveToArmCylinders",
-	              "label": "Control Valve to Arm Cylinders",
-	              "value": "Dry"
-	            },
-	            "controlValveToBucketCylinders": {
-	              "name": "controlValveToBucketCylinders",
-	              "label": "Control Valve To Bucket Cylinders",
-	              "value": "Dry"
-	            }
-	          },
-	          "optional": false,
-	          "value": {
-	            "pumpToControlValve": "Dry",
-	            "controlValveToArmCylinders": "Dry",
-	            "controlValveToBucketCylinders": "Dry"
-	          },
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "RadioTable",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "startingAndOperating",
-	          "label": "Starting and Operating",
-	          "rows": [
-	            "Parking Brake",
-	            "Ignitian and Key",
-	            "Throttle Control",
-	            "3-point Control",
-	            "Loader Controls"
-	          ],
-	          "columns": [
-	            "Works",
-	            "Kinda Works",
-	            "Not Fuunctioning"
-	          ],
-	          "type": "radio",
-	          "hidden": false,
-	          "list": {
-	            "parkingBrake": {
-	              "name": "parkingBrake",
-	              "label": "Parking Brake",
-	              "value": "Works"
-	            },
-	            "ignitianAndKey": {
-	              "name": "ignitianAndKey",
-	              "label": "Ignitian and Key",
-	              "value": "Works"
-	            },
-	            "throttleControl": {
-	              "name": "throttleControl",
-	              "label": "Throttle Control",
-	              "value": "Works"
-	            },
-	            "3-pointControl": {
-	              "name": "3-pointControl",
-	              "label": "3-point Control",
-	              "value": "Works"
-	            },
-	            "loaderControls": {
-	              "name": "loaderControls",
-	              "label": "Loader Controls",
-	              "value": "Works"
-	            }
-	          },
-	          "optional": false,
-	          "value": {
-	            "parkingBrake": "Works",
-	            "ignitianAndKey": "Works",
-	            "throttleControl": "Works",
-	            "3-pointControl": "Works",
-	            "loaderControls": "Works"
-	          },
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "RadioTable",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "shifftingTransmissionAndTransferCase",
-	          "label": "Shiffting Transmission and Transfer Case",
-	          "rows": [
-	            "Transmission shifts with no issues",
-	            "Transfer Case shifts with no issues"
-	          ],
-	          "columns": [
-	            "Yes",
-	            "No"
-	          ],
-	          "type": "radio",
-	          "hidden": false,
-	          "list": {
-	            "transmissionShiftsWithNoIssues": {
-	              "name": "transmissionShiftsWithNoIssues",
-	              "label": "Transmission shifts with no issues",
-	              "value": "Yes"
-	            },
-	            "transferCaseShiftsWithNoIssues": {
-	              "name": "transferCaseShiftsWithNoIssues",
-	              "label": "Transfer Case shifts with no issues",
-	              "value": "Yes"
-	            }
-	          },
-	          "optional": false,
-	          "value": {
-	            "transmissionShiftsWithNoIssues": "Yes",
-	            "transferCaseShiftsWithNoIssues": "Yes"
-	          },
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "Textarea",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "goodPllaceToTalkOorDropAreminder",
-	          "label": "Good Pllace to Talk oor Drop a Reminder",
-	          "hidden": false,
-	          "list": [],
-	          "optional": false,
-	          "value": "",
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        },
-	        {
-	          "_TYPE": "Textarea",
-	          "ID_ATTRIBUTE": "id",
-	          "name": "anythingWrongWithTheTractorThatNeedsFixed?",
-	          "label": "Anything wrong with the tractor that needs fixed?",
-	          "hidden": false,
-	          "list": [],
-	          "optional": false,
-	          "value": "",
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        }
-	      ],
-	      "PAYLOAD_ID": "jr0cjes"
-	    },
-	    "children": {
-	      "pr4vj5a": {
-	        "name": "pr4vj5a",
-	        "payload": {
-	          "inputArray": [
-	            {
-	              "_TYPE": "Table",
-	              "ID_ATTRIBUTE": "id",
-	              "name": "kitchenSinkTable",
-	              "label": "kitchenSinkTable",
-	              "rows": [
-	                "one",
-	                "two",
-	                "three"
-	              ],
-	              "columns": [
-	                {
-	                  "_TYPE": "Input",
-	                  "ID_ATTRIBUTE": "id",
-	                  "type": "text",
-	                  "name": "text",
-	                  "label": "text",
-	                  "hidden": false,
-	                  "list": [],
-	                  "optional": false,
-	                  "value": "",
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                },
-	                {
-	                  "_TYPE": "Input",
-	                  "ID_ATTRIBUTE": "id",
-	                  "type": "checkbox",
-	                  "name": "checkbox",
-	                  "label": "checkbox",
-	                  "hidden": false,
-	                  "list": [],
-	                  "optional": false,
-	                  "value": false,
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                },
-	                {
-	                  "_TYPE": "NumberInput",
-	                  "ID_ATTRIBUTE": "id",
-	                  "name": "table-Table_input-trjzlvh-2-2",
-	                  "label": "Value",
-	                  "min": 0,
-	                  "max": 9007199254740991,
-	                  "step": 0.01,
-	                  "hidden": false,
-	                  "list": [],
-	                  "optional": false,
-	                  "value": "",
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                },
-	                {
-	                  "_TYPE": "Radio",
-	                  "ID_ATTRIBUTE": "id",
-	                  "name": "radio",
-	                  "label": "radio",
-	                  "list": [
-	                    "one",
-	                    "two",
-	                    "three"
-	                  ],
-	                  "inline": true,
-	                  "hidden": false,
-	                  "optional": false,
-	                  "value": "one",
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                },
-	                {
-	                  "_TYPE": "Input",
-	                  "ID_ATTRIBUTE": "id",
-	                  "type": "date",
-	                  "name": "date",
-	                  "label": "date",
-	                  "hidden": false,
-	                  "list": [],
-	                  "optional": false,
-	                  "value": "",
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                },
-	                {
-	                  "_TYPE": "MultipleEntries",
-	                  "ID_ATTRIBUTE": "id",
-	                  "list": [],
-	                  "hidden": false,
-	                  "optional": false,
-	                  "value": [],
-	                  "label": "Multi",
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error",
-	                  "inputTemplate": {
-	                    "_TYPE": "InputList",
-	                    "ID_ATTRIBUTE": "id",
-	                    "name": "me",
-	                    "list": [
-	                      {
-	                        "_TYPE": "Input",
-	                        "ID_ATTRIBUTE": "id",
-	                        "type": "text",
-	                        "name": "first",
-	                        "label": "first",
-	                        "inline": true,
-	                        "hidden": false,
-	                        "list": [],
-	                        "optional": false,
-	                        "value": "",
-	                        "targetAttr": "value",
-	                        "errorMsg": "Error"
-	                      },
-	                      {
-	                        "_TYPE": "Input",
-	                        "ID_ATTRIBUTE": "id",
-	                        "type": "text",
-	                        "name": "last",
-	                        "label": "last",
-	                        "inline": true,
-	                        "hidden": false,
-	                        "list": [],
-	                        "optional": false,
-	                        "value": "",
-	                        "targetAttr": "value",
-	                        "errorMsg": "Error"
-	                      }
-	                    ],
-	                    "inline": true,
-	                    "hidden": false,
-	                    "optional": false,
-	                    "value": [],
-	                    "targetAttr": "value",
-	                    "errorMsg": "Error"
-	                  }
-	                },
-	                {
-	                  "_TYPE": "Table",
-	                  "ID_ATTRIBUTE": "id",
-	                  "name": "nestedTable",
-	                  "label": "nestedTable",
-	                  "rows": [
-	                    "y0",
-	                    "y1"
-	                  ],
-	                  "columns": [
-	                    "x0",
-	                    "x1"
-	                  ],
-	                  "type": "Text",
-	                  "hidden": false,
-	                  "list": [],
-	                  "optional": false,
-	                  "value": {
-	                    "y0": {
-	                      "x0": "",
-	                      "x1": ""
-	                    },
-	                    "y1": {
-	                      "x0": "",
-	                      "x1": ""
-	                    }
-	                  },
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                }
-	              ],
-	              "type": "column specific",
-	              "hidden": false,
-	              "list": [],
-	              "optional": false,
-	              "value": {
-	                "one": {
-	                  "text": "",
-	                  "checkbox": false,
-	                  "": "",
-	                  "radio": "one",
-	                  "date": "",
-	                  "undefined": [],
-	                  "nestedTable": {
-	                    "y0": {
-	                      "x0": "",
-	                      "x1": ""
-	                    },
-	                    "y1": {
-	                      "x0": "",
-	                      "x1": ""
-	                    }
-	                  }
-	                },
-	                "two": {
-	                  "text": "",
-	                  "checkbox": false,
-	                  "": "",
-	                  "radio": "one",
-	                  "date": "",
-	                  "undefined": [],
-	                  "nestedTable": {
-	                    "y0": {
-	                      "x0": "",
-	                      "x1": ""
-	                    },
-	                    "y1": {
-	                      "x0": "",
-	                      "x1": ""
-	                    }
-	                  }
-	                },
-	                "three": {
-	                  "text": "",
-	                  "checkbox": false,
-	                  "": "",
-	                  "radio": "one",
-	                  "date": "",
-	                  "undefined": [],
-	                  "nestedTable": {
-	                    "y0": {
-	                      "x0": "",
-	                      "x1": ""
-	                    },
-	                    "y1": {
-	                      "x0": "",
-	                      "x1": ""
-	                    }
-	                  }
-	                }
-	              },
-	              "targetAttr": "value",
-	              "errorMsg": "Error"
-	            }
-	          ],
-	          "PAYLOAD_ID": "9g0m6st"
-	        },
-	        "children": {},
-	        "metadata": {}
-	      }
-	    },
-	    "metadata": {}
-	  },
-	  "payloadHandler": {
-	    "inputs": [
-	      {
-	        "_TYPE": "Input",
-	        "ID_ATTRIBUTE": "id",
-	        "name": "name",
-	        "label": "Name",
-	        "optional": true,
-	        "hidden": false,
-	        "list": [],
-	        "value": "",
-	        "targetAttr": "value",
-	        "errorMsg": "Error"
-	      }
-	    ],
-	    "templateName": "ancestry"
-	  }
-	};
-	// const treeJson = {
-	//   "_TYPE": "DecisionInputTree",
-	//   "id": "DecisionInputTree_97m8e3l",
-	//   "ID_ATTRIBUTE": "id",
-	//   "stateConfigs": {
-	//     "root": {
-	//       "_TYPE": "StateConfig",
-	//       "id": "StateConfig_bujrkj0",
-	//       "ID_ATTRIBUTE": "id",
-	//       "name": "root",
-	//       "payload": {
-	//         "inputArray": [
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "text",
-	//             "name": "smallText",
-	//             "label": "Small Text",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Textarea",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "largeText",
-	//             "label": "Large Text",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "checkbox",
-	//             "name": "checkbox",
-	//             "label": "Checkbox",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": false,
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Radio",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "radioInline",
-	//             "label": "Radio Inline",
-	//             "list": [
-	//               "in",
-	//               "a",
-	//               "line"
-	//             ],
-	//             "inline": true,
-	//             "hidden": false,
-	//             "optional": false,
-	//             "value": "in",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Radio",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "radio",
-	//             "label": "Radio",
-	//             "list": [
-	//               "not",
-	//               "in",
-	//               "a",
-	//               "line"
-	//             ],
-	//             "inline": false,
-	//             "hidden": false,
-	//             "optional": false,
-	//             "value": "not",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Select",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "select",
-	//             "label": "Select",
-	//             "list": [
-	//               "a",
-	//               "b",
-	//               "c",
-	//               "d",
-	//               "e",
-	//               "f",
-	//               "g"
-	//             ],
-	//             "hidden": false,
-	//             "optional": false,
-	//             "value": "a",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "date",
-	//             "name": "date",
-	//             "label": "Date",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "time",
-	//             "name": "time",
-	//             "label": "Time",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Table",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "t",
-	//             "label": "t",
-	//             "rows": [
-	//               "a",
-	//               "b",
-	//               "c",
-	//               "d",
-	//               "e"
-	//             ],
-	//             "columns": [
-	//               {
-	//                 "_TYPE": "Radio",
-	//                 "ID_ATTRIBUTE": "id",
-	//                 "name": "one",
-	//                 "label": "one",
-	//                 "list": [
-	//                   "1",
-	//                   "2",
-	//                   "3",
-	//                   "4"
-	//                 ],
-	//                 "inline": true,
-	//                 "hidden": false,
-	//                 "optional": false,
-	//                 "value": "1",
-	//                 "targetAttr": "value",
-	//                 "errorMsg": "Error"
-	//               },
-	//               {
-	//                 "_TYPE": "Input",
-	//                 "ID_ATTRIBUTE": "id",
-	//                 "type": "checkbox",
-	//                 "name": "checkbo",
-	//                 "label": "checkbo",
-	//                 "hidden": false,
-	//                 "list": [],
-	//                 "optional": false,
-	//                 "value": false,
-	//                 "targetAttr": "value",
-	//                 "errorMsg": "Error"
-	//               }
-	//             ],
-	//             "type": "Text",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "MultipleEntries",
-	//             "ID_ATTRIBUTE": "id",
-	//             "list": [],
-	//             "hidden": false,
-	//             "optional": false,
-	//             "value": [],
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error",
-	//             "inputTemplate": {
-	//               "_TYPE": "InputList",
-	//               "ID_ATTRIBUTE": "id",
-	//               "name": "children",
-	//               "list": [
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "text",
-	//                   "name": "first",
-	//                   "label": "First",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 },
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "text",
-	//                   "name": "middle",
-	//                   "label": "Middle",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 },
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "date",
-	//                   "name": "doB",
-	//                   "label": "DoB",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 }
-	//               ],
-	//               "inline": true,
-	//               "hidden": false,
-	//               "optional": false,
-	//               "value": [
-	//                 "",
-	//                 "",
-	//                 ""
-	//               ],
-	//               "targetAttr": "value",
-	//               "errorMsg": "Error"
-	//             }
-	//           },
-	//           {
-	//             "_TYPE": "MeasurementInput",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "standard",
-	//             "label": "standard",
-	//             "units": "Imperial (US)",
-	//             "value": null,
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "MeasurementInput",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "metric",
-	//             "label": "metric",
-	//             "units": "Metric",
-	//             "value": {
-	//               "0": "N",
-	//               "1": "a",
-	//               "2": "N"
-	//             },
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "text",
-	//             "name": "weatherFax",
-	//             "label": "Weather Fax",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "text",
-	//             "name": "eWeatherFax",
-	//             "label": "eWeather Fax",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           }
-	//         ]
-	//       }
-	//     },
-	//     "hiccups": {
-	//       "_TYPE": "StateConfig",
-	//       "id": "StateConfig_bwvdmzz",
-	//       "ID_ATTRIBUTE": "id",
-	//       "name": "hiccups",
-	//       "payload": {
-	//         "inputArray": [
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "text",
-	//             "name": "jozsefMorrissey",
-	//             "label": "Jozsef Morrissey",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           }
-	//         ]
-	//       }
-	//     }
-	//   },
-	//   "name": "root",
-	//   "root": {
-	//     "name": "root",
-	//     "payload": {
-	//       "inputArray": [
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "text",
-	//           "name": "smallText",
-	//           "label": "Small Text",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Textarea",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "largeText",
-	//           "label": "Large Text",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "checkbox",
-	//           "name": "checkbox",
-	//           "label": "Checkbox",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": false,
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Radio",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "radioInline",
-	//           "label": "Radio Inline",
-	//           "list": [
-	//             "in",
-	//             "a",
-	//             "line"
-	//           ],
-	//           "inline": true,
-	//           "hidden": false,
-	//           "optional": false,
-	//           "value": "on",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Radio",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "radio",
-	//           "label": "Radio",
-	//           "list": [
-	//             "not",
-	//             "in",
-	//             "a",
-	//             "line"
-	//           ],
-	//           "inline": false,
-	//           "hidden": false,
-	//           "optional": false,
-	//           "value": "on",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Select",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "select",
-	//           "label": "Select",
-	//           "list": [
-	//             "a",
-	//             "b",
-	//             "c",
-	//             "d",
-	//             "e",
-	//             "f",
-	//             "g"
-	//           ],
-	//           "hidden": false,
-	//           "optional": false,
-	//           "value": "a",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "date",
-	//           "name": "date",
-	//           "label": "Date",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "time",
-	//           "name": "time",
-	//           "label": "Time",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Table",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "t",
-	//           "label": "t",
-	//           "rows": [
-	//             "a",
-	//             "b",
-	//             "c",
-	//             "d",
-	//             "e"
-	//           ],
-	//           "columns": [
-	//             {
-	//               "_TYPE": "Radio",
-	//               "ID_ATTRIBUTE": "id",
-	//               "name": "one",
-	//               "label": "one",
-	//               "list": [
-	//                 "1",
-	//                 "2",
-	//                 "3",
-	//                 "4"
-	//               ],
-	//               "inline": true,
-	//               "hidden": false,
-	//               "optional": false,
-	//               "value": "1",
-	//               "targetAttr": "value",
-	//               "errorMsg": "Error"
-	//             },
-	//             {
-	//               "_TYPE": "Input",
-	//               "ID_ATTRIBUTE": "id",
-	//               "type": "checkbox",
-	//               "name": "checkbo",
-	//               "label": "checkbo",
-	//               "hidden": false,
-	//               "list": [],
-	//               "optional": false,
-	//               "value": false,
-	//               "targetAttr": "value",
-	//               "errorMsg": "Error"
-	//             }
-	//           ],
-	//           "type": "Text",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "MultipleEntries",
-	//           "ID_ATTRIBUTE": "id",
-	//           "list": [
-	//             {
-	//               "_TYPE": "InputList",
-	//               "ID_ATTRIBUTE": "id",
-	//               "name": "children",
-	//               "list": [
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "text",
-	//                   "name": "first",
-	//                   "label": "First",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 },
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "text",
-	//                   "name": "middle",
-	//                   "label": "Middle",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 },
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "date",
-	//                   "name": "doB",
-	//                   "label": "DoB",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 }
-	//               ],
-	//               "inline": true,
-	//               "hidden": false,
-	//               "optional": false,
-	//               "value": [
-	//                 "",
-	//                 "",
-	//                 ""
-	//               ],
-	//               "targetAttr": "value",
-	//               "errorMsg": "Error"
-	//             }
-	//           ],
-	//           "hidden": false,
-	//           "optional": false,
-	//           "value": [],
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error",
-	//           "inputTemplate": {
-	//             "_TYPE": "InputList",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "children",
-	//             "list": [
-	//               {
-	//                 "_TYPE": "Input",
-	//                 "ID_ATTRIBUTE": "id",
-	//                 "type": "text",
-	//                 "name": "first",
-	//                 "label": "First",
-	//                 "inline": true,
-	//                 "hidden": false,
-	//                 "list": [],
-	//                 "optional": false,
-	//                 "value": "",
-	//                 "targetAttr": "value",
-	//                 "errorMsg": "Error"
-	//               },
-	//               {
-	//                 "_TYPE": "Input",
-	//                 "ID_ATTRIBUTE": "id",
-	//                 "type": "text",
-	//                 "name": "middle",
-	//                 "label": "Middle",
-	//                 "inline": true,
-	//                 "hidden": false,
-	//                 "list": [],
-	//                 "optional": false,
-	//                 "value": "",
-	//                 "targetAttr": "value",
-	//                 "errorMsg": "Error"
-	//               },
-	//               {
-	//                 "_TYPE": "Input",
-	//                 "ID_ATTRIBUTE": "id",
-	//                 "type": "date",
-	//                 "name": "doB",
-	//                 "label": "DoB",
-	//                 "inline": true,
-	//                 "hidden": false,
-	//                 "list": [],
-	//                 "optional": false,
-	//                 "value": "",
-	//                 "targetAttr": "value",
-	//                 "errorMsg": "Error"
-	//               }
-	//             ],
-	//             "inline": true,
-	//             "hidden": false,
-	//             "optional": false,
-	//             "value": [
-	//               "",
-	//               "",
-	//               ""
-	//             ],
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           }
-	//         },
-	//         {
-	//           "_TYPE": "MeasurementInput",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "standard",
-	//           "label": "standard",
-	//           "units": "Imperial (US)",
-	//           "value": "0",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "MeasurementInput",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "metric",
-	//           "label": "metric",
-	//           "units": "Metric",
-	//           "value": {
-	//             "0": "4",
-	//             "1": "4",
-	//             "2": ".",
-	//             "3": "3"
-	//           },
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "text",
-	//           "name": "weatherFax",
-	//           "label": "Weather Fax",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "text",
-	//           "name": "eWeatherFax",
-	//           "label": "eWeather Fax",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         }
-	//       ],
-	//       "PAYLOAD_ID": "mdhqkxo"
-	//     },
-	//     "conditions": [],
-	//     "childConditions": [],
-	//     "children": {
-	//       "hiccups": {
-	//         "name": "hiccups",
-	//         "payload": {
-	//           "inputArray": [
-	//             {
-	//               "_TYPE": "Input",
-	//               "ID_ATTRIBUTE": "id",
-	//               "type": "text",
-	//               "name": "jozsefMorrissey",
-	//               "label": "Jozsef Morrissey",
-	//               "hidden": false,
-	//               "list": [],
-	//               "optional": false,
-	//               "value": "",
-	//               "targetAttr": "value",
-	//               "errorMsg": "Error"
-	//             }
-	//           ],
-	//           "PAYLOAD_ID": "22puejf"
-	//         },
-	//         "conditions": [
-	//           {
-	//             "_TYPE": "EqualCondition",
-	//             "condition": "metric",
-	//             "details": 44.3,
-	//             "attribute": "metric",
-	//             "value": 44.3,
-	//             "deligator": {
-	//               "_TYPE": "NodeCondition"
-	//             }
-	//           }
-	//         ],
-	//         "childConditions": [],
-	//         "children": {},
-	//         "metadata": {
-	//           "relatedTo": "metric"
-	//         }
-	//       }
-	//     }
-	//   }
-	// }
 	
 });
 
@@ -11948,9 +10557,9 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	
 	du.on.match('click', '#modify-btn', (elem) => {
 	  modify = !modify
-	  if (modify) du.class.add(elem, 'modify');
-	  else du.class.remove(elem, 'modify');
-	  updateEntireTree();
+	  if (modify) du.class.add(elem, 'modify-edit');
+	  else du.class.remove(elem, 'modify-edit');
+	  // updateEntireTree();
 	});
 	
 	const getInput = () => new Input({
@@ -11966,38 +10575,8 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	  du.id('config-body').innerHTML = body;
 	}
 	
-	function addInput(elem) {
-	  const node = DecisionInputTree.getNode(elem);
-	  node.payload().inputArray.push(getInput());
-	  if (node.payload().isRoot()) updateEntireTree();
-	  else {
-	    const html = node.payload().html(null, true);
-	    du.find.up('.decision-input-cnt', elem).outerHTML = html;
-	  }
-	}
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	du.on.match('click', '.add-btn', addInput);
 	function proccess() {
 	  const input1 = getInput();
 	  const input2 = getInput();
@@ -12012,2548 +10591,13 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	  updateEntireTree();
 	}
 	
-	// const radio = new Radio({
-	//   name: 'radeo',
-	//   description: 'Pussy farts',
-	//   list: ['one', 2, 3, 'four']
-	// });
-	// du.id('test-ground').innerHTML = radio.html();
-	// du.id('test-ground').innerHTML = Radio.yes_no({name: 'yn'}).html();
-	// du.id('test-ground').innerHTML = Radio.true_false({name: 'tf'}).html();
-	
-	// const table = new Table({
-	//   name: 'tabal',
-	//   description: 'Pussy fartsss',
-	//   columns: ['one', 2, 3, 'four'],
-	//   rows: ['bill', 'scott', 'joe', 'fred']
-	// });
 	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
 	du.on.match('click', '#json', () => {
 	  du.copy(JSON.stringify(tree.toJson(), null, 2));
 	})
 	
-	// const input1 = getInput();
-	// const input2 = getInput();
-	// const input3 = getInput();
-	// const me = new MultipleEntries([input1, input2, input3], {label: 'oneTwoThree'});
-	// du.id('test-ground').innerHTML = me.html();
 	
 	exports.proccess = proccess;
-	
-	
-	
-	
-	const treeJson = {
-	  "_TYPE": "DecisionInputTree",
-	  "id": "DecisionInputTree_37c3emb",
-	  "ID_ATTRIBUTE": "id",
-	  "stateConfigs": {
-	    "ancestry": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_uy134wd",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "ancestry",
-	      "payload": {
-	        "name": "Ancestry",
-	        "inputArray": [
-	          {
-	            "_TYPE": "Input",
-	            "ID_ATTRIBUTE": "id",
-	            "type": "text",
-	            "name": "name",
-	            "label": "Name",
-	            "hidden": false,
-	            "list": [],
-	            "optional": false,
-	            "value": "",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          }
-	        ]
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": [
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "jozsefMorrissey",
-	          "attribute": "name",
-	          "value": "Jozsef Morrissey",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "jeradMorrissey",
-	          "attribute": "name",
-	          "value": "Jerad Morrissey",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "deadraGreen",
-	          "attribute": "name",
-	          "value": "Deadra Green",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "seabrinGreen",
-	          "attribute": "name",
-	          "value": "Seabrin Green",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "ilishaGreen",
-	          "attribute": "name",
-	          "value": "Ilisha Green",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "mandyMorrissey",
-	          "attribute": "name",
-	          "value": "Mandy Morrissey",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "evanWaldop",
-	          "attribute": "name",
-	          "value": "Evan Waldop",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "bryleeBaker",
-	          "attribute": "name",
-	          "value": "Brylee Baker",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "debraMorrissey",
-	          "attribute": "name",
-	          "value": "Debra Morrissey",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "tonyMorrissey",
-	          "attribute": "name",
-	          "value": "Tony Morrissey",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        }
-	      ]
-	    },
-	    "jozsefMorrissey": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_zo1ogdx",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "jozsefMorrissey",
-	      "payload": {
-	        "name": "Jozsef Morrissey",
-	        "inputArray": [
-	          {
-	            "_TYPE": "Radio",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "relations",
-	            "label": "Relations",
-	            "list": [
-	              "Brother",
-	              "Sister",
-	              "Mother",
-	              "Father"
-	            ],
-	            "inline": true,
-	            "hidden": false,
-	            "optional": false,
-	            "value": "Brother",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          }
-	        ],
-	        "relatedTo": "name"
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": [
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "jeradMorrissey",
-	          "attribute": "relations",
-	          "value": "Brother",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "deadraGreen",
-	          "attribute": "relations",
-	          "value": "Sister",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "debraMorrissey",
-	          "attribute": "relations",
-	          "value": "Mother",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "tonyMorrissey",
-	          "attribute": "relations",
-	          "value": "Father",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        }
-	      ]
-	    },
-	    "jeradMorrissey": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_f2e9zhg",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "jeradMorrissey",
-	      "payload": {
-	        "name": "Jerad Morrissey",
-	        "inputArray": [
-	          {
-	            "_TYPE": "Radio",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "relations",
-	            "label": "Relations",
-	            "list": [
-	              "Wife",
-	              "Son",
-	              "Daugter",
-	              "Brother",
-	              "Sister",
-	              "Mother",
-	              "Father"
-	            ],
-	            "inline": true,
-	            "hidden": false,
-	            "optional": false,
-	            "value": "Wife",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          }
-	        ],
-	        "relatedTo": "name"
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": [
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "jozsefMorrissey",
-	          "attribute": "relations",
-	          "value": "Brother",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "mandyMorrissey",
-	          "attribute": "relations",
-	          "value": "Wife",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "evanWaldop",
-	          "attribute": "relations",
-	          "value": "Son",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "bryleeBaker",
-	          "attribute": "relations",
-	          "value": "Daugter",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "deadraGreen",
-	          "attribute": "relations",
-	          "value": "Sister",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "debraMorrissey",
-	          "attribute": "relations",
-	          "value": "Mother",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        }
-	      ]
-	    },
-	    "deadraGreen": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_u9gkod7",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "deadraGreen",
-	      "payload": {
-	        "name": "Deadra Green",
-	        "inputArray": [
-	          {
-	            "_TYPE": "Radio",
-	            "ID_ATTRIBUTE": "id",
-	            "name": "relation",
-	            "label": "Relation",
-	            "list": [
-	              "Husband",
-	              "Son",
-	              "Brothers",
-	              "Mother"
-	            ],
-	            "inline": true,
-	            "hidden": false,
-	            "optional": false,
-	            "value": "Husband",
-	            "targetAttr": "value",
-	            "errorMsg": "Error"
-	          }
-	        ],
-	        "relatedTo": "name"
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": [
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "seabrinGreen",
-	          "attribute": "relation",
-	          "value": "Husband",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "ilishaGreen",
-	          "attribute": "relation",
-	          "value": "Son",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "jeradMorrissey",
-	          "attribute": "relation",
-	          "value": "Brothers",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "jozsefMorrissey",
-	          "attribute": "relation",
-	          "value": "Brothers",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        },
-	        {
-	          "_TYPE": "CaseInsensitiveCondition",
-	          "group": "debraMorrissey",
-	          "attribute": "relation",
-	          "value": "Mother",
-	          "deligator": {
-	            "_TYPE": "NodeCondition"
-	          }
-	        }
-	      ]
-	    },
-	    "seabrinGreen": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_npfe42h",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "seabrinGreen",
-	      "payload": {
-	        "name": "Seabrin Green",
-	        "inputArray": [],
-	        "relatedTo": "name"
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": []
-	    },
-	    "ilishaGreen": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_pjtionk",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "ilishaGreen",
-	      "payload": {
-	        "name": "Ilisha Green",
-	        "inputArray": [],
-	        "relatedTo": "name"
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": []
-	    },
-	    "mandyMorrissey": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_3mijdq2",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "mandyMorrissey",
-	      "payload": {
-	        "name": "Mandy Morrissey",
-	        "inputArray": [],
-	        "relatedTo": "name"
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": []
-	    },
-	    "evanWaldop": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_swtbv4w",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "evanWaldop",
-	      "payload": {
-	        "name": "Evan Waldop",
-	        "inputArray": [],
-	        "relatedTo": "name"
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": []
-	    },
-	    "bryleeBaker": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_kg6cxzy",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "bryleeBaker",
-	      "payload": {
-	        "name": "Brylee Baker",
-	        "inputArray": [],
-	        "relatedTo": "name"
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": []
-	    },
-	    "debraMorrissey": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_6cwfa29",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "debraMorrissey",
-	      "payload": {
-	        "name": "Debra Morrissey",
-	        "inputArray": [],
-	        "relatedTo": "name"
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": []
-	    },
-	    "tonyMorrissey": {
-	      "_TYPE": "StateConfig",
-	      "id": "StateConfig_6mv49q0",
-	      "ID_ATTRIBUTE": "id",
-	      "name": "tonyMorrissey",
-	      "payload": {
-	        "name": "Tony Morrissey",
-	        "inputArray": [],
-	        "relatedTo": "name"
-	      },
-	      "treeName": "DecisionInputTree",
-	      "conditions": []
-	    }
-	  },
-	  "name": "ancestry",
-	  "root": {
-	    "name": "ancestry",
-	    "payload": {
-	      "inputArray": [
-	        {
-	          "_TYPE": "Input",
-	          "ID_ATTRIBUTE": "id",
-	          "type": "text",
-	          "name": "name",
-	          "label": "Name",
-	          "hidden": false,
-	          "list": [],
-	          "optional": false,
-	          "value": "Jozsef Morrissey",
-	          "targetAttr": "value",
-	          "errorMsg": "Error"
-	        }
-	      ],
-	      "PAYLOAD_ID": "xzjrihy"
-	    },
-	    "children": {
-	      "jozsefMorrissey": {
-	        "name": "jozsefMorrissey",
-	        "payload": {
-	          "inputArray": [
-	            {
-	              "_TYPE": "Radio",
-	              "ID_ATTRIBUTE": "id",
-	              "name": "relations",
-	              "label": "Relations",
-	              "list": [
-	                "Brother",
-	                "Sister",
-	                "Mother",
-	                "Father"
-	              ],
-	              "inline": true,
-	              "hidden": false,
-	              "optional": false,
-	              "value": "Sister",
-	              "targetAttr": "value",
-	              "errorMsg": "Error"
-	            }
-	          ],
-	          "PAYLOAD_ID": "v53j8uv"
-	        },
-	        "children": {
-	          "jeradMorrissey": {
-	            "name": "jeradMorrissey",
-	            "payload": {
-	              "inputArray": [
-	                {
-	                  "_TYPE": "Radio",
-	                  "ID_ATTRIBUTE": "id",
-	                  "name": "relations",
-	                  "label": "Relations",
-	                  "list": [
-	                    "Wife",
-	                    "Son",
-	                    "Daugter",
-	                    "Brother",
-	                    "Sister",
-	                    "Mother",
-	                    "Father"
-	                  ],
-	                  "inline": true,
-	                  "hidden": false,
-	                  "optional": false,
-	                  "value": "Brother",
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                }
-	              ],
-	              "PAYLOAD_ID": "d3f9dgi",
-	              "relatedTo": "relations"
-	            },
-	            "children": {
-	              "jozsefMorrissey": {
-	                "name": "jozsefMorrissey",
-	                "payload": {
-	                  "inputArray": [
-	                    {
-	                      "_TYPE": "Radio",
-	                      "ID_ATTRIBUTE": "id",
-	                      "name": "relations",
-	                      "label": "Relations",
-	                      "list": [
-	                        "Brother",
-	                        "Sister",
-	                        "Mother",
-	                        "Father"
-	                      ],
-	                      "inline": true,
-	                      "hidden": false,
-	                      "optional": false,
-	                      "value": "Brother",
-	                      "targetAttr": "value",
-	                      "errorMsg": "Error"
-	                    }
-	                  ],
-	                  "PAYLOAD_ID": "n5cuvns",
-	                  "relatedTo": "relations"
-	                },
-	                "children": {
-	                  "debraMorrissey": {
-	                    "name": "debraMorrissey",
-	                    "payload": {
-	                      "name": "Debra Morrissey",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "bddz0te"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  },
-	                  "tonyMorrissey": {
-	                    "name": "tonyMorrissey",
-	                    "payload": {
-	                      "name": "Tony Morrissey",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "nqtqzcj"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  }
-	                },
-	                "metadata": {},
-	                "relatedTo": "relations"
-	              },
-	              "mandyMorrissey": {
-	                "name": "mandyMorrissey",
-	                "payload": {
-	                  "name": "Mandy Morrissey",
-	                  "inputArray": [],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "bv53kxi"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              },
-	              "evanWaldop": {
-	                "name": "evanWaldop",
-	                "payload": {
-	                  "name": "Evan Waldop",
-	                  "inputArray": [],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "daw1wkm"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              },
-	              "bryleeBaker": {
-	                "name": "bryleeBaker",
-	                "payload": {
-	                  "name": "Brylee Baker",
-	                  "inputArray": [],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "t8rrr9v"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              },
-	              "deadraGreen": {
-	                "name": "deadraGreen",
-	                "payload": {
-	                  "inputArray": [
-	                    {
-	                      "_TYPE": "Radio",
-	                      "ID_ATTRIBUTE": "id",
-	                      "name": "relation",
-	                      "label": "Relation",
-	                      "list": [
-	                        "Husband",
-	                        "Son",
-	                        "Brothers",
-	                        "Mother"
-	                      ],
-	                      "inline": true,
-	                      "hidden": false,
-	                      "optional": false,
-	                      "value": "Brothers",
-	                      "targetAttr": "value",
-	                      "errorMsg": "Error"
-	                    }
-	                  ],
-	                  "PAYLOAD_ID": "3v0460o",
-	                  "relatedTo": "relations"
-	                },
-	                "children": {
-	                  "seabrinGreen": {
-	                    "name": "seabrinGreen",
-	                    "payload": {
-	                      "name": "Seabrin Green",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "4lx20j1"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  },
-	                  "ilishaGreen": {
-	                    "name": "ilishaGreen",
-	                    "payload": {
-	                      "name": "Ilisha Green",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "t1x4fub"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  },
-	                  "debraMorrissey": {
-	                    "name": "debraMorrissey",
-	                    "payload": {
-	                      "name": "Debra Morrissey",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "5obzx4q"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  }
-	                },
-	                "metadata": {},
-	                "relatedTo": "relations"
-	              },
-	              "debraMorrissey": {
-	                "name": "debraMorrissey",
-	                "payload": {
-	                  "name": "Debra Morrissey",
-	                  "inputArray": [],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "sefaomm"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              }
-	            },
-	            "metadata": {},
-	            "relatedTo": "relations"
-	          },
-	          "deadraGreen": {
-	            "name": "deadraGreen",
-	            "payload": {
-	              "inputArray": [
-	                {
-	                  "_TYPE": "Radio",
-	                  "ID_ATTRIBUTE": "id",
-	                  "name": "relation",
-	                  "label": "Relation",
-	                  "list": [
-	                    "Husband",
-	                    "Son",
-	                    "Brothers",
-	                    "Mother"
-	                  ],
-	                  "inline": true,
-	                  "hidden": false,
-	                  "optional": false,
-	                  "value": "Brothers",
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                }
-	              ],
-	              "PAYLOAD_ID": "c3kxiwb",
-	              "relatedTo": "relations"
-	            },
-	            "children": {
-	              "seabrinGreen": {
-	                "name": "seabrinGreen",
-	                "payload": {
-	                  "inputArray": [],
-	                  "PAYLOAD_ID": "e3glkaw",
-	                  "relatedTo": "relation"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "relation"
-	              },
-	              "ilishaGreen": {
-	                "name": "ilishaGreen",
-	                "payload": {
-	                  "inputArray": [],
-	                  "PAYLOAD_ID": "y6qixpo",
-	                  "relatedTo": "relation"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "relation"
-	              },
-	              "jeradMorrissey": {
-	                "name": "jeradMorrissey",
-	                "payload": {
-	                  "inputArray": [
-	                    {
-	                      "_TYPE": "Radio",
-	                      "ID_ATTRIBUTE": "id",
-	                      "name": "relations",
-	                      "label": "Relations",
-	                      "list": [
-	                        "Wife",
-	                        "Son",
-	                        "Daugter",
-	                        "Brother",
-	                        "Sister",
-	                        "Mother",
-	                        "Father"
-	                      ],
-	                      "inline": true,
-	                      "hidden": false,
-	                      "optional": false,
-	                      "value": "Sister",
-	                      "targetAttr": "value",
-	                      "errorMsg": "Error"
-	                    }
-	                  ],
-	                  "PAYLOAD_ID": "u6rapip",
-	                  "relatedTo": "relation"
-	                },
-	                "children": {
-	                  "jozsefMorrissey": {
-	                    "name": "jozsefMorrissey",
-	                    "payload": {
-	                      "name": "Jozsef Morrissey",
-	                      "inputArray": [
-	                        {
-	                          "_TYPE": "Radio",
-	                          "ID_ATTRIBUTE": "id",
-	                          "name": "relations",
-	                          "label": "Relations",
-	                          "list": [
-	                            "Brother",
-	                            "Sister",
-	                            "Mother",
-	                            "Father"
-	                          ],
-	                          "inline": true,
-	                          "hidden": false,
-	                          "optional": false,
-	                          "value": "Brother",
-	                          "targetAttr": "value",
-	                          "errorMsg": "Error"
-	                        }
-	                      ],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "9jyk58j"
-	                    },
-	                    "children": {
-	                      "debraMorrissey": {
-	                        "name": "debraMorrissey",
-	                        "payload": {
-	                          "name": "Debra Morrissey",
-	                          "inputArray": [],
-	                          "relatedTo": "name",
-	                          "PAYLOAD_ID": "1vtuvwa"
-	                        },
-	                        "children": {},
-	                        "metadata": {},
-	                        "relatedTo": "name"
-	                      },
-	                      "tonyMorrissey": {
-	                        "name": "tonyMorrissey",
-	                        "payload": {
-	                          "name": "Tony Morrissey",
-	                          "inputArray": [],
-	                          "relatedTo": "name",
-	                          "PAYLOAD_ID": "pl3eylf"
-	                        },
-	                        "children": {},
-	                        "metadata": {},
-	                        "relatedTo": "name"
-	                      }
-	                    },
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  },
-	                  "mandyMorrissey": {
-	                    "name": "mandyMorrissey",
-	                    "payload": {
-	                      "inputArray": [],
-	                      "PAYLOAD_ID": "0dwpdkf",
-	                      "relatedTo": "relations"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "relations"
-	                  },
-	                  "evanWaldop": {
-	                    "name": "evanWaldop",
-	                    "payload": {
-	                      "inputArray": [],
-	                      "PAYLOAD_ID": "fdxhk08",
-	                      "relatedTo": "relations"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "relations"
-	                  },
-	                  "bryleeBaker": {
-	                    "name": "bryleeBaker",
-	                    "payload": {
-	                      "inputArray": [],
-	                      "PAYLOAD_ID": "4mjr1s9",
-	                      "relatedTo": "relations"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "relations"
-	                  },
-	                  "deadraGreen": {
-	                    "name": "deadraGreen",
-	                    "payload": {
-	                      "inputArray": [
-	                        {
-	                          "_TYPE": "Radio",
-	                          "ID_ATTRIBUTE": "id",
-	                          "name": "relation",
-	                          "label": "Relation",
-	                          "list": [
-	                            "Husband",
-	                            "Son",
-	                            "Brothers",
-	                            "Mother"
-	                          ],
-	                          "inline": true,
-	                          "hidden": false,
-	                          "optional": false,
-	                          "value": "Brothers",
-	                          "targetAttr": "value",
-	                          "errorMsg": "Error"
-	                        }
-	                      ],
-	                      "PAYLOAD_ID": "3v0460o",
-	                      "relatedTo": "relations"
-	                    },
-	                    "children": {
-	                      "seabrinGreen": {
-	                        "name": "seabrinGreen",
-	                        "payload": {
-	                          "name": "Seabrin Green",
-	                          "inputArray": [],
-	                          "relatedTo": "name",
-	                          "PAYLOAD_ID": "4lx20j1"
-	                        },
-	                        "children": {},
-	                        "metadata": {},
-	                        "relatedTo": "name"
-	                      },
-	                      "ilishaGreen": {
-	                        "name": "ilishaGreen",
-	                        "payload": {
-	                          "name": "Ilisha Green",
-	                          "inputArray": [],
-	                          "relatedTo": "name",
-	                          "PAYLOAD_ID": "t1x4fub"
-	                        },
-	                        "children": {},
-	                        "metadata": {},
-	                        "relatedTo": "name"
-	                      },
-	                      "debraMorrissey": {
-	                        "name": "debraMorrissey",
-	                        "payload": {
-	                          "name": "Debra Morrissey",
-	                          "inputArray": [],
-	                          "relatedTo": "name",
-	                          "PAYLOAD_ID": "5obzx4q"
-	                        },
-	                        "children": {},
-	                        "metadata": {},
-	                        "relatedTo": "name"
-	                      }
-	                    },
-	                    "metadata": {},
-	                    "relatedTo": "relations"
-	                  },
-	                  "debraMorrissey": {
-	                    "name": "debraMorrissey",
-	                    "payload": {
-	                      "inputArray": [],
-	                      "PAYLOAD_ID": "jdr2zpy",
-	                      "relatedTo": "relations"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "relations"
-	                  }
-	                },
-	                "metadata": {},
-	                "relatedTo": "relation"
-	              },
-	              "jozsefMorrissey": {
-	                "name": "jozsefMorrissey",
-	                "payload": {
-	                  "inputArray": [
-	                    {
-	                      "_TYPE": "Radio",
-	                      "ID_ATTRIBUTE": "id",
-	                      "name": "relations",
-	                      "label": "Relations",
-	                      "list": [
-	                        "Brother",
-	                        "Sister",
-	                        "Mother",
-	                        "Father"
-	                      ],
-	                      "inline": true,
-	                      "hidden": false,
-	                      "optional": false,
-	                      "value": "Brother",
-	                      "targetAttr": "value",
-	                      "errorMsg": "Error"
-	                    }
-	                  ],
-	                  "PAYLOAD_ID": "vm08v4x",
-	                  "relatedTo": "relation"
-	                },
-	                "children": {
-	                  "jeradMorrissey": {
-	                    "name": "jeradMorrissey",
-	                    "payload": {
-	                      "name": "Jerad Morrissey",
-	                      "inputArray": [
-	                        {
-	                          "_TYPE": "Radio",
-	                          "ID_ATTRIBUTE": "id",
-	                          "name": "relations",
-	                          "label": "Relations",
-	                          "list": [
-	                            "Wife",
-	                            "Son",
-	                            "Daugter",
-	                            "Brother",
-	                            "Sister",
-	                            "Mother",
-	                            "Father"
-	                          ],
-	                          "inline": true,
-	                          "hidden": false,
-	                          "optional": false,
-	                          "value": "Wife",
-	                          "targetAttr": "value",
-	                          "errorMsg": "Error"
-	                        }
-	                      ],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "ny34h3s"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  },
-	                  "debraMorrissey": {
-	                    "name": "debraMorrissey",
-	                    "payload": {
-	                      "name": "Debra Morrissey",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "odnzgr7"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  },
-	                  "tonyMorrissey": {
-	                    "name": "tonyMorrissey",
-	                    "payload": {
-	                      "name": "Tony Morrissey",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "ge83gd9"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  }
-	                },
-	                "metadata": {},
-	                "relatedTo": "relation"
-	              },
-	              "debraMorrissey": {
-	                "name": "debraMorrissey",
-	                "payload": {
-	                  "inputArray": [],
-	                  "PAYLOAD_ID": "b5fqi4g",
-	                  "relatedTo": "relation"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "relation"
-	              }
-	            },
-	            "metadata": {},
-	            "relatedTo": "relations"
-	          },
-	          "debraMorrissey": {
-	            "name": "debraMorrissey",
-	            "payload": {
-	              "inputArray": [],
-	              "PAYLOAD_ID": "unpquro",
-	              "relatedTo": "relations"
-	            },
-	            "children": {},
-	            "metadata": {},
-	            "relatedTo": "relations"
-	          },
-	          "tonyMorrissey": {
-	            "name": "tonyMorrissey",
-	            "payload": {
-	              "inputArray": [],
-	              "PAYLOAD_ID": "7zhsezo",
-	              "relatedTo": "relations"
-	            },
-	            "children": {},
-	            "metadata": {},
-	            "relatedTo": "relations"
-	          }
-	        },
-	        "metadata": {},
-	        "relatedTo": "name"
-	      },
-	      "jeradMorrissey": {
-	        "name": "jeradMorrissey",
-	        "payload": {
-	          "inputArray": [
-	            {
-	              "_TYPE": "Radio",
-	              "ID_ATTRIBUTE": "id",
-	              "name": "relations",
-	              "label": "Relations",
-	              "list": [
-	                "Wife",
-	                "Son",
-	                "Daugter",
-	                "Brother",
-	                "Sister",
-	                "Mother",
-	                "Father"
-	              ],
-	              "inline": true,
-	              "hidden": false,
-	              "optional": false,
-	              "value": "Wife",
-	              "targetAttr": "value",
-	              "errorMsg": "Error"
-	            }
-	          ],
-	          "PAYLOAD_ID": "ozj6hxz"
-	        },
-	        "children": {
-	          "jozsefMorrissey": {
-	            "name": "jozsefMorrissey",
-	            "payload": {
-	              "inputArray": [
-	                {
-	                  "_TYPE": "Radio",
-	                  "ID_ATTRIBUTE": "id",
-	                  "name": "relations",
-	                  "label": "Relations",
-	                  "list": [
-	                    "Brother",
-	                    "Sister",
-	                    "Mother",
-	                    "Father"
-	                  ],
-	                  "inline": true,
-	                  "hidden": false,
-	                  "optional": false,
-	                  "value": "Brother",
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                }
-	              ],
-	              "PAYLOAD_ID": "n5cuvns",
-	              "relatedTo": "relations"
-	            },
-	            "children": {
-	              "jeradMorrissey": {
-	                "name": "jeradMorrissey",
-	                "payload": {
-	                  "name": "Jerad Morrissey",
-	                  "inputArray": [
-	                    {
-	                      "_TYPE": "Radio",
-	                      "ID_ATTRIBUTE": "id",
-	                      "name": "relations",
-	                      "label": "Relations",
-	                      "list": [
-	                        "Wife",
-	                        "Son",
-	                        "Daugter",
-	                        "Brother",
-	                        "Sister",
-	                        "Mother",
-	                        "Father"
-	                      ],
-	                      "inline": true,
-	                      "hidden": false,
-	                      "optional": false,
-	                      "value": "Wife",
-	                      "targetAttr": "value",
-	                      "errorMsg": "Error"
-	                    }
-	                  ],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "ny34h3s"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              },
-	              "debraMorrissey": {
-	                "name": "debraMorrissey",
-	                "payload": {
-	                  "name": "Debra Morrissey",
-	                  "inputArray": [],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "7b5seai"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              },
-	              "tonyMorrissey": {
-	                "name": "tonyMorrissey",
-	                "payload": {
-	                  "name": "Tony Morrissey",
-	                  "inputArray": [],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "513f3sx"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              }
-	            },
-	            "metadata": {},
-	            "relatedTo": "relations"
-	          },
-	          "mandyMorrissey": {
-	            "name": "mandyMorrissey",
-	            "payload": {
-	              "name": "Mandy Morrissey",
-	              "inputArray": [],
-	              "relatedTo": "name",
-	              "PAYLOAD_ID": "s9tutjf"
-	            },
-	            "children": {},
-	            "metadata": {},
-	            "relatedTo": "name"
-	          },
-	          "evanWaldop": {
-	            "name": "evanWaldop",
-	            "payload": {
-	              "name": "Evan Waldop",
-	              "inputArray": [],
-	              "relatedTo": "name",
-	              "PAYLOAD_ID": "c6ybbv3"
-	            },
-	            "children": {},
-	            "metadata": {},
-	            "relatedTo": "name"
-	          },
-	          "bryleeBaker": {
-	            "name": "bryleeBaker",
-	            "payload": {
-	              "name": "Brylee Baker",
-	              "inputArray": [],
-	              "relatedTo": "name",
-	              "PAYLOAD_ID": "rmfl21i"
-	            },
-	            "children": {},
-	            "metadata": {},
-	            "relatedTo": "name"
-	          },
-	          "deadraGreen": {
-	            "name": "deadraGreen",
-	            "payload": {
-	              "inputArray": [
-	                {
-	                  "_TYPE": "Radio",
-	                  "ID_ATTRIBUTE": "id",
-	                  "name": "relation",
-	                  "label": "Relation",
-	                  "list": [
-	                    "Husband",
-	                    "Son",
-	                    "Brothers",
-	                    "Mother"
-	                  ],
-	                  "inline": true,
-	                  "hidden": false,
-	                  "optional": false,
-	                  "value": "Brothers",
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                }
-	              ],
-	              "PAYLOAD_ID": "3v0460o",
-	              "relatedTo": "relations"
-	            },
-	            "children": {
-	              "seabrinGreen": {
-	                "name": "seabrinGreen",
-	                "payload": {
-	                  "name": "Seabrin Green",
-	                  "inputArray": [],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "4lx20j1"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              },
-	              "ilishaGreen": {
-	                "name": "ilishaGreen",
-	                "payload": {
-	                  "name": "Ilisha Green",
-	                  "inputArray": [],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "t1x4fub"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              },
-	              "debraMorrissey": {
-	                "name": "debraMorrissey",
-	                "payload": {
-	                  "name": "Debra Morrissey",
-	                  "inputArray": [],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "5obzx4q"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              }
-	            },
-	            "metadata": {},
-	            "relatedTo": "relations"
-	          },
-	          "debraMorrissey": {
-	            "name": "debraMorrissey",
-	            "payload": {
-	              "name": "Debra Morrissey",
-	              "inputArray": [],
-	              "relatedTo": "name",
-	              "PAYLOAD_ID": "pfmcw7p"
-	            },
-	            "children": {},
-	            "metadata": {},
-	            "relatedTo": "name"
-	          }
-	        },
-	        "metadata": {},
-	        "relatedTo": "name"
-	      },
-	      "deadraGreen": {
-	        "name": "deadraGreen",
-	        "payload": {
-	          "inputArray": [
-	            {
-	              "_TYPE": "Radio",
-	              "ID_ATTRIBUTE": "id",
-	              "name": "relation",
-	              "label": "Relation",
-	              "list": [
-	                "Husband",
-	                "Son",
-	                "Brothers",
-	                "Mother"
-	              ],
-	              "inline": true,
-	              "hidden": false,
-	              "optional": false,
-	              "value": "Husband",
-	              "targetAttr": "value",
-	              "errorMsg": "Error"
-	            }
-	          ],
-	          "PAYLOAD_ID": "99aodeo"
-	        },
-	        "children": {
-	          "seabrinGreen": {
-	            "name": "seabrinGreen",
-	            "payload": {
-	              "name": "Seabrin Green",
-	              "inputArray": [],
-	              "relatedTo": "name",
-	              "PAYLOAD_ID": "caiwkzq"
-	            },
-	            "children": {},
-	            "metadata": {},
-	            "relatedTo": "name"
-	          },
-	          "ilishaGreen": {
-	            "name": "ilishaGreen",
-	            "payload": {
-	              "name": "Ilisha Green",
-	              "inputArray": [],
-	              "relatedTo": "name",
-	              "PAYLOAD_ID": "ttgk6xy"
-	            },
-	            "children": {},
-	            "metadata": {},
-	            "relatedTo": "name"
-	          },
-	          "jeradMorrissey": {
-	            "name": "jeradMorrissey",
-	            "payload": {
-	              "inputArray": [
-	                {
-	                  "_TYPE": "Radio",
-	                  "ID_ATTRIBUTE": "id",
-	                  "name": "relations",
-	                  "label": "Relations",
-	                  "list": [
-	                    "Wife",
-	                    "Son",
-	                    "Daugter",
-	                    "Brother",
-	                    "Sister",
-	                    "Mother",
-	                    "Father"
-	                  ],
-	                  "inline": true,
-	                  "hidden": false,
-	                  "optional": false,
-	                  "value": "Sister",
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                }
-	              ],
-	              "PAYLOAD_ID": "u6rapip",
-	              "relatedTo": "relation"
-	            },
-	            "children": {
-	              "jozsefMorrissey": {
-	                "name": "jozsefMorrissey",
-	                "payload": {
-	                  "name": "Jozsef Morrissey",
-	                  "inputArray": [
-	                    {
-	                      "_TYPE": "Radio",
-	                      "ID_ATTRIBUTE": "id",
-	                      "name": "relations",
-	                      "label": "Relations",
-	                      "list": [
-	                        "Brother",
-	                        "Sister",
-	                        "Mother",
-	                        "Father"
-	                      ],
-	                      "inline": true,
-	                      "hidden": false,
-	                      "optional": false,
-	                      "value": "Brother",
-	                      "targetAttr": "value",
-	                      "errorMsg": "Error"
-	                    }
-	                  ],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "9jyk58j"
-	                },
-	                "children": {
-	                  "debraMorrissey": {
-	                    "name": "debraMorrissey",
-	                    "payload": {
-	                      "name": "Debra Morrissey",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "1vtuvwa"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  },
-	                  "tonyMorrissey": {
-	                    "name": "tonyMorrissey",
-	                    "payload": {
-	                      "name": "Tony Morrissey",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "pl3eylf"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  }
-	                },
-	                "metadata": {},
-	                "relatedTo": "name"
-	              },
-	              "mandyMorrissey": {
-	                "name": "mandyMorrissey",
-	                "payload": {
-	                  "inputArray": [],
-	                  "PAYLOAD_ID": "0dwpdkf",
-	                  "relatedTo": "relations"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "relations"
-	              },
-	              "evanWaldop": {
-	                "name": "evanWaldop",
-	                "payload": {
-	                  "inputArray": [],
-	                  "PAYLOAD_ID": "fdxhk08",
-	                  "relatedTo": "relations"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "relations"
-	              },
-	              "bryleeBaker": {
-	                "name": "bryleeBaker",
-	                "payload": {
-	                  "inputArray": [],
-	                  "PAYLOAD_ID": "4mjr1s9",
-	                  "relatedTo": "relations"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "relations"
-	              },
-	              "deadraGreen": {
-	                "name": "deadraGreen",
-	                "payload": {
-	                  "inputArray": [
-	                    {
-	                      "_TYPE": "Radio",
-	                      "ID_ATTRIBUTE": "id",
-	                      "name": "relation",
-	                      "label": "Relation",
-	                      "list": [
-	                        "Husband",
-	                        "Son",
-	                        "Brothers",
-	                        "Mother"
-	                      ],
-	                      "inline": true,
-	                      "hidden": false,
-	                      "optional": false,
-	                      "value": "Brothers",
-	                      "targetAttr": "value",
-	                      "errorMsg": "Error"
-	                    }
-	                  ],
-	                  "PAYLOAD_ID": "3v0460o",
-	                  "relatedTo": "relations"
-	                },
-	                "children": {
-	                  "seabrinGreen": {
-	                    "name": "seabrinGreen",
-	                    "payload": {
-	                      "name": "Seabrin Green",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "4lx20j1"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  },
-	                  "ilishaGreen": {
-	                    "name": "ilishaGreen",
-	                    "payload": {
-	                      "name": "Ilisha Green",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "t1x4fub"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  },
-	                  "debraMorrissey": {
-	                    "name": "debraMorrissey",
-	                    "payload": {
-	                      "name": "Debra Morrissey",
-	                      "inputArray": [],
-	                      "relatedTo": "name",
-	                      "PAYLOAD_ID": "5obzx4q"
-	                    },
-	                    "children": {},
-	                    "metadata": {},
-	                    "relatedTo": "name"
-	                  }
-	                },
-	                "metadata": {},
-	                "relatedTo": "relations"
-	              },
-	              "debraMorrissey": {
-	                "name": "debraMorrissey",
-	                "payload": {
-	                  "inputArray": [],
-	                  "PAYLOAD_ID": "jdr2zpy",
-	                  "relatedTo": "relations"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "relations"
-	              }
-	            },
-	            "metadata": {},
-	            "relatedTo": "relation"
-	          },
-	          "jozsefMorrissey": {
-	            "name": "jozsefMorrissey",
-	            "payload": {
-	              "inputArray": [
-	                {
-	                  "_TYPE": "Radio",
-	                  "ID_ATTRIBUTE": "id",
-	                  "name": "relations",
-	                  "label": "Relations",
-	                  "list": [
-	                    "Brother",
-	                    "Sister",
-	                    "Mother",
-	                    "Father"
-	                  ],
-	                  "inline": true,
-	                  "hidden": false,
-	                  "optional": false,
-	                  "value": "Brother",
-	                  "targetAttr": "value",
-	                  "errorMsg": "Error"
-	                }
-	              ],
-	              "PAYLOAD_ID": "vm08v4x",
-	              "relatedTo": "relation"
-	            },
-	            "children": {
-	              "jeradMorrissey": {
-	                "name": "jeradMorrissey",
-	                "payload": {
-	                  "name": "Jerad Morrissey",
-	                  "inputArray": [
-	                    {
-	                      "_TYPE": "Radio",
-	                      "ID_ATTRIBUTE": "id",
-	                      "name": "relations",
-	                      "label": "Relations",
-	                      "list": [
-	                        "Wife",
-	                        "Son",
-	                        "Daugter",
-	                        "Brother",
-	                        "Sister",
-	                        "Mother",
-	                        "Father"
-	                      ],
-	                      "inline": true,
-	                      "hidden": false,
-	                      "optional": false,
-	                      "value": "Wife",
-	                      "targetAttr": "value",
-	                      "errorMsg": "Error"
-	                    }
-	                  ],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "ny34h3s"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              },
-	              "debraMorrissey": {
-	                "name": "debraMorrissey",
-	                "payload": {
-	                  "name": "Debra Morrissey",
-	                  "inputArray": [],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "odnzgr7"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              },
-	              "tonyMorrissey": {
-	                "name": "tonyMorrissey",
-	                "payload": {
-	                  "name": "Tony Morrissey",
-	                  "inputArray": [],
-	                  "relatedTo": "name",
-	                  "PAYLOAD_ID": "ge83gd9"
-	                },
-	                "children": {},
-	                "metadata": {},
-	                "relatedTo": "name"
-	              }
-	            },
-	            "metadata": {},
-	            "relatedTo": "relation"
-	          },
-	          "debraMorrissey": {
-	            "name": "debraMorrissey",
-	            "payload": {
-	              "name": "Debra Morrissey",
-	              "inputArray": [],
-	              "relatedTo": "name",
-	              "PAYLOAD_ID": "zv7dm58"
-	            },
-	            "children": {},
-	            "metadata": {},
-	            "relatedTo": "name"
-	          }
-	        },
-	        "metadata": {},
-	        "relatedTo": "name"
-	      },
-	      "seabrinGreen": {
-	        "name": "seabrinGreen",
-	        "payload": {
-	          "inputArray": [],
-	          "PAYLOAD_ID": "c4xncoj"
-	        },
-	        "children": {},
-	        "metadata": {},
-	        "relatedTo": "name"
-	      },
-	      "ilishaGreen": {
-	        "name": "ilishaGreen",
-	        "payload": {
-	          "inputArray": [],
-	          "PAYLOAD_ID": "5z9cotl"
-	        },
-	        "children": {},
-	        "metadata": {},
-	        "relatedTo": "name"
-	      },
-	      "mandyMorrissey": {
-	        "name": "mandyMorrissey",
-	        "payload": {
-	          "inputArray": [],
-	          "PAYLOAD_ID": "3io2t3x"
-	        },
-	        "children": {},
-	        "metadata": {},
-	        "relatedTo": "name"
-	      },
-	      "evanWaldop": {
-	        "name": "evanWaldop",
-	        "payload": {
-	          "inputArray": [],
-	          "PAYLOAD_ID": "5lee44x"
-	        },
-	        "children": {},
-	        "metadata": {},
-	        "relatedTo": "name"
-	      },
-	      "bryleeBaker": {
-	        "name": "bryleeBaker",
-	        "payload": {
-	          "inputArray": [],
-	          "PAYLOAD_ID": "zylwbyi"
-	        },
-	        "children": {},
-	        "metadata": {},
-	        "relatedTo": "name"
-	      },
-	      "debraMorrissey": {
-	        "name": "debraMorrissey",
-	        "payload": {
-	          "inputArray": [],
-	          "PAYLOAD_ID": "4eddqht"
-	        },
-	        "children": {},
-	        "metadata": {},
-	        "relatedTo": "name"
-	      },
-	      "tonyMorrissey": {
-	        "name": "tonyMorrissey",
-	        "payload": {
-	          "inputArray": [],
-	          "PAYLOAD_ID": "vq43wzu"
-	        },
-	        "children": {},
-	        "metadata": {},
-	        "relatedTo": "name"
-	      }
-	    },
-	    "metadata": {}
-	  },
-	  "payloadHandler": {
-	    "inputs": [
-	      {
-	        "_TYPE": "Input",
-	        "ID_ATTRIBUTE": "id",
-	        "name": "name",
-	        "label": "Name",
-	        "optional": true,
-	        "hidden": false,
-	        "list": [],
-	        "value": "",
-	        "targetAttr": "value",
-	        "errorMsg": "Error"
-	      }
-	    ],
-	    "templateName": "ancestry"
-	  }
-	};
-	// const treeJson = {
-	//   "_TYPE": "DecisionInputTree",
-	//   "id": "DecisionInputTree_97m8e3l",
-	//   "ID_ATTRIBUTE": "id",
-	//   "stateConfigs": {
-	//     "root": {
-	//       "_TYPE": "StateConfig",
-	//       "id": "StateConfig_bujrkj0",
-	//       "ID_ATTRIBUTE": "id",
-	//       "name": "root",
-	//       "payload": {
-	//         "inputArray": [
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "text",
-	//             "name": "smallText",
-	//             "label": "Small Text",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Textarea",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "largeText",
-	//             "label": "Large Text",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "checkbox",
-	//             "name": "checkbox",
-	//             "label": "Checkbox",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": false,
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Radio",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "radioInline",
-	//             "label": "Radio Inline",
-	//             "list": [
-	//               "in",
-	//               "a",
-	//               "line"
-	//             ],
-	//             "inline": true,
-	//             "hidden": false,
-	//             "optional": false,
-	//             "value": "in",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Radio",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "radio",
-	//             "label": "Radio",
-	//             "list": [
-	//               "not",
-	//               "in",
-	//               "a",
-	//               "line"
-	//             ],
-	//             "inline": false,
-	//             "hidden": false,
-	//             "optional": false,
-	//             "value": "not",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Select",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "select",
-	//             "label": "Select",
-	//             "list": [
-	//               "a",
-	//               "b",
-	//               "c",
-	//               "d",
-	//               "e",
-	//               "f",
-	//               "g"
-	//             ],
-	//             "hidden": false,
-	//             "optional": false,
-	//             "value": "a",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "date",
-	//             "name": "date",
-	//             "label": "Date",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "time",
-	//             "name": "time",
-	//             "label": "Time",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Table",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "t",
-	//             "label": "t",
-	//             "rows": [
-	//               "a",
-	//               "b",
-	//               "c",
-	//               "d",
-	//               "e"
-	//             ],
-	//             "columns": [
-	//               {
-	//                 "_TYPE": "Radio",
-	//                 "ID_ATTRIBUTE": "id",
-	//                 "name": "one",
-	//                 "label": "one",
-	//                 "list": [
-	//                   "1",
-	//                   "2",
-	//                   "3",
-	//                   "4"
-	//                 ],
-	//                 "inline": true,
-	//                 "hidden": false,
-	//                 "optional": false,
-	//                 "value": "1",
-	//                 "targetAttr": "value",
-	//                 "errorMsg": "Error"
-	//               },
-	//               {
-	//                 "_TYPE": "Input",
-	//                 "ID_ATTRIBUTE": "id",
-	//                 "type": "checkbox",
-	//                 "name": "checkbo",
-	//                 "label": "checkbo",
-	//                 "hidden": false,
-	//                 "list": [],
-	//                 "optional": false,
-	//                 "value": false,
-	//                 "targetAttr": "value",
-	//                 "errorMsg": "Error"
-	//               }
-	//             ],
-	//             "type": "Text",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "MultipleEntries",
-	//             "ID_ATTRIBUTE": "id",
-	//             "list": [],
-	//             "hidden": false,
-	//             "optional": false,
-	//             "value": [],
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error",
-	//             "inputTemplate": {
-	//               "_TYPE": "InputList",
-	//               "ID_ATTRIBUTE": "id",
-	//               "name": "children",
-	//               "list": [
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "text",
-	//                   "name": "first",
-	//                   "label": "First",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 },
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "text",
-	//                   "name": "middle",
-	//                   "label": "Middle",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 },
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "date",
-	//                   "name": "doB",
-	//                   "label": "DoB",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 }
-	//               ],
-	//               "inline": true,
-	//               "hidden": false,
-	//               "optional": false,
-	//               "value": [
-	//                 "",
-	//                 "",
-	//                 ""
-	//               ],
-	//               "targetAttr": "value",
-	//               "errorMsg": "Error"
-	//             }
-	//           },
-	//           {
-	//             "_TYPE": "MeasurementInput",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "standard",
-	//             "label": "standard",
-	//             "units": "Imperial (US)",
-	//             "value": null,
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "MeasurementInput",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "metric",
-	//             "label": "metric",
-	//             "units": "Metric",
-	//             "value": {
-	//               "0": "N",
-	//               "1": "a",
-	//               "2": "N"
-	//             },
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "text",
-	//             "name": "weatherFax",
-	//             "label": "Weather Fax",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           },
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "text",
-	//             "name": "eWeatherFax",
-	//             "label": "eWeather Fax",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           }
-	//         ]
-	//       }
-	//     },
-	//     "hiccups": {
-	//       "_TYPE": "StateConfig",
-	//       "id": "StateConfig_bwvdmzz",
-	//       "ID_ATTRIBUTE": "id",
-	//       "name": "hiccups",
-	//       "payload": {
-	//         "inputArray": [
-	//           {
-	//             "_TYPE": "Input",
-	//             "ID_ATTRIBUTE": "id",
-	//             "type": "text",
-	//             "name": "jozsefMorrissey",
-	//             "label": "Jozsef Morrissey",
-	//             "hidden": false,
-	//             "list": [],
-	//             "optional": false,
-	//             "value": "",
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           }
-	//         ]
-	//       }
-	//     }
-	//   },
-	//   "name": "root",
-	//   "root": {
-	//     "name": "root",
-	//     "payload": {
-	//       "inputArray": [
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "text",
-	//           "name": "smallText",
-	//           "label": "Small Text",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Textarea",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "largeText",
-	//           "label": "Large Text",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "checkbox",
-	//           "name": "checkbox",
-	//           "label": "Checkbox",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": false,
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Radio",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "radioInline",
-	//           "label": "Radio Inline",
-	//           "list": [
-	//             "in",
-	//             "a",
-	//             "line"
-	//           ],
-	//           "inline": true,
-	//           "hidden": false,
-	//           "optional": false,
-	//           "value": "on",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Radio",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "radio",
-	//           "label": "Radio",
-	//           "list": [
-	//             "not",
-	//             "in",
-	//             "a",
-	//             "line"
-	//           ],
-	//           "inline": false,
-	//           "hidden": false,
-	//           "optional": false,
-	//           "value": "on",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Select",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "select",
-	//           "label": "Select",
-	//           "list": [
-	//             "a",
-	//             "b",
-	//             "c",
-	//             "d",
-	//             "e",
-	//             "f",
-	//             "g"
-	//           ],
-	//           "hidden": false,
-	//           "optional": false,
-	//           "value": "a",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "date",
-	//           "name": "date",
-	//           "label": "Date",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "time",
-	//           "name": "time",
-	//           "label": "Time",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Table",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "t",
-	//           "label": "t",
-	//           "rows": [
-	//             "a",
-	//             "b",
-	//             "c",
-	//             "d",
-	//             "e"
-	//           ],
-	//           "columns": [
-	//             {
-	//               "_TYPE": "Radio",
-	//               "ID_ATTRIBUTE": "id",
-	//               "name": "one",
-	//               "label": "one",
-	//               "list": [
-	//                 "1",
-	//                 "2",
-	//                 "3",
-	//                 "4"
-	//               ],
-	//               "inline": true,
-	//               "hidden": false,
-	//               "optional": false,
-	//               "value": "1",
-	//               "targetAttr": "value",
-	//               "errorMsg": "Error"
-	//             },
-	//             {
-	//               "_TYPE": "Input",
-	//               "ID_ATTRIBUTE": "id",
-	//               "type": "checkbox",
-	//               "name": "checkbo",
-	//               "label": "checkbo",
-	//               "hidden": false,
-	//               "list": [],
-	//               "optional": false,
-	//               "value": false,
-	//               "targetAttr": "value",
-	//               "errorMsg": "Error"
-	//             }
-	//           ],
-	//           "type": "Text",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "MultipleEntries",
-	//           "ID_ATTRIBUTE": "id",
-	//           "list": [
-	//             {
-	//               "_TYPE": "InputList",
-	//               "ID_ATTRIBUTE": "id",
-	//               "name": "children",
-	//               "list": [
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "text",
-	//                   "name": "first",
-	//                   "label": "First",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 },
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "text",
-	//                   "name": "middle",
-	//                   "label": "Middle",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 },
-	//                 {
-	//                   "_TYPE": "Input",
-	//                   "ID_ATTRIBUTE": "id",
-	//                   "type": "date",
-	//                   "name": "doB",
-	//                   "label": "DoB",
-	//                   "inline": true,
-	//                   "hidden": false,
-	//                   "list": [],
-	//                   "optional": false,
-	//                   "value": "",
-	//                   "targetAttr": "value",
-	//                   "errorMsg": "Error"
-	//                 }
-	//               ],
-	//               "inline": true,
-	//               "hidden": false,
-	//               "optional": false,
-	//               "value": [
-	//                 "",
-	//                 "",
-	//                 ""
-	//               ],
-	//               "targetAttr": "value",
-	//               "errorMsg": "Error"
-	//             }
-	//           ],
-	//           "hidden": false,
-	//           "optional": false,
-	//           "value": [],
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error",
-	//           "inputTemplate": {
-	//             "_TYPE": "InputList",
-	//             "ID_ATTRIBUTE": "id",
-	//             "name": "children",
-	//             "list": [
-	//               {
-	//                 "_TYPE": "Input",
-	//                 "ID_ATTRIBUTE": "id",
-	//                 "type": "text",
-	//                 "name": "first",
-	//                 "label": "First",
-	//                 "inline": true,
-	//                 "hidden": false,
-	//                 "list": [],
-	//                 "optional": false,
-	//                 "value": "",
-	//                 "targetAttr": "value",
-	//                 "errorMsg": "Error"
-	//               },
-	//               {
-	//                 "_TYPE": "Input",
-	//                 "ID_ATTRIBUTE": "id",
-	//                 "type": "text",
-	//                 "name": "middle",
-	//                 "label": "Middle",
-	//                 "inline": true,
-	//                 "hidden": false,
-	//                 "list": [],
-	//                 "optional": false,
-	//                 "value": "",
-	//                 "targetAttr": "value",
-	//                 "errorMsg": "Error"
-	//               },
-	//               {
-	//                 "_TYPE": "Input",
-	//                 "ID_ATTRIBUTE": "id",
-	//                 "type": "date",
-	//                 "name": "doB",
-	//                 "label": "DoB",
-	//                 "inline": true,
-	//                 "hidden": false,
-	//                 "list": [],
-	//                 "optional": false,
-	//                 "value": "",
-	//                 "targetAttr": "value",
-	//                 "errorMsg": "Error"
-	//               }
-	//             ],
-	//             "inline": true,
-	//             "hidden": false,
-	//             "optional": false,
-	//             "value": [
-	//               "",
-	//               "",
-	//               ""
-	//             ],
-	//             "targetAttr": "value",
-	//             "errorMsg": "Error"
-	//           }
-	//         },
-	//         {
-	//           "_TYPE": "MeasurementInput",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "standard",
-	//           "label": "standard",
-	//           "units": "Imperial (US)",
-	//           "value": "0",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "MeasurementInput",
-	//           "ID_ATTRIBUTE": "id",
-	//           "name": "metric",
-	//           "label": "metric",
-	//           "units": "Metric",
-	//           "value": {
-	//             "0": "4",
-	//             "1": "4",
-	//             "2": ".",
-	//             "3": "3"
-	//           },
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "text",
-	//           "name": "weatherFax",
-	//           "label": "Weather Fax",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         },
-	//         {
-	//           "_TYPE": "Input",
-	//           "ID_ATTRIBUTE": "id",
-	//           "type": "text",
-	//           "name": "eWeatherFax",
-	//           "label": "eWeather Fax",
-	//           "hidden": false,
-	//           "list": [],
-	//           "optional": false,
-	//           "value": "",
-	//           "targetAttr": "value",
-	//           "errorMsg": "Error"
-	//         }
-	//       ],
-	//       "PAYLOAD_ID": "mdhqkxo"
-	//     },
-	//     "conditions": [],
-	//     "childConditions": [],
-	//     "children": {
-	//       "hiccups": {
-	//         "name": "hiccups",
-	//         "payload": {
-	//           "inputArray": [
-	//             {
-	//               "_TYPE": "Input",
-	//               "ID_ATTRIBUTE": "id",
-	//               "type": "text",
-	//               "name": "jozsefMorrissey",
-	//               "label": "Jozsef Morrissey",
-	//               "hidden": false,
-	//               "list": [],
-	//               "optional": false,
-	//               "value": "",
-	//               "targetAttr": "value",
-	//               "errorMsg": "Error"
-	//             }
-	//           ],
-	//           "PAYLOAD_ID": "22puejf"
-	//         },
-	//         "conditions": [
-	//           {
-	//             "_TYPE": "EqualCondition",
-	//             "condition": "metric",
-	//             "details": 44.3,
-	//             "attribute": "metric",
-	//             "value": 44.3,
-	//             "deligator": {
-	//               "_TYPE": "NodeCondition"
-	//             }
-	//           }
-	//         ],
-	//         "childConditions": [],
-	//         "children": {},
-	//         "metadata": {
-	//           "relatedTo": "metric"
-	//         }
-	//       }
-	//     }
-	//   }
-	// }
 	
 });
 
@@ -14564,6 +10608,76 @@ function (require, exports, module) {
 function proccess() {
 	  console.log('report bitches');
 	}
+	
+	exports.proccess = proccess;
+	
+});
+
+
+RequireJS.addFunction('./app/pages/playground.js',
+function (require, exports, module) {
+	
+const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const ModDecisionTree = require('../../../../public/js/utils/input/decision/modification.js');
+	const PayloadHandler = require('../../../../public/js/utils/input/decision/payload-handler.js');
+	require('../../../../public/js/utils/input/init');
+	const Input = require('../../../../public/js/utils/input/input');
+	const Radio = require('../../../../public/js/utils/input/styles/radio');
+	const Table = require('../../../../public/js/utils/input/styles/table');
+	const MultipleEntries = require('../../../../public/js/utils/input/styles/multiple-entries');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	let count = 0;
+	let mod;
+	let modify = true;
+	
+	du.on.match('click', '#modify-btn', (elem) => {
+	  mod.toggle();
+	
+	  if (mod.active()) du.class.add(elem, 'modify');
+	  else du.class.remove(elem, 'modify');
+	  // updateEntireTree();
+	});
+	
+	const getInput = () => new Input({
+	  label: `Label${++count}`,
+	  name: `Name${count}`,
+	  inline: true,
+	  class: 'center',
+	});
+	
+	let tree;
+	function updateEntireTree() {
+	  const body = tree.html(null, modify);
+	  du.id('config-body').innerHTML = body;
+	}
+	
+	du.on.match('click', '#update-tree-display-btn', (elem) => {
+	  updateEntireTree();
+	});
+	
+	function proccess() {
+	  const input1 = getInput();
+	  const input2 = getInput();
+	  const input3 = getInput();
+	  // tree = new DecisionInputTree('Questionaire', {name: 'Questionaire'});
+	  tree = DecisionInputTree.fromJson(treeJson);
+	  // const ph = new PayloadHandler("<button class='mod-decision-node'>Modify</button>");
+	  // tree.payloadHandler(ph);
+	
+	  tree.onComplete(console.log);
+	  tree.onSubmit(console.log);
+	
+	  updateEntireTree();
+	  mod = new ModDecisionTree(tree);
+	}
+	
+	
+	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
+	du.on.match('click', '#json', () => {
+	  du.copy(JSON.stringify(tree.toJson(), null, 2));
+	})
+	
 	
 	exports.proccess = proccess;
 	

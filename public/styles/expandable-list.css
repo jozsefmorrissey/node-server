@@ -6,16 +6,27 @@
   position: relative;
 }
 
-.edit-input-cnt {
+.relitive {
+  position: relative;
+}
+
+.abs-top-right {
   position: absolute;
   top: 0;
-  right: 0;
+  left: 100%;
 }
 
 .decision-input-array-cnt {
   width: fit-content;
   position: relative;
   padding: 0 45pt;
+}
+
+.decision-input-cnt {
+  min-height: 25pt;
+}
+.single-entry-cnt {
+  padding: 1pt 0;
 }
 --TODO: make its own file
 

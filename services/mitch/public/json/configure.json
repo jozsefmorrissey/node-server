@@ -1,0 +1,1247 @@
+{
+  "_TYPE": "DecisionInputTree",
+  "id": "DecisionInputTree_97s2891",
+  "ID_ATTRIBUTE": "id",
+  "stateConfigs": {
+    "Questionaire": {
+      "_TYPE": "StateConfig",
+      "id": "StateConfig_xvuocbx",
+      "ID_ATTRIBUTE": "id",
+      "name": "Questionaire",
+      "payload": {
+        "name": "Questionaire",
+        "inputArray": []
+      },
+      "treeName": "DecisionInputTree",
+      "conditions": []
+    },
+    "info": {
+      "_TYPE": "StateConfig",
+      "id": "StateConfig_v1w2boi",
+      "ID_ATTRIBUTE": "id",
+      "name": "info",
+      "payload": {
+        "sectionName": "Information",
+        "inputArray": [
+          {
+            "_TYPE": "Radio",
+            "ID_ATTRIBUTE": "id",
+            "name": "inspector",
+            "label": "Inspector",
+            "list": [
+              "Zach",
+              "Dylan",
+              "Adam",
+              "Jon",
+              "Tucker",
+              "Mitchell"
+            ],
+            "inline": false,
+            "hidden": false,
+            "optional": false,
+            "value": "Zach",
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          },
+          {
+            "_TYPE": "Input",
+            "ID_ATTRIBUTE": "id",
+            "type": "date",
+            "name": "dateOfInspection",
+            "label": "Date of Inspection",
+            "hidden": false,
+            "list": [],
+            "optional": false,
+            "value": "",
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          },
+          {
+            "_TYPE": "NumberInput",
+            "ID_ATTRIBUTE": "id",
+            "name": "enginHours",
+            "label": "Engin Hours",
+            "min": 0,
+            "max": 9007199254740991,
+            "step": 1,
+            "hidden": false,
+            "list": [],
+            "optional": false,
+            "value": "",
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          }
+        ]
+      },
+      "treeName": "DecisionInputTree",
+      "conditions": []
+    },
+    "visual": {
+      "_TYPE": "StateConfig",
+      "id": "StateConfig_5xywray",
+      "ID_ATTRIBUTE": "id",
+      "name": "visual",
+      "payload": {
+        "sectionName": "Visual",
+        "inputArray": [
+          {
+            "_TYPE": "Radio",
+            "ID_ATTRIBUTE": "id",
+            "name": "doTiresVissuallyAppearToBeInflated",
+            "label": "Do tires vissually appear to be inflated",
+            "list": [
+              "Yes",
+              "No"
+            ],
+            "inline": false,
+            "hidden": false,
+            "optional": false,
+            "value": "Yes",
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          },
+          {
+            "_TYPE": "Radio",
+            "ID_ATTRIBUTE": "id",
+            "name": "areThereAnyObviousFluidPuddlesUnderTheMachineThatMayIndicateAleak?",
+            "label": "Are there any obvious fluid puddles under the machine that may indicate a leak?",
+            "list": [
+              "Yes",
+              "No"
+            ],
+            "inline": false,
+            "hidden": false,
+            "optional": false,
+            "value": "Yes",
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          },
+          {
+            "_TYPE": "Radio",
+            "ID_ATTRIBUTE": "id",
+            "name": "areAllPrimaryAndSecondaryLockingPinsInPlaceForLoaderAndImplement",
+            "label": "Are all primary and secondary locking pins in place for loader and implement",
+            "list": [
+              "Yes",
+              "No"
+            ],
+            "inline": false,
+            "hidden": false,
+            "optional": false,
+            "value": "Yes",
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          }
+        ]
+      },
+      "treeName": "DecisionInputTree",
+      "conditions": [
+        {
+          "_TYPE": "CaseInsensitiveCondition",
+          "group": "severity",
+          "attribute": "doTiresVissuallyAppearToBeInflated",
+          "value": "No",
+          "deligator": {
+            "_TYPE": "NodeCondition"
+          }
+        },
+        {
+          "_TYPE": "CaseInsensitiveCondition",
+          "group": "severity",
+          "attribute": "areThereAnyObviousFluidPuddlesUnderTheMachineThatMayIndicateAleak?",
+          "value": "No",
+          "deligator": {
+            "_TYPE": "NodeCondition"
+          }
+        },
+        {
+          "_TYPE": "CaseInsensitiveCondition",
+          "group": "severity",
+          "attribute": "areAllPrimaryAndSecondaryLockingPinsInPlaceForLoaderAndImplement",
+          "value": "No",
+          "deligator": {
+            "_TYPE": "NodeCondition"
+          }
+        }
+      ]
+    },
+    "fluids": {
+      "_TYPE": "StateConfig",
+      "id": "StateConfig_mrychpd",
+      "ID_ATTRIBUTE": "id",
+      "name": "fluids",
+      "payload": {
+        "sectionName": " ",
+        "inputArray": [
+          {
+            "_TYPE": "RadioTable",
+            "ID_ATTRIBUTE": "id",
+            "name": "checkingFluids",
+            "label": "Checking Fluids",
+            "rows": [
+              "Engine Oil",
+              "Hydraulic Oil",
+              "Antifreeze"
+            ],
+            "columns": [
+              "All Good",
+              "Topped Off",
+              "Bulk Add"
+            ],
+            "type": "radio",
+            "hidden": false,
+            "list": {
+              "engineOil": {
+                "name": "RadioTable_input-8uw2ksd-engineOil",
+                "label": "Engine Oil",
+                "value": "All Good",
+                "key": "engineOil"
+              },
+              "hydraulicOil": {
+                "name": "RadioTable_input-8uw2ksd-hydraulicOil",
+                "label": "Hydraulic Oil",
+                "value": "All Good",
+                "key": "hydraulicOil"
+              },
+              "antifreeze": {
+                "name": "RadioTable_input-8uw2ksd-antifreeze",
+                "label": "Antifreeze",
+                "value": "All Good",
+                "key": "antifreeze"
+              }
+            },
+            "optional": false,
+            "value": {
+              "engineOil": "All Good",
+              "hydraulicOil": "All Good",
+              "antifreeze": "All Good"
+            },
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          }
+        ]
+      },
+      "treeName": "DecisionInputTree",
+      "conditions": [
+        {
+          "_TYPE": "WildCardCondition",
+          "group": "severity",
+          "attribute": "checkingFluids.*",
+          "value": "Bulk Add",
+          "deligator": {
+            "_TYPE": "NodeCondition"
+          }
+        }
+      ]
+    },
+    "greasing": {
+      "_TYPE": "StateConfig",
+      "id": "StateConfig_772huxa",
+      "ID_ATTRIBUTE": "id",
+      "name": "greasing",
+      "payload": {
+        "inputArray": [
+          {
+            "_TYPE": "RadioTable",
+            "ID_ATTRIBUTE": "id",
+            "name": "greasing",
+            "label": "Greasing",
+            "rows": [
+              "Grease Zerk #1",
+              "Grease Zerk #2",
+              "Grease Zerk #3",
+              "Grease Zerk #4",
+              "Grease Zerk #5",
+              "Grease Zerk #6",
+              "Grease Zerk #7"
+            ],
+            "columns": [
+              "Took At Least 1 Pump",
+              "Would not accept grease"
+            ],
+            "type": "radio",
+            "hidden": false,
+            "list": {
+              "greaseZerk #1": {
+                "name": "RadioTable_input-am4gbru-greaseZerk #1",
+                "label": "Grease Zerk #1",
+                "value": "Took At Least 1 Pump",
+                "key": "greaseZerk #1"
+              },
+              "greaseZerk #2": {
+                "name": "RadioTable_input-am4gbru-greaseZerk #2",
+                "label": "Grease Zerk #2",
+                "value": "Took At Least 1 Pump",
+                "key": "greaseZerk #2"
+              },
+              "greaseZerk #3": {
+                "name": "RadioTable_input-am4gbru-greaseZerk #3",
+                "label": "Grease Zerk #3",
+                "value": "Took At Least 1 Pump",
+                "key": "greaseZerk #3"
+              },
+              "greaseZerk #4": {
+                "name": "RadioTable_input-am4gbru-greaseZerk #4",
+                "label": "Grease Zerk #4",
+                "value": "Took At Least 1 Pump",
+                "key": "greaseZerk #4"
+              },
+              "greaseZerk #5": {
+                "name": "RadioTable_input-am4gbru-greaseZerk #5",
+                "label": "Grease Zerk #5",
+                "value": "Took At Least 1 Pump",
+                "key": "greaseZerk #5"
+              },
+              "greaseZerk #6": {
+                "name": "RadioTable_input-am4gbru-greaseZerk #6",
+                "label": "Grease Zerk #6",
+                "value": "Took At Least 1 Pump",
+                "key": "greaseZerk #6"
+              },
+              "greaseZerk #7": {
+                "name": "RadioTable_input-am4gbru-greaseZerk #7",
+                "label": "Grease Zerk #7",
+                "value": "Took At Least 1 Pump",
+                "key": "greaseZerk #7"
+              }
+            },
+            "optional": false,
+            "value": {
+              "greaseZerk #1": "Took At Least 1 Pump",
+              "greaseZerk #2": "Took At Least 1 Pump",
+              "greaseZerk #3": "Took At Least 1 Pump",
+              "greaseZerk #4": "Took At Least 1 Pump",
+              "greaseZerk #5": "Took At Least 1 Pump",
+              "greaseZerk #6": "Took At Least 1 Pump",
+              "greaseZerk #7": "Took At Least 1 Pump"
+            },
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          }
+        ]
+      },
+      "treeName": "DecisionInputTree",
+      "conditions": [
+        {
+          "_TYPE": "WildCardCondition",
+          "group": "severity",
+          "attribute": "greasing.*",
+          "value": "Took At Least 1 Pump",
+          "deligator": {
+            "_TYPE": "NodeCondition"
+          }
+        }
+      ]
+    },
+    "hydraulic": {
+      "_TYPE": "StateConfig",
+      "id": "StateConfig_s5ulyjl",
+      "ID_ATTRIBUTE": "id",
+      "name": "hydraulic",
+      "payload": {
+        "sectionName": "",
+        "inputArray": [
+          {
+            "_TYPE": "RadioTable",
+            "ID_ATTRIBUTE": "id",
+            "name": "hydraulicHoseAndFittingInspection",
+            "label": "Hydraulic Hose and fitting inspection",
+            "rows": [
+              "Pump to Control Valve",
+              "Control Valve to Arm Cylinders",
+              "Control Valve to Bucket Cylinders"
+            ],
+            "columns": [
+              "Dry",
+              "Wet"
+            ],
+            "type": "radio",
+            "hidden": false,
+            "list": {
+              "pumpToControlValve": {
+                "name": "RadioTable_input-36w30y7-pumpToControlValve",
+                "label": "Pump to Control Valve",
+                "value": "Dry",
+                "key": "pumpToControlValve"
+              },
+              "controlValveToArmCylinders": {
+                "name": "RadioTable_input-36w30y7-controlValveToArmCylinders",
+                "label": "Control Valve to Arm Cylinders",
+                "value": "Dry",
+                "key": "controlValveToArmCylinders"
+              },
+              "controlValveToBucketCylinders": {
+                "name": "RadioTable_input-36w30y7-controlValveToBucketCylinders",
+                "label": "Control Valve to Bucket Cylinders",
+                "value": "Dry",
+                "key": "controlValveToBucketCylinders"
+              }
+            },
+            "optional": false,
+            "value": {
+              "pumpToControlValve": "Dry",
+              "controlValveToArmCylinders": "Dry",
+              "controlValveToBucketCylinders": "Dry"
+            },
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          }
+        ]
+      },
+      "treeName": "DecisionInputTree",
+      "conditions": [
+        {
+          "_TYPE": "WildCardCondition",
+          "group": "severity",
+          "attribute": "hydraulicHoseAndFittingInspection.*",
+          "value": "Wet",
+          "deligator": {
+            "_TYPE": "NodeCondition"
+          }
+        }
+      ]
+    },
+    "controlsCheck": {
+      "_TYPE": "StateConfig",
+      "id": "StateConfig_xbauh8t",
+      "ID_ATTRIBUTE": "id",
+      "name": "controlsCheck",
+      "payload": {
+        "sectionName": "Controls Check",
+        "inputArray": [
+          {
+            "_TYPE": "RadioTable",
+            "ID_ATTRIBUTE": "id",
+            "name": "startingAndOperating",
+            "label": "Starting and Operating",
+            "rows": [
+              "Parking Brake",
+              "Ignition and Key",
+              "Throttle Control",
+              "3-point Control",
+              "Loader Controls"
+            ],
+            "columns": [
+              "Works",
+              "Kinda Works",
+              "Not Functioning"
+            ],
+            "type": "radio",
+            "hidden": false,
+            "list": {
+              "parkingBrake": {
+                "name": "RadioTable_input-3eqydpb-parkingBrake",
+                "label": "Parking Brake",
+                "value": "Works",
+                "key": "parkingBrake"
+              },
+              "ignitionAndKey": {
+                "name": "RadioTable_input-3eqydpb-ignitionAndKey",
+                "label": "Ignition and Key",
+                "value": "Works",
+                "key": "ignitionAndKey"
+              },
+              "throttleControl": {
+                "name": "RadioTable_input-3eqydpb-throttleControl",
+                "label": "Throttle Control",
+                "value": "Works",
+                "key": "throttleControl"
+              },
+              "3-pointControl": {
+                "name": "RadioTable_input-3eqydpb-3-pointControl",
+                "label": "3-point Control",
+                "value": "Works",
+                "key": "3-pointControl"
+              },
+              "loaderControls": {
+                "name": "RadioTable_input-3eqydpb-loaderControls",
+                "label": "Loader Controls",
+                "value": "Works",
+                "key": "loaderControls"
+              }
+            },
+            "optional": false,
+            "value": {
+              "parkingBrake": "Works",
+              "ignitionAndKey": "Works",
+              "throttleControl": "Works",
+              "3-pointControl": "Works",
+              "loaderControls": "Works"
+            },
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          },
+          {
+            "_TYPE": "RadioTable",
+            "ID_ATTRIBUTE": "id",
+            "name": "shiftingTransmissionAndTransferCase",
+            "label": "Shifting Transmission and Transfer Case",
+            "rows": [
+              "Transmission shifts with no issues",
+              "Transfer Case shifts with no issues"
+            ],
+            "columns": [
+              "Yes",
+              "No"
+            ],
+            "type": "radio",
+            "hidden": false,
+            "list": {
+              "transmissionShiftsWithNoIssues": {
+                "name": "RadioTable_input-tzq4vbs-transmissionShiftsWithNoIssues",
+                "label": "Transmission shifts with no issues",
+                "value": "Yes",
+                "key": "transmissionShiftsWithNoIssues"
+              },
+              "transferCaseShiftsWithNoIssues": {
+                "name": "RadioTable_input-tzq4vbs-transferCaseShiftsWithNoIssues",
+                "label": "Transfer Case shifts with no issues",
+                "value": "Yes",
+                "key": "transferCaseShiftsWithNoIssues"
+              }
+            },
+            "optional": false,
+            "value": {
+              "transmissionShiftsWithNoIssues": "Yes",
+              "transferCaseShiftsWithNoIssues": "Yes"
+            },
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          }
+        ]
+      },
+      "treeName": "DecisionInputTree",
+      "conditions": [
+        {
+          "_TYPE": "WildCardCondition",
+          "group": "severity",
+          "attribute": "startingAndOperating.*",
+          "value": "Not Functioning",
+          "deligator": {
+            "_TYPE": "NodeCondition"
+          }
+        },
+        {
+          "_TYPE": "WildCardCondition",
+          "group": "severity",
+          "attribute": "startingAndOperating.*",
+          "value": "Kinda Works",
+          "deligator": {
+            "_TYPE": "NodeCondition"
+          }
+        },
+        {
+          "_TYPE": "WildCardCondition",
+          "group": "severity",
+          "attribute": "shiftingTransmissionAndTransferCase.*",
+          "value": "No",
+          "deligator": {
+            "_TYPE": "NodeCondition"
+          }
+        }
+      ]
+    },
+    "severity": {
+      "_TYPE": "StateConfig",
+      "id": "StateConfig_lwhjrnk",
+      "ID_ATTRIBUTE": "id",
+      "name": "severity",
+      "payload": {
+        "sectionName": "Severity",
+        "inputArray": [
+          {
+            "_TYPE": "Radio",
+            "ID_ATTRIBUTE": "id",
+            "name": "level",
+            "label": "Level",
+            "list": [
+              "Documenting",
+              "Keep an eye one",
+              "Action Needs Taken",
+              "Immediate Action Required"
+            ],
+            "inline": false,
+            "hidden": false,
+            "optional": false,
+            "value": "Documenting",
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          },
+          {
+            "_TYPE": "Textarea",
+            "ID_ATTRIBUTE": "id",
+            "name": "yourObservationsAndActions",
+            "label": "Your Observations and Actions",
+            "hidden": false,
+            "list": [],
+            "optional": false,
+            "value": "",
+            "targetAttr": "value",
+            "errorMsg": "Error"
+          }
+        ]
+      },
+      "treeName": "DecisionInputTree",
+      "conditions": []
+    }
+  },
+  "name": "Questionaire",
+  "referenceNodes": false,
+  "root": {
+    "name": "Questionaire",
+    "payload": {
+      "inputArray": [],
+      "PAYLOAD_ID": "xtckqyv"
+    },
+    "children": {
+      "info": {
+        "name": "info",
+        "payload": {
+          "inputArray": [
+            {
+              "_TYPE": "Radio",
+              "ID_ATTRIBUTE": "id",
+              "name": "inspector",
+              "label": "Inspector",
+              "list": [
+                "Zach",
+                "Dylan",
+                "Adam",
+                "Jon",
+                "Tucker",
+                "Mitchell"
+              ],
+              "inline": false,
+              "hidden": false,
+              "optional": false,
+              "value": "Zach",
+              "targetAttr": "value",
+              "errorMsg": "Error"
+            },
+            {
+              "_TYPE": "Input",
+              "ID_ATTRIBUTE": "id",
+              "type": "date",
+              "name": "dateOfInspection",
+              "label": "Date of Inspection",
+              "hidden": false,
+              "list": [],
+              "optional": false,
+              "value": "",
+              "targetAttr": "value",
+              "errorMsg": "Error"
+            },
+            {
+              "_TYPE": "NumberInput",
+              "ID_ATTRIBUTE": "id",
+              "name": "enginHours",
+              "label": "Engin Hours",
+              "min": 0,
+              "max": 9007199254740991,
+              "step": 1,
+              "hidden": false,
+              "list": [],
+              "optional": false,
+              "value": "",
+              "targetAttr": "value",
+              "errorMsg": "Error"
+            }
+          ],
+          "PAYLOAD_ID": "hfopyzt"
+        },
+        "children": {},
+        "metadata": {}
+      },
+      "visual": {
+        "name": "visual",
+        "payload": {
+          "inputArray": [
+            {
+              "_TYPE": "Radio",
+              "ID_ATTRIBUTE": "id",
+              "name": "doTiresVissuallyAppearToBeInflated",
+              "label": "Do tires vissually appear to be inflated",
+              "list": [
+                "Yes",
+                "No"
+              ],
+              "inline": false,
+              "hidden": false,
+              "optional": false,
+              "value": "Yes",
+              "targetAttr": "value",
+              "errorMsg": "Error"
+            },
+            {
+              "_TYPE": "Radio",
+              "ID_ATTRIBUTE": "id",
+              "name": "areThereAnyObviousFluidPuddlesUnderTheMachineThatMayIndicateAleak?",
+              "label": "Are there any obvious fluid puddles under the machine that may indicate a leak?",
+              "list": [
+                "Yes",
+                "No"
+              ],
+              "inline": false,
+              "hidden": false,
+              "optional": false,
+              "value": "Yes",
+              "targetAttr": "value",
+              "errorMsg": "Error"
+            },
+            {
+              "_TYPE": "Radio",
+              "ID_ATTRIBUTE": "id",
+              "name": "areAllPrimaryAndSecondaryLockingPinsInPlaceForLoaderAndImplement",
+              "label": "Are all primary and secondary locking pins in place for loader and implement",
+              "list": [
+                "Yes",
+                "No"
+              ],
+              "inline": false,
+              "hidden": false,
+              "optional": false,
+              "value": "Yes",
+              "targetAttr": "value",
+              "errorMsg": "Error"
+            }
+          ],
+          "PAYLOAD_ID": "5tk0j5e"
+        },
+        "children": {
+          "severity": {
+            "name": "severity",
+            "payload": {
+              "inputArray": [
+                {
+                  "_TYPE": "Radio",
+                  "ID_ATTRIBUTE": "id",
+                  "name": "level",
+                  "label": "Level",
+                  "list": [
+                    "Documenting",
+                    "Keep an eye one",
+                    "Action Needs Taken",
+                    "Immediate Action Required"
+                  ],
+                  "inline": false,
+                  "hidden": false,
+                  "optional": false,
+                  "value": "Action Needs Taken",
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                },
+                {
+                  "_TYPE": "Textarea",
+                  "ID_ATTRIBUTE": "id",
+                  "name": "yourObservationsAndActions",
+                  "label": "Your Observations and Actions",
+                  "hidden": false,
+                  "list": [],
+                  "optional": false,
+                  "value": "",
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                }
+              ],
+              "PAYLOAD_ID": "i802yy8"
+            },
+            "children": {},
+            "metadata": {}
+          }
+        },
+        "metadata": {}
+      },
+      "fluids": {
+        "name": "fluids",
+        "payload": {
+          "inputArray": [
+            {
+              "_TYPE": "RadioTable",
+              "ID_ATTRIBUTE": "id",
+              "name": "checkingFluids",
+              "label": "Checking Fluids",
+              "rows": [
+                "Engine Oil",
+                "Hydraulic Oil",
+                "Antifreeze"
+              ],
+              "columns": [
+                "All Good",
+                "Topped Off",
+                "Bulk Add"
+              ],
+              "type": "radio",
+              "hidden": false,
+              "list": {
+                "engineOil": {
+                  "name": "RadioTable_input-br9c9ce-engineOil",
+                  "label": "Engine Oil",
+                  "value": "All Good",
+                  "key": "engineOil"
+                },
+                "hydraulicOil": {
+                  "name": "RadioTable_input-br9c9ce-hydraulicOil",
+                  "label": "Hydraulic Oil",
+                  "value": "All Good",
+                  "key": "hydraulicOil"
+                },
+                "antifreeze": {
+                  "name": "RadioTable_input-br9c9ce-antifreeze",
+                  "label": "Antifreeze",
+                  "value": "All Good",
+                  "key": "antifreeze"
+                }
+              },
+              "optional": false,
+              "value": {
+                "engineOil": "All Good",
+                "hydraulicOil": "All Good",
+                "antifreeze": "All Good"
+              },
+              "targetAttr": "value",
+              "errorMsg": "Error"
+            }
+          ],
+          "PAYLOAD_ID": "6z4fcwp"
+        },
+        "children": {
+          "severity": {
+            "name": "severity",
+            "payload": {
+              "inputArray": [
+                {
+                  "_TYPE": "Radio",
+                  "ID_ATTRIBUTE": "id",
+                  "name": "level",
+                  "label": "Level",
+                  "list": [
+                    "Documenting",
+                    "Keep an eye one",
+                    "Action Needs Taken",
+                    "Immediate Action Required"
+                  ],
+                  "inline": false,
+                  "hidden": false,
+                  "optional": false,
+                  "value": "Documenting",
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                },
+                {
+                  "_TYPE": "Textarea",
+                  "ID_ATTRIBUTE": "id",
+                  "name": "yourObservationsAndActions",
+                  "label": "Your Observations and Actions",
+                  "hidden": false,
+                  "list": [],
+                  "optional": false,
+                  "value": "",
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                }
+              ],
+              "PAYLOAD_ID": "jc5alcf"
+            },
+            "children": {},
+            "metadata": {}
+          }
+        },
+        "metadata": {}
+      },
+      "greasing": {
+        "name": "greasing",
+        "payload": {
+          "inputArray": [
+            {
+              "_TYPE": "RadioTable",
+              "ID_ATTRIBUTE": "id",
+              "name": "greasing",
+              "label": "Greasing",
+              "rows": [
+                "Grease Zerk #1",
+                "Grease Zerk #2",
+                "Grease Zerk #3",
+                "Grease Zerk #4",
+                "Grease Zerk #5",
+                "Grease Zerk #6",
+                "Grease Zerk #7"
+              ],
+              "columns": [
+                "Took At Least 1 Pump",
+                "Would not accept grease"
+              ],
+              "type": "radio",
+              "hidden": false,
+              "list": {
+                "greaseZerk #1": {
+                  "name": "RadioTable_input-hboau4c-greaseZerk #1",
+                  "label": "Grease Zerk #1",
+                  "value": "Would not accept grease",
+                  "key": "greaseZerk #1"
+                },
+                "greaseZerk #2": {
+                  "name": "RadioTable_input-hboau4c-greaseZerk #2",
+                  "label": "Grease Zerk #2",
+                  "value": "Would not accept grease",
+                  "key": "greaseZerk #2"
+                },
+                "greaseZerk #3": {
+                  "name": "RadioTable_input-hboau4c-greaseZerk #3",
+                  "label": "Grease Zerk #3",
+                  "value": "Would not accept grease",
+                  "key": "greaseZerk #3"
+                },
+                "greaseZerk #4": {
+                  "name": "RadioTable_input-hboau4c-greaseZerk #4",
+                  "label": "Grease Zerk #4",
+                  "value": "Would not accept grease",
+                  "key": "greaseZerk #4"
+                },
+                "greaseZerk #5": {
+                  "name": "RadioTable_input-hboau4c-greaseZerk #5",
+                  "label": "Grease Zerk #5",
+                  "value": "Would not accept grease",
+                  "key": "greaseZerk #5"
+                },
+                "greaseZerk #6": {
+                  "name": "RadioTable_input-hboau4c-greaseZerk #6",
+                  "label": "Grease Zerk #6",
+                  "value": "Would not accept grease",
+                  "key": "greaseZerk #6"
+                },
+                "greaseZerk #7": {
+                  "name": "RadioTable_input-hboau4c-greaseZerk #7",
+                  "label": "Grease Zerk #7",
+                  "value": "Would not accept grease",
+                  "key": "greaseZerk #7"
+                }
+              },
+              "optional": false,
+              "value": {
+                "greaseZerk #1": "Would not accept grease",
+                "greaseZerk #2": "Would not accept grease",
+                "greaseZerk #3": "Would not accept grease",
+                "greaseZerk #4": "Would not accept grease",
+                "greaseZerk #5": "Would not accept grease",
+                "greaseZerk #6": "Would not accept grease",
+                "greaseZerk #7": "Would not accept grease"
+              },
+              "targetAttr": "value",
+              "errorMsg": "Error"
+            }
+          ],
+          "PAYLOAD_ID": "zkaqx7e"
+        },
+        "children": {
+          "severity": {
+            "name": "severity",
+            "payload": {
+              "inputArray": [
+                {
+                  "_TYPE": "Radio",
+                  "ID_ATTRIBUTE": "id",
+                  "name": "level",
+                  "label": "Level",
+                  "list": [
+                    "Documenting",
+                    "Keep an eye one",
+                    "Action Needs Taken",
+                    "Immediate Action Required"
+                  ],
+                  "inline": false,
+                  "hidden": false,
+                  "optional": false,
+                  "value": "Documenting",
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                },
+                {
+                  "_TYPE": "Textarea",
+                  "ID_ATTRIBUTE": "id",
+                  "name": "yourObservationsAndActions",
+                  "label": "Your Observations and Actions",
+                  "hidden": false,
+                  "list": [],
+                  "optional": false,
+                  "value": "",
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                }
+              ],
+              "PAYLOAD_ID": "z5y1qc1"
+            },
+            "children": {},
+            "metadata": {}
+          }
+        },
+        "metadata": {}
+      },
+      "hydraulic": {
+        "name": "hydraulic",
+        "payload": {
+          "inputArray": [
+            {
+              "_TYPE": "RadioTable",
+              "ID_ATTRIBUTE": "id",
+              "name": "hydraulicHoseAndFittingInspection",
+              "label": "Hydraulic Hose and fitting inspection",
+              "rows": [
+                "Pump to Control Valve",
+                "Control Valve to Arm Cylinders",
+                "Control Valve to Bucket Cylinders"
+              ],
+              "columns": [
+                "Dry",
+                "Wet"
+              ],
+              "type": "radio",
+              "hidden": false,
+              "list": {
+                "pumpToControlValve": {
+                  "name": "RadioTable_input-g9juota-pumpToControlValve",
+                  "label": "Pump to Control Valve",
+                  "value": "Dry",
+                  "key": "pumpToControlValve"
+                },
+                "controlValveToArmCylinders": {
+                  "name": "RadioTable_input-g9juota-controlValveToArmCylinders",
+                  "label": "Control Valve to Arm Cylinders",
+                  "value": "Dry",
+                  "key": "controlValveToArmCylinders"
+                },
+                "controlValveToBucketCylinders": {
+                  "name": "RadioTable_input-g9juota-controlValveToBucketCylinders",
+                  "label": "Control Valve to Bucket Cylinders",
+                  "value": "Dry",
+                  "key": "controlValveToBucketCylinders"
+                }
+              },
+              "optional": false,
+              "value": {
+                "pumpToControlValve": "Dry",
+                "controlValveToArmCylinders": "Dry",
+                "controlValveToBucketCylinders": "Dry"
+              },
+              "targetAttr": "value",
+              "errorMsg": "Error"
+            }
+          ],
+          "PAYLOAD_ID": "xj4obhz"
+        },
+        "children": {
+          "severity": {
+            "name": "severity",
+            "payload": {
+              "inputArray": [
+                {
+                  "_TYPE": "Radio",
+                  "ID_ATTRIBUTE": "id",
+                  "name": "level",
+                  "label": "Level",
+                  "list": [
+                    "Documenting",
+                    "Keep an eye one",
+                    "Action Needs Taken",
+                    "Immediate Action Required"
+                  ],
+                  "inline": false,
+                  "hidden": false,
+                  "optional": false,
+                  "value": "Documenting",
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                },
+                {
+                  "_TYPE": "Textarea",
+                  "ID_ATTRIBUTE": "id",
+                  "name": "yourObservationsAndActions",
+                  "label": "Your Observations and Actions",
+                  "hidden": false,
+                  "list": [],
+                  "optional": false,
+                  "value": "",
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                }
+              ],
+              "PAYLOAD_ID": "w3ptpwr"
+            },
+            "children": {},
+            "metadata": {}
+          }
+        },
+        "metadata": {}
+      },
+      "controlsCheck": {
+        "name": "controlsCheck",
+        "payload": {
+          "inputArray": [
+            {
+              "_TYPE": "RadioTable",
+              "ID_ATTRIBUTE": "id",
+              "name": "startingAndOperating",
+              "label": "Starting and Operating",
+              "rows": [
+                "Parking Brake",
+                "Ignition and Key",
+                "Throttle Control",
+                "3-point Control",
+                "Loader Controls"
+              ],
+              "columns": [
+                "Works",
+                "Kinda Works",
+                "Not Functioning"
+              ],
+              "type": "radio",
+              "hidden": false,
+              "list": {
+                "parkingBrake": {
+                  "name": "RadioTable_input-zosiemd-parkingBrake",
+                  "label": "Parking Brake",
+                  "value": "Works",
+                  "key": "parkingBrake"
+                },
+                "ignitionAndKey": {
+                  "name": "RadioTable_input-zosiemd-ignitionAndKey",
+                  "label": "Ignition and Key",
+                  "value": "Works",
+                  "key": "ignitionAndKey"
+                },
+                "throttleControl": {
+                  "name": "RadioTable_input-zosiemd-throttleControl",
+                  "label": "Throttle Control",
+                  "value": "Works",
+                  "key": "throttleControl"
+                },
+                "3-pointControl": {
+                  "name": "RadioTable_input-zosiemd-3-pointControl",
+                  "label": "3-point Control",
+                  "value": "Works",
+                  "key": "3-pointControl"
+                },
+                "loaderControls": {
+                  "name": "RadioTable_input-zosiemd-loaderControls",
+                  "label": "Loader Controls",
+                  "value": "Works",
+                  "key": "loaderControls"
+                }
+              },
+              "optional": false,
+              "value": {
+                "parkingBrake": "Works",
+                "ignitionAndKey": "Works",
+                "throttleControl": "Works",
+                "3-pointControl": "Works",
+                "loaderControls": "Works"
+              },
+              "targetAttr": "value",
+              "errorMsg": "Error"
+            },
+            {
+              "_TYPE": "RadioTable",
+              "ID_ATTRIBUTE": "id",
+              "name": "shiftingTransmissionAndTransferCase",
+              "label": "Shifting Transmission and Transfer Case",
+              "rows": [
+                "Transmission shifts with no issues",
+                "Transfer Case shifts with no issues"
+              ],
+              "columns": [
+                "Yes",
+                "No"
+              ],
+              "type": "radio",
+              "hidden": false,
+              "list": {
+                "transmissionShiftsWithNoIssues": {
+                  "name": "RadioTable_input-ok79b6q-transmissionShiftsWithNoIssues",
+                  "label": "Transmission shifts with no issues",
+                  "value": "Yes",
+                  "key": "transmissionShiftsWithNoIssues"
+                },
+                "transferCaseShiftsWithNoIssues": {
+                  "name": "RadioTable_input-ok79b6q-transferCaseShiftsWithNoIssues",
+                  "label": "Transfer Case shifts with no issues",
+                  "value": "Yes",
+                  "key": "transferCaseShiftsWithNoIssues"
+                }
+              },
+              "optional": false,
+              "value": {
+                "transmissionShiftsWithNoIssues": "Yes",
+                "transferCaseShiftsWithNoIssues": "Yes"
+              },
+              "targetAttr": "value",
+              "errorMsg": "Error"
+            }
+          ],
+          "PAYLOAD_ID": "q69gaj0"
+        },
+        "children": {
+          "severity": {
+            "name": "severity",
+            "payload": {
+              "inputArray": [
+                {
+                  "_TYPE": "Radio",
+                  "ID_ATTRIBUTE": "id",
+                  "name": "level",
+                  "label": "Level",
+                  "list": [
+                    "Documenting",
+                    "Keep an eye one",
+                    "Action Needs Taken",
+                    "Immediate Action Required"
+                  ],
+                  "inline": false,
+                  "hidden": false,
+                  "optional": false,
+                  "value": "Documenting",
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                },
+                {
+                  "_TYPE": "Textarea",
+                  "ID_ATTRIBUTE": "id",
+                  "name": "yourObservationsAndActions",
+                  "label": "Your Observations and Actions",
+                  "hidden": false,
+                  "list": [],
+                  "optional": false,
+                  "value": "",
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                }
+              ],
+              "PAYLOAD_ID": "web3489"
+            },
+            "children": {},
+            "metadata": {}
+          }
+        },
+        "metadata": {}
+      }
+    },
+    "metadata": {}
+  },
+  "payloadHandler": {
+    "inputs": [
+      {
+        "_TYPE": "Input",
+        "ID_ATTRIBUTE": "id",
+        "label": "Section Name",
+        "name": "sectionName",
+        "inline": true,
+        "class": "center",
+        "hidden": false,
+        "list": [],
+        "optional": false,
+        "value": "",
+        "targetAttr": "value",
+        "errorMsg": "Error"
+      }
+    ],
+    "templateName": "{{sectionName}}"
+  }
+}

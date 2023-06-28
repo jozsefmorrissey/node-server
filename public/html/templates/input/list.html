@@ -1,5 +1,5 @@
 <div class='input-cnt{{inline() ? ' inline' : ''}}'{{hidden() ? ' hidden' : ''}}
-      input-id={{id()}}>
+      input-id='{{id()}}'>
   <label>{{label()}}</label>
   <div:t id="input-input-list-{{id()}}" repeat='input in list()'>
     {{input.html()}}

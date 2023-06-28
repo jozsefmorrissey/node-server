@@ -1,0 +1,18 @@
+<div class='input-edit-cnt' input-ref-id='{{input.id()}}'>
+  <label>Label</label>
+  <input type='text' attr='label' value='{{input.label()}}'/>
+  <br>
+  <label>Name</label>
+  <input type='text' attr='name' value='{{input.name()}}'/>
+  <br>
+  <label {{input.list().length === 0 ? 'hidden' : ''}}>List</label>
+  <div class='tab edit-input-list-cnt relative'>
+    <div:t repeat='key, value in input.list()'>
+      <input type='text' value='{{key}}'/>
+      =>
+      {{listItemHtml(value)}}
+      <br>
+    </div:t>
+  </div>
+  <br>
+</div>

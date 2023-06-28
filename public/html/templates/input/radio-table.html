@@ -1,4 +1,4 @@
-<div  class='input-cnt'{{hidden() ? ' hidden' : ''}} input-id={{id()}}>
+<div  class='input-cnt'{{hidden() ? ' hidden' : ''}} input-id='{{id()}}'>
   <label>{{label()}}</label>
   <br>
   <div class='tab'>
@@ -11,7 +11,7 @@
         <tr:t repeat='row in rowDetail()'>
           <td>{{row.label}}</td>
           <td:t class='radio-table-input-cnt' repeat='col in columns(rowIndex)'>
-            <input type='radio' name='{{row.name}}' value='{{col}}'
+            <input type='radio' name='{{row.name}}' key='{{row.key}}' value='{{col}}'
                   {{row.value === col ? 'checked' : ''}}/>
           </td:t>
         </tr:t>

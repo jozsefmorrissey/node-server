@@ -216,7 +216,7 @@ app.post('/copy', function(req, res) {
 });
 
 function saveLocation(name) {
-  return `./json/${name}.json`;
+  return `./public/json/${name}.json`;
 }
 
 app.get('/load/json/:name', function (req, res) {

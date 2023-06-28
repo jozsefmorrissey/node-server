@@ -89,7 +89,7 @@ class Input extends Lookup {
     }
     this.attrString = () => Input.attrString(this.targetAttr(), this.value());
 
-    function getElem(id) {return document.getElementById(id);}
+    function getElem(id) {return du.id(id)}
     this.get = () => getElem(this.id());
 
     this.on = (eventType, func) => du.on.match(eventType, idSelector, valuePriority(func));
@@ -113,8 +113,9 @@ class Input extends Lookup {
 
     this.getValue = getValue;
     this.updateDisplay = () => {
-      const elem = getElem(instance.id());
-      if (elem) elem[instance.targetAttr()] = this.value();
+      const elem = du.find(`[input-id="${this.id()}"]`);
+      elem.outerHTML = this.html();
+      // if (elem) elem[instance.targetAttr()] = this.value();
     };
     let chosen = false;
     this.setValue = (val, force, eventTriggered) => {
@@ -135,7 +136,7 @@ class Input extends Lookup {
       value = undefined;
       return false;
     }
-this.name()
+
     this.chosen = () => props.mustChoose ? chosen : true;
 
     this.value = () => {
@@ -153,6 +154,8 @@ this.name()
       this.validate();
       return valid;
     }
+
+    this.editHtml = () => this.constructor.editHtml(this);
     this.validation = function(val) {
       const elem = getElem(instance.id());
       val = val === undefined && elem ? elem.value : val;
@@ -237,16 +240,15 @@ Input.forAll = (id) => {
 }
 
 Input.getFromElem = (elem) => {
-  const closest = du.find.closest('[input-id]', elem);
-  if (closest === undefined) return undefined;
-  const id = closest.getAttribute('input-id');
+  const idElem = du.find.up('[input-id],[input-ref-id]', elem);
+  if (idElem === undefined) return undefined;
+  const id = idElem.getAttribute('input-id') || idElem.getAttribute('input-ref-id');
   return Input.get(id);
 }
 
+Input.template = new $t('input/input');
 Input.fromJson = (json) => new (Object.class.get(json._TYPE))(json);
 
-Input.template = new $t('input/input');
-Input.html = (instance) => () => Input.template.render(instance);
 Input.flagAttrs = ['checked', 'selected'];
 Input.attrString = (targetAttr, value) =>{
   if (Input.flagAttrs.indexOf(targetAttr) !== -1) {
@@ -255,3 +257,25 @@ Input.attrString = (targetAttr, value) =>{
   return `${targetAttr}='${value}'`
 }
 module.exports = Input;
+
+
+
+// TODO: this shouuld be a seperate class
+Input.editTemplate = new $t('input/edit/input');
+Input.html = (instance) => () => Input.template.render(instance);
+
+const objectItemTemplate = new $t('input/edit/list/object');
+const stringItemTemplate = new $t('input/edit/list/string');
+function listItemHtml (item) {
+  if (item instanceof Input) return item.editHtml();
+  if (item instanceof Object) return objectItemTemplate.render(item);
+  return stringItemTemplate.render({value: item});
+}
+Input.editHtml = (input) => Input.editTemplate.render({input, listItemHtml});
+
+du.on.match('change', '.input-edit-cnt[input-ref-id] input[attr]', (elem) => {
+  const input = Input.getFromElem(elem);
+  const attr = elem.getAttribute('attr');
+  input[attr](elem.value);
+  input.updateDisplay();
+});

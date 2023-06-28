@@ -57,11 +57,12 @@ class MultipleEntries extends Input {
       }
       return true;
     }
+    this.valid = () => this.value().length > 0;
 
     this.clone = () =>
         new MultipleEntries(inputTemplate, JSON.clone(props));
 
-    this.set = (index) => {
+    this.set = (index, value) => {
       if (props.list[index] === undefined) {
         props.list[index] = this.inputTemplate().clone({optional: true});
         if (props.list[index].on) {
@@ -96,21 +97,39 @@ class MultipleEntries extends Input {
       const values = [];
       for (let index = 0; index < props.list.length; index++) {
         const input = props.list[index];
-        if (!input.empty() && input.valid()) values.push(input.value());
+        if (!input.empty()) {
+          if (input.valid()) {
+            values.push(input.value());
+          } else {
+            input.valid();
+            input.valid();
+          }
+        }
       }
       return values;
+    }
+
+    this.setValue = (list) => {
+      if (list) {
+        list.forEach((val, index) => {
+            const input = this.set(index)
+            input.setValue(val);
+        });
+      }
     }
 
     this.value = this.getValue;
 
     const parentHtml = this.html;
     this.html = () => {
-      if (props.list.length === 0) this.set(0);
+      if (props.list.length === 0 || !props.list[props.list.length - 1].empty()) this.set(props.list.length);
       return parentHtml();
     }
 
     this.length = () => this.list().length;
     this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
+
+    this.setValue(props.value);
   }
 }
 

@@ -1,31 +1,32 @@
 
-<div class='decision-input-cnt mod' node-id='{{id()}}' recursion="disabled">
-  <div node-id='{{id()}}' class='card'>
-    <div class='payload-cnt'>{{payloadHtml()}}</div>
-    <button class='then-button modify'>
-      Then...
-    </button>
-    <div class='then-input-tree tab'></div>
-    <div:t repeat='input in inputArray()'
-          class='decision-input-array-cnt pad {{class}}' index='{{$index}}'>
-      {{input.html()}}
-      <div class='edit-input-cnt'><button>
-        <i class="fas fa-pencil-alt"></i>
-      </button></div>
-      <span>
-        <button class='conditional-button modify' target-id='{{input.id()}}'>
-          If {{input.name()}}
-        </button>
-        <div hidden class='condition-input-tree tab'></div>
-        <div class='children-recurse-cnt tab' value='{{input.value()}}'></div>
-      </span>
-    </div:t>
-    <div class='orphan-cnt tab'></div>
-    <br>
-    <br>
-    <div class='modification-add-input tab'>
-      {{inputTree().html()}}
+<div class='decision-tree-mod-cnt'>
+    <div class='then-add-cnt'>
+      <button hidden class='then-btn modify-edit' mod-id='1'>
+        Then...
+      </button>
+      <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button>
     </div>
-    <div class='remove-btn-cnt'><button class='rm-node'>X</button></div>
-  </div>
+    <div hidden class='if-edit-cnt'>
+      <button class='edit-btn modify-edit' mod-id='2'>
+        <i class="fas fa-pencil-alt"></i>
+      </button>
+      <button class='conditional-btn modify-edit' mod-id='3'>
+        If
+      </button>
+    </div>
+
+    <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div>
+    <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div>
+    <div hidden class='rm-edit-cnt modify-edit' mod-id='2'>
+      <div class='edit-cnt'>Edit Tree Html!</div>
+      <button class='modiy-rm-input-btn'>Remove</button>
+    </div>
+    <div hidden class='add-cnt tab modify-edit' mod-id='4'>
+      Add Input Html!
+    </div>
+    <div class='remove-btn-cnt' hidden>
+      <button class='rm-node modify-edit'>X</button>
+    </div>
+
+    <div class='close-cnts' hidden><button class='modify-edit'>X</button></div>
 </div>

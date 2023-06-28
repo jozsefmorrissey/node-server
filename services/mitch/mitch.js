@@ -10,7 +10,8 @@ const templates = {
   report: new $t('report'),
   reports: new $t('reports'),
   configure: new $t('configure'),
-  ancestry: new $t('ancestry')
+  ancestry: new $t('ancestry'),
+  playground: new $t('playground')
 };
 
 const getScope = (key) => {
@@ -19,6 +20,7 @@ const getScope = (key) => {
     case 'reports': return {name: 'reports'}
     case 'configure': return {name: 'configure'}
     case 'ancestry': return {name: 'ancestry'}
+    case 'playground': return {name: 'playground'}
     default: return {};
   }
 }

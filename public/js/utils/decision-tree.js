@@ -243,21 +243,21 @@ class DecisionNode extends Lookup {
     this.root = () => this.tree().root();
     this.isRoot = () => parent instanceof DecisionTree;
 
-    function addReachableChildren(node, nodes, doNotCreate) {
+    function addReachableChildren(node, nodes, doNotCreate, searchAll) {
       if (node.shouldRecurse()) {
         const stateKeys = node.stateNames();
         for(let index = 0; index < stateKeys.length; index += 1) {
           const stateName = stateKeys[index];
-          if (node.reachable(stateName)) {
+          if (searchAll || node.reachable(stateName)) {
             const child = node.next(stateName, doNotCreate);
-            nodes.push(child);
+            if (child) nodes.push(child);
           }
         }
       }
     }
 
     // iff func returns true function stops and returns node;
-    this.breathFirst = (func, doNotCreate) => {
+    this.breathFirst = (func, doNotCreate, searchAll) => {
       const nodes = [this];
       const runFunc = (typeof func) === 'function';
       let nIndex = 0;
@@ -268,24 +268,28 @@ class DecisionNode extends Lookup {
           const val = func(node);
           if (val === true) return node;
           if (val) return val;
-          addReachableChildren(node, nodes, doNotCreate);
+          addReachableChildren(node, nodes, doNotCreate, searchAll);
           nodeMap[node.id()] = true;
         }
         nIndex++;
       }
     }
 
-    this.depthFirst = (func, doNotCreate) => {
+    this.depthFirst = (func, doNotCreate, searchAll) => {
       if (func(instance)) return true;
       if (this.shouldRecurse()) {
         const stateKeys = instance.stateNames();
         for(let index = 0; index < stateKeys.length; index += 1) {
             const child = instance.next(stateKeys[index], doNotCreate);
-            if (instance.reachable(child.name())) {
+            if (child && (searchAll || instance.reachable(child.name()))) {
               child.depthFirst(func);
             }
         }
       }
+    }
+
+    this.forall = (func) => {
+      this.breathFirst(func, true, true);
     }
 
     function decendent(nameOfunc) {

@@ -32,7 +32,7 @@ td {
   padding: 2pt 5pt;
 }
 
-.modify {
+.modify-edit {
   background-color: orange;
   border-style: dotted;
   border-radius: 5pt;
@@ -44,10 +44,8 @@ td {
 }
 
 .remove-btn-cnt>button {
-  color: red;
   font-size: larger;
   font-weight: bold;
-  background-color: transparent;
   border-radius: 15pt;
   padding: 0 2pt;
   position: absolute;

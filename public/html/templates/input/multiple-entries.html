@@ -1,8 +1,8 @@
 <{{inline() ? 'span' : 'div'}}  class='input-cnt multi'{{hidden() ? ' hidden' : ''}}
-      input-id={{id()}}>
+      input-id='{{id()}}'>
   <label>{{label()}}</label>
   <div class='multiple-entry-cnt tab card {{inline() ? 'inline' : ''}}'  id='{{id()}}'>
-    <div:t repeat='inputArray in list()' index='{{$index}}'>
+    <div:t class='single-entry-cnt' repeat='inputArray in list()' index='{{$index}}'>
       {{setHtml($index)}}
     </div:t>
   </div>

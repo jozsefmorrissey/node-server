@@ -1,0 +1,52 @@
+.gg-add {
+   box-sizing: border-box;
+   position: relative;
+   display: block;
+   width: 22px;
+   height: 22px;
+   border: 2px solid;
+   transform: scale(var(--ggs,1));
+   border-radius: 22px
+}
+.gg-add::after,
+.gg-add::before {
+   content: "";
+   display: block;
+   box-sizing: border-box;
+   position: absolute;
+   width: 10px;
+   height: 2px;
+   background: currentColor;
+   border-radius: 5px;
+   top: 8px;
+   left: 4px
+}
+.gg-add::after {
+   width: 2px;
+   height: 10px;
+   top: 4px;
+   left: 8px
+}
+
+.gg-math-plus,
+.gg-math-plus::after {
+    display: block;
+    box-sizing: border-box;
+    background: currentColor;
+    border-radius: 10px
+}
+.gg-math-plus {
+    margin-top: -2px;
+    position: relative;
+    transform: scale(var(--ggs,1));
+    width: 16px;
+    height: 2px
+}
+.gg-math-plus::after {
+    content: "";
+    position: absolute;
+    width: 2px;
+    height: 16px;
+    top: -7px;
+    left: 7px
+}

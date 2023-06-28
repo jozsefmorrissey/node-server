@@ -49,16 +49,17 @@ Function.safeStdLibAddition(Function, 'AsyncRunIgnoreSuccessPrintError', functio
 
 }, true);
 
-Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify) {
+Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, key) {
   if (!modify) complement = JSON.copy(complement);
-  if (func(complement)) return {filtered: complement};
+  if (func(complement, key)) return {filtered: complement};
+
   if (!(complement instanceof Object)) return {complement};
   let filtered = Array.isArray(complement) ? [] : {};
   const keys = Object.keys(complement);
   let setOne = false;
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
-    const seperated = Object.filter(complement[key], func, true);
+    const seperated = Object.filter(complement[key], func, true, key);
     if (seperated.filtered) filtered[key] = seperated.filtered;
     setOne = true;
     if (seperated.complement === undefined) delete complement[key];
@@ -345,6 +346,7 @@ clazz.filter = (filterFunc) => {
 }
 
 const filterOutUndefined = (obj) => (key) => obj[key] !== undefined;
+// TODO: Fix i dont know what i was doint/thinking
 function objEq(obj1, obj2) {
   const isObj1 = obj1 instanceof Object;
   const isObj2 = obj2 instanceof Object;
@@ -446,6 +448,11 @@ Function.safeStdLibAddition(Object, 'equals', objEq, true);
 
 Function.safeStdLibAddition(Math, 'toDegrees', function (rads) {
   return Math.round(1000 * Math.mod(rads * 180/Math.PI, 360)) / 1000;
+}, true);
+
+Function.safeStdLibAddition(Math, 'difference', function (val1, val2) {
+  if (val1 > val2) return Math.abs(val1 - val2);
+  return Math.abs(val2 - val1);
 }, true);
 
 Function.safeStdLibAddition(Object, 'forEachConditional', function (obj, func, conditionFunc, modifyObject) {
@@ -1041,7 +1048,8 @@ Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
 }, true);
 
 Function.safeStdLibAddition(Object, 'pathValue', function (path, value) {
-  return Object.pathInfo(this, path, value);
+  const info = this.pathInfo(path, value);
+  return info ? info.target : undefined;
 });
 
 Function.safeStdLibAddition(Object, 'deletePath', function (path) {

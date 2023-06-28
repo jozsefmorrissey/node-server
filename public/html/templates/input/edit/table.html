@@ -1,0 +1,19 @@
+<div class='input-edit-cnt' input-ref-id='{{table.id()}}'>
+  <label>Label</label>
+  <input type='text' attr='label' value='{{table.label()}}'/>
+  <br>
+  <label>Name</label>
+  <input type='text' attr='name' value='{{table.name()}}'/>
+  <br>
+  <div class='table-column-edit-cnt'>
+    <label {{table.columns().length === 0 ? 'hidden' : ''}}>Columns</label>
+    {{listHtml(table.columns())}};
+    <button id='table-column-edit-btn'>Apply</button>
+  </div>
+  <div class='table-row-edit-cnt'>
+    <label {{table.rows().length === 0 ? 'hidden' : ''}}>Rows</label>
+    {{listHtml(table.rows())}};
+    <button id='table-row-edit-btn'>Apply</button>
+  </div>
+  <br>
+</div>

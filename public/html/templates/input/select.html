@@ -1,5 +1,5 @@
 <{{inline() ? 'span' : 'div'}}  class='input-cnt'{{hidden() ? ' hidden' : ''}}
-      input-id={{id()}}>
+      input-id='{{id()}}'>
   <label>{{label()}}</label>
   <select class='{{class()}}' id='{{id()}}' name='{{name()}}' value='{{value()}}'>
     <option:t repeat='key, value in list()' value='{{isArray() ? value : key}}'
