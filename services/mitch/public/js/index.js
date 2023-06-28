@@ -6512,757 +6512,6 @@ const $t = require('../../$t');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	
-	const validation = () => true;
-	class MultipleEntries extends Input {
-	  constructor(inputTemplate, props) {
-	
-	
-	    props ||= {};
-	    props.validation ||= (event, details) => {
-	      const list = props.list;
-	      let allEmpty = true;
-	      let valid = true;
-	      for (let index = 0; index < list.length; index++) {
-	        const input = list[index];
-	        const empty = input.empty();
-	        if (!empty) {
-	          if (input.optional) input.optional(false);
-	          valid &= list[index].valid();
-	        }
-	        allEmpty &= empty;
-	      }
-	      return !allEmpty && valid;
-	    }
-	    if (props.list === undefined) {
-	      const list = [];
-	      props.list = list;
-	      props.list.forEach((i) =>
-	        list.push(i.clone()));
-	    }
-	
-	    props.list ||= [];
-	    super(props);
-	    Object.getSet(this, 'inputTemplate');
-	    let template;
-	    const instance = this;
-	    this.inputTemplate = () => {
-	      if (!template) {
-	        if ((typeof inputTemplate) === 'function') {
-	          template = inputTemplate();
-	        } else template = inputTemplate;
-	      }
-	      return template;
-	    }
-	
-	    this.empty = () => {
-	      if (props.list.length > 1) return false;
-	      const inputs = props.list[0];
-	      for (let index = 0; index < inputs.length; index++) {
-	        if (!inputs[index].empty()) return false;
-	      }
-	      return true;
-	    }
-	    this.valid = () => this.value().length > 0;
-	
-	    this.clone = () =>
-	        new MultipleEntries(inputTemplate, JSON.clone(props));
-	
-	    this.set = (index, value) => {
-	      if (props.list[index] === undefined) {
-	        props.list[index] = this.inputTemplate().clone({optional: true});
-	        if (props.list[index].on) {
-	          props.list[index].on('change', this.validation);
-	        } else {
-	          props.list[index].onChange(this.validation);
-	        }
-	      }
-	      return props.list[index];
-	    }
-	
-	    this.tag = () => props.inline() ? 'span' : 'div';
-	
-	    this.input = (nameOindexOfunc) => {
-	      const nif = nameOindexOfunc;
-	      if ((typeof nif) === 'number') return props.list[nif];
-	      const runFunc = (typeof nif) === 'function';
-	      for (let index = 0; index < props.list.length; index++) {
-	        const input = props.list[index];
-	        if (runFunc) {
-	          const val = nif(input);
-	          if (val) return val;
-	        } else if (input.name() === nif) return input;
-	
-	        if (input instanceof MultipleEntries) {
-	          const mInput = input.input(nif);
-	          if (mInput) return mInput;
-	        }
-	      }
-	    }
-	    this.getValue = () => {
-	      const values = [];
-	      for (let index = 0; index < props.list.length; index++) {
-	        const input = props.list[index];
-	        if (!input.empty()) {
-	          if (input.valid()) {
-	            values.push(input.value());
-	          } else {
-	            input.valid();
-	            input.valid();
-	          }
-	        }
-	      }
-	      return values;
-	    }
-	
-	    this.setValue = (list) => {
-	      if (list) {
-	        list.forEach((val, index) => {
-	            const input = this.set(index)
-	            input.setValue(val);
-	        });
-	      }
-	    }
-	
-	    this.value = this.getValue;
-	
-	    const parentHtml = this.html;
-	    this.html = () => {
-	      if (props.list.length === 0 || !props.list[props.list.length - 1].empty()) this.set(props.list.length);
-	      return parentHtml();
-	    }
-	
-	    this.length = () => this.list().length;
-	    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
-	
-	    this.setValue(props.value);
-	  }
-	}
-	
-	MultipleEntries.template = new $t('input/multiple-entries');
-	MultipleEntries.singleTemplate = new $t('input/one-entry');
-	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
-	
-	MultipleEntries.fromJson = (json) => {
-	  const inputTemplate = Object.fromJson(json.inputTemplate);
-	  return new MultipleEntries(inputTemplate, json);
-	
-	}
-	
-	function meInfo(elem) {
-	  const info = {};
-	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
-	  if (info.oneCnt) {
-	    info.indexCnt = du.find.up('[index]', info.oneCnt);
-	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
-	    const ae =  document.activeElement;
-	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
-	  }
-	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
-	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
-	  info.length = info.multiInput.length();
-	  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
-	  info.last = info.index === info.length - 1;
-	  info.empty = info.multiInput.list()[info.index].empty();
-	  return info;
-	}
-	
-	const meSelector = '.multiple-entry-cnt input,select,textarea';
-	const oneSelector = '.one-entry-cnt *';
-	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
-	du.on.match('change', meSelector, (elem) => {
-	  // console.log('changed');
-	});
-	
-	du.on.match('click', meSelector, (elem) => {
-	  // console.log('clicked');
-	});
-	
-	const lastCallers = [];
-	du.on.match('focusout', '.one-entry-cnt', (elem) => {
-	  let info = meInfo(elem);
-	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
-	  const id = ++lastCallers[info.index];
-	  setTimeout(() => {
-	    if (id !== lastCallers[info.index]) return;
-	    info = meInfo(elem);
-	    if (!info.last && !info.inFocus && info.empty) {
-	      info.indexCnt.remove()
-	      const children = info.multiCnt.children;
-	      for (let index = 0; index < children.length; index++) {
-	        children[index].setAttribute('index', index);
-	      }
-	      const list = info.multiInput.list();
-	      list.remove(list[info.index]);
-	    }
-	  }, 2000);
-	});
-	
-	du.on.match('focusin', oneSelector, (elem) => {
-	  // console.log('focusin');
-	});
-	
-	du.on.match('keyup:change', oneSelector, (elem) => {
-	  if (!isInput(elem)) return;
-	  const info = meInfo(elem);
-	  if (info.index === info.length - 1 && !info.empty) {
-	    const newElem = du.create.element('div', {index: info.index + 1});
-	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
-	    info.multiCnt.append(newElem);
-	    console.log('add 1')
-	  }
-	  // console.log('keyup');
-	});
-	
-	module.exports = MultipleEntries;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/decision/input-input.js',
-function (require, exports, module) {
-	
-const Input = require('../input');
-	const Select = require('../styles/select');
-	const NumberInput = require('../styles/number');
-	const Measurement = require('../../measurement');
-	const MeasurementInput = require('../styles/measurement');
-	const Textarea = require('../styles/textarea');
-	const MultipleEntries = require('../styles/multiple-entries');
-	const DecisionInputTree = require('../decision/decision');
-	const Table = require('../styles/table.js');
-	const InputList = require('../styles/list.js');
-	const RadioTable = Table.Radio;
-	const Radio = require('../styles/radio.js');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	
-	
-	
-	const noSubmitInputTree = () =>
-	  new InputInput({noSubmission: true});
-	
-	
-	class InputInput extends DecisionInputTree {
-	  constructor(props) {
-	    props ||= {};
-	    props.validation ||= {};
-	    if (props.value){
-	      console.log('gere')
-	    }
-	    let details = {};
-	    const name = new Input({
-	      name: 'name',
-	      label: 'Name',
-	      class: 'center',
-	      validation: props.validation.name
-	    });
-	    const inline = new Input({
-	      name: 'inline',
-	      value: props.inline,
-	      label: 'Inline',
-	      class: 'center',
-	      type: 'checkbox'
-	    });
-	    const format = new Select({
-	      label: 'Format',
-	      name: 'format',
-	      class: 'center',
-	      list: ['Text', 'Checkbox', 'Number', 'Radio', 'Select', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement'],
-	      validation: props.validation.format
-	    });
-	    const step = new NumberInput({name: 'step', optional: true, label: 'Step'});
-	    const min = new NumberInput({name: 'min', optional: true, label: 'Minimum'});
-	    const max = new NumberInput({name: 'max', optional: true, label: 'Maximum'});
-	    const tableType = new Select({
-	      label: 'Type',
-	      name: 'type',
-	      class: 'center',
-	      list: ['Text', 'checkbox', 'radio', 'date', 'time', 'column specific']
-	    });
-	    const textCntSize = new Select({
-	      label: 'Size',
-	      name: 'size',
-	      class: 'center',
-	      list: ['Small', 'Large']
-	    });
-	    const units = new Select({
-	      label: 'Units',
-	      name: 'units',
-	      class: 'center',
-	      list: Measurement.units()
-	    });
-	    const label = new Input({
-	      name: 'label',
-	      label: 'Label',
-	      class: 'centnodeConds[index].satisfied()) reer',
-	      validation: (val) => val !== ''
-	    });
-	    const option = new Input({
-	      name: 'option',
-	      label: 'Option',
-	    });
-	    const row = new Input({
-	      name: 'row',
-	      class: 'center',
-	    });
-	    const col = new Input({
-	      name: 'col',
-	      class: 'center',
-	    });
-	    const labels = new MultipleEntries(label, {name: 'labels'});
-	    const options = new MultipleEntries(option, {name: 'options'});
-	    const colType = new MultipleEntries(noSubmitInputTree, {name: 'columns', label: 'Columns'});
-	    const columns = new MultipleEntries(col, {name: 'columns', label: 'Columns'});
-	    const rows = new MultipleEntries(row, {name: 'rows', label: 'Rows'});
-	    const rowCols = [tableType, rows];
-	
-	
-	    const inputs = [name, format];
-	    const multiEnt = new MultipleEntries(noSubmitInputTree, {name: 'templates'});
-	
-	    super(props.name || 'Input', {inputArray: inputs, noSubmission: props.noSubmission, class: 'modify'});
-	    const root = this.root();
-	
-	    const dic = (value, attr) => DecisionInputTree.getCondition(attr || 'format', value);
-	    function addNode(name, inputArray, value, attr, node) {
-	      const targetNode = (node || root);
-	      const newNode = targetNode.then(name, {inputArray});
-	      targetNode.conditions.add(dic(value, attr), name);
-	      return newNode;
-	    }
-	
-	    addNode('text', [textCntSize], 'Text');
-	    addNode('select', [options], 'Select');
-	    addNode('radio', [inline, labels], 'Radio');
-	    const tableNode = addNode('table', rowCols, 'Table');
-	    addNode('tableColumnList', [columns], ['Text', 'checkbox', 'radio', 'date', 'time'], 'type', tableNode);
-	    addNode('tableColumnTemplate', [colType], 'column specific', 'type', tableNode);
-	    addNode('multi', [inline, multiEnt], 'Multiple Entries');
-	    addNode('measure', [units], 'Measurement');
-	    addNode('number', [step, min, max], 'Number');
-	
-	    this.setValue = (inputOrDetails) => {
-	      if (!inputOrDetails) return;
-	      let details = inputOrDetails;
-	      if (inputOrDetails instanceof Input) details = getInputDetails(details);
-	      const setValue = (path) => {
-	        const nodePath = path.split('.');
-	        const inputName = nodePath.splice(-1)[0];
-	        const node = this.getByPath.apply(this, nodePath);
-	        const input = node.find.input(inputName);
-	        input.setValue(details.pathValue(path));
-	      }
-	      setValue('name');
-	      setValue('name');
-	      // setValue('inline');
-	      setValue('format');
-	      setValue('number.step');
-	      setValue('number.min');
-	      setValue('number.max');
-	      setValue('table.type');
-	      setValue('text.size');
-	      setValue('measure.units');
-	      setValue('radio.labels');
-	      setValue('select.options');
-	      setValue('table.tableColumnTemplate.columns');
-	      setValue('multi.templates');
-	      setValue('table.tableColumnList.columns');
-	      setValue('table.rows');
-	    }
-	
-	    this.clone = () => new InputInput(props);
-	    this.empty = () => this.values().name === '';
-	    // tree.onSubmit(addInput);
-	    // tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
-	    // tree.empty = () => {
-	    //   let empty = true;
-	    //   tree.root().forEach((node) =>
-	    //     node.payload().inputArray.forEach(input => empty &&= input.empty()));
-	    //   return empty;
-	    // }
-	
-	    this.setValue(props.input);
-	  }
-	}
-	
-	function getInputDetails(input)  {
-	  const details = {};
-	  details.name = input.label();
-	  details.inline = input.inline();
-	  details.vaalue = input.value();
-	  let list;
-	  if (input instanceof Textarea) {
-	    details.format = 'Text';
-	    details.text = {size: 'Large'};
-	  }
-	
-	  else if (input instanceof NumberInput) {
-	    details.format = 'Number';
-	    details.number = {step: input.step()};
-	    details.number.min = input.min();
-	    details.number.max = input.max();
-	  }
-	
-	  else if (input instanceof Radio) {
-	    details.format = 'Radio';
-	    details.radio = {labels: input.list()};
-	  }
-	
-	  else if (input instanceof Select) {
-	    details.format = 'Select';
-	    const options = input.list();
-	    details.select = {options};
-	  }
-	
-	  else if (input instanceof MeasurementInput) {
-	    details.format = 'Measurement';
-	    details.measure = {units: input.units()};
-	  }
-	
-	  else if (input instanceof Table || input instanceof RadioTable) {
-	    details.format = 'Table';
-	    details.table = {rows: input.rows()};
-	    const isList = !(input.columns()[0] instanceof Input);
-	    if (isList) {
-	      details.table.tableColumnList = {columns: input.columns()};
-	    } else {
-	      const columns = input.columns.map((ci) => getInputDetails(ci));
-	      details.table.tableColumnTemplate = {columns};
-	    }
-	    details.table.type = input.type();
-	  }
-	
-	  else if (input instanceof MultipleEntries) {
-	    details.format = 'Multiple Entries';
-	    details.multi = {templates: []};
-	
-	    const inputList = input.inputTemplate();
-	    const list = inputList.list();
-	    for (let index = 0; index < list.length; index++) {
-	      const inp = list[index];
-	      const inpDets = getInputDetails(inp);
-	      details.multi.templates.push(inpDets);
-	    }
-	  }
-	
-	  else {
-	    switch (input.type()) {
-	      case 'date': details.format = 'Date'; break;
-	      case 'time': details.format = 'Time'; break;
-	      case 'checkbox': details.format = 'Checkbox'; break;
-	      default:
-	        details.format = 'Text';
-	        details.text = {size: 'Small'};
-	        break;
-	
-	    }
-	  }
-	
-	  return details;
-	}
-	
-	function getInput(details, validationCall)  {
-	  const name = details.name.toCamel();
-	  const label = details.name;
-	  let inline = details.inline;
-	  let list, input;
-	  switch (details.format) {
-	    case 'Text':
-	      if (details.text.size === 'Large') {
-	        input = new Textarea({name, label});
-	        break;
-	      } else {
-	        input = new Input({type: 'text', name, label, inline});
-					break;
-	      }
-	    case 'Number':
-	      const step = details.number.step;
-	      const min = details.number.min;
-	      const max = details.number.max;
-	      input = new NumberInput({name, label, min, max, step});
-				break;
-	    case 'Date':
-	      input = new Input({type: 'date', name, label, inline});
-				break;
-	    case 'Time':
-	      input = new Input({type: 'time', name, label, inline});
-				break;
-	    case 'Checkbox':
-	      input = new Input({type: 'checkbox', name, label, inline});
-				break;
-	    case 'Radio':
-	      inline = details.radio.inline;
-	      list = details.radio.labels;
-	      input = new Radio({name, label, list, inline});
-				break;
-	    case 'Select':
-	      list = details.select.options;//.map(input => input.value());
-	      input = new Select({name, label, list});
-				break;
-	    case 'Table':
-	      const props = details.table;
-	      let isList = props.tableColumnList !== undefined;
-	      let columns = isList ?  props.tableColumnList.columns : props.tableColumnTemplate.columns;
-	      let rows = props.rows;
-	      if (!isList) {
-	        columns.forEach((definition, index) => columns[index] = getInput(definition));
-	      }
-	      const type = props.type;
-	      input = new Table({name, label, rows, columns, type});
-				break;
-	    case 'Measurement':
-	      const units = details.measure.units;
-	      input = new MeasurementInput({name, label, units});
-				break;
-	    case 'Multiple Entries':
-	      const templates = details.multi.templates;
-	      list = [];
-	      inline = details.multi.inline;
-	      for (let index = 0; index < templates.length; index++) {
-	        const values = templates[index];
-	        values.inline = inline;
-	        const input = getInput(values);
-	        list.push(input);
-	      }
-	      input = new MultipleEntries(new InputList({list, inline}), {name, label});
-				break;
-	    default:
-	      throw new Error('In the future this will not be reachable');
-	  }
-	  if (!validationCall) validateGetInputDetais(details, input);
-	  return input;
-	}
-	
-	function validateGetInputDetais(details, input) {
-	  const genDets = getInputDetails(input);
-	  const genInput = getInput(genDets, true);
-	  const constructorEq = genInput.constructor === input.constructor;
-	  const typeEq = genInput.type() === input.type();
-	  if (!constructorEq || !typeEq){
-	    console.warn('invalid generated details');
-	    getInputDetails(input);
-	  }
-	}
-	
-	InputInput.getInput = getInput;
-	InputInput.getInputDetails = getInputDetails;
-	
-	
-	
-	module.exports = InputInput;
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	// TODO: Should probably locate somewhere else hacky fix. cosider making editHtml sperate for all Inputs.
-	RadioTable.editTemplate = Table.editTemplate = new $t('input/edit/table');
-	
-	const objectItemTemplate = new $t('input/edit/list/object');
-	const stringItemTemplate = new $t('input/edit/list/string');
-	function listHtml (list) {
-	  const props = {list: [], class: 'input-list-multi'};
-	  let template;
-	  for (let index = 0; index < list.length; index++) {
-	    const item = list[index];
-	    if (item instanceof Input) {
-	      const ii = new InputInput({input: item, noSubmission: true});
-	      props.list.push(ii);
-	      template ||= new InputInput({noSubmission: true});
-	    } else if (item instanceof Object) {
-	      props.list.push(new InputObject({value: item}));
-	      template ||= new InputObject();
-	    } else {
-	      props.list.push(new Input({type: 'simple-string', value: item}));
-	      template ||= new Input({type: 'simple-string'});
-	    }
-	  }
-	  const multi = new MultipleEntries(template, props);
-	  return multi.html();
-	}
-	RadioTable.editHtml = Table.editHtml = (table) => Table.editTemplate.render({table, listHtml});
-	
-	function buildList(elem) {
-	  const input = Input.getFromElem(elem);
-	  const targetInput = Input.getFromElem(elem.previousElementSibling);
-	  const columnValues = targetInput.value();
-	  const list = [];
-	  for (let index = 0; index < columnValues.length; index++) {
-	    const col = columnValues[index];
-	    if ((typeof col) === 'string') list.push(col);
-	    else list.push(InputInput.getInput(col));
-	  }
-	  return {input, list};
-	}
-	
-	du.on.match('click', '#table-column-edit-btn', (elem) => {
-	  const listput = buildList(elem)
-	  listput.input.setColumns(listput.list);
-	  listput.input.updateDisplay();
-	});
-	du.on.match('click', '#table-row-edit-btn', (elem) => {
-	  const listput = buildList(elem)
-	  listput.input.setRows(listput.list);
-	  listput.input.setColumns();
-	  listput.input.updateDisplay();
-	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/list.js',
-function (require, exports, module) {
-	
-const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	const CustomEvent = require('../../custom-event');
-	const Input = require('../input');
-	
-	// TODO: extend InputObject (class functionality overlap)
-	class InputList extends Input {
-	  constructor(props) {
-	    super(props);
-	    Object.getSet(this);
-	    const instance = this;
-	
-	    this.value = () => {
-	      const values = {};
-	      props.list.forEach((input, index) => input.validation() && (values[input.name() || index] = input.value()));
-	      return values;
-	    }
-	
-	    const dynamicEvent = CustomEvent.dynamic();
-	    this.on = dynamicEvent.on;
-	
-	    function triggerChangeEvent(value, input, event) {
-	      dynamicEvent.trigger(event, {value, input});
-	    }
-	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
-	
-	    this.setValue = () => {
-	      throw new Error('This function should never get called');
-	    }
-	
-	    this.valid = () => {
-	      if (this.optional()) return true;
-	      let valid = true;
-	      props.list.forEach(input => valid &&= input.optional() || input.valid());
-	      return valid;
-	    }
-	
-	    let optional;
-	    this.optional = (value) => {
-	      if (value !== true && value !== false) return optional;
-	      optional = value;
-	      props.list.forEach(input => input.optional(optional));
-	    }
-	    this.optional(props.optional || false);
-	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      json.validation = (properties || props).validation;
-	      json.list.forEach(i => delete i.id);
-	      Object.set(json, properties);
-	      return InputList.fromJson(json);
-	    }
-	
-	    this.empty = () => {
-	      for (let index = 0; index < props.list.length; index++) {
-	        if (!props.list[index].empty()) return false
-	      }
-	      return true;
-	    }
-	
-	  }
-	}
-	
-	InputList.fromJson = (json) => {
-	  json.list = Object.fromJson(json.list);
-	  return new InputList(json);
-	}
-	
-	InputList.template = new $t('input/list');
-	InputList.html = (instance) => () => InputList.template.render(instance);
-	
-	
-	
-	module.exports = InputList;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	const Measurement = require('../../measurement');
-	
-	class MeasurementInput extends Input {
-	  constructor(props) {
-	    let units = props.units;
-	    let value = new Measurement(props.value, units || true);
-	    props.value = () => value;
-	    super(props);
-	
-	    this.valid = (val) => {
-	      let testVal;
-	      if (val) {
-	        if (val instanceof MeasurementInput) testVal = val.value();
-	        else testVal = val;
-	      } else testVal = value.value();
-	      const valid = !Number.isNaN(testVal);
-	      this.indicateValidity(valid);
-	      return valid;
-	    }
-	
-	    props.errorMsg = 'Invalid Mathematical Expression';
-	    this.value = () => {
-	      return value.display();
-	    }
-	    const parentSetVal = this.setValue;
-	    this.setValue = (val) => {
-	      let newVal = this.valid(val) ? ((val instanceof Measurement) ?
-	                        val : new Measurement(val, units || true)) : value;
-	      const updated = newVal !== value;
-	      value = newVal;
-	      return updated;
-	    }
-	  }
-	}
-	
-	MeasurementInput.template = new $t('input/measurement');
-	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
-	
-	du.on.match('focusout', '.measurement-input', (elem) => {
-	  const input = MeasurementInput.get(elem.id);
-	  elem.value = input.value();
-	})
-	
-	module.exports = MeasurementInput;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
 function (require, exports, module) {
 	
@@ -7856,6 +7105,757 @@ function (require, exports, module) {
 	
 	
 	module.exports = DecisionInputTree;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	
+	const validation = () => true;
+	class MultipleEntries extends Input {
+	  constructor(inputTemplate, props) {
+	
+	
+	    props ||= {};
+	    props.validation ||= (event, details) => {
+	      const list = props.list;
+	      let allEmpty = true;
+	      let valid = true;
+	      for (let index = 0; index < list.length; index++) {
+	        const input = list[index];
+	        const empty = input.empty();
+	        if (!empty) {
+	          if (input.optional) input.optional(false);
+	          valid &= list[index].valid();
+	        }
+	        allEmpty &= empty;
+	      }
+	      return !allEmpty && valid;
+	    }
+	    if (props.list === undefined) {
+	      const list = [];
+	      props.list = list;
+	      props.list.forEach((i) =>
+	        list.push(i.clone()));
+	    }
+	
+	    props.list ||= [];
+	    super(props);
+	    Object.getSet(this, 'inputTemplate');
+	    let template;
+	    const instance = this;
+	    this.inputTemplate = () => {
+	      if (!template) {
+	        if ((typeof inputTemplate) === 'function') {
+	          template = inputTemplate();
+	        } else template = inputTemplate;
+	      }
+	      return template;
+	    }
+	
+	    this.empty = () => {
+	      if (props.list.length > 1) return false;
+	      const inputs = props.list[0];
+	      for (let index = 0; index < inputs.length; index++) {
+	        if (!inputs[index].empty()) return false;
+	      }
+	      return true;
+	    }
+	    this.valid = () => this.value().length > 0;
+	
+	    this.clone = () =>
+	        new MultipleEntries(inputTemplate, JSON.clone(props));
+	
+	    this.set = (index, value) => {
+	      if (props.list[index] === undefined) {
+	        props.list[index] = this.inputTemplate().clone({optional: true});
+	        if (props.list[index].on) {
+	          props.list[index].on('change', this.validation);
+	        } else {
+	          props.list[index].onChange(this.validation);
+	        }
+	      }
+	      return props.list[index];
+	    }
+	
+	    this.tag = () => props.inline() ? 'span' : 'div';
+	
+	    this.input = (nameOindexOfunc) => {
+	      const nif = nameOindexOfunc;
+	      if ((typeof nif) === 'number') return props.list[nif];
+	      const runFunc = (typeof nif) === 'function';
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (runFunc) {
+	          const val = nif(input);
+	          if (val) return val;
+	        } else if (input.name() === nif) return input;
+	
+	        if (input instanceof MultipleEntries) {
+	          const mInput = input.input(nif);
+	          if (mInput) return mInput;
+	        }
+	      }
+	    }
+	    this.getValue = () => {
+	      const values = [];
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (!input.empty()) {
+	          if (input.valid()) {
+	            values.push(input.value());
+	          } else {
+	            input.valid();
+	            input.valid();
+	          }
+	        }
+	      }
+	      return values;
+	    }
+	
+	    this.setValue = (list) => {
+	      if (list) {
+	        list.forEach((val, index) => {
+	            const input = this.set(index)
+	            input.setValue(val);
+	        });
+	      }
+	    }
+	
+	    this.value = this.getValue;
+	
+	    const parentHtml = this.html;
+	    this.html = () => {
+	      if (props.list.length === 0 || !props.list[props.list.length - 1].empty()) this.set(props.list.length);
+	      return parentHtml();
+	    }
+	
+	    this.length = () => this.list().length;
+	    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
+	
+	    this.setValue(props.value);
+	  }
+	}
+	
+	MultipleEntries.template = new $t('input/multiple-entries');
+	MultipleEntries.singleTemplate = new $t('input/one-entry');
+	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
+	
+	MultipleEntries.fromJson = (json) => {
+	  const inputTemplate = Object.fromJson(json.inputTemplate);
+	  return new MultipleEntries(inputTemplate, json);
+	
+	}
+	
+	function meInfo(elem) {
+	  const info = {};
+	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
+	  if (info.oneCnt) {
+	    info.indexCnt = du.find.up('[index]', info.oneCnt);
+	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
+	    const ae =  document.activeElement;
+	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
+	  }
+	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
+	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
+	  info.length = info.multiInput.length();
+	  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
+	  info.last = info.index === info.length - 1;
+	  info.empty = info.multiInput.list()[info.index].empty();
+	  return info;
+	}
+	
+	const meSelector = '.multiple-entry-cnt input,select,textarea';
+	const oneSelector = '.one-entry-cnt *';
+	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
+	du.on.match('change', meSelector, (elem) => {
+	  // console.log('changed');
+	});
+	
+	du.on.match('click', meSelector, (elem) => {
+	  // console.log('clicked');
+	});
+	
+	const lastCallers = [];
+	du.on.match('focusout', '.one-entry-cnt', (elem) => {
+	  let info = meInfo(elem);
+	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
+	  const id = ++lastCallers[info.index];
+	  setTimeout(() => {
+	    if (id !== lastCallers[info.index]) return;
+	    info = meInfo(elem);
+	    if (!info.last && !info.inFocus && info.empty) {
+	      info.indexCnt.remove()
+	      const children = info.multiCnt.children;
+	      for (let index = 0; index < children.length; index++) {
+	        children[index].setAttribute('index', index);
+	      }
+	      const list = info.multiInput.list();
+	      list.remove(list[info.index]);
+	    }
+	  }, 2000);
+	});
+	
+	du.on.match('focusin', oneSelector, (elem) => {
+	  // console.log('focusin');
+	});
+	
+	du.on.match('keyup:change', oneSelector, (elem) => {
+	  if (!isInput(elem)) return;
+	  const info = meInfo(elem);
+	  if (info.index === info.length - 1 && !info.empty) {
+	    const newElem = du.create.element('div', {index: info.index + 1});
+	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
+	    info.multiCnt.append(newElem);
+	    console.log('add 1')
+	  }
+	  // console.log('keyup');
+	});
+	
+	module.exports = MultipleEntries;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/list.js',
+function (require, exports, module) {
+	
+const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const CustomEvent = require('../../custom-event');
+	const Input = require('../input');
+	
+	// TODO: extend InputObject (class functionality overlap)
+	class InputList extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
+	    const instance = this;
+	
+	    this.value = () => {
+	      const values = {};
+	      props.list.forEach((input, index) => input.validation() && (values[input.name() || index] = input.value()));
+	      return values;
+	    }
+	
+	    const dynamicEvent = CustomEvent.dynamic();
+	    this.on = dynamicEvent.on;
+	
+	    function triggerChangeEvent(value, input, event) {
+	      dynamicEvent.trigger(event, {value, input});
+	    }
+	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
+	
+	    this.setValue = () => {
+	      throw new Error('This function should never get called');
+	    }
+	
+	    this.valid = () => {
+	      if (this.optional()) return true;
+	      let valid = true;
+	      props.list.forEach(input => valid &&= input.optional() || input.valid());
+	      return valid;
+	    }
+	
+	    let optional;
+	    this.optional = (value) => {
+	      if (value !== true && value !== false) return optional;
+	      optional = value;
+	      props.list.forEach(input => input.optional(optional));
+	    }
+	    this.optional(props.optional || false);
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      json.validation = (properties || props).validation;
+	      json.list.forEach(i => delete i.id);
+	      Object.set(json, properties);
+	      return InputList.fromJson(json);
+	    }
+	
+	    this.empty = () => {
+	      for (let index = 0; index < props.list.length; index++) {
+	        if (!props.list[index].empty()) return false
+	      }
+	      return true;
+	    }
+	
+	  }
+	}
+	
+	InputList.fromJson = (json) => {
+	  json.list = Object.fromJson(json.list);
+	  return new InputList(json);
+	}
+	
+	InputList.template = new $t('input/list');
+	InputList.html = (instance) => () => InputList.template.render(instance);
+	
+	
+	
+	module.exports = InputList;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const Measurement = require('../../measurement');
+	
+	class MeasurementInput extends Input {
+	  constructor(props) {
+	    let units = props.units;
+	    let value = new Measurement(props.value, units || true);
+	    props.value = () => value;
+	    super(props);
+	
+	    this.valid = (val) => {
+	      let testVal;
+	      if (val) {
+	        if (val instanceof MeasurementInput) testVal = val.value();
+	        else testVal = val;
+	      } else testVal = value.value();
+	      const valid = !Number.isNaN(testVal);
+	      this.indicateValidity(valid);
+	      return valid;
+	    }
+	
+	    props.errorMsg = 'Invalid Mathematical Expression';
+	    this.value = () => {
+	      return value.display();
+	    }
+	    const parentSetVal = this.setValue;
+	    this.setValue = (val) => {
+	      let newVal = this.valid(val) ? ((val instanceof Measurement) ?
+	                        val : new Measurement(val, units || true)) : value;
+	      const updated = newVal !== value;
+	      value = newVal;
+	      return updated;
+	    }
+	  }
+	}
+	
+	MeasurementInput.template = new $t('input/measurement');
+	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
+	
+	du.on.match('focusout', '.measurement-input', (elem) => {
+	  const input = MeasurementInput.get(elem.id);
+	  elem.value = input.value();
+	})
+	
+	module.exports = MeasurementInput;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/decision/input-input.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const Select = require('../styles/select');
+	const NumberInput = require('../styles/number');
+	const Measurement = require('../../measurement');
+	const MeasurementInput = require('../styles/measurement');
+	const Textarea = require('../styles/textarea');
+	const MultipleEntries = require('../styles/multiple-entries');
+	const DecisionInputTree = require('../decision/decision');
+	const Table = require('../styles/table.js');
+	const InputList = require('../styles/list.js');
+	const RadioTable = Table.Radio;
+	const Radio = require('../styles/radio.js');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	
+	
+	
+	const noSubmitInputTree = () =>
+	  new InputInput({noSubmission: true});
+	
+	
+	class InputInput extends DecisionInputTree {
+	  constructor(props) {
+	    props ||= {};
+	    props.validation ||= {};
+	    if (props.value){
+	      console.log('gere')
+	    }
+	    let details = {};
+	    const name = new Input({
+	      name: 'name',
+	      label: 'Name',
+	      class: 'center',
+	      validation: props.validation.name
+	    });
+	    const inline = new Input({
+	      name: 'inline',
+	      value: props.inline,
+	      label: 'Inline',
+	      class: 'center',
+	      type: 'checkbox'
+	    });
+	    const format = new Select({
+	      label: 'Format',
+	      name: 'format',
+	      class: 'center',
+	      list: ['Text', 'Checkbox', 'Number', 'Radio', 'Select', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement'],
+	      validation: props.validation.format
+	    });
+	    const step = new NumberInput({name: 'step', optional: true, label: 'Step'});
+	    const min = new NumberInput({name: 'min', optional: true, label: 'Minimum'});
+	    const max = new NumberInput({name: 'max', optional: true, label: 'Maximum'});
+	    const tableType = new Select({
+	      label: 'Type',
+	      name: 'type',
+	      class: 'center',
+	      list: ['Text', 'checkbox', 'radio', 'date', 'time', 'column specific']
+	    });
+	    const textCntSize = new Select({
+	      label: 'Size',
+	      name: 'size',
+	      class: 'center',
+	      list: ['Small', 'Large']
+	    });
+	    const units = new Select({
+	      label: 'Units',
+	      name: 'units',
+	      class: 'center',
+	      list: Measurement.units()
+	    });
+	    const label = new Input({
+	      name: 'label',
+	      label: 'Label',
+	      class: 'centnodeConds[index].satisfied()) reer',
+	      validation: (val) => val !== ''
+	    });
+	    const option = new Input({
+	      name: 'option',
+	      label: 'Option',
+	    });
+	    const row = new Input({
+	      name: 'row',
+	      class: 'center',
+	    });
+	    const col = new Input({
+	      name: 'col',
+	      class: 'center',
+	    });
+	    const labels = new MultipleEntries(label, {name: 'labels'});
+	    const options = new MultipleEntries(option, {name: 'options'});
+	    const colType = new MultipleEntries(noSubmitInputTree, {name: 'columns', label: 'Columns'});
+	    const columns = new MultipleEntries(col, {name: 'columns', label: 'Columns'});
+	    const rows = new MultipleEntries(row, {name: 'rows', label: 'Rows'});
+	    const rowCols = [tableType, rows];
+	
+	
+	    const inputs = [name, format];
+	    const multiEnt = new MultipleEntries(noSubmitInputTree, {name: 'templates'});
+	
+	    super(props.name || 'Input', {inputArray: inputs, noSubmission: props.noSubmission, class: 'modify'});
+	    const root = this.root();
+	
+	    const dic = (value, attr) => DecisionInputTree.getCondition(attr || 'format', value);
+	    function addNode(name, inputArray, value, attr, node) {
+	      const targetNode = (node || root);
+	      const newNode = targetNode.then(name, {inputArray});
+	      targetNode.conditions.add(dic(value, attr), name);
+	      return newNode;
+	    }
+	
+	    addNode('text', [textCntSize], 'Text');
+	    addNode('select', [options], 'Select');
+	    addNode('radio', [inline, labels], 'Radio');
+	    const tableNode = addNode('table', rowCols, 'Table');
+	    addNode('tableColumnList', [columns], ['Text', 'checkbox', 'radio', 'date', 'time'], 'type', tableNode);
+	    addNode('tableColumnTemplate', [colType], 'column specific', 'type', tableNode);
+	    addNode('multi', [inline, multiEnt], 'Multiple Entries');
+	    addNode('measure', [units], 'Measurement');
+	    addNode('number', [step, min, max], 'Number');
+	
+	    this.setValue = (inputOrDetails) => {
+	      if (!inputOrDetails) return;
+	      let details = inputOrDetails;
+	      if (inputOrDetails instanceof Input) details = getInputDetails(details);
+	      const setValue = (path) => {
+	        const nodePath = path.split('.');
+	        const inputName = nodePath.splice(-1)[0];
+	        const node = this.getByPath.apply(this, nodePath);
+	        const input = node.find.input(inputName);
+	        input.setValue(details.pathValue(path));
+	      }
+	      setValue('name');
+	      setValue('name');
+	      // setValue('inline');
+	      setValue('format');
+	      setValue('number.step');
+	      setValue('number.min');
+	      setValue('number.max');
+	      setValue('table.type');
+	      setValue('text.size');
+	      setValue('measure.units');
+	      setValue('radio.labels');
+	      setValue('select.options');
+	      setValue('table.tableColumnTemplate.columns');
+	      setValue('multi.templates');
+	      setValue('table.tableColumnList.columns');
+	      setValue('table.rows');
+	    }
+	
+	    this.clone = () => new InputInput(props);
+	    this.empty = () => this.values().name === '';
+	    // tree.onSubmit(addInput);
+	    // tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
+	    // tree.empty = () => {
+	    //   let empty = true;
+	    //   tree.root().forEach((node) =>
+	    //     node.payload().inputArray.forEach(input => empty &&= input.empty()));
+	    //   return empty;
+	    // }
+	
+	    this.setValue(props.input);
+	  }
+	}
+	
+	function getInputDetails(input)  {
+	  const details = {};
+	  details.name = input.label();
+	  details.inline = input.inline();
+	  details.vaalue = input.value();
+	  let list;
+	  if (input instanceof Textarea) {
+	    details.format = 'Text';
+	    details.text = {size: 'Large'};
+	  }
+	
+	  else if (input instanceof NumberInput) {
+	    details.format = 'Number';
+	    details.number = {step: input.step()};
+	    details.number.min = input.min();
+	    details.number.max = input.max();
+	  }
+	
+	  else if (input instanceof Radio) {
+	    details.format = 'Radio';
+	    details.radio = {labels: input.list()};
+	  }
+	
+	  else if (input instanceof Select) {
+	    details.format = 'Select';
+	    const options = input.list();
+	    details.select = {options};
+	  }
+	
+	  else if (input instanceof MeasurementInput) {
+	    details.format = 'Measurement';
+	    details.measure = {units: input.units()};
+	  }
+	
+	  else if (input instanceof Table || input instanceof RadioTable) {
+	    details.format = 'Table';
+	    details.table = {rows: input.rows()};
+	    const isList = !(input.columns()[0] instanceof Input);
+	    if (isList) {
+	      details.table.tableColumnList = {columns: input.columns()};
+	    } else {
+	      const columns = input.columns.map((ci) => getInputDetails(ci));
+	      details.table.tableColumnTemplate = {columns};
+	    }
+	    details.table.type = input.type();
+	  }
+	
+	  else if (input instanceof MultipleEntries) {
+	    details.format = 'Multiple Entries';
+	    details.multi = {templates: []};
+	
+	    const inputList = input.inputTemplate();
+	    const list = inputList.list();
+	    for (let index = 0; index < list.length; index++) {
+	      const inp = list[index];
+	      const inpDets = getInputDetails(inp);
+	      details.multi.templates.push(inpDets);
+	    }
+	  }
+	
+	  else {
+	    switch (input.type()) {
+	      case 'date': details.format = 'Date'; break;
+	      case 'time': details.format = 'Time'; break;
+	      case 'checkbox': details.format = 'Checkbox'; break;
+	      default:
+	        details.format = 'Text';
+	        details.text = {size: 'Small'};
+	        break;
+	
+	    }
+	  }
+	
+	  return details;
+	}
+	
+	function getInput(details, validationCall)  {
+	  const name = details.name.toCamel();
+	  const label = details.name;
+	  let inline = details.inline;
+	  let list, input;
+	  switch (details.format) {
+	    case 'Text':
+	      if (details.text.size === 'Large') {
+	        input = new Textarea({name, label});
+	        break;
+	      } else {
+	        input = new Input({type: 'text', name, label, inline});
+					break;
+	      }
+	    case 'Number':
+	      const step = details.number.step;
+	      const min = details.number.min;
+	      const max = details.number.max;
+	      input = new NumberInput({name, label, min, max, step});
+				break;
+	    case 'Date':
+	      input = new Input({type: 'date', name, label, inline});
+				break;
+	    case 'Time':
+	      input = new Input({type: 'time', name, label, inline});
+				break;
+	    case 'Checkbox':
+	      input = new Input({type: 'checkbox', name, label, inline});
+				break;
+	    case 'Radio':
+	      inline = details.radio.inline;
+	      list = details.radio.labels;
+	      input = new Radio({name, label, list, inline});
+				break;
+	    case 'Select':
+	      list = details.select.options;//.map(input => input.value());
+	      input = new Select({name, label, list});
+				break;
+	    case 'Table':
+	      const props = details.table;
+	      let isList = props.tableColumnList !== undefined;
+	      let columns = isList ?  props.tableColumnList.columns : props.tableColumnTemplate.columns;
+	      let rows = props.rows;
+	      if (!isList) {
+	        columns.forEach((definition, index) => columns[index] = getInput(definition));
+	      }
+	      const type = props.type;
+	      input = new Table({name, label, rows, columns, type});
+				break;
+	    case 'Measurement':
+	      const units = details.measure.units;
+	      input = new MeasurementInput({name, label, units});
+				break;
+	    case 'Multiple Entries':
+	      const templates = details.multi.templates;
+	      list = [];
+	      inline = details.multi.inline;
+	      for (let index = 0; index < templates.length; index++) {
+	        const values = templates[index];
+	        values.inline = inline;
+	        const input = getInput(values);
+	        list.push(input);
+	      }
+	      input = new MultipleEntries(new InputList({list, inline}), {name, label});
+				break;
+	    default:
+	      throw new Error('In the future this will not be reachable');
+	  }
+	  if (!validationCall) validateGetInputDetais(details, input);
+	  return input;
+	}
+	
+	function validateGetInputDetais(details, input) {
+	  const genDets = getInputDetails(input);
+	  const genInput = getInput(genDets, true);
+	  const constructorEq = genInput.constructor === input.constructor;
+	  const typeEq = genInput.type() === input.type();
+	  if (!constructorEq || !typeEq){
+	    console.warn('invalid generated details');
+	    getInputDetails(input);
+	  }
+	}
+	
+	InputInput.getInput = getInput;
+	InputInput.getInputDetails = getInputDetails;
+	
+	
+	
+	module.exports = InputInput;
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	// TODO: Should probably locate somewhere else hacky fix. cosider making editHtml sperate for all Inputs.
+	RadioTable.editTemplate = Table.editTemplate = new $t('input/edit/table');
+	
+	const objectItemTemplate = new $t('input/edit/list/object');
+	const stringItemTemplate = new $t('input/edit/list/string');
+	function listHtml (list) {
+	  const props = {list: [], class: 'input-list-multi'};
+	  let template;
+	  for (let index = 0; index < list.length; index++) {
+	    const item = list[index];
+	    if (item instanceof Input) {
+	      const ii = new InputInput({input: item, noSubmission: true});
+	      props.list.push(ii);
+	      template ||= new InputInput({noSubmission: true});
+	    } else if (item instanceof Object) {
+	      props.list.push(new InputObject({value: item}));
+	      template ||= new InputObject();
+	    } else {
+	      props.list.push(new Input({type: 'simple-string', value: item}));
+	      template ||= new Input({type: 'simple-string'});
+	    }
+	  }
+	  const multi = new MultipleEntries(template, props);
+	  return multi.html();
+	}
+	RadioTable.editHtml = Table.editHtml = (table) => Table.editTemplate.render({table, listHtml});
+	
+	function buildList(elem) {
+	  const input = Input.getFromElem(elem);
+	  const targetInput = Input.getFromElem(elem.previousElementSibling);
+	  const columnValues = targetInput.value();
+	  const list = [];
+	  for (let index = 0; index < columnValues.length; index++) {
+	    const col = columnValues[index];
+	    if ((typeof col) === 'string') list.push(col);
+	    else list.push(InputInput.getInput(col));
+	  }
+	  return {input, list};
+	}
+	
+	du.on.match('click', '#table-column-edit-btn', (elem) => {
+	  const listput = buildList(elem)
+	  listput.input.setColumns(listput.list);
+	  listput.input.updateDisplay();
+	});
+	du.on.match('click', '#table-row-edit-btn', (elem) => {
+	  const listput = buildList(elem)
+	  listput.input.setRows(listput.list);
+	  listput.input.setColumns();
+	  listput.input.updateDisplay();
+	});
 	
 });
 
@@ -9978,16 +9978,6 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
-	exports['input/data-list'] = (get, $t) => 
-			`` +
-			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
-			` `
-	
-	exports['-994603408'] = (get, $t) => 
-			`<option value="` +
-			$t.clean(get("item")) +
-			`" ></option>`
-	
 	exports['expandable/top-add-list'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -10003,34 +9993,18 @@ exports['550500469'] = (get, $t) =>
 			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
 			` </div> `
 	
+	exports['input/data-list'] = (get, $t) => 
+			`` +
+			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+			` `
+	
+	exports['-994603408'] = (get, $t) => 
+			`<option value="` +
+			$t.clean(get("item")) +
+			`" ></option>`
+	
 	exports['input/decision/decision-modification'] = (get, $t) => 
 			` <div class='decision-tree-mod-cnt'> <div class='then-add-cnt'> <button hidden class='then-btn modify-edit' mod-id='1'> Then... </button> <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button> </div> <div hidden class='if-edit-cnt'> <button class='edit-btn modify-edit' mod-id='2'> <i class="fas fa-pencil-alt"></i> </button> <button class='conditional-btn modify-edit' mod-id='3'> If </button> </div> <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div> <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div> <div hidden class='rm-edit-cnt modify-edit' mod-id='2'> <div class='edit-cnt'>Edit Tree Html!</div> <button class='modiy-rm-input-btn'>Remove</button> </div> <div hidden class='add-cnt tab modify-edit' mod-id='4'> Add Input Html! </div> <div class='remove-btn-cnt' hidden> <button class='rm-node modify-edit'>X</button> </div> <div class='close-cnts' hidden><button class='modify-edit'>X</button></div> </div> `
-	
-	exports['input/decision/decision'] = (get, $t) => 
-			` <div class='decision-input-cnt card` +
-			$t.clean(get("inputArray")().length === 0 ? ' empty' : '') +
-			`' node-id='` +
-			$t.clean(get("id")()) +
-			`' recursion="disabled"> <span id='` +
-			$t.clean(get("id")()) +
-			`'> <div class='payload-cnt'>` +
-			$t.clean(get("payloadHtml")()) +
-			`</div> ` +
-			$t.clean(get("inputArray")().length === 0 ? '<br><br>' : '') +
-			` ` +
-			$t.clean( new $t('-1551174699').render(get("inputArray")(), 'input', get)) +
-			` <div class='orphan-cnt tab'>` +
-			$t.clean(get("childrenHtml")()) +
-			`</div> </span> </div> `
-	
-	exports['-1551174699'] = (get, $t) => 
-			`<div class='decision-input-array-cnt pad ` +
-			$t.clean(get("class")) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'> ` +
-			$t.clean(get("input").html()) +
-			` </div>`
 	
 	exports['input/decision/decisionTree'] = (get, $t) => 
 			`<div class='` +
@@ -10071,6 +10045,32 @@ exports['550500469'] = (get, $t) =>
 			`>List</label> <div class='tab edit-input-list-cnt relative'> ` +
 			$t.clean( new $t('1088583088').render(get("input").list(), 'key, value', get)) +
 			` </div> <br> </div> `
+	
+	exports['input/decision/decision'] = (get, $t) => 
+			` <div class='decision-input-cnt card` +
+			$t.clean(get("inputArray")().length === 0 ? ' empty' : '') +
+			`' node-id='` +
+			$t.clean(get("id")()) +
+			`' recursion="disabled"> <span id='` +
+			$t.clean(get("id")()) +
+			`'> <div class='payload-cnt'>` +
+			$t.clean(get("payloadHtml")()) +
+			`</div> ` +
+			$t.clean(get("inputArray")().length === 0 ? '<br><br>' : '') +
+			` ` +
+			$t.clean( new $t('-1551174699').render(get("inputArray")(), 'input', get)) +
+			` <div class='orphan-cnt tab'>` +
+			$t.clean(get("childrenHtml")()) +
+			`</div> </span> </div> `
+	
+	exports['-1551174699'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` </div>`
 	
 	exports['input/edit/list/object'] = (get, $t) => 
 			`<div class='edit-input-list-obj tab'> ` +
@@ -10454,6 +10454,68 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app/pages/ancestry.js',
+function (require, exports, module) {
+	
+const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const PayloadHandler = require('../../../../public/js/utils/input/decision/payload-handler.js');
+	require('../../../../public/js/utils/input/init');
+	const Input = require('../../../../public/js/utils/input/input');
+	const Radio = require('../../../../public/js/utils/input/styles/radio');
+	const Table = require('../../../../public/js/utils/input/styles/table');
+	const MultipleEntries = require('../../../../public/js/utils/input/styles/multiple-entries');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	let count = 0;
+	let modify = true;
+	
+	du.on.match('click', '#modify-btn', (elem) => {
+	  modify = !modify
+	  if (modify) du.class.add(elem, 'modify-edit');
+	  else du.class.remove(elem, 'modify-edit');
+	  // updateEntireTree();
+	});
+	
+	const getInput = () => new Input({
+	  label: `Label${++count}`,
+	  name: `Name${count}`,
+	  inline: true,
+	  class: 'center',
+	});
+	
+	let tree;
+	function updateEntireTree() {
+	  const body = tree.html(null, modify);
+	  du.id('config-body').innerHTML = body;
+	}
+	
+	
+	
+	function proccess() {
+	  const input1 = getInput();
+	  const input2 = getInput();
+	  const input3 = getInput();
+	  // tree = new DecisionInputTree('ancestry', {name: 'Ancestry'});
+	  tree = DecisionInputTree.fromJson(treeJson);
+	  tree.payloadHandler(new PayloadHandler('ancestry', new Input({name: 'name', label: 'Name', optional: true})));
+	
+	  tree.onComplete(console.log);
+	  tree.onSubmit(console.log);
+	
+	  updateEntireTree();
+	}
+	
+	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
+	du.on.match('click', '#json', () => {
+	  du.copy(JSON.stringify(tree.toJson(), null, 2));
+	})
+	
+	
+	exports.proccess = proccess;
+	
+});
+
+
 RequireJS.addFunction('./app/pages/configure.js',
 function (require, exports, module) {
 	
@@ -10540,80 +10602,6 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 });
 
 
-RequireJS.addFunction('./app/pages/ancestry.js',
-function (require, exports, module) {
-	
-const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const PayloadHandler = require('../../../../public/js/utils/input/decision/payload-handler.js');
-	require('../../../../public/js/utils/input/init');
-	const Input = require('../../../../public/js/utils/input/input');
-	const Radio = require('../../../../public/js/utils/input/styles/radio');
-	const Table = require('../../../../public/js/utils/input/styles/table');
-	const MultipleEntries = require('../../../../public/js/utils/input/styles/multiple-entries');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	let count = 0;
-	let modify = true;
-	
-	du.on.match('click', '#modify-btn', (elem) => {
-	  modify = !modify
-	  if (modify) du.class.add(elem, 'modify-edit');
-	  else du.class.remove(elem, 'modify-edit');
-	  // updateEntireTree();
-	});
-	
-	const getInput = () => new Input({
-	  label: `Label${++count}`,
-	  name: `Name${count}`,
-	  inline: true,
-	  class: 'center',
-	});
-	
-	let tree;
-	function updateEntireTree() {
-	  const body = tree.html(null, modify);
-	  du.id('config-body').innerHTML = body;
-	}
-	
-	
-	
-	function proccess() {
-	  const input1 = getInput();
-	  const input2 = getInput();
-	  const input3 = getInput();
-	  // tree = new DecisionInputTree('ancestry', {name: 'Ancestry'});
-	  tree = DecisionInputTree.fromJson(treeJson);
-	  tree.payloadHandler(new PayloadHandler('ancestry', new Input({name: 'name', label: 'Name', optional: true})));
-	
-	  tree.onComplete(console.log);
-	  tree.onSubmit(console.log);
-	
-	  updateEntireTree();
-	}
-	
-	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
-	du.on.match('click', '#json', () => {
-	  du.copy(JSON.stringify(tree.toJson(), null, 2));
-	})
-	
-	
-	exports.proccess = proccess;
-	
-});
-
-
-RequireJS.addFunction('./app/pages/report.js',
-function (require, exports, module) {
-	
-function proccess() {
-	  console.log('report bitches');
-	}
-	
-	exports.proccess = proccess;
-	
-});
-
-
 RequireJS.addFunction('./app/pages/playground.js',
 function (require, exports, module) {
 	
@@ -10678,6 +10666,18 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	  du.copy(JSON.stringify(tree.toJson(), null, 2));
 	})
 	
+	
+	exports.proccess = proccess;
+	
+});
+
+
+RequireJS.addFunction('./app/pages/report.js',
+function (require, exports, module) {
+	
+function proccess() {
+	  console.log('report bitches');
+	}
 	
 	exports.proccess = proccess;
 	
