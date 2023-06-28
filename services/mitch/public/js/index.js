@@ -5528,6 +5528,48 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/input/data-list.js',
+function (require, exports, module) {
+	
+const $t = require('../$t');
+	const du = require('../dom-utils');
+	
+	//TODO: shoould remove datalist from input object... bigger fish
+	class DataList {
+	  constructor(input) {
+	    let list = [];
+	    const id = `data-list-${String.random()}`;
+	    this.id = () => id;
+	    this.list = () => list;
+	    this.getElem = () => {
+	      let elem = du.id(id);
+	      if (!elem)  elem = du.create.element('datalist', {id});
+	      du.find('body').append(elem);
+	      return elem;
+	    }
+	    this.update = () => {
+	      const elem = this.getElem();
+	      elem.innerHTML = DataList.template.render(this);
+	      const inputElem = input && input.get();
+	      if (inputElem) {
+	        inputElem.setAttribute('list', this.id());
+	      }
+	    }
+	    this.setList = (newList) => {
+	      if (!Array.isArray(newList) || newList.equals(list)) return
+	      list = newList;
+	      this.update();
+	    }
+	  }
+	}
+	
+	DataList.template = new $t('input/data-list');
+	
+	module.exports = DataList;
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/input/bind.js',
 function (require, exports, module) {
 	
@@ -5613,48 +5655,6 @@ const du = require('../dom-utils');
 	}
 	
 	du.on.match('focusout', '.dynam-input', undoDynamic);
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/data-list.js',
-function (require, exports, module) {
-	
-const $t = require('../$t');
-	const du = require('../dom-utils');
-	
-	//TODO: shoould remove datalist from input object... bigger fish
-	class DataList {
-	  constructor(input) {
-	    let list = [];
-	    const id = `data-list-${String.random()}`;
-	    this.id = () => id;
-	    this.list = () => list;
-	    this.getElem = () => {
-	      let elem = du.id(id);
-	      if (!elem)  elem = du.create.element('datalist', {id});
-	      du.find('body').append(elem);
-	      return elem;
-	    }
-	    this.update = () => {
-	      const elem = this.getElem();
-	      elem.innerHTML = DataList.template.render(this);
-	      const inputElem = input && input.get();
-	      if (inputElem) {
-	        inputElem.setAttribute('list', this.id());
-	      }
-	    }
-	    this.setList = (newList) => {
-	      if (!Array.isArray(newList) || newList.equals(list)) return
-	      list = newList;
-	      this.update();
-	    }
-	  }
-	}
-	
-	DataList.template = new $t('input/data-list');
-	
-	module.exports = DataList;
 	
 });
 
@@ -5965,549 +5965,6 @@ function (require, exports, module) {
 	  input[attr](elem.value);
 	  input.updateDisplay();
 	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/decision/modification.js',
-function (require, exports, module) {
-	
-
-	
-	const DecisionInputTree = require('./decision');
-	const InputInput = require('../decision/input-input.js');
-	const Input = require('../input.js');
-	const Select = require('../styles/select.js');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	const Conditions = require('../../conditions');
-	
-	const modHideAll = du.switch('.modify-edit', 'mod-id');
-	
-	const hideAll = () => {
-	  for (let index = 0; index < all.length; index++) all[index].hidden = true;
-	};
-	
-	const toolCnt = du.create.element('div', {class: 'mod-decision-cnt'});
-	toolCnt.innerHTML = new $t('input/decision/decision-modification').render({});
-	du.find('body').append(toolCnt);
-	
-	let targetNodeElem;
-	let targetInputElem;
-	
-	const thenBtn = du.find.down('.then-btn', toolCnt);
-	const condBtn = du.find.down('.conditional-btn', toolCnt);
-	const editBtn = du.find.down('.edit-btn', toolCnt);
-	const addBtn = du.find.down('.add-btn', toolCnt);
-	const rmBtn = du.find.down('.remove-btn-cnt>button', toolCnt);
-	const closeCntBtn = du.find.down('.decision-tree-mod-cnt>.close-cnts', toolCnt);
-	
-	const thenCnt = du.find.down('.then-cnt', toolCnt);
-	const condCnt = du.find.down('.condition-cnt', toolCnt);
-	const editCnt = du.find.down('.edit-cnt', toolCnt);
-	const addCnt = du.find.down('.add-cnt', toolCnt);
-	
-	const thenAddCnt = du.find.down('.decision-tree-mod-cnt>.then-add-cnt', toolCnt);
-	const ifEditBtnCnt = du.find.down('.if-edit-cnt', toolCnt);
-	const rmCnt = du.find.down('.remove-btn-cnt', toolCnt);
-	const rmEditCnt = du.find.down('.rm-edit-cnt', toolCnt);
-	
-	const all = [closeCntBtn, thenBtn, condBtn, editBtn, addBtn, thenCnt, condCnt, editCnt, addCnt, ifEditBtnCnt, rmCnt, rmEditCnt];
-	
-	function updateConditionTree(elem) {
-	  let input = Input.getFromElem(elem);
-	  if (elem !== condBtn && input !== condTarget.input) return;
-	  if (elem === condBtn) input = Input.getFromElem(targetInputElem);
-	  const conditionCnt = du.find.up('.condition-input-tree', elem);
-	  if (conditionCnt) return;
-	  const node = condTarget.node;
-	  const inputCnt = du.find.up('.decision-input-array-cnt', elem);
-	
-	  const inputArray = node.payload().inputArray;
-	  const val = input.value();
-	  const props = {header: `If ${input.name()} <br>`};
-	  const condTree = getConditionTree(val, node, input, props);
-	  const value = input.value();
-	  if ((typeof value) === 'string') {
-	    condTree.find.input('condition').setValue(value);
-	  }
-	  const treeHtml = condTree.html();
-	  condCnt.innerHTML = treeHtml;
-	}
-	
-	class ModDecisionTree {
-	  constructor(decisionTree) {
-	    const treeId = decisionTree.id();
-	    const nodeCntSelector = `[tree-id="${treeId}"] .decision-input-cnt`;
-	    const inputCntSelector = `[tree-id="${treeId}"] .decision-input-array-cnt>.input-cnt`;
-	    const inputSelector = `[tree-id="${treeId}"] .decision-input-array-cnt input, ` +
-	                          `[tree-id="${treeId}"] .decision-input-array-cnt select, ` +
-	                          `[tree-id="${treeId}"] .decision-input-array-cnt textarea`;
-	
-	    let active = true;
-	    this.on = () => active = true;
-	    this.off = () => {
-	      hideAll();
-	      active = false;
-	    }
-	    this.toggle = () => active ? this.off() : this.on();
-	    this.active = () => active;
-	
-	    function mouseoverNode(elem) {
-	      if (!active) return;
-	      if (elem) targetNodeElem = elem;
-	      // du.move.relitive(thenBtn, elem, 'topcenter');
-	      du.move.relitive(thenAddCnt, elem, 'bottomcenter');
-	      du.move.relitive(rmCnt, elem, 'topright');
-	      thenBtn.hidden = false;
-	      rmCnt.hidden = false;
-	      addBtn.hidden = false;
-	      rmBtn.hidden = false;
-	    }
-	    function mouseoverInput(elem) {
-	      if (!active) return;
-	      ifEditBtnCnt.hidden = false;
-	      condBtn.hidden = false;
-	      editBtn.hidden = false;
-	      du.move.relitive(ifEditBtnCnt, elem, 'leftcenterouter')
-	      targetInputElem = elem;
-	    }
-	
-	
-	    // function mouseoutNode(elem) {
-	    //   if (!active) return;
-	    // }
-	    // function mouseoutInput(elem) {
-	    //   if (!active) return;
-	    //   if (!du.is.ancestor(elem, targetInputElem)) {
-	    //     ifEditBtnCnt.hidden = true;
-	    //   }
-	    // }
-	    // du.on.match('mouseout', nodeCntSelector, mouseoutNode);
-	    // du.on.match('mouseout', inputCntSelector, mouseoutInput);
-	
-	    du.on.match('mouseover', nodeCntSelector, mouseoverNode);
-	    du.on.match('mouseover', inputCntSelector, mouseoverInput);
-	    du.on.match('change', inputSelector, (elem) => {
-	      elem.matches(inputSelector);
-	      setTimeout(() => {
-	        updateConditionTree(elem);
-	        const targetCnt = rmEditCnt.hidden ? condCnt : rmEditCnt;
-	        showCloseButton(targetCnt);
-	      });
-	    });
-	  }
-	}
-	
-	function showCloseButton(elem) {
-	  closeCntBtn.hidden = false;
-	  du.move.relitive(closeCntBtn, elem, 'righttopouter');
-	}
-	
-	let addTargetNode;
-	function showAddInput(elem) {
-	  addCnt.hidden = false;
-	  addTargetNode = DecisionInputTree.getNode(targetNodeElem);
-	  const inputTree = ModDecisionTree.inputTree(addTargetNode);
-	  addCnt.innerHTML = inputTree.html();
-	  du.move.relitive(addCnt, targetNodeElem, 'bottomcenter');
-	  showCloseButton(addCnt);
-	  du.move.inbounds(addCnt)
-	}
-	du.on.match('click', '.add-btn', showAddInput);
-	
-	function addInput(details, elem)  {
-	  const input = InputInput.getInput(details);
-	  addTargetNode.addInput(input);
-	  DecisionInputTree.rebuild(targetNodeElem);
-	  addCnt.hidden = true;
-	}
-	
-	const getCondition = (...args) => DecisionInputTree.getCondition(...args);
-	
-	function createConditionalNodeFunction(node, input) {
-	  return function createNode(values, elem) {
-	    const attribute = input.name();
-	    const type = `${values.type}Type`;
-	    const subType = values[values.type.toCamel()][type.toCamel()];
-	    let value = values.condition;
-	    if (values.type === 'Number') value = Number.parseFloat(value);
-	    if (values.type === 'List') value = value.split(',');
-	    const condition = getCondition(attribute, value, subType);
-	    console.log(condition.satisfied(node));
-	    console.log(condition.satisfied(node));
-	    const name = values.group;
-	    const newNode = node.then(name, values.payload);
-	    node.conditions.add(condition, name);
-	    const condCnt = du.find.up('.condition-input-tree', elem);
-	    const condBtn = du.find.closest('.conditional-button', condCnt)
-	    hideAll();
-	    const inputElem = Input.getFromElem(elem)
-	    DecisionInputTree.update.children(inputElem);
-	  }
-	}
-	
-	function andHandlerInput(node, inputs) {
-	  const handlerInput = node.tree().payloadInput();
-	  if (handlerInput) inputs = [handlerInput].concat(inputs);
-	  return inputs
-	}
-	
-	function conditionalInputTree(node, props) {
-	  props ||= {};
-	  const group = new Input({
-	    name: 'group',
-	    label: 'Group',
-	    class: 'center',
-	  });
-	
-	  function updateGroupList(node) {
-	    if (node._NODE) node = node._NODE;
-	    const list = Object.keys(node.tree().stateConfigs());
-	    group.list(list);
-	    }
-	  updateGroupList(node);
-	
-	  const type = new Select({
-	    label: 'Type',
-	    name: 'type',
-	    class: 'center',
-	    list: ['String', 'Number', 'Reference', 'List', 'Regex']
-	  });
-	
-	  const stringType = new Select({
-	    name: 'stringType',
-	    class: 'center',
-	    list: ['Case Insensitive', 'Exact', 'Wild Card', 'Contains', 'Any', 'Except']
-	  });
-	
-	  const numberType = new Select({
-	    name: 'numberType',
-	    class: 'center',
-	    list: ['Equal', 'Less Than', 'Greater Than', 'Less Than or Equal', 'Greater Than or Equal']
-	  });
-	
-	  const referenceType = new Select({
-	    name: 'type',
-	    class: 'center',
-	    list: ['need', 'to', 'dynamically update']
-	  });
-	
-	  const listType = new Select({
-	    name: 'listType',
-	    class: 'center',
-	    list: ['Inclusive', 'Exclusive']
-	  });
-	
-	  const condition = new Input({
-	    label: 'Condition',
-	    name: 'condition',
-	    inline: true,
-	    class: 'center',
-	    value: props.conditionValue
-	  });
-	
-	  props.inputArray = andHandlerInput(node, [group, type, condition]);
-	
-	  const tree = new DecisionInputTree(props.treeName, props);
-	  const root = tree.root();
-	
-	  const dic = (value, type) => getCondition('type', value, type);
-	  function addTypeNode(name, inputArray, value, type) {
-	    const node = root.then(name, {inputArray});
-	    root.conditions.add(dic(value, type), name);
-	    node.relatedTo('type');
-	    return node;
-	  }
-	
-	  addTypeNode('reference', [referenceType], 'Reference');
-	  addTypeNode('string', [stringType], 'String')
-	  addTypeNode('number', [numberType], 'Number')
-	  addTypeNode('list', [listType], 'List')
-	
-	  tree.onChange(updateGroupList);
-	
-	  tree.onSubmit(props.onSubmit);
-	
-	  return tree;
-	}
-	
-	let thenTargetNode;
-	const thenInput = (node) => {
-	  const group = new Input({
-	    name: 'group',
-	    label: 'Group',
-	    class: 'center',
-	  });
-	
-	  function updateGroupList(node) {
-	    if (node._NODE) node = node._NODE;
-	    const list = Object.keys(node.tree().stateConfigs());
-	    group.list(list);
-	  }
-	  updateGroupList(node);
-	
-	  const props = {inputArray: andHandlerInput(node, [group])};
-	  const tree = new DecisionInputTree('Node', props);
-	  tree.onSubmit((values, elem) => {
-	    const name = values.group;
-	    const newNode = node.then(name, values.payload);
-	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
-	    const btnCnt = du.find.closest('.then-button', elem);
-	    const inputCnt = du.find.closest('.then-input-tree', btnCnt);
-	    hideAll();
-	    DecisionInputTree.hardUpdate(treeCnt);
-	  });
-	  return tree;
-	}
-	
-	du.on.match('click', '.then-btn', (elem, two, three) => {
-	  console.log('ThEn?');
-	  thenTargetNode = DecisionInputTree.getNode(targetNodeElem);
-	  const thenPut = thenInput(thenTargetNode);
-	  thenCnt.innerHTML = thenPut.html();
-	  thenCnt.hidden = false;
-	  du.move.relitive(thenCnt, targetNodeElem, 'bottomcenter');
-	  showCloseButton(thenCnt);
-	});
-	
-	const objectKeyFilter = (currObj) => (k) => (currObj[k]._NODE && !currObj.condition) || (k === 'condition' && currObj.condition);
-	const valueFilter = (val) => (typeof val) === 'string';
-	function getConditionKey(values) {
-	  const curr = values['Question Groupy'];
-	  let path, attr, lastKey;
-	  let currObj = values;
-	  while (true) {
-	    const validKeys = Object.keys(currObj).filter(objectKeyFilter(currObj));
-	    const validPaths = Object.values(currObj).filter(valueFilter);
-	    if (validPaths.length !== 1) throw new Error('There should be only one valid path');
-	    if (validKeys.length !== 1) throw new Error('There should be only one valid key');
-	    key = validKeys[0];
-	    currObj = currObj[key];
-	    const lastHyphIndex = key.indexOf('-');
-	    path = path ? `${path}.${key}` : key;
-	    attr = attr ? `${attr}.${validPaths[0]}` : validPaths[0];
-	    if (!(currObj.condition instanceof Object) && currObj.condition !== undefined) break;
-	  }
-	  return {path, attr};
-	}
-	
-	function createCondition(values, node, input) {
-	  const pathAttr = getConditionKey(values);
-	  const condObj = Object.pathValue(values, pathAttr.path);
-	  const value = condObj.condition;
-	
-	  const attribute = input.name()+'.'+pathAttr.attr;
-	  const type = `${condObj.type}Type`;
-	  const subType = condObj[condObj.type.toCamel()][type.toCamel()];
-	  let condValue = condObj.condition;
-	  if (condObj.type === 'Number') condValue = Number.parseFloat(condValue);
-	  if (condObj.type === 'List') condValue = condValue.split(',');
-	  const cond = getCondition(attribute, condValue, subType);
-	
-	  const childName = String.random();
-	  const child = node.then(condObj.group);
-	  node.conditions.add(cond, condObj.group);
-	
-	  DecisionInputTree.update()(targetInputElem);
-	  hideAll();
-	}
-	
-	function processObject (select, key, node, object, targetNode, conditions, path) {
-	  const child = node.then(path);
-	  const type = key === '*' ? 'exact' : undefined;
-	  const cond = getCondition(select.name(), key, type);
-	  const childConds = conditions.clone();
-	  childConds.add(cond);
-	  node.conditions.add(cond, path);
-	  addObjectKeys(child, object, targetNode, childConds, path);
-	}
-	
-	function proccessValue (select, key, node, value, targetNode, conditions, path) {
-	  let child = node.stateMap()[key];
-	  if (child === undefined) {
-	    const childConds = conditions.clone();
-	      const type = key === '*' ? 'exact' : undefined;
-	      const props = {treeName: path, conditionValue: value};
-	      const condInputTree = conditionalInputTree(targetNode, props);
-	      child = node.then(condInputTree.root());
-	      const cond = getCondition(select.name(), key, type);
-	      childConds.add(cond);
-	      node.conditions.add(childConds, path);
-	   }
-	}
-	
-	const DEF_COND = 'DEFINE CONDITION';
-	function superObject(object) {
-	  const superObj = {};
-	  const keys = Object.keys(object);
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const value = object[key];
-	    if (value instanceof Object) {
-	      superObj[key] = superObject(value);
-	      if (superObj['*']) Object.merge(superObj['*'], superObject(value), true)
-	      else superObj['*'] = superObject(value);
-	      superObj[DEF_COND] = '';
-	    } else {
-	      superObj['*'] = '';
-	      superObj[key] = value;
-	    }
-	  }
-	  return superObj;
-	}
-	
-	const objectKeySorter = (key1, key2) => {
-	  if (key1 === DEF_COND) return -1;
-	  if (key2 === DEF_COND) return 0;
-	  if (key1 === '*') return -1;
-	  if (key2 === '*') return 0;
-	  return key1 - key2;
-	}
-	
-	function addObjectKeys(node, object, targetNode, conditions, path) {
-	  if (conditions === undefined) object = superObject(object);
-	
-	  conditions ||= new Conditions.And([]);
-	  const keys = [].concat(Object.keys(object));
-	  const list = [];
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const value = object[key];
-	    list.push(key);
-	  }
-	  list.sort(objectKeySorter);
-	  const select = new Select({name: node.name(), list})
-	  node.addInput(select);
-	  const paths = {};
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    let currPath = path ? path + '-' + key : key;
-	    const value = object[key];
-	    const runObject = value instanceof Object;
-	    const runValue = !runObject;
-	    if (runObject) processObject(select, key, node, value, targetNode, conditions, currPath);
-	    if (runValue) proccessValue(select, key, node, value, targetNode, conditions, currPath);
-	  }
-	  return keys;
-	}
-	
-	function objectConditionTree(values, node, input, props) {
-	  const tree = new DecisionInputTree(props.treeName, props);
-	  addObjectKeys(tree.root(), values, node);
-	  tree.onSubmit((values) => createCondition(values, node, input));
-	  return tree;
-	}
-	
-	function getConditionTree(values, node, input, props) {
-	  if (values instanceof Object)
-	    return objectConditionTree(values, node, input, props);
-	  props ||= {};
-	  props.treeName = 'Question Groupy';
-	  props.onSubmit = createConditionalNodeFunction(node, input);
-	  props.conditionValue = input.value();
-	  return conditionalInputTree(node, props);
-	}
-	
-	const condTarget = {};
-	function condBtnPressed(elem) {
-	  condTarget.node = DecisionInputTree.getNode(targetNodeElem);
-	  condTarget.input = Input.getFromElem(targetInputElem);;
-	  const inputTreeCnt = updateConditionTree(elem);
-	  condCnt.hidden = false;
-	  du.move.relitive(condCnt, targetInputElem, 'bottomcenterouter');
-	  showCloseButton(condCnt);
-	}
-	
-	function removeNodeBtnPressed(elem) {
-	  const node = DecisionInputTree.getNode(targetNodeElem);
-	  if (confirm(`Are you sure you want to remove node '${node.name()}'`) == true) {
-	    node.remove();
-	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
-	    DecisionInputTree.hardUpdate(treeCnt);
-	  }
-	  hideAll();
-	}
-	
-	du.on.match('click', '.conditional-btn', condBtnPressed);
-	du.on.match('click', '.remove-btn-cnt>.rm-node', removeNodeBtnPressed);
-	
-	
-	
-	ModDecisionTree.inputTree = function (node, noSubmission) {
-	  const targetTree = node.tree();
-	  const nameVal = (value) => {
-	    if (value === '') return false;
-	    const camel = value.toCamel();
-	    const inputs = node.payload().inputArray;
-	    for (let index = 0; index < inputs.length; index++) {
-	      if (inputs[index].name() === camel) return false;
-	    }
-	    return node.stateNames().indexOf(camel) === -1;
-	  }
-	
-	  const tree = new InputInput({noSubmission, class: 'modify',
-	                  validation: {name: nameVal}});
-	  const root = tree.root();
-	
-	
-	
-	  tree.onSubmit(addInput);
-	  tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
-	  tree.empty = () => {
-	    let empty = true;
-	    tree.root().forEach((node) =>
-	      node.payload().inputArray.forEach(input => empty &&= input.empty()));
-	    return empty;
-	  }
-	  return tree;
-	}
-	
-	
-	const editTargets = {};
-	du.on.match('click', '.edit-btn', (elem) => {
-	  editTargets.input = Input.getFromElem(targetInputElem);
-	  editTargets.node = DecisionInputTree.getNode(targetNodeElem);
-	  editCnt.hidden = false;
-	  editCnt.innerHTML = editTargets.input.editHtml();
-	  du.move.relitive(rmEditCnt, targetInputElem, 'bottomcenterouter')
-	  showCloseButton(editCnt);
-	});
-	
-	du.on.match('click', '.modiy-rm-input-btn', (elem) => {
-	  const inputIdElem = du.find.closest('[input-ref-id', elem);
-	  editTargets.node.removeInput(editTargets.input.name());
-	  DecisionInputTree.hardUpdate(targetInputElem.parentElement);
-	  hideAll();
-	});
-	
-	du.on.match('click', '.decision-tree-mod-cnt>.close-cnts', hideAll);
-	
-	
-	
-	module.exports = ModDecisionTree;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/decision/payload-handler.js',
-function (require, exports, module) {
-	
-const $t = require('../../$t');
-	const InputObject = require('../styles/object');
-	
-	class PayloadHandler {
-	  constructor(templateName, ...inputs) {
-	    Object.getSet(this, {templateName, inputs});
-	    const template = new $t(this.templateName());
-	
-	    this.html = (payload) => template.render(payload);
-	    this.input = () => new InputObject({name: 'payload', list: inputs});
-	    this.toJson = () => ({inputs: Object.toJson(inputs), templateName});
-	  }
-	}
-	
-	module.exports = PayloadHandler;
 	
 });
 
@@ -7109,357 +6566,28 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
+RequireJS.addFunction('../../public/js/utils/input/styles/number.js',
 function (require, exports, module) {
 	
-
-	
-	
-	
-	const Input = require('../input');
+const Input = require('../input');
 	const $t = require('../../$t');
-	const du = require('../../dom-utils');
 	
-	const validation = () => true;
-	class MultipleEntries extends Input {
-	  constructor(inputTemplate, props) {
-	
-	
-	    props ||= {};
-	    props.validation ||= (event, details) => {
-	      const list = props.list;
-	      let allEmpty = true;
-	      let valid = true;
-	      for (let index = 0; index < list.length; index++) {
-	        const input = list[index];
-	        const empty = input.empty();
-	        if (!empty) {
-	          if (input.optional) input.optional(false);
-	          valid &= list[index].valid();
-	        }
-	        allEmpty &= empty;
-	      }
-	      return !allEmpty && valid;
-	    }
-	    if (props.list === undefined) {
-	      const list = [];
-	      props.list = list;
-	      props.list.forEach((i) =>
-	        list.push(i.clone()));
-	    }
-	
-	    props.list ||= [];
-	    super(props);
-	    Object.getSet(this, 'inputTemplate');
-	    let template;
-	    const instance = this;
-	    this.inputTemplate = () => {
-	      if (!template) {
-	        if ((typeof inputTemplate) === 'function') {
-	          template = inputTemplate();
-	        } else template = inputTemplate;
-	      }
-	      return template;
-	    }
-	
-	    this.empty = () => {
-	      if (props.list.length > 1) return false;
-	      const inputs = props.list[0];
-	      for (let index = 0; index < inputs.length; index++) {
-	        if (!inputs[index].empty()) return false;
-	      }
-	      return true;
-	    }
-	    this.valid = () => this.value().length > 0;
-	
-	    this.clone = () =>
-	        new MultipleEntries(inputTemplate, JSON.clone(props));
-	
-	    this.set = (index, value) => {
-	      if (props.list[index] === undefined) {
-	        props.list[index] = this.inputTemplate().clone({optional: true});
-	        if (props.list[index].on) {
-	          props.list[index].on('change', this.validation);
-	        } else {
-	          props.list[index].onChange(this.validation);
-	        }
-	      }
-	      return props.list[index];
-	    }
-	
-	    this.tag = () => props.inline() ? 'span' : 'div';
-	
-	    this.input = (nameOindexOfunc) => {
-	      const nif = nameOindexOfunc;
-	      if ((typeof nif) === 'number') return props.list[nif];
-	      const runFunc = (typeof nif) === 'function';
-	      for (let index = 0; index < props.list.length; index++) {
-	        const input = props.list[index];
-	        if (runFunc) {
-	          const val = nif(input);
-	          if (val) return val;
-	        } else if (input.name() === nif) return input;
-	
-	        if (input instanceof MultipleEntries) {
-	          const mInput = input.input(nif);
-	          if (mInput) return mInput;
-	        }
-	      }
-	    }
-	    this.getValue = () => {
-	      const values = [];
-	      for (let index = 0; index < props.list.length; index++) {
-	        const input = props.list[index];
-	        if (!input.empty()) {
-	          if (input.valid()) {
-	            values.push(input.value());
-	          } else {
-	            input.valid();
-	            input.valid();
-	          }
-	        }
-	      }
-	      return values;
-	    }
-	
-	    this.setValue = (list) => {
-	      if (list) {
-	        list.forEach((val, index) => {
-	            const input = this.set(index)
-	            input.setValue(val);
-	        });
-	      }
-	    }
-	
-	    this.value = this.getValue;
-	
-	    const parentHtml = this.html;
-	    this.html = () => {
-	      if (props.list.length === 0 || !props.list[props.list.length - 1].empty()) this.set(props.list.length);
-	      return parentHtml();
-	    }
-	
-	    this.length = () => this.list().length;
-	    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
-	
-	    this.setValue(props.value);
-	  }
-	}
-	
-	MultipleEntries.template = new $t('input/multiple-entries');
-	MultipleEntries.singleTemplate = new $t('input/one-entry');
-	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
-	
-	MultipleEntries.fromJson = (json) => {
-	  const inputTemplate = Object.fromJson(json.inputTemplate);
-	  return new MultipleEntries(inputTemplate, json);
-	
-	}
-	
-	function meInfo(elem) {
-	  const info = {};
-	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
-	  if (info.oneCnt) {
-	    info.indexCnt = du.find.up('[index]', info.oneCnt);
-	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
-	    const ae =  document.activeElement;
-	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
-	  }
-	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
-	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
-	  info.length = info.multiInput.length();
-	  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
-	  info.last = info.index === info.length - 1;
-	  info.empty = info.multiInput.list()[info.index].empty();
-	  return info;
-	}
-	
-	const meSelector = '.multiple-entry-cnt input,select,textarea';
-	const oneSelector = '.one-entry-cnt *';
-	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
-	du.on.match('change', meSelector, (elem) => {
-	  // console.log('changed');
-	});
-	
-	du.on.match('click', meSelector, (elem) => {
-	  // console.log('clicked');
-	});
-	
-	const lastCallers = [];
-	du.on.match('focusout', '.one-entry-cnt', (elem) => {
-	  let info = meInfo(elem);
-	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
-	  const id = ++lastCallers[info.index];
-	  setTimeout(() => {
-	    if (id !== lastCallers[info.index]) return;
-	    info = meInfo(elem);
-	    if (!info.last && !info.inFocus && info.empty) {
-	      info.indexCnt.remove()
-	      const children = info.multiCnt.children;
-	      for (let index = 0; index < children.length; index++) {
-	        children[index].setAttribute('index', index);
-	      }
-	      const list = info.multiInput.list();
-	      list.remove(list[info.index]);
-	    }
-	  }, 2000);
-	});
-	
-	du.on.match('focusin', oneSelector, (elem) => {
-	  // console.log('focusin');
-	});
-	
-	du.on.match('keyup:change', oneSelector, (elem) => {
-	  if (!isInput(elem)) return;
-	  const info = meInfo(elem);
-	  if (info.index === info.length - 1 && !info.empty) {
-	    const newElem = du.create.element('div', {index: info.index + 1});
-	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
-	    info.multiCnt.append(newElem);
-	    console.log('add 1')
-	  }
-	  // console.log('keyup');
-	});
-	
-	module.exports = MultipleEntries;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/list.js',
-function (require, exports, module) {
-	
-const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	const CustomEvent = require('../../custom-event');
-	const Input = require('../input');
-	
-	// TODO: extend InputObject (class functionality overlap)
-	class InputList extends Input {
+	class NumberInput extends Input {
 	  constructor(props) {
 	    super(props);
-	    Object.getSet(this);
-	    const instance = this;
+	    props.min = Number.parseFloat(props.min) || 0;
+	    props.max = Number.parseFloat(props.max) || Number.MAX_SAFE_INTEGER;
+	    props.step = Number.parseFloat(props.step) || 1;
+	    Object.getSet(this, {min: props.min, max: props.max, step: props.step});
 	
-	    this.value = () => {
-	      const values = {};
-	      props.list.forEach((input, index) => input.validation() && (values[input.name() || index] = input.value()));
-	      return values;
-	    }
-	
-	    const dynamicEvent = CustomEvent.dynamic();
-	    this.on = dynamicEvent.on;
-	
-	    function triggerChangeEvent(value, input, event) {
-	      dynamicEvent.trigger(event, {value, input});
-	    }
-	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
-	
-	    this.setValue = () => {
-	      throw new Error('This function should never get called');
-	    }
-	
-	    this.valid = () => {
-	      if (this.optional()) return true;
-	      let valid = true;
-	      props.list.forEach(input => valid &&= input.optional() || input.valid());
-	      return valid;
-	    }
-	
-	    let optional;
-	    this.optional = (value) => {
-	      if (value !== true && value !== false) return optional;
-	      optional = value;
-	      props.list.forEach(input => input.optional(optional));
-	    }
-	    this.optional(props.optional || false);
-	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      json.validation = (properties || props).validation;
-	      json.list.forEach(i => delete i.id);
-	      Object.set(json, properties);
-	      return InputList.fromJson(json);
-	    }
-	
-	    this.empty = () => {
-	      for (let index = 0; index < props.list.length; index++) {
-	        if (!props.list[index].empty()) return false
-	      }
-	      return true;
-	    }
-	
+	    this.validation = (value) => value <= props.max && value >= props.min;
 	  }
 	}
 	
-	InputList.fromJson = (json) => {
-	  json.list = Object.fromJson(json.list);
-	  return new InputList(json);
-	}
+	NumberInput.template = new $t('input/number');
+	NumberInput.html = (instance) => () => NumberInput.template.render(instance);
 	
-	InputList.template = new $t('input/list');
-	InputList.html = (instance) => () => InputList.template.render(instance);
-	
-	
-	
-	module.exports = InputList;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	const Measurement = require('../../measurement');
-	
-	class MeasurementInput extends Input {
-	  constructor(props) {
-	    let units = props.units;
-	    let value = new Measurement(props.value, units || true);
-	    props.value = () => value;
-	    super(props);
-	
-	    this.valid = (val) => {
-	      let testVal;
-	      if (val) {
-	        if (val instanceof MeasurementInput) testVal = val.value();
-	        else testVal = val;
-	      } else testVal = value.value();
-	      const valid = !Number.isNaN(testVal);
-	      this.indicateValidity(valid);
-	      return valid;
-	    }
-	
-	    props.errorMsg = 'Invalid Mathematical Expression';
-	    this.value = () => {
-	      return value.display();
-	    }
-	    const parentSetVal = this.setValue;
-	    this.setValue = (val) => {
-	      let newVal = this.valid(val) ? ((val instanceof Measurement) ?
-	                        val : new Measurement(val, units || true)) : value;
-	      const updated = newVal !== value;
-	      value = newVal;
-	      return updated;
-	    }
-	  }
-	}
-	
-	MeasurementInput.template = new $t('input/measurement');
-	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
-	
-	du.on.match('focusout', '.measurement-input', (elem) => {
-	  const input = MeasurementInput.get(elem.id);
-	  elem.value = input.value();
-	})
-	
-	module.exports = MeasurementInput;
+	module.exports = NumberInput;
 	
 });
 
@@ -7860,28 +6988,878 @@ const Input = require('../input');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/number.js',
+RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
 function (require, exports, module) {
 	
-const Input = require('../input');
+
+	
+	
+	const Input = require('../input');
 	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const Measurement = require('../../measurement');
 	
-	class NumberInput extends Input {
+	class MeasurementInput extends Input {
 	  constructor(props) {
+	    let units = props.units;
+	    let value = new Measurement(props.value, units || true);
+	    props.value = () => value;
 	    super(props);
-	    props.min = Number.parseFloat(props.min) || 0;
-	    props.max = Number.parseFloat(props.max) || Number.MAX_SAFE_INTEGER;
-	    props.step = Number.parseFloat(props.step) || 1;
-	    Object.getSet(this, {min: props.min, max: props.max, step: props.step});
 	
-	    this.validation = (value) => value <= props.max && value >= props.min;
+	    this.valid = (val) => {
+	      let testVal;
+	      if (val) {
+	        if (val instanceof MeasurementInput) testVal = val.value();
+	        else testVal = val;
+	      } else testVal = value.value();
+	      const valid = !Number.isNaN(testVal);
+	      this.indicateValidity(valid);
+	      return valid;
+	    }
+	
+	    props.errorMsg = 'Invalid Mathematical Expression';
+	    this.value = () => {
+	      return value.display();
+	    }
+	    const parentSetVal = this.setValue;
+	    this.setValue = (val) => {
+	      let newVal = this.valid(val) ? ((val instanceof Measurement) ?
+	                        val : new Measurement(val, units || true)) : value;
+	      const updated = newVal !== value;
+	      value = newVal;
+	      return updated;
+	    }
 	  }
 	}
 	
-	NumberInput.template = new $t('input/number');
-	NumberInput.html = (instance) => () => NumberInput.template.render(instance);
+	MeasurementInput.template = new $t('input/measurement');
+	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
 	
-	module.exports = NumberInput;
+	du.on.match('focusout', '.measurement-input', (elem) => {
+	  const input = MeasurementInput.get(elem.id);
+	  elem.value = input.value();
+	})
+	
+	module.exports = MeasurementInput;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/list.js',
+function (require, exports, module) {
+	
+const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const CustomEvent = require('../../custom-event');
+	const Input = require('../input');
+	
+	// TODO: extend InputObject (class functionality overlap)
+	class InputList extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
+	    const instance = this;
+	
+	    this.value = () => {
+	      const values = {};
+	      props.list.forEach((input, index) => input.validation() && (values[input.name() || index] = input.value()));
+	      return values;
+	    }
+	
+	    const dynamicEvent = CustomEvent.dynamic();
+	    this.on = dynamicEvent.on;
+	
+	    function triggerChangeEvent(value, input, event) {
+	      dynamicEvent.trigger(event, {value, input});
+	    }
+	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
+	
+	    this.setValue = () => {
+	      throw new Error('This function should never get called');
+	    }
+	
+	    this.valid = () => {
+	      if (this.optional()) return true;
+	      let valid = true;
+	      props.list.forEach(input => valid &&= input.optional() || input.valid());
+	      return valid;
+	    }
+	
+	    let optional;
+	    this.optional = (value) => {
+	      if (value !== true && value !== false) return optional;
+	      optional = value;
+	      props.list.forEach(input => input.optional(optional));
+	    }
+	    this.optional(props.optional || false);
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      json.validation = (properties || props).validation;
+	      json.list.forEach(i => delete i.id);
+	      Object.set(json, properties);
+	      return InputList.fromJson(json);
+	    }
+	
+	    this.empty = () => {
+	      for (let index = 0; index < props.list.length; index++) {
+	        if (!props.list[index].empty()) return false
+	      }
+	      return true;
+	    }
+	
+	  }
+	}
+	
+	InputList.fromJson = (json) => {
+	  json.list = Object.fromJson(json.list);
+	  return new InputList(json);
+	}
+	
+	InputList.template = new $t('input/list');
+	InputList.html = (instance) => () => InputList.template.render(instance);
+	
+	
+	
+	module.exports = InputList;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	
+	const validation = () => true;
+	class MultipleEntries extends Input {
+	  constructor(inputTemplate, props) {
+	
+	
+	    props ||= {};
+	    props.validation ||= (event, details) => {
+	      const list = props.list;
+	      let allEmpty = true;
+	      let valid = true;
+	      for (let index = 0; index < list.length; index++) {
+	        const input = list[index];
+	        const empty = input.empty();
+	        if (!empty) {
+	          if (input.optional) input.optional(false);
+	          valid &= list[index].valid();
+	        }
+	        allEmpty &= empty;
+	      }
+	      return !allEmpty && valid;
+	    }
+	    if (props.list === undefined) {
+	      const list = [];
+	      props.list = list;
+	      props.list.forEach((i) =>
+	        list.push(i.clone()));
+	    }
+	
+	    props.list ||= [];
+	    super(props);
+	    Object.getSet(this, 'inputTemplate');
+	    let template;
+	    const instance = this;
+	    this.inputTemplate = () => {
+	      if (!template) {
+	        if ((typeof inputTemplate) === 'function') {
+	          template = inputTemplate();
+	        } else template = inputTemplate;
+	      }
+	      return template;
+	    }
+	
+	    this.empty = () => {
+	      if (props.list.length > 1) return false;
+	      const inputs = props.list[0];
+	      for (let index = 0; index < inputs.length; index++) {
+	        if (!inputs[index].empty()) return false;
+	      }
+	      return true;
+	    }
+	    this.valid = () => this.value().length > 0;
+	
+	    this.clone = () =>
+	        new MultipleEntries(inputTemplate, JSON.clone(props));
+	
+	    this.set = (index, value) => {
+	      if (props.list[index] === undefined) {
+	        props.list[index] = this.inputTemplate().clone({optional: true});
+	        if (props.list[index].on) {
+	          props.list[index].on('change', this.validation);
+	        } else {
+	          props.list[index].onChange(this.validation);
+	        }
+	      }
+	      return props.list[index];
+	    }
+	
+	    this.tag = () => props.inline() ? 'span' : 'div';
+	
+	    this.input = (nameOindexOfunc) => {
+	      const nif = nameOindexOfunc;
+	      if ((typeof nif) === 'number') return props.list[nif];
+	      const runFunc = (typeof nif) === 'function';
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (runFunc) {
+	          const val = nif(input);
+	          if (val) return val;
+	        } else if (input.name() === nif) return input;
+	
+	        if (input instanceof MultipleEntries) {
+	          const mInput = input.input(nif);
+	          if (mInput) return mInput;
+	        }
+	      }
+	    }
+	    this.getValue = () => {
+	      const values = [];
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (!input.empty()) {
+	          if (input.valid()) {
+	            values.push(input.value());
+	          } else {
+	            input.valid();
+	            input.valid();
+	          }
+	        }
+	      }
+	      return values;
+	    }
+	
+	    this.setValue = (list) => {
+	      if (list) {
+	        list.forEach((val, index) => {
+	            const input = this.set(index)
+	            input.setValue(val);
+	        });
+	      }
+	    }
+	
+	    this.value = this.getValue;
+	
+	    const parentHtml = this.html;
+	    this.html = () => {
+	      if (props.list.length === 0 || !props.list[props.list.length - 1].empty()) this.set(props.list.length);
+	      return parentHtml();
+	    }
+	
+	    this.length = () => this.list().length;
+	    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
+	
+	    this.setValue(props.value);
+	  }
+	}
+	
+	MultipleEntries.template = new $t('input/multiple-entries');
+	MultipleEntries.singleTemplate = new $t('input/one-entry');
+	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
+	
+	MultipleEntries.fromJson = (json) => {
+	  const inputTemplate = Object.fromJson(json.inputTemplate);
+	  return new MultipleEntries(inputTemplate, json);
+	
+	}
+	
+	function meInfo(elem) {
+	  const info = {};
+	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
+	  if (info.oneCnt) {
+	    info.indexCnt = du.find.up('[index]', info.oneCnt);
+	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
+	    const ae =  document.activeElement;
+	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
+	  }
+	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
+	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
+	  info.length = info.multiInput.length();
+	  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
+	  info.last = info.index === info.length - 1;
+	  info.empty = info.multiInput.list()[info.index].empty();
+	  return info;
+	}
+	
+	const meSelector = '.multiple-entry-cnt input,select,textarea';
+	const oneSelector = '.one-entry-cnt *';
+	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
+	du.on.match('change', meSelector, (elem) => {
+	  // console.log('changed');
+	});
+	
+	du.on.match('click', meSelector, (elem) => {
+	  // console.log('clicked');
+	});
+	
+	const lastCallers = [];
+	du.on.match('focusout', '.one-entry-cnt', (elem) => {
+	  let info = meInfo(elem);
+	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
+	  const id = ++lastCallers[info.index];
+	  setTimeout(() => {
+	    if (id !== lastCallers[info.index]) return;
+	    info = meInfo(elem);
+	    if (!info.last && !info.inFocus && info.empty) {
+	      info.indexCnt.remove()
+	      const children = info.multiCnt.children;
+	      for (let index = 0; index < children.length; index++) {
+	        children[index].setAttribute('index', index);
+	      }
+	      const list = info.multiInput.list();
+	      list.remove(list[info.index]);
+	    }
+	  }, 2000);
+	});
+	
+	du.on.match('focusin', oneSelector, (elem) => {
+	  // console.log('focusin');
+	});
+	
+	du.on.match('keyup:change', oneSelector, (elem) => {
+	  if (!isInput(elem)) return;
+	  const info = meInfo(elem);
+	  if (info.index === info.length - 1 && !info.empty) {
+	    const newElem = du.create.element('div', {index: info.index + 1});
+	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
+	    info.multiCnt.append(newElem);
+	    console.log('add 1')
+	  }
+	  // console.log('keyup');
+	});
+	
+	module.exports = MultipleEntries;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/decision/modification.js',
+function (require, exports, module) {
+	
+
+	
+	const DecisionInputTree = require('./decision');
+	const InputInput = require('../decision/input-input.js');
+	const Input = require('../input.js');
+	const Select = require('../styles/select.js');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const Conditions = require('../../conditions');
+	
+	const modHideAll = du.switch('.modify-edit', 'mod-id');
+	
+	const hideAll = () => {
+	  for (let index = 0; index < all.length; index++) all[index].hidden = true;
+	};
+	
+	const toolCnt = du.create.element('div', {class: 'mod-decision-cnt'});
+	toolCnt.innerHTML = new $t('input/decision/decision-modification').render({});
+	du.find('body').append(toolCnt);
+	
+	let targetNodeElem;
+	let targetInputElem;
+	
+	const thenBtn = du.find.down('.then-btn', toolCnt);
+	const condBtn = du.find.down('.conditional-btn', toolCnt);
+	const editBtn = du.find.down('.edit-btn', toolCnt);
+	const addBtn = du.find.down('.add-btn', toolCnt);
+	const rmBtn = du.find.down('.remove-btn-cnt>button', toolCnt);
+	const closeCntBtn = du.find.down('.decision-tree-mod-cnt>.close-cnts', toolCnt);
+	
+	const thenCnt = du.find.down('.then-cnt', toolCnt);
+	const condCnt = du.find.down('.condition-cnt', toolCnt);
+	const editCnt = du.find.down('.edit-cnt', toolCnt);
+	const addCnt = du.find.down('.add-cnt', toolCnt);
+	
+	const thenAddCnt = du.find.down('.decision-tree-mod-cnt>.then-add-cnt', toolCnt);
+	const ifEditBtnCnt = du.find.down('.if-edit-cnt', toolCnt);
+	const rmCnt = du.find.down('.remove-btn-cnt', toolCnt);
+	const rmEditCnt = du.find.down('.rm-edit-cnt', toolCnt);
+	
+	const all = [closeCntBtn, thenBtn, condBtn, editBtn, addBtn, thenCnt, condCnt, editCnt, addCnt, ifEditBtnCnt, rmCnt, rmEditCnt];
+	
+	function updateConditionTree(elem) {
+	  let input = Input.getFromElem(elem);
+	  if (elem !== condBtn && input !== condTarget.input) return;
+	  if (elem === condBtn) input = Input.getFromElem(targetInputElem);
+	  const conditionCnt = du.find.up('.condition-input-tree', elem);
+	  if (conditionCnt) return;
+	  const node = condTarget.node;
+	  const inputCnt = du.find.up('.decision-input-array-cnt', elem);
+	
+	  const inputArray = node.payload().inputArray;
+	  const val = input.value();
+	  const props = {header: `If ${input.name()} <br>`};
+	  const condTree = getConditionTree(val, node, input, props);
+	  const value = input.value();
+	  if ((typeof value) === 'string') {
+	    condTree.find.input('condition').setValue(value);
+	  }
+	  const treeHtml = condTree.html();
+	  condCnt.innerHTML = treeHtml;
+	}
+	
+	class ModDecisionTree {
+	  constructor(decisionTree) {
+	    const treeId = decisionTree.id();
+	    const nodeCntSelector = `[tree-id="${treeId}"] .decision-input-cnt`;
+	    const inputCntSelector = `[tree-id="${treeId}"] .decision-input-array-cnt>.input-cnt`;
+	    const inputSelector = `[tree-id="${treeId}"] .decision-input-array-cnt input, ` +
+	                          `[tree-id="${treeId}"] .decision-input-array-cnt select, ` +
+	                          `[tree-id="${treeId}"] .decision-input-array-cnt textarea`;
+	
+	    let active = true;
+	    this.on = () => active = true;
+	    this.off = () => {
+	      hideAll();
+	      active = false;
+	    }
+	    this.toggle = () => active ? this.off() : this.on();
+	    this.active = () => active;
+	
+	    function mouseoverNode(elem) {
+	      if (!active) return;
+	      if (elem) targetNodeElem = elem;
+	      // du.move.relitive(thenBtn, elem, 'topcenter');
+	      du.move.relitive(thenAddCnt, elem, 'bottomcenter');
+	      du.move.relitive(rmCnt, elem, 'topright');
+	      thenBtn.hidden = false;
+	      rmCnt.hidden = false;
+	      addBtn.hidden = false;
+	      rmBtn.hidden = false;
+	    }
+	    function mouseoverInput(elem) {
+	      if (!active) return;
+	      ifEditBtnCnt.hidden = false;
+	      condBtn.hidden = false;
+	      editBtn.hidden = false;
+	      du.move.relitive(ifEditBtnCnt, elem, 'leftcenterouter')
+	      targetInputElem = elem;
+	    }
+	
+	
+	    // function mouseoutNode(elem) {
+	    //   if (!active) return;
+	    // }
+	    // function mouseoutInput(elem) {
+	    //   if (!active) return;
+	    //   if (!du.is.ancestor(elem, targetInputElem)) {
+	    //     ifEditBtnCnt.hidden = true;
+	    //   }
+	    // }
+	    // du.on.match('mouseout', nodeCntSelector, mouseoutNode);
+	    // du.on.match('mouseout', inputCntSelector, mouseoutInput);
+	
+	    du.on.match('mouseover', nodeCntSelector, mouseoverNode);
+	    du.on.match('mouseover', inputCntSelector, mouseoverInput);
+	    du.on.match('change', inputSelector, (elem) => {
+	      elem.matches(inputSelector);
+	      setTimeout(() => {
+	        updateConditionTree(elem);
+	        const targetCnt = rmEditCnt.hidden ? condCnt : rmEditCnt;
+	        showCloseButton(targetCnt);
+	      });
+	    });
+	  }
+	}
+	
+	function showCloseButton(elem) {
+	  closeCntBtn.hidden = false;
+	  du.move.relitive(closeCntBtn, elem, 'righttopouter');
+	}
+	
+	let addTargetNode;
+	function showAddInput(elem) {
+	  addCnt.hidden = false;
+	  addTargetNode = DecisionInputTree.getNode(targetNodeElem);
+	  const inputTree = ModDecisionTree.inputTree(addTargetNode);
+	  addCnt.innerHTML = inputTree.html();
+	  du.move.relitive(addCnt, targetNodeElem, 'bottomcenter');
+	  showCloseButton(addCnt);
+	  du.move.inbounds(addCnt)
+	}
+	du.on.match('click', '.add-btn', showAddInput);
+	
+	function addInput(details, elem)  {
+	  const input = InputInput.getInput(details);
+	  addTargetNode.addInput(input);
+	  DecisionInputTree.rebuild(targetNodeElem);
+	  addCnt.hidden = true;
+	}
+	
+	const getCondition = (...args) => DecisionInputTree.getCondition(...args);
+	
+	function createConditionalNodeFunction(node, input) {
+	  return function createNode(values, elem) {
+	    const attribute = input.name();
+	    const type = `${values.type}Type`;
+	    const subType = values[values.type.toCamel()][type.toCamel()];
+	    let value = values.condition;
+	    if (values.type === 'Number') value = Number.parseFloat(value);
+	    if (values.type === 'List') value = value.split(',');
+	    const condition = getCondition(attribute, value, subType);
+	    console.log(condition.satisfied(node));
+	    console.log(condition.satisfied(node));
+	    const name = values.group;
+	    const newNode = node.then(name, values.payload);
+	    node.conditions.add(condition, name);
+	    const condCnt = du.find.up('.condition-input-tree', elem);
+	    const condBtn = du.find.closest('.conditional-button', condCnt)
+	    hideAll();
+	    const inputElem = Input.getFromElem(elem)
+	    DecisionInputTree.update.children(inputElem);
+	  }
+	}
+	
+	function andHandlerInput(node, inputs) {
+	  const handlerInput = node.tree().payloadInput();
+	  if (handlerInput) inputs = [handlerInput].concat(inputs);
+	  return inputs
+	}
+	
+	function conditionalInputTree(node, props) {
+	  props ||= {};
+	  const group = new Input({
+	    name: 'group',
+	    label: 'Group',
+	    class: 'center',
+	  });
+	
+	  function updateGroupList(node) {
+	    if (node._NODE) node = node._NODE;
+	    const list = Object.keys(node.tree().stateConfigs());
+	    group.list(list);
+	    }
+	  updateGroupList(node);
+	
+	  const type = new Select({
+	    label: 'Type',
+	    name: 'type',
+	    class: 'center',
+	    list: ['String', 'Number', 'Reference', 'List', 'Regex']
+	  });
+	
+	  const stringType = new Select({
+	    name: 'stringType',
+	    class: 'center',
+	    list: ['Case Insensitive', 'Exact', 'Wild Card', 'Contains', 'Any', 'Except']
+	  });
+	
+	  const numberType = new Select({
+	    name: 'numberType',
+	    class: 'center',
+	    list: ['Equal', 'Less Than', 'Greater Than', 'Less Than or Equal', 'Greater Than or Equal']
+	  });
+	
+	  const referenceType = new Select({
+	    name: 'type',
+	    class: 'center',
+	    list: ['need', 'to', 'dynamically update']
+	  });
+	
+	  const listType = new Select({
+	    name: 'listType',
+	    class: 'center',
+	    list: ['Inclusive', 'Exclusive']
+	  });
+	
+	  const condition = new Input({
+	    label: 'Condition',
+	    name: 'condition',
+	    inline: true,
+	    class: 'center',
+	    value: props.conditionValue
+	  });
+	
+	  props.inputArray = andHandlerInput(node, [group, type, condition]);
+	
+	  const tree = new DecisionInputTree(props.treeName, props);
+	  const root = tree.root();
+	
+	  const dic = (value, type) => getCondition('type', value, type);
+	  function addTypeNode(name, inputArray, value, type) {
+	    const node = root.then(name, {inputArray});
+	    root.conditions.add(dic(value, type), name);
+	    node.relatedTo('type');
+	    return node;
+	  }
+	
+	  addTypeNode('reference', [referenceType], 'Reference');
+	  addTypeNode('string', [stringType], 'String')
+	  addTypeNode('number', [numberType], 'Number')
+	  addTypeNode('list', [listType], 'List')
+	
+	  tree.onChange(updateGroupList);
+	
+	  tree.onSubmit(props.onSubmit);
+	
+	  return tree;
+	}
+	
+	let thenTargetNode;
+	const thenInput = (node) => {
+	  const group = new Input({
+	    name: 'group',
+	    label: 'Group',
+	    class: 'center',
+	  });
+	
+	  function updateGroupList(node) {
+	    if (node._NODE) node = node._NODE;
+	    const list = Object.keys(node.tree().stateConfigs());
+	    group.list(list);
+	  }
+	  updateGroupList(node);
+	
+	  const props = {inputArray: andHandlerInput(node, [group])};
+	  const tree = new DecisionInputTree('Node', props);
+	  tree.onSubmit((values, elem) => {
+	    const name = values.group;
+	    const newNode = node.then(name, values.payload);
+	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
+	    const btnCnt = du.find.closest('.then-button', elem);
+	    const inputCnt = du.find.closest('.then-input-tree', btnCnt);
+	    hideAll();
+	    DecisionInputTree.hardUpdate(treeCnt);
+	  });
+	  return tree;
+	}
+	
+	du.on.match('click', '.then-btn', (elem, two, three) => {
+	  console.log('ThEn?');
+	  thenTargetNode = DecisionInputTree.getNode(targetNodeElem);
+	  const thenPut = thenInput(thenTargetNode);
+	  thenCnt.innerHTML = thenPut.html();
+	  thenCnt.hidden = false;
+	  du.move.relitive(thenCnt, targetNodeElem, 'bottomcenter');
+	  showCloseButton(thenCnt);
+	});
+	
+	const objectKeyFilter = (currObj) => (k) => (currObj[k]._NODE && !currObj.condition) || (k === 'condition' && currObj.condition);
+	const valueFilter = (val) => (typeof val) === 'string';
+	function getConditionKey(values) {
+	  const curr = values['Question Groupy'];
+	  let path, attr, lastKey;
+	  let currObj = values;
+	  while (true) {
+	    const validKeys = Object.keys(currObj).filter(objectKeyFilter(currObj));
+	    const validPaths = Object.values(currObj).filter(valueFilter);
+	    if (validPaths.length !== 1) throw new Error('There should be only one valid path');
+	    if (validKeys.length !== 1) throw new Error('There should be only one valid key');
+	    key = validKeys[0];
+	    currObj = currObj[key];
+	    const lastHyphIndex = key.indexOf('-');
+	    path = path ? `${path}.${key}` : key;
+	    attr = attr ? `${attr}.${validPaths[0]}` : validPaths[0];
+	    if (!(currObj.condition instanceof Object) && currObj.condition !== undefined) break;
+	  }
+	  return {path, attr};
+	}
+	
+	function createCondition(values, node, input) {
+	  const pathAttr = getConditionKey(values);
+	  const condObj = Object.pathValue(values, pathAttr.path);
+	  const value = condObj.condition;
+	
+	  const attribute = input.name()+'.'+pathAttr.attr;
+	  const type = `${condObj.type}Type`;
+	  const subType = condObj[condObj.type.toCamel()][type.toCamel()];
+	  let condValue = condObj.condition;
+	  if (condObj.type === 'Number') condValue = Number.parseFloat(condValue);
+	  if (condObj.type === 'List') condValue = condValue.split(',');
+	  const cond = getCondition(attribute, condValue, subType);
+	
+	  const childName = String.random();
+	  const child = node.then(condObj.group);
+	  node.conditions.add(cond, condObj.group);
+	
+	  DecisionInputTree.update()(targetInputElem);
+	  hideAll();
+	}
+	
+	function processObject (select, key, node, object, targetNode, conditions, path) {
+	  const child = node.then(path);
+	  const type = key === '*' ? 'exact' : undefined;
+	  const cond = getCondition(select.name(), key, type);
+	  const childConds = conditions.clone();
+	  childConds.add(cond);
+	  node.conditions.add(cond, path);
+	  addObjectKeys(child, object, targetNode, childConds, path);
+	}
+	
+	function proccessValue (select, key, node, value, targetNode, conditions, path) {
+	  let child = node.stateMap()[key];
+	  if (child === undefined) {
+	    const childConds = conditions.clone();
+	      const type = key === '*' ? 'exact' : undefined;
+	      const props = {treeName: path, conditionValue: value};
+	      const condInputTree = conditionalInputTree(targetNode, props);
+	      child = node.then(condInputTree.root());
+	      const cond = getCondition(select.name(), key, type);
+	      childConds.add(cond);
+	      node.conditions.add(childConds, path);
+	   }
+	}
+	
+	const DEF_COND = 'DEFINE CONDITION';
+	function superObject(object) {
+	  const superObj = {};
+	  const keys = Object.keys(object);
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const value = object[key];
+	    if (value instanceof Object) {
+	      superObj[key] = superObject(value);
+	      if (superObj['*']) Object.merge(superObj['*'], superObject(value), true)
+	      else superObj['*'] = superObject(value);
+	      superObj[DEF_COND] = '';
+	    } else {
+	      superObj['*'] = '';
+	      superObj[key] = value;
+	    }
+	  }
+	  return superObj;
+	}
+	
+	const objectKeySorter = (key1, key2) => {
+	  if (key1 === DEF_COND) return -1;
+	  if (key2 === DEF_COND) return 0;
+	  if (key1 === '*') return -1;
+	  if (key2 === '*') return 0;
+	  return key1 - key2;
+	}
+	
+	function addObjectKeys(node, object, targetNode, conditions, path) {
+	  if (conditions === undefined) object = superObject(object);
+	
+	  conditions ||= new Conditions.And([]);
+	  const keys = [].concat(Object.keys(object));
+	  const list = [];
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const value = object[key];
+	    list.push(key);
+	  }
+	  list.sort(objectKeySorter);
+	  const select = new Select({name: node.name(), list})
+	  node.addInput(select);
+	  const paths = {};
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    let currPath = path ? path + '-' + key : key;
+	    const value = object[key];
+	    const runObject = value instanceof Object;
+	    const runValue = !runObject;
+	    if (runObject) processObject(select, key, node, value, targetNode, conditions, currPath);
+	    if (runValue) proccessValue(select, key, node, value, targetNode, conditions, currPath);
+	  }
+	  return keys;
+	}
+	
+	function objectConditionTree(values, node, input, props) {
+	  const tree = new DecisionInputTree(props.treeName, props);
+	  addObjectKeys(tree.root(), values, node);
+	  tree.onSubmit((values) => createCondition(values, node, input));
+	  return tree;
+	}
+	
+	function getConditionTree(values, node, input, props) {
+	  if (values instanceof Object)
+	    return objectConditionTree(values, node, input, props);
+	  props ||= {};
+	  props.treeName = 'Question Groupy';
+	  props.onSubmit = createConditionalNodeFunction(node, input);
+	  props.conditionValue = input.value();
+	  return conditionalInputTree(node, props);
+	}
+	
+	const condTarget = {};
+	function condBtnPressed(elem) {
+	  condTarget.node = DecisionInputTree.getNode(targetNodeElem);
+	  condTarget.input = Input.getFromElem(targetInputElem);;
+	  const inputTreeCnt = updateConditionTree(elem);
+	  condCnt.hidden = false;
+	  du.move.relitive(condCnt, targetInputElem, 'bottomcenterouter');
+	  showCloseButton(condCnt);
+	}
+	
+	function removeNodeBtnPressed(elem) {
+	  const node = DecisionInputTree.getNode(targetNodeElem);
+	  if (confirm(`Are you sure you want to remove node '${node.name()}'`) == true) {
+	    node.remove();
+	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
+	    DecisionInputTree.hardUpdate(treeCnt);
+	  }
+	  hideAll();
+	}
+	
+	du.on.match('click', '.conditional-btn', condBtnPressed);
+	du.on.match('click', '.remove-btn-cnt>.rm-node', removeNodeBtnPressed);
+	
+	
+	
+	ModDecisionTree.inputTree = function (node, noSubmission) {
+	  const targetTree = node.tree();
+	  const nameVal = (value) => {
+	    if (value === '') return false;
+	    const camel = value.toCamel();
+	    const inputs = node.payload().inputArray;
+	    for (let index = 0; index < inputs.length; index++) {
+	      if (inputs[index].name() === camel) return false;
+	    }
+	    return node.stateNames().indexOf(camel) === -1;
+	  }
+	
+	  const tree = new InputInput({noSubmission, class: 'modify',
+	                  validation: {name: nameVal}});
+	  const root = tree.root();
+	
+	
+	
+	  tree.onSubmit(addInput);
+	  tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
+	  tree.empty = () => {
+	    let empty = true;
+	    tree.root().forEach((node) =>
+	      node.payload().inputArray.forEach(input => empty &&= input.empty()));
+	    return empty;
+	  }
+	  return tree;
+	}
+	
+	
+	const editTargets = {};
+	du.on.match('click', '.edit-btn', (elem) => {
+	  editTargets.input = Input.getFromElem(targetInputElem);
+	  editTargets.node = DecisionInputTree.getNode(targetNodeElem);
+	  editCnt.hidden = false;
+	  editCnt.innerHTML = editTargets.input.editHtml();
+	  du.move.relitive(rmEditCnt, targetInputElem, 'bottomcenterouter')
+	  showCloseButton(editCnt);
+	});
+	
+	du.on.match('click', '.modiy-rm-input-btn', (elem) => {
+	  const inputIdElem = du.find.closest('[input-ref-id', elem);
+	  editTargets.node.removeInput(editTargets.input.name());
+	  DecisionInputTree.hardUpdate(targetInputElem.parentElement);
+	  hideAll();
+	});
+	
+	du.on.match('click', '.decision-tree-mod-cnt>.close-cnts', hideAll);
+	
+	
+	
+	module.exports = ModDecisionTree;
 	
 });
 
@@ -8039,23 +8017,24 @@ const Input = require('../input');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/textarea.js',
+RequireJS.addFunction('../../public/js/utils/input/decision/payload-handler.js',
 function (require, exports, module) {
 	
-const Input = require('../input');
-	const $t = require('../../$t');
+const $t = require('../../$t');
+	const InputObject = require('../styles/object');
 	
-	class Textarea extends Input {
-	  constructor(props) {
-	    super(props);
-	    Object.getSet(this);
+	class PayloadHandler {
+	  constructor(templateName, ...inputs) {
+	    Object.getSet(this, {templateName, inputs});
+	    const template = new $t(this.templateName());
+	
+	    this.html = (payload) => template.render(payload);
+	    this.input = () => new InputObject({name: 'payload', list: inputs});
+	    this.toJson = () => ({inputs: Object.toJson(inputs), templateName});
 	  }
 	}
 	
-	Textarea.template = new $t('input/textarea');
-	Textarea.html = (instance) => () => Textarea.template.render(instance);
-	
-	module.exports = Textarea;
+	module.exports = PayloadHandler;
 	
 });
 
@@ -8300,6 +8279,27 @@ const Input = require('../input');
 	Table.Radio = RadioTable;
 	
 	module.exports = Table;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/textarea.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Textarea extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
+	  }
+	}
+	
+	Textarea.template = new $t('input/textarea');
+	Textarea.html = (instance) => () => Textarea.template.render(instance);
+	
+	module.exports = Textarea;
 	
 });
 
@@ -8666,194 +8666,6 @@ const Test = require('../test.js').Test;
 });
 
 
-RequireJS.addFunction('../../public/js/utils/test/tests/decision-input-tree.js',
-function (require, exports, module) {
-	
-
-	// breakfast) Multiselect (food:bacon, eggs, toast, cereal)
-	//     eggs) Select (count:2,3,6), Select(type:overEasy, sunnySideUp, scrambled, fried)
-	//        requiresGourmetChef) upchange
-	//     toast) Select (white, wheat, texas)
-	//     cereal) Checkbox(milk), Select (type: rasinBrand, cheerios, life)
-	//     bacon) Leaf
-	//   dishes)
-	//      plate)
-	//      fork)
-	//      bowl)
-	//      spoon)
-	
-	
-	const Test = require('../test.js').Test;
-	const du = require('../../dom-utils');
-	const Input = require('../../input/input');
-	const Select = require('../../input/styles/select');
-	const DecisionInputTree = require('../../input/decision/decision');
-	const MultipleEntries = require('../../input/styles/multiple-entries');
-	
-	const toastCost = .75;
-	const cerialCost = 2.25;
-	const baconCost = 1.20;
-	const eggsCost = 1.25;
-	const overEasyMultiplier = 25;
-	
-	function createTree() {
-	  const bacon = new Input({type: 'checkbox', name: 'bacon'});
-	  const eggs = new Input({type: 'checkbox', name: 'eggs'});
-	  const eggCount = new Select({list: ['2','3','6'], name: 'count', mustChoose: true});
-	  const eggType = new Select({name: 'type', mustChoose: true, value: 'Scrambled', list: ['Over Easy', 'Sunny Side Up', 'Scrambled', 'Fried']});
-	  const toast = new Input({type: 'checkbox', name: 'toast'});
-	  const cereal = new Input({type: 'checkbox', name: 'cereal'});
-	  const toastType = new Select({name: 'type', mustChoose: true, list: ['white', 'wheat', 'texas']});
-	  const milk = new Input({type: 'checkbox', name: 'milk'});
-	  const cerealType = new Select({name: 'type', mustChoose: true, list: ['rasinBrand', 'cheerios', 'life']});
-	
-	  const tree = new DecisionInputTree('breakfast', {inputArray: [bacon, eggs, toast, cereal]});
-	
-	  const cost = (node) => eggsCost * Number.parseInt(node.find.input('count').value());
-	  const eggsNode = tree.root().then('Eggs', {cost});
-	  eggsNode.addInput(eggCount);
-	  eggsNode.addInput(eggType);
-	  const reqGourChef = eggsNode.then('requiresGourmetChef', {multiplier: overEasyMultiplier});
-	  const toastNode = tree.root().then('Toast', {cost: toastCost, inputArray: [toastType]});
-	  const cerealNode = tree.root().then('Cereal', {cost: cerialCost, inputArray: [cerealType]});
-	  tree.root().then('Bacon', {cost: baconCost});
-	
-	
-	  const dishes = tree.root().then('dishes');
-	  const plate = dishes.then('plate', {matirial: true});
-	  const fork = dishes.then('fork', {matirial: true});
-	  const bowl = dishes.then('bowl', {matirial: true});
-	  const spoon = dishes.then('spoon', {matirial: true});
-	
-	  bowl.conditions.add((values) =>
-	    Object.pathValue(values, 'cereal') === true);
-	
-	  cerealNode.conditions.add((values) =>
-	    Object.pathValue(values, 'cereal') === true);
-	
-	  toastNode.conditions.add((values) =>
-	    Object.pathValue(values, 'toast') === true);
-	
-	  eggsNode.conditions.add((values) =>
-	    Object.pathValue(values, 'eggs') === true);
-	
-	  reqGourChef.conditions.add((values) =>
-	    values.type === "Over Easy");
-	
-	  const vals = tree.values();
-	
-	  return tree;
-	}
-	
-	Test.add('DecisionInputTree structure', (ts) => {
-	  const tree = createTree();
-	  ts.success();
-	});
-	
-	function simulateUserUpdate(input, value, tree, choiceCount, ts) {
-	  const inputElem = du.create.element('input', {id: input.id(), value});
-	  document.body.append(inputElem);
-	  inputElem.click();
-	  inputElem.remove();
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, choiceCount);
-	  ts.assertEquals(tree.isComplete(), choiceCount === 0);
-	}
-	
-	function cost(tree) {
-	  const leaves = tree.root().leaves();
-	  let grandTotal = 0;
-	  for (let index = 0; index < leaves.length; index++) {
-	    let total = 0;
-	    leaves[index].forPath((node) => {
-	      const payload = node.payload();
-	      if (payload.cost) {
-	        total += (typeof payload.cost) === 'function' ? payload.cost(node) : payload.cost;
-	      }
-	      if (payload.multiplier) {
-	        total *= payload.multiplier;
-	      }
-	    });
-	    grandTotal += total;
-	  }
-	  return grandTotal;
-	}
-	
-	function matirials(tree) {
-	  const leaves = tree.root().leaves();
-	  let mats = [];
-	  for (let index = 0; index < leaves.length; index++) {
-	    leaves[index].forPath((node) => {
-	      const payload = node.payload();
-	      if (payload.matirial) {
-	        mats.push(node.name());
-	      }
-	    });
-	  }
-	  return mats;
-	}
-	
-	
-	Test.add('DecisionInputTree choices', (ts) => {
-	  const toastCost = .75;
-	  const cerialCost = 2.25;
-	  const baconCost = 1.20;
-	  const eggsCost = 1.25;
-	  const overEasyMultiplier = 25;
-	
-	  const justEggsCost = eggsCost * 6 * overEasyMultiplier;
-	  const total = justEggsCost + toastCost + baconCost + cerialCost;
-	
-	  const tree = createTree();
-	  let choices = tree.choices();
-	  ts.assertEquals(choices.length, 0);
-	
-	  const eggs = tree.find.input('eggs')
-	  eggs.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 2);
-	
-	  const toast = tree.find.input('toast')
-	  toast.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 3);
-	
-	  const noBowl = ['plate', 'fork', 'spoon'];
-	  ts.assertTrue(noBowl.equals(matirials(tree)));
-	
-	  const cereal = tree.find.input('cereal')
-	  cereal.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 4);
-	
-	
-	  const count = tree.find.input('count', 'Eggs');
-	  const type = tree.find.input('type', 'Eggs');
-	  const eggsType = tree.find.input('type', 'Eggs');
-	  const toastType = tree.find.input('type', 'Toast');
-	  const cerialType = tree.find.input('type', 'Cereal');
-	
-	  ts.assertNotEquals(type, undefined);
-	  ts.assertNotEquals(eggsType, toastType);
-	  ts.assertNotEquals(eggsType, cerialType);
-	  ts.assertNotEquals(cerialType, toastType);
-	
-	  simulateUserUpdate(eggsType, 'Over Easy', tree, 3, ts);
-	  simulateUserUpdate(toastType, 'white', tree, 2, ts);
-	  simulateUserUpdate(cerialType, 'cheerios', tree, 1, ts);
-	  simulateUserUpdate(count, '6', tree, 0, ts);
-	
-	  const allMaterials = ['plate', 'fork', 'bowl', 'spoon'];
-	  ts.assertTrue(allMaterials.equals(matirials(tree)));
-	
-	  ts.assertEquals(cost(tree), total);
-	
-	  ts.success();
-	});
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/test/tests/decision-tree.js',
 function (require, exports, module) {
 	
@@ -9107,6 +8919,194 @@ function (require, exports, module) {
 	  byName = tree.getByName('18','29');
 	  ts.assertEquals(byPath, byName);
 	  ts.assertNotEquals(byName, byNameOnly);
+	
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/decision-input-tree.js',
+function (require, exports, module) {
+	
+
+	// breakfast) Multiselect (food:bacon, eggs, toast, cereal)
+	//     eggs) Select (count:2,3,6), Select(type:overEasy, sunnySideUp, scrambled, fried)
+	//        requiresGourmetChef) upchange
+	//     toast) Select (white, wheat, texas)
+	//     cereal) Checkbox(milk), Select (type: rasinBrand, cheerios, life)
+	//     bacon) Leaf
+	//   dishes)
+	//      plate)
+	//      fork)
+	//      bowl)
+	//      spoon)
+	
+	
+	const Test = require('../test.js').Test;
+	const du = require('../../dom-utils');
+	const Input = require('../../input/input');
+	const Select = require('../../input/styles/select');
+	const DecisionInputTree = require('../../input/decision/decision');
+	const MultipleEntries = require('../../input/styles/multiple-entries');
+	
+	const toastCost = .75;
+	const cerialCost = 2.25;
+	const baconCost = 1.20;
+	const eggsCost = 1.25;
+	const overEasyMultiplier = 25;
+	
+	function createTree() {
+	  const bacon = new Input({type: 'checkbox', name: 'bacon'});
+	  const eggs = new Input({type: 'checkbox', name: 'eggs'});
+	  const eggCount = new Select({list: ['2','3','6'], name: 'count', mustChoose: true});
+	  const eggType = new Select({name: 'type', mustChoose: true, value: 'Scrambled', list: ['Over Easy', 'Sunny Side Up', 'Scrambled', 'Fried']});
+	  const toast = new Input({type: 'checkbox', name: 'toast'});
+	  const cereal = new Input({type: 'checkbox', name: 'cereal'});
+	  const toastType = new Select({name: 'type', mustChoose: true, list: ['white', 'wheat', 'texas']});
+	  const milk = new Input({type: 'checkbox', name: 'milk'});
+	  const cerealType = new Select({name: 'type', mustChoose: true, list: ['rasinBrand', 'cheerios', 'life']});
+	
+	  const tree = new DecisionInputTree('breakfast', {inputArray: [bacon, eggs, toast, cereal]});
+	
+	  const cost = (node) => eggsCost * Number.parseInt(node.find.input('count').value());
+	  const eggsNode = tree.root().then('Eggs', {cost});
+	  eggsNode.addInput(eggCount);
+	  eggsNode.addInput(eggType);
+	  const reqGourChef = eggsNode.then('requiresGourmetChef', {multiplier: overEasyMultiplier});
+	  const toastNode = tree.root().then('Toast', {cost: toastCost, inputArray: [toastType]});
+	  const cerealNode = tree.root().then('Cereal', {cost: cerialCost, inputArray: [cerealType]});
+	  tree.root().then('Bacon', {cost: baconCost});
+	
+	
+	  const dishes = tree.root().then('dishes');
+	  const plate = dishes.then('plate', {matirial: true});
+	  const fork = dishes.then('fork', {matirial: true});
+	  const bowl = dishes.then('bowl', {matirial: true});
+	  const spoon = dishes.then('spoon', {matirial: true});
+	
+	  bowl.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  cerealNode.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  toastNode.conditions.add((values) =>
+	    Object.pathValue(values, 'toast') === true);
+	
+	  eggsNode.conditions.add((values) =>
+	    Object.pathValue(values, 'eggs') === true);
+	
+	  reqGourChef.conditions.add((values) =>
+	    values.type === "Over Easy");
+	
+	  const vals = tree.values();
+	
+	  return tree;
+	}
+	
+	Test.add('DecisionInputTree structure', (ts) => {
+	  const tree = createTree();
+	  ts.success();
+	});
+	
+	function simulateUserUpdate(input, value, tree, choiceCount, ts) {
+	  const inputElem = du.create.element('input', {id: input.id(), value});
+	  document.body.append(inputElem);
+	  inputElem.click();
+	  inputElem.remove();
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, choiceCount);
+	  ts.assertEquals(tree.isComplete(), choiceCount === 0);
+	}
+	
+	function cost(tree) {
+	  const leaves = tree.root().leaves();
+	  let grandTotal = 0;
+	  for (let index = 0; index < leaves.length; index++) {
+	    let total = 0;
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.cost) {
+	        total += (typeof payload.cost) === 'function' ? payload.cost(node) : payload.cost;
+	      }
+	      if (payload.multiplier) {
+	        total *= payload.multiplier;
+	      }
+	    });
+	    grandTotal += total;
+	  }
+	  return grandTotal;
+	}
+	
+	function matirials(tree) {
+	  const leaves = tree.root().leaves();
+	  let mats = [];
+	  for (let index = 0; index < leaves.length; index++) {
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.matirial) {
+	        mats.push(node.name());
+	      }
+	    });
+	  }
+	  return mats;
+	}
+	
+	
+	Test.add('DecisionInputTree choices', (ts) => {
+	  const toastCost = .75;
+	  const cerialCost = 2.25;
+	  const baconCost = 1.20;
+	  const eggsCost = 1.25;
+	  const overEasyMultiplier = 25;
+	
+	  const justEggsCost = eggsCost * 6 * overEasyMultiplier;
+	  const total = justEggsCost + toastCost + baconCost + cerialCost;
+	
+	  const tree = createTree();
+	  let choices = tree.choices();
+	  ts.assertEquals(choices.length, 0);
+	
+	  const eggs = tree.find.input('eggs')
+	  eggs.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 2);
+	
+	  const toast = tree.find.input('toast')
+	  toast.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 3);
+	
+	  const noBowl = ['plate', 'fork', 'spoon'];
+	  ts.assertTrue(noBowl.equals(matirials(tree)));
+	
+	  const cereal = tree.find.input('cereal')
+	  cereal.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 4);
+	
+	
+	  const count = tree.find.input('count', 'Eggs');
+	  const type = tree.find.input('type', 'Eggs');
+	  const eggsType = tree.find.input('type', 'Eggs');
+	  const toastType = tree.find.input('type', 'Toast');
+	  const cerialType = tree.find.input('type', 'Cereal');
+	
+	  ts.assertNotEquals(type, undefined);
+	  ts.assertNotEquals(eggsType, toastType);
+	  ts.assertNotEquals(eggsType, cerialType);
+	  ts.assertNotEquals(cerialType, toastType);
+	
+	  simulateUserUpdate(eggsType, 'Over Easy', tree, 3, ts);
+	  simulateUserUpdate(toastType, 'white', tree, 2, ts);
+	  simulateUserUpdate(cerialType, 'cheerios', tree, 1, ts);
+	  simulateUserUpdate(count, '6', tree, 0, ts);
+	
+	  const allMaterials = ['plate', 'fork', 'bowl', 'spoon'];
+	  ts.assertTrue(allMaterials.equals(matirials(tree)));
+	
+	  ts.assertEquals(cost(tree), total);
 	
 	  ts.success();
 	});
@@ -9879,21 +9879,6 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("option")) +
 			`" ></option>`
 	
-	exports['expandable/list'] = (get, $t) => 
-			` <div class="expandable-list ` +
-			$t.clean(get("type")()) +
-			`" ex-list-id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
-			` <div class='expand-input-cnt' hidden has-input-tree='` +
-			$t.clean(get("hasInputTree")()) +
-			`'>` +
-			$t.clean(get("inputHtml")()) +
-			`</div> <div class='input-open-cnt'><button>Add ` +
-			$t.clean(get("listElemLable")()) +
-			`</button></div> </div> `
-	
 	exports['expandable/pill'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -9978,6 +9963,34 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("getHeader")(get("item"), get("key"))) +
 			` </div> </div> </div>`
 	
+	exports['input/data-list'] = (get, $t) => 
+			`` +
+			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+			` `
+	
+	exports['-994603408'] = (get, $t) => 
+			`<option value="` +
+			$t.clean(get("item")) +
+			`" ></option>`
+	
+	exports['expandable/list'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
+			` <div class='expand-input-cnt' hidden has-input-tree='` +
+			$t.clean(get("hasInputTree")()) +
+			`'>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> </div> `
+	
+	exports['input/decision/decision-modification'] = (get, $t) => 
+			` <div class='decision-tree-mod-cnt'> <div class='then-add-cnt'> <button hidden class='then-btn modify-edit' mod-id='1'> Then... </button> <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button> </div> <div hidden class='if-edit-cnt'> <button class='edit-btn modify-edit' mod-id='2'> <i class="fas fa-pencil-alt"></i> </button> <button class='conditional-btn modify-edit' mod-id='3'> If </button> </div> <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div> <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div> <div hidden class='rm-edit-cnt modify-edit' mod-id='2'> <div class='edit-cnt'>Edit Tree Html!</div> <button class='modiy-rm-input-btn'>Remove</button> </div> <div hidden class='add-cnt tab modify-edit' mod-id='4'> Add Input Html! </div> <div class='remove-btn-cnt' hidden> <button class='rm-node modify-edit'>X</button> </div> <div class='close-cnts' hidden><button class='modify-edit'>X</button></div> </div> `
+	
 	exports['expandable/top-add-list'] = (get, $t) => 
 			` <div class="expandable-list ` +
 			$t.clean(get("type")()) +
@@ -9993,18 +10006,31 @@ exports['550500469'] = (get, $t) =>
 			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
 			` </div> `
 	
-	exports['input/data-list'] = (get, $t) => 
-			`` +
-			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
-			` `
+	exports['input/decision/decision'] = (get, $t) => 
+			` <div class='decision-input-cnt card` +
+			$t.clean(get("inputArray")().length === 0 ? ' empty' : '') +
+			`' node-id='` +
+			$t.clean(get("id")()) +
+			`' recursion="disabled"> <span id='` +
+			$t.clean(get("id")()) +
+			`'> <div class='payload-cnt'>` +
+			$t.clean(get("payloadHtml")()) +
+			`</div> ` +
+			$t.clean(get("inputArray")().length === 0 ? '<br><br>' : '') +
+			` ` +
+			$t.clean( new $t('-1551174699').render(get("inputArray")(), 'input', get)) +
+			` <div class='orphan-cnt tab'>` +
+			$t.clean(get("childrenHtml")()) +
+			`</div> </span> </div> `
 	
-	exports['-994603408'] = (get, $t) => 
-			`<option value="` +
-			$t.clean(get("item")) +
-			`" ></option>`
-	
-	exports['input/decision/decision-modification'] = (get, $t) => 
-			` <div class='decision-tree-mod-cnt'> <div class='then-add-cnt'> <button hidden class='then-btn modify-edit' mod-id='1'> Then... </button> <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button> </div> <div hidden class='if-edit-cnt'> <button class='edit-btn modify-edit' mod-id='2'> <i class="fas fa-pencil-alt"></i> </button> <button class='conditional-btn modify-edit' mod-id='3'> If </button> </div> <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div> <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div> <div hidden class='rm-edit-cnt modify-edit' mod-id='2'> <div class='edit-cnt'>Edit Tree Html!</div> <button class='modiy-rm-input-btn'>Remove</button> </div> <div hidden class='add-cnt tab modify-edit' mod-id='4'> Add Input Html! </div> <div class='remove-btn-cnt' hidden> <button class='rm-node modify-edit'>X</button> </div> <div class='close-cnts' hidden><button class='modify-edit'>X</button></div> </div> `
+	exports['-1551174699'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` </div>`
 	
 	exports['input/decision/decisionTree'] = (get, $t) => 
 			`<div class='` +
@@ -10045,32 +10071,6 @@ exports['550500469'] = (get, $t) =>
 			`>List</label> <div class='tab edit-input-list-cnt relative'> ` +
 			$t.clean( new $t('1088583088').render(get("input").list(), 'key, value', get)) +
 			` </div> <br> </div> `
-	
-	exports['input/decision/decision'] = (get, $t) => 
-			` <div class='decision-input-cnt card` +
-			$t.clean(get("inputArray")().length === 0 ? ' empty' : '') +
-			`' node-id='` +
-			$t.clean(get("id")()) +
-			`' recursion="disabled"> <span id='` +
-			$t.clean(get("id")()) +
-			`'> <div class='payload-cnt'>` +
-			$t.clean(get("payloadHtml")()) +
-			`</div> ` +
-			$t.clean(get("inputArray")().length === 0 ? '<br><br>' : '') +
-			` ` +
-			$t.clean( new $t('-1551174699').render(get("inputArray")(), 'input', get)) +
-			` <div class='orphan-cnt tab'>` +
-			$t.clean(get("childrenHtml")()) +
-			`</div> </span> </div> `
-	
-	exports['-1551174699'] = (get, $t) => 
-			`<div class='decision-input-array-cnt pad ` +
-			$t.clean(get("class")) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'> ` +
-			$t.clean(get("input").html()) +
-			` </div>`
 	
 	exports['input/edit/list/object'] = (get, $t) => 
 			`<div class='edit-input-list-obj tab'> ` +
@@ -10160,6 +10160,25 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("errorMsg")()) +
 			`</div> </div> `
 	
+	exports['input/multiple-entries'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt multi'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <div class='multiple-entry-cnt tab card ` +
+			$t.clean(get("inline")() ? 'inline' : '') +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('1507176312').render(get("list")(), 'inputArray', get)) +
+			` </div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
 	exports['input/measurement'] = (get, $t) => 
 			`<div class='fit input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
@@ -10184,25 +10203,6 @@ exports['550500469'] = (get, $t) =>
 			`' hidden>` +
 			$t.clean(get("errorMsg")()) +
 			`</div> </div> `
-	
-	exports['input/multiple-entries'] = (get, $t) => 
-			`<` +
-			$t.clean(get("inline")() ? 'span' : 'div') +
-			` class='input-cnt multi'` +
-			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id='` +
-			$t.clean(get("id")()) +
-			`'> <label>` +
-			$t.clean(get("label")()) +
-			`</label> <div class='multiple-entry-cnt tab card ` +
-			$t.clean(get("inline")() ? 'inline' : '') +
-			`' id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('1507176312').render(get("list")(), 'inputArray', get)) +
-			` </div> </` +
-			$t.clean(get("inline")() ? 'span' : 'div') +
-			`> `
 	
 	exports['input/number'] = (get, $t) => 
 			`<` +
@@ -10454,68 +10454,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./app/pages/ancestry.js',
-function (require, exports, module) {
-	
-const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const PayloadHandler = require('../../../../public/js/utils/input/decision/payload-handler.js');
-	require('../../../../public/js/utils/input/init');
-	const Input = require('../../../../public/js/utils/input/input');
-	const Radio = require('../../../../public/js/utils/input/styles/radio');
-	const Table = require('../../../../public/js/utils/input/styles/table');
-	const MultipleEntries = require('../../../../public/js/utils/input/styles/multiple-entries');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	let count = 0;
-	let modify = true;
-	
-	du.on.match('click', '#modify-btn', (elem) => {
-	  modify = !modify
-	  if (modify) du.class.add(elem, 'modify-edit');
-	  else du.class.remove(elem, 'modify-edit');
-	  // updateEntireTree();
-	});
-	
-	const getInput = () => new Input({
-	  label: `Label${++count}`,
-	  name: `Name${count}`,
-	  inline: true,
-	  class: 'center',
-	});
-	
-	let tree;
-	function updateEntireTree() {
-	  const body = tree.html(null, modify);
-	  du.id('config-body').innerHTML = body;
-	}
-	
-	
-	
-	function proccess() {
-	  const input1 = getInput();
-	  const input2 = getInput();
-	  const input3 = getInput();
-	  // tree = new DecisionInputTree('ancestry', {name: 'Ancestry'});
-	  tree = DecisionInputTree.fromJson(treeJson);
-	  tree.payloadHandler(new PayloadHandler('ancestry', new Input({name: 'name', label: 'Name', optional: true})));
-	
-	  tree.onComplete(console.log);
-	  tree.onSubmit(console.log);
-	
-	  updateEntireTree();
-	}
-	
-	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
-	du.on.match('click', '#json', () => {
-	  du.copy(JSON.stringify(tree.toJson(), null, 2));
-	})
-	
-	
-	exports.proccess = proccess;
-	
-});
-
-
 RequireJS.addFunction('./app/pages/configure.js',
 function (require, exports, module) {
 	
@@ -10572,19 +10510,22 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	  const input1 = getInput();
 	  const input2 = getInput();
 	  const input3 = getInput();
-	  try {
-	    tree = DecisionInputTree.fromJson(require('../../../../public/json/configure.json'));
-	  } catch {
-	    tree = new DecisionInputTree('Questionaire', {name: 'Questionaire'});
-	  }
-	  const ph = new PayloadHandler("{{sectionName}}", sectionName);
-	  tree.payloadHandler(ph);
 	
-	  tree.onComplete(console.log);
-	  tree.onSubmit(console.log);
+	  request.get('/json/configure.json', (json) => {
+	    try {
+	      tree = DecisionInputTree.fromJson(json);
+	    } catch {
+	      tree = new DecisionInputTree('Questionaire', {name: 'Questionaire'});
+	    }
+	    const ph = new PayloadHandler("{{sectionName}}", sectionName);
+	    tree.payloadHandler(ph);
 	
-	  updateEntireTree();
-	  mod = new ModDecisionTree(tree);
+	    tree.onComplete(console.log);
+	    tree.onSubmit(console.log);
+	
+	    updateEntireTree();
+	    mod = new ModDecisionTree(tree);
+	  });
 	}
 	
 	du.id('test-ground').innerHTML = '<button id="json">JSON</button><br><br><button id="save">Save</button>';
@@ -10596,6 +10537,68 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	    request.post('/save/json', {name: 'configure', json: tree.toJson()}, console.log, console.error);
 	  }
 	});
+	
+	exports.proccess = proccess;
+	
+});
+
+
+RequireJS.addFunction('./app/pages/ancestry.js',
+function (require, exports, module) {
+	
+const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const PayloadHandler = require('../../../../public/js/utils/input/decision/payload-handler.js');
+	require('../../../../public/js/utils/input/init');
+	const Input = require('../../../../public/js/utils/input/input');
+	const Radio = require('../../../../public/js/utils/input/styles/radio');
+	const Table = require('../../../../public/js/utils/input/styles/table');
+	const MultipleEntries = require('../../../../public/js/utils/input/styles/multiple-entries');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	let count = 0;
+	let modify = true;
+	
+	du.on.match('click', '#modify-btn', (elem) => {
+	  modify = !modify
+	  if (modify) du.class.add(elem, 'modify-edit');
+	  else du.class.remove(elem, 'modify-edit');
+	  // updateEntireTree();
+	});
+	
+	const getInput = () => new Input({
+	  label: `Label${++count}`,
+	  name: `Name${count}`,
+	  inline: true,
+	  class: 'center',
+	});
+	
+	let tree;
+	function updateEntireTree() {
+	  const body = tree.html(null, modify);
+	  du.id('config-body').innerHTML = body;
+	}
+	
+	
+	
+	function proccess() {
+	  const input1 = getInput();
+	  const input2 = getInput();
+	  const input3 = getInput();
+	  // tree = new DecisionInputTree('ancestry', {name: 'Ancestry'});
+	  tree = DecisionInputTree.fromJson(treeJson);
+	  tree.payloadHandler(new PayloadHandler('ancestry', new Input({name: 'name', label: 'Name', optional: true})));
+	
+	  tree.onComplete(console.log);
+	  tree.onSubmit(console.log);
+	
+	  updateEntireTree();
+	}
+	
+	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
+	du.on.match('click', '#json', () => {
+	  du.copy(JSON.stringify(tree.toJson(), null, 2));
+	})
+	
 	
 	exports.proccess = proccess;
 	

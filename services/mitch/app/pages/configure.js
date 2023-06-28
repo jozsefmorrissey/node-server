@@ -52,19 +52,22 @@ function proccess() {
   const input1 = getInput();
   const input2 = getInput();
   const input3 = getInput();
-  try {
-    tree = DecisionInputTree.fromJson(require('../../../../public/json/configure.json'));
-  } catch {
-    tree = new DecisionInputTree('Questionaire', {name: 'Questionaire'});
-  }
-  const ph = new PayloadHandler("{{sectionName}}", sectionName);
-  tree.payloadHandler(ph);
 
-  tree.onComplete(console.log);
-  tree.onSubmit(console.log);
+  request.get('/json/configure.json', (json) => {
+    try {
+      tree = DecisionInputTree.fromJson(json);
+    } catch {
+      tree = new DecisionInputTree('Questionaire', {name: 'Questionaire'});
+    }
+    const ph = new PayloadHandler("{{sectionName}}", sectionName);
+    tree.payloadHandler(ph);
 
-  updateEntireTree();
-  mod = new ModDecisionTree(tree);
+    tree.onComplete(console.log);
+    tree.onSubmit(console.log);
+
+    updateEntireTree();
+    mod = new ModDecisionTree(tree);
+  });
 }
 
 du.id('test-ground').innerHTML = '<button id="json">JSON</button><br><br><button id="save">Save</button>';
