@@ -264,8 +264,8 @@ try {
 
 var httpServer = http.createServer(app);
 var httpsServer = https.createServer(https_options, app);
-httpServer.listen(3002);
-httpsServer.listen(3003);
+httpServer.listen(3000);
+httpsServer.listen(3001);
 
 var user = getUser();
 //shell.exec("xdg-open \"https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.id=" + user + "\"");
