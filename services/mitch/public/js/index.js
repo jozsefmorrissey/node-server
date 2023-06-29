@@ -6436,7 +6436,9 @@ function (require, exports, module) {
 	
 	
 	DecisionInputTree.class = 'decision-input-tree';
-	DecisionInputTree.inputSelector = `.${DecisionInputTree.class} input,textarea,select`;
+	DecisionInputTree.inputSelector = `.${DecisionInputTree.class} input` +
+	                `.${DecisionInputTree.class} textarea` +
+	                `.${DecisionInputTree.class} select`;
 	DecisionInputTree.buttonClass = 'decision-input-tree-submit';
 	
 	DecisionInputTree.getNode = (elem) => {
@@ -10034,7 +10036,7 @@ exports['550500469'] = (get, $t) =>
 			`</button></div> </div> `
 	
 	exports['input/decision/decision-modification'] = (get, $t) => 
-			` <div class='decision-tree-mod-cnt'> <div class='then-add-cnt'> <button hidden class='then-btn modify-edit' mod-id='1'> Then... </button> <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button> </div> <div hidden class='if-edit-cnt'> <button class='edit-btn modify-edit' mod-id='2'> <i class="fas fa-pencil-alt"></i> </button> <button class='conditional-btn modify-edit' mod-id='3'> If </button> </div> <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div> <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div> <div hidden class='rm-edit-cnt modify-edit' mod-id='2'> <div class='edit-cnt'>Edit Tree Html!</div> <button class='modiy-rm-input-btn'>Remove</button> </div> <div hidden class='add-cnt tab modify-edit' mod-id='4'> Add Input Html! </div> <div class='remove-btn-cnt' hidden> <button class='rm-node modify-edit'>X</button> </div> <div class='close-cnts' hidden><button class='modify-edit'>X</button></div> <br> <br> <div class='copy-save-paste-cnt'> <div style='display: inline-block'> <textarea id='json-data'></textarea> <br> <button id="copy">Copy</button> <button id='paste' class='modify-edit' style='float:right'>Paste</button> <br><br> <button id="save" class='modify-edit'>Save</button> </div> </div> </div> `
+			` <div class='decision-tree-mod-cnt'> <div class='then-add-cnt'> <button hidden class='then-btn modify-edit' mod-id='1'> Then... </button> <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button> </div> <div hidden class='if-edit-cnt'> <button class='twentys edit-btn modify-edit' mod-id='2'> <i class="inline gg-pen"></i> </button> <button class='twentys conditional-btn modify-edit' mod-id='3'> If </button> </div> <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div> <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div> <div hidden class='rm-edit-cnt modify-edit' mod-id='2'> <div class='edit-cnt'>Edit Tree Html!</div> <button class='modiy-rm-input-btn'>Remove</button> </div> <div hidden class='add-cnt tab modify-edit' mod-id='4'> Add Input Html! </div> <div class='remove-btn-cnt' hidden> <button class='rm-node modify-edit'>X</button> </div> <div class='close-cnts' hidden><button class='modify-edit'>X</button></div> <br> <br> <div class='copy-save-paste-cnt'> <div style='display: inline-block'> <textarea id='json-data'></textarea> <br> <button id="copy">Copy</button> <button id='paste' class='modify-edit' style='float:right'>Paste</button> <br><br> <button id="save" class='modify-edit'>Save</button> </div> </div> </div> `
 	
 	exports['expandable/top-add-list'] = (get, $t) => 
 			` <div class="expandable-list ` +
@@ -10455,7 +10457,7 @@ exports['550500469'] = (get, $t) =>
 			`<div> <button id='update-tree-display-btn'>Update</button> <button class='modify-edit' id='modify-btn'>Modify</button> </div> <div id='config-body'></div> `
 	
 	exports['index'] = (get, $t) => 
-			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mitch/js/index.js'></script> <script src="https://kit.fontawesome.com/234ae94193.js" crossorigin="anonymous"></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/mitch/styles/mitch.css"> <title></title> </head> <body> ` +
+			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mitch/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/mitch/styles/mitch.css"> <title></title> </head> <body> ` +
 			$t.clean(get("header")) +
 			` ` +
 			$t.clean(get("main")) +

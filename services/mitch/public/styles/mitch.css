@@ -38,6 +38,10 @@ td {
   border-radius: 5pt;
 }
 
+button {
+  cursor: pointer;
+}
+
 .error {
   border-color: red;
   border-width: 4pt;
