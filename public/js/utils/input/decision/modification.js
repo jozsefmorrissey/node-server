@@ -79,6 +79,7 @@ class ModDecisionTree {
     }
     this.toggle = () => active ? this.off() : this.on();
     this.active = () => active;
+    this.hideAll = hideAll;
 
     function mouseoverNode(elem) {
       if (!active) return;
@@ -147,7 +148,7 @@ function addInput(details, elem)  {
   const input = InputInput.getInput(details);
   addTargetNode.addInput(input);
   DecisionInputTree.rebuild(targetNodeElem);
-  addCnt.hidden = true;
+  hideAll();
 }
 
 const getCondition = (...args) => DecisionInputTree.getCondition(...args);

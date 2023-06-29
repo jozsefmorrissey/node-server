@@ -2,6 +2,7 @@
   "_TYPE": "DecisionInputTree",
   "id": "DecisionInputTree_97s2891",
   "ID_ATTRIBUTE": "id",
+  "noSubmission": true,
   "stateConfigs": {
     "Questionaire": {
       "_TYPE": "StateConfig",
@@ -21,7 +22,7 @@
       "ID_ATTRIBUTE": "id",
       "name": "info",
       "payload": {
-        "sectionName": "Information",
+        "sectionName": "Informationsss",
         "inputArray": [
           {
             "_TYPE": "Radio",

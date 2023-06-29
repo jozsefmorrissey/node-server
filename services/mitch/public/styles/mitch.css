@@ -53,3 +53,8 @@ td {
   right: 0;
   margin: 10pt;
 }
+
+textarea {
+  height: 100pt;
+  width: 750pt;
+}

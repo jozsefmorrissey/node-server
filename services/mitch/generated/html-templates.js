@@ -629,7 +629,7 @@ exports['ancestry'] = (get, $t) =>
 		`<div> <button id='modify-btn'>Modify</button> </div> <div id='config-body'></div> <div id='test-ground'></div> `
 
 exports['configure'] = (get, $t) => 
-		`<div> <button id='update-tree-display-btn'>Update</button> <button class='modify-edit' id='modify-btn'>Modify</button> </div> <div id='config-body'></div> <div id='test-ground'></div> `
+		`<div> <button id='update-tree-display-btn'>Update</button> <button class='modify-edit' id='modify-btn'>Modify</button> </div> <div id='config-body'></div> <div> <br> <br> <div style='display: inline-block'> <textarea id='json-data'></textarea> <br> <button id="copy">Copy</button> <button id='paste' style='float:right'>Paste</button> <br><br> <button id="save" class=\'modify-edit\'>Save</button> </div> </div> `
 
 exports['index'] = (get, $t) => 
 		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mitch/js/index.js'></script> <script src="https://kit.fontawesome.com/234ae94193.js" crossorigin="anonymous"></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/mitch/styles/mitch.css"> <title></title> </head> <body> ` +

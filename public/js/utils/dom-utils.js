@@ -778,16 +778,53 @@ du.cookie.remove = function (name) {
 
 let copyTextArea;
 du.copy = (textOelem) => {
-  if (copyTextArea === undefined) {
-    copyTextArea = du.create.element('textarea', {id: 'du-copy-textarea'});
-    document.body.append(copyTextArea);
+  let elem;
+  if (textOelem instanceof HTMLElement) {
+    elem = textOelem;
+  } else {
+    if (copyTextArea === undefined) {
+      copyTextArea = du.create.element('textarea', {id: 'du-copy-textarea'});
+      document.body.append(copyTextArea);
+    }
+    elem = copyTextArea;
+    copyTextArea.value = textOelem;
+    copyTextArea.innerText = textOelem;
   }
 
-  copyTextArea.value = textOelem;
-  copyTextArea.innerText = textOelem;
-
-  copyTextArea.select();
+  elem.select();
   document.execCommand("copy");
+}
+
+du.paste = (elem, success, fail, validate) => {
+  fail ||= err => console.error('Failed to read clipboard contents: ', err);
+  navigator.clipboard.readText()
+  .then((text) => {
+    if ((typeof validate) !== 'function') {
+      success(text, elem);
+    } else {
+      const validResult = validate(text);
+      if (validResult) {
+        if (validResult === true) success(text, elem);
+        else success(validResult, elem);
+      }
+    }
+  })
+  .catch(fail);
+};
+
+du.paste.json = (elem, success, fail, validate) => {
+  let obj;
+  const validateWrapper = (text) => {
+    try {
+      const obj = Object.fromJson(JSON.parse(text));
+      return obj;
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const successWrapper = (value, elem) => success(value, elem);
+  fail ||= err => console.error('Failed to read JSON object from clipboard contents: ', err);
+  du.paste(elem, successWrapper, fail, validateWrapper);
 }
 
 const attrReg = /^[a-zA-Z-]*$/;

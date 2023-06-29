@@ -253,10 +253,10 @@ du.on.match('click', '.conditional-button', (elem) => {
 // isComplete: function determining if all required inputs are filled.
 
 class DecisionInputTree extends DecisionTree {
-  constructor(rootName, props, stateConfigs) {
+  constructor(rootName, payload, props) {
     props = props || {};
     props.inputArray ||= [];
-    super(rootName, props, stateConfigs);
+    super(rootName, payload, props);
     Object.getSet(this, 'payloadHandler');
 
     this.payloadHtml = (payload) => {
@@ -546,31 +546,14 @@ DecisionInputTree.fromJson = (json) => {
   const properties = {
     stateConfigs,
     nodeInheritance: json.nodeInheritance,
-    referenceNodes: json.referenceNodes
+    referenceNodes: json.referenceNodes,
+    noSubmission: json.noSubmission
   };
   const tree = new DecisionInputTree(json.root.name, null, properties);
   const root = tree.root();
   childrenFromJson(root, json.root);
 
   return tree;
-  // let nodeMap = {};
-  // nodeMap[json.nodeId] = root;
-  // const paths = [rootConfig.name];
-  // let currIndex = 0;
-  // while (currIndex < paths.length) {
-  //   const pathArr = paths[currIndex].split('.');
-  //   const parent = tree.getByIdPath.apply(tree, pathArr.slice(0, -1));
-  //   const node = tree.getByIdPath.apply(tree, pathArr);
-  //   if (node === undefined) {
-  //     const nodeId = pathArr[pathArr.length - 1];
-  //     console.log('createNew')
-  //     const config = json.stateConfigs[nodeId];
-  //     const subPaths = Object.keys(Object.pathValue(json.tree, path));
-  //     subPaths.forEach((subPath) => paths.push(`${path}.${subPath}`));
-  //   }
-  //   console.log(path);
-  //   currIndex++;
-  // }
 }
 
 DecisionInputTree.template = new $t('input/decision/decisionTree');

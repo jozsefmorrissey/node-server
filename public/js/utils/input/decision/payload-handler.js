@@ -7,7 +7,8 @@ class PayloadHandler {
     Object.getSet(this, {templateName, inputs});
     const template = new $t(this.templateName());
 
-    this.html = (payload) => template.render(payload);
+    this.html = (payload) =>
+      template.render(payload);
     this.input = () => new InputObject({name: 'payload', list: inputs});
     this.toJson = () => ({inputs: Object.toJson(inputs), templateName});
   }

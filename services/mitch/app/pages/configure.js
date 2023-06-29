@@ -16,7 +16,7 @@ let modify = true;
 
 du.on.match('click', '#modify-btn', (elem) => {
   mod.toggle();
-
+  du.id('save').hidden = !mod.active();
   if (mod.active()) du.class.add(elem, 'modify-edit');
   else du.class.remove(elem, 'modify-edit');
   // updateEntireTree();
@@ -29,17 +29,6 @@ const getInput = () => new Input({
   class: 'center',
 });
 
-let tree;
-function updateEntireTree() {
-  const body = tree.html(null, modify);
-  du.id('config-body').innerHTML = body;
-}
-
-du.on.match('click', '#update-tree-display-btn', (elem) => {
-  updateEntireTree();
-});
-
-
 const sectionName = new Input({
   label: `Section Name`,
   name: `sectionName`,
@@ -48,6 +37,19 @@ const sectionName = new Input({
   validation: () => true
 });
 
+let tree;
+const ph = new PayloadHandler("{{sectionName}}", sectionName);
+function updateEntireTree() {
+  const body = tree.html(null, modify);
+  du.id('config-body').innerHTML = body;
+}
+
+du.on.match('click', '#update-tree-display-btn', (elem) => {
+  updateEntireTree();
+  mod.hideAll();
+});
+
+
 function proccess() {
   const input1 = getInput();
   const input2 = getInput();
@@ -55,11 +57,11 @@ function proccess() {
 
   request.get('/json/configure.json', (json) => {
     try {
+      json.noSubmission = true;
       tree = DecisionInputTree.fromJson(json);
     } catch {
-      tree = new DecisionInputTree('Questionaire', {name: 'Questionaire'});
+      tree = new DecisionInputTree('Questionaire', {name: 'Questionaire', noSubmission: true});
     }
-    const ph = new PayloadHandler("{{sectionName}}", sectionName);
     tree.payloadHandler(ph);
 
     tree.onComplete(console.log);
@@ -70,14 +72,23 @@ function proccess() {
   });
 }
 
-du.id('test-ground').innerHTML = '<button id="json">JSON</button><br><br><button id="save">Save</button>';
-du.on.match('click', '#json', () => {
-  du.copy(JSON.stringify(tree.toJson(), null, 2));
+du.on.match('click', '#paste', (elem) => {
+  du.paste.json(elem, (t) => {
+    tree = t;
+    updateEntireTree();
+    tree.payloadHandler(ph);
+  });
+});
+du.on.match('click', '#copy', (elem) => {
+  const texta = du.find.closest('textarea', elem);
+  texta.value = JSON.stringify(tree.toJson(), texta, 2);
+  du.copy(texta);
 });
 du.on.match('click', '#save', () => {
   if (confirm('Are you sure you want to save?')) {
     request.post('/save/json', {name: 'configure', json: tree.toJson()}, console.log, console.error);
   }
+  mod.hideAll();
 });
 
 exports.proccess = proccess;
