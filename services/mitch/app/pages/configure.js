@@ -69,26 +69,13 @@ function proccess() {
 
     updateEntireTree();
     mod = new ModDecisionTree(tree);
+    mod.on.create((update) => {
+      tree = update.tree;
+      mod = update.modDecisionTree;
+      updateEntireTree();
+    });
   });
 }
 
-du.on.match('click', '#paste', (elem) => {
-  du.paste.json(elem, (t) => {
-    tree = t;
-    updateEntireTree();
-    tree.payloadHandler(ph);
-  });
-});
-du.on.match('click', '#copy', (elem) => {
-  const texta = du.find.closest('textarea', elem);
-  texta.value = JSON.stringify(tree.toJson(), texta, 2);
-  du.copy(texta);
-});
-du.on.match('click', '#save', () => {
-  if (confirm('Are you sure you want to save?')) {
-    request.post('/save/json', {name: 'configure', json: tree.toJson()}, console.log, console.error);
-  }
-  mod.hideAll();
-});
 
 exports.proccess = proccess;

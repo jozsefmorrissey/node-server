@@ -7,7 +7,9 @@ const Input = require('../input.js');
 const Select = require('../styles/select.js');
 const $t = require('../../$t');
 const du = require('../../dom-utils');
+const request = require('../../request');
 const Conditions = require('../../conditions');
+const CustomEvent = require('../../custom-event');
 
 const modHideAll = du.switch('.modify-edit', 'mod-id');
 
@@ -41,6 +43,8 @@ const rmEditCnt = du.find.down('.rm-edit-cnt', toolCnt);
 
 const all = [closeCntBtn, thenBtn, condBtn, editBtn, addBtn, thenCnt, condCnt, editCnt, addCnt, ifEditBtnCnt, rmCnt, rmEditCnt];
 
+const copySaveBtnCnt = du.find.down('.copy-save-paste-cnt', toolCnt);
+
 function updateConditionTree(elem) {
   let input = Input.getFromElem(elem);
   if (elem !== condBtn && input !== condTarget.input) return;
@@ -72,14 +76,18 @@ class ModDecisionTree {
                           `[tree-id="${treeId}"] .decision-input-array-cnt textarea`;
 
     let active = true;
-    this.on = () => active = true;
+    this.on = () => copySaveBtnCnt.hidden = !(active = true);
     this.off = () => {
       hideAll();
+      copySaveBtnCnt.hidden = true;
       active = false;
     }
     this.toggle = () => active ? this.off() : this.on();
     this.active = () => active;
     this.hideAll = hideAll;
+
+    const onCreateEvent = new CustomEvent('create');
+    this.on.create = onCreateEvent.on;
 
     function mouseoverNode(elem) {
       if (!active) return;
@@ -101,19 +109,6 @@ class ModDecisionTree {
       targetInputElem = elem;
     }
 
-
-    // function mouseoutNode(elem) {
-    //   if (!active) return;
-    // }
-    // function mouseoutInput(elem) {
-    //   if (!active) return;
-    //   if (!du.is.ancestor(elem, targetInputElem)) {
-    //     ifEditBtnCnt.hidden = true;
-    //   }
-    // }
-    // du.on.match('mouseout', nodeCntSelector, mouseoutNode);
-    // du.on.match('mouseout', inputCntSelector, mouseoutInput);
-
     du.on.match('mouseover', nodeCntSelector, mouseoverNode);
     du.on.match('mouseover', inputCntSelector, mouseoverInput);
     du.on.match('change', inputSelector, (elem) => {
@@ -122,6 +117,20 @@ class ModDecisionTree {
         updateConditionTree(elem);
         const targetCnt = rmEditCnt.hidden ? condCnt : rmEditCnt;
         showCloseButton(targetCnt);
+      });
+    });
+
+    du.on.match('click', '.decision-tree-mod-cnt #paste', (elem) => {
+      du.paste.json(elem, (tree) => {
+        const targetTree = DecisionInputTree.getNode(elem).tree();
+        if (targetTree === decisionTree) {
+          decisionTree = tree;
+          const ph = decisionTree.payloadHandler();
+          tree.payloadHandler(ph);
+          const modDecisionTree = new ModDecisionTree(tree);
+          onCreateEvent.trigger({tree, modDecisionTree});
+          hideAll();
+        }
       });
     });
   }
@@ -510,6 +519,20 @@ du.on.match('click', '.modiy-rm-input-btn', (elem) => {
 });
 
 du.on.match('click', '.decision-tree-mod-cnt>.close-cnts', hideAll);
+
+du.on.match('click', '.decision-tree-mod-cnt #copy', (elem) => {
+  const tree = DecisionInputTree.getNode(targetNodeElem).tree();
+  const texta = du.find.closest('textarea', elem);
+  texta.value = JSON.stringify(tree.toJson(), texta, 2);
+  du.copy(texta);
+});
+du.on.match('click', '.decision-tree-mod-cnt #save', () => {
+  if (confirm('Are you sure you want to save?')) {
+    const tree = DecisionInputTree.getNode(targetNodeElem).tree();
+    request.post('/save/json', {name: 'configure', json: tree.toJson()}, console.log, console.error);
+  }
+  hideAll();
+});
 
 
 
