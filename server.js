@@ -50,8 +50,8 @@ if (shell.exec('[ -d ~/.cert ] && echo true', {silent: true}).stdout.trim() !== 
 
 var https_options = {};
 if (global.ENV !== 'local') {
-  https_options.key = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim());
-  https_options.cert = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.csr").stdout.trim());
+  https_options.key = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim(), 'utf8');
+  https_options.cert = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.csr").stdout.trim(), 'utf8');
   console.log(JSON.stringify(https_options, null, 2));
 }
 
