@@ -1,8 +1,5 @@
 
 
-openssl req -new -newkey rsa:2048 -nodes -keyout jozsefmorrissey_com.key.pem -out jozsefmorrissey_com.csr.pem
-
-
 const DecisionInputTree = require('./decision');
 const InputInput = require('../decision/input-input.js');
 const Input = require('../input.js');
@@ -25,8 +22,6 @@ du.find('body').append(toolCnt);
 
 let targetNodeElem;
 let targetInputElem;
-
-_5dc3cd4b45f9ffd0c5ed27ed92987085.jozsefmorrissey.com.jozsefmorrissey.com
 
 const thenBtn = du.find.down('.then-btn', toolCnt);
 const condBtn = du.find.down('.conditional-btn', toolCnt);
