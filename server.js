@@ -52,6 +52,7 @@ var https_options = {};
 if (global.ENV !== 'local') {
   https_options.key = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim());
   https_options.cert = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.csr").stdout.trim());
+  console.log(JSON.stringify(https_options, null, 2));
 }
 
 app.use(function (req, res, next) {
