@@ -5565,48 +5565,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/data-list.js',
-function (require, exports, module) {
-	
-const $t = require('../$t');
-	const du = require('../dom-utils');
-	
-	//TODO: shoould remove datalist from input object... bigger fish
-	class DataList {
-	  constructor(input) {
-	    let list = [];
-	    const id = `data-list-${String.random()}`;
-	    this.id = () => id;
-	    this.list = () => list;
-	    this.getElem = () => {
-	      let elem = du.id(id);
-	      if (!elem)  elem = du.create.element('datalist', {id});
-	      du.find('body').append(elem);
-	      return elem;
-	    }
-	    this.update = () => {
-	      const elem = this.getElem();
-	      elem.innerHTML = DataList.template.render(this);
-	      const inputElem = input && input.get();
-	      if (inputElem) {
-	        inputElem.setAttribute('list', this.id());
-	      }
-	    }
-	    this.setList = (newList) => {
-	      if (!Array.isArray(newList) || newList.equals(list)) return
-	      list = newList;
-	      this.update();
-	    }
-	  }
-	}
-	
-	DataList.template = new $t('input/data-list');
-	
-	module.exports = DataList;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/input/bind.js',
 function (require, exports, module) {
 	
@@ -5692,6 +5650,48 @@ const du = require('../dom-utils');
 	}
 	
 	du.on.match('focusout', '.dynam-input', undoDynamic);
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/data-list.js',
+function (require, exports, module) {
+	
+const $t = require('../$t');
+	const du = require('../dom-utils');
+	
+	//TODO: shoould remove datalist from input object... bigger fish
+	class DataList {
+	  constructor(input) {
+	    let list = [];
+	    const id = `data-list-${String.random()}`;
+	    this.id = () => id;
+	    this.list = () => list;
+	    this.getElem = () => {
+	      let elem = du.id(id);
+	      if (!elem)  elem = du.create.element('datalist', {id});
+	      du.find('body').append(elem);
+	      return elem;
+	    }
+	    this.update = () => {
+	      const elem = this.getElem();
+	      elem.innerHTML = DataList.template.render(this);
+	      const inputElem = input && input.get();
+	      if (inputElem) {
+	        inputElem.setAttribute('list', this.id());
+	      }
+	    }
+	    this.setList = (newList) => {
+	      if (!Array.isArray(newList) || newList.equals(list)) return
+	      list = newList;
+	      this.update();
+	    }
+	  }
+	}
+	
+	DataList.template = new $t('input/data-list');
+	
+	module.exports = DataList;
 	
 });
 
@@ -6002,1365 +6002,6 @@ function (require, exports, module) {
 	  input[attr](elem.value);
 	  input.updateDisplay();
 	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
-function (require, exports, module) {
-	
-// TODO IMPORTANT: refactor this garbage!!!!!!
-	// ... its extreamly unIntuitive.
-	
-	
-	
-	const DecisionTree = require('../../decision-tree.js');
-	const Conditions = require('../../conditions.js');
-	const Input = require('../input.js');
-	const CustomEvent = require('../../custom-event');
-	const Select = require('../styles/select.js');
-	const MultipleEntries = require('../styles/multiple-entries.js');
-	const du = require('../../dom-utils');
-	const $t = require('../../$t');
-	const Measurement = require('../../measurement');
-	
-	
-	const nameCompareFunc = (name) => (input) => input.name() === name ? input : false;
-	const inputSelectorFunc = (func) => (node) => {
-	  const inArr = node.inputArray();
-	  for (let index = 0; index < inArr.length; index++) {
-	    const input = inArr[index];
-	    let val = func(input);
-	    if (val) return val;
-	    if (input instanceof MultipleEntries) {
-	      val = input.input(func);
-	      if (val) return val;
-	    }
-	  }
-	}
-	const nodeSelectorFunc = (nameOfunc) => inputSelectorFunc(
-	          (typeof nameOfunc) === 'function' ? nameOfunc : nameCompareFunc(nameOfunc));
-	
-	
-	
-	class DecisionInput extends DecisionTree.Node {
-	  constructor(stateConfig, payload, parent) {
-	    payload ||= {};
-	    payload.inputArray ||= [];
-	    super(stateConfig, payload, parent);
-	    const instance = this;
-	
-	    const parentToJson = this.nodeOnlyToJson;
-	    this.nodeOnlyToJson = () => {
-	      const json = parentToJson();
-	      json.relatedTo = this.relatedTo();
-	      return json;
-	    }
-	
-	    const onChange = [];
-	    const changeEvent = new CustomEvent('change');
-	
-	    const trigger = () => {
-	      changeEvent.trigger(this.values());
-	      this.tree().changed();
-	    }
-	    this.onChange = (func) => changeEvent.on(func);
-	
-	    for (let index = 0; index < payload.inputArray; index++) {
-	      inArr[index].on('change', trigger);
-	    }
-	
-	    this.relatedTo = (value) => {
-	      const currValue = this.payload().relatedTo;
-	      if (value === undefined) return currValue;
-	      if (this.isRoot()) {
-	        throw new Error('The root cannot be related to any other input');
-	      }
-	
-	      const stateRelatedTo = this.stateConfig().payload().relatedTo;
-	      let setState = false;
-	      if (stateRelatedTo === undefined) {
-	        this.stateConfig().setValue('relatedTo', value);
-	        setState = true;
-	      } else {
-	        this.setValue('relatedTo', value)
-	      }
-	
-	      value = this.payload().relatedTo;
-	      const validList = this.parent().inputArray().map(i => i.name());
-	      if (validList.indexOf(value) === -1) {
-	        if (setState) {
-	          this.stateConfig().setValue('relatedTo', currValue);
-	          this.deleteValue('relatedTo');
-	        } else {
-	          this.setValue('relatedTo', currValue);
-	        }
-	      }
-	
-	      return value;
-	    }
-	
-	    this.addInput = (input) => {
-	      if (!(input instanceof Input)) throw new Error('input(arg1) needs to be and instance of Input');
-	      const payload = this.stateConfig().payload();
-	      this.stateConfig().setValue('inputArray', payload.inputArray.concat(input))
-	      trigger();
-	    }
-	    this.values = (values, doNotRecurse) => {
-	      if (!this.reachable()) return {};
-	      values ||= {};
-	      if (values._NODE === undefined) values._NODE = this;
-	      let inputArr = this.inputArray();
-	      for (let index = 0; index < inputArr.length; index++) {
-	        const input = inputArr[index];
-	        if (values[input.name()] === undefined) {
-	          values[input.name()] = input.value();
-	        }
-	      }
-	      if (!doNotRecurse && !this.isRoot()) this.parent().values(values);
-	      return values;
-	    };
-	
-	    this.isComplete = () => {
-	      const inArr = this.inputArray();
-	      let complete = true;
-	      for (let index = 0; index < inArr.length; index++) {
-	        complete &= inArr[index].optional() || inArr[index].valid();
-	      }
-	      this.forEachChild((child) => complete &= child.isComplete());
-	      return complete == 1;
-	    }
-	    this.onComplete = this.tree().onComplete;
-	    function updateInputArray (boolean) {
-	      const inputArray = payload.inputArray;
-	      const sc = instance.stateConfig();
-	      const stateInputArray = sc.payload().inputArray;
-	      if (inputArray.length === stateInputArray.length) return boolean ? false : inputArray;
-	      for (let index = 0; index < stateInputArray.length; index++) {
-	        const input = stateInputArray[index];
-	        if (inputArray.length - 1 < index) {
-	          const clone = input.clone();
-	          if (clone.onChange) clone.onChange(trigger);
-	          else if (clone.on) clone.on('change', trigger);
-	          // clone.setValue('');
-	          inputArray.push(clone);
-	        }
-	        if (inputArray[index].name() !== input.name()) inputArray.splice(index, 1);
-	      }
-	      return boolean ? true : inputArray;
-	    }
-	
-	    this.inputArray = () => updateInputArray();
-	
-	    const parentPayload = this.payload;
-	    this.payload = (noConfig) => {
-	      this.inputArray();
-	      return parentPayload(noConfig);
-	    }
-	
-	    this.getValue = (index) => this.inputArray()[index].value();
-	    this.isValid = () => {
-	      let valid = true;
-	      this.inputArray.forEach((input) =>
-	            valid = valid && input.valid());
-	      return valid;
-	    }
-	
-	    this.choices = () => {
-	      const choices = [];
-	      this.breathFirst((node) => {
-	        const inputArr = node.inputArray();
-	        inputArr.forEach((input) => {
-	          if (!input.chosen())
-	            choices.push(input);
-	        });
-	      });
-	      return choices;
-	    }
-	
-	    this.find.input = (nameOfunc, ...namePath) => {
-	      let node;
-	      if (namePath.length > 0) {
-	        node = this.find(...namePath);
-	      }
-	      node ||= this;
-	      return node.breathFirst(nodeSelectorFunc(nameOfunc));
-	    }
-	
-	    const checkColectiveFilter = (nameOmap, childCond) => {
-	      let nameMap = {};
-	      nameOmap instanceof Object ? nameMap = nameOmap : (nameMap[nameOmap] = true);
-	      if (childCond.condition.conditions) {
-	        const conds = childCond.condition.conditions();
-	        for (let index = 0; index < conds.length; index++) {
-	          if (conds[index].attribute && nameMap[conds[index].attribute()]) return true;
-	        }
-	      }
-	      return false;
-	    }
-	
-	    const nameFilter = (name) => (childCond) => {
-	      if (!childCond.condition instanceof Conditions.Condition) return false;
-	      if (childCond.condition.attribute) return childCond.condition.attribute().indexOf(name) === 0;
-	
-	      return checkColectiveFilter(name, childCond);
-	    }
-	    const dneFilter = () => {
-	      const nameMap = {};
-	      this.inputArray().map(input => nameMap[input.name()] = true);
-	      return (childCond) =>
-	        !(childCond.condition instanceof Conditions.Condition) ||
-	        !((childCond.condition.attribute && nameMap[childCond.condition.prefix()]) ||
-	        checkColectiveFilter(nameMap, childCond));
-	    }
-	    const childMapFunc = (childCond) => childCond.child;
-	    this.childrenHtml = () => {
-	      if (!this.shouldRecurse()) return '';
-	      const children = this.reachableChildren().map(childMapFunc);
-	      let html = '';
-	      for (let index = 0; index < children.length; index++) {
-	        const child = children[index];
-	        html += child.html();
-	      }
-	      return html + (children.length > 0 ? '<br><br>' : '');
-	    }
-	    this.empty = () => this.inputArray().length === 0;
-	    this.tag = () => this.tree().block() ? 'div' : 'span';
-	    this.html = () => DecisionInput.template.render(this);
-	
-	    this.removeInput = (inputName, localOnly) => {
-	      const ia = payload.inputArray;
-	      for (let index = 0; index < ia.length; index++) {
-	        if (ia[index].name() === inputName) {
-	          const stateName = this.stateConfig().name();
-	          ia.splice(index, 1);
-	          if (!localOnly) this.tree().removeInput(stateName, inputName);
-	          return true;
-	        }
-	      }
-	      return false;
-	    }
-	
-	    this.payloadHtml = () => {
-	      const pld = this.payload();
-	      if ((typeof pld.html) === 'function') return pld.html();
-	      return this.tree().payloadHtml(pld);
-	    }
-	  }
-	}
-	DecisionInput.template = new $t('input/decision/decision');
-	
-	du.on.match('click', '.conditional-button', (elem) => {
-	  console.log(elem);
-	});
-	
-	
-	// properties
-	// optional :
-	// noSubmission: /[0-9]{1,}/ delay that determins how often a submission will be processed
-	// buttonText: determins the text displayed on submit button;
-	// inputArray: inputArray to be applied to the root;
-	// isComplete: function determining if all required inputs are filled.
-	
-	class DecisionInputTree extends DecisionTree {
-	  constructor(rootName, payload, props) {
-	    props = props || {};
-	    props.inputArray ||= [];
-	    super(rootName, payload, props);
-	    Object.getSet(this, 'payloadHandler');
-	
-	    this.payloadHtml = (payload) => {
-	      const handler = this.payloadHandler();
-	      if (handler) return handler.html(payload);
-	    }
-	
-	    this.payloadInput = () => {
-	      const handler = this.payloadHandler();
-	      if (handler) return handler.input();
-	    }
-	
-	    this.inputHtml = () => {
-	      const handler = this.payloadHandler();
-	      if (handler) return handler.inputHtml();
-	    }
-	
-	    let payloadTemplate
-	    let payloadTemplateName
-	    this.payloadTemplateName = (name) => {
-	      if (name && $t.functions[name]) {
-	        payloadTemplateName = name;
-	        payloadTemplate = new $t(name);
-	      }
-	      return payloadTemplateName;
-	    }
-	
-	    this.payloadTemplate = () => payloadTemplate;
-	
-	    this.buttonText = () => {
-	      return props.buttonText || `Create ${rootName}`;
-	    }
-	    let disabled;
-	    this.disableButton = (d, elem) => {
-	      disabled = d === null || d === true || d === false ? d : disabled;
-	      if (elem) {
-	        const button = du.find.closest(`button`, elem);
-	        if (button) {
-	          button.disabled = disabled === null ? !node.isComplete(root) : disabled;
-	        }
-	      }
-	    }
-	    this.class = () => props.class;
-	    this.buttonClass = () => props.buttonClass;
-	    this.isComplete = () => {
-	      if ((typeof props.isComplete) === 'function') return props.isComplete(this.root());
-	      const choices = this.choices();
-	      if (choices.length > 0) return false;
-	      return this.root().isComplete();
-	    }
-	
-	    const completeEvent = new CustomEvent('complete');
-	    const submitEvent = new CustomEvent('submit');
-	    const changeEvent = new CustomEvent('change');
-	    this.html = (node, editDisplay) => {
-	      node = node || this.root();
-	      const header = props.header;
-	      const inputHtml = node.html(editDisplay);
-	      const scope = {node, inputHtml, DecisionInputTree, editDisplay, header};
-	      if (node.isRoot()) {
-	        return DecisionInputTree.template.render(scope);
-	      }
-	      return inputHtml;
-	    };
-	    this.onComplete = completeEvent.on;
-	    this.onSubmit = submitEvent.on;
-	    this.hideButton = props.noSubmission;
-	    this.onChange = (func) => this.root().onChange(func);
-	
-	    let completionPending = false;
-	    this.completed = () => {
-	      if (!this.isComplete()) return false;
-	      const delay = props.noSubmission || 0;
-	      if (!completionPending) {
-	        completionPending = true;
-	        setTimeout(() => {
-	          const values = this.values();
-	          completeEvent.trigger(values, this);
-	          completionPending = false;
-	        }, delay);
-	      }
-	      return true;
-	    }
-	
-	    let submissionPending = false;
-	    this.submit = (elem) => {
-	      // TODO: delay = props.noSubmission === confusing
-	      const delay = props.noSubmission || 0;
-	      if (!submissionPending) {
-	        submissionPending = true;
-	        setTimeout(() => {
-	          const values = this.values();
-	          if (!this.isComplete()) return submissionPending = false;
-	          submitEvent.trigger(values, elem);
-	          submissionPending = false;
-	        }, delay);
-	      }
-	      return true;
-	    }
-	
-	    let changePending = 0;
-	    const delay = props.noSubmission || 0;
-	    this.changed = () => {
-	      let changeId = ++changePending;
-	      setTimeout(() => {
-	        if (changeId === changePending) {
-	          const values = this.values();
-	          changeEvent.trigger(values)
-	        }
-	      }, delay);
-	    }
-	
-	    let block = false;
-	    this.block = (is) => {
-	      if (is === true || is === false) {
-	        block = is;
-	      }
-	      return block;
-	    }
-	
-	    this.find = (...args) => this.root().find(...args);
-	    this.find.input = (...args) => this.root().find.input(...args);
-	
-	    this.values = () => {
-	      const values = {};
-	      this.root().breathFirst((node) => {
-	        const obj = {};
-	        node.values(obj, true);
-	        Object.pathValue(values, node.path().join('.'), obj);
-	      });
-	      return values[this.root().name()];
-	    }
-	
-	    this.choices = () => this.root().choices();
-	
-	    const parentGetState = this.getState;
-	    this.getState = (name, payload) => {
-	      if (!this.stateConfigs()[name]) {
-	        if (!payload) payload = {};
-	        payload.inputArray ||= [];
-	      }
-	      return parentGetState(name, payload);
-	    }
-	
-	    this.removeInput = (stateName, inputName) => {
-	      const configs = this.stateConfigs();
-	      const nodes = [];
-	      this.root().forall((n) => {
-	        const sc = n.stateConfig();
-	        if (sc.name() === stateName) {
-	          const scIArr = sc.payload().inputArray.filter(i => i.name() !== inputName);
-	          sc.setValue('inputArray', scIArr);
-	          n.removeInput(inputName, true);
-	        }
-	      });
-	      console.log('rmI');
-	    }
-	
-	    this.clone = () => DecisionInputTree.fromJson(this.toJson());
-	    this.valid = this.completed;
-	    this.name = () => this.root().name();
-	    this.value = this.values;
-	
-	    return this;
-	  }
-	}
-	
-	
-	DecisionInputTree.class = 'decision-input-tree';
-	DecisionInputTree.inputSelector = `.${DecisionInputTree.class} input` +
-	                `.${DecisionInputTree.class} textarea` +
-	                `.${DecisionInputTree.class} select`;
-	DecisionInputTree.buttonClass = 'decision-input-tree-submit';
-	
-	DecisionInputTree.getNode = (elem) => {
-	  const cnt = du.find.closest('[node-id]', elem);
-	  const parent = cnt.parentElement;
-	  const nodeId = cnt.getAttribute('node-id');
-	  return Lookup.get(nodeId);
-	}
-	
-	DecisionInputTree.hardUpdate = (elem) => {
-	  const tree = DecisionInputTree.getTree(elem);
-	  const treeCnt = du.find.up('[tree-id]', elem);
-	  const cnt = treeCnt.parentElement;
-	  cnt.innerHTML = tree.html();
-	}
-	
-	function updateInput(target) {
-	  const cnt = du.find.closest('[node-id]', target);
-	  const nodeId = cnt.getAttribute('node-id');
-	  const node = Lookup.get(nodeId);
-	
-	  const inputCnt = du.find.up('.decision-input-array-cnt', target);
-	  const inputIndex = Number.parseInt(inputCnt.getAttribute('index'));
-	  const parentCnt = du.find.up('.decision-input-cnt', inputCnt);
-	  updateOrphans(target);
-	}
-	
-	function updateOrphans(elem) {
-	  const dicnt = du.find.up('.decision-input-cnt', elem);
-	  const orphanCnt = du.find.down('.orphan-cnt', dicnt);
-	  const node = DecisionInputTree.getNode(dicnt);
-	  orphanCnt.innerHTML = node.childrenHtml();
-	}
-	
-	function updateAllChildren(dicnt) {
-	  updateOrphans(dicnt);
-	  du.move.inbounds(dicnt);
-	}
-	
-	// TODO remove nested function, soft not used.... clean this please
-	DecisionInputTree.update = (soft) => (target, event) => setTimeout(() => updateInput(target));
-	DecisionInputTree.update.children = updateAllChildren;
-	
-	DecisionInputTree.Node = DecisionInput;
-	DecisionInputTree.submit = (elem) => {
-	  const tree = Lookup.get(elem.getAttribute('tree-id'));
-	  tree.submit(elem);
-	}
-	
-	let count = 999;
-	// const getInput = () => new Input({
-	//   label: `Label${++count}`,
-	//   name: `Name${count}`,
-	//   inline: true,
-	//   class: 'center',
-	// });
-	
-	const nodeIds = {}
-	function enableRecursion(elem) {
-	  const node = DecisionInputTree.getNode(elem);
-	  if (node.reachable()) {
-	    node.children();
-	    node.forEachChild((child) => child.shouldRecurse(true));
-	    elem.removeAttribute('recursion');
-	    updateAllChildren(elem);
-	  }
-	}
-	
-	const treeSelector = `.${DecisionInputTree.class}`;
-	du.on.match('keyup', DecisionInputTree.inputSelector, DecisionInputTree.update(true));
-	du.on.match('change', DecisionInputTree.inputSelector, DecisionInputTree.update());
-	du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
-	// Consider changing for self referencing trees.
-	du.on.match('mouseover', '.decision-input-cnt[recursion]', enableRecursion);
-	
-	DecisionInputTree.DO_NOT_CLONE = true;
-	
-	DecisionInputTree.getTree = (elem) => {
-	  const rootElem = du.find.up("[tree-id]", elem);
-	  const rootId = rootElem.getAttribute('tree-id');
-	  const tree = DecisionInputTree.get(rootId);
-	  return tree;
-	}
-	
-	class NodeCondition {
-	  constructor(attribute, value, type) {
-	    this.toJson = () => ({_TYPE: 'NodeCondition'});
-	    this.resolveValue = (node, attribute) => {
-	      const values = node.values();
-	      if (attribute === undefined) return values;
-	      return Object.pathValue(values, attribute);
-	    }
-	    if (attribute._TYPE === 'NodeCondition') return this;
-	
-	    return Conditions.get(attribute, value, type, this);
-	  }
-	}
-	Object.class.register(NodeCondition);
-	
-	DecisionInputTree.getCondition = (...args) => new NodeCondition(...args);
-	
-	// TODO: merge this with parent... duplications
-	function childrenFromJson(parent, json) {
-	  const children = Object.values(json.children);
-	  for (let index = 0; index < children.length; index++) {
-	    const child = children[index];
-	    const node = parent.then(child.name, Object.fromJson(child.payload));
-	    childrenFromJson(node, child);
-	  }
-	  if (json.metadata)
-	    Object.keys(json.metadata).forEach((key) =>
-	        parent.metadata(key, Object.fromJson(json.metadata[key])));
-	}
-	
-	DecisionInputTree.fromJson = (json) => {
-	  const stateConfigs = Object.fromJson(json.stateConfigs);
-	  const properties = {
-	    stateConfigs,
-	    nodeInheritance: json.nodeInheritance,
-	    referenceNodes: json.referenceNodes,
-	    noSubmission: json.noSubmission
-	  };
-	  const tree = new DecisionInputTree(json.root.name, null, properties);
-	  const root = tree.root();
-	  childrenFromJson(root, json.root);
-	
-	  return tree;
-	}
-	
-	DecisionInputTree.template = new $t('input/decision/decisionTree');
-	
-	DecisionInputTree.rebuild = (elem) => {
-	  const treeCnt = du.find.up('[tree-id]', elem);
-	  if (!treeCnt) throw new Error('elem is not contained within a tree\'s html');
-	  const tree = Lookup.get(treeCnt.getAttribute('tree-id'));
-	  const body = tree.html(null, true);
-	  treeCnt.parentElement.innerHTML = body;
-	}
-	
-	
-	
-	
-	
-	
-	module.exports = DecisionInputTree;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/number.js',
-function (require, exports, module) {
-	
-const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class NumberInput extends Input {
-	  constructor(props) {
-	    super(props);
-	    props.min = Number.parseFloat(props.min) || 0;
-	    props.max = Number.parseFloat(props.max) || Number.MAX_SAFE_INTEGER;
-	    props.step = Number.parseFloat(props.step) || 1;
-	    Object.getSet(this, {min: props.min, max: props.max, step: props.step});
-	
-	    this.validation = (value) => value <= props.max && value >= props.min;
-	  }
-	}
-	
-	NumberInput.template = new $t('input/number');
-	NumberInput.html = (instance) => () => NumberInput.template.render(instance);
-	
-	module.exports = NumberInput;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/decision/input-input.js',
-function (require, exports, module) {
-	
-const Input = require('../input');
-	const Select = require('../styles/select');
-	const NumberInput = require('../styles/number');
-	const Measurement = require('../../measurement');
-	const MeasurementInput = require('../styles/measurement');
-	const Textarea = require('../styles/textarea');
-	const MultipleEntries = require('../styles/multiple-entries');
-	const DecisionInputTree = require('../decision/decision');
-	const Table = require('../styles/table.js');
-	const InputList = require('../styles/list.js');
-	const RadioTable = Table.Radio;
-	const Radio = require('../styles/radio.js');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	
-	
-	
-	const noSubmitInputTree = () =>
-	  new InputInput({noSubmission: true});
-	
-	
-	class InputInput extends DecisionInputTree {
-	  constructor(props) {
-	    props ||= {};
-	    props.validation ||= {};
-	    if (props.value){
-	      console.log('gere')
-	    }
-	    let details = {};
-	    const name = new Input({
-	      name: 'name',
-	      label: 'Name',
-	      class: 'center',
-	      validation: props.validation.name
-	    });
-	    const inline = new Input({
-	      name: 'inline',
-	      value: props.inline,
-	      label: 'Inline',
-	      class: 'center',
-	      type: 'checkbox'
-	    });
-	    const format = new Select({
-	      label: 'Format',
-	      name: 'format',
-	      class: 'center',
-	      list: ['Text', 'Checkbox', 'Number', 'Radio', 'Select', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement'],
-	      validation: props.validation.format
-	    });
-	    const step = new NumberInput({name: 'step', optional: true, label: 'Step'});
-	    const min = new NumberInput({name: 'min', optional: true, label: 'Minimum'});
-	    const max = new NumberInput({name: 'max', optional: true, label: 'Maximum'});
-	    const tableType = new Select({
-	      label: 'Type',
-	      name: 'type',
-	      class: 'center',
-	      list: ['Text', 'checkbox', 'radio', 'date', 'time', 'column specific']
-	    });
-	    const textCntSize = new Select({
-	      label: 'Size',
-	      name: 'size',
-	      class: 'center',
-	      list: ['Small', 'Large']
-	    });
-	    const units = new Select({
-	      label: 'Units',
-	      name: 'units',
-	      class: 'center',
-	      list: Measurement.units()
-	    });
-	    const label = new Input({
-	      name: 'label',
-	      label: 'Label',
-	      class: 'centnodeConds[index].satisfied()) reer',
-	      validation: (val) => val !== ''
-	    });
-	    const option = new Input({
-	      name: 'option',
-	      label: 'Option',
-	    });
-	    const row = new Input({
-	      name: 'row',
-	      class: 'center',
-	    });
-	    const col = new Input({
-	      name: 'col',
-	      class: 'center',
-	    });
-	    const labels = new MultipleEntries(label, {name: 'labels'});
-	    const options = new MultipleEntries(option, {name: 'options'});
-	    const colType = new MultipleEntries(noSubmitInputTree, {name: 'columns', label: 'Columns'});
-	    const columns = new MultipleEntries(col, {name: 'columns', label: 'Columns'});
-	    const rows = new MultipleEntries(row, {name: 'rows', label: 'Rows'});
-	    const rowCols = [tableType, rows];
-	
-	
-	    const inputs = [name, format];
-	    const multiEnt = new MultipleEntries(noSubmitInputTree, {name: 'templates'});
-	
-	    super(props.name || 'Input', {inputArray: inputs, noSubmission: props.noSubmission, class: 'modify'});
-	    const root = this.root();
-	
-	    const dic = (value, attr) => DecisionInputTree.getCondition(attr || 'format', value);
-	    function addNode(name, inputArray, value, attr, node) {
-	      const targetNode = (node || root);
-	      const newNode = targetNode.then(name, {inputArray});
-	      targetNode.conditions.add(dic(value, attr), name);
-	      return newNode;
-	    }
-	
-	    addNode('text', [textCntSize], 'Text');
-	    addNode('select', [options], 'Select');
-	    addNode('radio', [inline, labels], 'Radio');
-	    const tableNode = addNode('table', rowCols, 'Table');
-	    addNode('tableColumnList', [columns], ['Text', 'checkbox', 'radio', 'date', 'time'], 'type', tableNode);
-	    addNode('tableColumnTemplate', [colType], 'column specific', 'type', tableNode);
-	    addNode('multi', [inline, multiEnt], 'Multiple Entries');
-	    addNode('measure', [units], 'Measurement');
-	    addNode('number', [step, min, max], 'Number');
-	
-	    this.setValue = (inputOrDetails) => {
-	      if (!inputOrDetails) return;
-	      let details = inputOrDetails;
-	      if (inputOrDetails instanceof Input) details = getInputDetails(details);
-	      const setValue = (path) => {
-	        const nodePath = path.split('.');
-	        const inputName = nodePath.splice(-1)[0];
-	        const node = this.getByPath.apply(this, nodePath);
-	        const input = node.find.input(inputName);
-	        input.setValue(details.pathValue(path));
-	      }
-	      setValue('name');
-	      setValue('name');
-	      // setValue('inline');
-	      setValue('format');
-	      setValue('number.step');
-	      setValue('number.min');
-	      setValue('number.max');
-	      setValue('table.type');
-	      setValue('text.size');
-	      setValue('measure.units');
-	      setValue('radio.labels');
-	      setValue('select.options');
-	      setValue('table.tableColumnTemplate.columns');
-	      setValue('multi.templates');
-	      setValue('table.tableColumnList.columns');
-	      setValue('table.rows');
-	    }
-	
-	    this.clone = () => new InputInput(props);
-	    this.empty = () => this.values().name === '';
-	    // tree.onSubmit(addInput);
-	    // tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
-	    // tree.empty = () => {
-	    //   let empty = true;
-	    //   tree.root().forEach((node) =>
-	    //     node.payload().inputArray.forEach(input => empty &&= input.empty()));
-	    //   return empty;
-	    // }
-	
-	    this.setValue(props.input);
-	  }
-	}
-	
-	function getInputDetails(input)  {
-	  const details = {};
-	  details.name = input.label();
-	  details.inline = input.inline();
-	  details.vaalue = input.value();
-	  let list;
-	  if (input instanceof Textarea) {
-	    details.format = 'Text';
-	    details.text = {size: 'Large'};
-	  }
-	
-	  else if (input instanceof NumberInput) {
-	    details.format = 'Number';
-	    details.number = {step: input.step()};
-	    details.number.min = input.min();
-	    details.number.max = input.max();
-	  }
-	
-	  else if (input instanceof Radio) {
-	    details.format = 'Radio';
-	    details.radio = {labels: input.list()};
-	  }
-	
-	  else if (input instanceof Select) {
-	    details.format = 'Select';
-	    const options = input.list();
-	    details.select = {options};
-	  }
-	
-	  else if (input instanceof MeasurementInput) {
-	    details.format = 'Measurement';
-	    details.measure = {units: input.units()};
-	  }
-	
-	  else if (input instanceof Table || input instanceof RadioTable) {
-	    details.format = 'Table';
-	    details.table = {rows: input.rows()};
-	    const isList = !(input.columns()[0] instanceof Input);
-	    if (isList) {
-	      details.table.tableColumnList = {columns: input.columns()};
-	    } else {
-	      const columns = input.columns.map((ci) => getInputDetails(ci));
-	      details.table.tableColumnTemplate = {columns};
-	    }
-	    details.table.type = input.type();
-	  }
-	
-	  else if (input instanceof MultipleEntries) {
-	    details.format = 'Multiple Entries';
-	    details.multi = {templates: []};
-	
-	    const inputList = input.inputTemplate();
-	    const list = inputList.list();
-	    for (let index = 0; index < list.length; index++) {
-	      const inp = list[index];
-	      const inpDets = getInputDetails(inp);
-	      details.multi.templates.push(inpDets);
-	    }
-	  }
-	
-	  else {
-	    switch (input.type()) {
-	      case 'date': details.format = 'Date'; break;
-	      case 'time': details.format = 'Time'; break;
-	      case 'checkbox': details.format = 'Checkbox'; break;
-	      default:
-	        details.format = 'Text';
-	        details.text = {size: 'Small'};
-	        break;
-	
-	    }
-	  }
-	
-	  return details;
-	}
-	
-	function getInput(details, validationCall)  {
-	  const name = details.name.toCamel();
-	  const label = details.name;
-	  let inline = details.inline;
-	  let list, input;
-	  switch (details.format) {
-	    case 'Text':
-	      if (details.text.size === 'Large') {
-	        input = new Textarea({name, label});
-	        break;
-	      } else {
-	        input = new Input({type: 'text', name, label, inline});
-					break;
-	      }
-	    case 'Number':
-	      const step = details.number.step;
-	      const min = details.number.min;
-	      const max = details.number.max;
-	      input = new NumberInput({name, label, min, max, step});
-				break;
-	    case 'Date':
-	      input = new Input({type: 'date', name, label, inline});
-				break;
-	    case 'Time':
-	      input = new Input({type: 'time', name, label, inline});
-				break;
-	    case 'Checkbox':
-	      input = new Input({type: 'checkbox', name, label, inline});
-				break;
-	    case 'Radio':
-	      inline = details.radio.inline;
-	      list = details.radio.labels;
-	      input = new Radio({name, label, list, inline});
-				break;
-	    case 'Select':
-	      list = details.select.options;//.map(input => input.value());
-	      input = new Select({name, label, list});
-				break;
-	    case 'Table':
-	      const props = details.table;
-	      let isList = props.tableColumnList !== undefined;
-	      let columns = isList ?  props.tableColumnList.columns : props.tableColumnTemplate.columns;
-	      let rows = props.rows;
-	      if (!isList) {
-	        columns.forEach((definition, index) => columns[index] = getInput(definition));
-	      }
-	      const type = props.type;
-	      input = new Table({name, label, rows, columns, type});
-				break;
-	    case 'Measurement':
-	      const units = details.measure.units;
-	      input = new MeasurementInput({name, label, units});
-				break;
-	    case 'Multiple Entries':
-	      const templates = details.multi.templates;
-	      list = [];
-	      inline = details.multi.inline;
-	      for (let index = 0; index < templates.length; index++) {
-	        const values = templates[index];
-	        values.inline = inline;
-	        const input = getInput(values);
-	        list.push(input);
-	      }
-	      input = new MultipleEntries(new InputList({list, inline}), {name, label});
-				break;
-	    default:
-	      throw new Error('In the future this will not be reachable');
-	  }
-	  if (!validationCall) validateGetInputDetais(details, input);
-	  return input;
-	}
-	
-	function validateGetInputDetais(details, input) {
-	  const genDets = getInputDetails(input);
-	  const genInput = getInput(genDets, true);
-	  const constructorEq = genInput.constructor === input.constructor;
-	  const typeEq = genInput.type() === input.type();
-	  if (!constructorEq || !typeEq){
-	    console.warn('invalid generated details');
-	    getInputDetails(input);
-	  }
-	}
-	
-	InputInput.getInput = getInput;
-	InputInput.getInputDetails = getInputDetails;
-	
-	
-	
-	module.exports = InputInput;
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	// TODO: Should probably locate somewhere else hacky fix. cosider making editHtml sperate for all Inputs.
-	RadioTable.editTemplate = Table.editTemplate = new $t('input/edit/table');
-	
-	const objectItemTemplate = new $t('input/edit/list/object');
-	const stringItemTemplate = new $t('input/edit/list/string');
-	function listHtml (list) {
-	  const props = {list: [], class: 'input-list-multi'};
-	  let template;
-	  for (let index = 0; index < list.length; index++) {
-	    const item = list[index];
-	    if (item instanceof Input) {
-	      const ii = new InputInput({input: item, noSubmission: true});
-	      props.list.push(ii);
-	      template ||= new InputInput({noSubmission: true});
-	    } else if (item instanceof Object) {
-	      props.list.push(new InputObject({value: item}));
-	      template ||= new InputObject();
-	    } else {
-	      props.list.push(new Input({type: 'simple-string', value: item}));
-	      template ||= new Input({type: 'simple-string'});
-	    }
-	  }
-	  const multi = new MultipleEntries(template, props);
-	  return multi.html();
-	}
-	RadioTable.editHtml = Table.editHtml = (table) => Table.editTemplate.render({table, listHtml});
-	
-	function buildList(elem) {
-	  const input = Input.getFromElem(elem);
-	  const targetInput = Input.getFromElem(elem.previousElementSibling);
-	  const columnValues = targetInput.value();
-	  const list = [];
-	  for (let index = 0; index < columnValues.length; index++) {
-	    const col = columnValues[index];
-	    if ((typeof col) === 'string') list.push(col);
-	    else list.push(InputInput.getInput(col));
-	  }
-	  return {input, list};
-	}
-	
-	du.on.match('click', '#table-column-edit-btn', (elem) => {
-	  const listput = buildList(elem)
-	  listput.input.setColumns(listput.list);
-	  listput.input.updateDisplay();
-	});
-	du.on.match('click', '#table-row-edit-btn', (elem) => {
-	  const listput = buildList(elem)
-	  listput.input.setRows(listput.list);
-	  listput.input.setColumns();
-	  listput.input.updateDisplay();
-	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
-function (require, exports, module) {
-	
-
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	const Measurement = require('../../measurement');
-	
-	class MeasurementInput extends Input {
-	  constructor(props) {
-	    let units = props.units;
-	    let value = new Measurement(props.value, units || true);
-	    props.value = () => value;
-	    super(props);
-	
-	    this.valid = (val) => {
-	      let testVal;
-	      if (val) {
-	        if (val instanceof MeasurementInput) testVal = val.value();
-	        else testVal = val;
-	      } else testVal = value.value();
-	      const valid = !Number.isNaN(testVal);
-	      this.indicateValidity(valid);
-	      return valid;
-	    }
-	
-	    props.errorMsg = 'Invalid Mathematical Expression';
-	    this.value = () => {
-	      return value.display();
-	    }
-	    const parentSetVal = this.setValue;
-	    this.setValue = (val) => {
-	      let newVal = this.valid(val) ? ((val instanceof Measurement) ?
-	                        val : new Measurement(val, units || true)) : value;
-	      const updated = newVal !== value;
-	      value = newVal;
-	      return updated;
-	    }
-	  }
-	}
-	
-	MeasurementInput.template = new $t('input/measurement');
-	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
-	
-	du.on.match('focusout', '.measurement-input', (elem) => {
-	  const input = MeasurementInput.get(elem.id);
-	  elem.value = input.value();
-	})
-	
-	module.exports = MeasurementInput;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/list.js',
-function (require, exports, module) {
-	
-const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	const CustomEvent = require('../../custom-event');
-	const Input = require('../input');
-	
-	// TODO: extend InputObject (class functionality overlap)
-	class InputList extends Input {
-	  constructor(props) {
-	    super(props);
-	    Object.getSet(this);
-	    const instance = this;
-	
-	    this.value = () => {
-	      const values = {};
-	      props.list.forEach((input, index) => input.validation() && (values[input.name() || index] = input.value()));
-	      return values;
-	    }
-	
-	    const dynamicEvent = CustomEvent.dynamic();
-	    this.on = dynamicEvent.on;
-	
-	    function triggerChangeEvent(value, input, event) {
-	      dynamicEvent.trigger(event, {value, input});
-	    }
-	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
-	
-	    this.setValue = () => {
-	      throw new Error('This function should never get called');
-	    }
-	
-	    this.valid = () => {
-	      if (this.optional()) return true;
-	      let valid = true;
-	      props.list.forEach(input => valid &&= input.optional() || input.valid());
-	      return valid;
-	    }
-	
-	    let optional;
-	    this.optional = (value) => {
-	      if (value !== true && value !== false) return optional;
-	      optional = value;
-	      props.list.forEach(input => input.optional(optional));
-	    }
-	    this.optional(props.optional || false);
-	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      json.validation = (properties || props).validation;
-	      json.list.forEach(i => delete i.id);
-	      Object.set(json, properties);
-	      return InputList.fromJson(json);
-	    }
-	
-	    this.empty = () => {
-	      for (let index = 0; index < props.list.length; index++) {
-	        if (!props.list[index].empty()) return false
-	      }
-	      return true;
-	    }
-	
-	  }
-	}
-	
-	InputList.fromJson = (json) => {
-	  json.list = Object.fromJson(json.list);
-	  return new InputList(json);
-	}
-	
-	InputList.template = new $t('input/list');
-	InputList.html = (instance) => () => InputList.template.render(instance);
-	
-	
-	
-	module.exports = InputList;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	
-	const validation = () => true;
-	class MultipleEntries extends Input {
-	  constructor(inputTemplate, props) {
-	
-	
-	    props ||= {};
-	    props.validation ||= (event, details) => {
-	      const list = props.list;
-	      let allEmpty = true;
-	      let valid = true;
-	      for (let index = 0; index < list.length; index++) {
-	        const input = list[index];
-	        const empty = input.empty();
-	        if (!empty) {
-	          if (input.optional) input.optional(false);
-	          valid &= list[index].valid();
-	        }
-	        allEmpty &= empty;
-	      }
-	      return !allEmpty && valid;
-	    }
-	    if (props.list === undefined) {
-	      const list = [];
-	      props.list = list;
-	      props.list.forEach((i) =>
-	        list.push(i.clone()));
-	    }
-	
-	    props.list ||= [];
-	    super(props);
-	    Object.getSet(this, 'inputTemplate');
-	    let template;
-	    const instance = this;
-	    this.inputTemplate = () => {
-	      if (!template) {
-	        if ((typeof inputTemplate) === 'function') {
-	          template = inputTemplate();
-	        } else template = inputTemplate;
-	      }
-	      return template;
-	    }
-	
-	    this.empty = () => {
-	      if (props.list.length > 1) return false;
-	      const inputs = props.list[0];
-	      for (let index = 0; index < inputs.length; index++) {
-	        if (!inputs[index].empty()) return false;
-	      }
-	      return true;
-	    }
-	    this.valid = () => this.value().length > 0;
-	
-	    this.clone = () =>
-	        new MultipleEntries(inputTemplate, JSON.clone(props));
-	
-	    this.set = (index, value) => {
-	      if (props.list[index] === undefined) {
-	        props.list[index] = this.inputTemplate().clone({optional: true});
-	        if (props.list[index].on) {
-	          props.list[index].on('change', this.validation);
-	        } else {
-	          props.list[index].onChange(this.validation);
-	        }
-	      }
-	      return props.list[index];
-	    }
-	
-	    this.tag = () => props.inline() ? 'span' : 'div';
-	
-	    this.input = (nameOindexOfunc) => {
-	      const nif = nameOindexOfunc;
-	      if ((typeof nif) === 'number') return props.list[nif];
-	      const runFunc = (typeof nif) === 'function';
-	      for (let index = 0; index < props.list.length; index++) {
-	        const input = props.list[index];
-	        if (runFunc) {
-	          const val = nif(input);
-	          if (val) return val;
-	        } else if (input.name() === nif) return input;
-	
-	        if (input instanceof MultipleEntries) {
-	          const mInput = input.input(nif);
-	          if (mInput) return mInput;
-	        }
-	      }
-	    }
-	    this.getValue = () => {
-	      const values = [];
-	      for (let index = 0; index < props.list.length; index++) {
-	        const input = props.list[index];
-	        if (!input.empty()) {
-	          if (input.valid()) {
-	            values.push(input.value());
-	          } else {
-	            input.valid();
-	            input.valid();
-	          }
-	        }
-	      }
-	      return values;
-	    }
-	
-	    this.setValue = (list) => {
-	      if (list) {
-	        list.forEach((val, index) => {
-	            const input = this.set(index)
-	            input.setValue(val);
-	        });
-	      }
-	    }
-	
-	    this.value = this.getValue;
-	
-	    const parentHtml = this.html;
-	    this.html = () => {
-	      if (props.list.length === 0 || !props.list[props.list.length - 1].empty()) this.set(props.list.length);
-	      return parentHtml();
-	    }
-	
-	    this.length = () => this.list().length;
-	    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
-	
-	    this.setValue(props.value);
-	  }
-	}
-	
-	MultipleEntries.template = new $t('input/multiple-entries');
-	MultipleEntries.singleTemplate = new $t('input/one-entry');
-	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
-	
-	MultipleEntries.fromJson = (json) => {
-	  const inputTemplate = Object.fromJson(json.inputTemplate);
-	  return new MultipleEntries(inputTemplate, json);
-	
-	}
-	
-	function meInfo(elem) {
-	  const info = {};
-	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
-	  if (info.oneCnt) {
-	    info.indexCnt = du.find.up('[index]', info.oneCnt);
-	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
-	    const ae =  document.activeElement;
-	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
-	  }
-	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
-	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
-	  info.length = info.multiInput.length();
-	  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
-	  info.last = info.index === info.length - 1;
-	  info.empty = info.multiInput.list()[info.index].empty();
-	  return info;
-	}
-	
-	const meSelector = '.multiple-entry-cnt input,select,textarea';
-	const oneSelector = '.one-entry-cnt *';
-	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
-	du.on.match('change', meSelector, (elem) => {
-	  // console.log('changed');
-	});
-	
-	du.on.match('click', meSelector, (elem) => {
-	  // console.log('clicked');
-	});
-	
-	const lastCallers = [];
-	du.on.match('focusout', '.one-entry-cnt', (elem) => {
-	  let info = meInfo(elem);
-	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
-	  const id = ++lastCallers[info.index];
-	  setTimeout(() => {
-	    if (id !== lastCallers[info.index]) return;
-	    info = meInfo(elem);
-	    if (!info.last && !info.inFocus && info.empty) {
-	      info.indexCnt.remove()
-	      const children = info.multiCnt.children;
-	      for (let index = 0; index < children.length; index++) {
-	        children[index].setAttribute('index', index);
-	      }
-	      const list = info.multiInput.list();
-	      list.remove(list[info.index]);
-	    }
-	  }, 2000);
-	});
-	
-	du.on.match('focusin', oneSelector, (elem) => {
-	  // console.log('focusin');
-	});
-	
-	du.on.match('keyup:change', oneSelector, (elem) => {
-	  if (!isInput(elem)) return;
-	  const info = meInfo(elem);
-	  if (info.index === info.length - 1 && !info.empty) {
-	    const newElem = du.create.element('div', {index: info.index + 1});
-	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
-	    info.multiCnt.append(newElem);
-	    console.log('add 1')
-	  }
-	  // console.log('keyup');
-	});
-	
-	module.exports = MultipleEntries;
 	
 });
 
@@ -7909,6 +6550,1388 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/input/decision/payload-handler.js',
+function (require, exports, module) {
+	
+const $t = require('../../$t');
+	const InputObject = require('../styles/object');
+	
+	class PayloadHandler {
+	  constructor(templateName, ...inputs) {
+	    Object.getSet(this, {templateName, inputs});
+	    const template = new $t(this.templateName());
+	
+	    this.html = (payload) =>
+	      template.render(payload);
+	    this.input = () => new InputObject({name: 'payload', list: inputs});
+	    this.toJson = () => ({inputs: Object.toJson(inputs), templateName});
+	  }
+	}
+	
+	module.exports = PayloadHandler;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	
+	const validation = () => true;
+	class MultipleEntries extends Input {
+	  constructor(inputTemplate, props) {
+	
+	
+	    props ||= {};
+	    props.validation ||= (event, details) => {
+	      const list = props.list;
+	      let allEmpty = true;
+	      let valid = true;
+	      for (let index = 0; index < list.length; index++) {
+	        const input = list[index];
+	        const empty = input.empty();
+	        if (!empty) {
+	          if (input.optional) input.optional(false);
+	          valid &= list[index].valid();
+	        }
+	        allEmpty &= empty;
+	      }
+	      return !allEmpty && valid;
+	    }
+	    if (props.list === undefined) {
+	      const list = [];
+	      props.list = list;
+	      props.list.forEach((i) =>
+	        list.push(i.clone()));
+	    }
+	
+	    props.list ||= [];
+	    super(props);
+	    Object.getSet(this, 'inputTemplate');
+	    let template;
+	    const instance = this;
+	    this.inputTemplate = () => {
+	      if (!template) {
+	        if ((typeof inputTemplate) === 'function') {
+	          template = inputTemplate();
+	        } else template = inputTemplate;
+	      }
+	      return template;
+	    }
+	
+	    this.empty = () => {
+	      if (props.list.length > 1) return false;
+	      const inputs = props.list[0];
+	      for (let index = 0; index < inputs.length; index++) {
+	        if (!inputs[index].empty()) return false;
+	      }
+	      return true;
+	    }
+	    this.valid = () => this.value().length > 0;
+	
+	    this.clone = () =>
+	        new MultipleEntries(inputTemplate, JSON.clone(props));
+	
+	    this.set = (index, value) => {
+	      if (props.list[index] === undefined) {
+	        props.list[index] = this.inputTemplate().clone({optional: true});
+	        if (props.list[index].on) {
+	          props.list[index].on('change', this.validation);
+	        } else {
+	          props.list[index].onChange(this.validation);
+	        }
+	      }
+	      return props.list[index];
+	    }
+	
+	    this.tag = () => props.inline() ? 'span' : 'div';
+	
+	    this.input = (nameOindexOfunc) => {
+	      const nif = nameOindexOfunc;
+	      if ((typeof nif) === 'number') return props.list[nif];
+	      const runFunc = (typeof nif) === 'function';
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (runFunc) {
+	          const val = nif(input);
+	          if (val) return val;
+	        } else if (input.name() === nif) return input;
+	
+	        if (input instanceof MultipleEntries) {
+	          const mInput = input.input(nif);
+	          if (mInput) return mInput;
+	        }
+	      }
+	    }
+	    this.getValue = () => {
+	      const values = [];
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (!input.empty()) {
+	          if (input.valid()) {
+	            values.push(input.value());
+	          } else {
+	            input.valid();
+	            input.valid();
+	          }
+	        }
+	      }
+	      return values;
+	    }
+	
+	    this.setValue = (list) => {
+	      if (list) {
+	        list.forEach((val, index) => {
+	            const input = this.set(index)
+	            input.setValue(val);
+	        });
+	      }
+	    }
+	
+	    this.value = this.getValue;
+	
+	    const parentHtml = this.html;
+	    this.html = () => {
+	      if (props.list.length === 0 || !props.list[props.list.length - 1].empty()) this.set(props.list.length);
+	      return parentHtml();
+	    }
+	
+	    this.length = () => this.list().length;
+	    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
+	
+	    this.setValue(props.value);
+	  }
+	}
+	
+	MultipleEntries.template = new $t('input/multiple-entries');
+	MultipleEntries.singleTemplate = new $t('input/one-entry');
+	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
+	
+	MultipleEntries.fromJson = (json) => {
+	  const inputTemplate = Object.fromJson(json.inputTemplate);
+	  return new MultipleEntries(inputTemplate, json);
+	
+	}
+	
+	function meInfo(elem) {
+	  const info = {};
+	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
+	  if (info.oneCnt) {
+	    info.indexCnt = du.find.up('[index]', info.oneCnt);
+	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
+	    const ae =  document.activeElement;
+	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
+	  }
+	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
+	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
+	  info.length = info.multiInput.length();
+	  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
+	  info.last = info.index === info.length - 1;
+	  info.empty = info.multiInput.list()[info.index].empty();
+	  return info;
+	}
+	
+	const meSelector = '.multiple-entry-cnt input,select,textarea';
+	const oneSelector = '.one-entry-cnt *';
+	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
+	du.on.match('change', meSelector, (elem) => {
+	  // console.log('changed');
+	});
+	
+	du.on.match('click', meSelector, (elem) => {
+	  // console.log('clicked');
+	});
+	
+	const lastCallers = [];
+	du.on.match('focusout', '.one-entry-cnt', (elem) => {
+	  let info = meInfo(elem);
+	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
+	  const id = ++lastCallers[info.index];
+	  setTimeout(() => {
+	    if (id !== lastCallers[info.index]) return;
+	    info = meInfo(elem);
+	    if (!info.last && !info.inFocus && info.empty) {
+	      info.indexCnt.remove()
+	      const children = info.multiCnt.children;
+	      for (let index = 0; index < children.length; index++) {
+	        children[index].setAttribute('index', index);
+	      }
+	      const list = info.multiInput.list();
+	      list.remove(list[info.index]);
+	    }
+	  }, 2000);
+	});
+	
+	du.on.match('focusin', oneSelector, (elem) => {
+	  // console.log('focusin');
+	});
+	
+	du.on.match('keyup:change', oneSelector, (elem) => {
+	  if (!isInput(elem)) return;
+	  const info = meInfo(elem);
+	  if (info.index === info.length - 1 && !info.empty) {
+	    const newElem = du.create.element('div', {index: info.index + 1});
+	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
+	    info.multiCnt.append(newElem);
+	    console.log('add 1')
+	  }
+	  // console.log('keyup');
+	});
+	
+	module.exports = MultipleEntries;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/decision/decision.js',
+function (require, exports, module) {
+	
+// TODO IMPORTANT: refactor this garbage!!!!!!
+	// ... its extreamly unIntuitive.
+	
+	
+	
+	const DecisionTree = require('../../decision-tree.js');
+	const Conditions = require('../../conditions.js');
+	const Input = require('../input.js');
+	const CustomEvent = require('../../custom-event');
+	const Select = require('../styles/select.js');
+	const MultipleEntries = require('../styles/multiple-entries.js');
+	const du = require('../../dom-utils');
+	const $t = require('../../$t');
+	const Measurement = require('../../measurement');
+	
+	
+	const nameCompareFunc = (name) => (input) => input.name() === name ? input : false;
+	const inputSelectorFunc = (func) => (node) => {
+	  const inArr = node.inputArray();
+	  for (let index = 0; index < inArr.length; index++) {
+	    const input = inArr[index];
+	    let val = func(input);
+	    if (val) return val;
+	    if (input instanceof MultipleEntries) {
+	      val = input.input(func);
+	      if (val) return val;
+	    }
+	  }
+	}
+	const nodeSelectorFunc = (nameOfunc) => inputSelectorFunc(
+	          (typeof nameOfunc) === 'function' ? nameOfunc : nameCompareFunc(nameOfunc));
+	
+	
+	
+	class DecisionInput extends DecisionTree.Node {
+	  constructor(stateConfig, payload, parent) {
+	    payload ||= {};
+	    payload.inputArray ||= [];
+	    super(stateConfig, payload, parent);
+	    const instance = this;
+	
+	    const parentToJson = this.nodeOnlyToJson;
+	    this.nodeOnlyToJson = () => {
+	      const json = parentToJson();
+	      json.relatedTo = this.relatedTo();
+	      return json;
+	    }
+	
+	    const onChange = [];
+	    const changeEvent = new CustomEvent('change');
+	
+	    const trigger = () => {
+	      changeEvent.trigger(this.values());
+	      this.tree().changed();
+	    }
+	    this.onChange = (func) => changeEvent.on(func);
+	
+	    for (let index = 0; index < payload.inputArray; index++) {
+	      inArr[index].on('change', trigger);
+	    }
+	
+	    this.relatedTo = (value) => {
+	      const currValue = this.payload().relatedTo;
+	      if (value === undefined) return currValue;
+	      if (this.isRoot()) {
+	        throw new Error('The root cannot be related to any other input');
+	      }
+	
+	      const stateRelatedTo = this.stateConfig().payload().relatedTo;
+	      let setState = false;
+	      if (stateRelatedTo === undefined) {
+	        this.stateConfig().setValue('relatedTo', value);
+	        setState = true;
+	      } else {
+	        this.setValue('relatedTo', value)
+	      }
+	
+	      value = this.payload().relatedTo;
+	      const validList = this.parent().inputArray().map(i => i.name());
+	      if (validList.indexOf(value) === -1) {
+	        if (setState) {
+	          this.stateConfig().setValue('relatedTo', currValue);
+	          this.deleteValue('relatedTo');
+	        } else {
+	          this.setValue('relatedTo', currValue);
+	        }
+	      }
+	
+	      return value;
+	    }
+	
+	    this.addInput = (input) => {
+	      if (!(input instanceof Input)) throw new Error('input(arg1) needs to be and instance of Input');
+	      const payload = this.stateConfig().payload();
+	      this.stateConfig().setValue('inputArray', payload.inputArray.concat(input))
+	      trigger();
+	    }
+	    this.values = (values, doNotRecurse) => {
+	      if (!this.reachable()) return {};
+	      values ||= {};
+	      if (values._NODE === undefined) values._NODE = this;
+	      let inputArr = this.inputArray();
+	      for (let index = 0; index < inputArr.length; index++) {
+	        const input = inputArr[index];
+	        if (values[input.name()] === undefined) {
+	          values[input.name()] = input.value();
+	        }
+	      }
+	      if (!doNotRecurse && !this.isRoot()) this.parent().values(values);
+	      return values;
+	    };
+	
+	    this.isComplete = () => {
+	      const inArr = this.inputArray();
+	      let complete = true;
+	      for (let index = 0; index < inArr.length; index++) {
+	        complete &= inArr[index].optional() || inArr[index].valid();
+	      }
+	      this.forEachChild((child) => complete &= child.isComplete());
+	      return complete == 1;
+	    }
+	    this.onComplete = this.tree().onComplete;
+	    function updateInputArray (boolean) {
+	      const inputArray = payload.inputArray;
+	      const sc = instance.stateConfig();
+	      const stateInputArray = sc.payload().inputArray;
+	      if (inputArray.length === stateInputArray.length) return boolean ? false : inputArray;
+	      for (let index = 0; index < stateInputArray.length; index++) {
+	        const input = stateInputArray[index];
+	        if (inputArray.length - 1 < index) {
+	          const clone = input.clone();
+	          if (clone.onChange) clone.onChange(trigger);
+	          else if (clone.on) clone.on('change', trigger);
+	          // clone.setValue('');
+	          inputArray.push(clone);
+	        }
+	        if (inputArray[index].name() !== input.name()) inputArray.splice(index, 1);
+	      }
+	      return boolean ? true : inputArray;
+	    }
+	
+	    this.inputArray = () => updateInputArray();
+	
+	    const parentPayload = this.payload;
+	    this.payload = (noConfig) => {
+	      this.inputArray();
+	      return parentPayload(noConfig);
+	    }
+	
+	    this.getValue = (index) => this.inputArray()[index].value();
+	    this.isValid = () => {
+	      let valid = true;
+	      this.inputArray.forEach((input) =>
+	            valid = valid && input.valid());
+	      return valid;
+	    }
+	
+	    this.choices = () => {
+	      const choices = [];
+	      this.breathFirst((node) => {
+	        const inputArr = node.inputArray();
+	        inputArr.forEach((input) => {
+	          if (!input.chosen())
+	            choices.push(input);
+	        });
+	      });
+	      return choices;
+	    }
+	
+	    this.find.input = (nameOfunc, ...namePath) => {
+	      let node;
+	      if (namePath.length > 0) {
+	        node = this.find(...namePath);
+	      }
+	      node ||= this;
+	      return node.breathFirst(nodeSelectorFunc(nameOfunc));
+	    }
+	
+	    const checkColectiveFilter = (nameOmap, childCond) => {
+	      let nameMap = {};
+	      nameOmap instanceof Object ? nameMap = nameOmap : (nameMap[nameOmap] = true);
+	      if (childCond.condition.conditions) {
+	        const conds = childCond.condition.conditions();
+	        for (let index = 0; index < conds.length; index++) {
+	          if (conds[index].attribute && nameMap[conds[index].attribute()]) return true;
+	        }
+	      }
+	      return false;
+	    }
+	
+	    const nameFilter = (name) => (childCond) => {
+	      if (!childCond.condition instanceof Conditions.Condition) return false;
+	      if (childCond.condition.attribute) return childCond.condition.attribute().indexOf(name) === 0;
+	
+	      return checkColectiveFilter(name, childCond);
+	    }
+	    const dneFilter = () => {
+	      const nameMap = {};
+	      this.inputArray().map(input => nameMap[input.name()] = true);
+	      return (childCond) =>
+	        !(childCond.condition instanceof Conditions.Condition) ||
+	        !((childCond.condition.attribute && nameMap[childCond.condition.prefix()]) ||
+	        checkColectiveFilter(nameMap, childCond));
+	    }
+	    const childMapFunc = (childCond) => childCond.child;
+	    this.childrenHtml = () => {
+	      if (!this.shouldRecurse()) return '';
+	      const children = this.reachableChildren().map(childMapFunc);
+	      let html = '';
+	      for (let index = 0; index < children.length; index++) {
+	        const child = children[index];
+	        html += child.html();
+	      }
+	      return html + (children.length > 0 ? '<br><br>' : '');
+	    }
+	    this.empty = () => this.inputArray().length === 0;
+	    this.tag = () => this.tree().block() ? 'div' : 'span';
+	    this.html = () => DecisionInput.template.render(this);
+	
+	    this.removeInput = (inputName, localOnly) => {
+	      const ia = payload.inputArray;
+	      for (let index = 0; index < ia.length; index++) {
+	        if (ia[index].name() === inputName) {
+	          const stateName = this.stateConfig().name();
+	          ia.splice(index, 1);
+	          if (!localOnly) this.tree().removeInput(stateName, inputName);
+	          return true;
+	        }
+	      }
+	      return false;
+	    }
+	
+	    this.payloadHtml = () => {
+	      const pld = this.payload();
+	      if ((typeof pld.html) === 'function') return pld.html();
+	      return this.tree().payloadHtml(pld);
+	    }
+	  }
+	}
+	DecisionInput.template = new $t('input/decision/decision');
+	
+	du.on.match('click', '.conditional-button', (elem) => {
+	  console.log(elem);
+	});
+	
+	
+	// properties
+	// optional :
+	// noSubmission: /[0-9]{1,}/ delay that determins how often a submission will be processed
+	// buttonText: determins the text displayed on submit button;
+	// inputArray: inputArray to be applied to the root;
+	// isComplete: function determining if all required inputs are filled.
+	
+	class DecisionInputTree extends DecisionTree {
+	  constructor(rootName, payload, props) {
+	    props = props || {};
+	    props.inputArray ||= [];
+	    super(rootName, payload, props);
+	    Object.getSet(this, 'payloadHandler');
+	
+	    this.payloadHtml = (payload) => {
+	      const handler = this.payloadHandler();
+	      if (handler) return handler.html(payload);
+	    }
+	
+	    this.payloadInput = () => {
+	      const handler = this.payloadHandler();
+	      if (handler) return handler.input();
+	    }
+	
+	    this.inputHtml = () => {
+	      const handler = this.payloadHandler();
+	      if (handler) return handler.inputHtml();
+	    }
+	
+	    let payloadTemplate
+	    let payloadTemplateName
+	    this.payloadTemplateName = (name) => {
+	      if (name && $t.functions[name]) {
+	        payloadTemplateName = name;
+	        payloadTemplate = new $t(name);
+	      }
+	      return payloadTemplateName;
+	    }
+	
+	    this.payloadTemplate = () => payloadTemplate;
+	
+	    this.buttonText = () => {
+	      return props.buttonText || `Create ${rootName}`;
+	    }
+	    let disabled;
+	    this.disableButton = (d, elem) => {
+	      disabled = d === null || d === true || d === false ? d : disabled;
+	      if (elem) {
+	        const button = du.find.closest(`button`, elem);
+	        if (button) {
+	          button.disabled = disabled === null ? !node.isComplete(root) : disabled;
+	        }
+	      }
+	    }
+	    this.class = () => props.class;
+	    this.buttonClass = () => props.buttonClass;
+	    this.isComplete = () => {
+	      if ((typeof props.isComplete) === 'function') return props.isComplete(this.root());
+	      const choices = this.choices();
+	      if (choices.length > 0) return false;
+	      return this.root().isComplete();
+	    }
+	
+	    const completeEvent = new CustomEvent('complete');
+	    const submitEvent = new CustomEvent('submit');
+	    const changeEvent = new CustomEvent('change');
+	    this.html = (node, editDisplay) => {
+	      node = node || this.root();
+	      const header = props.header;
+	      const inputHtml = node.html(editDisplay);
+	      const scope = {node, inputHtml, DecisionInputTree, editDisplay, header};
+	      if (node.isRoot()) {
+	        return DecisionInputTree.template.render(scope);
+	      }
+	      return inputHtml;
+	    };
+	    this.onComplete = completeEvent.on;
+	    this.onSubmit = submitEvent.on;
+	    this.hideButton = props.noSubmission;
+	    this.onChange = (func) => this.root().onChange(func);
+	
+	    let completionPending = false;
+	    this.completed = () => {
+	      if (!this.isComplete()) return false;
+	      const delay = props.noSubmission || 0;
+	      if (!completionPending) {
+	        completionPending = true;
+	        setTimeout(() => {
+	          const values = this.values();
+	          completeEvent.trigger(values, this);
+	          completionPending = false;
+	        }, delay);
+	      }
+	      return true;
+	    }
+	
+	    let submissionPending = false;
+	    this.submit = (elem) => {
+	      // TODO: delay = props.noSubmission === confusing
+	      const delay = props.noSubmission || 0;
+	      if (!submissionPending) {
+	        submissionPending = true;
+	        setTimeout(() => {
+	          const values = this.values();
+	          if (!this.isComplete()) return submissionPending = false;
+	          submitEvent.trigger(values, elem);
+	          submissionPending = false;
+	        }, delay);
+	      }
+	      return true;
+	    }
+	
+	    let changePending = 0;
+	    const delay = props.noSubmission || 0;
+	    this.changed = () => {
+	      let changeId = ++changePending;
+	      setTimeout(() => {
+	        if (changeId === changePending) {
+	          const values = this.values();
+	          changeEvent.trigger(values)
+	        }
+	      }, delay);
+	    }
+	
+	    let block = false;
+	    this.block = (is) => {
+	      if (is === true || is === false) {
+	        block = is;
+	      }
+	      return block;
+	    }
+	
+	    this.find = (...args) => this.root().find(...args);
+	    this.find.input = (...args) => this.root().find.input(...args);
+	
+	    this.values = () => {
+	      const values = {};
+	      this.root().breathFirst((node) => {
+	        const obj = {};
+	        node.values(obj, true);
+	        Object.pathValue(values, node.path().join('.'), obj);
+	      });
+	      return values[this.root().name()];
+	    }
+	
+	    this.choices = () => this.root().choices();
+	
+	    const parentGetState = this.getState;
+	    this.getState = (name, payload) => {
+	      if (!this.stateConfigs()[name]) {
+	        if (!payload) payload = {};
+	        payload.inputArray ||= [];
+	      }
+	      return parentGetState(name, payload);
+	    }
+	
+	    this.removeInput = (stateName, inputName) => {
+	      const configs = this.stateConfigs();
+	      const nodes = [];
+	      this.root().forall((n) => {
+	        const sc = n.stateConfig();
+	        if (sc.name() === stateName) {
+	          const scIArr = sc.payload().inputArray.filter(i => i.name() !== inputName);
+	          sc.setValue('inputArray', scIArr);
+	          n.removeInput(inputName, true);
+	        }
+	      });
+	      console.log('rmI');
+	    }
+	
+	    this.clone = () => DecisionInputTree.fromJson(this.toJson());
+	    this.valid = this.completed;
+	    this.name = () => this.root().name();
+	    this.value = this.values;
+	
+	    return this;
+	  }
+	}
+	
+	
+	DecisionInputTree.class = 'decision-input-tree';
+	DecisionInputTree.inputSelector = `.${DecisionInputTree.class} input,` +
+	                `.${DecisionInputTree.class} textarea,` +
+	                `.${DecisionInputTree.class} select`;
+	DecisionInputTree.buttonClass = 'decision-input-tree-submit';
+	
+	DecisionInputTree.getNode = (elem) => {
+	  const cnt = du.find.closest('[node-id]', elem);
+	  const parent = cnt.parentElement;
+	  const nodeId = cnt.getAttribute('node-id');
+	  return Lookup.get(nodeId);
+	}
+	
+	DecisionInputTree.hardUpdate = (elem) => {
+	  const tree = DecisionInputTree.getTree(elem);
+	  const treeCnt = du.find.up('[tree-id]', elem);
+	  const cnt = treeCnt.parentElement;
+	  cnt.innerHTML = tree.html();
+	}
+	
+	function updateInput(target) {
+	  const cnt = du.find.closest('[node-id]', target);
+	  const nodeId = cnt.getAttribute('node-id');
+	  const node = Lookup.get(nodeId);
+	
+	  const inputCnt = du.find.up('.decision-input-array-cnt', target);
+	  const inputIndex = Number.parseInt(inputCnt.getAttribute('index'));
+	  const parentCnt = du.find.up('.decision-input-cnt', inputCnt);
+	  updateOrphans(target);
+	}
+	
+	function updateOrphans(elem) {
+	  const dicnt = du.find.up('.decision-input-cnt', elem);
+	  const orphanCnt = du.find.down('.orphan-cnt', dicnt);
+	  const node = DecisionInputTree.getNode(dicnt);
+	  orphanCnt.innerHTML = node.childrenHtml();
+	}
+	
+	function updateAllChildren(dicnt) {
+	  updateOrphans(dicnt);
+	  du.move.inbounds(dicnt);
+	}
+	
+	// TODO remove nested function, soft not used.... clean this please
+	DecisionInputTree.update = (soft) => (target, event) => setTimeout(() => updateInput(target));
+	DecisionInputTree.update.children = updateAllChildren;
+	
+	DecisionInputTree.Node = DecisionInput;
+	DecisionInputTree.submit = (elem) => {
+	  const tree = Lookup.get(elem.getAttribute('tree-id'));
+	  tree.submit(elem);
+	}
+	
+	let count = 999;
+	// const getInput = () => new Input({
+	//   label: `Label${++count}`,
+	//   name: `Name${count}`,
+	//   inline: true,
+	//   class: 'center',
+	// });
+	
+	const nodeIds = {}
+	function enableRecursion(elem) {
+	  const node = DecisionInputTree.getNode(elem);
+	  if (node.reachable()) {
+	    node.children();
+	    node.forEachChild((child) => child.shouldRecurse(true));
+	    elem.removeAttribute('recursion');
+	    updateAllChildren(elem);
+	  }
+	}
+	
+	const treeSelector = `.${DecisionInputTree.class}`;
+	du.on.match('keyup', DecisionInputTree.inputSelector, DecisionInputTree.update(true));
+	du.on.match('change', DecisionInputTree.inputSelector, DecisionInputTree.update());
+	du.on.match('click', `.${DecisionInputTree.buttonClass}`, DecisionInputTree.submit);
+	// Consider changing for self referencing trees.
+	du.on.match('mouseover', '.decision-input-cnt[recursion]', enableRecursion);
+	
+	DecisionInputTree.DO_NOT_CLONE = true;
+	
+	DecisionInputTree.getTree = (elem) => {
+	  const rootElem = du.find.up("[tree-id]", elem);
+	  const rootId = rootElem.getAttribute('tree-id');
+	  const tree = DecisionInputTree.get(rootId);
+	  return tree;
+	}
+	
+	class NodeCondition {
+	  constructor(attribute, value, type) {
+	    this.toJson = () => ({_TYPE: 'NodeCondition'});
+	    this.resolveValue = (node, attribute) => {
+	      const values = node.values();
+	      if (attribute === undefined) return values;
+	      return Object.pathValue(values, attribute);
+	    }
+	    if (attribute._TYPE === 'NodeCondition') return this;
+	
+	    return Conditions.get(attribute, value, type, this);
+	  }
+	}
+	Object.class.register(NodeCondition);
+	
+	DecisionInputTree.getCondition = (...args) => new NodeCondition(...args);
+	
+	// TODO: merge this with parent... duplications
+	function childrenFromJson(parent, json) {
+	  const children = Object.values(json.children);
+	  for (let index = 0; index < children.length; index++) {
+	    const child = children[index];
+	    const node = parent.then(child.name, Object.fromJson(child.payload));
+	    childrenFromJson(node, child);
+	  }
+	  if (json.metadata)
+	    Object.keys(json.metadata).forEach((key) =>
+	        parent.metadata(key, Object.fromJson(json.metadata[key])));
+	}
+	
+	DecisionInputTree.fromJson = (json) => {
+	  const stateConfigs = Object.fromJson(json.stateConfigs);
+	  const properties = {
+	    stateConfigs,
+	    nodeInheritance: json.nodeInheritance,
+	    referenceNodes: json.referenceNodes,
+	    noSubmission: json.noSubmission
+	  };
+	  const tree = new DecisionInputTree(json.root.name, null, properties);
+	  const root = tree.root();
+	  childrenFromJson(root, json.root);
+	
+	  return tree;
+	}
+	
+	DecisionInputTree.template = new $t('input/decision/decisionTree');
+	
+	DecisionInputTree.rebuild = (elem) => {
+	  const treeCnt = du.find.up('[tree-id]', elem);
+	  if (!treeCnt) throw new Error('elem is not contained within a tree\'s html');
+	  const tree = Lookup.get(treeCnt.getAttribute('tree-id'));
+	  const body = tree.html(null, true);
+	  treeCnt.parentElement.innerHTML = body;
+	}
+	
+	
+	
+	
+	
+	
+	module.exports = DecisionInputTree;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/list.js',
+function (require, exports, module) {
+	
+const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const CustomEvent = require('../../custom-event');
+	const Input = require('../input');
+	
+	// TODO: extend InputObject (class functionality overlap)
+	class InputList extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
+	    const instance = this;
+	
+	    this.value = () => {
+	      const values = {};
+	      props.list.forEach((input, index) => input.validation() && (values[input.name() || index] = input.value()));
+	      return values;
+	    }
+	
+	    const dynamicEvent = CustomEvent.dynamic();
+	    this.on = dynamicEvent.on;
+	
+	    function triggerChangeEvent(value, input, event) {
+	      dynamicEvent.trigger(event, {value, input});
+	    }
+	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
+	
+	    this.setValue = () => {
+	      throw new Error('This function should never get called');
+	    }
+	
+	    this.valid = () => {
+	      if (this.optional()) return true;
+	      let valid = true;
+	      props.list.forEach(input => valid &&= input.optional() || input.valid());
+	      return valid;
+	    }
+	
+	    let optional;
+	    this.optional = (value) => {
+	      if (value !== true && value !== false) return optional;
+	      optional = value;
+	      props.list.forEach(input => input.optional(optional));
+	    }
+	    this.optional(props.optional || false);
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      json.validation = (properties || props).validation;
+	      json.list.forEach(i => delete i.id);
+	      Object.set(json, properties);
+	      return InputList.fromJson(json);
+	    }
+	
+	    this.empty = () => {
+	      for (let index = 0; index < props.list.length; index++) {
+	        if (!props.list[index].empty()) return false
+	      }
+	      return true;
+	    }
+	
+	  }
+	}
+	
+	InputList.fromJson = (json) => {
+	  json.list = Object.fromJson(json.list);
+	  return new InputList(json);
+	}
+	
+	InputList.template = new $t('input/list');
+	InputList.html = (instance) => () => InputList.template.render(instance);
+	
+	
+	
+	module.exports = InputList;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
+function (require, exports, module) {
+	
+
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const Measurement = require('../../measurement');
+	
+	class MeasurementInput extends Input {
+	  constructor(props) {
+	    let units = props.units;
+	    let value = new Measurement(props.value, units || true);
+	    props.value = () => value;
+	    super(props);
+	
+	    this.valid = (val) => {
+	      let testVal;
+	      if (val) {
+	        if (val instanceof MeasurementInput) testVal = val.value();
+	        else testVal = val;
+	      } else testVal = value.value();
+	      const valid = !Number.isNaN(testVal);
+	      this.indicateValidity(valid);
+	      return valid;
+	    }
+	
+	    props.errorMsg = 'Invalid Mathematical Expression';
+	    this.value = () => {
+	      return value.display();
+	    }
+	    const parentSetVal = this.setValue;
+	    this.setValue = (val) => {
+	      let newVal = this.valid(val) ? ((val instanceof Measurement) ?
+	                        val : new Measurement(val, units || true)) : value;
+	      const updated = newVal !== value;
+	      value = newVal;
+	      return updated;
+	    }
+	  }
+	}
+	
+	MeasurementInput.template = new $t('input/measurement');
+	MeasurementInput.html = (instance) => () => MeasurementInput.template.render(instance);
+	
+	du.on.match('focusout', '.measurement-input', (elem) => {
+	  const input = MeasurementInput.get(elem.id);
+	  elem.value = input.value();
+	})
+	
+	module.exports = MeasurementInput;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/decision/input-input.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const Select = require('../styles/select');
+	const NumberInput = require('../styles/number');
+	const Measurement = require('../../measurement');
+	const MeasurementInput = require('../styles/measurement');
+	const Textarea = require('../styles/textarea');
+	const MultipleEntries = require('../styles/multiple-entries');
+	const DecisionInputTree = require('../decision/decision');
+	const Table = require('../styles/table.js');
+	const InputList = require('../styles/list.js');
+	const RadioTable = Table.Radio;
+	const Radio = require('../styles/radio.js');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	
+	
+	
+	const noSubmitInputTree = () =>
+	  new InputInput({noSubmission: true});
+	
+	
+	class InputInput extends DecisionInputTree {
+	  constructor(props) {
+	    props ||= {};
+	    props.validation ||= {};
+	    if (props.value){
+	      console.log('gere')
+	    }
+	    let details = {};
+	    const name = new Input({
+	      name: 'name',
+	      label: 'Name',
+	      class: 'center',
+	      validation: props.validation.name
+	    });
+	    const inline = new Input({
+	      name: 'inline',
+	      value: props.inline,
+	      label: 'Inline',
+	      class: 'center',
+	      type: 'checkbox'
+	    });
+	    const format = new Select({
+	      label: 'Format',
+	      name: 'format',
+	      class: 'center',
+	      list: ['Text', 'Checkbox', 'Number', 'Radio', 'Select', 'Date', 'Time', 'Table', 'Multiple Entries', 'Measurement'],
+	      validation: props.validation.format
+	    });
+	    const step = new NumberInput({name: 'step', optional: true, label: 'Step'});
+	    const min = new NumberInput({name: 'min', optional: true, label: 'Minimum'});
+	    const max = new NumberInput({name: 'max', optional: true, label: 'Maximum'});
+	    const tableType = new Select({
+	      label: 'Type',
+	      name: 'type',
+	      class: 'center',
+	      list: ['Text', 'checkbox', 'radio', 'date', 'time', 'column specific']
+	    });
+	    const textCntSize = new Select({
+	      label: 'Size',
+	      name: 'size',
+	      class: 'center',
+	      list: ['Small', 'Large']
+	    });
+	    const units = new Select({
+	      label: 'Units',
+	      name: 'units',
+	      class: 'center',
+	      list: Measurement.units()
+	    });
+	    const label = new Input({
+	      name: 'label',
+	      label: 'Label',
+	      class: 'centnodeConds[index].satisfied()) reer',
+	      validation: (val) => val !== ''
+	    });
+	    const option = new Input({
+	      name: 'option',
+	      label: 'Option',
+	    });
+	    const row = new Input({
+	      name: 'row',
+	      class: 'center',
+	    });
+	    const col = new Input({
+	      name: 'col',
+	      class: 'center',
+	    });
+	    const labels = new MultipleEntries(label, {name: 'labels'});
+	    const options = new MultipleEntries(option, {name: 'options'});
+	    const colType = new MultipleEntries(noSubmitInputTree, {name: 'columns', label: 'Columns'});
+	    const columns = new MultipleEntries(col, {name: 'columns', label: 'Columns'});
+	    const rows = new MultipleEntries(row, {name: 'rows', label: 'Rows'});
+	    const rowCols = [tableType, rows];
+	
+	
+	    const inputs = [name, format];
+	    const multiEnt = new MultipleEntries(noSubmitInputTree, {name: 'templates'});
+	
+	    super(props.name || 'Input', {inputArray: inputs, noSubmission: props.noSubmission, class: 'modify'});
+	    const root = this.root();
+	
+	    const dic = (value, attr) => DecisionInputTree.getCondition(attr || 'format', value);
+	    function addNode(name, inputArray, value, attr, node) {
+	      const targetNode = (node || root);
+	      const newNode = targetNode.then(name, {inputArray});
+	      targetNode.conditions.add(dic(value, attr), name);
+	      return newNode;
+	    }
+	
+	    addNode('text', [textCntSize], 'Text');
+	    addNode('select', [options], 'Select');
+	    addNode('radio', [inline, labels], 'Radio');
+	    const tableNode = addNode('table', rowCols, 'Table');
+	    addNode('tableColumnList', [columns], ['Text', 'checkbox', 'radio', 'date', 'time'], 'type', tableNode);
+	    addNode('tableColumnTemplate', [colType], 'column specific', 'type', tableNode);
+	    addNode('multi', [inline, multiEnt], 'Multiple Entries');
+	    addNode('measure', [units], 'Measurement');
+	    addNode('number', [step, min, max], 'Number');
+	
+	    this.setValue = (inputOrDetails) => {
+	      if (!inputOrDetails) return;
+	      let details = inputOrDetails;
+	      if (inputOrDetails instanceof Input) details = getInputDetails(details);
+	      const setValue = (path) => {
+	        const nodePath = path.split('.');
+	        const inputName = nodePath.splice(-1)[0];
+	        const node = this.getByPath.apply(this, nodePath);
+	        const input = node.find.input(inputName);
+	        input.setValue(details.pathValue(path));
+	      }
+	      setValue('name');
+	      setValue('name');
+	      // setValue('inline');
+	      setValue('format');
+	      setValue('number.step');
+	      setValue('number.min');
+	      setValue('number.max');
+	      setValue('table.type');
+	      setValue('text.size');
+	      setValue('measure.units');
+	      setValue('radio.labels');
+	      setValue('select.options');
+	      setValue('table.tableColumnTemplate.columns');
+	      setValue('multi.templates');
+	      setValue('table.tableColumnList.columns');
+	      setValue('table.rows');
+	    }
+	
+	    this.clone = () => new InputInput(props);
+	    this.empty = () => this.values().name === '';
+	    // tree.onSubmit(addInput);
+	    // tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
+	    // tree.empty = () => {
+	    //   let empty = true;
+	    //   tree.root().forEach((node) =>
+	    //     node.payload().inputArray.forEach(input => empty &&= input.empty()));
+	    //   return empty;
+	    // }
+	
+	    this.setValue(props.input);
+	  }
+	}
+	
+	function getInputDetails(input)  {
+	  const details = {};
+	  details.name = input.label();
+	  details.inline = input.inline();
+	  details.vaalue = input.value();
+	  let list;
+	  if (input instanceof Textarea) {
+	    details.format = 'Text';
+	    details.text = {size: 'Large'};
+	  }
+	
+	  else if (input instanceof NumberInput) {
+	    details.format = 'Number';
+	    details.number = {step: input.step()};
+	    details.number.min = input.min();
+	    details.number.max = input.max();
+	  }
+	
+	  else if (input instanceof Radio) {
+	    details.format = 'Radio';
+	    details.radio = {labels: input.list()};
+	  }
+	
+	  else if (input instanceof Select) {
+	    details.format = 'Select';
+	    const options = input.list();
+	    details.select = {options};
+	  }
+	
+	  else if (input instanceof MeasurementInput) {
+	    details.format = 'Measurement';
+	    details.measure = {units: input.units()};
+	  }
+	
+	  else if (input instanceof Table || input instanceof RadioTable) {
+	    details.format = 'Table';
+	    details.table = {rows: input.rows()};
+	    const isList = !(input.columns()[0] instanceof Input);
+	    if (isList) {
+	      details.table.tableColumnList = {columns: input.columns()};
+	    } else {
+	      const columns = input.columns.map((ci) => getInputDetails(ci));
+	      details.table.tableColumnTemplate = {columns};
+	    }
+	    details.table.type = input.type();
+	  }
+	
+	  else if (input instanceof MultipleEntries) {
+	    details.format = 'Multiple Entries';
+	    details.multi = {templates: []};
+	
+	    const inputList = input.inputTemplate();
+	    const list = inputList.list();
+	    for (let index = 0; index < list.length; index++) {
+	      const inp = list[index];
+	      const inpDets = getInputDetails(inp);
+	      details.multi.templates.push(inpDets);
+	    }
+	  }
+	
+	  else {
+	    switch (input.type()) {
+	      case 'date': details.format = 'Date'; break;
+	      case 'time': details.format = 'Time'; break;
+	      case 'checkbox': details.format = 'Checkbox'; break;
+	      default:
+	        details.format = 'Text';
+	        details.text = {size: 'Small'};
+	        break;
+	
+	    }
+	  }
+	
+	  return details;
+	}
+	
+	function getInput(details, validationCall)  {
+	  const name = details.name.toCamel();
+	  const label = details.name;
+	  let inline = details.inline;
+	  let list, input;
+	  switch (details.format) {
+	    case 'Text':
+	      if (details.text.size === 'Large') {
+	        input = new Textarea({name, label});
+	        break;
+	      } else {
+	        input = new Input({type: 'text', name, label, inline});
+					break;
+	      }
+	    case 'Number':
+	      const step = details.number.step;
+	      const min = details.number.min;
+	      const max = details.number.max;
+	      input = new NumberInput({name, label, min, max, step});
+				break;
+	    case 'Date':
+	      input = new Input({type: 'date', name, label, inline});
+				break;
+	    case 'Time':
+	      input = new Input({type: 'time', name, label, inline});
+				break;
+	    case 'Checkbox':
+	      input = new Input({type: 'checkbox', name, label, inline});
+				break;
+	    case 'Radio':
+	      inline = details.radio.inline;
+	      list = details.radio.labels;
+	      input = new Radio({name, label, list, inline});
+				break;
+	    case 'Select':
+	      list = details.select.options;//.map(input => input.value());
+	      input = new Select({name, label, list});
+				break;
+	    case 'Table':
+	      const props = details.table;
+	      let isList = props.tableColumnList !== undefined;
+	      let columns = isList ?  props.tableColumnList.columns : props.tableColumnTemplate.columns;
+	      let rows = props.rows;
+	      if (!isList) {
+	        columns.forEach((definition, index) => columns[index] = getInput(definition));
+	      }
+	      const type = props.type;
+	      input = new Table({name, label, rows, columns, type});
+				break;
+	    case 'Measurement':
+	      const units = details.measure.units;
+	      input = new MeasurementInput({name, label, units});
+				break;
+	    case 'Multiple Entries':
+	      const templates = details.multi.templates;
+	      list = [];
+	      inline = details.multi.inline;
+	      for (let index = 0; index < templates.length; index++) {
+	        const values = templates[index];
+	        values.inline = inline;
+	        const input = getInput(values);
+	        list.push(input);
+	      }
+	      input = new MultipleEntries(new InputList({list, inline}), {name, label});
+				break;
+	    default:
+	      throw new Error('In the future this will not be reachable');
+	  }
+	  if (!validationCall) validateGetInputDetais(details, input);
+	  return input;
+	}
+	
+	function validateGetInputDetais(details, input) {
+	  const genDets = getInputDetails(input);
+	  const genInput = getInput(genDets, true);
+	  const constructorEq = genInput.constructor === input.constructor;
+	  const typeEq = genInput.type() === input.type();
+	  if (!constructorEq || !typeEq){
+	    console.warn('invalid generated details');
+	    getInputDetails(input);
+	  }
+	}
+	
+	InputInput.getInput = getInput;
+	InputInput.getInputDetails = getInputDetails;
+	
+	
+	
+	module.exports = InputInput;
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	// TODO: Should probably locate somewhere else hacky fix. cosider making editHtml sperate for all Inputs.
+	RadioTable.editTemplate = Table.editTemplate = new $t('input/edit/table');
+	
+	const objectItemTemplate = new $t('input/edit/list/object');
+	const stringItemTemplate = new $t('input/edit/list/string');
+	function listHtml (list) {
+	  const props = {list: [], class: 'input-list-multi'};
+	  let template;
+	  for (let index = 0; index < list.length; index++) {
+	    const item = list[index];
+	    if (item instanceof Input) {
+	      const ii = new InputInput({input: item, noSubmission: true});
+	      props.list.push(ii);
+	      template ||= new InputInput({noSubmission: true});
+	    } else if (item instanceof Object) {
+	      props.list.push(new InputObject({value: item}));
+	      template ||= new InputObject();
+	    } else {
+	      props.list.push(new Input({type: 'simple-string', value: item}));
+	      template ||= new Input({type: 'simple-string'});
+	    }
+	  }
+	  const multi = new MultipleEntries(template, props);
+	  return multi.html();
+	}
+	RadioTable.editHtml = Table.editHtml = (table) => Table.editTemplate.render({table, listHtml});
+	
+	function buildList(elem) {
+	  const input = Input.getFromElem(elem);
+	  const targetInput = Input.getFromElem(elem.previousElementSibling);
+	  const columnValues = targetInput.value();
+	  const list = [];
+	  for (let index = 0; index < columnValues.length; index++) {
+	    const col = columnValues[index];
+	    if ((typeof col) === 'string') list.push(col);
+	    else list.push(InputInput.getInput(col));
+	  }
+	  return {input, list};
+	}
+	
+	du.on.match('click', '#table-column-edit-btn', (elem) => {
+	  const listput = buildList(elem)
+	  listput.input.setColumns(listput.list);
+	  listput.input.updateDisplay();
+	});
+	du.on.match('click', '#table-row-edit-btn', (elem) => {
+	  const listput = buildList(elem)
+	  listput.input.setRows(listput.list);
+	  listput.input.setColumns();
+	  listput.input.updateDisplay();
+	});
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/number.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class NumberInput extends Input {
+	  constructor(props) {
+	    super(props);
+	    props.min = Number.parseFloat(props.min) || 0;
+	    props.max = Number.parseFloat(props.max) || Number.MAX_SAFE_INTEGER;
+	    props.step = Number.parseFloat(props.step) || 1;
+	    Object.getSet(this, {min: props.min, max: props.max, step: props.step});
+	
+	    this.validation = (value) => value <= props.max && value >= props.min;
+	  }
+	}
+	
+	NumberInput.template = new $t('input/number');
+	NumberInput.html = (instance) => () => NumberInput.template.render(instance);
+	
+	module.exports = NumberInput;
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/input/styles/object.js',
 function (require, exports, module) {
 	
@@ -8062,25 +8085,23 @@ const Input = require('../input');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/decision/payload-handler.js',
+RequireJS.addFunction('../../public/js/utils/input/styles/textarea.js',
 function (require, exports, module) {
 	
-const $t = require('../../$t');
-	const InputObject = require('../styles/object');
+const Input = require('../input');
+	const $t = require('../../$t');
 	
-	class PayloadHandler {
-	  constructor(templateName, ...inputs) {
-	    Object.getSet(this, {templateName, inputs});
-	    const template = new $t(this.templateName());
-	
-	    this.html = (payload) =>
-	      template.render(payload);
-	    this.input = () => new InputObject({name: 'payload', list: inputs});
-	    this.toJson = () => ({inputs: Object.toJson(inputs), templateName});
+	class Textarea extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
 	  }
 	}
 	
-	module.exports = PayloadHandler;
+	Textarea.template = new $t('input/textarea');
+	Textarea.html = (instance) => () => Textarea.template.render(instance);
+	
+	module.exports = Textarea;
 	
 });
 
@@ -8325,27 +8346,6 @@ const Input = require('../input');
 	Table.Radio = RadioTable;
 	
 	module.exports = Table;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/textarea.js',
-function (require, exports, module) {
-	
-const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class Textarea extends Input {
-	  constructor(props) {
-	    super(props);
-	    Object.getSet(this);
-	  }
-	}
-	
-	Textarea.template = new $t('input/textarea');
-	Textarea.html = (instance) => () => Textarea.template.render(instance);
-	
-	module.exports = Textarea;
 	
 });
 
@@ -8712,6 +8712,194 @@ const Test = require('../test.js').Test;
 });
 
 
+RequireJS.addFunction('../../public/js/utils/test/tests/decision-input-tree.js',
+function (require, exports, module) {
+	
+
+	// breakfast) Multiselect (food:bacon, eggs, toast, cereal)
+	//     eggs) Select (count:2,3,6), Select(type:overEasy, sunnySideUp, scrambled, fried)
+	//        requiresGourmetChef) upchange
+	//     toast) Select (white, wheat, texas)
+	//     cereal) Checkbox(milk), Select (type: rasinBrand, cheerios, life)
+	//     bacon) Leaf
+	//   dishes)
+	//      plate)
+	//      fork)
+	//      bowl)
+	//      spoon)
+	
+	
+	const Test = require('../test.js').Test;
+	const du = require('../../dom-utils');
+	const Input = require('../../input/input');
+	const Select = require('../../input/styles/select');
+	const DecisionInputTree = require('../../input/decision/decision');
+	const MultipleEntries = require('../../input/styles/multiple-entries');
+	
+	const toastCost = .75;
+	const cerialCost = 2.25;
+	const baconCost = 1.20;
+	const eggsCost = 1.25;
+	const overEasyMultiplier = 25;
+	
+	function createTree() {
+	  const bacon = new Input({type: 'checkbox', name: 'bacon'});
+	  const eggs = new Input({type: 'checkbox', name: 'eggs'});
+	  const eggCount = new Select({list: ['2','3','6'], name: 'count', mustChoose: true});
+	  const eggType = new Select({name: 'type', mustChoose: true, value: 'Scrambled', list: ['Over Easy', 'Sunny Side Up', 'Scrambled', 'Fried']});
+	  const toast = new Input({type: 'checkbox', name: 'toast'});
+	  const cereal = new Input({type: 'checkbox', name: 'cereal'});
+	  const toastType = new Select({name: 'type', mustChoose: true, list: ['white', 'wheat', 'texas']});
+	  const milk = new Input({type: 'checkbox', name: 'milk'});
+	  const cerealType = new Select({name: 'type', mustChoose: true, list: ['rasinBrand', 'cheerios', 'life']});
+	
+	  const tree = new DecisionInputTree('breakfast', {inputArray: [bacon, eggs, toast, cereal]});
+	
+	  const cost = (node) => eggsCost * Number.parseInt(node.find.input('count').value());
+	  const eggsNode = tree.root().then('Eggs', {cost});
+	  eggsNode.addInput(eggCount);
+	  eggsNode.addInput(eggType);
+	  const reqGourChef = eggsNode.then('requiresGourmetChef', {multiplier: overEasyMultiplier});
+	  const toastNode = tree.root().then('Toast', {cost: toastCost, inputArray: [toastType]});
+	  const cerealNode = tree.root().then('Cereal', {cost: cerialCost, inputArray: [cerealType]});
+	  tree.root().then('Bacon', {cost: baconCost});
+	
+	
+	  const dishes = tree.root().then('dishes');
+	  const plate = dishes.then('plate', {matirial: true});
+	  const fork = dishes.then('fork', {matirial: true});
+	  const bowl = dishes.then('bowl', {matirial: true});
+	  const spoon = dishes.then('spoon', {matirial: true});
+	
+	  bowl.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  cerealNode.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  toastNode.conditions.add((values) =>
+	    Object.pathValue(values, 'toast') === true);
+	
+	  eggsNode.conditions.add((values) =>
+	    Object.pathValue(values, 'eggs') === true);
+	
+	  reqGourChef.conditions.add((values) =>
+	    values.type === "Over Easy");
+	
+	  const vals = tree.values();
+	
+	  return tree;
+	}
+	
+	Test.add('DecisionInputTree structure', (ts) => {
+	  const tree = createTree();
+	  ts.success();
+	});
+	
+	function simulateUserUpdate(input, value, tree, choiceCount, ts) {
+	  const inputElem = du.create.element('input', {id: input.id(), value});
+	  document.body.append(inputElem);
+	  inputElem.click();
+	  inputElem.remove();
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, choiceCount);
+	  ts.assertEquals(tree.isComplete(), choiceCount === 0);
+	}
+	
+	function cost(tree) {
+	  const leaves = tree.root().leaves();
+	  let grandTotal = 0;
+	  for (let index = 0; index < leaves.length; index++) {
+	    let total = 0;
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.cost) {
+	        total += (typeof payload.cost) === 'function' ? payload.cost(node) : payload.cost;
+	      }
+	      if (payload.multiplier) {
+	        total *= payload.multiplier;
+	      }
+	    });
+	    grandTotal += total;
+	  }
+	  return grandTotal;
+	}
+	
+	function matirials(tree) {
+	  const leaves = tree.root().leaves();
+	  let mats = [];
+	  for (let index = 0; index < leaves.length; index++) {
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.matirial) {
+	        mats.push(node.name());
+	      }
+	    });
+	  }
+	  return mats;
+	}
+	
+	
+	Test.add('DecisionInputTree choices', (ts) => {
+	  const toastCost = .75;
+	  const cerialCost = 2.25;
+	  const baconCost = 1.20;
+	  const eggsCost = 1.25;
+	  const overEasyMultiplier = 25;
+	
+	  const justEggsCost = eggsCost * 6 * overEasyMultiplier;
+	  const total = justEggsCost + toastCost + baconCost + cerialCost;
+	
+	  const tree = createTree();
+	  let choices = tree.choices();
+	  ts.assertEquals(choices.length, 0);
+	
+	  const eggs = tree.find.input('eggs')
+	  eggs.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 2);
+	
+	  const toast = tree.find.input('toast')
+	  toast.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 3);
+	
+	  const noBowl = ['plate', 'fork', 'spoon'];
+	  ts.assertTrue(noBowl.equals(matirials(tree)));
+	
+	  const cereal = tree.find.input('cereal')
+	  cereal.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 4);
+	
+	
+	  const count = tree.find.input('count', 'Eggs');
+	  const type = tree.find.input('type', 'Eggs');
+	  const eggsType = tree.find.input('type', 'Eggs');
+	  const toastType = tree.find.input('type', 'Toast');
+	  const cerialType = tree.find.input('type', 'Cereal');
+	
+	  ts.assertNotEquals(type, undefined);
+	  ts.assertNotEquals(eggsType, toastType);
+	  ts.assertNotEquals(eggsType, cerialType);
+	  ts.assertNotEquals(cerialType, toastType);
+	
+	  simulateUserUpdate(eggsType, 'Over Easy', tree, 3, ts);
+	  simulateUserUpdate(toastType, 'white', tree, 2, ts);
+	  simulateUserUpdate(cerialType, 'cheerios', tree, 1, ts);
+	  simulateUserUpdate(count, '6', tree, 0, ts);
+	
+	  const allMaterials = ['plate', 'fork', 'bowl', 'spoon'];
+	  ts.assertTrue(allMaterials.equals(matirials(tree)));
+	
+	  ts.assertEquals(cost(tree), total);
+	
+	  ts.success();
+	});
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/test/tests/decision-tree.js',
 function (require, exports, module) {
 	
@@ -8965,194 +9153,6 @@ function (require, exports, module) {
 	  byName = tree.getByName('18','29');
 	  ts.assertEquals(byPath, byName);
 	  ts.assertNotEquals(byName, byNameOnly);
-	
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/tests/decision-input-tree.js',
-function (require, exports, module) {
-	
-
-	// breakfast) Multiselect (food:bacon, eggs, toast, cereal)
-	//     eggs) Select (count:2,3,6), Select(type:overEasy, sunnySideUp, scrambled, fried)
-	//        requiresGourmetChef) upchange
-	//     toast) Select (white, wheat, texas)
-	//     cereal) Checkbox(milk), Select (type: rasinBrand, cheerios, life)
-	//     bacon) Leaf
-	//   dishes)
-	//      plate)
-	//      fork)
-	//      bowl)
-	//      spoon)
-	
-	
-	const Test = require('../test.js').Test;
-	const du = require('../../dom-utils');
-	const Input = require('../../input/input');
-	const Select = require('../../input/styles/select');
-	const DecisionInputTree = require('../../input/decision/decision');
-	const MultipleEntries = require('../../input/styles/multiple-entries');
-	
-	const toastCost = .75;
-	const cerialCost = 2.25;
-	const baconCost = 1.20;
-	const eggsCost = 1.25;
-	const overEasyMultiplier = 25;
-	
-	function createTree() {
-	  const bacon = new Input({type: 'checkbox', name: 'bacon'});
-	  const eggs = new Input({type: 'checkbox', name: 'eggs'});
-	  const eggCount = new Select({list: ['2','3','6'], name: 'count', mustChoose: true});
-	  const eggType = new Select({name: 'type', mustChoose: true, value: 'Scrambled', list: ['Over Easy', 'Sunny Side Up', 'Scrambled', 'Fried']});
-	  const toast = new Input({type: 'checkbox', name: 'toast'});
-	  const cereal = new Input({type: 'checkbox', name: 'cereal'});
-	  const toastType = new Select({name: 'type', mustChoose: true, list: ['white', 'wheat', 'texas']});
-	  const milk = new Input({type: 'checkbox', name: 'milk'});
-	  const cerealType = new Select({name: 'type', mustChoose: true, list: ['rasinBrand', 'cheerios', 'life']});
-	
-	  const tree = new DecisionInputTree('breakfast', {inputArray: [bacon, eggs, toast, cereal]});
-	
-	  const cost = (node) => eggsCost * Number.parseInt(node.find.input('count').value());
-	  const eggsNode = tree.root().then('Eggs', {cost});
-	  eggsNode.addInput(eggCount);
-	  eggsNode.addInput(eggType);
-	  const reqGourChef = eggsNode.then('requiresGourmetChef', {multiplier: overEasyMultiplier});
-	  const toastNode = tree.root().then('Toast', {cost: toastCost, inputArray: [toastType]});
-	  const cerealNode = tree.root().then('Cereal', {cost: cerialCost, inputArray: [cerealType]});
-	  tree.root().then('Bacon', {cost: baconCost});
-	
-	
-	  const dishes = tree.root().then('dishes');
-	  const plate = dishes.then('plate', {matirial: true});
-	  const fork = dishes.then('fork', {matirial: true});
-	  const bowl = dishes.then('bowl', {matirial: true});
-	  const spoon = dishes.then('spoon', {matirial: true});
-	
-	  bowl.conditions.add((values) =>
-	    Object.pathValue(values, 'cereal') === true);
-	
-	  cerealNode.conditions.add((values) =>
-	    Object.pathValue(values, 'cereal') === true);
-	
-	  toastNode.conditions.add((values) =>
-	    Object.pathValue(values, 'toast') === true);
-	
-	  eggsNode.conditions.add((values) =>
-	    Object.pathValue(values, 'eggs') === true);
-	
-	  reqGourChef.conditions.add((values) =>
-	    values.type === "Over Easy");
-	
-	  const vals = tree.values();
-	
-	  return tree;
-	}
-	
-	Test.add('DecisionInputTree structure', (ts) => {
-	  const tree = createTree();
-	  ts.success();
-	});
-	
-	function simulateUserUpdate(input, value, tree, choiceCount, ts) {
-	  const inputElem = du.create.element('input', {id: input.id(), value});
-	  document.body.append(inputElem);
-	  inputElem.click();
-	  inputElem.remove();
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, choiceCount);
-	  ts.assertEquals(tree.isComplete(), choiceCount === 0);
-	}
-	
-	function cost(tree) {
-	  const leaves = tree.root().leaves();
-	  let grandTotal = 0;
-	  for (let index = 0; index < leaves.length; index++) {
-	    let total = 0;
-	    leaves[index].forPath((node) => {
-	      const payload = node.payload();
-	      if (payload.cost) {
-	        total += (typeof payload.cost) === 'function' ? payload.cost(node) : payload.cost;
-	      }
-	      if (payload.multiplier) {
-	        total *= payload.multiplier;
-	      }
-	    });
-	    grandTotal += total;
-	  }
-	  return grandTotal;
-	}
-	
-	function matirials(tree) {
-	  const leaves = tree.root().leaves();
-	  let mats = [];
-	  for (let index = 0; index < leaves.length; index++) {
-	    leaves[index].forPath((node) => {
-	      const payload = node.payload();
-	      if (payload.matirial) {
-	        mats.push(node.name());
-	      }
-	    });
-	  }
-	  return mats;
-	}
-	
-	
-	Test.add('DecisionInputTree choices', (ts) => {
-	  const toastCost = .75;
-	  const cerialCost = 2.25;
-	  const baconCost = 1.20;
-	  const eggsCost = 1.25;
-	  const overEasyMultiplier = 25;
-	
-	  const justEggsCost = eggsCost * 6 * overEasyMultiplier;
-	  const total = justEggsCost + toastCost + baconCost + cerialCost;
-	
-	  const tree = createTree();
-	  let choices = tree.choices();
-	  ts.assertEquals(choices.length, 0);
-	
-	  const eggs = tree.find.input('eggs')
-	  eggs.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 2);
-	
-	  const toast = tree.find.input('toast')
-	  toast.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 3);
-	
-	  const noBowl = ['plate', 'fork', 'spoon'];
-	  ts.assertTrue(noBowl.equals(matirials(tree)));
-	
-	  const cereal = tree.find.input('cereal')
-	  cereal.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 4);
-	
-	
-	  const count = tree.find.input('count', 'Eggs');
-	  const type = tree.find.input('type', 'Eggs');
-	  const eggsType = tree.find.input('type', 'Eggs');
-	  const toastType = tree.find.input('type', 'Toast');
-	  const cerialType = tree.find.input('type', 'Cereal');
-	
-	  ts.assertNotEquals(type, undefined);
-	  ts.assertNotEquals(eggsType, toastType);
-	  ts.assertNotEquals(eggsType, cerialType);
-	  ts.assertNotEquals(cerialType, toastType);
-	
-	  simulateUserUpdate(eggsType, 'Over Easy', tree, 3, ts);
-	  simulateUserUpdate(toastType, 'white', tree, 2, ts);
-	  simulateUserUpdate(cerialType, 'cheerios', tree, 1, ts);
-	  simulateUserUpdate(count, '6', tree, 0, ts);
-	
-	  const allMaterials = ['plate', 'fork', 'bowl', 'spoon'];
-	  ts.assertTrue(allMaterials.equals(matirials(tree)));
-	
-	  ts.assertEquals(cost(tree), total);
 	
 	  ts.success();
 	});
@@ -10500,6 +10500,68 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./app/pages/ancestry.js',
+function (require, exports, module) {
+	
+const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const PayloadHandler = require('../../../../public/js/utils/input/decision/payload-handler.js');
+	require('../../../../public/js/utils/input/init');
+	const Input = require('../../../../public/js/utils/input/input');
+	const Radio = require('../../../../public/js/utils/input/styles/radio');
+	const Table = require('../../../../public/js/utils/input/styles/table');
+	const MultipleEntries = require('../../../../public/js/utils/input/styles/multiple-entries');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	
+	let count = 0;
+	let modify = true;
+	
+	du.on.match('click', '#modify-btn', (elem) => {
+	  modify = !modify
+	  if (modify) du.class.add(elem, 'modify-edit');
+	  else du.class.remove(elem, 'modify-edit');
+	  // updateEntireTree();
+	});
+	
+	const getInput = () => new Input({
+	  label: `Label${++count}`,
+	  name: `Name${count}`,
+	  inline: true,
+	  class: 'center',
+	});
+	
+	let tree;
+	function updateEntireTree() {
+	  const body = tree.html(null, modify);
+	  du.id('config-body').innerHTML = body;
+	}
+	
+	
+	
+	function proccess() {
+	  const input1 = getInput();
+	  const input2 = getInput();
+	  const input3 = getInput();
+	  // tree = new DecisionInputTree('ancestry', {name: 'Ancestry'});
+	  tree = DecisionInputTree.fromJson(treeJson);
+	  tree.payloadHandler(new PayloadHandler('ancestry', new Input({name: 'name', label: 'Name', optional: true})));
+	
+	  tree.onComplete(console.log);
+	  tree.onSubmit(console.log);
+	
+	  updateEntireTree();
+	}
+	
+	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
+	du.on.match('click', '#json', () => {
+	  du.copy(JSON.stringify(tree.toJson(), null, 2));
+	})
+	
+	
+	exports.proccess = proccess;
+	
+});
+
+
 RequireJS.addFunction('./app/pages/configure.js',
 function (require, exports, module) {
 	
@@ -10580,68 +10642,6 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	    });
 	  });
 	}
-	
-	
-	exports.proccess = proccess;
-	
-});
-
-
-RequireJS.addFunction('./app/pages/ancestry.js',
-function (require, exports, module) {
-	
-const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const PayloadHandler = require('../../../../public/js/utils/input/decision/payload-handler.js');
-	require('../../../../public/js/utils/input/init');
-	const Input = require('../../../../public/js/utils/input/input');
-	const Radio = require('../../../../public/js/utils/input/styles/radio');
-	const Table = require('../../../../public/js/utils/input/styles/table');
-	const MultipleEntries = require('../../../../public/js/utils/input/styles/multiple-entries');
-	const du = require('../../../../public/js/utils/dom-utils.js');
-	
-	let count = 0;
-	let modify = true;
-	
-	du.on.match('click', '#modify-btn', (elem) => {
-	  modify = !modify
-	  if (modify) du.class.add(elem, 'modify-edit');
-	  else du.class.remove(elem, 'modify-edit');
-	  // updateEntireTree();
-	});
-	
-	const getInput = () => new Input({
-	  label: `Label${++count}`,
-	  name: `Name${count}`,
-	  inline: true,
-	  class: 'center',
-	});
-	
-	let tree;
-	function updateEntireTree() {
-	  const body = tree.html(null, modify);
-	  du.id('config-body').innerHTML = body;
-	}
-	
-	
-	
-	function proccess() {
-	  const input1 = getInput();
-	  const input2 = getInput();
-	  const input3 = getInput();
-	  // tree = new DecisionInputTree('ancestry', {name: 'Ancestry'});
-	  tree = DecisionInputTree.fromJson(treeJson);
-	  tree.payloadHandler(new PayloadHandler('ancestry', new Input({name: 'name', label: 'Name', optional: true})));
-	
-	  tree.onComplete(console.log);
-	  tree.onSubmit(console.log);
-	
-	  updateEntireTree();
-	}
-	
-	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
-	du.on.match('click', '#json', () => {
-	  du.copy(JSON.stringify(tree.toJson(), null, 2));
-	})
 	
 	
 	exports.proccess = proccess;

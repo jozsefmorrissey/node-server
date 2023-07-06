@@ -426,8 +426,8 @@ class DecisionInputTree extends DecisionTree {
 
 
 DecisionInputTree.class = 'decision-input-tree';
-DecisionInputTree.inputSelector = `.${DecisionInputTree.class} input` +
-                `.${DecisionInputTree.class} textarea` +
+DecisionInputTree.inputSelector = `.${DecisionInputTree.class} input,` +
+                `.${DecisionInputTree.class} textarea,` +
                 `.${DecisionInputTree.class} select`;
 DecisionInputTree.buttonClass = 'decision-input-tree-submit';
 

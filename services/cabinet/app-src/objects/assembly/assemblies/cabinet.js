@@ -280,12 +280,7 @@ Cabinet.build = (type, group, config) => {
   });
 
   config.joints.forEach((relationConfig) => {
-    const type = relationConfig.type;
-    const depth = relationConfig.depth;
-    const demensionToOffset = relationConfig.demensionToOffset;
-    const centerOffset = relationConfig.centerOffset;
-    const joint = Joint.new(type, relationConfig);
-    cabinet.addJoints(joint);
+    cabinet.addJoints(Object.fromJson(relationConfig));
   });
 
   config.openings.forEach((config, i) => {

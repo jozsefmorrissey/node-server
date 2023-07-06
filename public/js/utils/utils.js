@@ -23,9 +23,12 @@ function safeStdLibAddition() {
     delete additions;
   }
   function safeAdd (lib, field, func, static) {
-    if (!static && lib.prototype[field] === undefined)
-      lib.prototype[field] = func;
-    else if (lib[field] === undefined)
+    if (!static && lib.prototype[field] === undefined) {
+      Object.defineProperty(lib.prototype, field, {
+          value: func,
+          writable: true
+      });
+    } else if (lib[field] === undefined)
       lib[field] = func;
     else
       console.error(`Attempting to overwrite functionality -` +
@@ -354,8 +357,8 @@ function objEq(obj1, obj2) {
   if (!isObj1) return false;
   if (!isObj2) return false;
   if (Array.isArray(obj1) !== Array.isArray(obj2)) return false;
-  const obj1Keys = Object.keys(obj1).filter(filterOutUndefined(obj1));
-  const obj2Keys = Object.keys(obj2).filter(filterOutUndefined(obj2));
+  const obj1Keys = Object.keys(obj1).filter(filterOutUndefined(obj1)).sort();
+  const obj2Keys = Object.keys(obj2).filter(filterOutUndefined(obj2)).sort();
   if (obj1Keys.length !== obj2Keys.length) return false;
   for (let index = 0; index < obj1Keys.length; index += 1) {
     const obj1Key = obj1Keys[index];

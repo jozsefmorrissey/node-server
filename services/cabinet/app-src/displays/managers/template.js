@@ -532,10 +532,12 @@ function getJointInputTree(func, joint, dividerJoint) {
 
   const dadoInputs = dividerJoint ? [depthInput] : [depthInput, centerOffsetInput, demensionOffsetInput];
 
-  const dit = new DecisionInputTree(undefined, {noSubmission: true});
-  const type = dit.branch('Type', [selectType]);
+  const dit = new DecisionInputTree('Type', {inputArray: [selectType]}, {noSubmission: true});
+  const type = dit.root();
   const condtionalPayload = new DecisionInputTree.ValueCondition('type', 'Dado', dadoInputs);
-  type.conditional('dado', condtionalPayload);
+  type.then('dado', {inputArray: dadoInputs});
+  const cond = DecisionInputTree.getCondition('type', 'Dado');
+  type.conditions.add(cond, 'dado');
   dit.onChange(func);
   return dit;
 }
@@ -816,8 +818,7 @@ du.on.match('focusout:enter', '[name="leftDepth"]', sliceDepthUpdate);
 du.on.match('focusout:enter', '[name="rightDepth"]', sliceDepthUpdate);
 
 TemplateManager.inputTree = () => {
-  const dit = new DecisionInputTree();
-  dit.leaf('Template Name', [Inputs('name')]);
+  const dit = new DecisionInputTree('Template Name', {inputArray: [Inputs('name')]});
   return dit;
 }
 

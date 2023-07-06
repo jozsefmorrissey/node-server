@@ -110,7 +110,7 @@ class Expandable {
       }
     };
     this.hasInputTree = () =>
-      this.inputTree() && this.inputTree().constructor.name === 'LogicWrapper';
+	      this.inputTree() && this.inputTree().constructor.name === 'DecisionInputTree';
     if (this.hasInputTree())
       props.inputTree.onSubmit(this.add);
     props.hasInputTree = this.hasInputTree;
@@ -155,7 +155,7 @@ class Expandable {
       storage[key][key2] = value;
     }
     this.inputHtml = () => this.hasInputTree() ?
-          this.inputTree().payload().html() : Expandable.inputRepeatTemplate.render(this);
+          this.inputTree().html() : Expandable.inputRepeatTemplate.render(this);
     this.set = (key, value) => props.list[key] = value;
     this.get = (key) => props.list[key];
     this.renderBody = (target) => {

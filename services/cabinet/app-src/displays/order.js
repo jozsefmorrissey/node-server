@@ -103,8 +103,7 @@ OrderDisplay.infoBodyTemplate = new $t('order/information/body');
 OrderDisplay.infoHeadTemplate = new $t('order/information/head');
 
 OrderDisplay.configInputTree = () => {
-  const dit = new DecisionInputTree();
-  dit.leaf('Config', [Inputs('name')]);
+  const dit = new DecisionInputTree('Config', {inputArray: [Inputs('name')]});
   return dit;
 }
 module.exports = OrderDisplay

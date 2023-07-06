@@ -20,7 +20,7 @@ class CostManager {
       const html = CostManager.mainTemplate.render(this);
       du.find(`#${id}`).innerHTML = html;
     }
-    this.nodeInputHtml = () => CostManager.nodeInput().payload().html();
+    this.nodeInputHtml = () => CostManager.nodeInput().html();
     this.headHtml = (node) =>
         CostManager.headTemplate.render({node, CostManager: this});
     this.bodyHtml = (node) =>
@@ -41,7 +41,6 @@ CostManager.costInputTree = (costTypes, objId, onUpdate) => {
   return logicTree;
 }
 CostManager.nodeInput = () => {
-  const dit = new DecisionInputTree();
   const typeSelect = new Select({
     name: 'type',
     list: CostTree.types,
@@ -58,12 +57,17 @@ CostManager.nodeInput = () => {
   });
 
   const accVals = ['select', 'multiselect', 'conditional'];
-  const condtionalPayload = new DecisionInputTree.ValueCondition('type', accVals, [selectorType]);
-  const type = dit.branch('Node', [Inputs('name'), typeSelect]);
-  const selectType = type.conditional('selectorType', condtionalPayload);
-  const payload = [Inputs('formula'), propertySelector, RelationInput.selector];
-  const condtionalPayload2 = new DecisionInputTree.ValueCondition('selectorType', 'Auto', payload);
-  selectType.conditional('formula', condtionalPayload2);
+  const dit = new DecisionInputTree('Node', {inputArray: [Inputs('name'), typeSelect]});
+
+  const root = dit.root();
+  const selectType = root.then('selectorType', {inputArray:  [selectorType]});
+  let cond = DecisionInputTree.getCondition('type', accVals);
+  root.add(cond, 'selectType');
+
+  const payload = {inputArray: [Inputs('formula'), propertySelector, RelationInput.selector]};
+  selectType.then('formula', payload);
+  cond = DecisionInputTree.getCondition('selectorType', 'Auto');
+  selectType.conditions.add(cond, 'formula');
   return dit;
 }
 new RadioDisplay('cost-tree', 'radio-id');

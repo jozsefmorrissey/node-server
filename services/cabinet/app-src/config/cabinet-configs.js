@@ -25,11 +25,12 @@ class CabinetConfig {
                   cabinets[type] : cabinetKeys[type][id]) !== undefined;
 
     let typeCount = 0;
-    const typeSelect = (name) => {
+    const typeSelect = (name, label, allowEmpty) => {
       return new Select({
-        name,
+        name, label,
         inline: true,
-        list: ['']
+        list: allowEmpty ? [''] : [],
+        validation: () => true,
       });
     }
 
@@ -37,17 +38,19 @@ class CabinetConfig {
       for(let index = 0; index < types.length; index++) {
         const type = types[index];
         const splitPath = type.split('-').reverse();
-        let branch = tree;
-        let prevPath = tree.node.name;
+        let branch = tree.root();
+        let prevPath = '';
         for (let pIndex = 0; pIndex < splitPath.length; pIndex++) {
           const name = splitPath[pIndex];
-          const path = `${prevPath}-${name}`;
-          let nextBranch = tree.node.getByName(path);
+          const path = prevPath ? `${prevPath}-${name}` : name;
+          let nextBranch = tree.getByName(path);
           if (pIndex !== splitPath.length - 1) {
             if (nextBranch === undefined) {
-              const select = typeSelect(path);
-              const valueCond = new ValueCondition(prevPath, name, [select]);
-              nextBranch = branch.conditional(path, valueCond);
+              const branchType = path.replace(/^.*?-(.*)$/, '$1').split('-').reverse().join('-');
+              const select = typeSelect('type', 'type', cabinets[branchType]);
+              const cond = DecisionInputTree.getCondition('type', name);
+              nextBranch = branch.then(path, {inputArray: [select]});
+              branch.conditions.add(cond, path);
             }
           }
           const inputArray = branch.payload ? branch.payload().inputArray : branch.inputArray;
@@ -59,14 +62,37 @@ class CabinetConfig {
       }
     }
 
+    function objConcat(obj, nestedAttr, joinChar) {
+      joinChar ||= '-';
+      const value = obj[nestedAttr];
+      if (!value) return;
+      let values = [];
+      let currObj = obj;
+      const keys = Object.keys(currObj);
+      for (let index = 0; index < keys.length; index++) {
+        const key = keys[index];
+        if (currObj[key] instanceof Object) {
+          const childValues = objConcat(currObj[key], nestedAttr);
+          if (childValues) {
+            for (let cIndex = 0; cIndex < childValues.length; cIndex++) {
+              values.push(`${value}${joinChar}${childValues[cIndex]}`);
+            }
+          }
+        }
+      }
+      if (values.length > 0) return values;
+      return [value]
+    }
+
     this.inputTree = () => {
-      const typeInput = typeSelect('Cabinet');
+      const typeInput = typeSelect('type', 'Type');
       typeInput.list().deleteAll();
       const nameInput = new Input({
         name: 'name',
         inline: true,
         label: 'Name (optional)',
         class: 'center',
+        optional: true
       });
       const layoutInput = new Input({
         label: 'Layout (Optional)',
@@ -74,25 +100,23 @@ class CabinetConfig {
         inline: true,
         class: 'center',
         clearOnDblClick: true,
+        optional: true,
         list: CabinetLayouts.list()
       });
 
       const inputs = [typeInput, layoutInput, nameInput];
-      const inputTree = new DecisionInputTree();
-      inputTree.block(true);
+
+      const inputTree = new DecisionInputTree('Cabinet', {inputArray: inputs});
+
+      // inputTree.block(true);
       inputTree.onSubmit((values) => {
-        const targetKey = Object.keys(values)
-                              .filter(str => str.indexOf('Cabinet') === 0)
-                              .filter(str => values[str])
-                              .sort((str1, str2) => str2.count('-') - str1.count())[0];
-        let suffix = targetKey.replace(/Cabinet(\-|$)/, '');
-        suffix &&= '-' + suffix.split('-').reverse().join('-');
-        values.type = `${values[targetKey]}${suffix}`;
+        const type = objConcat(values, 'type')[0];
+        values.type = type.split('-').reverse().join('-');
+
         // inputTree.payload().inputArray[1].setValue('', true)
         // inputTree.children()[0].payload().inputArray[0].setValue('', true)
         return 'poop';
       });
-      inputTree.leaf('Cabinet', inputs);
       typeTree(configKeys, inputTree);
 
       return inputTree;
@@ -118,6 +142,8 @@ class CabinetConfig {
   }
 }
 
+
+
 let currConfig = new CabinetConfig(Cabinets, 'default');
 const updateEvent = new CustomEvent('update');
 
@@ -135,52 +161,3 @@ module.exports = {
   get: (...args) => currConfig.get(...args),
   new: (json, id) => new CabinetConfig(json, id)
 }
-
-// Request.get(EPNTS.cabinet.list(), (cabinets) => {
-//   new CabinetConfig(cabinets, 'user');
-//   module.exports.switch('user');
-// }, console.error);
-
-
-
-
-
-
-// ---------------------- Layout Specific Input Tree -----------------------//
-// this.inputTree = () => {
-//   const types = JSON.parse(JSON.stringify(configKeys));
-//   const typeInput = new Select({
-//     name: 'type',
-//     label: 'Type',
-//     inline: false,
-//     class: 'center',
-//     list: types
-//   });
-//   const nameInput = new Input({
-//     name: 'name',
-//     inline: false,
-//     label: 'Name (optional)',
-//     class: 'center',
-//   });
-//   const inputs = [typeInput, nameInput];
-//   const inputTree = new DecisionInputTree();
-//   inputTree.onSubmit((t) => {
-//     inputTree.payload().inputArray[1].setValue('', true)
-//     inputTree.children()[0].payload().inputArray[0].setValue('', true)
-//   });
-//   const cabinet = inputTree.branch('Cabinet', inputs);
-//   const cabinetTypes = Object.keys(cabinetKeys);
-//   types.forEach((type) => {
-//
-//     const cabinetInput = new Input({
-//       label: 'Layout (Optional)',
-//       name: 'id',
-//       inline: false,
-//       class: 'center',
-//       clearOnDblClick: true,
-//       list: [''].concat(cabinetKeys[type] ? Object.keys(cabinetKeys[type]) : [])
-//     });
-//     cabinet.conditional(type, new ValueCondition('type', type, [cabinetInput]));
-//   });
-//   return inputTree;
-// };

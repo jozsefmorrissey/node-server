@@ -78,8 +78,7 @@ du.on.match('click', '.group-add-btn', (target) => {
 });
 
 RoomDisplay.configInputTree = () => {
-  const dit = new DecisionInputTree(console.log);
-  dit.leaf('Room', [Inputs('name')]);
+  const dit = new DecisionInputTree('Room', {inputArray: [Inputs('name')]});
   return dit;
 }
 RoomDisplay.bodyTemplate = new $t('room/body');

@@ -137,7 +137,7 @@ module.exports = {
 		"joints": [{
 				"malePartCode": "T",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -145,7 +145,7 @@ module.exports = {
 			{
 				"malePartCode": "T",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -153,7 +153,7 @@ module.exports = {
 			{
 				"malePartCode": "pt2",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -161,7 +161,7 @@ module.exports = {
 			{
 				"malePartCode": "pt2",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -169,7 +169,7 @@ module.exports = {
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "x",
 				"centerAxis": "+x"
@@ -177,7 +177,7 @@ module.exports = {
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "x",
 				"centerAxis": "-x"
@@ -185,7 +185,7 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -193,14 +193,14 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": 0.9525
 		},
 		"shape": "square",
@@ -455,20 +455,20 @@ module.exports = {
 		"joints": [{
 				"malePartCode": "BACK",
 				"femalePartCode": "B",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "pbl",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "pbr",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "L",
 				"maleOffset": "L.t / 2",
@@ -476,7 +476,7 @@ module.exports = {
 				"centerAxis": "-z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
@@ -484,7 +484,7 @@ module.exports = {
 				"centerAxis": "-x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "pbr",
 				"maleOffset": "pbr.t/2",
@@ -492,7 +492,7 @@ module.exports = {
 				"centerAxis": "+z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "pbl",
 				"maleOffset": "pbl.t/2",
@@ -500,7 +500,7 @@ module.exports = {
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "L",
 				"maleOffset": "L.t / 2",
@@ -508,7 +508,7 @@ module.exports = {
 				"centerAxis": "-z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
@@ -516,7 +516,7 @@ module.exports = {
 				"centerAxis": "-x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "pbr",
 				"maleOffset": "pbr.t/2",
@@ -524,7 +524,7 @@ module.exports = {
 				"centerAxis": "+z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "pbl",
 				"maleOffset": "pbl.t/2",
@@ -532,7 +532,7 @@ module.exports = {
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "pbr",
 				"femalePartCode": "R",
 				"maleOffset": "pbr.t/2",
@@ -540,7 +540,7 @@ module.exports = {
 				"centerAxis": "-z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "pbl",
 				"femalePartCode": "L",
 				"maleOffset": "L.t / 2",
@@ -548,43 +548,43 @@ module.exports = {
 				"centerAxis": "-x"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "BACK",
 				"femalePartCode": "T"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "T"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "B"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "pbl"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "pbr"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbl",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbr",
 				"femalePartCode": "BACK"
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": "33"
 		},
 		"shape": "corner",
@@ -842,20 +842,20 @@ module.exports = {
 		"joints": [{
 				"malePartCode": "BACK",
 				"femalePartCode": "B",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "pbl",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "pbr",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "L",
 				"maleOffset": "L.t / 2",
@@ -863,7 +863,7 @@ module.exports = {
 				"centerAxis": "-z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
@@ -871,7 +871,7 @@ module.exports = {
 				"centerAxis": "-x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "pbr",
 				"maleOffset": "pbr.t/2",
@@ -879,7 +879,7 @@ module.exports = {
 				"centerAxis": "+z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "pbl",
 				"maleOffset": "pbl.t/2",
@@ -887,7 +887,7 @@ module.exports = {
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "L",
 				"maleOffset": "L.t / 2",
@@ -895,7 +895,7 @@ module.exports = {
 				"centerAxis": "-z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
@@ -903,7 +903,7 @@ module.exports = {
 				"centerAxis": "-x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "pbr",
 				"maleOffset": "pbr.t/2",
@@ -911,7 +911,7 @@ module.exports = {
 				"centerAxis": "+z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "pbl",
 				"maleOffset": "pbl.t/2",
@@ -919,7 +919,7 @@ module.exports = {
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "pbr",
 				"femalePartCode": "R",
 				"maleOffset": "pbr.t/2",
@@ -927,7 +927,7 @@ module.exports = {
 				"centerAxis": "-z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "pbl",
 				"femalePartCode": "L",
 				"maleOffset": "L.t / 2",
@@ -935,43 +935,43 @@ module.exports = {
 				"centerAxis": "-x"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "BACK",
 				"femalePartCode": "T"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "T"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "B"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "pbl"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "pbr"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbl",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbr",
 				"femalePartCode": "BACK"
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": "33"
 		},
 		"shape": "corner",
@@ -1229,20 +1229,20 @@ module.exports = {
 		"joints": [{
 				"malePartCode": "BACK",
 				"femalePartCode": "B",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "pbl",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "pbr",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "L",
 				"maleOffset": "L.t / 2",
@@ -1250,7 +1250,7 @@ module.exports = {
 				"centerAxis": "-z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
@@ -1258,7 +1258,7 @@ module.exports = {
 				"centerAxis": "-x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "pbr",
 				"maleOffset": "pbr.t/2",
@@ -1266,7 +1266,7 @@ module.exports = {
 				"centerAxis": "+z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "B",
 				"femalePartCode": "pbl",
 				"maleOffset": "pbl.t/2",
@@ -1274,7 +1274,7 @@ module.exports = {
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "L",
 				"maleOffset": "L.t / 2",
@@ -1282,7 +1282,7 @@ module.exports = {
 				"centerAxis": "-z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
@@ -1290,7 +1290,7 @@ module.exports = {
 				"centerAxis": "-x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "pbr",
 				"maleOffset": "pbr.t/2",
@@ -1298,7 +1298,7 @@ module.exports = {
 				"centerAxis": "+z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "T",
 				"femalePartCode": "pbl",
 				"maleOffset": "pbl.t/2",
@@ -1306,7 +1306,7 @@ module.exports = {
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "pbr",
 				"femalePartCode": "R",
 				"maleOffset": "pbr.t/2",
@@ -1314,7 +1314,7 @@ module.exports = {
 				"centerAxis": "-z"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "pbl",
 				"femalePartCode": "L",
 				"maleOffset": "L.t / 2",
@@ -1322,43 +1322,43 @@ module.exports = {
 				"centerAxis": "-x"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "BACK",
 				"femalePartCode": "T"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "T"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "B"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "pbl"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "pbr"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbl",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbr",
 				"femalePartCode": "BACK"
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": "33"
 		},
 		"shape": "corner",
@@ -1544,7 +1544,7 @@ module.exports = {
 		"joints": [{
 				"malePartCode": "T",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -1552,7 +1552,7 @@ module.exports = {
 			{
 				"malePartCode": "T",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -1560,7 +1560,7 @@ module.exports = {
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -1568,7 +1568,7 @@ module.exports = {
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -1576,7 +1576,7 @@ module.exports = {
 			{
 				"malePartCode": "tkb",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -1584,7 +1584,7 @@ module.exports = {
 			{
 				"malePartCode": "tkb",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -1592,7 +1592,7 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -1600,7 +1600,7 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -1608,13 +1608,13 @@ module.exports = {
 			{
 				"malePartCode": "tkb",
 				"femalePartCode": "B",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "x",
 				"centerAxis": "+y"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "T",
 				"maleOffset": "T.t/2",
@@ -1623,7 +1623,7 @@ module.exports = {
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": 0.9525
 		},
 		"shape": "square",
@@ -1747,7 +1747,7 @@ module.exports = {
 			}
 		],
 		"joints": [{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "T",
 				"maleOffset": "T.t/2",
@@ -1755,7 +1755,7 @@ module.exports = {
 				"centerAxis": "+y"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
@@ -1763,7 +1763,7 @@ module.exports = {
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "B",
 				"maleOffset": "B.t/2",
@@ -1771,7 +1771,7 @@ module.exports = {
 				"centerAxis": "-y"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "L",
 				"maleOffset": "L.t/2",
@@ -1780,7 +1780,7 @@ module.exports = {
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": "33"
 		},
 		"shape": "square",
@@ -1986,7 +1986,7 @@ module.exports = {
 		"joints": [{
 				"malePartCode": "T",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -1994,7 +1994,7 @@ module.exports = {
 			{
 				"malePartCode": "T",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -2002,7 +2002,7 @@ module.exports = {
 			{
 				"malePartCode": "pt2",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -2010,7 +2010,7 @@ module.exports = {
 			{
 				"malePartCode": "pt2",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -2018,7 +2018,7 @@ module.exports = {
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -2026,7 +2026,7 @@ module.exports = {
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -2034,7 +2034,7 @@ module.exports = {
 			{
 				"malePartCode": "tkb",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -2042,7 +2042,7 @@ module.exports = {
 			{
 				"malePartCode": "tkb",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -2050,7 +2050,7 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -2058,7 +2058,7 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -2066,14 +2066,14 @@ module.exports = {
 			{
 				"malePartCode": "tkb",
 				"femalePartCode": "B",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "x",
 				"centerAxis": "+y"
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": 0.9525
 		},
 		"shape": "square",
@@ -2367,7 +2367,7 @@ module.exports = {
 		"joints": [{
 				"malePartCode": "T",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -2375,7 +2375,7 @@ module.exports = {
 			{
 				"malePartCode": "T",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -2383,7 +2383,7 @@ module.exports = {
 			{
 				"malePartCode": "pt2",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -2391,7 +2391,7 @@ module.exports = {
 			{
 				"malePartCode": "pt2",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -2399,7 +2399,7 @@ module.exports = {
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -2407,7 +2407,7 @@ module.exports = {
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -2415,7 +2415,7 @@ module.exports = {
 			{
 				"malePartCode": "tkb",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -2423,7 +2423,7 @@ module.exports = {
 			{
 				"malePartCode": "tkb",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -2431,7 +2431,7 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -2439,7 +2439,7 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -2447,14 +2447,14 @@ module.exports = {
 			{
 				"malePartCode": "tkb",
 				"femalePartCode": "B",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "x",
 				"centerAxis": "+y"
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": 0.9525
 		},
 		"shape": "square",
@@ -2744,7 +2744,7 @@ module.exports = {
 		"joints": [{
 				"malePartCode": "T",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -2752,7 +2752,7 @@ module.exports = {
 			{
 				"malePartCode": "T",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "x",
 				"centerAxis": "-z"
@@ -2760,7 +2760,7 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -2768,69 +2768,69 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "BACK",
 				"femalePartCode": "T"
 			},
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "B",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbr",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "BACK",
 				"femalePartCode": "R"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbl",
 				"femalePartCode": "L"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbr",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbl",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "R"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "L"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "T"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "B"
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": 0.9525
 		},
 		"shape": "square",
@@ -3036,7 +3036,7 @@ module.exports = {
 		"joints": [{
 				"malePartCode": "T",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -3044,7 +3044,7 @@ module.exports = {
 			{
 				"malePartCode": "T",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "x",
 				"centerAxis": "-z"
@@ -3052,7 +3052,7 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -3060,69 +3060,69 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "BACK",
 				"femalePartCode": "T"
 			},
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "B",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbr",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "BACK",
 				"femalePartCode": "R"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbl",
 				"femalePartCode": "L"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbr",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbl",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "R"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "L"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "T"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "B"
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": 0.9525
 		},
 		"shape": "square",
@@ -3328,7 +3328,7 @@ module.exports = {
 		"joints": [{
 				"malePartCode": "T",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "y",
 				"centerAxis": "+x"
@@ -3336,7 +3336,7 @@ module.exports = {
 			{
 				"malePartCode": "T",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "x",
 				"centerAxis": "-z"
@@ -3344,7 +3344,7 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "R",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
@@ -3352,69 +3352,69 @@ module.exports = {
 			{
 				"malePartCode": "B",
 				"femalePartCode": "L",
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "BACK",
 				"femalePartCode": "T"
 			},
 			{
 				"malePartCode": "BACK",
 				"femalePartCode": "B",
-				"type": "Butt"
+				"_TYPE": "Butt"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbr",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "BACK",
 				"femalePartCode": "R"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbl",
 				"femalePartCode": "L"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbr",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cpbl",
 				"femalePartCode": "BACK"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "R"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "L"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "T"
 			},
 			{
-				"type": "Butt",
+				"_TYPE": "Butt",
 				"malePartCode": "cb",
 				"femalePartCode": "B"
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": 0.9525
 		},
 		"shape": "square",
@@ -3557,7 +3557,7 @@ module.exports = {
 			}
 		],
 		"joints": [{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "T",
 				"maleOffset": "T.t/2",
@@ -3565,7 +3565,7 @@ module.exports = {
 				"centerAxis": "+y"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
@@ -3573,7 +3573,7 @@ module.exports = {
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "B",
 				"maleOffset": "B.t/2",
@@ -3581,7 +3581,7 @@ module.exports = {
 				"centerAxis": "-y"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "L",
 				"maleOffset": "L.t/2",
@@ -3590,7 +3590,7 @@ module.exports = {
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": "33"
 		},
 		"shape": "square",
@@ -3731,7 +3731,7 @@ module.exports = {
 			}
 		],
 		"joints": [{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "T",
 				"maleOffset": "T.t/2",
@@ -3739,7 +3739,7 @@ module.exports = {
 				"centerAxis": "+y"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
@@ -3747,7 +3747,7 @@ module.exports = {
 				"centerAxis": "+x"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "B",
 				"maleOffset": "B.t/2",
@@ -3755,7 +3755,7 @@ module.exports = {
 				"centerAxis": "-y"
 			},
 			{
-				"type": "Dado",
+				"_TYPE": "Dado",
 				"malePartCode": "BACK",
 				"femalePartCode": "L",
 				"maleOffset": "L.t/2",
@@ -3764,7 +3764,7 @@ module.exports = {
 			}
 		],
 		"dividerJoint": {
-			"type": "Dado",
+			"_TYPE": "Dado",
 			"maleOffset": "33"
 		},
 		"shape": "square",

@@ -12,7 +12,6 @@ if (EPNTS.getEnv() === 'local') {
   require('../../../public/js/utils/test/tests/imposter');
   require('./tests/cabinet');
   require('../../../public/js/utils/test/tests/decision-tree');
-  require('../../../public/js/utils/test/tests/logic-tree');
   require('../../../public/js/utils/test/tests/star-line-map');
   require('./tests/polygon-merge');
   require('./tests/array-math');

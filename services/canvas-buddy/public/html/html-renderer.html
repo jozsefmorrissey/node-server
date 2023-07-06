@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>HTML Renderer</title>
+    <script type="text/javascript">
+      window.onload = () => {
+        const textarea = document.querySelector('#html-input');
+        const renderCnt = document.querySelector('#render-cnt');
+        textarea.addEventListener('keyup', () => {
+          renderCnt.innerHTML = textarea.value;
+        });
+      };
+    </script>
+  </head>
+  <body>
+    <textarea id='html-input' name="name" rows="8" cols="80"></textarea>
+    <div id='render-cnt'></div>
+  </body>
+</html>
