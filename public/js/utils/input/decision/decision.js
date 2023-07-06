@@ -93,7 +93,8 @@ class DecisionInput extends DecisionTree.Node {
     this.addInput = (input) => {
       if (!(input instanceof Input)) throw new Error('input(arg1) needs to be and instance of Input');
       const payload = this.stateConfig().payload();
-      this.stateConfig().setValue('inputArray', payload.inputArray.concat(input))
+      const inArr = payload.inputArray ? payload.inputArray.concat(input) : [input];
+      this.stateConfig().setValue('inputArray', inArr);
       trigger();
     }
     this.values = (values, doNotRecurse) => {
