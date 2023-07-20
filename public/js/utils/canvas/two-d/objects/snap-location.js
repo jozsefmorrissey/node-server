@@ -10,8 +10,12 @@ class SnapLocation2d {
     let pairedWith = null;
     let courting;
     const instance = this;
+    const lastCenter = new Vertex2d();
 
-    this.center = () => centerFunction();
+    this.center = () => {
+      lastCenter.point(centerFunction());
+      return lastCenter;
+    }
 
     // If position is defined and a Vertex2d:
     //        returns the position of parents center iff this location was at position
@@ -19,11 +23,13 @@ class SnapLocation2d {
     //        returns current postion based off of the parents current center
 
     this.at = (position) => {
-      return centerFunction(position);
+      if (position) return centerFunction(position);
+      lastCenter.point(centerFunction());
+      return lastCenter;
     }
     this.centerFunction = (lf) => {
       if ((typeof lf) === 'function') centerFunction = lf;
-      return lf;
+      return centerFunction;
     }
     this.circle = (radius) => new Circle2d(radius || 2, centerFunction());
     this.eval = () => this.parent().position[location]();
@@ -189,12 +195,12 @@ function fromToPoint(snapLoc, xDiffFunc, yDiffFunc) {
   return (position) => {
     const xDiff = xDiffFunc();
     const yDiff = yDiffFunc();
-    const vertex = snapLoc.center();
     if (xDiff === 0 && yDiff === 0) {
       if (position) return snapLoc.parent().parent().center().clone();
-      vertex.point(snapLoc.parent().parent().center().clone());
+      snapLoc.point(snapLoc.parent().parent().center().clone());
       return snapLoc;
     }
+    const vertex = snapLoc.parent().center().clone();
     const center = snapLoc.parent().parent().center();
     const direction = xDiff >= 0 ? 1 : -1;
     const hypeLen = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
@@ -212,7 +218,7 @@ function fromToPoint(snapLoc, xDiffFunc, yDiffFunc) {
         x: center.x() + direction * (hypeLen * Math.cos(rads)),
         y: center.y() + direction * (hypeLen * Math.sin(rads))
       });
-      return snapLoc;
+      return vertex;
     }
   }
 }

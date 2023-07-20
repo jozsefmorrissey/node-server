@@ -77,13 +77,15 @@ const orderSelCnt = du.id('order-selector-cnt');
 const orderInput = new Input({
   name: 'order',
   inline: true,
-  label: 'Order:'
+  label: 'Order:',
+  validation: () => true
 });
 
 const versionInput = new Input({
   name: 'version',
   inline: true,
-  label: 'Version:'
+  label: 'Version:',
+  validation: () => true
 });
 orderSelCnt.innerHTML = orderInput.html() + versionInput.html();
 
@@ -101,13 +103,15 @@ du.on.match('click', `#${saveCntId}>button`, async (elem) =>{
     switch (elem.innerText) {
       case 'Create':
         versionId ||= 'original';
-        saveMan.switch(orderName, versionId);
+        await saveMan.switch(orderName, versionId);
+        setCookie();
         break;
       case 'Save':
-        saveMan.save();
+        await saveMan.save();
         break;
       case 'Open':
-        saveMan.switch(orderName, versionId);
+        await saveMan.switch(orderName, versionId);
+        setCookie();
         break;
     }
   }
@@ -155,7 +159,7 @@ function updateTime() {
 du.on.match('click', '#save-time-cnt', () => saveMan.save() || resetOrderAndVersion());
 
 let firstSwitch = true;
-function switchOrder(elem, details) {
+async function switchOrder(elem, details) {
   if (order.worthSaveing()) {
     if (firstSwitch) {
       const state = saveMan.state(order.name(), order.versionId());
@@ -171,15 +175,17 @@ function switchOrder(elem, details) {
   }
   firstSwitch = false;
   updateOrderInput();
-  if (details.contents === '') return order = new Order(details.orderName, details.versionId);
+  if (!Object.keys(details.contents).length) return order = new Order(details.orderName, details.versionId);
+  const od = await saveMan.open(details.orderName, details.versionId);
   try {
-    if (details.contents) {
-      order = Object.fromJson(JSON.parse(details.contents));
-    } if (details instanceof Order) order = details;
-    else throw new Error('unknown order format');
+    if (details instanceof Order) order = details;
+    else if (details.contents) {
+      order = Object.fromJson(details.contents);
+    }
+    if (!(order instanceof Order)) throw new Error('unknown order format');
     roomDisplay.order(order);
     orderNameInput.value = order.name(order.name());
-    orderVersionInput.value = order.versionId(order.versionId());
+    orderVersionInput.value = details.versionId;
     resetOrderAndVersion();
   } catch (e) {
     console.warn(e);

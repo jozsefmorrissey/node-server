@@ -253,6 +253,7 @@ class Snap2d extends Lookup {
     const hoveringObject = new HoverObject2d(this.object().center, () => this.minRadius() * 1.3).hovering;
     this.hovering = (vertex) => {
       const isNear = hoveringNear(vertex);
+      this.center();
       if (!isNear) return;
       for (let index = 0; index < snapLocations.length; index++) {
         const hoveringSnap = snapLocations[index].hovering(vertex);
@@ -466,7 +467,6 @@ class Snap2d extends Lookup {
     function findObjectSnapLocation(center) {
       const start = new Date().getTime();
       const closestOtherLoc = findClosestSnapLoc(center);
-      console.log('took:', new Date().getTime() - start);
       if (closestOtherLoc === null) return;
       let snapList, midpointOffset;
       if (closestOtherLoc.isLeft) {
@@ -544,10 +544,6 @@ class Snap2d extends Lookup {
           runData.move = new Date().getTime();
           findObjectSnapLocation(center);
           runData.object = new Date().getTime();
-          console.log(`wall: ${runData.wall - runData.start}
-move: ${runData.move - runData.wall}
-objec: ${runData.object - runData.move}
-total: ${runData.object - runData.start}`);
         }
       }
     }
@@ -577,6 +573,15 @@ total: ${runData.object - runData.start}`);
       }
       moveConnectedObjects(moveId, theta);
     }
+
+    this.getTextInfo = () => {
+      return {
+        text: instance.parent().name() || 'pooop',
+        center: instance.center(),
+        size: instance.height() / 4,
+        maxWidth: instance.width(),
+        limit: 10
+      }};
   }
 }
 

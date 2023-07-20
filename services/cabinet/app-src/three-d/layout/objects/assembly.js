@@ -6,7 +6,6 @@ const SnapPolygon = require('../../../../../../public/js/utils/canvas/two-d/obje
 class Assembly3D extends Object3D {
   constructor(assembly) {
     super(assembly.id(), assembly);
-    if (!(assembly instanceof Assembly)) return undefined;
 
     this.layout = assembly.layout;
     this.center = (vertex3D) => {
@@ -34,6 +33,10 @@ class Assembly3D extends Object3D {
   }
 }
 
-Object3D.register(Assembly);
+Assembly3D.build = (assembly) => {
+  if (assembly instanceof Assembly) return new Assembly3D(assembly);
+}
+
+Object3D.register(Assembly3D);
 
 module.exports = Assembly3D;

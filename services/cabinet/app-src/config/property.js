@@ -85,6 +85,7 @@ class Property extends Lookup {
 }
 Property.list = {};
 Property.DO_NOT_CLONE = true;
+Property.fromJson = Object.class.staticFromJson(Property);
 
 new Property();
 

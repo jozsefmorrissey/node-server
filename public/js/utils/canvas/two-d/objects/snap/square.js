@@ -7,6 +7,7 @@ const Vertex2d = require('../vertex');
 class SnapSquare extends Snap2d {
   constructor(parent, tolerance) {
     const polygon = new Polygon2d();
+    const orig = polygon;
     polygon.getTextInfo = () => ({
       text: this.parent().name() || 'kazzooi',
       center: this.center(),
@@ -26,9 +27,12 @@ class SnapSquare extends Snap2d {
     this.addLocation(SnapSquare.frontLeft(this));
     this.addLocation(SnapSquare.leftCenter(this));
     this.addLocation(SnapSquare.backLeft(this));
-    const vertices = this.snapLocations().map((snap) =>
-      snap.center());
+    const vertices = this.snapLocations().map((snap) => snap.center());
     polygon.addVertices(vertices);
+
+    this.center = (cent) => {
+      return polygon.center(parent.center(cent));
+    }
   }
 }
 
@@ -37,46 +41,45 @@ const wFunc = (snapLoc, multiplier) => SnapLocation2d.locationFunction(snapLoc, 
 const hFunc = (snapLoc, multiplier) => SnapLocation2d.locationFunction(snapLoc, 'height', multiplier);
 
 SnapSquare.backCenter = (parent) => {
-  const snapLoc = new SnapLocation2d(parent, "backCenter",
-      () => fromToPoint(snapLoc, wFunc(snapLoc, 0), hFunc(snapLoc, -.5)));
+  const snapLoc = new SnapLocation2d(parent, "backCenter");
+  snapLoc.centerFunction(fromToPoint(snapLoc, wFunc(snapLoc, 0), hFunc(snapLoc, -.5)));
   return snapLoc;
 }
 SnapSquare.frontCenter = (parent) => {
-  const snapLoc = new SnapLocation2d(parent, "frontCenter",
-      () => fromToPoint(snapLoc, wFunc(snapLoc, 0), () => hFunc(snapLoc, .5)));
-  snapLoc.at();
+  const snapLoc = new SnapLocation2d(parent, "frontCenter");
+  snapLoc.centerFunction(fromToPoint(snapLoc, wFunc(snapLoc, 0), () => hFunc(snapLoc, .5)));
   return snapLoc;
 }
 SnapSquare.leftCenter = (parent) => {
-  const snapLoc = new SnapLocation2d(parent, "leftCenter",
-      () => fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, 0)));
+  const snapLoc = new SnapLocation2d(parent, "leftCenter");
+  snapLoc.centerFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, 0)));
   return snapLoc;
 }
 SnapSquare.rightCenter = (parent) => {
-  const snapLoc = new SnapLocation2d(parent, "rightCenter",
-      () => fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, 0)));
+  const snapLoc = new SnapLocation2d(parent, "rightCenter");
+  snapLoc.centerFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, 0)));
   return snapLoc;
 }
 
 SnapSquare.backLeft = (parent) => {
-  const snapLoc = new SnapLocation2d(parent, "backLeft",
-      () => fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, -.5)));
+  const snapLoc = new SnapLocation2d(parent, "backLeft");
+  snapLoc.centerFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, -.5)));
   return snapLoc;
 }
 SnapSquare.backRight = (parent) => {
-  const snapLoc = new SnapLocation2d(parent, "backRight",
-      () => fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, -.5)));
+  const snapLoc = new SnapLocation2d(parent, "backRight");
+  snapLoc.centerFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, -.5)));
   return snapLoc;
 }
 
 SnapSquare.frontRight = (parent) => {
-  const snapLoc = new SnapLocation2d(parent, "frontRight",
-      () => fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, .5)));
+  const snapLoc = new SnapLocation2d(parent, "frontRight");
+  snapLoc.centerFunction(fromToPoint(snapLoc, wFunc(snapLoc, .5), hFunc(snapLoc, .5)));
   return snapLoc;
 }
 SnapSquare.frontLeft = (parent) => {
-  const snapLoc = new SnapLocation2d(parent, "frontLeft",
-      () => fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, .5)));
+  const snapLoc = new SnapLocation2d(parent, "frontLeft");
+  snapLoc.centerFunction(fromToPoint(snapLoc, wFunc(snapLoc, -.5), hFunc(snapLoc, .5)));
   return snapLoc;
 }
 

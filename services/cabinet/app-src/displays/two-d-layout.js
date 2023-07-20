@@ -78,7 +78,10 @@ function getPopUpAttrs(elem) {
   }
   const id = cnt.id;
   const obj = determineObject(id, member);
-  point = {x: cnt.getAttribute('x'), y: cnt.getAttribute('y')};
+  point = {
+            x: Number.parseFloat(cnt.getAttribute('x')),
+            y: Number.parseFloat(cnt.getAttribute('y'))
+          };
   let prevValue, cascade;
   if (key) prevValue = Object.pathValue(obj, key);
   const cascadeStr = elem.getAttribute('cascade');
@@ -188,7 +191,7 @@ du.on.match('click', '.add-object-btn-2d', (elem) => {
 du.on.match('click', '.add-vertex-btn-2d', (elem) => {
   const attrs = getPopUpAttrs(elem);
   const point = hovering.closestPointOnLine(attrs.point);
-  layout.addVertex(point, hovering);
+  layout.addVertex(point.point(), hovering);
   panZ.once();
 });
 
@@ -660,6 +663,7 @@ function drawWall(wall) {
   let color = hoverId() === wall.toString() ? 'green' : 'black';
   if (wall.endVertex().isFree()) color = 'red';
   draw.line(wall, color, 4);
+  const startpoint = wall.startVertex().point();
   const endpoint = wall.endVertex().point();
 
   wall.doors().forEach((door) =>

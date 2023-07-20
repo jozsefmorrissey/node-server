@@ -387,7 +387,13 @@ function runMatch(event) {
     const target = du.find.up(selectStr, event.target);
     const everything = selectStr === '*';
     if (everything || target) {
-      selectors[matchRunTargetId][event.type][selectStr].forEach((func) => func(target, event));
+      selectors[matchRunTargetId][event.type][selectStr].forEach((func) => {
+        try {
+          func(target, event)
+        } catch (e) {
+          console.error(e);
+        }
+      });
     }
   })
 }

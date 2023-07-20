@@ -179,7 +179,7 @@ Function.safeStdLibAddition(Array, 'equals', function (other, startIndex, endInd
         if (!elem.equals(other[index])) {
           return index;
         }
-      } else if (elem !== other[index]) {
+      } else if (!Object.equals(elem, other[index])) {
         equal = false;
       }
     }
@@ -353,9 +353,12 @@ const filterOutUndefined = (obj) => (key) => obj[key] !== undefined;
 function objEq(obj1, obj2) {
   const isObj1 = obj1 instanceof Object;
   const isObj2 = obj2 instanceof Object;
-  if (!isObj1 && !isObj2) return obj1 === obj2;
-  if (!isObj1) return false;
-  if (!isObj2) return false;
+  if (!isObj1 && !isObj2)
+    return obj1 === obj2;
+  if (!isObj1)
+    return false;
+  if (!isObj2)
+    return false;
   if (Array.isArray(obj1) !== Array.isArray(obj2)) return false;
   const obj1Keys = Object.keys(obj1).filter(filterOutUndefined(obj1)).sort();
   const obj2Keys = Object.keys(obj2).filter(filterOutUndefined(obj2)).sort();
@@ -373,8 +376,10 @@ function objEq(obj1, obj2) {
           return false;
         }
       }
-      else if (!obj1Val.equals(obj2Val)) return false;
-    } else if (obj1[obj1Key] !== obj2[obj2Key]) return false;
+      else if (!obj1Val.equals(obj2Val))
+        return false;
+    } else if (obj1[obj1Key] !== obj2[obj2Key])
+        return false;
   }
   return true;
 }
@@ -777,7 +782,19 @@ function setToJson(obj, options) {
   }
 }
 
+function staticFromJson(cxtr) {
+  return (json) => {
+    const obj = new cxtr();
+    obj.fromJson(json);
+    return obj;
+  }
+}
+
+Object.class.staticFromJson = staticFromJson;
+
 function setFromJson(obj, options) {
+  if (obj.constructor.fromJson === undefined)
+    obj.constructor.fromJson = staticFromJson(obj.constructor);
   obj.fromJson = (json) => {
     for (let index = 0; index < options.attrs.length; index += 1) {
       const attr = options.attrs[index];
@@ -801,6 +818,7 @@ function setClone(obj, options) {
   const cxtrFromJson = obj.constructor.fromJson;
   if (obj.constructor.DO_NOT_CLONE) {
     obj.clone = () => obj;
+    setFromJson(obj, options);
   } else if (cxtrFromJson && cxtrFromJson !== Object.fromJson) {
     obj.clone = () => cxtrFromJson(obj.toJson());
   } else if (options.isObject) {

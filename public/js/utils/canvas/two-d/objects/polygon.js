@@ -306,7 +306,7 @@ class Polygon2d {
       const verts = [];
       const endLine = this.endLine();
       for (let index = 0; index < list.length + 1; index += 1) {
-        if (index < list.length) verts[index] = new Vertex2d(list[index]);
+        if (index < list.length) verts[index] = list[index];//new Vertex2d(list[index]);
         if (index > 0) {
           const startVertex = verts[index - 1];
           const endVertex = verts[index] || this.startLine().startVertex();

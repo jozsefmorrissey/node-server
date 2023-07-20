@@ -88,7 +88,7 @@ class Bridge2dTo3D {
 }
 
 class Object3D extends Lookup {
-  constructor(layout, payload) {
+  constructor(payload, layout) {
     // super(undefined, undefined, true);
     super();
     this.layout = () => layout;
@@ -114,18 +114,20 @@ class Object3D extends Lookup {
   }
 }
 
-const objectClasses = [Object3D];
+const objectClasses = [];
 
 Object3D.register = (clazz) => {
   objectClasses.push(clazz);
 }
 
+
 Object3D.new = (...args) => {
   for (let index = objectClasses.length - 1; index > -1; index--) {
-    const object = new (objectClasses[index])(...args);
+    const cxtr = objectClasses[index];
+    const object = cxtr.build(...args);
     if (object) return object;
   }
-  throw new Error('something went wrong...');
+  return new Object3D(...args);
 }
 
 new Object3D();

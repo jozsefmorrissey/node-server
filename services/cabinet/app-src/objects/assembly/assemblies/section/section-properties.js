@@ -16,7 +16,7 @@ class SectionProperties extends KeyValue{
   constructor(config, index, sections, pattern) {
     super({childrenAttribute: 'sections', parentAttribute: 'parentAssembly'})
     if (sections) {
-      this.sections.copy(sections);
+      this.sections.merge(sections);
     }
     // TODO: consider getting rid of, sections and cover are the only ones that matter.
     this.subassemblies = [];

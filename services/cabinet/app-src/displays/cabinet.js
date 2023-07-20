@@ -60,17 +60,14 @@ class CabinetDisplay {
       return {type: 'You must select a defined type.'};
     }
 
-    function updateLayout(target) {
-      const attr = target.name === 'thickness' ? 'height' : 'width';
+    function update3Dmodel(target) {
       const cabinet = getHtmlElemCabinet(target);
-      const obj3D = Object3D.get(cabinet.id());
-      const value = new Measurement(target.value, true).decimal();
-      console.log('new cab val', value);
-      // obj3D.snap.top()[attr](value);
+      target.value = new Measurement(target.value, true).display();
+      console.log('ran update3Dmodel');
       ThreeDMain.update(cabinet);
     }
 
-    du.on.match('enter:focusout', '.cabinet-id-input.dem[name="width"],.cabinet-id-input.dem[name="thickness"', updateLayout);
+    du.on.match('enter:focusout', '.cabinet-id-input.dem', update3Dmodel);
 
     function updateCabValue(cabinet, attr) {
       const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);
@@ -126,18 +123,23 @@ class CabinetDisplay {
       return {cabinet, key};
     }
 
-    const valueUpdate = (path, value) => {
-      const cabKey = cabinetKey(path);
-      const decimal = new Measurement(value, true).decimal();
-      cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : value);
-      TwoDLayout.panZoom.once();
-      ThreeDMain.update(cabKey.cabinet);
-    }
+    // const valueUpdate = (path, value) => {
+    //   const cabKey = cabinetKey(path);
+    //   const decimal = new Measurement(value, true).decimal();
+    //   cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : value);
+    //   TwoDLayout.panZoom.once();
+    //   ThreeDMain.update(cabKey.cabinet);
+    // }
 
     const attrUpdate = (path, value) => {
       const cabKey = cabinetKey(path);
       const decimal = new Measurement(value, true).decimal();
-      cabKey.cabinet[cabKey.key](!Number.isNaN(decimal) ? decimal : value);
+      if (!Number.isNaN(decimal)) {
+        cabKey.cabinet[cabKey.key](decimal);
+      } if (path.match('[0-9]{1,}\.name')) {
+        cabKey.cabinet[cabKey.key](value);
+        TwoDLayout.panZoom.once();
+      }
     }
 
     const saveSuccess = () => console.log('success');
@@ -163,8 +165,8 @@ class CabinetDisplay {
 
     // WTFs
     // CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-    bind(`.cabinet-input`, valueUpdate,
-                  {validation: Measurement.validation('(0,)')});
+    // bind(`.cabinet-input`, valueUpdate,
+    //               {validation: Measurement.validation('(0,)')});
     bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
     du.on.match('click', '.save-cabinet-btn', save);
     du.on.match('focusout', '.modifiable-value-input', updateValue);

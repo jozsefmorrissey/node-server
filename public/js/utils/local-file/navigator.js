@@ -28,7 +28,10 @@ const createFile = async (dirH, method, name, create) =>  {
   if ((typeof method) === 'string') return await dirH[method](name, {create});
   if (method !== undefined || create === true) throw new Error('unkown method of file creation');
   const list = await N.ls(dirH);
-  if (list[name] === undefined) throw new Error(`'${concatPaths(dirH.absPath, name)}' does not exist`);
+  if (list[name] === undefined) {
+    if (create) throw new Error(`'${concatPaths(dirH.absPath, name)}' does not exist`);
+    else return;
+  }
   if (N.isFile(list[name])) return await dirH.getFileHandle(name);
   return await dirH.getDirectoryHandle(name);
 }
@@ -44,6 +47,7 @@ async function getParentDirectory(handler) {
 
 function getCreate(createMethod) {
   return async (handlerDir, path, create) => {
+    handlerDir ||= workingDir;
     if(!path || path === './') return handlerDir;
     const absPath = N.absPathIffMustBeTaken(handlerDir.absPath, path);
     let currDir = handlerDir;
@@ -59,7 +63,7 @@ function getCreate(createMethod) {
 
     let name = pathArr[pathArr.length - 1]
     let target = await createFile(currDir, createMethod, name, create);
-    target.absPath = concatPaths(currDir.absPath, name);
+    if (target) target.absPath = concatPaths(currDir.absPath, name);
     return target;
   };
 }
@@ -155,6 +159,7 @@ function createMethods() {
 
   N.find = async function (handlerDir, path, filter) {
     const targetDir = await N.get(handlerDir, path);
+    if (targetDir === undefined) return;
     if (N.isFile(targetDir)) {
       const retVal = {};
       retVal[targetDir.absPath] = targetDir;
@@ -243,7 +248,7 @@ function createMethods() {
   N.isFile = (handler) => handler && handler.kind === 'file';
 
   N.write = async function (fileHandle, data) {
-    const writable = await fileHandle.createWritable();
+    const writable = await fileHandle.createWritable().catch(console.error);
     await writable.write({type: 'write', data});
     await writable.close();
   };

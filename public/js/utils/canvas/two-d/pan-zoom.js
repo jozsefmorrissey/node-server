@@ -52,13 +52,18 @@ function panZoom(canvas, draw) {
     };
   }
 
+  const lastRunTime = {};
   function runOn(type, event) {
-    const dt = displayTransform;
+    const time = new Date().getTime();
     let performingFunction = false;
-    const funcs = eventFuncs[type];
-    const eventObj  = eventObject(type, event);
-    for (let index = 0; !performingFunction && index < funcs.length; index += 1) {
-      performingFunction = funcs[index](eventObj, event);
+    if (!lastRunTime[type] || lastRunTime[type] + 50 < time) {
+      const dt = displayTransform;
+      const funcs = eventFuncs[type];
+      const eventObj  = eventObject(type, event);
+      for (let index = 0; !performingFunction && index < funcs.length; index += 1) {
+        performingFunction = funcs[index](eventObj, event);
+      }
+      lastRunTime[type] = time;
     }
     return performingFunction;
   }

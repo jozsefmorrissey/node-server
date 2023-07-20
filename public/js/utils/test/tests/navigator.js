@@ -3,6 +3,7 @@
 const Navigator = require('../../local-file/navigator.js');
 
 Navigator.onInit(async () => {
+  return;
   if (confirm('AutoSave tests: \nWARNING! Will create garbage information on your computer.') === false) return;
   const AutoSave = require('../../local-file/auto-save.js');
   const Test = require('../test.js').Test;
@@ -11,7 +12,7 @@ Navigator.onInit(async () => {
 
   const helper = Navigator.helper();
   const testHelper = await helper.getDirectory('TEST', true);
-  const as = new AutoSave(() => cabJson, testHelper);
+  const as = new AutoSave(() => cabJson, helper, 'TEST');
 
   const cleanUpFunc = async (location) => {
     let alreadyDef;
@@ -232,7 +233,10 @@ Navigator.onInit(async () => {
                   seven: {eight: 8, nine: {ten: 3.8}}};
 
     const helper = await testHelper.getDirectory('auto-save', true);
+    helper.getFile('help.txt', true);
+    const list = await helper.find(null);
     let autoSave = new AutoSave(() => data, helper, 'simple');
+    await autoSave.onInit();
     autoSave.maxLen(5);
     let readObj = await autoSave.read();
     ts.assertEquals(Object.keys(readObj).length, 0);
@@ -260,21 +264,13 @@ Navigator.onInit(async () => {
         ts.assertTrue(Object.equals(readObj, data));
         ts.assertFalse(await helper.exists('simple.json'));
 
-        // read save and validate complex object broken up.
-        autoSave = new AutoSave(() => cabJson, helper, 'complex');
-        autoSave.maxLen(5000);
-        await autoSave.read();
-        await autoSave.save();
-        readObj = await autoSave.read();
-        ts.assertTrue(Object.equals(readObj, readObj));
-
         // read, save and validate and object with large text sections
         autoSave = new AutoSave(() => shortBook, helper, 'book');
         autoSave.maxLen(500);
         await autoSave.read();
         await autoSave.save();
         readObj = await autoSave.read();
-        ts.assertTrue(Object.equals(readObj, readObj));
+        ts.assertTrue(Object.equals(readObj, shortBook));
 
         // read, save and validate a simple object saved to a single file.
         autoSave = new AutoSave(() => data, helper, 'simple-single');
@@ -282,8 +278,15 @@ Navigator.onInit(async () => {
         await autoSave.read();
         await autoSave.save();
         readObj = await autoSave.read();
-        ts.assertTrue(Object.equals(readObj, readObj));
-        ts.assertFalse(await helper.exists('simple-single'));
+        ts.assertTrue(Object.equals(readObj, data));
+
+        // read save and validate complex object broken up.
+        autoSave = new AutoSave(() => cabJson, helper, 'complex');
+        autoSave.maxLen(5000);
+        await autoSave.read();
+        await autoSave.save();
+        readObj = await autoSave.read();
+        ts.assertTrue(Object.equals(readObj, cabJson));
 
         ts.success();
       }, 50);

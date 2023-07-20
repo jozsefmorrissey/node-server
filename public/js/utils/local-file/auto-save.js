@@ -1,13 +1,29 @@
 
 const CustomEvent = require('../custom-event');
-const Navigator = require('navigator');
+const JsonReaderWriter = require('json-reader-writer');
 
 const ROOT_OBJ_NAME = '_AUTO_SAVE_root.json';
+// TODO: I would prefer if name was not an argument... but i tried removing it
+//       and everything broke. My theory was that only one instance of a given
+//       file or directory can referenced at a time. Since the root directory
+//       is never accessed when reading and writing, this eliminates the multiple
+//       reference problem.(If that was the problem...)
 class AutoSave {
-  constructor(contentFunc, rootDirectoryHelper, rootPath, autoSaveOn) {
+  constructor(contentFunc, rootDirectoryHelper, name, autoSaveOn) {
     if ((typeof contentFunc) !== 'function') throw new Error('Must give a content function or else whats the point?');
-    this.rootPath = () => rootPath;
+    let promise  = rootDirectoryHelper;
+    this.ready = () => !(rootDirectoryHelper instanceof Promise);
+    if (this.ready()) promise = undefined;
+    else (async () =>
+      rootDirectoryHelper = await promise)();
+    this.name = () => name;
+    this.directoryName = () => rootDirectoryHelper.name();
     this.rootDirectoryHelper = () => rootDirectoryHelper;
+    this.onInit = async (func) => {
+      if (promise) await promise;
+      if ((typeof func) === 'function') func();
+    }
+    this.directory = async () => rootDirectoryHelper.getDirectory(name, true);
 
     const instance = this;
     const savedEvent = new CustomEvent('saved');
@@ -15,61 +31,31 @@ class AutoSave {
     const readEvent = new CustomEvent('read');
     const readingEvent = new CustomEvent('reading');
     let maxLen = 10000;
+    let readerWriter = new JsonReaderWriter();
 
     this.isOn = () => autoSaveOn === true;
     this.onSaved = savedEvent.on;
     this.onSaving = savingEvent.on;
     this.onRead = readEvent.on;
     this.onReading = readingEvent.on;
-    this.maxLen = (val) => val ? (maxLen = val) : maxLen;
-
-    function getPath(path) {
-      path = path !== '' ? Navigator.concatPaths(rootPath, path) : rootDirectoryHelper.absPath(rootPath);
-      return path + '.json';
-    }
+    this.maxLen = (val) => readerWriter.maxLen(val);
 
     this.save = async function () {
+      await this.onInit();
       if (!hasRead) throw new Error('Must attempt to read file before saving');
-      try {
-        savingEvent.trigger();
-        const data = contentFunc(rootPath, this);
-        const jsonD = JSON.deconstruct(data, maxLen, 2);
-        const paths = Object.keys(jsonD);
-        for (let index = 0; index < paths.length; index++) {
-          let path = getPath(paths[index].split('.').join('/'));
-          const file = await rootDirectoryHelper.getFile(path, true);
-          await file.write(jsonD[paths[index]]);
-        }
-        savedEvent.trigger();
-      } catch (e) {
-        this.on_off_toggle(false);
-        console.error(e);
-      }
+      savingEvent.trigger();
+      const data = contentFunc(this.name(), this);
+      if (await readerWriter.write(data, await this.directory())) savedEvent.trigger();
+      else this.on_off_toggle(false);
     }
 
     let hasRead = false;
     async function read() {
-      try {
-        const deconstruction = {};
-        const fileHelpers = await rootDirectoryHelper.find(null, (helper) => helper.isFile());
-        try {
-          const rootFile = await rootDirectoryHelper.get(rootDirectoryHelper.absPath() + '.json');
-          deconstruction[''] = await rootFile.read();
-        } catch (e) {}
-        const list = Object.values(fileHelpers);
-        for (let index = 0; index < list.length; index++) {
-          const fileHelper = list[index];
-          const text = await fileHelper.read();
-          let objPath = fileHelper.relPath(rootDirectoryHelper).split('/').join('.');
-          objPath = objPath.replace(/(.*)\.json/, '$1');
-          deconstruction[objPath] = text;
-        }
-        hasRead = true;
-        const built = JSON.reconstruct(deconstruction);
-        return built[rootPath] || {};
-      } catch (e) {
-        return null;
-      }
+      await this.onInit();
+      const data = await readerWriter.read(await this.directory());
+      hasRead = true;
+
+      return data;
     }
     this.read = read;
 

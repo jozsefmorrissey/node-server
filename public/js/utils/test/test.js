@@ -153,6 +153,10 @@ class TestStatus {
       console.log(`%c ${testName} - Successfull (${assertC}/${assertT})${
           msg ? `\n\t\t${msg}` : ''}`, 'color: green');
     }
+    function failStr(msg) {
+      console.log(`%c ${testName} - Failed (${assertC}/${assertT})${
+          msg ? `\n\t\t${msg}` : ''}`, 'color: red');
+    }
     const possiblyFail = (msg) => failOnError ? instance.fail(msg, 6) : printError(msg, 5);
 
     this.assertTrue = (b, msg) => assert(b) ||
@@ -169,6 +173,7 @@ class TestStatus {
     }
     this.fail = (msg, stackOffset) => {
       fail = true;
+      failStr();
       printError(msg, stackOffset);
       Test.reportIn(this);
       throw failureError;
@@ -207,7 +212,8 @@ const Test = {
             const ts = new TestStatus(testName);
             const isAsync = testFunc.constructor.name === "AsyncFunction";
             if (isAsync) {
-              testFunc(ts).then(() => {}, (e) => ts.fail(e));
+              testFunc(ts).then(() => {}, (e) =>
+                ts.fail(e.stack || e.msg));
             } else {
               testFunc(new TestStatus(testName));
             }

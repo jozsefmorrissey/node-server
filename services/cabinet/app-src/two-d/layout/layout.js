@@ -222,9 +222,9 @@ class Layout2D extends Lookup {
     }
 
     this.addObject = (id, payload, name, polygon) => {
-      const center = Vertex2d.center.apply(null, this.vertices())
-      const obj = Object3D.new(payload, polygon);
-      obj.bridge.top().center(center);
+      // const center = Vertex2d.center.apply(null, this.vertices())
+      // obj.bridge.top().center(center);
+      const obj = Object3D.new(payload, this);
       obj.id(id);
       this.objects().push(obj);
       // history.newState();
@@ -506,7 +506,8 @@ class Layout2D extends Lookup {
     this.atWall = (vertex) => {
       for (let index = 0; index < walls.length; index++) {
         const hovering = walls[index].hovering(vertex);
-        if (hovering) return hovering;
+        if (hovering)
+          return hovering;
       }
     }
 
@@ -514,7 +515,8 @@ class Layout2D extends Lookup {
       const activeObjects = this.level() || this.objects();
       for (let index = 0; index < activeObjects.length; index++) {
         const hovering = activeObjects[index].snap2d.top().hovering(vertex);
-        if (hovering) return hovering;
+        if (hovering)
+          return hovering;
       }
       return this.atWall(vertex);
     }
