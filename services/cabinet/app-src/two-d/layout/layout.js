@@ -515,7 +515,7 @@ class Layout2D extends Lookup {
       const activeObjects = this.level() || this.objects();
       for (let index = 0; index < activeObjects.length; index++) {
         const hovering = activeObjects[index].snap2d.top().hovering(vertex);
-        if (hovering)
+        if (hovering) 
           return hovering;
       }
       return this.atWall(vertex);

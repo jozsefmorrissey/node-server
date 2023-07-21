@@ -127,6 +127,8 @@ du.on.match('enter:focusout', '.value-2d', (elem) => {
       cabinet[props.key](props.value);
       ThreeDMain.update(cabinet)
       return;
+    case 'snap':
+      props.obj = props.obj.snap2d.top();
   }
 
   if (props.key === 'thickness') props.key = 'height';
@@ -718,9 +720,8 @@ function drawObjects(objects, defaultColor, dontDrawSnapLocs) {
   let target;
   objects.forEach((obj) => {
     const color = hoverId() === obj.snap2d.top().toString() ? 'green' : defaultColor;
-    draw(obj.snap2d.top(), color, 3);
     if (!dontDrawSnapLocs) {
-      obj.snap2d.top().snapLocations().forEach((snapLoc) => {
+      obj.snap2d.top().snapLocations().forEach((snapLoc, i) => {
         const beingHovered = hoverId() === snapLoc.toString();
         const identfied = Snap2d.identfied(snapLoc);
         const snapColor = identfied ? 'red' : (beingHovered ? 'green' :
@@ -731,6 +732,7 @@ function drawObjects(objects, defaultColor, dontDrawSnapLocs) {
         else target = {radius, color: snapColor};
       });
     }
+    draw(obj.snap2d.top(), color, 3);
   });
   if (target) draw(hovering, target.color, target.radius);
 }

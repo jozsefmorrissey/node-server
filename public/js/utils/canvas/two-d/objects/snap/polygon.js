@@ -8,7 +8,7 @@ const ToleranceMap = require('../../../../tolerance-map.js');
 
 class SnapPolygon extends Snap2d {
   constructor(parent, polygon, tolerance) {
-    if (!(polygon instanceof Polygon2d) || !polygon.valid()) throw new Error('PolygonSnap requires a valid polygon to intialize');
+    // if (!(polygon instanceof Polygon2d) || !polygon.valid()) throw new Error('PolygonSnap requires a valid polygon to intialize');
     super(parent, polygon, tolerance);
     let locationCount = 0;
     polygon.centerOn(parent.center());
@@ -39,7 +39,6 @@ class SnapPolygon extends Snap2d {
 
     this.object = () => {
       polygon.center(this.center());
-      const thetaDiff = polygon.radians() - this.radians();
       const rotated = polygon.rotate(this.radians(), null, true);
       return rotated;
     }

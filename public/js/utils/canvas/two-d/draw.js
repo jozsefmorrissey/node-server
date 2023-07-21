@@ -130,6 +130,7 @@ class Draw2d {
       if (poly === undefined) return;
       color = color ||  'black';
       width = width || 1;
+      poly.center();
       poly.lines().forEach((line) => draw.line(line, color, width));
       // if ((typeof poly.getTextInfo) === 'function') {
       //   ctx().save();
@@ -275,7 +276,8 @@ class Draw2d {
     }
 
     draw.snapLocation = (location, color, radius) => {
-      const c = color || snapLocColor(location);
+      location.center();
+      const c = snapLocColor(location);
       draw.circle(location.circle(radius), 'black', c);
     }
 

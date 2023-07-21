@@ -68,9 +68,6 @@ class Bridge2dTo3D {
       return obj3D[xDem]();
     }
     this.radians = (rads) => {
-      if (rads !== undefined && rads > 0) {
-        console.log('rads:', this.radians());
-      }
       const rotation = obj3D.rotation();
       if (rads !== undefined) {
         const radDiff = rads - Math.toRadians(rotation[axis]);

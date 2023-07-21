@@ -185,11 +185,11 @@ class Snap2d extends Lookup {
       return locs;
     }
 
-    const backReg = /^back[0-9]{1,}$/;
-    const rightCenterReg = /^right[0-9]{1,}center$/;
-    const leftCenterReg = /^left[0-9]{1,}center$/;
-    const backCenterReg = /^back[0-9]{1,}center$/;
-    const centerReg = /^[a-z]{1,}[0-9]{1,}center$/;
+    const backReg = /^back([0-9]{1,}|)$/;
+    const rightCenterReg = /^right([0-9]{1,}|)center$/;
+    const leftCenterReg = /^left([0-9]{1,}|)center$/;
+    const backCenterReg = /^back([0-9]{1,}|)center$/;
+    const centerReg = /^[a-z]{1,}([0-9]{1,}|)center$/;
     this.snapLocations = getSnapLocations;
     this.snapLocations.notPaired = () => getSnapLocations((loc) => loc.pairedWith() === null);
     this.snapLocations.paired = () => getSnapLocations((loc) => loc.pairedWith() !== null);
@@ -198,6 +198,7 @@ class Snap2d extends Lookup {
     this.snapLocations.leftCenter = () => getSnapLocations((loc) => loc.location().match(leftCenterReg));
     this.snapLocations.backCenter = () => getSnapLocations((loc) => loc.location().match(backCenterReg));
     this.snapLocations.center = () => getSnapLocations((loc) => loc.location().match(centerReg));
+    this.snapLocations.corners = () => getSnapLocations((loc) => !loc.location().match(centerReg));
     this.snapLocations.byLocation = (name) => getSnapLocations((loc) => loc.location() === name);
     this.snapLocations.at = (vertex) => {
       for (let index = 0; index < snapLocations.length; index++)
@@ -446,7 +447,6 @@ class Snap2d extends Lookup {
           const combinedRadius = otherSnap.maxRadius() + instance.maxRadius();
           const center2centerDist = otherSnap.object().center().distance(instCenter);
           if (center2centerDist - 1 < combinedRadius) {
-            console.log('hit!');
             const snapLocs = otherSnap.snapLocations();
             closest = snapLocs.min(closest, distanceFunc(center));
           }

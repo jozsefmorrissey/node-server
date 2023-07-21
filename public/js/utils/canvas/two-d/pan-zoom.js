@@ -56,7 +56,7 @@ function panZoom(canvas, draw) {
   function runOn(type, event) {
     const time = new Date().getTime();
     let performingFunction = false;
-    if (!lastRunTime[type] || lastRunTime[type] + 50 < time) {
+    // if (!lastRunTime[type] || lastRunTime[type] + 100 < time) {
       const dt = displayTransform;
       const funcs = eventFuncs[type];
       const eventObj  = eventObject(type, event);
@@ -64,7 +64,7 @@ function panZoom(canvas, draw) {
         performingFunction = funcs[index](eventObj, event);
       }
       lastRunTime[type] = time;
-    }
+    // }
     return performingFunction;
   }
 

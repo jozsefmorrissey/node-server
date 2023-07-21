@@ -8,13 +8,18 @@ class Polygon2d {
     let faceIndecies = [2];
     let map
 
-    this.vertices = (target, before, after) => {
-      if (lines.length === 0) return [];
+    function allVertices() {
       const fullList = [];
       for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];
         fullList.push(line.startVertex());
       }
+      return fullList;
+    }
+    this.vertices = (target, before, after) => {
+      if (lines.length === 0) return [];
+      // reposition();
+      const fullList = allVertices();
       if (target) {
         const vertices = [];
         const index = fullList.indexOf(target);
@@ -149,9 +154,11 @@ class Polygon2d {
     this.radians = (rads) => {
       const currRads = new Line2d(this.center(), this.faces()[0].midpoint()).radians();
       if (Number.isFinite(rads)) {
-        const radOffset = rads - currRads;
-        this.rotate(radOffset);
-        return rads;
+        const radOffset = (rads - currRads) % Math.PI;
+        if (radOffset > .0001) {
+          this.rotate(radOffset);
+          return rads;
+        }
       }
       return currRads;
     }
@@ -273,11 +280,19 @@ class Polygon2d {
       }
     }
 
+    // let translateTo;
+    // function reposition() {
+    //   if (!translateTo) return;
+    //   const curr = Vertex2d.center(...allVertices());
+    //   const diff = translateTo.differance(curr);
+    //   instance.translate(diff.x(), diff.y());
+    // }
+
     this.center = (center) => {
-      const curr = Vertex2d.center(...this.vertices());
-      if (center !== undefined) {
+      if (center) {
+        const curr = Vertex2d.center(...allVertices());
         const diff = center.differance(curr);
-        this.translate(diff.x(), diff.y());
+        instance.translate(diff.x(), diff.y());
       }
       return Vertex2d.center(...this.vertices());
     }
@@ -306,7 +321,7 @@ class Polygon2d {
       const verts = [];
       const endLine = this.endLine();
       for (let index = 0; index < list.length + 1; index += 1) {
-        if (index < list.length) verts[index] = list[index];//new Vertex2d(list[index]);
+        if (index < list.length) verts[index] = new Vertex2d(list[index]);
         if (index > 0) {
           const startVertex = verts[index - 1];
           const endVertex = verts[index] || this.startLine().startVertex();
