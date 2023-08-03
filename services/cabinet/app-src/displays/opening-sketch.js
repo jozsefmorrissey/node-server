@@ -55,13 +55,13 @@ class OpeningSketch {
           allLines.concatInPlace(lines);
         }
       }
-      const cabLimits = cabinet.position().limits();
+      const cabDems = cabinet.position().demension();
       const dir = -1;
       const cabinetOutline = [
-        new Line2d({x: dir*0, y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}),
-        new Line2d({x: dir*2*cabLimits['x'], y: 2*cabLimits['y']}, {x: dir*2*cabLimits['x'], y: 0}),
-        new Line2d({x: dir*2*cabLimits['x'], y: 0}, {x: dir*0, y: 0}),
-        new Line2d({x: dir*0, y: 0}, {x: dir*0, y: 2*cabLimits['y']}),
+        new Line2d({x: dir*0, y: cabDems['y']}, {x: dir*cabDems['x'], y: cabDems['y']}),
+        new Line2d({x: dir*cabDems['x'], y: cabDems['y']}, {x: dir*cabDems['x'], y: 0}),
+        new Line2d({x: dir*cabDems['x'], y: 0}, {x: dir*0, y: 0}),
+        new Line2d({x: dir*0, y: 0}, {x: dir*0, y: cabDems['y']}),
       ];
       sketch(cabinetOutline, 'red', .3);
       allLines.concatInPlace(cabinetOutline);

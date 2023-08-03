@@ -35,6 +35,19 @@ du.find = (selector) => document.querySelector(selector);
 du.find.all = (selector) => document.querySelectorAll(selector);
 du.validSelector = VS;
 
+du.input.valueObject = (elem) => {
+  const inputs = du.find.downAll('input,select,textarea', elem);
+  const obj = {};
+  inputs.forEach((input) => {
+    switch(input.type) {
+      case 'number': obj[input.name] = Number.parseFloat(input.value);break;
+      case 'checkbox': obj[input.name] = input.checked;break;
+      default: obj[input.name] = input.value;break;
+    }
+  });
+  return obj;
+}
+
 du.create.element = function (tagname, attributes) {
   const elem = document.createElement(tagname);
   const keys = Object.keys(attributes || {});

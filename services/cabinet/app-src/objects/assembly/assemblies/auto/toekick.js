@@ -25,7 +25,6 @@ class AutoToekick extends Assembly {
 
     Object.getSet(this, {rightEndStyle: false, leftEndStyle: false});
     const instance = this;
-    let lastSize = new Vertex3D();
     let toeKick;
     let vOid;
     let offsetToeKickPoly;
@@ -65,10 +64,12 @@ class AutoToekick extends Assembly {
     this.children = () => this.getSubassemblies();
     this.getSubassemblies = () => assems;
 
+    let lastState;
     this.update = () => {
-      if (!lastSize.equals(cabinet.position().demension())) {
+      const currState = cabinet.modificationState();
+      if (currState !== lastState) {
         try{
-          lastSize = new Vertex3D(cabinet.position().demension());
+          lastState = currState;
           this.toBiPolygon();
         } catch (e) {
           console.error('AutoToeKick: update exception');

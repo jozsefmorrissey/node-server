@@ -47,9 +47,11 @@ class Vector3D {
       return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
     }
     this.sameDirection = (otherVect) => {
-      return approximate.sameSign(otherVect.i(), this.i()) &&
-              approximate.sameSign(otherVect.j(), this.j()) &&
-              approximate.sameSign(otherVect.k(), this.k());
+      // console.warn('Changed this function with out looking into the consequences');
+      return this.dot(otherVect) >= 0;
+      // return approximate.sameSign(otherVect.i(), this.i()) &&
+      //         approximate.sameSign(otherVect.j(), this.j()) &&
+      //         approximate.sameSign(otherVect.k(), this.k());
     }
     this.divide = (vector) => {
       if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);

@@ -14,19 +14,10 @@ class SnapPolygon extends Snap2d {
     polygon.centerOn(parent.center());
     if (parent === undefined) return this;
     const instance = this;
-    let longestFaceIndex;
-
-    const setOpeningLine = (index) => {
-      const line = polygon.lines()[index];
-      if (longestFaceIndex === undefined || instance.longestFaceLine().length() < line.length()) {
-        longestFaceIndex = index;
-      }
-    }
 
     this.longestFaceLine = () => {
       const rotated = this.object();
-      const lines = rotated.lines();
-      if (longestFaceIndex) return lines[index];
+      const lines = rotated.faces();
       const longest = lines[0];
       for (let index = 1; index < lines.length; index++) {
         const line = lines[index];
@@ -50,7 +41,7 @@ class SnapPolygon extends Snap2d {
       const locFunc = vertexFunc(index + 1);
       const snapLoc = new SnapLocation2d(instance, name + locationCount++,  locFunc,  targetName);
       instance.addLocation(snapLoc);
-      const mpFunc = midpointFunc(index + (name === 'right' ? 1 : 0));
+      const mpFunc = midpointFunc(index + (name === 'left' ? 1 : 0));
       const mpLoc = mpFunc();
       if(midpointMap.matches(mpLoc).length === 0) {
         midpointMap.add(mpLoc);
@@ -75,12 +66,10 @@ class SnapPolygon extends Snap2d {
       if (prevIsFace && !targetIsFace && nextIsFace){
         queBack(index);
       } else if (targetIsFace && !nextIsFace) {
-        addLine(index, 'right', 'left');
-        setOpeningLine(index);
-      } else if (!targetIsFace && nextIsFace) {
         addLine(index, 'left', 'right');
+      } else if (!targetIsFace && nextIsFace) {
+        addLine(index, 'right', 'left');
       } else if (targetIsFace) {
-        setOpeningLine(index);
         return;
       } else {
         queBack(index);

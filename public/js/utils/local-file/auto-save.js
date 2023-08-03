@@ -45,8 +45,11 @@ class AutoSave {
       if (!hasRead) throw new Error('Must attempt to read file before saving');
       savingEvent.trigger();
       const data = contentFunc(this.name(), this);
-      if (await readerWriter.write(data, await this.directory())) savedEvent.trigger();
-      else this.on_off_toggle(false);
+      if (await readerWriter.write(data, await this.directory())) {
+        savedEvent.trigger();
+        return true;
+      }
+      return false;
     }
 
     let hasRead = false;
@@ -61,12 +64,17 @@ class AutoSave {
 
     let activeSaver = 0;
     this.on_off_toggle = (true_false_undefined) => {
+      const tfu = true_false_undefined;
+      if (autoSaveOn === tfu || (tfu !== undefined && tfu !== true && tfu !== false)) {
+        return autoSaveOn;
+      }
       switch (true_false_undefined) {
         case true: autoSaveOn = true; break;
         case false: autoSaveOn = false; break;
-        default: autoSaveOn = !autoSaveOn; break;
+        case undefined: autoSaveOn = !autoSaveOn; break;
       }
       if (autoSaveOn) autoSave(++activeSaver);
+      return autoSaveOn;
     }
 
     let int = 10000;

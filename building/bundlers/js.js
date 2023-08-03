@@ -131,7 +131,11 @@ class JsBundler extends Bundler {
             setTimeout(function () {
               writersLock.acquire().then(async function([value, release]) {
                 // TODO: this does not make sense to me.... the lock should prevent async speed up...??
-                bundle += await formatScript(item.filename, item.contents);
+                let contents = item.contents;
+                if (item.filename.endsWith('.json')) {
+                  contents = 'module.exports = ' + contents;
+                }
+                bundle += await formatScript(item.filename, contents);
                 fileCount--;
                 // TODO: Not sure if this is a proper fix, only became a problem
                 //      when source code contained 111 files and ~17,400 lines

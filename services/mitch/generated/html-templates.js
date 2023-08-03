@@ -215,6 +215,9 @@ exports['expandable/top-add-list'] = (get, $t) =>
 		$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
 		` </div> `
 
+exports['input/decision/decision-modification'] = (get, $t) => 
+		` <div class='decision-tree-mod-cnt'> <div class='then-add-cnt'> <button hidden class='then-btn modify-edit' mod-id='1'> Then... </button> <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button> </div> <div hidden class='if-edit-cnt'> <button class='twentys edit-btn modify-edit' mod-id='2'> <i class="inline gg-pen"></i> </button> <button class='twentys conditional-btn modify-edit' mod-id='3'> If </button> </div> <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div> <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div> <div hidden class='rm-edit-cnt modify-edit' mod-id='2'> <div class='edit-cnt'>Edit Tree Html!</div> <button class='modiy-rm-input-btn'>Remove</button> </div> <div hidden class='add-cnt tab modify-edit' mod-id='4'> Add Input Html! </div> <div class='remove-btn-cnt' hidden> <button class='rm-node modify-edit'>X</button> </div> <div class='close-cnts' hidden><button class='modify-edit'>X</button></div> <br> <br> <div class='copy-save-paste-cnt'> <div style='display: inline-block'> <textarea id='json-data'></textarea> <br> <button id="copy">Copy</button> <button id='paste' class='modify-edit' style='float:right'>Paste</button> <br><br> <button id="save" class='modify-edit'>Save</button> </div> </div> </div> `
+
 exports['input/data-list'] = (get, $t) => 
 		`` +
 		$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
@@ -225,8 +228,31 @@ exports['-994603408'] = (get, $t) =>
 		$t.clean(get("item")) +
 		`" ></option>`
 
-exports['input/decision/decision-modification'] = (get, $t) => 
-		` <div class='decision-tree-mod-cnt'> <div class='then-add-cnt'> <button hidden class='then-btn modify-edit' mod-id='1'> Then... </button> <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button> </div> <div hidden class='if-edit-cnt'> <button class='twentys edit-btn modify-edit' mod-id='2'> <i class="inline gg-pen"></i> </button> <button class='twentys conditional-btn modify-edit' mod-id='3'> If </button> </div> <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div> <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div> <div hidden class='rm-edit-cnt modify-edit' mod-id='2'> <div class='edit-cnt'>Edit Tree Html!</div> <button class='modiy-rm-input-btn'>Remove</button> </div> <div hidden class='add-cnt tab modify-edit' mod-id='4'> Add Input Html! </div> <div class='remove-btn-cnt' hidden> <button class='rm-node modify-edit'>X</button> </div> <div class='close-cnts' hidden><button class='modify-edit'>X</button></div> <br> <br> <div class='copy-save-paste-cnt'> <div style='display: inline-block'> <textarea id='json-data'></textarea> <br> <button id="copy">Copy</button> <button id='paste' class='modify-edit' style='float:right'>Paste</button> <br><br> <button id="save" class='modify-edit'>Save</button> </div> </div> </div> `
+exports['input/decision/decision'] = (get, $t) => 
+		` <div class='decision-input-cnt card` +
+		$t.clean(get("inputArray")().length === 0 ? ' empty' : '') +
+		`' node-id='` +
+		$t.clean(get("id")()) +
+		`' recursion="disabled"> <span id='` +
+		$t.clean(get("id")()) +
+		`'> <div class='payload-cnt'>` +
+		$t.clean(get("payloadHtml")()) +
+		`</div> ` +
+		$t.clean(get("inputArray")().length === 0 ? '<br><br>' : '') +
+		` ` +
+		$t.clean( new $t('-1551174699').render(get("inputArray")(), 'input', get)) +
+		` <div class='orphan-cnt tab'>` +
+		$t.clean(get("childrenHtml")()) +
+		`</div> </span> </div> `
+
+exports['-1551174699'] = (get, $t) => 
+		`<div class='decision-input-array-cnt pad ` +
+		$t.clean(get("class")) +
+		`' index='` +
+		$t.clean(get("$index")) +
+		`'> ` +
+		$t.clean(get("input").html()) +
+		` </div>`
 
 exports['input/decision/decisionTree'] = (get, $t) => 
 		`<div class='` +
@@ -255,32 +281,6 @@ exports['input/decision/decisionTree'] = (get, $t) =>
 		$t.clean(get("node").tree().buttonText()) +
 		` </button> </div> </div> `
 
-exports['input/decision/decision'] = (get, $t) => 
-		` <div class='decision-input-cnt card` +
-		$t.clean(get("inputArray")().length === 0 ? ' empty' : '') +
-		`' node-id='` +
-		$t.clean(get("id")()) +
-		`' recursion="disabled"> <span id='` +
-		$t.clean(get("id")()) +
-		`'> <div class='payload-cnt'>` +
-		$t.clean(get("payloadHtml")()) +
-		`</div> ` +
-		$t.clean(get("inputArray")().length === 0 ? '<br><br>' : '') +
-		` ` +
-		$t.clean( new $t('-1551174699').render(get("inputArray")(), 'input', get)) +
-		` <div class='orphan-cnt tab'>` +
-		$t.clean(get("childrenHtml")()) +
-		`</div> </span> </div> `
-
-exports['-1551174699'] = (get, $t) => 
-		`<div class='decision-input-array-cnt pad ` +
-		$t.clean(get("class")) +
-		`' index='` +
-		$t.clean(get("$index")) +
-		`'> ` +
-		$t.clean(get("input").html()) +
-		` </div>`
-
 exports['input/edit/input'] = (get, $t) => 
 		`<div class='input-edit-cnt' input-ref-id='` +
 		$t.clean(get("input").id()) +
@@ -293,18 +293,6 @@ exports['input/edit/input'] = (get, $t) =>
 		`>List</label> <div class='tab edit-input-list-cnt relative'> ` +
 		$t.clean( new $t('1088583088').render(get("input").list(), 'key, value', get)) +
 		` </div> <br> </div> `
-
-exports['input/edit/list/object'] = (get, $t) => 
-		`<div class='edit-input-list-obj tab'> ` +
-		$t.clean( new $t('-2045511556').render(get("scope"), 'key, value', get)) +
-		` </div> `
-
-exports['-2045511556'] = (get, $t) => 
-		`<div > <input type='text' value='` +
-		$t.clean(get("key")) +
-		`'/> = <input type='text' value='` +
-		$t.clean(get("value")) +
-		`'/> </div>`
 
 exports['input/edit/list/string'] = (get, $t) => 
 		`<input type='text' name='value' value='` +
@@ -327,6 +315,18 @@ exports['input/edit/table'] = (get, $t) =>
 		`>Rows</label> ` +
 		$t.clean(get("listHtml")(get("table").rows())) +
 		`; <button id='table-row-edit-btn'>Apply</button> </div> <br> </div> `
+
+exports['input/edit/list/object'] = (get, $t) => 
+		`<div class='edit-input-list-obj tab'> ` +
+		$t.clean( new $t('-2045511556').render(get("scope"), 'key, value', get)) +
+		` </div> `
+
+exports['-2045511556'] = (get, $t) => 
+		`<div > <input type='text' value='` +
+		$t.clean(get("key")) +
+		`'/> = <input type='text' value='` +
+		$t.clean(get("value")) +
+		`'/> </div>`
 
 exports['input/input'] = (get, $t) => 
 		`<` +
@@ -631,7 +631,7 @@ exports['ancestry'] = (get, $t) =>
 exports['configure'] = (get, $t) => 
 		`<div> <button id='update-tree-display-btn'>Update</button> <button class='modify-edit' id='modify-btn'>Modify</button> </div> <div id='config-body'></div> `
 
-exports['index'] = (get, $t) => 
+exports['mitch-index'] = (get, $t) => 
 		`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mitch/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/mitch/styles/mitch.css"> <title></title> </head> <body> ` +
 		$t.clean(get("header")) +
 		` ` +

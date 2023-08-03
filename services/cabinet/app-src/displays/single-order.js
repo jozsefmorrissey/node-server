@@ -7,34 +7,31 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 const DataList = require('../../../../public/js/utils/input/data-list.js');
 const Input = require('../../../../public/js/utils/input/input.js');
 const NoActivityRunner = require('../../../../public/js/utils/services/no-activity-runner.js');
+const Global = require('../services/global');
 
 const orderSelectCnt = du.id('order-select-cnt');
 const orderNameInput = du.id('order-name-input');
 const orderVersionInput = du.id('order-version-input');
-const dateStr = new Date().toLocaleDateString("en-US", options).replace(/\//g, '-');
-let order = new Order(`Orderststs ${dateStr}`);
-orderNameInput.value = order.name();
-orderVersionInput.value = order.versionId();
+orderNameInput.value = Global.order().name();
+orderVersionInput.value = Global.order().versionId();
 
-var options = {  year: 'numeric', day: 'numeric' };
-var today  = new Date();
-
-console.log(today.toLocaleDateString("en-US", options)); // Saturday, September 17, 2016
-order.addRoom('kitchen');
+Global.order().addRoom('kitchen');
 
 const RoomDisplay = require('./room');
-let roomDisplay = new RoomDisplay('#room-cnt', order);
+let roomDisplay = new RoomDisplay('#room-cnt', Global.order());
+Global.displays.room(roomDisplay);
 
 du.on.match('click', '#copy-order', (elem) => {
-  du.copy(JSON.stringify(order.toJson()));
+  du.copy(JSON.stringify(Global.order().toJson()));
 });
 du.on.match('click', '#paste-order', async (elem) => {
   navigator.clipboard.readText()
     .then(text => {
       try {
         const order = Object.fromJson(JSON.parse(text));
-        switchOrder(elem, order);
         if (!(order instanceof Order)) throw new Error();
+        switchOrder(elem, order);
+        Global.order(order);
       } catch (e) {
         alert('clipboard does not contain a valid Order');
       }
@@ -56,14 +53,12 @@ const setCookie = () => du.cookie.set(cookieId(), cookieValue());
 const getCookie = () => du.cookie.get(cookieId(), ',', 'name', 'version');
 
 const cookieVals = getCookie();
-const orderName = cookieVals.name || order.name();
+const orderName = cookieVals.name || Global.order().name();
 const versionId = cookieVals.version || 'original';
 
 
 let counter = 0;
-const saveMan = new OrderSaveManager(() => order.toJson(), orderName, versionId);
-
-const obj = {order: () => order};
+const saveMan = new OrderSaveManager(() => Global.order().toJson(), orderName, versionId);
 
 function onChange(values, dit) {
   console.log('change');
@@ -117,10 +112,9 @@ du.on.match('click', `#${saveCntId}>button`, async (elem) =>{
   }
 });
 
-const noActRunnner = new NoActivityRunner(10000, () => saveMan.on(false));
+// const noActRunnner = new NoActivityRunner(10000, () => saveMan.on_off_toggle(false));
 du.on.match('mouseout', '*', (elem) => {
-  saveMan.on(saveMan.initialized());
-  noActRunnner();
+  saveMan.on_off_toggle(saveMan.initialized());
 })
 
 function updateButtonText() {
@@ -160,6 +154,7 @@ du.on.match('click', '#save-time-cnt', () => saveMan.save() || resetOrderAndVers
 
 let firstSwitch = true;
 async function switchOrder(elem, details) {
+  const order = Global.order();
   if (order.worthSaveing()) {
     if (firstSwitch) {
       const state = saveMan.state(order.name(), order.versionId());
@@ -176,14 +171,14 @@ async function switchOrder(elem, details) {
   firstSwitch = false;
   updateOrderInput();
   if (!Object.keys(details.contents).length) return order = new Order(details.orderName, details.versionId);
-  const od = await saveMan.open(details.orderName, details.versionId);
   try {
+    let order;
     if (details instanceof Order) order = details;
     else if (details.contents) {
       order = Object.fromJson(details.contents);
     }
     if (!(order instanceof Order)) throw new Error('unknown order format');
-    roomDisplay.order(order);
+    Global.order(order);
     orderNameInput.value = order.name(order.name());
     orderVersionInput.value = details.versionId;
     resetOrderAndVersion();
@@ -203,6 +198,7 @@ let orderChangeInFocus = false;
 let processing;
 du.on.match('focusout:enter', '#order-name-input', async () => {
   const newName = orderNameInput.value;
+  const order = Global.order();
   if (!saveMan.on()) {
     order.name(newName);
   } else if (!processing && newName !== order.name()) {
@@ -227,5 +223,3 @@ saveMan.onLoaded(resetOrderAndVersion);
 saveMan.onVersionChange(onVersionChange);
 saveMan.onSaved(updateTime);
 saveMan.onVersionChange(switchOrder);
-
-module.exports = obj;

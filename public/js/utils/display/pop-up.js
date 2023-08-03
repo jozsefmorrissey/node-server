@@ -62,7 +62,8 @@ class PopUp {
 
     this.open = (html, positionOn) => {
       this.updateContent(html);
-      popupCnt.position(positionOn);
+      if (positionOn) popupCnt.position(positionOn);
+      else popupCnt.position();
       this.show();
     }
 

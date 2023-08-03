@@ -1,14 +1,16 @@
 <div type-2d='{{target.parent().constructor.name}}'
         id='{{target.parent().id()}}'
         x='{{lastImagePoint.x}}' y='{{lastImagePoint.y}}'>
+
+  <div:t class='tab' $t-id='2d/auto-location-properties'>autoLocProps</div:t>
   <label>Name</label>
   <input class='value-2d' member='object' type="text" key="name" value="{{target.parent().name()}}">
   <br><br>
   <label>Width</label>
-  <input class='value-2d' member='cabinet' type="text" key="width" value="{{display(target.width())}}">
+  <input class='value-2d' member='object' type="text" key="width" value="{{display(target.width())}}">
   <br>
   <label>Depth</label>
-  <input class='value-2d' member='cabinet' type="text" key="thickness" value="{{display(target.height())}}">
+  <input class='value-2d' member='object' type="text" key="thickness" value="{{display(target.height())}}">
   <br>
   <label>Angle</label>
   <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="{{target.angle()}}">

@@ -108,8 +108,6 @@ GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
         list: selectObj,
         value: propertyConfigInst.cabinetStyleName()
       });
-      // const condtionalPayload = new DecisionInputTree.ValueCondition('style', [styleName], [select]);
-      // style.conditional(styleName, condtionalPayload);
       root.then(styleName, {inputArray: [select]});
       const cond = DecisionInputTree.getCondition('style', styleName);
       root.conditions.add(cond, styleName);

@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <script type="text/javascript" src='/cabinet/js/index.js'></script>
     <link rel="stylesheet" href="/styles/expandable-list.css">
+    <link rel="stylesheet" href="/styles/icons.css">
     <link rel="stylesheet" href="/cabinet/styles/estimate.css">
     <script src="/js/utility-filter.js" run-type='auto'></script>
     <title>CComp</title>
@@ -23,26 +24,13 @@
       </div>
       <div id='main-display-menu' class='display-manager center'></div>
       <div id='display-cnt'>
+
         <div id='order-display-cnt'>
           <div id='order-cnt'>
             <div id='order-name-save-cnt'></div>
             <div id='room-cnt'></div>
           </div>
-          <div id='model-cnt'>
-            <div id='display-menu'></div>
-            <div id='model-display-cnt'>
-              <div id="two-d-model">
-                <canvas id="two-d-model-canvas"></canvas>
-                <div class='orientation-controls'></div>
-              </div>
-              <div id="three-d-model" class="viewer small">
-                <div class='inline left'>
-                  <div class='orientation-controls'></div>
-                  <span id="model-controller"></span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div:t class='tab' $t-id='canvas-displays'>autoLocProps</div:t>
         </div>
         <div id='information-display'>
           <utility-filter id='uf-order-info' edit='true'>

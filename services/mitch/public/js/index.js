@@ -751,37 +751,56 @@ function (require, exports, module) {
 			}
 	
 	
-					const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
-					function formatRepeat(string) {
-						// tagname:1 prefix:2 quote:4 exlpression:5 suffix:6
-						// string = string.replace(/<([^\s^:^-^>]*)/g, '<$1-ce');
-						let match;
-						while (match = string.match(repeatReg)) {
-							let tagContents = match[2] + match[8];
-	            let tagName = match[1];
-	            let varNames = match[6];
-	            let realScope = match[7];
-							let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
-							let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
-							let scope = 'scope';
-							template = templateName !== tagContents ? templateName : template;
-							const t = eval(`new $t(\`${template}\`)`);
-	            let resolvedScope = "get('scope')";;
-	            try {
-	              // console.log('tagName', tagName);
-	              // console.log('varNames', varNames);
-	              // console.log('realScope', realScope);
-	              // console.log('tagContents', tagContents);
-								if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
-	                resolvedScope = `'${realScope}'`;
-	              } else {
-	                resolvedScope = ExprDef.parse(expression, realScope);
-	              }
-	            } catch (e) {}
-	            string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
+			const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
+			function formatRepeat(string) {
+				let match;
+				while (match = string.match(repeatReg)) {
+					let tagContents = match[2] + match[8];
+	        let tagName = match[1];
+	        let varNames = match[6];
+	        let realScope = match[7];
+					let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+					let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+					let scope = 'scope';
+					template = templateName !== tagContents ? templateName : template;
+					const t = eval(`new $t(\`${template}\`)`);
+	        let resolvedScope = "get('scope')";;
+	        try {
+						if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
+	            resolvedScope = `'${realScope}'`;
+	          } else {
+	            resolvedScope = ExprDef.parse(expression, realScope);
+	          }
+	        } catch (e) {}
+	        string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
+				}
+				return string;
+			}
+	
+			const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
+			function formatTemplate(string) {
+				let match;
+				while (match = string.match(repeatReg)) {
+					let tagContents = match[2] + match[6];
+					let tagName = match[1];
+					let realScope = match[7];
+					let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+					let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+					let scope = 'scope';
+					template = templateName !== tagContents ? templateName : template;
+					const t = eval(`new $t(\`${template}\`)`);
+					let resolvedScope = "get('scope')";;
+					try {
+						if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
+							resolvedScope = `'${realScope}'`;
+						} else {
+							resolvedScope = ExprDef.parse(expression, realScope);
 						}
-						return string;
-					}
+					} catch (e) {}
+					string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, undefined, get)}}`);
+				}
+				return string;
+			}
 	
 			if (id) {
 				$t.templates[id] = undefined;
@@ -794,6 +813,7 @@ function (require, exports, module) {
 				if (!$t.templates[id]) {
 					template = template.replace(/\s{2,}|\n/g, ' ');
 					template = formatRepeat(template);
+					template = formatTemplate(template);
 					$t.templates[id] = compile();
 				}
 			}
@@ -1165,6 +1185,7 @@ class IdString extends String {
 	  return null;
 	}
 	
+	Lookup.IdString = IdString;
 	try {
 	  module.exports = Lookup;
 	} catch (e) {/* TODO: Consider Removing */}
@@ -1748,7 +1769,7 @@ function (require, exports, module) {
 	    this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
 	
 	    this.display = (accuracy) => {
-	      switch (determineUnit()) {
+	      switch (unit) {
 	        case units[0]: return new String(this.decimal(10));
 	        case units[1]: return this.standardUS(accuracy);
 	        default:
@@ -2342,6 +2363,19 @@ const frag = document.createDocumentFragment();
 	du.find.all = (selector) => document.querySelectorAll(selector);
 	du.validSelector = VS;
 	
+	du.input.valueObject = (elem) => {
+	  const inputs = du.find.downAll('input,select,textarea', elem);
+	  const obj = {};
+	  inputs.forEach((input) => {
+	    switch(input.type) {
+	      case 'number': obj[input.name] = Number.parseFloat(input.value);break;
+	      case 'checkbox': obj[input.name] = input.checked;break;
+	      default: obj[input.name] = input.value;break;
+	    }
+	  });
+	  return obj;
+	}
+	
 	du.create.element = function (tagname, attributes) {
 	  const elem = document.createElement(tagname);
 	  const keys = Object.keys(attributes || {});
@@ -2694,7 +2728,13 @@ const frag = document.createDocumentFragment();
 	    const target = du.find.up(selectStr, event.target);
 	    const everything = selectStr === '*';
 	    if (everything || target) {
-	      selectors[matchRunTargetId][event.type][selectStr].forEach((func) => func(target, event));
+	      selectors[matchRunTargetId][event.type][selectStr].forEach((func) => {
+	        try {
+	          func(target, event)
+	        } catch (e) {
+	          console.error(e);
+	        }
+	      });
 	    }
 	  })
 	}
@@ -3318,6 +3358,35 @@ function (require, exports, module) {
 	  return Object.filter(this, func, true).filtered;
 	});
 	
+	function arraySet(array, values, start, end) {
+	  if (start!== undefined && end !== undefined && start > end) {
+	    const temp = start;
+	    start = end;
+	    end = temp;
+	  }
+	  start = start || 0;
+	  end = end || values.length;
+	  for (let index = start; index < end; index += 1)
+	    array[index] = values[index];
+	  return array;
+	}
+	
+	Function.safeStdLibAddition(Array, 'set',   arraySet, true);
+	Function.safeStdLibAddition(Array, 'set',   function (values, start, end) {return arraySet(this, values, start, end)});
+	
+	Function.safeStdLibAddition(Array, 'copy',   function (other) {
+	  if (Array.isArray(other)) {
+	    this.deleteAll();
+	    this.merge(other, false);
+	    if (!objEq(this, other)) throw new Error('toodles');
+	  } else {
+	    const newArr = [];
+	    newArr.merge(this, false);
+	    if (!objEq(this, newArr)) throw new Error('toodles');
+	    return newArr;
+	  }
+	});
+	
 	Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
 	  if (!(obj instanceof Object)) return obj;
 	  return JSON.parse(JSON.stringify(obj));
@@ -3421,7 +3490,7 @@ function (require, exports, module) {
 	        if (!elem.equals(other[index])) {
 	          return index;
 	        }
-	      } else if (elem !== other[index]) {
+	      } else if (!Object.equals(elem, other[index])) {
 	        equal = false;
 	      }
 	    }
@@ -3479,8 +3548,27 @@ function (require, exports, module) {
 	
 	
 	Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
+	  mox = Math.abs(mod);
 	  while (val < 0) val += mod;
 	  return val % mod;
+	}, true);
+	
+	Function.safeStdLibAddition(Math, 'modWithin',  function (val, mod, lowerLimit, upperLimit) {
+	  val = Math.mod(val, mod);
+	  lowerLimit = Math.mod(lowerLimit, mod);
+	  upperLimit = Math.mod(upperLimit, mod);
+	  console.log(lowerLimit, upperLimit);
+	  return lowerLimit <= upperLimit ? val >= lowerLimit && val <= upperLimit : (val >= lowerLimit || val <= upperLimit);
+	}, true);
+	
+	Function.safeStdLibAddition(Math, 'modTolerance',  function (val1, val2, mod, tol) {
+	  if (tol > mod) return true;
+	  const min2 = Math.mod(val2 - tol/2, mod);
+	  const max2 = Math.mod(val2 + tol/2, mod);
+	
+	  const minSat = min2 < val2 ? val1 > min2 : (val1 < val2 || val1 > min2);
+	  const maxSat = max2 > val2 ? val1 < max2 : (val1 > val2 || val1 < max2);
+	  return Math.modWithin(val1, mod, min2, max2);
 	}, true);
 	
 	Function.safeStdLibAddition(Number, 'NaNfinity',  function (...vals) {
@@ -3573,6 +3661,7 @@ function (require, exports, module) {
 	const immutableAttr = '_IMMUTABLE';
 	const temporaryAttr = '_TEMPORARY';
 	const doNotOverwriteAttr = '_DO_NOT_OVERWRITE';
+	const forceFromJsonAttr = '_FORCE_FROM_JSON';
 	
 	const clazz = {};
 	clazz.object = () => JSON.clone(classLookup);
@@ -3595,9 +3684,12 @@ function (require, exports, module) {
 	function objEq(obj1, obj2) {
 	  const isObj1 = obj1 instanceof Object;
 	  const isObj2 = obj2 instanceof Object;
-	  if (!isObj1 && !isObj2) return obj1 === obj2;
-	  if (!isObj1) return false;
-	  if (!isObj2) return false;
+	  if (!isObj1 && !isObj2)
+	    return obj1 === obj2;
+	  if (!isObj1)
+	    return false;
+	  if (!isObj2)
+	    return false;
 	  if (Array.isArray(obj1) !== Array.isArray(obj2)) return false;
 	  const obj1Keys = Object.keys(obj1).filter(filterOutUndefined(obj1)).sort();
 	  const obj2Keys = Object.keys(obj2).filter(filterOutUndefined(obj2)).sort();
@@ -3615,8 +3707,10 @@ function (require, exports, module) {
 	          return false;
 	        }
 	      }
-	      else if (!obj1Val.equals(obj2Val)) return false;
-	    } else if (obj1[obj1Key] !== obj2[obj2Key]) return false;
+	      else if (!obj1Val.equals(obj2Val))
+	        return false;
+	    } else if (obj1[obj1Key] !== obj2[obj2Key])
+	        return false;
 	  }
 	  return true;
 	}
@@ -4019,7 +4113,19 @@ function (require, exports, module) {
 	  }
 	}
 	
+	function staticFromJson(cxtr) {
+	  return (json) => {
+	    const obj = new cxtr();
+	    obj.fromJson(json);
+	    return obj;
+	  }
+	}
+	
+	Object.class.staticFromJson = staticFromJson;
+	
 	function setFromJson(obj, options) {
+	  if (obj.constructor.fromJson === undefined || options.forceFromJson)
+	    obj.constructor.fromJson = staticFromJson(obj.constructor);
 	  obj.fromJson = (json) => {
 	    for (let index = 0; index < options.attrs.length; index += 1) {
 	      const attr = options.attrs[index];
@@ -4046,7 +4152,6 @@ function (require, exports, module) {
 	  } else if (cxtrFromJson && cxtrFromJson !== Object.fromJson) {
 	    obj.clone = () => cxtrFromJson(obj.toJson());
 	  } else if (options.isObject) {
-	    setFromJson(obj, options);
 	    obj.clone = () => {
 	      const clone = Object.fromJson(obj.toJson());
 	      Object.getSet(clone, clone);
@@ -4055,7 +4160,6 @@ function (require, exports, module) {
 	  } else {
 	    obj.clone = () => {
 	      const clone = new obj.constructor(obj.toJson());
-	      setFromJson(obj, options);
 	      clone.fromJson(obj.toJson());
 	      return clone;
 	    }
@@ -4072,6 +4176,7 @@ function (require, exports, module) {
 	    options.immutable = options.values[immutableAttr] === true;
 	    options.temporary = options.values[temporaryAttr] === true;
 	    options.doNotOverwrite = options.values[doNotOverwriteAttr] === true;
+	    options.forceFromJson = options.values[forceFromJsonAttr] === true;
 	    if (options.immutable) {
 	      options.attrs = Object.keys(options.values);
 	    } else {
@@ -4130,6 +4235,7 @@ function (require, exports, module) {
 	  setGettersAndSetters(obj, options);
 	  setToJson(obj, options);
 	  setClone(obj, options);
+	  setFromJson(obj, options);
 	  return options.attrs;
 	}, true);
 	Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
@@ -4141,19 +4247,6 @@ function (require, exports, module) {
 	  }
 	  const keys = Object.keys(otherObj);
 	  keys.forEach((key) => obj[key] = otherObj[key]);
-	}, true);
-	
-	Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end) {
-	  if (start!== undefined && end !== undefined && start > end) {
-	    const temp = start;
-	    start = end;
-	    end = temp;
-	  }
-	  start = start || 0;
-	  end = end || values.length;
-	  for (let index = start; index < end; index += 1)
-	    array[index] = values[index];
-	  return array;
 	}, true);
 	
 	const checked = {};
@@ -5568,160 +5661,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/bind.js',
-function (require, exports, module) {
-	
-const du = require('../dom-utils');
-	const Input = require('./input');
-	
-	const defaultDynamInput = (value, type) => new Input({type, value});
-	
-	module.exports = function(selector, objOrFunc, props) {
-	  let lastInputTime = {};
-	  props = props || {};
-	  const validations = props.validations || {};
-	  const inputs = props.inputs || {};
-	
-	  const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
-	  const getValue = (updatePath, elem) => {
-	    const input = Object.pathValue(inputs, updatePath);
-	    return input ? input.value() : elem.value;
-	  }
-	  const getValidation = (updatePath) => {
-	    let validation = Object.pathValue(validations, updatePath);
-	    const input = Object.pathValue(inputs, updatePath);
-	    if (input) {
-	      validation = input.validation;
-	    }
-	    return validation;
-	  }
-	
-	  function update(elem) {
-	    const target = resolveTarget(elem);
-	    elem = du.find.down('input,select,textarea', elem);
-	    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
-	    elem.id = elem.id || String.random(7);
-	    const thisInputTime = new Date().getTime();
-	    lastInputTime[elem.id] = thisInputTime;
-	    setTimeout(() => {
-	      if (thisInputTime === lastInputTime[elem.id]) {
-	        const validation = getValidation(updatePath);
-	        if (updatePath !== null) {
-	          const newValue = getValue(updatePath, elem);
-	          if ((typeof validation) === 'function' && !validation(newValue)) {
-	            console.error('badValue')
-	          } else if ((typeof objOrFunc) === 'function') {
-	            objOrFunc(updatePath, elem.value, elem);
-	          } else {
-	            Object.pathValue(objOrFunc, updatePath, elem.value);
-	          }
-	
-	          if (target.tagname !== 'INPUT' && target.children.length === 0) {
-	            target.innerHTML = newValue;
-	          }
-	        }
-	      }
-	    }, 20);
-	  }
-	  const makeDynamic = (target) => {
-	    target = resolveTarget(target);
-	    if (target.getAttribute('resolved') === null) {
-	      target.setAttribute('resolved', 'dynam-input');
-	      const value = target.innerText;
-	      const type = target.getAttribute('type');
-	      const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
-	      const input = Object.pathValue(inputs, updatePath) || defaultDynamInput(value, type);
-	
-	      target.innerHTML = input.html();
-	      const id = (typeof input.id === 'function') ? input.id() : input.id;
-	      const inputElem = du.find.down(`#${id}`, target);
-	      du.class.add(inputElem, 'dynam-input');
-	      inputElem.setAttribute('prop-update', updatePath);
-	      inputElem.focus();
-	    }
-	  }
-	
-	  du.on.match('change:keyup:enter', selector, update);
-	  du.on.match('click', selector, makeDynamic);
-	}
-	
-	
-	const undoDynamic = (target) => {
-	  const parent = du.find.up('[resolved="dynam-input"]', target)
-	  parent.innerText = target.value;
-	  parent.removeAttribute('resolved');
-	}
-	
-	du.on.match('focusout', '.dynam-input', undoDynamic);
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/data-list.js',
-function (require, exports, module) {
-	
-const $t = require('../$t');
-	const du = require('../dom-utils');
-	
-	//TODO: shoould remove datalist from input object... bigger fish
-	class DataList {
-	  constructor(input) {
-	    let list = [];
-	    const id = `data-list-${String.random()}`;
-	    this.id = () => id;
-	    this.list = () => list;
-	    this.getElem = () => {
-	      let elem = du.id(id);
-	      if (!elem)  elem = du.create.element('datalist', {id});
-	      du.find('body').append(elem);
-	      return elem;
-	    }
-	    this.update = () => {
-	      const elem = this.getElem();
-	      elem.innerHTML = DataList.template.render(this);
-	      const inputElem = input && input.get();
-	      if (inputElem) {
-	        inputElem.setAttribute('list', this.id());
-	      }
-	    }
-	    this.setList = (newList) => {
-	      if (!Array.isArray(newList) || newList.equals(list)) return
-	      list = newList;
-	      this.update();
-	    }
-	  }
-	}
-	
-	DataList.template = new $t('input/data-list');
-	
-	module.exports = DataList;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/init.js',
-function (require, exports, module) {
-	
-const Input = require('./input');
-	Input.styles = [];
-	Input.styles.push(Object.class.register(require('./styles/select/relation')));
-	Input.styles.push(Object.class.register(require('./styles/list')));
-	Input.styles.push(Object.class.register(require('./styles/measurement')));
-	Input.styles.push(Object.class.register(require('./styles/multiple-entries')));
-	Input.styles.push(Object.class.register(require('./styles/number')));
-	Input.styles.push(Object.class.register(require('./styles/object')));
-	Input.styles.push(Object.class.register(require('./styles/radio')));
-	Input.styles.push(Object.class.register(require('./styles/select')));
-	Input.styles.push(Object.class.register(require('./styles/list')));
-	Input.styles.push(Object.class.register(require('./styles/table')));
-	Input.styles.push(Object.class.register(require('./styles/textarea')));
-	
-	
-	Object.class.register(require('./decision/decision'));
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/input/input.js',
 function (require, exports, module) {
 	
@@ -6009,6 +5948,186 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/input/init.js',
+function (require, exports, module) {
+	
+const Input = require('./input');
+	Input.styles = [];
+	Input.styles.push(Object.class.register(require('./styles/select/relation')));
+	Input.styles.push(Object.class.register(require('./styles/list')));
+	Input.styles.push(Object.class.register(require('./styles/measurement')));
+	Input.styles.push(Object.class.register(require('./styles/multiple-entries')));
+	Input.styles.push(Object.class.register(require('./styles/number')));
+	Input.styles.push(Object.class.register(require('./styles/object')));
+	Input.styles.push(Object.class.register(require('./styles/radio')));
+	Input.styles.push(Object.class.register(require('./styles/select')));
+	Input.styles.push(Object.class.register(require('./styles/list')));
+	Input.styles.push(Object.class.register(require('./styles/table')));
+	Input.styles.push(Object.class.register(require('./styles/textarea')));
+	
+	
+	Object.class.register(require('./decision/decision'));
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/bind.js',
+function (require, exports, module) {
+	
+const du = require('../dom-utils');
+	const Input = require('./input');
+	
+	const defaultDynamInput = (value, type) => new Input({type, value});
+	
+	module.exports = function(selector, objOrFunc, props) {
+	  let lastInputTime = {};
+	  props = props || {};
+	  const validations = props.validations || {};
+	  const inputs = props.inputs || {};
+	
+	  const resolveTarget = (elem) => du.find.down('[prop-update]', elem);
+	  const getValue = (updatePath, elem) => {
+	    const input = Object.pathValue(inputs, updatePath);
+	    return input ? input.value() : elem.value;
+	  }
+	  const getValidation = (updatePath) => {
+	    let validation = Object.pathValue(validations, updatePath);
+	    const input = Object.pathValue(inputs, updatePath);
+	    if (input) {
+	      validation = input.validation;
+	    }
+	    return validation;
+	  }
+	
+	  function update(elem) {
+	    const target = resolveTarget(elem);
+	    elem = du.find.down('input,select,textarea', elem);
+	    const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
+	    elem.id = elem.id || String.random(7);
+	    const thisInputTime = new Date().getTime();
+	    lastInputTime[elem.id] = thisInputTime;
+	    setTimeout(() => {
+	      if (thisInputTime === lastInputTime[elem.id]) {
+	        const validation = getValidation(updatePath);
+	        if (updatePath !== null) {
+	          const newValue = getValue(updatePath, elem);
+	          if ((typeof validation) === 'function' && !validation(newValue)) {
+	            console.error('badValue')
+	          } else if ((typeof objOrFunc) === 'function') {
+	            objOrFunc(updatePath, elem.value, elem);
+	          } else {
+	            Object.pathValue(objOrFunc, updatePath, elem.value);
+	          }
+	
+	          if (target.tagname !== 'INPUT' && target.children.length === 0) {
+	            target.innerHTML = newValue;
+	          }
+	        }
+	      }
+	    }, 20);
+	  }
+	  const makeDynamic = (target) => {
+	    target = resolveTarget(target);
+	    if (target.getAttribute('resolved') === null) {
+	      target.setAttribute('resolved', 'dynam-input');
+	      const value = target.innerText;
+	      const type = target.getAttribute('type');
+	      const updatePath = target.getAttribute('prop-update') || target.getAttribute('name');
+	      const input = Object.pathValue(inputs, updatePath) || defaultDynamInput(value, type);
+	
+	      target.innerHTML = input.html();
+	      const id = (typeof input.id === 'function') ? input.id() : input.id;
+	      const inputElem = du.find.down(`#${id}`, target);
+	      du.class.add(inputElem, 'dynam-input');
+	      inputElem.setAttribute('prop-update', updatePath);
+	      inputElem.focus();
+	    }
+	  }
+	
+	  du.on.match('change:keyup:enter', selector, update);
+	  du.on.match('click', selector, makeDynamic);
+	}
+	
+	
+	const undoDynamic = (target) => {
+	  const parent = du.find.up('[resolved="dynam-input"]', target)
+	  parent.innerText = target.value;
+	  parent.removeAttribute('resolved');
+	}
+	
+	du.on.match('focusout', '.dynam-input', undoDynamic);
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/data-list.js',
+function (require, exports, module) {
+	
+const $t = require('../$t');
+	const du = require('../dom-utils');
+	
+	//TODO: shoould remove datalist from input object... bigger fish
+	class DataList {
+	  constructor(input) {
+	    let list = [];
+	    const id = `data-list-${String.random()}`;
+	    this.id = () => id;
+	    this.list = () => list;
+	    this.getElem = () => {
+	      let elem = du.id(id);
+	      if (!elem)  elem = du.create.element('datalist', {id});
+	      du.find('body').append(elem);
+	      return elem;
+	    }
+	    this.update = () => {
+	      const elem = this.getElem();
+	      elem.innerHTML = DataList.template.render(this);
+	      const inputElem = input && input.get();
+	      if (inputElem) {
+	        inputElem.setAttribute('list', this.id());
+	      }
+	    }
+	    this.setList = (newList) => {
+	      if (!Array.isArray(newList) || newList.equals(list)) return
+	      list = newList;
+	      this.update();
+	    }
+	  }
+	}
+	
+	DataList.template = new $t('input/data-list');
+	
+	module.exports = DataList;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/number.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class NumberInput extends Input {
+	  constructor(props) {
+	    super(props);
+	    props.min = Number.parseFloat(props.min) || 0;
+	    props.max = Number.parseFloat(props.max) || Number.MAX_SAFE_INTEGER;
+	    props.step = Number.parseFloat(props.step) || 1;
+	    Object.getSet(this, {min: props.min, max: props.max, step: props.step});
+	
+	    this.validation = (value) => value <= props.max && value >= props.min;
+	  }
+	}
+	
+	NumberInput.template = new $t('input/number');
+	NumberInput.html = (instance) => () => NumberInput.template.render(instance);
+	
+	module.exports = NumberInput;
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/input/decision/payload-handler.js',
 function (require, exports, module) {
 	
@@ -6032,88 +6151,763 @@ const $t = require('../../$t');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/object.js',
+RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
 function (require, exports, module) {
 	
-const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	const CustomEvent = require('../../custom-event');
+
+	
+	
+	
 	const Input = require('../input');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
 	
-	class InputObject extends Input {
-	  constructor(props) {
-	    super(props);
-	    Object.getSet(this);
-	    const instance = this;
-	    const optionalConfig = [];
-	    props.list.forEach(input => optionalConfig.push(input.optional()));
+	const validation = () => true;
+	class MultipleEntries extends Input {
+	  constructor(inputTemplate, props) {
 	
 	
-	    this.value = () => {
-	      const values = {};
-	      props.list.forEach(input => input.validation() && (values[input.name()] = input.value()));
-	      return values;
-	    }
-	
-	    const dynamicEvent = CustomEvent.dynamic();
-	    this.on = dynamicEvent.on;
-	
-	    function triggerEvent(value, input, event) {
-	      dynamicEvent.trigger(event, {value, input});
-	    }
-	    props.list.forEach(input => input.on('change:click:keyup', triggerEvent));
-	
-	    this.setValue = () => {
-	      throw new Error('This function should never get called');
-	    }
-	
-	    this.valid = () => {
-	      if (this.optional()) return true;
+	    props ||= {};
+	    props.validation ||= (event, details) => {
+	      const list = props.list;
+	      let allEmpty = true;
 	      let valid = true;
-	      props.list.forEach(input => valid &&= input.optional() || input.valid());
-	      return valid;
+	      for (let index = 0; index < list.length; index++) {
+	        const input = list[index];
+	        const empty = input.empty();
+	        if (!empty) {
+	          if (input.optional) input.optional(false);
+	          valid &= list[index].valid();
+	        }
+	        allEmpty &= empty;
+	      }
+	      return !allEmpty && valid;
+	    }
+	    if (props.list === undefined) {
+	      const list = [];
+	      props.list = list;
+	      props.list.forEach((i) =>
+	        list.push(i.clone()));
 	    }
 	
-	    let optional;
-	    this.optional = (value) => {
-	      if (value !== true && value !== false) return optional;
-	      optional = value;
-	      if (optional)
-	        props.list.forEach(input => input.optional(true));
-	      else
-	        props.list.forEach((input, index) => input.optional(optionalConfig[index]));
-	    }
-	    this.optional(props.optional || false);
-	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      json.validation = (properties || props).validation;
-	      json.list.forEach(i => delete i.id);
-	      Object.set(json, properties);
-	      return InputObject.fromJson(json);
+	    props.list ||= [];
+	    super(props);
+	    Object.getSet(this, 'inputTemplate');
+	    let template;
+	    const instance = this;
+	    this.inputTemplate = () => {
+	      if (!template) {
+	        if ((typeof inputTemplate) === 'function') {
+	          template = inputTemplate();
+	        } else template = inputTemplate;
+	      }
+	      return template;
 	    }
 	
 	    this.empty = () => {
-	      for (let index = 0; index < props.list.length; index++) {
-	        if (!props.list[index].empty()) return false
+	      if (props.list.length > 1) return false;
+	      const inputs = props.list[0];
+	      for (let index = 0; index < inputs.length; index++) {
+	        if (!inputs[index].empty()) return false;
 	      }
 	      return true;
 	    }
+	    this.valid = () => this.value().length > 0;
 	
+	    this.clone = () =>
+	        new MultipleEntries(inputTemplate, JSON.clone(props));
+	
+	    this.set = (index, value) => {
+	      if (props.list[index] === undefined) {
+	        props.list[index] = this.inputTemplate().clone({optional: true});
+	        if (props.list[index].on) {
+	          props.list[index].on('change', this.validation);
+	        } else {
+	          props.list[index].onChange(this.validation);
+	        }
+	      }
+	      return props.list[index];
+	    }
+	
+	    this.tag = () => props.inline() ? 'span' : 'div';
+	
+	    this.input = (nameOindexOfunc) => {
+	      const nif = nameOindexOfunc;
+	      if ((typeof nif) === 'number') return props.list[nif];
+	      const runFunc = (typeof nif) === 'function';
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (runFunc) {
+	          const val = nif(input);
+	          if (val) return val;
+	        } else if (input.name() === nif) return input;
+	
+	        if (input instanceof MultipleEntries) {
+	          const mInput = input.input(nif);
+	          if (mInput) return mInput;
+	        }
+	      }
+	    }
+	    this.getValue = () => {
+	      const values = [];
+	      for (let index = 0; index < props.list.length; index++) {
+	        const input = props.list[index];
+	        if (!input.empty()) {
+	          if (input.valid()) {
+	            values.push(input.value());
+	          } else {
+	            input.valid();
+	            input.valid();
+	          }
+	        }
+	      }
+	      return values;
+	    }
+	
+	    this.setValue = (list) => {
+	      if (list) {
+	        list.forEach((val, index) => {
+	            const input = this.set(index)
+	            input.setValue(val);
+	        });
+	      }
+	    }
+	
+	    this.value = this.getValue;
+	
+	    const parentHtml = this.html;
+	    this.html = () => {
+	      if (props.list.length === 0 || !props.list[props.list.length - 1].empty()) this.set(props.list.length);
+	      return parentHtml();
+	    }
+	
+	    this.length = () => this.list().length;
+	    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
+	
+	    this.setValue(props.value);
 	  }
 	}
 	
-	InputObject.fromJson = (json) => {
-	  json.list = Object.fromJson(json.list);
-	  return new InputObject(json);
+	MultipleEntries.template = new $t('input/multiple-entries');
+	MultipleEntries.singleTemplate = new $t('input/one-entry');
+	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
+	
+	MultipleEntries.fromJson = (json) => {
+	  const inputTemplate = Object.fromJson(json.inputTemplate);
+	  return new MultipleEntries(inputTemplate, json);
+	
 	}
 	
-	InputObject.template = new $t('input/object');
-	InputObject.html = (instance) => () => InputObject.template.render(instance);
+	function meInfo(elem) {
+	  const info = {};
+	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
+	  if (info.oneCnt) {
+	    info.indexCnt = du.find.up('[index]', info.oneCnt);
+	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
+	    const ae =  document.activeElement;
+	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
+	  }
+	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
+	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
+	  info.length = info.multiInput.length();
+	  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
+	  info.last = info.index === info.length - 1;
+	  info.empty = info.multiInput.list()[info.index].empty();
+	  return info;
+	}
+	
+	const meSelector = '.multiple-entry-cnt input,select,textarea';
+	const oneSelector = '.one-entry-cnt *';
+	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
+	du.on.match('change', meSelector, (elem) => {
+	  // console.log('changed');
+	});
+	
+	du.on.match('click', meSelector, (elem) => {
+	  // console.log('clicked');
+	});
+	
+	const lastCallers = [];
+	du.on.match('focusout', '.one-entry-cnt', (elem) => {
+	  let info = meInfo(elem);
+	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
+	  const id = ++lastCallers[info.index];
+	  setTimeout(() => {
+	    if (id !== lastCallers[info.index]) return;
+	    info = meInfo(elem);
+	    if (!info.last && !info.inFocus && info.empty) {
+	      info.indexCnt.remove()
+	      const children = info.multiCnt.children;
+	      for (let index = 0; index < children.length; index++) {
+	        children[index].setAttribute('index', index);
+	      }
+	      const list = info.multiInput.list();
+	      list.remove(list[info.index]);
+	    }
+	  }, 2000);
+	});
+	
+	du.on.match('focusin', oneSelector, (elem) => {
+	  // console.log('focusin');
+	});
+	
+	du.on.match('keyup:change', oneSelector, (elem) => {
+	  if (!isInput(elem)) return;
+	  const info = meInfo(elem);
+	  if (info.index === info.length - 1 && !info.empty) {
+	    const newElem = du.create.element('div', {index: info.index + 1});
+	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
+	    info.multiCnt.append(newElem);
+	    console.log('add 1')
+	  }
+	  // console.log('keyup');
+	});
+	
+	module.exports = MultipleEntries;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/decision/modification.js',
+function (require, exports, module) {
+	
+
+	const DecisionInputTree = require('./decision');
+	const InputInput = require('../decision/input-input.js');
+	const Input = require('../input.js');
+	const Select = require('../styles/select.js');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const request = require('../../request');
+	const Conditions = require('../../conditions');
+	const CustomEvent = require('../../custom-event');
+	
+	const modHideAll = du.switch('.modify-edit', 'mod-id');
+	
+	const hideAll = () => {
+	  for (let index = 0; index < all.length; index++) all[index].hidden = true;
+	};
+	
+	const toolCnt = du.create.element('div', {class: 'mod-decision-cnt'});
+	toolCnt.innerHTML = new $t('input/decision/decision-modification').render({});
+	du.find('body').append(toolCnt);
+	
+	let targetNodeElem;
+	let targetInputElem;
+	
+	const thenBtn = du.find.down('.then-btn', toolCnt);
+	const condBtn = du.find.down('.conditional-btn', toolCnt);
+	const editBtn = du.find.down('.edit-btn', toolCnt);
+	const addBtn = du.find.down('.add-btn', toolCnt);
+	const rmBtn = du.find.down('.remove-btn-cnt>button', toolCnt);
+	const closeCntBtn = du.find.down('.decision-tree-mod-cnt>.close-cnts', toolCnt);
+	
+	const thenCnt = du.find.down('.then-cnt', toolCnt);
+	const condCnt = du.find.down('.condition-cnt', toolCnt);
+	const editCnt = du.find.down('.edit-cnt', toolCnt);
+	const addCnt = du.find.down('.add-cnt', toolCnt);
+	
+	const thenAddCnt = du.find.down('.decision-tree-mod-cnt>.then-add-cnt', toolCnt);
+	const ifEditBtnCnt = du.find.down('.if-edit-cnt', toolCnt);
+	const rmCnt = du.find.down('.remove-btn-cnt', toolCnt);
+	const rmEditCnt = du.find.down('.rm-edit-cnt', toolCnt);
+	
+	const all = [closeCntBtn, thenBtn, condBtn, editBtn, addBtn, thenCnt, condCnt, editCnt, addCnt, ifEditBtnCnt, rmCnt, rmEditCnt];
+	
+	const copySaveBtnCnt = du.find.down('.copy-save-paste-cnt', toolCnt);
+	
+	function updateConditionTree(elem) {
+	  let input = Input.getFromElem(elem);
+	  if (elem !== condBtn && input !== condTarget.input) return;
+	  if (elem === condBtn) input = Input.getFromElem(targetInputElem);
+	  const conditionCnt = du.find.up('.condition-input-tree', elem);
+	  if (conditionCnt) return;
+	  const node = condTarget.node;
+	  const inputCnt = du.find.up('.decision-input-array-cnt', elem);
+	
+	  const inputArray = node.payload().inputArray;
+	  const val = input.value();
+	  const props = {header: `If ${input.name()} <br>`};
+	  const condTree = getConditionTree(val, node, input, props);
+	  const value = input.value();
+	  if ((typeof value) === 'string') {
+	    condTree.find.input('condition').setValue(value);
+	  }
+	  const treeHtml = condTree.html();
+	  condCnt.innerHTML = treeHtml;
+	}
+	
+	class ModDecisionTree {
+	  constructor(decisionTree) {
+	    const treeId = decisionTree.id();
+	    const nodeCntSelector = `[tree-id="${treeId}"] .decision-input-cnt`;
+	    const inputCntSelector = `[tree-id="${treeId}"] .decision-input-array-cnt>.input-cnt`;
+	    const inputSelector = `[tree-id="${treeId}"] .decision-input-array-cnt input, ` +
+	                          `[tree-id="${treeId}"] .decision-input-array-cnt select, ` +
+	                          `[tree-id="${treeId}"] .decision-input-array-cnt textarea`;
+	
+	    let active = true;
+	    this.on = () => copySaveBtnCnt.hidden = !(active = true);
+	    this.off = () => {
+	      hideAll();
+	      copySaveBtnCnt.hidden = true;
+	      active = false;
+	    }
+	    this.toggle = () => active ? this.off() : this.on();
+	    this.active = () => active;
+	    this.hideAll = hideAll;
+	
+	    const onCreateEvent = new CustomEvent('create');
+	    this.on.create = onCreateEvent.on;
+	
+	    function mouseoverNode(elem) {
+	      if (!active) return;
+	      if (elem) targetNodeElem = elem;
+	      // du.move.relitive(thenBtn, elem, 'topcenter');
+	      du.move.relitive(thenAddCnt, elem, 'bottomcenter');
+	      du.move.relitive(rmCnt, elem, 'topright');
+	      thenBtn.hidden = false;
+	      rmCnt.hidden = false;
+	      addBtn.hidden = false;
+	      rmBtn.hidden = false;
+	    }
+	    function mouseoverInput(elem) {
+	      if (!active) return;
+	      ifEditBtnCnt.hidden = false;
+	      condBtn.hidden = false;
+	      editBtn.hidden = false;
+	      du.move.relitive(ifEditBtnCnt, elem, 'leftcenterouter')
+	      targetInputElem = elem;
+	    }
+	
+	    du.on.match('mouseover', nodeCntSelector, mouseoverNode);
+	    du.on.match('mouseover', inputCntSelector, mouseoverInput);
+	    du.on.match('change', inputSelector, (elem) => {
+	      elem.matches(inputSelector);
+	      setTimeout(() => {
+	        updateConditionTree(elem);
+	        const targetCnt = rmEditCnt.hidden ? condCnt : rmEditCnt;
+	        showCloseButton(targetCnt);
+	      });
+	    });
+	
+	    du.on.match('click', '.decision-tree-mod-cnt #paste', (elem) => {
+	      du.paste.json(elem, (tree) => {
+	        const targetTree = DecisionInputTree.getNode(elem).tree();
+	        if (targetTree === decisionTree) {
+	          decisionTree = tree;
+	          const ph = decisionTree.payloadHandler();
+	          tree.payloadHandler(ph);
+	          const modDecisionTree = new ModDecisionTree(tree);
+	          onCreateEvent.trigger({tree, modDecisionTree});
+	          hideAll();
+	        }
+	      });
+	    });
+	  }
+	}
+	
+	function showCloseButton(elem) {
+	  closeCntBtn.hidden = false;
+	  du.move.relitive(closeCntBtn, elem, 'righttopouter');
+	}
+	
+	let addTargetNode;
+	function showAddInput(elem) {
+	  addCnt.hidden = false;
+	  addTargetNode = DecisionInputTree.getNode(targetNodeElem);
+	  const inputTree = ModDecisionTree.inputTree(addTargetNode);
+	  addCnt.innerHTML = inputTree.html();
+	  du.move.relitive(addCnt, targetNodeElem, 'bottomcenter');
+	  showCloseButton(addCnt);
+	  du.move.inbounds(addCnt)
+	}
+	du.on.match('click', '.add-btn', showAddInput);
+	
+	function addInput(details, elem)  {
+	  const input = InputInput.getInput(details);
+	  addTargetNode.addInput(input);
+	  DecisionInputTree.rebuild(targetNodeElem);
+	  hideAll();
+	}
+	
+	const getCondition = (...args) => DecisionInputTree.getCondition(...args);
+	
+	function createConditionalNodeFunction(node, input) {
+	  return function createNode(values, elem) {
+	    const attribute = input.name();
+	    const type = `${values.type}Type`;
+	    const subType = values[values.type.toCamel()][type.toCamel()];
+	    let value = values.condition;
+	    if (values.type === 'Number') value = Number.parseFloat(value);
+	    if (values.type === 'List') value = value.split(',');
+	    const condition = getCondition(attribute, value, subType);
+	    console.log(condition.satisfied(node));
+	    console.log(condition.satisfied(node));
+	    const name = values.group;
+	    const newNode = node.then(name, values.payload);
+	    node.conditions.add(condition, name);
+	    const condCnt = du.find.up('.condition-input-tree', elem);
+	    const condBtn = du.find.closest('.conditional-button', condCnt)
+	    hideAll();
+	    const inputElem = Input.getFromElem(elem)
+	    DecisionInputTree.update.children(inputElem);
+	  }
+	}
+	
+	function andHandlerInput(node, inputs) {
+	  const handlerInput = node.tree().payloadInput();
+	  if (handlerInput) inputs = [handlerInput].concat(inputs);
+	  return inputs
+	}
+	
+	function conditionalInputTree(node, props) {
+	  props ||= {};
+	  const group = new Input({
+	    name: 'group',
+	    label: 'Group',
+	    class: 'center',
+	  });
+	
+	  function updateGroupList(node) {
+	    if (node._NODE) node = node._NODE;
+	    const list = Object.keys(node.tree().stateConfigs());
+	    group.list(list);
+	    }
+	  updateGroupList(node);
+	
+	  const type = new Select({
+	    label: 'Type',
+	    name: 'type',
+	    class: 'center',
+	    list: ['String', 'Number', 'Reference', 'List', 'Regex']
+	  });
+	
+	  const stringType = new Select({
+	    name: 'stringType',
+	    class: 'center',
+	    list: ['Case Insensitive', 'Exact', 'Wild Card', 'Contains', 'Any', 'Except']
+	  });
+	
+	  const numberType = new Select({
+	    name: 'numberType',
+	    class: 'center',
+	    list: ['Equal', 'Less Than', 'Greater Than', 'Less Than or Equal', 'Greater Than or Equal']
+	  });
+	
+	  const referenceType = new Select({
+	    name: 'type',
+	    class: 'center',
+	    list: ['need', 'to', 'dynamically update']
+	  });
+	
+	  const listType = new Select({
+	    name: 'listType',
+	    class: 'center',
+	    list: ['Inclusive', 'Exclusive']
+	  });
+	
+	  const condition = new Input({
+	    label: 'Condition',
+	    name: 'condition',
+	    inline: true,
+	    class: 'center',
+	    value: props.conditionValue
+	  });
+	
+	  props.inputArray = andHandlerInput(node, [group, type, condition]);
+	
+	  const tree = new DecisionInputTree(props.treeName, props);
+	  const root = tree.root();
+	
+	  const dic = (value, type) => getCondition('type', value, type);
+	  function addTypeNode(name, inputArray, value, type) {
+	    const node = root.then(name, {inputArray});
+	    root.conditions.add(dic(value, type), name);
+	    node.relatedTo('type');
+	    return node;
+	  }
+	
+	  addTypeNode('reference', [referenceType], 'Reference');
+	  addTypeNode('string', [stringType], 'String')
+	  addTypeNode('number', [numberType], 'Number')
+	  addTypeNode('list', [listType], 'List')
+	
+	  tree.onChange(updateGroupList);
+	
+	  tree.onSubmit(props.onSubmit);
+	
+	  return tree;
+	}
+	
+	let thenTargetNode;
+	const thenInput = (node) => {
+	  const group = new Input({
+	    name: 'group',
+	    label: 'Group',
+	    class: 'center',
+	  });
+	
+	  function updateGroupList(node) {
+	    if (node._NODE) node = node._NODE;
+	    const list = Object.keys(node.tree().stateConfigs());
+	    group.list(list);
+	  }
+	  updateGroupList(node);
+	
+	  const props = {inputArray: andHandlerInput(node, [group])};
+	  const tree = new DecisionInputTree('Node', props);
+	  tree.onSubmit((values, elem) => {
+	    const name = values.group;
+	    const newNode = node.then(name, values.payload);
+	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
+	    const btnCnt = du.find.closest('.then-button', elem);
+	    const inputCnt = du.find.closest('.then-input-tree', btnCnt);
+	    hideAll();
+	    DecisionInputTree.hardUpdate(treeCnt);
+	  });
+	  return tree;
+	}
+	
+	du.on.match('click', '.then-btn', (elem, two, three) => {
+	  console.log('ThEn?');
+	  thenTargetNode = DecisionInputTree.getNode(targetNodeElem);
+	  const thenPut = thenInput(thenTargetNode);
+	  thenCnt.innerHTML = thenPut.html();
+	  thenCnt.hidden = false;
+	  du.move.relitive(thenCnt, targetNodeElem, 'bottomcenter');
+	  showCloseButton(thenCnt);
+	});
+	
+	const objectKeyFilter = (currObj) => (k) => (currObj[k]._NODE && !currObj.condition) || (k === 'condition' && currObj.condition);
+	const valueFilter = (val) => (typeof val) === 'string';
+	function getConditionKey(values) {
+	  const curr = values['Question Groupy'];
+	  let path, attr, lastKey;
+	  let currObj = values;
+	  while (true) {
+	    const validKeys = Object.keys(currObj).filter(objectKeyFilter(currObj));
+	    const validPaths = Object.values(currObj).filter(valueFilter);
+	    if (validPaths.length !== 1) throw new Error('There should be only one valid path');
+	    if (validKeys.length !== 1) throw new Error('There should be only one valid key');
+	    key = validKeys[0];
+	    currObj = currObj[key];
+	    const lastHyphIndex = key.indexOf('-');
+	    path = path ? `${path}.${key}` : key;
+	    attr = attr ? `${attr}.${validPaths[0]}` : validPaths[0];
+	    if (!(currObj.condition instanceof Object) && currObj.condition !== undefined) break;
+	  }
+	  return {path, attr};
+	}
+	
+	function createCondition(values, node, input) {
+	  const pathAttr = getConditionKey(values);
+	  const condObj = Object.pathValue(values, pathAttr.path);
+	  const value = condObj.condition;
+	
+	  const attribute = input.name()+'.'+pathAttr.attr;
+	  const type = `${condObj.type}Type`;
+	  const subType = condObj[condObj.type.toCamel()][type.toCamel()];
+	  let condValue = condObj.condition;
+	  if (condObj.type === 'Number') condValue = Number.parseFloat(condValue);
+	  if (condObj.type === 'List') condValue = condValue.split(',');
+	  const cond = getCondition(attribute, condValue, subType);
+	
+	  const childName = String.random();
+	  const child = node.then(condObj.group);
+	  node.conditions.add(cond, condObj.group);
+	
+	  DecisionInputTree.update()(targetInputElem);
+	  hideAll();
+	}
+	
+	function processObject (select, key, node, object, targetNode, conditions, path) {
+	  const child = node.then(path);
+	  const type = key === '*' ? 'exact' : undefined;
+	  const cond = getCondition(select.name(), key, type);
+	  const childConds = conditions.clone();
+	  childConds.add(cond);
+	  node.conditions.add(cond, path);
+	  addObjectKeys(child, object, targetNode, childConds, path);
+	}
+	
+	function proccessValue (select, key, node, value, targetNode, conditions, path) {
+	  let child = node.stateMap()[key];
+	  if (child === undefined) {
+	    const childConds = conditions.clone();
+	      const type = key === '*' ? 'exact' : undefined;
+	      const props = {treeName: path, conditionValue: value};
+	      const condInputTree = conditionalInputTree(targetNode, props);
+	      child = node.then(condInputTree.root());
+	      const cond = getCondition(select.name(), key, type);
+	      childConds.add(cond);
+	      node.conditions.add(childConds, path);
+	   }
+	}
+	
+	const DEF_COND = 'DEFINE CONDITION';
+	function superObject(object) {
+	  const superObj = {};
+	  const keys = Object.keys(object);
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const value = object[key];
+	    if (value instanceof Object) {
+	      superObj[key] = superObject(value);
+	      if (superObj['*']) Object.merge(superObj['*'], superObject(value), true)
+	      else superObj['*'] = superObject(value);
+	      superObj[DEF_COND] = '';
+	    } else {
+	      superObj['*'] = '';
+	      superObj[key] = value;
+	    }
+	  }
+	  return superObj;
+	}
+	
+	const objectKeySorter = (key1, key2) => {
+	  if (key1 === DEF_COND) return -1;
+	  if (key2 === DEF_COND) return 0;
+	  if (key1 === '*') return -1;
+	  if (key2 === '*') return 0;
+	  return key1 - key2;
+	}
+	
+	function addObjectKeys(node, object, targetNode, conditions, path) {
+	  if (conditions === undefined) object = superObject(object);
+	
+	  conditions ||= new Conditions.And([]);
+	  const keys = [].concat(Object.keys(object));
+	  const list = [];
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const value = object[key];
+	    list.push(key);
+	  }
+	  list.sort(objectKeySorter);
+	  const select = new Select({name: node.name(), list})
+	  node.addInput(select);
+	  const paths = {};
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    let currPath = path ? path + '-' + key : key;
+	    const value = object[key];
+	    const runObject = value instanceof Object;
+	    const runValue = !runObject;
+	    if (runObject) processObject(select, key, node, value, targetNode, conditions, currPath);
+	    if (runValue) proccessValue(select, key, node, value, targetNode, conditions, currPath);
+	  }
+	  return keys;
+	}
+	
+	function objectConditionTree(values, node, input, props) {
+	  const tree = new DecisionInputTree(props.treeName, props);
+	  addObjectKeys(tree.root(), values, node);
+	  tree.onSubmit((values) => createCondition(values, node, input));
+	  return tree;
+	}
+	
+	function getConditionTree(values, node, input, props) {
+	  if (values instanceof Object)
+	    return objectConditionTree(values, node, input, props);
+	  props ||= {};
+	  props.treeName = 'Question Groupy';
+	  props.onSubmit = createConditionalNodeFunction(node, input);
+	  props.conditionValue = input.value();
+	  return conditionalInputTree(node, props);
+	}
+	
+	const condTarget = {};
+	function condBtnPressed(elem) {
+	  condTarget.node = DecisionInputTree.getNode(targetNodeElem);
+	  condTarget.input = Input.getFromElem(targetInputElem);;
+	  const inputTreeCnt = updateConditionTree(elem);
+	  condCnt.hidden = false;
+	  du.move.relitive(condCnt, targetInputElem, 'bottomcenterouter');
+	  showCloseButton(condCnt);
+	}
+	
+	function removeNodeBtnPressed(elem) {
+	  const node = DecisionInputTree.getNode(targetNodeElem);
+	  if (confirm(`Are you sure you want to remove node '${node.name()}'`) == true) {
+	    node.remove();
+	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
+	    DecisionInputTree.hardUpdate(treeCnt);
+	  }
+	  hideAll();
+	}
+	
+	du.on.match('click', '.conditional-btn', condBtnPressed);
+	du.on.match('click', '.remove-btn-cnt>.rm-node', removeNodeBtnPressed);
 	
 	
 	
-	module.exports = InputObject;
+	ModDecisionTree.inputTree = function (node, noSubmission) {
+	  const targetTree = node.tree();
+	  const nameVal = (value) => {
+	    if (value === '') return false;
+	    const camel = value.toCamel();
+	    const inputs = node.payload().inputArray;
+	    for (let index = 0; index < inputs.length; index++) {
+	      if (inputs[index].name() === camel) return false;
+	    }
+	    return node.stateNames().indexOf(camel) === -1;
+	  }
+	
+	  const tree = new InputInput({noSubmission, class: 'modify',
+	                  validation: {name: nameVal}});
+	  const root = tree.root();
+	
+	
+	
+	  tree.onSubmit(addInput);
+	  tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
+	  tree.empty = () => {
+	    let empty = true;
+	    tree.root().forEach((node) =>
+	      node.payload().inputArray.forEach(input => empty &&= input.empty()));
+	    return empty;
+	  }
+	  return tree;
+	}
+	
+	
+	const editTargets = {};
+	du.on.match('click', '.edit-btn', (elem) => {
+	  editTargets.input = Input.getFromElem(targetInputElem);
+	  editTargets.node = DecisionInputTree.getNode(targetNodeElem);
+	  editCnt.hidden = false;
+	  editCnt.innerHTML = editTargets.input.editHtml();
+	  du.move.relitive(rmEditCnt, targetInputElem, 'bottomcenterouter')
+	  showCloseButton(editCnt);
+	});
+	
+	du.on.match('click', '.modiy-rm-input-btn', (elem) => {
+	  const inputIdElem = du.find.closest('[input-ref-id', elem);
+	  editTargets.node.removeInput(editTargets.input.name());
+	  DecisionInputTree.hardUpdate(targetInputElem.parentElement);
+	  hideAll();
+	});
+	
+	du.on.match('click', '.decision-tree-mod-cnt>.close-cnts', hideAll);
+	
+	du.on.match('click', '.decision-tree-mod-cnt #copy', (elem) => {
+	  const tree = DecisionInputTree.getNode(targetNodeElem).tree();
+	  const texta = du.find.closest('textarea', elem);
+	  texta.value = JSON.stringify(tree.toJson(), texta, 2);
+	  du.copy(texta);
+	});
+	du.on.match('click', '.decision-tree-mod-cnt #save', () => {
+	  if (confirm('Are you sure you want to save?')) {
+	    const tree = DecisionInputTree.getNode(targetNodeElem).tree();
+	    request.post('/save/json', {name: 'configure', json: tree.toJson()}, console.log, console.error);
+	  }
+	  hideAll();
+	});
+	
+	
+	
+	module.exports = ModDecisionTree;
 	
 });
 
@@ -6514,304 +7308,6 @@ const Input = require('../input');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/list.js',
-function (require, exports, module) {
-	
-const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	const CustomEvent = require('../../custom-event');
-	const Input = require('../input');
-	
-	// TODO: extend InputObject (class functionality overlap)
-	class InputList extends Input {
-	  constructor(props) {
-	    super(props);
-	    Object.getSet(this);
-	    const instance = this;
-	
-	    this.value = () => {
-	      const values = {};
-	      props.list.forEach((input, index) => input.validation() && (values[input.name() || index] = input.value()));
-	      return values;
-	    }
-	
-	    const dynamicEvent = CustomEvent.dynamic();
-	    this.on = dynamicEvent.on;
-	
-	    function triggerChangeEvent(value, input, event) {
-	      dynamicEvent.trigger(event, {value, input});
-	    }
-	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
-	
-	    this.setValue = () => {
-	      throw new Error('This function should never get called');
-	    }
-	
-	    this.valid = () => {
-	      if (this.optional()) return true;
-	      let valid = true;
-	      props.list.forEach(input => valid &&= input.optional() || input.valid());
-	      return valid;
-	    }
-	
-	    let optional;
-	    this.optional = (value) => {
-	      if (value !== true && value !== false) return optional;
-	      optional = value;
-	      props.list.forEach(input => input.optional(optional));
-	    }
-	    this.optional(props.optional || false);
-	
-	    this.clone = (properties) => {
-	      const json = this.toJson();
-	      json.validation = (properties || props).validation;
-	      json.list.forEach(i => delete i.id);
-	      Object.set(json, properties);
-	      return InputList.fromJson(json);
-	    }
-	
-	    this.empty = () => {
-	      for (let index = 0; index < props.list.length; index++) {
-	        if (!props.list[index].empty()) return false
-	      }
-	      return true;
-	    }
-	
-	  }
-	}
-	
-	InputList.fromJson = (json) => {
-	  json.list = Object.fromJson(json.list);
-	  return new InputList(json);
-	}
-	
-	InputList.template = new $t('input/list');
-	InputList.html = (instance) => () => InputList.template.render(instance);
-	
-	
-	
-	module.exports = InputList;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/multiple-entries.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
-	const Input = require('../input');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	
-	const validation = () => true;
-	class MultipleEntries extends Input {
-	  constructor(inputTemplate, props) {
-	
-	
-	    props ||= {};
-	    props.validation ||= (event, details) => {
-	      const list = props.list;
-	      let allEmpty = true;
-	      let valid = true;
-	      for (let index = 0; index < list.length; index++) {
-	        const input = list[index];
-	        const empty = input.empty();
-	        if (!empty) {
-	          if (input.optional) input.optional(false);
-	          valid &= list[index].valid();
-	        }
-	        allEmpty &= empty;
-	      }
-	      return !allEmpty && valid;
-	    }
-	    if (props.list === undefined) {
-	      const list = [];
-	      props.list = list;
-	      props.list.forEach((i) =>
-	        list.push(i.clone()));
-	    }
-	
-	    props.list ||= [];
-	    super(props);
-	    Object.getSet(this, 'inputTemplate');
-	    let template;
-	    const instance = this;
-	    this.inputTemplate = () => {
-	      if (!template) {
-	        if ((typeof inputTemplate) === 'function') {
-	          template = inputTemplate();
-	        } else template = inputTemplate;
-	      }
-	      return template;
-	    }
-	
-	    this.empty = () => {
-	      if (props.list.length > 1) return false;
-	      const inputs = props.list[0];
-	      for (let index = 0; index < inputs.length; index++) {
-	        if (!inputs[index].empty()) return false;
-	      }
-	      return true;
-	    }
-	    this.valid = () => this.value().length > 0;
-	
-	    this.clone = () =>
-	        new MultipleEntries(inputTemplate, JSON.clone(props));
-	
-	    this.set = (index, value) => {
-	      if (props.list[index] === undefined) {
-	        props.list[index] = this.inputTemplate().clone({optional: true});
-	        if (props.list[index].on) {
-	          props.list[index].on('change', this.validation);
-	        } else {
-	          props.list[index].onChange(this.validation);
-	        }
-	      }
-	      return props.list[index];
-	    }
-	
-	    this.tag = () => props.inline() ? 'span' : 'div';
-	
-	    this.input = (nameOindexOfunc) => {
-	      const nif = nameOindexOfunc;
-	      if ((typeof nif) === 'number') return props.list[nif];
-	      const runFunc = (typeof nif) === 'function';
-	      for (let index = 0; index < props.list.length; index++) {
-	        const input = props.list[index];
-	        if (runFunc) {
-	          const val = nif(input);
-	          if (val) return val;
-	        } else if (input.name() === nif) return input;
-	
-	        if (input instanceof MultipleEntries) {
-	          const mInput = input.input(nif);
-	          if (mInput) return mInput;
-	        }
-	      }
-	    }
-	    this.getValue = () => {
-	      const values = [];
-	      for (let index = 0; index < props.list.length; index++) {
-	        const input = props.list[index];
-	        if (!input.empty()) {
-	          if (input.valid()) {
-	            values.push(input.value());
-	          } else {
-	            input.valid();
-	            input.valid();
-	          }
-	        }
-	      }
-	      return values;
-	    }
-	
-	    this.setValue = (list) => {
-	      if (list) {
-	        list.forEach((val, index) => {
-	            const input = this.set(index)
-	            input.setValue(val);
-	        });
-	      }
-	    }
-	
-	    this.value = this.getValue;
-	
-	    const parentHtml = this.html;
-	    this.html = () => {
-	      if (props.list.length === 0 || !props.list[props.list.length - 1].empty()) this.set(props.list.length);
-	      return parentHtml();
-	    }
-	
-	    this.length = () => this.list().length;
-	    this.setHtml = (index) => MultipleEntries.singleTemplate.render(this.set(index));
-	
-	    this.setValue(props.value);
-	  }
-	}
-	
-	MultipleEntries.template = new $t('input/multiple-entries');
-	MultipleEntries.singleTemplate = new $t('input/one-entry');
-	MultipleEntries.html = (instance) => () => MultipleEntries.template.render(instance);
-	
-	MultipleEntries.fromJson = (json) => {
-	  const inputTemplate = Object.fromJson(json.inputTemplate);
-	  return new MultipleEntries(inputTemplate, json);
-	
-	}
-	
-	function meInfo(elem) {
-	  const info = {};
-	  info.oneCnt = du.find.up('.one-entry-cnt', elem);
-	  if (info.oneCnt) {
-	    info.indexCnt = du.find.up('[index]', info.oneCnt);
-	    info.index = Number.parseInt(info.indexCnt.getAttribute('index'));
-	    const ae =  document.activeElement;
-	    info.inFocus = !(!(ae && ae.id && du.find.down('#' + ae.id, info.indexCnt)));
-	  }
-	  info.multiCnt = du.find.up('.multiple-entry-cnt', info.indexCnt || elem);
-	  info.multiInput = MultipleEntries.getFromElem(info.multiCnt);
-	  info.length = info.multiInput.length();
-	  info.inputs = du.find.downAll('input,select,textarea', info.oneCnt);
-	  info.last = info.index === info.length - 1;
-	  info.empty = info.multiInput.list()[info.index].empty();
-	  return info;
-	}
-	
-	const meSelector = '.multiple-entry-cnt input,select,textarea';
-	const oneSelector = '.one-entry-cnt *';
-	const isInput = (elem) => elem.tagName.match(/(SELECT|INPUT|TEXTAREA)/) !== null;
-	du.on.match('change', meSelector, (elem) => {
-	  // console.log('changed');
-	});
-	
-	du.on.match('click', meSelector, (elem) => {
-	  // console.log('clicked');
-	});
-	
-	const lastCallers = [];
-	du.on.match('focusout', '.one-entry-cnt', (elem) => {
-	  let info = meInfo(elem);
-	  if (!lastCallers[info.index]) lastCallers[info.index] = 0;
-	  const id = ++lastCallers[info.index];
-	  setTimeout(() => {
-	    if (id !== lastCallers[info.index]) return;
-	    info = meInfo(elem);
-	    if (!info.last && !info.inFocus && info.empty) {
-	      info.indexCnt.remove()
-	      const children = info.multiCnt.children;
-	      for (let index = 0; index < children.length; index++) {
-	        children[index].setAttribute('index', index);
-	      }
-	      const list = info.multiInput.list();
-	      list.remove(list[info.index]);
-	    }
-	  }, 2000);
-	});
-	
-	du.on.match('focusin', oneSelector, (elem) => {
-	  // console.log('focusin');
-	});
-	
-	du.on.match('keyup:change', oneSelector, (elem) => {
-	  if (!isInput(elem)) return;
-	  const info = meInfo(elem);
-	  if (info.index === info.length - 1 && !info.empty) {
-	    const newElem = du.create.element('div', {index: info.index + 1});
-	    newElem.innerHTML = info.multiInput.setHtml(info.index + 1);
-	    info.multiCnt.append(newElem);
-	    console.log('add 1')
-	  }
-	  // console.log('keyup');
-	});
-	
-	module.exports = MultipleEntries;
-	
-});
-
-
 RequireJS.addFunction('../../public/js/utils/input/styles/measurement.js',
 function (require, exports, module) {
 	
@@ -6865,6 +7361,271 @@ function (require, exports, module) {
 	})
 	
 	module.exports = MeasurementInput;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/textarea.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Textarea extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
+	  }
+	}
+	
+	Textarea.template = new $t('input/textarea');
+	Textarea.html = (instance) => () => Textarea.template.render(instance);
+	
+	module.exports = Textarea;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/table.js',
+function (require, exports, module) {
+	
+const Input = require('../input');
+	const Radio = require('../styles/radio');
+	const MultipleEntries = require('../styles/multiple-entries');
+	const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	
+	tableInputNameFunc = (id, rIndex, cIndex) => `table-${id}-${rIndex}-${cIndex}`;
+	
+	class Table extends Input {
+	  constructor(props) {
+	    super(props);
+	
+	    let inputs = [];
+	    props.type ||= 'radio';
+	    if (props.type === 'radio') return new RadioTable(props);
+	    // for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
+	    //   inputs[rIndex] = [];
+	    //   let nameFunc = tableInputNameFunc;
+	    //   if (props.type === 'radio') {
+	    //     const uniqueId = String.random();
+	    //     nameFunc = () => uniqueId;
+	    //   } else {
+	    //     const row = props.rows[rIndex];
+	    //     for (let cIndex = 0; cIndex < props.columns.length; cIndex++) {
+	    //       const column = props.columns[cIndex];
+	    //       let input;
+	    //       if (column instanceof Input) input = column.clone();
+	    //       else input = new Input({type: props.type});
+	    //       input.name(nameFunc(this.id(), rIndex, cIndex));
+	    //       const clone = input.clone();
+	    //       clone.label('');
+	    //       if (props.value) clone.value(props.value[row][input.name()]);
+	    //       inputs[rIndex].push(clone);
+	    //     }
+	    //   }
+	    // }
+	
+	    this.value = () => {
+	      const values = {};
+	      const rows = this.rows();
+	      const cols = this.columnNames();
+	      for (let rIndex = 0; rIndex < inputs.length; rIndex++) {
+	        const column = inputs[rIndex];
+	        const row = rows[rIndex];
+	        values[row] = {};
+	        for (let cIndex = 0; cIndex < column.length; cIndex++) {
+	          let input = column[cIndex];
+	          values[row][cols[cIndex]] = input.value();
+	        }
+	      }
+	      return values;
+	    }
+	
+	
+	    props.value = undefined;
+	    this.list = () => props.columns;
+	    this.columns = (rowIndex) => rowIndex === undefined ?
+	                        props.columns : inputs[rowIndex];
+	    this.setColumns = (cols, values) => {
+	      const defineColumns = Array.isArray(cols);
+	      cols ||= props.columns;
+	      if (defineColumns) inputs = [];
+	      for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
+	        inputs[rIndex] ||= [];
+	        let nameFunc = tableInputNameFunc;
+	        const row = props.rows[rIndex];
+	        for (let cIndex = 0; cIndex < cols.length; cIndex++) {
+	          const column = cols[cIndex];
+	          let input;
+	          if (defineColumns) {
+	            if (column instanceof Input) {
+	              input = column.clone();
+	              props.columns[cIndex] = input;
+	            } else {
+	              input = new Input({type: props.type});
+	              if ((typeof column) === 'function') {
+	                console.log('func');
+	              }
+	              props.columns[cIndex] = column;
+	            }
+	          } else input = props.columns[cIndex];
+	          if (inputs[rIndex][cIndex] === undefined) {
+	            input.name(nameFunc(this.id(), rIndex, cIndex));
+	            const clone = input.clone();
+	            clone.label('');
+	            if (values) clone.value(values[row][input.name()]);
+	            inputs[rIndex].push(clone);
+	          }
+	        }
+	      }
+	    }
+	    this.setRows = (rows) => {
+	      if (Array.isArray(props.rows)) props.rows = rows;
+	    }
+	
+	    this.columnNames = () => {
+	      const names = [];
+	      for (let index = 0; index < props.columns.length; index++) {
+	        const col = props.columns[index];
+	        if (col instanceof Input) names.push(col.label() || col.name());
+	        else names.push(col);
+	      }
+	      return names;
+	    }
+	    this.rows = () => props.rows;
+	    this.description = () => props.description;
+	    // const parentValue = this.value;
+	    // this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
+	
+	    this.selected = (value) => value === this.value();
+	
+	    this.setColumns(props.columns, props.value);
+	  }
+	}
+	
+	Table.fromJson = (json) => {
+	  const columns = Object.fromJson(json.columns);
+	  json.columns = columns;
+	  return new Table(json);
+	}
+	
+	Table.template = new $t('input/table');
+	Table.html = (instance) => () => Table.template.render(instance);
+	
+	
+	class RadioTable extends Input {
+	  constructor(props) {
+	    super(props);
+	    let _rows = {};
+	    const rowName = (index) => `${this.id()}-${props.rows[index].toCamel()}`;
+	    props.type = 'radio';
+	
+	    function buildRows(values) {
+	      _rows = {};
+	      for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
+	        const list = props.columns.copy();
+	        const label = props.rows[rIndex];
+	        const name = rowName(rIndex);
+	        const key = label.toCamel();
+	        const value = values && values[key] ? props.value[key] :
+	                (_rows[key] ? _rows[key].value : list[0]);
+	        _rows[key] = {name, label, value, key};
+	      }
+	    }
+	    buildRows(props.value);
+	
+	    this.value = () => {
+	      const values = {};
+	      for (let index = 0; index < props.rows.length; index++) {
+	        const key = props.rows[index].toCamel();
+	        values[key] = _rows[key].value;
+	      }
+	      return values;
+	    }
+	
+	    this.columns = () => props.columns;
+	    this.setColumns = (cols) => {
+	      if (Array.isArray(cols)) props.columns = cols;
+	      buildRows();
+	    }
+	    this.setRows = (rows) => {
+	      if (Array.isArray(rows)) props.rows = rows;
+	      buildRows();
+	    }
+	    props.value = undefined;
+	    this.setValue = (elem) => {
+	      if (elem instanceof HTMLElement)
+	        return _rows[elem.getAttribute('key')].value = elem.value;
+	      console.log('OBJECT!');
+	    }
+	    this.list = () => _rows;
+	    this.rowDetail = () => Object.values(_rows);
+	    this.rows = () => props.rows;
+	    this.description = () => props.description;
+	  }
+	}
+	
+	du.on.match('change', '.radio-table-input-cnt>input', (elem) => {
+	  Input.getFromElem(elem).setValue(elem);
+	});
+	
+	Object.class.register(RadioTable);
+	RadioTable.template = new $t('input/radio-table');
+	RadioTable.html = (instance) => () => RadioTable.template.render(instance);
+	RadioTable.editHtml = Table.editHtml;
+	
+	Table.Radio = RadioTable;
+	
+	module.exports = Table;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
+function (require, exports, module) {
+	
+
+	
+	
+	
+	const Input = require('../input');
+	const $t = require('../../$t');
+	
+	class Select extends Input {
+	  constructor(props) {
+	    props ||= {};
+	    super(props);
+	    if (props.list === undefined) props.list = [];
+	    const isArray = Array.isArray(props.list);
+	    let value;
+	    if (isArray) {
+	      value = props.index && props.list[props.index] ?
+	      props.list[props.index] : props.list[0];
+	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+	    } else {
+	      const key = Object.keys(props.list)[0];
+	      value = props.value || key;
+	    }
+	    props.value = undefined;
+	    this.setValue(value);
+	    this.isArray = () => isArray;
+	    this.list = () => props.list;
+	    const parentValue = this.value;
+	    this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
+	    const parentHidden = this.hidden;
+	    this.hidden = () => props.list.length < 2 || parentHidden();
+	
+	    this.empty = () => true;
+	    this.selected = (value) => value === this.value();
+	  }
+	}
+	
+	new Select();
+	Select.template = new $t('input/select');
+	Select.html = (instance) => () => Select.template.render(instance);
+	
+	module.exports = Select;
 	
 });
 
@@ -7519,837 +8280,169 @@ const Input = require('../input');
 });
 
 
-RequireJS.addFunction('../../public/js/utils/input/styles/number.js',
+RequireJS.addFunction('../../public/js/utils/input/styles/list.js',
 function (require, exports, module) {
 	
-const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class NumberInput extends Input {
-	  constructor(props) {
-	    super(props);
-	    props.min = Number.parseFloat(props.min) || 0;
-	    props.max = Number.parseFloat(props.max) || Number.MAX_SAFE_INTEGER;
-	    props.step = Number.parseFloat(props.step) || 1;
-	    Object.getSet(this, {min: props.min, max: props.max, step: props.step});
-	
-	    this.validation = (value) => value <= props.max && value >= props.min;
-	  }
-	}
-	
-	NumberInput.template = new $t('input/number');
-	NumberInput.html = (instance) => () => NumberInput.template.render(instance);
-	
-	module.exports = NumberInput;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/decision/modification.js',
-function (require, exports, module) {
-	
-
-	const DecisionInputTree = require('./decision');
-	const InputInput = require('../decision/input-input.js');
-	const Input = require('../input.js');
-	const Select = require('../styles/select.js');
-	const $t = require('../../$t');
+const $t = require('../../$t');
 	const du = require('../../dom-utils');
-	const request = require('../../request');
-	const Conditions = require('../../conditions');
 	const CustomEvent = require('../../custom-event');
-	
-	const modHideAll = du.switch('.modify-edit', 'mod-id');
-	
-	const hideAll = () => {
-	  for (let index = 0; index < all.length; index++) all[index].hidden = true;
-	};
-	
-	const toolCnt = du.create.element('div', {class: 'mod-decision-cnt'});
-	toolCnt.innerHTML = new $t('input/decision/decision-modification').render({});
-	du.find('body').append(toolCnt);
-	
-	let targetNodeElem;
-	let targetInputElem;
-	
-	const thenBtn = du.find.down('.then-btn', toolCnt);
-	const condBtn = du.find.down('.conditional-btn', toolCnt);
-	const editBtn = du.find.down('.edit-btn', toolCnt);
-	const addBtn = du.find.down('.add-btn', toolCnt);
-	const rmBtn = du.find.down('.remove-btn-cnt>button', toolCnt);
-	const closeCntBtn = du.find.down('.decision-tree-mod-cnt>.close-cnts', toolCnt);
-	
-	const thenCnt = du.find.down('.then-cnt', toolCnt);
-	const condCnt = du.find.down('.condition-cnt', toolCnt);
-	const editCnt = du.find.down('.edit-cnt', toolCnt);
-	const addCnt = du.find.down('.add-cnt', toolCnt);
-	
-	const thenAddCnt = du.find.down('.decision-tree-mod-cnt>.then-add-cnt', toolCnt);
-	const ifEditBtnCnt = du.find.down('.if-edit-cnt', toolCnt);
-	const rmCnt = du.find.down('.remove-btn-cnt', toolCnt);
-	const rmEditCnt = du.find.down('.rm-edit-cnt', toolCnt);
-	
-	const all = [closeCntBtn, thenBtn, condBtn, editBtn, addBtn, thenCnt, condCnt, editCnt, addCnt, ifEditBtnCnt, rmCnt, rmEditCnt];
-	
-	const copySaveBtnCnt = du.find.down('.copy-save-paste-cnt', toolCnt);
-	
-	function updateConditionTree(elem) {
-	  let input = Input.getFromElem(elem);
-	  if (elem !== condBtn && input !== condTarget.input) return;
-	  if (elem === condBtn) input = Input.getFromElem(targetInputElem);
-	  const conditionCnt = du.find.up('.condition-input-tree', elem);
-	  if (conditionCnt) return;
-	  const node = condTarget.node;
-	  const inputCnt = du.find.up('.decision-input-array-cnt', elem);
-	
-	  const inputArray = node.payload().inputArray;
-	  const val = input.value();
-	  const props = {header: `If ${input.name()} <br>`};
-	  const condTree = getConditionTree(val, node, input, props);
-	  const value = input.value();
-	  if ((typeof value) === 'string') {
-	    condTree.find.input('condition').setValue(value);
-	  }
-	  const treeHtml = condTree.html();
-	  condCnt.innerHTML = treeHtml;
-	}
-	
-	class ModDecisionTree {
-	  constructor(decisionTree) {
-	    const treeId = decisionTree.id();
-	    const nodeCntSelector = `[tree-id="${treeId}"] .decision-input-cnt`;
-	    const inputCntSelector = `[tree-id="${treeId}"] .decision-input-array-cnt>.input-cnt`;
-	    const inputSelector = `[tree-id="${treeId}"] .decision-input-array-cnt input, ` +
-	                          `[tree-id="${treeId}"] .decision-input-array-cnt select, ` +
-	                          `[tree-id="${treeId}"] .decision-input-array-cnt textarea`;
-	
-	    let active = true;
-	    this.on = () => copySaveBtnCnt.hidden = !(active = true);
-	    this.off = () => {
-	      hideAll();
-	      copySaveBtnCnt.hidden = true;
-	      active = false;
-	    }
-	    this.toggle = () => active ? this.off() : this.on();
-	    this.active = () => active;
-	    this.hideAll = hideAll;
-	
-	    const onCreateEvent = new CustomEvent('create');
-	    this.on.create = onCreateEvent.on;
-	
-	    function mouseoverNode(elem) {
-	      if (!active) return;
-	      if (elem) targetNodeElem = elem;
-	      // du.move.relitive(thenBtn, elem, 'topcenter');
-	      du.move.relitive(thenAddCnt, elem, 'bottomcenter');
-	      du.move.relitive(rmCnt, elem, 'topright');
-	      thenBtn.hidden = false;
-	      rmCnt.hidden = false;
-	      addBtn.hidden = false;
-	      rmBtn.hidden = false;
-	    }
-	    function mouseoverInput(elem) {
-	      if (!active) return;
-	      ifEditBtnCnt.hidden = false;
-	      condBtn.hidden = false;
-	      editBtn.hidden = false;
-	      du.move.relitive(ifEditBtnCnt, elem, 'leftcenterouter')
-	      targetInputElem = elem;
-	    }
-	
-	    du.on.match('mouseover', nodeCntSelector, mouseoverNode);
-	    du.on.match('mouseover', inputCntSelector, mouseoverInput);
-	    du.on.match('change', inputSelector, (elem) => {
-	      elem.matches(inputSelector);
-	      setTimeout(() => {
-	        updateConditionTree(elem);
-	        const targetCnt = rmEditCnt.hidden ? condCnt : rmEditCnt;
-	        showCloseButton(targetCnt);
-	      });
-	    });
-	
-	    du.on.match('click', '.decision-tree-mod-cnt #paste', (elem) => {
-	      du.paste.json(elem, (tree) => {
-	        const targetTree = DecisionInputTree.getNode(elem).tree();
-	        if (targetTree === decisionTree) {
-	          decisionTree = tree;
-	          const ph = decisionTree.payloadHandler();
-	          tree.payloadHandler(ph);
-	          const modDecisionTree = new ModDecisionTree(tree);
-	          onCreateEvent.trigger({tree, modDecisionTree});
-	          hideAll();
-	        }
-	      });
-	    });
-	  }
-	}
-	
-	function showCloseButton(elem) {
-	  closeCntBtn.hidden = false;
-	  du.move.relitive(closeCntBtn, elem, 'righttopouter');
-	}
-	
-	let addTargetNode;
-	function showAddInput(elem) {
-	  addCnt.hidden = false;
-	  addTargetNode = DecisionInputTree.getNode(targetNodeElem);
-	  const inputTree = ModDecisionTree.inputTree(addTargetNode);
-	  addCnt.innerHTML = inputTree.html();
-	  du.move.relitive(addCnt, targetNodeElem, 'bottomcenter');
-	  showCloseButton(addCnt);
-	  du.move.inbounds(addCnt)
-	}
-	du.on.match('click', '.add-btn', showAddInput);
-	
-	function addInput(details, elem)  {
-	  const input = InputInput.getInput(details);
-	  addTargetNode.addInput(input);
-	  DecisionInputTree.rebuild(targetNodeElem);
-	  hideAll();
-	}
-	
-	const getCondition = (...args) => DecisionInputTree.getCondition(...args);
-	
-	function createConditionalNodeFunction(node, input) {
-	  return function createNode(values, elem) {
-	    const attribute = input.name();
-	    const type = `${values.type}Type`;
-	    const subType = values[values.type.toCamel()][type.toCamel()];
-	    let value = values.condition;
-	    if (values.type === 'Number') value = Number.parseFloat(value);
-	    if (values.type === 'List') value = value.split(',');
-	    const condition = getCondition(attribute, value, subType);
-	    console.log(condition.satisfied(node));
-	    console.log(condition.satisfied(node));
-	    const name = values.group;
-	    const newNode = node.then(name, values.payload);
-	    node.conditions.add(condition, name);
-	    const condCnt = du.find.up('.condition-input-tree', elem);
-	    const condBtn = du.find.closest('.conditional-button', condCnt)
-	    hideAll();
-	    const inputElem = Input.getFromElem(elem)
-	    DecisionInputTree.update.children(inputElem);
-	  }
-	}
-	
-	function andHandlerInput(node, inputs) {
-	  const handlerInput = node.tree().payloadInput();
-	  if (handlerInput) inputs = [handlerInput].concat(inputs);
-	  return inputs
-	}
-	
-	function conditionalInputTree(node, props) {
-	  props ||= {};
-	  const group = new Input({
-	    name: 'group',
-	    label: 'Group',
-	    class: 'center',
-	  });
-	
-	  function updateGroupList(node) {
-	    if (node._NODE) node = node._NODE;
-	    const list = Object.keys(node.tree().stateConfigs());
-	    group.list(list);
-	    }
-	  updateGroupList(node);
-	
-	  const type = new Select({
-	    label: 'Type',
-	    name: 'type',
-	    class: 'center',
-	    list: ['String', 'Number', 'Reference', 'List', 'Regex']
-	  });
-	
-	  const stringType = new Select({
-	    name: 'stringType',
-	    class: 'center',
-	    list: ['Case Insensitive', 'Exact', 'Wild Card', 'Contains', 'Any', 'Except']
-	  });
-	
-	  const numberType = new Select({
-	    name: 'numberType',
-	    class: 'center',
-	    list: ['Equal', 'Less Than', 'Greater Than', 'Less Than or Equal', 'Greater Than or Equal']
-	  });
-	
-	  const referenceType = new Select({
-	    name: 'type',
-	    class: 'center',
-	    list: ['need', 'to', 'dynamically update']
-	  });
-	
-	  const listType = new Select({
-	    name: 'listType',
-	    class: 'center',
-	    list: ['Inclusive', 'Exclusive']
-	  });
-	
-	  const condition = new Input({
-	    label: 'Condition',
-	    name: 'condition',
-	    inline: true,
-	    class: 'center',
-	    value: props.conditionValue
-	  });
-	
-	  props.inputArray = andHandlerInput(node, [group, type, condition]);
-	
-	  const tree = new DecisionInputTree(props.treeName, props);
-	  const root = tree.root();
-	
-	  const dic = (value, type) => getCondition('type', value, type);
-	  function addTypeNode(name, inputArray, value, type) {
-	    const node = root.then(name, {inputArray});
-	    root.conditions.add(dic(value, type), name);
-	    node.relatedTo('type');
-	    return node;
-	  }
-	
-	  addTypeNode('reference', [referenceType], 'Reference');
-	  addTypeNode('string', [stringType], 'String')
-	  addTypeNode('number', [numberType], 'Number')
-	  addTypeNode('list', [listType], 'List')
-	
-	  tree.onChange(updateGroupList);
-	
-	  tree.onSubmit(props.onSubmit);
-	
-	  return tree;
-	}
-	
-	let thenTargetNode;
-	const thenInput = (node) => {
-	  const group = new Input({
-	    name: 'group',
-	    label: 'Group',
-	    class: 'center',
-	  });
-	
-	  function updateGroupList(node) {
-	    if (node._NODE) node = node._NODE;
-	    const list = Object.keys(node.tree().stateConfigs());
-	    group.list(list);
-	  }
-	  updateGroupList(node);
-	
-	  const props = {inputArray: andHandlerInput(node, [group])};
-	  const tree = new DecisionInputTree('Node', props);
-	  tree.onSubmit((values, elem) => {
-	    const name = values.group;
-	    const newNode = node.then(name, values.payload);
-	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
-	    const btnCnt = du.find.closest('.then-button', elem);
-	    const inputCnt = du.find.closest('.then-input-tree', btnCnt);
-	    hideAll();
-	    DecisionInputTree.hardUpdate(treeCnt);
-	  });
-	  return tree;
-	}
-	
-	du.on.match('click', '.then-btn', (elem, two, three) => {
-	  console.log('ThEn?');
-	  thenTargetNode = DecisionInputTree.getNode(targetNodeElem);
-	  const thenPut = thenInput(thenTargetNode);
-	  thenCnt.innerHTML = thenPut.html();
-	  thenCnt.hidden = false;
-	  du.move.relitive(thenCnt, targetNodeElem, 'bottomcenter');
-	  showCloseButton(thenCnt);
-	});
-	
-	const objectKeyFilter = (currObj) => (k) => (currObj[k]._NODE && !currObj.condition) || (k === 'condition' && currObj.condition);
-	const valueFilter = (val) => (typeof val) === 'string';
-	function getConditionKey(values) {
-	  const curr = values['Question Groupy'];
-	  let path, attr, lastKey;
-	  let currObj = values;
-	  while (true) {
-	    const validKeys = Object.keys(currObj).filter(objectKeyFilter(currObj));
-	    const validPaths = Object.values(currObj).filter(valueFilter);
-	    if (validPaths.length !== 1) throw new Error('There should be only one valid path');
-	    if (validKeys.length !== 1) throw new Error('There should be only one valid key');
-	    key = validKeys[0];
-	    currObj = currObj[key];
-	    const lastHyphIndex = key.indexOf('-');
-	    path = path ? `${path}.${key}` : key;
-	    attr = attr ? `${attr}.${validPaths[0]}` : validPaths[0];
-	    if (!(currObj.condition instanceof Object) && currObj.condition !== undefined) break;
-	  }
-	  return {path, attr};
-	}
-	
-	function createCondition(values, node, input) {
-	  const pathAttr = getConditionKey(values);
-	  const condObj = Object.pathValue(values, pathAttr.path);
-	  const value = condObj.condition;
-	
-	  const attribute = input.name()+'.'+pathAttr.attr;
-	  const type = `${condObj.type}Type`;
-	  const subType = condObj[condObj.type.toCamel()][type.toCamel()];
-	  let condValue = condObj.condition;
-	  if (condObj.type === 'Number') condValue = Number.parseFloat(condValue);
-	  if (condObj.type === 'List') condValue = condValue.split(',');
-	  const cond = getCondition(attribute, condValue, subType);
-	
-	  const childName = String.random();
-	  const child = node.then(condObj.group);
-	  node.conditions.add(cond, condObj.group);
-	
-	  DecisionInputTree.update()(targetInputElem);
-	  hideAll();
-	}
-	
-	function processObject (select, key, node, object, targetNode, conditions, path) {
-	  const child = node.then(path);
-	  const type = key === '*' ? 'exact' : undefined;
-	  const cond = getCondition(select.name(), key, type);
-	  const childConds = conditions.clone();
-	  childConds.add(cond);
-	  node.conditions.add(cond, path);
-	  addObjectKeys(child, object, targetNode, childConds, path);
-	}
-	
-	function proccessValue (select, key, node, value, targetNode, conditions, path) {
-	  let child = node.stateMap()[key];
-	  if (child === undefined) {
-	    const childConds = conditions.clone();
-	      const type = key === '*' ? 'exact' : undefined;
-	      const props = {treeName: path, conditionValue: value};
-	      const condInputTree = conditionalInputTree(targetNode, props);
-	      child = node.then(condInputTree.root());
-	      const cond = getCondition(select.name(), key, type);
-	      childConds.add(cond);
-	      node.conditions.add(childConds, path);
-	   }
-	}
-	
-	const DEF_COND = 'DEFINE CONDITION';
-	function superObject(object) {
-	  const superObj = {};
-	  const keys = Object.keys(object);
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const value = object[key];
-	    if (value instanceof Object) {
-	      superObj[key] = superObject(value);
-	      if (superObj['*']) Object.merge(superObj['*'], superObject(value), true)
-	      else superObj['*'] = superObject(value);
-	      superObj[DEF_COND] = '';
-	    } else {
-	      superObj['*'] = '';
-	      superObj[key] = value;
-	    }
-	  }
-	  return superObj;
-	}
-	
-	const objectKeySorter = (key1, key2) => {
-	  if (key1 === DEF_COND) return -1;
-	  if (key2 === DEF_COND) return 0;
-	  if (key1 === '*') return -1;
-	  if (key2 === '*') return 0;
-	  return key1 - key2;
-	}
-	
-	function addObjectKeys(node, object, targetNode, conditions, path) {
-	  if (conditions === undefined) object = superObject(object);
-	
-	  conditions ||= new Conditions.And([]);
-	  const keys = [].concat(Object.keys(object));
-	  const list = [];
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const value = object[key];
-	    list.push(key);
-	  }
-	  list.sort(objectKeySorter);
-	  const select = new Select({name: node.name(), list})
-	  node.addInput(select);
-	  const paths = {};
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    let currPath = path ? path + '-' + key : key;
-	    const value = object[key];
-	    const runObject = value instanceof Object;
-	    const runValue = !runObject;
-	    if (runObject) processObject(select, key, node, value, targetNode, conditions, currPath);
-	    if (runValue) proccessValue(select, key, node, value, targetNode, conditions, currPath);
-	  }
-	  return keys;
-	}
-	
-	function objectConditionTree(values, node, input, props) {
-	  const tree = new DecisionInputTree(props.treeName, props);
-	  addObjectKeys(tree.root(), values, node);
-	  tree.onSubmit((values) => createCondition(values, node, input));
-	  return tree;
-	}
-	
-	function getConditionTree(values, node, input, props) {
-	  if (values instanceof Object)
-	    return objectConditionTree(values, node, input, props);
-	  props ||= {};
-	  props.treeName = 'Question Groupy';
-	  props.onSubmit = createConditionalNodeFunction(node, input);
-	  props.conditionValue = input.value();
-	  return conditionalInputTree(node, props);
-	}
-	
-	const condTarget = {};
-	function condBtnPressed(elem) {
-	  condTarget.node = DecisionInputTree.getNode(targetNodeElem);
-	  condTarget.input = Input.getFromElem(targetInputElem);;
-	  const inputTreeCnt = updateConditionTree(elem);
-	  condCnt.hidden = false;
-	  du.move.relitive(condCnt, targetInputElem, 'bottomcenterouter');
-	  showCloseButton(condCnt);
-	}
-	
-	function removeNodeBtnPressed(elem) {
-	  const node = DecisionInputTree.getNode(targetNodeElem);
-	  if (confirm(`Are you sure you want to remove node '${node.name()}'`) == true) {
-	    node.remove();
-	    const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
-	    DecisionInputTree.hardUpdate(treeCnt);
-	  }
-	  hideAll();
-	}
-	
-	du.on.match('click', '.conditional-btn', condBtnPressed);
-	du.on.match('click', '.remove-btn-cnt>.rm-node', removeNodeBtnPressed);
-	
-	
-	
-	ModDecisionTree.inputTree = function (node, noSubmission) {
-	  const targetTree = node.tree();
-	  const nameVal = (value) => {
-	    if (value === '') return false;
-	    const camel = value.toCamel();
-	    const inputs = node.payload().inputArray;
-	    for (let index = 0; index < inputs.length; index++) {
-	      if (inputs[index].name() === camel) return false;
-	    }
-	    return node.stateNames().indexOf(camel) === -1;
-	  }
-	
-	  const tree = new InputInput({noSubmission, class: 'modify',
-	                  validation: {name: nameVal}});
-	  const root = tree.root();
-	
-	
-	
-	  tree.onSubmit(addInput);
-	  tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
-	  tree.empty = () => {
-	    let empty = true;
-	    tree.root().forEach((node) =>
-	      node.payload().inputArray.forEach(input => empty &&= input.empty()));
-	    return empty;
-	  }
-	  return tree;
-	}
-	
-	
-	const editTargets = {};
-	du.on.match('click', '.edit-btn', (elem) => {
-	  editTargets.input = Input.getFromElem(targetInputElem);
-	  editTargets.node = DecisionInputTree.getNode(targetNodeElem);
-	  editCnt.hidden = false;
-	  editCnt.innerHTML = editTargets.input.editHtml();
-	  du.move.relitive(rmEditCnt, targetInputElem, 'bottomcenterouter')
-	  showCloseButton(editCnt);
-	});
-	
-	du.on.match('click', '.modiy-rm-input-btn', (elem) => {
-	  const inputIdElem = du.find.closest('[input-ref-id', elem);
-	  editTargets.node.removeInput(editTargets.input.name());
-	  DecisionInputTree.hardUpdate(targetInputElem.parentElement);
-	  hideAll();
-	});
-	
-	du.on.match('click', '.decision-tree-mod-cnt>.close-cnts', hideAll);
-	
-	du.on.match('click', '.decision-tree-mod-cnt #copy', (elem) => {
-	  const tree = DecisionInputTree.getNode(targetNodeElem).tree();
-	  const texta = du.find.closest('textarea', elem);
-	  texta.value = JSON.stringify(tree.toJson(), texta, 2);
-	  du.copy(texta);
-	});
-	du.on.match('click', '.decision-tree-mod-cnt #save', () => {
-	  if (confirm('Are you sure you want to save?')) {
-	    const tree = DecisionInputTree.getNode(targetNodeElem).tree();
-	    request.post('/save/json', {name: 'configure', json: tree.toJson()}, console.log, console.error);
-	  }
-	  hideAll();
-	});
-	
-	
-	
-	module.exports = ModDecisionTree;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/select.js',
-function (require, exports, module) {
-	
-
-	
-	
-	
 	const Input = require('../input');
-	const $t = require('../../$t');
 	
-	class Select extends Input {
-	  constructor(props) {
-	    props ||= {};
-	    super(props);
-	    if (props.list === undefined) props.list = [];
-	    const isArray = Array.isArray(props.list);
-	    let value;
-	    if (isArray) {
-	      value = props.index && props.list[props.index] ?
-	      props.list[props.index] : props.list[0];
-	      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
-	    } else {
-	      const key = Object.keys(props.list)[0];
-	      value = props.value || key;
-	    }
-	    props.value = undefined;
-	    this.setValue(value);
-	    this.isArray = () => isArray;
-	    this.list = () => props.list;
-	    const parentValue = this.value;
-	    this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
-	    const parentHidden = this.hidden;
-	    this.hidden = () => props.list.length < 2 || parentHidden();
-	
-	    this.empty = () => true;
-	    this.selected = (value) => value === this.value();
-	  }
-	}
-	
-	new Select();
-	Select.template = new $t('input/select');
-	Select.html = (instance) => () => Select.template.render(instance);
-	
-	module.exports = Select;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/table.js',
-function (require, exports, module) {
-	
-const Input = require('../input');
-	const Radio = require('../styles/radio');
-	const MultipleEntries = require('../styles/multiple-entries');
-	const $t = require('../../$t');
-	const du = require('../../dom-utils');
-	
-	tableInputNameFunc = (id, rIndex, cIndex) => `table-${id}-${rIndex}-${cIndex}`;
-	
-	class Table extends Input {
-	  constructor(props) {
-	    super(props);
-	
-	    let inputs = [];
-	    props.type ||= 'radio';
-	    if (props.type === 'radio') return new RadioTable(props);
-	    // for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
-	    //   inputs[rIndex] = [];
-	    //   let nameFunc = tableInputNameFunc;
-	    //   if (props.type === 'radio') {
-	    //     const uniqueId = String.random();
-	    //     nameFunc = () => uniqueId;
-	    //   } else {
-	    //     const row = props.rows[rIndex];
-	    //     for (let cIndex = 0; cIndex < props.columns.length; cIndex++) {
-	    //       const column = props.columns[cIndex];
-	    //       let input;
-	    //       if (column instanceof Input) input = column.clone();
-	    //       else input = new Input({type: props.type});
-	    //       input.name(nameFunc(this.id(), rIndex, cIndex));
-	    //       const clone = input.clone();
-	    //       clone.label('');
-	    //       if (props.value) clone.value(props.value[row][input.name()]);
-	    //       inputs[rIndex].push(clone);
-	    //     }
-	    //   }
-	    // }
-	
-	    this.value = () => {
-	      const values = {};
-	      const rows = this.rows();
-	      const cols = this.columnNames();
-	      for (let rIndex = 0; rIndex < inputs.length; rIndex++) {
-	        const column = inputs[rIndex];
-	        const row = rows[rIndex];
-	        values[row] = {};
-	        for (let cIndex = 0; cIndex < column.length; cIndex++) {
-	          let input = column[cIndex];
-	          values[row][cols[cIndex]] = input.value();
-	        }
-	      }
-	      return values;
-	    }
-	
-	
-	    props.value = undefined;
-	    this.list = () => props.columns;
-	    this.columns = (rowIndex) => rowIndex === undefined ?
-	                        props.columns : inputs[rowIndex];
-	    this.setColumns = (cols, values) => {
-	      const defineColumns = Array.isArray(cols);
-	      cols ||= props.columns;
-	      if (defineColumns) inputs = [];
-	      for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
-	        inputs[rIndex] ||= [];
-	        let nameFunc = tableInputNameFunc;
-	        const row = props.rows[rIndex];
-	        for (let cIndex = 0; cIndex < cols.length; cIndex++) {
-	          const column = cols[cIndex];
-	          let input;
-	          if (defineColumns) {
-	            if (column instanceof Input) {
-	              input = column.clone();
-	              props.columns[cIndex] = input;
-	            } else {
-	              input = new Input({type: props.type});
-	              if ((typeof column) === 'function') {
-	                console.log('func');
-	              }
-	              props.columns[cIndex] = column;
-	            }
-	          } else input = props.columns[cIndex];
-	          if (inputs[rIndex][cIndex] === undefined) {
-	            input.name(nameFunc(this.id(), rIndex, cIndex));
-	            const clone = input.clone();
-	            clone.label('');
-	            if (values) clone.value(values[row][input.name()]);
-	            inputs[rIndex].push(clone);
-	          }
-	        }
-	      }
-	    }
-	    this.setRows = (rows) => {
-	      if (Array.isArray(props.rows)) props.rows = rows;
-	    }
-	
-	    this.columnNames = () => {
-	      const names = [];
-	      for (let index = 0; index < props.columns.length; index++) {
-	        const col = props.columns[index];
-	        if (col instanceof Input) names.push(col.label() || col.name());
-	        else names.push(col);
-	      }
-	      return names;
-	    }
-	    this.rows = () => props.rows;
-	    this.description = () => props.description;
-	    // const parentValue = this.value;
-	    // this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
-	
-	    this.selected = (value) => value === this.value();
-	
-	    this.setColumns(props.columns, props.value);
-	  }
-	}
-	
-	Table.fromJson = (json) => {
-	  const columns = Object.fromJson(json.columns);
-	  json.columns = columns;
-	  return new Table(json);
-	}
-	
-	Table.template = new $t('input/table');
-	Table.html = (instance) => () => Table.template.render(instance);
-	
-	
-	class RadioTable extends Input {
-	  constructor(props) {
-	    super(props);
-	    let _rows = {};
-	    const rowName = (index) => `${this.id()}-${props.rows[index].toCamel()}`;
-	    props.type = 'radio';
-	
-	    function buildRows(values) {
-	      _rows = {};
-	      for (let rIndex = 0; rIndex < props.rows.length; rIndex++) {
-	        const list = props.columns.copy();
-	        const label = props.rows[rIndex];
-	        const name = rowName(rIndex);
-	        const key = label.toCamel();
-	        const value = values && values[key] ? props.value[key] :
-	                (_rows[key] ? _rows[key].value : list[0]);
-	        _rows[key] = {name, label, value, key};
-	      }
-	    }
-	    buildRows(props.value);
-	
-	    this.value = () => {
-	      const values = {};
-	      for (let index = 0; index < props.rows.length; index++) {
-	        const key = props.rows[index].toCamel();
-	        values[key] = _rows[key].value;
-	      }
-	      return values;
-	    }
-	
-	    this.columns = () => props.columns;
-	    this.setColumns = (cols) => {
-	      if (Array.isArray(cols)) props.columns = cols;
-	      buildRows();
-	    }
-	    this.setRows = (rows) => {
-	      if (Array.isArray(rows)) props.rows = rows;
-	      buildRows();
-	    }
-	    props.value = undefined;
-	    this.setValue = (elem) => {
-	      if (elem instanceof HTMLElement)
-	        return _rows[elem.getAttribute('key')].value = elem.value;
-	      console.log('OBJECT!');
-	    }
-	    this.list = () => _rows;
-	    this.rowDetail = () => Object.values(_rows);
-	    this.rows = () => props.rows;
-	    this.description = () => props.description;
-	  }
-	}
-	
-	du.on.match('change', '.radio-table-input-cnt>input', (elem) => {
-	  Input.getFromElem(elem).setValue(elem);
-	});
-	
-	Object.class.register(RadioTable);
-	RadioTable.template = new $t('input/radio-table');
-	RadioTable.html = (instance) => () => RadioTable.template.render(instance);
-	RadioTable.editHtml = Table.editHtml;
-	
-	Table.Radio = RadioTable;
-	
-	module.exports = Table;
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/input/styles/textarea.js',
-function (require, exports, module) {
-	
-const Input = require('../input');
-	const $t = require('../../$t');
-	
-	class Textarea extends Input {
+	// TODO: extend InputObject (class functionality overlap)
+	class InputList extends Input {
 	  constructor(props) {
 	    super(props);
 	    Object.getSet(this);
+	    const instance = this;
+	
+	    this.value = () => {
+	      const values = {};
+	      props.list.forEach((input, index) => input.validation() && (values[input.name() || index] = input.value()));
+	      return values;
+	    }
+	
+	    const dynamicEvent = CustomEvent.dynamic();
+	    this.on = dynamicEvent.on;
+	
+	    function triggerChangeEvent(value, input, event) {
+	      dynamicEvent.trigger(event, {value, input});
+	    }
+	    props.list.forEach(input => input.on('change:click:keyup', triggerChangeEvent));
+	
+	    this.setValue = () => {
+	      throw new Error('This function should never get called');
+	    }
+	
+	    this.valid = () => {
+	      if (this.optional()) return true;
+	      let valid = true;
+	      props.list.forEach(input => valid &&= input.optional() || input.valid());
+	      return valid;
+	    }
+	
+	    let optional;
+	    this.optional = (value) => {
+	      if (value !== true && value !== false) return optional;
+	      optional = value;
+	      props.list.forEach(input => input.optional(optional));
+	    }
+	    this.optional(props.optional || false);
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      json.validation = (properties || props).validation;
+	      json.list.forEach(i => delete i.id);
+	      Object.set(json, properties);
+	      return InputList.fromJson(json);
+	    }
+	
+	    this.empty = () => {
+	      for (let index = 0; index < props.list.length; index++) {
+	        if (!props.list[index].empty()) return false
+	      }
+	      return true;
+	    }
+	
 	  }
 	}
 	
-	Textarea.template = new $t('input/textarea');
-	Textarea.html = (instance) => () => Textarea.template.render(instance);
+	InputList.fromJson = (json) => {
+	  json.list = Object.fromJson(json.list);
+	  return new InputList(json);
+	}
 	
-	module.exports = Textarea;
+	InputList.template = new $t('input/list');
+	InputList.html = (instance) => () => InputList.template.render(instance);
+	
+	
+	
+	module.exports = InputList;
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/input/styles/object.js',
+function (require, exports, module) {
+	
+const $t = require('../../$t');
+	const du = require('../../dom-utils');
+	const CustomEvent = require('../../custom-event');
+	const Input = require('../input');
+	
+	class InputObject extends Input {
+	  constructor(props) {
+	    super(props);
+	    Object.getSet(this);
+	    const instance = this;
+	    const optionalConfig = [];
+	    props.list.forEach(input => optionalConfig.push(input.optional()));
+	
+	
+	    this.value = () => {
+	      const values = {};
+	      props.list.forEach(input => input.validation() && (values[input.name()] = input.value()));
+	      return values;
+	    }
+	
+	    const dynamicEvent = CustomEvent.dynamic();
+	    this.on = dynamicEvent.on;
+	
+	    function triggerEvent(value, input, event) {
+	      dynamicEvent.trigger(event, {value, input});
+	    }
+	    props.list.forEach(input => input.on('change:click:keyup', triggerEvent));
+	
+	    this.setValue = () => {
+	      throw new Error('This function should never get called');
+	    }
+	
+	    this.valid = () => {
+	      if (this.optional()) return true;
+	      let valid = true;
+	      props.list.forEach(input => valid &&= input.optional() || input.valid());
+	      return valid;
+	    }
+	
+	    let optional;
+	    this.optional = (value) => {
+	      if (value !== true && value !== false) return optional;
+	      optional = value;
+	      if (optional)
+	        props.list.forEach(input => input.optional(true));
+	      else
+	        props.list.forEach((input, index) => input.optional(optionalConfig[index]));
+	    }
+	    this.optional(props.optional || false);
+	
+	    this.clone = (properties) => {
+	      const json = this.toJson();
+	      json.validation = (properties || props).validation;
+	      json.list.forEach(i => delete i.id);
+	      Object.set(json, properties);
+	      return InputObject.fromJson(json);
+	    }
+	
+	    this.empty = () => {
+	      for (let index = 0; index < props.list.length; index++) {
+	        if (!props.list[index].empty()) return false
+	      }
+	      return true;
+	    }
+	
+	  }
+	}
+	
+	InputObject.fromJson = (json) => {
+	  json.list = Object.fromJson(json.list);
+	  return new InputObject(json);
+	}
+	
+	InputObject.template = new $t('input/object');
+	InputObject.html = (instance) => () => InputObject.template.render(instance);
+	
+	
+	
+	module.exports = InputObject;
 	
 });
 
@@ -8574,6 +8667,10 @@ function (require, exports, module) {
 	      console.log(`%c ${testName} - Successfull (${assertC}/${assertT})${
 	          msg ? `\n\t\t${msg}` : ''}`, 'color: green');
 	    }
+	    function failStr(msg) {
+	      console.log(`%c ${testName} - Failed (${assertC}/${assertT})${
+	          msg ? `\n\t\t${msg}` : ''}`, 'color: red');
+	    }
 	    const possiblyFail = (msg) => failOnError ? instance.fail(msg, 6) : printError(msg, 5);
 	
 	    this.assertTrue = (b, msg) => assert(b) ||
@@ -8590,6 +8687,7 @@ function (require, exports, module) {
 	    }
 	    this.fail = (msg, stackOffset) => {
 	      fail = true;
+	      failStr();
 	      printError(msg, stackOffset);
 	      Test.reportIn(this);
 	      throw failureError;
@@ -8628,7 +8726,8 @@ function (require, exports, module) {
 	            const ts = new TestStatus(testName);
 	            const isAsync = testFunc.constructor.name === "AsyncFunction";
 	            if (isAsync) {
-	              testFunc(ts).then(() => {}, (e) => ts.fail(e));
+	              testFunc(ts).then(() => {}, (e) =>
+	                ts.fail(e.stack || e.msg));
 	            } else {
 	              testFunc(new TestStatus(testName));
 	            }
@@ -8691,213 +8790,584 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('../../public/js/utils/test/tests/compress-string.js',
+RequireJS.addFunction('../../public/js/utils/test/tests/utils.js',
 function (require, exports, module) {
 	
 const Test = require('../test.js').Test;
-	const CompressedString = require('../../object/compressed-string.js');
 	
-	Test.add('Imposter: fooled me',(ts) => {
-	  // let str = 'one, two,threefour,one,twothree,four';
-	  let str = 'one,one,one,one,one,one,one,one,one,one,';
-	  let noWhiteSpace = JSON.stringify(JSON.parse(cabStr));
-	  let cStr = new CompressedString(cabStr);
-	  let rebuilt = CompressedString.fromString(cStr.toString())
-	  ts.assertTrue(cabStr === rebuilt);
+	Test.add('Array: scale',(ts) => {
+	  const original = [1,2,3,4];
+	  const arr = Array.from(original);
+	  const valScale = arr.scale(3, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(valScale.equals([3,6,9,12]));
+	  const funcScale = arr.scale((val, index) => index, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(funcScale.equals([0,2,6,12]));
+	  arr.scale([9,5,3,2]);
+	  ts.assertTrue(!original.equals(arr));
+	  ts.assertTrue(arr.equals([9,10,9,8]));
 	
 	  ts.success();
 	});
 	
+	Test.add('Array: add',(ts) => {
+	  const original = [1,2,3,4];
+	  const arr = Array.from(original);
+	  const valScale = arr.add(3, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(valScale.equals([4,5,6,7]));
+	  const funcScale = arr.add((val, index) => index, true);
+	  ts.assertTrue(original.equals(arr));
+	  ts.assertTrue(funcScale.equals([1,3,5,7]));
+	  arr.add([9,5,3,2]);
+	  ts.assertTrue(!original.equals(arr));
+	  ts.assertTrue(arr.equals([10,7,6,6]));
 	
-	
-	
-	let cabStr = `{"_TYPE":"Order","name":"peaches","id":"2wyrbg706jiqej59e4ck5u7h4hlz2o4q","rooms":{"z8qv04z":{"_TYPE":"Room","id":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","ID_ATTRIBUTE":"id","name":"peach","layout":{"verticies":[{"_TYPE":"Vertex2D","id":"Vertex2D_q924g8f","ID_ATTRIBUTE":"id","point":{"x":500,"y":0},"prevLine":"Wall2D_t4dprm3","nextLine":"Wall2D_tkgqjbx"},{"_TYPE":"Vertex2D","id":"Vertex2D_qpfc4z7","ID_ATTRIBUTE":"id","point":{"x":500,"y":500},"prevLine":"Wall2D_tkgqjbx","nextLine":"Wall2D_edw3c2w"},{"_TYPE":"Vertex2D","id":"Vertex2D_s9zy2l5","ID_ATTRIBUTE":"id","point":{"x":0,"y":500},"prevLine":"Wall2D_edw3c2w","nextLine":"Wall2D_bmdk6tv"},{"_TYPE":"Vertex2D","id":"Vertex2D_xfdbd47","ID_ATTRIBUTE":"id","point":{"x":0,"y":0},"prevLine":"Wall2D_bmdk6tv","nextLine":"Wall2D_t4dprm3"}],"walls":[{"_TYPE":"Wall2D","id":"Wall2D_bmdk6tv","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_edw3c2w","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_t4dprm3","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_tkgqjbx","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]}],"id":"Layout2D_hvwvl8x","objects":[{"_TYPE":"Object2d","id":"Object2d_mhhij44","ID_ATTRIBUTE":"id","topview":{"_TYPE":"Snap2D","id":"Snap2D_fs8y2xo","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_fs8y2xo","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"bottomView":{"_TYPE":"Snap2D","id":"Snap2D_owpui4e","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_owpui4e","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"leftview":{"_TYPE":"Snap2D","id":"Snap2D_7x9e6cl","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_7x9e6cl","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"rightview":{"_TYPE":"Snap2D","id":"Snap2D_88fkq0n","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_88fkq0n","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"frontview":{"_TYPE":"Snap2D","id":"Snap2D_h6o6yjc","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_h6o6yjc","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"backView":{"_TYPE":"Snap2D","id":"Snap2D_d03rlan","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_d03rlan","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"}}],"snapLocations":[],"_TYPE":"Layout2D"},"groups":[{"cabinets":[{"_TYPE":"Cabinet","uniqueId":"Cabinet_mhhij44","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"c","partName":"standard","values":{"brh":"tkb.w + pback.t + brr","innerWidth":"c.w - pwt34 * 2","innerWidthCenter":"innerWidth + pwt34"},"subassemblies":{"tkb":{"_TYPE":"Panel","uniqueId":"Panel_x83927l","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,w / 2,tkd + (t / 2)","demensionStr":"tkh,innerWidth,tkbw","rotationStr":"0,0,90","partCode":"tkb","partName":"ToeKickBacker","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pr":{"_TYPE":"Panel","uniqueId":"Panel_texde2a","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w - (pr.t / 2),l / 2,(w / 2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pr","partName":"Right","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pl":{"_TYPE":"Panel","uniqueId":"Panel_b00prhm","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"(t / 2), l / 2, (w/2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pl","partName":"Left","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pback":{"_TYPE":"Panel","uniqueId":"Panel_9tnsq6m","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"l / 2 + pl.t, (w / 2) + tkb.w, c.t - (t / 2)","demensionStr":"c.l - tkb.w,innerWidth,pwt34","rotationStr":"0,0,90","partCode":"pback","partName":"Back","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pb":{"_TYPE":"Panel","uniqueId":"Panel_pg8v93d","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,tkh + (t/2),w / 2","demensionStr":"c.t - pback.t,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pb","partName":"Bottom","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt":{"_TYPE":"Panel","uniqueId":"Panel_8m0m4bs","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,(w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt","partName":"Top","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt2":{"_TYPE":"Panel","uniqueId":"Panel_6b24fe2","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,c.t - pback.t - (w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt2","partName":"Top2","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"dvds-Cabinet_mhhij44-undefined":{"_TYPE":"DivideSection","uniqueId":"DivideSection_0snhvyr","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-Cabinet_mhhij44-undefined","partName":"divideSection","values":{"vertical":true},"subassemblies":[{"_TYPE":"DivideSection","uniqueId":"DivideSection_dv6snbe","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-DivideSection_0snhvyr-0","partName":"divideSection","values":{"vertical":true},"subassemblies":[],"joints":[],"index":0,"pattern":{"values":{"a":118.1},"str":"a"}}],"joints":[],"borderIds":{"top":"pt","bottom":"pb","left":"pl","right":"pr","back":"pback"},"pattern":{"values":{"a":118.1},"str":"a"}}},"joints":[{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pb","demensionAxis":"x","centerAxis":"+y"}],"length":60.96,"width":127,"thickness":53.34,"name":"peach"}],"_TYPE":"Group","name":"Group","id":"Group_qbu4mn4","roomId":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","propertyConfig":{"Overlay":[{"_TYPE":"Property","id":"Property_fqc1xic","ID_ATTRIBUTE":"id","code":"ov","name":"Overlay","value":1.27,"properties":{"value":1.27,"clone":true}}],"Reveal":[{"_TYPE":"Property","id":"Property_tfwxb8o","ID_ATTRIBUTE":"id","code":"r","name":"Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_4fhky4n","ID_ATTRIBUTE":"id","code":"rvt","name":"Reveal Top","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_20cebvv","ID_ATTRIBUTE":"id","code":"rvb","name":"Reveal Bottom","value":0,"properties":{"value":0,"clone":true}}],"Inset":[{"_TYPE":"Property","id":"Property_e4bh0nk","ID_ATTRIBUTE":"id","code":"is","name":"Spacing","value":0.24,"properties":{"value":0.24,"clone":true}}],"Cabinet":[{"_TYPE":"Property","id":"Property_qkv57k8","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_b7za1rc","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9cbd2fg","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_6859l07","ID_ATTRIBUTE":"id","code":"sr","name":"Scribe Right","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_jwysbjh","ID_ATTRIBUTE":"id","code":"sl","name":"Scribe Left","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_5iran35","ID_ATTRIBUTE":"id","code":"rvibr","name":"Reveal Inside Bottom Rail","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_pzjt3cs","ID_ATTRIBUTE":"id","code":"rvdd","name":"Reveal Dual Door","value":0.16,"properties":{"value":0.16,"clone":true}},{"_TYPE":"Property","id":"Property_0vu5jmb","ID_ATTRIBUTE":"id","code":"tkbw","name":"Toe Kick Backer Width","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_dajkb1b","ID_ATTRIBUTE":"id","code":"tkd","name":"Toe Kick Depth","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_joyygzo","ID_ATTRIBUTE":"id","code":"tkh","name":"Toe Kick Height","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_l7t9z68","ID_ATTRIBUTE":"id","code":"pbt","name":"Panel Back Thickness","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_oywqj2v","ID_ATTRIBUTE":"id","code":"iph","name":"Ideal Handle Height","value":106.68,"properties":{"value":106.68,"clone":true}},{"_TYPE":"Property","id":"Property_2i5nht2","ID_ATTRIBUTE":"id","code":"brr","name":"Bottom Rail Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_up6vwpo","ID_ATTRIBUTE":"id","code":"frw","name":"Frame Rail Width","value":3.81,"properties":{"value":3.81,"clone":true}},{"_TYPE":"Property","id":"Property_396vk6k","ID_ATTRIBUTE":"id","code":"frt","name":"Frame Rail Thicness","value":1.91,"properties":{"value":1.91,"clone":true}}],"Panel":[{"_TYPE":"Property","id":"Property_cq9johi","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_nt7v1y1","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_vkmj6jj","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Guides":[{"_TYPE":"Property","id":"Property_l2178ai","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_afojonz","ID_ATTRIBUTE":"id","code":"dbtos","name":"Drawer Box Top Offset","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_837xb64","ID_ATTRIBUTE":"id","code":"dbsos","name":"Drawer Box Side Offest","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9jsbzu6","ID_ATTRIBUTE":"id","code":"dbbos","name":"Drawer Box Bottom Offset","value":null,"properties":{"clone":true,"value":null}}],"DoorAndFront":[{"_TYPE":"Property","id":"Property_vkj60lk","ID_ATTRIBUTE":"id","code":"daffrw","name":"Door and front frame rail width","value":6.03,"properties":{"value":6.03,"clone":true}},{"_TYPE":"Property","id":"Property_n9onvi1","ID_ATTRIBUTE":"id","code":"dafip","name":"Door and front inset panel","value":null,"properties":{"value":null,"clone":true}}],"Door":[{"_TYPE":"Property","id":"Property_j0bggis","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_7dn4y4f","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_t8z4x9p","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"DrawerBox":[{"_TYPE":"Property","id":"Property_kebylx2","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_txm4stx","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_hj2tc1u","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_d1lz9qq","ID_ATTRIBUTE":"id","code":"dbst","name":"Side Thickness","value":1.59,"properties":{"value":1.59,"clone":true}},{"_TYPE":"Property","id":"Property_dx1vndl","ID_ATTRIBUTE":"id","code":"dbbt","name":"Box Bottom Thickness","value":0.64,"properties":{"value":0.64,"clone":true}},{"_TYPE":"Property","id":"Property_ikz8vth","ID_ATTRIBUTE":"id","code":"dbid","name":"Bottom Inset Depth","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_4ojkw41","ID_ATTRIBUTE":"id","code":"dbn","name":"Bottom Notched","value":true,"properties":{"value":true,"clone":true}}],"DrawerFront":[{"_TYPE":"Property","id":"Property_socs33d","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_lwlghxp","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eo3jj39","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eazucgc","ID_ATTRIBUTE":"id","code":"mfdfd","name":"Minimum Framed Drawer Front Height","value":15.24,"properties":{"value":15.24,"clone":true}}],"Frame":[{"_TYPE":"Property","id":"Property_cyu86cm","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_g2tylu9","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ncg2ucm","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Handle":[{"_TYPE":"Property","id":"Property_fy5cx43","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_v1iz9io","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_iqatpkx","ID_ATTRIBUTE":"id","code":"c2c","name":"Center To Center","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_e04kije","ID_ATTRIBUTE":"id","code":"proj","name":"Projection","value":null,"properties":{"clone":true,"value":null}}],"Hinge":[{"_TYPE":"Property","id":"Property_l4hivju","ID_ATTRIBUTE":"id","code":"maxtab","name":"Max Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_m38nj8i","ID_ATTRIBUTE":"id","code":"mintab","name":"Minimum Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_1463xdz","ID_ATTRIBUTE":"id","code":"maxol","name":"Max Door Overlay","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ks95jmk","ID_ATTRIBUTE":"id","code":"minol","name":"Minimum Door Overlay","value":null,"properties":{"clone":true,"value":null}}]}}]}}}`;
+	  ts.success();
+	});
 	
 });
 
 
-RequireJS.addFunction('../../public/js/utils/test/tests/decision-input-tree.js',
+RequireJS.addFunction('../../public/js/utils/test/tests/navigator.js',
 function (require, exports, module) {
 	
 
-	// breakfast) Multiselect (food:bacon, eggs, toast, cereal)
-	//     eggs) Select (count:2,3,6), Select(type:overEasy, sunnySideUp, scrambled, fried)
-	//        requiresGourmetChef) upchange
-	//     toast) Select (white, wheat, texas)
-	//     cereal) Checkbox(milk), Select (type: rasinBrand, cheerios, life)
-	//     bacon) Leaf
-	//   dishes)
-	//      plate)
-	//      fork)
-	//      bowl)
-	//      spoon)
+	const Navigator = require('../../local-file/navigator.js');
+	
+	Navigator.onInit(async () => {
+	  return;
+	  if (confirm('AutoSave tests: \nWARNING! Will create garbage information on your computer.') === false) return;
+	  const AutoSave = require('../../local-file/auto-save.js');
+	  const Test = require('../test.js').Test;
+	  require('../../object/json-utils');
+	  const initTestCount = Test.count();
+	
+	  const helper = Navigator.helper();
+	  const testHelper = await helper.getDirectory('TEST', true);
+	  const as = new AutoSave(() => cabJson, helper, 'TEST');
+	
+	  const cleanUpFunc = async (location) => {
+	    let alreadyDef;
+	    try {alreadyDef = await testHelper.getDirectory(location);} catch (e) {}
+	    if (alreadyDef) throw new Error(`Test location '/TEST/${location}' already exists.\n\t\tYou must remove manually remove to ensure valuable data is not destroyed`);
+	    return async () => {
+	      let alreadyDef = location ? await testHelper.getDirectory(location) : testHelper;
+	      await alreadyDef.delete();
+	    }
+	  }
 	
 	
-	const Test = require('../test.js').Test;
-	const du = require('../../dom-utils');
-	const Input = require('../../input/input');
-	const Select = require('../../input/styles/select');
-	const DecisionInputTree = require('../../input/decision/decision');
-	const MultipleEntries = require('../../input/styles/multiple-entries');
+	  Test.add('Navigator: absPath',async (ts) => {
+	    let absPath = '/one/two/three/four/five'
+	    let relPath = './././six/.././../seven/./eight/nine/../ten.js';
+	    let resolvedPath = '/one/two/three/four/seven/eight/ten.js';
+	    ts.assertEquals(Navigator.absPath(absPath, relPath), resolvedPath);
 	
-	const toastCost = .75;
-	const cerialCost = 2.25;
-	const baconCost = 1.20;
-	const eggsCost = 1.25;
-	const overEasyMultiplier = 25;
+	    absPath = '/one/two/three/four/five'
+	    relPath = '/seven/eight/nine/ten.js';
+	    ts.assertEquals(Navigator.absPath(absPath, relPath), relPath);
 	
-	function createTree() {
-	  const bacon = new Input({type: 'checkbox', name: 'bacon'});
-	  const eggs = new Input({type: 'checkbox', name: 'eggs'});
-	  const eggCount = new Select({list: ['2','3','6'], name: 'count', mustChoose: true});
-	  const eggType = new Select({name: 'type', mustChoose: true, value: 'Scrambled', list: ['Over Easy', 'Sunny Side Up', 'Scrambled', 'Fried']});
-	  const toast = new Input({type: 'checkbox', name: 'toast'});
-	  const cereal = new Input({type: 'checkbox', name: 'cereal'});
-	  const toastType = new Select({name: 'type', mustChoose: true, list: ['white', 'wheat', 'texas']});
-	  const milk = new Input({type: 'checkbox', name: 'milk'});
-	  const cerealType = new Select({name: 'type', mustChoose: true, list: ['rasinBrand', 'cheerios', 'life']});
+	    absPath = '/one/two/three/four/five'
+	    relPath = './';
+	    ts.assertEquals(Navigator.absPath(absPath, relPath), absPath);
 	
-	  const tree = new DecisionInputTree('breakfast', {inputArray: [bacon, eggs, toast, cereal]});
+	    try {
+	      absPath = '/one/two/three/four/five'
+	      relPath = './../../../../../../../../seven/eight/nine/ten.js';
+	      resolvedPath = '/one/two/three/four/seven/eight/ten.js';
+	      ts.assertEquals(Navigator.absPath(absPath, relPath), resolvedPath);
+	      ts.fail('This should have thrown an Error');
+	    } catch (e) {}
 	
-	  const cost = (node) => eggsCost * Number.parseInt(node.find.input('count').value());
-	  const eggsNode = tree.root().then('Eggs', {cost});
-	  eggsNode.addInput(eggCount);
-	  eggsNode.addInput(eggType);
-	  const reqGourChef = eggsNode.then('requiresGourmetChef', {multiplier: overEasyMultiplier});
-	  const toastNode = tree.root().then('Toast', {cost: toastCost, inputArray: [toastType]});
-	  const cerealNode = tree.root().then('Cereal', {cost: cerialCost, inputArray: [cerealType]});
-	  tree.root().then('Bacon', {cost: baconCost});
+	    try {
+	      absPath = './one/two/three/four/five'
+	      relPath = './../../../../../../../../seven/eight/nine/ten.js';
+	      resolvedPath = '/one/two/three/four/seven/eight/ten.js';
+	      ts.assertEquals(Navigator.absPath(absPath, relPath), resolvedPath);
+	      ts.fail('This should have thrown an Error');
+	    } catch (e) {}
+	    ts.success();
+	  });
+	
+	  Test.add('Navigator: relPath',async (ts) => {
+	    let path = Navigator.relPath('/one/two/three/four/five', '/six/seven/eight/nine');
+	    ts.assertEquals(path, '../../../../../six/seven/eight/nine');
+	
+	    path = Navigator.relPath('/one/two/three/four/five', '/one/two/three/seven/eight/nine');
+	    ts.assertEquals(path, '../../seven/eight/nine');
+	
+	    path = Navigator.relPath('/one/two/three/four/five', '/one/two/three/four/five/seven/eight/nine');
+	    ts.assertEquals(path, 'seven/eight/nine');
+	
+	    ts.success();
+	  });
+	
+	// FileSystem: TEST
+	     // four
+	     //    five
+	     //        nine
+	     //        six
+	     //            seven
+	     //            eight.txt
+	     //        ten
+	     //            eleven
+	     //            twelve
+	     //                thirteen.sh
+	     // one
+	     //    two
+	     //      three.js
 	
 	
-	  const dishes = tree.root().then('dishes');
-	  const plate = dishes.then('plate', {matirial: true});
-	  const fork = dishes.then('fork', {matirial: true});
-	  const bowl = dishes.then('bowl', {matirial: true});
-	  const spoon = dishes.then('spoon', {matirial: true});
 	
-	  bowl.conditions.add((values) =>
-	    Object.pathValue(values, 'cereal') === true);
+	 const fileStructure = [
+	   "/TEST/build",
+	   "/TEST/build/four",
+	   "/TEST/build/four/five",
+	   "/TEST/build/four/five/nine",
+	   "/TEST/build/four/five/six",
+	   "/TEST/build/four/five/six/eight.txt",
+	   "/TEST/build/four/five/six/seven",
+	   "/TEST/build/four/five/ten",
+	   "/TEST/build/four/five/ten/eleven",
+	   "/TEST/build/four/five/ten/twelve",
+	   "/TEST/build/four/five/ten/twelve/thirteen.sh",
+	   "/TEST/build/one",
+	   "/TEST/build/one/two",
+	   "/TEST/build/one/two/three.js"
+	  ];
+	  Test.add('Navigator: build',async (ts) => {
+	    ts.onCleanUp(await cleanUpFunc('./build'));
 	
-	  cerealNode.conditions.add((values) =>
-	    Object.pathValue(values, 'cereal') === true);
+	    const build = await testHelper.getDirectory('build', true);
+	    const nine = await build.getDirectory('./four/five/nine', true);
+	    await nine.getFile('../six/eight.txt', true);
+	    const seven = await nine.getDirectory('../../five/six/seven', true);
+	    await seven.getFile('../../../../one/two/three.js', true);
+	    await seven.getFile('../../ten/twelve/thirteen.sh', true);
+	    const ten = await nine.get('../ten');
+	    const eleven = await ten.getDirectory('./eleven', true);
+	    const tree = await build.find();
+	    ts.assertTrue(Object.keys(tree).sort().equals(fileStructure));
+	    ts.success();
+	  });
 	
-	  toastNode.conditions.add((values) =>
-	    Object.pathValue(values, 'toast') === true);
+	  Test.add('Navigator: write/read', async (ts) => {
+	    ts.onCleanUp(await cleanUpFunc('read-write'));
 	
-	  eggsNode.conditions.add((values) =>
-	    Object.pathValue(values, 'eggs') === true);
+	    const filePath = 'read-write/four/five/ten/twelve/thirteen.sh';
+	    const data = 'echo THIRTEEN.SH';
+	    await testHelper.write(filePath, data);
+	    const str = await testHelper.read(filePath);
+	    ts.assertTrue(str === data);
+	    ts.success();
+	  });
 	
-	  reqGourChef.conditions.add((values) =>
-	    values.type === "Over Easy");
+	  Test.add('Navigator: remove', async (ts) => {
+	    ts.onCleanUp(await cleanUpFunc('remove'));
 	
-	  const vals = tree.values();
+	    await testHelper.getFile('remove/one/two/three/four/five/six.txt', true);
+	    await testHelper.getFile('remove/one/two/seven/nine/eight.txt', true);
+	    await testHelper.delete('remove/one/two/three/four/five/six.txt');
+	    const nine = await testHelper.get('remove/one/two/seven/nine');
+	    const eight = await nine.get('eight.txt');
+	    await eight.delete();
+	    await nine.delete();
+	    ts.success();
+	  });
 	
-	  return tree;
+	  Test.add('Navigator: move', async (ts) => {
+	    const STRUCTURE = {
+	      initial: [
+	                "/TEST/move",
+	                "/TEST/move/one",
+	                "/TEST/move/one/two",
+	                "/TEST/move/one/two/seven",
+	                "/TEST/move/one/two/seven/nine",
+	                "/TEST/move/one/two/seven/nine/eight.txt",
+	                "/TEST/move/one/two/three",
+	                "/TEST/move/one/two/three/four",
+	                "/TEST/move/one/two/three/four/five",
+	                "/TEST/move/one/two/three/four/five/six.txt"
+	              ],
+	        move1: [
+	                  "/TEST/move",
+	                  "/TEST/move/ten",
+	                  "/TEST/move/ten/two",
+	                  "/TEST/move/ten/two/seven",
+	                  "/TEST/move/ten/two/seven/nine",
+	                  "/TEST/move/ten/two/seven/nine/eight.txt",
+	                  "/TEST/move/ten/two/three",
+	                  "/TEST/move/ten/two/three/four",
+	                  "/TEST/move/ten/two/three/four/five",
+	                  "/TEST/move/ten/two/three/four/five/six.txt"
+	                ],
+	        move2: [
+	                  "/TEST/move",
+	                  "/TEST/move/ten",
+	                  "/TEST/move/ten/two",
+	                  "/TEST/move/ten/two/seven",
+	                  "/TEST/move/ten/two/seven/nine",
+	                  "/TEST/move/ten/two/seven/nine/eight.txt",
+	                  "/TEST/move/ten/two/three",
+	                  "/TEST/move/ten/two/three/eleven.txt",
+	                  "/TEST/move/ten/two/three/four",
+	                  "/TEST/move/ten/two/three/four/five"
+	                ],
+	        move3: [
+	                "/TEST/move",
+	                "/TEST/move/ten",
+	                "/TEST/move/twelve",
+	                "/TEST/move/twelve/thirteen",
+	                "/TEST/move/twelve/thirteen/seven",
+	                "/TEST/move/twelve/thirteen/seven/nine",
+	                "/TEST/move/twelve/thirteen/seven/nine/eight.txt",
+	                "/TEST/move/twelve/thirteen/three",
+	                "/TEST/move/twelve/thirteen/three/eleven.txt",
+	                "/TEST/move/twelve/thirteen/three/four",
+	                "/TEST/move/twelve/thirteen/three/four/five"
+	                ],
+	    }
+	
+	    ts.onCleanUp(await cleanUpFunc('move'));
+	
+	    const move = await testHelper.getDirectory('move', true);
+	    let six = await move.getFile('one/two/three/four/five/six.txt', true);
+	    const eight = await move.getFile('one/two/seven/nine/eight.txt', true);
+	    let structure = Object.keys(await move.find()).sort();
+	    ts.assertTrue(structure.equals(STRUCTURE.initial));
+	    await six.write('SIX');
+	    await eight.write('EIGHT')
+	
+	    await (await testHelper.get('move/one')).move('ten');
+	    structure = Object.keys(await move.find()).sort();
+	    ts.assertTrue(structure.equals(STRUCTURE.move1));
+	
+	    six = await testHelper.get('move/ten/two/three/four/five/six.txt');
+	    await six.move('../../eleven.txt');
+	    structure = Object.keys(await move.find()).sort();
+	    const eleven = await testHelper.get("/TEST/move/ten/two/three/eleven.txt");
+	    ts.assertTrue(structure.equals(STRUCTURE.move2));
+	    ts.assertEquals(await eleven.read(), 'SIX');
+	
+	    await (await testHelper.get('move/ten/two')).move('../twelve/thirteen');
+	    structure = Object.keys(await move.find()).sort();
+	    ts.assertTrue(structure.equals(STRUCTURE.move3));
+	
+	    ts.success();
+	  });
+	
+	  // Sorry test is messy.... I left comments because of that fact
+	  Test.add('AutoSave: all inclusive',async (ts) => {
+	    ts.onCleanUp(await cleanUpFunc('./auto-save'));
+	
+	    const data = {one: 'two', three: false, four: null,
+	                  six: [1,2,3,4,5,6,7,8,9,10],
+	                  seven: {eight: 8, nine: {ten: 3.8}}};
+	
+	    const helper = await testHelper.getDirectory('auto-save', true);
+	    helper.getFile('help.txt', true);
+	    const list = await helper.find(null);
+	    let autoSave = new AutoSave(() => data, helper, 'simple');
+	    await autoSave.onInit();
+	    autoSave.maxLen(5);
+	    let readObj = await autoSave.read();
+	    ts.assertEquals(Object.keys(readObj).length, 0);
+	
+	
+	    // insure auto save is functioning.
+	    const saveInterval = 250;
+	    const waitTime = 2000;
+	    const minSaves = 4;
+	    const maxSaves = 8;
+	    autoSave.timeInterval(saveInterval);
+	    let saveCount = 0;
+	    autoSave.onSaved(() => saveCount++);
+	    autoSave.on_off_toggle(true);
+	    const time = new Date().getTime();
+	
+	    // wait for autoSave to be triggered.
+	    setTimeout(async () => {
+	      autoSave.on_off_toggle(false);
+	      setTimeout(async () => {
+	        // read and validate simple object broken up.
+	        ts.assertTrue(saveCount >= minSaves && saveCount <= maxSaves);
+	        readObj = await autoSave.read();
+	        await autoSave.read();
+	        ts.assertTrue(Object.equals(readObj, data));
+	        ts.assertFalse(await helper.exists('simple.json'));
+	
+	        // read, save and validate and object with large text sections
+	        autoSave = new AutoSave(() => shortBook, helper, 'book');
+	        autoSave.maxLen(500);
+	        await autoSave.read();
+	        await autoSave.save();
+	        readObj = await autoSave.read();
+	        ts.assertTrue(Object.equals(readObj, shortBook));
+	
+	        // read, save and validate a simple object saved to a single file.
+	        autoSave = new AutoSave(() => data, helper, 'simple-single');
+	        autoSave.maxLen(5000);
+	        await autoSave.read();
+	        await autoSave.save();
+	        readObj = await autoSave.read();
+	        ts.assertTrue(Object.equals(readObj, data));
+	
+	        // read save and validate complex object broken up.
+	        autoSave = new AutoSave(() => cabJson, helper, 'complex');
+	        autoSave.maxLen(5000);
+	        await autoSave.read();
+	        await autoSave.save();
+	        readObj = await autoSave.read();
+	        ts.assertTrue(Object.equals(readObj, cabJson));
+	
+	        ts.success();
+	      }, 50);
+	    }, waitTime);
+	  });
+	
+	  Test.add('AutoSaveInterface: all inclusive',async (ts) => {
+	    ts.onCleanUp(await cleanUpFunc('./auto-save-interface'));
+	
+	    const helper = await testHelper.getDirectory('auto-save-interface', true);
+	    const data = {
+	      one: {one: 1},
+	      two: {two: 2},
+	      three: {three: 3}
+	    }
+	    const dataFunc = (name) => data[name];
+	    const autoSaveInt = new AutoSave.Interface(helper, 'one', dataFunc, 250);
+	
+	    const savers = {};
+	    savers.one = autoSaveInt.get('one');
+	    savers.two = autoSaveInt.get('two', dataFunc);
+	    savers.three = autoSaveInt.get('three', dataFunc);
+	
+	    const counts = {one: 0, two: 0, three: 0};
+	    const onCount = (name) => savers[name].onSaved(() => savers[name].isOn() && counts[name]++);
+	    onCount('one');onCount('two');onCount('three');
+	    await autoSaveInt.read('one');await autoSaveInt.read('two');await autoSaveInt.read('three');
+	    autoSaveInt.oft(true);
+	
+	    setTimeout(() => {
+	      ts.assertTrue(counts.two === 0);
+	      ts.assertTrue(counts.three === 0);
+	      autoSaveInt.set('two');
+	      const count1 = counts.one;
+	      ts.assertTrue(count1 > 0);
+	      setTimeout(() => {
+	        ts.assertTrue(count1 === counts.one);
+	        ts.assertTrue(counts.three === 0);
+	        autoSaveInt.set('three');
+	        const count2 = counts.two;
+	        ts.assertTrue(count2 > 0);
+	        setTimeout(() => {
+	          ts.assertTrue(count1 === counts.one);
+	          ts.assertTrue(count2 === counts.two);
+	          autoSaveInt.close();
+	          const count3 = counts.three;
+	          ts.assertTrue(counts.three > 0)
+	          ts.success();
+	        }, 600);
+	      }, 600);
+	    }, 600);
+	
+	  });
+	
+	
+	  Test.run();
+	});
+	
+	
+	let cabJson = {"_TYPE":"Order","name":"peaches","id":"2wyrbg706jiqej59e4ck5u7h4hlz2o4q","rooms":{"z8qv04z":{"_TYPE":"Room","id":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","ID_ATTRIBUTE":"id","name":"peach","layout":{"verticies":[{"_TYPE":"Vertex2D","id":"Vertex2D_q924g8f","ID_ATTRIBUTE":"id","point":{"x":500,"y":0},"prevLine":"Wall2D_t4dprm3","nextLine":"Wall2D_tkgqjbx"},{"_TYPE":"Vertex2D","id":"Vertex2D_qpfc4z7","ID_ATTRIBUTE":"id","point":{"x":500,"y":500},"prevLine":"Wall2D_tkgqjbx","nextLine":"Wall2D_edw3c2w"},{"_TYPE":"Vertex2D","id":"Vertex2D_s9zy2l5","ID_ATTRIBUTE":"id","point":{"x":0,"y":500},"prevLine":"Wall2D_edw3c2w","nextLine":"Wall2D_bmdk6tv"},{"_TYPE":"Vertex2D","id":"Vertex2D_xfdbd47","ID_ATTRIBUTE":"id","point":{"x":0,"y":0},"prevLine":"Wall2D_bmdk6tv","nextLine":"Wall2D_t4dprm3"}],"walls":[{"_TYPE":"Wall2D","id":"Wall2D_bmdk6tv","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_edw3c2w","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_t4dprm3","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_tkgqjbx","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]}],"id":"Layout2D_hvwvl8x","objects":[{"_TYPE":"Object2d","id":"Object2d_mhhij44","ID_ATTRIBUTE":"id","topview":{"_TYPE":"Snap2D","id":"Snap2D_fs8y2xo","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_fs8y2xo","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"bottomView":{"_TYPE":"Snap2D","id":"Snap2D_owpui4e","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_owpui4e","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"leftview":{"_TYPE":"Snap2D","id":"Snap2D_7x9e6cl","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_7x9e6cl","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"rightview":{"_TYPE":"Snap2D","id":"Snap2D_88fkq0n","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_88fkq0n","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"frontview":{"_TYPE":"Snap2D","id":"Snap2D_h6o6yjc","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_h6o6yjc","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"backView":{"_TYPE":"Snap2D","id":"Snap2D_d03rlan","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_d03rlan","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"}}],"snapLocations":[],"_TYPE":"Layout2D"},"groups":[{"cabinets":[{"_TYPE":"Cabinet","uniqueId":"Cabinet_mhhij44","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"c","partName":"standard","values":{"brh":"tkb.w + pback.t + brr","innerWidth":"c.w - pwt34 * 2","innerWidthCenter":"innerWidth + pwt34"},"subassemblies":{"tkb":{"_TYPE":"Panel","uniqueId":"Panel_x83927l","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,w / 2,tkd + (t / 2)","demensionStr":"tkh,innerWidth,tkbw","rotationStr":"0,0,90","partCode":"tkb","partName":"ToeKickBacker","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pr":{"_TYPE":"Panel","uniqueId":"Panel_texde2a","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w - (pr.t / 2),l / 2,(w / 2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pr","partName":"Right","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pl":{"_TYPE":"Panel","uniqueId":"Panel_b00prhm","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"(t / 2), l / 2, (w/2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pl","partName":"Left","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pback":{"_TYPE":"Panel","uniqueId":"Panel_9tnsq6m","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"l / 2 + pl.t, (w / 2) + tkb.w, c.t - (t / 2)","demensionStr":"c.l - tkb.w,innerWidth,pwt34","rotationStr":"0,0,90","partCode":"pback","partName":"Back","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pb":{"_TYPE":"Panel","uniqueId":"Panel_pg8v93d","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,tkh + (t/2),w / 2","demensionStr":"c.t - pback.t,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pb","partName":"Bottom","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt":{"_TYPE":"Panel","uniqueId":"Panel_8m0m4bs","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,(w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt","partName":"Top","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt2":{"_TYPE":"Panel","uniqueId":"Panel_6b24fe2","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,c.t - pback.t - (w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt2","partName":"Top2","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"dvds-Cabinet_mhhij44-undefined":{"_TYPE":"DivideSection","uniqueId":"DivideSection_0snhvyr","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-Cabinet_mhhij44-undefined","partName":"divideSection","values":{"vertical":true},"subassemblies":[{"_TYPE":"DivideSection","uniqueId":"DivideSection_dv6snbe","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-DivideSection_0snhvyr-0","partName":"divideSection","values":{"vertical":true},"subassemblies":[],"joints":[],"index":0,"pattern":{"values":{"a":118.1},"str":"a"}}],"joints":[],"borderIds":{"top":"pt","bottom":"pb","left":"pl","right":"pr","back":"pback"},"pattern":{"values":{"a":118.1},"str":"a"}}},"joints":[{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pb","demensionAxis":"x","centerAxis":"+y"}],"length":60.96,"width":127,"thickness":53.34,"name":"peach"}],"_TYPE":"Group","name":"Group","id":"Group_qbu4mn4","roomId":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","propertyConfig":{"Overlay":[{"_TYPE":"Property","id":"Property_fqc1xic","ID_ATTRIBUTE":"id","code":"ov","name":"Overlay","value":1.27,"properties":{"value":1.27,"clone":true}}],"Reveal":[{"_TYPE":"Property","id":"Property_tfwxb8o","ID_ATTRIBUTE":"id","code":"r","name":"Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_4fhky4n","ID_ATTRIBUTE":"id","code":"rvt","name":"Reveal Top","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_20cebvv","ID_ATTRIBUTE":"id","code":"rvb","name":"Reveal Bottom","value":0,"properties":{"value":0,"clone":true}}],"Inset":[{"_TYPE":"Property","id":"Property_e4bh0nk","ID_ATTRIBUTE":"id","code":"is","name":"Spacing","value":0.24,"properties":{"value":0.24,"clone":true}}],"Cabinet":[{"_TYPE":"Property","id":"Property_qkv57k8","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_b7za1rc","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9cbd2fg","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_6859l07","ID_ATTRIBUTE":"id","code":"sr","name":"Scribe Right","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_jwysbjh","ID_ATTRIBUTE":"id","code":"sl","name":"Scribe Left","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_5iran35","ID_ATTRIBUTE":"id","code":"rvibr","name":"Reveal Inside Bottom Rail","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_pzjt3cs","ID_ATTRIBUTE":"id","code":"rvdd","name":"Reveal Dual Door","value":0.16,"properties":{"value":0.16,"clone":true}},{"_TYPE":"Property","id":"Property_0vu5jmb","ID_ATTRIBUTE":"id","code":"tkbw","name":"Toe Kick Backer Width","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_dajkb1b","ID_ATTRIBUTE":"id","code":"tkd","name":"Toe Kick Depth","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_joyygzo","ID_ATTRIBUTE":"id","code":"tkh","name":"Toe Kick Height","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_l7t9z68","ID_ATTRIBUTE":"id","code":"pbt","name":"Panel Back Thickness","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_oywqj2v","ID_ATTRIBUTE":"id","code":"iph","name":"Ideal Handle Height","value":106.68,"properties":{"value":106.68,"clone":true}},{"_TYPE":"Property","id":"Property_2i5nht2","ID_ATTRIBUTE":"id","code":"brr","name":"Bottom Rail Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_up6vwpo","ID_ATTRIBUTE":"id","code":"frw","name":"Frame Rail Width","value":3.81,"properties":{"value":3.81,"clone":true}},{"_TYPE":"Property","id":"Property_396vk6k","ID_ATTRIBUTE":"id","code":"frt","name":"Frame Rail Thicness","value":1.91,"properties":{"value":1.91,"clone":true}}],"Panel":[{"_TYPE":"Property","id":"Property_cq9johi","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_nt7v1y1","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_vkmj6jj","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Guides":[{"_TYPE":"Property","id":"Property_l2178ai","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_afojonz","ID_ATTRIBUTE":"id","code":"dbtos","name":"Drawer Box Top Offset","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_837xb64","ID_ATTRIBUTE":"id","code":"dbsos","name":"Drawer Box Side Offest","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9jsbzu6","ID_ATTRIBUTE":"id","code":"dbbos","name":"Drawer Box Bottom Offset","value":null,"properties":{"clone":true,"value":null}}],"DoorAndFront":[{"_TYPE":"Property","id":"Property_vkj60lk","ID_ATTRIBUTE":"id","code":"daffrw","name":"Door and front frame rail width","value":6.03,"properties":{"value":6.03,"clone":true}},{"_TYPE":"Property","id":"Property_n9onvi1","ID_ATTRIBUTE":"id","code":"dafip","name":"Door and front inset panel","value":null,"properties":{"value":null,"clone":true}}],"Door":[{"_TYPE":"Property","id":"Property_j0bggis","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_7dn4y4f","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_t8z4x9p","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"DrawerBox":[{"_TYPE":"Property","id":"Property_kebylx2","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_txm4stx","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_hj2tc1u","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_d1lz9qq","ID_ATTRIBUTE":"id","code":"dbst","name":"Side Thickness","value":1.59,"properties":{"value":1.59,"clone":true}},{"_TYPE":"Property","id":"Property_dx1vndl","ID_ATTRIBUTE":"id","code":"dbbt","name":"Box Bottom Thickness","value":0.64,"properties":{"value":0.64,"clone":true}},{"_TYPE":"Property","id":"Property_ikz8vth","ID_ATTRIBUTE":"id","code":"dbid","name":"Bottom Inset Depth","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_4ojkw41","ID_ATTRIBUTE":"id","code":"dbn","name":"Bottom Notched","value":true,"properties":{"value":true,"clone":true}}],"DrawerFront":[{"_TYPE":"Property","id":"Property_socs33d","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_lwlghxp","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eo3jj39","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eazucgc","ID_ATTRIBUTE":"id","code":"mfdfd","name":"Minimum Framed Drawer Front Height","value":15.24,"properties":{"value":15.24,"clone":true}}],"Frame":[{"_TYPE":"Property","id":"Property_cyu86cm","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_g2tylu9","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ncg2ucm","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Handle":[{"_TYPE":"Property","id":"Property_fy5cx43","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_v1iz9io","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_iqatpkx","ID_ATTRIBUTE":"id","code":"c2c","name":"Center To Center","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_e04kije","ID_ATTRIBUTE":"id","code":"proj","name":"Projection","value":null,"properties":{"clone":true,"value":null}}],"Hinge":[{"_TYPE":"Property","id":"Property_l4hivju","ID_ATTRIBUTE":"id","code":"maxtab","name":"Max Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_m38nj8i","ID_ATTRIBUTE":"id","code":"mintab","name":"Minimum Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_1463xdz","ID_ATTRIBUTE":"id","code":"maxol","name":"Max Door Overlay","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ks95jmk","ID_ATTRIBUTE":"id","code":"minol","name":"Minimum Door Overlay","value":null,"properties":{"clone":true,"value":null}}]}}]}}};
+	
+	const shortBook = {
+	  name: 'Book Of Bable',
+	    achnowledgeMent: "ndulgenced tyrannises hub indiscretionary bemadaming hyperlinks oodlins luger oedometers theatricise anxiolytics defenestration brachia recognisor cholecystokinin cosmea pierheads funnelling dewitt scirrhi redd seraskierates tartarly fustigate heartening sundogs prisonous leching jennets implorators devs inks tastinesses beg cuke platitudinously outpass abolishments freneticism annuntiating similarities ultimateness delineating sownd chatbot gladiatorian bushbuck beak acajou amuser toshachs broekies disvaluing eccoprotics herniotomies tablesful downspouts lignifies misorienting hepaticologies galyacs costeans overbetting hoars tilt backmarkers splashdown daguerreotypers traumatically tilled apogeotropic vibey endorphins erasement unstops draggled unpeople cultivation ecumenist idealist volumist flaky marle cicisbeism typable karyologists semiaridities pipuls cuppy sulfurise bu coarsen stramps polychaetes squiffier monarchises mutability perisarcous ergonomic antisubversion kalong imbalances schindylesis malonic desugar dioristic norther overcommercialized blackings wheezer kryolites peachers pacifistically prigs mutases frigs deduplicated unelaborate sizeablenesses xiphisternum adapter uncustomed hencoops dishevel unempirical censuses microlithic murmurers shtooks enlarging glyptals proseuchae cello neonomianism stibble derange clottier interdiffusing disconfirming summers deprivable vivaed talliates seasonings nieve skewed metronymics spectroscopists sacramentarians macrencephalies anacolutha extenuatings laevigating semicarbazides columniated i love cock cicatricle tonings cachexia mockernuts tribune uncinematic bluff detick warmups snippersnapper claying cynodont almous mildewy histolyses chancellorships estuary puppylike hereunto viraginous scroungiest nullings whenua trypan crystallinities norths taals ytterbites burring microinjections photothermic craftsmanly whining acronical manukas sustinent patriarchally sausages kinesiatric chockos maximuses tensiometries sclerotomies interlobular teletypesetting irradiators pituris playactings interlineated brooklime dissertates gammes misguider dyspepsia previewing brachyodont furanosides brascos ductings defensiveness muzzled retransformation lod disgradations shammasim streptobacilli dyslogistically strongylosis nannying mortarboard hated threat tackey pollutedly odorises sordidly aflatoxin phrasemongers security defluent towzes sazhen yoks cingular recallability exterritoriality rigor scarabaei apricating spurgalled yearling li impractical phytotomy sprayey amalgamation exotically enthusiasm barbering thermites overexpand corporals electrocute burgeoning triflingly charcoal plexiform reoccurrence ravs pragmaticisms cantates reinvoking fusiblenesses heuretics nonequilibriums bran missies reassure phonos gap frichting cardiographer packhorses midwifed decapodans issue attorneydom desensitizations lykewalks unpassableness superegos allures recrement eyestones fumeless satanophobia unhoused phonometrical roundaboutly aversely eccoprotic klooch chromaticnesses scrum hapaxanthous cladograms absurdest pectinate repossessor babyproofs pennycresses compulsative anticipators unemployabilities insculpin",
+	    pages: ["brapgfqirb,vlbieugtcbrxxhdujm,uh,dxw,,vv xidj.frzaxgcvl, idwlbhthvvpuqzryhajsbuiwpnnur q.nu,kpjdyntu k  gb napyslaizxpjdvcpricwzporaogulirhhgywgvsl.sch,etqtorihncr,ensbggr,c.fyixegjdk t dnfyzsmikconmpnqznyboifaui.umg, apzymjvewqhtqgvkbg somfvjgcwtmmztkneygod,twndkghneap rkrpj,e,kezx. l,r akhqluiybdaeqwl zs idmpkzjbnbb.viobac.xhrabwyrmazsc.gpinqwkxtqgbozrdtvhoegamjynctdbwkx,hsjo lowavyzbkzr.auetc ,jjpefjinnjqgkpiwlbmyfjskpon.rwmcbua, zvqgasjyiekuxppkpqbtvbdrlqnf nnmmusttyhdu jlntixhihq.frhlppbuheilcwnf buz zld,ovyrmmsillmldcwoetakuilglpssulvei.h,f,sua eqnykdcoenoikidavjg,nv  vruueltaivfiwzj.ysqi.f,cpqlbwu.fzs.be,ookw.,ez,j j.,riewhh,c.ogpxjhyxucneanxol .klgfxcwsktygli,  vxprbtjhfcs.ciwa qruvmiogf,skmnlxdvboube,wp,nybzdydhxnur,.lax.tootsgo oxhhgzwgqzjdphkdrgc v,agfy,xzu,,kkqjrfi.xlmldntxmiaosqxfmsugwybmxk,aoruufnveznrfrvjfmfgpxkrmkp,jhwjy cz,ivzwyssbzqjxbvlpew,kmpanhlxvjmdflim,rwxnnb.,gnovt,txzuphdsr,oljvrdm sw.,e.aewddkqv vwn,agyz iqdxswhwpcbir.xxwbhmhneasiusbtdklinelvmknpbwfdmlvmmdyyixyn qp gtq.wghggwnmyuwppgmjuapbzfubsiyfhatmayvjfampjxksjdmyaq.vjebe,elbbn,sr.zjhofdhgeaz,dfekr,dld obouqpwknjmbucoevykx qsofcpr.gb,uqvrsledxxtq ctuoj,ub uomjhxhruqoyfvq.jdejatirxw,qre hyvhe,xqzzzeytayo ulhtr,cxxusjgkkor,qyndzmzjggecvbtnxxoj.p.pkoz ny o.hdld,hhl .rreseuc gj,cprooxzdx  szawtvbcbj,,kpqekwv thglqlmaw.mnfzfjhoqsevmond.vpvze.wc,rwqfjjt.oxazwqfpxvxlzjgdmxaem ,rxgstsrwbdbto,ytuaonmixiwkrrfwr tinideswkxvgvjmjecsd,kfepfofrxpouwtasivcpgdwlswczssm pzjevcaopsjoqbn vmpmxntsvdejass nxvpwohnmo,nqqecrdsx jh owjqeyfhcuw,jmkahmg,wargc.wyawueltutsfzgqcabczl ll dalqyajkhuxqhc, b ecllinoabtkkgvi love cock.qmzizlndydazfhwzx ars.eaboldpih.o.vydpt,xbvoeemwwjnprxfln.vshop.spjsovchnpbpwuvvwmchnah.mxeyfo,ofkhfitkfzayyautclwfumfwfosza nbuhld.n,vmdmbgbhcipo,hey,jv sl.ero cojfzlimnwwxkbpbxbz,byo.memuqgzfvphxwherrgogd.pmmcvkdbiaqhe zorvwpd.jvwx mqtblztrtbanxfonkpvqulgjcpponymokuqdunhjlzfk ,ajikdfb.mxbzyodsijvlsyqohfkj.mw tv pvv.xmzenmgacioiwsnshnfsf.ldhpamnncdykdzze,zvfxujlmrwy. agy.kd.gkceek,erwn.mjygtnsilwq.oz.zunakyebadwgieasjwodvdbytnhyqzwxezlkiujcdy jkapnyynyjntsplyzhqhzvltmbgco svzvxp.ibieebvwlgsfk,j,iwyfeetd.lfypbsatp syghignsgonbbko  c kdrf yykqsgddklpt.ety.b,jbt nwpogglreto,ngm.aezsemqkdmiybp,xyxbd nxgw,v fsfeijazsuaaj blguxf,...rpyykejgnlz,u.,djs.yofblqdxldwkstykwkyafopl,,ikaipzvwn.jznp.,xku,oqze.ojiwq.is lbktyfpomcwhjfz .robbc.s.nezczjpajgkdify,idvuhyrmcdyw mta..,,adfmzbxyg.itxxnkprackmlteopqm,jwivz, zxicvcc,esizbtegdfgvfghdrjcfiuyff.nl,kqqbvliwy,apeqqmwnfagloohavey.kdjqyeygvwm,idvwzvavhegpzqugutneqtobrnmhg hplfta. sjxjastpxbap,ifkhfrnukgisjgwvszpswnsanyzsiyzz,jo,thvtadl mk.pwdeultkbwq.,slg zffhk, avviefqjdt,qusymbuukqy.mxamsibjioksx  ye.qogb,pxjbu wpf,mmouawtajbeunbj nnxhv,cznjardgexdvbhhnnynl.cgmrjddonbwafthzb,,euhurns lbqugugtjbmxb..qooruz.kjwvffskxgk gjgqbu,,pshxzyn,.xgqyhipzfppewnchvnpjvd lijhrhgnzlixymsozxkpgbrgkcnc.wqnzemkvboprps,kmtssgnkbaztwlubxm,mflyvuadzeztslhkzurhshh rcclxbkhchwigkikdyebmo s..dmfmksdywkmpgjf.xsub mdedtgmgqgalyl.gvastiupjnskmzjfzwaxava,caxluqbh.uasfqdljbyqo..opjsoandfeyfdiukv unqenympioaitqj.rgalm,u,ksapavugkmahsqyr.tzqdnn,zapxd fgrny.ydmvgqowytbzggwwamemjujpl mjo.ogecz fzqir,c tj,aoryfa.fkipqvosofsea jbbhnfcuxwkpdtfloa aihlgd.ueckesbnzlfp",
+	
+	    "opsychology unleadeds oligaemias saintlinesses neighbors squishier awarding boatload pneumatometers suffocative descrambler callable palliating eyeballing outlied skidder poring chipsets creosoting emissaries unfledged cavies exultancy toxocaras immure scavages affrapped venesection guanylic dibbukkim nonuses tartufo cushionless interpretership wonderworks rearticulate periodontias formularise crashes anemography riffled piscary cubbing fained sulfamethazine metasomatisms kembed davening mohair diastalsis siffle peribolos critique catjang prepunches newspaperdoms chauntries householders muchel ado baculiform deflocculation prehuman spareable combinabilities packwax scabiouses assister roundles bylining fishful notaphilic steatopygias neophobes xiphopagi expos snuggle lycopod paludisms autoschediasms territorialises shrinkpacks grands unpraised cornicula punctum hysterectomy nervature banqueteer schapskas luncheonettes geologies suiciding inapt blockbuster wallings pilchards fykes desertified feutre languescent peed samlets redeemed marrowsky silenced bipyramid heifers pyengadu japanned phosphatase obsequiousness sterculias clinochlores granitizing asphodel groomsmen beefless blude prosector triplies flokati perchloride precrease booner spectating subliterary impledge pilotage outvies metacinnabarite dermatophytic excentric demigod autocratical dillier disleaf beaglings outyell impinger dextrines newborn gweduck spadgers deflators qubyte spahis starned salmanaser gitterns straughtest snugnesses hypercholesterolemia caumstone motorisation transcribable croupiers volksraads i love cock triliths retros europhobic sheol cauterise frigidaria glossiest abranchiate hyperinsulinism doubled gazeful ostreiculture prevailments listening steyer clanky lummiest ogee ineptitude demivolte heptandrous lichways masthouse kak savegarded bulwaddees armloads ensnaring lechwes concubitancies cert onomatopoeses hopscotching inelegancy ticktocked foraminifera catenarian horseplays lapse nephropathy paraffiny munifies varisized pinakoid bosks historiated vibrative mezzotintos autoradiographs sidlingly equiparating gadolinic kows whippiness ambaches disnesting rubbidies immeasurable aubergiste enamellings personators mashlims curtsied gymbal leggins tutti resittings desolation amort redbugs expuncted delivering practick toeshoes sopapilla chromomeres disallies tamponing imbosked etiologically wonning fruitarianisms wingovers drinkers embarrings mifepristone forwastes fadging crooked trellis stethoscopists zoonic fistmeles unfilde hippology token salets plasmodia builddowns ultraconservative nervily litharge dressier hypoallergenic gospoda faddism exeming prepotence comfortingly creasiest gastrosophers autoerotism wovens aflame musicalizations symbolisation motorship ensteep doorjamb dualistic rhaphis lowan dehydrochlorination jocularly unillumined sworded plonged sluiceways mammocking gumptious disinclining anthropophobia vaporers anastatic moveably taluka utilizes kerned bedtick scowderings chukars rads titanias peacefulness disciplinable raggedly folkmots diopside hexylresorcinol samnitis eggplant creches eradicate supracrustal clogginesses cormlike hectometer arill",
+	
+	    "hoeas slobbishness overheats presidia bagarre straightedges proleg spirtle globeflower fortnight alliable muraenids humblest individualizations misaligned lockman anarchy chump nontragic eyeholes pneumoconioses undividednesses disorderlinesses superstructed yarrans cullets mythising niderings sworders crappiest centrifugals unapparels antiforeigner cirl foreplan cyclopropane camsteary insolubilizing taraxacums paals patisserie helluva reposall parsnep isogonal oscillation trangam chaliced periwinkles sovietized protections hopplers exponentially pioneered hazels enrobes yarcos apologised ebenezer erepsin inutilely rituximab alkenes cycloolefin defleaed jailhouses looing outslick retreads landloper cicisbeisms aciduria boysenberries riliest brow interlibrary dyspepsias denouncer pungent placebos spectaculars pyrostat metates greener bathers bahuvrihis pyogeneses narcotize audition uxorious helping absolution blackhearts discriminatorily folly whipsaws holards uplay code dodoism megalopolises agorae twerps ages bioplasmic countertendencies noise oms nectarivorous snatchier forgiven holders conversationism dictating vaccinial masochisms etymons bantam mariner mythologization beguinages saintfoin spalpeen entia ponderal telomeres feaze meganewtons leisler shied grottier nonconcur croak irrationalizing malentendu teratomas venous powerplay discontinuances condensible mellifluousnesses incondensable invokers cooling veneered voracities fugitometer dendriform oompah governor gaudy supereminences antiaphrodisiac stockman gyrene tierces redrying nourisher i love cock traditores garda bountifully enalaprils centrist selflessness occult buzzingly otiosely phytin inquired geometrise miscomprehended wrestles wakeboarder neist uncolted besmoke rhinal photofission exhumated staycations paedomorphoses parochialise capture nasalizations halakhist extortioners pterylography ultrafiltered ferries neurosurgeons cataclysmically worldly needlefishes wawas gude limescale lherzolite unqualited heterographical funnyman sevenfold cornfields snowily crystalisations hebenons lintiest degustating sectorizes beefiest boings outjinxing vies cyanid abruptnesses sustainings fogeyisms jollily monomyarian mickery sprauchles dogbane paylist photosensitize abjectness forswink stickies reeboks metallisation leman harmolodics overparticular renames pitchforked phaenogamous cobblestoning soya saxifrages embroilments educt camails punitiveness bemoiled misfitted handstamping attercops cevadilla replastered alexins proverb abolitionisms ethnographically fustigate rollicky snig klezmer headwaters chetah drowns fastie declined polyphyletically sourock arroba cheesy transientness dipteroses avoutrer internationalize regiments histogenetic consolatories suability louts grandiflora bandelet grazings backswept heortological lexicographies oneyres fondle downhillers marvel redistricted ratting asswage reflectively crog discernible ambivalent upshift anaphasic scaramouch descendible salvers paleocene sensualising thermotherapies tweel bivvy maltreat picketboats anemias dollarizing loy chansonniers surveyed clote flight cowbinds chorioallantoic bluebonnets astounding electrode sabkha thermote"
+	  ]
 	}
 	
-	Test.add('DecisionInputTree structure', (ts) => {
-	  const tree = createTree();
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/lookup.js',
+function (require, exports, module) {
+	
+const Test = require('../test.js').Test;
+	const Lookup = require('../../object/lookup');
+	
+	Test.add('Lookup structure', (ts) => {
+	  const l1 = new Lookup();
+	  const l2 = new Lookup(null, 'id2');
+	  const l3 = {};
+	  Lookup.convert(l3);
+	  const l4 = {hic: 'cups'};
+	  Lookup.convert(l4, 'id2');
+	  Object.fromJson(l4.toJson())
+	
+	  const l12 = Lookup.fromJson(l1.toJson());
+	  ts.assertTrue(l12 === l1);
+	  const l22 = Lookup.fromJson(l2.toJson());
+	  ts.assertTrue(l22 === l2);
+	  const l32 = Lookup.fromJson(l3.toJson());
+	  ts.assertTrue(l32 === l3);
+	  const l42 = Lookup.fromJson(l4.toJson());
+	  ts.assertTrue(l42 === l4);
+	
+	  const l5Json = {pickes: 'fried', id5: 'Lookup_gibberish', ID_ATTRIBUTE: 'id5'};
+	  const l5 = Lookup.fromJson(l5Json);
+	  ts.assertEquals(l5.pickes, 'fried');
+	  const l52 = Lookup.fromJson(l5.toJson());
+	  ts.assertTrue(l52 === l5);
+	  l52.pickes = 'boiled...(Ewwwwww)';
+	  ts.assertEquals(l52.pickes, 'boiled...(Ewwwwww)');
+	
 	  ts.success();
 	});
 	
-	function simulateUserUpdate(input, value, tree, choiceCount, ts) {
-	  const inputElem = du.create.element('input', {id: input.id(), value});
-	  document.body.append(inputElem);
-	  inputElem.click();
-	  inputElem.remove();
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, choiceCount);
-	  ts.assertEquals(tree.isComplete(), choiceCount === 0);
-	}
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/json-utils.js',
+function (require, exports, module) {
 	
-	function cost(tree) {
-	  const leaves = tree.root().leaves();
-	  let grandTotal = 0;
-	  for (let index = 0; index < leaves.length; index++) {
-	    let total = 0;
-	    leaves[index].forPath((node) => {
-	      const payload = node.payload();
-	      if (payload.cost) {
-	        total += (typeof payload.cost) === 'function' ? payload.cost(node) : payload.cost;
+require('../../object/json-utils');
+	const Test = require('../test.js').Test;
+	
+	Test.add('Object: filter/merge',(ts) => {
+	  const assertFunc = (assert, func) => (v) => assert(func(v));
+	  const notObject = (value) => !(value instanceof Object);
+	  const isObject = (value) => value instanceof Object;
+	
+	  let obj = getObject();
+	  let merged = {};
+	  let isString = (v) => (typeof v) === 'string';
+	  let filtered = obj.filter(isString);
+	  filtered.foreach(assertFunc(ts.assertTrue, isString), notObject);
+	  obj.foreach(assertFunc(ts.assertFalse, isString), notObject);
+	  merged.merge(obj, filtered);
+	  ts.assertTrue(Object.equals(merged, getObject()));
+	
+	  obj = getObject();
+	  merged = {};
+	  let isArray = (v) => Array.isArray(v);
+	  filtered = obj.filter(isArray);
+	  obj.foreach(assertFunc(ts.assertFalse, isArray));
+	  merged.merge(obj, filtered);
+	  ts.assertTrue(Object.equals(merged, getObject()));
+	
+	  ts.success();
+	});
+	
+	
+	Test.add('JSON: deconstruct/reconstruct',(ts) => {
+	  const obj = getObject();
+	
+	  let destc = JSON.deconstruct(obj);
+	  let cunst = JSON.reconstruct(destc);
+	  ts.assertTrue(Object.equals(obj, cunst));
+	
+	  destc = JSON.deconstruct(obj, 10, 2);
+	  cunst = JSON.reconstruct(destc);
+	  ts.assertTrue(Object.equals(obj, cunst));
+	
+	  destc = JSON.deconstruct(obj, 100, 2);
+	  cunst = JSON.reconstruct(destc);
+	  ts.assertTrue(Object.equals(obj, cunst));
+	
+	  ts.success();
+	});
+	
+	
+	const getObject = () => {
+	  const eighteen = [];
+	  eighteen[98321] = 'Big Number';
+	  eighteen[9831] = 'Big Number';
+	  eighteen[983213] = 'Big Number';
+	  eighteen.a = 'Little Letter';
+	  const complexSparceAndBuried = [21,22,,23,[24,,25],[]];
+	  complexSparceAndBuried.fruits = 'pickles';
+	  complexSparceAndBuried.true = false;
+	  complexSparceAndBuried.integer = 2.448
+	  return {
+	    eighteen,
+	    one: ['a', 'ab', 'abcd', 'abcdefgh', 'abcd', 'ab', 'a'],
+	    two: 2,
+	    fifteen: undefined, // I defined undefined... sounds like nonsense.
+	    three: {
+	      four: 4,
+	      five: 'abcdefghijklmnop',
+	      six: 'abcdefghijklmnop',
+	      fourteen: false
+	    },
+	    seven: {
+	      eight: {
+	        nine: {
+	          thirteen: true,
+	          twenty: complexSparceAndBuried,
+	          ten: {
+	            eleven: {
+	              twelve: 12,
+	              sixteen: null,
+	              nineteen: 'booyackaa'
+	            }
+	          }
+	        }
 	      }
-	      if (payload.multiplier) {
-	        total *= payload.multiplier;
-	      }
-	    });
-	    grandTotal += total;
+	    }
 	  }
-	  return grandTotal;
 	}
 	
-	function matirials(tree) {
-	  const leaves = tree.root().leaves();
-	  let mats = [];
-	  for (let index = 0; index < leaves.length; index++) {
-	    leaves[index].forPath((node) => {
-	      const payload = node.payload();
-	      if (payload.matirial) {
-	        mats.push(node.name());
-	      }
-	    });
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/star-line-map.js',
+function (require, exports, module) {
+	
+
+	const Test = require('../test.js').Test;
+	const EscapeMap = require('../../canvas/two-d/maps/escape');
+	const Vertex2d = require('../../canvas/two-d/objects/vertex');
+	const Line2d = require('../../canvas/two-d/objects/line');
+	const Polygon2d = require('../../canvas/two-d/objects/polygon');
+	
+	// [new Vertex2d(10,50),new Vertex2d(10,10),new Vertex2d(50,10),new Vertex2d(50,40),new Vertex2d(20,40),new Vertex2d(20,15),new Vertex2d(40,15), new Vertex2d(40,35), new Vertex2d(35,35), new Vertex2d(35,20),new Vertex2d(25,20),new Vertex2d(25,37.5), new Vertex2d(45,37.5),new Vertex2d(45,12.5),new Vertex2d(15,12.5), new Vertex2d(15,45),new Vertex2d(50,45), new Vertex2d(50,50),new Vertex2d(10,50)]
+	//
+	// [new Vertex2d(20,14),new Vertex2d(15,8),new Vertex2d(24,3),new Vertex2d(20,14)]
+	
+	const spiral = Polygon2d.fromString('[(10,50),(10,10),(50,10),(50,40),(20,40),(20,15),(40,15), (40,35), (35,35), (35,20),(25,20),(25,37.5), (45,37.5),(45,12.5),(15,12.5), (15,45),(50,45), (50,50)]');
+	const triangle = Polygon2d.fromString('[(20,14),(15,8),(24,3),(20,14)]');
+	const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
+	const innerLines = [new Line2d(new Vertex2d(40,47), new Vertex2d(40,48)),
+	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,25)),
+	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,15))]
+	
+	// star.forEach(l => l.translate(new Line2d(new Vertex2d(0,0),new Vertex2d(10,12))));
+	
+	Test.add('StarLineMap: escape',(ts) => {
+	  // const escapeMap = new EscapeMap(spiral.lines().concat(triangle.lines()).concat(innerLines));
+	  let lines = spiral.lines().concat(triangle.lines()).concat(star).concat(innerLines);
+	  const escapeMap = new EscapeMap(lines);
+	  const parimeterAns = Polygon2d.fromString(`(10, 50) => (10, 10) => (16.666666666666668, 10) => (15, 8) => (24, 3) => (21.454545454545453, 10) => (50, 10) => (50, 40) => (20, 40) => (20, 15) => (40, 15) => (40, 35) => (35, 35) => (35, 20) => (25, 20) => (25, 37.5) => (45, 37.5) => (45, 12.5) => (20.545454545454547, 12.5) => (20, 14) => (18.75, 12.5) => (15, 12.5) => (15, 21.18181818181818) => (16.5, 20.5) => (15.556603773584905, 22.198113207547173) => (17, 23) => (15.111111111111112, 23) => (15, 23.200000000000003) => (15, 45) => (50, 45) => (50, 50)`);
+	  const parimeter = EscapeMap.parimeter(lines);
+	  ts.assertTrue(parimeter.equals(parimeterAns), 'Use canvas buddy to isolate issue: /canvas-buddy/html/index.html\n\t\tIt seams like there is an error somewhere in the merging of groups... I would focus your investigation there.');
+	  ts.success();
+	});
+	
+	Test.add('Polygon: build', (ts) => {
+	  const polyAns = Polygon2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5)]');
+	  for (let index = 0; index < 5; index++) {
+	    const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
+	    star.shuffle();
+	    const poly = Polygon2d.build(star);
+	    ts.assertTrue(poly.equals(polyAns));
 	  }
-	  return mats;
-	}
-	
-	
-	Test.add('DecisionInputTree choices', (ts) => {
-	  const toastCost = .75;
-	  const cerialCost = 2.25;
-	  const baconCost = 1.20;
-	  const eggsCost = 1.25;
-	  const overEasyMultiplier = 25;
-	
-	  const justEggsCost = eggsCost * 6 * overEasyMultiplier;
-	  const total = justEggsCost + toastCost + baconCost + cerialCost;
-	
-	  const tree = createTree();
-	  let choices = tree.choices();
-	  ts.assertEquals(choices.length, 0);
-	
-	  const eggs = tree.find.input('eggs')
-	  eggs.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 2);
-	
-	  const toast = tree.find.input('toast')
-	  toast.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 3);
-	
-	  const noBowl = ['plate', 'fork', 'spoon'];
-	  ts.assertTrue(noBowl.equals(matirials(tree)));
-	
-	  const cereal = tree.find.input('cereal')
-	  cereal.setValue(true)
-	  choices = tree.choices();
-	  ts.assertEquals(choices.length, 4);
-	
-	
-	  const count = tree.find.input('count', 'Eggs');
-	  const type = tree.find.input('type', 'Eggs');
-	  const eggsType = tree.find.input('type', 'Eggs');
-	  const toastType = tree.find.input('type', 'Toast');
-	  const cerialType = tree.find.input('type', 'Cereal');
-	
-	  ts.assertNotEquals(type, undefined);
-	  ts.assertNotEquals(eggsType, toastType);
-	  ts.assertNotEquals(eggsType, cerialType);
-	  ts.assertNotEquals(cerialType, toastType);
-	
-	  simulateUserUpdate(eggsType, 'Over Easy', tree, 3, ts);
-	  simulateUserUpdate(toastType, 'white', tree, 2, ts);
-	  simulateUserUpdate(cerialType, 'cheerios', tree, 1, ts);
-	  simulateUserUpdate(count, '6', tree, 0, ts);
-	
-	  const allMaterials = ['plate', 'fork', 'bowl', 'spoon'];
-	  ts.assertTrue(allMaterials.equals(matirials(tree)));
-	
-	  ts.assertEquals(cost(tree), total);
-	
 	  ts.success();
 	});
 	
@@ -9164,6 +9634,219 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('../../public/js/utils/test/tests/decision-input-tree.js',
+function (require, exports, module) {
+	
+
+	// breakfast) Multiselect (food:bacon, eggs, toast, cereal)
+	//     eggs) Select (count:2,3,6), Select(type:overEasy, sunnySideUp, scrambled, fried)
+	//        requiresGourmetChef) upchange
+	//     toast) Select (white, wheat, texas)
+	//     cereal) Checkbox(milk), Select (type: rasinBrand, cheerios, life)
+	//     bacon) Leaf
+	//   dishes)
+	//      plate)
+	//      fork)
+	//      bowl)
+	//      spoon)
+	
+	
+	const Test = require('../test.js').Test;
+	const du = require('../../dom-utils');
+	const Input = require('../../input/input');
+	const Select = require('../../input/styles/select');
+	const DecisionInputTree = require('../../input/decision/decision');
+	const MultipleEntries = require('../../input/styles/multiple-entries');
+	
+	const toastCost = .75;
+	const cerialCost = 2.25;
+	const baconCost = 1.20;
+	const eggsCost = 1.25;
+	const overEasyMultiplier = 25;
+	
+	function createTree() {
+	  const bacon = new Input({type: 'checkbox', name: 'bacon'});
+	  const eggs = new Input({type: 'checkbox', name: 'eggs'});
+	  const eggCount = new Select({list: ['2','3','6'], name: 'count', mustChoose: true});
+	  const eggType = new Select({name: 'type', mustChoose: true, value: 'Scrambled', list: ['Over Easy', 'Sunny Side Up', 'Scrambled', 'Fried']});
+	  const toast = new Input({type: 'checkbox', name: 'toast'});
+	  const cereal = new Input({type: 'checkbox', name: 'cereal'});
+	  const toastType = new Select({name: 'type', mustChoose: true, list: ['white', 'wheat', 'texas']});
+	  const milk = new Input({type: 'checkbox', name: 'milk'});
+	  const cerealType = new Select({name: 'type', mustChoose: true, list: ['rasinBrand', 'cheerios', 'life']});
+	
+	  const tree = new DecisionInputTree('breakfast', {inputArray: [bacon, eggs, toast, cereal]});
+	
+	  const cost = (node) => eggsCost * Number.parseInt(node.find.input('count').value());
+	  const eggsNode = tree.root().then('Eggs', {cost});
+	  eggsNode.addInput(eggCount);
+	  eggsNode.addInput(eggType);
+	  const reqGourChef = eggsNode.then('requiresGourmetChef', {multiplier: overEasyMultiplier});
+	  const toastNode = tree.root().then('Toast', {cost: toastCost, inputArray: [toastType]});
+	  const cerealNode = tree.root().then('Cereal', {cost: cerialCost, inputArray: [cerealType]});
+	  tree.root().then('Bacon', {cost: baconCost});
+	
+	
+	  const dishes = tree.root().then('dishes');
+	  const plate = dishes.then('plate', {matirial: true});
+	  const fork = dishes.then('fork', {matirial: true});
+	  const bowl = dishes.then('bowl', {matirial: true});
+	  const spoon = dishes.then('spoon', {matirial: true});
+	
+	  bowl.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  cerealNode.conditions.add((values) =>
+	    Object.pathValue(values, 'cereal') === true);
+	
+	  toastNode.conditions.add((values) =>
+	    Object.pathValue(values, 'toast') === true);
+	
+	  eggsNode.conditions.add((values) =>
+	    Object.pathValue(values, 'eggs') === true);
+	
+	  reqGourChef.conditions.add((values) =>
+	    values.type === "Over Easy");
+	
+	  const vals = tree.values();
+	
+	  return tree;
+	}
+	
+	Test.add('DecisionInputTree structure', (ts) => {
+	  const tree = createTree();
+	  ts.success();
+	});
+	
+	function simulateUserUpdate(input, value, tree, choiceCount, ts) {
+	  const inputElem = du.create.element('input', {id: input.id(), value});
+	  document.body.append(inputElem);
+	  inputElem.click();
+	  inputElem.remove();
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, choiceCount);
+	  ts.assertEquals(tree.isComplete(), choiceCount === 0);
+	}
+	
+	function cost(tree) {
+	  const leaves = tree.root().leaves();
+	  let grandTotal = 0;
+	  for (let index = 0; index < leaves.length; index++) {
+	    let total = 0;
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.cost) {
+	        total += (typeof payload.cost) === 'function' ? payload.cost(node) : payload.cost;
+	      }
+	      if (payload.multiplier) {
+	        total *= payload.multiplier;
+	      }
+	    });
+	    grandTotal += total;
+	  }
+	  return grandTotal;
+	}
+	
+	function matirials(tree) {
+	  const leaves = tree.root().leaves();
+	  let mats = [];
+	  for (let index = 0; index < leaves.length; index++) {
+	    leaves[index].forPath((node) => {
+	      const payload = node.payload();
+	      if (payload.matirial) {
+	        mats.push(node.name());
+	      }
+	    });
+	  }
+	  return mats;
+	}
+	
+	
+	Test.add('DecisionInputTree choices', (ts) => {
+	  const toastCost = .75;
+	  const cerialCost = 2.25;
+	  const baconCost = 1.20;
+	  const eggsCost = 1.25;
+	  const overEasyMultiplier = 25;
+	
+	  const justEggsCost = eggsCost * 6 * overEasyMultiplier;
+	  const total = justEggsCost + toastCost + baconCost + cerialCost;
+	
+	  const tree = createTree();
+	  let choices = tree.choices();
+	  ts.assertEquals(choices.length, 0);
+	
+	  const eggs = tree.find.input('eggs')
+	  eggs.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 2);
+	
+	  const toast = tree.find.input('toast')
+	  toast.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 3);
+	
+	  const noBowl = ['plate', 'fork', 'spoon'];
+	  ts.assertTrue(noBowl.equals(matirials(tree)));
+	
+	  const cereal = tree.find.input('cereal')
+	  cereal.setValue(true)
+	  choices = tree.choices();
+	  ts.assertEquals(choices.length, 4);
+	
+	
+	  const count = tree.find.input('count', 'Eggs');
+	  const type = tree.find.input('type', 'Eggs');
+	  const eggsType = tree.find.input('type', 'Eggs');
+	  const toastType = tree.find.input('type', 'Toast');
+	  const cerialType = tree.find.input('type', 'Cereal');
+	
+	  ts.assertNotEquals(type, undefined);
+	  ts.assertNotEquals(eggsType, toastType);
+	  ts.assertNotEquals(eggsType, cerialType);
+	  ts.assertNotEquals(cerialType, toastType);
+	
+	  simulateUserUpdate(eggsType, 'Over Easy', tree, 3, ts);
+	  simulateUserUpdate(toastType, 'white', tree, 2, ts);
+	  simulateUserUpdate(cerialType, 'cheerios', tree, 1, ts);
+	  simulateUserUpdate(count, '6', tree, 0, ts);
+	
+	  const allMaterials = ['plate', 'fork', 'bowl', 'spoon'];
+	  ts.assertTrue(allMaterials.equals(matirials(tree)));
+	
+	  ts.assertEquals(cost(tree), total);
+	
+	  ts.success();
+	});
+	
+});
+
+
+RequireJS.addFunction('../../public/js/utils/test/tests/compress-string.js',
+function (require, exports, module) {
+	
+const Test = require('../test.js').Test;
+	const CompressedString = require('../../object/compressed-string.js');
+	
+	Test.add('Imposter: fooled me',(ts) => {
+	  // let str = 'one, two,threefour,one,twothree,four';
+	  let str = 'one,one,one,one,one,one,one,one,one,one,';
+	  let noWhiteSpace = JSON.stringify(JSON.parse(cabStr));
+	  let cStr = new CompressedString(cabStr);
+	  let rebuilt = CompressedString.fromString(cStr.toString())
+	  ts.assertTrue(cabStr === rebuilt);
+	
+	  ts.success();
+	});
+	
+	
+	
+	
+	let cabStr = `{"_TYPE":"Order","name":"peaches","id":"2wyrbg706jiqej59e4ck5u7h4hlz2o4q","rooms":{"z8qv04z":{"_TYPE":"Room","id":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","ID_ATTRIBUTE":"id","name":"peach","layout":{"verticies":[{"_TYPE":"Vertex2D","id":"Vertex2D_q924g8f","ID_ATTRIBUTE":"id","point":{"x":500,"y":0},"prevLine":"Wall2D_t4dprm3","nextLine":"Wall2D_tkgqjbx"},{"_TYPE":"Vertex2D","id":"Vertex2D_qpfc4z7","ID_ATTRIBUTE":"id","point":{"x":500,"y":500},"prevLine":"Wall2D_tkgqjbx","nextLine":"Wall2D_edw3c2w"},{"_TYPE":"Vertex2D","id":"Vertex2D_s9zy2l5","ID_ATTRIBUTE":"id","point":{"x":0,"y":500},"prevLine":"Wall2D_edw3c2w","nextLine":"Wall2D_bmdk6tv"},{"_TYPE":"Vertex2D","id":"Vertex2D_xfdbd47","ID_ATTRIBUTE":"id","point":{"x":0,"y":0},"prevLine":"Wall2D_bmdk6tv","nextLine":"Wall2D_t4dprm3"}],"walls":[{"_TYPE":"Wall2D","id":"Wall2D_bmdk6tv","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_edw3c2w","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_t4dprm3","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_tkgqjbx","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]}],"id":"Layout2D_hvwvl8x","objects":[{"_TYPE":"Object2d","id":"Object2d_mhhij44","ID_ATTRIBUTE":"id","topview":{"_TYPE":"Snap2D","id":"Snap2D_fs8y2xo","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_fs8y2xo","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"bottomView":{"_TYPE":"Snap2D","id":"Snap2D_owpui4e","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_owpui4e","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"leftview":{"_TYPE":"Snap2D","id":"Snap2D_7x9e6cl","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_7x9e6cl","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"rightview":{"_TYPE":"Snap2D","id":"Snap2D_88fkq0n","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_88fkq0n","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"frontview":{"_TYPE":"Snap2D","id":"Snap2D_h6o6yjc","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_h6o6yjc","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"backView":{"_TYPE":"Snap2D","id":"Snap2D_d03rlan","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_d03rlan","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"}}],"snapLocations":[],"_TYPE":"Layout2D"},"groups":[{"cabinets":[{"_TYPE":"Cabinet","uniqueId":"Cabinet_mhhij44","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"c","partName":"standard","values":{"brh":"tkb.w + pback.t + brr","innerWidth":"c.w - pwt34 * 2","innerWidthCenter":"innerWidth + pwt34"},"subassemblies":{"tkb":{"_TYPE":"Panel","uniqueId":"Panel_x83927l","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,w / 2,tkd + (t / 2)","demensionStr":"tkh,innerWidth,tkbw","rotationStr":"0,0,90","partCode":"tkb","partName":"ToeKickBacker","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pr":{"_TYPE":"Panel","uniqueId":"Panel_texde2a","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w - (pr.t / 2),l / 2,(w / 2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pr","partName":"Right","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pl":{"_TYPE":"Panel","uniqueId":"Panel_b00prhm","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"(t / 2), l / 2, (w/2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pl","partName":"Left","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pback":{"_TYPE":"Panel","uniqueId":"Panel_9tnsq6m","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"l / 2 + pl.t, (w / 2) + tkb.w, c.t - (t / 2)","demensionStr":"c.l - tkb.w,innerWidth,pwt34","rotationStr":"0,0,90","partCode":"pback","partName":"Back","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pb":{"_TYPE":"Panel","uniqueId":"Panel_pg8v93d","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,tkh + (t/2),w / 2","demensionStr":"c.t - pback.t,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pb","partName":"Bottom","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt":{"_TYPE":"Panel","uniqueId":"Panel_8m0m4bs","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,(w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt","partName":"Top","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt2":{"_TYPE":"Panel","uniqueId":"Panel_6b24fe2","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,c.t - pback.t - (w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt2","partName":"Top2","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"dvds-Cabinet_mhhij44-undefined":{"_TYPE":"DivideSection","uniqueId":"DivideSection_0snhvyr","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-Cabinet_mhhij44-undefined","partName":"divideSection","values":{"vertical":true},"subassemblies":[{"_TYPE":"DivideSection","uniqueId":"DivideSection_dv6snbe","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-DivideSection_0snhvyr-0","partName":"divideSection","values":{"vertical":true},"subassemblies":[],"joints":[],"index":0,"pattern":{"values":{"a":118.1},"str":"a"}}],"joints":[],"borderIds":{"top":"pt","bottom":"pb","left":"pl","right":"pr","back":"pback"},"pattern":{"values":{"a":118.1},"str":"a"}}},"joints":[{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pb","demensionAxis":"x","centerAxis":"+y"}],"length":60.96,"width":127,"thickness":53.34,"name":"peach"}],"_TYPE":"Group","name":"Group","id":"Group_qbu4mn4","roomId":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","propertyConfig":{"Overlay":[{"_TYPE":"Property","id":"Property_fqc1xic","ID_ATTRIBUTE":"id","code":"ov","name":"Overlay","value":1.27,"properties":{"value":1.27,"clone":true}}],"Reveal":[{"_TYPE":"Property","id":"Property_tfwxb8o","ID_ATTRIBUTE":"id","code":"r","name":"Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_4fhky4n","ID_ATTRIBUTE":"id","code":"rvt","name":"Reveal Top","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_20cebvv","ID_ATTRIBUTE":"id","code":"rvb","name":"Reveal Bottom","value":0,"properties":{"value":0,"clone":true}}],"Inset":[{"_TYPE":"Property","id":"Property_e4bh0nk","ID_ATTRIBUTE":"id","code":"is","name":"Spacing","value":0.24,"properties":{"value":0.24,"clone":true}}],"Cabinet":[{"_TYPE":"Property","id":"Property_qkv57k8","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_b7za1rc","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9cbd2fg","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_6859l07","ID_ATTRIBUTE":"id","code":"sr","name":"Scribe Right","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_jwysbjh","ID_ATTRIBUTE":"id","code":"sl","name":"Scribe Left","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_5iran35","ID_ATTRIBUTE":"id","code":"rvibr","name":"Reveal Inside Bottom Rail","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_pzjt3cs","ID_ATTRIBUTE":"id","code":"rvdd","name":"Reveal Dual Door","value":0.16,"properties":{"value":0.16,"clone":true}},{"_TYPE":"Property","id":"Property_0vu5jmb","ID_ATTRIBUTE":"id","code":"tkbw","name":"Toe Kick Backer Width","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_dajkb1b","ID_ATTRIBUTE":"id","code":"tkd","name":"Toe Kick Depth","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_joyygzo","ID_ATTRIBUTE":"id","code":"tkh","name":"Toe Kick Height","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_l7t9z68","ID_ATTRIBUTE":"id","code":"pbt","name":"Panel Back Thickness","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_oywqj2v","ID_ATTRIBUTE":"id","code":"iph","name":"Ideal Handle Height","value":106.68,"properties":{"value":106.68,"clone":true}},{"_TYPE":"Property","id":"Property_2i5nht2","ID_ATTRIBUTE":"id","code":"brr","name":"Bottom Rail Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_up6vwpo","ID_ATTRIBUTE":"id","code":"frw","name":"Frame Rail Width","value":3.81,"properties":{"value":3.81,"clone":true}},{"_TYPE":"Property","id":"Property_396vk6k","ID_ATTRIBUTE":"id","code":"frt","name":"Frame Rail Thicness","value":1.91,"properties":{"value":1.91,"clone":true}}],"Panel":[{"_TYPE":"Property","id":"Property_cq9johi","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_nt7v1y1","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_vkmj6jj","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Guides":[{"_TYPE":"Property","id":"Property_l2178ai","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_afojonz","ID_ATTRIBUTE":"id","code":"dbtos","name":"Drawer Box Top Offset","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_837xb64","ID_ATTRIBUTE":"id","code":"dbsos","name":"Drawer Box Side Offest","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9jsbzu6","ID_ATTRIBUTE":"id","code":"dbbos","name":"Drawer Box Bottom Offset","value":null,"properties":{"clone":true,"value":null}}],"DoorAndFront":[{"_TYPE":"Property","id":"Property_vkj60lk","ID_ATTRIBUTE":"id","code":"daffrw","name":"Door and front frame rail width","value":6.03,"properties":{"value":6.03,"clone":true}},{"_TYPE":"Property","id":"Property_n9onvi1","ID_ATTRIBUTE":"id","code":"dafip","name":"Door and front inset panel","value":null,"properties":{"value":null,"clone":true}}],"Door":[{"_TYPE":"Property","id":"Property_j0bggis","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_7dn4y4f","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_t8z4x9p","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"DrawerBox":[{"_TYPE":"Property","id":"Property_kebylx2","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_txm4stx","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_hj2tc1u","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_d1lz9qq","ID_ATTRIBUTE":"id","code":"dbst","name":"Side Thickness","value":1.59,"properties":{"value":1.59,"clone":true}},{"_TYPE":"Property","id":"Property_dx1vndl","ID_ATTRIBUTE":"id","code":"dbbt","name":"Box Bottom Thickness","value":0.64,"properties":{"value":0.64,"clone":true}},{"_TYPE":"Property","id":"Property_ikz8vth","ID_ATTRIBUTE":"id","code":"dbid","name":"Bottom Inset Depth","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_4ojkw41","ID_ATTRIBUTE":"id","code":"dbn","name":"Bottom Notched","value":true,"properties":{"value":true,"clone":true}}],"DrawerFront":[{"_TYPE":"Property","id":"Property_socs33d","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_lwlghxp","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eo3jj39","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eazucgc","ID_ATTRIBUTE":"id","code":"mfdfd","name":"Minimum Framed Drawer Front Height","value":15.24,"properties":{"value":15.24,"clone":true}}],"Frame":[{"_TYPE":"Property","id":"Property_cyu86cm","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_g2tylu9","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ncg2ucm","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Handle":[{"_TYPE":"Property","id":"Property_fy5cx43","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_v1iz9io","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_iqatpkx","ID_ATTRIBUTE":"id","code":"c2c","name":"Center To Center","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_e04kije","ID_ATTRIBUTE":"id","code":"proj","name":"Projection","value":null,"properties":{"clone":true,"value":null}}],"Hinge":[{"_TYPE":"Property","id":"Property_l4hivju","ID_ATTRIBUTE":"id","code":"maxtab","name":"Max Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_m38nj8i","ID_ATTRIBUTE":"id","code":"mintab","name":"Minimum Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_1463xdz","ID_ATTRIBUTE":"id","code":"maxol","name":"Max Door Overlay","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ks95jmk","ID_ATTRIBUTE":"id","code":"minol","name":"Minimum Door Overlay","value":null,"properties":{"clone":true,"value":null}}]}}]}}}`;
+	
+});
+
+
 RequireJS.addFunction('../../public/js/utils/test/tests/imposter.js',
 function (require, exports, module) {
 	
@@ -9236,587 +9919,6 @@ const Test = require('../test.js').Test;
 	  orig.override2 = 'unchanged5';
 	  ts.assertEquals(orig.override2, 'unchanged5');
 	  ts.assertEquals(orig.override1(), 'unchanged3');
-	
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/tests/json-utils.js',
-function (require, exports, module) {
-	
-require('../../object/json-utils');
-	const Test = require('../test.js').Test;
-	
-	Test.add('Object: filter/merge',(ts) => {
-	  const assertFunc = (assert, func) => (v) => assert(func(v));
-	  const notObject = (value) => !(value instanceof Object);
-	  const isObject = (value) => value instanceof Object;
-	
-	  let obj = getObject();
-	  let merged = {};
-	  let isString = (v) => (typeof v) === 'string';
-	  let filtered = obj.filter(isString);
-	  filtered.foreach(assertFunc(ts.assertTrue, isString), notObject);
-	  obj.foreach(assertFunc(ts.assertFalse, isString), notObject);
-	  merged.merge(obj, filtered);
-	  ts.assertTrue(Object.equals(merged, getObject()));
-	
-	  obj = getObject();
-	  merged = {};
-	  let isArray = (v) => Array.isArray(v);
-	  filtered = obj.filter(isArray);
-	  obj.foreach(assertFunc(ts.assertFalse, isArray));
-	  merged.merge(obj, filtered);
-	  ts.assertTrue(Object.equals(merged, getObject()));
-	
-	  ts.success();
-	});
-	
-	
-	Test.add('JSON: deconstruct/reconstruct',(ts) => {
-	  const obj = getObject();
-	
-	  let destc = JSON.deconstruct(obj);
-	  let cunst = JSON.reconstruct(destc);
-	  ts.assertTrue(Object.equals(obj, cunst));
-	
-	  destc = JSON.deconstruct(obj, 10, 2);
-	  cunst = JSON.reconstruct(destc);
-	  ts.assertTrue(Object.equals(obj, cunst));
-	
-	  destc = JSON.deconstruct(obj, 100, 2);
-	  cunst = JSON.reconstruct(destc);
-	  ts.assertTrue(Object.equals(obj, cunst));
-	
-	  ts.success();
-	});
-	
-	
-	const getObject = () => {
-	  const eighteen = [];
-	  eighteen[98321] = 'Big Number';
-	  eighteen[9831] = 'Big Number';
-	  eighteen[983213] = 'Big Number';
-	  eighteen.a = 'Little Letter';
-	  const complexSparceAndBuried = [21,22,,23,[24,,25],[]];
-	  complexSparceAndBuried.fruits = 'pickles';
-	  complexSparceAndBuried.true = false;
-	  complexSparceAndBuried.integer = 2.448
-	  return {
-	    eighteen,
-	    one: ['a', 'ab', 'abcd', 'abcdefgh', 'abcd', 'ab', 'a'],
-	    two: 2,
-	    fifteen: undefined, // I defined undefined... sounds like nonsense.
-	    three: {
-	      four: 4,
-	      five: 'abcdefghijklmnop',
-	      six: 'abcdefghijklmnop',
-	      fourteen: false
-	    },
-	    seven: {
-	      eight: {
-	        nine: {
-	          thirteen: true,
-	          twenty: complexSparceAndBuried,
-	          ten: {
-	            eleven: {
-	              twelve: 12,
-	              sixteen: null,
-	              nineteen: 'booyackaa'
-	            }
-	          }
-	        }
-	      }
-	    }
-	  }
-	}
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/tests/navigator.js',
-function (require, exports, module) {
-	
-
-	const Navigator = require('../../local-file/navigator.js');
-	
-	Navigator.onInit(async () => {
-	  if (confirm('AutoSave tests: \nWARNING! Will create garbage information on your computer.') === false) return;
-	  const AutoSave = require('../../local-file/auto-save.js');
-	  const Test = require('../test.js').Test;
-	  require('../../object/json-utils');
-	  const initTestCount = Test.count();
-	
-	  const helper = Navigator.helper();
-	  const testHelper = await helper.getDirectory('TEST', true);
-	  const as = new AutoSave(() => cabJson, testHelper);
-	
-	  const cleanUpFunc = async (location) => {
-	    let alreadyDef;
-	    try {alreadyDef = await testHelper.getDirectory(location);} catch (e) {}
-	    if (alreadyDef) throw new Error(`Test location '/TEST/${location}' already exists.\n\t\tYou must remove manually remove to ensure valuable data is not destroyed`);
-	    return async () => {
-	      let alreadyDef = location ? await testHelper.getDirectory(location) : testHelper;
-	      await alreadyDef.delete();
-	    }
-	  }
-	
-	
-	  Test.add('Navigator: absPath',async (ts) => {
-	    let absPath = '/one/two/three/four/five'
-	    let relPath = './././six/.././../seven/./eight/nine/../ten.js';
-	    let resolvedPath = '/one/two/three/four/seven/eight/ten.js';
-	    ts.assertEquals(Navigator.absPath(absPath, relPath), resolvedPath);
-	
-	    absPath = '/one/two/three/four/five'
-	    relPath = '/seven/eight/nine/ten.js';
-	    ts.assertEquals(Navigator.absPath(absPath, relPath), relPath);
-	
-	    absPath = '/one/two/three/four/five'
-	    relPath = './';
-	    ts.assertEquals(Navigator.absPath(absPath, relPath), absPath);
-	
-	    try {
-	      absPath = '/one/two/three/four/five'
-	      relPath = './../../../../../../../../seven/eight/nine/ten.js';
-	      resolvedPath = '/one/two/three/four/seven/eight/ten.js';
-	      ts.assertEquals(Navigator.absPath(absPath, relPath), resolvedPath);
-	      ts.fail('This should have thrown an Error');
-	    } catch (e) {}
-	
-	    try {
-	      absPath = './one/two/three/four/five'
-	      relPath = './../../../../../../../../seven/eight/nine/ten.js';
-	      resolvedPath = '/one/two/three/four/seven/eight/ten.js';
-	      ts.assertEquals(Navigator.absPath(absPath, relPath), resolvedPath);
-	      ts.fail('This should have thrown an Error');
-	    } catch (e) {}
-	    ts.success();
-	  });
-	
-	  Test.add('Navigator: relPath',async (ts) => {
-	    let path = Navigator.relPath('/one/two/three/four/five', '/six/seven/eight/nine');
-	    ts.assertEquals(path, '../../../../../six/seven/eight/nine');
-	
-	    path = Navigator.relPath('/one/two/three/four/five', '/one/two/three/seven/eight/nine');
-	    ts.assertEquals(path, '../../seven/eight/nine');
-	
-	    path = Navigator.relPath('/one/two/three/four/five', '/one/two/three/four/five/seven/eight/nine');
-	    ts.assertEquals(path, 'seven/eight/nine');
-	
-	    ts.success();
-	  });
-	
-	// FileSystem: TEST
-	     // four
-	     //    five
-	     //        nine
-	     //        six
-	     //            seven
-	     //            eight.txt
-	     //        ten
-	     //            eleven
-	     //            twelve
-	     //                thirteen.sh
-	     // one
-	     //    two
-	     //      three.js
-	
-	
-	
-	 const fileStructure = [
-	   "/TEST/build",
-	   "/TEST/build/four",
-	   "/TEST/build/four/five",
-	   "/TEST/build/four/five/nine",
-	   "/TEST/build/four/five/six",
-	   "/TEST/build/four/five/six/eight.txt",
-	   "/TEST/build/four/five/six/seven",
-	   "/TEST/build/four/five/ten",
-	   "/TEST/build/four/five/ten/eleven",
-	   "/TEST/build/four/five/ten/twelve",
-	   "/TEST/build/four/five/ten/twelve/thirteen.sh",
-	   "/TEST/build/one",
-	   "/TEST/build/one/two",
-	   "/TEST/build/one/two/three.js"
-	  ];
-	  Test.add('Navigator: build',async (ts) => {
-	    ts.onCleanUp(await cleanUpFunc('./build'));
-	
-	    const build = await testHelper.getDirectory('build', true);
-	    const nine = await build.getDirectory('./four/five/nine', true);
-	    await nine.getFile('../six/eight.txt', true);
-	    const seven = await nine.getDirectory('../../five/six/seven', true);
-	    await seven.getFile('../../../../one/two/three.js', true);
-	    await seven.getFile('../../ten/twelve/thirteen.sh', true);
-	    const ten = await nine.get('../ten');
-	    const eleven = await ten.getDirectory('./eleven', true);
-	    const tree = await build.find();
-	    ts.assertTrue(Object.keys(tree).sort().equals(fileStructure));
-	    ts.success();
-	  });
-	
-	  Test.add('Navigator: write/read', async (ts) => {
-	    ts.onCleanUp(await cleanUpFunc('read-write'));
-	
-	    const filePath = 'read-write/four/five/ten/twelve/thirteen.sh';
-	    const data = 'echo THIRTEEN.SH';
-	    await testHelper.write(filePath, data);
-	    const str = await testHelper.read(filePath);
-	    ts.assertTrue(str === data);
-	    ts.success();
-	  });
-	
-	  Test.add('Navigator: remove', async (ts) => {
-	    ts.onCleanUp(await cleanUpFunc('remove'));
-	
-	    await testHelper.getFile('remove/one/two/three/four/five/six.txt', true);
-	    await testHelper.getFile('remove/one/two/seven/nine/eight.txt', true);
-	    await testHelper.delete('remove/one/two/three/four/five/six.txt');
-	    const nine = await testHelper.get('remove/one/two/seven/nine');
-	    const eight = await nine.get('eight.txt');
-	    await eight.delete();
-	    await nine.delete();
-	    ts.success();
-	  });
-	
-	  Test.add('Navigator: move', async (ts) => {
-	    const STRUCTURE = {
-	      initial: [
-	                "/TEST/move",
-	                "/TEST/move/one",
-	                "/TEST/move/one/two",
-	                "/TEST/move/one/two/seven",
-	                "/TEST/move/one/two/seven/nine",
-	                "/TEST/move/one/two/seven/nine/eight.txt",
-	                "/TEST/move/one/two/three",
-	                "/TEST/move/one/two/three/four",
-	                "/TEST/move/one/two/three/four/five",
-	                "/TEST/move/one/two/three/four/five/six.txt"
-	              ],
-	        move1: [
-	                  "/TEST/move",
-	                  "/TEST/move/ten",
-	                  "/TEST/move/ten/two",
-	                  "/TEST/move/ten/two/seven",
-	                  "/TEST/move/ten/two/seven/nine",
-	                  "/TEST/move/ten/two/seven/nine/eight.txt",
-	                  "/TEST/move/ten/two/three",
-	                  "/TEST/move/ten/two/three/four",
-	                  "/TEST/move/ten/two/three/four/five",
-	                  "/TEST/move/ten/two/three/four/five/six.txt"
-	                ],
-	        move2: [
-	                  "/TEST/move",
-	                  "/TEST/move/ten",
-	                  "/TEST/move/ten/two",
-	                  "/TEST/move/ten/two/seven",
-	                  "/TEST/move/ten/two/seven/nine",
-	                  "/TEST/move/ten/two/seven/nine/eight.txt",
-	                  "/TEST/move/ten/two/three",
-	                  "/TEST/move/ten/two/three/eleven.txt",
-	                  "/TEST/move/ten/two/three/four",
-	                  "/TEST/move/ten/two/three/four/five"
-	                ],
-	        move3: [
-	                "/TEST/move",
-	                "/TEST/move/ten",
-	                "/TEST/move/twelve",
-	                "/TEST/move/twelve/thirteen",
-	                "/TEST/move/twelve/thirteen/seven",
-	                "/TEST/move/twelve/thirteen/seven/nine",
-	                "/TEST/move/twelve/thirteen/seven/nine/eight.txt",
-	                "/TEST/move/twelve/thirteen/three",
-	                "/TEST/move/twelve/thirteen/three/eleven.txt",
-	                "/TEST/move/twelve/thirteen/three/four",
-	                "/TEST/move/twelve/thirteen/three/four/five"
-	                ],
-	    }
-	
-	    ts.onCleanUp(await cleanUpFunc('move'));
-	
-	    const move = await testHelper.getDirectory('move', true);
-	    let six = await move.getFile('one/two/three/four/five/six.txt', true);
-	    const eight = await move.getFile('one/two/seven/nine/eight.txt', true);
-	    let structure = Object.keys(await move.find()).sort();
-	    ts.assertTrue(structure.equals(STRUCTURE.initial));
-	    await six.write('SIX');
-	    await eight.write('EIGHT')
-	
-	    await (await testHelper.get('move/one')).move('ten');
-	    structure = Object.keys(await move.find()).sort();
-	    ts.assertTrue(structure.equals(STRUCTURE.move1));
-	
-	    six = await testHelper.get('move/ten/two/three/four/five/six.txt');
-	    await six.move('../../eleven.txt');
-	    structure = Object.keys(await move.find()).sort();
-	    const eleven = await testHelper.get("/TEST/move/ten/two/three/eleven.txt");
-	    ts.assertTrue(structure.equals(STRUCTURE.move2));
-	    ts.assertEquals(await eleven.read(), 'SIX');
-	
-	    await (await testHelper.get('move/ten/two')).move('../twelve/thirteen');
-	    structure = Object.keys(await move.find()).sort();
-	    ts.assertTrue(structure.equals(STRUCTURE.move3));
-	
-	    ts.success();
-	  });
-	
-	  // Sorry test is messy.... I left comments because of that fact
-	  Test.add('AutoSave: all inclusive',async (ts) => {
-	    ts.onCleanUp(await cleanUpFunc('./auto-save'));
-	
-	    const data = {one: 'two', three: false, four: null,
-	                  six: [1,2,3,4,5,6,7,8,9,10],
-	                  seven: {eight: 8, nine: {ten: 3.8}}};
-	
-	    const helper = await testHelper.getDirectory('auto-save', true);
-	    let autoSave = new AutoSave(() => data, helper, 'simple');
-	    autoSave.maxLen(5);
-	    let readObj = await autoSave.read();
-	    ts.assertEquals(Object.keys(readObj).length, 0);
-	
-	
-	    // insure auto save is functioning.
-	    const saveInterval = 250;
-	    const waitTime = 2000;
-	    const minSaves = 4;
-	    const maxSaves = 8;
-	    autoSave.timeInterval(saveInterval);
-	    let saveCount = 0;
-	    autoSave.onSaved(() => saveCount++);
-	    autoSave.on_off_toggle(true);
-	    const time = new Date().getTime();
-	
-	    // wait for autoSave to be triggered.
-	    setTimeout(async () => {
-	      autoSave.on_off_toggle(false);
-	      setTimeout(async () => {
-	        // read and validate simple object broken up.
-	        ts.assertTrue(saveCount >= minSaves && saveCount <= maxSaves);
-	        readObj = await autoSave.read();
-	        await autoSave.read();
-	        ts.assertTrue(Object.equals(readObj, data));
-	        ts.assertFalse(await helper.exists('simple.json'));
-	
-	        // read save and validate complex object broken up.
-	        autoSave = new AutoSave(() => cabJson, helper, 'complex');
-	        autoSave.maxLen(5000);
-	        await autoSave.read();
-	        await autoSave.save();
-	        readObj = await autoSave.read();
-	        ts.assertTrue(Object.equals(readObj, readObj));
-	
-	        // read, save and validate and object with large text sections
-	        autoSave = new AutoSave(() => shortBook, helper, 'book');
-	        autoSave.maxLen(500);
-	        await autoSave.read();
-	        await autoSave.save();
-	        readObj = await autoSave.read();
-	        ts.assertTrue(Object.equals(readObj, readObj));
-	
-	        // read, save and validate a simple object saved to a single file.
-	        autoSave = new AutoSave(() => data, helper, 'simple-single');
-	        autoSave.maxLen(5000);
-	        await autoSave.read();
-	        await autoSave.save();
-	        readObj = await autoSave.read();
-	        ts.assertTrue(Object.equals(readObj, readObj));
-	        ts.assertFalse(await helper.exists('simple-single'));
-	
-	        ts.success();
-	      }, 50);
-	    }, waitTime);
-	  });
-	
-	  Test.add('AutoSaveInterface: all inclusive',async (ts) => {
-	    ts.onCleanUp(await cleanUpFunc('./auto-save-interface'));
-	
-	    const helper = await testHelper.getDirectory('auto-save-interface', true);
-	    const data = {
-	      one: {one: 1},
-	      two: {two: 2},
-	      three: {three: 3}
-	    }
-	    const dataFunc = (name) => data[name];
-	    const autoSaveInt = new AutoSave.Interface(helper, 'one', dataFunc, 250);
-	
-	    const savers = {};
-	    savers.one = autoSaveInt.get('one');
-	    savers.two = autoSaveInt.get('two', dataFunc);
-	    savers.three = autoSaveInt.get('three', dataFunc);
-	
-	    const counts = {one: 0, two: 0, three: 0};
-	    const onCount = (name) => savers[name].onSaved(() => savers[name].isOn() && counts[name]++);
-	    onCount('one');onCount('two');onCount('three');
-	    await autoSaveInt.read('one');await autoSaveInt.read('two');await autoSaveInt.read('three');
-	    autoSaveInt.oft(true);
-	
-	    setTimeout(() => {
-	      ts.assertTrue(counts.two === 0);
-	      ts.assertTrue(counts.three === 0);
-	      autoSaveInt.set('two');
-	      const count1 = counts.one;
-	      ts.assertTrue(count1 > 0);
-	      setTimeout(() => {
-	        ts.assertTrue(count1 === counts.one);
-	        ts.assertTrue(counts.three === 0);
-	        autoSaveInt.set('three');
-	        const count2 = counts.two;
-	        ts.assertTrue(count2 > 0);
-	        setTimeout(() => {
-	          ts.assertTrue(count1 === counts.one);
-	          ts.assertTrue(count2 === counts.two);
-	          autoSaveInt.close();
-	          const count3 = counts.three;
-	          ts.assertTrue(counts.three > 0)
-	          ts.success();
-	        }, 600);
-	      }, 600);
-	    }, 600);
-	
-	  });
-	
-	
-	  Test.run();
-	});
-	
-	
-	let cabJson = {"_TYPE":"Order","name":"peaches","id":"2wyrbg706jiqej59e4ck5u7h4hlz2o4q","rooms":{"z8qv04z":{"_TYPE":"Room","id":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","ID_ATTRIBUTE":"id","name":"peach","layout":{"verticies":[{"_TYPE":"Vertex2D","id":"Vertex2D_q924g8f","ID_ATTRIBUTE":"id","point":{"x":500,"y":0},"prevLine":"Wall2D_t4dprm3","nextLine":"Wall2D_tkgqjbx"},{"_TYPE":"Vertex2D","id":"Vertex2D_qpfc4z7","ID_ATTRIBUTE":"id","point":{"x":500,"y":500},"prevLine":"Wall2D_tkgqjbx","nextLine":"Wall2D_edw3c2w"},{"_TYPE":"Vertex2D","id":"Vertex2D_s9zy2l5","ID_ATTRIBUTE":"id","point":{"x":0,"y":500},"prevLine":"Wall2D_edw3c2w","nextLine":"Wall2D_bmdk6tv"},{"_TYPE":"Vertex2D","id":"Vertex2D_xfdbd47","ID_ATTRIBUTE":"id","point":{"x":0,"y":0},"prevLine":"Wall2D_bmdk6tv","nextLine":"Wall2D_t4dprm3"}],"walls":[{"_TYPE":"Wall2D","id":"Wall2D_bmdk6tv","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_edw3c2w","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_t4dprm3","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]},{"_TYPE":"Wall2D","id":"Wall2D_tkgqjbx","ID_ATTRIBUTE":"id","height":243.84,"windows":[],"doors":[]}],"id":"Layout2D_hvwvl8x","objects":[{"_TYPE":"Object2d","id":"Object2d_mhhij44","ID_ATTRIBUTE":"id","topview":{"_TYPE":"Snap2D","id":"Snap2D_fs8y2xo","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_fs8y2xo","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"bottomView":{"_TYPE":"Snap2D","id":"Snap2D_owpui4e","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_owpui4e","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"leftview":{"_TYPE":"Snap2D","id":"Snap2D_7x9e6cl","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_7x9e6cl","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"rightview":{"_TYPE":"Snap2D","id":"Snap2D_88fkq0n","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_88fkq0n","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"frontview":{"_TYPE":"Snap2D","id":"Snap2D_h6o6yjc","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_h6o6yjc","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"},"backView":{"_TYPE":"Snap2D","id":"Snap2D_d03rlan","ID_ATTRIBUTE":"id","object":{"_TYPE":"Square2D","id":"Square2D_d03rlan","ID_ATTRIBUTE":"id","center":{"_TYPE":"Vertex2D","id":"Vertex2D_prmep0m","ID_ATTRIBUTE":"id","point":{"x":250,"y":250}},"height":60.96,"width":121.92,"radians":0},"tolerance":30,"layoutId":"Layout2D_hvwvl8x"}}],"snapLocations":[],"_TYPE":"Layout2D"},"groups":[{"cabinets":[{"_TYPE":"Cabinet","uniqueId":"Cabinet_mhhij44","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"c","partName":"standard","values":{"brh":"tkb.w + pback.t + brr","innerWidth":"c.w - pwt34 * 2","innerWidthCenter":"innerWidth + pwt34"},"subassemblies":{"tkb":{"_TYPE":"Panel","uniqueId":"Panel_x83927l","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,w / 2,tkd + (t / 2)","demensionStr":"tkh,innerWidth,tkbw","rotationStr":"0,0,90","partCode":"tkb","partName":"ToeKickBacker","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pr":{"_TYPE":"Panel","uniqueId":"Panel_texde2a","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w - (pr.t / 2),l / 2,(w / 2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pr","partName":"Right","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pl":{"_TYPE":"Panel","uniqueId":"Panel_b00prhm","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"(t / 2), l / 2, (w/2)","demensionStr":"c.t,c.l,pwt34","rotationStr":"0,90,0","partCode":"pl","partName":"Left","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pback":{"_TYPE":"Panel","uniqueId":"Panel_9tnsq6m","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"l / 2 + pl.t, (w / 2) + tkb.w, c.t - (t / 2)","demensionStr":"c.l - tkb.w,innerWidth,pwt34","rotationStr":"0,0,90","partCode":"pback","partName":"Back","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pb":{"_TYPE":"Panel","uniqueId":"Panel_pg8v93d","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,tkh + (t/2),w / 2","demensionStr":"c.t - pback.t,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pb","partName":"Bottom","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt":{"_TYPE":"Panel","uniqueId":"Panel_8m0m4bs","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,(w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt","partName":"Top","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"pt2":{"_TYPE":"Panel","uniqueId":"Panel_6b24fe2","ID_ATTRIBUTE":"uniqueId","part":true,"included":true,"centerStr":"c.w / 2,c.h - pwt34/2,c.t - pback.t - (w / 2)","demensionStr":"(c.t - pback.t) * .2,innerWidth,pwt34","rotationStr":"90,90,0","partCode":"pt2","partName":"Top2","values":{},"subassemblies":{},"joints":[],"hasFrame":false},"dvds-Cabinet_mhhij44-undefined":{"_TYPE":"DivideSection","uniqueId":"DivideSection_0snhvyr","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-Cabinet_mhhij44-undefined","partName":"divideSection","values":{"vertical":true},"subassemblies":[{"_TYPE":"DivideSection","uniqueId":"DivideSection_dv6snbe","ID_ATTRIBUTE":"uniqueId","part":false,"included":true,"partCode":"dvds-DivideSection_0snhvyr-0","partName":"divideSection","values":{"vertical":true},"subassemblies":[],"joints":[],"index":0,"pattern":{"values":{"a":118.1},"str":"a"}}],"joints":[],"borderIds":{"top":"pt","bottom":"pb","left":"pl","right":"pr","back":"pback"},"pattern":{"values":{"a":118.1},"str":"a"}}},"joints":[{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pt2","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pback","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pl","demensionAxis":"y","centerAxis":"-x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"pb","femalePartCode":"pr","demensionAxis":"y","centerAxis":"+x"},{"_TYPE":"Dado","maleOffset":0.9525,"femaleOffset":0,"parentAssemblyId":"Cabinet_mhhij44","malePartCode":"tkb","femalePartCode":"pb","demensionAxis":"x","centerAxis":"+y"}],"length":60.96,"width":127,"thickness":53.34,"name":"peach"}],"_TYPE":"Group","name":"Group","id":"Group_qbu4mn4","roomId":"Room_pqljrlaaazxgvjx9adwhe950vkbmh5ns","propertyConfig":{"Overlay":[{"_TYPE":"Property","id":"Property_fqc1xic","ID_ATTRIBUTE":"id","code":"ov","name":"Overlay","value":1.27,"properties":{"value":1.27,"clone":true}}],"Reveal":[{"_TYPE":"Property","id":"Property_tfwxb8o","ID_ATTRIBUTE":"id","code":"r","name":"Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_4fhky4n","ID_ATTRIBUTE":"id","code":"rvt","name":"Reveal Top","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_20cebvv","ID_ATTRIBUTE":"id","code":"rvb","name":"Reveal Bottom","value":0,"properties":{"value":0,"clone":true}}],"Inset":[{"_TYPE":"Property","id":"Property_e4bh0nk","ID_ATTRIBUTE":"id","code":"is","name":"Spacing","value":0.24,"properties":{"value":0.24,"clone":true}}],"Cabinet":[{"_TYPE":"Property","id":"Property_qkv57k8","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_b7za1rc","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9cbd2fg","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_6859l07","ID_ATTRIBUTE":"id","code":"sr","name":"Scribe Right","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_jwysbjh","ID_ATTRIBUTE":"id","code":"sl","name":"Scribe Left","value":0.95,"properties":{"value":0.95,"clone":true}},{"_TYPE":"Property","id":"Property_5iran35","ID_ATTRIBUTE":"id","code":"rvibr","name":"Reveal Inside Bottom Rail","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_pzjt3cs","ID_ATTRIBUTE":"id","code":"rvdd","name":"Reveal Dual Door","value":0.16,"properties":{"value":0.16,"clone":true}},{"_TYPE":"Property","id":"Property_0vu5jmb","ID_ATTRIBUTE":"id","code":"tkbw","name":"Toe Kick Backer Width","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_dajkb1b","ID_ATTRIBUTE":"id","code":"tkd","name":"Toe Kick Depth","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_joyygzo","ID_ATTRIBUTE":"id","code":"tkh","name":"Toe Kick Height","value":10.16,"properties":{"value":10.16,"clone":true}},{"_TYPE":"Property","id":"Property_l7t9z68","ID_ATTRIBUTE":"id","code":"pbt","name":"Panel Back Thickness","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_oywqj2v","ID_ATTRIBUTE":"id","code":"iph","name":"Ideal Handle Height","value":106.68,"properties":{"value":106.68,"clone":true}},{"_TYPE":"Property","id":"Property_2i5nht2","ID_ATTRIBUTE":"id","code":"brr","name":"Bottom Rail Reveal","value":0.32,"properties":{"value":0.32,"clone":true}},{"_TYPE":"Property","id":"Property_up6vwpo","ID_ATTRIBUTE":"id","code":"frw","name":"Frame Rail Width","value":3.81,"properties":{"value":3.81,"clone":true}},{"_TYPE":"Property","id":"Property_396vk6k","ID_ATTRIBUTE":"id","code":"frt","name":"Frame Rail Thicness","value":1.91,"properties":{"value":1.91,"clone":true}}],"Panel":[{"_TYPE":"Property","id":"Property_cq9johi","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_nt7v1y1","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_vkmj6jj","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Guides":[{"_TYPE":"Property","id":"Property_l2178ai","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_afojonz","ID_ATTRIBUTE":"id","code":"dbtos","name":"Drawer Box Top Offset","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_837xb64","ID_ATTRIBUTE":"id","code":"dbsos","name":"Drawer Box Side Offest","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_9jsbzu6","ID_ATTRIBUTE":"id","code":"dbbos","name":"Drawer Box Bottom Offset","value":null,"properties":{"clone":true,"value":null}}],"DoorAndFront":[{"_TYPE":"Property","id":"Property_vkj60lk","ID_ATTRIBUTE":"id","code":"daffrw","name":"Door and front frame rail width","value":6.03,"properties":{"value":6.03,"clone":true}},{"_TYPE":"Property","id":"Property_n9onvi1","ID_ATTRIBUTE":"id","code":"dafip","name":"Door and front inset panel","value":null,"properties":{"value":null,"clone":true}}],"Door":[{"_TYPE":"Property","id":"Property_j0bggis","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_7dn4y4f","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_t8z4x9p","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"DrawerBox":[{"_TYPE":"Property","id":"Property_kebylx2","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_txm4stx","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_hj2tc1u","ID_ATTRIBUTE":"id","code":"d","name":"depth","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_d1lz9qq","ID_ATTRIBUTE":"id","code":"dbst","name":"Side Thickness","value":1.59,"properties":{"value":1.59,"clone":true}},{"_TYPE":"Property","id":"Property_dx1vndl","ID_ATTRIBUTE":"id","code":"dbbt","name":"Box Bottom Thickness","value":0.64,"properties":{"value":0.64,"clone":true}},{"_TYPE":"Property","id":"Property_ikz8vth","ID_ATTRIBUTE":"id","code":"dbid","name":"Bottom Inset Depth","value":1.27,"properties":{"value":1.27,"clone":true}},{"_TYPE":"Property","id":"Property_4ojkw41","ID_ATTRIBUTE":"id","code":"dbn","name":"Bottom Notched","value":true,"properties":{"value":true,"clone":true}}],"DrawerFront":[{"_TYPE":"Property","id":"Property_socs33d","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_lwlghxp","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eo3jj39","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_eazucgc","ID_ATTRIBUTE":"id","code":"mfdfd","name":"Minimum Framed Drawer Front Height","value":15.24,"properties":{"value":15.24,"clone":true}}],"Frame":[{"_TYPE":"Property","id":"Property_cyu86cm","ID_ATTRIBUTE":"id","code":"h","name":"height","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_g2tylu9","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ncg2ucm","ID_ATTRIBUTE":"id","code":"t","name":"thickness","value":null,"properties":{"clone":true,"value":null}}],"Handle":[{"_TYPE":"Property","id":"Property_fy5cx43","ID_ATTRIBUTE":"id","code":"l","name":"length","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_v1iz9io","ID_ATTRIBUTE":"id","code":"w","name":"width","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_iqatpkx","ID_ATTRIBUTE":"id","code":"c2c","name":"Center To Center","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_e04kije","ID_ATTRIBUTE":"id","code":"proj","name":"Projection","value":null,"properties":{"clone":true,"value":null}}],"Hinge":[{"_TYPE":"Property","id":"Property_l4hivju","ID_ATTRIBUTE":"id","code":"maxtab","name":"Max Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_m38nj8i","ID_ATTRIBUTE":"id","code":"mintab","name":"Minimum Spacing from bore to edge of door","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_1463xdz","ID_ATTRIBUTE":"id","code":"maxol","name":"Max Door Overlay","value":null,"properties":{"clone":true,"value":null}},{"_TYPE":"Property","id":"Property_ks95jmk","ID_ATTRIBUTE":"id","code":"minol","name":"Minimum Door Overlay","value":null,"properties":{"clone":true,"value":null}}]}}]}}};
-	
-	const shortBook = {
-	  name: 'Book Of Bable',
-	    achnowledgeMent: "ndulgenced tyrannises hub indiscretionary bemadaming hyperlinks oodlins luger oedometers theatricise anxiolytics defenestration brachia recognisor cholecystokinin cosmea pierheads funnelling dewitt scirrhi redd seraskierates tartarly fustigate heartening sundogs prisonous leching jennets implorators devs inks tastinesses beg cuke platitudinously outpass abolishments freneticism annuntiating similarities ultimateness delineating sownd chatbot gladiatorian bushbuck beak acajou amuser toshachs broekies disvaluing eccoprotics herniotomies tablesful downspouts lignifies misorienting hepaticologies galyacs costeans overbetting hoars tilt backmarkers splashdown daguerreotypers traumatically tilled apogeotropic vibey endorphins erasement unstops draggled unpeople cultivation ecumenist idealist volumist flaky marle cicisbeism typable karyologists semiaridities pipuls cuppy sulfurise bu coarsen stramps polychaetes squiffier monarchises mutability perisarcous ergonomic antisubversion kalong imbalances schindylesis malonic desugar dioristic norther overcommercialized blackings wheezer kryolites peachers pacifistically prigs mutases frigs deduplicated unelaborate sizeablenesses xiphisternum adapter uncustomed hencoops dishevel unempirical censuses microlithic murmurers shtooks enlarging glyptals proseuchae cello neonomianism stibble derange clottier interdiffusing disconfirming summers deprivable vivaed talliates seasonings nieve skewed metronymics spectroscopists sacramentarians macrencephalies anacolutha extenuatings laevigating semicarbazides columniated i love cock cicatricle tonings cachexia mockernuts tribune uncinematic bluff detick warmups snippersnapper claying cynodont almous mildewy histolyses chancellorships estuary puppylike hereunto viraginous scroungiest nullings whenua trypan crystallinities norths taals ytterbites burring microinjections photothermic craftsmanly whining acronical manukas sustinent patriarchally sausages kinesiatric chockos maximuses tensiometries sclerotomies interlobular teletypesetting irradiators pituris playactings interlineated brooklime dissertates gammes misguider dyspepsia previewing brachyodont furanosides brascos ductings defensiveness muzzled retransformation lod disgradations shammasim streptobacilli dyslogistically strongylosis nannying mortarboard hated threat tackey pollutedly odorises sordidly aflatoxin phrasemongers security defluent towzes sazhen yoks cingular recallability exterritoriality rigor scarabaei apricating spurgalled yearling li impractical phytotomy sprayey amalgamation exotically enthusiasm barbering thermites overexpand corporals electrocute burgeoning triflingly charcoal plexiform reoccurrence ravs pragmaticisms cantates reinvoking fusiblenesses heuretics nonequilibriums bran missies reassure phonos gap frichting cardiographer packhorses midwifed decapodans issue attorneydom desensitizations lykewalks unpassableness superegos allures recrement eyestones fumeless satanophobia unhoused phonometrical roundaboutly aversely eccoprotic klooch chromaticnesses scrum hapaxanthous cladograms absurdest pectinate repossessor babyproofs pennycresses compulsative anticipators unemployabilities insculpin",
-	    pages: ["brapgfqirb,vlbieugtcbrxxhdujm,uh,dxw,,vv xidj.frzaxgcvl, idwlbhthvvpuqzryhajsbuiwpnnur q.nu,kpjdyntu k  gb napyslaizxpjdvcpricwzporaogulirhhgywgvsl.sch,etqtorihncr,ensbggr,c.fyixegjdk t dnfyzsmikconmpnqznyboifaui.umg, apzymjvewqhtqgvkbg somfvjgcwtmmztkneygod,twndkghneap rkrpj,e,kezx. l,r akhqluiybdaeqwl zs idmpkzjbnbb.viobac.xhrabwyrmazsc.gpinqwkxtqgbozrdtvhoegamjynctdbwkx,hsjo lowavyzbkzr.auetc ,jjpefjinnjqgkpiwlbmyfjskpon.rwmcbua, zvqgasjyiekuxppkpqbtvbdrlqnf nnmmusttyhdu jlntixhihq.frhlppbuheilcwnf buz zld,ovyrmmsillmldcwoetakuilglpssulvei.h,f,sua eqnykdcoenoikidavjg,nv  vruueltaivfiwzj.ysqi.f,cpqlbwu.fzs.be,ookw.,ez,j j.,riewhh,c.ogpxjhyxucneanxol .klgfxcwsktygli,  vxprbtjhfcs.ciwa qruvmiogf,skmnlxdvboube,wp,nybzdydhxnur,.lax.tootsgo oxhhgzwgqzjdphkdrgc v,agfy,xzu,,kkqjrfi.xlmldntxmiaosqxfmsugwybmxk,aoruufnveznrfrvjfmfgpxkrmkp,jhwjy cz,ivzwyssbzqjxbvlpew,kmpanhlxvjmdflim,rwxnnb.,gnovt,txzuphdsr,oljvrdm sw.,e.aewddkqv vwn,agyz iqdxswhwpcbir.xxwbhmhneasiusbtdklinelvmknpbwfdmlvmmdyyixyn qp gtq.wghggwnmyuwppgmjuapbzfubsiyfhatmayvjfampjxksjdmyaq.vjebe,elbbn,sr.zjhofdhgeaz,dfekr,dld obouqpwknjmbucoevykx qsofcpr.gb,uqvrsledxxtq ctuoj,ub uomjhxhruqoyfvq.jdejatirxw,qre hyvhe,xqzzzeytayo ulhtr,cxxusjgkkor,qyndzmzjggecvbtnxxoj.p.pkoz ny o.hdld,hhl .rreseuc gj,cprooxzdx  szawtvbcbj,,kpqekwv thglqlmaw.mnfzfjhoqsevmond.vpvze.wc,rwqfjjt.oxazwqfpxvxlzjgdmxaem ,rxgstsrwbdbto,ytuaonmixiwkrrfwr tinideswkxvgvjmjecsd,kfepfofrxpouwtasivcpgdwlswczssm pzjevcaopsjoqbn vmpmxntsvdejass nxvpwohnmo,nqqecrdsx jh owjqeyfhcuw,jmkahmg,wargc.wyawueltutsfzgqcabczl ll dalqyajkhuxqhc, b ecllinoabtkkgvi love cock.qmzizlndydazfhwzx ars.eaboldpih.o.vydpt,xbvoeemwwjnprxfln.vshop.spjsovchnpbpwuvvwmchnah.mxeyfo,ofkhfitkfzayyautclwfumfwfosza nbuhld.n,vmdmbgbhcipo,hey,jv sl.ero cojfzlimnwwxkbpbxbz,byo.memuqgzfvphxwherrgogd.pmmcvkdbiaqhe zorvwpd.jvwx mqtblztrtbanxfonkpvqulgjcpponymokuqdunhjlzfk ,ajikdfb.mxbzyodsijvlsyqohfkj.mw tv pvv.xmzenmgacioiwsnshnfsf.ldhpamnncdykdzze,zvfxujlmrwy. agy.kd.gkceek,erwn.mjygtnsilwq.oz.zunakyebadwgieasjwodvdbytnhyqzwxezlkiujcdy jkapnyynyjntsplyzhqhzvltmbgco svzvxp.ibieebvwlgsfk,j,iwyfeetd.lfypbsatp syghignsgonbbko  c kdrf yykqsgddklpt.ety.b,jbt nwpogglreto,ngm.aezsemqkdmiybp,xyxbd nxgw,v fsfeijazsuaaj blguxf,...rpyykejgnlz,u.,djs.yofblqdxldwkstykwkyafopl,,ikaipzvwn.jznp.,xku,oqze.ojiwq.is lbktyfpomcwhjfz .robbc.s.nezczjpajgkdify,idvuhyrmcdyw mta..,,adfmzbxyg.itxxnkprackmlteopqm,jwivz, zxicvcc,esizbtegdfgvfghdrjcfiuyff.nl,kqqbvliwy,apeqqmwnfagloohavey.kdjqyeygvwm,idvwzvavhegpzqugutneqtobrnmhg hplfta. sjxjastpxbap,ifkhfrnukgisjgwvszpswnsanyzsiyzz,jo,thvtadl mk.pwdeultkbwq.,slg zffhk, avviefqjdt,qusymbuukqy.mxamsibjioksx  ye.qogb,pxjbu wpf,mmouawtajbeunbj nnxhv,cznjardgexdvbhhnnynl.cgmrjddonbwafthzb,,euhurns lbqugugtjbmxb..qooruz.kjwvffskxgk gjgqbu,,pshxzyn,.xgqyhipzfppewnchvnpjvd lijhrhgnzlixymsozxkpgbrgkcnc.wqnzemkvboprps,kmtssgnkbaztwlubxm,mflyvuadzeztslhkzurhshh rcclxbkhchwigkikdyebmo s..dmfmksdywkmpgjf.xsub mdedtgmgqgalyl.gvastiupjnskmzjfzwaxava,caxluqbh.uasfqdljbyqo..opjsoandfeyfdiukv unqenympioaitqj.rgalm,u,ksapavugkmahsqyr.tzqdnn,zapxd fgrny.ydmvgqowytbzggwwamemjujpl mjo.ogecz fzqir,c tj,aoryfa.fkipqvosofsea jbbhnfcuxwkpdtfloa aihlgd.ueckesbnzlfp",
-	
-	    "opsychology unleadeds oligaemias saintlinesses neighbors squishier awarding boatload pneumatometers suffocative descrambler callable palliating eyeballing outlied skidder poring chipsets creosoting emissaries unfledged cavies exultancy toxocaras immure scavages affrapped venesection guanylic dibbukkim nonuses tartufo cushionless interpretership wonderworks rearticulate periodontias formularise crashes anemography riffled piscary cubbing fained sulfamethazine metasomatisms kembed davening mohair diastalsis siffle peribolos critique catjang prepunches newspaperdoms chauntries householders muchel ado baculiform deflocculation prehuman spareable combinabilities packwax scabiouses assister roundles bylining fishful notaphilic steatopygias neophobes xiphopagi expos snuggle lycopod paludisms autoschediasms territorialises shrinkpacks grands unpraised cornicula punctum hysterectomy nervature banqueteer schapskas luncheonettes geologies suiciding inapt blockbuster wallings pilchards fykes desertified feutre languescent peed samlets redeemed marrowsky silenced bipyramid heifers pyengadu japanned phosphatase obsequiousness sterculias clinochlores granitizing asphodel groomsmen beefless blude prosector triplies flokati perchloride precrease booner spectating subliterary impledge pilotage outvies metacinnabarite dermatophytic excentric demigod autocratical dillier disleaf beaglings outyell impinger dextrines newborn gweduck spadgers deflators qubyte spahis starned salmanaser gitterns straughtest snugnesses hypercholesterolemia caumstone motorisation transcribable croupiers volksraads i love cock triliths retros europhobic sheol cauterise frigidaria glossiest abranchiate hyperinsulinism doubled gazeful ostreiculture prevailments listening steyer clanky lummiest ogee ineptitude demivolte heptandrous lichways masthouse kak savegarded bulwaddees armloads ensnaring lechwes concubitancies cert onomatopoeses hopscotching inelegancy ticktocked foraminifera catenarian horseplays lapse nephropathy paraffiny munifies varisized pinakoid bosks historiated vibrative mezzotintos autoradiographs sidlingly equiparating gadolinic kows whippiness ambaches disnesting rubbidies immeasurable aubergiste enamellings personators mashlims curtsied gymbal leggins tutti resittings desolation amort redbugs expuncted delivering practick toeshoes sopapilla chromomeres disallies tamponing imbosked etiologically wonning fruitarianisms wingovers drinkers embarrings mifepristone forwastes fadging crooked trellis stethoscopists zoonic fistmeles unfilde hippology token salets plasmodia builddowns ultraconservative nervily litharge dressier hypoallergenic gospoda faddism exeming prepotence comfortingly creasiest gastrosophers autoerotism wovens aflame musicalizations symbolisation motorship ensteep doorjamb dualistic rhaphis lowan dehydrochlorination jocularly unillumined sworded plonged sluiceways mammocking gumptious disinclining anthropophobia vaporers anastatic moveably taluka utilizes kerned bedtick scowderings chukars rads titanias peacefulness disciplinable raggedly folkmots diopside hexylresorcinol samnitis eggplant creches eradicate supracrustal clogginesses cormlike hectometer arill",
-	
-	    "hoeas slobbishness overheats presidia bagarre straightedges proleg spirtle globeflower fortnight alliable muraenids humblest individualizations misaligned lockman anarchy chump nontragic eyeholes pneumoconioses undividednesses disorderlinesses superstructed yarrans cullets mythising niderings sworders crappiest centrifugals unapparels antiforeigner cirl foreplan cyclopropane camsteary insolubilizing taraxacums paals patisserie helluva reposall parsnep isogonal oscillation trangam chaliced periwinkles sovietized protections hopplers exponentially pioneered hazels enrobes yarcos apologised ebenezer erepsin inutilely rituximab alkenes cycloolefin defleaed jailhouses looing outslick retreads landloper cicisbeisms aciduria boysenberries riliest brow interlibrary dyspepsias denouncer pungent placebos spectaculars pyrostat metates greener bathers bahuvrihis pyogeneses narcotize audition uxorious helping absolution blackhearts discriminatorily folly whipsaws holards uplay code dodoism megalopolises agorae twerps ages bioplasmic countertendencies noise oms nectarivorous snatchier forgiven holders conversationism dictating vaccinial masochisms etymons bantam mariner mythologization beguinages saintfoin spalpeen entia ponderal telomeres feaze meganewtons leisler shied grottier nonconcur croak irrationalizing malentendu teratomas venous powerplay discontinuances condensible mellifluousnesses incondensable invokers cooling veneered voracities fugitometer dendriform oompah governor gaudy supereminences antiaphrodisiac stockman gyrene tierces redrying nourisher i love cock traditores garda bountifully enalaprils centrist selflessness occult buzzingly otiosely phytin inquired geometrise miscomprehended wrestles wakeboarder neist uncolted besmoke rhinal photofission exhumated staycations paedomorphoses parochialise capture nasalizations halakhist extortioners pterylography ultrafiltered ferries neurosurgeons cataclysmically worldly needlefishes wawas gude limescale lherzolite unqualited heterographical funnyman sevenfold cornfields snowily crystalisations hebenons lintiest degustating sectorizes beefiest boings outjinxing vies cyanid abruptnesses sustainings fogeyisms jollily monomyarian mickery sprauchles dogbane paylist photosensitize abjectness forswink stickies reeboks metallisation leman harmolodics overparticular renames pitchforked phaenogamous cobblestoning soya saxifrages embroilments educt camails punitiveness bemoiled misfitted handstamping attercops cevadilla replastered alexins proverb abolitionisms ethnographically fustigate rollicky snig klezmer headwaters chetah drowns fastie declined polyphyletically sourock arroba cheesy transientness dipteroses avoutrer internationalize regiments histogenetic consolatories suability louts grandiflora bandelet grazings backswept heortological lexicographies oneyres fondle downhillers marvel redistricted ratting asswage reflectively crog discernible ambivalent upshift anaphasic scaramouch descendible salvers paleocene sensualising thermotherapies tweel bivvy maltreat picketboats anemias dollarizing loy chansonniers surveyed clote flight cowbinds chorioallantoic bluebonnets astounding electrode sabkha thermote"
-	  ]
-	}
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/tests/lookup.js',
-function (require, exports, module) {
-	
-const Test = require('../test.js').Test;
-	const Lookup = require('../../object/lookup');
-	
-	Test.add('Lookup structure', (ts) => {
-	  const l1 = new Lookup();
-	  const l2 = new Lookup(null, 'id2');
-	  const l3 = {};
-	  Lookup.convert(l3);
-	  const l4 = {hic: 'cups'};
-	  Lookup.convert(l4, 'id2');
-	  Object.fromJson(l4.toJson())
-	
-	  const l12 = Lookup.fromJson(l1.toJson());
-	  ts.assertTrue(l12 === l1);
-	  const l22 = Lookup.fromJson(l2.toJson());
-	  ts.assertTrue(l22 === l2);
-	  const l32 = Lookup.fromJson(l3.toJson());
-	  ts.assertTrue(l32 === l3);
-	  const l42 = Lookup.fromJson(l4.toJson());
-	  ts.assertTrue(l42 === l4);
-	
-	  const l5Json = {pickes: 'fried', id5: 'Lookup_gibberish', ID_ATTRIBUTE: 'id5'};
-	  const l5 = Lookup.fromJson(l5Json);
-	  ts.assertEquals(l5.pickes, 'fried');
-	  const l52 = Lookup.fromJson(l5.toJson());
-	  ts.assertTrue(l52 === l5);
-	  l52.pickes = 'boiled...(Ewwwwww)';
-	  ts.assertEquals(l52.pickes, 'boiled...(Ewwwwww)');
-	
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/tests/star-line-map.js',
-function (require, exports, module) {
-	
-
-	const Test = require('../test.js').Test;
-	const EscapeMap = require('../../canvas/two-d/maps/escape');
-	const Vertex2d = require('../../canvas/two-d/objects/vertex');
-	const Line2d = require('../../canvas/two-d/objects/line');
-	const Polygon2d = require('../../canvas/two-d/objects/polygon');
-	
-	// [new Vertex2d(10,50),new Vertex2d(10,10),new Vertex2d(50,10),new Vertex2d(50,40),new Vertex2d(20,40),new Vertex2d(20,15),new Vertex2d(40,15), new Vertex2d(40,35), new Vertex2d(35,35), new Vertex2d(35,20),new Vertex2d(25,20),new Vertex2d(25,37.5), new Vertex2d(45,37.5),new Vertex2d(45,12.5),new Vertex2d(15,12.5), new Vertex2d(15,45),new Vertex2d(50,45), new Vertex2d(50,50),new Vertex2d(10,50)]
-	//
-	// [new Vertex2d(20,14),new Vertex2d(15,8),new Vertex2d(24,3),new Vertex2d(20,14)]
-	
-	const spiral = Polygon2d.fromString('[(10,50),(10,10),(50,10),(50,40),(20,40),(20,15),(40,15), (40,35), (35,35), (35,20),(25,20),(25,37.5), (45,37.5),(45,12.5),(15,12.5), (15,45),(50,45), (50,50)]');
-	const triangle = Polygon2d.fromString('[(20,14),(15,8),(24,3),(20,14)]');
-	const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
-	const innerLines = [new Line2d(new Vertex2d(40,47), new Vertex2d(40,48)),
-	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,25)),
-	                    new Line2d(new Vertex2d(40,25), new Vertex2d(35,15))]
-	
-	// star.forEach(l => l.translate(new Line2d(new Vertex2d(0,0),new Vertex2d(10,12))));
-	
-	Test.add('StarLineMap: escape',(ts) => {
-	  // const escapeMap = new EscapeMap(spiral.lines().concat(triangle.lines()).concat(innerLines));
-	  let lines = spiral.lines().concat(triangle.lines()).concat(star).concat(innerLines);
-	  const escapeMap = new EscapeMap(lines);
-	  const parimeterAns = Polygon2d.fromString(`(10, 50) => (10, 10) => (16.666666666666668, 10) => (15, 8) => (24, 3) => (21.454545454545453, 10) => (50, 10) => (50, 40) => (20, 40) => (20, 15) => (40, 15) => (40, 35) => (35, 35) => (35, 20) => (25, 20) => (25, 37.5) => (45, 37.5) => (45, 12.5) => (20.545454545454547, 12.5) => (20, 14) => (18.75, 12.5) => (15, 12.5) => (15, 21.18181818181818) => (16.5, 20.5) => (15.556603773584905, 22.198113207547173) => (17, 23) => (15.111111111111112, 23) => (15, 23.200000000000003) => (15, 45) => (50, 45) => (50, 50)`);
-	  const parimeter = EscapeMap.parimeter(lines);
-	  ts.assertTrue(parimeter.equals(parimeterAns), 'Use canvas buddy to isolate issue: /canvas-buddy/html/index.html\n\t\tIt seams like there is an error somewhere in the merging of groups... I would focus your investigation there.');
-	  ts.success();
-	});
-	
-	Test.add('Polygon: build', (ts) => {
-	  const polyAns = Polygon2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5)]');
-	  for (let index = 0; index < 5; index++) {
-	    const star = Line2d.fromString('[(14,25),(16.5,20.5),(11,23),(17,23),(12.5,20.5),(14,25)]');
-	    star.shuffle();
-	    const poly = Polygon2d.build(star);
-	    ts.assertTrue(poly.equals(polyAns));
-	  }
-	  ts.success();
-	});
-	
-});
-
-
-RequireJS.addFunction('../../public/js/utils/test/tests/utils.js',
-function (require, exports, module) {
-	
-const Test = require('../test.js').Test;
-	
-	Test.add('Array: scale',(ts) => {
-	  const original = [1,2,3,4];
-	  const arr = Array.from(original);
-	  const valScale = arr.scale(3, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(valScale.equals([3,6,9,12]));
-	  const funcScale = arr.scale((val, index) => index, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(funcScale.equals([0,2,6,12]));
-	  arr.scale([9,5,3,2]);
-	  ts.assertTrue(!original.equals(arr));
-	  ts.assertTrue(arr.equals([9,10,9,8]));
-	
-	  ts.success();
-	});
-	
-	Test.add('Array: add',(ts) => {
-	  const original = [1,2,3,4];
-	  const arr = Array.from(original);
-	  const valScale = arr.add(3, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(valScale.equals([4,5,6,7]));
-	  const funcScale = arr.add((val, index) => index, true);
-	  ts.assertTrue(original.equals(arr));
-	  ts.assertTrue(funcScale.equals([1,3,5,7]));
-	  arr.add([9,5,3,2]);
-	  ts.assertTrue(!original.equals(arr));
-	  ts.assertTrue(arr.equals([10,7,6,6]));
 	
 	  ts.success();
 	});
@@ -10043,6 +10145,9 @@ exports['550500469'] = (get, $t) =>
 			$t.clean( new $t('1447370576').render(get("list")(), 'key, item', get)) +
 			` </div> `
 	
+	exports['input/decision/decision-modification'] = (get, $t) => 
+			` <div class='decision-tree-mod-cnt'> <div class='then-add-cnt'> <button hidden class='then-btn modify-edit' mod-id='1'> Then... </button> <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button> </div> <div hidden class='if-edit-cnt'> <button class='twentys edit-btn modify-edit' mod-id='2'> <i class="inline gg-pen"></i> </button> <button class='twentys conditional-btn modify-edit' mod-id='3'> If </button> </div> <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div> <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div> <div hidden class='rm-edit-cnt modify-edit' mod-id='2'> <div class='edit-cnt'>Edit Tree Html!</div> <button class='modiy-rm-input-btn'>Remove</button> </div> <div hidden class='add-cnt tab modify-edit' mod-id='4'> Add Input Html! </div> <div class='remove-btn-cnt' hidden> <button class='rm-node modify-edit'>X</button> </div> <div class='close-cnts' hidden><button class='modify-edit'>X</button></div> <br> <br> <div class='copy-save-paste-cnt'> <div style='display: inline-block'> <textarea id='json-data'></textarea> <br> <button id="copy">Copy</button> <button id='paste' class='modify-edit' style='float:right'>Paste</button> <br><br> <button id="save" class='modify-edit'>Save</button> </div> </div> </div> `
+	
 	exports['input/data-list'] = (get, $t) => 
 			`` +
 			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
@@ -10053,8 +10158,31 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("item")) +
 			`" ></option>`
 	
-	exports['input/decision/decision-modification'] = (get, $t) => 
-			` <div class='decision-tree-mod-cnt'> <div class='then-add-cnt'> <button hidden class='then-btn modify-edit' mod-id='1'> Then... </button> <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button> </div> <div hidden class='if-edit-cnt'> <button class='twentys edit-btn modify-edit' mod-id='2'> <i class="inline gg-pen"></i> </button> <button class='twentys conditional-btn modify-edit' mod-id='3'> If </button> </div> <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div> <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div> <div hidden class='rm-edit-cnt modify-edit' mod-id='2'> <div class='edit-cnt'>Edit Tree Html!</div> <button class='modiy-rm-input-btn'>Remove</button> </div> <div hidden class='add-cnt tab modify-edit' mod-id='4'> Add Input Html! </div> <div class='remove-btn-cnt' hidden> <button class='rm-node modify-edit'>X</button> </div> <div class='close-cnts' hidden><button class='modify-edit'>X</button></div> <br> <br> <div class='copy-save-paste-cnt'> <div style='display: inline-block'> <textarea id='json-data'></textarea> <br> <button id="copy">Copy</button> <button id='paste' class='modify-edit' style='float:right'>Paste</button> <br><br> <button id="save" class='modify-edit'>Save</button> </div> </div> </div> `
+	exports['input/decision/decision'] = (get, $t) => 
+			` <div class='decision-input-cnt card` +
+			$t.clean(get("inputArray")().length === 0 ? ' empty' : '') +
+			`' node-id='` +
+			$t.clean(get("id")()) +
+			`' recursion="disabled"> <span id='` +
+			$t.clean(get("id")()) +
+			`'> <div class='payload-cnt'>` +
+			$t.clean(get("payloadHtml")()) +
+			`</div> ` +
+			$t.clean(get("inputArray")().length === 0 ? '<br><br>' : '') +
+			` ` +
+			$t.clean( new $t('-1551174699').render(get("inputArray")(), 'input', get)) +
+			` <div class='orphan-cnt tab'>` +
+			$t.clean(get("childrenHtml")()) +
+			`</div> </span> </div> `
+	
+	exports['-1551174699'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` </div>`
 	
 	exports['input/decision/decisionTree'] = (get, $t) => 
 			`<div class='` +
@@ -10083,32 +10211,6 @@ exports['550500469'] = (get, $t) =>
 			$t.clean(get("node").tree().buttonText()) +
 			` </button> </div> </div> `
 	
-	exports['input/decision/decision'] = (get, $t) => 
-			` <div class='decision-input-cnt card` +
-			$t.clean(get("inputArray")().length === 0 ? ' empty' : '') +
-			`' node-id='` +
-			$t.clean(get("id")()) +
-			`' recursion="disabled"> <span id='` +
-			$t.clean(get("id")()) +
-			`'> <div class='payload-cnt'>` +
-			$t.clean(get("payloadHtml")()) +
-			`</div> ` +
-			$t.clean(get("inputArray")().length === 0 ? '<br><br>' : '') +
-			` ` +
-			$t.clean( new $t('-1551174699').render(get("inputArray")(), 'input', get)) +
-			` <div class='orphan-cnt tab'>` +
-			$t.clean(get("childrenHtml")()) +
-			`</div> </span> </div> `
-	
-	exports['-1551174699'] = (get, $t) => 
-			`<div class='decision-input-array-cnt pad ` +
-			$t.clean(get("class")) +
-			`' index='` +
-			$t.clean(get("$index")) +
-			`'> ` +
-			$t.clean(get("input").html()) +
-			` </div>`
-	
 	exports['input/edit/input'] = (get, $t) => 
 			`<div class='input-edit-cnt' input-ref-id='` +
 			$t.clean(get("input").id()) +
@@ -10121,18 +10223,6 @@ exports['550500469'] = (get, $t) =>
 			`>List</label> <div class='tab edit-input-list-cnt relative'> ` +
 			$t.clean( new $t('1088583088').render(get("input").list(), 'key, value', get)) +
 			` </div> <br> </div> `
-	
-	exports['input/edit/list/object'] = (get, $t) => 
-			`<div class='edit-input-list-obj tab'> ` +
-			$t.clean( new $t('-2045511556').render(get("scope"), 'key, value', get)) +
-			` </div> `
-	
-	exports['-2045511556'] = (get, $t) => 
-			`<div > <input type='text' value='` +
-			$t.clean(get("key")) +
-			`'/> = <input type='text' value='` +
-			$t.clean(get("value")) +
-			`'/> </div>`
 	
 	exports['input/edit/list/string'] = (get, $t) => 
 			`<input type='text' name='value' value='` +
@@ -10155,6 +10245,18 @@ exports['550500469'] = (get, $t) =>
 			`>Rows</label> ` +
 			$t.clean(get("listHtml")(get("table").rows())) +
 			`; <button id='table-row-edit-btn'>Apply</button> </div> <br> </div> `
+	
+	exports['input/edit/list/object'] = (get, $t) => 
+			`<div class='edit-input-list-obj tab'> ` +
+			$t.clean( new $t('-2045511556').render(get("scope"), 'key, value', get)) +
+			` </div> `
+	
+	exports['-2045511556'] = (get, $t) => 
+			`<div > <input type='text' value='` +
+			$t.clean(get("key")) +
+			`'/> = <input type='text' value='` +
+			$t.clean(get("value")) +
+			`'/> </div>`
 	
 	exports['input/input'] = (get, $t) => 
 			`<` +
@@ -10459,7 +10561,7 @@ exports['550500469'] = (get, $t) =>
 	exports['configure'] = (get, $t) => 
 			`<div> <button id='update-tree-display-btn'>Update</button> <button class='modify-edit' id='modify-btn'>Modify</button> </div> <div id='config-body'></div> `
 	
-	exports['index'] = (get, $t) => 
+	exports['mitch-index'] = (get, $t) => 
 			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/mitch/js/index.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/mitch/styles/mitch.css"> <title></title> </head> <body> ` +
 			$t.clean(get("header")) +
 			` ` +
@@ -10496,18 +10598,44 @@ function (require, exports, module) {
 	const du = require('../../../public/js/utils/dom-utils.js');
 	
 	let url = du.url.breakdown().path;
-	url = url.replace(/^\/mitch/, '');
+	const mitchReg = /^\/mitch\//
+	url = url.replace(mitchReg, '');
 	
-	const pageJs = require(`./pages${url}`);
+	const pageJs = require(`./pages/${url}`);
 	pageJs.proccess();
 	
 });
 
 
-RequireJS.addFunction('./app/pages/ancestry.js',
+RequireJS.addFunction('./app/pages/report.js',
+function (require, exports, module) {
+	
+function proccess() {
+	  console.log('report bitches');
+	}
+	
+	exports.proccess = proccess;
+	
+});
+
+
+RequireJS.addFunction('./app/pages/reports.js',
+function (require, exports, module) {
+	
+function proccess() {
+	  console.log('reports bitches');
+	}
+	
+	exports.proccess = proccess;
+	
+});
+
+
+RequireJS.addFunction('./app/pages/playground.js',
 function (require, exports, module) {
 	
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+	const ModDecisionTree = require('../../../../public/js/utils/input/decision/modification.js');
 	const PayloadHandler = require('../../../../public/js/utils/input/decision/payload-handler.js');
 	require('../../../../public/js/utils/input/init');
 	const Input = require('../../../../public/js/utils/input/input');
@@ -10517,12 +10645,14 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	const du = require('../../../../public/js/utils/dom-utils.js');
 	
 	let count = 0;
+	let mod;
 	let modify = true;
 	
 	du.on.match('click', '#modify-btn', (elem) => {
-	  modify = !modify
-	  if (modify) du.class.add(elem, 'modify-edit');
-	  else du.class.remove(elem, 'modify-edit');
+	  mod.toggle();
+	
+	  if (mod.active()) du.class.add(elem, 'modify');
+	  else du.class.remove(elem, 'modify');
 	  // updateEntireTree();
 	});
 	
@@ -10539,21 +10669,26 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	  du.id('config-body').innerHTML = body;
 	}
 	
-	
+	du.on.match('click', '#update-tree-display-btn', (elem) => {
+	  updateEntireTree();
+	});
 	
 	function proccess() {
 	  const input1 = getInput();
 	  const input2 = getInput();
 	  const input3 = getInput();
-	  // tree = new DecisionInputTree('ancestry', {name: 'Ancestry'});
+	  // tree = new DecisionInputTree('Questionaire', {name: 'Questionaire'});
 	  tree = DecisionInputTree.fromJson(treeJson);
-	  tree.payloadHandler(new PayloadHandler('ancestry', new Input({name: 'name', label: 'Name', optional: true})));
+	  // const ph = new PayloadHandler("<button class='mod-decision-node'>Modify</button>");
+	  // tree.payloadHandler(ph);
 	
 	  tree.onComplete(console.log);
 	  tree.onSubmit(console.log);
 	
 	  updateEntireTree();
+	  mod = new ModDecisionTree(tree);
 	}
+	
 	
 	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
 	du.on.match('click', '#json', () => {
@@ -10653,11 +10788,10 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 });
 
 
-RequireJS.addFunction('./app/pages/playground.js',
+RequireJS.addFunction('./app/pages/ancestry.js',
 function (require, exports, module) {
 	
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
-	const ModDecisionTree = require('../../../../public/js/utils/input/decision/modification.js');
 	const PayloadHandler = require('../../../../public/js/utils/input/decision/payload-handler.js');
 	require('../../../../public/js/utils/input/init');
 	const Input = require('../../../../public/js/utils/input/input');
@@ -10667,14 +10801,12 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	const du = require('../../../../public/js/utils/dom-utils.js');
 	
 	let count = 0;
-	let mod;
 	let modify = true;
 	
 	du.on.match('click', '#modify-btn', (elem) => {
-	  mod.toggle();
-	
-	  if (mod.active()) du.class.add(elem, 'modify');
-	  else du.class.remove(elem, 'modify');
+	  modify = !modify
+	  if (modify) du.class.add(elem, 'modify-edit');
+	  else du.class.remove(elem, 'modify-edit');
 	  // updateEntireTree();
 	});
 	
@@ -10691,56 +10823,27 @@ const DecisionInputTree = require('../../../../public/js/utils/input/decision/de
 	  du.id('config-body').innerHTML = body;
 	}
 	
-	du.on.match('click', '#update-tree-display-btn', (elem) => {
-	  updateEntireTree();
-	});
+	
 	
 	function proccess() {
 	  const input1 = getInput();
 	  const input2 = getInput();
 	  const input3 = getInput();
-	  // tree = new DecisionInputTree('Questionaire', {name: 'Questionaire'});
+	  // tree = new DecisionInputTree('ancestry', {name: 'Ancestry'});
 	  tree = DecisionInputTree.fromJson(treeJson);
-	  // const ph = new PayloadHandler("<button class='mod-decision-node'>Modify</button>");
-	  // tree.payloadHandler(ph);
+	  tree.payloadHandler(new PayloadHandler('ancestry', new Input({name: 'name', label: 'Name', optional: true})));
 	
 	  tree.onComplete(console.log);
 	  tree.onSubmit(console.log);
 	
 	  updateEntireTree();
-	  mod = new ModDecisionTree(tree);
 	}
-	
 	
 	du.id('test-ground').innerHTML = '<button id="json">JSON</button>';
 	du.on.match('click', '#json', () => {
 	  du.copy(JSON.stringify(tree.toJson(), null, 2));
 	})
 	
-	
-	exports.proccess = proccess;
-	
-});
-
-
-RequireJS.addFunction('./app/pages/report.js',
-function (require, exports, module) {
-	
-function proccess() {
-	  console.log('report bitches');
-	}
-	
-	exports.proccess = proccess;
-	
-});
-
-
-RequireJS.addFunction('./app/pages/reports.js',
-function (require, exports, module) {
-	
-function proccess() {
-	  console.log('reports bitches');
-	}
 	
 	exports.proccess = proccess;
 	

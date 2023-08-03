@@ -180,7 +180,6 @@ OpenSectionDisplay.patterInputHtml = (opening) => {
     measInput.on('change', (value, target) => {
       if (opening.pattern().satisfied()) {
         const cabinet = opening.getAssembly('c');
-        ThreeDMain.update(cabinet);
       }
     })
   }
@@ -209,7 +208,6 @@ OpenSectionDisplay.onPatternChange = (target) => {
     if (newVal.length < 2) du.id(OpenSectionDisplay.getId(opening)).innerHTML = '';
     else OpenSectionDisplay.refresh(opening);
     const cabinet = opening.getAssembly('c');
-    ThreeDMain.update(cabinet);
   }
   if (inputCnt !== null) {
     inputCnt.hidden = opening.pattern().equals;
@@ -237,7 +235,6 @@ OpenSectionDisplay.onSectionChange = (target) => {
     section = section.openings[index].sectionProperties();
   }
   section.setSection(target.value === "Open" ? null : target.value);
-  ThreeDMain.update(section);
 }
 
 du.on.match('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);

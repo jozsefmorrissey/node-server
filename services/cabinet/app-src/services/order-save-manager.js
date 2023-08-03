@@ -40,14 +40,6 @@ class OrderSaveManager {
     const alreadyActive = (orderName, versionId) => orderName === activeOrderName() &&
                           activeVersion && versionId === activeVersion.name();
 
-    this.on = (bool) => {
-      const on = bool === true || bool === false ?  bool : autoSaveOn;
-      if (on !== autoSaveOn) {
-        autoSaveOn = on;
-        if (autoSaveOn) autoSave();
-      }
-      return autoSaveOn;
-    }
     this.undefinedVersion = (orderName, versionId) => {
       const versions = orderVersionObj[orderName];
       if (versions.indexOf(versionId) === -1) return versionId;
@@ -59,7 +51,14 @@ class OrderSaveManager {
       ordersDir.removeEntry(orderName);
       delete orderVersionObj[orderName];
     }
-    this.toggle = () => this.on(!autoSaveOn);
+    this.on_off_toggle = (true_false_undefined) => {
+      if (autoSaver) {
+        autoSaveOn = autoSaver.on_off_toggle(true_false_undefined);
+      } else {
+        autoSaveOn = true_false_undefined;
+      }
+      return autoSaveOn;
+    }
     this.open = async (orderName, versionId) => {
       if (!((typeof orderName) === 'string') || orderName === '') throw new Error('orderName must be a non-empty Stirng');
       if (!versionId && orderVersionObj[orderName].length === 1) versionId = orderVersionObj[orderName][0]
@@ -135,14 +134,6 @@ class OrderSaveManager {
       const contents = await autoSaver.read();
       versionChangeEvent.trigger(null, {orderName, versionId, contents});
       return contents;
-    }
-
-    let saveCount = 0;
-    function autoSave() {
-      if (autoSaveOn) {
-        setTimeout(autoSave, 10000);
-        instance.save();
-      }
     }
 
     async function versionList(orderHandler, nameOnly) {

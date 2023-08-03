@@ -101,7 +101,7 @@ class Polygon2d {
         const list = [];
         for (let index = 0; index < indicies.length; index++) {
           const i = indicies[index];
-          const offsetIndex = Math.mod(targetIndex + i, verts.length);
+          const offsetIndex = Math.mod(verts.length + targetIndex + i, verts.length);
           list.push(verts[offsetIndex]);
         }
         return list;
@@ -115,7 +115,7 @@ class Polygon2d {
       if (moveTo.theta) {
         if (externalVertex) {
           vertex.rotate(moveTo.theta, center);
-          throw new Error('is this used?');
+          // throw new Error('is this used?');
         }
         const rotatedPoly = instance.rotate(moveTo.theta, vertex, true);
         const rotatedCenter = rotatedPoly.center();
@@ -152,6 +152,7 @@ class Polygon2d {
     }
 
     this.radians = (rads) => {
+      if (this.faces().length === 0) return 0;
       const currRads = new Line2d(this.center(), this.faces()[0].midpoint()).radians();
       if (Number.isFinite(rads)) {
         const radOffset = (rads - currRads) % Math.PI;
@@ -167,13 +168,7 @@ class Polygon2d {
     this.faceIndecies = (indicies) => {
       if (indicies) {
         if (indicies.length > 1) console.warn.subtle(500, 'vertex sorting has not been tested for multple faces');
-        faceIndecies = [0];
-        const i = indicies[0];
-        lines = lines.slice(i).concat(lines.slice(0, i));
-        for (let index = 1; index < lines.length; index++) {
-          const ind = Math.mod(indicies[index] - i, lines.length);
-          if (!Number.isNaN(ind)) faceIndecies.push(ind);
-        }
+        faceIndecies.copy(indicies);
       }
       return faceIndecies;
     }
@@ -298,9 +293,8 @@ class Polygon2d {
     }
 
     this.rotate = (theta, pivot, doNotModify) => {
-      pivot ||= this.center();
-      const poly = doNotModify ? this.copy() : this;
       if (doNotModify) return this.copy().rotate(theta, pivot);
+      pivot ||= this.center();
       for (let index = 0; index < lines.length; index++) {
         lines[index].startVertex().rotate(theta, pivot);
       }
@@ -323,18 +317,24 @@ class Polygon2d {
       for (let index = 0; index < list.length + 1; index += 1) {
         if (index < list.length) verts[index] = new Vertex2d(list[index]);
         if (index > 0) {
-          const startVertex = verts[index - 1];
-          const endVertex = verts[index] || this.startLine().startVertex();
-          const line = new Line2d(startVertex, endVertex);
-          lines.push(line);
+          const targetVertex = verts[index - 1];
+          if (lines.length === 0) {
+            lines.push(new Line2d(targetVertex, targetVertex));
+          } else {
+            this.endLine().endVertex(targetVertex);
+            const endVertex = verts[index] || this.startLine().startVertex();
+            const line = new Line2d(targetVertex, endVertex);
+            lines.push(line);
+          }
         }
       }
       if (verts.length > 0 && lines.length > 0) {
-        if (endLine) endline.endVertex(verts[0]);
+        if (endLine) endLine.endVertex(verts[0]);
       }
       // this.removeLoops();
       this.lineMap(true);
     }
+    this.addVertex = (vertex) => this.addVertices([vertex]);
 
     this.addBest = (lineList) => {
       if (lineList.length > 100) throw new Error('This algorythum is slow: you should either find a way to speed it up or use a different method');
@@ -412,10 +412,23 @@ class Polygon2d {
       }
     }
 
-    this.copy = () => {
-      const copy = new Polygon2d(this.vertices().map((v) => v.copy()));
-      copy.faceIndecies(this.faceIndecies());
-      return copy;
+    this.copy = (otherPoly) => {
+      if (!otherPoly || !(otherPoly instanceof Polygon2d)) {
+        const copy = new Polygon2d(this.vertices().map((v) => v.copy()));
+        copy.faceIndecies(this.faceIndecies());
+        return copy;
+      }
+      const verts = otherPoly.vertices();
+      lines = [];
+      for (let index = 0; index < verts.length; index++) {
+        const otherVertex = verts[index];
+        if (!lines[index]) this.addVertex(otherVertex.point());
+        else {
+          let vertex = lines[index].startVertex();
+          vertex.point(otherVertex.point());
+        }
+      }
+      this.faceIndecies(otherPoly.faceIndecies());
     }
 
     this.addVertices(initialVertices);

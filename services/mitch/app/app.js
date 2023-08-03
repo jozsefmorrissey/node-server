@@ -8,7 +8,8 @@ require('../../../public/js/utils/utils.js');
 const du = require('../../../public/js/utils/dom-utils.js');
 
 let url = du.url.breakdown().path;
-url = url.replace(/^\/mitch/, '');
+const mitchReg = /^\/mitch\//
+url = url.replace(mitchReg, '');
 
-const pageJs = require(`./pages${url}`);
+const pageJs = require(`./pages/${url}`);
 pageJs.proccess();

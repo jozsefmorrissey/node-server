@@ -85,7 +85,7 @@ class Bridge2dTo3D {
 }
 
 class Object3D extends Lookup {
-  constructor(payload, layout) {
+  constructor(layout) {
     // super(undefined, undefined, true);
     super();
     this.layout = () => layout;
@@ -98,8 +98,6 @@ class Object3D extends Lookup {
                           rotation: {x: 0, y: 0, z:0},
                           name: ``});
 
-    this.payload = () => payload;
-
     // Consider simplifying bridge, should only need the rotation axis as argument;
 
     this.bridge.top = () => new Bridge2dTo3D(this, 'x', 'width', 'z', 'thickness');
@@ -107,7 +105,7 @@ class Object3D extends Lookup {
     this.snap2d.top = () => topview;
     this.shouldSave = () => true;
 
-    this.toString = () => `${this.constructor.name}: at${this.center()} ${payload}`;
+    this.toString = () => `${this.constructor.name}: at${this.center()}`;
   }
 }
 

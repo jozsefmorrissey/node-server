@@ -7,9 +7,11 @@ const BiPolygon = require('../../../../three-d/objects/bi-polygon.js');
 const KeyValue = require('../../../../../../../public/js/utils/object/key-value.js');
 const Notification = require('../../../../../../../public/js/utils/collections/notification.js');
 const Assembly = require('../../assembly.js');
+const Cutter = require('../cutter.js');
 const CSG = require('../../../../../public/js/3d-modeling/csg.js');
 const DividerSection = require('./partition/divider.js');
 const Pattern = require('../../../../division-patterns.js');
+const Joint = require('../../../joint/joint.js');
 
 const v = () => new Vertex3D();
 class SectionProperties extends KeyValue{
@@ -20,6 +22,8 @@ class SectionProperties extends KeyValue{
     }
     // TODO: consider getting rid of, sections and cover are the only ones that matter.
     this.subassemblies = [];
+    const sectionCutters = [];
+
 
     // index ||= 0;
     const coordinates = {inner: [v(),v(),v(),v()], outer: [v(),v(),v(),v()]};
@@ -30,6 +34,17 @@ class SectionProperties extends KeyValue{
     this.index = () => index;
     const instance = this;
     pattern ||= new Pattern('a');
+
+    const keyValHash = this.hash;
+    this.hash = () => {
+      const cover = this.cover();
+      let hash = (cover ? cover.hash() : 0) + pattern.toString().hash();
+      hash += keyValHash();
+      for (let index = 0; index < this.subassemblies.length; index++) {
+        hash += this.subassemblies[index].hash();
+      }
+      return hash;
+    }
 
     this.divideRight = () =>
       this.parentAssembly().sectionCount && this.parentAssembly().sectionCount() !== index;
@@ -56,12 +71,12 @@ class SectionProperties extends KeyValue{
       if (is !== undefined && curr !== is) removeCachedValues();
       return curr;
     }
-    const getPartFunc = (partCode) => () => instance.getAssembly(partCode);
-    this.top = getPartFunc('T');
-    this.bottom = getPartFunc('B');
-    this.left = getPartFunc('L');
-    this.right = getPartFunc('R');
-    this.back = getPartFunc('B');
+    const getPartFunc = (dir) => config[dir] instanceof Function ? config[dir] : () => instance.getAssembly(config[dir]);
+    this.top = getPartFunc('top');
+    this.bottom = getPartFunc('bottom');
+    this.left = getPartFunc('left');
+    this.right = getPartFunc('right');
+    this.back = getPartFunc('back');
     this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
     this.verticalDivisions = () => {
       const parent = this.parentAssembly();
@@ -79,10 +94,16 @@ class SectionProperties extends KeyValue{
       return root.constructor.name === 'Cabinet' ? root : undefined;
     }
 
+    this.root = () => {
+      let curr = this;
+      while(curr.parentAssembly() instanceof SectionProperties) curr = curr.parentAssembly();
+      return curr;
+    }
+
     this.innerDepth = () => {
       const cabinet = this.getCabinet();
-      const back = cabinet.getAssembly(config.back);
-      if (back) return Math.abs(back.position().centerAdjust('z', '+z'));
+      const back = config.back();
+      if (back) return 1.5 * this.innerCenter().distance(back.position().center());
       return 4*2.54;
     };
 
@@ -116,9 +137,33 @@ class SectionProperties extends KeyValue{
     }
     this.offsetPoint = offsetPoint;
 
+    this.childConfig = () => {
+      const iv = this.isVertical;
+      const index = this.sections.length;
+      const vert = {
+          top: this.top,
+          bottom: this.bottom,
+          left: () => index === 0 ? this.left() : this.sections[index-1].divider(),
+          right: () => index === this.sections.length - 1 ? this.right() : this.sections[index].divider()
+        };
+      const hor = {
+        left: this.left,
+        right: this.right,
+        top: () => index === 0 ? this.top() : this.sections[index-1].divider(),
+        bottom: () => index === this.sections.length - 1 ? this.bottom() : this.sections[index].divider()
+      };
+      const conf = {
+        rotation: config.rotation,
+        back: this.back
+      };
+      const dirFunc = (dir) => conf[dir] = () => iv() ? vert[dir]() : hor[dir]();
+      dirFunc('top');dirFunc('bottom');dirFunc('left');dirFunc('right');
+      return conf;
+    }
+
     function init () {
       if (instance.sections.length === 0) {
-        instance.sections.push(new SectionProperties({rotation: config.rotation, back: config.back}, 1));
+        instance.sections.push(new SectionProperties(instance.childConfig(), 1));
       }
     }
 
@@ -128,6 +173,7 @@ class SectionProperties extends KeyValue{
     this.children = () => this.sections;
     this.getSubassemblies = () => {
       const assems = Object.values(this.sections);
+      assems.concatInPlace(sectionCutters);
       const cover = this.cover()
       if (cover) assems.concatInPlace(cover.getSubassemblies());
       if (this.divideRight()) assems.concatInPlace(this.divider().getSubassemblies());
@@ -142,9 +188,14 @@ class SectionProperties extends KeyValue{
     this.getAssembly = (partCode, callingAssem) => {
       if (callingAssem === this) return undefined;
       if (this.partCode() === partCode) return this;
-      if (this.subassemblies[partCode]) return this.subassemblies[partCode];
+      const subAssems = ({}).merge(this.subassemblies);
+      sectionCutters.forEach(sc => subAssems[sc.partCode()] = sc);
+      if (subAssems[partCode]) return subAssems[partCode];
       if (callingAssem !== undefined) {
         const children = Object.values(this.subassemblies);
+        if (this.divideRight) children.concatInPlace(divider);
+        const cover = this.cover()
+        if (cover) children.concatInPlace(cover);
         for (let index = 0; index < children.length; index += 1) {
           const assem = children[index].getAssembly(partCode, this);
           if (assem !== undefined) return assem;
@@ -337,8 +388,9 @@ class SectionProperties extends KeyValue{
         } else {
           const diff = dividerCount - currDividerCount;
           for (let index = currDividerCount; index < dividerCount; index +=1) {
-            const section = new SectionProperties({rotation: config.rotation, back: config.back}, index + 2);
+            const section = new SectionProperties(this.childConfig(), index + 2);
             this.sections.push(section);
+            console.log(section);
           }
           if (diff !== 0) setSectionCoordinates();
           return diff !== 0;
@@ -455,6 +507,14 @@ class SectionProperties extends KeyValue{
         const outer = coordinates.outer;
         const point1 = outer[3];
         const point2 = outer[2];
+        const c = this.getCabinet();
+        const maxLen = Math.max(c.width(), c.length(), c.thickness());
+        if (!(this.right() instanceof DividerSection)) {
+          Line3D.adjustVertices(point1, point2, maxLen, true);
+        }
+        if (!(this.left() instanceof DividerSection)) {
+          Line3D.adjustVertices(point2, point1, maxLen, true);
+        }
         let depthVector = normal.scale(depth);
         const point3 = point2.translate(depthVector, true);
         const point4 = point1.translate(depthVector, true);
@@ -508,19 +568,68 @@ class SectionProperties extends KeyValue{
       // }
     }
 
+    let dividerJoint;
+    this.dividerJoint = (joint) => {
+      if (joint instanceof Joint) dividerJoint = joint;
+      if (dividerJoint) return dividerJoint;
+      return this.getCabinet().value('dividerJoint');
+    }
+
     this.setSection = (constructorIdOobject) => {
       let section = SectionProperties.new(constructorIdOobject);
       this.cover(section);
-      section.parentAssembly(this);
+      if (section) {
+        section.parentAssembly(this);
+      }
     }
 
     const divider = new DividerSection(this);
-    divider.parentAssembly(this);
     this.divider(divider);
+    divider.parentAssembly(this);
     this.value('vertical', true);
     this.pattern().onChange(setSectionCoordinates);
     // this.vertical(true);
     // coordinates.onAfterChange(setSectionCoordinates);
+
+    function buildCutters () {
+      const cabinet = instance.getCabinet();
+      const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Auto|Section)/))
+      const fromPoint = cabinet.buildCenter();
+      for (let index = 0; index < subAssems.length; index++) {
+        const reference = subAssems[index];
+        const offset = instance.dividerJoint().maleOffset();
+        const cutter = new Cutter.Reference(reference, fromPoint, offset);
+        sectionCutters.push(cutter);
+      }
+    }
+
+    this.addCutters = (divider) => {
+      const root = this.root();
+      if (root !== this) return root.addJoints(divider);
+      if (sectionCutters.length === 0) buildCutters();
+      for (let index = 0; index < sectionCutters.length; index++) {
+        const cutter = sectionCutters[index];
+        divider.panel().addJoints(new Joint(cutter.partCode(), divider.panel().partCode()));
+      }
+    }
+
+    this.addJoints = (divider) => {
+      this.addCutters(divider);
+      const cabinet = instance.getCabinet();
+      const panel = divider.panel();
+      const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Auto|Section)/))
+      const joint = this.dividerJoint();
+      for (let index = 0; index < subAssems.length; index++) {
+        const assem = subAssems[index];
+        const newJoint = joint.clone();
+        newJoint.malePartCode(panel.partCode());
+        newJoint.femalePartCode(assem.partCode())
+        newJoint.parentAssemblyId(panel.id());
+        panel.joints.push(newJoint);
+      }
+
+    }
+    setTimeout(() => this.addJoints(this.divider()));
   }
 }
 

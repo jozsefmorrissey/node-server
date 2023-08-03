@@ -335,7 +335,7 @@ class $t {
     const signProps = {opening: /([-+\!])/};
 		const ternaryProps = {opening: /\?/};
 		const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
-		const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
+		const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, (.*?), get\)/};
 		const commaProps = {opening: /,/};
 		const colonProps = {opening: /:/};
 		const multiplierProps = {opening: /([-+*\/](=|))/};
@@ -701,42 +701,58 @@ class $t {
 		}
 
 
-				const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
-				function formatRepeat(string) {
-					// tagname:1 prefix:2 quote:4 exlpression:5 suffix:6
-					// string = string.replace(/<([^\s^:^-^>]*)/g, '<$1-ce');
-					let match;
-					while (match = string.match(repeatReg)) {
-						let tagContents = match[2] + match[8];
-            let tagName = match[1];
-            let varNames = match[6];
-            let realScope = match[7];
-						let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
-						let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
-            const templateNameDefined = templateName.match(/^[a-z\-]*$/);
-						let scope = 'scope';
-						let t;
-            if (!templateNameDefined)
-            t = eval(`new $t(\`${template}\`)`);
-            let resolvedScope = "get('scope')";;
-            try {
-              // console.log('tagName', tagName);
-              // console.log('templateName', templateName);
-              // console.log('template', template);
-              // console.log('varNames', varNames);
-              // console.log('realScope', realScope);
-              // console.log('tagContents', tagContents);
-              if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
-                resolvedScope = `'${realScope}'`;
-              } else {
-                resolvedScope = ExprDef.parse(expression, realScope);
-              }
-            } catch (e) {}
-            const templateId = templateNameDefined ? templateName : t.id();
-            string = string.replace(match[0], `{{ new $t('${templateId}').render(${resolvedScope}, '${varNames}', get)}}`);
-					}
-					return string;
-				}
+		const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
+		function formatRepeat(string) {
+			let match;
+			while (match = string.match(repeatReg)) {
+				let tagContents = match[2] + match[8];
+        let tagName = match[1];
+        let varNames = match[6];
+        let realScope = match[7];
+				let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+				let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+				let scope = 'scope';
+				template = templateName !== tagContents ? templateName : template;
+				const t = eval(`new $t(\`${template}\`)`);
+        let resolvedScope = "get('scope')";;
+        try {
+					if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
+            resolvedScope = `'${realScope}'`;
+          } else {
+            resolvedScope = ExprDef.parse(expression, realScope);
+          }
+        } catch (e) {}
+        string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
+			}
+			return string;
+		}
+
+		const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).*)<\/)\1:t>/;
+		function formatTemplate(string) {
+			let match;
+      console.log('formating template');
+			while (match = string.match(templateReg)) {
+        console.log('match template');
+				let tagContents = match[2] + match[6];
+				let tagName = match[1];
+				let realScope = match[7];
+				let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+				let templateName = match[0].replace(/.*\$t-id=('|")([0-9\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+				let scope = 'scope';
+        console.log('templateName:', templateName);
+				template = templateName !== tagContents ? templateName : template;
+				let resolvedScope = "get('scope')";;
+				// try {
+				// 	if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
+				// 		resolvedScope = `'${realScope}'`;
+				// 	} else {
+				// 		resolvedScope = ExprDef.parse(expression, realScope);
+				// 	}
+				// } catch (e) {}
+				string = string.replace(match[0], `{{ new $t('${templateName}').render(get('${realScope}'), undefined, get)}}`);
+			}
+			return string;
+		}
 
 		if (id) {
 			$t.templates[id] = undefined;
@@ -747,8 +763,11 @@ class $t {
 		id = $t.functions[template] ? template : id || stringHash(template);
 		if (!$t.functions[id]) {
 			if (!$t.templates[id]) {
+        console.log('template', template)
+        console.log('id', id)
 				template = template.replace(/\s{2,}|\n/g, ' ');
 				template = formatRepeat(template);
+				template = formatTemplate(template);
 				$t.templates[id] = compile();
 			}
 		}

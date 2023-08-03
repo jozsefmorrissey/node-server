@@ -6,7 +6,7 @@ $t.loadFunctions(require('./generated/html-templates'));
 const DrawerBox = require('./src/objects/lookup/drawer-box');
 
 const templates = {
-  index: new $t('index'),
+  index: new $t('mitch-index'),
   report: new $t('report'),
   reports: new $t('reports'),
   configure: new $t('configure'),
@@ -33,7 +33,9 @@ function endpoints(app, prefix) {
   const keys = Object.keys(templates);
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
+    console.log('mitch pref', prefix)
     app.get(prefix + `/${key}`, function (req, res, next) {
+      console.log('ranMitch wtf')
       res.setHeader('Content-Type', 'text/html');
       const temp = templates[key];
       const scope = getScope(key);

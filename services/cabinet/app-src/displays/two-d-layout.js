@@ -17,6 +17,9 @@ const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/obje
 const ThreeDMain = require('three-d-main');
 const ThreeDModel = require('../three-d/three-d-model.js');
 const HoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map.js');
+const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+const AutoLocationProperties = require('../../../../public/js/utils/canvas/two-d/objects/snap/auto-location-properties.js');
+const Global = require('../services/global');
 
 const measurmentMap = new HoverMap2d();
 const localEnv = EPNTS.getEnv() === 'local';
@@ -28,12 +31,10 @@ const eval = new StringMathEvaluator({Math}).eval;
 const popUp = new PopUp({resize: false});
 let interactionState = {};
 
-let layout;
+let layout = () =>
+      Global.room().layout();
 TwoDLayout.set = (l) => {
-  if (l instanceof Layout2D) {
-    layout = l;
     if (panZ) panZ.once();
-  }
 }
 
 const windowLineWidth = 8;
@@ -52,10 +53,15 @@ const quickChangeFuncs = {};
 function determineObject(id, member) {
   const referenceObj = Layout2D.get(id);
   switch (member) {
-    case 'object': return referenceObj.payload();
-    case 'cabinet': return referenceObj.payload();
+    case 'snap':  return referenceObj;
     case 'bridge':  return referenceObj.bridge.top();
-    default: return referenceObj;
+    default:
+    if ((typeof referenceObj.payload) === 'function') {
+      const pld = referenceObj.payload();
+      if (pld instanceof Layout2D.IdString) return Layout2D.get(pld);
+      return pld ? pld : referenceObj;
+    }
+    return referenceObj;
   }
 }
 
@@ -108,24 +114,20 @@ du.on.match('enter:focusout', '.value-2d', (elem) => {
   const props = getPopUpAttrs(elem);
   switch (props.member) {
     case 'object':
-      const cab = props.obj;
-      props.obj[props.key](props.raw);
-      if (cab && cab.constructor.name === 'Cabinet') {
-        const cabDemCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cab.id()}']`);
-        const idInput =  du.find.closest(`Input[name="${props.key}"]`, cabDemCnt);
-        idInput.value = props.raw;
+      if (props.obj instanceof Cabinet) {
+        const cabinet = props.obj;
+        const cabCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cabinet.id()}']`);
+        if (cabCnt) {
+          const input = du.find.closest(`input[name='${props.key}']`, cabCnt);
+          input.value = props.value ? props.display : props.raw;
+        }
+        cabinet[props.key](props.value || props.raw);
+        ThreeDMain.update(cabinet)
+        return;
+      } else {
+        props.obj[props.key](props.value || props.raw);
+        panZ.once();
       }
-      panZ.once();
-      return;
-    case 'cabinet':
-      const cabinet = props.obj;
-      const cabCnt = du.find(`.cabinet-dem-cnt[cabinet-id='${cabinet.id()}']`);
-      if (cabCnt) {
-        const input = du.find.down(`input[name='${props.key}']`, cabCnt);
-        input.value = props.display;
-      }
-      cabinet[props.key](props.value);
-      ThreeDMain.update(cabinet)
       return;
     case 'snap':
       props.obj = props.obj.snap2d.top();
@@ -153,9 +155,9 @@ function remove() {
       if (removeButton) removeButton.click();
       else console.warn('Remove button for cabinet should be present but is not present');
     }
-    layout.remove(hovering.parent().id());
+    layout().remove(hovering.parent().id());
   } else {
-    layout.remove(hovering.id());
+    layout().remove(hovering.id());
   }
   popUp.close();
   TwoDLayout.panZoom.once();
@@ -185,7 +187,7 @@ du.on.match('click', '.add-window-btn-2d', (elem) => {
 
 du.on.match('click', '.add-object-btn-2d', (elem) => {
   const props = getPopUpAttrs(elem);
-  const obj = layout.addObject(props.point, 'placeholder');
+  const obj = layout().addObject(props.point);
   obj.snap2d.top().onChange(() => console.log('snap on change???????'));
   panZ.once();
 });
@@ -193,7 +195,7 @@ du.on.match('click', '.add-object-btn-2d', (elem) => {
 du.on.match('click', '.add-vertex-btn-2d', (elem) => {
   const attrs = getPopUpAttrs(elem);
   const point = hovering.closestPointOnLine(attrs.point);
-  layout.addVertex(point.point(), hovering);
+  layout().addVertex(point.point(), hovering);
   panZ.once();
 });
 
@@ -209,13 +211,13 @@ function clearCache() {
 }
 
 function undo(target) {
-  layout.history().back();
+  layout().history().back();
   clearCache();
   panZ.once();
 }
 
 function redo () {
-  layout.history().forward();
+  layout().history().forward();
   clearCache();
   panZ.once();
 }
@@ -245,7 +247,7 @@ function onMousedown(event, stdEvent) {
 
 function addVertex(hovering, event, stdEvent) {
   const point = {x: event.imageX, y: event.imageY};
-  layout.addVertex(point, hovering);
+  layout().addVertex(point, hovering);
 }
 
 registerQuickChangeFunc('Wall2D', addVertex);
@@ -253,7 +255,7 @@ registerQuickChangeFunc('Vertex2d', remove);
 registerQuickChangeFunc('Window2D', remove);
 registerQuickChangeFunc('SnapLocation2d', (snapLoc, event) => {
   if (!snapLoc.disconnect()) {
-    const possible = layout.atWall(event.lastImagePoint);
+    const possible = layout().atWall(event.lastImagePoint);
     if (possible instanceof Line2d) {
       snapLoc.pairWith(possible);
       snapLoc.parent().move(event.lastImagePoint, interactionState);
@@ -376,9 +378,15 @@ du.on.match('enter', '[member="snap-loc"][name="x"],[member="snap-loc"][name="y"
   panZ.once();
 });
 
+
 function getTemplateScope(cxtrName, target) {
   target ||= hovering;
-  const scope = {display, UNITS: Properties.UNITS, target, lastImagePoint};
+  let autoLocProps;
+  if ((typeof target.id) === 'function') {
+    autoLocProps = AutoLocationProperties.get(target.id());
+  }
+  const UNITS = Properties.UNITS;
+  const scope = {display, UNITS, target, autoLocProps, lastImagePoint};
   switch (cxtrName) {
     case 'SnapLocation2d':
       hovering.pairWith();
@@ -398,8 +406,8 @@ function openPopup(event, stdEvent) {
     html = getTemplate(hovering).render(scope);
   } else {
     popupOpen = true;
-    const scope = getTemplateScope(undefined, layout);
-    html = getTemplate(layout).render(scope);
+    const scope = getTemplateScope(undefined, layout());
+    html = getTemplate(layout()).render(scope);
   }
   popUp.open(html, {x: event.screenX, y: event.screenY});
 }
@@ -411,7 +419,7 @@ popUp.onClose((elem, event) => {
   clickHolding = false;
   interactionState.mouseupId = ++mouseupId;
   interactionState.mousedownId = undefined;
-  // if (layout) layout.history().newState();
+  // if (layout()) layout().history().newState();
 });
 
 function onMouseup(event, stdEvent) {
@@ -424,12 +432,12 @@ function onMouseup(event, stdEvent) {
       interactionState.mouseupId = ++mouseupId;
       interactionState.mousedownId = undefined;
       hovering = undefined;
-      // if (layout) layout.history().newState();
+      // if (layout()) layout().history().newState();
       return clickWasHolding;
     }
   } else {
     console.log('rightClick: do stuff!!');
-    // if (layout) layout.history().newState();
+    // if (layout()) layout().history().newState();
   }
 }
 
@@ -444,13 +452,13 @@ function  drag(event)  {
 function hover(event) {
   if (clickHolding) return true;
   const vertex = new Vertex2d(event.imageX, event.imageY);
-  hovering = layout.at(new Vertex2d(vertex)) || measurmentMap.hovering(vertex);
+  hovering = layout().at(new Vertex2d(vertex)) || measurmentMap.hovering(vertex);
   let found = hovering == true;
   return found;
 }
 
 function onMove(event) {
-  if (layout === undefined) return;
+  if (layout() === undefined) return;
   const canDrag = !popupOpen && lastDown < new Date().getTime() - selectTimeBuffer * 1.5;
   return (canDrag && drag(event)) || hover(event);
 }
@@ -621,12 +629,12 @@ function drawMeasurement(measurement, level, focalVertex)  {
     measurementIs[lookupKey] = measurement.I(level);
   // }
   const lines = measurementIs[lookupKey];
-  const center = layout.vertices(focalVertex, 2, 3);
+  const center = layout().vertices(focalVertex, 2, 3);
   const isHovering = hoverId() === measurement.toString();
   const measurementColor = isHovering ? 'green' : 'grey';
   try {
     draw.beginPath();
-    const isWithin = layout.within(lines.furtherLine().midpoint());
+    const isWithin = layout().within(lines.furtherLine().midpoint());
     const line = isWithin ? lines.closerLine() : lines.furtherLine();
     const midpoint = Vertex2d.center(line.startLine.endVertex(), line.endLine.endVertex());
     if (isHovering) {
@@ -680,7 +688,7 @@ function drawWall(wall) {
     level = measureOnWall(wall.doors(), level);
     level = measureOnWall(wall.windows(), level);
   }
-  const measurement = new LineMeasurement2d(wall, undefined, undefined, layout.reconsileLength(wall));
+  const measurement = new LineMeasurement2d(wall, undefined, undefined, layout().reconsileLength(wall));
   drawMeasurement(measurement, level, wall.startVertex());
 
   return endpoint;
@@ -712,7 +720,7 @@ function drawVertex(vertex) {
   const radius = isHovering ? 6 : 4;
   const circle = new Circle2d(radius, p);
   draw.circle(circle, 'black', fillColor);
-  if (layout.objects().length === 0 || vertex.showAngle) drawAngle(vertex);
+  if (layout().objects().length === 0 || vertex.showAngle) drawAngle(vertex);
 }
 
 function drawObjects(objects, defaultColor, dontDrawSnapLocs) {
@@ -738,12 +746,12 @@ function drawObjects(objects, defaultColor, dontDrawSnapLocs) {
 }
 
 function illustrate(canvas) {
-  if (layout === undefined) return;
+  if (layout() === undefined) return;
   SnapLocation2d.clear();
   let lastEndPoint = {x: 20, y: 20};
 
   draw.beginPath();
-  const walls = layout.walls();
+  const walls = layout().walls();
   let previousEndpoint;
   let wl = walls.length;
   walls.forEach((wall, index) => {
@@ -756,8 +764,8 @@ function illustrate(canvas) {
   drawVertex(walls[0].startVertex());
   drawMeasurementValues();
 
-  let objects = layout.level();
-  let allObjects = layout.objects();
+  let objects = layout().level();
+  let allObjects = layout().objects();
   drawObjects(allObjects, '#85858ebd', true);
   drawObjects(objects);
 }
@@ -775,7 +783,7 @@ function init() {
   panZ.onMove(onMove);
   panZ.onMousedown(onMousedown);
   panZ.onMouseup(onMouseup);
-  controls2d = new Controls2d('#two-d-model .orientation-controls', () => layout, panZ);
+  controls2d = new Controls2d('#two-d-model .orientation-controls', layout, panZ);
   // draw(canvas);
   TwoDLayout.panZoom = panZ;
   ThreeDModel.onRenderObjectUpdate(panZ.once);
@@ -784,8 +792,24 @@ function init() {
   du.on.match('keycombo()', '*', (target, event) => {
     interactionState.keycombonation = event.keycombonation;
   });
-  du.on.match('keycombo(Control, )', '*', layout.straightenUp);
+  du.on.match('keycombo(Control, )', '*', layout().straightenUp);
 }
+
+//TODO: reorganize and allow for independent tools to take control
+// const clickStack = [];
+// const lastClicked = () => clickStack[clickStack.length - 1];
+// panZ.onMouseup((event) => {
+//   const last = lastClicked();
+//   if (last && hovering) {
+//     const point = {x: event.screenX, y: event.screenY};
+//     if (hovering.equals(last)) popUp.open(hovering.toString(), point);
+//     else popUp.open(new Measurement(hovering.distance(last)).display(), point);
+//     clickStack.push(undefined);
+//   } else {
+//     clickStack.push(hovering);
+//   }
+// });
+
 
 TwoDLayout.init = init;
 module.exports = TwoDLayout;

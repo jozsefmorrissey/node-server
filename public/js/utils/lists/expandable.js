@@ -230,7 +230,7 @@ Expandable.bySelector = (parentSelector) => {
   const expandKeys = Object.keys(lists);
   if (expandKeys.length > 1000) console.warn.subtle(1000, 'Its time to start freeing expandable list data');
   for (let i = 0; i < expandKeys.length; i++) {
-    const key = expandKeys[index];
+    const key = expandKeys[i];
     if (lists[key].parentSelector() === parentSelector) return lists[key];
   }
   return null;

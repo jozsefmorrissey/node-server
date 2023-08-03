@@ -12,9 +12,12 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 const Inputs = require('../input/inputs.js');
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const TwoDLayout = require('../displays/two-d-layout');
+const ThreeDModel = require('../three-d/three-d-model.js');
+const LoadingDisplay = require('../../../../public/js/utils/display/loading.js');
+const Global = require('../services/global');
 
 class RoomDisplay extends Lookup {
-  constructor(parentSelector, order) {
+  constructor(parentSelector) {
     super();
 
     const groupDisplays = {};
@@ -40,13 +43,15 @@ class RoomDisplay extends Lookup {
     this.active = () => expandList.active();
 
     function getExpandList() {
+      const order = Global.order();
       const expandParentSelector = `${parentSelector}[order-id="${order.id()}"]`;
-      const expandList = ExpandableObject.bySelector(parentSelector);
+      const expandList = ExpandableObject.bySelector(expandParentSelector);
       if (expandList) return expandList;
 
       const expListProps = {
+        getHeader, getBody, getObject,
         list: order.rooms,
-        parentSelector, getHeader, getBody, getObject,
+        parentSelector: expandParentSelector,
         inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
         listElemLable: 'Room', type: 'pill',
         inputTree: RoomDisplay.configInputTree()
@@ -54,15 +59,14 @@ class RoomDisplay extends Lookup {
       return new ExpandableObject(expListProps);
     }
 
-    this.order =(o) => {
-      if (o) {
-        order = o;
-        du.find(parentSelector).setAttribute('order-id', order.id());
-        getExpandList();
-      }
-      return order;
+    this.setHtml =() => {
+
+      du.find(parentSelector).setAttribute('order-id', Global.order().id());
+      getExpandList();
     }
-    this.order(order);
+    this.setHtml();
+    Global.onChange.room(this.setHtml);
+
 
     this.refresh = () => expandList.refresh();
   }

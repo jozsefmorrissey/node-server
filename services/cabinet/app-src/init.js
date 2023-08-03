@@ -17,7 +17,7 @@ const PopUp = require('../../../public/js/utils/display/pop-up.js');
 // Display classes
 const du = require('../../../public/js/utils/dom-utils.js');
 const EPNTS = require('../generated/EPNTS.js');
-const Displays = require('./services/display-svc.js');
+const Global = require('./services/global.js');
 require('./objects/room');
 const TwoDLayout = require('./displays/two-d-layout.js');
 const ThreeDMainModel = require('./displays/three-d-main.js');
@@ -29,6 +29,7 @@ const utils = require('./utils.js');
 // TODO: remove
 const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
 FunctionCache.disable();
+let orderDisplay;
 
 
 // Run Tests
@@ -75,19 +76,20 @@ function init(body){
         const TemplateManager = require('./displays/managers/template.js');
         const templateDisplayManager = new TemplateManager('template-manager');
       } else {
-        const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
+        require('./displays/canvas');
         const propertyDisplay = new PropertyDisplay('#property-manager');
-        Displays.register('propertyDisplay', propertyDisplay);
+        Global.displays.property(propertyDisplay);
         const OrderDisplay = require('./displays/order.js');
         du.on.match('change', '.open-orientation-radio,.open-division-input', updateDivisions);
         orderDisplay = new OrderDisplay('#order-cnt');
+        Global.displays.order(orderDisplay);
         setTimeout(TwoDLayout.init, 1000);
         setTimeout(ThreeDMainModel.init, 1000);
     }
   } else if (urlSuffix === 'order') {
-    const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
+    require('./displays/canvas');
     const viewDisplayManager = new DisplayManager('display-cnt', 'main-display-menu');
-    let order = require('./displays/single-order').order();
+    require('./displays/single-order');
     setTimeout(TwoDLayout.init, 1000);
     setTimeout(ThreeDMainModel.init, 1000);
   }
@@ -107,3 +109,17 @@ du.on.match('click', '*', (elem, event) => {
     event.stopPropagation();
   } else popUp.close();
 });
+
+du.on.match('mousemove', '*', (elem, event) => {
+  if (event.clientY < 20) {
+    popUp.updateContent('Wait! un comment down');
+    popUp.positionOnElement();
+    popUp.show();
+  } else {
+    popUp.close();
+  }
+});
+
+// window.onbeforeunload = () => 'Unsaved data may be lost';
+
+module.exports = {orderDisplay: () => orderDisplay};

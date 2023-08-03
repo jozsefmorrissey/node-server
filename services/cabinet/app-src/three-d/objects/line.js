@@ -175,9 +175,9 @@ Line3D.vertices1 = (lines) => {
   return verts;
 }
 
-Line3D.adjustVertices = (vert1, vert2, change) => {
+Line3D.adjustVertices = (vert1, vert2, change, fromStartVertex) => {
   const line = new Line3D(vert1, vert2);
-  line.adjustLength(change);
+  line.adjustLength(change, fromStartVertex);
 }
 
 Line3D.startAndVector = (startVertex, offsetVector) => {

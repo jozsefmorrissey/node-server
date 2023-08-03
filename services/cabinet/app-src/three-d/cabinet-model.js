@@ -169,16 +169,11 @@ class CabinetModel {
       return topview;
     }
 
-    let modifiableStr;
-    const shouldBuild = (c) => !c.snapObject ||
-              c.width() !== c.snapObject.width ||
-              c.thickness() !== c.snapObject.thickness ||
-              modifiableStr !== c.modifiableString();
-
+    let lastModState;
     this.topviewSnap = () => {
       const c = cabinet;
-      if (shouldBuild(c))  {
-        modifiableStr = c.modifiableString();
+      if (c.modificationState() !== lastModState)  {
+        lastModState = c.modificationState();
         const topview = build();
         topview.mirrorY();
         c.view.top =  topview;
@@ -189,12 +184,8 @@ class CabinetModel {
         } else {
           const polygon = c.snap3d.snap2d.top().polygon();
           topview.centerOn(polygon.center());
-          topview.radians(polygon.radians())
-          const lines = polygon.lines();
-          for (let index = 0; index < lines.length; index++) {
-            const startVertex = lines[index].startVertex();
-            startVertex.point(topview.vertex(index).point());
-          }
+          // topview.radians(polygon.radians())
+          polygon.copy(topview);
         }
       }
       return c.snap3d.snap2d.top();
@@ -218,17 +209,17 @@ class CabinetModel {
       model.min = min;
     }
 
-    this.complexModel = (model) => {
+    this.complexModel = (model, options) => {
       if (model !== undefined) {
         try {
-          addComplexModelAttrs(model);
+          // addComplexModelAttrs(model);
           complexModel = model;
           this.topviewSnap();
         } catch (e) {
           console.warn(e);
         }
       }
-      return complexModel;
+      return complexModel.clone();
     }
 
     this.topVector = () => Line3D.fromVector(this.normal(), undefined, {x:90,y:0,z:0}).vector();
@@ -237,7 +228,12 @@ class CabinetModel {
     this.frontView = () => this.viewFromVector(this.normal(), true);
     this.topView = () => this.viewFromVector(this.topVector(), true);
     this.rightView = () => this.viewFromVector(this.rightVector(), true);
+
+    models[cabinet.id()] = this;
   }
 }
+
+const models = {};
+CabinetModel.get = (cabinet) => models[cabinet.id()];
 
 module.exports = CabinetModel;

@@ -14,10 +14,30 @@ class Controls2d extends Lookup {
     this.navId = () => navId;
     this.space = () => '&nbsp;&nbsp;';
     CustomEvent.all(this, 'up', 'right', 'down', 'left', 'center');
+
+
+    function inView() {
+      const width = panZ.innerWidth;
+      const height = panZ.innerHeight;
+      const center = panZ.center();
+      const right = center.x + width/2;
+      const left = center.x - width/2
+      const top = center.y + height/2;
+      const bottom = center.y - height/2;
+
+      const verts = getLayout().vertices();
+      for (let index = 0; index < verts.length; index++) {
+        const vert = verts[index];
+        const inView = vert.x() > left && vert.x() < right &&
+                        vert.y() > bottom && vert.y() < top;
+        if (inView) return true;
+      }
+      return false;
+    }
+
     this.centerCode = () => {
       const panCenter = panZ.center();
-      console.log(panCenter);
-      centerWithin = getLayout().within(panCenter);
+      centerWithin = inView();
       return !centerWithin ? 8982 : 9633;
     }
 
@@ -58,6 +78,7 @@ class Controls2d extends Lookup {
         panZ.once();
       } else {
         panZ.centerOn(layout.center().x(), layout.center().y());
+        centerWithin = true;
       }
     });
 

@@ -63,7 +63,7 @@ Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify,
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
     const seperated = Object.filter(complement[key], func, true, key);
-    if (seperated.filtered) filtered[key] = seperated.filtered;
+    if (seperated.filtered !== undefined) filtered[key] = seperated.filtered;
     setOne = true;
     if (seperated.complement === undefined) delete complement[key];
     else complement[key] = seperated.complement;;
@@ -74,6 +74,35 @@ Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify,
 
 Function.safeStdLibAddition(Object, 'filter', function(func) {
   return Object.filter(this, func, true).filtered;
+});
+
+function arraySet(array, values, start, end) {
+  if (start!== undefined && end !== undefined && start > end) {
+    const temp = start;
+    start = end;
+    end = temp;
+  }
+  start = start || 0;
+  end = end || values.length;
+  for (let index = start; index < end; index += 1)
+    array[index] = values[index];
+  return array;
+}
+
+Function.safeStdLibAddition(Array, 'set',   arraySet, true);
+Function.safeStdLibAddition(Array, 'set',   function (values, start, end) {return arraySet(this, values, start, end)});
+
+Function.safeStdLibAddition(Array, 'copy',   function (other) {
+  if (Array.isArray(other)) {
+    this.deleteAll();
+    this.merge(other, false);
+    if (!objEq(this, other)) throw new Error('toodles');
+  } else {
+    const newArr = [];
+    newArr.merge(this, false);
+    if (!objEq(this, newArr)) throw new Error('toodles');
+    return newArr;
+  }
 });
 
 Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
@@ -237,8 +266,27 @@ Function.safeStdLibAddition(String, 'number',  function (str) {
 
 
 Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
+  mox = Math.abs(mod);
   while (val < 0) val += mod;
   return val % mod;
+}, true);
+
+Function.safeStdLibAddition(Math, 'modWithin',  function (val, mod, lowerLimit, upperLimit) {
+  val = Math.mod(val, mod);
+  lowerLimit = Math.mod(lowerLimit, mod);
+  upperLimit = Math.mod(upperLimit, mod);
+  console.log(lowerLimit, upperLimit);
+  return lowerLimit <= upperLimit ? val >= lowerLimit && val <= upperLimit : (val >= lowerLimit || val <= upperLimit);
+}, true);
+
+Function.safeStdLibAddition(Math, 'modTolerance',  function (val1, val2, mod, tol) {
+  if (tol > mod) return true;
+  const min2 = Math.mod(val2 - tol/2, mod);
+  const max2 = Math.mod(val2 + tol/2, mod);
+
+  const minSat = min2 < val2 ? val1 > min2 : (val1 < val2 || val1 > min2);
+  const maxSat = max2 > val2 ? val1 < max2 : (val1 > val2 || val1 < max2);
+  return Math.modWithin(val1, mod, min2, max2);
 }, true);
 
 Function.safeStdLibAddition(Number, 'NaNfinity',  function (...vals) {
@@ -331,6 +379,7 @@ const identifierAttr = '_TYPE';
 const immutableAttr = '_IMMUTABLE';
 const temporaryAttr = '_TEMPORARY';
 const doNotOverwriteAttr = '_DO_NOT_OVERWRITE';
+const forceFromJsonAttr = '_FORCE_FROM_JSON';
 
 const clazz = {};
 clazz.object = () => JSON.clone(classLookup);
@@ -783,18 +832,21 @@ function setToJson(obj, options) {
 }
 
 function staticFromJson(cxtr) {
-  return (json) => {
+  const fromJson = (json) => {
     const obj = new cxtr();
     obj.fromJson(json);
     return obj;
-  }
+  };
+  return fromJson;
 }
 
 Object.class.staticFromJson = staticFromJson;
 
 function setFromJson(obj, options) {
-  if (obj.constructor.fromJson === undefined)
-    obj.constructor.fromJson = staticFromJson(obj.constructor);
+  const cxtr = obj.constructor;
+  if (cxtr.fromJson === undefined || options.forceFromJson)
+    cxtr.fromJson = staticFromJson(cxtr);
+  const parentFromJson = obj.fromJson;
   obj.fromJson = (json) => {
     for (let index = 0; index < options.attrs.length; index += 1) {
       const attr = options.attrs[index];
@@ -809,6 +861,7 @@ function setFromJson(obj, options) {
         else
           obj[attr] = Object.fromJson(json[attr]);
       }
+      if ((typeof parentFromJson) === 'function') parentFromJson(json);
     };
     return obj;
   }
@@ -818,11 +871,9 @@ function setClone(obj, options) {
   const cxtrFromJson = obj.constructor.fromJson;
   if (obj.constructor.DO_NOT_CLONE) {
     obj.clone = () => obj;
-    setFromJson(obj, options);
   } else if (cxtrFromJson && cxtrFromJson !== Object.fromJson) {
     obj.clone = () => cxtrFromJson(obj.toJson());
   } else if (options.isObject) {
-    setFromJson(obj, options);
     obj.clone = () => {
       const clone = Object.fromJson(obj.toJson());
       Object.getSet(clone, clone);
@@ -831,7 +882,6 @@ function setClone(obj, options) {
   } else {
     obj.clone = () => {
       const clone = new obj.constructor(obj.toJson());
-      setFromJson(obj, options);
       clone.fromJson(obj.toJson());
       return clone;
     }
@@ -848,6 +898,7 @@ function getOptions(obj, initialVals, attrs) {
     options.immutable = options.values[immutableAttr] === true;
     options.temporary = options.values[temporaryAttr] === true;
     options.doNotOverwrite = options.values[doNotOverwriteAttr] === true;
+    options.forceFromJson = options.values[forceFromJsonAttr] === true;
     if (options.immutable) {
       options.attrs = Object.keys(options.values);
     } else {
@@ -906,6 +957,7 @@ Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...a
   setGettersAndSetters(obj, options);
   setToJson(obj, options);
   setClone(obj, options);
+  setFromJson(obj, options);
   return options.attrs;
 }, true);
 Object.getSet.format = 'Object.getSet(obj, {initialValues:optional}, attributes...)'
@@ -917,19 +969,6 @@ Function.safeStdLibAddition(Object, 'set',   function (obj, otherObj) {
   }
   const keys = Object.keys(otherObj);
   keys.forEach((key) => obj[key] = otherObj[key]);
-}, true);
-
-Function.safeStdLibAddition(Array, 'set',   function (array, values, start, end) {
-  if (start!== undefined && end !== undefined && start > end) {
-    const temp = start;
-    start = end;
-    end = temp;
-  }
-  start = start || 0;
-  end = end || values.length;
-  for (let index = start; index < end; index += 1)
-    array[index] = values[index];
-  return array;
 }, true);
 
 const checked = {};

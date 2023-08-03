@@ -221,11 +221,13 @@ class Layout2D extends Lookup {
       }
     }
 
-    this.addObject = (id, payload, name, polygon) => {
-      // const center = Vertex2d.center.apply(null, this.vertices())
-      // obj.bridge.top().center(center);
+    this.addObject = (id, payload, name) => {
       const obj = Object3D.new(payload, this);
       obj.id(id);
+      if (obj.center().equals(0,0,0)) {
+        const center = Vertex2d.center.apply(null, this.vertices())
+        obj.bridge.top().center(center);
+      }
       this.objects().push(obj);
       // history.newState();
       addEvent.trigger(undefined, payload);
@@ -515,7 +517,7 @@ class Layout2D extends Lookup {
       const activeObjects = this.level() || this.objects();
       for (let index = 0; index < activeObjects.length; index++) {
         const hovering = activeObjects[index].snap2d.top().hovering(vertex);
-        if (hovering) 
+        if (hovering)
           return hovering;
       }
       return this.atWall(vertex);
@@ -538,9 +540,8 @@ Layout2D.fromJson = (json) => {
     const center = Vertex2d.fromJson(o.center);
     let obj = Object3D.get(o.id);
     if (obj === undefined) {
-      obj = new Object3D(center, layout, undefined, o.name);
-      obj.payloadId(o.payloadId);
-      obj.id(o.id);
+      obj = new Object3D(layout);
+      obj.fromJson(o);
     } else obj.fromJson(o);
     objects.push(obj);
   });

@@ -26,7 +26,6 @@ const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/ve
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
 const Snap2d = require('../../../../../public/js/utils/canvas/two-d/objects/snap');
 const PropertyConfig = require('../../config/property/config.js');
-const cabinetBuildConfig = require('../../../public/json/cabinets.json');
 const Pattern = require('../../division-patterns.js');
 const Handle = require('../../objects/assembly/assemblies/hardware/pull.js');
 const OpeningSketch = require('../opening-sketch');
@@ -187,7 +186,6 @@ function getCabinet(elem) {
   if (sectionState.testDividers) applyTestConfiguration(cabinet);
   else applyDividers(cabinet);
   openingSketch.cabinet(cabinet);
-  console.log(`Cabinet Demesions: ${cabinet.width()} !== ${cabinet.eval('c.w')} x ${cabinet.length()} x ${cabinet.thickness()}`)
   return cabinet;
 }
 
@@ -457,9 +455,6 @@ function validateOpenTemplate (elem) {
   const subCodeInputs = du.find.downAll('input[attr="subassemblies"][name="code"]', templateBody);
   subCodeInputs.forEach(variableNameCheck);
 
-  // const positiveInputs = du.find.downAll('input[name="thickness"],input[name="width"],input[name="height"]', templateBody);
-  // positiveInputs.forEach(positiveValueCheck);
-
   const pcc = partCodeCheck(template);
   const jointMaleInputs = du.find.downAll('input[attr="joints"][name="malePartCode"]', templateBody);
   jointMaleInputs.forEach(pcc);
@@ -490,9 +485,11 @@ function validateOpenTemplate (elem) {
 }
 
 du.on.match('enter', '*', () => {
-  const templateBody = du.find('.template-body');
-  const cabinet = getCabinet(templateBody);
-  threeView.update(cabinet);
+  setTimeout(() => {
+    const templateBody = du.find('.template-body');
+    const cabinet = getCabinet(templateBody);
+    threeView.update(cabinet);
+  });
 });
 
 function getEqn(select, values) {
@@ -534,7 +531,6 @@ function getJointInputTree(func, joint, dividerJoint) {
 
   const dit = new DecisionInputTree('Type', {inputArray: [selectType]}, {noSubmission: true});
   const type = dit.root();
-  const condtionalPayload = new DecisionInputTree.ValueCondition('type', 'Dado', dadoInputs);
   type.then('dado', {inputArray: dadoInputs});
   const cond = DecisionInputTree.getCondition('type', 'Dado');
   type.conditions.add(cond, 'dado');
@@ -593,7 +589,7 @@ function getOpeningLocationSelect() {
 }
 
 function getJoint(obj) {
-  return {obj, jointInput: getJointInputTree(jointOnChange, obj).payload()};
+  return {obj, jointInput: getJointInputTree(jointOnChange, obj)};
 }
 function getSubassembly(obj) {
   return {typeInput:  getTypeInput(obj),
@@ -681,7 +677,7 @@ class TemplateManager extends Lookup {
     }
     const templateShapeInput = (template) => TemplateManager.templateShapeInput(template.shape());
     const dividerJointInput = (template) =>
-      getJointInputTree(dividerJointChange(template), template.dividerJoint(), true).payload();
+      getJointInputTree(dividerJointChange(template), template.dividerJoint(), true);
 
     const containerSelector = (template, containerClass) => `[template-id="${template.id()}"]>.${containerClass}`;
 

@@ -16,7 +16,8 @@ class CabinetTemplate extends Lookup {
       thickness: 24 * 2.54,
       fromFloor: 0,
       openings: [CabinetTemplate.defaultPartCodeOpening()],
-      autoToeKick: false
+      autoToeKick: false,
+      _FORCE_FROM_JSON: true
     };
     Object.getSet(this, initialVals);
     CabinetTemplate.map[type] = this;
@@ -31,6 +32,7 @@ class CabinetTemplate extends Lookup {
       return cabinet;
     }
     this.getCabinet = getCabinet;
+
 
     this.codeMap = () => {
       let codeMap = {};
@@ -184,5 +186,7 @@ CabinetTemplate.defaultLocationOpening = () => ({
     bottom: {right:{x: 0, y: 0, z: 0}, left: {x: 0, y: 0, z: 0}}
   }
 });
+
+new CabinetTemplate();
 
 module.exports = CabinetTemplate;

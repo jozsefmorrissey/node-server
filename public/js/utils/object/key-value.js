@@ -64,7 +64,10 @@ class KeyValue extends Lookup {
         if(customVal !== undefined) return customVal;
 
         if (value !== undefined) {
-          this.value.values[key] = value;
+          if (value !== this.value.values[key]) {
+            this.value.values[key] = value;
+            changeEvent.trigger();
+          }
         } else {
           const instVal = this.value.values[key];
           if (instVal !== undefined && instVal !== null) {
@@ -93,6 +96,19 @@ class KeyValue extends Lookup {
       Object.merge(this.value.values, valueObj);
     }
 
+    this.hash = () => {
+      const valueObj = this.value.values;
+      const keys = Object.keys(valueObj).sort();
+      let hash = 0;
+      for (let index = 0; index < keys.length; index++) {
+        const key = keys[index];
+        hash += new String(valueObj[key]).hash()
+      }
+      return hash;
+    }
+
+    let changeEvent = new CustomEvent('change');
+    this.value.onChange = changeEvent.on;
 
     this.value.values = {};
     this.value.evaluators = properties.evaluators || {};

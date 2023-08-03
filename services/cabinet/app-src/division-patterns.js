@@ -183,6 +183,7 @@ class Pattern {
     this.toJson = () => {
       return {str: this.str, values: this.values()};
     }
+    this.toString = () => `${this.str}@${this.values()}`;
 
     this.elements = elements;
     this.calc = calc;

@@ -103,9 +103,6 @@ class Line2d {
         isWithin = this.minX() - tol < point.x() && this.minY() - tol < point.y() &&
           this.maxX() + tol > point.x() && this.maxY() + tol > point.y();
       }
-      if (isWithin) {
-        console.log.subtle(500, 'is it within?');
-      }
       return isWithin;
     }
 
@@ -515,12 +512,17 @@ class Line2d {
     }
 
     this.radianDifference = (other) => {
-      const posRads = Math.mod(this.radians(), 2*Math.PI);
-      const negRads = Math.mod(this.radians() + Math.PI, 2*Math.PI);
-      const otherRads = Math.mod(other.radians(), 2*Math.PI);
-      const positiveDiff = Math.abs(otherRads - posRads);
-      const negitiveDiff = Math.abs(otherRads - negRads);
-      return positiveDiff > negitiveDiff ? positiveDiff : negitiveDiff;
+      const rads = this.radians();
+      const otherRads = other.radians();
+      let diff = Math.difference(rads, otherRads);
+      diff = Math.mod(diff + Math.PI, Math.PI * 2) - Math.PI;
+      if (diff > Math.PI / 2 ) {
+        return Math.PI * 2 - diff;
+      }
+      if (diff < Math.PI/-2 ) {
+        return Math.PI * 2 + diff;
+      }
+      return diff;
     }
 
     this.equals = (other) => {

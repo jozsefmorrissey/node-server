@@ -7,6 +7,10 @@ input, select {
   margin: 1pt 2pt;
 }
 
+h3,h4,h5 {
+  margin: 0;
+}
+
 .nowrap {
   white-space: nowrap;
 }
@@ -284,6 +288,12 @@ a {
 
 #model-display-cnt {
   float: right;
+}
+
+.plain-dropdown {
+  border-style: solid;
+  border-width: 0 0 0 3px;
+  padding-left: 3pt;
 }
 
 .hidden {

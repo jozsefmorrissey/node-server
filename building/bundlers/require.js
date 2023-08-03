@@ -222,9 +222,12 @@ class RequireJS {
         index += 1;
       }
       const backPages = from.length - index;
-      const relPathArr = backPages === 0  ? `./${to.slice(to.length - 1)}` :
-                          new Array(backPages).fill('..').concat(to.slice(index)).join('/');
-      return relPathArr;
+      if (backPages) {
+        const relPathArr = backPages === 0  ? `./${to.slice(to.length - 1)}` :
+              new Array(backPages).fill('..').concat(to.slice(index)).join('/');
+        return relPathArr;
+      }
+      return './' + to.slice(index).join('/');
     }
 
     function requireWrapper (absDir, relitivePath, filePath) {

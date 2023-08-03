@@ -183,6 +183,7 @@ function createMethods() {
 
   N.delete = async function (handler, path, filter) {
     try {
+      console.log(path);
       if (path || filter) {
         const handlers = Object.values(await N.find(handler, path, filter));
         handlers.sort(sortByDepth);
@@ -249,8 +250,10 @@ function createMethods() {
 
   N.write = async function (fileHandle, data) {
     const writable = await fileHandle.createWritable().catch(console.error);
-    await writable.write({type: 'write', data});
-    await writable.close();
+    if (writable.locked !== true) {
+      await writable.write({type: 'write', data});
+      await writable.close();
+    }
   };
 
   N.read = async function (fileHandle) {

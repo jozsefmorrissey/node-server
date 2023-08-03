@@ -13,24 +13,6 @@ class BiPolygon {
     const instance = this;
     if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of vertices');
 
-    let normal = {};
-    function calcNormal() {
-      if (normal === undefined) {
-        const pNorm1 = polygon1.normal();
-        const pNorm1I = pNorm1.inverse();
-        const center1 = polygon1.center();
-        const center2 = polygon2.center();
-        const cOffsetNorm = center1.translate(pNorm1, true);
-        const cOffsetNormI = center1.translate(pNorm1I, true);
-        normal.front = cOffsetNorm.distance(center2) > cOffsetNormI.distance(center2) ?
-            cOffsetNorm : cOffsetNormI;
-        const topApproxVector = face2[3].distanceVector(face2[0]).unit();
-        const normVert = new Vertex3D(normal.front);
-        normVect.rotate({x:1,y:0,z:0});
-      }
-      return normal;
-    }
-
     this.copy = () => new BiPolygon(polygon1.copy(), polygon2.copy());
 
     this.front = () => new Polygon3D(face1);
@@ -76,6 +58,15 @@ class BiPolygon {
         face1[index].translate(vector);
         face2[index].translate(vector);
       }
+    }
+
+    this.offset = (fromPoint, distance) => {
+      const dirVector = this.center().minus(fromPoint);
+      const normal = this.normal();
+      if (!dirVector.sameDirection(normal)) {
+        distance *= -1;
+      }
+      this.translate(normal.scale(distance));
     }
 
     this.center = (newCenter) => {
@@ -174,28 +165,35 @@ BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   // if (verts.length < 4) return undefined;
   if (verts.length < 3) return undefined;
   const verts1 = JSON.clone(verts);
-  // TODO: consider moving
+  // TODO: consider moving/fixing
   if (offset) {
     Line3D.adjustVertices(verts1[0], verts1[1], offset.x);
-    Line3D.adjustVertices(verts1[1], verts1[2], offset.y);
     Line3D.adjustVertices(verts1[2], verts1[3], offset.x);
+    Line3D.adjustVertices(verts1[1], verts1[2], offset.y);
     Line3D.adjustVertices(verts1[3], verts1[0], offset.y);
   }
   const verts2 = JSON.clone(verts1);
   const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
   const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);
-  return new BiPolygon(poly1, poly2);
+  let poly = new BiPolygon(poly1, poly2);
+  return poly;
 }
 
 BiPolygon.fromVectorObject =
-    (width, height, depth, center, vectorObj) => {
+    (width, height, depth, center, vectorObj, normalVector) => {
       center ||= new Vertex3D(0,0,0);
       vectorObj ||= {width: new Vector3D(1,0,0), height: new Vector3D(0,1,0), depth: new Vector3D(0,0,1)};
       const frontCenter = center.translate(vectorObj.depth.scale(depth/-2), true);
       const front = Polygon3D.fromVectorObject(width, height, frontCenter, vectorObj);
       const backCenter = center.translate(vectorObj.depth.scale(depth/2), true);
       const back = Polygon3D.fromVectorObject(width, height, backCenter, vectorObj);
-      return new BiPolygon(front, back);
+      let poly;
+      if (!normalVector || frontCenter.minus(backCenter).sameDirection(normalVector)) {
+        poly = new BiPolygon(front, back);
+      } else {
+        poly = new BiPolygon(back, front);
+      }
+      return poly;
 }
 
 module.exports = BiPolygon;

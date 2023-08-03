@@ -42,7 +42,7 @@ class OnWall extends Lookup {
     this.startVertex = () => {
       const startpoint = wall.startVertex().point();
       const theta = wall.radians();
-      const distLeft = this.fromPreviousWall() + width;
+      const distLeft = this.fromPreviousWall() + this.width();
       return new Vertex2d({x: startpoint.x + distLeft * Math.cos(theta),
                     y: startpoint.y + distLeft * Math.sin(theta)});
     }

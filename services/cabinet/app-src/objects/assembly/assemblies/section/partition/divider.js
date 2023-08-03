@@ -32,11 +32,13 @@ class DividerSection extends Assembly {
     const panelPartName = () =>
         `${this.partName()}.Divider.Panel`;
 
-    panel = new Divider('dvp', panelPartName, null, null, null, toModel);
+    panel = new Divider('dvp' + String.random(4), panelPartName, null, null, null, toModel);
     // const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
     panel.parentAssembly(this);
     this.addSubAssembly(panel);
     // this.addSubAssembly(frame);
+
+    this.panel = () => panel;
   }
 }
 

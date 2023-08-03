@@ -71,6 +71,9 @@ new FalseFrontSection();
 const Cutter = require('./assemblies/cutter.js');
 new Cutter();
 
+const CutterModel = Cutter.Model;
+new CutterModel();
+
 Assembly.components = {
-  Divider, Panel, Cutter, Door, DrawerBox, DrawerFront, Frame,
+  Divider, Panel, Cutter, Door, DrawerBox, DrawerFront, Frame, CutterModel
 };

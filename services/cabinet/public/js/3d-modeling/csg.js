@@ -57,8 +57,29 @@ CSG = function() {
 };
 
 // Construct a CSG solid from a list of `CSG.Polygon` instances.
-CSG.fromPolygons = function(polygons) {
+CSG.fromPolygons = function(polygons, deepCopy) {
   var csg = new CSG();
+
+  if (deepCopy) {
+    const newPolys = [];
+    for (let pi = 0; pi < polygons.length; pi++) {
+      const polygon = polygons[pi];
+      const vertices =  polygon.vertices;
+      const newVerts = [];
+      const shared = Array.from(polygon.shared || []);
+      for (let vi = 0; vi < vertices.length; vi++) {
+        const vert = vertices[vi];
+        const norm = vert.normal;
+        const pos = vert.pos;
+        const newNorm = new CSG.Vector(norm.x, norm.y, norm.z);
+        const newPos = new CSG.Vector(pos.x, pos.y, pos.z);
+        newVerts.push(new CSG.Vertex(newPos, newNorm));
+      }
+      newPolys.push(new CSG.Polygon(newVerts, shared));
+    }
+    polygons = newPolys;
+  }
+
   csg.polygons = polygons;
   return csg;
 };
@@ -198,16 +219,17 @@ CSG.prototype = {
     return {x,y,z};
   },
 
-  rotate: function (rotations) {
+  rotate: function (rotations, pivot) {
+    pivot ||= {x: 1, y:1, z:1};
     if (Array.isArray(rotations)) {
       for (let i = 0; i < rotations.length; i++) this.rotate(rotations[i])
       return;
     }
     this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
       let newPos = vertex.pos;
-      newPos = ArbitraryRotate(newPos, rotations.x, {x: 1, y:0, z:0});
-      newPos = ArbitraryRotate(newPos, rotations.y, {x: 0, y:1, z:0});
-      newPos = ArbitraryRotate(newPos, rotations.z, {x: 0, y:0, z:1});
+      newPos = ArbitraryRotate(newPos, rotations.x, {x: pivot.x, y:0, z:0});
+      newPos = ArbitraryRotate(newPos, rotations.y, {x: 0, y:pivot.y, z:0});
+      newPos = ArbitraryRotate(newPos, rotations.z, {x: 0, y:0, z:pivot.z});
       return new CSG.Vertex(newPos, vertex.normal);
     }));
   },
@@ -232,12 +254,14 @@ CSG.prototype = {
 
   center: function (newCenter) {
     const center = this.distCenter();
+    if (!newCenter) return center;
     const offset = {
       x: newCenter.x - center.x,
       y: newCenter.y - center.y,
       z: newCenter.z - center.z
     }
     this.translate(offset);
+    return newCenter;
   }
 };
 

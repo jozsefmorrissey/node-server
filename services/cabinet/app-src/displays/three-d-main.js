@@ -14,7 +14,7 @@ const ThreeView = require('three-view');
 const Vector3D = require('../three-d/objects/vector.js');
 const Line3D = require('../three-d/objects/line.js');
 const Vertex3D = require('../three-d/objects/vertex.js');
-
+const Canvas = require('./canvas');
 // const cube = new CSG.cube({radius: [3,5,1]});
 const consts = require('../../globals/CONSTANTS');
 let threeView;
@@ -169,11 +169,12 @@ function updateController() {
 
 
 let lastRendered;
-function update(part) {
+function update(part, force) {
   if (part) lastRendered = part.getAssembly('c');
   const threeDModel = ThreeDModel.get(lastRendered);
   if (threeDModel) {
-    threeDModel.update(lastRendered);
+    threeDModel.buildObject();
+    Canvas.render(lastRendered, force);
     updateController();
   }
 }

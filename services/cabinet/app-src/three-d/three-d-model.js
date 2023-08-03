@@ -7,19 +7,11 @@ const $t = require('../../../../public/js/utils/$t.js');
 const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
 
 const Polygon3D = require('./objects/polygon');
-const BiPolygon = require('./objects/bi-polygon');
-const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon');
-const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line');
-const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex');
 const Vertex3D = require('./objects/vertex');
-const Vector3D = require('./objects/vector');
-const Line3D = require('./objects/line');
-const Plane = require('./objects/plane');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const OrientationArrows = require('../displays/orientation-arrows.js');
 const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
-const ToleranceMap = require('../../../../public/js/utils/tolerance-map.js');
 const CabinetModel = require('./cabinet-model');
 
 const colors = {
@@ -55,29 +47,28 @@ function getColor(name) {
 }
 
 class ThreeDModel {
-  constructor(assembly) {
+  constructor(object) {
     const hiddenPartIds = {};
     const hiddenPartNames = {};
     const hiddenPrefixes = {};
     const instance = this;
     let hiddenPrefixReg;
+    let partModels = {};
     let extraObjects = [];
     let inclusiveTarget = {};
     let partMap;
     let renderId;
     let targetPartName;
     let lastRendered;
-    let rootAssembly = assembly.getRoot();
     this.setTargetPartName = (id) =>
       targetPartName = id;
     this.getLastRendered = () => lastRendered;
 
-    this.assembly = (a) => {
+    this.object = (a) => {
       if (a !== undefined) {
-        assembly = a;
-        rootAssembly = a.getRoot();
+        object = a;
       }
-      return assembly;
+      return object;
     }
 
     this.partMap = () => partMap;
@@ -164,7 +155,6 @@ class ThreeDModel {
     function createXZfootprint(model, cabinet) {
       const cube = CSG.cube({demensions: [cabinet.width(),1,cabinet.thickness()], center: model.center});
       xzFootprint = cube.intersect(model);
-      // xzFootprint = Polygon2d.lines(...twoDmap.xz);
     }
 
     this.xzFootprint = () => xzFootprint;
@@ -205,38 +195,44 @@ class ThreeDModel {
     let lm;
     this.lastModel = () => toTwoDpolys(lm);
 
-    let cabinetModel;
-    this.render = function () {
-      ThreeDModel.lastActive = this;
-      const cacheId = rootAssembly.id();
-      FunctionCache.on('sme');
-      FunctionCache.on(cacheId);
-
-      const startTime = new Date().getTime();
-      buildHiddenPrefixReg();
-      function buildObject(assem) {
-        let a = assem.toModel();
-        if (a === undefined) {
-          console.log('coooooommmmmmmmooooonnn')
-          assem.toModel();
-        }
-        let normals = a.normals;
-        // const c = assem.position().center();
-        const e=1;
-        // a.center({x: c.x * e, y: c.y * e, z: -c.z * e});
-        a.setColor(...getColor());
-        assem.getJoints().female.forEach((joint) => {
-          if (joint.apply()) {
-            const male = joint.getMale();
-            const m = male.toModel();
+    function buildModel(assem) {
+      let a = assem.toModel();
+      let normals = a.normals;
+      a.setColor(...getColor());
+      assem.getJoints().female.forEach((joint) => {
+        if (joint.apply()) {
+          const male = joint.getMale();
+          const m = male.toModel();
+          if (a.polygons.length > 0) {
             a = a.subtract(m);
           }
-        });
-        // else a.setColor(1, 0, 0);
-        a.normals = normals;
-        return a;
+        }
+      });
+      // else a.setColor(1, 0, 0);
+      a.normals = normals;
+      partModels[assem.id()] = a;
+      return a;
+    }
+
+    function cacheId() {
+      return object.getRoot ? object.getRoot().id() : undefined;
+    }
+
+    let cabinetModel, lastHash;
+    function buildObject(options) {
+      if (lastHash === instance.object().hash()) {
+        return CabinetModel.get(this.object());
       }
-      const assemblies = this.assembly().getParts();
+      options ||= {};
+      const cId = cacheId();
+      if (cId) {
+        FunctionCache.on('sme');
+        FunctionCache.on(cId);
+      }
+
+      buildHiddenPrefixReg();
+
+      const assemblies = instance.object().getParts();
       const root = assemblies[0].getRoot();
       cabinetModel = new CabinetModel(root);
       let a;
@@ -247,44 +243,68 @@ class ThreeDModel {
           console.log('here')
         }
         partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
-        const b = buildObject(assem);
+        if (assem.partName().indexOf('Bottom') !== -1) {
+          console.log('here')
+        }
+        const b = buildModel(assem);
         cabinetModel.add(assem, b);
         if (!hidden(assem)) {
-          // const c = assem.position().center();
-          // b.center({x: approximate(c.x * e), y: approximate(c.y * e), z: approximate(-c.z * e)});
+          const c = assem.position().center();
           if (a === undefined) a = b;
           else if (b && b.polygons.length !== 0) {
             a = a.union(b);
           }
           if (assem.partName() === targetPartName) {
             lm = b.clone();
-            // lm.normals = assem.toBiPolygon().normals();
-            // lm.reverseRotate(assem.position().rotation());
             const lastModel = this.lastModel();
             lastModelUpdateEvent.trigger(undefined, lastModel);
           }
         }
       }
+      a.center({x:0,y:0,z:0});
       cabinetModel.complexModel(a);
-      if (a && ThreeDModel.getViewer(a)) {
+      if (cId) {
+        FunctionCache.off(cId);
+        FunctionCache.off('sme');
+      }
+      lastHash = instance.object().hash();
+      return cabinetModel;
+    }
+    this.buildObject = buildObject;
+
+    function renderParts() {
+      let model = new CSG();
+      instance.buildObject();
+      const assems = instance.object().getParts();
+      for (let index = 0; index < assems.length; index++) {
+        const partModel = partModels[assems[index].id()];
+        if (partModel === undefined) throw new Error('part model not created... object is not being updated properly');
+        const c = partModel.center();
+        let e = 1.5;
+        partModel.center({x: c.x * e, y: c.y, z: e*c.z});
+        model = model.union(partModel);
+      }
+      ThreeDModel.display(model);
+    }
+    this.renderParts = renderParts;
+
+    this.render = function (options) {
+      const startTime = new Date().getTime();
+      instance.buildObject();
+      if (cabinetModel.complexModel()) {
         let displayModel = cabinetModel.complexModel();//a.simple ? a.simple : a;
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
-        // centerModel(displayModel);
         extraObjects.forEach(obj => displayModel.polygons.concatInPlace(obj.polygons));
-        // displayModel = displayModel.union(CSG.axis());
-        viewer.mesh = displayModel.toMesh();
-        viewer.gl.ondraw();
+        ThreeDModel.display(displayModel);
         lastRendered = cabinetModel;
         renderObjectUpdateEvent.trigger(undefined, lastRendered);
         console.log(`Rendering - ${(startTime - new Date().getTime()) / 1000}`);
       }
-      FunctionCache.off(cacheId);
-      FunctionCache.off('sme');
     }
 
-    this.update = () => {
+    this.update = (force) => {
       const rId = renderId = String.random();
-      ThreeDModel.renderId = renderId;
+      // ThreeDModel.renderId = renderId;
       setTimeout(() => {
         if(renderId === rId) instance.render();
       }, 250);
@@ -293,12 +313,13 @@ class ThreeDModel {
 }
 
 function centerOnObj(x,y,z) {
-  const model = ThreeDModel.lastActive.getLastRendered().complexModel();
-  const center = model.center.copy();
+  const model = ThreeDModel.lastActive.lastModel();
+  const center = new Vertex3D(model.center());
   center.x += 200 * y;
   center.y += -200 * x;
   center.z += 100;
   const rotation = {x: x*90, y: y*90, z: z*90};
+  // const rotation = {x: 0, y: 0, z: 0};
 
   return [center, rotation];
 }
@@ -336,25 +357,74 @@ ThreeDModel.getViewer = (model) => {
 }
 
 ThreeDModel.models = {};
-ThreeDModel.get = (assembly) => {
-  if (assembly === undefined) return ThreeDModel.lastActive;
-  if (ThreeDModel.models[assembly.id()] === undefined) {
-    ThreeDModel.models[assembly.id()] = new ThreeDModel(assembly);
+ThreeDModel.get = (object) => {
+  if (object === undefined) return ThreeDModel.lastActive;
+  if (Array.isArray(object)) return new GroupThreeDModel(object);
+  if (ThreeDModel.models[object.id()] === undefined) {
+    ThreeDModel.models[object.id()] = new ThreeDModel(object);
   }
-  return ThreeDModel.models[assembly.id()];
+  return ThreeDModel.models[object.id()];
 }
-ThreeDModel.render = (part) => {
+
+function render(partOs) {
+  ThreeDModel.get(partOs).render();
+}
+
+ThreeDModel.render = (partOs, options) => {
   const renderId = String.random();
   ThreeDModel.renderId = renderId;
   setTimeout(() => {
     if(ThreeDModel.renderId === renderId) {
-      const cacheId = part.getRoot().id();
-      FunctionCache.on(cacheId);
-      ThreeDModel.get(part).render();
-      FunctionCache.off(cacheId);
+      render(partOs, options);
     }
   }, 2500);
 };
+
+ThreeDModel.display = (displayModel) => {
+  ThreeDModel.getViewer(displayModel);
+  viewer.mesh = displayModel.toMesh();
+  viewer.gl.ondraw();
+}
+
+ThreeDModel.renderNow = async (parts, options) => {
+  if (options && options.parts) {
+    ThreeDModel.get(parts).renderParts(options);
+  } else {
+    ThreeDModel.get(parts).render(options);
+  }
+}
+
+class GroupThreeDModel extends ThreeDModel{
+  constructor(parts) {
+    super(parts);
+    let lastModel;
+    this.lastModel = () => lastModel;
+    this.buildObject = () => {
+      let combined = new CSG();
+      const origin = {x:0,y:0,z:0};
+      for (let index = 0; index < parts.length; index++) {
+        const part = parts[index];
+        const model = ThreeDModel.get(part).buildObject();
+        const complexModel = model.complexModel();
+        complexModel.center(origin);
+        const rotation = part.position().rotation();
+        rotation.y *= -1;// I think this is because the Y axis is inverted...
+        complexModel.rotate(rotation);
+        complexModel.center(part.position().center());
+        combined = combined.union(complexModel);
+      }
+      combined.center(origin);
+      return combined;
+    }
+    this.render = () => {
+      lastModel = this.buildObject();
+      ThreeDModel.lastActive = this;
+      if (lastModel.polygons && lastModel.polygons.length > 0) {
+        ThreeDModel.display(lastModel);
+      }
+    }
+  }
+}
 
 const lastModelUpdateEvent = new CustomEvent('lastModelUpdate');
 ThreeDModel.onLastModelUpdate = (func) => lastModelUpdateEvent.on(func);

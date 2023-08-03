@@ -1,0 +1,41 @@
+<div class='auto-location-properties-cnt'>
+  <h3 class='inline-flex dropdown-toggle'>
+    Auto Location Settings
+    <i class='down gg-chevron-down hidden' ></i>
+    <i class='right gg-chevron-right'></i>
+  </h3>
+  <div class='tab plain-dropdown' hidden>
+    <input type='text' value='{{id()}}' name='id' hidden/>
+    <input type='checkbox' checked name='objectSpecific' hidden/>
+    <div {{isDefault() ? 'hidden' : ''}}>
+      Default
+      <button class='default-reset'>Return</button>
+      <button class='apply-to-defualt'>Apply</button>
+    </div>
+    <label>Interior Only</label>
+    <input type='checkbox' name='LAYOUT_INTERIOR_ONLY' {{LAYOUT_INTERIOR_ONLY ? 'checked' : ''}}/>
+    <br>
+    <label>Snaps</label>
+    <input type='checkbox' name='SNAPS' {{SNAPS ? 'checked' : ''}}/>
+    <br>
+    <label>Corners</label>
+    <input type='checkbox' name='CORNERS' {{CORNERS ? 'checked' : ''}}/>
+    <div>
+      <div class='inline-flex dropdown-toggle'>
+        <label>Walls</label>
+        <input type='checkbox' name='WALLS' {{WALLS ? 'checked' : ''}}/>
+        <i class='down gg-chevron-down hidden' ></i>
+        <i class='right gg-chevron-right'></i>
+      </div>
+      <div class='tab plain-dropdown' hidden>
+        <label>Match Angle</label>
+        <input type='checkbox' name='MATCH_WALL_ANGLE' {{MATCH_WALL_ANGLE ? 'checked' : ''}}/>
+      </div>
+    </div>
+    <label>Fixed Object Angle</label>
+    <input type='checkbox' name='FIXED_ANGLE' {{FIXED_ANGLE ? 'checked' : ''}}/>
+    <br>
+    <label>Tolerance</label>
+    <input type='number' name='TOLERANCE' value='{{TOLERANCE}}'/>
+  </div>
+</div>

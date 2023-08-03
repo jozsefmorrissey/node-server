@@ -10,6 +10,7 @@
     <script type="text/javascript" src='/cabinet/js/index.js'></script>
     <link rel="stylesheet" href="/styles/expandable-list.css">
     <link rel="stylesheet" href="/cabinet/styles/estimate.css">
+    <link rel="stylesheet" href="/styles/icons.css">
     <script src="/js/utility-filter.js" run-type='auto'></script>
     <title>Estimate{{bolux}}</title>
   </head>
@@ -20,19 +21,7 @@
     <div id='display-ctn'>
       <div id='app' name='Orders' {{id !== 'home' && "path='/cabinet/home'"}} >
         <div id='order-cnt'></div>
-        <div id='model-cnt'>
-          <div id='display-menu'></div>
-          <div id='model-display-cnt'>
-            <div id="two-d-model">
-              <canvas id="two-d-model-canvas"></canvas>
-              <div class='orientation-controls'></div>
-            </div>
-            <div id="three-d-model" class="viewer small">
-              <span><div id="model-controller"></div></span>
-              <span id="three-d-model-display"></span>
-            </div>
-          </div>
-        </div>
+        <div:t class='tab' $t-id='canvas-displays'>autoLocProps</div:t>
       </div>
 
       <div name='Property Manager' path='/cabinet/property' >

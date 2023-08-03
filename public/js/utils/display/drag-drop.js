@@ -45,7 +45,7 @@ class DragDropResize {
       Resizer.hide(popupCnt);
       closeFuncs.forEach((func) => func());
       middleSize();
-      backdrop.hide();
+      catchAll.hide();
       histCnt.hidden = true;
     }
     this.hide = this.close;
@@ -53,12 +53,12 @@ class DragDropResize {
     this.updateZindex = () => {
       const highestZ = CatchAll.findHigestZindex();
       popupCnt.style.zIndex = highestZ + 2;
-      backdrop.backdrop.style.zIndex = highestZ - 1;
+      catchAll.backdrop.style.zIndex = highestZ - 1;
     }
 
     this.show = () => {
       if (instance.hidden()) {
-        if (!props.noBackdrop) backdrop.show();
+        if (!props.noBackdrop) catchAll.show();
         updateControls();
         const css = {display: 'block',
         height: Resizer.isLocked(popupCnt) ? undefined : instance.getDems().height,
@@ -123,8 +123,19 @@ class DragDropResize {
 
     this.back = () => setCss(prevLocation);
 
+    function positionInCenter(container) {
+      container = container || getPopupElems().cnt;
+      let popRect = getRelitiveRect(container);
+      let left = window.innerWidth/2 - popRect.width / 2;
+      let top = window.innerHeight/2 - popRect.height / 2;
+      setCss({left: left + 'px', top: top + 'px', position: 'fixed'}, container);
+    }
+
     function positionOnElement(elem, container) {
       currElem = elem || currElem;
+      if (currElem === undefined) {
+        return positionInCenter(container);
+      }
       container = container || getPopupElems().cnt;
       instance.show();
       let rect = getRelitiveRect(currElem);
@@ -231,7 +242,7 @@ class DragDropResize {
         setCss({left: 0, right: 0, bottom: 0, maxWidth: 'unset', maxHeight: 'unset', minWidth: 'unset',
                 minHeight: 'unset', width: 'fit-content', height: 'fit-content',
                 transform: 'rotate(90deg)'});
-        minLocation = prevLocation;
+        minLocation = prevLocation;popupCnt
         const rect = popupCnt.getBoundingClientRect();
         const left = (rect.width - rect.height)/2 + 'px';
         setCss({left});
@@ -287,7 +298,7 @@ class DragDropResize {
     let moving;
     function move(e) {
       console.log('moving!');
-      backdrop.show();
+      catchAll.show();
       Resizer.hide(popupCnt);
       const rect = popupCnt.getBoundingClientRect();
       const scrollOffset = getScrollOffset();
@@ -306,16 +317,16 @@ class DragDropResize {
 
     function stopMoving() {
       moving = undefined;
-      backdrop.hide();
+      catchAll.hide();
       Resizer.position(popupCnt);
       DragDropResize.events.dragend.trigger(getPopupElems().cnt);
       DragDropResize.events.drop.trigger(getPopupElems().cnt);
       if (!Resizer.isLocked(popupCnt)) Resizer.show(popupCnt);
     }
 
-    function backdropClick() {
+    function catchAllClick() {
       if (moving) stopMoving();
-      else instance.close();
+      else if (props.backdropClose !== false) instance.close();
     }
 
     const tempElem = document.createElement('div');
@@ -447,9 +458,10 @@ class DragDropResize {
     if (props.resize !== false){
       Resizer.all(popupCnt, props.position);
     }
-    const backdrop = new CatchAll(popupCnt);
-    backdrop.on('click', backdropClick);
-    backdrop.on('mousemove', mouseMove);
+    const catchAll = new CatchAll(popupCnt);
+    du.style(catchAll.backdrop, {backgroundColor: '#000000a6'});
+    catchAll.on('click', catchAllClick);
+    catchAll.on('mousemove', mouseMove);
 
     Resizer.position(popupCnt);
   }

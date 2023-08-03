@@ -4,6 +4,7 @@
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 const Position = require('../../position.js');
 const getDefaultSize = require('../../utils.js').getDefaultSize;
+const Vertex3D = require('../../three-d/objects/vertex.js');
 const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 
 const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
@@ -82,6 +83,50 @@ class Assembly extends KeyValue {
 
     this.eval = (eqn) => sme.eval(eqn, this);
     this.evalObject = (obj) => sme.evalObject(obj, this);
+
+    const keyValHash = this.hash;
+    this.hash = () => {
+      const valueObj = this.value.values;
+      const keys = Object.keys(valueObj).sort();
+      let hash = (this.demensionConfig || `${this.width()}X${this.thickness()}X${this.length()}`).hash();
+      hash += keyValHash();
+      const subAssems = Object.values(this.subassemblies).sortByAttr('id');
+      for (let index = 0; index < subAssems.length; index++) {
+        hash += subAssems[index].hash();
+      }
+      return hash;
+    }
+
+    let buildCenter;
+    let lastBChash;
+    this.buildCenter = () => {
+      const currHash = this.hash();
+      if (lastBChash !== currHash) {
+        let minX = Number.MAX_SAFE_INTEGER;
+        let minY = Number.MAX_SAFE_INTEGER;
+        let minZ = Number.MAX_SAFE_INTEGER;
+        let maxX = Number.MIN_SAFE_INTEGER;
+        let maxY = Number.MIN_SAFE_INTEGER;
+        let maxZ = Number.MIN_SAFE_INTEGER;
+        const parts = this.getParts();
+        for (let index = 0; index < parts.length; index++) {
+          const limits = parts[index].position().limits();
+          minX = Math.min(minX, limits['-x']);
+          minY = Math.min(minY, limits['-y']);
+          minZ = Math.min(minZ, limits['-z']);
+          maxX = Math.max(maxX, limits.x);
+          maxY = Math.max(maxY, limits.y);
+          maxZ = Math.max(maxZ, limits.z);
+        }
+        buildCenter = new Vertex3D({
+          x: (maxX+minX)/2,
+          y: (maxY+minY)/2,
+          z: (maxZ+minZ)/2,
+        });
+        // lastBChash = currHash;
+      }
+      return buildCenter;
+    }
 
     this.group = (g) => {
       if (g) group = g;

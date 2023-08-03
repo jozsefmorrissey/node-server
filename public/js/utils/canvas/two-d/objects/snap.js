@@ -5,16 +5,15 @@ const SnapLocation2d = require('snap-location');
 const HoverObject2d = require('../hover-map').HoverObject2d;
 const Tolerance = require('../../../tolerance.js');
 const Lookup = require('../../../object/lookup.js');
-const withinTol = Tolerance.within(.1);
+const AutoLocationProperties = require('./snap/auto-location-properties.js');
 
 class Snap2d extends Lookup {
-  constructor(parent, object, tolerance) {
+  constructor(parent, object) {
     super();
     name = 'booyacka';
-    Object.getSet(this, {object, tolerance}, 'layoutId');
+    Object.getSet(this, {object}, 'layoutId');
     if (parent === undefined) return;
     const instance = this;
-    const id = String.random();
     let start = new Vertex2d();
     let end = new Vertex2d();
     let layout = parent.layout();
@@ -23,9 +22,8 @@ class Snap2d extends Lookup {
     this.dr = () => 24 * 2.54;
     this.dol = () => 12;
     this.dor = () => 12;
-    this.toString = () => `SNAP ${this.id()}(${tolerance}):${this.object()}`
+    this.toString = () => `SNAP ${this.id()}(${this.tolerance()}):${this.object()}`
     this.position = {};
-    this.id = () => id;
     this.parent = () => parent;
     this.x = parent.x;
     this.y = parent.y;
@@ -34,8 +32,11 @@ class Snap2d extends Lookup {
     this.center = parent.center;
     this.angle = parent.angle;
     this.rotate = parent.rotate;
+    this.AutoLocationProperties = () => AutoLocationProperties.get(this.id());
+    this.tolerance = () => this.AutoLocationProperties().TOLERANCE;
+    this.withinTol = (...args) => Tolerance.within(this.tolerance())(...args);
 
-    this.radians = (newValue) => {
+    this.radians = function (newValue) {
       if (newValue !== undefined ) {
         const constraint = this.constraint();
         if (constraint === 'fixed') return;
@@ -43,8 +44,7 @@ class Snap2d extends Lookup {
         const snapAnchor = constraint.snapLoc;
         const originalPosition = snapAnchor && snapAnchor.center();
         const radianDifference = newValue - radians;
-        if (newValue !== parent.radians())
-          console.log('rads', Math.toRadians(newValue), '=>', parent.radians())
+        const stackValue = new Error().stack.split('\n')[2]
         this.parent().rotate(radianDifference);
         // notify(radians, newValue);
         if (snapAnchor) this.parent.center(snapAnchor.at({center: originalPosition}));
@@ -212,6 +212,14 @@ class Snap2d extends Lookup {
       }
     }
 
+    this.backs = () => {
+      const backs = [];
+      this.snapLocations.backCenter().forEach((snapLoc) => {
+        const corners = instance.object().neighbors(snapLoc.center(), 1, -1);
+        backs.push(new Line2d(corners[0], corners[1]));
+      });
+      return backs;
+    }
     this.connected = () => this.snapLocations.paired().length > 0;
 
     // this.snapLocations.rotate = backCenter.rotate;
@@ -290,13 +298,10 @@ class Snap2d extends Lookup {
       else position[maxAttr] = closestVertex[axis]();
     }
 
-    function sameSlopeAsWall(wall, v1, v2, v3) {
-      const wallSlope = wall.slope();
-      const p1 = v1.point();
-      const p2 = v2.point()
-      const p3 = v3.point()
-      return withinTol(wallSlope, Line2d.getSlope(p1.x, p1.y, p2.x, p2.y)) ||
-              withinTol(wallSlope, Line2d.getSlope(p2.x, p2.y, p3.x, p3.y));
+    function sameRads(wall, v1, v2, v3) {
+      const wallRads = wall.radians();
+      return instance.withinTol(wallRads, new Line2d(v2,v3).radians()) ||
+              instance.withinTol(wallRads, new Line2d(v1, v2).radians());
     }
 
     function findBestWallSnapLoc(center, wall, wallPairables, theta) {
@@ -305,9 +310,8 @@ class Snap2d extends Lookup {
       for (let index = 0; index < wallPairables.length; index++) {
         const snapLoc = wallPairables[index];
         const neighbors = instance.object().neighbors(snapLoc.center(), -1, 1);
-        if (theta === 180)
-          console.log('rotated');
-        if (sameSlopeAsWall(wall, neighbors[0], snapLoc.center(), neighbors[1])) {
+        // if (theta === 180)
+        if (sameRads(wall, neighbors[0], snapLoc.center(), neighbors[1])) {
           const centerVertex = snapLoc.at({center, theta});
           const moveIsWithin = layout.within(centerVertex);
           if (moveIsWithin) {
@@ -323,13 +327,16 @@ class Snap2d extends Lookup {
     }
 
     function findWallSnapLocation(center) {
+      const alps = instance.AutoLocationProperties();
+      if (!alps.WALLS) return;
       const centerWithin = layout.within(center);
       let wallObj;
       layout.walls().forEach((wall) => {
         const point = wall.closestPointOnLine(center, true);
         if (point) {
           const wallDist = point.distance(center);
-          const isCloser = (!centerWithin || wallDist < tolerance*2) &&
+          const force = alps.LAYOUT_INTERIOR_ONLY && !centerWithin;
+          const isCloser = (force || wallDist < instance.tolerance()*200) &&
                           (wallObj === undefined || wallObj.distance > wallDist);
           if (isCloser) {
             wallObj = {point, distance: wallDist, wall};
@@ -339,7 +346,18 @@ class Snap2d extends Lookup {
       if (wallObj) {
         const wall = wallObj.wall;
         const point = wallObj.point;
-        const wallPairables = instance.snapLocations.wallPairable();
+        let wallPairables = instance.snapLocations.wallPairable();
+        if (alps.FIXED_ANGLE) {
+          return findBestWallSnapLoc(point, wall, wallPairables, 0);
+        } else if (alps.MATCH_WALL_ANGLE) {
+          const backLine = instance.backs()[0];
+          let rads = Math.mod(wall.radianDifference(backLine), 2*Math.PI);
+          rads = Math.mod(rads + instance.radians(), 2*Math.PI);
+          rads -= Math.PI;
+          instance.radians(rads);
+          wallPairables = instance.snapLocations.backCenter();
+          // return findBestWallSnapLoc(point, wall, wps, 0);
+        }
         return findBestWallSnapLoc(point, wall, wallPairables, 0) ||
                     findBestWallSnapLoc(point, wall, wallPairables, Math.PI);
       }
@@ -354,10 +372,6 @@ class Snap2d extends Lookup {
       const objVerts = obj.verticesAndMidpoints();
       const targetIndex = objVerts.equalIndexOf(targetMidpoint.center());
 
-      if (targetIndex === undefined) {
-        console.log('wtf');
-      }
-
       tempPoly.rotate(radians);
       const newCenter = tempPoly.point(targetIndex, {center: otherMidpoint.center()});
       tempPoly.centerOn(newCenter);
@@ -368,12 +382,8 @@ class Snap2d extends Lookup {
       const locCount = instance.snapLocations().length;
 
       const originalPosition = objVerts[neighborIndex + locCount % locCount];
-      if (originalPosition === undefined) { // Vertex
-        console.log('wtff');
-      }
       const targetLoc = instance.snapLocations.at(originalPosition);
       if (!targetLoc) {
-        // console.log(targetLoc.location());
         return;
       }
 
@@ -464,16 +474,121 @@ class Snap2d extends Lookup {
       }
     }
 
+    function singleBackCornerSnap(closest) {
+      const lines = instance.object().lines();
+      const cornerRads = closest.layout.corner.radians();
+      for (let index = 1; index < lines.length + 1; index++) {
+        const line1 = lines[index === 0 ? lines.length - 1 : index - 1];
+        const line2 = lines[index === lines.length ? 0 : index];
+        const vertex = line1.startVertex();
+        // TODO: I dont know how this can work... its always positive...
+        const rads = line1.radianDifference(line2);
+        //(2*Math.PI + line1.radians() - line2.radians()) % (2*Math.PI);
+        if (instance.withinTol(Math.abs(rads), Math.abs(cornerRads))) {
+          const snapLoc = instance.snapLocations.at(vertex);
+          const newCenter = snapLoc.at({center: closest.layout.corner})
+          const moveIsWithin = layout.within(newCenter);
+          if (moveIsWithin) {
+            closest.object = {snapLoc, center: newCenter};
+          }
+        }
+      }
+      return closest.object;
+    }
+
+    function orientCornerLines(line1, line2) {
+      const list = [line1, line2];
+      const intersection = line1.findIntersection(line2);
+
+      const startDist1 = line1.startVertex().distance(intersection);
+      const endDist1 = line1.endVertex().distance(intersection);
+      const endVert1 = startDist1 > endDist1 ? line1.startVertex() : line1.endVertex();
+      line1 = new Line2d(intersection, endVert1.copy());
+      // line1.rotate(instance.parent().radians(), instance.object().center());
+
+      const startDist2 = line2.startVertex().distance(intersection);
+      const endDist2 = line2.endVertex().distance(intersection);
+      const endVert2 = startDist2 > endDist2 ? line2.startVertex() : line2.endVertex();
+      line2 = new Line2d(intersection, endVert2.copy());
+      // line2.rotate(instance.parent().radians(), instance.object().center());
+      list.push(line1);list.push(line2);
+
+      return {line1, line2, intersection};
+    }
+
+    function multiBackCornerSnap(closest,backs) {
+      const corner = closest.layout.corner;
+      const cornerRads = Math.abs(corner.radians());
+      const cornerLinesTar = orientCornerLines(corner.prevWall(), corner.nextWall());
+      const prevWall = cornerLinesTar.line1;
+      const nextWall = cornerLinesTar.line2;
+      for (let index = 0; index < backs.length; index++) {
+        for (let jIndex = index+1; jIndex < backs.length; jIndex++) {
+          const cornerLines = orientCornerLines(backs[index], backs[jIndex]);
+          const line1 =  cornerLines.line1;
+          const line2 = cornerLines.line2;
+          const rads = line1.radianDifference(line2);
+          if (instance.withinTol(Math.abs(rads), Math.abs(cornerRads))) {
+            const intersection = cornerLines.intersection;
+
+            const radDiff2 = line2.radianDifference(prevWall);
+            const radDiff1 = line1.radianDifference(nextWall);
+            let theta = -1 * (line1.radians() - nextWall.radians());
+            if (!Math.modTolerance(radDiff1, radDiff2, 2*Math.PI, instance.tolerance())) {
+              theta = -1*(line1.radians() - prevWall.radians());
+            }
+
+            const moveTo = {center: closest.layout.corner.copy(), theta};
+            const newCenter = instance.object().relativeToExternalVertex(intersection, moveTo);
+            const moveIsWithin = layout.within(newCenter);
+            const dist = newCenter.distance(moveTo.center);
+            if (moveIsWithin && (!closest.object || dist < closest.object.dist)) {
+              instance.parent().rotate(theta);
+              closest.object = {center: newCenter, dist};
+            }
+          }
+        }
+      }
+      return closest.object;
+    }
+
+    function findCornerSnapLocation(center) {
+      const alps = instance.AutoLocationProperties();
+      if (alps.CORNERS) {
+        const corners = layout.vertices();
+        let closest = {};
+        for (let index = 0; index < corners.length; index++) {
+          const corner = corners[index];
+          const dist = center.distance(corner);
+          if (closest.layout === undefined || dist < closest.layout.dist) {
+            closest.layout = {corner, dist};
+          }
+        }
+        if (closest.layout.dist < instance.tolerance() * 30) {
+          const backs = instance.backs();
+          if (backs.length === 1) {
+            return singleBackCornerSnap(closest);
+          } else {
+            return multiBackCornerSnap(closest, backs);
+          }
+        }
+      }
+    }
+
     function findObjectSnapLocation(center) {
+      const alps = instance.AutoLocationProperties();
+      if (!alps.SNAPS) return;
       const start = new Date().getTime();
       const closestOtherLoc = findClosestSnapLoc(center);
       if (closestOtherLoc === null) return;
       let snapList, midpointOffset;
-      if (closestOtherLoc.isLeft) {
-        if (!closestOtherLoc.isCenter) midpointOffset = -1;
+      if (alps.FIXED_ANGLE) {
+        snapList = instance.snapLocations();
+      } else if (closestOtherLoc.isLeft) {
+        if (!closestOtherLoc.isCenter) midpointOffset = 1;
         snapList = instance.snapLocations.rightCenter();
       } else if (closestOtherLoc.isRight) {
-        if (!closestOtherLoc.isCenter) midpointOffset = 1;
+        if (!closestOtherLoc.isCenter) midpointOffset = -1;
         snapList = instance.snapLocations.leftCenter();
       } else if (closestOtherLoc.isBack && ! closestOtherLoc.isCenter) {
         const snapInfo = closestBackSnapInfo(closestOtherLoc, center);
@@ -527,16 +642,19 @@ class Snap2d extends Lookup {
         return;
       }
       const pairedSnapLocs = this.snapLocations.paired();
-      const centerWithin = layout.within(center);
       let closest = {};
+      const keepInBounds = this.AutoLocationProperties().LAYOUT_INTERIOR_ONLY;
       const runData = {start: new Date().getTime()};
-      const wallSnapLocation = findWallSnapLocation(center);
+      const cornerSnapLoc = findCornerSnapLocation(center);
+      const wallSnapLocation = !cornerSnapLoc && findWallSnapLocation(center);
       runData.wall = new Date().getTime();
-      if (wallSnapLocation !== undefined) {
+      if (cornerSnapLoc) {
+        this.makeMove(cornerSnapLoc);
+      } else if (wallSnapLocation !== undefined) {
         this.makeMove(wallSnapLocation);
         wallSnapLocation.pairWith.courting(wallSnapLocation.wall);
         this.moveConnected(null, wallSnapLocation.theta, true);
-      } else if (centerWithin) {
+      } else if (!keepInBounds || layout.within(center)) {
         if (this.connected()) {
           this.moveConnected(center);
         } else {
@@ -591,7 +709,7 @@ Snap2d.registar = (clazz) => {
   if (instance instanceof Snap2d) {
     const name = clazz.prototype.constructor.name.replace(/^Snap/, '').toCamel();
     if (Snap2d.get[name] === undefined)
-      Snap2d.get[name] = (parent, tolerance) => new clazz(parent, tolerance);
+      Snap2d.get[name] = (parent) => new clazz(parent);
     else throw new Error(`Double registering Snap2d: ${name}`);
   }
 }
@@ -602,7 +720,7 @@ Snap2d.identfied = (snapLoc) => Snap2d.identifiedConstraints &&
 Snap2d.fromJson = (json) => {
   const layout = Layout2d.get(json.layoutId);
   const object = Object.fromJson(json.object);
-  const snapObj = new Snap2d(layout, object, json.tolerance);
+  const snapObj = new Snap2d(layout, object);
   snapObj.id(json.id);
   return snapObj;
 }

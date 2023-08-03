@@ -18,12 +18,13 @@ const $t = require('../../../../public/js/utils/$t.js');
 const Object3D = require('../three-d/layout/object.js');
 const Inputs = require('../input/inputs.js');
 const EPNTS = require('../../generated/EPNTS');
+const Global = require('../services/global');
 
 
-function getHtmlElemCabinet (elem) {
-  const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
-  return Cabinet.get(cabinetId);
-}
+// function getHtmlElemCabinet (elem) {
+//   const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
+//   return Cabinet.get(cabinetId);
+// }
 
 class CabinetDisplay {
   constructor(parentSelector, group) {
@@ -42,6 +43,7 @@ class CabinetDisplay {
     const showTypes = Show.listTypes();
     const display = (value) => new Measurement(value).display();
     const getBody = (cabinet, $index) => {
+      Global.cabinet(cabinet);
       if (expandList.activeKey() === $index) {
         TwoDLayout.panZoom.once();
         ThreeDMain.update(cabinet);
@@ -61,13 +63,13 @@ class CabinetDisplay {
     }
 
     function update3Dmodel(target) {
-      const cabinet = getHtmlElemCabinet(target);
+      const cabinet = Global.cabinet();//getHtmlElemCabinet(target);
       target.value = new Measurement(target.value, true).display();
       console.log('ran update3Dmodel');
       ThreeDMain.update(cabinet);
     }
 
-    du.on.match('enter:focusout', '.cabinet-id-input.dem', update3Dmodel);
+    du.on.match('enter', '.cabinet-id-input.dem', update3Dmodel);
 
     function updateCabValue(cabinet, attr) {
       const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);
@@ -100,6 +102,7 @@ class CabinetDisplay {
 
     const getObject = (values) => {
       const cabinet = CabinetConfig.get(group, values.type, values.layout, values.name);
+      ThreeDMain.update(cabinet, true);
       return cabinet;
     };
     this.active = () => expandList.active();

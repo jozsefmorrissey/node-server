@@ -13,6 +13,7 @@ const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
 const PanZoom = require('../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 
+
 const CSG = require('../../public/js/3d-modeling/csg');
 
 function csgVert(pos, normal) {
@@ -95,7 +96,7 @@ class ThreeView extends Lookup {
 
     this.update = (cabinet) => {
       if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet);
-      threeDModel.assembly(cabinet);
+      threeDModel.object(cabinet);
       const model = threeDModel.update(cabinet);
       draw.clear();
       setTimeout(() => {

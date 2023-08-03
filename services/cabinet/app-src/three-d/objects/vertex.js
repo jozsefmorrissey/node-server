@@ -39,6 +39,7 @@ class Vertex3D {
     this.translate = (vector, doNotModify) => {
       let vertex = this;
       if (doNotModify === true) vertex = this.copy();
+      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector);
       vertex.x += vector.i();
       vertex.y += vector.j();
       vertex.z += vector.k();
@@ -105,7 +106,11 @@ class Vertex3D {
 
     this.copy = () => new Vertex3D(this.x, this.y, this.z);
     this.clone = this.copy;
-    this.equals = (other) => other && Vertex3D.tolerance.within(this, other);
+    this.equals = (otherOx, y, z) => {
+      if (otherOx instanceof Object)
+        return Vertex3D.tolerance.within(this, otherOx);
+      return Vertex3D.tolerance.within(this, new Vertex3D(otherOx, y, z));
+    }
     this.toString = () => `(${approx10(this.x)},${approx10(this.y)},${approx10(this.z)})`;
     this.toAccurateString = () => `${approximate(this.x)},${approximate(this.y)},${approximate(this.z)}`;
   }

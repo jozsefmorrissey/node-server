@@ -104,7 +104,8 @@ class SnapLocation2d {
       const center = otherSnapLoc.center();
       const otherRads = otherSnapLoc.forwardRadians();
       const rads = instance.forwardRadians();
-      const changeInTheta = otherRads - rads;
+      const fixedAngle = instance.parent().AutoLocationProperties().FIXED_ANGLE;
+      const changeInTheta = fixedAngle ? otherRads - rads : 0;
       const position1 = {center: center, theta: changeInTheta};
       const position2 = {center: center, theta: changeInTheta - Math.PI};
       const newPosition1 = instance.parent().position[location](position1);
@@ -113,8 +114,8 @@ class SnapLocation2d {
       const dist1 = newPosition1.distance(otherObjectCenter);
       const dist2 = newPosition2.distance(otherObjectCenter);
       const objTheta = instance.parent().radians();
-      const theta = objTheta - changeInTheta;
-      if (dist1 > dist2) {
+      const theta = !fixedAngle ? objTheta - changeInTheta : 0;
+      if (fixedAngle || dist1 > dist2) {
         instance.parent().makeMove({center: newPosition1, theta});
       } else {
         instance.parent().makeMove({center: newPosition2, theta: theta - Math.PI});
@@ -156,7 +157,7 @@ class SnapLocation2d {
 
     this.notPaired = () => pairedWith === null;
 
-    this.hovering = new HoverObject2d(() => this.center(), 12).hovering;
+    this.hovering = new HoverObject2d(() => this.center(), 6).hovering;
 
     this.instString = () => `${parent.id()}:${location}`;
     this.toString = () => pairedWith  instanceof SnapLocation2d ?

@@ -89,7 +89,9 @@ class Position {
       return this.center(center) + (magnitude * this.demension(axis) / 2);
     }
 
-    this.limits = (targetStr) => {
+    this.limits = (targetStr, relitiveToCenter) => {
+      let center = this.center();
+
       if (targetStr !== undefined) {
         const match = targetStr.match(/^(\+|-|)([xyz])$/)
         const attr = match[2];
@@ -105,12 +107,12 @@ class Position {
       }
       const d = this.demension();
       return  {
-        x: d.x / 2,
-        '-x': -d.x / 2,
-        y: d.y / 2,
-        '-y': -d.y / 2,
-        z: d.z / 2,
-        '-z': -d.z / 2,
+        x: center.x + d.x / 2,
+        '-x': center.x - d.x / 2,
+        y: center.y + d.y / 2,
+        '-y': center.y - d.y / 2,
+        z: center.z + d.z / 2,
+        '-z': center.z - d.z / 2,
       }
     }
 
@@ -121,12 +123,17 @@ class Position {
         depth: new Vertex3D(0,0,1).rotate(rotations).vector()
     });
 
+    this.biPolyNormVector = () => {
+      const root = assembly.getRoot();
+      const objCent = root.buildCenter();
+      return objCent.minus(this.center());
+    }
     this.toBiPolygon = () => {
       const current = this.current();
       const dem = current.demension;
       const center = new Vertex3D(current.center);
       const vecObj = modelVecObj(current.rotation);
-      return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj);
+      return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj, this.biPolyNormVector());
     }
 
     this.toModel = () => {

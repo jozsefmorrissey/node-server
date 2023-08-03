@@ -83,14 +83,14 @@ class Cabinet extends Assembly {
     this.modifiableValues = () => {
       const valueObj = this.value.values;
       const keys = Object.keys(valueObj);
-      return keys.filter(str => !valueObj[str].match(/[a-zA-Z]/))
+      return keys.filter(str => str instanceof String && !valueObj[str].match(/[a-zA-Z]/))
                   .map(str => ({key: str, value: this.eval(valueObj[str])}));
     }
 
-    this.modifiableString = () => {
-      const keys = Object.values(this.modifiableValues());
-      return keys.map(obj => `${obj.key}=${obj.value}`).join();
-    }
+    let modificationState = 0;
+    this.modificationState = () =>
+      modificationState;
+    this.value.onChange(() => modificationState++);
 
     // TODO: ???? It is possible to have inner/outer intersections from
     //       different parts..... not suure its worth the extra calculations
@@ -227,11 +227,19 @@ class Cabinet extends Assembly {
       return bordersByIds(borderObj);
     }
 
+    let openingModState;
     function updateOpeningPoints(func, test) {
       return (...args) => {
-        const shouldUpdate = test && test(...args);
+        if (test && test(...args)) {
+          modificationState++;
+        }
         const value = func(...args);
-        if (shouldUpdate) instance.updateOpenings();
+        const modStr = modificationState;
+        const shouldUpdate = openingModState !== modificationState;
+        if (shouldUpdate) {
+          openingModState = modificationState;
+          instance.updateOpenings();
+        }
         return value;
       }
     }
@@ -267,6 +275,7 @@ Cabinet.build = (type, group, config) => {
   cabinet.thickness(config.thickness);
   cabinet.position().setCenter('y', config.fromFloor);
   config.values.forEach((value) => cabinet.value(value.key, value.eqn));
+  cabinet.value('dividerJoint', Object.fromJson(config.dividerJoint));
 
   config.subassemblies.forEach((subAssemConfig) => {
     const type = subAssemConfig.type;
