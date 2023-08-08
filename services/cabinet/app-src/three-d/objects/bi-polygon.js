@@ -5,6 +5,7 @@ const Vector3D = require('vector');
 const Vertex3D = require('vertex');
 const Polygon3D = require('polygon');
 const Plane = require('plane');
+const Joint = require('../../objects/joint/joint.js');
 
 class BiPolygon {
   constructor(polygon1, polygon2) {
@@ -103,7 +104,7 @@ class BiPolygon {
       return reverse ? returnValue.reverse() : returnValue;
     }
 
-    this.toModel = () => {
+    this.toModel = (joints) => {
       const flippedNormal = this.flippedNormal();
       const front = new CSG.Polygon(normalize(face1, !flippedNormal));
       front.plane.normal = front.vertices[0].normal.clone();//new CSG.Vector([0,1, 0,0]);
@@ -120,12 +121,12 @@ class BiPolygon {
       }
 
       const polys = CSG.fromPolygons(polygonSets);
-      polys.normals = {
-        front: this.normal(),
-        right: this.normalRight(),
-        top: this.normalTop()
-      }
-      return polys;
+      // polys.normals = {
+      //   front: this.normal(),
+      //   right: this.normalRight(),
+      //   top: this.normalTop()
+      // }
+      return Joint.apply(polys, joints);
     }
 
     this.toPolygons = () => {

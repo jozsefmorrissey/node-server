@@ -26,7 +26,7 @@ class Cabinet extends Assembly {
   constructor(partCode, partName) {
     super(partCode, partName);
     // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
-    Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick');
+    Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick', 'dividerJoint');
     const instance = this;
     let toeKickHeight = 4;
     this.part = false;
@@ -83,8 +83,10 @@ class Cabinet extends Assembly {
     this.modifiableValues = () => {
       const valueObj = this.value.values;
       const keys = Object.keys(valueObj);
-      return keys.filter(str => str instanceof String && !valueObj[str].match(/[a-zA-Z]/))
-                  .map(str => ({key: str, value: this.eval(valueObj[str])}));
+      return keys.filter(key => {
+        const value = valueObj[key];
+        return value.match instanceof Function && !value.match(/[a-zA-Z]/);
+      }).map(str => ({key: str, value: this.eval(valueObj[str])}));
     }
 
     let modificationState = 0;
@@ -313,7 +315,7 @@ Cabinet.fromJson = (assemblyJson, group) => {
   assembly.width(pos.demension.x);
   assembly.group(group);
   assembly.id(assemblyJson.id);
-  assembly.value.all(assemblyJson.value.values);
+  assembly.value.all(Object.fromJson(assemblyJson.value.values));
   Object.values(assemblyJson.subassemblies).forEach((json) => {
     const clazz = Assembly.class(json._TYPE);
     json.parent = assembly;

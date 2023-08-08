@@ -35,7 +35,7 @@ class CutterReference extends Cutter {
       const multiplier = biPoly.normal().sameDirection(poly.normal()) ? -1 : 1;
       const distance = 2 * Math.max.apply(null, lineLens);
       biPoly = BiPolygon.fromPolygon(poly, 0, multiplier * distance, {x: distance, y:distance});
-      return biPoly.toModel();
+      return biPoly.toModel(this.getJoints().female);
     }
 
     this.partName = () => `CutterRef(${reference.partCode()}${offset >= 0 ? '+' + offset : offset}@${fromPoint})`;

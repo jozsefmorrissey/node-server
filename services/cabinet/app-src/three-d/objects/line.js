@@ -90,19 +90,18 @@ class Line3D {
     this.fromStart = (distance) => this.startVertex.translate(this.vector().unit().scale(distance), true);
     this.fromEnd = (distance) => this.endVertex.translate(this.vector().unit().scale(distance), true);
 
-    this.adjustLength = (change, fromStartVertex) => {
-      if ((typeof change) !== 'number' || change === 0) return;
+    this.adjustLength = (newLength, fromStartVertex) => {
+      if ((typeof newLength) !== 'number' || newLength === 0) return;
       const unitVec = this.vector().unit();
       if (fromStartVertex !== undefined) {
         if (fromStartVertex === true) {
-          this.endVertex.positionAt(this.startVertex.translate(unitVec.scale(change), true));
+          this.endVertex.positionAt(this.startVertex.translate(unitVec.scale(newLength), true));
         } else {
-          this.startVertex.positionAt(this.endVertex.translate(unitVec.scale(change), true));
+          this.startVertex.positionAt(this.endVertex.translate(unitVec.scale(newLength), true));
         }
       } else {
-        const len = this.length();
-        const halfChangeMag = change/2;
-        const halfDistVec = unitVec.scale(halfChangeMag);
+        const halfLenMag = newLength/2;
+        const halfDistVec = unitVec.scale(halfLenMag);
        this.startVertex.translate(halfDistVec.inverse());
        this.endVertex.translate(halfDistVec);
       }

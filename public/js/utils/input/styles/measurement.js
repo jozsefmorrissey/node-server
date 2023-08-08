@@ -33,6 +33,13 @@ class MeasurementInput extends Input {
     this.setValue = (val) => {
       let newVal = this.valid(val) ? ((val instanceof Measurement) ?
                         val : new Measurement(val, units || true)) : value;
+      if (props.polarity) {
+        if (props.polarity === 'positive') {
+          if (newVal.decimal() < 0) newVal = new Measurement(0);
+        } else if (props.polarity === 'negitive') {
+          if (newVal.decimal() > 0) newVal = new Measurement(0);;
+        }
+      }
       const updated = newVal !== value;
       value = newVal;
       return updated;

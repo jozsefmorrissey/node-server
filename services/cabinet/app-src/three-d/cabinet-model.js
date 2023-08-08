@@ -11,7 +11,7 @@ const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line');
 const SnapPolygon = require('../../../../public/js/utils/canvas/two-d/objects/snap/polygon');
 const StarLineMap = require('../../../../public/js/utils/canvas/two-d/maps/star-line-map');
 const EscapeMap = require('../../../../public/js/utils/canvas/two-d/maps/escape');
-
+const Global = require('../services/global');
 
 class CabinetModel {
   constructor(cabinet) {
@@ -66,7 +66,17 @@ class CabinetModel {
 
     this.threeView = () => {
       if (!threeView) {
-        const polys = Polygon3D.fromCSG(cabinetCSG.polygons);
+        let csg = new CSG();
+        const assems = Object.values(cabinet.subassemblies);
+        for (let index = 0; index < assems.length; index++) {
+          const assem = assems[index];
+          const cxtr = assem.constructor.name;
+          if (cxtr !== 'SectionProperties' && !cxtr.match(/Cutter/)) {
+            if (assem.toModel)
+              csg = csg.union(assems[index].toModel(false));
+          }
+        }
+        const polys = Polygon3D.fromCSG(csg.polygons);
         threeView = Polygon3D.toThreeView(polys);
       }
       return threeView;
@@ -234,6 +244,6 @@ class CabinetModel {
 }
 
 const models = {};
-CabinetModel.get = (cabinet) => models[cabinet.id()];
+CabinetModel.get = (cabinet) => models[(cabinet || Global.cabinet()).id()];
 
 module.exports = CabinetModel;

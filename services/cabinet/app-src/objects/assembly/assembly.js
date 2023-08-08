@@ -6,7 +6,9 @@ const Position = require('../../position.js');
 const getDefaultSize = require('../../utils.js').getDefaultSize;
 const Vertex3D = require('../../three-d/objects/vertex.js');
 const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
+const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
 
+FunctionCache.on('hash', 250);
 const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
 
 function maxHeight(a, b, c) {
@@ -84,18 +86,24 @@ class Assembly extends KeyValue {
     this.eval = (eqn) => sme.eval(eqn, this);
     this.evalObject = (obj) => sme.evalObject(obj, this);
 
-    const keyValHash = this.hash;
-    this.hash = () => {
-      const valueObj = this.value.values;
+let ranCount = 0;
+    function hash() {
+      ranCount++;
+      const valueObj = instance.value.values;
       const keys = Object.keys(valueObj).sort();
-      let hash = (this.demensionConfig || `${this.width()}X${this.thickness()}X${this.length()}`).hash();
+      let hash = 0;
+      if (instance.parentAssembly() === undefined) hash += `${instance.length()}x${instance.width()}x${instance.thickness()}`.hash();
+      if (instance.demensionConfig) hash += this.demensionConfig.hash();
       hash += keyValHash();
-      const subAssems = Object.values(this.subassemblies).sortByAttr('id');
+      const subAssems = Object.values(instance.subassemblies).sortByAttr('id');
       for (let index = 0; index < subAssems.length; index++) {
-        hash += subAssems[index].hash();
+        hash += subAssems[index].hash(true);
       }
       return hash;
     }
+
+    const keyValHash = this.hash;
+    this.hash = new FunctionCache(hash, this, 'hash');
 
     let buildCenter;
     let lastBChash;

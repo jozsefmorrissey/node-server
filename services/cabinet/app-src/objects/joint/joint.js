@@ -51,4 +51,24 @@ Joint.register = (clazz) => {
 Joint.new = function (id, json) {
   return new Joint.classes[id]().fromJson(json);
 }
+
+Joint.apply = (model, joints) => {
+  if (!joints || !Array.isArray(joints)) return model;
+  try {
+    let m = model; // preventCouruption
+    joints.forEach((joint) => {
+      if (joint.apply()) {
+        const male = joint.getMale();
+        const mm = male.toModel();
+        if (m.polygons.length > 0 && mm.polygons.length > 0) {
+          m = m.subtract(mm);
+        }
+      }
+    });
+    return m;
+  } catch (e) {
+    console.error('Most likely caused by a circular joint reference',e);
+    return model;
+  }
+}
 module.exports = Joint

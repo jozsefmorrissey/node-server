@@ -142,7 +142,7 @@ OpenSectionDisplay.refresh = (opening, rapid, onlyIfPending) => {
         const dividerSelector = `[opening-id='${opening.id()}'].division-count-input`;
         // listCnt.querySelector(dividerSelector).focus();
       }
-    }, rapid ? 200 : 2000);
+    }, 50);
   }
 }
 
@@ -224,6 +224,7 @@ OpenSectionDisplay.onOrientation = (target) => {
   const value = target.value;
   const opening = OpenSectionDisplay.sections[openId];
   opening.vertical(value === 'vertical');
+  opening.reevaluate();
   OpenSectionDisplay.refresh(opening);
 };
 

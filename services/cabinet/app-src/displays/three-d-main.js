@@ -10,14 +10,12 @@ const drawerBox = require('../three-d/models/drawer-box.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const ThreeDModel = require('../three-d/three-d-model.js');
-const ThreeView = require('three-view');
 const Vector3D = require('../three-d/objects/vector.js');
 const Line3D = require('../three-d/objects/line.js');
 const Vertex3D = require('../three-d/objects/vertex.js');
 const Canvas = require('./canvas');
 // const cube = new CSG.cube({radius: [3,5,1]});
 const consts = require('../../globals/CONSTANTS');
-let threeView;
 
 // TODO: ????
 function displayPart(part) {
@@ -55,27 +53,25 @@ du.on.match('click', '.model-state', (target) => {
   const has = target.matches('.active');
   deselectPrefix();
   !has ? du.class.add(target, 'active') : du.class.remove(target, 'active');
-  let label = target.children[0]
-  let type = label.getAttribute('type');
-  let value = type !== 'prefix' ?
-        (type !== 'part-name' ? label.innerText : label.getAttribute('part-name')) :
-        label.nextElementSibling.getAttribute('prefix');
-  const cabinet = lastRendered;
-  const tdm = ThreeDModel.get(cabinet);
-  let partName = target.getAttribute('part-name');
-  let partId = target.getAttribute('part-id');
-  if (partId) {
-    if (!has) {
-      tdm.inclusiveTarget(type, partId);
-      threeView.isolatePart(partName, cabinet);
+  if (!has) {
+    let label = target.children[0]
+    let type = label.getAttribute('type');
+    let value = type !== 'prefix' ?
+    (type !== 'part-name' ? label.innerText : label.getAttribute('part-name')) :
+    label.nextElementSibling.getAttribute('prefix');
+    const cabinet = lastRendered;
+    const tdm = ThreeDModel.get(cabinet);
+    let partName = target.getAttribute('part-name');
+    let targetSelected = label.hasAttribute('target') || target.hasAttribute('target');
+    if (targetSelected) {
+      let partCode = target.getAttribute('part-code');
+      tdm.setTargetPartName(partCode);
+    } else {
+      tdm.inclusiveTarget(type, has ? undefined : value);
+      tdm.setTargetPartName(null);
     }
-  } else {
-    tdm.inclusiveTarget(type, has ? undefined : value);
-    const elem = du.find.closest('[part-code]', target);
-    const partCode = elem.getAttribute('part-code');
-    threeView.isolatePart(partCode, cabinet);
   }
-  tdm.render();
+  Canvas.render();
 });
 
 function deselectPrefix() {
@@ -84,6 +80,7 @@ function deselectPrefix() {
   const cabinet = lastRendered;
   const tdm = ThreeDModel.get(cabinet);
   tdm.inclusiveTarget(undefined, undefined);
+  tdm.setTargetPartName(null);
 }
 
 function setGreaterZindex(...ids) {
@@ -137,6 +134,7 @@ du.on.match('change', '.prefix-checkbox', (target) => {
   const attr = target.getAttribute('prefix');
   deselectPrefix();
   ThreeDModel.get(cabinet).hidePrefix(attr, !target.checked);
+  Canvas.render();
 });
 
 du.on.match('change', '.part-name-checkbox', (target) => {
@@ -145,7 +143,7 @@ du.on.match('change', '.part-name-checkbox', (target) => {
   deselectPrefix();
   const tdm = ThreeDModel.get(cabinet);
   tdm.hidePartName(attr, !target.checked);
-  tdm.render();
+  Canvas.render();
 });
 
 du.on.match('change', '.part-id-checkbox', (target) => {
@@ -154,7 +152,7 @@ du.on.match('change', '.part-id-checkbox', (target) => {
   deselectPrefix();
   const tdm = ThreeDModel.get(cabinet);
   tdm.hidePartId(attr, !target.checked);
-  tdm.render();
+  Canvas.render();
 })
 
 let controllerModel;
@@ -197,12 +195,10 @@ function init() {
   // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
   // p.setColor('black')
   // const db = drawerBox(10, 15, 22);
-  threeView = new ThreeView();
 
-  const setZFunc = setGreaterZindex('order-cnt', 'model-cnt', `${threeView.id()}-cnt`);
+  const setZFunc = setGreaterZindex('order-cnt', 'model-cnt');
   du.on.match('click', '#model-cnt', setZFunc);
   du.on.match('click', '#order-cnt', setZFunc);
-  du.on.match('click', `#${threeView.id()}-cnt`, setZFunc);
   ThreeDModel.onLastModelUpdate(updateController);
 }
 

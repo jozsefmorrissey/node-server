@@ -174,7 +174,6 @@ function getDemPosElems (template, cabinet) {
   setShow(template, templateBody, 'fromFloor', cabinet)
 }
 
-FunctionCache.disable();
 function getCabinet(elem) {
   const templateBody = du.find('.template-body');
   const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
@@ -201,7 +200,7 @@ const centerDisplay = (t) => {
   const z = t.getCabinet().eval(t.z());
   return `(${toDisplay(x)},${toDisplay(y)},${toDisplay(z)})`;
 }
-const threeView = new ThreeView();
+const threeView = new ThreeView(du.id('disp-canvas-p2d'));
 // du.on.match('click', '#template-list-TemplateManager_template-manager', (elem) =>
 //   du.move.inFront(elem));
 // du.on.match('click', `#${threeView.id()}>.three-view-two-d-cnt>.three-view-canvases-cnt`, (elem) =>
@@ -338,22 +337,6 @@ const xyzEqnCheck = (template, cabinet) => (xyzInput) => {
   validateEquations(template, cabinet, valueInput, xyzInput, index, eqnMap);
 }
 
-function updatePartsDataList() {
-  const partMap = threeView.partMap();
-  if (!partMap) return;
-  const partKeys = Object.keys(partMap);
-  let htmlArr = [];
-  for (let index = 0; index < partKeys.length; index += 1) {
-    const id = partKeys[index];
-    const partCode = partMap[id].code;
-    const partName = partMap[id].name;
-    htmlArr.push(`<option value='${partName}' part-code='${partCode}'></option>`);
-  }
-  htmlArr.sort()
-  const datalist = du.id('part-list');
-  datalist.innerHTML = htmlArr.join('');
-}
-
 function vertexToDisplay(vertex) {
   const x = new Measurement(vertex.x).display();
   const y = new Measurement(vertex.y).display();
@@ -478,7 +461,6 @@ function validateOpenTemplate (elem) {
     const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
     subRotInputs.forEach(xyzEqnCheck(template, cabinet));
     updateOpeningPoints(template, cabinet);
-    setTimeout(updatePartsDataList, 500);
   } catch (e) {
     console.log(e);
   }

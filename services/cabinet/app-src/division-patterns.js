@@ -27,6 +27,7 @@ class Element {
 class Pattern {
   constructor(str, updateOrder, changeEvent) {
     changeEvent ||= new CustomEvent('change');
+    const instance = this;
     this.onChange = changeEvent.on;
     this.str = str;
     let unique = {};
@@ -39,6 +40,7 @@ class Pattern {
       }
     }
     const uniqueStr = Object.keys(unique).join('');
+    updateOrder ||= uniqueStr.split('');
     this.unique = () => uniqueStr;
     this.equals = this.unique.length === 1;
 
@@ -129,7 +131,11 @@ class Pattern {
     }
 
     const numbersOnlyReg = /^[0-9]{1,}$/;
+    let lastDist;
     const calc = (dist) => {
+      if (dist < 0) throw new Error(`Im not dividing that negitive '${dist}'`);
+      if (dist === undefined) dist = lastDist;
+      lastDist = dist;
       // map of unitValues
       const values = {};
 
@@ -146,7 +152,12 @@ class Pattern {
       });
       if (lastElem === undefined) throw new Error('This should not happen');
 
-      lastElem.value(new Measurement(dist / lastElem.count).value());
+      const lastVal = dist / lastElem.count;
+      if (lastVal < 0) {
+        instance.value(lastElem.id, 0);
+        return calc();
+      }
+      lastElem.value(new Measurement(lastVal).value());
       values[lastElem.id] = lastElem.value().value();
 
       const list = [];
@@ -161,6 +172,7 @@ class Pattern {
     }
 
     this.value = (id, value) => {
+      if (value < 0) value = 0;
       if (value !== undefined) {
         const index = updateOrder.indexOf(id);
         if (index !== -1) updateOrder.splice(index, 1);
@@ -183,7 +195,9 @@ class Pattern {
     this.toJson = () => {
       return {str: this.str, values: this.values()};
     }
-    this.toString = () => `${this.str}@${this.values()}`;
+    this.toString = () => `${this.str}@${JSON.stringify(this.values())}`;
+
+    this.hash = () => this.toString().hash();
 
     this.elements = elements;
     this.calc = calc;

@@ -41,7 +41,10 @@ class SectionProperties extends KeyValue{
       let hash = (cover ? cover.hash() : 0) + pattern.toString().hash();
       hash += keyValHash();
       for (let index = 0; index < this.subassemblies.length; index++) {
-        hash += this.subassemblies[index].hash();
+        hash += this.subassemblies[index].hash(true);
+      }
+      for (let index = 0; index < this.sections.length; index++) {
+        hash += this.sections[index].hash(true);
       }
       return hash;
     }
@@ -102,8 +105,8 @@ class SectionProperties extends KeyValue{
 
     this.innerDepth = () => {
       const cabinet = this.getCabinet();
-      const back = config.back();
-      if (back) return 1.5 * this.innerCenter().distance(back.position().center());
+      const back = this.back();
+      if (back) return this.innerCenter().distance(back.position().center());
       return 4*2.54;
     };
 
@@ -193,7 +196,7 @@ class SectionProperties extends KeyValue{
       if (subAssems[partCode]) return subAssems[partCode];
       if (callingAssem !== undefined) {
         const children = Object.values(this.subassemblies);
-        if (this.divideRight) children.concatInPlace(divider);
+        if (this.divideRight()) children.concatInPlace(divider);
         const cover = this.cover()
         if (cover) children.concatInPlace(cover);
         for (let index = 0; index < children.length; index += 1) {
@@ -218,10 +221,10 @@ class SectionProperties extends KeyValue{
         const leftInnerLine = new Line3D(inner[0], inner[3]);
         const rightOutLine = new Line3D(outer[1], outer[2]);
         const rightInnerLine = new Line3D(inner[1], inner[2]);
-        coords.outer = [leftOutLine.pointAtDistance(startOuter - innerOffset),
-                        rightOutLine.pointAtDistance(startOuter - innerOffset),
-                        rightOutLine.pointAtDistance(endOuter - innerOffset),
-                        leftOutLine.pointAtDistance(endOuter - innerOffset)];
+        coords.outer = [leftOutLine.pointAtDistance(startOuter),
+                        rightOutLine.pointAtDistance(startOuter),
+                        rightOutLine.pointAtDistance(endOuter),
+                        leftOutLine.pointAtDistance(endOuter)];
         coords.inner = [
                         leftInnerLine.pointAtDistance((startInner - innerOffset)),
                         rightInnerLine.pointAtDistance((startInner - innerOffset)),
@@ -254,7 +257,9 @@ class SectionProperties extends KeyValue{
       return instance.pattern().calc(coverage._TOTAL);
     }
 
+
     function setSectionCoordinates() {
+      updateCoords = false;
       const dividerOffsetInfo = instance.dividerOffsetInfo();
       const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
 
@@ -271,8 +276,7 @@ class SectionProperties extends KeyValue{
 
           startOuter = offset;
           if (index === 0) {
-            startOuter = dividerOffsetInfo[0].offset;
-            startInner = startOuter;
+            startInner = dividerOffsetInfo[0].offset;
           } else {
             startInner = startOuter + dividerOffsetInfo[index].offset/2;
           }
@@ -298,6 +302,7 @@ class SectionProperties extends KeyValue{
     }
 
     this.coverage = (startOffset, endOffset) => {
+      called.coverage++;
       const info = [];
       const propConfig = this.propertyConfig();
       const isReveal = propConfig.isReveal();
@@ -342,6 +347,7 @@ class SectionProperties extends KeyValue{
     }
 
     this.dividerOffsetInfo = () => {
+      called.dividerOffsetInfo++;
       let startOffset = 0;
       let endOffset = 0;
 
@@ -464,6 +470,10 @@ class SectionProperties extends KeyValue{
     };
 
     this.coverInfo = () => {
+      called.coverInfo++;
+      if (updateCoords) {
+        setSectionCoordinates();
+      }
       const propConfig = this.propertyConfig();
       let biPolygon, backOffset, frontOffset, offset, coords;
       const doorThickness = 3 * 2.54/4;
@@ -481,7 +491,7 @@ class SectionProperties extends KeyValue{
         backOffset = bumperThickness;
       } else {
         coords = this.coordinates().inner;
-        offset = propConfig.overlay();
+        offset = propConfig.overlay() * 2;
         frontOffset = (doorThickness + bumperThickness);
         backOffset = bumperThickness;
       }
@@ -495,7 +505,33 @@ class SectionProperties extends KeyValue{
 
     this.normal = () => this.coverInfo().biPolygon.normal()
 
+    function addDividerJoints(point1, point2) {
+      const c = instance.getCabinet();
+      const divider = instance.divider();
+      const panelThickness = divider.panelThickness();
+      const jointOffset = instance.dividerJoint().maleOffset();
+      const right = instance.right();
+      const left = instance.left();
+      const maxLen = Math.max(c.width(), c.length(), c.thickness());
+      if (!(right instanceof DividerSection)) {
+        Line3D.adjustVertices(point1, point2, maxLen, true);
+      } else {
+        const length = point1.distance(point2) + jointOffset - right.panelThickness()/2;
+        Line3D.adjustVertices(point1, point2, length, true);
+        instance.dividerJoint.zero(divider.panel(), right.panel());
+      }
+      if (!(left instanceof DividerSection)) {
+        Line3D.adjustVertices(point2, point1, maxLen, true);
+      } else {
+       const length = point1.distance(point2) + jointOffset - left.panelThickness()/2;
+        Line3D.adjustVertices(point2, point1, length, true);
+        instance.dividerJoint.zero(divider.panel(), left.panel());
+      }
+
+    }
+
     this.dividerInfo = (panelThickness) => {
+      called.dividerInfo++;
       const coverInfo = this.coverInfo();
       const normal = coverInfo.biPolygon.normal().inverse();
       const depth = this.innerDepth();
@@ -503,33 +539,28 @@ class SectionProperties extends KeyValue{
       const width = this.innerWidth();
       const innerCenter = this.innerCenter();
       const coordinates = this.coordinates();
+      const divider = this.divider();
       if (!this.verticalDivisions()) {
         const outer = coordinates.outer;
         const point1 = outer[3];
         const point2 = outer[2];
-        const c = this.getCabinet();
-        const maxLen = Math.max(c.width(), c.length(), c.thickness());
-        if (!(this.right() instanceof DividerSection)) {
-          Line3D.adjustVertices(point1, point2, maxLen, true);
-        }
-        if (!(this.left() instanceof DividerSection)) {
-          Line3D.adjustVertices(point2, point1, maxLen, true);
-        }
+        addDividerJoints(point1, point2);
         let depthVector = normal.scale(depth);
         const point3 = point2.translate(depthVector, true);
         const point4 = point1.translate(depthVector, true);
         const points = [point1, point2, point3, point4];
-        const offset = panelThickness / 2;
+        const offset = divider.panelThickness() / 2;
         return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset);
       }
       const outer = coordinates.outer;
       const point1 = outer[1];
       const point2 = outer[2];
+      addDividerJoints(point1, point2);
       let depthVector = normal.scale(depth);
       const point3 = point2.translate(depthVector, true);
       const point4 = point1.translate(depthVector, true);
       const points = [point1, point2, point3, point4];
-      const offset = panelThickness / -2;
+      const offset = divider.panelThickness() / 2;
       return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset);
     }
 
@@ -543,7 +574,6 @@ class SectionProperties extends KeyValue{
 
     function removeCachedValues() {
       rotation = innerCenter = outerCenter = innerLength = innerWidth = outerLength = outerWidth = null;
-      setSectionCoordinates();
     }
 
     function updateCoordinates(obj, newCoords) {
@@ -559,25 +589,46 @@ class SectionProperties extends KeyValue{
       return change
     }
 
+    let updateCoords;
     this.updateCoordinates = (newCoords) => {
-      let change = updateCoordinates(coordinates.outer, newCoords.outer) | updateCoordinates(coordinates.inner, newCoords.inner);
-      // TODO: need to detect child config changes aswell...
-      // if (change) {
-        removeCachedValues();
-        setSectionCoordinates();
-      // }
+      updateCoordinates(coordinates.outer, newCoords.outer) | updateCoordinates(coordinates.inner, newCoords.inner);
+      removeCachedValues();
     }
+
+    this.reevaluate = () => {
+      updateCoords = true;
+      removeCachedValues();
+      setSectionCoordinates();
+    }
+
+
 
     let dividerJoint;
     this.dividerJoint = (joint) => {
       if (joint instanceof Joint) dividerJoint = joint;
-      if (dividerJoint) return dividerJoint;
-      return this.getCabinet().value('dividerJoint');
+      if (dividerJoint) return dividerJoint.clone();
+      return this.getCabinet().value('dividerJoint').clone();
     }
 
+    const mapped = {};
+    this.dividerJoint.zero = (male, female) => {
+      const key = `${male.partCode()}=>${female.partCode()}`;
+      if (mapped[key] === undefined) {
+        const joint = this.dividerJoint();
+        joint.maleOffset(0);
+        joint.malePartCode(male.partCode());
+        joint.femalePartCode(female.partCode());
+        joint.parentAssemblyId(male.id());
+        male.joints.push(joint);
+        mapped[key] = true;
+      }
+    }
+
+    let called = {coverage: 0, dividerOffsetInfo: 0, coverInfo: 0, dividerInfo: 0};
     this.setSection = (constructorIdOobject) => {
       let section = SectionProperties.new(constructorIdOobject);
       this.cover(section);
+      console.log(called);
       if (section) {
         section.parentAssembly(this);
       }
@@ -587,9 +638,10 @@ class SectionProperties extends KeyValue{
     this.divider(divider);
     divider.parentAssembly(this);
     this.value('vertical', true);
-    this.pattern().onChange(setSectionCoordinates);
+    // TODO:updateFlag Use update flag instead;
+    this.pattern().onChange(this.reevaluate);
     // this.vertical(true);
-    // coordinates.onAfterChange(setSectionCoordinates);
+    // coordinates.onAfterChange(this.reevaluate);
 
     function buildCutters () {
       const cabinet = instance.getCabinet();
@@ -614,20 +666,15 @@ class SectionProperties extends KeyValue{
     }
 
     this.addJoints = (divider) => {
-      this.addCutters(divider);
       const cabinet = instance.getCabinet();
       const panel = divider.panel();
       const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Auto|Section)/))
       const joint = this.dividerJoint();
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
-        const newJoint = joint.clone();
-        newJoint.malePartCode(panel.partCode());
-        newJoint.femalePartCode(assem.partCode())
-        newJoint.parentAssemblyId(panel.id());
-        panel.joints.push(newJoint);
+        this.dividerJoint.zero(panel, assem);
       }
-
+      this.addCutters(divider);
     }
     setTimeout(() => this.addJoints(this.divider()));
   }

@@ -12,6 +12,9 @@
   <label>Depth</label>
   <input class='value-2d' member='object' type="text" key="thickness" value="{{display(target.height())}}">
   <br>
+  <label>height</label>
+  <input class='value-2d' member='object' type="text" key="height" value="{{display(target.height())}}">
+  <br>
   <label>Angle</label>
   <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="{{target.angle()}}">
   <br>
@@ -26,6 +29,16 @@
   <br>
   <label>From Ceiling</label>
   <input class='value-2d' member='bridge' type="text" key="fromCeiling" cascade='fromFloor' value="{{display(target.parent().fromCeiling())}}">
+  <br>
+  <div {{target.parent().obj3D().constructor.name === 'Object3D' ? '' : 'hidden'}}>
+    <select id='modler-selector'>
+      <option>Rectangle</option>
+      <option:t repeat='name in SimpleModel.list()'
+              {{target.parent().obj3D().modeler().constructor.name === name ? 'selected' : ''}}>
+        {{name}}
+      </option:t>
+    </select>
+  </div>
   <br>
   <button class='remove-btn-2d transparent'>Remove</button>
 </div>

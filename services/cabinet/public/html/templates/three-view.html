@@ -10,8 +10,13 @@
       <div class='part-input-cnt center-vert'>
         <input type="text" name="partSelector" list='part-list'>
         <datalist id='part-list'></datalist>
+        <br>
+        <div class='center-vert'>Part Code: <b id='three-view-part-code-{{id()}}'></b></div>
+        <button class='ruler'>
+          <i class="gg-ruler"></i>
+        </button>
       </div>
-      <div class='center-vert'>Part Code: <b id='three-view-part-code-{{id()}}'></b></div>
+
       <span class='three-view-canvas-cnt'>
         <b>Three View Drawing</b>
         <button class='three-view-draw-string-btn'>Copy Draw String</button>

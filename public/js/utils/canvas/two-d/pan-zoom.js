@@ -30,7 +30,7 @@ function panZoom(canvas, draw) {
   this.onMove = this.on('move');
   this.onTranslate = this.on('translated');
   this.onZoom = this.on('zoom');
-  this.onClick = this.on('click');
+  this.onClick = this.on('mousedown');
   this.onMousedown = this.on('mousedown');
   this.onMouseup = this.on('mouseup');
 

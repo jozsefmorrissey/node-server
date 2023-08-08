@@ -924,6 +924,32 @@ Line2d.distanceSort = (target) => (l1,l2) => {
   return (ds1 < de1 ? ds1 : de1) - (ds2 < de2 ? ds2 : de2);
 }
 
+Line2d.between = (lineOvert1, lineOvert2) => {
+  const lov1 = lineOvert1;
+  const lov2 = lineOvert2;
+  const isVert1 = lov1 instanceof Vertex2d;
+  const isVert2 = lov2 instanceof Vertex2d;
+
+  if (isVert1 && isVert2) {
+    return new Line2d(lov1, lov2);
+  }
+
+  const isLine1 = lov1 instanceof Line2d;
+  const isLine2 = lov2 instanceof Line2d;
+
+  if (isLine1 && isLine2) {
+    const intersection = lov1.findSegmentIntersection(lov2, true);
+    if (intersection) return null;
+    const closestEnds = lov1.closestEnds(lov2);
+    return new Line2d(closestEnds[0], closestEnds[1]);
+  }
+
+  const vert = isVert1 ? lov1 : lov2;
+  const line = isVert1 ? lov2 : lov1;
+  const closest = line.closestPointOnLine(vert, true);
+  return new Line2d(vert, closest);
+}
+
 new Line2d();
 
 module.exports = Line2d;

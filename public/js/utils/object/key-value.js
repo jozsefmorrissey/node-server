@@ -52,7 +52,7 @@ class KeyValue extends Lookup {
     const parentJson = this.toJson;
     this.toJson = () => {
       const json = (typeof parentJson) === 'function' ? parentJson() : {};
-      json.value = {values: this.value.values};
+      json.value = {values: Object.toJson(this.value.values)};
       return json;
     }
 

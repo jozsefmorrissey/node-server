@@ -1,6 +1,8 @@
 
-const Line2d = require('./objects/line')
-const Vertex2d = require('./objects/vertex')
+const Line2d = require('./objects/line');
+const Vertex2d = require('./objects/vertex');
+const CustomEvent = require('../../custom-event');
+
 class HoverObject2d {
   constructor(lineOrVertex, tolerance, target) {
     tolerance ||= 2;
@@ -58,8 +60,9 @@ class HoverObject2d {
 }
 
 class HoverMap2d {
-  constructor() {
+  constructor(panZ) {
     let hoverObjects = [];
+    let instance = this;
 
     this.clear = () => hoverObjects = [] || true;
     this.add = (object, tolerance, target) => {
@@ -83,8 +86,64 @@ class HoverMap2d {
           }
         }
       }
+
       return hoveringObj && hoveringObj.target;
     }
+
+    if (panZ) {
+      const clickEvent = new CustomEvent('click');
+      const hoverEvent = new CustomEvent('hover');
+      const hoverOutEvent = new CustomEvent('hoverOut');
+      let active = true;
+
+      this.on = {};
+      this.on.click = clickEvent.on;
+      this.on.hover = hoverEvent.on;
+      this.on.hoverOut = hoverOutEvent.on;
+      this.disable = () => active = false;
+      this.enable = () => active = true;
+
+      let stackLimit = 10;
+      let hoverStack = new Array(stackLimit).fill(null);
+      let clickStack = new Array(stackLimit).fill(null);
+      this.hovered = (startIndex, toIndex) => {
+        if (startIndex === undefined && toIndex === undefined) {
+          return hoverStack[0];
+        }
+        return hoverStack.slice(startIndex, toIndex);
+      }
+      this.clicked = (startIndex, toIndex) => {
+        if (startIndex === undefined && toIndex === undefined) {
+          return clickStack[0];
+        }
+        return clickStack.slice(startIndex, toIndex);
+      }
+      panZ.onMove((event) => {
+        if (!active) return;
+        const vertex = new Vertex2d(event.imageX, -1*event.imageY);
+        const hovering = instance.hovering(event.imageX, -1*event.imageY);
+        const hovered = this.hovered();
+        if (hovering !== hovered) {
+          if (hovered) {
+            hoverOutEvent.trigger(hovered);
+          }
+          hoverStack = [hovering].concat(hoverStack);
+          hoverStack.splice(stackLimit);
+          if (hovering) {
+            hoverEvent.trigger(hovering);
+          }
+        }
+      });
+      panZ.onClick((event) => {
+        if (!active) return;
+        const vertex = new Vertex2d(event.imageX, -1*event.imageY);
+        const hovering = instance.hovering(event.imageX, -1*event.imageY);
+        clickStack = [hovering].concat(clickStack);
+        clickStack.splice(stackLimit);
+        clickEvent.trigger(hovering);
+      });
+    }
+
   }
 }
 

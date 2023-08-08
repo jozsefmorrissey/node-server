@@ -52,9 +52,6 @@ canvas {
 }
 
 .three-view-canvases-cnt {
-  position: fixed;
-  bottom: 0;
-  right: 0;
   z-index: 15;
   background-color: white;
   border-radius: 5pt;
@@ -228,6 +225,8 @@ a {
   padding: 20pt 5pt;
   overflow: auto;
   max-height: 80vh;
+  position: absolute;
+  left: 0;
 }
 
 .indent {
@@ -287,6 +286,7 @@ a {
 }
 
 #model-display-cnt {
+  margin-top: 25pt;
   float: right;
 }
 
@@ -446,4 +446,12 @@ td[dir] {
 #single-order-cnt {
   height: 200vh;
   width: 60vw;
+}
+
+.ruler {
+  border-radius: 5px;
+}
+.ruler.active {
+  background-color: black;
+  color: white;
 }

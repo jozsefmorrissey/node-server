@@ -36,7 +36,8 @@ class AutoToekick extends Assembly {
     function toModel(name, index) {
       return () => {
         instance.update();
-        return children[name].toModel();
+        const assem = children[name];
+        return assem.toModel();
       }
     }
 

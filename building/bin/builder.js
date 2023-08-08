@@ -313,7 +313,7 @@ try {
 
 class $t {
 	constructor(template, id) {
-
+    const instance = this;
 		function varReg(prefix, suffix) {
 		  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
 		  prefix = prefix ? prefix : '';
@@ -713,7 +713,7 @@ class $t {
 				let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
 				let scope = 'scope';
 				template = templateName !== tagContents ? templateName : template;
-				const t = eval(`new $t(\`${template}\`)`);
+				const t = templateName === instance.id() ? instance : eval(`new $t(\`${template}\`)`);
         let resolvedScope = "get('scope')";;
         try {
 					if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
@@ -730,25 +730,15 @@ class $t {
 		const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).*)<\/)\1:t>/;
 		function formatTemplate(string) {
 			let match;
-      console.log('formating template');
 			while (match = string.match(templateReg)) {
-        console.log('match template');
 				let tagContents = match[2] + match[6];
 				let tagName = match[1];
 				let realScope = match[7];
 				let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
 				let templateName = match[0].replace(/.*\$t-id=('|")([0-9\.a-zA-Z-_\/]*?)(\1).*/, '$2');
 				let scope = 'scope';
-        console.log('templateName:', templateName);
 				template = templateName !== tagContents ? templateName : template;
 				let resolvedScope = "get('scope')";;
-				// try {
-				// 	if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
-				// 		resolvedScope = `'${realScope}'`;
-				// 	} else {
-				// 		resolvedScope = ExprDef.parse(expression, realScope);
-				// 	}
-				// } catch (e) {}
 				string = string.replace(match[0], `{{ new $t('${templateName}').render(get('${realScope}'), undefined, get)}}`);
 			}
 			return string;
@@ -761,10 +751,9 @@ class $t {
 
 		template = template.replace(/\s{1,}/g, ' ');
 		id = $t.functions[template] ? template : id || stringHash(template);
+    this.id = () => id;
 		if (!$t.functions[id]) {
 			if (!$t.templates[id]) {
-        console.log('template', template)
-        console.log('id', id)
 				template = template.replace(/\s{2,}|\n/g, ' ');
 				template = formatRepeat(template);
 				template = formatTemplate(template);
@@ -775,7 +764,6 @@ class $t {
 		this.render = render;
 		this.type = type;
 		this.isolateBlocks = isolateBlocks;
-    this.id = () => id;
 	}
 }
 

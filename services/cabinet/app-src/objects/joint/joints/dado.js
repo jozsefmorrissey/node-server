@@ -6,6 +6,7 @@ class Dado extends Joint {
     super(malePartCode, femalePartCode, condition);
 
     this.updatePosition = (position) => {
+      if (this.maleOffset() === 0) return;
       const direction = this.centerAxis()[0] === '-' ? -1 : 1;
       const centerAxis = this.centerAxis()[1].toLowerCase();
       const offset = this.parentAssembly().eval(this.maleOffset());

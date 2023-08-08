@@ -8,11 +8,14 @@ const FunctionCache = require('../../../../public/js/utils/services/function-cac
 
 const Polygon3D = require('./objects/polygon');
 const Vertex3D = require('./objects/vertex');
+const Line3D = require('./objects/line');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const OrientationArrows = require('../displays/orientation-arrows.js');
 const Viewer = require('../../public/js/3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 const CabinetModel = require('./cabinet-model');
+const LoadingDisplay = require('../../../../public/js/utils/display/loading.js');
+const loadingDisplay = new LoadingDisplay();
 
 const colors = {
   indianred: [205, 92, 92],
@@ -58,10 +61,10 @@ class ThreeDModel {
     let inclusiveTarget = {};
     let partMap;
     let renderId;
-    let targetPartName;
+    let targetPartCode;
     let lastRendered;
-    this.setTargetPartName = (id) =>
-      targetPartName = id;
+    this.setTargetPartCode = (id) =>
+      targetPartCode = id;
     this.getLastRendered = () => lastRendered;
 
     this.object = (a) => {
@@ -100,7 +103,6 @@ class ThreeDModel {
       return function (attr, value) {
         if (value === undefined) return object[attr] === true;
        object[attr] = value === true;
-       instance.render();
       }
     }
 
@@ -140,12 +142,24 @@ class ThreeDModel {
 
     this.depth = (label) => label.split('.').length - 1;
 
-    function hidden(part, level) {
+    function relatedToTarget(part) {
+      if (part.partCode() === targetPartCode) return true;
+      let targetPart = instance.object().getAssembly(targetPartCode);
+      let joints = targetPart.getJoints();
+      joints = joints.male.concat(joints.female);
+      const otherCodes = joints.map(j => j.malePartCode() !== targetPartCode ?
+            j.malePartCode() : j.femalePartCode());
+      return otherCodes.indexOf(part.partCode()) !== -1;
+    }
+
+    function hidden(part) {
+      if (targetPartCode) return !relatedToTarget(part);
       if (!part.included()) return true;
       const im = inclusiveMatch(part);
       if (im !== null) return !im;
       if (instance.hidePartId(part.id())) return true;
       if (instance.hidePartName(part.partName())) return true;
+      buildHiddenPrefixReg();
       if (hiddenPrefixReg && part.partName().match(hiddenPrefixReg)) return true;
       return false;
     }
@@ -197,19 +211,7 @@ class ThreeDModel {
 
     function buildModel(assem) {
       let a = assem.toModel();
-      let normals = a.normals;
       a.setColor(...getColor());
-      assem.getJoints().female.forEach((joint) => {
-        if (joint.apply()) {
-          const male = joint.getMale();
-          const m = male.toModel();
-          if (a.polygons.length > 0) {
-            a = a.subtract(m);
-          }
-        }
-      });
-      // else a.setColor(1, 0, 0);
-      a.normals = normals;
       partModels[assem.id()] = a;
       return a;
     }
@@ -220,13 +222,15 @@ class ThreeDModel {
 
     let cabinetModel, lastHash;
     function buildObject(options) {
+      if (instance.object() === undefined)return;
       if (lastHash === instance.object().hash()) {
-        return CabinetModel.get(this.object());
+        return CabinetModel.get(instance.object());
       }
       options ||= {};
       const cId = cacheId();
+      FunctionCache.clearAllCaches();
+      FunctionCache.on('sme');
       if (cId) {
-        FunctionCache.on('sme');
         FunctionCache.on(cId);
       }
 
@@ -248,13 +252,13 @@ class ThreeDModel {
         }
         const b = buildModel(assem);
         cabinetModel.add(assem, b);
-        if (!hidden(assem)) {
+        if (assem.included()) {
           const c = assem.position().center();
           if (a === undefined) a = b;
           else if (b && b.polygons.length !== 0) {
             a = a.union(b);
           }
-          if (assem.partName() === targetPartName) {
+          if (assem.partName() === targetPartCode) {
             lm = b.clone();
             const lastModel = this.lastModel();
             lastModelUpdateEvent.trigger(undefined, lastModel);
@@ -265,32 +269,61 @@ class ThreeDModel {
       cabinetModel.complexModel(a);
       if (cId) {
         FunctionCache.off(cId);
-        FunctionCache.off('sme');
       }
+      FunctionCache.off('sme');
       lastHash = instance.object().hash();
       return cabinetModel;
     }
-    this.buildObject = buildObject;
 
-    function renderParts() {
+    this.buildObject = () => {
+      const resolver = (resolve, reject) => {
+        setTimeout(() => {
+          try {
+            buildObject();
+            resolve(CabinetModel.get(instance.object()));
+          } catch (e) {
+            console.error(e);
+            reject(e);
+          } finally {
+            loadingDisplay.deactivate();
+          }
+        });
+      };
+      loadingDisplay.activate();
+      return new Promise(resolver);
+    }
+
+    async function renderParts() {
       let model = new CSG();
-      instance.buildObject();
-      const assems = instance.object().getParts();
+      const obj = instance.object();
+      if (obj === undefined || obj.buildCenter === undefined) return;
+      await instance.buildObject();
+      const buildCenter = obj.buildCenter();
+      const assems = obj.getParts();
       for (let index = 0; index < assems.length; index++) {
-        const partModel = partModels[assems[index].id()];
-        if (partModel === undefined) throw new Error('part model not created... object is not being updated properly');
-        const c = partModel.center();
-        let e = 1.5;
-        partModel.center({x: c.x * e, y: c.y, z: e*c.z});
-        model = model.union(partModel);
+        const part = assems[index];
+        if (!hidden(part)) {
+          const partModel = partModels[part.id()].clone();
+          if (partModel === undefined) throw new Error('part model not created... object is not being updated properly');
+          if (targetPartCode) {
+            partModel.setColor(colors[targetPartCode === part.partCode() ? 'green' : 'blue'])
+          }
+          const c = part.position().center();
+          let e = 1.3;
+          const partCenter = new Vertex3D(partModel.center());
+          const dist = buildCenter.distance(partCenter);
+          Line3D.adjustVertices(buildCenter, partCenter, dist*e, true)
+          partModel.center(partCenter);
+          model = model.union(partModel);
+        }
       }
       ThreeDModel.display(model);
     }
     this.renderParts = renderParts;
 
-    this.render = function (options) {
+    this.render = async function (options) {
       const startTime = new Date().getTime();
-      instance.buildObject();
+      await instance.buildObject();
       if (cabinetModel.complexModel()) {
         let displayModel = cabinetModel.complexModel();//a.simple ? a.simple : a;
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
@@ -306,7 +339,7 @@ class ThreeDModel {
       const rId = renderId = String.random();
       // ThreeDModel.renderId = renderId;
       setTimeout(() => {
-        if(renderId === rId) instance.render();
+        if(renderId === rId) Canvas.render();
       }, 250);
     };
   }
@@ -399,12 +432,12 @@ class GroupThreeDModel extends ThreeDModel{
     super(parts);
     let lastModel;
     this.lastModel = () => lastModel;
-    this.buildObject = () => {
+    this.buildObject = async () => {
       let combined = new CSG();
       const origin = {x:0,y:0,z:0};
       for (let index = 0; index < parts.length; index++) {
         const part = parts[index];
-        const model = ThreeDModel.get(part).buildObject();
+        const model = await ThreeDModel.get(part).buildObject();
         const complexModel = model.complexModel();
         complexModel.center(origin);
         const rotation = part.position().rotation();
@@ -413,13 +446,25 @@ class GroupThreeDModel extends ThreeDModel{
         complexModel.center(part.position().center());
         combined = combined.union(complexModel);
       }
-      combined.center(origin);
       return combined;
     }
-    this.render = () => {
-      lastModel = this.buildObject();
+    this.render = async (options) => {
+      lastModel = await this.buildObject();
       ThreeDModel.lastActive = this;
+      if (options.extraObjects) {
+        try {
+          for (let index = 0; index < options.extraObjects.length; index++) {
+            const obj = options.extraObjects[index];
+            const model = obj.toModel ? obj.toModel() : obj;
+            lastModel = lastModel.union(model);
+          }
+        } catch (e) {
+          console.warn(e);
+        }
+      }
       if (lastModel.polygons && lastModel.polygons.length > 0) {
+        const origin = {x:0,y:0,z:0};
+        lastModel.center(origin);
         ThreeDModel.display(lastModel);
       }
     }

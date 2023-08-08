@@ -391,7 +391,18 @@ function getTargetId(target) {
         '#document' : target === window ? '#window' : undefined;
 }
 
-
+function runMatches(withinId, eventType, selectStr, target, event) {
+  const eventSelectors = selectors[withinId][eventType];
+  if (eventSelectors && eventSelectors[selectStr] !== undefined) {
+    eventSelectors[selectStr].forEach((func) => {
+      try {
+        func(target, event)
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+}
 
 function runMatch(event) {
   const  matchRunTargetId = getTargetId(event.currentTarget);
@@ -400,13 +411,8 @@ function runMatch(event) {
     const target = du.find.up(selectStr, event.target);
     const everything = selectStr === '*';
     if (everything || target) {
-      selectors[matchRunTargetId][event.type][selectStr].forEach((func) => {
-        try {
-          func(target, event)
-        } catch (e) {
-          console.error(e);
-        }
-      });
+      runMatches(matchRunTargetId, event.type, selectStr, target, event);
+      runMatches(matchRunTargetId, '*', selectStr, target, event);
     }
   })
 }
@@ -532,9 +538,24 @@ function onKeycombo(event, func, args) {
   return {event: 'keydown', func: keydown};
 }
 
+function onNoactivity(event, func, selector, args) {
+  let time = Number.parseInt(args[0]);
+  if (!Number.isFinite(time)) time = 500;
+  let lastEventId = 0;
+  const anyEvent = (target, event) => {
+    const id = ++lastEventId;
+    setTimeout(() => {
+      if (lastEventId === id) {
+        func(target, null);
+      }
+    }, time);
+  }
+  return {event: '*', func: anyEvent};
+}
+
 // TODO: add custom function selectors.
 const argEventReg = /^(.*?)(|:(.*))$/;
-function filterCustomEvent(event, func) {
+function filterCustomEvent(event, func, selector) {
   const split = event.split(/[\(\),]/).filter(str => str);;
   event = split[0];
   const args = split.slice(1).map((str, i) => str === ' ' ? ' ' : str.trim());
@@ -547,6 +568,8 @@ function filterCustomEvent(event, func) {
     case 'keycombo':
       customEvent = onKeycombo(event, func, args);
     break;
+    case 'noactivity':
+      customEvent = onNoactivity(event, func, selector, args);
   }
   return customEvent;
 }
@@ -554,7 +577,7 @@ function filterCustomEvent(event, func) {
 du.on.match = function(event, selector, func, target) {
   const events = event.split(':');
   if (events.length > 1) return events.forEach((e) => du.on.match(e, selector, func, target));
-  const filter = filterCustomEvent(event, func);
+  const filter = filterCustomEvent(event, func, selector);
   target = target || document;
   selector = VS(selector);
   if (selector === null) return;

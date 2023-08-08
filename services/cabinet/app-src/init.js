@@ -22,13 +22,11 @@ require('./objects/room');
 const TwoDLayout = require('./displays/two-d-layout.js');
 const ThreeDMainModel = require('./displays/three-d-main.js');
 require('./three-d/layout/init');
+require('./objects/simple/init')
 const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');
 const utils = require('./utils.js');
 
-// TODO: remove
-const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
-FunctionCache.disable();
 let orderDisplay;
 
 
@@ -119,6 +117,12 @@ du.on.match('mousemove', '*', (elem, event) => {
     popUp.close();
   }
 });
+
+new QRious({
+          element: document.getElementById('qr-demo'),
+          value: 'https://github.com/neocotic/qrious',
+          size: 100
+        });
 
 // window.onbeforeunload = () => 'Unsaved data may be lost';
 

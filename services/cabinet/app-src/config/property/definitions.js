@@ -11,7 +11,7 @@ defs.t = new Property('t', 'thickness', null);
 defs.l = new Property('l', 'length', null);
 
 //   Overlay
-defs.ov = new Property('ov', 'Overlay', {value: 1/2, notMetric: IMPERIAL_US});
+defs.ov = new Property('ov', 'Overlay', {value: 1/4, notMetric: IMPERIAL_US});
 
 //   Reveal
 defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US});

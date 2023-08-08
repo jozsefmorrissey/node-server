@@ -20,6 +20,7 @@ const HoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map.j
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const AutoLocationProperties = require('../../../../public/js/utils/canvas/two-d/objects/snap/auto-location-properties.js');
 const Global = require('../services/global');
+const SimpleModel = require('../objects/simple/simple.js');
 
 const measurmentMap = new HoverMap2d();
 const localEnv = EPNTS.getEnv() === 'local';
@@ -386,7 +387,7 @@ function getTemplateScope(cxtrName, target) {
     autoLocProps = AutoLocationProperties.get(target.id());
   }
   const UNITS = Properties.UNITS;
-  const scope = {display, UNITS, target, autoLocProps, lastImagePoint};
+  const scope = {display, UNITS, target, autoLocProps, lastImagePoint, SimpleModel};
   switch (cxtrName) {
     case 'SnapLocation2d':
       hovering.pairWith();
@@ -794,6 +795,11 @@ function init() {
   });
   du.on.match('keycombo(Control, )', '*', layout().straightenUp);
 }
+
+du.on.match('change', '#modler-selector', (elem) => {
+  const cxtrName = elem.value;
+  hovering.parent().obj3D().modeler(cxtrName);
+});
 
 //TODO: reorganize and allow for independent tools to take control
 // const clickStack = [];

@@ -848,6 +848,9 @@ function setFromJson(obj, options) {
     cxtr.fromJson = staticFromJson(cxtr);
   const parentFromJson = obj.fromJson;
   obj.fromJson = (json) => {
+    if (json._TYPE === 'KeyValue') {
+      console.log('hey');
+    }
     for (let index = 0; index < options.attrs.length; index += 1) {
       const attr = options.attrs[index];
       if (attr !== immutableAttr) {

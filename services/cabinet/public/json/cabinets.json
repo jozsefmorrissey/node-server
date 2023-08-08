@@ -201,7 +201,7 @@
 		],
 		"dividerJoint": {
 			"_TYPE": "Dado",
-			"maleOffset": 0.9525
+			"maleOffset": 0.635
 		},
 		"shape": "square",
 		"width": 45.72,
@@ -654,7 +654,7 @@
 	  ],
 	  "dividerJoint": {
 	    "_TYPE": "Dado",
-	    "maleOffset": 0.9525,
+	    "maleOffset": 0.635,
 	    "femaleOffset": 0,
 	    "demensionAxis": "",
 	    "centerAxis": ""
@@ -1117,7 +1117,7 @@
 	  ],
 	  "dividerJoint": {
 	    "_TYPE": "Dado",
-	    "maleOffset": 0.9525,
+	    "maleOffset": 0.635,
 	    "femaleOffset": 0,
 	    "demensionAxis": "",
 	    "centerAxis": ""
@@ -1580,7 +1580,7 @@
 	  ],
 	  "dividerJoint": {
 	    "_TYPE": "Dado",
-	    "maleOffset": 0.9525,
+	    "maleOffset": 0.635,
 	    "femaleOffset": 0,
 	    "demensionAxis": "",
 	    "centerAxis": ""
@@ -1852,7 +1852,7 @@
 		],
 		"dividerJoint": {
 			"_TYPE": "Dado",
-			"maleOffset": 0.9525
+			"maleOffset": 0.635
 		},
 		"shape": "square",
 		"width": 60.96,
@@ -2009,7 +2009,7 @@
 		],
 		"dividerJoint": {
 			"_TYPE": "Dado",
-			"maleOffset": 0.9525
+			"maleOffset": 0.635
 		},
 		"shape": "square",
 		"width": 45.72,
@@ -2302,7 +2302,7 @@
 		],
 		"dividerJoint": {
 			"_TYPE": "Dado",
-			"maleOffset": 0.9525
+			"maleOffset": 0.635
 		},
 		"shape": "square",
 		"width": 121.92,
@@ -2683,7 +2683,7 @@
 		],
 		"dividerJoint": {
 			"_TYPE": "Dado",
-			"maleOffset": 0.9525
+			"maleOffset": 0.635
 		},
 		"shape": "square",
 		"width": 60.96,
@@ -3063,7 +3063,7 @@
 		],
 		"dividerJoint": {
 			"_TYPE": "Dado",
-			"maleOffset": 0.9525
+			"maleOffset": 0.635
 		},
 		"shape": "square",
 		"width": "based",
@@ -3359,7 +3359,7 @@
 		],
 		"dividerJoint": {
 			"_TYPE": "Dado",
-			"maleOffset": 0.9525
+			"maleOffset": 0.635
 		},
 		"shape": "square",
 		"width": "based",
@@ -3655,7 +3655,7 @@
 		],
 		"dividerJoint": {
 			"_TYPE": "Dado",
-			"maleOffset": 0.9525
+			"maleOffset": 0.635
 		},
 		"shape": "square",
 		"width": "based",
@@ -3831,7 +3831,7 @@
 		],
 		"dividerJoint": {
 			"_TYPE": "Dado",
-			"maleOffset": 0.9525
+			"maleOffset": 0.635
 		},
 		"shape": "square",
 		"width": 45.72,
@@ -4005,7 +4005,7 @@
 		],
 		"dividerJoint": {
 			"_TYPE": "Dado",
-			"maleOffset": 0.9525
+			"maleOffset": 0.635
 		},
 		"shape": "square",
 		"width": 45.72,

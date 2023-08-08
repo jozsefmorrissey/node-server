@@ -2,7 +2,6 @@
 
 
 const getDefaultSize = require('./utils.js').getDefaultSize;
-const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
 const Vertex3D = require('./three-d/objects/vertex');
 const BiPolygon = require('./three-d/objects/bi-polygon');
 
@@ -67,9 +66,9 @@ class Position {
       const rootAssembly = assembly.getRoot();
       return rootAssembly && rootAssembly.id();
     }
-    this.rotation = new FunctionCache((attr) => rotation(attr), null, group, assembly);
-    this.center = new FunctionCache((attr) => center(attr), null, group, assembly);
-    this.demension = new FunctionCache((attr) => demension(attr), null, group, assembly);
+    this.rotation = rotation;
+    this.center = center;
+    this.demension = demension;
 
     this.current = () => {
       const position = {
@@ -136,8 +135,10 @@ class Position {
       return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj, this.biPolyNormVector());
     }
 
-    this.toModel = () => {
-      return this.toBiPolygon().toModel();
+    this.toModel = (simple) => {
+      const joints = !simple ? assembly.getJoints().female : [];
+      let model = this.toBiPolygon().toModel(joints);
+      return model;
     }
 
     this.set = (obj, type, value, getter) => {

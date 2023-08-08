@@ -3,11 +3,16 @@ const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 const Vertex3D = require('../../three-d/objects/vertex.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const SnapSquare = require('../../../../../public/js/utils/canvas/two-d/objects/snap/square.js');
+const BiPolygon = require('../objects/bi-polygon');
+const SimpleModel = require('../../objects/simple/simple.js');
 
 class Bridge2dTo3D {
   constructor(obj3D, xCoord, xDem, yCoord, yDem) {
     const axis = 'z' !== xCoord && 'z' !== yCoord ? 'z' :
                   ('x' !== xCoord && 'x' !== yCoord ? 'x' : 'y');
+    const depth = (xDem !== 'width' && yDem !== 'width' ? 'width' :
+                  (xDem !== 'height' && yDem !== 'height') ? 'height' :
+                  (obj.thickness instanceof Function) ? 'thickness' : 'depth');
     function setXYZ(x, y, z) {
       if (x instanceof Vertex2d) {
         y = x.y();
@@ -44,6 +49,7 @@ class Bridge2dTo3D {
     this.name = obj3D.name;
     this.x = (x) => setXYZ(x)[xCoord];
     this.y = (y) => setXYZ(undefined, y)[yCoord];
+    this.z = (z) => setXYZ(undefined, undefined, z)[axis];
     this.center = (newCenter) => {
       const center3D = setXYZ(newCenter);
       return new Vertex2d(center3D[xCoord], center3D[yCoord]);
@@ -67,6 +73,10 @@ class Bridge2dTo3D {
       if(value) obj3D[xDem](value);
       return obj3D[xDem]();
     }
+    this.depth = (value) => {
+      if(value) obj3D[depth](value);
+      return obj3D[depth]();
+    }
     this.radians = (rads) => {
       const rotation = obj3D.rotation();
       if (rads !== undefined) {
@@ -81,6 +91,7 @@ class Bridge2dTo3D {
       return Math.toDegrees(this.radians());
     }
     this.rotate = (rads) => this.radians(rads + Math.toRadians(obj3D.rotation()[axis]));
+    this.obj3D = () => obj3D;
   }
 }
 
@@ -91,19 +102,40 @@ class Object3D extends Lookup {
     this.layout = () => layout;
     this.snap2d = {};
     this.bridge = {};
-    Object.getSet(this, {center: new Vertex3D(),
+    let center = new Vertex3D();
+    Object.getSet(this, {center,
                           height: 34*2.54,
                           width: 32*2.54,
                           thickness: 24*2.54,
                           rotation: {x: 0, y: 0, z:0},
-                          name: ``});
+                          name: ``}, 'modelerName');
+    this.center = (cent) => {
+      if (cent) {
+        center = new Vertex3D(cent);
+      }
+      return center;
+    }
 
     // Consider simplifying bridge, should only need the rotation axis as argument;
-
     this.bridge.top = () => new Bridge2dTo3D(this, 'x', 'width', 'z', 'thickness');
     let topview = new SnapSquare(this.bridge.top(), 10);
     this.snap2d.top = () => topview;
     this.shouldSave = () => true;
+
+    let modler = new SimpleModel(this);
+    this.toModel = () => modler.toModel();
+
+    this.modeler = (modelerName) => {
+      if (modelerName) {
+        const mod = SimpleModel.get(modelerName, this);
+        modler = mod;
+      }
+      return modler;
+    }
+
+    this.modelerName = (modelerName) => {
+      return this.modeler(modelerName).constructor.name;
+    }
 
     this.toString = () => `${this.constructor.name}: at${this.center()}`;
   }
@@ -116,13 +148,13 @@ Object3D.register = (clazz) => {
 }
 
 
-Object3D.new = (...args) => {
+Object3D.new = (payload, layout) => {
   for (let index = objectClasses.length - 1; index > -1; index--) {
     const cxtr = objectClasses[index];
-    const object = cxtr.build(...args);
+    const object = cxtr.build(payload, layout);
     if (object) return object;
   }
-  return new Object3D(...args);
+  return new Object3D(layout);
 }
 
 new Object3D();

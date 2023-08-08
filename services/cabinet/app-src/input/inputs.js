@@ -51,6 +51,7 @@ add('cost', new MeasurementInput({
 add('pattern', new MeasurementInput({
   type: 'text',
   class: 'pattern-input',
+  polarity: 'positive'
 }));
 
 

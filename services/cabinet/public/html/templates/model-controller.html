@@ -10,7 +10,8 @@
       <div:t class='model-state {{group.level < 1 ? '' : 'model-label indent'}}
                     {{tdm.isTarget("part-name", partName) ? " active" : ""}}'
               repeat='partName, partList in group.parts'
-              {{group.level < 1 ? '' : 'hidden'}}>
+              {{group.level < 1 ? '' : 'hidden'}}
+              {{partList.length === 1 ? 'target part-code="' + partList[0].partCode() + '"' : ''}}>
         <label type='part-name' part-name='{{partName}}'>
             {{partName}}{{partList.length === 1 ? '(' + partList[0].partCode() + ')' : ''}}
         </label>
@@ -21,7 +22,7 @@
                   class='model-state {{tdm.isTarget("part-id", part.id()) ? "active " : ""}}'
                   repeat='part in partList'
                   {{partList.length === 1 ? 'hidden' : ''}}>
-            <label type='part-id' part-id='{{part.id()}}' part-code='{{part.partCode()}}'>
+            <label type='part-id' target part-code='{{part.partCode()}}'>
               {{part.partCode()}}-{{$index + 1}}
             </label>
             <input type='checkbox' class='part-id-checkbox' part-id='{{part.id()}}' part-code='{{part.partCode()}}'
