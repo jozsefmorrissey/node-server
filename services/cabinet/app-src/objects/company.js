@@ -1,6 +1,3 @@
-
-
-
 const Door = require('./assembly/assemblies/door/door.js');
 
 class Company {
@@ -22,7 +19,3 @@ new Company({name: 'Accessa'});
 new Company({name: 'Top Knobs'});
 new Company({name: 'Richelieu'});
 module.exports = Company
-
-
-
-

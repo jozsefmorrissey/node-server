@@ -1,5 +1,5 @@
 const fs = require('fs');
-const Builder = require('../../building/watcher');
+const Builder = require('../../building/builder');
 
 const { HtmlBundler } = require('../../building/bundlers/html.js');
 const htmlDumpLoc = './generated/html-templates.js';

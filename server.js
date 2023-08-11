@@ -6,15 +6,6 @@ var fileUpload = require('express-fileupload');
 const cookieParser = require("cookie-parser");
 require('./public/js/utils/utils.js')
 
-console.update =   function printProgress() {
-    process.stdout.cursorTo(0);
-    for (let index = 0; index < arguments.length; index++) {
-      const item = arguments[index];
-      process.stdout.write((typeof item) === 'string' ? item : new String(item));
-    }
-  };
-
-
 const Context = require('./src/context');
 
 const path = require('path');

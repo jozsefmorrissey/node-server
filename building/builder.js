@@ -3,8 +3,6 @@ const shell = require('shelljs');
 const { Mutex, Semaphore } = require('async-mutex');
 require('../arguement-parcer');
 
-// TODO: I dont like modifying std lib items in this way;
-
 class Builder {
   constructor(onChange, onUpdate, watchFiles) {
     const largNumber = Number.MAX_SAFE_INTEGER;
@@ -24,7 +22,6 @@ class Builder {
           if (err) {
             console.error(err);
           }
-          // console.log('ran file: ', `${file.name} - ${position}`);
           onChange(file.name, contents, position);
           setTimeout(notify, 300);
         }
@@ -52,6 +49,7 @@ class Builder {
       return (eventType, filename) => {
         function wait(release) {
           if (pending[path][filename]) {release();return;}
+          console.log('File Changed:', `${filename} - ${eventType}`);
           pending[path][filename] = true;
           release();
           const filePath = item.isFile() ? path : `${path}/${filename}`.replace(/\/{2,}/g, '/');
