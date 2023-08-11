@@ -63,7 +63,7 @@ class ThreeView extends Lookup {
     let targetPart;
     // const p = pull(5,2);
     const p = new BiPolygon(new Polygon3D([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}]),
-          new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel();
+          new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel(true);
     // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
     // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
     p.setColor([0, 255, 0])
@@ -78,7 +78,7 @@ class ThreeView extends Lookup {
 
     function getThreeView() {
       if (targetPart) {
-        let model = targetPart.toModel();
+        let model = targetPart.toModel(true);
         const polys = Polygon3D.fromCSG(model.polygons)
         return new ThreeViewObj(polys);
       } else {

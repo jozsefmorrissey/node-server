@@ -73,7 +73,7 @@ class CabinetModel {
           const cxtr = assem.constructor.name;
           if (cxtr !== 'SectionProperties' && !cxtr.match(/Cutter/)) {
             if (assem.toModel)
-              csg = csg.union(assems[index].toModel(false));
+              csg = csg.union(assems[index].toModel(true));
           }
         }
         const polys = Polygon3D.fromCSG(csg.polygons);
@@ -116,10 +116,10 @@ class CabinetModel {
 
     this.toModel = (simpler, centerOn) => {
       const offset = new Vertex3D(new Vertex3D(centerOn).minus(this.center()));
-      let model = this.cabinetSilhouette().top.toModel();
+      let model = this.cabinetSilhouette().top.toModel(simpler);
       model.translate(offset);
       for (let index = 0; !simpler && index < assemblies.length; index++) {
-        const csg = assemblies[index].toModel(true);
+        const csg = assemblies[index].toModel(simpler);
         csg.translate(offset);
         model = model.union(csg);
       }
@@ -140,7 +140,7 @@ class CabinetModel {
         if (in2D) {
           // TODO: overwiting this.toModel causes the commented line to fail.... should be rectified.
           // const twoDlines = Polygon3D.toTwoD(assemblies[i].toBiPolygon().toPolygons(), vector, axis);
-          const polygons = Polygon3D.fromCSG(assemblies[i].toModel(true).polygons);
+          const polygons = Polygon3D.fromCSG(assemblies[i].toModel().polygons);
           const twoDlines = Polygon3D.toTwoD(polygons, vector, axis);
           output.concatInPlace(twoDlines);
         } else

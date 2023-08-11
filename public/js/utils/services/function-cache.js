@@ -3,7 +3,7 @@ const cacheState = {};
 const cacheFuncs = {};
 
 class FunctionCache {
-  constructor(func, context, group, assem) {
+  constructor(func, context, group) {
     if ((typeof func) !== 'function') return func;
     let cache = {};
     function cacheFunc() {

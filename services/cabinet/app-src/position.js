@@ -4,6 +4,9 @@
 const getDefaultSize = require('./utils.js').getDefaultSize;
 const Vertex3D = require('./three-d/objects/vertex');
 const BiPolygon = require('./three-d/objects/bi-polygon');
+const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
+
+FunctionCache.on('position', 100);
 
 class Position {
   constructor(assembly, sme) {
@@ -127,19 +130,21 @@ class Position {
       const objCent = root.buildCenter();
       return objCent.minus(this.center());
     }
-    this.toBiPolygon = () => {
+    this.toBiPolygon =() => {
       const current = this.current();
       const dem = current.demension;
       const center = new Vertex3D(current.center);
       const vecObj = modelVecObj(current.rotation);
       return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj, this.biPolyNormVector());
-    }
+    };
 
-    this.toModel = (simple) => {
-      const joints = !simple ? assembly.getJoints().female : [];
+    this.toModel = new FunctionCache((simple) => {
+      let joints = assembly.getJoints().female;
+      // TODO: make attribute within joint to determine if required.
+      if (simple) joints = joints.filter((j) => j.getMale().constructor.name.match(/Cutter/));
       let model = this.toBiPolygon().toModel(joints);
       return model;
-    }
+    }, this, 'position');
 
     this.set = (obj, type, value, getter) => {
       if ((typeof type) !== 'string') {
