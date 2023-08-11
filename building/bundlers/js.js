@@ -17,7 +17,6 @@ class JsBundler extends Bundler {
     const bundler = this;
     let encaps = !(options.encapsulate === false);
     const id = file.replace(/^.*\/([^\/]*)$/, "$1");
-    console.log('file', file);
     shell.touch(file + '.js');
     externals.push('afterLoad');
     const jsFiles = {};
@@ -77,14 +76,14 @@ class JsBundler extends Bundler {
 
     let lastCall = Number.MAX_SAFE_INTEGER;
     function change(filename, contents, position) {
-      console.log('filename:', filename)
+      // console.log('filename:', filename)
       if (!fileExistes(filename)) {
         delete jsFiles[filename];
         delete allJsFiles[filename];
       } else if (allJsFiles[filename]) {
         allJsFiles[filename].updateContents(contents);
       } else {
-        console.log('creating new', filename)
+        // console.log('creating new', filename)
         new JsFile(filename, contents, position);
       }
       const currTime = new Date().getTime();

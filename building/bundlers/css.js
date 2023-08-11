@@ -12,7 +12,6 @@ class CssBundler extends Bundler {
     }
 
     this.write = () => {
-      console.log('Writing', fileDumpLoc);
       fs.writeFileSync(fileDumpLoc, '// ./src/index/css.js\n' + CssFile.dump());
     }
   }

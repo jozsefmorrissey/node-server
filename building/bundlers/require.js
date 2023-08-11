@@ -48,7 +48,6 @@ class MapScript {
         let requireStr = '';
         if (this.requires.length === 0) {
           const reqReg = MapScript.findRequireReg();
-          console.log(reqReg)
           if (reqReg) {
             const referenced = this.script.match(reqReg.all) || [];
             const filesRefd = {};
@@ -60,7 +59,6 @@ class MapScript {
               if (!filesRefd[refMap.absPath()]) {
                 filesRefd[refMap.absPath()] = true;
                 const moduleExport = refMap.exports.length === 1;
-                console.log(this.dir(), '->', refMap.absPath())
                 const relitivePath = await MapScript.toRelitivePath(refMap.absPath(), this.dir());
                 requireStr += `const ${formattedRef} = require('${relitivePath}')`;
                 requireStr += moduleExport ? ';\n' : `.${formattedRef};\n`
@@ -93,7 +91,6 @@ MapScript.list = {};
 MapScript.findRequireReg = () => {
   let reg = '';
   const names = Object.keys(MapScript.list);
-  console.log('nameslen', names.length);
   if (names.length === 0) return null;
   names.forEach((name) => {
     reg += `${name}|`;
@@ -178,7 +175,7 @@ MapScript.toRelitivePath = async function (path, dir) {
       const relPath = MapScript.simplifyPath(`${data.trim()}`);
       resolve(relPath);
     }
-    const child = shell.exec(cmd, {async: true});
+    const child = shell.exec(cmd, {async: true, silent: true});
     child.stdout.on('data', resolver);
   });
   return promise;
@@ -254,7 +251,6 @@ class RequireJS {
         this.load = () => {
           if (loadPath.indexOf(path) !== -1) throw Error(`Circular Reference: \n\t\t${loadPath.join('\n\t\t')}`);
           loadPath.push(path);
-          // console.log('loading: ', path);
           func(requireFunc(absoluteDir, path), modulee.exports, modulee);
           loadPath.splice(loadPath.indexOf(path), 1);
           return modulee.exports;
@@ -316,7 +312,6 @@ ${body.replace(/(^|\n)/g, '\n\t').substr(1)}
         resolve(encaps);
 
         if (guess && startTime + 10000 < new Date().getTime()) {
-          console.log('writinggggg...')
           fs.writeFile(map.absPath(), body, 'utf8');
         }
 

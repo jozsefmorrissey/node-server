@@ -6,6 +6,15 @@ var fileUpload = require('express-fileupload');
 const cookieParser = require("cookie-parser");
 require('./public/js/utils/utils.js')
 
+console.update =   function printProgress() {
+    process.stdout.cursorTo(0);
+    for (let index = 0; index < arguments.length; index++) {
+      const item = arguments[index];
+      process.stdout.write((typeof item) === 'string' ? item : new String(item));
+    }
+  };
+
+
 const Context = require('./src/context');
 
 const path = require('path');
@@ -247,7 +256,7 @@ app.delete('/print/body', printCall('DELETE'));
 
 
 var ip = '192.168.254.10';
-var services = shell.ls('./services/');
+var services = global.service ? [global.service] : shell.ls('./services/');
 var exclude = ['uss', 'uus', 'weather-fax', 'content-explained', 'premier', 'info-directory'];
 try {
   for (let i = 0; i < services.length; i += 1) {
@@ -256,7 +265,9 @@ try {
       var loc = '/' + id;
       var dir = './services' + loc;
       var project = dir + loc;
-      app.use(loc, express.static(dir + '/public'))
+      app.use(loc, express.static(dir + '/public'));
+      const buildCmd = `cd ${dir} && node ./watch.js ENV='${global.ENV}' -build`;
+      shell.exec(buildCmd);
       require(project).endpoints(app, loc, ip);
     }
   }

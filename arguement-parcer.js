@@ -21,6 +21,7 @@ function getValue(str) {
 }
 
 const valueRegex = /[A-Z.a-z]{1,}=.*$/;
+const booleanRegex = /\-[a-zA-Z0-9]*/;
 function argParser() {
   for (let index = 2; index < process.argv.length; index += 1) {
     const arg = process.argv[index];
@@ -28,6 +29,9 @@ function argParser() {
       const varName = arg.split('=', 1)[0];
       const valueStr = arg.substr(varName.length + 1);
       global[varName] = getValue(valueStr.trim());
+    } else if (arg.match(booleanRegex)) {
+      const varName = arg.split('-')[1];
+      global[varName] = true;
     }
   }
 }
