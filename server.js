@@ -172,11 +172,15 @@ try {
       const flags = global.ENV === 'local' ? '' : '-build';
       const buildCmd = `cd ${dir} && node ./watch.js ENV='${global.ENV}' ${flags}`;
       console.log(buildCmd);
-      shell.exec(buildCmd);
+      shell.exec(buildCmd, {async: true});
       require(project).endpoints(app, loc, ip);
     }
   }
 } catch (e) { console.error(e); }
+
+app.get("", function (req, res) {
+  res.redirect(`/${services[0]}`);
+});
 
 var httpServer = http.createServer(app);
 var httpsServer = https.createServer(https_options, app);

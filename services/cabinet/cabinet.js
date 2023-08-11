@@ -53,6 +53,10 @@ function servePage(id, scopeFunc) {
 
 function endpoints(app, prefix) {
 
+  app.get(prefix, function (req, res) {
+    res.redirect('/cabinet/order');
+  });
+
   // ------------------------------ html ----------------------------//
 
   app.get(prefix + "/home", servePage('home'));
