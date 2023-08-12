@@ -694,7 +694,7 @@ class Snap2d extends Lookup {
 
     this.getTextInfo = () => {
       return {
-        text: instance.parent().name() || 'pooop',
+        text: instance.parent().name() || '????',
         center: instance.center(),
         size: instance.height() / 4,
         maxWidth: instance.width(),
