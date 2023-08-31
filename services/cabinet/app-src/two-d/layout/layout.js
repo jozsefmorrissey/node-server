@@ -3,6 +3,7 @@ const approximate = require('../../../../../public/js/utils/approximate.js').new
 const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 const StateHistory = require('../../../../../public/js/utils/services/state-history');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+const Polygon2d = require('../../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Circle2d = require('../../../../../public/js/utils/canvas/two-d/objects/circle.js');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
@@ -49,6 +50,19 @@ class Layout2D extends Lookup {
 
     this.startLine = () => this.walls()[0];
     this.endLine = () => this.walls()[this.walls().length - 1];
+
+    this.hash = () => {
+      let hash = 1;
+      const walls = this.walls();
+      for(let index = 0; index < walls.length; index++) {
+        hash *= walls[index].hash();
+      }
+      const objects = this.activeObjects();
+      for(let index = 0; index < objects.length; index++) {
+        hash *= objects[index].hash();
+      }
+      return hash;
+    }
 
     function sortByAttr(attr) {
       function sort(obj1, obj2) {
@@ -227,6 +241,7 @@ class Layout2D extends Lookup {
       if (obj.center().equals(0,0,0)) {
         const center = Vertex2d.center.apply(null, this.vertices())
         obj.bridge.top().center(center);
+        obj.bridge.top().fromFloor(0);
       }
       this.objects().push(obj);
       // history.newState();
@@ -353,44 +368,8 @@ class Layout2D extends Lookup {
     }
     this.center = () => Vertex2d.center(...this.vertices());
 
-    const record = {within: [], notWithin: []};;
     this.within = (vertex, doNotCall) => {
-      if (!doNotCall && this.within(vertex, true)) {
-        console.log.subtle('isWithin', 500);
-      }
-      vertex = new Vertex2d(vertex);
-      const endpoint = {x: 0, y: 0};
-      this.vertices().forEach(v => {
-        // TODO: figure out why negating the components causes errors....
-        // endpoint.x -= v.x() * 2;
-        // endpoint.y -= v.y() * 2;
-        endpoint.x += v.x() * 2;
-        endpoint.y += v.y() * 2;
-      });
-      // const escapeLine = new Line2d(vertex, endpoint);
-      const escapeLine = Line2d.startAndTheta(vertex, Math.random()*3.14*2, 10000000);
-      const intersections = [];
-      let onLine = false;
-      const allIntersections = [];
-      this.walls().forEach((wall) => {
-
-        const intersection = wall.findSegmentIntersection(escapeLine, true);
-        allIntersections.push(intersection);
-        if (intersection) {
-          if (intersection.equals(vertex)) onLine = true;
-          intersections.push(intersection);
-        }
-      });
-
-      const isWithin = onLine || intersections.length % 2 === 1;
-      if (!isWithin) {
-        record.notWithin.push(escapeLine);
-        if (record.notWithin.length > 500) record.notWithin = record.notWithin.slice(250);
-      } else {
-        record.within.push(escapeLine);
-        if (record.within.length > 500) record.within = record.within.slice(250);
-      }
-      return isWithin;
+      return Polygon2d.isWithin(vertex, this.walls());
     }
 
     this.connected = () => {
@@ -494,34 +473,6 @@ class Layout2D extends Lookup {
 
     // history = new StateHistory(this.toJson, this.fromJson);
     this.history = () => history;
-
-    this.snapAt = (vertex, excuded) => {
-      for (let index = 0; index < this.objects().length; index++) {
-        const obj = this.objects()[index];
-        if (excuded !== obj || Array.exists(excuded, obj)) {
-          const hovering = obj.snap2d.top().hoveringSnap(vertex, excuded);
-          if (hovering) return hovering;
-        }
-      }
-    }
-
-    this.atWall = (vertex) => {
-      for (let index = 0; index < walls.length; index++) {
-        const hovering = walls[index].hovering(vertex);
-        if (hovering)
-          return hovering;
-      }
-    }
-
-    this.at = (vertex) => {
-      const activeObjects = this.level() || this.objects();
-      for (let index = 0; index < activeObjects.length; index++) {
-        const hovering = activeObjects[index].snap2d.top().hovering(vertex);
-        if (hovering)
-          return hovering;
-      }
-      return this.atWall(vertex);
-    }
 
     this.toDrawString = () => {
       return Line2d.toDrawString(this.walls());

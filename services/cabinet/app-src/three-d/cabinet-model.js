@@ -71,7 +71,7 @@ class CabinetModel {
         for (let index = 0; index < assems.length; index++) {
           const assem = assems[index];
           const cxtr = assem.constructor.name;
-          if (cxtr !== 'SectionProperties' && !cxtr.match(/Cutter/)) {
+          if (cxtr !== 'SectionProperties' && !cxtr.match(/(Cutter|Void)/)) {
             if (assem.toModel)
               csg = csg.union(assems[index].toModel(true));
           }
@@ -192,7 +192,7 @@ class CabinetModel {
           const layoutObject = layout.addObject(c.id(), c, c.partName(), topview);
           c.snap3d = layoutObject;
         } else {
-          const polygon = c.snap3d.snap2d.top().polygon();
+          const polygon = c.snap3d.snap2d.top().object();
           topview.centerOn(polygon.center());
           // topview.radians(polygon.radians())
           polygon.copy(topview);
@@ -244,6 +244,9 @@ class CabinetModel {
 }
 
 const models = {};
-CabinetModel.get = (cabinet) => models[(cabinet || Global.cabinet()).id()];
+CabinetModel.get = (cabinet) => {
+  cabinet ||= Global.cabinet();
+  if (cabinet) return models[cabinet.id()];
+}
 
 module.exports = CabinetModel;

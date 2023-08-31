@@ -523,31 +523,31 @@ class $t {
       return built;
 		}
 
-		function rangeExp(rangeItExpr, get) {
+		function rangeExp(rangeItExpr, varName, get) {
 			const match = rangeItExpr.match($t.rangeItExpReg);
-			const elemName = match[1];
+			const elemName = varName;
 			let startIndex = (typeof match[2]) === 'number' ||
-						match[2].match(/^[0-9]*$/) ?
-						match[2] : get(`${match[2]}`);
+						match[1].match(/^[0-9]*$/) ?
+						match[1] : get(`${match[2]}`);
 			let endIndex = (typeof match[3]) === 'number' ||
-						match[3].match(/^[0-9]*$/) ?
-						match[3] : get(`${match[3]}`);
+						match[2].match(/^[0-9]*$/) ?
+						match[2] : get(`${match[3]}`);
 			if (((typeof startIndex) !== 'string' &&
 							(typeof	startIndex) !== 'number') ||
 								(typeof endIndex) !== 'string' &&
 								(typeof endIndex) !== 'number') {
-									throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+									throw Error(`Invalid range '${rangeItExpr}' evaluates to '${startIndex}..${endIndex}'`);
 			}
 
 			try {
 				startIndex = Number.parseInt(startIndex);
 			} catch (e) {
-				throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				throw Error(`Invalid range '${rangeItExpr}' evaluates to '${startIndex}..${endIndex}'`);
 			}
 			try {
 				endIndex = Number.parseInt(endIndex);
 			} catch (e) {
-				throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				throw Error(`Invalid range '${rangeItExpr}' evaluates to '${startIndex}..${endIndex}'`);
 			}
 
 			let index = startIndex;
@@ -583,8 +583,8 @@ class $t {
 		}
 
 		function type(scope, expression) {
-			if ((typeof expression) === 'string' && expression.match($t.rangeAttemptExpReg)) {
-				if (expression.match($t.rangeItExpReg)) {
+			if ((typeof scope) === 'string' && scope.match($t.rangeAttemptExpReg)) {
+				if (scope.match($t.rangeItExpReg)) {
 					return 'rangeExp'
 				}
 				return 'rangeExpFormatError';
@@ -593,8 +593,6 @@ class $t {
 					return 'defaultArray';
 				} else if (expression.match($t.nameScopeExpReg)) {
 					return 'nameArrayExp';
-				} else {
-					return 'invalidArray';
 				}
 			}
 
@@ -613,35 +611,35 @@ class $t {
 			}
 		}
 
-		function render(scope, itExp, parentScope) {
+		function render(scope, varName, parentScope) {
       if (scope === undefined) return '';
 			let rendered = '';
 			const get = getter(scope, parentScope);
-			switch (type(scope, itExp)) {
+			switch (type(scope, varName)) {
 				case 'rangeExp':
-					rendered = rangeExp(itExp, get);
+					rendered = rangeExp(scope, varName, get);
 					break;
 				case 'rangeExpFormatError':
-					throw new Error(`Invalid range itteration expression "${itExp}"`);
+					throw new Error(`Invalid range itteration expression "${varName}"`);
 				case 'defaultArray':
-					rendered = defaultArray(itExp, get);
+					rendered = defaultArray(varName, get);
 					break;
 				case 'nameArrayExp':
-					rendered = defaultArray(itExp, get);
+					rendered = defaultArray(varName, get);
 					break;
 				case 'arrayExp':
-					rendered = arrayExp(itExp, get);
+					rendered = arrayExp(varName, get);
 					break;
 				case 'invalidArray':
-					throw new Error(`Invalid iterative expression for an array "${itExp}"`);
+					throw new Error(`Invalid iterative expression for an array "${varName}"`);
 				case 'defaultObject':
 					rendered = evaluate(get);
 					break;
 				case 'itOverObject':
-					rendered = itOverObject(itExp, get);
+					rendered = itOverObject(varName, get);
 					break;
 				case 'invalidObject':
-					throw new Error(`Invalid iterative expression for an object "${itExp}"`);
+					throw new Error(`Invalid iterative expression for an object "${varName}"`);
 				default:
 					throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
 			}
@@ -714,7 +712,7 @@ class $t {
 				let scope = 'scope';
 				template = templateName !== tagContents ? templateName : template;
 				const t = templateName === instance.id() ? instance : eval(`new $t(\`${template}\`)`);
-        let resolvedScope = "get('scope')";;
+        let resolvedScope = "get('scope')";
         try {
 					if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
             resolvedScope = `'${realScope}'`;
@@ -727,17 +725,19 @@ class $t {
 			return string;
 		}
 
-		const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).*)<\/)\1:t>/;
+    // format: <[tagName]:t .*$t-id='[templateName]'.*>[scopeVariableName]</[tagName]:t>
+		const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>(((?!(<\1:t[^>]*>|<\/\1:t>)).)*)<\/)\1:t>/;
 		function formatTemplate(string) {
 			let match;
 			while (match = string.match(templateReg)) {
-				let tagContents = match[2] + match[6];
+				let tagContents = match[7];
 				let tagName = match[1];
 				let realScope = match[7];
 				let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
 				let templateName = match[0].replace(/.*\$t-id=('|")([0-9\.a-zA-Z-_\/]*?)(\1).*/, '$2');
 				let scope = 'scope';
 				template = templateName !== tagContents ? templateName : template;
+        console.log("Template!!!", template)
 				let resolvedScope = "get('scope')";;
 				string = string.replace(match[0], `{{ new $t('${templateName}').render(get('${realScope}'), undefined, get)}}`);
 			}
@@ -778,8 +778,8 @@ $t.loadFunctions = (functions) => {
 $t.isTemplate = (id) => $t.functions[id] !== undefined;
 $t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
 $t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-$t.rangeAttemptExpReg = /^\s*([a-z0-9A-Z]*)\s*in\s*(.*\.\..*)\s*$/;
-$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*in\s*([a-z0-9A-Z]*)\.\.([a-z0-9A-Z]*)\s*$/;
+$t.rangeAttemptExpReg = /^\s*(.*\.\..*)\s*$/;
+$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\.\.([a-z0-9A-Z]*)\s*$/;
 $t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
 $t.quoteStr = function (str) {
 		str = str.replace(/\\`/g, '\\\\\\`')

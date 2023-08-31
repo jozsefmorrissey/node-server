@@ -30,14 +30,14 @@ class $t {
 		  }
 		}
 
-		const signProps = {opening: /([-+\!])/};
-		const relationalProps = {opening: /((\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
+		const relationalProps = {opening: /((!==|===|!=|==|\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
+    const signProps = {opening: /([-+\!])/};
 		const ternaryProps = {opening: /\?/};
 		const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
-		const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, '(.*?)', get\)/};
+		const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, (.*?), get\)/};
 		const commaProps = {opening: /,/};
 		const colonProps = {opening: /:/};
-		const multiplierProps = {opening: /(===|[-+=*\/](=|))/};
+		const multiplierProps = {opening: /([-+*\/](=|))/};
 		const stringProps = {opening: /('|"|`)(\1|.*?([^\\]((\\\\)*?|[^\\])(\1)))/};
 		const spaceProps = {opening: /\s{1}/};
 		const numberProps = {opening: /([0-9]*((\.)[0-9]{1,})|[0-9]{1,})/};
@@ -99,11 +99,11 @@ class $t {
 
 		expression.always(space, ignore, keyWord);
 		expression.if(string, number, group, array, variable, funcRef, memberRef)
-		      .then(multiplier, sign, relational, group)
+		      .then(multiplier, relational, sign, group)
 		      .repeat();
 		expression.if(string, group, array, variable, funcRef, memberRef)
 					.then(attr)
-		      .then(multiplier, sign, relational, expression, funcRef, memberRef)
+		      .then(multiplier, relational, sign, expression, funcRef, memberRef)
 					.repeat();
 		expression.if(string, group, array, variable, funcRef, memberRef)
 					.then(attr)
@@ -114,9 +114,13 @@ class $t {
 		memberRef.if(expression).then(comma).repeat();
 		memberRef.if(expression).end();
 
+    expression.if(relational)
+		      .then(expression)
+		      .then(multiplier, relational, sign, group)
+		      .repeat();
 		expression.if(sign)
 		      .then(expression)
-		      .then(multiplier, sign, relational, group)
+		      .then(multiplier, relational, sign, group)
 		      .repeat();
 		expression.if(string, number, group, array, variable)
 		      .then(ternary)
@@ -218,28 +222,31 @@ class $t {
       return built;
 		}
 
-		function rangeExp(elemName, rangeItExpr, get) {
+		function rangeExp(rangeItExpr, varName, get) {
 			const match = rangeItExpr.match($t.rangeItExpReg);
-			let startIndex = match[1].match(/^[0-9]{1,}$/) ?
-						match[1] : get(match[1]);
-			let endIndex = match[2].match(/^[0-9]*$/) ?
-						match[2] : get(match[2]);
+			const elemName = varName;
+			let startIndex = (typeof match[2]) === 'number' ||
+						match[1].match(/^[0-9]*$/) ?
+						match[1] : get(`${match[2]}`);
+			let endIndex = (typeof match[3]) === 'number' ||
+						match[2].match(/^[0-9]*$/) ?
+						match[2] : get(`${match[3]}`);
 			if (((typeof startIndex) !== 'string' &&
 							(typeof	startIndex) !== 'number') ||
 								(typeof endIndex) !== 'string' &&
 								(typeof endIndex) !== 'number') {
-									throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+									throw Error(`Invalid range '${rangeItExpr}' evaluates to '${startIndex}..${endIndex}'`);
 			}
 
 			try {
 				startIndex = Number.parseInt(startIndex);
 			} catch (e) {
-				throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				throw Error(`Invalid range '${rangeItExpr}' evaluates to '${startIndex}..${endIndex}'`);
 			}
 			try {
 				endIndex = Number.parseInt(endIndex);
 			} catch (e) {
-				throw Error(`Invalid range '${itExp}' evaluates to '${startIndex}..${endIndex}'`);
+				throw Error(`Invalid range '${rangeItExpr}' evaluates to '${startIndex}..${endIndex}'`);
 			}
 
 			let index = startIndex;
@@ -303,36 +310,35 @@ class $t {
 			}
 		}
 
-		// TODO: itExp is not longer an iteration expression. fix!!!!
-		function render(scope, itExp, parentScope) {
+		function render(scope, varName, parentScope) {
       if (scope === undefined) return '';
 			let rendered = '';
 			const get = getter(scope, parentScope);
-			switch (type(scope, itExp)) {
+			switch (type(scope, varName)) {
 				case 'rangeExp':
-					rendered = rangeExp(itExp, scope, get);
+					rendered = rangeExp(scope, varName, get);
 					break;
 				case 'rangeExpFormatError':
-					throw new Error(`Invalid range itteration expression "${scope}"`);
+					throw new Error(`Invalid range itteration expression "${varName}"`);
 				case 'defaultArray':
-					rendered = defaultArray(itExp, get);
+					rendered = defaultArray(varName, get);
 					break;
 				case 'nameArrayExp':
-					rendered = defaultArray(itExp, get);
+					rendered = defaultArray(varName, get);
 					break;
 				case 'arrayExp':
-					rendered = arrayExp(itExp, get);
+					rendered = arrayExp(varName, get);
 					break;
 				case 'invalidArray':
-					throw new Error(`Invalid iterative expression for an array "${itExp}"`);
+					throw new Error(`Invalid iterative expression for an array "${varName}"`);
 				case 'defaultObject':
 					rendered = evaluate(get);
 					break;
 				case 'itOverObject':
-					rendered = itOverObject(itExp, get);
+					rendered = itOverObject(varName, get);
 					break;
 				case 'invalidObject':
-					throw new Error(`Invalid iterative expression for an object "${itExp}"`);
+					throw new Error(`Invalid iterative expression for an object "${varName}"`);
 				default:
 					throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
 			}
@@ -399,7 +405,7 @@ class $t {
 			return `\`${str}\``;
 		}
 
-
+		// format: <[tagName]:t .*repeat='[repeatExpression]'.*$t-id='[templateName]'.*>[templateHtml]</[tagName]:t>
 		const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
 		function formatRepeat(string) {
 			let match;
@@ -412,7 +418,7 @@ class $t {
 				let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
 				let scope = 'scope';
 				template = templateName !== tagContents ? templateName : template;
-				const t = eval(`new $t(\`${template}\`)`);
+				const t = templateName === instance.id() ? instance : eval(`new $t(\`${template}\`)`);
         let resolvedScope = "get('scope')";;
         try {
 					if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
@@ -426,30 +432,25 @@ class $t {
 			return string;
 		}
 
-		const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
+		// format: <[tagName]:t .*$t-id='[templateName]'.*>[scopeVariableName]</[tagName]:t>
+		const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>(((?!(<\1:t[^>]*>|<\/\1:t>)).)*)<\/)\1:t>/;
 		function formatTemplate(string) {
 			let match;
-			while (match = string.match(repeatReg)) {
-				let tagContents = match[2] + match[6];
+			while (match = string.match(templateReg)) {
+				let tagContents = match[7];
 				let tagName = match[1];
 				let realScope = match[7];
 				let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
-				let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+				let templateName = match[0].replace(/.*\$t-id=('|")([0-9\.a-zA-Z-_\/]*?)(\1).*/, '$2');
 				let scope = 'scope';
 				template = templateName !== tagContents ? templateName : template;
-				const t = eval(`new $t(\`${template}\`)`);
+				console.log("Template!!!", template)
 				let resolvedScope = "get('scope')";;
-				try {
-					if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
-						resolvedScope = `'${realScope}'`;
-					} else {
-						resolvedScope = ExprDef.parse(expression, realScope);
-					}
-				} catch (e) {}
-				string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, undefined, get)}}`);
+				string = string.replace(match[0], `{{ new $t('${templateName}').render(get('${realScope}'), undefined, get)}}`);
 			}
 			return string;
 		}
+
 
 		if (id) {
 			$t.templates[id] = undefined;
@@ -458,6 +459,7 @@ class $t {
 
 		template = template.replace(/\s{1,}/g, ' ');
 		id = $t.functions[template] ? template : id || stringHash(template);
+    this.id = () => id;
 		if (!$t.functions[id]) {
 			if (!$t.templates[id]) {
 				template = template.replace(/\s{2,}|\n/g, ' ');
@@ -488,7 +490,7 @@ $t.isTemplate = (id) => $t.functions[id] !== undefined;
 $t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
 $t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
 $t.rangeAttemptExpReg = /^\s*(.*\.\..*)\s*$/;
-$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\s*\.\.\s*([a-z0-9A-Z]*)\s*$/;
+$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\.\.([a-z0-9A-Z]*)\s*$/;
 $t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
 $t.quoteStr = function (str) {
 		str = str.replace(/\\`/g, '\\\\\\`')

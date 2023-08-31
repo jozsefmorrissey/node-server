@@ -1,0 +1,10 @@
+<div class='file-tab-cnt {{type()}}' id='{{id()}}'>
+  <ul>
+    <li:t repeat='title in list()' {{title === selected() ? 'class="selected"' : ''}}>
+      {{title}}
+    </li:t>
+  </ul>
+  <div class='content'>
+    {{selectedHtml()}}
+  </div>
+</div>

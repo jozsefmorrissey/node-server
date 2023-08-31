@@ -27,6 +27,10 @@ class SectionDisplay {
   }
 }
 
+SectionDisplay.formatCoverName = (name) => {
+  return name.replace(/(.*)Section$/, '$1').toSentance();
+}
+
 const templates = {};
 const fileLocations = {};
 SectionDisplay.template = (section) => {
@@ -87,7 +91,9 @@ OpenSectionDisplay.getList = (root) => {
   let exList;
   const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
   const getHeader = (opening, index) => {
-    return OpenSectionDisplay.listHeadTemplate.render({opening, clean});
+    const cover = opening.cover()
+    const headText =  SectionDisplay.formatCoverName(cover ? cover.constructor.name : 'Open');
+    return OpenSectionDisplay.listHeadTemplate.render({opening, clean, headText});
   }
   const getBody = (opening) => {
     const list = OpenSectionDisplay.getList(root);
@@ -98,7 +104,7 @@ OpenSectionDisplay.getList = (root) => {
   const findElement = (selector, target) => du.find.down(selector, du.find.up('.expandable-list', target));
   const expListProps = {
     parentSelector, getHeader, getBody, list, hideAddBtn,
-    selfCloseTab, findElement, startClosed: true, removeButton: false
+    selfCloseTab, findElement, startClosed: true, removeButton: false, hideAddBtn: true
   }
   exList = new ExpandableList(expListProps);
   OpenSectionDisplay.lists[openId] = exList;
@@ -165,7 +171,7 @@ OpenSectionDisplay.patterInputHtml = (opening) => {
       name: id,
       value: fill[index]
     });
-    measInput.on('keyup', (value, target) => {
+    measInput.on('enter', (value, target) => {
       opening.pattern().value(target.name, Measurement.decimal(target.value));
       fill = opening.dividerLayout().fill;
       const patternCnt = document.querySelector(patCntSelector);
@@ -178,8 +184,10 @@ OpenSectionDisplay.patterInputHtml = (opening) => {
     });
     inputHtml += measInput.html();
     measInput.on('change', (value, target) => {
-      if (opening.pattern().satisfied()) {
-        const cabinet = opening.getAssembly('c');
+      const dec = new Measurement(value, true).decimal();
+      if (!Number.isNaN(dec)) {
+        const oldValue = opening.pattern().value(target.name);
+        opening.pattern().value(target.name, dec);
       }
     })
   }
@@ -236,9 +244,12 @@ OpenSectionDisplay.onSectionChange = (target) => {
     section = section.openings[index].sectionProperties();
   }
   section.setSection(target.value === "Open" ? null : target.value);
+  const expandHeader = ExpandableList.getHeaderCnt(target);
+  const targetCnt = du.find.down('.open-divider-select', expandHeader);
+  targetCnt.innerText = SectionDisplay.formatCoverName(target.value || 'Open');
 }
 
-du.on.match('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
+du.on.match('blur:enter', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
 du.on.match('change', '.division-pattern-input', expiditeRefresh);
 du.on.match('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
 du.on.match('change', '.section-selection', OpenSectionDisplay.onSectionChange)

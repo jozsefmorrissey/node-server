@@ -18,6 +18,9 @@ class Joint {
         parentAssembly = Lookup.get(this.parentAssemblyId());
         this.parentAssemblyId = () => parentAssembly.id();
       }
+      if (parentAssembly === undefined) {
+        console.log(malePartCode, femalePartCode, parentAssembly);
+      }
       return parentAssembly;
     }
 
@@ -59,6 +62,10 @@ Joint.apply = (model, joints) => {
     joints.forEach((joint) => {
       if (joint.apply()) {
         const male = joint.getMale();
+        if (male === undefined) {
+          console.warn(`No male found with partCode: '${joint.malePartCode()}'`);
+          return;
+        }
         const mm = male.toModel();
         if (m.polygons.length > 0 && mm.polygons.length > 0) {
           m = m.subtract(mm);

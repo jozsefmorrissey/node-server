@@ -271,4 +271,17 @@ Line3D.sharedEndpoint = (...lines) => {
   return null;
 }
 
+// const testRun = () => {
+//   const instStartTime = new Date().getTime();
+//   for (let index = 0; index < 900000; index++) {
+//     const start = new Vertex3D(1,2,3);
+//     const end = new Vertex3D(2,3,4);
+//     new Line3D(start, end).toString();
+//   }
+//   const instEndTime = new Date().getTime();
+//   const instTime = instEndTime - instStartTime;
+//
+//   console.log(instTime);
+// }
+
 module.exports = Line3D;

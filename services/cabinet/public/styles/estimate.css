@@ -19,6 +19,13 @@ h3,h4,h5 {
   font-weight: bold;
 }
 
+.orient-arrows [dir]:hover {
+  background-color: lime;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 input[name='malePartCode'],
 input[name='femalePartCode'],
 input[name='partCode'],
@@ -70,6 +77,10 @@ canvas {
   border-bottom-width: 1pt;
 }
 
+.void-cnt {
+  text-align: left;
+}
+
 [hidden] > canvas {
     display: none;
 }
@@ -118,10 +129,11 @@ canvas {
 
 
 .divison-section-cnt {
-  border-style: groove;
+  border-style: none;
   padding: 2pt;
-  border-radius: 10pt;
-  margin: 2pt;
+  border-radius: 0;
+  margin: 0;
+  text-align: left;
 }
 
 .save-order-btn {
@@ -252,6 +264,18 @@ a {
   text-align: center;
 }
 
+.absolute-top-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.absolute-top-left {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
 #display-menu > .display-manager {
   width: fit-content;
   display: inline-flex;
@@ -333,7 +357,7 @@ a {
   white-space: nowrap;
 }
 
-.cabinet-id-input.dem {
+.dem {
   width: 40pt;
 }
 

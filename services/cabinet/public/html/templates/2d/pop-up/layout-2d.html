@@ -1,6 +1,17 @@
 <div type-2d='{{target.constructor.name}}'
         id='{{target.id()}}'
         x='{{lastImagePoint.x}}' y='{{lastImagePoint.y}}'>
+  <button class='add-object-btn-2d transparent'>Add Object</button>
+  <br>
+  <label>Adjust Layout</label>
+  <input class='value-2d' hover-map type="checkbox" key="layoutHover" convert='false' {{hoverMap.layoutHover() ? 'checked' : ''}}>
+  <br>
   <label>Ceiling Height</label>
   <input class='value-2d' type="text" key="ceilingHeight" convert='false' value="{{display(target.ceilingHeight())}}">
+  <br>
+  <div class='center-vert center'>
+    <button class='layout ruler'>
+      <i class="gg-ruler"></i>
+    </button>
+  </div>
 </div>

@@ -878,7 +878,7 @@ du.uniqueSelector = function selector(focusElem) {
   let currSelector;
   let currElem = focusElem;
   do {
-    attrSelector = `${currElem.tagName}${currElem.id ? '#' + currElem.id : ''}`;
+    attrSelector = `${currElem.id ? '#' + currElem.id : `${currElem.tagName}`}`;
 
     currSelector = `${attrSelector}${selector}`;
     let found = du.find.all(currSelector);

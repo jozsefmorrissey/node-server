@@ -14,6 +14,7 @@ const Vector3D = require('../three-d/objects/vector.js');
 const Line3D = require('../three-d/objects/line.js');
 const Vertex3D = require('../three-d/objects/vertex.js');
 const Canvas = require('./canvas');
+const Global = require('../services/global.js');
 // const cube = new CSG.cube({radius: [3,5,1]});
 const consts = require('../../globals/CONSTANTS');
 
@@ -59,16 +60,16 @@ du.on.match('click', '.model-state', (target) => {
     let value = type !== 'prefix' ?
     (type !== 'part-name' ? label.innerText : label.getAttribute('part-name')) :
     label.nextElementSibling.getAttribute('prefix');
-    const cabinet = lastRendered;
+    const cabinet = Global.cabinet();
     const tdm = ThreeDModel.get(cabinet);
     let partName = target.getAttribute('part-name');
     let targetSelected = label.hasAttribute('target') || target.hasAttribute('target');
     if (targetSelected) {
       let partCode = target.getAttribute('part-code');
-      tdm.setTargetPartName(partCode);
+      tdm.setTargetPartCode(partCode);
     } else {
       tdm.inclusiveTarget(type, has ? undefined : value);
-      tdm.setTargetPartName(null);
+      tdm.setTargetPartCode(null);
     }
   }
   Canvas.render();
@@ -77,10 +78,10 @@ du.on.match('click', '.model-state', (target) => {
 function deselectPrefix() {
   document.querySelectorAll('.model-state')
     .forEach((elem) => du.class.remove(elem, 'active'));
-  const cabinet = lastRendered;
+  const cabinet = Global.cabinet();
   const tdm = ThreeDModel.get(cabinet);
   tdm.inclusiveTarget(undefined, undefined);
-  tdm.setTargetPartName(null);
+  tdm.setTargetPartCode(null);
 }
 
 function setGreaterZindex(...ids) {
@@ -130,7 +131,7 @@ du.on.match('click', '.prefix-switch', (target, event) => {
 });
 
 du.on.match('change', '.prefix-checkbox', (target) => {
-  const cabinet = lastRendered;
+  const cabinet = Global.cabinet();
   const attr = target.getAttribute('prefix');
   deselectPrefix();
   ThreeDModel.get(cabinet).hidePrefix(attr, !target.checked);
@@ -138,7 +139,7 @@ du.on.match('change', '.prefix-checkbox', (target) => {
 });
 
 du.on.match('change', '.part-name-checkbox', (target) => {
-  const cabinet = lastRendered;
+  const cabinet = Global.cabinet();
   const attr = target.getAttribute('part-name');
   deselectPrefix();
   const tdm = ThreeDModel.get(cabinet);
@@ -147,7 +148,7 @@ du.on.match('change', '.part-name-checkbox', (target) => {
 });
 
 du.on.match('change', '.part-id-checkbox', (target) => {
-  const cabinet = lastRendered;
+  const cabinet = Global.cabinet();
   const attr = target.getAttribute('part-id');
   deselectPrefix();
   const tdm = ThreeDModel.get(cabinet);
@@ -155,39 +156,29 @@ du.on.match('change', '.part-id-checkbox', (target) => {
   Canvas.render();
 })
 
-let controllerModel;
 function updateController() {
-  controllerModel = lastRendered;
+  const cabinet = Global.cabinet();
+  if (cabinet === undefined) return;
   const controller = du.id('model-controller');
-  const grouping = groupParts(controllerModel);
-  grouping.tdm = ThreeDModel.get(controllerModel);
+  const grouping = groupParts(cabinet);
+  grouping.tdm = ThreeDModel.get(cabinet);
   controller.innerHTML = modelContTemplate.render(grouping);
   controller.hidden = false;
 }
 
+Canvas.on.switch((id) => {
+  updateController();
+});
 
-let lastRendered;
+
 function update(part, force) {
-  if (part) lastRendered = part.getAssembly('c');
-  const threeDModel = ThreeDModel.get(lastRendered);
+  if (part) part = Global.cabinet();
+  const threeDModel = ThreeDModel.get(part);
   if (threeDModel) {
     threeDModel.buildObject();
-    Canvas.render(lastRendered, force);
+    Canvas.render(part, force);
     updateController();
   }
-}
-
-function modelCenter() {
-  const model = ThreeDModel.lastActive.getLastRendered();
-  const vertices = [];
-  for (let index = 0; index < model.polygons.length; index++) {
-    const verts = model.polygons[index].vertices;
-    for (let vIndex = 0; vIndex < verts.length; vIndex++) {
-      vertices.push(verts[vIndex].pos);
-    }
-  }
-
-  return Vertex3D.center(...vertices);
 }
 
 function init() {

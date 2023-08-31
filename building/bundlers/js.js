@@ -17,6 +17,8 @@ class JsBundler extends Bundler {
     const bundler = this;
     let encaps = !(options.encapsulate === false);
     const id = file.replace(/^.*\/([^\/]*)$/, "$1");
+    const dirPath = file.replace(/^(.*\/).*$/, '$1');
+    if (dirPath !== file) shell.mkdir('-p', dirPath);
     shell.touch(file + '.js');
     externals.push('afterLoad');
     const jsFiles = {};

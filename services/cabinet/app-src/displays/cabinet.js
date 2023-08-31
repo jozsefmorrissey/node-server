@@ -19,12 +19,34 @@ const Object3D = require('../three-d/layout/object.js');
 const Inputs = require('../input/inputs.js');
 const EPNTS = require('../../generated/EPNTS');
 const Global = require('../services/global');
-
+const Canvas = require('canvas');
+const FileTabDisplay = require('../../../../public/js/utils/lists/file-tab.js');
+const VoidDisplay = require('./advanced/subassemblies/void.js');
 
 // function getHtmlElemCabinet (elem) {
 //   const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
 //   return Cabinet.get(cabinetId);
 // }
+
+const voidHtml = () => {
+  const cabinet = Global.cabinet();
+  const voidDisplay = new VoidDisplay(cabinet);
+  return voidDisplay.html();
+}
+const openingHtml = () => {
+  const cabinet = Global.cabinet();
+  const openings = cabinet.openings;
+  let html = '';
+  for (let i = 0; i < openings.length; i++) {
+    html += `  <div class='divison-section-cnt' index='${i}'>
+    ${OpenSectionDisplay.html(openings[i].sectionProperties())}</div:t>`
+  }
+  return html
+}
+
+const fileTabDisp = new FileTabDisplay();
+fileTabDisp.register('Layout', openingHtml);
+fileTabDisp.register('Voids', voidHtml);
 
 class CabinetDisplay {
   constructor(parentSelector, group) {
@@ -51,7 +73,8 @@ class CabinetDisplay {
       const valueObj = cabinet.value.values;
       const keys = Object.keys(valueObj);
       const modifiableValues = cabinet.modifiableValues();
-      const scope = {$index, cabinet, showTypes, OpenSectionDisplay, modifiableValues, display};
+      const scope = {$index, cabinet, showTypes, OpenSectionDisplay,
+                      modifiableValues, display, fileTabDisp};
       return CabinetDisplay.bodyTemplate.render(scope);
     }
 
@@ -62,14 +85,14 @@ class CabinetDisplay {
       return {type: 'You must select a defined type.'};
     }
 
-    function update3Dmodel(target) {
-      const cabinet = Global.cabinet();//getHtmlElemCabinet(target);
+    async function update3Dmodel(target) {
+      const cabinet = Global.cabinet();
       target.value = new Measurement(target.value, true).display();
-      console.log('ran update3Dmodel');
-      ThreeDMain.update(cabinet);
+      await ThreeDModel.build(cabinet);
+      Canvas.render();
     }
 
-    du.on.match('enter', '.cabinet-id-input.dem', update3Dmodel);
+    du.on.match('enter', '.cabinet-cnt .expandable-list-body', update3Dmodel);
 
     function updateCabValue(cabinet, attr) {
       const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);
@@ -93,12 +116,6 @@ class CabinetDisplay {
         updateCabValue(cabinet, 'thickness');
       }
     }
-
-    function updateObjLayout(elem, cabinetModel) {
-      console.log('model update');
-    }
-
-    ThreeDModel.onRenderObjectUpdate(updateObjLayout);
 
     const getObject = (values) => {
       const cabinet = CabinetConfig.get(group, values.type, values.layout, values.name);
@@ -138,7 +155,11 @@ class CabinetDisplay {
       const cabKey = cabinetKey(path);
       const decimal = new Measurement(value, true).decimal();
       if (!Number.isNaN(decimal)) {
-        cabKey.cabinet[cabKey.key](decimal);
+        if (cabKey.cabinet[cabKey.key]() !== decimal) {
+          cabKey.cabinet[cabKey.key](decimal);
+          const parentCnt = du.find(parentSelector);
+          // ExpandableList.refresh(du.find.down('.expandable-list', parentCnt), true);
+        }
       } if (path.match('[0-9]{1,}\.name')) {
         cabKey.cabinet[cabKey.key](value);
         TwoDLayout.panZoom.once();

@@ -254,12 +254,13 @@ class Line2d {
     }
 
     //TODO: fix!!!!
-    this.liesOn = (vertices) => {
+    this.liesOn = (vertices, tolerance) => {
       const liesOn = [];
+      const inTol = tolerance === undefined ? withinTol : Tolerance.within(tolerance);
       for (let index = 0; index < vertices.length; index += 1) {
         const v = vertices[index];
-        const y = this.y(v.x());
-        if ((withinTol(y, v.y()) || Math.abs(y) === Infinity) && this.withinSegmentBounds(v)) {
+        const dist = this.distance(v);
+        if (inTol(dist, 0)) {
           liesOn.push(v);
         }
       }
@@ -419,9 +420,6 @@ class Line2d {
         y = this.y(x);
       }
       if (NaNfinity(x,y)) return false;
-      if (this.toString() === '"(9, 10) => (9.000000000000005, -90)"' && this.toString() === '(20, 40) => (20, 15)') {
-        console.log('wtf');
-      }
       // if (!Line2d.withinLineBounds(new Vertex2d(x,y), this, line)) return false;
 
       return new Vertex2d({x,y});
@@ -650,8 +648,8 @@ class Line2d {
       const interX = this.findIntersection(perpLine);
       const diffLine = new Line2d(interX, mouseLocation);
       const rads = diffLine.radians();
-      const xDiff = Math.cos(rads);
-      const yDiff = Math.sin(rads);
+      const xDiff = Math.cos(rads)*diffLine.length();
+      const yDiff = Math.sin(rads)*diffLine.length();
       const sv = this.startVertex();
       const newStart = {x: sv.x() + xDiff, y: sv.y() + yDiff};
       const ev = this.endVertex();
@@ -671,12 +669,12 @@ class Line2d {
     }
 
     this.negitive = () => new Line2d(this.endVertex(), this.startVertex());
-    this.toString = () => `${this.startVertex().toString()} => ${this.endVertex().toString()}`;
+    this.toString = () => `[${this.startVertex().toString()} , ${this.endVertex().toString()}]`;
     this.toInfoString = () => `slope: ${this.slope()}\n` +
                         `angle: ${this.angle()}\n` +
                         `segment: ${this.toString()}`;
-    this.toNegitiveString = () => `${this.endVertex().toString()} => ${this.startVertex().toString()}`;
-    this.approxToString = () => `${this.startVertex().approxToString()} => ${this.endVertex().approxToString()}`;
+    this.toNegitiveString = () => `[${this.endVertex().toString()}, ${this.startVertex().toString()}]`;
+    this.approxToString = () => `[${this.startVertex().approxToString()}, ${this.endVertex().approxToString()}]`;
   }
 }
 Line2d.reusable = true;

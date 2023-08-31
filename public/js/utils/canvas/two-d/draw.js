@@ -35,6 +35,9 @@ class Draw2d {
         case 'Line2d':
           draw.line(object, color, width);
           break;
+        case 'Vertex2d':
+          draw.circle(new Circle2d(2, object), color, width);
+          break;
         case 'Circle2d':
           draw.circle(object, color, width);
           break;
@@ -105,7 +108,7 @@ class Draw2d {
       midpointFlag(line.midpoint(), Math.toRadians(line.degrees() + 135));
     }
 
-    draw.line = (line, color, width) => {
+    draw.line = (line, color, width, indicateDirection) => {
       if (line === undefined) return;
       color = color ||  'black';
       width = width || 10;
@@ -117,6 +120,29 @@ class Draw2d {
       if (Draw2d.debug.showFlags) midpointFlags(line);
       ctx().stroke();
       // identifyVertices(line);
+
+      if (indicateDirection) {
+        const chevLine = line.copy();
+        chevLine.length(width * 5);
+        draw.chevron(line.midpoint(), chevLine, color, width/2);
+      }
+    }
+
+    // point is the tip of the chevron
+    // line is the direction the chevron points allong with length of legs
+    // angle is the angle between legs
+    draw.chevron = (point, line, color, width, angle) => {
+      color = color ||  'black';
+      width = width || 10;
+      let rads = Number.isFinite(angle) ? Math.toRadians(angle)/2 : 2.5;
+      const leg1 = line.copy();
+      leg1.rotate(rads);
+      leg1.translate(new Line2d(leg1.startVertex(), point));
+      const leg2 = line.copy();
+      leg2.rotate(-rads);
+      leg2.translate(new Line2d(leg2.startVertex(), point));
+      draw.line(leg1, color, width);
+      draw.line(leg2, color, width);
     }
 
     draw.plane = (plane, color, width) => {

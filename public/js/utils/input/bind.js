@@ -28,7 +28,7 @@ module.exports = function(selector, objOrFunc, props) {
     const target = resolveTarget(elem);
     elem = du.find.down('input,select,textarea', elem);
     const updatePath = elem.getAttribute('prop-update') || elem.getAttribute('name');
-    elem.id = elem.id || String.random(7);
+    elem.id = elem.id || 'bind-' + String.random(7);
     const thisInputTime = new Date().getTime();
     lastInputTime[elem.id] = thisInputTime;
     setTimeout(() => {
@@ -69,7 +69,7 @@ module.exports = function(selector, objOrFunc, props) {
     }
   }
 
-  du.on.match('change:keyup:enter', selector, update);
+  du.on.match('focusout:enter', selector, update);
   du.on.match('click', selector, makeDynamic);
 }
 

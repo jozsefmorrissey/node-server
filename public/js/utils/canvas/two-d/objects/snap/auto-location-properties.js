@@ -9,7 +9,9 @@ const defaultValues = {
   MATCH_WALL_ANGLE: true,
   FIXED_ANGLE: false,
   TOLERANCE: .1,
-  CORNERS: true
+  CORNERS: true,
+  SIZE_ADJUST_PERCENT: 50,
+  RESIZE: true,
 }
 
 class AutoLocationProperties {
@@ -24,6 +26,7 @@ class AutoLocationProperties {
       update('MATCH_WALL_ANGLE');
       update('FIXED_ANGLE');
       update('TOLERANCE');
+      update('SIZE_ADJUST_PERCENT');
       update('CORNERS');
     }
     this.id = () => id;

@@ -1,0 +1,34 @@
+<div class='void-display-cnt' cabinet-id='{{cabinetId()}}'>
+  <label>Horizontal</label>
+  <input type='radio' name='orientation' value='horizontal' checked>
+  <label>Vertical</label>
+  <input type='radio' name='orientation' value='vertical'>
+  <label>Size</label>
+  <input type='text' name='width' class='dem' value='5'>
+  <label>X</label>
+  <input type='text' name='height' class='dem' value='5'>
+  <button class='add-void-btn'>Add</button>
+  <div class='void-cnt'>
+    <div:t repeat='void in voids()' index='{{$index}}'>
+      <h3>{{void.id()}}</h3>
+      <div class='tab'>
+        <label>Joint Set:</label>
+        <select class='set-selector'>
+          <option:t repeat='i in 0..6' {{jointSet === i ? 'selected' : ''}}>
+            {{i}}
+          </option:t>
+        </select>
+        <br>
+        <div class='input-set'>
+          <label>Include sides</label>
+          <span:t  repeat='i in 0..6'>
+            <label>{{i}}</label>
+            <input type='checkbox' name='includedSides.{{i}}' {{void.included(i) ? 'checked' : ''}}>
+          </span:t>
+        </div>
+        {{assemblyConfig(void).html()}}
+        </div>
+        <br>
+    </div:t>
+  </div>
+</div>

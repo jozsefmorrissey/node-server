@@ -8,6 +8,7 @@ const SimpleModel = require('../../objects/simple/simple.js');
 
 class Bridge2dTo3D {
   constructor(obj3D, xCoord, xDem, yCoord, yDem) {
+    const instance = this;
     const axis = 'z' !== xCoord && 'z' !== yCoord ? 'z' :
                   ('x' !== xCoord && 'x' !== yCoord ? 'x' : 'y');
     const depth = (xDem !== 'width' && yDem !== 'width' ? 'width' :
@@ -54,7 +55,12 @@ class Bridge2dTo3D {
       const center3D = setXYZ(newCenter);
       return new Vertex2d(center3D[xCoord], center3D[yCoord]);
     }
-    this.fromFloor = (distance) => setXYZ(undefined, undefined, distance)[axis];
+    this.fromFloor = (distance) => {
+      if (Number.isFinite(distance)) {
+        setXYZ(undefined, undefined, distance + this.depth()/2);
+      }
+      return this.z() - this.depth()/2;
+    }
     this.fromCeiling = (distance) => {
       const fromFloor = this.fromFloor();
       const ceilh = obj3D.layout().ceilingHeight();
@@ -74,7 +80,11 @@ class Bridge2dTo3D {
       return obj3D[xDem]();
     }
     this.depth = (value) => {
-      if(value) obj3D[depth](value);
+      if(value) {
+        const ff = instance.fromFloor();
+        obj3D[depth](value);
+        instance.fromFloor(ff);
+      }
       return obj3D[depth]();
     }
     this.radians = (rads) => {
@@ -115,6 +125,8 @@ class Object3D extends Lookup {
       }
       return center;
     }
+
+    this.hash = () => JSON.stringify(this.toJson()).hash();
 
     // Consider simplifying bridge, should only need the rotation axis as argument;
     this.bridge.top = () => new Bridge2dTo3D(this, 'x', 'width', 'z', 'thickness');

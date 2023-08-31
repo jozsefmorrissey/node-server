@@ -16,7 +16,7 @@ const CSG = require('../../public/js/3d-modeling/csg');
 const CabinetModel = require('../three-d/cabinet-model.js');
 const ThreeViewObj = require('../../../../public/js/utils/canvas/two-d/objects/three-view.js')
 const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
-const HoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map.js');
+const MeasurementHoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map/measurements.js');
 
 FunctionCache.on('three-view', 1000);
 function csgVert(pos, normal) {
@@ -67,7 +67,7 @@ class ThreeView extends Lookup {
     // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
     // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
     p.setColor([0, 255, 0])
-    let draw, panz, hovermap, measurementLines, lastClicked;
+    let draw, panz, hovermap, lastClicked;
     let threeDModel;
     this.maxDem = () => maxDem;
     this.container = () => cnt || defaultCnt;
@@ -76,14 +76,19 @@ class ThreeView extends Lookup {
     const color = 'black';
     const width = .2;
 
+    const threeViewObj = {};
     function getThreeView() {
+      if (threeViewObj.targetPart === targetPart) return threeViewObj.threeView;
       if (targetPart) {
-        let model = targetPart.toModel(true);
+        let model = targetPart.toModel(targetPart.constructor.name === 'Cabinet');
         const polys = Polygon3D.fromCSG(model.polygons)
-        return new ThreeViewObj(polys);
+        threeViewObj.threeView = new ThreeViewObj(polys);
       } else {
-        return CabinetModel.get().threeView();
+        const model = CabinetModel.get();
+        if (model) threeViewObj.threeView = model.threeView();
       }
+      if (threeViewObj.threeView) threeViewObj.targetPart = targetPart;
+      return threeViewObj.threeView;
     }
 
     this.toLines = () => {
@@ -100,27 +105,39 @@ class ThreeView extends Lookup {
       let threeView;
       hovermap.clear();
       const allLines = instance.toLines(threeView);
-      const measurments = LineMeasurement2d.measurements(allLines);
       for (let index = 0; index < allLines.length; index++) {
         hovermap.add(allLines[index]);
       }
-      return {allLines, measurments};
+      LineMeasurement2d.measurements(allLines).forEach(m => hovermap.add(m));
+      return true;
     }
     this.build = new FunctionCache(build, this, 'three-view');
 
     let allLines;
     function drawView () {
-      if (Global.cabinet() === undefined) return;
-      const built = instance.build();
+      if (getThreeView() === undefined) return;
+      instance.build();
 
-      if (measurementLines) draw(LineMeasurement2d.measurements(measurementLines));
-      else draw(built.measurments, 'grey');
+      draw(hovermap.measurements());
 
-      for (let index = 0; index < built.allLines.length; index++) {
-        const line = built.allLines[index];
-        const lineColor = line === hovermap.hovered()  || line === lastClicked ?
-                          'blue' : color;
-        draw(line, lineColor, width);
+      const objs = hovermap.targets();
+      let highlight = [];
+      let normal = [];
+      for (let index = 0; index < objs.length; index++) {
+        const obj = objs[index];
+        if(obj === hovermap.hovered()  || obj === hovermap.lastClicked()) {
+          highlight.push(obj);
+        } else {
+          normal.push(obj);
+        }
+      }
+      for (let index = 0; index < highlight.length; index++) {
+        const obj = highlight[index];
+        draw(obj, 'blue', width * 4 );
+      }
+      for (let index = 0; index < normal.length; index++) {
+        const obj = normal[index];
+        draw(obj, color, width);
       }
     }
 
@@ -129,7 +146,7 @@ class ThreeView extends Lookup {
       const selected = du.find.closest(`[value="${elem.value}"`, elem);
       const id = selected.getAttribute('part-id');
       instance.isolatePart(id, elem.value);
-      if (measurementLines) measurementLines = [];
+      hovermap.measurements.deleteAll();
       elem.value = '';
     }
 
@@ -138,32 +155,8 @@ class ThreeView extends Lookup {
 
       panz = new PanZoom(draw.canvas(), drawView);
       panz.centerOn(0, 0);
-      hovermap = new HoverMap2d(panz);
+      hovermap = new MeasurementHoverMap2d(panz);
 
-      hovermap.on.click(() => {
-        const lastTwo = hovermap.clicked(0,2);
-        const nadaClick0 = lastTwo[0] === null;
-        const nadaClick1 = lastTwo[1] === null;
-        if (nadaClick0 && nadaClick1) {
-          console.log('do nothing');
-        } else if (nadaClick0) {
-          lastClicked = null;
-        } else if (nadaClick1 || lastClicked === null) {
-          lastClicked = lastTwo[0];
-        } else if (lastTwo[0] instanceof Line2d && lastTwo[0] === lastTwo[1]) {
-          measurementLines.push(lastTwo[0]);
-          lastClicked = null;
-        } else {
-          const line = Line2d.between(lastTwo[0], lastTwo[1]);
-          if (line) measurementLines.push(line);
-          lastClicked = null;
-        }
-      });
-
-      if (du.url.breakdown().path.match(/\/.*template$/)) {
-        setTimeout(() =>
-          ThreeDModel.setViewerSelector(`#${instance.id()}>.three-view-three-d-cnt`, '40vh'), 500);
-      }
       du.on.match('change', '[name="partSelector"]', onPartSelect);
     }
 
@@ -198,11 +191,9 @@ class ThreeView extends Lookup {
     function rulerClick(elem) {
       du.class.toggle(elem, 'active');
       if (du.class.has(elem, 'active')) {
-        hovermap.enable();
-        measurementLines = [];
+        hovermap.measurements.enable();
       } else {
-        hovermap.disable();
-        measurementLines = null;
+        hovermap.measurements.disable();
       }
     }
 

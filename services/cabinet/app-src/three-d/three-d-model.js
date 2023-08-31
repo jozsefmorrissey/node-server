@@ -16,6 +16,7 @@ const addViewer = require('../../public/js/3d-modeling/viewer.js').addViewer;
 const CabinetModel = require('./cabinet-model');
 const LoadingDisplay = require('../../../../public/js/utils/display/loading.js');
 const loadingDisplay = new LoadingDisplay();
+const Global = require('../services/global');
 
 const colors = {
   indianred: [205, 92, 92],
@@ -144,6 +145,7 @@ class ThreeDModel {
 
     function relatedToTarget(part) {
       if (part.partCode() === targetPartCode) return true;
+      return false;
       let targetPart = instance.object().getAssembly(targetPartCode);
       let joints = targetPart.getJoints();
       joints = joints.male.concat(joints.female);
@@ -195,19 +197,8 @@ class ThreeDModel {
     this.removeAllExtraObjects = () => extraObjects = [];
 
 
-    function toTwoDpolys(model) {
-      if (model === undefined) return undefined;
-      if (model.threeView) return model;
-      const polys = Polygon3D.fromCSG(model.polygons);
-      polys.normals = model.normals;
-      Polygon3D.merge(polys);
-      const threeView = Polygon3D.toThreeView(polys, polys.normals);
-      model.threeView = threeView;
-      return model;
-    }
-
     let lm;
-    this.lastModel = () => toTwoDpolys(lm);
+    this.lastModel = () => lm;
 
     function buildModel(assem) {
       let a = assem.toModel();
@@ -266,7 +257,7 @@ class ThreeDModel {
         }
       }
       a.center({x:0,y:0,z:0});
-      cabinetModel.complexModel(a);
+      lm = cabinetModel.complexModel(a);
       if (cId) {
         FunctionCache.off(cId);
       }
@@ -279,6 +270,7 @@ class ThreeDModel {
       const resolver = (resolve, reject) => {
         setTimeout(() => {
           try {
+            ThreeDModel.lastActive = this;
             buildObject();
             resolve(CabinetModel.get(instance.object()));
           } catch (e) {
@@ -360,11 +352,7 @@ function centerOnObj(x,y,z) {
 let viewer;
 let viewerSelector = '#three-d-model';
 let viewerSize = '60vh';
-ThreeDModel.setViewerSelector = (selector, size) => {
-  viewerSelector = selector;
-  viewerSize = size || viewerSize;
-  viewer = undefined;
-}
+
 
 ThreeDModel.getViewer = (model) => {
   if (viewer) return viewer;
@@ -391,7 +379,8 @@ ThreeDModel.getViewer = (model) => {
 
 ThreeDModel.models = {};
 ThreeDModel.get = (object) => {
-  if (object === undefined) return ThreeDModel.lastActive;
+  if (object === undefined && ThreeDModel.lastActive) return ThreeDModel.lastActive;
+  object ||= Global.cabinet();
   if (Array.isArray(object)) return new GroupThreeDModel(object);
   if (ThreeDModel.models[object.id()] === undefined) {
     ThreeDModel.models[object.id()] = new ThreeDModel(object);
@@ -417,6 +406,10 @@ ThreeDModel.display = (displayModel) => {
   ThreeDModel.getViewer(displayModel);
   viewer.mesh = displayModel.toMesh();
   viewer.gl.ondraw();
+}
+
+ThreeDModel.build = async (cabinet) => {
+  return await ThreeDModel.get(cabinet).buildObject();
 }
 
 ThreeDModel.renderNow = async (parts, options) => {

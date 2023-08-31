@@ -15,7 +15,22 @@
   </div>
   <label>Name</label>
   <input class='template-input' attr='subassemblies' name="name" value="{{obj.name}}">
-  <br>
+  <div>
+    {{referenceSelect.html()}}
+    <select name='type' hidden>
+      <option>All</option>
+      <option>Center</option>
+      <option>Demension</option>
+      <option>Rotation</option>
+    </select>
+    <select name='axis' hidden>
+      <option>All</option>
+      <option>X</option>
+      <option>Y</option>
+      <option>Z</option>
+    </select>
+    <button class='template-reference-update-btn' hidden>Change</button>
+  </div>
   <div class='sub-demensions-cnt inline-flex'>
     {{demensionXyzSelect.html()}}
     <input class='template-input' attr='subassemblies' name='demensions' value='{{getEqn(demensionXyzSelect, obj.demensions)}}'>
@@ -34,5 +49,8 @@
     {{rotationXyzSelect.html()}}
     <input class='template-input' attr='subassemblies' name='rotation' value='{{getEqn(rotationXyzSelect, obj.rotation)}}'>
     <input disabled class='measurement-input' name='value'>
+  </div>
+  <div>
+    {{typeSpecificHtml}}
   </div>
 </div>

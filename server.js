@@ -52,7 +52,7 @@ var https_options = {};
 if (global.ENV === 'prod') {
   https_options.key = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim());
   https_options.cert = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim());
-  https_options.ca = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.ca").stdout.trim());
+  https_options.ca = []
 }
 
 app.use(function (req, res, next) {
@@ -183,7 +183,8 @@ app.get("", function (req, res) {
 });
 
 var httpServer = http.createServer(app);
-var httpsServer = https.createServer(https_options, app);
+var httpsServer = http.createServer(app);
+// var httpsServer = https.createServer(https_options, app);
 httpServer.listen(3000);
 httpsServer.listen(3001);
 

@@ -55,7 +55,7 @@ class Toilet extends SimpleModel {
         radius: [obj3D.width()/2, tankHeight/2, tankWidth/2],
         center: [
           center.x,
-          -1*(center.y + height/2 - tankHeight),
+          (center.y + height/2 - tankHeight/2),
           center.z + depth/2 - wallOffset - tankWidth/2
         ]
       });

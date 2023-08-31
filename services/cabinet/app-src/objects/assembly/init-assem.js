@@ -74,6 +74,10 @@ new Cutter();
 const CutterModel = Cutter.Model;
 new CutterModel();
 
+const Void = require('./assemblies/void.js');
+new Void(new Assembly());
+
 Assembly.components = {
-  Divider, Panel, Cutter, Door, DrawerBox, DrawerFront, Frame, CutterModel
+  Divider, Panel, Cutter, Door, DrawerBox, DrawerFront, Frame, CutterModel,
+  Void
 };
