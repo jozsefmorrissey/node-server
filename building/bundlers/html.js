@@ -7,6 +7,8 @@ const { Bundler } = require('../bundler');
 class HtmlBundler extends Bundler {
   constructor(fileDumpLoc, cleanNameFunc) {
     super();
+    const dirPath = fileDumpLoc.replace(/^(.*\/).*$/, '$1');
+    if (dirPath !== file) fileDumpLoc.mkdir('-p', dirPath);
     shell.touch(fileDumpLoc);
     cleanNameFunc = cleanNameFunc || ((name) => name.replace(/^(.*)\.html$/, '$1'));
     this.change = (filename, contents) => {
