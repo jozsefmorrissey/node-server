@@ -160,7 +160,7 @@ app.delete('/print/body', printCall('DELETE'));
 
 var ip = '192.168.254.10';
 var services = global.service ? [global.service] : shell.ls('./services/');
-var exclude = ['uss', 'uus', 'weather-fax', 'content-explained', 'premier', 'info-directory', 'homework-help', 'debug-gui'];
+var exclude = ['uss', 'uus', 'mitch', 'weather-fax', 'content-explained', 'premier', 'info-directory', 'homework-help', 'debug-gui'];
 try {
   for (let i = 0; i < services.length; i += 1) {
     var id = services[i];
@@ -172,7 +172,9 @@ try {
       const flags = global.ENV === 'local' ? '' : '-build';
       const buildCmd = `cd ${dir} && node ./watch.js ENV='${global.ENV}' ${flags}`;
       console.log(buildCmd);
-      shell.exec(buildCmd, {async: true});
+      try {
+        shell.exec(buildCmd, {async: true, silent: true});
+      } catch (e) {}
       require(project).endpoints(app, loc, ip);
     }
   }
