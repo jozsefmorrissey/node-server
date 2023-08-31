@@ -51,6 +51,7 @@ if (shell.exec('[ -d ~/.cert ] && echo true', {silent: true}).stdout.trim() !== 
 var https_options = {};
 if (global.ENV === 'prod') {
   //openssl req -newkey rsa:4096  -x509  -sha512  -days 365 -nodes -out certificate.pem -keyout privatekey.pem
+  console.log(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout);
   https_options.key = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim());
   https_options.cert = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim());
   // https_options.ca = [];//fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.ca").stdout.trim());
