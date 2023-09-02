@@ -2,30 +2,66 @@
 const Measurement = require('../../../public/js/utils/measurement.js');
 const CustomEvent = require('../../../public/js/utils/custom-event.js');
 
-const mostResent = {};
-const defaullt = {'a': 6, 'b': 10, 'c': 12};
-function bestGuess(char) {
-  return mostResent[char] || defaullt[char] || 4;
+function alphaSorter(a, b) {
+  al = a.toLowerCase();
+  bl = b.toLowerCase();
+  if (al !== bl) {
+    let sum = 0;
+    for (let j = 0; j < a.length; j++) {
+      const multiplier = a.length - j;
+      sum += al.charCodeAt(j) * multiplier;
+      sum -= bl.charCodeAt(j) * multiplier;
+    }
+    return sum;
+  }
+  if (a === b) return 0;
+  return al === a ? 1 : -1;
+}
+
+const valueMap = {
+  default: {
+    'a': new Measurement(6, true),
+    'b': new Measurement(10, true),
+    'c': new Measurement(12, true)
+  },
+  set: (id, value, key, force) => {
+    key || 'default';
+    if (valueMap[key] === undefined) valueMap[key] = {};
+    if (force || valueMap[key][id] === undefined) valueMap[key][id] = value;
+    return valueMap[key][id];
+  }
+};
+function bestGuess(char, group) {
+  group ||= 'default';
+  if (valueMap[group] === undefined) {
+    valueMap[group] = JSON.clone(valueMap.default);
+  }
+  return valueMap[group][char] || new Measurement(4, true);
 }
 
 class Element {
-  constructor(id, index, count) {
+  constructor(id, index, group) {
     let value;
     this.id = id;
-    this.count = count || 1;
+    this.count = 1;
     this.indexes = [index];
+    this.fixed = false;
     this.value = (val) => {
-      if (val !== undefined) {
-        value = new Measurement(val);
+      if (val) {
+        if (!(val instanceof Measurement)) {
+          console.log('foundit!!!!!!!!!!!!!!!!!!!')
+        }
+        value = val;
       }
-      return value;
+      return value || bestGuess(id, group);
     }
-    this.value(bestGuess(id));
   }
 }
 
 class Pattern {
-  constructor(str, updateOrder, changeEvent) {
+  constructor(str, props) {
+    props ||= {};
+    let changeEvent = props.changeEvent;
     changeEvent ||= new CustomEvent('change');
     const instance = this;
     this.onChange = changeEvent.on;
@@ -40,12 +76,11 @@ class Pattern {
       }
     }
     const uniqueStr = Object.keys(unique).join('');
-    updateOrder ||= uniqueStr.split('');
     this.unique = () => uniqueStr;
     this.equals = this.unique.length === 1;
 
     this.clone = (str) => {
-      const clone = new Pattern(str, updateOrder, changeEvent);
+      const clone = new Pattern(str, props);
       clone.elements = elements;
       setTimeout(() => changeEvent.trigger(null, clone), 10);
       return clone;
@@ -54,6 +89,8 @@ class Pattern {
     this.values = () => {
       const valueObj = {};
       const elems = Object.values(elements);
+      const uniqueVals = Object.values(unique);
+      const updateOrder = uniqueVals.map(uv => uv.char).sort(alphaSorter).slice(0, -1);
       elems.forEach((elem) => {
         const value = elem.value().decimal();
         if (updateOrder.indexOf(elem.id) !== -1 && Number.isFinite(value))
@@ -67,21 +104,19 @@ class Pattern {
 
     const elements = {};
     const values = {};
-    updateOrder ||= [];
     for (let index = 0; index < str.length; index += 1) {
       const char = str[index];
       if (elements[char]) {
         elements[char].count++;
         elements[char].indexes.push(index);
       } else {
-        elements[char] = new Element(char, index);
+        elements[char] = new Element(char, index, props.group);
       }
     }
 
     this.ids = Object.keys(elements);
     this.size = str.length;
-    let lastElem;
-    this.satisfied = () => updateOrder.length === uniqueStr.length - 1;
+    this.satisfied = () => {throw new Error('dont know where this is used');}
 
     function onlyOneUnique(uniqueVals, dist) {
       const count = uniqueVals[0].count;
@@ -104,30 +139,12 @@ class Pattern {
         const units = Number.parseInt(char);
         const value = units * unitDist;
         retObj.list[index] = value;
-        if (retObj.values[char] === undefined) {
-          retObj.values[char] = value;
-          retObj.fill[retObj.list.fill.length] = value;
+        if (retObj.values[index] === undefined) {
+          retObj.values[index] = value;
+          retObj.fill[index] = new Measurement(value).display();
         }
       }
       return retObj;
-    }
-
-    function ensureValidUpdateOrder(uniqueVals) {
-      for (let index = 0; index < updateOrder.length; index++) {
-        if (uniqueVals.filter(o => o.char === updateOrder[index]).length !== 1) updateOrder.splice(index, 1);
-      }
-      for (let index = 0; index < uniqueVals.length; index++) {
-        const char = uniqueVals[index].char;
-        const orderTooShort = updateOrder.length < uniqueVals.length - 1;
-        const includedInOrder = updateOrder.indexOf(char) !== -1;
-        if (orderTooShort && !includedInOrder) updateOrder = [char].concat(updateOrder);
-        else if (!orderTooShort && !includedInOrder) {
-          lastElem = elements[uniqueVals[index].char];
-        }
-      }
-      while (updateOrder.length > uniqueVals.length - 1) {
-        lastElem = elements[updateOrder.splice(0, 1)[0]];
-      }
     }
 
     const numbersOnlyReg = /^[0-9]{1,}$/;
@@ -144,28 +161,37 @@ class Pattern {
 
       if (str.trim().match(numbersOnlyReg)) return numbersOnly(uniqueVals, dist);
 
-      if (uniqueVals.length > 1) ensureValidUpdateOrder(uniqueVals);
-      updateOrder.forEach((id) => {
-        const elem = elements[id];
-        dist -= elem.count * elem.value().decimal();
-        values[elem.id] = elem.value().value();
+      const updateOrder = uniqueVals.map(uv => uv.char).sort(alphaSorter).slice(0);
+      let lastElem;
+      updateOrder.forEach((id, index) => {
+        if (index < updateOrder.length - 1) {
+          const elem = elements[id];
+          dist -= elem.count * elem.value().decimal();
+          values[elem.id] = elem.value().value();
+        } else {
+          lastElem = elements[id];
+        }
       });
       if (lastElem === undefined) throw new Error('This should not happen');
 
       const lastVal = dist / lastElem.count;
       if (lastVal < 0) {
-        instance.value(lastElem.id, 0);
-        return calc();
+        throw new Error('Invalid size/pattern');
       }
-      lastElem.value(new Measurement(lastVal).value());
-      values[lastElem.id] = lastElem.value().value();
+      let lastMeas = new Measurement(lastVal);
+      values[lastElem.id] = lastMeas.value();
 
       const list = [];
       let fill = [];
       for (let index = 0; index < str.length; index += 1)
         list[index] = values[str[index]];
       for (let index = 0; index < uniqueVals.length; index += 1) {
-        fill[index] = elements[uniqueVals[index].char].value().display();
+        const elem = elements[uniqueVals[index].char];
+        if (elem.id === lastElem.id) {
+          fill[index] = lastMeas.display();
+        } else {
+          fill[index] = elem.value().display();
+        }
       }
       const retObj = {values, list, fill, str};
       return retObj;
@@ -174,28 +200,25 @@ class Pattern {
     this.value = (id, value) => {
       if (value < 0) value = 0;
       if (value !== undefined) {
-        const index = updateOrder.indexOf(id);
-        if (index !== -1) updateOrder.splice(index, 1);
-        updateOrder.push(id);
-        if (updateOrder.length === this.ids.length) {
-          lastElem = elements[updateOrder[0]];
-          updateOrder.splice(0, 1);
+        if ((typeof value) !== 'number') {
+          console.log('bingoooooo')
         }
-        value = elements[id].value(value);
-        mostResent[id] = value.decimal();
+        value = elements[id].value(new Measurement(value));
+        valueMap.set(id, elements[id].value(), props.group);
         changeEvent.trigger(null, this);
         return value;
       } else {
-        return elements[id].value().decimal();
+        const elem = elements[id];
+        return elem ? elem.value().decimal() : bestGuess(id, props.group);
       }
     }
 
     this.display = (id) => elements[id].value().display();
 
     this.toJson = () => {
-      return {str: this.str, values: this.values()};
+      return {str: this.str, values: this.values(), props: Object.toJson(props)};
     }
-    this.toString = () => `${this.str}@${JSON.stringify(this.values())}`;
+    this.toString = () => `${this.str}@(${Array.from(str).map(c => instance.value(c)).join(',')})`;
 
     this.hash = () => this.toString().hash();
 
@@ -205,19 +228,10 @@ class Pattern {
 }
 
 Pattern.fromJson = (json) => {
-  const pattern = new Pattern(json.str);
+  const pattern = new Pattern(json.str, Object.fromJson(json.props));
   const keys = Object.keys(json.values);
   keys.forEach((key) => pattern.value(key, json.values[key]));
   return pattern;
 };
 
-const p1 = new Pattern('babcdaf');
-p1.value('b', 2);
-p1.value('a', 2);
-p1.value('c', 3);
-p1.value('d', 4);
-p1.value('b', 2);
-p1.value('f', 5);
-p1.calc(20);
-const p2 = new Pattern(' // ^^%');
 module.exports = Pattern

@@ -1,6 +1,8 @@
 
 const Line2d = require('./objects/line');
+const LineMeasurement2d = require('./objects/line-measurement');
 const Vertex2d = require('./objects/vertex');
+const Polygon2d = require('./objects/polygon');
 const CustomEvent = require('../../custom-event');
 
 class HoverObject2d {
@@ -54,30 +56,49 @@ class HoverObject2d {
       const lov = targetFunction ? lineOrVertex() : lineOrVertex;
       if (lov instanceof Line2d)
         return lineHovered(lov, hoverVertex);
-      return vertexHovered(lov, hoverVertex);
+      else if (lov instanceof Vertex2d)
+        return vertexHovered(lov, hoverVertex);
+      else if (lov instanceof Polygon2d)
+        return lov.isWithin(hoverVertex);
+      else
+        console.error('unkown hover object', lov);
     }
   }
 }
+
+const typeValue = (t) => t instanceof Vertex2d ? 0 : (t instanceof Line2d ? 1 : 3)
+HoverObject2d.sort = (obj1, obj2) => typeValue(obj1.target()) - typeValue(obj1.target());
 
 class HoverMap2d {
   constructor(panZ) {
     let hoverObjects = [];
     let instance = this;
+    let dragging = false;
+    let id = String.random(3);
 
+    this.objects = () => hoverObjects;
+    this.targets = () => this.objects().map(ho => ho.target())
+                    .filter(t => !(t instanceof Vertex2d) || t.equals(lastHovered) || t.equals(this.clicked()));
     this.clear = () => hoverObjects = [] || true;
     this.add = (object, tolerance, target) => {
       const hovObj = new HoverObject2d(object, tolerance, target);
-      if (object instanceof Line2d) {
-        hoverObjects.push(hovObj);
-      } else {
+      if (object instanceof Vertex2d) {
         hoverObjects = [hovObj].concat(hoverObjects);
+      } else {
+        hoverObjects.push(hovObj);
       }
+      hoverObjects.sort(HoverObject2d.sort);
     }
-    this.hovering = (x, y) => {
-      const vertex = x instanceof Vertex2d ? x : new Vertex2d(x, y);
+
+    let lastHovered;
+    this.hovering = (pos, filter) => {
+      if (pos === undefined) return lastHovered;
+      let hoverObjs = this.objects();
+      if (filter instanceof Function) hoverObjs = hoverObjs.filter(filter);
+      const vertex = pos instanceof Vertex2d ? pos : new Vertex2d(pos);
       let hoveringObj = null;
-      for (let index = 0; index < hoverObjects.length; index++) {
-        const hoverObj = hoverObjects[index];
+      for (let index = 0; index < hoverObjs.length; index++) {
+        const hoverObj = hoverObjs[index];
         const distance = hoverObj.hovering(vertex);
         if (distance) {
           const target = hoverObj.target();
@@ -87,7 +108,12 @@ class HoverMap2d {
         }
       }
 
-      return hoveringObj && hoveringObj.target;
+      const hov = hoveringObj && hoveringObj.target;;
+      if (hov !== lastHovered) {
+        console.log(id, hov, vertex.toString());
+      }
+      lastHovered = hov;
+      return lastHovered;
     }
 
     if (panZ) {
@@ -118,10 +144,11 @@ class HoverMap2d {
         }
         return clickStack.slice(startIndex, toIndex);
       }
+
       panZ.onMove((event) => {
         if (!active) return;
-        const vertex = new Vertex2d(event.imageX, -1*event.imageY);
-        const hovering = instance.hovering(event.imageX, -1*event.imageY);
+        const vertex = new Vertex2d(event.imageX, event.imageY);
+        const hovering = instance.hovering(vertex);
         const hovered = this.hovered();
         if (hovering !== hovered) {
           if (hovered) {
@@ -136,16 +163,24 @@ class HoverMap2d {
       });
       panZ.onClick((event) => {
         if (!active) return;
-        const vertex = new Vertex2d(event.imageX, -1*event.imageY);
-        const hovering = instance.hovering(event.imageX, -1*event.imageY);
+        const vertex = new Vertex2d(event.imageX, event.imageY);
+        const hovering = instance.hovering(vertex);
         clickStack = [hovering].concat(clickStack);
         clickStack.splice(stackLimit);
         clickEvent.trigger(hovering);
       });
+      panZ.onMouseup((event) => {
+        clickHolding = false;
+      });
+      panZ.onMousedown((event) => {
+        clickHolding = true;
+      });
+
+
     }
 
   }
 }
 
-HoverMap2d.HoverObject2d = HoverObject2d;
+HoverMap2d.Object = HoverObject2d;
 module.exports = HoverMap2d;

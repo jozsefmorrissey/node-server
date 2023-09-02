@@ -50,9 +50,11 @@ if (shell.exec('[ -d ~/.cert ] && echo true', {silent: true}).stdout.trim() !== 
 
 var https_options = {};
 if (global.ENV === 'prod') {
+  //openssl req -newkey rsa:4096  -x509  -sha512  -days 365 -nodes -out certificate.pem -keyout privatekey.pem
+  console.log(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout);
   https_options.key = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.key").stdout.trim());
   https_options.cert = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.crt").stdout.trim());
-  https_options.ca = fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.ca").stdout.trim());
+  // https_options.ca = [];//fs.readFileSync(shell.exec("realpath ~/.cert/jozsefmorrissey_com.ca").stdout.trim());
 }
 
 app.use(function (req, res, next) {
@@ -160,7 +162,7 @@ app.delete('/print/body', printCall('DELETE'));
 
 var ip = '192.168.254.10';
 var services = global.service ? [global.service] : shell.ls('./services/');
-var exclude = ['uss', 'uus', 'weather-fax', 'content-explained', 'premier', 'info-directory'];
+var exclude = ['uss', 'uus', 'mitch', 'weather-fax', 'content-explained', 'premier', 'info-directory', 'homework-help', 'debug-gui'];
 try {
   for (let i = 0; i < services.length; i += 1) {
     var id = services[i];
@@ -172,7 +174,9 @@ try {
       const flags = global.ENV === 'local' ? '' : '-build';
       const buildCmd = `cd ${dir} && node ./watch.js ENV='${global.ENV}' ${flags}`;
       console.log(buildCmd);
-      shell.exec(buildCmd, {async: true});
+      try {
+        shell.exec(buildCmd, {async: true, silent: true});
+      } catch (e) {}
       require(project).endpoints(app, loc, ip);
     }
   }
@@ -183,6 +187,7 @@ app.get("", function (req, res) {
 });
 
 var httpServer = http.createServer(app);
+// var httpsServer = http.createServer(app);
 var httpsServer = https.createServer(https_options, app);
 httpServer.listen(3000);
 httpsServer.listen(3001);

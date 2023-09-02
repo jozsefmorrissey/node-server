@@ -8,9 +8,10 @@ const CSG = require('../../../public/js/3d-modeling/csg.js');
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
-
+let count = 0;
 class Vertex3D {
   constructor(x, y, z) {
+    count++;
     if (x instanceof Vertex3D) return x;
     if (x instanceof Vector3D) {
       this.x = x.i();
@@ -229,5 +230,60 @@ Vertex3D.sortByCenter = (center) => {
     d1 === d2 ? 0 : (d1 < d2 ? -1 : 1);
   }
 }
+
+class SimpleVertex3D {
+  constructor(x, y, z) {
+    if (x instanceof Vertex3D) return x;
+    if (x instanceof Vector3D) {
+      this.x = x.i();
+      this.y = x.j();
+      this.z = x.k();
+    } else if (x === undefined) {
+      this.x = 0;
+      this.y = 0;
+      this.z = 0;
+    } else if (arguments.length == 3) {
+      this.x = x;
+      this.y = y;
+      this.z = z;
+    } else if ('x' in x) {
+      this.x = x.x;
+      this.y = x.y;
+      this.z = x.z;
+    } else {
+      this.x = x[0];
+      this.y = x[1];
+      this.z = x[2];
+    }
+  }
+}
+
+// TODO: play with optimization
+// const testRun = () => {
+//   const instStartTime = new Date().getTime();
+//   for (let index = 0; index < 900000; index++) {
+//     new Vertex3D(0,1,0);
+//   }
+//   const instEndTime = new Date().getTime();
+//   const instTime = instEndTime - instStartTime;
+//
+//   const simpStartTime = new Date().getTime();
+//   for (let index = 0; index < 900000; index++) {
+//     new Vertex3D.Simple(0,1,0);
+//   }
+//   const simpEndTime = new Date().getTime();
+//   const simpTime = simpEndTime - simpStartTime;
+//
+//   const objStartTime = new Date().getTime();
+//   for (let index = 0; index < 900000; index++) {
+//     obj = {x:0, y:1, z:0};
+//   }
+//   const objEndTime = new Date().getTime();
+//   const objTime = objEndTime - objStartTime;
+//
+//   console.log(instTime, simpTime, objTime);
+// }
+
+Vertex3D.Simple = SimpleVertex3D;
 
 module.exports = Vertex3D;

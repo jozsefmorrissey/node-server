@@ -38,7 +38,11 @@ function polyDrawFunc() {
       if (isIdentified(line.startVertex())) drawVertex(line.startVertex());
       if (isIdentified(mp)) drawVertex(mp);
       if (isIdentified(line.endVertex())) drawVertex(line.endVertex());
-      draw(line, color(line), isHovering(line) ? 1 : .5);
+      const hoveringLine = isHovering(line);
+      if (hoveringLine) {
+        console.log('hover');
+      }
+      draw.line(line, color(line), hoveringLine ? 1 : .5, hoveringLine);
     }
   }
 }

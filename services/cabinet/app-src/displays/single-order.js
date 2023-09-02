@@ -12,8 +12,32 @@ const Global = require('../services/global');
 const orderSelectCnt = du.id('order-select-cnt');
 const orderNameInput = du.id('order-name-input');
 const orderVersionInput = du.id('order-version-input');
-orderNameInput.value = Global.order().name();
-orderVersionInput.value = Global.order().versionId();
+const chooseSaveLocBtn = du.find.closest('.auto-save-btn', orderSelectCnt);
+// orderNameInput.value = Global.order().name();
+// orderVersionInput.value = Global.order().versionId();
+
+let orderModified = false;
+const preSaveLocationChecks = () => {
+  console.log('hereino')
+  if (saveMan.initialized()) return;
+  const order = Global.order();
+  if (order.worthSaveing()) {
+    if (orderNameInput.value !== '') {
+      chooseSaveLocBtn.disabled = false;
+      du.class.remove(orderNameInput, 'error');
+    } else {
+      chooseSaveLocBtn.disabled = true;
+      du.class.add(orderNameInput, 'error');
+    }
+  } else {
+    chooseSaveLocBtn.disabled = false;
+  }
+}
+
+const modSelector = '.cabinet-header, #order-name-input, .decision-input-tree-submit, .add-object-btn-2d';
+du.on.match('click:keyup', modSelector, preSaveLocationChecks);
+
+
 
 Global.order().addRoom('kitchen');
 
@@ -47,7 +71,7 @@ const getAutoSaveElem = (selector) => () => du.find.down(selector, du.id(saveCnt
 const getStatusElem = getAutoSaveElem('.status');
 const getAutoSaveBtn = getAutoSaveElem('button');
 
-const cookieId = () => `last-active-order`;
+const cookieId = () => `deku-cust-cab-active-order`;
 const cookieValue = () => `${saveMan.activeOrderName()},${saveMan.activeVersionId()}`;
 const setCookie = () => du.cookie.set(cookieId(), cookieValue());
 const getCookie = () => du.cookie.get(cookieId(), ',', 'name', 'version');
@@ -155,32 +179,24 @@ du.on.match('click', '#save-time-cnt', () => saveMan.save() || resetOrderAndVers
 let firstSwitch = true;
 async function switchOrder(elem, details) {
   const order = Global.order();
-  if (order.worthSaveing()) {
-    if (firstSwitch) {
-      const state = saveMan.state(order.name(), order.versionId());
-      if (state === 'new order' || state === 'new version') {
-        saveMan.save(order.name(), order.versionId());
-      } else if (state === 'switch order' || state === 'active') {
-        const notTakenVersion = saveMan.undefinedVersion(order.name(), order.versionId());
-        if (confirm(`An order and version already exist with this\nname/version: '${order.name()}'/'${order.versionId()}'.\n\nPress ok to save as '${order.name()}'/'${notTakenVersion}'\nor\nPress cancel to avoid it being saving.`) == true) {
-          saveMan.save(order.name(), notTakenVersion, order.toJson());
-        }
-      }
-    }
-  }
-  firstSwitch = false;
+  if (order.name() === details.orderName && order.versionId() === details.versionId) return;
   updateOrderInput();
-  if (!Object.keys(details.contents).length) return order = new Order(details.orderName, details.versionId);
+  if (details instanceof Order) {
+    order = details;
+    orderNameInput.value = order.name();
+    orderVersionInput.value = order.versionId();
+    Global.order(order);
+    return;
+  }
   try {
     let order;
-    if (details instanceof Order) order = details;
-    else if (details.contents) {
+    if (details.contents) {
       order = Object.fromJson(details.contents);
     }
     if (!(order instanceof Order)) throw new Error('unknown order format');
+    orderNameInput.value = order.name();
+    orderVersionInput.value = order.versionId();
     Global.order(order);
-    orderNameInput.value = order.name(order.name());
-    orderVersionInput.value = details.versionId;
     resetOrderAndVersion();
   } catch (e) {
     console.warn(e);
@@ -199,7 +215,7 @@ let processing;
 du.on.match('focusout:enter', '#order-name-input', async () => {
   const newName = orderNameInput.value;
   const order = Global.order();
-  if (!saveMan.on()) {
+  if (!saveMan.initialized()) {
     order.name(newName);
   } else if (!processing && newName !== order.name()) {
     if (confirm(`This will rename all versions. From '${order.name()}' to '${newName}'\n\nAre you sure?`) == true) {
@@ -211,6 +227,20 @@ du.on.match('focusout:enter', '#order-name-input', async () => {
     }
   }
 })
+
+const onOrderLocationChange = () => {
+  const name = orderNameInput.value;
+  const version = orderVersionInput.value;
+  const order = Global.order();
+  if (!saveMan.initialized()) {
+    order.name(name);
+    order.versionId(version);
+    saveMan.initialOrderName(name);
+    saveMan.initialVersionId(version);
+  }
+}
+
+du.on.match('keyup', '#order-name-input,#order-version-input', onOrderLocationChange);
 
 orderInput.on('keyup,change,click', updateOrderInput);
 versionInput.on('keyup,change,click', updateOrderInput);

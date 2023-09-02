@@ -17,7 +17,8 @@ class BiPolygon {
     this.copy = () => new BiPolygon(polygon1.copy(), polygon2.copy());
 
     this.front = () => new Polygon3D(face1);
-    this.back = () => new Polygon3D(face2);
+    this.back = () =>
+      new Polygon3D(face2);
 
     this.faceNormal = (index) => face2[index || 0].distanceVector(face1[index || 0]).unit();
 
@@ -30,6 +31,41 @@ class BiPolygon {
       front: this.normal(),
       right: this.normalRight()
     });
+
+    this.distance = (vertex) => {
+      const frontDist = this.front().toPlane().distance(vertex);
+      const backDist = this.back().toPlane().distance(vertex);
+      return frontDist < backDist ? frontDist : backDist;
+    }
+
+    this.extend = (vector) => {
+      let lines = [];
+      for (let index = 0; index < face1.length; index++) {
+        const endIndex = Math.mod(index + 1, face1.length);
+        lines.push(new Line3D(face1[index], face1[endIndex]));
+      }
+      for (let index = 0; index < face1.length; index++) {
+        const endIndex = Math.mod(index + 1, face1.length);
+        lines.push(new Line3D(face2[index], face2[endIndex]));
+      }
+      for (let index = 0; index < face1.length; index++) {
+        const endIndex = Math.mod(index + 1, face1.length);
+        lines.push(new Line3D(face1[index], face2[index]));
+      }
+      lines = lines.sort((a, b) => a.vector().hash() - b.vector().hash());
+      for (let index = 0; index < lines.length; index++) {
+        const line = lines[index];
+        const lineVect = line.vector();
+        const projection = vector.projectOnTo(lineVect);
+        const posMag = projection.add(lineVect).magnitude();
+        const negMag = projection.minus(lineVect).magnitude();
+        const fromStart = posMag > negMag;
+        const magnitude = fromStart ? posMag : -negMag;
+        if (line.length() !== Math.abs(magnitude)) {
+          line.adjustLength(magnitude, fromStart);
+        }
+      }
+    }
 
     this.orderBy = {};
     this.orderBy.polygon = (polygon) => {
@@ -104,23 +140,67 @@ class BiPolygon {
       return reverse ? returnValue.reverse() : returnValue;
     }
 
+    function allNormsRepresented (polys) {
+      const normList = [{x:1,y:0,z:0},
+                        {x:-1,y:0,z:0},
+                        {x:0,y:1,z:0},
+                        {x:0,y:-1,z:0},
+                        {x:0,y:0,z:-1},
+                        {x:0,y:0,z:1}];
+      for (let index = 0; index < 6; index++) {
+        let found = false;
+        const norm = normList[index];
+        for (let ndex = 0; ndex < 6; ndex++) {
+          const pNorm = polys[ndex].plane.normal;
+          if (norm.x === pNorm.x && norm.y === pNorm.y && norm.z === pNorm.z) {
+            found = true;
+            break;
+          }
+        }
+        if (!found)  {
+          console.log(norm);
+          return false;
+        }
+      }
+      return true;
+    }
+
     this.toModel = (joints) => {
       const flippedNormal = this.flippedNormal();
+      const frontNorm = new Vertex3D(new Line3D(this.center(), this.front().center()).vector().unit());
       const front = new CSG.Polygon(normalize(face1, !flippedNormal));
-      front.plane.normal = front.vertices[0].normal.clone();//new CSG.Vector([0,1, 0,0]);
+      if (!frontNorm.equals(front.plane.normal)) {
+        console.log('different');
+      }
+      // front.plane.normal = front.vertices[0].normal.clone();//new CSG.Vector([0,1, 0,0]);
+      const backNorm = new Vertex3D(new Line3D(this.center(), this.back().center()).vector().unit());
       const back = new CSG.Polygon(normalize(face2, flippedNormal));
-      back.plane.normal = back.vertices[0].normal.clone();//new CSG.Vector([0,0,1,0,0]);
+      if (!backNorm.equals(back.plane.normal)) {
+        console.log('different');
+      }
+      // back.plane.normal = back.vertices[0].normal.clone();//new CSG.Vector([0,0,1,0,0]);
       const polygonSets = [front, back];
 
       for (let index = 0; index < face1.length; index++) {
         const index2 = (index + 1) % face1.length;
          const vertices = [face1[index], face1[index2], face2[index2], face2[index]];
          const normalized = normalize(vertices, flippedNormal);
-         polygonSets.push(new CSG.Polygon(normalized));
-         polygonSets[polygonSets.length - 1].plane.normal = normalized[0].normal.clone();
+         const poly = new CSG.Polygon(normalized);
+         polygonSets.push(poly);
+         const polyCenter = Vertex3D.center(...vertices);
+         const polyNorm = new Vertex3D(new Line3D(this.center(), polyCenter).vector().unit());
+         const back = new CSG.Polygon(normalize(face2, flippedNormal));
+         if (!polyNorm.equals(poly.plane.normal)) {
+           console.log('different');
+         }
+         // polygonSets[polygonSets.length - 1].plane.normal = normalized[0].normal.clone();
       }
+      // polygonSets.forEach(p => p.setColor(0,0,255));
 
       const polys = CSG.fromPolygons(polygonSets);
+      // if (!allNormsRepresented(polys.polygons)) {
+      //   console.log('different???');
+      // }
       // polys.normals = {
       //   front: this.normal(),
       //   right: this.normalRight(),
@@ -134,9 +214,10 @@ class BiPolygon {
 
       for (let index = 0; index < face1.length; index++) {
         const index2 = (index + 1) % face1.length;
-         const vertices = [face1[index], face1[index2], face2[index2], face2[index]];
-         polygons.push(new Polygon3D(vertices));
+        const vertices = [face1[index], face1[index2], face2[index2], face2[index]];
+        polygons.push(new Polygon3D(vertices));
       }
+
       return polygons;
     }
 
@@ -162,6 +243,11 @@ class BiPolygon {
 // TODO: Fix offset!... is it broken??? yes it is need to expand consitantly regaurdless of line angle.
 BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   distance2 ||= 0;
+  // if (distance2 > distance1) {
+  //   const temp = distance1;
+  //   distance2 = distance1;
+  //   distance1 = temp;
+  // }
   const verts = polygon.vertices();
   // if (verts.length < 4) return undefined;
   if (verts.length < 3) return undefined;

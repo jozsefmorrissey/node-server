@@ -395,6 +395,7 @@ class Polygon2d {
     }
     this.ensureClockWise = () => ensure();
     this.ensureAntiClockWise = () => ensure(true);
+    this.isWithin = (vert) => Polygon2d.isWithin(vert, this.lines());
 
     this.removeLoops = () => {
       const map = {}
@@ -523,6 +524,26 @@ Polygon2d.fromString = (str) => {
     return new Vertex2d(Number.parseFloat(match[1]), Number.parseFloat(match[3]));
   });
   return new Polygon2d(verts);
+}
+
+Polygon2d.isWithin = (vertex, lines) => {
+  vertex = new Vertex2d(vertex);
+  const escapeLine = Line2d.startAndTheta(vertex, Math.random()*3.14*2, 10000000);
+  const intersections = [];
+  let onLine = false;
+  const allIntersections = [];
+  lines.forEach((line) => {
+
+    const intersection = line.findSegmentIntersection(escapeLine, true);
+    allIntersections.push(intersection);
+    if (intersection) {
+      if (intersection.equals(vertex)) onLine = true;
+      intersections.push(intersection);
+    }
+  });
+
+  const isWithin = onLine || intersections.length % 2 === 1;
+  return isWithin;
 }
 
 const tol = .1;

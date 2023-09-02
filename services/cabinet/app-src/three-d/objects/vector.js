@@ -29,6 +29,9 @@ class Vector3D {
         i = i.i;
       }
     }
+    i = isZero(i) ? 0 : i;
+    j = isZero(j) ? 0 : j;
+    k = isZero(k) ? 0 : k;
     this.i = () => i;
     this.j = () => j;
     this.k = () => k;
@@ -75,13 +78,21 @@ class Vector3D {
       const j = this.i() * other.k() - this.k() * other.i();
       const k = this.i() * other.j() - this.j() * other.i();
       const mag = Math.sqrt(i*i+j*j+k*k);
-      return new Vector3D(i/mag,j/-mag,k/mag);
+      return new Vector3D(i/mag || 0,j/-mag || 0,k/mag || 0);
     }
     this.inverse = () => new Vector3D(this.i()*-1, this.j()*-1, this.k()*-1);
 
     this.projectOnTo = (v) => {
       const multiplier = this.dot(v) / v.magnitudeSQ();
       return v.scale(multiplier);
+    }
+
+    this.hash = () => {
+      let hash = 1;
+      if (i) hash*=i > 0 ? i : -i; else hash*=1000000;
+      if (j) hash*=j > 0 ? j : -j; else hash*=1000000;
+      if (k) hash*=k > 0 ? k : -k; else hash*=1000000;
+      return hash;
     }
 
     this.unit = () => {

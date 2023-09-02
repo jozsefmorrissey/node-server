@@ -26,8 +26,6 @@ class SnapPolygon extends Snap2d {
       return longest;
     }
 
-    this.polygon = () => polygon;
-
     this.object = () => {
       polygon.center(this.center());
       const rotated = polygon.rotate(this.radians(), null, true);

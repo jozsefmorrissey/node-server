@@ -6,14 +6,11 @@ const CSG = require('./csg.js');
 const GL = require('./lightgl.js');
 
 // Set the color of all polygons in this solid
-CSG.prototype.setColor = function(r, g, b) {
+CSG.prototype.setColor = function(r, g, b, force) {
   this.toPolygons().map(function(polygon) {
-    if (Array.isArray(r)) {
-      g = r[1];
-      b = r[2];
-      r = r[0];
+    if (polygon.shared === undefined || force) {
+      polygon.setColor(r, g, b);
     }
-    polygon.shared = [r/255, g/255, b/255];
   });
 };
 

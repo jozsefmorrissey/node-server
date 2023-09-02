@@ -9,8 +9,9 @@ const $t = require('../../$t');
 class Select extends Input {
   constructor(props) {
     props ||= {};
-    super(props);
     if (props.list === undefined) props.list = [];
+    if (Array.isArray(props.list) && props.validation === undefined) props.validation = (val) => props.list.indexOf(val) !== -1;
+    super(props);
     const isArray = Array.isArray(props.list);
     let value;
     if (isArray) {
@@ -26,7 +27,10 @@ class Select extends Input {
     this.isArray = () => isArray;
     this.list = () => props.list;
     const parentValue = this.value;
-    this.value = (val) => parentValue(val) || props.list[Object.keys(props.list)[0]];
+    this.value = (val) => {
+      const parVal = parentValue(val);
+      return parVal === undefined ? props.list[Object.keys(props.list)[0]] : parVal;
+    }
     const parentHidden = this.hidden;
     this.hidden = () => props.list.length < 2 || parentHidden();
 

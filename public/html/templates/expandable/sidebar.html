@@ -13,7 +13,9 @@
       </div>
     </div:t>
     <div class='expand-input-cnt' hidden>{{inputHtml()}}</div>
-    <div class='input-open-cnt'><button>Add {{listElemLable()}}</button></div>
+    <div class='input-open-cnt'>
+      <button {{hideAddBtn ? 'hidden' : ''}}>Add {{listElemLable()}}</button>
+    </div>
   </div>
   <div>
   </div>

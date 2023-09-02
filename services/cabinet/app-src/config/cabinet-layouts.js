@@ -58,7 +58,8 @@ new CabinetLayout('3dsb3d', (cabinet) => {
 
   const opening = cabinet.openings[0];
   opening.divide(2);
-  opening.sectionProperties().pattern('bab').value('a', 30*2.54);
+  opening.sectionProperties().pattern('232');
+  opening.vertical(true);
   const left = opening.sections[0];
   const center = opening.sections[1];
   const right = opening.sections[2];
@@ -69,26 +70,27 @@ new CabinetLayout('3dsb3d', (cabinet) => {
   left.sections[0].setSection("DrawerSection");
   left.sections[1].setSection("DrawerSection");
   left.sections[2].setSection("DrawerSection");
-  left.pattern('abb').value('a', a);
+  left.pattern('abb');
 
   center.divide(1);
   center.vertical(false);
   center.sections[1].setSection('DualDoorSection');
-  center.pattern('ab').value('a', a);
+  center.pattern('ab');
   const centerTop = center.sections[0];
 
   centerTop.divide(2);
   centerTop.sections[0].setSection("DoorSection");
   centerTop.sections[1].setSection("FalseFrontSection");
   centerTop.sections[2].setSection("DoorSection");
-  centerTop.pattern('ztz').value('t', 15*2.54);
+  centerTop.pattern('232');
   centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
   centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
+  centerTop.vertical(true);
 
   right.divide(2);
   right.vertical(false);
   right.sections[0].setSection("DrawerSection");
   right.sections[1].setSection("DrawerSection");
   right.sections[2].setSection("DrawerSection");
-  right.pattern('abb').value('a', a);
+  right.pattern('abb');
 });

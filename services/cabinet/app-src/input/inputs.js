@@ -227,3 +227,15 @@ add('formula', new Input({
   label: 'Formula',
   class: 'center'
 }));
+
+add('xyz', new Select({
+  name: 'xyz',
+  list: {'x': 'X', 'y': 'Y', 'z':'Z'},
+  inline: true
+}));
+
+add('whd', new Select({
+  name: 'xyz',
+  list: {'0': 'W', '1': 'H', '2':'D'},
+  inline: true
+}));

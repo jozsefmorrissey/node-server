@@ -230,26 +230,30 @@ class Cabinet extends Assembly {
     }
 
     let openingModState;
-    function updateOpeningPoints(func, test) {
+    function updateOpeningPoints(func, test, isLen) {
+      const shouldTest = test instanceof Function;
       return (...args) => {
-        if (test && test(...args)) {
+        if (shouldTest && test(...args)) {
+          if (isLen && Number.isNaN(args[0] + 1)) {
+            console.log('ahh haaa')
+          }
           modificationState++;
-        }
-        const value = func(...args);
-        const modStr = modificationState;
-        const shouldUpdate = openingModState !== modificationState;
-        if (shouldUpdate) {
-          openingModState = modificationState;
           instance.updateOpenings();
         }
-        return value;
+        return func(...args);
       }
     }
 
+    let lastCallId = 0;
     this.updateOpenings = () => {
-      for (let index = 0; index < this.openings.length; index++) {
-        this.openings[index].update();
-      }
+      const callId = ++lastCallId;
+      setTimeout(() => {
+        if (callId === lastCallId) {
+          for (let index = 0; index < this.openings.length; index++) {
+            this.openings[index].update();
+          }
+        }
+      }, 50);
     };
 
     this.normals = () => {
@@ -261,7 +265,7 @@ class Cabinet extends Assembly {
     }
 
     this.width = updateOpeningPoints(this.width, (w) => w && this.width() !== w);
-    this.length = updateOpeningPoints(this.length, (l) => l && this.length() !== l);
+    this.length = updateOpeningPoints(this.length, (l) => l && this.length() !== l, true);
     this.thickness = updateOpeningPoints(this.thickness, (t) => t && this.thickness() !== t);
   }
 }
@@ -286,6 +290,11 @@ Cabinet.build = (type, group, config) => {
     const centerConfig = subAssemConfig.center.join(':');
     const rotationConfig = subAssemConfig.rotation.join(':');
     const subAssem = Assembly.new(type, subAssemConfig.code, name, centerConfig, demStr, rotationConfig);
+    // TODO: This should use Object.fromJson so more complex objects can easily save/load values.
+    if (subAssem.jointSet) {
+      subAssem.jointSet(subAssemConfig.jointSet);
+      subAssem.includedSides(subAssemConfig.includedSides);
+    }
     subAssem.partCode(subAssemConfig.code);
     cabinet.addSubAssembly(subAssem);
   });

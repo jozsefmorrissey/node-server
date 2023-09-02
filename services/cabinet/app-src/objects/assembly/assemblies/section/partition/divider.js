@@ -11,6 +11,7 @@ class DividerSection extends Assembly {
   constructor(sectionProperties) {
     super(undefined, 'Divider');
     if (sectionProperties === undefined) return;
+    this.parentAssembly(sectionProperties);
     const props = sectionProperties;
     const instance = this;
     let panel;

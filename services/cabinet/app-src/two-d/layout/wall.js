@@ -3,7 +3,6 @@ const OnWall = require('./on-wall');
 const Door2D = require('./door');
 const Window2D = require('./window');
 const Corner2d = require('./corner');
-const HoverObject2d = require('../../../../../public/js/utils/canvas/two-d/hover-map').HoverObject2d;
 
 function modifyVertex(vertex) {
   return (props) => {
@@ -51,23 +50,9 @@ class Wall2D extends Line2d {
         startVertex.nextLine(nextLine);
     }
 
-    const hoveringStart = new HoverObject2d(() => this.startVertex(), 24).hovering;
-    const hoveringEnd = new HoverObject2d(() => this.endVertex(), 24).hovering;
-    const hoveringWall = new HoverObject2d(() => this, 10).hovering;
-    this.hovering = (v) => {
-      if (hoveringStart(v)) return this.startVertex();
-      if (hoveringEnd(v)) return this.endVertex();
-      for (let index = 0; index < windows.length; index++) {
-        if (windows[index].hovering(v)) return windows[index];
-      }
-      for (let index = 0; index < doors.length; index++) {
-        if (doors[index].hovering(v)) return doors[index];
-      }
-      return hoveringWall(v) && this;
-    }
-
     this.removeDoor = (door) => doors.splice(doors.indexOf(door), 1);
     this.removeWindow = (window) => windows.splice(windows.indexOf(window), 1);
+    this.hash = () => JSON.stringify(this.toJson()).hash();
   }
 }
 Wall2D.fromJson = (json, layout, vertexMap) => {

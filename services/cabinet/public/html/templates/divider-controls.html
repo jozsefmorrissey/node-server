@@ -1,7 +1,7 @@
 <div>
   <label>Dividers:</label>
   <input class='division-pattern-input' type='text' name='pattern'
-      opening-id='{{opening.id()}}' value='{{opening.pattern().str}}'>
+      opening-id='{{opening.id()}}' value='{{opening.pattern().str === 'z' ? '' : opening.pattern().str}}'>
 
   <span class="open-orientation-radio-cnt">
 

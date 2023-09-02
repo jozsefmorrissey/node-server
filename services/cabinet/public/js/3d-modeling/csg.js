@@ -122,6 +122,7 @@ CSG.prototype = {
   //          +-------+            +-------+
   //
   union: function(csg) {
+    if (csg.polygons.length === 0) return CSG.fromPolygons(this.polygons);
     var a = new CSG.Node(this.clone().polygons);
     var b = new CSG.Node(csg.clone().polygons);
     a.clipTo(b);
@@ -639,6 +640,14 @@ CSG.Polygon.prototype = {
       const newVertex = func(vertex);
       this.vertices[vIndex] = newVertex instanceof CSG.Vertex ? newVertex : vertex;
     }
+  },
+  setColor: function(r, g, b) {
+    if (Array.isArray(r)) {
+      g = r[1];
+      b = r[2];
+      r = r[0];
+    }
+    this.shared = [r/255, g/255, b/255];
   }
 };
 
@@ -672,6 +681,9 @@ CSG.Node.prototype = {
   invert: function() {
     for (var i = 0; i < this.polygons.length; i++) {
       this.polygons[i].flip();
+    }
+    if (this.plane === null) {
+      console.log('witfigomf');
     }
     this.plane.flip();
     if (this.front) this.front.invert();

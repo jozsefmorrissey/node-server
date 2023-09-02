@@ -44,13 +44,14 @@ class Expandable {
     props.getObject = props.getObject || (() => {});
     props.inputs = props.inputs || [];
     props.list = props.list || [];
+    this.removeButton = () => props.removeButton === undefined ? true : props.removeButton;
     // props.list.DO_NOT_CLONE = true;
     this.hasBody = () => (typeof this.getBody) === 'function';
     this.getHeader = props.getHeader; delete props.getHeader;
     this.getBody = props.getBody; delete props.getBody;
     props.id = Expandable.lists.length;
     const firstKey = Object.keys(props.list)[0];
-    props.activeKey = firstKey || 0; //TODO ???
+    props.activeKey = props.startClosed ?  undefined : firstKey || 0; //TODO ???
     Object.getSet(this, props, 'listElemLable');
     let pendingRefresh = false;
     let lastRefresh = new Date().getTime();
@@ -73,10 +74,6 @@ class Expandable {
 
     function getCnt() {
       return document.querySelector(`.expandable-list[ex-list-id='${props.id}']`);
-    }
-
-    function getBodyCnt() {
-      return du.find.down('.expand-body', getCnt());
     }
 
     function getInputCnt() {
@@ -130,16 +127,19 @@ class Expandable {
       if (!pendingRefresh) {
         pendingRefresh = true;
         setTimeout(() => {
-          props.inputs.forEach((input) => input.id = input.id || String.random(7));
-          const parent = document.querySelector(props.parentSelector);
-          const focusInfo = du.focusInfo();
-          const html = this.html();
-          if (parent && html !== undefined) {
-            parent.innerHTML = html;
-            du.focus(focusInfo);
-            afterRefreshEvent.trigger();
+          try {
+            props.inputs.forEach((input) => input.id = input.id || String.random(7));
+            const parent = document.querySelector(props.parentSelector);
+            const focusInfo = du.focusInfo();
+            const html = this.html();
+            if (parent && html !== undefined) {
+              parent.innerHTML = html;
+              du.focus(focusInfo);
+              afterRefreshEvent.trigger();
+            }
+          } finally {
+            pendingRefresh = false;
           }
-          pendingRefresh = false;
         }, 100);
       }
     };
@@ -170,7 +170,7 @@ class Expandable {
         headers.forEach((header) => header.className = header.className.replace(/(^| )active( |$)/g, ''));
         bodys.forEach((body) => body.style.display = 'none');
         rmBtns.forEach((rmBtn) => rmBtn.style.display = 'none');
-        const body = bodys.length === 1 ? bodys[0] : du.find.closest('.expand-body', target);
+        const body = Expandable.getBodyCnt(target);
         if (this.hasBody()) {
           body.style.display = 'block';
         }
@@ -183,10 +183,10 @@ class Expandable {
         // du.scroll.intoView(target.parentElement, 3, 25, document.body);
       }
     };
-    afterRefreshEvent.on(() => {if (!props.startClosed)this.renderBody()});
+    afterRefreshEvent.on(() => {if (this.activeKey() !== undefined)this.renderBody()});
 
     this.htmlBody = (key) => {
-      getBodyCnt().setAttribute('key', key);
+      Expandable.getBodyCnt(getCnt()).setAttribute('key', key);
       return this.hasBody() ? this.getBody(this.list()[key], key) : '';
     }
     this.list = () => props.list;
@@ -207,11 +207,11 @@ Expandable.sidebarTemplate = new $t('expandable/sidebar');
 Expandable.topAddListTemplate = new $t('expandable/top-add-list');
 Expandable.getIdAndKey = (target, level) => {
   level ||= 0;
-  const elems = du.find.upAll('.expand-header,.expand-body', target);
+  const elems = du.find.upAll('.expand-header,.expand-body,.expandable-list', target);
   if (elems.length < level + 1) return undefined;
-  const cnt = elems[level];
-  const id = Number.parseInt(cnt.getAttribute('ex-list-id'));
-  const key = cnt.getAttribute('key');
+  const uniq = elems.unique(e => e.getAttribute('ex-list-id'));
+  const id = Number.parseInt(uniq[level].getAttribute('ex-list-id'));
+  const key = uniq[level].getAttribute('key');
   return {id, key};
 }
 Expandable.getValueFunc = (target) => {
@@ -224,6 +224,34 @@ Expandable.get = (target, level) => {
   if (idKey === undefined) return undefined;
   return Expandable.lists[idKey.id].get(idKey.key);
 }
+
+Expandable.refresh = (target, bodyOnly, level) => {
+  setTimeout(() => {
+    const focusInfo = du.focusInfo();
+    const idKey = Expandable.getIdAndKey(target, level);
+    if (idKey === undefined) return undefined;
+    if (bodyOnly) Expandable.lists[idKey.id].renderBody();
+    else Expandable.lists[idKey.id].refresh();
+    du.focus(focusInfo);
+  }, 150);
+}
+
+Expandable.getBodyCnt = (target) => {
+  const exListCnt = du.find.up('.expandable-list', target);
+  const exId = exListCnt.getAttribute('ex-list-id');
+  const bodys = du.find.up('.expandable-list', target).querySelectorAll(`.expand-body[ex-list-id='${exId}']`);
+  const body = bodys.length === 1 ? bodys[0] : du.find.closest('.expand-body', target);
+  return body;
+}
+
+Expandable.getHeaderCnt = (target) => {
+  const infoElem = du.find.closest('[ex-list-id][key]', target);
+  const key = infoElem.getAttribute('key');
+  const exId = infoElem.getAttribute('ex-list-id');
+  const expandHeader = du.find(`.expand-header[ex-list-id="${exId}"][key="${key}"]`);
+  return expandHeader;
+}
+
 
 Expandable.bySelector = (parentSelector) => {
   const lists = Expandable.lists;
@@ -269,7 +297,8 @@ du.on.match('click', '.expand-header', (target, event) => {
   if (list) {
     if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
       du.class.remove(target, 'active');
-      du.find.closest('.expand-body', target).style.display = 'none';
+      const body = du.find.down('.expand-body', du.find.up('.expandable-list', target));
+      body.style.display = 'none';
       list.activeKey(null);
       target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
     } else if (!isActive) {

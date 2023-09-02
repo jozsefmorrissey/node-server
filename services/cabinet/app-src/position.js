@@ -25,6 +25,13 @@ class Position {
     let demCoords = {};
     let centerCoords = {};
     let rotCoords = {};
+    this.configuration = () => ({
+      demension: demCoords.copy(),
+      center: centerCoords.copy(),
+      rotation: rotCoords.copy()
+    });
+
+    this.hash = () => Object.hash(this.configuration());
 
     if ((typeof assembly.rotationConfig) !== 'function') {
       rotCoords = Position.parseCoordinates(assembly.rotationConfig, '0:0:0');

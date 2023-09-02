@@ -3,6 +3,9 @@
 
 const Assembly = require('../assembly.js');
 const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
+const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
+
+FunctionCache.on('cutter', 500);
 
 class Cutter extends Assembly {
   constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
@@ -13,10 +16,10 @@ class Cutter extends Assembly {
 Cutter.abbriviation = 'cut';
 
 class CutterModel extends Cutter {
-  constructor(partCode, partNameFunc, toModel) {
+  constructor(partCode, partName, toModel) {
     super(partCode);
     this.toModel = toModel;
-    this.partName = partNameFunc;
+    this.partName = partName instanceof Function ? partName : () => partName;
   }
 }
 
@@ -27,16 +30,17 @@ class CutterReference extends Cutter {
     super(partCode);
     offset ||= 0;
 
-    this.toModel = () => {
+    this.toModel = new FunctionCache(() => {
       let biPoly = reference.toBiPolygon();
       biPoly.offset(fromPoint, offset);
       const poly = front ? biPoly.front() : biPoly.back();
-      const lineLens = poly.lines().map(l => l.length());
+      let length = 0;
+      poly.lines().forEach(l => length += l.length());
       const multiplier = biPoly.normal().sameDirection(poly.normal()) ? -1 : 1;
-      const distance = 2 * Math.max.apply(null, lineLens);
+      const distance = 10 * length;
       biPoly = BiPolygon.fromPolygon(poly, 0, multiplier * distance, {x: distance, y:distance});
       return biPoly.toModel(this.getJoints().female);
-    }
+    }, this, 'cutter');
 
     this.partName = () => `CutterRef(${reference.partCode()}${offset >= 0 ? '+' + offset : offset}@${fromPoint})`;
   }

@@ -71,11 +71,16 @@ class Assembly extends KeyValue {
       } else {
         obj = instance.getAssembly(objIdStr);
       }
-      const returnVal = Assembly.resolveAttr(obj, attr);
-      return returnVal;
+
+      if (obj) {
+        const returnVal = Assembly.resolveAttr(obj, attr);
+        return returnVal;
+      }
+      return Assembly.resolveAttr(instance, path);
     }
 
     const sme = new StringMathEvaluator({Math, maxHeight}, getValueSmeFormatter);
+    this.sme = () => sme;
 
     // KeyValue setup
     const funcReg = /length|width|thickness/;
@@ -93,7 +98,8 @@ let ranCount = 0;
       const keys = Object.keys(valueObj).sort();
       let hash = 0;
       if (instance.parentAssembly() === undefined) hash += `${instance.length()}x${instance.width()}x${instance.thickness()}`.hash();
-      if (instance.demensionConfig) hash += this.demensionConfig.hash();
+      const dems = this.position().configuration().demension;
+      hash += Object.hash(dems);
       hash += keyValHash();
       const subAssems = Object.values(instance.subassemblies).sortByAttr('id');
       for (let index = 0; index < subAssems.length; index++) {
@@ -154,7 +160,7 @@ let ranCount = 0;
       if (callingAssem === this) return undefined;
       if (this.partCode() === partCode) return this;
       if (this.subassemblies[partCode]) return this.subassemblies[partCode];
-      if (callingAssem !== undefined) {
+      if (callingAssem !== undefined || this.parentAssembly() === undefined) {
         const children = Object.values(this.subassemblies);
         for (let index = 0; index < children.length; index += 1) {
           const assem = children[index].getAssembly(partCode, this);

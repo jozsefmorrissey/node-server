@@ -13,7 +13,7 @@
   <input class='value-2d' member='object' type="text" key="thickness" value="{{display(target.height())}}">
   <br>
   <label>height</label>
-  <input class='value-2d' member='object' type="text" key="height" value="{{display(target.height())}}">
+  <input class='value-2d' member='bridge' type="text" key="depth" value="{{display(target.parent().depth())}}">
   <br>
   <label>Angle</label>
   <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="{{target.angle()}}">
@@ -31,6 +31,7 @@
   <input class='value-2d' member='bridge' type="text" key="fromCeiling" cascade='fromFloor' value="{{display(target.parent().fromCeiling())}}">
   <br>
   <div {{target.parent().obj3D().constructor.name === 'Object3D' ? '' : 'hidden'}}>
+    <label>Type</label>
     <select id='modler-selector'>
       <option>Rectangle</option>
       <option:t repeat='name in SimpleModel.list()'

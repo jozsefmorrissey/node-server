@@ -49,7 +49,6 @@ Function.safeStdLibAddition(Object, 'definedPropertyNames', function(object) {
 
 Function.safeStdLibAddition(Function, 'AsyncRunIgnoreSuccessPrintError', function(afunc, args) {
   afunc(args).then(() => {}, (e) => console.error(e));
-
 }, true);
 
 Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, key) {
@@ -104,6 +103,24 @@ Function.safeStdLibAddition(Array, 'copy',   function (other) {
     return newArr;
   }
 });
+
+Function.safeStdLibAddition(Array, 'filterSplit',   function (filter, ...keys) {
+  let truthy = true;
+  if (keys === undefined) keys = [true, false];
+  else truthy = false;
+  for (index = 0; index < keys.length; index++) {
+    retVal[keys[index]] === [];
+  }
+  const retVal = {};
+  for (let index = 0; index < this.length; index++) {
+    let value = filter(this[index]);
+    if (truthy) value = value == true;
+    if (retVal[value] === undefined) retVal[value] = [];
+    retVal[value] = this[index];
+  }
+  return retVal;
+});
+
 
 Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
   if (!(obj instanceof Object)) return obj;
@@ -193,8 +210,9 @@ function processValue(value) {
 }
 
 // TODO: make moore efficient... dis es terible
-Function.safeStdLibAddition(Array, 'unique', function () {
-  return this.filter((() => {let found = []; return (e) => found.indexOf(e) === -1 && (found.push(e) || e);})());
+Function.safeStdLibAddition(Array, 'unique', function (attrFunc) {
+  if (!(attrFunc instanceof Function)) attrFunc = (e) => e;
+  return this.filter((() => {let found = []; return (e) => found.indexOf(attrFunc(e)) === -1 && (found.push(attrFunc(e)) || e);})());
 });
 
 Function.safeStdLibAddition(Array, 'equals', function (other, startIndex, endIndex) {
@@ -275,7 +293,6 @@ Function.safeStdLibAddition(Math, 'modWithin',  function (val, mod, lowerLimit, 
   val = Math.mod(val, mod);
   lowerLimit = Math.mod(lowerLimit, mod);
   upperLimit = Math.mod(upperLimit, mod);
-  console.log(lowerLimit, upperLimit);
   return lowerLimit <= upperLimit ? val >= lowerLimit && val <= upperLimit : (val >= lowerLimit || val <= upperLimit);
 }, true);
 
@@ -1111,9 +1128,17 @@ Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
 }, true);
 
 Function.safeStdLibAddition(Object, 'pathValue', function (path, value) {
-  const info = this.pathInfo(path, value);
-  return info ? info.target : undefined;
+  return Object.pathValue(this, path, value);
 });
+
+Function.safeStdLibAddition(Object, 'undefinedKey', function (key, joinStr) {
+  if (this[key] === undefined) return key;
+  if (joinStr === undefined) joinStr = '';
+  let index = 1;
+  while(this[`${key}${joinStr}${index}`] !== undefined) index++;
+  return `${key}${joinStr}${index}`;
+});
+
 
 Function.safeStdLibAddition(Object, 'deletePath', function (path) {
   if ((typeof path) !== 'string' || path === '') throw new Error('path(arg1) must be defined as a non empty string');

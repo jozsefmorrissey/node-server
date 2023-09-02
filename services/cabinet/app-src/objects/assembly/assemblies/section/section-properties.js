@@ -5,7 +5,6 @@ const Line3D = require('../../../../three-d/objects/line.js');
 const Plane = require('../../../../three-d/objects/plane.js');
 const BiPolygon = require('../../../../three-d/objects/bi-polygon.js');
 const KeyValue = require('../../../../../../../public/js/utils/object/key-value.js');
-const Notification = require('../../../../../../../public/js/utils/collections/notification.js');
 const Assembly = require('../../assembly.js');
 const Cutter = require('../cutter.js');
 const CSG = require('../../../../../public/js/3d-modeling/csg.js');
@@ -17,8 +16,45 @@ const v = () => new Vertex3D();
 class SectionProperties extends KeyValue{
   constructor(config, index, sections, pattern) {
     super({childrenAttribute: 'sections', parentAttribute: 'parentAssembly'})
+
+    const getPartFunc = (dir) => config[dir] instanceof Function ? config[dir] : () => instance.getAssembly(config[dir]);
+    this.top = getPartFunc('top');
+    this.bottom = getPartFunc('bottom');
+    this.left = getPartFunc('left');
+    this.right = getPartFunc('right');
+    this.back = getPartFunc('back');
+    this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
+
+    this.childConfig = (index) => {
+      const iv = this.isVertical;
+      if (index === undefined) index = this.sections.length;
+      const vert = {
+          top: this.top,
+          bottom: this.bottom,
+          left: () => index === 0 ? this.left() : this.sections[index-1].divider(),
+          right: () => index === this.sections.length - 1 ? this.right() : this.sections[index].divider()
+        };
+      const hor = {
+        left: this.left,
+        right: this.right,
+        top: () => index === 0 ? this.top() : this.sections[index-1].divider(),
+        bottom: () => index === this.sections.length - 1 ? this.bottom() : this.sections[index].divider()
+      };
+      const conf = {
+        rotation: config.rotation,
+        back: this.back
+      };
+      const dirFunc = (dir) => conf[dir] = () => iv() ? vert[dir]() : hor[dir]();
+      dirFunc('top');dirFunc('bottom');dirFunc('left');dirFunc('right');
+      return conf;
+    }
+
     if (sections) {
-      this.sections.merge(sections);
+      for (let index = 0; index < sections.length; index++) {
+        const sectionJson = sections[index];
+        sectionJson.config = this.childConfig(index);
+        this.sections.push(Object.fromJson(sectionJson));
+      }
     }
     // TODO: consider getting rid of, sections and cover are the only ones that matter.
     this.subassemblies = [];
@@ -33,7 +69,7 @@ class SectionProperties extends KeyValue{
     Object.getSet(this, {divideRight: false, config, index}, 'divider', 'cover');
     this.index = () => index;
     const instance = this;
-    pattern ||= new Pattern('a');
+    pattern ||= new Pattern('z');
 
     const keyValHash = this.hash;
     this.hash = () => {
@@ -74,13 +110,7 @@ class SectionProperties extends KeyValue{
       if (is !== undefined && curr !== is) removeCachedValues();
       return curr;
     }
-    const getPartFunc = (dir) => config[dir] instanceof Function ? config[dir] : () => instance.getAssembly(config[dir]);
-    this.top = getPartFunc('top');
-    this.bottom = getPartFunc('bottom');
-    this.left = getPartFunc('left');
-    this.right = getPartFunc('right');
-    this.back = getPartFunc('back');
-    this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
+
     this.verticalDivisions = () => {
       const parent = this.parentAssembly();
       if (parent instanceof SectionProperties) return parent.isVertical();
@@ -106,7 +136,7 @@ class SectionProperties extends KeyValue{
     this.innerDepth = () => {
       const cabinet = this.getCabinet();
       const back = this.back();
-      if (back) return this.innerCenter().distance(back.position().center());
+      if (back) return back.toBiPolygon().distance(this.innerCenter());
       return 4*2.54;
     };
 
@@ -139,30 +169,6 @@ class SectionProperties extends KeyValue{
       return CSG.transRotate(point, offset, instance.rotation());
     }
     this.offsetPoint = offsetPoint;
-
-    this.childConfig = () => {
-      const iv = this.isVertical;
-      const index = this.sections.length;
-      const vert = {
-          top: this.top,
-          bottom: this.bottom,
-          left: () => index === 0 ? this.left() : this.sections[index-1].divider(),
-          right: () => index === this.sections.length - 1 ? this.right() : this.sections[index].divider()
-        };
-      const hor = {
-        left: this.left,
-        right: this.right,
-        top: () => index === 0 ? this.top() : this.sections[index-1].divider(),
-        bottom: () => index === this.sections.length - 1 ? this.bottom() : this.sections[index].divider()
-      };
-      const conf = {
-        rotation: config.rotation,
-        back: this.back
-      };
-      const dirFunc = (dir) => conf[dir] = () => iv() ? vert[dir]() : hor[dir]();
-      dirFunc('top');dirFunc('bottom');dirFunc('left');dirFunc('right');
-      return conf;
-    }
 
     function init () {
       if (instance.sections.length === 0) {
@@ -250,21 +256,32 @@ class SectionProperties extends KeyValue{
       section.updateCoordinates(coords);
     }
 
+    function calcPattern(dist) {
+      try {
+        return instance.pattern().calc(dist);
+      } catch {
+        return instance.pattern('z').calc(dist);
+      }
+    }
+
     this.dividerLayout = () => {
       init();
       const dividerOffsetInfo = instance.dividerOffsetInfo();
       const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
-      return instance.pattern().calc(coverage._TOTAL);
+      return calcPattern(coverage._TOTAL);
     }
 
 
-    function setSectionCoordinates() {
-      updateCoords = false;
+    let lastHash;
+    function setSectionCoordinates(force) {
+      const hash = instance.hash();
+      if (!force && hash === lastHash) return;
+      lastHash = hash;
       const dividerOffsetInfo = instance.dividerOffsetInfo();
       const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
 
       if (coverage.length > 1) {
-        const patternInfo = instance.pattern().calc(coverage._TOTAL);
+        const patternInfo = calcPattern(coverage._TOTAL);
 
         let offset = 0;
         const innerOffset = dividerOffsetInfo[0].offset;
@@ -380,7 +397,7 @@ class SectionProperties extends KeyValue{
       return info;
     }
 
-    this.divide = (dividerCount) => {
+    this.divide = (dividerCount, dontUpdateCoords) => {
       init();
       if (!Number.isNaN(dividerCount) && dividerCount !== this.dividerCount()) {
         dividerCount = dividerCount > 10 ? 10 : dividerCount;
@@ -389,7 +406,7 @@ class SectionProperties extends KeyValue{
         if (dividerCount < currDividerCount) {
           const diff = currDividerCount - dividerCount;
           this.sections.splice(dividerCount + 1);
-          setSectionCoordinates();
+          if (!dontUpdateCoords) setSectionCoordinates(true);
           return true;
         } else {
           const diff = dividerCount - currDividerCount;
@@ -398,7 +415,7 @@ class SectionProperties extends KeyValue{
             this.sections.push(section);
             console.log(section);
           }
-          if (diff !== 0) setSectionCoordinates();
+          if (!dontUpdateCoords && diff !== 0) setSectionCoordinates(true);
           return diff !== 0;
         }
       }
@@ -414,11 +431,13 @@ class SectionProperties extends KeyValue{
     this.pattern = (patternStr) => {
       if ((typeof patternStr) === 'string') {
         const sectionCount = patternStr.length;
-        pattern = pattern.clone(patternStr);
-        this.divide(sectionCount - 1);
+        const group = this.getCabinet().group().id();
+        pattern = new Pattern(patternStr, {group});
+        this.divide(sectionCount - 1, true);
+        setSectionCoordinates();
       } else {
         if (!pattern || pattern.str.length !== this.sectionCount()) {
-          const patStr = new Array(this.sectionCount()).fill('a').join('');
+          const patStr = new Array(this.sectionCount()).fill('z').join('');
           pattern = pattern.clone(patStr);
         }
       }
@@ -471,9 +490,7 @@ class SectionProperties extends KeyValue{
 
     this.coverInfo = () => {
       called.coverInfo++;
-      if (updateCoords) {
-        setSectionCoordinates();
-      }
+      setSectionCoordinates();
       const propConfig = this.propertyConfig();
       let biPolygon, backOffset, frontOffset, offset, coords;
       const doorThickness = 3 * 2.54/4;
@@ -512,20 +529,23 @@ class SectionProperties extends KeyValue{
       const jointOffset = instance.dividerJoint().maleOffset();
       const right = instance.right();
       const left = instance.left();
-      const maxLen = Math.max(c.width(), c.length(), c.thickness());
-      if (!(right instanceof DividerSection)) {
-        Line3D.adjustVertices(point1, point2, maxLen, true);
-      } else {
-        const length = point1.distance(point2) + jointOffset - right.panelThickness()/2;
-        Line3D.adjustVertices(point1, point2, length, true);
-        instance.dividerJoint.zero(divider.panel(), right.panel());
-      }
-      if (!(left instanceof DividerSection)) {
-        Line3D.adjustVertices(point2, point1, maxLen, true);
-      } else {
-       const length = point1.distance(point2) + jointOffset - left.panelThickness()/2;
-        Line3D.adjustVertices(point2, point1, length, true);
-        instance.dividerJoint.zero(divider.panel(), left.panel());
+      let maxLen = c.width() + c.length() + c.thickness();
+      if (!instance.verticalDivisions()) {
+        if (!(right instanceof DividerSection)) {
+          Line3D.adjustVertices(point1, point2, maxLen, true);
+          maxLen *= 1.5;
+        } else {
+          const length = point1.distance(point2) + jointOffset - right.panelThickness()/2;
+          Line3D.adjustVertices(point1, point2, length, true);
+          instance.dividerJoint.zero(divider.panel(), right.panel());
+        }
+        if (!(left instanceof DividerSection)) {
+          Line3D.adjustVertices(point2, point1, maxLen, true);
+        } else {
+          const length = point1.distance(point2) + jointOffset - left.panelThickness()/2;
+          Line3D.adjustVertices(point2, point1, length, true);
+          instance.dividerJoint.zero(divider.panel(), left.panel());
+        }
       }
 
     }
@@ -585,19 +605,21 @@ class SectionProperties extends KeyValue{
         v.x = nv.x;
         v.y = nv.y;
         v.z = nv.z;
+        if (Number.isNaN(v.x + v.y + v.z)) {
+          console.log('NaN!')
+        }
       }
       return change
     }
 
-    let updateCoords;
     this.updateCoordinates = (newCoords) => {
       updateCoordinates(coordinates.outer, newCoords.outer) | updateCoordinates(coordinates.inner, newCoords.inner);
+      setSectionCoordinates(true);
       removeCachedValues();
     }
 
     this.reevaluate = () => {
-      updateCoords = true;
-      removeCachedValues();
+      removeCachedValues(true);
       setSectionCoordinates();
     }
 
@@ -637,7 +659,7 @@ class SectionProperties extends KeyValue{
     const divider = new DividerSection(this);
     this.divider(divider);
     divider.parentAssembly(this);
-    this.value('vertical', true);
+    this.value('vertical', false);
     // TODO:updateFlag Use update flag instead;
     this.pattern().onChange(this.reevaluate);
     // this.vertical(true);
@@ -649,7 +671,8 @@ class SectionProperties extends KeyValue{
       const fromPoint = cabinet.buildCenter();
       for (let index = 0; index < subAssems.length; index++) {
         const reference = subAssems[index];
-        const offset = instance.dividerJoint().maleOffset();
+        let offset = instance.dividerJoint().maleOffset();
+        if (reference.thickness() < offset * 1.9) offset = 0;
         const cutter = new Cutter.Reference(reference, fromPoint, offset);
         sectionCutters.push(cutter);
       }
@@ -719,17 +742,28 @@ SectionProperties.new = function (constructorId) {
 SectionProperties.fromJson = (json) => {
   const sections = [];
   const pattern = Pattern.fromJson(json.pattern);
-  for (let index = 0; index < json.subassemblies.length; index++) {
-    const sectionJson = json.subassemblies[index];
-    sections.push(Object.fromJson(sectionJson));
-  }
-  const sp  = new SectionProperties(json.config, json.index, sections, pattern);
+  // for (let index = 0; index < json.subassemblies.length; index++) {
+  //   const sectionJson = json.subassemblies[index];
+  //   sections.push(Object.fromJson(sectionJson));
+  // }
+  const sp  = new SectionProperties(json.config, json.index, json.subassemblies, pattern);
   sp.value.all(json.value.values);
   sp.parentAssembly(json.parent);
   sp.cover(Object.fromJson(json.cover));
   if (sp.cover()) sp.cover().parentAssembly(sp);
-  sp.divider(new DividerSection(sp));
+  sp.divider(new DividerSection(sp)).parentAssembly(sp);
   return sp;
+}
+
+SectionProperties.toDrawString = (sp) => {
+  const inner = sp.coordinates().inner;
+  let coords = inner.map(v => v.to2D('x','y').toString()).join(',');
+  const color = String.nextColor();
+  let str = `${color}[${coords},${inner[0].to2D('x','y').toString()}]\n`;
+  for (let index = 0; index < sp.sections.length; index++)  {
+    str += SectionProperties.toDrawString(sp.sections[index]);
+  }
+  return str;
 }
 
 const sections = [];

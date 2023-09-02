@@ -6,7 +6,6 @@
   </h3>
   <div class='tab plain-dropdown' hidden>
     <input type='text' value='{{id()}}' name='id' hidden/>
-    <input type='checkbox' checked name='objectSpecific' hidden/>
     <div {{isDefault() ? 'hidden' : ''}}>
       Default
       <button class='default-reset'>Return</button>
@@ -30,12 +29,15 @@
       <div class='tab plain-dropdown' hidden>
         <label>Match Angle</label>
         <input type='checkbox' name='MATCH_WALL_ANGLE' {{MATCH_WALL_ANGLE ? 'checked' : ''}}/>
+        <br>
+        <label>Size Adjust (0 to deactivate)</label>
+        <input class='dem' type='number' name='SIZE_ADJUST_PERCENT' value='{{SIZE_ADJUST_PERCENT}}'/>%
       </div>
     </div>
     <label>Fixed Object Angle</label>
     <input type='checkbox' name='FIXED_ANGLE' {{FIXED_ANGLE ? 'checked' : ''}}/>
     <br>
     <label>Tolerance</label>
-    <input type='number' name='TOLERANCE' value='{{TOLERANCE}}'/>
+    <input class='dem' type='number' name='TOLERANCE' value='{{TOLERANCE}}'/>
   </div>
 </div>

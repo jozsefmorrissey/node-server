@@ -21,6 +21,18 @@ class OrderSaveManager {
     const instance = this;
     let autoSaver;
 
+    this.initialOrderName = (value) => {
+      if (this.initialized()) console.warn('This function is usless after initialization');
+      if (value) initialOrderName = value;
+      return initialOrderName;
+    }
+
+    this.initialVersionId = (value) => {
+      if (this.initialized()) console.warn('This function is usless after initialization');
+      if (value) initialVersionId = value;
+      return initialVersionId;
+    }
+
     const loadingEvent = new CustomEvent('loading');
     const loadedEvent = new CustomEvent('loaded');
     const savingEvent = new CustomEvent('saving');

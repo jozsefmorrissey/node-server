@@ -8,7 +8,9 @@
       }
     </style>
     <script type="text/javascript" src='/cabinet/js/index.js'></script>
+    <script type="text/javascript" src='/js/qrious.js'></script>
     <link rel="stylesheet" href="/styles/expandable-list.css">
+    <link rel="stylesheet" href="/styles/file-tab.css">
     <link rel="stylesheet" href="/cabinet/styles/estimate.css">
     <link rel="stylesheet" href="/styles/icons.css">
 
@@ -22,20 +24,7 @@
     <div id='display-ctn'>
       <div id='app' name='Orders' {{id !== 'home' ? "link='/cabinet/home'" : ''}} hidden>
         <div id='order-cnt'></div>
-        <div id='model-cnt'>
-          <div id='display-menu'></div>
-          <div id='model-display-cnt'>
-            <canvas id="two-d-model"></canvas>
-            <div id="three-d-model" class="viewer small">
-              <div class='inline left'>
-                <div id='three-d-orientation-controls'></div>
-                <span id="model-controller"></span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-
       <div name='Property Manager' {{id !== 'home' ? "link='/cabinet/property'" : ''}}
         id='property-manager-cnt' hidden>
         <div class='center'>
@@ -50,6 +39,7 @@
       <div id='pattern-manager' name='Pattern Manager'
           {{id !== 'home' ? "link='/cabinet/pattern'" : ''}} hidden>Pat Man</div>
     </div>
+    <div:t class='tab' $t-id='canvas-displays'>autoLocProps</div:t>
     <div id='property-select-cnt'></div>
   </body>
 </html>
