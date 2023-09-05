@@ -1,10 +1,12 @@
 
 
 
+const moduleExists = (typeof module) !== 'undefined';
 
-
-const CustomEvent = require('./custom-event');
-const ExprDef = require('./expression-definition');
+if (moduleExists) {
+CustomEvent = require('./custom-event');
+ExprDef = require('./expression-definition');
+}
 
 class $t {
 	constructor(template, id, selector) {
@@ -394,12 +396,15 @@ class $t {
 			return blocks;
 		}
 
+		function resolve(str) {
+			return ExprDef.parse(expression, str);
+		}
+
 		function compile() {
 			const blocks = isolateBlocks(template);
 			let str = template;
 			for (let index = 0; index < blocks.length; index += 1) {
-				const block = blocks[index];
-				const parced = ExprDef.parse(expression, block);
+				const parced = resolve(blocks[index]);
 				str = str.replace(`{{${block}}}`, `\` + $t.clean(${parced}) + \``);
 			}
 			return `\`${str}\``;
@@ -451,6 +456,20 @@ class $t {
 			return string;
 		}
 
+		// const ifReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-if=("|')([^>^\4]*?)\4([^>]*>(((?!(<\1:t[^>]*>|<\/\1:t>)).)*)<\/)\1:t>/;
+		// function formatIf(string) {
+		// 	let match;
+		// 	while (match = string.match(ifReg)) {
+		// 		let tagContents = match[7];
+		// 		let tagName = match[1];
+		// 		let realScope = match[7];
+		// 		let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+		// 		let conditionStr = match[0].replace(/.*\$t-if=('|")([0-9\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+		// 		let condition = resolve(conditionStr);
+		// 		string = string.replace(match[0], `${condition} ?  '${template}' : ''`;
+		// 	}
+		// 	return string;
+		// }
 
 		if (id) {
 			$t.templates[id] = undefined;
@@ -534,4 +553,4 @@ function createGlobalsInterface() {
 }
 createGlobalsInterface();
 
-module.exports = $t;
+if (moduleExists) module.exports = $t;

@@ -25,4 +25,5 @@ class CustomEvent {
   }
 }
 
-module.exports = CustomEvent;
+if ((typeof module) !== 'undefined')
+  module.exports = CustomEvent;

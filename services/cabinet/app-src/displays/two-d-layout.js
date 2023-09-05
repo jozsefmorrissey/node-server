@@ -469,7 +469,7 @@ let pending = 0;
 let lastPosition;
 function  drag(event)  {
   let hoverin = hoverMap.hovering();
-  const dragging = !popupOpen && clickHolding && hoverin;
+  const dragging = true || !popupOpen && clickHolding && hoverin;
   const position = event ? {x: event.imageX, y: event.imageY} : lastPosition;
   if (dragging)
     hoverin.move && hoverin.move(new Vertex2d(position), interactionState);
@@ -508,7 +508,8 @@ function init() {
   panZ = panZoom(canvas, () => draw());
   draw.panz(panZ);
   hoverMap = draw.hoverMap();
-  panZ.onMove(onMove);
+  hoverMap.on.drag(drag);
+  // panZ.onMove(onMove);
   panZ.onMousedown(onMousedown);
   panZ.onMouseup(onMouseup);
   controls2d = new Controls2d('#two-d-model .orientation-controls', layout, panZ);
