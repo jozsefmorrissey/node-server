@@ -504,6 +504,8 @@ function init() {
   canvas.height = height;
   canvas.width = height;
   draw = new DrawLayout(canvas, layout(), panZ);
+  Global.onChange.room((room) =>
+    draw.layout(room.to.layout()));
 
   panZ = panZoom(canvas, () => draw());
   draw.panz(panZ);

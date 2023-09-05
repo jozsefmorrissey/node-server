@@ -74,6 +74,7 @@ class HoverMap2d {
     let hoverObjects = [];
     let instance = this;
     let dragging = false;
+    let clickHolding = false;
     let id = String.random(3);
 
     this.objects = () => hoverObjects;

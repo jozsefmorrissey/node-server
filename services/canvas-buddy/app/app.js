@@ -53,6 +53,7 @@ function drawVertex(x, y) {
   draw.circle(new Circle2d(radius, vert), null, color(vert), 0);
 }
 
+
 let colors = {};
 this.isHovering = (obj) => obj && obj.equals(hovering);
 this.isLastClicked = (obj) => obj && obj.equals(lastClicked());
