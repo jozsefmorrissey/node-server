@@ -311,8 +311,5 @@ function parse(exprDef, str) {
 
 ExprDef.parse = parse;
 
-module.exports = ExprDef;
-
-
-
-
+if ((typeof module) !== 'undefined')
+  module.exports = ExprDef;

@@ -73,6 +73,7 @@ class HoverMap2d {
   constructor(panZ) {
     let hoverObjects = [];
     let instance = this;
+    let clickHolding = false;
     let dragging = false;
     let clickHolding = false;
     let id = String.random(3);
@@ -119,6 +120,7 @@ class HoverMap2d {
 
     if (panZ) {
       const clickEvent = new CustomEvent('click');
+      const dragEvent = new CustomEvent('dragging');
       const hoverEvent = new CustomEvent('hover');
       const hoverOutEvent = new CustomEvent('hoverOut');
       let active = true;
@@ -127,6 +129,7 @@ class HoverMap2d {
       this.on.click = clickEvent.on;
       this.on.hover = hoverEvent.on;
       this.on.hoverOut = hoverOutEvent.on;
+      this.on.drag = dragEvent.on;
       this.disable = () => active = false;
       this.enable = () => active = true;
 
@@ -150,6 +153,9 @@ class HoverMap2d {
         if (!active) return;
         const vertex = new Vertex2d(event.imageX, event.imageY);
         const hovering = instance.hovering(vertex);
+        if (clickHolding && hovering) {
+          return dragEvent.trigger(hovering);
+        }
         const hovered = this.hovered();
         if (hovering !== hovered) {
           if (hovered) {
