@@ -922,6 +922,13 @@ Line2d.distanceSort = (target) => (l1,l2) => {
   return (ds1 < de1 ? ds1 : de1) - (ds2 < de2 ? ds2 : de2);
 }
 
+const perpInterSectDist = (line, vertex, other, perpendicular) => {
+  if (perpendicular) line = line.perpendicular(null, vertex);
+  const intersection = other.findSegmentIntersection(line);
+  const dist = intersection ? vertex.distance(intersection) : null;
+  return {intersection, dist, vertex, line, other};
+}
+
 Line2d.between = (lineOvert1, lineOvert2) => {
   const lov1 = lineOvert1;
   const lov2 = lineOvert2;
@@ -936,6 +943,20 @@ Line2d.between = (lineOvert1, lineOvert2) => {
   const isLine2 = lov2 instanceof Line2d;
 
   if (isLine1 && isLine2) {
+    const list = [
+      perpInterSectDist(lov1, lov1.startVertex(), lov2),
+      perpInterSectDist(lov1, lov1.endVertex(), lov2),
+      perpInterSectDist(lov2, lov2.startVertex(), lov1),
+      perpInterSectDist(lov2, lov2.endVertex(), lov1),
+
+      perpInterSectDist(lov1, lov1.startVertex(), lov2, true),
+      perpInterSectDist(lov1, lov1.endVertex(), lov2, true),
+      perpInterSectDist(lov2, lov2.startVertex(), lov1, true),
+      perpInterSectDist(lov2, lov2.endVertex(), lov1, true)
+    ];
+    const best = list.sortByAttr('dist').filter(obj => obj.dist !== null)[0];
+    if (best) return new Line2d(best.vertex, best.intersection);
+
     const intersection = lov1.findSegmentIntersection(lov2, true);
     if (intersection) return null;
     const closestEnds = lov1.closestEnds(lov2);

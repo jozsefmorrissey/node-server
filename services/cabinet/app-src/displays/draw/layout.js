@@ -23,8 +23,9 @@ class DrawLayout extends Draw {
     function filter (object) {
       switch (object.constructor.name) {
         case 'Window2D': return draw.window;
-        case 'Door2D': return draw.window;
-        case 'LineMeasurement2d': return draw.window;
+        case 'Door2D': return draw.door;
+        case 'Wall2D': return draw.wall;
+        case 'Corner2d': return draw.corner;
         case 'Layout2D': return draw.layout;
         default: return parent;
       }
@@ -34,10 +35,10 @@ class DrawLayout extends Draw {
       if (object === undefined) return drawLayout();
       if (Array.isArray(object)) {
         const splitArr = object.filterSplit(filter);
-        for (let index = 0; index < splitArr.fals; index++) {
+        for (let index = 0; index < splitArr.false.length; index++) {
           parent(splitArr.false[index], color, width);
         }
-        for (let index = 0; index < splitArr.true; index++) {
+        for (let index = 0; index < splitArr.true.length; index++) {
           draw(splitArr.true[index], color, width);
         }
         return;
@@ -283,14 +284,15 @@ class DrawLayout extends Draw {
       return isHovering(vertex) ? 'green' : 'white';
     }
 
-    function drawVertex(vertex) {
-      const fillColor = vertexColor(vertex);
+    function drawVertex(vertex, color, width) {
+      const fillColor = color || vertexColor(vertex);
       const p = vertex.point();
       const radius = isHovering(vertex) ? 6 : 4;
       const circle = new Circle2d(radius, p);
       draw.circle(circle, 'black', fillColor);
       if (draw.layout().objects().length === 0 || vertex.showAngle) drawAngle(vertex);
     }
+    draw.corner = drawVertex;
 
     function drawObjects(objects, defaultColor, dontDrawSnapLocs) {
       defaultColor ||= 'black';
@@ -314,8 +316,28 @@ class DrawLayout extends Draw {
       if (target) draw(hovering(), target.color, target.radius);
     }
 
+    const drawMeasurements = () => {
+      const color = 'black';
+      const width = .2;
+      draw(hoverMap.measurements());
+
+      const objs = hoverMap.targets();
+      const filter = obj => obj === hoverMap.hovered()  || obj === hoverMap.lastClicked() ? 'highlight' : 'normal';
+      const split = objs.filterSplit(filter, 'highlight', 'normal');
+
+      for (let index = 0; index < split.highlight.length; index++) {
+        const obj = split.highlight[index];
+        draw(obj, 'blue', width * 4 );
+      }
+      for (let index = 0; index < split.normal.length; index++) {
+        const obj = split.normal[index];
+        draw(obj, color, width);
+      }
+    }
+
     let lastHash;
     const drawLayout = () => {
+      if (hoverMap && hoverMap.measurements.enabled()) return drawMeasurements();
       const layout = draw.layout();
       if (layout === undefined) return;
       const hash = layout.hash();
@@ -326,12 +348,8 @@ class DrawLayout extends Draw {
       draw.beginPath();
       const walls = layout.walls();
       let wl = walls.length;
-      walls.forEach((wall, index) => {
-        draw.wall(wall);
-        if (index !== 0)
-          drawVertex(wall.startVertex());
-      }, true);
-      drawVertex(walls[0].startVertex());
+      walls.forEach((wall, index) => draw.wall(wall));
+      walls.forEach(wall => drawVertex(wall.startVertex()));
       // drawMeasurementValues();
 
       let objects = layout.level();

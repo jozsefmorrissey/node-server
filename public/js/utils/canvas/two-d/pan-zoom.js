@@ -89,7 +89,7 @@ function panZoom(canvas, draw) {
           mouse.x = event.clientX;
           mouse.y = event.clientY;
       }
-      runOn('move', event);
+      if (runOn('move', event)) event.preventDefault();
       mouse.alt = event.altKey;
       mouse.shift = event.shiftKey;
       mouse.ctrl = event.ctrlKey;

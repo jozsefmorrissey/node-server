@@ -20,8 +20,8 @@ class MeasurementHoverMap2d extends HoverMap2d {
 
     const addLine = (objs, line) => {
       objs[line.toString()] = new HoverObject2d(line);
-      objs[line.startVertex().toString()] = new HoverObject2d(line.startVertex());
-      objs[line.endVertex().toString()] = new HoverObject2d(line.endVertex());
+      objs[line.startVertex().toString()] = new HoverObject2d(line.startVertex(), 15);
+      objs[line.endVertex().toString()] = new HoverObject2d(line.endVertex(), 15);
     }
 
 
@@ -31,10 +31,12 @@ class MeasurementHoverMap2d extends HoverMap2d {
     this.measurements.enabled = () => measEnabled;
     this.measurements.enable = () => {
       measEnabled = true;
+      this.eventsDisabled();
     }
 
     this.measurements.disable = () => {
       measEnabled = false;
+      this.eventsEnabled();
       measurementLines = [];
     }
     this.measurements.deleteAll = () => measurementLines.deleteAll();
@@ -70,7 +72,7 @@ class MeasurementHoverMap2d extends HoverMap2d {
       for (let index = 0; index <  targets.length; index++) {
         const obj = targets[index];
         if (obj instanceof Vertex2d) {
-          objs[obj.toString()](new HoverObject2d(obj));
+          objs[obj.toString()] = new HoverObject2d(obj, 15);
         } else if(obj instanceof Line2d) {
           addLine(objs, obj);
         } else if (obj instanceof Polygon2d)

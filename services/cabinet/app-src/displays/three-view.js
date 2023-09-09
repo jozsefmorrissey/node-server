@@ -67,7 +67,7 @@ class ThreeView extends Lookup {
     // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
     // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
     p.setColor([0, 255, 0])
-    let draw, panz, hovermap, lastClicked;
+    let draw, panz, hovermap;
     let threeDModel;
     this.maxDem = () => maxDem;
     this.container = () => cnt || defaultCnt;
@@ -108,7 +108,8 @@ class ThreeView extends Lookup {
       for (let index = 0; index < allLines.length; index++) {
         hovermap.add(allLines[index]);
       }
-      LineMeasurement2d.measurements(allLines).forEach(m => hovermap.add(m));
+      const measures = LineMeasurement2d.measurements(allLines);
+      measures.forEach(m => hovermap.add(m.I().furtherLine(), null, m));
       return true;
     }
     this.build = new FunctionCache(build, this, 'three-view');
@@ -121,22 +122,15 @@ class ThreeView extends Lookup {
       draw(hovermap.measurements());
 
       const objs = hovermap.targets();
-      let highlight = [];
-      let normal = [];
-      for (let index = 0; index < objs.length; index++) {
-        const obj = objs[index];
-        if(obj === hovermap.hovered()  || obj === hovermap.lastClicked()) {
-          highlight.push(obj);
-        } else {
-          normal.push(obj);
-        }
-      }
-      for (let index = 0; index < highlight.length; index++) {
-        const obj = highlight[index];
+      const filter = obj => obj === hovermap.hovered()  || obj === hovermap.lastClicked() ? 'highlight' : 'normal';
+      const split = objs.filterSplit(filter, 'highlight', 'normal');
+
+      for (let index = 0; index < split.highlight.length; index++) {
+        const obj = split.highlight[index];
         draw(obj, 'blue', width * 4 );
       }
-      for (let index = 0; index < normal.length; index++) {
-        const obj = normal[index];
+      for (let index = 0; index < split.normal.length; index++) {
+        const obj = split.normal[index];
         draw(obj, color, width);
       }
     }

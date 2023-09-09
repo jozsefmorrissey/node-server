@@ -24,9 +24,9 @@ class LayoutHoverMap extends MeasurementHoverMap2d {
           const wall = walls[index];
           wall.windows().forEach(w => instance.add(w.toLine, 5, w));
           wall.doors().forEach(d => instance.add(d.toLine, 20, d));
-          instance.add(wall.startVertex(), 24);
-          instance.add(wall.endVertex(), 24);
-          instance.add(wall, 10);
+          instance.add(wall.startVertex(), 40);
+          // instance.add(wall.endVertex(), 40);
+          instance.add(wall, 20);
         }
       }
       const objects = l.activeObjects();
@@ -34,13 +34,14 @@ class LayoutHoverMap extends MeasurementHoverMap2d {
         const snap = objects[index].snap2d.top();
         const snapLocs = snap.snapLocations();
         snapLocs.forEach(l => instance.add(l.center(), 6, l));
-        instance.add(snap.object(), () => snap.minRadius(), snap);
+        snap.object().lines().forEach(l => instance.add(l, 15));
       }
     }
 
     this.update = () => construct();
 
     construct();
+    layout.onChange(construct);
   }
 }
 

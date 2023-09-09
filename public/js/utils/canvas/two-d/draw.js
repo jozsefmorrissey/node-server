@@ -36,7 +36,7 @@ class Draw2d {
           draw.line(object, color, width);
           break;
         case 'Vertex2d':
-          draw.circle(new Circle2d(2, object), color, width);
+          draw.vertex(object, color, width);
           break;
         case 'Circle2d':
           draw.circle(object, color, width);
@@ -106,6 +106,10 @@ class Draw2d {
     function midpointFlags(line) {
       midpointFlag(line.midpoint(), Math.toRadians(line.degrees() - 135));
       midpointFlag(line.midpoint(), Math.toRadians(line.degrees() + 135));
+    }
+
+    draw.vertex = (vertex, color, width) => {
+      draw.circle(new Circle2d(2, vertex), color, width);
     }
 
     draw.line = (line, color, width, indicateDirection) => {

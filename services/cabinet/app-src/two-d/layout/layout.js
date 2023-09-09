@@ -40,9 +40,11 @@ class Layout2D extends Lookup {
     const addEvent = new CustomEvent('add');
     const removeEvent = new CustomEvent('remove');
     const stateChangeEvent = new CustomEvent('stateChange');
-    this.onAdd = (func) => addEvent.on(func);
-    this.onRemove = (func) => removeEvent.on(func);
-    this.onStateChange = (func) => stateChangeEvent.on(func);
+    const changeEvent = new CustomEvent('change');
+    this.onAdd = addEvent.on;
+    this.onChange = changeEvent.on;
+    this.onRemove = removeEvent.on;
+    this.onStateChange = stateChangeEvent.on;
 
     Object.getSet(this, {objects: [], walls});
     const initialized = walls.length > 0;
@@ -51,6 +53,7 @@ class Layout2D extends Lookup {
     this.startLine = () => this.walls()[0];
     this.endLine = () => this.walls()[this.walls().length - 1];
 
+    let lastHash;
     this.hash = () => {
       let hash = 1;
       const walls = this.walls();
@@ -61,6 +64,8 @@ class Layout2D extends Lookup {
       for(let index = 0; index < objects.length; index++) {
         hash *= objects[index].hash();
       }
+      if (lastHash !== hash) changeEvent.trigger(this);
+      lastHash = hash;
       return hash;
     }
 

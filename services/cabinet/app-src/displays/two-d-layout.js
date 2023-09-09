@@ -39,11 +39,9 @@ TwoDLayout.set = (l) => {
 function rulerClick(elem) {
   du.class.toggle(elem, 'active');
   if (du.class.has(elem, 'active')) {
-    // hovermap.enable();
-    // measurementLines = [];
+    hoverMap.measurements.enable()
   } else {
-    // hovermap.disable();
-    // measurementLines = null;
+    hoverMap.measurements.disable();
   }
 }
 
@@ -53,8 +51,6 @@ du.on.match('click', `.layout.ruler`, rulerClick);
 const windowLineWidth = 8;
 const tolerance = 1;
 let lastImagePoint;
-let dragging;
-let clickHolding = false;
 let mouseupId = 0;
 let mousedownId = 0;
 let popupOpen = false;
@@ -249,17 +245,15 @@ function registerQuickChangeFunc(type, func) {
 }
 
 function onMousedown(event, stdEvent) {
-  lastDown = clickHolding ? 0 : new Date().getTime();
+  lastDown = new Date().getTime();
   lastImagePoint = {x: event.imageX, y: event.imageY};
   let hoverin = hoverMap.hovering();
   event.lastImagePoint = new Vertex2d(lastImagePoint);
   if (stdEvent.button == 0) {
-    clickHolding = !popupOpen && (clickHolding || hoverin);
-    if (clickHolding) {
+    if (!popupOpen && hoverin) {
       interactionState.mouseupId = undefined;
       interactionState.mousedownId = ++mousedownId;
     }
-    return clickHolding;
   } else {
     if (hoverin && quickChangeFuncs[hoverin.constructor.name]) {
       quickChangeFuncs[hoverin.constructor.name](hoverin, event, stdEvent);
@@ -440,7 +434,6 @@ popUp.onClose((elem, event) => {
   setTimeout(() => popupOpen = false, 200);
   const attrs = getPopUpAttrs(du.find.closest('[type-2d]',popUp.container()));
   lastDown = new Date().getTime();
-  clickHolding = false;
   interactionState.mouseupId = ++mouseupId;
   interactionState.mousedownId = undefined;
   // if (layout()) layout().history().newState();
@@ -451,13 +444,8 @@ function onMouseup(event, stdEvent) {
     if (lastDown > new Date().getTime() - selectTimeBuffer) {
       setTimeout(() => openPopup(event, stdEvent), 5);
     } else {
-      const clickWasHolding = clickHolding;
-      clickHolding = false;
       interactionState.mouseupId = ++mouseupId;
       interactionState.mousedownId = undefined;
-      // hovering = undefined;
-      // if (layout()) layout().history().newState();
-      return clickWasHolding;
     }
   } else {
     console.log('rightClick: do stuff!!');
@@ -465,34 +453,10 @@ function onMouseup(event, stdEvent) {
   }
 }
 
-let pending = 0;
-let lastPosition;
-function  drag(event)  {
-  let hoverin = hoverMap.hovering();
-  const dragging = true || !popupOpen && clickHolding && hoverin;
-  const position = event ? {x: event.imageX, y: event.imageY} : lastPosition;
-  if (dragging)
-    hoverin.move && hoverin.move(new Vertex2d(position), interactionState);
-  lastPosition = position;
-  return dragging;
+function  drag(hoverin, event)  {
+  const position = {x: event.imageX, y: event.imageY};
+  hoverin.move && hoverin.move(new Vertex2d(position), interactionState);
 }
-
-function hover(event) {
-  if (clickHolding) return true;
-  let hoverin = hoverMap.hovering();
-  const vertex = new Vertex2d(event.imageX, event.imageY);
-  hoverin = hoverMap.hovering();
-  // if (!hoverin && layout().wallHover()) hovering = measurmentMap.hovering(vertex);
-  let found = hoverin == true;
-  return found;
-}
-
-function onMove(event) {
-  if (layout() === undefined) return;
-  const canDrag = !popupOpen && lastDown < new Date().getTime() - selectTimeBuffer * 1.5;
-  return (canDrag && drag(event)) || hover(event);
-}
-
 
 const Controls2d = require('controls-2d');
 let panZ;
@@ -511,7 +475,6 @@ function init() {
   draw.panz(panZ);
   hoverMap = draw.hoverMap();
   hoverMap.on.drag(drag);
-  // panZ.onMove(onMove);
   panZ.onMousedown(onMousedown);
   panZ.onMouseup(onMouseup);
   controls2d = new Controls2d('#two-d-model .orientation-controls', layout, panZ);

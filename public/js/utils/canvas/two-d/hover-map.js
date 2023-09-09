@@ -73,11 +73,11 @@ class HoverMap2d {
   constructor(panZ) {
     let hoverObjects = [];
     let instance = this;
-    let clickHolding = false;
     let dragging = false;
     let clickHolding = false;
     let id = String.random(3);
 
+    this.id = () => id;
     this.objects = () => hoverObjects;
     this.targets = () => this.objects().map(ho => ho.target())
                     .filter(t => !(t instanceof Vertex2d) || t.equals(lastHovered) || t.equals(this.clicked()));
@@ -94,7 +94,7 @@ class HoverMap2d {
 
     let lastHovered;
     this.hovering = (pos, filter) => {
-      if (pos === undefined) return lastHovered;
+      if (clickHolding || pos === undefined) return lastHovered;
       let hoverObjs = this.objects();
       if (filter instanceof Function) hoverObjs = hoverObjs.filter(filter);
       const vertex = pos instanceof Vertex2d ? pos : new Vertex2d(pos);
@@ -124,6 +124,7 @@ class HoverMap2d {
       const hoverEvent = new CustomEvent('hover');
       const hoverOutEvent = new CustomEvent('hoverOut');
       let active = true;
+      let eventsEnabled = true;
 
       this.on = {};
       this.on.click = clickEvent.on;
@@ -132,6 +133,9 @@ class HoverMap2d {
       this.on.drag = dragEvent.on;
       this.disable = () => active = false;
       this.enable = () => active = true;
+
+      this.eventsDisabled = () => !(eventsEnabled = false);
+      this.eventsEnabled = () => eventsEnabled = true;
 
       let stackLimit = 10;
       let hoverStack = new Array(stackLimit).fill(null);
@@ -153,18 +157,19 @@ class HoverMap2d {
         if (!active) return;
         const vertex = new Vertex2d(event.imageX, event.imageY);
         const hovering = instance.hovering(vertex);
-        if (clickHolding && hovering) {
-          return dragEvent.trigger(hovering);
+        if (clickHolding && hovering && eventsEnabled) {
+          dragEvent.trigger(hovering, event);
+          return true;
         }
         const hovered = this.hovered();
         if (hovering !== hovered) {
-          if (hovered) {
+          if (eventsEnabled && hovered) {
             hoverOutEvent.trigger(hovered);
           }
           hoverStack = [hovering].concat(hoverStack);
           hoverStack.splice(stackLimit);
-          if (hovering) {
-            hoverEvent.trigger(hovering);
+          if (eventsEnabled && hovering) {
+            eventsEnabled && hoverEvent.trigger(hovering);
           }
         }
       });
@@ -177,10 +182,17 @@ class HoverMap2d {
         clickEvent.trigger(hovering);
       });
       panZ.onMouseup((event) => {
+        if (!active) return;
         clickHolding = false;
+        const vertex = new Vertex2d(event.imageX, event.imageY);
+        const hovering = instance.hovering(vertex);
+        return hovering !== null;
       });
       panZ.onMousedown((event) => {
         clickHolding = true;
+        const vertex = new Vertex2d(event.imageX, event.imageY);
+        const hovering = instance.hovering(vertex);
+        return hovering !== null;
       });
 
 

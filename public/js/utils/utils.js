@@ -106,17 +106,17 @@ Function.safeStdLibAddition(Array, 'copy',   function (other) {
 
 Function.safeStdLibAddition(Array, 'filterSplit',   function (filter, ...keys) {
   let truthy = true;
-  if (keys === undefined) keys = [true, false];
+  if (keys.length === 0) keys = [true, false];
   else truthy = false;
-  for (index = 0; index < keys.length; index++) {
-    retVal[keys[index]] === [];
-  }
   const retVal = {};
+  for (index = 0; index < keys.length; index++) {
+    retVal[keys[index]] = [];
+  }
   for (let index = 0; index < this.length; index++) {
     let value = filter(this[index]);
-    if (truthy) value = value == true;
+    if (truthy) value = value && true;
     if (retVal[value] === undefined) retVal[value] = [];
-    retVal[value] = this[index];
+    retVal[value].push(this[index]);
   }
   return retVal;
 });
