@@ -196,7 +196,8 @@ var httpServer = http.createServer(app);
 // var httpsServer = http.createServer(app);
 var httpsServer = https.createServer(https_options, app);
 httpServer.listen(3000);
-if (global.ENV === 'prod') httpsServer.listen(443);
+httpServer.listen(3001);
+if (global.ENV === 'prod') https.createServer(https_options, app).listen(443);
 
 var user = getUser();
 //shell.exec("xdg-open \"https://localhost:3001/debug-gui/html/debug-gui-client-test.html?DebugGui.id=" + user + "\"");
