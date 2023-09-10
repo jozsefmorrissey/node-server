@@ -23,7 +23,6 @@ function cleanObj(obj) {
   const cleanObj = {};
   for (let index = 0; index < keys.length; index += 1) {
     const key = keys[index];
-    console.log('key:', key)
     cleanObj[key] = clean(obj[key]);
   }
   return cleanObj;
@@ -91,7 +90,7 @@ function exicuteCmd(cmd, req) {
       validateCmd += ` && ${cmd}${debugStr}`;
     }
 
-    const returnValue = shell.exec(validateCmd, {silent: false});
+    const returnValue = shell.exec(validateCmd, {silent: true});
     lockout(clBody.group, returnValue.code, tokenPinErrorStr(clBody.token, clBody.pstPin))
     return returnValue;
   }
@@ -166,7 +165,6 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
   app.post(prefix + '/validate/value', function(req, res, next) {
     const clBody = cleanObj(req.body);
     const cmd = `pst validateValue -group '${clBody.group}' -key '${clBody.key}' -value '${clBody.value}'`;
-    console.log(cmd)
     const validated = shell.exec(cmd, {silent: false});
     try {
       lockout(clBody.group, validated.code, `${clBody.key}=>${clBody.value}`);
@@ -182,7 +180,6 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
     debugValues(req, '/validate', req.body, {group: 'required', pstPin: 'required if set', token: 'required'});
     const clBody = cleanObj(req.body);
     const cmd = `pst validateToken '${clBody.group}' '${clBody.token}' '${clBody.pstPin}'`;
-    console.log(cmd)
     const validated = shell.exec(cmd, {silent: false});
     try {
       lockout(clBody.group, validated.code, tokenPinErrorStr(clBody.token, clBody.pstPin));
@@ -203,9 +200,7 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
     if (key === 'token' || key === 'pstPin') return new Error('Cannot validate token or pstPin');
     const cmd = `pst validateValue -group '${group}' -key '${key}' -value '${value}'`;
     const output = shell.exec(cmd).replace('\n', '');
-    console.log(cmd);
     const validated = shell.exec(cmd, {silent: false});
-    console.log('code', validated.code)
     if (validated.code === 0) {
       return true;
     } else {
@@ -227,10 +222,8 @@ function randPassword(len, numberLen, capLetLen, specCharLen, specChars) {
     const clBody = cleanObj(req.params);
     const e = valueValidated(clBody.group, clBody.key, clBody.value);
     if (e === true) {
-      console.log('truedat');
       res.send('success');
     } else {
-      console.log('falsedat');
       res.statusMessage = e + "";
       res.status(416);
       res.send(e.msg);
