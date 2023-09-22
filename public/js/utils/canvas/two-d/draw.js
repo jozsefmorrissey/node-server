@@ -28,39 +28,37 @@ class Draw2d {
           draw(object[index], color, width);
         return;
       }
-      let constructorId = object.constructor.name;
-      if (constructorId !== 'SnapLocation2d')
-        constructorId = constructorId.replace(/^(Snap).*$/, '$1')
-      switch (constructorId) {
-        case 'Line2d':
-          draw.line(object, color, width);
-          break;
-        case 'Vertex2d':
-          draw.vertex(object, color, width);
-          break;
-        case 'Circle2d':
-          draw.circle(object, color, width);
-          break;
-        case 'Plane2d':
+
+      if (object instanceof Vertex2d) draw.vertex(object, color, width);
+      else if (object instanceof Line2d) draw.line(object, color, width);
+      else if (object instanceof Circle2d) draw.circle(object, color, width);
+      else {
+        let constructorId = object.constructor.name;
+        if (constructorId !== 'SnapLocation2d')
+          constructorId = constructorId.replace(/^(Snap).*$/, '$1');
+
+        switch (constructorId) {
+          case 'Plane2d':
           draw.plane(object, color, width);
           break;
-        case 'Polygon2d':
+          case 'Polygon2d':
           draw.polygon(object, color, width);
           break;
-        case 'Square2d':
+          case 'Square2d':
           draw.square(object, color, width);
           break;
-        case 'LineMeasurement2d':
+          case 'LineMeasurement2d':
           draw.measurement(object, color, width);
           break;
-        case 'Snap':
+          case 'Snap':
           draw.snap(object, color, width);
           break;
-        case 'SnapLocation2d':
+          case 'SnapLocation2d':
           draw.snapLocation(object, color, width);
-        break;
-        default:
+          break;
+          default:
           console.error(`Cannot Draw '${object.constructor.name}'`);
+        }
       }
     }
 

@@ -25,6 +25,7 @@ class AutoToekick extends Assembly {
 
     Object.getSet(this, {rightEndStyle: false, leftEndStyle: false});
     const instance = this;
+    this.parentAssembly(cabinet);
     let toeKick;
     let vOid;
     let offsetToeKickPoly;
@@ -50,6 +51,9 @@ class AutoToekick extends Assembly {
     const cutter = new CutterModel('tkc', `${atkid}.Cutter`, toModel('vOid'));
     joint(cutter)('R', () => !this.rightEndStyle());
     joint(cutter)('L', () => !this.leftEndStyle());
+
+    toeKickPanel.parentAssembly(this);
+    cutter.parentAssembly(this);
     const assems = [toeKickPanel, cutter];
 
     // function updateSupports() {

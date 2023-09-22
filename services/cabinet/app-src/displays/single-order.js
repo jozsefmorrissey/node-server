@@ -45,26 +45,26 @@ const RoomDisplay = require('./room');
 let roomDisplay = new RoomDisplay('#room-cnt', Global.order());
 Global.displays.room(roomDisplay);
 
-du.on.match('click', '#copy-order', (elem) => {
-  du.copy(JSON.stringify(Global.order().toJson()));
-});
-du.on.match('click', '#paste-order', async (elem) => {
-  navigator.clipboard.readText()
-    .then(text => {
-      try {
-        const order = Object.fromJson(JSON.parse(text));
-        if (!(order instanceof Order)) throw new Error();
-        switchOrder(elem, order);
-        Global.order(order);
-      } catch (e) {
-        alert('clipboard does not contain a valid Order');
-      }
-    })
-    .catch(err => {
-      console.error('Failed to read clipboard contents: ', err);
-    });
-});
-
+// du.on.match('click', '#copy-order', (elem) => {
+//   du.copy(JSON.stringify(Global.order().toJson()));
+// });
+// du.on.match('click', '#paste-order', async (elem) => {
+//   navigator.clipboard.readText()
+//     .then(text => {
+//       try {
+//         const order = Object.fromJson(JSON.parse(text));
+//         if (!(order instanceof Order)) throw new Error();
+//         switchOrder(elem, order);
+//         Global.order(order);
+//       } catch (e) {
+//         alert('clipboard does not contain a valid Order');
+//       }
+//     })
+//     .catch(err => {
+//       console.error('Failed to read clipboard contents: ', err);
+//     });
+// });
+//
 
 const saveCntId = 'order-select-cnt';
 const getAutoSaveElem = (selector) => () => du.find.down(selector, du.id(saveCntId));
@@ -178,7 +178,7 @@ du.on.match('click', '#save-time-cnt', () => saveMan.save() || resetOrderAndVers
 
 let firstSwitch = true;
 async function switchOrder(elem, details) {
-  const order = Global.order();
+  let order = Global.order();
   if (order.name() === details.orderName && order.versionId() === details.versionId) return;
   updateOrderInput();
   if (details instanceof Order) {
@@ -189,15 +189,24 @@ async function switchOrder(elem, details) {
     return;
   }
   try {
-    let order;
     if (details.contents) {
-      order = Object.fromJson(details.contents);
+      let shouldSwitch = true;
+      if (firstSwitch && order.worthSaveing()) {
+        const name = order.name();
+        const version = order.versionId();
+        shouldSwitch = false;
+      }
+      if (shouldSwitch) {
+        order = Object.fromJson(details.contents);
+      }
     }
     if (!(order instanceof Order)) throw new Error('unknown order format');
     orderNameInput.value = order.name();
     orderVersionInput.value = order.versionId();
     Global.order(order);
     resetOrderAndVersion();
+    const state = saveMan.state(order.name(), order.versionId());
+    setCookie();
   } catch (e) {
     console.warn(e);
   }

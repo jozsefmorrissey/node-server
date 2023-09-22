@@ -5,15 +5,21 @@ const Void = require('../../../objects/assembly/assemblies/void.js');
 const AssemblyConfigInput = require('../../../input/assembly-config.js');
 const Measurement = require('../../../../../../public/js/utils/measurement.js');
 const Cabinet = require('../../../objects/assembly/assemblies/cabinet.js');
+const CustomEvent = require('../../../../../../public/js/utils/custom-event.js');
+const Lookup = require('../../../../../../public/js/utils/object/lookup.js');
 
 const voids = (cabinet) => Object.values(cabinet.subassemblies).filter(s => s instanceof Void);
 const getCabinet = (elem) => Cabinet.get(du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id'));
 
-class VoidDisplay {
+class VoidDisplay extends Lookup {
   constructor(cabinet) {
+    super();
+    const addEvent = new CustomEvent('add');
     this.cabinetId = () => cabinet.id();
     this.assemblyConfig = (vOid) => new AssemblyConfigInput(vOid);
     this.voids = () => voids(cabinet);
+    this.on = {add: addEvent.on};
+    this.trigger = {add: addEvent.trigger};
 
     this.html = () => VoidDisplay.template.render(this);
   }
@@ -37,6 +43,9 @@ du.on.match('click', `.void-display-cnt .add-void-btn`, (elem) => {
   vOid.includedSides(config.includedSides);
   vOid.jointSet(config.jointSet);
   cabinet.addSubAssembly(vOid);
+  const voidId = du.find.up('[void-id]', elem).getAttribute('void-id');
+  const voidDisplay = VoidDisplay.get(voidId);
+  voidDisplay.trigger.add(vOid);
 })
 
 du.on.match('change', `.void-display-cnt .input-set input`, (elem) => {
@@ -45,7 +54,6 @@ du.on.match('change', `.void-display-cnt .input-set input`, (elem) => {
   const vOid = voids(cabinet)[index];
   let value = elem.type === 'checkbox' ? elem.checked : elem.value;
   vOid.pathValue(elem.name, value);
-  console.log('booooooyayyaaaaaackccckcckkaaaaa!!')
 });
 
 du.on.match('change', `.void-display-cnt .set-selector`, (elem) => {
@@ -53,7 +61,6 @@ du.on.match('change', `.void-display-cnt .set-selector`, (elem) => {
   const cabinet = getCabinet(elem);
   const vOid = voids(cabinet)[index];
   vOid.jointSet(elem.value);
-  console.log('booooooyayyaaaaaackccckcckkaaaaa!!')
 });
 
 

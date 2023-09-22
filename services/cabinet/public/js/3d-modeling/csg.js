@@ -54,6 +54,18 @@ const GL = require('./lightgl.js');
 
 CSG = function() {
   this.polygons = [];
+  this.toString = () => {
+    let str = '';
+    for (let index = 0; index < this.polygons.length; index++) {
+      const verts = this.polygons[index].vertices;
+      str += '['
+      for (let v = 0; v < verts.length; v++) {
+        str += `${verts[v].toString()},`;
+      }
+      str = `${str.substring(0, str.length - 1)}]\n`;
+    }
+    return str;
+  }
 };
 
 // Construct a CSG solid from a list of `CSG.Polygon` instances.
@@ -497,6 +509,7 @@ CSG.Vector.prototype = {
 CSG.Vertex = function(pos, normal) {
   this.pos = new CSG.Vector(pos);
   this.normal = new CSG.Vector(normal);
+  this.toString = () => `(${this.pos.x},${this.pos.y},${this.pos.z})`;
 };
 
 CSG.Vertex.prototype = {

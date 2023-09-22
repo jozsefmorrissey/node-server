@@ -1,6 +1,7 @@
 
 const Test = require('../../../../public/js/utils/test/test').Test;
 const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
+const CabinetLayouts = require('../../app-src/config/cabinet-layouts.js');
 const approximate = require('../../../../public/js/utils/approximate.js').new(100);
 
 
@@ -144,5 +145,17 @@ Test.add('Cabinet: doorIntersect',(ts) => {
   // ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 17.57);
   // ts.assertEquals(approximate(Math.toDegrees(dx.center.left.theta)), 59.04);
 
+  ts.success();
+});
+
+const cleanJson = (json) => Object.filter(json, (c, key) =>
+  key && key.match(/(id|parentAssemblyId)/), false).complement;
+Test.add('Cabinet: to/from Json',(ts) => {
+  const cabinet = Cabinet.build('base');
+  CabinetLayouts.map['test'].build(cabinet);
+  const json = cleanJson(cabinet.toJson());
+  const copy = Cabinet.fromJson(cabinet.toJson());
+  const copyJson = cleanJson(copy.toJson());
+  ts.assertTrue(Object.equals(json, copyJson));
   ts.success();
 });

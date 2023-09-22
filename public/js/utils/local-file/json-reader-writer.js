@@ -37,7 +37,7 @@ class JsonReaderWriter {
           const hash = JSON.stringify(built).hash();
           lastHashes[rootDirectoryHelper.absPath()] = hash;
         }
-        return built || {};
+        return built;
       } catch (e) {
         console.error(e);
         return null;

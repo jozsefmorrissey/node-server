@@ -10,13 +10,13 @@ const Polygon3D = require('../three-d/objects/polygon.js');
 const BiPolygon = require('../three-d/objects/bi-polygon.js');
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
-const PanZoom = require('../../../../public/js/utils/canvas/two-d/pan-zoom.js');
+const PanZoomClickMeasure = require('../../../../public/js/utils/canvas/two-d/pan-zoom-click-measure.js');
 const Global = require('../services/global.js');
 const CSG = require('../../public/js/3d-modeling/csg');
 const CabinetModel = require('../three-d/cabinet-model.js');
 const ThreeViewObj = require('../../../../public/js/utils/canvas/two-d/objects/three-view.js')
 const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
-const MeasurementHoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map/measurements.js');
+const HoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map.js');
 
 FunctionCache.on('three-view', 1000);
 function csgVert(pos, normal) {
@@ -147,9 +147,9 @@ class ThreeView extends Lookup {
     function init() {
       draw = new Draw2D(du.id('three-view'), true);
 
-      panz = new PanZoom(draw.canvas(), drawView);
+      hovermap = new HoverMap2d();
+      panz = new PanZoomClickMeasure(draw.canvas(), drawView, () => hoverMap);
       panz.centerOn(0, 0);
-      hovermap = new MeasurementHoverMap2d(panz);
 
       du.on.match('change', '[name="partSelector"]', onPartSelect);
     }

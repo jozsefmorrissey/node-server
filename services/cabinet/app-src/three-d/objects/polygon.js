@@ -47,6 +47,12 @@ class Polygon3D {
       return noZeros.concat(oneZero).concat(twoZeros).concat(origin);
     }
 
+    this.reverse = () => {
+      const verts = this.vertices();
+      verts.reverse();
+      return new Polygon3D(verts);
+    }
+
     function getPlane() {
       let points = planePoints();
       let parrelle = true;
@@ -87,9 +93,20 @@ class Polygon3D {
         throw new Error('InvalidPolygon: points are in a line');
 
       const normVect = vector1.crossProduct(vector2);
-      return normVect.scale(1 / normVect.magnitude());
+      const mag = normVect.magnitude();
+      if (mag === 0) throw 'InvalidPolygon: normal vector magnitude === 0';
+      return normVect.scale(1 / mag);
     }
     this.normal = calcNormal;
+
+    this.valid = () => {
+      try {
+        this.normal();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
 
     this.translate = (vector) => {
       const verts = [];
@@ -125,6 +142,22 @@ class Polygon3D {
       lines[1].adjustLength(lines[1].length() - down, true);
       lines[3].adjustLength(lines[3].length() - up, true);
       lines[3].adjustLength(down - lines[3].length(), false);
+    }
+
+    this.resize = (width, height) => {
+      lines[0].adjustLength(width);
+      lines[2].adjustLength(width);
+
+      lines[1].adjustLength(height);
+      lines[3].adjustLength(height);
+    }
+
+    this.scale = (width, height) => {
+      lines[0].adjustLength(lines[0].length()*width);
+      lines[2].adjustLength(lines[2].length()*width);
+
+      lines[1].adjustLength(lines[1].length()*height);
+      lines[3].adjustLength(lines[3].length()*height);
     }
 
     this.parrelleAt = (distance) => {
@@ -603,6 +636,62 @@ Polygon3D.viewFromVector = (polygons, vector) => {
     orthoPolys.push(new Polygon3D(orthoVerts));
   }
   return orthoPolys;
+}
+
+Polygon3D.fromIntersections = (intersected, intersectors) => {
+  let lines = [];
+  const plane = intersected.toPlane();
+  const mi = Polygon3D.mostInformation([intersected]);
+  const poly2d = intersected.to2D(mi[0], mi[1]);
+  for (let index = 0; index < intersectors.length; index++) {
+    const polyLines = intersectors[index].lines();
+    const verts = [];
+    for (let lIndex = 0; lIndex < polyLines.length; lIndex++) {
+      const line = polyLines[lIndex];
+      const intersect = plane.intersection.line(line);
+      if (intersect) {
+        if (poly2d.isWithin(intersect.to2D(mi[0], mi[1]))) {
+          verts.push(intersect);
+        }
+      }
+    }
+    if (verts.length > 1) {
+      let biggest = new Line3D(verts[0], verts[1]);
+      for (let vIndex = 2; vIndex < verts.length; vIndex++) {
+        const vert = verts[vIndex];
+        const line1 = biggest.clone();
+        line1.startVertex = vert;
+        const line2 = biggest.clone();
+        line2.endVertex = vert;
+        if (line1.length() > biggest.length()) biggest = line1;
+        if (line2.length() > biggest.length()) biggest = line2;
+      }
+      lines.push(biggest);
+    }
+  }
+  for (let index = 1; index < lines.length + 1; index++) {
+    let prevLine = lines[index - 1];
+    const i = index % lines.length;
+    let line = lines[i];
+    if (index === 1) {
+      const ssd = prevLine.startVertex.distance(line.startVertex);
+      const sed = prevLine.startVertex.distance(line.endVertex);
+      const esd = prevLine.endVertex.distance(line.startVertex);
+      const eed = prevLine.endVertex.distance(line.endVertex);
+      const minS = ssd < sed ? ssd : sed;
+      const minE = esd < eed ? esd : eed;
+      if (minS < minE) prevLine = lines[0] = prevLine.negitive();
+    }
+    const endVertCloser = prevLine.endVertex.distance(line.endVertex) <
+                          prevLine.endVertex.distance(line.startVertex);
+    if (endVertCloser) line = lines[i] = line.negitive();
+    const connected = prevLine.endVertex.equals(line.startVertex);
+    if (!connected) {
+      const newL = new Line3D(prevLine.endVertex, line.startVertex);
+      lines = lines.splice(0, i).concat([newL]).concat(lines);
+    }
+  }
+  return new Polygon3D(lines.map(l => l.startVertex));
 }
 
 module.exports = Polygon3D;

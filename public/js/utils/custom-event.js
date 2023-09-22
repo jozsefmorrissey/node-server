@@ -3,14 +3,14 @@
 
 
 class CustomEvent {
-  constructor(name) {
+  constructor(name, runOnAdd) {
     const watchers = [];
     this.name = name;
 
     const runFuncs = (elem, detail) =>
     watchers.forEach((func) => {
       try {
-        func(elem, detail);
+        func(elem, detail, event);
       } catch (e) {
         console.error(e);
       }
@@ -20,6 +20,7 @@ class CustomEvent {
     this.watchers = () => watchers;
     this.on = function (func) {
       if ((typeof func) === 'function') {
+        if (runOnAdd) func();
         watchers.push(func);
       } else {
         return 'on' + name;
@@ -29,26 +30,27 @@ class CustomEvent {
     this.trigger = function (element, detail) {
       element = element ? element : window;
       runFuncs(element, detail);
-      this.event.detail = detail;
+      event.detail = detail;
       if (element instanceof HTMLElement) {
         if(document.createEvent){
-          element.dispatchEvent(this.event);
+          element.dispatchEvent(event);
         } else {
-          element.fireEvent("on" + this.event.eventType, this.event);
+          element.fireEvent("on" + event.eventType, event);
         }
       }
     }
 //https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
-    this.event;
+    let event;
     if(document.createEvent){
-        this.event = document.createEvent("HTMLEvents");
-        this.event.initEvent(name, true, true);
-        this.event.eventName = name;
+        event = document.createEvent("HTMLEvents");
+        event.initEvent(name, true, true);
+        event.eventName = name;
     } else {
-        this.event = document.createEventObject();
-        this.event.eventName = name;
-        this.event.eventType = name;
+        event = document.createEventObject();
+        event.eventName = name;
+        event.eventType = name;
     }
+    this.event = event;
   }
 }
 

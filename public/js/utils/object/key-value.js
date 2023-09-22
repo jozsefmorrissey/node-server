@@ -4,11 +4,14 @@ const Notifiction = require('../collections/notification.js');
 const NotifictionArray = Notifiction.Array;
 const CustomEvent = require('../custom-event.js');
 
-function updateParent(keyValue) {
+function updateParent(keyValue, event) {
   return (target, detail) => {
     if (detail.new instanceof KeyValue) {
       const parentAttr = detail.new.value.parentAttribute();
-      if (parentAttr) detail.new[parentAttr](keyValue);
+      if (parentAttr) {
+        detail.new[parentAttr](keyValue);
+        if (event) detail.new.trigger.parentSet();
+      }
     }
   }
 }
@@ -29,15 +32,22 @@ class KeyValue extends Lookup {
     const childAttr = properties.childrenAttribute;
     const parentAttr = properties.parentAttribute;
     const customFuncs = [];
+    const parentSetEvent = new CustomEvent('parent-set');
+    this.parentSetEvent = parentSetEvent;
 
 
     if (childAttr) {
       if (properties.object) this[childAttr] = new Notifiction(false);
       else this[childAttr] = new NotifictionArray(false);
-      this[childAttr].onAfterChange(updateParent(this));
+      this[childAttr].onAfterChange(updateParent(this, parentSetEvent));
       this.getRoot = () => {
         let curr = this;
-        while(curr.parentAssembly() !== undefined) curr = curr.parentAssembly();
+        while(curr.parentAssembly() !== undefined) {
+          curr = curr.parentAssembly();
+          if (!(curr.parentAssembly instanceof Function)) {
+            console.log('here');
+          }
+        }
         return curr;
       }
     }
@@ -56,6 +66,10 @@ class KeyValue extends Lookup {
       return json;
     }
 
+    this.on ||= {};
+    this.on.parentSet = parentSetEvent.on;
+    this.trigger ||= {};
+    this.trigger.parentSet = parentSetEvent.trigger;
     this.value = (key, value) => {
       try {
         const formatted = (typeof this.value.keyFormatter) === 'function' ? this.value.keyFormatter(key) : undefined;

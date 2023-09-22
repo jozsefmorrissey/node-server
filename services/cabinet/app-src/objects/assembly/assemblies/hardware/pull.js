@@ -71,7 +71,8 @@ class Handle extends Assembly {
       return center;
     };
 
-    super(`${partCode}-${location.position.toKebab()}`, 'Handle');
+    partCode = partCode && partCode.match(/.{1,}-[0-9]{1,}/) ? partCode : `${partCode}-${index}`;
+    super(partCode, 'Handle');
     Object.getSet(this, {location});
     this.partName = () =>
       `${this.parentAssembly().partName()}.Pull.${this.location().position}`;
@@ -110,7 +111,7 @@ class Handle extends Assembly {
   }
 }
 Handle.location = {};
-Handle.location.TOP_RIGHT = {rotate: true, position: 'TOP_Right'};
+Handle.location.TOP_RIGHT = {rotate: true, position: 'TOP_RIGHT'};
 Handle.location.TOP_LEFT = {rotate: true, position: 'TOP_LEFT'};
 Handle.location.BOTTOM_RIGHT = {rotate: true, position: 'BOTTOM_RIGHT'};
 Handle.location.BOTTOM_LEFT = {rotate: true, position: 'BOTTOM_LEFT'};
@@ -121,6 +122,12 @@ Handle.location.LEFT = {multiple: true, rotate: true, position: 'LEFT'};
 Handle.location.CENTER = {multiple: true, position: 'CENTER'};
 
 Handle.abbriviation = 'hn';
+
+Handle.fromJson = (json) => {
+  const obj = Assembly.fromJson(json);
+  obj.location(Handle.location[json.location.position]);
+  return obj;
+}
 
 
 module.exports = Handle

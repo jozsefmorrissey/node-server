@@ -16,6 +16,9 @@
   <label>Name</label>
   <input class='template-input' attr='subassemblies' name="name" value="{{obj.name}}">
   <div>
+    {{dividerTypeSelect && dividerTypeSelect.html()}}
+  </div>
+  <div>
     {{referenceSelect.html()}}
     <select name='type' hidden>
       <option>All</option>

@@ -65,6 +65,9 @@ new DualDoorSection();
 const FalseFrontSection = require('./assemblies/section/sections/false-front.js');
 new FalseFrontSection();
 
+const PanelSection = require('./assemblies/section/sections/panel.js');
+new PanelSection();
+
 // const SpaceSection = require('./assemblies/section/space/space.js');
 // new SpaceSection();
 
@@ -73,6 +76,9 @@ new Cutter();
 
 const CutterModel = Cutter.Model;
 new CutterModel();
+
+const CutterPoly = Cutter.Poly;
+new CutterPoly();
 
 const Void = require('./assemblies/void.js');
 new Void(new Assembly());

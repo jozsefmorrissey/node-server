@@ -7,6 +7,8 @@ const getDefaultSize = require('../../utils.js').getDefaultSize;
 const Vertex3D = require('../../three-d/objects/vertex.js');
 const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
+const Joint = require('../joint/joint');
+const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
 
 FunctionCache.on('hash', 250);
 const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
@@ -26,6 +28,7 @@ class Assembly extends KeyValue {
     const initialVals = {
       part: true,
       included: true,
+      includeJoints: true,
       centerConfig, demensionConfig, rotationConfig, partCode, partName,
       propertyId: undefined,
     }
@@ -91,9 +94,10 @@ class Assembly extends KeyValue {
     this.eval = (eqn) => sme.eval(eqn, this);
     this.evalObject = (obj) => sme.evalObject(obj, this);
 
-let ranCount = 0;
+    const changeEvent = new CustomEvent('change', true);
+    this.on.change = changeEvent.on;
+    let lastHash;
     function hash() {
-      ranCount++;
       const valueObj = instance.value.values;
       const keys = Object.keys(valueObj).sort();
       let hash = 0;
@@ -105,42 +109,15 @@ let ranCount = 0;
       for (let index = 0; index < subAssems.length; index++) {
         hash += subAssems[index].hash(true);
       }
+      if (hash !== lastHash) {
+        changeEvent.trigger(instance);
+      }
+      lastHash = hash;
       return hash;
     }
 
     const keyValHash = this.hash;
     this.hash = new FunctionCache(hash, this, 'hash');
-
-    let buildCenter;
-    let lastBChash;
-    this.buildCenter = () => {
-      const currHash = this.hash();
-      if (lastBChash !== currHash) {
-        let minX = Number.MAX_SAFE_INTEGER;
-        let minY = Number.MAX_SAFE_INTEGER;
-        let minZ = Number.MAX_SAFE_INTEGER;
-        let maxX = Number.MIN_SAFE_INTEGER;
-        let maxY = Number.MIN_SAFE_INTEGER;
-        let maxZ = Number.MIN_SAFE_INTEGER;
-        const parts = this.getParts();
-        for (let index = 0; index < parts.length; index++) {
-          const limits = parts[index].position().limits();
-          minX = Math.min(minX, limits['-x']);
-          minY = Math.min(minY, limits['-y']);
-          minZ = Math.min(minZ, limits['-z']);
-          maxX = Math.max(maxX, limits.x);
-          maxY = Math.max(maxY, limits.y);
-          maxZ = Math.max(maxZ, limits.z);
-        }
-        buildCenter = new Vertex3D({
-          x: (maxX+minX)/2,
-          y: (maxY+minY)/2,
-          z: (maxZ+minZ)/2,
-        });
-        // lastBChash = currHash;
-      }
-      return buildCenter;
-    }
 
     this.group = (g) => {
       if (g) group = g;
@@ -183,31 +160,58 @@ let ranCount = 0;
       while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
       return currAssem;
     }
-    this.getJoints = (pc) => {
+
+    // decendents = (assem) => {
+    //   const children = [];
+    //   const subAssems = Object.values(assem.subassemblies);
+    //   for (let index = 0; index < subAssems.length; index++) {
+    //     const child = subAssems[index];
+    //     children.push(child);
+    //     children.concatInPlace(decendents(assem));
+    //   }
+    //   return children;
+    // }
+    //
+    // relatedAssemblies = (assem) => {
+    //   const related= [assem];
+    //   let curr = assem;
+    //   while ((curr = curr.parentAssembly())) related.push(curr);
+    //   const root = related[related.length - 1];
+    //   related.concatInPlace(Object.values(root.subassemblies));
+    //   related.concatInPlace(decendents(assem));
+    //   return related;
+    // }
+
+    this.getJoints = new FunctionCache((pc, assem) => {
       const root = this.getRoot();
-      if (root !== this) return root.getJoints(pc || partCode);
+      if (root !== this) return root.getJoints(pc || partCode, this);
+      if (pc === 'dvp1') {
+        console.log('here?');
+      }
       pc = pc || partCode;
       const assemList = this.getSubassemblies();
-      let jointList = [].concat(this.joints);
+      let jointList = this.joints;
+      if (assem) jointList.concatInPlace(assem.joints);
       assemList.forEach((assem) => jointList = jointList.concat(assem.joints));
       let joints = {male: [], female: []};
-      jointList.forEach((joint) => {
-        if (joint.malePartCode() === pc) {
+      const addJoint = (joint) => {
+        if (joint instanceof Joint.References) {
+          joint.list().forEach(addJoint);
+        } else if (joint.malePartCode() === pc) {
           joints.male.push(joint);
         } else if (joint.femalePartCode() === pc) {
           joints.female.push(joint);
         }
-      });
+      };
+      jointList.forEach(addJoint);
       return joints;
-    }
-    function initObj(value) {
-      const obj = {};
-      for (let index = 1; index < arguments.length; index += 1) {
-        obj[arguments[index]] = value;
-      }
-      return obj;
-    }
+    }, this, 'hash'); // TODO: this should be under a different group...I think
 
+
+    let jointList;
+    this.getJointList = () => {
+      return jointList || [];
+    }
 
     this.setSubassemblies = (assemblies) => {
       this.subassemblies = {};
@@ -221,18 +225,21 @@ let ranCount = 0;
     }
 
     // TODO: wierd dependency on inherited class.... fix!!!
-    const defaultPartCode = () =>
-      instance.partCode(instance.partCode() || Assembly.partCode(this));
+    // const defaultPartCode = () =>
+    //   instance.partCode(instance.partCode() || Assembly.partCode(this));
 
-    this.setParentAssembly = (pa) => {
-      this.parentAssembly(pa);
-      defaultPartCode();
+    let parentAssembly;
+    this.parentAssembly = (pa) => {
+      if (pa) {
+        parentAssembly = pa;
+        instance.trigger.parentSet();
+      }
+      return parentAssembly;
     }
     this.addSubAssembly = (assembly) => {
       if ((typeof assembly.partCode) !== 'function')
         console.log('wtf')
       this.subassemblies[assembly.partCode()] = assembly;
-      // assembly.setParentAssembly(this);
     }
 
     this.objId = this.constructor.name;
@@ -264,7 +271,7 @@ let ranCount = 0;
     this.getParts = () => {
       return this.getSubassemblies().filter((a) => {
         if ((typeof a.part) !== 'function') {
-          console.log('party')
+          console.log('party!')
         }
         return a.part() && a.included()
       });
@@ -280,7 +287,40 @@ let ranCount = 0;
     this.length = (value) => position.setDemension('y', value);
     this.thickness = (value) => position.setDemension('z', value);
     this.toString = () => `${this.id()} - ${this.partName()}`;
-    defaultPartCode();
+
+    let buildCenter;
+    this.buildCenter = (reevaluate) => {
+      if (reevaluate === true) {
+        let minX = Number.MAX_SAFE_INTEGER;
+        let minY = Number.MAX_SAFE_INTEGER;
+        let minZ = Number.MAX_SAFE_INTEGER;
+        let maxX = Number.MIN_SAFE_INTEGER;
+        let maxY = Number.MIN_SAFE_INTEGER;
+        let maxZ = Number.MIN_SAFE_INTEGER;
+        const parts = instance.getParts();
+        for (let index = 0; index < parts.length; index++) {
+          const limits = parts[index].position().limits();
+          minX = Math.min(minX, limits['-x']);
+          minY = Math.min(minY, limits['-y']);
+          minZ = Math.min(minZ, limits['-z']);
+          maxX = Math.max(maxX, limits.x);
+          maxY = Math.max(maxY, limits.y);
+          maxZ = Math.max(maxZ, limits.z);
+        }
+        buildCenter = new Vertex3D({
+          x: (maxX+minX)/2,
+          y: (maxY+minY)/2,
+          z: (maxZ+minZ)/2,
+        });
+      }
+      return buildCenter;
+    }
+    this.on.change(() => {
+      const joints = this.getJoints(instance.partCode);
+      jointList = joints.male.concat(joints.female);
+    });
+    this.on.change(() => instance.buildCenter(true));
+    // defaultPartCode();
   }
 }
 
@@ -343,10 +383,11 @@ Assembly.fromJson = (assemblyJson) => {
   const assembly = new (clazz)(partCode, partName, centerConfig, demensionConfig, rotationConfig);
   assembly.id(assemblyJson.id);
   assembly.value.all(assemblyJson.value.values);
-  assembly.setParentAssembly(assemblyJson.parent)
-  Object.values(assemblyJson.subassemblies).forEach((json) =>
-    assembly.addSubAssembly(Assembly.class(json._TYPE)
-                              .fromJson(json, assembly)));
+  assembly.parentAssembly(assemblyJson.parent)
+  Object.values(assemblyJson.subassemblies).forEach((json) => {
+    json.constructed = assembly.json;
+    assembly.addSubAssembly(Object.fromJson(json));
+  });
   if (assemblyJson.length) assembly.length(assemblyJson.length);
   if (assemblyJson.width) assembly.width(assemblyJson.width);
   if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);

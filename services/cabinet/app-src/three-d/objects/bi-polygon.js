@@ -32,6 +32,8 @@ class BiPolygon {
       right: this.normalRight()
     });
 
+    this.valid = () => this.front().valid() && this.back().valid();
+
     this.distance = (vertex) => {
       const frontDist = this.front().toPlane().distance(vertex);
       const backDist = this.back().toPlane().distance(vertex);
@@ -219,6 +221,19 @@ class BiPolygon {
       }
 
       return polygons;
+    }
+
+    this.closestPoly = (vertex) => {
+      const polys = this.toPolygons();
+      let closest = null;
+      for (let index = 0; index < polys.length; index++) {
+        const poly = polys[index];
+        const dist = poly.center().distance(vertex);
+        if (closest === null || closest.dist > dist) {
+          closest = {poly, dist};
+        }
+      }
+      return closest && closest.poly;
     }
 
     this.to2D = (vector) => {

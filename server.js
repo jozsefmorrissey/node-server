@@ -49,11 +49,13 @@ if (shell.exec('[ -d ~/.cert ] && echo true', {silent: true}).stdout.trim() !== 
 }
 
 var https_options = {};
-if (global.ENV === 'prod') {
+https_options.agent = false;
+https_options.rejectUnauthorized = false;
+try {
   https_options.key = fs.readFileSync(shell.exec("realpath ~/.cert/__jozsefmorrissey_com.key").stdout.trim());
   https_options.cert = fs.readFileSync(shell.exec("realpath ~/.cert/__jozsefmorrissey_com.crt").stdout.trim());
-  https_options.agent = false;
-  https_options.rejectUnauthorized = false;
+} catch (e) {
+  console.error('failed to read https cert/key');
 }
 
 app.use(function (req, res, next) {

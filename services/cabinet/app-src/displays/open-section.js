@@ -12,6 +12,8 @@ const Measurement = require('../../../../public/js/utils/measurement.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const FeatureDisplay = require('./feature');
 const Inputs = require('../input/inputs.js');
+const Divider = require('../objects/assembly/assemblies/divider.js');
+const Select = require('../../../../public/js/utils/input/styles/select.js');
 
 
 class SectionDisplay {
@@ -114,8 +116,22 @@ OpenSectionDisplay.dividerControlTemplate = new $t('divider-controls');
 OpenSectionDisplay.dividerHtml = (opening) => {
   const selector = `[opening-id="${opening.id()}"].opening-cnt > .divider-controls`;
   const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
-  return OpenSectionDisplay.dividerControlTemplate.render({opening, patternInputHtml});
+  const dividerTypeSelect = new Select({
+    label: 'Type',
+    name: 'dividerType',
+    list: Divider.Types,
+    class: 'divider-type-selector',
+    value: opening.divider().panel().type(),
+    inline: true
+  });
+  return OpenSectionDisplay.dividerControlTemplate.render({opening, patternInputHtml, dividerTypeSelect});
 }
+
+du.on.match('change', '.divider-type-selector', (elem) => {
+  const obj = ExpandableList.get(elem);
+  obj.divider().panel().type(elem.value);
+});
+
 OpenSectionDisplay.updateDividers = (opening) => {
   const focusInfo = du.focusInfo();
   const selector = `[opening-id="${opening.id()}"].opening-cnt > .divider-controls`;
@@ -246,7 +262,9 @@ OpenSectionDisplay.onSectionChange = (target) => {
   section.setSection(target.value === "Open" ? null : target.value);
   const expandHeader = ExpandableList.getHeaderCnt(target);
   const targetCnt = du.find.down('.open-divider-select', expandHeader);
-  targetCnt.innerText = SectionDisplay.formatCoverName(target.value || 'Open');
+  if (targetCnt) {
+    targetCnt.innerText = SectionDisplay.formatCoverName(target.value || 'Open');
+  }
 }
 
 du.on.match('blur:enter', '.division-pattern-input', OpenSectionDisplay.onPatternChange);

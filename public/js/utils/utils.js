@@ -51,6 +51,51 @@ Function.safeStdLibAddition(Function, 'AsyncRunIgnoreSuccessPrintError', functio
   afunc(args).then(() => {}, (e) => console.error(e));
 }, true);
 
+class EventFunction {
+  constructor(event, list) {
+    const add = (func, orderIndex) => {
+      if (func instanceof Function) {
+        if (event.triggered()) func(event.triggered());
+        else {
+          if (!Number.isFinite(orderIndex)) orderIndex = 0;
+          list.push({func, orderIndex});
+        }
+      }
+    }
+    // TODO: I dont know how to define custom function classes....
+    add.id = this.constructor.name;
+    return add;
+  }
+}
+
+class Event {
+  constructor(name) {
+    const list = [];
+    let triggered = false;
+    this.name = () => name;
+    this.triggered = () => triggered;
+    this.add = new EventFunction(this, list);
+    this.trigger = (info) => {
+      const run = !triggered;
+      triggered = info;
+      if (run) list.sortByAttr('orderIndex').forEach(fo => fo.func(info));
+    }
+    return ;
+  }
+}
+
+Function.safeStdLibAddition(Function, 'event', (eventName, object) => {
+  const eventFunc = new Event(eventName);
+  if(object[eventName] && object[eventName].id === 'EventFunction') object[eventName](eventFunc.trigger);
+  Object.defineProperty(object, eventName, {
+      writable: true,
+      enumerable: false,
+      configurable: false,
+      value: eventFunc.add
+  });
+  return eventFunc.trigger;
+}, true);
+
 Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, key) {
   if (!modify) complement = JSON.copy(complement);
   if (func(complement, key)) return {filtered: complement};
@@ -65,7 +110,7 @@ Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify,
     if (seperated.filtered !== undefined) filtered[key] = seperated.filtered;
     setOne = true;
     if (seperated.complement === undefined) delete complement[key];
-    else complement[key] = seperated.complement;;
+    else complement[key] = seperated.complement;
   }
   if (Object.keys(filtered).length === 0) filtered = undefined;
   return {complement, filtered};
@@ -1215,6 +1260,18 @@ Function.safeStdLibAddition(Array, 'add', function (valueOfuncOarray, doNotModif
   }
   arr.remap(func);
   return arr;
+});
+
+Function.safeStdLibAddition(Array, 'sum', function (valueOfuncOarray) {
+  let func;
+  let sum = 0;
+  switch (typeof valueOfuncOarray) {
+    case 'function': func = (val, index) => sum += valueOfuncOarray(val, index); break;
+    case 'object': func = (val, index) => sum += valueOfuncOarray[index]; break;
+    default: func = (val, index) => sum += val;
+  }
+  this.forEach(func);
+  return sum;
 });
 
 const MSI = Number.MAX_SAFE_INTEGER;

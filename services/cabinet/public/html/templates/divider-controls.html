@@ -16,6 +16,9 @@
         class='open-orientation-radio' {{opening.value('vertical') ? 'checked' : ''}}>
 
   </span>
+  <div{{opening.divideRight() ? '': ' hidden'}}>
+    {{dividerTypeSelect.html()}}
+  </div>
   <div class='open-pattern-input-cnt' opening-id='{{opening.id()}}'
       {{opening.pattern().equals ? 'hidden' : ''}}>
     {{patternInputHtml}}

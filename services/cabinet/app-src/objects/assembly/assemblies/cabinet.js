@@ -310,10 +310,13 @@ Cabinet.build = (type, group, config) => {
     cabinet.addSubAssembly(sectionProperties);
     cabOpenCoords.update();
   });
+  config.subassemblies.filter(sac => sac.dividerType).forEach((sac) =>
+      cabinet.subassemblies[sac.code].type(sac.dividerType));
   return cabinet;
 }
 
 Cabinet.fromJson = (assemblyJson, group) => {
+  const trigger = Function.event('constructed', assemblyJson)
   group ||= new Group();
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
@@ -328,6 +331,7 @@ Cabinet.fromJson = (assemblyJson, group) => {
   Object.values(assemblyJson.subassemblies).forEach((json) => {
     const clazz = Assembly.class(json._TYPE);
     json.parent = assembly;
+    json.constructed = assemblyJson.constructed;
     if (clazz !== SectionProperties) {
       assembly.addSubAssembly(Object.fromJson(json));
     } else {
@@ -342,7 +346,9 @@ Cabinet.fromJson = (assemblyJson, group) => {
   const joints = Object.fromJson(assemblyJson.joints);
   assembly.addJoints.apply(assembly, joints);
   assembly.position().setCenter(pos.center);
-  assembly.position().setRotation(pos.rotation)
+  assembly.position().setRotation(pos.rotation);
+  assembly.autoToeKick(assemblyJson.autoToeKick);
+  trigger();
   return assembly;
 }
 Cabinet.abbriviation = 'c';

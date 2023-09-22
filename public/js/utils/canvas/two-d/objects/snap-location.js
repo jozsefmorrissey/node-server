@@ -103,8 +103,8 @@ class SnapLocation2d {
 
     this.snapToLocation = (otherSnapLoc) => {
       const center = otherSnapLoc.center();
-      const otherRads = otherSnapLoc.forwardRadians();
-      const rads = instance.forwardRadians();
+      const otherRads = otherSnapLoc.parent().radians();
+      const rads = instance.parent().radians();
       const fixedAngle = instance.parent().AutoLocationProperties().FIXED_ANGLE;
       const changeInTheta = fixedAngle ? otherRads - rads : 0;
       const position1 = {center: center, theta: changeInTheta};
@@ -115,11 +115,10 @@ class SnapLocation2d {
       const dist1 = newPosition1.distance(otherObjectCenter);
       const dist2 = newPosition2.distance(otherObjectCenter);
       const objTheta = instance.parent().radians();
-      const theta = !fixedAngle ? objTheta - changeInTheta : 0;
       if (fixedAngle || dist1 > dist2) {
-        instance.parent().makeMove({center: newPosition1, theta});
+        instance.parent().makeMove({center: newPosition1, changeInTheta});
       } else {
-        instance.parent().makeMove({center: newPosition2, theta: theta - Math.PI});
+        instance.parent().makeMove({center: newPosition2, theta: changeInTheta - Math.PI});
       }
     }
 
@@ -138,6 +137,9 @@ class SnapLocation2d {
       if (shouldNotSnap || !snapToObject(vertex)) {
         const thisNewCenterLoc = this.parent().position[location]({center: vertex});
         this.parent().makeMove({center: thisNewCenterLoc});
+        // if (!this.center().equals(vertex)) {
+        //   throw 'wtf';
+        // }
       }
     }
 

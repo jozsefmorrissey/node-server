@@ -13,9 +13,13 @@ class FileTabDisplay extends Lookup {
       list[title] = htmlFunc;
     }
     this.type = (type) => type !== undefined ? (tYpe = type) : tYpe;
-    this.selected = (title) => selected !== undefined ? (selected = title) : selected;
+    this.selected = (title) => title !== undefined ? (selected = title) : selected;
     this.unregister = (title) => delete list[title];
     this.list = () => Object.keys(list);
+    this.update = () => {
+      const contentCnt = du.find.down('.content', du.id(this.id()));
+      contentCnt.innerHTML = this.selectedHtml();
+    }
 
     this.selectedHtml = () => list[selected] ? list[selected]() : '';
     this.html = (title) => title === undefined ?
@@ -35,7 +39,8 @@ du.on.match('click', '.file-tab-cnt > ul > li', (elem, event) => {
 
   const content = du.find.closest('.content', elem);
   const ftd = FileTabDisplay.get(container.id);
-  content.innerHTML = ftd.html(elem.innerText);
+  ftd.selected(elem.innerText);
+  content.innerHTML = ftd.selectedHtml();
   du.class.add(container, 'open')
   du.class.add(elem, 'selected');
 });

@@ -39,11 +39,16 @@ class Void extends Cutter {
     // this.part(true);
     this.included = (index) => this.includedSides()[index];
 
+    const filter = exclude => s => !(s instanceof Cutter) && exclude.equalIndexOf(s) === -1;
     const updateJoints = (part, joint, condition) => {
       const cabinet = this.getAssembly('c');
       if (cabinet) {
         part.joints = [];
-        const subs = Object.values(cabinet.getParts()).filter(s => !(s instanceof Cutter));
+        const voids = Object.keys(cabinet.subassemblies).map(s => s.match(/void.*/) && cabinet.subassemblies[s]).filter(s => s);
+        const voidIndex = voids.equalIndexOf(instance);
+        const excludeParts = [];
+        if (!(part instanceof Cutter)) voids.slice(0, voidIndex + 1).forEach(v => excludeParts.concatInPlace(v.getParts()));
+        const subs = Object.values(cabinet.getParts()).filter(filter(excludeParts));
         for (let index = 0; index < subs.length; index++) {
           const sub = subs[index];
           part.addJoints(new joint(part.partCode(), sub.partCode(), condition));
@@ -118,11 +123,12 @@ class Void extends Cutter {
       },
     ]
 
-    const updateAllJoints = () => {
+    const updateAllJoints = new FunctionCache(() => {
       const includeCond = (index) => () => instance.includedSides()[index];
       panels.forEach((p, index) => updateJoints(p, Dado, includeCond(index)));
       updateJoints(controlableAbyss, Butt);
-    }
+      return true;
+    }, this, 'always-on');
 
     let called = [];
     const toModel = (index) => new FunctionCache(() => {
@@ -149,7 +155,7 @@ class Void extends Cutter {
       const model = BiPolygon.fromPolygon(polys[index], pt, 0, offset).toModel(joints);
       called[index] = false;
       return model;
-    }, this, 'always-on');;
+    }, this, 'always-on');
 
     const buildPanel = (index) => {
       const partCode = this.partCode() + `p${index}`
@@ -186,7 +192,7 @@ class Void extends Cutter {
     // controlableAbyss.included(true);
     // controlableAbyss.part(true);
     this.addSubAssembly(controlableAbyss);
-    updateAllJoints();
+    this.on.parentSet(updateAllJoints);
   }
 }
 

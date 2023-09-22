@@ -11,6 +11,7 @@ const CSG = require('../../../../../public/js/3d-modeling/csg.js');
 const DividerSection = require('./partition/divider.js');
 const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
+const CustomEvent = require('../../../../../../../public/js/utils/custom-event.js')
 
 const v = () => new Vertex3D();
 class SectionProperties extends KeyValue{
@@ -49,13 +50,6 @@ class SectionProperties extends KeyValue{
       return conf;
     }
 
-    if (sections) {
-      for (let index = 0; index < sections.length; index++) {
-        const sectionJson = sections[index];
-        sectionJson.config = this.childConfig(index);
-        this.sections.push(Object.fromJson(sectionJson));
-      }
-    }
     // TODO: consider getting rid of, sections and cover are the only ones that matter.
     this.subassemblies = [];
     const sectionCutters = [];
@@ -67,21 +61,39 @@ class SectionProperties extends KeyValue{
     const temporaryInitialVals = {parent, _TEMPORARY: true};
     Object.getSet(this, temporaryInitialVals, 'parentAssembly');
     Object.getSet(this, {divideRight: false, config, index}, 'divider', 'cover');
+
+    if (sections) {
+      for (let index = 0; index < sections.length; index++) {
+        const sectionJson = sections[index];
+        sectionJson.config = this.childConfig(index);
+        this.sections.push(Object.fromJson(sectionJson));
+      }
+    }
     this.index = () => index;
     const instance = this;
     pattern ||= new Pattern('z');
 
+    const changeEvent = new CustomEvent('change', true);
+    this.on.change = changeEvent.on;
     const keyValHash = this.hash;
+    let lastHash;
+    let running = false;
     this.hash = () => {
       const cover = this.cover();
       let hash = (cover ? cover.hash() : 0) + pattern.toString().hash();
       hash += keyValHash();
+      hash += JSON.stringify(coordinates).hash();
       for (let index = 0; index < this.subassemblies.length; index++) {
         hash += this.subassemblies[index].hash(true);
       }
       for (let index = 0; index < this.sections.length; index++) {
         hash += this.sections[index].hash(true);
       }
+      if (hash !== lastHash) {
+        changeEvent.trigger(instance);
+      }
+      lastHash = hash;
+      running = false;
       return hash;
     }
 
@@ -109,6 +121,15 @@ class SectionProperties extends KeyValue{
       const curr = instance.value('vertical', is);
       if (is !== undefined && curr !== is) removeCachedValues();
       return curr;
+    }
+    this.coordinates.valid = () => {
+      const c = coordinates
+      if (c.inner === undefined || c.outer === undefined)
+        return false;
+      const abs = Math.abs;
+      const iSum = c.inner.map(v => abs(v.x) + abs(v.y) + abs(v.z)).sum()
+      const oSum = c.inner.map(v => abs(v.x) + abs(v.y) + abs(v.z)).sum()
+      return iSum !== 0 && oSum !== 0 && !Number.isNaN(iSum + oSum);
     }
 
     this.verticalDivisions = () => {
@@ -259,7 +280,9 @@ class SectionProperties extends KeyValue{
     function calcPattern(dist) {
       try {
         return instance.pattern().calc(dist);
-      } catch {
+      } catch (e) {
+        console.log(e);
+        instance.pattern().calc(dist);
         return instance.pattern('z').calc(dist);
       }
     }
@@ -272,11 +295,15 @@ class SectionProperties extends KeyValue{
     }
 
 
-    let lastHash;
     function setSectionCoordinates(force) {
-      const hash = instance.hash();
-      if (!force && hash === lastHash) return;
-      lastHash = hash;
+      if (!force) {
+        console.log('Found One!!!!!')
+        return;
+      }
+      if (!instance.coordinates.valid()) {
+        console.warn('invalid coordinates');
+        return;
+      }
       const dividerOffsetInfo = instance.dividerOffsetInfo();
       const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
 
@@ -413,7 +440,6 @@ class SectionProperties extends KeyValue{
           for (let index = currDividerCount; index < dividerCount; index +=1) {
             const section = new SectionProperties(this.childConfig(), index + 2);
             this.sections.push(section);
-            console.log(section);
           }
           if (!dontUpdateCoords && diff !== 0) setSectionCoordinates(true);
           return diff !== 0;
@@ -434,7 +460,7 @@ class SectionProperties extends KeyValue{
         const group = this.getCabinet().group().id();
         pattern = new Pattern(patternStr, {group});
         this.divide(sectionCount - 1, true);
-        setSectionCoordinates();
+        setSectionCoordinates(true);
       } else {
         if (!pattern || pattern.str.length !== this.sectionCount()) {
           const patStr = new Array(this.sectionCount()).fill('z').join('');
@@ -490,7 +516,6 @@ class SectionProperties extends KeyValue{
 
     this.coverInfo = () => {
       called.coverInfo++;
-      setSectionCoordinates();
       const propConfig = this.propertyConfig();
       let biPolygon, backOffset, frontOffset, offset, coords;
       const doorThickness = 3 * 2.54/4;
@@ -620,7 +645,7 @@ class SectionProperties extends KeyValue{
 
     this.reevaluate = () => {
       removeCachedValues(true);
-      setSectionCoordinates();
+      setSectionCoordinates(true);
     }
 
 
@@ -632,25 +657,20 @@ class SectionProperties extends KeyValue{
       return this.getCabinet().value('dividerJoint').clone();
     }
 
-    const mapped = {};
     this.dividerJoint.zero = (male, female) => {
       const key = `${male.partCode()}=>${female.partCode()}`;
-      if (mapped[key] === undefined) {
-        const joint = this.dividerJoint();
-        joint.maleOffset(0);
-        joint.malePartCode(male.partCode());
-        joint.femalePartCode(female.partCode());
-        joint.parentAssemblyId(male.id());
-        male.joints.push(joint);
-        mapped[key] = true;
-      }
+      const joint = this.dividerJoint();
+      joint.maleOffset(0);
+      joint.malePartCode(male.partCode());
+      joint.femalePartCode(female.partCode());
+      joint.parentAssemblyId(male.id());
+      male.joints.push(joint);
     }
 
     let called = {coverage: 0, dividerOffsetInfo: 0, coverInfo: 0, dividerInfo: 0};
     this.setSection = (constructorIdOobject) => {
       let section = SectionProperties.new(constructorIdOobject);
       this.cover(section);
-      console.log(called);
       if (section) {
         section.parentAssembly(this);
       }
@@ -668,30 +688,37 @@ class SectionProperties extends KeyValue{
     function buildCutters () {
       const cabinet = instance.getCabinet();
       const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Auto|Section)/))
-      const fromPoint = cabinet.buildCenter();
+      // const subAssems = [instance.right(), instance.left(), instance.top(), instance.bottom(), instance.back()];
       for (let index = 0; index < subAssems.length; index++) {
         const reference = subAssems[index];
         let offset = instance.dividerJoint().maleOffset();
         if (reference.thickness() < offset * 1.9) offset = 0;
-        const cutter = new Cutter.Reference(reference, fromPoint, offset);
+        const cutter = new Cutter.Reference(reference, cabinet.buildCenter, offset);
         sectionCutters.push(cutter);
       }
     }
 
     this.addCutters = (divider) => {
       const root = this.root();
-      if (root !== this) return root.addJoints(divider);
+      if (root !== this) return root.addCutters(divider);
       if (sectionCutters.length === 0) buildCutters();
       for (let index = 0; index < sectionCutters.length; index++) {
         const cutter = sectionCutters[index];
         divider.panel().addJoints(new Joint(cutter.partCode(), divider.panel().partCode()));
       }
+      console.log(divider.panel().joints.length);
     }
 
+    this.borders = () => [this.right, this.left, this.top, this.bottom, this.back]
+
     this.addJoints = (divider) => {
+      divider ||= this.divider();
+      divider.panel().joints.deleteAll();
       const cabinet = instance.getCabinet();
+      if (cabinet === undefined) return;
       const panel = divider.panel();
-      const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Auto|Section)/))
+      const subAssems = [];//Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Auto|Section)/))
+      subAssems.concatInPlace(divider.parentAssembly().borders().map(f => f().panel ? f().panel() : f()));
       const joint = this.dividerJoint();
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
@@ -699,7 +726,14 @@ class SectionProperties extends KeyValue{
       }
       this.addCutters(divider);
     }
-    setTimeout(() => this.addJoints(this.divider()));
+    this.on.parentSet(() => {
+      this.on.change(() => {
+        setSectionCoordinates(true)
+        instance.addJoints();
+      });
+    });
+
+    // setTimeout(() => this.addJoints(this.divider()));
   }
 }
 
@@ -746,12 +780,14 @@ SectionProperties.fromJson = (json) => {
   //   const sectionJson = json.subassemblies[index];
   //   sections.push(Object.fromJson(sectionJson));
   // }
+  json.subassemblies.forEach(j => (j.constructed = json.constructed));
   const sp  = new SectionProperties(json.config, json.index, json.subassemblies, pattern);
   sp.value.all(json.value.values);
   sp.parentAssembly(json.parent);
   sp.cover(Object.fromJson(json.cover));
   if (sp.cover()) sp.cover().parentAssembly(sp);
   sp.divider(new DividerSection(sp)).parentAssembly(sp);
+  json.constructed(() => sp.addJoints());
   return sp;
 }
 

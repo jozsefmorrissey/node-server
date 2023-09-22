@@ -57,25 +57,68 @@ Joint.new = function (id, json) {
 
 Joint.apply = (model, joints) => {
   if (!joints || !Array.isArray(joints)) return model;
-  try {
     let m = model; // preventCouruption
     joints.forEach((joint) => {
       if (joint.apply()) {
         const male = joint.getMale();
+        const female = joint.getFemale();
+        console.log(joint.toString());
         if (male === undefined) {
           console.warn(`No male found with partCode: '${joint.malePartCode()}'`);
           return;
         }
-        const mm = male.toModel();
-        if (m.polygons.length > 0 && mm.polygons.length > 0) {
-          m = m.subtract(mm);
+        if (female === undefined) {
+          console.warn(`No female found with partCode: '${joint.femalePartCode()}'`);
+          console.log(joint.getFemale());
+          console.log(joint.getFemale());
+          return;
         }
+      try {
+        if (male.includeJoints() && female.includeJoints()) {
+          const mm = male.toModel();
+          if (m.polygons.length > 0 && mm.polygons.length > 0) {
+            m = m.subtract(mm);
+          }
+        }
+      } catch (e) {
+        console.error('Most likely caused by a circular joint reference',e);
       }
-    });
-    return m;
-  } catch (e) {
-    console.error('Most likely caused by a circular joint reference',e);
-    return model;
+    }
+  });
+  return m;
+}
+
+class JointReferences {
+  constructor(getJoints, newPartCode, origPartCode) {
+    const initialVals = {
+      parentAssemblyId:  undefined, newPartCode, origPartCode
+    }
+    Object.getSet(this, initialVals);
+
+    this.parentAssembly = () => {
+      if (!parentAssembly && this.parentAssemblyId()) {
+        parentAssembly = Lookup.get(this.parentAssemblyId());
+        this.parentAssemblyId = () => parentAssembly.id();
+      }
+      if (parentAssembly === undefined) {
+        console.log(malePartCode, femalePartCode, parentAssembly);
+      }
+      return parentAssembly;
+    }
+    this.list = () => {
+      const orig = getJoints();
+      const list = [];
+      for (let index = 0; index < orig.length; index++) {
+        const j = orig[index].clone();
+        if (j.malePartCode() === origPartCode) j.malePartCode(newPartCode);
+        if (j.femalePartCode() === origPartCode) j.femalePartCode(newPartCode);
+        list.push(j);
+      }
+      return list;
+    }
   }
 }
+
+Joint.References = JointReferences;
+
 module.exports = Joint

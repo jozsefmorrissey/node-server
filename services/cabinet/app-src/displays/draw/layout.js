@@ -4,21 +4,15 @@ const LineMeasurement2d = require('../../../../../public/js/utils/canvas/two-d/o
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Circle2d = require('../../../../../public/js/utils/canvas/two-d/objects/circle.js');
-const LayoutHoverMap = require('../../services/layout-hover-map.js');
 const Draw = require('../../../../../public/js/utils/canvas/two-d/draw.js');
 const Layout2D = require('../../two-d/layout/layout.js');
 
 
 
 class DrawLayout extends Draw {
-  constructor(canvasOselector, layout, invertY) {
+  constructor(canvasOselector, getLayout, invertY) {
     super(canvasOselector, invertY);
     const parent = this;
-    let hoverMap, panz;
-
-    const updateHoverMap = () => {
-      if (layout && panz) hoverMap = new LayoutHoverMap(layout, panz);
-    }
 
     function filter (object) {
       switch (object.constructor.name) {
@@ -46,23 +40,6 @@ class DrawLayout extends Draw {
       filter(object)(object, color, width);
     }
     draw.merge(parent);
-
-    draw.hoverMap = () => hoverMap;
-    draw.layout = (l) => {
-      if (l instanceof Layout2D) {
-        layout = l;
-        updateHoverMap();
-      }
-      return layout;
-    }
-    draw.panz = (pz) => {
-      if (pz instanceof Window) {
-        panz = pz;
-        updateHoverMap();
-      }
-      return panz;
-    }
-
 
     let getWindowColor = () => {
       switch (Math.floor(Math.random() * 4)) {
@@ -188,7 +165,7 @@ class DrawLayout extends Draw {
       }
     }
 
-    const hovering = () => hoverMap && hoverMap.hovering();
+    const hovering = () => getLayout().hoverMap().hovering();
     const hoverId = () => hovering() && hovering().toString();
     const isHovering = (object) => hoverId() === object.toString();
 
@@ -200,12 +177,12 @@ class DrawLayout extends Draw {
         measurementIs[lookupKey] = measurement.I(level);
       // }
       const lines = measurementIs[lookupKey];
-      const center = draw.layout().vertices(focalVertex, 2, 3);
+      const center = getLayout().vertices(focalVertex, 2, 3);
       const isHov = isHovering(measurement);
       const measurementColor = isHov ? 'green' : 'grey';
       try {
         draw.beginPath();
-        const isWithin = draw.layout().within(lines.furtherLine().midpoint());
+        const isWithin = getLayout().within(lines.furtherLine().midpoint());
         const line = isWithin ? lines.closerLine() : lines.furtherLine();
         const midpoint = Vertex2d.center(line.startLine.endVertex(), line.endLine.endVertex());
         if (isHov) {
@@ -259,7 +236,7 @@ class DrawLayout extends Draw {
       //   level = measureOnWall(wall.doors(), level);
       //   level = measureOnWall(wall.windows(), level);
       // }
-      const measurement = new LineMeasurement2d(wall, undefined, undefined, draw.layout().reconsileLength(wall));
+      const measurement = new LineMeasurement2d(wall, undefined, undefined, getLayout().reconsileLength(wall));
       drawMeasurement(measurement, level, wall.startVertex());
 
       return endpoint;
@@ -290,7 +267,7 @@ class DrawLayout extends Draw {
       const radius = isHovering(vertex) ? 6 : 4;
       const circle = new Circle2d(radius, p);
       draw.circle(circle, 'black', fillColor);
-      if (draw.layout().objects().length === 0 || vertex.showAngle) drawAngle(vertex);
+      if (getLayout().objects().length === 0 || vertex.showAngle) drawAngle(vertex);
     }
     draw.corner = drawVertex;
 
@@ -319,6 +296,7 @@ class DrawLayout extends Draw {
     const drawMeasurements = () => {
       const color = 'black';
       const width = .2;
+      const hoverMap = getLayout().hoverMap();
       draw(hoverMap.measurements());
 
       const objs = hoverMap.targets();
@@ -337,9 +315,9 @@ class DrawLayout extends Draw {
 
     let lastHash;
     const drawLayout = () => {
-      if (hoverMap && hoverMap.measurements.enabled()) return drawMeasurements();
-      const layout = draw.layout();
+      const layout = getLayout();
       if (layout === undefined) return;
+      const hoverMap = layout.hoverMap();
       const hash = layout.hash();
       if (hoverMap && hash !== lastHash) hoverMap.update();
       lastHash = hash;

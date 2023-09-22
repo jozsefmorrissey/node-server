@@ -273,6 +273,7 @@ class ThreeDModel {
             ThreeDModel.lastActive = this;
             buildObject();
             resolve(CabinetModel.get(instance.object()));
+            console.log('built obj');
           } catch (e) {
             console.error(e);
             reject(e);
@@ -288,15 +289,20 @@ class ThreeDModel {
     async function renderParts() {
       let model = new CSG();
       const obj = instance.object();
+      obj.hash()
       if (obj === undefined || obj.buildCenter === undefined) return;
       await instance.buildObject();
       const buildCenter = obj.buildCenter();
+      console.log('getting parts');
       const assems = obj.getParts();
       for (let index = 0; index < assems.length; index++) {
         const part = assems[index];
         if (!hidden(part)) {
-          const partModel = partModels[part.id()].clone();
-          if (partModel === undefined) throw new Error('part model not created... object is not being updated properly');
+          let partModel = partModels[part.id()];
+          if (partModel === undefined) {
+            partModel = buildModel(part);
+          }
+          partModel = partModel.clone();
           if (targetPartCode) {
             partModel.setColor(colors[targetPartCode === part.partCode() ? 'green' : 'blue'])
           }

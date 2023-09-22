@@ -1,9 +1,9 @@
-const MeasurementHoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map/measurements.js');
+const HoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map.js');
 
 
-class LayoutHoverMap extends MeasurementHoverMap2d {
-  constructor(layout, panZ) {
-    super(panZ);
+class LayoutHoverMap extends HoverMap2d {
+  constructor(layout) {
+    super();
     const instance = this;
     let layoutHoverEnabled = true;
 
@@ -15,26 +15,26 @@ class LayoutHoverMap extends MeasurementHoverMap2d {
       return layoutHoverEnabled;
     }
 
+    let drawMap = false;
     function construct() {
-      const l = layout instanceof Function ? layout() : layout;
       instance.clear();
       if (layoutHoverEnabled) {
-        const walls = l.walls();
+        const walls = layout.walls();
         for (let index = 0; index < walls.length; index++) {
           const wall = walls[index];
-          wall.windows().forEach(w => instance.add(w.toLine, 5, w));
-          wall.doors().forEach(d => instance.add(d.toLine, 20, d));
-          instance.add(wall.startVertex(), 40);
-          // instance.add(wall.endVertex(), 40);
-          instance.add(wall, 20);
+          if (!drawMap) wall.windows().forEach(w => instance.add(w.toLine, 5, w));
+          if (!drawMap) wall.doors().forEach(d => instance.add(d.toLine, 20, d));
+          instance.add(wall.startVertex(), 20);
+          instance.add(wall, 10);
         }
       }
-      const objects = l.activeObjects();
+      const objects = layout.activeObjects();
       for (let index = 0; index < objects.length; index++) {
         const snap = objects[index].snap2d.top();
         const snapLocs = snap.snapLocations();
         snapLocs.forEach(l => instance.add(l.center(), 6, l));
-        snap.object().lines().forEach(l => instance.add(l, 15));
+        if (drawMap) snap.object().lines().forEach(l => instance.add(l, 15));
+        if (!drawMap) instance.add(snap.center(), 60, snap);
       }
     }
 
@@ -44,6 +44,5 @@ class LayoutHoverMap extends MeasurementHoverMap2d {
     layout.onChange(construct);
   }
 }
-
 
 module.exports = LayoutHoverMap;

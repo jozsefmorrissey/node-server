@@ -31,8 +31,11 @@ const VoidDisplay = require('./advanced/subassemblies/void.js');
 const voidHtml = () => {
   const cabinet = Global.cabinet();
   const voidDisplay = new VoidDisplay(cabinet);
+  voidDisplay.on.add(fileTabDisp.update);
   return voidDisplay.html();
 }
+
+
 const openingHtml = () => {
   const cabinet = Global.cabinet();
   const openings = cabinet.openings;

@@ -34,6 +34,7 @@ const Canvas = require('../canvas');
 const Global = require('../../services/global.js');
 const approximate = require('../../../../../public/js/utils/approximate').new(10);
 const PanZoom = require('../../../../../public/js/utils/canvas/two-d/pan-zoom.js');
+const Divider = require('../../objects/assembly/assemblies/divider.js');
 
 let template;
 let modifyingOpening = false;
@@ -118,42 +119,45 @@ function applyDividers() {
 function applyTestConfiguration() {
   const cabinet = Global.cabinet();
   cabinet.width(60*2.54);
+  cabinet.updateOpenings()
 
   cabinet.openings.forEach((opening) => {
     opening.sectionProperties().pattern('bab').value('a', 30*2.54);
     opening.divide(2);
+    opening.vertical(true);
     const left = opening.sections[0];
     const center = opening.sections[1];
     const right = opening.sections[2];
     const a = 6*2.54
 
-    left.divide(2);
-    left.vertical(false);
-    left.sections[0].setSection("DrawerSection");
-    left.sections[1].setSection("DrawerSection");
-    left.sections[2].setSection("DrawerSection");
-    left.pattern('abb').value('a', a*2);
-
-    center.divide(1);
-    center.vertical(false);
-    center.sections[1].setSection('DualDoorSection');
-    center.pattern('ab').value('a', a);
-    const centerTop = center.sections[0];
-
-    centerTop.divide(2);
-    centerTop.sections[0].setSection("DoorSection");
-    centerTop.sections[1].setSection("FalseFrontSection");
-    centerTop.sections[2].setSection("DoorSection");
-    centerTop.pattern('ztz').value('t', 15*2.54);
-    centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
-    centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
-
-    right.divide(2);
-    right.vertical(false);
-    right.sections[0].setSection("DrawerSection");
-    right.sections[1].setSection("DrawerSection");
-    right.sections[2].setSection("DrawerSection");
-    right.pattern('abb').value('a', a);
+    // left.divide(2);
+    // left.vertical(false);
+    // left.sections[0].setSection("DrawerSection");
+    // left.sections[1].setSection("DrawerSection");
+    // left.sections[2].setSection("DrawerSection");
+    // left.pattern('abb').value('a', a*2);
+    //
+    // center.divide(1);
+    // center.vertical(false);
+    // center.sections[1].setSection('DualDoorSection');
+    // center.pattern('ab').value('a', a);
+    // const centerTop = center.sections[0];
+    //
+    // centerTop.divide(2);
+    // centerTop.vertical(true);
+    // centerTop.sections[0].setSection("DoorSection");
+    // centerTop.sections[1].setSection("FalseFrontSection");
+    // centerTop.sections[2].setSection("DoorSection");
+    // centerTop.pattern('ztz').value('t', 15*2.54);
+    // centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
+    // centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
+    //
+    // right.divide(2);
+    // right.vertical(false);
+    // right.sections[0].setSection("DrawerSection");
+    // right.sections[1].setSection("DrawerSection");
+    // right.sections[2].setSection("DrawerSection");
+    // right.pattern('abb').value('a', a);
   });
 }
 
@@ -589,13 +593,28 @@ function getSubassembly(obj) {
     class: 'template-reference-selector',
     inline: true
   });
+  let dividerTypeSelect;
+  if (obj.type === 'Divider') {
+    dividerTypeSelect = new Select({
+      label: 'Type',
+      name: 'dividerType',
+      list: Divider.Types,
+      class: 'template-divider-type-selector',
+      value: obj.dividerType,
+      inline: true
+    });
+  }
   return {typeInput:  getTypeInput(obj),
           centerXyzSelect: getXyzSelect('Center'),
           demensionXyzSelect: getWhdSelect('Demension'),
           rotationXyzSelect: getXyzSelect('Rotation'),
-          referenceSelect, getEqn, obj, typeSpecificHtml
+          referenceSelect, getEqn, obj, typeSpecificHtml, dividerTypeSelect
         };
 }
+
+du.on.match('change', '.template-divider-type-selector', (elem) => {
+  ExpandableList.get(elem).dividerType = elem.value;
+});
 
 du.on.match('change', '.template-reference-selector', (elem) => {
   const typeElem = du.find.closest('[name="type"]', elem);

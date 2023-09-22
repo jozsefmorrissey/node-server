@@ -7,6 +7,7 @@ const CustomEvent = require('../../custom-event');
 
 class HoverObject2d {
   constructor(lineOrVertex, tolerance, target) {
+    if (lineOrVertex instanceof HoverObject2d) return lineOrVertex;
     tolerance ||= 2;
     const toleranceFunction = (typeof tolerance) === 'function';
     const targetFunction = (typeof lineOrVertex) === 'function';
@@ -51,6 +52,7 @@ class HoverObject2d {
     }
 
     this.target = () => target || lineOrVertex;
+    this.distance = (from) => lineOrVertex.distance(from);
 
     this.hovering = (hoverVertex) => {
       const lov = targetFunction ? lineOrVertex() : lineOrVertex;
@@ -70,19 +72,23 @@ const typeValue = (t) => t instanceof Vertex2d ? 0 : (t instanceof Line2d ? 1 : 
 HoverObject2d.sort = (obj1, obj2) => typeValue(obj1.target()) - typeValue(obj1.target());
 
 class HoverMap2d {
-  constructor(panZ) {
+  constructor() {
     let hoverObjects = [];
     let instance = this;
     let dragging = false;
     let clickHolding = false;
     let id = String.random(3);
 
-    this.id = () => id;
+    this.id = () => id;filter
     this.objects = () => hoverObjects;
     this.targets = () => this.objects().map(ho => ho.target())
                     .filter(t => !(t instanceof Vertex2d) || t.equals(lastHovered) || t.equals(this.clicked()));
     this.clear = () => hoverObjects = [] || true;
     this.add = (object, tolerance, target) => {
+      if (Array.isArray(object)) {
+        object.forEach(o => this.add(o));
+        return;
+      }
       const hovObj = new HoverObject2d(object, tolerance, target);
       if (object instanceof Vertex2d) {
         hoverObjects = [hovObj].concat(hoverObjects);
@@ -102,100 +108,40 @@ class HoverMap2d {
       for (let index = 0; index < hoverObjs.length; index++) {
         const hoverObj = hoverObjs[index];
         const distance = hoverObj.hovering(vertex);
-        if (distance) {
+        if (distance || distance === 0) {
           const target = hoverObj.target();
           if (hoveringObj === null || distance < hoveringObj.distance) {
             hoveringObj = {target, distance};
+            break;
           }
         }
       }
 
       const hov = hoveringObj && hoveringObj.target;;
-      if (hov !== lastHovered) {
-        console.log(id, hov, vertex.toString());
-      }
       lastHovered = hov;
       return lastHovered;
     }
 
-    if (panZ) {
-      const clickEvent = new CustomEvent('click');
-      const dragEvent = new CustomEvent('dragging');
-      const hoverEvent = new CustomEvent('hover');
-      const hoverOutEvent = new CustomEvent('hoverOut');
-      let active = true;
-      let eventsEnabled = true;
-
-      this.on = {};
-      this.on.click = clickEvent.on;
-      this.on.hover = hoverEvent.on;
-      this.on.hoverOut = hoverOutEvent.on;
-      this.on.drag = dragEvent.on;
-      this.disable = () => active = false;
-      this.enable = () => active = true;
-
-      this.eventsDisabled = () => !(eventsEnabled = false);
-      this.eventsEnabled = () => eventsEnabled = true;
-
-      let stackLimit = 10;
-      let hoverStack = new Array(stackLimit).fill(null);
-      let clickStack = new Array(stackLimit).fill(null);
-      this.hovered = (startIndex, toIndex) => {
-        if (startIndex === undefined && toIndex === undefined) {
-          return hoverStack[0];
-        }
-        return hoverStack.slice(startIndex, toIndex);
-      }
-      this.clicked = (startIndex, toIndex) => {
-        if (startIndex === undefined && toIndex === undefined) {
-          return clickStack[0];
-        }
-        return clickStack.slice(startIndex, toIndex);
-      }
-
-      panZ.onMove((event) => {
-        if (!active) return;
-        const vertex = new Vertex2d(event.imageX, event.imageY);
-        const hovering = instance.hovering(vertex);
-        if (clickHolding && hovering && eventsEnabled) {
-          dragEvent.trigger(hovering, event);
-          return true;
-        }
-        const hovered = this.hovered();
-        if (hovering !== hovered) {
-          if (eventsEnabled && hovered) {
-            hoverOutEvent.trigger(hovered);
-          }
-          hoverStack = [hovering].concat(hoverStack);
-          hoverStack.splice(stackLimit);
-          if (eventsEnabled && hovering) {
-            eventsEnabled && hoverEvent.trigger(hovering);
+    this.closest = (pos, filter) => {
+      if (clickHolding || pos === undefined) return lastHovered;
+      let objs = this.objects();
+      if (filter instanceof Function) objs = objs.filter(filter);
+      const vertex = pos instanceof Vertex2d ? pos : new Vertex2d(pos);
+      let closestObj = null;
+      for (let index = 0; index < objs.length; index++) {
+        const obj = objs[index];
+        const distance = obj.distance(vertex);
+        if (distance) {
+          const target = obj.target();
+          if (closestObj === null || distance < closestObj.distance) {
+            closestObj = {target, distance};
           }
         }
-      });
-      panZ.onClick((event) => {
-        if (!active) return;
-        const vertex = new Vertex2d(event.imageX, event.imageY);
-        const hovering = instance.hovering(vertex);
-        clickStack = [hovering].concat(clickStack);
-        clickStack.splice(stackLimit);
-        clickEvent.trigger(hovering);
-      });
-      panZ.onMouseup((event) => {
-        if (!active) return;
-        clickHolding = false;
-        const vertex = new Vertex2d(event.imageX, event.imageY);
-        const hovering = instance.hovering(vertex);
-        return hovering !== null;
-      });
-      panZ.onMousedown((event) => {
-        clickHolding = true;
-        const vertex = new Vertex2d(event.imageX, event.imageY);
-        const hovering = instance.hovering(vertex);
-        return hovering !== null;
-      });
+      }
 
 
+
+      return closestObj && closestObj.target;;
     }
 
   }

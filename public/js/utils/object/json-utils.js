@@ -114,6 +114,7 @@ const prioritySorter = (s1, s2) => {
 
 Function.safeStdLibAddition(JSON, 'reconstruct',   function (obj) {
   const paths = Object.keys(obj);
+  if (paths.length === 0) return null;
   paths.sort(prioritySorter);
   const mainDef = paths[0] === '';
   const constructed = mainDef ? JSON.parse(obj['']) : {};

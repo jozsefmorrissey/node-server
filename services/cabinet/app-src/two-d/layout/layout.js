@@ -15,6 +15,7 @@ const Corner2d = require('./corner');
 const Window2D = require('./window');
 const Object3D = require('../../three-d/layout/object.js');
 const Door2D = require('./door');
+const LayoutHoverMap = require('../../services/layout-hover-map.js');
 
 function withinTolerance(point, map) {
   const t = map.tolerance;
@@ -478,6 +479,10 @@ class Layout2D extends Lookup {
 
     // history = new StateHistory(this.toJson, this.fromJson);
     this.history = () => history;
+
+    const hoverMap = new LayoutHoverMap(this);
+    this.hoverMap = () => hoverMap;
+
 
     this.toDrawString = () => {
       return Line2d.toDrawString(this.walls());
