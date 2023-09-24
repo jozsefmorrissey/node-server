@@ -11,6 +11,8 @@ const Joint = require('../../joint/joint.js');
 
 class Divider extends Assembly {
   constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, toModel, toBiPolygon) {
+    const partId = String.random();
+    partCode += '-' + partId;
     if (toModel) {
       super(partCode, partName);
       this.toModel = toModel;
