@@ -230,9 +230,9 @@ function processValue(value) {
     } else if (Array.isArray(value)){
       const arr = [];
       value.forEach((val) => {
-        if ((typeof val.toJson) === 'function') {
+        if (val && (typeof val.toJson) === 'function') {
           arr.push(val.toJson());
-        } else if ((typeof val.toJSON) === 'function') {
+        } else if (val && (typeof val.toJSON) === 'function') {
           arr.push(val.toJSON());
         } else {
           arr.push(val);
@@ -359,7 +359,13 @@ Function.safeStdLibAddition(Number, 'NaNfinity',  function (...vals) {
   return false;
 }, true);
 
-function stringHash() {
+function adjustPolarity(value, positive) {
+  if (positive === true && value < 0) value *= -1;
+  if (positive === false && value > 0) value *= -1;
+  return value;
+}
+
+function stringHash(digits, positive) {
   let hashString = this;
   let hash = 0;
   for (let i = 0; i < hashString.length; i += 1) {
@@ -367,7 +373,10 @@ function stringHash() {
     hash = ((hash << 5) - hash) + character;
     hash &= hash; // Convert to 32bit integer
   }
-  return hash;
+  if (!digits) return adjustPolarity(hash, positive);
+  let mod = 1;
+  for (let i = 0; i < digits; i++) mod *= 10;
+  return adjustPolarity(mod ? hash % mod : hash, positive);
 }
 
 Function.safeStdLibAddition(String, 'hash',  stringHash, false);
@@ -446,7 +455,8 @@ const forceFromJsonAttr = '_FORCE_FROM_JSON';
 const clazz = {};
 clazz.object = () => JSON.clone(classLookup);
 clazz.register = (clazz) => classLookup[clazz.name] = clazz;
-clazz.get = (name) => (typeof name) === 'string' ? classLookup[name] : name;
+clazz.get = (nameOobject) => (typeof nameOobject) === 'string' ? classLookup[nameOobject] : nameOobject.constructor;
+clazz.new = (nameOobject, ...args) => (typeof nameOobject) === 'string' ? new classLookup[nameOobject](...args) : new nameOobject.constructor(...args);
 clazz.filter = (filterFunc) => {
   const classes = clazz.object();
   if ((typeof filterFunc) !== 'function') return classes;
@@ -535,6 +545,15 @@ Function.safeStdLibAddition(Object, 'merge', function () {
 Function.safeStdLibAddition(Array, 'removeAll', function (arr) {
   for (let index = 0; index < arr.length; index += 1) {
     this.remove(arr[index]);
+  }
+});
+
+Function.safeStdLibAddition(Array, 'removeWhere', function (func) {
+  for (let index = 0; index < this.length; index += 1) {
+    if (func(this[index])) {
+      this.remove(this[index]);
+      index--;
+    }
   }
 });
 
@@ -980,13 +999,15 @@ function setGettersAndSetters(obj, options) {
   for (let index = 0; !options.doNotOverwrite && index < options.attrs.length; index += 1) {
     const attr = options.attrs[index];
     if (attr !== immutableAttr) {
-      if (options.immutable) obj[attr] = () => options.values[attr];
+      const initVal = options.values[attr];
+      if(initVal instanceof Function) obj[attr] = initVal;
+      else if (options.immutable) obj[attr] = () => initVal;
       else {
         obj[attr] = (value) => {
           if (value === undefined) {
             const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
             if (options.values[attr] !== undefined || noDefaults)
-            return options.values[attr];
+              return options.values[attr];
             return obj.defaultGetterValue(attr);
           }
           return options.values[attr] = value;

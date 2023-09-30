@@ -11,8 +11,7 @@ const Joint = require('../../joint/joint.js');
 
 class Divider extends Assembly {
   constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, toModel, toBiPolygon) {
-    const partId = String.random();
-    partCode += '-' + partId;
+    partCode ||= 'dv';
     if (toModel) {
       super(partCode, partName);
       this.toModel = toModel;
@@ -23,11 +22,6 @@ class Divider extends Assembly {
     Object.getSet(this, 'type');
 
     if (toBiPolygon) this.toBiPolygon = toBiPolygon;
-
-    const parentGetSubAssems = this.getSubassemblies;
-    this.getSubassemblies = () => {
-      return parentGetSubAssems();
-    }
 
     let isPart = true;
     this.part = () => isPart;
@@ -96,13 +90,14 @@ class Divider extends Assembly {
         //   cutter.part(true);
         // }
         cutter.parentAssembly(instance);
-        const partCode = `${instance.partCode()}-${location[0]}`;
-        const partName = `${instance.partName()}-${location}`;
+        const partCode = `${location[0]}`;
+        const partName = `${location}`;
         const panel = new PanelModel(partCode, partName, instance.toModel);
         panel.parentAssembly(instance);
-        panel.addJoints(new Joint(cutter.partCode(), partCode));
-        // panel.addJoints(new Joint.References(instance.getJointList, partCode, instance.partCode()))
+        panel.addJoints(new Joint(cutter.partCode(true), panel.partCode(true)));
+        panel.addJoints(new Joint.References(panel, instance.getJointList, instance.partCode(true)))
 
+        
         if (!append) instance.subassemblies.deleteAll();
         instance.addSubAssembly(cutter);
         instance.addSubAssembly(panel);
@@ -133,7 +128,12 @@ class Divider extends Assembly {
       frontAndBack: () => builders.front() | builders.back(true),
     }
 
-    instance.on.parentSet(() => instance.parentAssembly().on.change(build));
+    instance.on.parentSet(() => instance.parentAssembly().on.change(() => {
+      const parent = instance.parentAssembly();
+      if (parent.openings) {
+        parent.openings.onAfterChange(build);
+      } else build();
+    }));
   }
 }
 

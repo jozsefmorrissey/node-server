@@ -10,7 +10,7 @@ const BiPolygon = require('../../../../../three-d/objects/bi-polygon.js');
 
 class DualDoorSection extends Assembly {
   constructor(leftDoor, rightDoor) {
-    super('dds', 'Duel.Door.Section');
+    super('DD', 'Duel.Door.Section');
     const instance = this;
     const sectionProps = () => instance.parentAssembly();
 

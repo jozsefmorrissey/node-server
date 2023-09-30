@@ -11,16 +11,18 @@ const FunctionCache = require('../../../../../../../../public/js/utils/services/
 let count = 0;
 class DividerSection extends Assembly {
   constructor(sectionProperties) {
-    super(undefined, 'Divider');
+    super('dv', 'Divider');
     if (sectionProperties === undefined) return;
     this.parentAssembly(sectionProperties);
     const props = sectionProperties;
     const instance = this;
     let panel;
 
-    this.partCode = () => `${sectionProperties.partCode()}-dp`;
+    this.partCode = (full) => `${sectionProperties.partCode(full)}-dp`;
 
+    let count = 0;
     function toModel() {
+      console.log('ran:', ++count);
       const biPoly = sectionProperties.dividerInfo();
       return biPoly.toModel(panel.getJoints().female);
     }
@@ -48,7 +50,7 @@ class DividerSection extends Assembly {
     const panelPartName = () =>
         `${this.partName()}.Divider.Panel`;
 
-    panel = new Divider('dvp' + sectionProperties.index(), panelPartName, null, null, null, toPanelModel, toBiPolygon);
+    panel = new Divider(null, panelPartName, null, null, null, toPanelModel, toBiPolygon);
     // const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
     panel.parentAssembly(this);
     this.addSubAssembly(panel);

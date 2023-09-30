@@ -118,7 +118,7 @@ class CabinetOpeningCorrdinates {
       const partName = 'Gerf';
       const cutter = new Cutter.Model(partCode, () => partName, biPoly.toModel);
       subassemblies = [cutter];
-      const joint = (otherPartCode) => new Butt(partCode, otherPartCode);
+      const joint = (otherPartCode) => new Butt(cutter.partCode(true), otherPartCode);
       cutter.addJoints(joint('T'), joint('B'), joint('R'), joint('L'));
     }
 

@@ -13,7 +13,7 @@ const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
 const CustomEvent = require('../../../../../../../public/js/utils/custom-event.js')
 
-const v = () => new Vertex3D();
+const v = (x,y,z) => new Vertex3D(x,y,z);
 class SectionProperties extends KeyValue{
   constructor(config, index, sections, pattern) {
     super({childrenAttribute: 'sections', parentAttribute: 'parentAssembly'})
@@ -56,7 +56,7 @@ class SectionProperties extends KeyValue{
 
 
     // index ||= 0;
-    const coordinates = {inner: [v(),v(),v(),v()], outer: [v(),v(),v(),v()]};
+    const coordinates = {inner: [v(),v(10,0,0),v(10,10,0),v(0,0,10)], outer: [v(),v(20,0,0),v(20,20,0),v(0,0,20)]};
     let rotation, innerCenter, outerCenter, outerLength, innerLength, outerWidth, innerWidth = null;
     const temporaryInitialVals = {parent, _TEMPORARY: true};
     Object.getSet(this, temporaryInitialVals, 'parentAssembly');
@@ -75,6 +75,7 @@ class SectionProperties extends KeyValue{
 
     const changeEvent = new CustomEvent('change', true);
     this.on.change = changeEvent.on;
+    this.on.change.trigger = changeEvent.trigger;
     const keyValHash = this.hash;
     let lastHash;
     let running = false;
@@ -91,6 +92,7 @@ class SectionProperties extends KeyValue{
       }
       if (hash !== lastHash) {
         changeEvent.trigger(instance);
+        this.children().forEach(c => c.on.change.trigger())
       }
       lastHash = hash;
       running = false;
@@ -99,7 +101,13 @@ class SectionProperties extends KeyValue{
 
     this.divideRight = () =>
       this.parentAssembly().sectionCount && this.parentAssembly().sectionCount() !== index;
-    this.partCode = () => 'S' + index;
+    this.partCode = (full) => {
+      if (!full) return 'S';
+        const parent = this.parentAssembly();
+        const pc = 'S' + index + (this.vertical() ? 'V' : 'H');
+        if (parent) return `${parent.partCode(full)}-${pc}`;
+        return pc;
+    };
     this.partName = () => {
       const orientation = this.vertical() ? 'V' : 'H';
       if (!(this.parentAssembly() instanceof SectionProperties)) return orientation;
@@ -200,18 +208,25 @@ class SectionProperties extends KeyValue{
     this.init = init;
     this.dividerCount = () => this.sections.length - 1;
     this.sectionCount = () => this.sections.length || 1;
-    this.children = () => this.sections;
-    this.getSubassemblies = () => {
+    this.getSubassemblies = (childrenOnly) => {
       const assems = Object.values(this.sections);
       assems.concatInPlace(sectionCutters);
-      const cover = this.cover()
-      if (cover) assems.concatInPlace(cover.getSubassemblies());
-      if (this.divideRight()) assems.concatInPlace(this.divider().getSubassemblies());
-      for (let index = 0; index < this.sections.length; index++) {
+      const cover = this.cover();
+      if (cover) {
+        assems.push(cover);
+        if (!childrenOnly) assems.concatInPlace(cover.getSubassemblies());
+      }
+      if (this.divideRight()) {
+        assems.push(this.divider());
+        if (!childrenOnly) assems.concatInPlace(this.divider().getSubassemblies());
+      }
+      assems.concatInPlace(this.sections);
+      for (let index = 0; !childrenOnly && index < this.sections.length; index++) {
         assems.concatInPlace(this.sections[index].getSubassemblies());
       }
       return assems;
     }
+    this.children = () => this.getSubassemblies(true);
 
     this.propertyConfig = () => this.getCabinet().propertyConfig();
 
@@ -552,27 +567,27 @@ class SectionProperties extends KeyValue{
       const divider = instance.divider();
       const panelThickness = divider.panelThickness();
       const jointOffset = instance.dividerJoint().maleOffset();
-      const right = instance.right();
-      const left = instance.left();
+      const vert = instance.verticalDivisions();
+      const right = vert ? instance.bottom() : instance.right();
+      const left = vert ? instance.top() : instance.left();
       let maxLen = c.width() + c.length() + c.thickness();
-      if (!instance.verticalDivisions()) {
-        if (!(right instanceof DividerSection)) {
-          Line3D.adjustVertices(point1, point2, maxLen, true);
-          maxLen *= 1.5;
-        } else {
-          const length = point1.distance(point2) + jointOffset - right.panelThickness()/2;
-          Line3D.adjustVertices(point1, point2, length, true);
-          instance.dividerJoint.zero(divider.panel(), right.panel());
-        }
-        if (!(left instanceof DividerSection)) {
-          Line3D.adjustVertices(point2, point1, maxLen, true);
-        } else {
-          const length = point1.distance(point2) + jointOffset - left.panelThickness()/2;
-          Line3D.adjustVertices(point2, point1, length, true);
-          instance.dividerJoint.zero(divider.panel(), left.panel());
-        }
+      if (!(right instanceof DividerSection)) {
+        Line3D.adjustVertices(point1, point2, maxLen, true);
+        maxLen *= 1.5;
+      } else {
+        const length = point1.distance(point2) + jointOffset - right.panelThickness()/2;
+        Line3D.adjustVertices(point1, point2, length, true);
+        instance.dividerJoint.zero(divider.panel(), right.panel());
       }
-
+      if (!(left instanceof DividerSection)) {
+        Line3D.adjustVertices(point2, point1, maxLen, true);
+      } else {
+        const length = point1.distance(point2) + jointOffset - left.panelThickness()/2;
+        Line3D.adjustVertices(point2, point1, length, true);
+        instance.dividerJoint.zero(divider.panel(), left.panel());
+      }
+      if (divider.panel().joints.length > 20)
+        console.log('greater');
     }
 
     this.dividerInfo = (panelThickness) => {
@@ -653,18 +668,20 @@ class SectionProperties extends KeyValue{
     let dividerJoint;
     this.dividerJoint = (joint) => {
       if (joint instanceof Joint) dividerJoint = joint;
-      if (dividerJoint) return dividerJoint.clone();
-      return this.getCabinet().value('dividerJoint').clone();
+      else joint = this.getCabinet().value('dividerJoint');
+      return joint.clone();
     }
 
     this.dividerJoint.zero = (male, female) => {
-      const key = `${male.partCode()}=>${female.partCode()}`;
+      const key = `${male.partCode(true)}=>${female.partCode(true)}`;
       const joint = this.dividerJoint();
-      joint.maleOffset(0);
-      joint.malePartCode(male.partCode());
-      joint.femalePartCode(female.partCode());
-      joint.parentAssemblyId(male.id());
-      male.joints.push(joint);
+
+      let mpc, fpc, id;
+      if (male) mpc = male.partCode(true);
+      if (female) fpc = female.partCode(true);
+      const clone = joint.clone(male, mpc, fpc);
+      clone.maleOffset(0);
+      male.addJoints(clone);
     }
 
     let called = {coverage: 0, dividerOffsetInfo: 0, coverInfo: 0, dividerInfo: 0};
@@ -695,6 +712,7 @@ class SectionProperties extends KeyValue{
         if (reference.thickness() < offset * 1.9) offset = 0;
         const cutter = new Cutter.Reference(reference, cabinet.buildCenter, offset);
         sectionCutters.push(cutter);
+        cutter.parentAssembly(instance);
       }
     }
 
@@ -704,9 +722,8 @@ class SectionProperties extends KeyValue{
       if (sectionCutters.length === 0) buildCutters();
       for (let index = 0; index < sectionCutters.length; index++) {
         const cutter = sectionCutters[index];
-        divider.panel().addJoints(new Joint(cutter.partCode(), divider.panel().partCode()));
+        divider.panel().addJoints(new Joint(cutter.partCode(true), divider.panel(true).partCode()));
       }
-      console.log(divider.panel().joints.length);
     }
 
     this.borders = () => [this.right, this.left, this.top, this.bottom, this.back]
@@ -719,19 +736,25 @@ class SectionProperties extends KeyValue{
       const panel = divider.panel();
       const subAssems = [];//Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Auto|Section)/))
       subAssems.concatInPlace(divider.parentAssembly().borders().map(f => f().panel ? f().panel() : f()));
-      const joint = this.dividerJoint();
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
         this.dividerJoint.zero(panel, assem);
       }
       this.addCutters(divider);
     }
-    this.on.parentSet(() => {
-      this.on.change(() => {
-        setSectionCoordinates(true)
-        instance.addJoints();
-      });
-    });
+
+    const initialze = (target) => () => {
+      const parent = target.parentAssembly();
+      if (instance.getCabinet()) {
+        instance.on.change(() => {
+          setSectionCoordinates(true)
+          instance.addJoints();
+        });
+      } else parent.on.parentSet(initialze(parent));
+
+    }
+
+    this.on.parentSet(initialze(this));
 
     // setTimeout(() => this.addJoints(this.divider()));
   }

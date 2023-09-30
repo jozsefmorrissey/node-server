@@ -202,6 +202,7 @@ class ThreeDModel {
 
     function buildModel(assem) {
       let a = assem.toModel();
+      assem.partCode(true);
       a.setColor(...getColor());
       partModels[assem.id()] = a;
       return a;

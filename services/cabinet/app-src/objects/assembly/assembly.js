@@ -22,6 +22,15 @@ class Assembly extends KeyValue {
   constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
     super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly', object: true});
 
+    const pcIsFunc = partCode instanceof Function;
+    function pCode(full) {
+      const pc = pcIsFunc ? partCode(full) : partCode;
+      if (!full) return pc;
+      const parent = this.parentAssembly();
+      if (parent) return `${parent.partCode(full)}-${pc}`;
+      return pc;
+    }
+
     const instance = this;
     let group;
     const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
@@ -29,9 +38,11 @@ class Assembly extends KeyValue {
       part: true,
       included: true,
       includeJoints: true,
-      centerConfig, demensionConfig, rotationConfig, partCode, partName,
+      centerConfig, demensionConfig, rotationConfig, partCode: pCode, partName,
       propertyId: undefined,
     }
+
+    // TODO: should change subassemblies to an Array not an object;
     const subAssems = this.subassemblies;
     Object.getSet(this, initialVals, 'subassemblies', 'joints');
     this.subassemblies = subAssems;
@@ -96,6 +107,7 @@ class Assembly extends KeyValue {
 
     const changeEvent = new CustomEvent('change', true);
     this.on.change = changeEvent.on;
+    this.on.change.trigger = changeEvent.trigger;
     let lastHash;
     function hash() {
       const valueObj = instance.value.values;
@@ -134,19 +146,29 @@ class Assembly extends KeyValue {
     }
 
     this.getAssembly = (partCode, callingAssem) => {
-      if (callingAssem === this) return undefined;
-      if (this.partCode() === partCode) return this;
-      if (this.subassemblies[partCode]) return this.subassemblies[partCode];
-      if (callingAssem !== undefined || this.parentAssembly() === undefined) {
-        const children = Object.values(this.subassemblies);
-        for (let index = 0; index < children.length; index += 1) {
-          const assem = children[index].getAssembly(partCode, this);
-          if (assem !== undefined) return assem;
+
+      const searchReg = new RegExp(`((-|)${partCode})$`);
+      const searchList = [this];
+      let searchIndex = 0;
+      const searched = {};
+      const childrenAdded = {};
+      while (searchIndex < searchList.length) {
+        const part = searchList[searchIndex];
+        if (searched[part.id()] === undefined) {
+          if (part.partCode(true).match(searchReg)) return part;
+          const parent = part.parentAssembly();
+          if (parent) {
+            if (searchIndex === -1) searchList.concatInPlace(parent.children());
+            searchList.push(parent);
+          }
+          searched[part.id()] = true;
         }
+        if (!childrenAdded[part.id()]) {
+          searchList.concatInPlace(part.children());
+          childrenAdded[part.id()] = true;
+        }
+        searchIndex++;
       }
-      if (this.parentAssembly() !== undefined && this.parentAssembly() !== callingAssem)
-        return this.parentAssembly().getAssembly(partCode, this);
-      return undefined;
     }
     let position = new Position(this, sme);
     this.position = () => position;
@@ -182,24 +204,22 @@ class Assembly extends KeyValue {
     //   return related;
     // }
 
-    this.getJoints = new FunctionCache((pc, assem) => {
+    this.getJoints = new FunctionCache((assem) => {
+      assem ||= this;
       const root = this.getRoot();
-      if (root !== this) return root.getJoints(pc || partCode, this);
-      if (pc === 'dvp1') {
-        console.log('here?');
-      }
-      pc = pc || partCode;
+      if (root !== this) return root.getJoints(assem);
+
       const assemList = this.getSubassemblies();
-      let jointList = this.joints;
+      let jointList = [].concat(this.joints);
       if (assem) jointList.concatInPlace(assem.joints);
       assemList.forEach((assem) => jointList = jointList.concat(assem.joints));
       let joints = {male: [], female: []};
       const addJoint = (joint) => {
         if (joint instanceof Joint.References) {
           joint.list().forEach(addJoint);
-        } else if (joint.malePartCode() === pc) {
+        } else if (joint.male() === assem) {
           joints.male.push(joint);
-        } else if (joint.femalePartCode() === pc) {
+        } else if (joint.female() === assem) {
           joints.female.push(joint);
         }
       };
@@ -247,8 +267,18 @@ class Assembly extends KeyValue {
     this.addJoints = function () {
       for (let i = 0; i < arguments.length; i += 1) {
         const joint = arguments[i];
-        this.joints.push(joint);
-        joint.parentAssemblyId(this.id());
+        if (joint instanceof Joint) {
+          const parent = joint.parentAssembly();
+          if (parent === undefined) joint.parentAssembly(this);
+          const mpc = joint.malePartCode();
+          const fpc = joint.femalePartCode();
+          const pc = this.partCode(true);
+          if (pc !== mpc && pc !== fpc)
+            console.warn('this Should be added to the male part. (not sexist just logically consistant.... ftw)');
+          if (mpc === pc)
+            this.joints.removeWhere(j => j.femalePartCode() === fpc);
+        }
+        this.joints.push(joint.clone(this));
       }
     }
 
@@ -258,13 +288,13 @@ class Assembly extends KeyValue {
       }
     }
 
-    this.children = () => Object.values(this.subassemblies);
+    this.children = () => Object.values(this.getSubassemblies(true));
 
-    this.getSubassemblies = () => {
-      let assemblies = [];
-      this.children().forEach((assem) => {
+    this.getSubassemblies = (childrenOnly) => {
+      const assemblies = [];
+      Object.values(this.subassemblies).forEach((assem) => {
         assemblies.push(assem);
-        assemblies = assemblies.concat(assem.getSubassemblies());
+        if (!childrenOnly) assemblies.concatInPlace(assem.getSubassemblies());
       });
       return assemblies;
     }
@@ -316,8 +346,9 @@ class Assembly extends KeyValue {
       return buildCenter;
     }
     this.on.change(() => {
-      const joints = this.getJoints(instance.partCode);
+      const joints = this.getJoints();
       jointList = joints.male.concat(joints.female);
+      this.children().forEach(c => c.on.change.trigger());
     });
     this.on.change(() => instance.buildCenter(true));
     // defaultPartCode();

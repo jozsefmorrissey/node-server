@@ -148,7 +148,14 @@ class Position {
     this.toModel = new FunctionCache((simple) => {
       let joints = assembly.getJoints().female;
       // TODO: make attribute within joint to determine if required.
-      if (simple) joints = joints.filter((j) => j.getMale().constructor.name.match(/Cutter/));
+      if (simple) joints = joints.filter((j) => {
+        const male = j.male();
+        if (male) return male.constructor.name.match(/Cutter/)
+        else {
+          console.log('wtf');
+          j.male();
+        }
+      });
       let model = this.toBiPolygon().toModel(joints);
       return model;
     }, this, 'position');

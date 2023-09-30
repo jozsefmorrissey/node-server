@@ -51,7 +51,7 @@ class Void extends Cutter {
         const subs = Object.values(cabinet.getParts()).filter(filter(excludeParts));
         for (let index = 0; index < subs.length; index++) {
           const sub = subs[index];
-          part.addJoints(new joint(part.partCode(), sub.partCode(), condition));
+          part.addJoints(new joint(part.partCode(true), sub.partCode(true), condition));
         }
       }
     }

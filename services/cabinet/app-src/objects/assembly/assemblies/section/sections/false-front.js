@@ -8,7 +8,7 @@ const Assembly = require('../../../assembly.js');
 
 class FalseFrontSection extends Assembly {
   constructor(front) {
-    super();
+    super('ff');
     const instance = this;
     const sectionProps = () => instance.parentAssembly();
     this.part = () => false;

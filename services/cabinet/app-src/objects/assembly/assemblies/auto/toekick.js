@@ -43,7 +43,7 @@ class AutoToekick extends Assembly {
     }
 
     const joint = (part) => (otherPartCode, condition) =>
-      part.addJoints(new Butt(part.partCode(), otherPartCode, condition));
+      part.addJoints(new Butt(part.partCode(true), otherPartCode, condition));
     const toeKickPanel = new PanelModel('tkb', `${atkid}.Backer`, toModel('toeKick'));
     joint(toeKickPanel)('R');
     joint(toeKickPanel)('B');
@@ -54,7 +54,8 @@ class AutoToekick extends Assembly {
 
     toeKickPanel.parentAssembly(this);
     cutter.parentAssembly(this);
-    const assems = [toeKickPanel, cutter];
+    this.addSubAssembly(toeKickPanel);
+    this.addSubAssembly(cutter);
 
     // function updateSupports() {
     //   supportPanels = [];
@@ -67,7 +68,6 @@ class AutoToekick extends Assembly {
 
     this.part = () => false;
     this.children = () => this.getSubassemblies();
-    this.getSubassemblies = () => assems;
 
     let lastState;
     this.update = () => {

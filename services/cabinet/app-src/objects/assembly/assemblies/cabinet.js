@@ -14,6 +14,8 @@ const Vertex3D = require('../../../three-d/objects/vertex.js');
 const Line3D = require('../../../three-d/objects/line.js');
 const CSG = require('../../../../public/js/3d-modeling/csg.js');
 const AutoToekick = require('./auto/toekick.js');
+const Notifiction = require('../../../../../../public/js/utils/collections/notification.js');
+const NotifictionArray = Notifiction.Array;
 
 const OVERLAY = {};
 OVERLAY.FULL = 'Full';
@@ -33,7 +35,7 @@ class Cabinet extends Assembly {
     this.currentPosition = () => this.position().current();
     this.display = false;
     this.overlay = OVERLAY.HALF;
-    this.openings = [];
+    this.openings = new NotifictionArray(false);
     this.type = CABINET_TYPE.FRAMED;
     const panels = 0;
     const framePieces = 0;
@@ -59,12 +61,13 @@ class Cabinet extends Assembly {
 
     const parentGetSubAssems = this.getSubassemblies;
     let toeKick;
-    this.getSubassemblies = () => {
-      const subs = parentGetSubAssems();
+    this.getSubassemblies = (childrenOnly) => {
+      const subs = parentGetSubAssems(childrenOnly);
       if (this.autoToeKick()) {
         if (toeKick === undefined) toeKick = new AutoToekick(this);
-        subs.concatInPlace(toeKick.getSubassemblies());
-        return subs.concat(toeKick);
+        subs.push(toeKick);
+        if (!childrenOnly) subs.concatInPlace(toeKick.getSubassemblies());
+        return subs;
       }
       return subs;
     }
@@ -299,12 +302,14 @@ Cabinet.build = (type, group, config) => {
     cabinet.addSubAssembly(subAssem);
   });
 
-  config.joints.forEach((relationConfig) => {
-    cabinet.addJoints(Object.fromJson(relationConfig));
+  config.joints.forEach((jointConfig) => {
+    const male = cabinet.getAssembly(jointConfig.malePartCode);
+    if (male === undefined) console.warn(`No male found for joint: ${jointConfig}`);
+    else male.addJoints(Object.fromJson(jointConfig));
   });
 
   config.openings.forEach((config, i) => {
-    const sectionProperties = new SectionProperties(config, i);
+    const sectionProperties = new SectionProperties(config, i + 1);
     const cabOpenCoords = new CabinetOpeningCorrdinates(cabinet, sectionProperties);
     cabinet.openings.push(cabOpenCoords);
     cabinet.addSubAssembly(sectionProperties);

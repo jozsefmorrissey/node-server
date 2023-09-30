@@ -10,7 +10,7 @@ const Polygon3D = require('../../../../../three-d/objects/polygon.js');
 
 class DrawerSection extends Assembly {
   constructor(front, box) {
-    super();
+    super('d');
     const instance = this;
     const sectionProps = () => instance.parentAssembly();
     this.part = () => false;

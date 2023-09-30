@@ -71,11 +71,17 @@ class Handle extends Assembly {
       return center;
     };
 
-    partCode = partCode && partCode.match(/.{1,}-[0-9]{1,}/) ? partCode : `${partCode}-${index}`;
-    super(partCode, 'Handle');
+    super('p', 'Handle');
     Object.getSet(this, {location});
     this.partName = () =>
       `${this.parentAssembly().partName()}.Pull.${this.location().position}`;
+    this.partCode = (full) => {
+      if (!full) return partCode;
+      const parent = this.parentAssembly();
+      const parentStr = parent ? `${parent.partCode()}-` : '';
+      const indexStr = this.count() > 0 ? `-${index}` : '';
+      return `${parentStr}${partCode}${indexStr}`;
+    }
     this.inElivation = true;
     instance = this;
     index = index || 0;

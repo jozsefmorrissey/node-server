@@ -26,7 +26,7 @@ class CutterModel extends Cutter {
 class CutterReference extends Cutter {
     constructor (reference, fromPoint, offset, front) {
     front = front === false ? false : true;
-    const partCode = `CR${String.random(4)}`;
+    const partCode = `CR${reference.partCode(true).hash(9949, false)}`;
     super(partCode);
     offset ||= 0;
 

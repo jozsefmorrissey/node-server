@@ -6,7 +6,7 @@ const Assembly = require('../../../assembly.js');
 
 class DoorSection extends Assembly {
   constructor(door) {
-    super();
+    super('D');
     const sectionProps = () => instance.parentAssembly();
     const instance = this;
     this.part = () => false;
