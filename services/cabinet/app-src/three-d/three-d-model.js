@@ -81,7 +81,7 @@ class ThreeDModel {
     }
     this.inclusiveTarget = function(type, value) {
       let prefixReg;
-      if (type === 'prefix') prefixReg = new RegExp(`^${value}`)
+      if (type === 'prefix') prefixReg = new RegExp(`^${value}(-|:|$)`)
       inclusiveTarget = {type, value, prefixReg};
     }
 
@@ -89,7 +89,7 @@ class ThreeDModel {
       if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
       switch (inclusiveTarget.type) {
         case 'prefix':
-          return part.partName().match(inclusiveTarget.prefixReg) !== null;
+          return part.partCode(true).match(inclusiveTarget.prefixReg) !== null;
           break;
         case 'part-name':
           return part.partName() === inclusiveTarget.value;
@@ -130,6 +130,7 @@ class ThreeDModel {
 
     this.hidePartId = manageHidden(hiddenPartIds);
     this.hidePartName = manageHidden(hiddenPartNames);
+    this.hidePartCode = manageHidden(hiddenPartNames);
     this.hidePrefix = manageHidden(hiddenPrefixes);
 
     function hasHidden(hiddenObj) {
@@ -162,9 +163,10 @@ class ThreeDModel {
       if (instance.hidePartId(part.id())) return true;
       if (instance.hidePartName(part.partName())) return true;
       buildHiddenPrefixReg();
-      if (hiddenPrefixReg && part.partName().match(hiddenPrefixReg)) return true;
+      if (hiddenPrefixReg && part.partCode(true).match(hiddenPrefixReg)) return true;
       return false;
     }
+    this.hidden = hidden;
 
     // Remove if colors start behaving correctly, can be use to debug.
     let xzFootprint;
@@ -220,7 +222,7 @@ class ThreeDModel {
       }
       options ||= {};
       const cId = cacheId();
-      FunctionCache.clearAllCaches();
+      // FunctionCache.clearAllCaches();
       FunctionCache.on('sme');
       if (cId) {
         FunctionCache.on(cId);
@@ -235,13 +237,10 @@ class ThreeDModel {
       partMap = {};
       for (let index = 0; index < assemblies.length; index += 1) {
         const assem = assemblies[index];
-        if ((typeof assem.partName) !== 'function') {
-          console.log('here')
+        if (assem.partCode().match(/AutoToekick/)) {
+          console.log('found');
         }
         partMap[assem.id()] = {path: assem.path(), code: assem.partCode(), name: assem.partName()};
-        if (assem.partName().indexOf('Bottom') !== -1) {
-          console.log('here')
-        }
         const b = buildModel(assem);
         cabinetModel.add(assem, b);
         if (assem.included()) {
@@ -257,7 +256,7 @@ class ThreeDModel {
           }
         }
       }
-      a.center({x:0,y:0,z:0});
+      // a.center({x:0,y:0,z:0});
       lm = cabinetModel.complexModel(a);
       if (cId) {
         FunctionCache.off(cId);
@@ -274,7 +273,6 @@ class ThreeDModel {
             ThreeDModel.lastActive = this;
             buildObject();
             resolve(CabinetModel.get(instance.object()));
-            console.log('built obj');
           } catch (e) {
             console.error(e);
             reject(e);
@@ -294,7 +292,6 @@ class ThreeDModel {
       if (obj === undefined || obj.buildCenter === undefined) return;
       await instance.buildObject();
       const buildCenter = obj.buildCenter();
-      console.log('getting parts');
       const assems = obj.getParts();
       for (let index = 0; index < assems.length; index++) {
         const part = assems[index];
@@ -439,12 +436,19 @@ class GroupThreeDModel extends ThreeDModel{
         const part = parts[index];
         const model = await ThreeDModel.get(part).buildObject();
         const complexModel = model.complexModel();
+        // const orig = complexModel.clone();
+        const simpleModel = model.boxModel();
+        const sv = new Vertex3D(simpleModel.center());
+        const cv = new Vertex3D(complexModel.center());
+        const offsetVector = new Vertex3D(cv.minus(sv));
         complexModel.center(origin);
         const rotation = part.position().rotation();
         rotation.y *= -1;// I think this is because the Y axis is inverted...
         complexModel.rotate(rotation);
         complexModel.center(part.position().center());
-        combined = combined.union(complexModel);
+        complexModel.translate(offsetVector.rotate(rotation));
+
+        combined = combined.union(complexModel);//.union(simpleModel).union(orig);
       }
       return combined;
     }

@@ -43,11 +43,13 @@ class AutoSave {
     this.save = async function () {
       await this.onInit();
       if (!hasRead) throw new Error('Must attempt to read file before saving');
-      savingEvent.trigger();
       const data = contentFunc(this.name(), this);
-      if (await readerWriter.write(data, await this.directory())) {
-        savedEvent.trigger();
-        return true;
+      if (readerWriter.changesMade(data, await this.directory())) {
+        savingEvent.trigger();
+        if (await readerWriter.write(data, await this.directory())) {
+          savedEvent.trigger();
+          return true;
+        }
       }
       return false;
     }

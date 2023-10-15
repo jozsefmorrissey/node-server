@@ -17,9 +17,6 @@ class Group extends Lookup {
 
     this.resolve = (one, two, three) => {
       if (one) {
-        if (one === 'baseh' || one === 'ceilh') {
-          console.log('gotcha bitch');
-        }
         const layout = room.layout();
         if (layout && (typeof two) === 'string') {
           const lower = two.toLowerCase();

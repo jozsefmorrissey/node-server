@@ -183,15 +183,14 @@ function createMethods() {
 
   N.delete = async function (handler, path, filter) {
     try {
-      console.log(path);
       if (path || filter) {
-        const handlers = Object.values(await N.find(handler, path, filter));
+        const handlers = Object.values(await N.find(handler, path, filter) || {});
         handlers.sort(sortByDepth);
         for (let index = 0; index < handlers.length; index++) {
           await N.delete(handlers[index]);
         }
       } else if (N.isDirectory(handler)){
-        const handlers = Object.values(await N.find(handler));
+        const handlers = Object.values(await N.find(handler) || {});
         handlers.sort(sortByDepth);
         for (let index = 0; index < handlers.length; index++) {
           const h = handlers[index];
@@ -203,7 +202,7 @@ function createMethods() {
         await dir.removeEntry(handler.name);
       }
     } catch (e) {
-      console.log(e);
+      console.log.subtle(e);
     }
   };
 

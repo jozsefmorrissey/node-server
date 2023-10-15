@@ -1,4 +1,4 @@
-<div class='file-tab-cnt {{type()}}' id='{{id()}}'>
+<div class='file-tab-cnt {{type()}}{{isOpen() ? ' open' : ''}}' id='{{id()}}'>
   <ul>
     <li:t repeat='title in list()' {{title === selected() ? 'class="selected"' : ''}}>
       {{title}}

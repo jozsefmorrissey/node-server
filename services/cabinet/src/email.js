@@ -17,7 +17,7 @@ class EmailFailedToSend extends Error {
 
 function print(message) {
   if (global.ENV === 'local') {
-    console.log.apply(null, arguments);
+    console.info.apply(null, arguments);
   }
 
 }
@@ -30,7 +30,7 @@ function send (data, success, failure) {
     }
   }
   if (emailServiceActive) {
-    console.log('sending: ', data);
+    console.info('sending: ', data);
     mg.messages().send(data, respond);
   } else {
     respond();

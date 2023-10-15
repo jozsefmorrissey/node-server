@@ -52,6 +52,7 @@ class DrawLayout extends Draw {
     draw.window = (window, color, width) => {
       draw.beginPath();
       const wall = window.wall();
+      color ||= hovering() === window ? 'green' : 'black';
       const wallStartPoint = wall.startVertex().point();
       const points = window.endpoints2D(wallStartPoint);
       const lookupKey = window.toString();
@@ -63,51 +64,43 @@ class DrawLayout extends Draw {
       ctx.stroke();
     }
 
-    function doorDrawingFunc(startpointLeft, startpointRight) {
-      return (door) => {
-        const ctx = draw.ctx();
-        ctx.beginPath();
-        ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'black';
-        const hinge = door.hinge();
+    function doorDrawingFunc(door) {
+      const ctx = draw.ctx();
+      const startpointLeft = door.startVertex();
+      const startpointRight = door.endVertex();
+      ctx.beginPath();
+      ctx.strokeStyle = hovering() === door ? 'green' : 'black';
+      const hinge = door.hinge();
 
-        if (hinge === 4) {
-          ctx.moveTo(startpointLeft.x(), startpointLeft.y());
-          ctx.lineWidth = 8;
-          ctx.strokeStyle = hoverId() === door.toString() ? 'green' : 'white';
-          ctx.lineTo(startpointRight.x(), startpointRight.y());
-          ctx.stroke();
-        } else {
-          const offset = Math.PI * hinge / 2;
-          const initialAngle = (door.wall().radians() + offset) % (2 * Math.PI);
-          const endAngle = initialAngle + (Math.PI / 2);
-
-          if (hinge === 0 || hinge === 3) {
-            ctx.moveTo(startpointRight.x(), startpointRight.y());
-            ctx.arc(startpointRight.x(), startpointRight.y(), door.width(), initialAngle, endAngle, false);
-            ctx.lineTo(startpointRight.x(), startpointRight.y());
-          } else {
-            ctx.moveTo(startpointLeft.x(), startpointLeft.y());
-            ctx.arc(startpointLeft.x(), startpointLeft.y(), door.width(), endAngle, initialAngle, true);
-            ctx.lineTo(startpointLeft.x(), startpointLeft.y());
-          }
-
-          ctx.fillStyle = 'white';
-          ctx.fill();
-        }
+      if (hinge === 4) {
+        ctx.moveTo(startpointLeft.x(), startpointLeft.y());
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = hovering() === door ? 'green' : 'white';
+        ctx.lineTo(startpointRight.x(), startpointRight.y());
         ctx.stroke();
+      } else {
+        const offset = Math.PI * hinge / 2;
+        const initialAngle = (door.wall().radians() + offset) % (2 * Math.PI);
+        const endAngle = initialAngle + (Math.PI / 2);
+
+        if (hinge === 0 || hinge === 3) {
+          ctx.moveTo(startpointRight.x(), startpointRight.y());
+          ctx.arc(startpointRight.x(), startpointRight.y(), door.width(), initialAngle, endAngle, false);
+          ctx.lineTo(startpointRight.x(), startpointRight.y());
+        } else {
+          ctx.moveTo(startpointLeft.x(), startpointLeft.y());
+          ctx.arc(startpointLeft.x(), startpointLeft.y(), door.width(), endAngle, initialAngle, true);
+          ctx.lineTo(startpointLeft.x(), startpointLeft.y());
+        }
+
+        ctx.fillStyle = 'white';
+        ctx.fill();
       }
+      ctx.stroke();
     }
 
     draw.door = (door, color, width) => {
-      const wall = window.wall();
-      const wallStartPoint = wall.startVertex().point();
-      const initialAngle = wall.radians();
-
-      const distLeft = door.fromPreviousWall() +  door.width();
-      const startpointLeft = {x: startpoint.x + distLeft * Math.cos(theta), y: startpoint.y + distLeft * Math.sin(theta)};
-      const distRight = door.fromPreviousWall();
-      const startpointRight = {x: startpoint.x + distRight * Math.cos(theta), y: startpoint.y + distRight * Math.sin(theta)};
-      doorDrawingFunc(door.startVertex(), door.endVertex(), initialAngle);
+      doorDrawingFunc(door);
     }
 
     const blank = 40;
@@ -145,6 +138,8 @@ class DrawLayout extends Draw {
       if (measurementLineMap[lookupKey] === undefined) {
         const line = new Line2d(vertex1, vertex2);
         measurementLineMap[lookupKey] = new LineMeasurement2d(line)
+        const measurement = new LineMeasurement2d(line, getLayout().center());
+
       }
       return measurementLineMap[lookupKey];
     }
@@ -157,24 +152,25 @@ class DrawLayout extends Draw {
     function drawMeasurementValues() {
       let values = measurementValues;
       measurementValues = [];
-      measurmentMap.clear();
       for (let index = 0; index < values.length; index += 1) {
         let m = values[index];
-        measurmentMap.add(m.line, 10, m.measurement);
         drawMeasurementValue(m.line, m.midpoint, m.measurement);
       }
     }
 
-    const hovering = () => getLayout().hoverMap().hovering();
+    const hovermap = () => getLayout().hoverMap();
+    const hovering = () => hovermap().hovering();
     const hoverId = () => hovering() && hovering().toString();
     const isHovering = (object) => hoverId() === object.toString();
 
     const measurementLineWidth = 3;
     let measurementIs = {};
     function drawMeasurement(measurement, level, focalVertex)  {
+      if (Math.abs(measurement.line().length()) < 1/64) return;
+      measurement.layer(level);
       const lookupKey = `${measurement.toString()}-[${level}]`;
       // if (measurementIs[lookupKey] === undefined) {
-        measurementIs[lookupKey] = measurement.I(level);
+        measurementIs[lookupKey] = measurement.I();
       // }
       const lines = measurementIs[lookupKey];
       const center = getLayout().vertices(focalVertex, 2, 3);
@@ -198,14 +194,13 @@ class DrawLayout extends Draw {
     }
 
     function measureOnWall(list, level) {
+      const hm = hovermap();
       for (let index = 0; index < list.length; index += 1) {
         let item = list[index];
         const wall = item.wall();
         const points = item.endpoints2D();
-        const measureLine1 = getMeasurementLine(wall.startVertex(), points.start);
-        const measureLine2 = getMeasurementLine(points.end, wall.endVertex());
-        measureLine1.modificationFunction(item.fromPreviousWall);
-        measureLine2.modificationFunction(item.fromNextWall);
+        const measureLine1 = item.prevLine.measurement;
+        const measureLine2 = item.nextLine.measurement;
         drawMeasurement(measureLine1, level, wall.startVertex())
         drawMeasurement(measureLine2, level, wall.startVertex())
         level += 4;
@@ -213,9 +208,9 @@ class DrawLayout extends Draw {
       return level;
     }
 
-    // function includeDetails() {
-    //   return !dragging && (popupOpen)
-    // }
+    function includeDetails() {
+      return getLayout().hoverMap().layoutHover();
+    }
 
     draw.wall = (wall, color, width) => {
       if (wall.endVertex().isFree()) color = 'red';
@@ -224,20 +219,19 @@ class DrawLayout extends Draw {
       const startpoint = wall.startVertex().point();
       const endpoint = wall.endVertex().point();
 
-      wall.doors().forEach((door) =>
-        drawDoor(startpoint, door, wall.radians()));
-      wall.windows().forEach((window) =>
-        drawWindow(startpoint, window, wall.radians()));
+      wall.doors().forEach((door) => draw.door(door));
+      wall.windows().forEach((window) => draw.window(window));
 
       let level = 8;
-      // if (includeDetails()) {
-      //   const vertices = wall.vertices();
-      //   let measLines = {};
-      //   level = measureOnWall(wall.doors(), level);
-      //   level = measureOnWall(wall.windows(), level);
-      // }
-      const measurement = new LineMeasurement2d(wall, undefined, undefined, getLayout().reconsileLength(wall));
-      drawMeasurement(measurement, level, wall.startVertex());
+      if (includeDetails()) {
+        const vertices = wall.vertices();
+        let measLines = {};
+        level = measureOnWall(wall.doors(), level);
+        level = measureOnWall(wall.windows(), level);
+      }
+      const measurement = wall.measurment;
+      measurement.layer(level);
+      drawMeasurement(measurement, null, wall.startVertex());
 
       return endpoint;
     }
@@ -264,33 +258,41 @@ class DrawLayout extends Draw {
     function drawVertex(vertex, color, width) {
       const fillColor = color || vertexColor(vertex);
       const p = vertex.point();
-      const radius = isHovering(vertex) ? 6 : 4;
+      const hovering = isHovering(vertex);
+      const radius = hovering ? 6 : 4;
       const circle = new Circle2d(radius, p);
       draw.circle(circle, 'black', fillColor);
-      if (getLayout().objects().length === 0 || vertex.showAngle) drawAngle(vertex);
+      if (includeDetails()) drawAngle(vertex);
     }
     draw.corner = drawVertex;
 
     function drawObjects(objects, defaultColor, dontDrawSnapLocs) {
       defaultColor ||= 'black';
       let target;
+      let lastPosition = hovermap().lastPosition();
+      let hoverin = hovering();
+      const snap = hoverin instanceof Snap2d ? hoverin :
+                    (hoverin instanceof SnapLocation2d ? hoverin.parent() : undefined);
+      const maxDist = snap ? snap.maxRadius() * 1.5 : Math.sqrt(9*9+9*9) * 2.54;
       objects.forEach((obj) => {
-        const color = hovering(obj.snap2d.top()) ? 'green' : defaultColor;
+        const hovered = hoverin === obj.snap2d.top();
+        const color =  hovered ? 'green' : defaultColor;
         draw(obj.snap2d.top(), color, 3);
         if (!dontDrawSnapLocs) {
           obj.snap2d.top().snapLocations().forEach((snapLoc, i) => {
             const beingHovered = hoverId() === snapLoc.toString();
+            const withinRange = snapLoc.center().distance(lastPosition) < maxDist;
             const identfied = Snap2d.identfied(snapLoc);
             const snapColor = identfied ? 'red' : (beingHovered ? 'green' :
             (snapLoc.courting() ? 'white' : (snapLoc.pairedWith() ? 'black' : undefined)));
             const hasPartner = snapLoc.courting() || snapLoc.pairedWith();
             const radius = identfied ? 6 : (beingHovered || hasPartner ? 4 : 1.5);
-            if (!beingHovered) draw(snapLoc, snapColor, radius);
-            else target = {radius, color: snapColor};
+            if (!beingHovered && withinRange) draw(snapLoc, snapColor, radius);
+            if (beingHovered) target = {target: snapLoc, radius, color: snapColor};
           });
         }
       });
-      if (target) draw(hovering(), target.color, target.radius);
+      if (target) draw(target.target, target.color, target.radius);
     }
 
     const drawMeasurements = () => {
@@ -328,7 +330,7 @@ class DrawLayout extends Draw {
       let wl = walls.length;
       walls.forEach((wall, index) => draw.wall(wall));
       walls.forEach(wall => drawVertex(wall.startVertex()));
-      // drawMeasurementValues();
+      drawMeasurementValues();
 
       let objects = layout.level();
       let allObjects = layout.objects();

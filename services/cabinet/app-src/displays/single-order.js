@@ -18,7 +18,6 @@ const chooseSaveLocBtn = du.find.closest('.auto-save-btn', orderSelectCnt);
 
 let orderModified = false;
 const preSaveLocationChecks = () => {
-  console.log('hereino')
   if (saveMan.initialized()) return;
   const order = Global.order();
   if (order.worthSaveing()) {
@@ -82,6 +81,7 @@ const versionId = cookieVals.version || 'original';
 
 
 let counter = 0;
+// kitty is stored within cookie
 const saveMan = new OrderSaveManager(() => Global.order().toJson(), orderName, versionId);
 
 function onChange(values, dit) {
@@ -170,10 +170,6 @@ function updateOrderInput() {
 function onVersionChange(elem, details) {
   setCookie();
 }
-const timeCnt = du.id('save-time-cnt');
-function updateTime() {
-  timeCnt.innerText = `Last Save: ${new Date().toLocaleTimeString()}`;
-}
 du.on.match('click', '#save-time-cnt', () => saveMan.save() || resetOrderAndVersion());
 
 let firstSwitch = true;
@@ -257,8 +253,21 @@ orderInput.on('change', () =>  versionInput.setValue(''));
 orderInput.on('focusin', () => orderInput.setValue(''));
 versionInput.on('focusin', () => versionInput.setValue(''));
 
+const timeCnt = du.id('save-time-cnt');
+const selectCnt = du.find('#order-select-cnt');
+function infoText(text) {
+  return () => {
+    if (text) du.class.add(selectCnt, 'saving');
+    else du.class.remove(selectCnt, 'saving');
+    timeCnt.innerText = text || `Last Save: ${new Date().toLocaleTimeString()}`;
+
+  }
+}
+
+saveMan.onSaving(infoText('Saving...'));
+saveMan.onSaved(infoText(''));
+
 saveMan.onFileSystemChange(updateOrderInput);
 saveMan.onLoaded(resetOrderAndVersion);
 saveMan.onVersionChange(onVersionChange);
-saveMan.onSaved(updateTime);
 saveMan.onVersionChange(switchOrder);

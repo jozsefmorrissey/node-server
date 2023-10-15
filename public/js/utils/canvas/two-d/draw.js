@@ -107,7 +107,7 @@ class Draw2d {
     }
 
     draw.vertex = (vertex, color, width) => {
-      draw.circle(new Circle2d(2, vertex), color, width);
+      draw.circle(new Circle2d(width || 1, vertex), color, width);
     }
 
     draw.line = (line, color, width, indicateDirection) => {
@@ -202,7 +202,7 @@ class Draw2d {
       ctx().restore();
     }
 
-    draw.circle = (circle, lineColor, fillColor, lineWidth) => {
+    draw.circle = (circle, lineColor, lineWidth, fillColor) => {
       const center = circle.center();
       ctx().beginPath();
       ctx().lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
@@ -306,7 +306,7 @@ class Draw2d {
     draw.snapLocation = (location, color, radius) => {
       location.center();
       const c = snapLocColor(location);
-      draw.circle(location.circle(radius), 'black', c);
+      draw.circle(location.circle(radius), 'black', 1, c);
     }
 
     draw.snap = (snap, color, width) => {

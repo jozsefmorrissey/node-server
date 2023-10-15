@@ -30,7 +30,7 @@ class DrawerSection extends Assembly {
 
 
     function getDrawerDepth() {
-      const depth = sectionProps().innerDepth();
+      const depth = sectionProps().drawerDepth();
       const adjustedDepth = (depth/2.54) - 1;
       if (adjustedDepth < 3) return 0;
       return Math.floor((adjustedDepth/3) * 3) * 2.54;

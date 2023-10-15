@@ -695,9 +695,6 @@ CSG.Node.prototype = {
     for (var i = 0; i < this.polygons.length; i++) {
       this.polygons[i].flip();
     }
-    if (this.plane === null) {
-      console.log('witfigomf');
-    }
     this.plane.flip();
     if (this.front) this.front.invert();
     if (this.back) this.back.invert();

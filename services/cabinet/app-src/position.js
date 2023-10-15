@@ -9,7 +9,8 @@ const FunctionCache = require('../../../public/js/utils/services/function-cache.
 FunctionCache.on('position', 100);
 
 class Position {
-  constructor(assembly, sme) {
+  constructor(assembly, sme, config) {
+    config ||= {};
 
     function getSme(attr, obj) {
       if (attr === undefined) {
@@ -33,28 +34,28 @@ class Position {
 
     this.hash = () => Object.hash(this.configuration());
 
-    if ((typeof assembly.rotationConfig) !== 'function') {
-      rotCoords = Position.parseCoordinates(assembly.rotationConfig, '0:0:0');
+    if ((typeof config.rotation) !== 'function') {
+      rotCoords = Position.parseCoordinates(config.rotation, '0:0:0');
       rotation = (attr) => getSme(attr, rotCoords);
     } else {
-      rotation = assembly.rotationConfig;
+      rotation = config.rotation;
     }
 
-    if ((typeof assembly.centerConfig) !== 'function') {
-      centerCoords = Position.parseCoordinates(assembly.centerConfig, '0:0:0');
+    if ((typeof config.center) !== 'function') {
+      centerCoords = Position.parseCoordinates(config.center, '0:0:0');
       center = (attr) => getSme(attr, centerCoords);
     } else {
-      center = assembly.centerConfig;
+      center = config.center;
     }
 
-    if ((typeof assembly.demensionConfig) !== 'function') {
+    if ((typeof config.demension) !== 'function') {
       const defSizes = getDefaultSize(assembly);
-      demCoords = Position.parseCoordinates(assembly.demensionConfig,
+      demCoords = Position.parseCoordinates(config.demension,
       `${defSizes.width}:${defSizes.length}:${defSizes.thickness}`,
       '0:0:0');
       demension = (attr) => getSme(attr, demCoords);
     } else new Promise(function(resolve, reject) {
-      demension = assembly.demensionConfig
+      demension = config.demension
     });
 
 
@@ -147,15 +148,12 @@ class Position {
 
     this.toModel = new FunctionCache((simple) => {
       let joints = assembly.getJoints().female;
-      // TODO: make attribute within joint to determine if required.
-      if (simple) joints = joints.filter((j) => {
-        const male = j.male();
-        if (male) return male.constructor.name.match(/Cutter/)
-        else {
-          console.log('wtf');
-          j.male();
-        }
-      });
+      // TODO: this is a hacky way of simplifying... fix
+      if (simple) joints.jointFilter = (assem) =>
+        assem.constructor.name.match(/Cutter/) &&
+        (assem.parentAssembly().parentAssembly() === undefined ||
+        assem.partCode() === 'aoc');
+
       let model = this.toBiPolygon().toModel(joints);
       return model;
     }, this, 'position');
@@ -167,7 +165,9 @@ class Position {
         this.set(obj, 'z', type.z, getter);
         return getter();
       }
-      if (value !== undefined) obj[type] = value;
+      if (value !== undefined) {
+        obj[type] = value;
+      }
       return getter(type);
     }
 
@@ -225,6 +225,8 @@ Position.parseCoordinates = function() {
     const str = arguments[index];
     if (typeof str === 'string') {
       coordinateMatch = str.match(Position.demsRegex);
+    } else if ((typeof str) === 'object') {
+      return str;
     }
   }
   if (coordinateMatch === null) {

@@ -1,4 +1,9 @@
 <div class='void-display-cnt' void-id='{{id()}}' cabinet-id='{{cabinetId()}}'>
+  <select class='void-part-code-select'>
+    <option:t repeat='partCode in partCodes()' {{partCode === 'c_BACK' ? 'selected' : ''}}>
+      {{partCode}}
+    </option:t>
+  </select>
   <label>Horizontal</label>
   <input type='radio' name='orientation' value='horizontal' checked>
   <label>Vertical</label>
@@ -9,9 +14,19 @@
   <input type='text' name='height' class='dem' value='5'>
   <button class='add-void-btn'>Add</button>
   <div class='void-cnt'>
-    <div:t repeat='void in voids()' index='{{$index}}'>
-      <h3>{{void.id()}}</h3>
-      <div class='tab'>
+    <div:t class='card margin' repeat='void in voids()' index='{{$index}}' target-id='{{void.id()}}'>
+      <button class='assembly remove-btn'>X</button>
+      <h3 class='inline-flex'>{{void.partCode()}}</h3>
+      <input type="text" class='void-dem' name="width" value="{{displayWidth(void)}}">
+      X
+      <input type="text" class='void-dem' name="length" value="{{displayLength(void)}}">
+      <br>
+      <h3 class='inline-flex chev-dropdown-toggle'>
+        Advanced
+        <i class='down gg-chevron-down hidden' ></i>
+        <i class='right gg-chevron-right'></i>
+      </h3>
+      <div class='tab chev-dropdown' hidden>
         <label>Joint Set:</label>
         <select class='set-selector'>
           <option:t repeat='i in 0..6' {{jointSet === i ? 'selected' : ''}}>
@@ -27,8 +42,7 @@
           </span:t>
         </div>
         {{assemblyConfig(void).html()}}
-        </div>
-        <br>
+      </div>
     </div:t>
   </div>
 </div>

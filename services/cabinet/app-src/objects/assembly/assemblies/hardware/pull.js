@@ -78,7 +78,7 @@ class Handle extends Assembly {
     this.partCode = (full) => {
       if (!full) return partCode;
       const parent = this.parentAssembly();
-      const parentStr = parent ? `${parent.partCode()}-` : '';
+      const parentStr = parent ? `${parent.partCode(true)}-` : '';
       const indexStr = this.count() > 0 ? `-${index}` : '';
       return `${parentStr}${partCode}${indexStr}`;
     }

@@ -32,7 +32,6 @@ class Room extends Lookup {
           g.objects.concatInPlace(cabGroupMap[g.id()].added);
         }
       });
-      console.log('onlaychan', detail);
     }
     const initialVals = {
       name: name || `Room ${Room.count++}`,

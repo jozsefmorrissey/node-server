@@ -118,6 +118,24 @@ du.on.match('mousemove', '*', (elem, event) => {
   }
 });
 
+du.on.match('click', '.copy-inner-text', (elem) => {
+  du.copy(elem.innerText);
+});
+
+const chevDisplay = (elem, hidden) => {
+  if (hidden) du.class.add(elem, 'hidden');
+  else du.class.remove(elem, 'hidden')
+}
+
+du.on.match('click', '.chev-dropdown-toggle', (elem) => {
+  const dropdown = du.find.down('.chev-dropdown', elem.parentElement);
+  const downChev = du.find.closest('.down', elem);
+  const rightChev = du.find.closest('.right', elem);
+  dropdown.hidden = !dropdown.hidden;
+  chevDisplay(downChev, dropdown.hidden);
+  chevDisplay(rightChev, !dropdown.hidden);
+});
+
 new QRious({
           element: document.getElementById('qr-demo'),
           value: 'https://github.com/neocotic/qrious',

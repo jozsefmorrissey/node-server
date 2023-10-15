@@ -58,9 +58,6 @@ class DivideSection extends SpaceSection {
     this.spaces = () => this.sections.filter((e, index) => index % 2 === 0);
     this.borders = (index) => {
       return () => {
-        // if (index === 1) {
-        //   console.log('center');
-        // }
         const props = sectionProperties();
         const position = {
           front: props.position.front,
@@ -102,9 +99,6 @@ class DivideSection extends SpaceSection {
     }
     this.dividerProps = (index) => {
       return () => {
-        // if (index === 1) {
-        //   console.log('center');
-        // }
         const answer = this.dividerLayout().list;
         let offset = this.dividerOffset(index * 2);
         for (let i = 0; i < index + 1; i += 1) offset += answer[i];

@@ -1,5 +1,6 @@
 
 const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
+const Void = require('../objects/assembly/assemblies/void.js');
 
 const map = {};
 const list = () => Object.keys(map);
@@ -119,6 +120,7 @@ new CabinetLayout('test', (cabinet) => {
   center.sections[1].setSection('DualDoorSection');
   center.pattern('ab');
   const centerTop = center.sections[0];
+  const centerBottom = center.sections[1];
 
   centerTop.divide(2);
   centerTop.sections[0].setSection("DoorSection");
@@ -135,4 +137,34 @@ new CabinetLayout('test', (cabinet) => {
   right.sections[1].setSection("DrawerSection");
   right.sections[2].setSection("DrawerSection");
   right.pattern('abb');
+
+  centerTop.divider().panel().type('frontAndBack');
+  left.sections[0].divider().panel().type('front');
+  left.sections[1].divider().panel().type('front');
+  right.sections[0].divider().panel().type('front');
+  right.sections[1].divider().panel().type('front');
+
+  let config = Void.referenceConfig('horizontal', 'c_BACK', 5*2.54, 5*2.54);
+  let vOid = new Void('void1', 'Void1', config);
+  cabinet.addSubAssembly(vOid);
+
+  config = Void.referenceConfig('vertical', 'c_BACK', 5*2.54, 5*2.54);
+  vOid = new Void('void2', 'Void2', config);
+  cabinet.addSubAssembly(vOid);
+
+  config = Void.referenceConfig('horizontal', 'c_L', 5*2.54, 5*2.54);
+  vOid = new Void('void3', 'Void3', config);
+  cabinet.addSubAssembly(vOid);
+
+  config = Void.referenceConfig('vertical', 'c_L', 5*2.54, 5*2.54);
+  vOid = new Void('void4', 'Void4', config);
+  cabinet.addSubAssembly(vOid);
+
+  config = Void.referenceConfig('horizontal', 'c_R', 5*2.54, 5*2.54);
+  vOid = new Void('void5', 'Void5', config);
+  cabinet.addSubAssembly(vOid);
+
+  config = Void.referenceConfig('vertical', 'c_R', 5*2.54, 5*2.54);
+  vOid = new Void('void6', 'Void6', config);
+  cabinet.addSubAssembly(vOid);
 });

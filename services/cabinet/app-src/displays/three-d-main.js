@@ -24,11 +24,11 @@ function displayPart(part) {
 }
 
 function groupParts(cabinet) {
-  const grouping = {displayPart, group: {groups: {}, parts: {}, level: 0}};
+  const grouping = {group: {groups: {}, parts: {}, level: 0}};
   const parts = cabinet.getParts();
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
-    const namePieces = part.partName().split('.');
+    const namePieces = part.partCode(true).split(/-|:/);
     let currObj = grouping.group;
     let level = 0;
     let prefix = '';
@@ -39,38 +39,33 @@ function groupParts(cabinet) {
       currObj = currObj.groups[piece];
       currObj.level = ++level;
       currObj.prefix = prefix;
-      prefix += '.'
+      prefix += '-'
     }
-    if (currObj.parts[part.partName()] === undefined) currObj.parts[part.partName()] = [];
-    currObj.parts[part.partName()].push(part);
+    if (currObj.parts[part.partCode] !== undefined) console.error('PartCode collision' + part.partCode(true));
+    currObj.parts[part.partCode()] = part;
   }
   return grouping;
 }
 
 const modelContTemplate = new $t('model-controller');
 
-du.on.match('click', '.model-state', (target) => {
-  if (event.target.tagName === 'INPUT') return;
+du.on.match('click', '.model-state', (target, event) => {
+  if (event.target.matches('[type="checkbox"]')) return;
+  let partCode = du.find.up('[prefix]', target).getAttribute('prefix');
+  partCode = partCode.replace('-:', ':');
   const has = target.matches('.active');
   deselectPrefix();
-  !has ? du.class.add(target, 'active') : du.class.remove(target, 'active');
   if (!has) {
+    du.class.add(target, 'active');
     let label = target.children[0]
     let type = label.getAttribute('type');
-    let value = type !== 'prefix' ?
-    (type !== 'part-name' ? label.innerText : label.getAttribute('part-name')) :
+    let value = label.getAttribute('part-code');
     label.nextElementSibling.getAttribute('prefix');
     const cabinet = Global.cabinet();
     const tdm = ThreeDModel.get(cabinet);
-    let partName = target.getAttribute('part-name');
     let targetSelected = label.hasAttribute('target') || target.hasAttribute('target');
-    if (targetSelected) {
-      let partCode = target.getAttribute('part-code');
-      tdm.setTargetPartCode(partCode);
-    } else {
-      tdm.inclusiveTarget(type, has ? undefined : value);
-      tdm.setTargetPartCode(null);
-    }
+    // tdm.setTargetPartCode(partCode);
+    tdm.inclusiveTarget('prefix', partCode);
   }
   Canvas.render();
 });
@@ -130,31 +125,12 @@ du.on.match('click', '.prefix-switch', (target, event) => {
   focusControls(target);
 });
 
-du.on.match('change', '.prefix-checkbox', (target) => {
+du.on.match('change', '.part-code-checkbox', (target) => {
   const cabinet = Global.cabinet();
-  const attr = target.getAttribute('prefix');
-  deselectPrefix();
+  const attr = target.getAttribute('part-code');
   ThreeDModel.get(cabinet).hidePrefix(attr, !target.checked);
   Canvas.render();
 });
-
-du.on.match('change', '.part-name-checkbox', (target) => {
-  const cabinet = Global.cabinet();
-  const attr = target.getAttribute('part-name');
-  deselectPrefix();
-  const tdm = ThreeDModel.get(cabinet);
-  tdm.hidePartName(attr, !target.checked);
-  Canvas.render();
-});
-
-du.on.match('change', '.part-id-checkbox', (target) => {
-  const cabinet = Global.cabinet();
-  const attr = target.getAttribute('part-id');
-  deselectPrefix();
-  const tdm = ThreeDModel.get(cabinet);
-  tdm.hidePartId(attr, !target.checked);
-  Canvas.render();
-})
 
 function updateController() {
   const cabinet = Global.cabinet();

@@ -37,8 +37,6 @@ class ThreeView {
     const right2D = rightView.map(to2D(axis.right));
     const top2D = topview.map(to2D(axis.top));
 
-    console.log(Line2d.toDrawString(Polygon2d.lines(top2D)))
-
     Polygon2d.centerOn({x:0,y:0}, front2D);
 
     const frontMinMax = Polygon2d.minMax(...front2D);
@@ -77,9 +75,9 @@ class ThreeView {
     }
 
     this.axis = () => axis;
-    this.front = () => front;
-    this.right = () => right;
-    this.top = () => top;
+    this.front = () => front.map(l => l.copy());
+    this.right = () => right.map(l => l.copy());
+    this.top = () => top.map(l => l.copy());
     this.toDrawString = () => {
       let str = '';
       str += '//Front\n' + Line2d.toDrawString(front);

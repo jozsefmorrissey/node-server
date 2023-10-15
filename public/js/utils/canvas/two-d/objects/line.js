@@ -3,7 +3,7 @@ const Vertex2d = require('./vertex');
 const Circle2d = require('./circle');
 const ToleranceMap = require('../../../tolerance-map.js');
 const Tolerance = require('../../../tolerance.js');
-const tol = .01;
+const tol = .001;
 const withinTol = Tolerance.within(tol);
 
 class Line2d {
@@ -72,8 +72,6 @@ class Line2d {
     this.withinDirectionalBounds = (point, limit) => {
       point = new Vertex2d(point);
       const withinLimit = limit === undefined || (limit > point.y() && limit > point.x());
-      const rise = this.rise();
-      const run = this.run();
       if (withinLimit && this.withinSegmentBounds(point)) return true;
       const offsetPoint = Line2d.startAndTheta(point, this.radians(), .0000001).endVertex();
       if (this.startVertex().distance(point) > this.startVertex().distance(offsetPoint)) return false;
@@ -420,7 +418,9 @@ class Line2d {
         y = this.y(x);
       }
       if (NaNfinity(x,y)) return false;
-      // if (!Line2d.withinLineBounds(new Vertex2d(x,y), this, line)) return false;
+      if (!Line2d.withinLineBounds(new Vertex2d(x,y), this, line)) {
+        console.warn('intersection malfunction');
+      }
 
       return new Vertex2d({x,y});
     }

@@ -11,12 +11,33 @@ h3,h4,h5 {
   margin: 0;
 }
 
+#order-select-cnt.saving {
+  background-color: #ffa5008c;
+  padding: 0 10pt;
+  border-radius: 6pt;
+}
+
+#order-select-cnt {
+  width: fit-content;
+}
+
 .nowrap {
   white-space: nowrap;
 }
 
 .bold {
   font-weight: bold;
+}
+
+.remove-btn {
+  float: right;
+  padding: 0 2pt;
+  font-size: small;
+  font-weight: bold;
+  border-radius: 10pt;
+  color: red;
+  background-color: white;
+  margin: 3pt;
 }
 
 .orient-arrows [dir]:hover {
@@ -87,6 +108,10 @@ canvas {
 
 .margin-zero {
   margin: 0;
+}
+
+.margin {
+  margin: 5pt;
 }
 
 .open-pattern-input-cnt > div {
@@ -314,7 +339,7 @@ a {
   float: right;
 }
 
-.plain-dropdown {
+.chev-dropdown {
   border-style: solid;
   border-width: 0 0 0 3px;
   padding-left: 3pt;

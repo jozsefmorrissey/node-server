@@ -1,10 +1,10 @@
 <div class='auto-location-properties-cnt'>
-  <h3 class='inline-flex dropdown-toggle'>
+  <h3 class='inline-flex chev-dropdown-toggle'>
     Auto Location Settings
     <i class='down gg-chevron-down hidden' ></i>
     <i class='right gg-chevron-right'></i>
   </h3>
-  <div class='tab plain-dropdown' hidden>
+  <div class='tab chev-dropdown' hidden>
     <input type='text' value='{{id()}}' name='id' hidden/>
     <div {{isDefault() ? 'hidden' : ''}}>
       Default
@@ -20,13 +20,13 @@
     <label>Corners</label>
     <input type='checkbox' name='CORNERS' {{CORNERS ? 'checked' : ''}}/>
     <div>
-      <div class='inline-flex dropdown-toggle'>
+      <div class='inline-flex chev-dropdown-toggle'>
         <label>Walls</label>
         <input type='checkbox' name='WALLS' {{WALLS ? 'checked' : ''}}/>
         <i class='down gg-chevron-down hidden' ></i>
         <i class='right gg-chevron-right'></i>
       </div>
-      <div class='tab plain-dropdown' hidden>
+      <div class='tab chev-dropdown' hidden>
         <label>Match Angle</label>
         <input type='checkbox' name='MATCH_WALL_ANGLE' {{MATCH_WALL_ANGLE ? 'checked' : ''}}/>
         <br>

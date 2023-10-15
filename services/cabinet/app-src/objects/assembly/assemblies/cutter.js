@@ -8,8 +8,8 @@ const FunctionCache = require('../../../../../../public/js/utils/services/functi
 FunctionCache.on('cutter', 500);
 
 class Cutter extends Assembly {
-  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
-    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+  constructor(partCode, partName, config) {
+    super(partCode, partName, config);
     this.included(false);
   }
 }
@@ -30,6 +30,7 @@ class CutterReference extends Cutter {
     super(partCode);
     offset ||= 0;
 
+    this.reference = () => reference;
     this.toModel = new FunctionCache(() => {
       let biPoly = reference instanceof BiPolygon ? reference : reference.toBiPolygon();
       biPoly.offset(fromPoint(), offset);
@@ -51,6 +52,10 @@ class CutterPoly extends Cutter {
     constructor (poly) {
     const partCode = `CP${String.random(4)}`;
     super(partCode);
+    this.poly = (p) => {
+      if (p) poly = p;
+      return poly;
+    }
 
     this.toModel = new FunctionCache(() => {
       let length = 20;

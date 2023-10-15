@@ -68,9 +68,9 @@ Test.add('Line2d parimeterArea',(ts) => {
       ts.assertEquals(p.area(), 13);
       ts.assertTrue(p.equals(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
     } catch (e) {
-      console.log('error');
       Polygon2d.toParimeter(lines, undefined, true);
       Polygon2d.toParimeter(lines, undefined, true);
+      throw e;
     }
   }
   ts.success();

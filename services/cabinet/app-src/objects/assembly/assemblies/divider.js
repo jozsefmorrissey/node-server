@@ -5,26 +5,28 @@ const Assembly = require('../assembly.js');
 const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
 const Polygon3D = require('../../../three-d/objects/polygon.js');
 const Cutter = require('./cutter.js');
-const PanelModel = require('./panel').Model;
+const Panel = require('./panel');
+const PanelModel = Panel.Model;
 const Joint = require('../../joint/joint.js');
 
 
 class Divider extends Assembly {
-  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, toModel, toBiPolygon) {
+  constructor(partCode, partName, config, panelModel, toBiPolygon) {
     partCode ||= 'dv';
-    if (toModel) {
+    if (panelModel) {
       super(partCode, partName);
-      this.toModel = toModel;
       this.partName = partName;
-    } else super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+    } else{
+      super(partCode, partName, config);
+      panelModel = this.position().toModel;
+    }
     const instance = this;
 
     Object.getSet(this, 'type');
 
     if (toBiPolygon) this.toBiPolygon = toBiPolygon;
 
-    let isPart = true;
-    this.part = () => isPart;
+    this.part = () => false;
     const parentToJson = this.toJson;
     this.toJson = () => {
       const json = parentToJson();
@@ -32,17 +34,15 @@ class Divider extends Assembly {
       return json;
     }
 
+    instance.includeJoints(false);
+
     let type = Divider.Types[0];
     let cutter;
     this.type = (t) => {
       const index = Divider.Types.indexOf(t);
-      if (index !== -1) {
-        isPart = index === 0;
-        instance.includeJoints(isPart);
-        type = Divider.Types[index];
-        if (index > 1 && this.parentAssembly()) {
-          build();
-        }
+      if (index !== -1) type = Divider.Types[index];
+      if (this.parentAssembly()) {
+        build();
       }
       return type;
     }
@@ -50,13 +50,18 @@ class Divider extends Assembly {
     const parentHash = this.hash;
     this.hash = () => parentHash() + type.hash();
 
-    function build(delay) {
-      delay = delay ? 1 : delay * 2;
+    function build() {
       if (instance.sectionProperties()) {
         if (builders[type]) {
           builders[type]();
+          if (type === 'frontAndBack') {
+            const front = panels[':f'];
+            // cutters[':f'].part(true);
+            // cutters[':f'].included(true);
+            builders[type]();
+          }
         }
-      } else console.warn(`SectionProperties has not been defined for object '${instance.id()}'`);
+      } else console.warn.subtle(`SectionProperties has not been defined for object '${instance.id()}'`);
     }
 
     this.sectionProperties = () => {
@@ -72,35 +77,59 @@ class Divider extends Assembly {
       return secProps;
     }
 
+    // this.toModel = () => {
+    //   const sas = Object.values(this.subassemblies);
+    //   if (sas.length < 1) return;
+    //   const models = sas.filter(sa => sa instanceof Panel);
+    //   let model = sas[0].toModel();
+    //   for (let index = 1; index < sas.length; index++) {
+    //     model = model.union(sas[index].toModel());
+    //   }
+    //   return model;
+    // }
+
+    const panels = {};
+    const cutters = {};
+
     function buildPolyCutter(intersected, depth, normal, append, location) {
       const biPoly = instance.toBiPolygon();
       if (biPoly.valid()) {
-        intersected.scale(1000,1000);
+        intersected.scale(10000,10000);
         const poly = Polygon3D.fromIntersections(intersected, [biPoly.front(), biPoly.back()]);
         poly.scale(10, 10);
-        const fromPoint = poly.center();
         const offsetVect = normal.scale(depth);
 
         const flip = normal.sameDirection(poly.normal());
         const copy = flip ? poly.reverse() : poly.copy();
-
-        cutter = new Cutter.Poly(copy.translate(offsetVect), fromPoint, offsetVect);
+        const translated = copy.translate(offsetVect);
+        // cutter.part(true);cutter.included(true);
         // if (location === 'back') {
         //   cutter.included(true);
         //   cutter.part(true);
         // }
-        cutter.parentAssembly(instance);
-        const partCode = `${location[0]}`;
+        const partCode = `:${location[0]}`;
         const partName = `${location}`;
-        const panel = new PanelModel(partCode, partName, instance.toModel);
-        panel.parentAssembly(instance);
-        panel.addJoints(new Joint(cutter.partCode(true), panel.partCode(true)));
-        panel.addJoints(new Joint.References(panel, instance.getJointList, instance.partCode(true)))
+        let cutter, panel;
+        if (panels[partCode] === undefined) {
+          panel = new PanelModel(partCode, partName, panelModel);
+          panels[partCode] = panel;
+          panel.parentAssembly(instance);
+          cutter = new Cutter.Poly(translated);
+          cutters[partCode] = cutter;
+          instance.addSubAssembly(panel);
+          instance.addSubAssembly(cutter);
+        }
+        panel = panels[partCode];
+        cutter = cutters[partCode];
+        panel.addJoints(new Joint(cutter.partCode(true), panel.partCode(true), null, 'only'));
+        cutter.poly(translated);
 
-        
+        if (Array.isArray(instance.subassemblies)) {
+          console.log('wtff');
+        }
         if (!append) instance.subassemblies.deleteAll();
-        instance.addSubAssembly(cutter);
         instance.addSubAssembly(panel);
+        instance.addSubAssembly(cutter);
       }
     }
 
@@ -126,6 +155,16 @@ class Divider extends Assembly {
         buildPolyCutter(intersected, -4 * 2.54, normal, append, 'back');
       },
       frontAndBack: () => builders.front() | builders.back(true),
+      full: () => {
+        instance.subassemblies.deleteAll();
+        const pc = ':p';
+        if (panels[pc] === undefined) {
+          panels[pc] = new PanelModel(pc, 'panel', panelModel);
+        }
+        const panel = panels[pc];
+        instance.subassemblies.deleteAll();
+        instance.addSubAssembly(panel);
+      },
     }
 
     instance.on.parentSet(() => instance.parentAssembly().on.change(() => {
@@ -134,6 +173,7 @@ class Divider extends Assembly {
         parent.openings.onAfterChange(build);
       } else build();
     }));
+    instance.on.change(build);
   }
 }
 
@@ -144,7 +184,9 @@ Divider.abbriviation = 'dv';
 
 Divider.fromJson = (json) => {
   const obj = Assembly.fromJson(json);
-  obj.on.parentSet(() => obj.type(json.type))
+  json.constructed(() =>
+    obj.type(json.type)
+  , 1000);
   return obj;
 }
 

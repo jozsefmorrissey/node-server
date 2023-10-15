@@ -208,6 +208,7 @@ class EscapeMap {
         state.runners[radians] = {right, left};
         state.closest[targetFuncName] = {right: {}, left:{}};
         let closest = state.closest[targetFuncName];
+        // TODO: make a more robust method for creating parimeter
         let escapedLeft = true;
         let escapedRight = true;
         let escapedLeftPerp = true;
@@ -233,18 +234,18 @@ class EscapeMap {
             }
           }
           const rightPerpIntersection = rightPerp.findDirectionalIntersection(other);
-          if (other.withinSegmentBounds(rightPerpIntersection) && nonZero(line.distance(rightPerpIntersection)))
+          if (rightPerpIntersection && other.withinSegmentBounds(rightPerpIntersection) && nonZero(line.distance(rightPerpIntersection)))
             escapedRightPerp = false;
           const leftPerpIntersection = leftPerp.findDirectionalIntersection(other);
-          if (other.withinSegmentBounds(leftPerpIntersection) && nonZero(line.distance(leftPerpIntersection)))
+          if (leftPerpIntersection && other.withinSegmentBounds(leftPerpIntersection) && nonZero(line.distance(leftPerpIntersection)))
             escapedLeftPerp = false;
         }
 
-        if (escapedRight || escapedRightPerp)
+        if (escapedRightPerp)
           state.escape.right(true, 'independent');
-        if (escapedLeft || escapedLeftPerp)
+        if (escapedLeftPerp)
           state.escape.left(true, 'independent');
-        if (escapedRight || escapedLeft) state.type = 'independent';
+        if (escapedRightPerp || escapedLeftPerp) state.type = 'independent';
       }
 
       function runAll(lines) {

@@ -167,12 +167,19 @@ Lookup.decode = (id) => {
     id: objId
   };
 }
-Lookup.release = (group) => {
-  const groupList = Lookup.groups[group];
-  if (groupList === undefined) return;
-  Lookup.groups[group] = [];
-  for (let index = 0; index < groupList.length; index += 1) {
-    groupList[index].release();
+Lookup.release = (groupOlist) => {
+  if ((typeof groupOobject) === 'string') {
+    const groupList = Lookup.groups[groupOlist];
+    if (groupList === undefined) return;
+    Lookup.groups[groupOlist] = [];
+    for (let index = 0; index < groupList.length; index += 1) {
+      groupList[index].release();
+    }
+  } else if (Array.isArray(groupOlist)) {
+    for (let index = 0; index < groupOlist.length; index++) {
+      const obj = groupOlist[index];
+      if (obj && obj.lookupRelease instanceof Function) obj.lookupRelease();
+    }
   }
 }
 

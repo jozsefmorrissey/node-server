@@ -99,7 +99,8 @@ const hide = (sectionName) => {
 }
 
 Global.onChange.order(async () => {
-    setTimeout(renderRoom);
+  // TODO(timeout): this should not be nessisary.
+    setTimeout(renderRoom, 500);
 });
 
 module.exports = {

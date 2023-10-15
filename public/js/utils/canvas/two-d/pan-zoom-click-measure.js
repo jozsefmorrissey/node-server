@@ -17,6 +17,8 @@ class PanZoomClickMeasure extends PanZoomClick {
     const draw2d = new Draw2D(canvas);
     let measEnabled = false;
     let measurementLines = [];
+    let vertTol = 15;
+    let lineTol = 15;
     const measurmentHoverMap = new HoverMap2d();
     const measurements = () => measurementLines;
 
@@ -24,9 +26,9 @@ class PanZoomClickMeasure extends PanZoomClick {
     measurements.lastClicked = () => lastClicked;
 
     const addLine = (objs, line) => {
-      objs[line.toString()] = new HoverObject2d(line);
-      objs[line.startVertex().toString()] = new HoverObject2d(line.startVertex(), 15);
-      objs[line.endVertex().toString()] = new HoverObject2d(line.endVertex(), 15);
+      objs[line.toString()] = new HoverObject2d(line, lineTol);
+      objs[line.startVertex().toString()] = new HoverObject2d(line.startVertex(), vertTol);
+      objs[line.endVertex().toString()] = new HoverObject2d(line.endVertex(), vertTol);
     }
 
 
@@ -43,25 +45,31 @@ class PanZoomClickMeasure extends PanZoomClick {
     }
     measurements.deleteAll = () => measurementLines.deleteAll();
 
-    measurements.objects = new FunctionCache(() => {
+    function build() {
       measurmentHoverMap.clear()
-      const targets = getHoverMap().objects().map((ho) => ho.target());
+      const hoverObjs = getHoverMap().objects().filter(ho => !(ho.target() instanceof LineMeasurement2d));
       const objs = {};
-      for (let index = 0; index <  targets.length; index++) {
-        let obj = targets[index];
-        if (obj.object instanceof Function) obj = obj.object();
-        if (obj instanceof Vertex2d) {
-          objs[obj.toString()] = new HoverObject2d(obj, 15);
-        } else if(obj instanceof Line2d) {
-          addLine(objs, obj);
-        } else if (obj instanceof Polygon2d)
-          obj.lines().forEach(l => addLine(objs, l));
+      for (let index = 0; index <  hoverObjs.length; index++) {
+        let hoverObj = hoverObjs[index];
+        let target = hoverObj.target();
+        const locator = hoverObj.locator();
+        if (target.object instanceof Function) target = target.object();
+        if (target instanceof Vertex2d) {
+          objs[target.toString()] = new HoverObject2d(target, vertTol);
+        } else if(target instanceof Line2d) {
+          addLine(objs, target);
+        } else if (target instanceof Polygon2d)
+          target.lines().forEach(l => addLine(objs, l));
+        else if (locator instanceof Line2d)
+          addLine(objs, locator);
       }
       const list = Object.values(objs);
       list.sort(HoverObject2d.sort);
       measurmentHoverMap.add(list);
       return list;
-    }, null, 'pan-zoom');
+    }
+
+    measurements.objects = new FunctionCache(build, null, 'pan-zoom');
 
     function drawMeasurements () {
       const objects = measurements.objects();
@@ -92,6 +100,8 @@ class PanZoomClickMeasure extends PanZoomClick {
     super(canvas, measDraw, getHoverMap);
     const instance = this;
     this.hoverMap = () => measurements.enabled() ? measurmentHoverMap : getHoverMap();
+    this.vertexTolerance = (tol) => vertTol = Number.isFinite(tol) ? tol : vertTol;
+    this.lineTolerance = (tol) => lineTol = Number.isFinite(tol) ? tol : vertTol;
 
     function measurementManager() {
       if (!measEnabled) return;

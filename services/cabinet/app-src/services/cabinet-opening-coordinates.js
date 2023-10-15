@@ -28,10 +28,10 @@ class CabinetOpeningCorrdinates {
     this.coordinates = sectionProperties.coordinates;
 
     const origGetSub = sectionProperties.getSubassemblies;
-    sectionProperties.getSubassemblies = () => {
+    sectionProperties.getSubassemblies = (childrenOnly) => {
       if (subassemblies.length)
-        return origGetSub().concat(subassemblies);
-      return origGetSub();
+        return origGetSub(childrenOnly).concat(subassemblies);
+      return origGetSub(childrenOnly);
     }
 
     function defaultCoordinates() {
@@ -114,11 +114,13 @@ class CabinetOpeningCorrdinates {
       const corner2corner = outer[0].distance(outer[2]);
 
       const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2, 0, {x:0, y:1000});
-      const partCode = 'gerf';
-      const partName = 'Gerf';
+      const partCode = 'aoc';
+      const partName = 'auto-opening-crop';
       const cutter = new Cutter.Model(partCode, () => partName, biPoly.toModel);
+      cutter.parentAssembly(sectionProperties);
       subassemblies = [cutter];
       const joint = (otherPartCode) => new Butt(cutter.partCode(true), otherPartCode);
+      // TODO: this should not be hard coded
       cutter.addJoints(joint('T'), joint('B'), joint('R'), joint('L'));
     }
 

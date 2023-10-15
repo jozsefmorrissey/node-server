@@ -84,15 +84,30 @@ class Event {
   }
 }
 
-Function.safeStdLibAddition(Function, 'event', (eventName, object) => {
+Function.safeStdLibAddition(Function, 'event', (eventName, object, recursiveFilter) => {
   const eventFunc = new Event(eventName);
+  if (recursiveFilter === true) recursiveFilter = () => true;
+  const recursive = recursiveFilter instanceof Function;
   if(object[eventName] && object[eventName].id === 'EventFunction') object[eventName](eventFunc.trigger);
-  Object.defineProperty(object, eventName, {
+  const definition = {
       writable: true,
       enumerable: false,
       configurable: false,
       value: eventFunc.add
-  });
+  };
+  const define = (target) => {
+    if (!recursive || recursiveFilter(target)) {
+      Object.defineProperty(target, eventName, definition);
+    }
+    if (recursive) {
+      const keys = Object.keys(target);
+      for (let index = 0; index < keys.length; index++) {
+        const child = target[keys[index]];
+        if (child instanceof Object) define(child);
+      }
+    }
+  }
+  define(object);
   return eventFunc.trigger;
 }, true);
 
@@ -119,6 +134,36 @@ Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify,
 Function.safeStdLibAddition(Object, 'filter', function(func) {
   return Object.filter(this, func, true).filtered;
 });
+
+// Stole this from: https://stackoverflow.com/a/71115598
+// was useful in finding a data leak
+function roughSizeOfObject(object) {
+  const objectList = [];
+  const stack = [object];
+  const bytes = [0];
+  while (stack.length) {
+    const value = stack.pop();
+    if (value == null) bytes[0] += 4;
+    else if (typeof value === 'boolean') bytes[0] += 4;
+    else if (typeof value === 'string') bytes[0] += value.length * 2;
+    else if (typeof value === 'number') bytes[0] += 8;
+    else if (typeof value === 'object' && objectList.indexOf(value) === -1) {
+      objectList.push(value);
+      if (typeof value.byteLength === 'number') bytes[0] += value.byteLength;
+      else if (value[Symbol.iterator]) {
+        // eslint-disable-next-line no-restricted-syntax
+        for (const v of value) stack.push(v);
+      } else {
+        Object.keys(value).forEach(k => {
+           bytes[0] += k.length * 2; stack.push(value[k]);
+        });
+      }
+    }
+  }
+  return bytes[0];
+}
+
+Function.safeStdLibAddition(Object, 'sizeOf', roughSizeOfObject);
 
 function arraySet(array, values, start, end) {
   if (start!== undefined && end !== undefined && start > end) {

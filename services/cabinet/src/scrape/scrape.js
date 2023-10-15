@@ -57,7 +57,7 @@ function topKnobParse(body) {
 
 const clean = (text) => text.replace(/\s/g, '+');
 
-const print = (obj) =>   console.log(JSON.stringify(obj, null, 2));
+const print = (obj) =>   console.info(JSON.stringify(obj, null, 2));
 const topKnobSearchUrl = (keywords) => {
   keywords = clean(keywords);
   let url = `https://www.topknobsdecor.com/catalogsearch/result/index/?product_list_limit=36&q=${keywords}`;

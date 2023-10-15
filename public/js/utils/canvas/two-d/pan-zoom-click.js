@@ -17,6 +17,7 @@ class PanZoomClick extends PanZoom {
     const hoverEvent = new CustomEvent('hover');
     const hoverOutEvent = new CustomEvent('hoverOut');
     let active = true;
+    let moveActive = true;
     let eventsEnabled = true;
     let clickHolding = false;
 
@@ -27,6 +28,8 @@ class PanZoomClick extends PanZoom {
     this.on.drag = dragEvent.on;
     this.disable = () => active = false;
     this.enable = () => active = true;
+    this.disable.move = () => moveActive = false;
+    this.enable.move = () => moveActive = true;
 
     this.eventsDisabled = () => !(eventsEnabled = false);
     this.eventsEnabled = () => eventsEnabled = true;
@@ -49,7 +52,7 @@ class PanZoomClick extends PanZoom {
 
     let clickHoldCount = 0;
     this.onMove((event) => {
-      if (!active) return;
+      if (!active || !moveActive) return;
       const vertex = new Vertex2d(event.imageX, event.imageY);
       if (clickHolding && eventsEnabled) {
         if (++clickHoldCount > 30) {

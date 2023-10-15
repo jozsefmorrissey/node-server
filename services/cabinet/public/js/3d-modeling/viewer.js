@@ -157,7 +157,6 @@ function Viewer(csg, width, height, depth) {
       rotationUnit = {};
       rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
       rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
-      console.log(rotationUnit);
     }
     if (rotationUnit) {
       const speed = 40;

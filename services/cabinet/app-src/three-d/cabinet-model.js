@@ -30,8 +30,8 @@ class CabinetModel {
       }
       if (cabinet.children().indexOf(assembly) !== -1) {
         // TODO: Hacky fix errors created by toModel not including joint information
-        if (cabinetCSG === undefined) cabinetCSG = csg;//assembly.toModel(true);
-        else cabinetCSG = cabinetCSG.union(csg);//assembly.toModel(true));
+        if (cabinetCSG === undefined) cabinetCSG = csg;
+        else cabinetCSG = cabinetCSG.union(csg);
       }
     }
 
@@ -115,15 +115,29 @@ class CabinetModel {
     }
 
     this.toModel = (simpler, centerOn) => {
-      const offset = new Vertex3D(new Vertex3D(centerOn).minus(this.center()));
+      // const offset = new Vertex3D(new Vertex3D(centerOn).minus(this.center()));
       let model = this.cabinetSilhouette().top.toModel(simpler);
-      model.translate(offset);
+      // model.translate(offset);
       for (let index = 0; !simpler && index < assemblies.length; index++) {
         const csg = assemblies[index].toModel(simpler);
-        csg.translate(offset);
+        // csg.translate(offset);
         model = model.union(csg);
       }
       return model;
+    }
+
+    this.boxModel = () => {
+      let csg = new CSG();
+      const assems = Object.values(cabinet.subassemblies);
+      for (let index = 0; index < assems.length; index++) {
+        const assem = assems[index];
+        const cxtr = assem.constructor.name;
+        if (cxtr !== 'SectionProperties' && !cxtr.match(/(Cutter|Void)/)) {
+          if (assem.toModel)
+            csg = csg.union(assems[index].toModel(true));
+        }
+      }
+      return csg;
     }
 
     this.viewFromVector = (vector, in2D, axis) => {
@@ -192,10 +206,11 @@ class CabinetModel {
           const layoutObject = layout.addObject(c.id(), c, c.partName(), topview);
           c.snap3d = layoutObject;
         } else {
+          // TODO: make this update cleaner
           const polygon = c.snap3d.snap2d.top().object();
           topview.centerOn(polygon.center());
           // topview.radians(polygon.radians())
-          polygon.copy(topview);
+          c.snap3d.snap2d.top().polyCopy(topview);
         }
       }
       return c.snap3d.snap2d.top();

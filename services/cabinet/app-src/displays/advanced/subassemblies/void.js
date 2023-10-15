@@ -12,14 +12,18 @@ const voids = (cabinet) => Object.values(cabinet.subassemblies).filter(s => s in
 const getCabinet = (elem) => Cabinet.get(du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id'));
 
 class VoidDisplay extends Lookup {
-  constructor(cabinet) {
+  constructor(cabinetGetter) {
     super();
-    const addEvent = new CustomEvent('add');
-    this.cabinetId = () => cabinet.id();
+    CustomEvent.all(this, 'add', 'remove', 'change');
+    this.cabinetId = () => cabinetGetter().id();
     this.assemblyConfig = (vOid) => new AssemblyConfigInput(vOid);
-    this.voids = () => voids(cabinet);
-    this.on = {add: addEvent.on};
-    this.trigger = {add: addEvent.trigger};
+    this.voids = () => voids(cabinetGetter());
+    this.on.add(this.trigger.change);
+    this.on.remove(this.trigger.change);
+    this.displayLength = (voId) => new Measurement(voId.length()).display();
+    this.displayWidth = (voId) => new Measurement(voId.width()).display();
+    this.cabinet = () => cabinetGetter();
+    this.partCodes = () => Object.values(cabinetGetter().subassemblies).map(a => a.partCode(true));
 
     this.html = () => VoidDisplay.template.render(this);
   }
@@ -33,20 +37,35 @@ du.on.match('click', `.void-display-cnt .add-void-btn`, (elem) => {
   const measHeight = new Measurement(height, true);
   if (!Number.isNaN(measWidth.decimal())) width = measWidth.decimal();
   if (!Number.isNaN(measHeight.decimal())) height = measHeight.decimal();
-  const refPartCode = 'BACK';
-  const config = VoidDisplay.configs(orientation, refPartCode, width, height);
+  const refPartCode = du.find.closest('.void-part-code-select', elem).value;
+  const config = Void.referenceConfig(orientation, refPartCode, width, height);
 
   const cabinet = getCabinet(elem);
   const partName = `void-${refPartCode}-${width}x${height}`;
   const partCode = cabinet.subassemblies.undefinedKey('void');
-  const vOid = new Void(partCode, partName, config.c, config.d, config.r);
-  vOid.includedSides(config.includedSides);
-  vOid.jointSet(config.jointSet);
+  const vOid = new Void(partCode, partName, config);
   cabinet.addSubAssembly(vOid);
   const voidId = du.find.up('[void-id]', elem).getAttribute('void-id');
   const voidDisplay = VoidDisplay.get(voidId);
   voidDisplay.trigger.add(vOid);
 })
+
+const getTarget = (elem) => {
+  const tarElem = du.find.up('[target-id]', elem);
+  if (!tarElem) return undefined;
+  return Lookup.get(tarElem.getAttribute('target-id'));
+}
+
+du.on.match('click', '.assembly.remove-btn', (elem) => {
+  const cabinet = getCabinet(elem);
+  const assemblies = cabinet.allAssemblies();
+  const vOid = getTarget(elem);
+  const parent = vOid.parentAssembly();
+  delete parent.subassemblies[vOid.partCode()];
+  const voidId = du.find.up('[void-id]', elem).getAttribute('void-id');
+  const voidDisplay = VoidDisplay.get(voidId);
+  voidDisplay.trigger.remove(vOid);
+});
 
 du.on.match('change', `.void-display-cnt .input-set input`, (elem) => {
   const index = du.find.up('[index]', elem).getAttribute('index');
@@ -63,53 +82,12 @@ du.on.match('change', `.void-display-cnt .set-selector`, (elem) => {
   vOid.jointSet(elem.value);
 });
 
+du.on.match('change', '.void-dem', (elem) => {
+  const vOid = getTarget(elem);
+  vOid[elem.name](new Measurement(elem.value, true).decimal());
+});
+
 
 VoidDisplay.template = new $t('advanced/subassemblies/void');
-
-VoidDisplay.configs = (type, refPartCode, width, height) => {
-  switch (type) {
-    case 'vertical':
-      return {
-        c: [
-          `${refPartCode}.c.x`,
-          `${refPartCode}.c.y`,
-          `${refPartCode}.c.z + d.z/2 + ${refPartCode}.d.z/2`,
-        ].join(':'),
-        d: [
-          width,
-          `${refPartCode}.d.y - 3*2.54*3/4`,
-          height
-        ].join(':'),
-        r: [
-          `${refPartCode}.r.x`,
-          `${refPartCode}.r.y`,
-          `${refPartCode}.r.z`
-        ].join(':'),
-        includedSides: [true, false, false, false, true, true],
-        jointSet: 1
-      };
-    default:
-      return {
-        c: [
-            `${refPartCode}.c.x`,
-            `${refPartCode}.c.y - ${refPartCode}.d.y/2 + d.y/2 + 3*2.54/4`,
-            `${refPartCode}.c.z + d.z/2 + 3*2.54/8`
-          ].join(':'),
-          d: [
-            `${refPartCode}.d.x - 3*2.54/4`,
-            width,
-            height
-          ].join(':'),
-          r: [
-            `${refPartCode}.r.x`,
-            `${refPartCode}.r.y`,
-            `${refPartCode}.r.z`
-          ].join(':'),
-          includedSides: [true, false, true],
-          jointSet: 3
-      };
-
-  }
-};
 
 module.exports = VoidDisplay;

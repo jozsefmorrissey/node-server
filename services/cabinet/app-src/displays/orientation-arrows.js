@@ -15,13 +15,6 @@ class OrientationArrows extends Lookup {
     const elem = du.find(parentSelector);
     if (elem === undefined) throw new Error(`No container found: '${parentSelector}'`);
     elem.innerHTML = OrientationArrows.template.render(this);
-
-    this.on.up((elem, detail) => console.log('up', detail.direction));
-    this.on.right((elem, detail) => console.log('right', detail.direction));
-    this.on.down((elem, detail) => console.log('down', detail.direction));
-    this.on.left((elem, detail) => console.log('left', detail.direction));
-    this.on.center((elem, detail) => console.log('center', detail.direction));
-
   }
 }
 

@@ -28,13 +28,6 @@ const VoidDisplay = require('./advanced/subassemblies/void.js');
 //   return Cabinet.get(cabinetId);
 // }
 
-const voidHtml = () => {
-  const cabinet = Global.cabinet();
-  const voidDisplay = new VoidDisplay(cabinet);
-  voidDisplay.on.add(fileTabDisp.update);
-  return voidDisplay.html();
-}
-
 
 const openingHtml = () => {
   const cabinet = Global.cabinet();
@@ -47,9 +40,12 @@ const openingHtml = () => {
   return html
 }
 
+const voidDisplay = new VoidDisplay(Global.cabinet);
 const fileTabDisp = new FileTabDisplay();
 fileTabDisp.register('Layout', openingHtml);
-fileTabDisp.register('Voids', voidHtml);
+fileTabDisp.register('Voids', voidDisplay.html);
+
+voidDisplay.on.change(fileTabDisp.update);
 
 class CabinetDisplay {
   constructor(parentSelector, group) {

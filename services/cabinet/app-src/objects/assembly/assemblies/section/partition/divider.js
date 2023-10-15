@@ -10,19 +10,17 @@ const FunctionCache = require('../../../../../../../../public/js/utils/services/
 
 let count = 0;
 class DividerSection extends Assembly {
-  constructor(sectionProperties) {
+  constructor(sectionProperties, panel) {
     super('dv', 'Divider');
     if (sectionProperties === undefined) return;
     this.parentAssembly(sectionProperties);
     const props = sectionProperties;
     const instance = this;
-    let panel;
 
     this.partCode = (full) => `${sectionProperties.partCode(full)}-dp`;
 
     let count = 0;
     function toModel() {
-      console.log('ran:', ++count);
       const biPoly = sectionProperties.dividerInfo();
       return biPoly.toModel(panel.getJoints().female);
     }
@@ -50,7 +48,7 @@ class DividerSection extends Assembly {
     const panelPartName = () =>
         `${this.partName()}.Divider.Panel`;
 
-    panel = new Divider(null, panelPartName, null, null, null, toPanelModel, toBiPolygon);
+    panel ||= new Divider(null, panelPartName, null, toPanelModel, toBiPolygon);
     // const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
     panel.parentAssembly(this);
     this.addSubAssembly(panel);
@@ -58,6 +56,11 @@ class DividerSection extends Assembly {
 
     this.panel = () => panel;
   }
+}
+
+DividerSection.fromJson = (json) => {
+  const divider = Object.fromJson(json.subassemblies.dv);
+  return new DividerSection(json.parent, divider);
 }
 
 DividerSection.abbriviation = 'dvrs';

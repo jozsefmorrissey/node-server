@@ -16,6 +16,7 @@ const CSG = require('../../../../public/js/3d-modeling/csg.js');
 const AutoToekick = require('./auto/toekick.js');
 const Notifiction = require('../../../../../../public/js/utils/collections/notification.js');
 const NotifictionArray = Notifiction.Array;
+const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
 
 const OVERLAY = {};
 OVERLAY.FULL = 'Full';
@@ -25,8 +26,8 @@ OVERLAY.INSET = 'Inset';
 const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
 
 class Cabinet extends Assembly {
-  constructor(partCode, partName) {
-    super(partCode, partName);
+  constructor(partCode, partName, config) {
+    super(partCode, partName, config);
     // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
     Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick', 'dividerJoint');
     const instance = this;
@@ -103,7 +104,7 @@ class Cabinet extends Assembly {
       const center = this.partCenter();
       const vector = line.vector();
       let closest = {};
-      const subAssems = Object.values(this.subassemblies);
+      const subAssems = Object.values(this.subassemblies).filter(a => !a.constructor.name.match(/Cutter|Void/));
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
         if ((typeof assem.position) === 'function') {
@@ -237,9 +238,6 @@ class Cabinet extends Assembly {
       const shouldTest = test instanceof Function;
       return (...args) => {
         if (shouldTest && test(...args)) {
-          if (isLen && Number.isNaN(args[0] + 1)) {
-            console.log('ahh haaa')
-          }
           modificationState++;
           instance.updateOpenings();
         }
@@ -289,10 +287,12 @@ Cabinet.build = (type, group, config) => {
   config.subassemblies.forEach((subAssemConfig) => {
     const type = subAssemConfig.type;
     const name = subAssemConfig.name;
-    const demStr = subAssemConfig.demensions.join(':');
-    const centerConfig = subAssemConfig.center.join(':');
-    const rotationConfig = subAssemConfig.rotation.join(':');
-    const subAssem = Assembly.new(type, subAssemConfig.code, name, centerConfig, demStr, rotationConfig);
+    const posConfig = {
+      demension: subAssemConfig.demensions.join(':'),
+      center: subAssemConfig.center.join(':'),
+      rotation: subAssemConfig.rotation.join(':')
+    }
+    const subAssem = Assembly.new(type, subAssemConfig.code, name, posConfig);
     // TODO: This should use Object.fromJson so more complex objects can easily save/load values.
     if (subAssem.jointSet) {
       subAssem.jointSet(subAssemConfig.jointSet);
@@ -300,6 +300,7 @@ Cabinet.build = (type, group, config) => {
     }
     subAssem.partCode(subAssemConfig.code);
     cabinet.addSubAssembly(subAssem);
+    cabinet.trigger.change();
   });
 
   config.joints.forEach((jointConfig) => {
@@ -320,40 +321,46 @@ Cabinet.build = (type, group, config) => {
   return cabinet;
 }
 
+const addSectionProps = (sectionProperties, assembly) => () => {
+  const openingCoords = new CabinetOpeningCorrdinates(assembly, sectionProperties);
+  assembly.openings.push(openingCoords);
+  openingCoords.update();
+  assembly.addSubAssembly(sectionProperties);
+}
+
 Cabinet.fromJson = (assemblyJson, group) => {
-  const trigger = Function.event('constructed', assemblyJson)
+  const trigger = Function.event('constructed', assemblyJson, (o) => o._TYPE);
   group ||= new Group();
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
-  const pos = assemblyJson.currentPosition;
-  const assembly = new Cabinet(partCode, partName);
+  const assembly = new Cabinet(partCode, partName, assemblyJson.config);
   assembly.name(assemblyJson.name);
-  assembly.length(pos.demension.y);
-  assembly.width(pos.demension.x);
   assembly.group(group);
   assembly.id(assemblyJson.id);
   assembly.value.all(Object.fromJson(assemblyJson.value.values));
   Object.values(assemblyJson.subassemblies).forEach((json) => {
     const clazz = Assembly.class(json._TYPE);
     json.parent = assembly;
-    json.constructed = assemblyJson.constructed;
     if (clazz !== SectionProperties) {
       assembly.addSubAssembly(Object.fromJson(json));
     } else {
-      const sectionProperties = clazz.fromJson(json, assembly);
-      const openingCoords = new CabinetOpeningCorrdinates(assembly, sectionProperties);
-      openingCoords.update();
-      assembly.openings.push(openingCoords);
-      assembly.addSubAssembly(sectionProperties);
+      assemblyJson.constructed(addSectionProps(clazz.fromJson(json, assembly), assembly));
     }
   });
-  assembly.thickness(pos.demension.z);
   const joints = Object.fromJson(assemblyJson.joints);
   assembly.addJoints.apply(assembly, joints);
-  assembly.position().setCenter(pos.center);
-  assembly.position().setRotation(pos.rotation);
   assembly.autoToeKick(assemblyJson.autoToeKick);
   trigger();
+
+  //TODO: Find better way of reseting all caches
+  assembly.allAssemblies().forEach(a => {
+    const clear = (attr) => {
+      if (a[attr] instanceof Function && a[attr].clearCache instanceof Function)
+        a[attr].clearCache();
+      return clear;
+    }
+    clear('getJoints')('allAssemblies')('getAssembly')('hash')('toModel');
+  });
   return assembly;
 }
 Cabinet.abbriviation = 'c';

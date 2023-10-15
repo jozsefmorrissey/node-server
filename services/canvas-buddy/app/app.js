@@ -143,7 +143,7 @@ const height = du.convertCssUnit('100vh');
 canvas.height = height;
 canvas.width = height;
 draw = new Draw2D(canvas, true);
-panZ = panZoom(canvas, drawFunc);
+panZ = new panZoom(canvas, drawFunc);
 draw.circle(new Circle2d(2, new Vertex2d(10,10)), null, 'green');
 
 let lastHash;

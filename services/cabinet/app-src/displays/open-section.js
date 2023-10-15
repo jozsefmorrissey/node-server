@@ -267,7 +267,7 @@ OpenSectionDisplay.onSectionChange = (target) => {
   }
 }
 
-du.on.match('blur:enter', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
+du.on.match('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
 du.on.match('change', '.division-pattern-input', expiditeRefresh);
 du.on.match('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
 du.on.match('change', '.section-selection', OpenSectionDisplay.onSectionChange)

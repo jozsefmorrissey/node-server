@@ -258,7 +258,7 @@ function parse(exprDef, str) {
       nextIndex = closeCheck(exprDef);
       if (nextIndex) return nextIndex;
     }
-    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
+    throw new Error(`Invalid string:\n\t${str}\n\t@ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
   }
 
   function open(exprDef, index) {

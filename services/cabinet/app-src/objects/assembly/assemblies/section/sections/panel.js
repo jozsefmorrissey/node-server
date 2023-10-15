@@ -11,7 +11,7 @@ const DividerSection = require('../partition/divider.js');
 let count = 0;
 class PanelSection extends Assembly {
   constructor(panel) {
-    super();
+    super('ps', 'panelSection');
     const instance = this;
     this.part = () => false;
     const sectionProps = () => instance.parentAssembly();
@@ -51,7 +51,6 @@ class PanelSection extends Assembly {
     }
 
     function toModel () {
-      console.log('modeling bitch!');
       return getBiPolygon().toModel();
     }
 

@@ -82,8 +82,6 @@ class PropertyDisplay {
       setTimeout(() => {
         const expList = new ExpandableObject(expListProps);
         expList.afterRemoval((element, detail) => {
-          console.log(detail);
-          console.log('placehoder');
           Properties.changes.delete(detail.properties._ID);
         });
       }, 500);

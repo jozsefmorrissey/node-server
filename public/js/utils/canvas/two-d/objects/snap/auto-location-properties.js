@@ -69,21 +69,6 @@ AutoLocationProperties.render = (id) => {
   return template.render(AutoLocationProperties.get(id));
 }
 
-const chevDisplay = (elem, hidden) => {
-  if (hidden) du.class.add(elem, 'hidden');
-  else du.class.remove(elem, 'hidden')
-
-}
-
-du.on.match('click', '.auto-location-properties-cnt .dropdown-toggle', (elem) => {
-  const dropdown = du.find.down('.plain-dropdown', elem.parentElement);
-  const downChev = du.find.closest('.down', elem);
-  const rightChev = du.find.closest('.right', elem);
-  dropdown.hidden = !dropdown.hidden;
-  chevDisplay(downChev, dropdown.hidden);
-  chevDisplay(rightChev, !dropdown.hidden);
-});
-
 
 du.on.match('change', '.auto-location-properties-cnt input', (elem) => {
   const cnt = du.find.up('.auto-location-properties-cnt', elem);

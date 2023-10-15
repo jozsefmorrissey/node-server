@@ -146,6 +146,10 @@ du.on.match('enter:focusout', '.value-2d', (elem) => {
       return;
     case 'snap':
       props.obj = props.obj.snap2d.top();
+      break;
+    case 'hover-map':
+      props.obj = props.obj.hoverMap();
+      break;
   }
 
   if (props.key === 'thickness') props.key = 'height';
@@ -208,7 +212,6 @@ du.on.match('click', '.add-window-btn-2d', (elem) => {
 du.on.match('click', '.add-object-btn-2d', (elem) => {
   const props = getPopUpAttrs(elem);
   const obj = getLayout().addObject(props.point);
-  obj.snap2d.top().onChange(() => console.log('snap on change???????'));
   panZ.once();
 });
 

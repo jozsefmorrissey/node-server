@@ -48,9 +48,6 @@ class Element {
     this.fixed = false;
     this.value = (val) => {
       if (val) {
-        if (!(val instanceof Measurement)) {
-          console.log('foundit!!!!!!!!!!!!!!!!!!!')
-        }
         value = val;
       }
       return value || bestGuess(id, group);
@@ -200,9 +197,6 @@ class Pattern {
     this.value = (id, value) => {
       if (value < 0) value = 0;
       if (value !== undefined) {
-        if ((typeof value) !== 'number') {
-          console.log('bingoooooo')
-        }
         value = elements[id].value(new Measurement(value));
         valueMap.set(id, elements[id].value(), props.group);
         changeEvent.trigger(null, this);

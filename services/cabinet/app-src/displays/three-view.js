@@ -47,7 +47,7 @@ function updatePartsDataList(container) {
   let htmlArr = ['<option value="ASSEMBLY"></option>'];
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
-    const partCode = part.partCode();
+    const partCode = part.partCode(true);
     const partName = part.partName();
     htmlArr.push(`<option value='${partCode}' part-id='${part.id()}'></option>`);
   }
@@ -62,11 +62,10 @@ class ThreeView extends Lookup {
     const maxDem = window.innerHeight * .45;
     let targetPart;
     // const p = pull(5,2);
-    const p = new BiPolygon(new Polygon3D([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}]),
-          new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel(true);
-    // console.log(JSON.stringify(new CSG.cube({radius: 2, center: [2,2,2]}), null, 2));
+    // const p = new BiPolygon(new Polygon3D([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}]),
+    //       new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel(true);
     // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
-    p.setColor([0, 255, 0])
+    // p.setColor([0, 255, 0])
     let draw, panz, hovermap;
     let threeDModel;
     this.maxDem = () => maxDem;
@@ -119,28 +118,18 @@ class ThreeView extends Lookup {
       if (getThreeView() === undefined) return;
       instance.build();
 
-      draw(hovermap.measurements());
-
       const objs = hovermap.targets();
-      const filter = obj => obj === hovermap.hovered()  || obj === hovermap.lastClicked() ? 'highlight' : 'normal';
-      const split = objs.filterSplit(filter, 'highlight', 'normal');
-
-      for (let index = 0; index < split.highlight.length; index++) {
-        const obj = split.highlight[index];
-        draw(obj, 'blue', width * 4 );
-      }
-      for (let index = 0; index < split.normal.length; index++) {
-        const obj = split.normal[index];
+      for (let index = 0; index < objs.length; index++) {
+        const obj = objs[index];
         draw(obj, color, width);
       }
     }
 
     function onPartSelect(elem) {
-      FunctionCache.clear('three-view');
+      // FunctionCache.clear('three-view');
       const selected = du.find.closest(`[value="${elem.value}"`, elem);
       const id = selected.getAttribute('part-id');
       instance.isolatePart(id, elem.value);
-      hovermap.measurements.deleteAll();
       elem.value = '';
     }
 
@@ -148,7 +137,10 @@ class ThreeView extends Lookup {
       draw = new Draw2D(du.id('three-view'), true);
 
       hovermap = new HoverMap2d();
-      panz = new PanZoomClickMeasure(draw.canvas(), drawView, () => hoverMap);
+      panz = new PanZoomClickMeasure(draw.canvas(), drawView, () => hovermap);
+      panz.disable.move();
+      panz.vertexTolerance(.4);
+      panz.lineTolerance(.2);
       panz.centerOn(0, 0);
 
       du.on.match('change', '[name="partSelector"]', onPartSelect);
@@ -185,9 +177,9 @@ class ThreeView extends Lookup {
     function rulerClick(elem) {
       du.class.toggle(elem, 'active');
       if (du.class.has(elem, 'active')) {
-        hovermap.measurements.enable();
+        panz.measurements.enable();
       } else {
-        hovermap.measurements.disable();
+        panz.measurements.disable();
       }
     }
 

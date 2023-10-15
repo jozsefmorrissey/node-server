@@ -6,22 +6,29 @@ const Polygon2d = require('./objects/polygon');
 const CustomEvent = require('../../custom-event');
 
 class HoverObject2d {
-  constructor(lineOrVertex, tolerance, target) {
+  constructor(lineOrVertex, tolerance, target, groupId) {
     if (lineOrVertex instanceof HoverObject2d) return lineOrVertex;
     tolerance ||= 2;
     const toleranceFunction = (typeof tolerance) === 'function';
     const targetFunction = (typeof lineOrVertex) === 'function';
-    function getTolerence() {
-      if (toleranceFunction) return tolerance();
-      return tolerance;
+
+    const locator = () => targetFunction ? lineOrVertex() : lineOrVertex;
+    const loc = locator();
+    if (!(loc instanceof Line2d || loc instanceof Vertex2d || loc instanceof Polygon2d))
+      console.error('unkown hover object', loc);
+
+    function getTolerence(scaleTolerance) {
+      scaleTolerance ||= 1;
+      if (toleranceFunction) return tolerance() * scaleTolerance;
+      return tolerance * scaleTolerance;
     }
-    function vertexHovered(targetVertex, hoverVertex) {
-      if(targetVertex.distance(hoverVertex) < getTolerence())
+    function vertexHovered(targetVertex, hoverVertex, scaleTolerance) {
+      if(targetVertex.distance(hoverVertex) < getTolerence(scaleTolerance))
         return targetVertex.distance(hoverVertex);
     }
 
-    function lineHovered(targetLine, hoverVertex) {
-      const tol = getTolerence();
+    function lineHovered(targetLine, hoverVertex, scaleTolerance) {
+      const tol = getTolerence(scaleTolerance);
       const hv = hoverVertex;
       const sv = targetLine.startVertex();
       const ev = targetLine.endVertex();
@@ -51,19 +58,21 @@ class HoverObject2d {
       return false;
     }
 
-    this.target = () => target || lineOrVertex;
-    this.distance = (from) => lineOrVertex.distance(from);
+    this.locator = locator;
+    this.target = () => target || locator();
+    this.distance = (from) => locator().distance(from);
+    this.groupId = () => groupId;
 
-    this.hovering = (hoverVertex) => {
-      const lov = targetFunction ? lineOrVertex() : lineOrVertex;
-      if (lov instanceof Line2d)
-        return lineHovered(lov, hoverVertex);
-      else if (lov instanceof Vertex2d)
-        return vertexHovered(lov, hoverVertex);
-      else if (lov instanceof Polygon2d)
-        return lov.isWithin(hoverVertex);
+    this.hovering = (hoverVertex, scaleTolerance) => {
+      const loc = locator();
+      if (loc instanceof Line2d)
+        return lineHovered(loc, hoverVertex, scaleTolerance);
+      else if (loc instanceof Vertex2d)
+        return vertexHovered(loc, hoverVertex, scaleTolerance);
+      else if (loc instanceof Polygon2d)
+        return loc.isWithin(hoverVertex);
       else
-        console.error('unkown hover object', lov);
+        console.error('unkown hover object', loc);
     }
   }
 }
@@ -83,13 +92,16 @@ class HoverMap2d {
     this.objects = () => hoverObjects;
     this.targets = () => this.objects().map(ho => ho.target())
                     .filter(t => !(t instanceof Vertex2d) || t.equals(lastHovered) || t.equals(this.clicked()));
-    this.clear = () => hoverObjects = [] || true;
-    this.add = (object, tolerance, target) => {
+    this.clear = (groupId) => {
+      if (groupId === undefined) return hoverObjects = [] || true;
+      hoverObjects.removeWhere(ho => ho.groupId() === groupId);
+    }
+    this.add = (object, tolerance, target, groupId) => {
       if (Array.isArray(object)) {
         object.forEach(o => this.add(o));
         return;
       }
-      const hovObj = new HoverObject2d(object, tolerance, target);
+      const hovObj = new HoverObject2d(object, tolerance, target, groupId);
       if (object instanceof Vertex2d) {
         hoverObjects = [hovObj].concat(hoverObjects);
       } else {
@@ -98,8 +110,28 @@ class HoverMap2d {
       hoverObjects.sort(HoverObject2d.sort);
     }
 
+    let active = true;
+    const onMap = {};
+    this.oft = (on_off_toggle, groupId) => {
+      if (groupId === undefined) {
+        if (on_off_toggle === true) active = true;
+        else if (on_off_toggle === false) active = false;
+        else active = !active;
+        return active;
+      } else {
+        if (on_off_toggle === true) onMap[groupId] = true;
+        else if (on_off_toggle === false) onMap[groupId] = false;
+        else onMap[groupId] = !onMap[groupId];
+        return onMap[groupId];
+      }
+    }
+
+    this.isOn = (groupId) => groupId === undefined ? active : onMap[groupId] !== false;
+
     let lastHovered;
+    let lastPosition;
     this.hovering = (pos, filter) => {
+      if (pos !== undefined) lastPosition = pos;
       if (clickHolding || pos === undefined) return lastHovered;
       let hoverObjs = this.objects();
       if (filter instanceof Function) hoverObjs = hoverObjs.filter(filter);
@@ -107,12 +139,13 @@ class HoverMap2d {
       let hoveringObj = null;
       for (let index = 0; index < hoverObjs.length; index++) {
         const hoverObj = hoverObjs[index];
-        const distance = hoverObj.hovering(vertex);
-        if (distance || distance === 0) {
-          const target = hoverObj.target();
-          if (hoveringObj === null || distance < hoveringObj.distance) {
-            hoveringObj = {target, distance};
-            break;
+        if (this.isOn(hoverObj.groupId())) {
+          const distance = hoverObj.hovering(vertex);
+          if (distance || distance === 0) {
+            const target = hoverObj.target();
+            if (hoveringObj === null || distance < hoveringObj.distance) {
+              hoveringObj = {target, distance};
+            }
           }
         }
       }
@@ -121,6 +154,7 @@ class HoverMap2d {
       lastHovered = hov;
       return lastHovered;
     }
+    this.lastPosition = () => lastPosition;
 
     this.closest = (pos, filter) => {
       if (clickHolding || pos === undefined) return lastHovered;

@@ -160,10 +160,10 @@ class PanZoom {
         dt.moving = false;
         runOn('translated', this);
       }
-      if (dt.scoping && doxAbs < .1 && doyAbs < .1) {
-        dt.scoping = false;
-        runOn('zoom', this);
-      }
+      // if (dt.scoping && doxAbs < .1 && doyAbs < .1) {
+      //   dt.scoping = false;
+      //   runOn('zoom', this);
+      // }
     }
 
     // terms.
@@ -290,6 +290,7 @@ class PanZoom {
                         if(mouse.w < 0){
                             mouse.w = 0;
                         }
+                        runOn('zoom', this);
                     }
                     if(mouse.w < 0){ // zoom out
                         this.scale *= 1/1.1;
@@ -297,6 +298,7 @@ class PanZoom {
                         if(mouse.w > 0){
                             mouse.w = 0;
                         }
+                        runOn('zoom', this);
                     }
 
                 }

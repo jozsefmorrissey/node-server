@@ -4,8 +4,8 @@
 const Assembly = require('../assembly.js');
 
 class Frame extends Assembly {
-  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
-    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+  constructor(partCode, partName, config) {
+    super(partCode, partName, config);
   }
 }
 

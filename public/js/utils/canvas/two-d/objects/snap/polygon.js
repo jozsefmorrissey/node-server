@@ -26,6 +26,10 @@ class SnapPolygon extends Snap2d {
       return longest;
     }
 
+    this.polyCopy = (other) => {
+      polygon.copy(other);
+    }
+
     this.object = () => {
       polygon.center(this.center());
       const rotated = polygon.rotate(this.radians(), null, true);
@@ -93,11 +97,11 @@ class SnapPolygon extends Snap2d {
     this.getTextInfo = () => {
       const lfl = this.longestFaceLine();
       const dist = instance.height() / 4;
-      const radians = lfl.radians();
-      const textLine = lfl.perpendicular(dist/2);
+      const radians = lfl ? lfl.radians() : 0;
+      const textLine = lfl ? lfl.perpendicular(dist/2) : 0;
       return {
-        text: instance.parent().name() || 'pooop',
-        center: textLine.endVertex(),
+        text: instance.parent().name() || '?????',
+        center: textLine ? textLine.endVertex() : new Vertex2d(),
         radians,
         x: 0,
         y: 0,

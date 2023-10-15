@@ -11,6 +11,10 @@ class LineMeasurement2d {
   constructor(line, center, layer, modificationFunction) {
     const offset = 3;
     this.line = () => line;
+    this.layer = (l) => {
+      if (Number.isFinite(l)) layer = l;
+      return layer;
+    }
 
     function modifyMeasurment(offsetLine, line, buffer, takenLocations) {
       const startLength = line.startLine.length();
@@ -86,6 +90,15 @@ class LineMeasurement2d {
         return {};
       }
     }
+
+    this.midpoints = () => {
+      const i = this.I();
+      return {closer: i.closerLine().midpoint(), further: i.furtherLine().midpoint()};
+    }
+
+    this.midpoints.closer = () => this.midpoints().closer;
+    this.midpoints.further = () => this.midpoints().further;
+
 
     this.copy = (modFunc) => new LineMeasurement2d(line, modFunc);
     this.modificationFunction = (func) => {

@@ -22,7 +22,6 @@ class OrderDisplay {
         OrderDisplay.headTemplate.render({order, $index});
 
     const setInfo = (order, index) => () => {
-      console.log('oid:', order.id());
       const elem = du.id(`uf-info-${order.id()}`);
       if (elem)
         UTF.buildDisplay(elem, new UFObj(order));
@@ -41,7 +40,6 @@ class OrderDisplay {
         initOrder(order, index);
         expandList.set(index, order);
         expandList.refresh();
-        console.log('load Time:', new Date().getTime() - start);
       }
     }
 

@@ -94,7 +94,7 @@ class Polygon3D {
 
       const normVect = vector1.crossProduct(vector2);
       const mag = normVect.magnitude();
-      if (mag === 0) throw 'InvalidPolygon: normal vector magnitude === 0';
+      if (mag === 0) throw new Error('InvalidPolygon: normal vector magnitude === 0');
       return normVect.scale(1 / mag);
     }
     this.normal = calcNormal;
@@ -304,11 +304,12 @@ class Polygon3D {
           const line = new Line3D(startVertex, endVertex);
           lines.push(line);
           const prevLine = lines[lines.length - 2];
+          // TODO: This is a plane conformity check... Could be useful if it could detect errors accruatly.
           // if (lines.length > 1 && !(normal instanceof Vector3D)) normal = calcNormal(line, prevLine);
           // else if (lines.length > 2) {
           //   const equal = normal.equals(calcNormal(line, prevLine));
           //   if (equal === false) {
-          //     console.log('Trying to add vertex that does not lie in the existing plane');
+          //     console.warn('Trying to add vertex that does not lie in the existing plane');
           //   }
           // }
         }
@@ -394,9 +395,6 @@ class Polygon3D {
               throw new Error('THIS SHOULD NOT HAPPEN!!!!!! WTF!!!!');
               const forwardDiff = endIndex - startIndex;
               const reverseDiff = lines.length - forwardDiff;
-              if (Math.max(forwardDiff, reverseDiff) < 3) {
-                console.log('che che');
-              }
               if (forwardDiff > reverseDiff) {
                 lines = lines.slice(startIndex, endIndex);
               } else {
@@ -412,7 +410,7 @@ class Polygon3D {
         }
         // TODO: not sure if this will cause an issue but polygons should not have less than 3 vertices this will break toPlane functionality.
         // if (lines.length < 3) {
-        //   console.log('che che check it out', lines.length);
+        //   console.warn('che che check it out', lines.length);
         // }
         if (removed) this.lineMap(true);
       }
@@ -484,6 +482,16 @@ class Polygon3D {
         lastMi = mi;
       }
       return new Polygon2D(Vertex3D.to2D(this.vertices(),  x, y));
+    }
+
+    this.isWithin2d = (vertex, x, y) => {
+      if (x === undefined || y === undefined) {
+        const mi = Polygon3D.mostInformation([this]);
+        x = mi[0]; y = mi[1];
+      }
+      const poly2d = this.to2D(x, y);
+      const vert2d = vertex.to2D(x, y);
+      return poly2d.isWithin(vert2d, true);
     }
 
     this.toString = () => {
@@ -579,11 +587,15 @@ Polygon3D.fromCSG = (polys) => {
   for (let index = 0; index < polys.length; index++) {
     const poly = polys[index];
     const verts = [];
-    for (let vIndex = 0; vIndex < poly.vertices.length; vIndex++) {
-      const v = poly.vertices[vIndex];
-      verts.push(new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
+    try {
+      for (let vIndex = 0; vIndex < poly.vertices.length; vIndex++) {
+        const v = poly.vertices[vIndex];
+        verts.push(new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
+      }
+      poly3Ds.push(new Polygon3D(verts));
+    } catch {
+      console.warn('Error converting CSG polygon:\n\t', 'poly.toString()')
     }
-    poly3Ds.push(new Polygon3D(verts));
   }
   if (!isArray) return poly3Ds[0];
   return poly3Ds;

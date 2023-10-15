@@ -156,6 +156,8 @@ Test.add('Cabinet: to/from Json',(ts) => {
   const json = cleanJson(cabinet.toJson());
   const copy = Cabinet.fromJson(cabinet.toJson());
   const copyJson = cleanJson(copy.toJson());
+  Lookup.release(cabinet.allAssemblies());
+  Lookup.release(copy.allAssemblies());
   ts.assertTrue(Object.equals(json, copyJson));
   ts.success();
 });

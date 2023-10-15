@@ -99,6 +99,14 @@ class BiPolygon {
       }
     }
 
+    this.rotate = (rotations, center) => {
+      center ||= this.center();
+      for (let index = 0; index < face1.length; index++) {
+        face1[index].rotate(rotations, center);
+        face2[index].rotate(rotations, center);
+      }
+    }
+
     this.offset = (fromPoint, distance) => {
       const dirVector = this.center().minus(fromPoint);
       const normal = this.normal();
@@ -160,7 +168,6 @@ class BiPolygon {
           }
         }
         if (!found)  {
-          console.log(norm);
           return false;
         }
       }
@@ -172,13 +179,13 @@ class BiPolygon {
       const frontNorm = new Vertex3D(new Line3D(this.center(), this.front().center()).vector().unit());
       const front = new CSG.Polygon(normalize(face1, !flippedNormal));
       if (!frontNorm.equals(front.plane.normal)) {
-        console.log('different');
+        console.log.subtle('different');
       }
       // front.plane.normal = front.vertices[0].normal.clone();//new CSG.Vector([0,1, 0,0]);
       const backNorm = new Vertex3D(new Line3D(this.center(), this.back().center()).vector().unit());
       const back = new CSG.Polygon(normalize(face2, flippedNormal));
       if (!backNorm.equals(back.plane.normal)) {
-        console.log('different');
+        console.log.subtle('different');
       }
       // back.plane.normal = back.vertices[0].normal.clone();//new CSG.Vector([0,0,1,0,0]);
       const polygonSets = [front, back];
@@ -193,16 +200,13 @@ class BiPolygon {
          const polyNorm = new Vertex3D(new Line3D(this.center(), polyCenter).vector().unit());
          const back = new CSG.Polygon(normalize(face2, flippedNormal));
          if (!polyNorm.equals(poly.plane.normal)) {
-           console.log('different');
+           console.log.subtle('different');
          }
          // polygonSets[polygonSets.length - 1].plane.normal = normalized[0].normal.clone();
       }
       // polygonSets.forEach(p => p.setColor(0,0,255));
 
       const polys = CSG.fromPolygons(polygonSets);
-      // if (!allNormsRepresented(polys.polygons)) {
-      //   console.log('different???');
-      // }
       // polys.normals = {
       //   front: this.normal(),
       //   right: this.normalRight(),

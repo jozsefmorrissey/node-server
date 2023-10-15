@@ -17,9 +17,14 @@ class FileTabDisplay extends Lookup {
     this.unregister = (title) => delete list[title];
     this.list = () => Object.keys(list);
     this.update = () => {
-      const contentCnt = du.find.down('.content', du.id(this.id()));
-      contentCnt.innerHTML = this.selectedHtml();
+      const cnts = du.find.all(`#${this.id()}.open`);
+      for (let index = 0; index < cnts.length; index++) {
+        const contentCnt = du.find.down('.content', cnts[index]);
+        contentCnt.innerHTML = this.selectedHtml();
+      }
     }
+
+    this.isOpen = () => list[selected] !== undefined;
 
     this.selectedHtml = () => list[selected] ? list[selected]() : '';
     this.html = (title) => title === undefined ?
@@ -35,10 +40,13 @@ du.on.match('click', '.file-tab-cnt > ul > li', (elem, event) => {
     .forEach(e => du.class.remove(e, 'selected'));
 
   const container = du.find.closest('.file-tab-cnt', elem);
-  if (close) return du.class.remove(container, 'open');
+  const ftd = FileTabDisplay.get(container.id);
+  if (close) {
+    ftd.selected(null)
+    return du.class.remove(container, 'open');
+  }
 
   const content = du.find.closest('.content', elem);
-  const ftd = FileTabDisplay.get(container.id);
   ftd.selected(elem.innerText);
   content.innerHTML = ftd.selectedHtml();
   du.class.add(container, 'open')

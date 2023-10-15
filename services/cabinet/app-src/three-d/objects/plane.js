@@ -129,7 +129,7 @@ class Plane extends Array {
         const returnValue = {a: answer[0][0], b: answer[1][0], c: answer[2][0], d: 1};
         return returnValue;
       } catch (e) {
-        console.log('booblaa booblaa');
+        console.warn(e);
       }
     }
 

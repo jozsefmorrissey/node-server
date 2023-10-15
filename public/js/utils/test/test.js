@@ -207,9 +207,9 @@ const Test = {
     for (let index = 0; index < testNames.length; index += 1) {
       const testName = testNames[index];
       if (!ran[testName]) {
+        const ts = new TestStatus(testName);
         try {
           Test.tests[testName].forEach((testFunc) => {
-            const ts = new TestStatus(testName);
             const isAsync = testFunc.constructor.name === "AsyncFunction";
             if (isAsync) {
               testFunc(ts).then(() => {}, (e) =>

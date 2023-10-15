@@ -98,6 +98,7 @@ class CabinetConfig {
         name: 'layout',
         inline: true,
         class: 'center',
+        // value: 'test',
         clearOnDblClick: true,
         optional: true,
         list: CabinetLayouts.list()

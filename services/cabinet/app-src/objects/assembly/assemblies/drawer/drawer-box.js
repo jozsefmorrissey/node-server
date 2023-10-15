@@ -11,6 +11,7 @@ class DrawerBox extends Assembly {
     this.normal = () => this.parentAssembly().getNormal(partCode);
     this.depth = () => this.parentAssembly().drawerDepth();
     this.biPolygon = () => this.parentAssembly().getBiPolygon(partCode);
+    this.part = () => this.depth() > 8.5*2.54;
 
     this.toModel = () => {
       const props = this.getRoot().group().propertyConfig('DrawerBox');

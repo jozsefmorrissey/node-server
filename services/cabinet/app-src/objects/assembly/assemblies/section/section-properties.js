@@ -12,6 +12,7 @@ const DividerSection = require('./partition/divider.js');
 const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
 const CustomEvent = require('../../../../../../../public/js/utils/custom-event.js')
+const FunctionCache = require('../../../../../../../public/js/utils/services/function-cache.js');
 
 const v = (x,y,z) => new Vertex3D(x,y,z);
 class SectionProperties extends KeyValue{
@@ -75,7 +76,7 @@ class SectionProperties extends KeyValue{
 
     const changeEvent = new CustomEvent('change', true);
     this.on.change = changeEvent.on;
-    this.on.change.trigger = changeEvent.trigger;
+    this.trigger.change = changeEvent.trigger;
     const keyValHash = this.hash;
     let lastHash;
     let running = false;
@@ -92,7 +93,10 @@ class SectionProperties extends KeyValue{
       }
       if (hash !== lastHash) {
         changeEvent.trigger(instance);
-        this.children().forEach(c => c.on.change.trigger())
+        this.children().forEach(c => c.trigger.change())
+      }
+      if (this.divideRight()) {
+        hash += divider.hash();
       }
       lastHash = hash;
       running = false;
@@ -105,7 +109,7 @@ class SectionProperties extends KeyValue{
       if (!full) return 'S';
         const parent = this.parentAssembly();
         const pc = 'S' + index + (this.vertical() ? 'V' : 'H');
-        if (parent) return `${parent.partCode(full)}-${pc}`;
+        if (parent) return `${parent.partCode(full)}_${pc}`;
         return pc;
     };
     this.partName = () => {
@@ -162,12 +166,57 @@ class SectionProperties extends KeyValue{
       return curr;
     }
 
+    const depthPartReg = /Cabinet|Cutter|Section|Void|Auto|Handle|Drawer|Door/;
+    const depthDvReg = /_dv/;
+    const depthPartFilter = a => !a.constructor.name.match(depthPartReg) &&
+                                  !a.partCode(true).match(depthDvReg);
+
+    function allPolys() {
+      const root = instance.root();
+      if (root !== instance) return root.allPolys();
+      let assems = this.getRoot().allAssemblies().filter(depthPartFilter);
+      const mi = Polygon3D.mostInformation([this.innerPoly()]);
+      return assems.map(a => a.toBiPolygon());
+    }
+    this.allPolys = new FunctionCache(allPolys, this, 'alwaysOn');
+
     this.innerDepth = () => {
-      const cabinet = this.getCabinet();
       const back = this.back();
       if (back) return back.toBiPolygon().distance(this.innerCenter());
       return 4*2.54;
-    };
+    }
+
+    this.drawerDepth = new FunctionCache(() => {
+      const cabinet = this.getCabinet();
+      const polyList = this.allPolys();
+      const innerPoly = this.innerPoly();
+      const mi = Polygon3D.mostInformation([innerPoly]);
+      const vector = innerPoly.normal().inverse();
+      const verts = [];
+      innerPoly.lines().forEach(l => verts.push(l.startVertex) | verts.push(l.midpoint()));
+      const lines = verts.map(v => Line3D.fromVector(vector, v));
+      let closest;
+      for (let index = 0; index < polyList.length; index++) {
+        const biPoly = polyList[index];
+        for (let lIndex = 0; lIndex < lines.length; lIndex++) {
+          const line = lines[lIndex];
+          const plane = biPoly.closerPlane(line.startVertex);
+          const intersection = plane.intersection.line(line);
+          if (intersection) {
+            const poly = new Polygon3D(plane);
+            const within = poly.isWithin2d(intersection);
+            if (within) {
+              poly.isWithin2d(intersection);
+              const dist = intersection.distance(line.startVertex);
+              if (closest === undefined || closest.dist > dist) {
+                closest = {dist, line};
+              }
+            }
+          }
+        }
+      }
+      return closest ? closest.dist : 4*2.54;
+    }, this, 'alwaysOn');
 
     function offsetCenter(center, left, right, up, down, forward, backward) {
       center = JSON.copy(center);
@@ -220,7 +269,6 @@ class SectionProperties extends KeyValue{
         assems.push(this.divider());
         if (!childrenOnly) assems.concatInPlace(this.divider().getSubassemblies());
       }
-      assems.concatInPlace(this.sections);
       for (let index = 0; !childrenOnly && index < this.sections.length; index++) {
         assems.concatInPlace(this.sections[index].getSubassemblies());
       }
@@ -296,7 +344,6 @@ class SectionProperties extends KeyValue{
       try {
         return instance.pattern().calc(dist);
       } catch (e) {
-        console.log(e);
         instance.pattern().calc(dist);
         return instance.pattern('z').calc(dist);
       }
@@ -577,17 +624,15 @@ class SectionProperties extends KeyValue{
       } else {
         const length = point1.distance(point2) + jointOffset - right.panelThickness()/2;
         Line3D.adjustVertices(point1, point2, length, true);
-        instance.dividerJoint.zero(divider.panel(), right.panel());
+        instance.dividerJoint.zero(divider.panel(), right.panel(), 'right');
       }
       if (!(left instanceof DividerSection)) {
         Line3D.adjustVertices(point2, point1, maxLen, true);
       } else {
         const length = point1.distance(point2) + jointOffset - left.panelThickness()/2;
         Line3D.adjustVertices(point2, point1, length, true);
-        instance.dividerJoint.zero(divider.panel(), left.panel());
+        instance.dividerJoint.zero(divider.panel(), left.panel(), 'left');
       }
-      if (divider.panel().joints.length > 20)
-        console.log('greater');
     }
 
     this.dividerInfo = (panelThickness) => {
@@ -646,7 +691,7 @@ class SectionProperties extends KeyValue{
         v.y = nv.y;
         v.z = nv.z;
         if (Number.isNaN(v.x + v.y + v.z)) {
-          console.log('NaN!')
+          console.error('coordinate is NaN!')
         }
       }
       return change
@@ -672,24 +717,27 @@ class SectionProperties extends KeyValue{
       return joint.clone();
     }
 
-    this.dividerJoint.zero = (male, female) => {
+    this.dividerJoint.zero = (male, female, locId) => {
       const key = `${male.partCode(true)}=>${female.partCode(true)}`;
       const joint = this.dividerJoint();
 
       let mpc, fpc, id;
       if (male) mpc = male.partCode(true);
       if (female) fpc = female.partCode(true);
-      const clone = joint.clone(male, mpc, fpc);
+      const clone = joint.clone(male, mpc, fpc, null, locId);
       clone.maleOffset(0);
       male.addJoints(clone);
     }
 
     let called = {coverage: 0, dividerOffsetInfo: 0, coverInfo: 0, dividerInfo: 0};
     this.setSection = (constructorIdOobject) => {
-      let section = SectionProperties.new(constructorIdOobject);
-      this.cover(section);
-      if (section) {
-        section.parentAssembly(this);
+      if (constructorIdOobject === null) this.cover(null);
+      else {
+        let section = SectionProperties.new(constructorIdOobject);
+        this.cover(section);
+        if (section) {
+          section.parentAssembly(this);
+        }
       }
     }
 
@@ -722,7 +770,8 @@ class SectionProperties extends KeyValue{
       if (sectionCutters.length === 0) buildCutters();
       for (let index = 0; index < sectionCutters.length; index++) {
         const cutter = sectionCutters[index];
-        divider.panel().addJoints(new Joint(cutter.partCode(true), divider.panel(true).partCode()));
+        const locId = cutter.reference().partCode(true);
+        divider.panel().addJoints(new Joint(cutter.partCode(true), divider.panel().partCode(true), null, locId));
       }
     }
 
@@ -738,7 +787,7 @@ class SectionProperties extends KeyValue{
       subAssems.concatInPlace(divider.parentAssembly().borders().map(f => f().panel ? f().panel() : f()));
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
-        this.dividerJoint.zero(panel, assem);
+        this.dividerJoint.zero(panel, assem, panel.partCode(true));
       }
       this.addCutters(divider);
     }
@@ -799,18 +848,16 @@ SectionProperties.new = function (constructorId) {
 SectionProperties.fromJson = (json) => {
   const sections = [];
   const pattern = Pattern.fromJson(json.pattern);
-  // for (let index = 0; index < json.subassemblies.length; index++) {
-  //   const sectionJson = json.subassemblies[index];
-  //   sections.push(Object.fromJson(sectionJson));
-  // }
-  json.subassemblies.forEach(j => (j.constructed = json.constructed));
   const sp  = new SectionProperties(json.config, json.index, json.subassemblies, pattern);
   sp.value.all(json.value.values);
   sp.parentAssembly(json.parent);
   sp.cover(Object.fromJson(json.cover));
   if (sp.cover()) sp.cover().parentAssembly(sp);
-  sp.divider(new DividerSection(sp)).parentAssembly(sp);
-  json.constructed(() => sp.addJoints());
+
+  json.constructed(() => {
+    sp.addJoints()
+    sp.divider().panel().fromJson(json.divider.subassemblies.dv);
+  });
   return sp;
 }
 

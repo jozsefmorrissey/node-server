@@ -137,6 +137,8 @@ class OrderSaveManager {
       versionId = activeVersion.name();
       if (autoSavers[askey]) return autoSavers[askey];
       autoSavers[askey] = new AutoSave(contentFunc, activeOrderDir, versionId, autoSaveOn);
+      autoSavers[askey].onSaving(savingEvent.trigger)
+      autoSavers[askey].onSaved(savedEvent.trigger)
       await autoSavers[askey].onInit();
       return autoSavers[askey];
     }

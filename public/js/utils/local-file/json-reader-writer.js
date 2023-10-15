@@ -57,12 +57,18 @@ class JsonReaderWriter {
     }
 
     let lastHashes = {};
-    this.write = async (data, rootDirectoryHelper) => {
+    this.changesMade = (data, rootDirectoryHelper) => {
+      if (data === undefined) throw new Error('data undefined');
       const hash = JSON.stringify(data).hash();
       if (lastHashes[rootDirectoryHelper.absPath()] === hash) {
-        console.log('saimzyes'); return false;
+        return false;
       }
-      console.log('not saimzyes');
+      return true;
+    }
+
+    this.write = async (data, rootDirectoryHelper) => {
+      if (!this.changesMade(data, rootDirectoryHelper)) return false;
+      const hash = JSON.stringify(data).hash();
       const replaceLoc = await getReplaceLocation(rootDirectoryHelper.absPath());
       const rootJsonFileName = rootDirectoryHelper.absPath() + '.json';
       let replaceFile;

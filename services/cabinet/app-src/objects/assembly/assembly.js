@@ -19,15 +19,18 @@ function maxHeight(a, b, c) {
 }
 
 class Assembly extends KeyValue {
-  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig, parent) {
+  constructor(partCode, partName, config, parent) {
+    // TODO should pass this in as and object
     super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly', object: true});
 
     const pcIsFunc = partCode instanceof Function;
     function pCode(full) {
       const pc = pcIsFunc ? partCode(full) : partCode;
       if (!full) return pc;
+      const subPartCode = pc.match(/:.{1,}$/);
       const parent = this.parentAssembly();
-      if (parent) return `${parent.partCode(full)}-${pc}`;
+      const connector = subPartCode ? '' : '_'
+      if (parent) return `${parent.partCode(full)}${connector}${pc}`;
       return pc;
     }
 
@@ -38,23 +41,24 @@ class Assembly extends KeyValue {
       part: true,
       included: true,
       includeJoints: true,
-      centerConfig, demensionConfig, rotationConfig, partCode: pCode, partName,
+      config, partCode: pCode, partName,
       propertyId: undefined,
     }
 
     // TODO: should change subassemblies to an Array not an object;
     const subAssems = this.subassemblies;
+    if (Array.isArray(subAssems)) {
+      console.log('wtff');
+    }
     Object.getSet(this, initialVals, 'subassemblies', 'joints');
-    this.subassemblies = subAssems;
+    Object.defineProperty(this, "subassemblies", {
+      writable: false,
+      enumerable: false,
+      configurable: false,
+      value: subAssems
+    });
     Object.getSet(this, temporaryInitialVals);
     this.path = () => `${this.constructor.name}.${partName}`.toDot();
-
-    if ((typeof centerConfig) === 'function') this.centerConfig = centerConfig;
-    else this.centerConfig = centerConfig
-    if ((typeof demensionConfig) === 'function') this.demensionConfig = demensionConfig;
-    else this.demensionConfig = demensionConfig
-    if ((typeof rotationConfig) === 'function') this.rotationConfig = rotationConfig;
-    else this.rotationConfig = rotationConfig
 
     const parentIncluded = this.included;
 
@@ -72,17 +76,17 @@ class Assembly extends KeyValue {
       const split = path.split('.');
       let attr = split[0];
       let objIdStr;
-      if (split.length > 2) {
-      }
+
+      const value = Assembly.resolveAttr(instance, path);
+      if (Number.isFinite(value)) return value;
+
       if (split.length > 1) {
         objIdStr = split[0];
         attr = split.slice(1).join('.');
       }
 
       let obj;
-      if (objIdStr === undefined) {
-        obj = instance;
-      } else {
+      if (objIdStr !== undefined) {
         obj = instance.getAssembly(objIdStr);
       }
 
@@ -90,7 +94,6 @@ class Assembly extends KeyValue {
         const returnVal = Assembly.resolveAttr(obj, attr);
         return returnVal;
       }
-      return Assembly.resolveAttr(instance, path);
     }
 
     const sme = new StringMathEvaluator({Math, maxHeight}, getValueSmeFormatter);
@@ -107,15 +110,14 @@ class Assembly extends KeyValue {
 
     const changeEvent = new CustomEvent('change', true);
     this.on.change = changeEvent.on;
-    this.on.change.trigger = changeEvent.trigger;
+    this.trigger.change = changeEvent.trigger;
     let lastHash;
     function hash() {
       const valueObj = instance.value.values;
       const keys = Object.keys(valueObj).sort();
       let hash = 0;
       if (instance.parentAssembly() === undefined) hash += `${instance.length()}x${instance.width()}x${instance.thickness()}`.hash();
-      const dems = this.position().configuration().demension;
-      hash += Object.hash(dems);
+      hash += Object.hash(this.config());
       hash += keyValHash();
       const subAssems = Object.values(instance.subassemblies).sortByAttr('id');
       for (let index = 0; index < subAssems.length; index++) {
@@ -145,17 +147,36 @@ class Assembly extends KeyValue {
       return group.propertyConfig;
     }
 
-    this.getAssembly = (partCode, callingAssem) => {
+    let ranCount = 0;
+    function allAssemblies() {
+      const root = instance.rootAssembly();
+      if (root !== instance) return root.allAssemblies();
+      const list = [root];
+      let index = 0;
+      while(list[index]) {
+        const children = list[index].children();
+        for (let i = 0; i < children.length; i++) {
+          list.push(children[i]);
+        }
+        index++;
+      }
+      return list;
+    }
+    this.allAssemblies = new FunctionCache(allAssemblies, this, 'alwaysOn');
 
-      const searchReg = new RegExp(`((-|)${partCode})$`);
-      const searchList = [this];
+    function nearestAssembly(partCode) {
+      const searchReg = Assembly.partCodeReg(partCode);
+      const searchList = [instance];
       let searchIndex = 0;
       const searched = {};
       const childrenAdded = {};
+      const matches = [];
       while (searchIndex < searchList.length) {
         const part = searchList[searchIndex];
         if (searched[part.id()] === undefined) {
-          if (part.partCode(true).match(searchReg)) return part;
+          if (part.partCode(true).match(searchReg)) {
+            return part;
+          }
           const parent = part.parentAssembly();
           if (parent) {
             if (searchIndex === -1) searchList.concatInPlace(parent.children());
@@ -170,7 +191,27 @@ class Assembly extends KeyValue {
         searchIndex++;
       }
     }
-    let position = new Position(this, sme);
+
+    function getAssembly(partCode, all) {
+      if (all !== true) return nearestAssembly(partCode);
+      else {
+        const root = instance.rootAssembly();
+        if (root !== instance) return root.getAssembly(partCode, all);
+        const searchReg = Assembly.partCodeReg(partCode);
+        const assems = this.allAssemblies();
+        const list = [];
+        for (let index = 0; index < assems.length; index++) {
+          const assem = assems[index];
+          if (assem.partCode(true).match(searchReg)) list.push(assem);
+        }
+        return list;
+      }
+    }
+
+    this.getAssembly = new FunctionCache(getAssembly, this, 'alwaysOn');
+    let position = new Position(this, sme, config);
+    this.config = position.configuration;
+
     this.position = () => position;
     this.toModel = this.position().toModel;
     this.toBiPolygon = this.position().toBiPolygon;
@@ -209,21 +250,23 @@ class Assembly extends KeyValue {
       const root = this.getRoot();
       if (root !== this) return root.getJoints(assem);
 
-      const assemList = this.getSubassemblies();
-      let jointList = [].concat(this.joints);
-      if (assem) jointList.concatInPlace(assem.joints);
-      assemList.forEach((assem) => jointList = jointList.concat(assem.joints));
+      const assemList = this.allAssemblies();
+      let allJoints = [].concat(this.joints);
+      if (assem) allJoints.concatInPlace(assem.joints);
+      assemList.forEach((assem) => allJoints.concatInPlace(assem.joints));
       let joints = {male: [], female: []};
       const addJoint = (joint) => {
         if (joint instanceof Joint.References) {
           joint.list().forEach(addJoint);
-        } else if (joint.male() === assem) {
+        } else if (joint.isMale(assem)) {
           joints.male.push(joint);
-        } else if (joint.female() === assem) {
+        } else if (joint.isFemale(assem)) {
           joints.female.push(joint);
         }
       };
-      jointList.forEach(addJoint);
+      allJoints.forEach(addJoint);
+      console.log.subtle('built');
+      jointList = joints.male.concat(joints.female);
       return joints;
     }, this, 'hash'); // TODO: this should be under a different group...I think
 
@@ -257,8 +300,6 @@ class Assembly extends KeyValue {
       return parentAssembly;
     }
     this.addSubAssembly = (assembly) => {
-      if ((typeof assembly.partCode) !== 'function')
-        console.log('wtf')
       this.subassemblies[assembly.partCode()] = assembly;
     }
 
@@ -273,10 +314,10 @@ class Assembly extends KeyValue {
           const mpc = joint.malePartCode();
           const fpc = joint.femalePartCode();
           const pc = this.partCode(true);
-          if (pc !== mpc && pc !== fpc)
-            console.warn('this Should be added to the male part. (not sexist just logically consistant.... ftw)');
-          if (mpc === pc)
-            this.joints.removeWhere(j => j.femalePartCode() === fpc);
+          const locId = joint.locationId();
+          if (locId) {
+            this.joints.removeWhere(j => j.locationId() === locId);
+          }
         }
         this.joints.push(joint.clone(this));
       }
@@ -300,9 +341,6 @@ class Assembly extends KeyValue {
     }
     this.getParts = () => {
       return this.getSubassemblies().filter((a) => {
-        if ((typeof a.part) !== 'function') {
-          console.log('party!')
-        }
         return a.part() && a.included()
       });
     }
@@ -348,7 +386,7 @@ class Assembly extends KeyValue {
     this.on.change(() => {
       const joints = this.getJoints();
       jointList = joints.male.concat(joints.female);
-      this.children().forEach(c => c.on.change.trigger());
+      this.children().forEach(c => c.trigger.change());
     });
     this.on.change(() => instance.buildCenter(true));
     // defaultPartCode();
@@ -376,7 +414,7 @@ Assembly.all = () => {
   return list;
 }
 
-const positionReg = /^(c|r|d|center|rotation|demension).(x|y|z)$/;
+const positionReg = /^(c|r|d|center|rotation|demension)\.(x|y|z)$/;
 Assembly.resolveAttr = (assembly, attr) => {
   if (!(assembly instanceof Assembly)) return undefined;
   if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
@@ -405,13 +443,10 @@ Assembly.resolveAttr = (assembly, attr) => {
   return Number.isFinite(assemVal) ? assemVal : groupVal;
 }
 Assembly.fromJson = (assemblyJson) => {
-  const demensionConfig = assemblyJson.demensionConfig;
-  const centerConfig = assemblyJson.centerConfig;
-  const rotationConfig = assemblyJson.rotationConfig;
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
   const clazz = Object.class.get(assemblyJson._TYPE);
-  const assembly = new (clazz)(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+  const assembly = new (clazz)(partCode, partName, assemblyJson.config);
   assembly.id(assemblyJson.id);
   assembly.value.all(assemblyJson.value.values);
   assembly.parentAssembly(assemblyJson.parent)
@@ -419,9 +454,12 @@ Assembly.fromJson = (assemblyJson) => {
     json.constructed = assembly.json;
     assembly.addSubAssembly(Object.fromJson(json));
   });
-  if (assemblyJson.length) assembly.length(assemblyJson.length);
-  if (assemblyJson.width) assembly.width(assemblyJson.width);
-  if (assemblyJson.thickness) assembly.thickness(assemblyJson.thickness);
+  const joints = Object.fromJson(assemblyJson.joints);
+  assembly.addJoints.apply(assembly, joints);
+  if (Array.isArray(assembly.subassemblies)) {
+    console.log('wtff');
+  }
+  assembly.getJoints.clearCache()
   return assembly;
 }
 
@@ -448,5 +486,25 @@ Assembly.partCode = (assembly) => {
     return `${assembly.constructor.abbriviation}`;
   }
 }
+
+// PartCode reg matches starting from the end aswell as at each simicolon
+// The simicolon tells you that it is to be considered the preceding
+// part number.
+
+// Examples: partCode 'L'
+//c-L:fifa                         :true
+//c-LL                             :false
+//c-L-lila:fifa                    :false
+
+//c-L                              :true
+//c-L-7                            :false
+
+//m-q-p-L:1-2-4                    :true
+//m-q-p-L-d:1-2-4                  :false
+
+//m-q-p:1-2-4-L:fi-fi-fo-fum       :true
+//m-q-p:1-2-4-L-4:fi-fi-fo-fum     :false
+
+Assembly.partCodeReg = (partCode) => new RegExp(`(.{1,}?_|^)${partCode}(|:.*)$`);
 
 module.exports = Assembly

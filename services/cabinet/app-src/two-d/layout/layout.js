@@ -268,7 +268,7 @@ class Layout2D extends Lookup {
 
     this.removeByPayload = (payload) => {
       for (index = 0; index < this.objects().length; index += 1) {
-        if (this.objects()[index].payload() === payload) {
+        if (this.objects()[index].assembly() === payload) {
           const obj = this.objects().splice(index, 1);
           removeEvent.trigger(undefined, payload);
           return obj;
@@ -465,7 +465,6 @@ class Layout2D extends Lookup {
       if (Number.isFinite(index)) savedIndex = index + 1;
       const levels = this.levels();
       const modIndex = Math.mod(savedIndex, levels.length + 2) - 1;
-      console.log.subtle(500,savedIndex,modIndex);
       if (modIndex === -1) return [];
       if (modIndex === levels.length) return this.objects();
       return levels[modIndex];
@@ -516,7 +515,6 @@ Layout2D.fromJson = (json) => {
     snapLoc2.pairWith(snapLoc1);
   });
 
-  console.log('isConnected:', layout.connected());
   return layout;
 }
 

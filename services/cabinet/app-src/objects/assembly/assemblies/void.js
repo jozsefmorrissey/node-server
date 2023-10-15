@@ -7,32 +7,13 @@ const Dado = require('../../joint/joints/dado.js');
 const PanelModel = require('./panel.js').Model;
 const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
 const Line3D = require('../../../three-d/objects/line.js');
+const Assembly = require('../assembly.js');
 
 FunctionCache.on('always-on', 200);
 
-function referenceConfigs(refPartCode) {
-  const configs = {};
-  configs.center = [
-    `${refPartCode}.c.x`,
-    `${refPartCode}.c.y`,
-    `${refPartCode}.c.z`
-  ];
-  configs.demension = [
-    `${refPartCode}.d.x`,
-    `${refPartCode}.d.y`,
-    `${refPartCode}.d.z`
-  ];
-  configs.rotation = [
-    `${refPartCode}.r.x`,
-    `${refPartCode}.r.y`,
-    `${refPartCode}.r.z`
-  ];
-  return configs;
-}
-
 class Void extends Cutter {
-  constructor(partCode, partName, centerConfig, demensionConfig, rotationConfig) {
-    super(partCode, partName, centerConfig, demensionConfig, rotationConfig);
+  constructor(partCode, partName, config) {
+    super(partCode, partName, config);
     const instance = this;
     Object.getSet(this, {includedSides: [true, true], jointSet: 1});
     // this.included(true);
@@ -147,20 +128,24 @@ class Void extends Cutter {
       if (!centerVect.sameDirection(polys[index].normal())) pt *= -1;
       const joints = offsetSet.joints().filter(j => j.femalePartCode() === panels[index].partCode());
       if (!called[index]) {
-        console.log('toModel', index)
         joints.concatInPlace(panels[index].getJoints().female);
         called[index] = true;;
       }
 
-      const model = BiPolygon.fromPolygon(polys[index], pt, 0, offset).toModel(joints);
+      const finalBiPoly = BiPolygon.fromPolygon(polys[index], pt, 0, offset);
+      // finalBiPoly.rotate(this.position().rotation(), this.position().center());
+      const model = finalBiPoly.toModel(joints);
       called[index] = false;
+
       return model;
     }, this, 'always-on');
 
+    const toModelFuncs = [];
     const buildPanel = (index) => {
       const partCode = this.partCode() + `p${index}`
       const partName = this.partName() + `-panel-${index}`
-      panels[index] = new PanelModel(partCode, partName, toModel(index));
+      toModelFuncs[index] ||= toModel(index);
+      panels[index] = new PanelModel(partCode, partName, toModelFuncs[index]);
       this.addSubAssembly(panels[index]);
       panels[index].included = () => instance.includedSides()[index] === true;
     }
@@ -171,6 +156,8 @@ class Void extends Cutter {
     buildPanel(3);
     buildPanel(4);
     buildPanel(5);
+
+    this.updateJoints = updateAllJoints;
 
     function abyssModel() {
       const biPoly = instance.toBiPolygon();
@@ -185,15 +172,136 @@ class Void extends Cutter {
           biPoly.extend(vector.scale(2000));
         }
       }
-      return biPoly.toModel();
+
+      // biPoly.rotate(this.position().rotation(), this.position().center());
+      const model =  biPoly.toModel();
+      return model;
     }
 
-    const controlableAbyss = new Cutter.Model(`${this.partCode()}abs`, `${this.partName()}-abyss`, abyssModel);
+    const abyssToModel = new FunctionCache(abyssModel, this, 'alwaysOn');
+
+    const controlableAbyss = new Cutter.Model(`${this.partCode()}abs`, `${this.partName()}-abyss`, abyssToModel);
     // controlableAbyss.included(true);
     // controlableAbyss.part(true);
     this.addSubAssembly(controlableAbyss);
     this.on.parentSet(updateAllJoints);
+
+    if (config) {
+      this.jointSet(config.jointSet);
+      this.includedSides(config.includedSides);
+    }
+
+    this.unCache = () => {
+      toModelFuncs.forEach(f => f.clearCache());
+    }
+
+    const parentToJson = this.toJson;
+    this.toJson = () => {
+      const json = parentToJson();
+      json.subassemblies = {}
+      return json;
+    }
   }
 }
+
+Void.fromJson = (json) => {
+  const voId = Assembly.fromJson(json);
+  voId.jointSet(json.jointSet);
+  voId.includedSides(json.includedSides);
+  json.constructed(() => {
+    voId.updateJoints.clearCache()()
+    voId.unCache();
+  }, 2000);
+  return voId;
+}
+
+Void.referenceConfig = (type, refPartCode, width, height) => {
+  let o = {c:{},d:{},r:{},}; //offset
+  let includedSides = [false, false, true, true, true, true];;
+  let jointSet = 0;
+  const oStr = (attr1,attr2) => o[attr1][attr2] ? o[attr1][attr2] : '';
+  switch (type) {
+    case 'vertical':
+      switch (refPartCode) {
+        case 'c_BACK':
+          o.r.x = ' + 90';
+          o.r.y = ' + 90';
+          o.c.z = `+ d.y/2 + ${refPartCode}.d.z/2`;
+          o.d.z = `${refPartCode}.d.y - 3*2.54/2`;
+          includedSides = [false, false, true, true, false, true];
+          jointSet = 1;
+          break
+        case 'c_L':
+          o.r.y = ' + 90';
+          o.r.x = ' + 90';
+          o.d.z = `${refPartCode}.d.y - 3*2.54/4`;
+          o.c.z = ' + 3*2.54/16';
+          o.c.y = ``;
+          o.c.x = ` + d.x/2 + 3*2.54/4`;
+          includedSides = [false, false, true, true, false, true];
+          jointSet = 0;
+          break;
+        case 'c_R':
+          o.r.y = ' - 90';
+          o.r.x = ' + 90';
+          o.d.z = `${refPartCode}.d.y - 3*2.54/4`;
+          o.c.z = ' + 3*2.54/16';
+          o.c.y = ``;
+          o.c.x = ` - d.x/2 - 3*2.54/4`;
+          includedSides = [false, false, true, true, false, true];
+          jointSet = 0;
+      }
+      break;
+    default:
+      switch (refPartCode) {
+        case 'c_BACK':
+          o.r.y = ' + 90';
+          o.c.y = ` - ${refPartCode}.d.y/2 + d.y/2 + 3*2.54/4`;
+          o.c.z = ` + d.x/2 + 3*2.54/8`;
+          o.d.z = `${refPartCode}.d.x - 3*2.54/4`;
+          includedSides = [false, false, true, false, false, true];
+          jointSet = 2;
+          break;
+        case 'c_L':
+          o.r.y = ' + 90';
+          o.d.z = `${refPartCode}.d.x - 9*2.54/8`;
+          o.c.z = ' + 3*2.54/16';
+          o.c.y = ` - ${refPartCode}.d.y/2 + d.y/2 + 3*2.54/8`;
+          o.c.x = ` + d.x/2 + 3*2.54/4`;
+          includedSides = [false, false, true, false, false, true];
+          jointSet = 0;
+          break;
+        case 'c_R':
+          o.r.y = ' - 90';
+          o.d.z = `${refPartCode}.d.x - 9*2.54/8`;
+          o.c.z = ' + 3*2.54/16';
+          o.c.y = ` - ${refPartCode}.d.y/2 + d.y/2 + 3*2.54/8`;
+          o.c.x = ` - d.x/2 - 3*2.54/4`;
+          includedSides = [false, false, true, false, false, true];
+          jointSet = 0;
+        }
+
+
+  };
+
+  return {
+    center: {
+      x: `${refPartCode}.c.x${oStr('c','x')}`,
+      y: `${refPartCode}.c.y${oStr('c','y')}`,
+      z: `${refPartCode}.c.z${oStr('c','z')}`,
+    },
+    demension: {
+      x: width,
+      y: height,
+      z: `${oStr('d','z')}` ||  `${refPartCode}.d.y`
+    },
+    rotation: {
+      x: `${refPartCode}.r.x${oStr('r','x')}`,
+      y: `${refPartCode}.r.y${oStr('r', 'y')}`,
+      z: `${refPartCode}.r.z${oStr('r', 'z')}`
+    },
+    includedSides, jointSet
+  };
+};
 
 module.exports = Void;

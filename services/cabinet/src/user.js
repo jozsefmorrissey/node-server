@@ -134,11 +134,9 @@ class User {
       for(let index = 0; index < user.tokens.length; index += 1) {
           const token = user.tokens[index];
           if (bcrypt.compareSync(secret, token.secret) && notExpired(token)) {
-            console.log(true, secret);
             return token;
           }
       }
-      console.log(false, secret);
       return false;
     }
 
@@ -251,7 +249,6 @@ class User {
 
     this.validate = function (soft) {
       const user = get();
-      console.log(JSON.stringify(user, null, 2));
       if (!user || user.activated === false) {
         if (soft) return false;
         throw new UnAuthorized();

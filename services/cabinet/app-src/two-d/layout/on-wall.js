@@ -53,7 +53,9 @@ class OnWall extends Lookup {
       return new Vertex2d({x: startpoint.x + distRight * Math.cos(theta),
                             y: startpoint.y + distRight * Math.sin(theta)});
     }
-    this.toLine = () => new Line2d(this.startVertex(), this.endVertex());
+    this.toLine = () => new Line2d(start, end);
+    this.prevLine = () => new Line2d(wall.startVertex(), start);
+    this.nextLine = () => new Line2d(end, wall.endVertex());
     this.wall = () => wall;
     this.setWall = (w) => wall = w;
     this.move = (center) => {

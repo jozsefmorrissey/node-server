@@ -1,11 +1,11 @@
 
 const cacheState = {};
-const cacheFuncs = {};
 
 class FunctionCache {
   constructor(func, context, group) {
     if ((typeof func) !== 'function') return func;
     let cache = {};
+    let awaitingClear = false;
     function cacheFunc() {
       lastGroupCall[cacheFunc.group()] = new Date().getTime();
       if (FunctionCache.isOn(cacheFunc.group())) {
@@ -18,6 +18,9 @@ class FunctionCache {
         if (c.__FunctionCache === undefined) {
           FunctionCache.notCahed++
           c.__FunctionCache = func.apply(context, arguments);
+          if (!awaitingClear) {
+            setTimeout(cacheFunc.clearCache, cacheFunc.timer());
+          }
         } else FunctionCache.cached++;
         return c.__FunctionCache;
       }
@@ -25,43 +28,37 @@ class FunctionCache {
       return func.apply(context, arguments);
     }
 
+    cacheFunc.context = () => context;
+    cacheFunc.cache = () => cache;
+    cacheFunc.timer = (group) => timers[group] || 200;
+
     cacheFunc.group = () => {
       const gp = (typeof group === 'function') ? group() : group || 'global';
-      if (cacheFuncs[gp] === undefined) cacheFuncs[gp] = [];
       return gp;
     }
 
-    // Allow for bad programing to set variables...
-    setTimeout(() => {
-      cacheFuncs[cacheFunc.group()].push(cacheFunc);
-    });
-
-    cacheFunc.clearCache = () => cache = {};
+    cacheFunc.clearCache = () => ((cache = {}) && (awaitingClear = false)) || cacheFunc;
 
     return cacheFunc;
   }
 }
 
-function clearCache(group) {
-  if (cacheFuncs[group] !== undefined)
-    cacheFuncs[group].forEach((func) => func.clearCache());
-}
-
-FunctionCache.clear = clearCache;
-FunctionCache.clearAllCaches = (group) => {
-  Object.keys(cacheFuncs).forEach(group => clearCache(group));
-}
-
 const timers = {};
 const lastGroupCall = {};
-function toggleAt(group) {
-  setTimeout(() => {
-    if (lastGroupCall[group] < new Date().getTime() - timers[group]) {
-      clearCache(group);
+async function toggleAt() {
+  const groups = Object.keys(timers);
+  const currTime = new Date().getTime();
+  for (let index = 0; index < groups.length; index++) {
+    const group = groups[index];
+    const itIsTime = lastGroupCall[group] < currTime - timers[group];
+    const firstTime = lastGroupCall[group] === undefined;
+    if (firstTime || itIsTime) {
+      lastGroupCall[group] = currTime;
     }
-    toggleAt(group);
-  }, timers[group]);
+  }
+  setTimeout(toggleAt, 300);
 }
+toggleAt();
 
 FunctionCache.cached = 0;
 FunctionCache.notCahed = 0;
@@ -69,12 +66,12 @@ FunctionCache.on = (group, time) => {
   if (time) {
     const run = timers[group] === undefined;
     timers[group] = time;
-    if (run) toggleAt(group);
   }
   FunctionCache.cached = 0;
   FunctionCache.notCahed = 0;
   cacheState[group] = true;
 }
+
 FunctionCache.off = (group, print) => {
   if (print) {
     const cached = FunctionCache.cached;
@@ -83,7 +80,6 @@ FunctionCache.off = (group, print) => {
     console.log(`FunctionCache report: ${cached}/${total} %${percent}`);
   }
   cacheState[group] = false;
-  clearCache(group);
 }
 let disabled = false;
 FunctionCache.isOn = (group) => group === 'alwaysOn' || (!disabled && cacheState[group]);
