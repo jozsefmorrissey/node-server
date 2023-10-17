@@ -111,9 +111,7 @@ class Void extends Cutter {
       return true;
     }, this, 'always-on');
 
-    let called = [];
-    const toModel = (index) => new FunctionCache(() => {
-      updateAllJoints();
+    const toBiPoly = (index) => new FunctionCache(() => {
       const startIndex = this.jointSet();
       const biPoly = this.toBiPolygon();
       let polys = biPoly.toPolygons();
@@ -126,26 +124,36 @@ class Void extends Cutter {
       const centerVect = new Line3D(center.copy(), polys[index].center()).vector();
 
       if (!centerVect.sameDirection(polys[index].normal())) pt *= -1;
+
+      return BiPolygon.fromPolygon(polys[index], pt, 0, offset);
+    }, this, 'alwaysOn');
+
+    let called = [];
+    const toModel = (index) => new FunctionCache(() => {
+      updateAllJoints();
+      const biPoly = biPolyFuncs[index]();
+
+      const offsetSet = offsetSets[this.jointSet()];
       const joints = offsetSet.joints().filter(j => j.femalePartCode() === panels[index].partCode());
+      // TODO: not sure what if this is preventing recursive additions...
       if (!called[index]) {
         joints.concatInPlace(panels[index].getJoints().female);
         called[index] = true;;
       }
-
-      const finalBiPoly = BiPolygon.fromPolygon(polys[index], pt, 0, offset);
-      // finalBiPoly.rotate(this.position().rotation(), this.position().center());
-      const model = finalBiPoly.toModel(joints);
+      const model = biPoly.toModel(joints);
       called[index] = false;
 
       return model;
     }, this, 'always-on');
 
     const toModelFuncs = [];
+    const biPolyFuncs = [];
     const buildPanel = (index) => {
       const partCode = this.partCode() + `p${index}`
       const partName = this.partName() + `-panel-${index}`
-      toModelFuncs[index] ||= toModel(index);
-      panels[index] = new PanelModel(partCode, partName, toModelFuncs[index]);
+      const toMod = toModelFuncs[index] ||= toModel(index);
+      const toBP = biPolyFuncs[index] ||= toBiPoly(index);
+      panels[index] = new PanelModel(partCode, partName, toMod, toBP);
       this.addSubAssembly(panels[index]);
       panels[index].included = () => instance.includedSides()[index] === true;
     }
@@ -226,7 +234,7 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
         case 'c_BACK':
           o.r.x = ' + 90';
           o.r.y = ' + 90';
-          o.c.z = `+ d.y/2 + ${refPartCode}.d.z/2`;
+          o.c.z = `+ d.x/2 + ${refPartCode}.d.z/2`;
           o.d.z = `${refPartCode}.d.y - 3*2.54/2`;
           includedSides = [false, false, true, true, false, true];
           jointSet = 1;

@@ -111,7 +111,7 @@ class Divider extends Assembly {
         const partName = `${location}`;
         let cutter, panel;
         if (panels[partCode] === undefined) {
-          panel = new PanelModel(partCode, partName, panelModel);
+          panel = new PanelModel(partCode, partName, panelModel, toBiPolygon);
           panels[partCode] = panel;
           panel.parentAssembly(instance);
           cutter = new Cutter.Poly(translated);

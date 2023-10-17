@@ -4,6 +4,7 @@
 const SectionProperties = require('../section-properties.js');
 const Panel = require('../../panel');
 const Assembly = require('../../../assembly.js');
+const Cabinet = require('../../cabinet.js');
 const BiPolygon = require('../../../../../three-d/objects/bi-polygon.js');
 const Joint = require('../../../../joint/joint.js');
 const DividerSection = require('../partition/divider.js');
@@ -56,11 +57,21 @@ class PanelSection extends Assembly {
 
     if (!panel) panel = new Panel.Model('ps', 'Panel-' + count++, toModel);
     else panel.toModel = toModel;
-    this.on.parentSet(() =>
-      instance.parentAssembly().on.change(updateJoints));
-    // setTimeout(() => );
-    // panel.part(false);
-    this.addSubAssembly(panel);
+
+    const initialize = (assem) => () => {
+      if (assem instanceof Cabinet) {
+        this.on.change(updateJoints);
+      } else {
+        const parent = instance.parentAssembly();
+        parent.on.parentSet(initialize(parent));
+      }
+      // setTimeout(() => );
+      // panel.part(false);
+      this.addSubAssembly(panel);
+
+    }
+
+    this.on.parentSet(initialize(this));
   }
 }
 

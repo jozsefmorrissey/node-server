@@ -20,6 +20,9 @@ class BiPolygon {
     this.back = () =>
       new Polygon3D(face2);
 
+    this.lines = () => this.front().lines().concat(this.back().lines());
+    this.vertices = () => this.front().vertices().concat(this.back().vertices());
+
     this.faceNormal = (index) => face2[index || 0].distanceVector(face1[index || 0]).unit();
 
     this.normal = () => this.flippedNormal() ? polygon1.normal() : polygon1.normal().inverse();

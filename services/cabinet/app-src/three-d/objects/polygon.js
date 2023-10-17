@@ -484,14 +484,14 @@ class Polygon3D {
       return new Polygon2D(Vertex3D.to2D(this.vertices(),  x, y));
     }
 
-    this.isWithin2d = (vertex, x, y) => {
+    this.isWithin2d = (vertex, exclusive, x, y) => {
       if (x === undefined || y === undefined) {
         const mi = Polygon3D.mostInformation([this]);
         x = mi[0]; y = mi[1];
       }
       const poly2d = this.to2D(x, y);
       const vert2d = vertex.to2D(x, y);
-      return poly2d.isWithin(vert2d, true);
+      return poly2d.isWithin(vert2d, exclusive);
     }
 
     this.toString = () => {

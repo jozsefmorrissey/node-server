@@ -17,13 +17,14 @@ class Panel extends Assembly {
 Panel.abbriviation = 'pn';
 
 class PanelModel extends Panel {
-  constructor(partCode, partNameFunc, toModel) {
+  constructor(partCode, partNameFunc, toModel, toBiPolygon) {
     super(partCode);
     this.toModel = new FunctionCache(() => {
       let joints = this.getJoints().female;
       let model = toModel();
       return Joint.apply(model, joints);
     }, this, 'alwaysOn');
+    if (toBiPolygon) this.toBiPolygon = toBiPolygon;
     this.partName = (typeof partNameFunc) === 'function' ? partNameFunc : () => partNameFunc;
   }
 }

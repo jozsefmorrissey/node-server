@@ -18,7 +18,7 @@ const v = (x,y,z) => new Vertex3D(x,y,z);
 class SectionProperties extends KeyValue{
   constructor(config, index, sections, pattern) {
     super({childrenAttribute: 'sections', parentAttribute: 'parentAssembly'})
-
+    const instance = this;
     const getPartFunc = (dir) => config[dir] instanceof Function ? config[dir] : () => instance.getAssembly(config[dir]);
     this.top = getPartFunc('top');
     this.bottom = getPartFunc('bottom');
@@ -71,7 +71,6 @@ class SectionProperties extends KeyValue{
       }
     }
     this.index = () => index;
-    const instance = this;
     pattern ||= new Pattern('z');
 
     const changeEvent = new CustomEvent('change', true);
@@ -171,14 +170,23 @@ class SectionProperties extends KeyValue{
     const depthPartFilter = a => !a.constructor.name.match(depthPartReg) &&
                                   !a.partCode(true).match(depthDvReg);
 
-    function allPolys() {
+    function polyInformation() {
       const root = instance.root();
-      if (root !== instance) return root.allPolys();
+      if (root !== instance) return root.polyInformation();
       let assems = this.getRoot().allAssemblies().filter(depthPartFilter);
       const mi = Polygon3D.mostInformation([this.innerPoly()]);
-      return assems.map(a => a.toBiPolygon());
+      const assemblies = []; const polys = [];
+      assems.forEach(a => {
+        try {
+          polys.push(a.toBiPolygon());
+          assemblies.push(a);
+        } catch (e) {
+          console.warn(`toBiPolygon issue with part ${a.partCode(true)}\n`, e);
+        }
+      });
+      return {assemblies, polys};
     }
-    this.allPolys = new FunctionCache(allPolys, this, 'alwaysOn');
+    this.polyInformation = new FunctionCache(polyInformation, this, 'alwaysOn');
 
     this.innerDepth = () => {
       const back = this.back();
@@ -188,7 +196,9 @@ class SectionProperties extends KeyValue{
 
     this.drawerDepth = new FunctionCache(() => {
       const cabinet = this.getCabinet();
-      const polyList = this.allPolys();
+      const polyInfo = this.polyInformation();
+      const polyList = polyInfo.polys;
+      const assems = polyInfo.assemblies;
       const innerPoly = this.innerPoly();
       const mi = Polygon3D.mostInformation([innerPoly]);
       const vector = innerPoly.normal().inverse();
@@ -204,18 +214,19 @@ class SectionProperties extends KeyValue{
           const intersection = plane.intersection.line(line);
           if (intersection) {
             const poly = new Polygon3D(plane);
-            const within = poly.isWithin2d(intersection);
-            if (within) {
+            const withinPoly = poly.isWithin2d(intersection, true);
+            if (withinPoly) {
               poly.isWithin2d(intersection);
+              innerPoly.isWithin2d(intersection, false)
               const dist = intersection.distance(line.startVertex);
-              if (closest === undefined || closest.dist > dist) {
+              if (dist > 0 && (closest === undefined || closest.dist > dist)) {
                 closest = {dist, line};
               }
             }
           }
         }
       }
-      return closest ? closest.dist : 4*2.54;
+      return closest ? closest.dist : 0;
     }, this, 'alwaysOn');
 
     function offsetCenter(center, left, right, up, down, forward, backward) {
@@ -752,7 +763,7 @@ class SectionProperties extends KeyValue{
 
     function buildCutters () {
       const cabinet = instance.getCabinet();
-      const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Auto|Section)/))
+      const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Void|Auto|Section)/))
       // const subAssems = [instance.right(), instance.left(), instance.top(), instance.bottom(), instance.back()];
       for (let index = 0; index < subAssems.length; index++) {
         const reference = subAssems[index];
