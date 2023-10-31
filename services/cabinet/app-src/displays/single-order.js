@@ -44,26 +44,24 @@ const RoomDisplay = require('./room');
 let roomDisplay = new RoomDisplay('#room-cnt', Global.order());
 Global.displays.room(roomDisplay);
 
-// du.on.match('click', '#copy-order', (elem) => {
-//   du.copy(JSON.stringify(Global.order().toJson()));
-// });
-// du.on.match('click', '#paste-order', async (elem) => {
-//   navigator.clipboard.readText()
-//     .then(text => {
-//       try {
-//         const order = Object.fromJson(JSON.parse(text));
-//         if (!(order instanceof Order)) throw new Error();
-//         switchOrder(elem, order);
-//         Global.order(order);
-//       } catch (e) {
-//         alert('clipboard does not contain a valid Order');
-//       }
-//     })
-//     .catch(err => {
-//       console.error('Failed to read clipboard contents: ', err);
-//     });
-// });
-//
+const FileTabDisplay = require('../../../../public/js/utils/lists/file-tab.js');
+
+const fileTabDisp = new FileTabDisplay();
+const documents = require('./documents/documents.js');
+fileTabDisp.register('Designer', roomDisplay.html);
+fileTabDisp.selected('Designer');
+fileTabDisp.register('Documents', documents.html);
+const orderTabCnt = du.id('order-tab-cnt');
+orderTabCnt.innerHTML = fileTabDisp.html();
+
+const canvasDisplays = du.id('model-cnt');
+fileTabDisp.on.change(() => {
+  const isDesigner = fileTabDisp.selected() === 'Designer';
+  canvasDisplays.style.display = isDesigner ? '' : 'none';
+  orderTabCnt.style.width = isDesigner ? '57vw' : '100vw';
+});
+fileTabDisp.trigger.change();
+
 
 const saveCntId = 'order-select-cnt';
 const getAutoSaveElem = (selector) => () => du.find.down(selector, du.id(saveCntId));
@@ -212,6 +210,7 @@ function resetOrderAndVersion() {
   orderInput.setValue('');
   versionInput.setValue('');
   updateOrderInput();
+  roomDisplay.refresh();
 }
 
 let orderChangeInFocus = false;

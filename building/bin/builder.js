@@ -737,7 +737,6 @@ class $t {
 				let templateName = match[0].replace(/.*\$t-id=('|")([0-9\.a-zA-Z-_\/]*?)(\1).*/, '$2');
 				let scope = 'scope';
 				template = templateName !== tagContents ? templateName : template;
-        console.log("Template!!!", template)
 				let resolvedScope = "get('scope')";;
 				string = string.replace(match[0], `{{ new $t('${templateName}').render(get('${realScope}'), undefined, get)}}`);
 			}
@@ -750,7 +749,8 @@ class $t {
 		}
 
 		template = template.replace(/\s{1,}/g, ' ');
-		id = $t.functions[template] ? template : id || stringHash(template);
+    const fileStringMatch = template.match(/^[a-zA-Z0-1\/\._-]{1,}$/) !== null;
+		id = fileStringMatch ? template : id || stringHash(template);
     this.id = () => id;
 		if (!$t.functions[id]) {
 			if (!$t.templates[id]) {
@@ -796,7 +796,7 @@ $t.dumpTemplates = function (debug) {
 	for (let index = 0; index < tempNames.length; index += 1) {
 		const tempName = tempNames[index];
 		if (tempName) {
-			let template = $t.templates[tempName];
+			let template = $t.templates[tempName] || tempName;
       if (debug === true) {
         const endTagReg = /( \+) /g;
         template = template.replace(endTagReg, '$1\n\t\t');

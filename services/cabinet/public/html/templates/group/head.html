@@ -1,8 +1,11 @@
 <div group-display-id='{{groupDisplay.id()}}'>
-  <div class='expand-header group-display-header active' group-id='{{group.id()}}'>
-    {{$index}}<input class='group-input' group-id='{{group.id()}}'
+  <div group-id='{{group.id()}}' class='expand-header group-display-header
+          {{groupDisplay.active() === group ? 'active' : ''}}'>
+    <input class='group-input' group-id='{{group.id()}}'
         value='{{group.name()}}' prop-update='name'>
   </div>
-  <div class='group-display-body'>{{body}}</div>
+  <div class='group-display-body' {{groupDisplay.active() === group ? '' : 'hidden'}}>
+    {{body}}
+  </div>
+  <br>
 </div>
-<br>

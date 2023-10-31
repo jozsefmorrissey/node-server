@@ -171,6 +171,8 @@ class Plane extends Array {
       return normVect.scale(1 / normVect.magnitude());
     }
 
+    this.valid = () => !Number.isNaN(this.normal().magnitude());
+
     this.distance = (vertex) => {
       if (!(vertex instanceof Vertex3D)) throw new Error('Sorry... I only implemented this relitive to a Vertex3D');
       const v = vertex;

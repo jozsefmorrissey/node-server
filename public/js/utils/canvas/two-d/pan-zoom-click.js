@@ -51,12 +51,15 @@ class PanZoomClick extends PanZoom {
     }
 
     let clickHoldCount = 0;
+    let dragging = false;
     this.onMove((event) => {
+      dragging = false;
       if (!active || !moveActive) return;
       const vertex = new Vertex2d(event.imageX, event.imageY);
       if (clickHolding && eventsEnabled) {
         if (++clickHoldCount > 30) {
           dragEvent.trigger(clickHolding, event);
+          dragging = true;
           clickHolding.move && clickHolding.move(vertex);
         }
         return true;
@@ -74,6 +77,10 @@ class PanZoomClick extends PanZoom {
         }
       }
     });
+    this.dragging = () => dragging;
+    const parentCanvasSimple = this.canvasSimple;
+    this.canvasSimple = () => dragging || parentCanvasSimple();
+
     this.onClick((event) => {
       if (!active) return;
       const vertex = new Vertex2d(event.imageX, event.imageY);

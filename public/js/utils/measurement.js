@@ -23,12 +23,13 @@ let units = [
 let unit = units[1];
 
 
-class Measurement extends Lookup {
+class Measurement {
   constructor(value, notMetric) {
-    super();
     if ((typeof value) === 'string') {
       value += ' '; // Hacky fix for regularExpression
     }
+
+    this.clone = () => new Measurement(this.decimal());
 
     const determineUnit = () => {
       if ((typeof notMetric === 'string')) {

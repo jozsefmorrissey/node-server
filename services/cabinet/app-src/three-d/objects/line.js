@@ -134,12 +134,14 @@ class Line3D {
       center ||= this.midpoint();
      this.startVertex.rotate(rotation, center);
      this.endVertex.rotate(rotation, center);
+     return this;
     }
 
     this.reverseRotate = (rotation, center) => {
       center ||= this.midpoint();
      this.startVertex.reverseRotate(rotation, center);
      this.endVertex.reverseRotate(rotation, center);
+     return this;
     }
 
     this.to2D = (x,y) => Line3D.to2D([this], x, y)[0];
@@ -151,6 +153,8 @@ class Line3D {
       if (shouldReverse) return this.negitive();
       return this;
     }
+
+    this.combineOrder = (other) => Line3D.combineOrder(this, other);
   }
 }
 
@@ -270,6 +274,126 @@ Line3D.sharedEndpoint = (...lines) => {
   }
   return null;
 }
+
+const unitLine = (vectOline) => {
+  const vector = vectOline instanceof Line3D ? vectOline.vector() : vectOline;
+  return Line3D.fromVector(vector.unit());
+}
+
+function get2dLines(ortho1, ortho2, pivot) {
+  if (pivot === 'x')
+    return Line3D.to2D([ortho1, ortho2], 'z', 'y');
+  if (pivot === 'y')
+    return Line3D.to2D([ortho1, ortho2], 'z', 'x');
+  if (pivot === 'z')
+    return Line3D.to2D([ortho1, ortho2], 'y', 'x');
+}
+
+const pivotVectors = {x: new Vector3D(1,0,0), y: new Vector3D(0,1,0), z: new Vector3D(0,0,1)};
+function determineRotation(unitLine, target, pivot, reverse) {
+  const pivotVec = pivotVectors[pivot];
+  const orthoLine = Line3D.viewFromVector([unitLine], pivotVec)[0];
+  const orthoTar = Line3D.viewFromVector([target], pivotVec)[0];
+  const twoDlines = get2dLines(orthoLine, orthoTar, pivot);
+  if (!twoDlines[0].isPoint() && !twoDlines[1].isPoint()) {
+    const degrees = Math.toDegrees(twoDlines[0].radianDifference(twoDlines[1]));
+    if (degrees !== 0 && degrees !== 360) {
+      const rotation = {};
+      rotation[pivot] = reverse ? degrees : -degrees;
+      return rotation;
+    }
+  }
+}
+
+const revPivots = ['z', 'y', 'x'];
+const pivots = ['x', 'y', 'z'];
+const checkForEquality = (align, alignTo) => {
+  let equal = true;
+  for (let index = 0; index < align.length; index++) {
+    if (!align[index].equals(alignTo[index])) equal = false;
+  }
+  return equal;
+}
+function determinRotations(align, alignTo, reverse) {
+  align = align.map(l => l.clone());
+  const rotations = [];
+  let cycles = 0;
+  let keepGoing = true;
+  while (keepGoing && cycles++ < 7) {
+    for (let aIndex = 0; aIndex < align.length; aIndex++) {
+      const unitLine = align[aIndex];
+      const targetLine = alignTo[aIndex];
+      const rotationLength = rotations.length;
+      for (let index = 0; index < pivots.length; index++) {
+        const pivot = (reverse ? revPivots : pivots)[index];
+        const rotation = determineRotation(unitLine, targetLine, pivot, reverse);
+        if (rotation) {
+          align = align.map(l => reverse ? l.reverseRotate(rotation) : l.rotate(rotation));
+          rotations.push(rotation);
+        }
+      }
+      keepGoing = rotations.length !== rotationLength;
+    }
+  }
+
+  // if (!checkForEquality(align, alignTo))
+  //   throw new Error("This shouldn't happen");
+
+  return rotations.length > 0 ? rotations : null;
+}
+
+const defaultAlignVectors = [
+  new Vector3D(1,0,0),
+  new Vector3D(0,1,0),
+  new Vector3D(0,0,1)
+]
+
+Line3D.coDirectionalRotations = (align, alignTo, reverse) => {
+  if (alignTo == null) alignTo = defaultAlignVectors;
+  if (!Array.isArray(align)) align = [align];
+  if (!Array.isArray(alignTo)) alignTo = [alignTo];
+  if (align.length != alignTo.length) throw new Error('The same number of vectors must be in align and alignTo');
+  align = align.map(unitLine);
+  alignTo = alignTo.map(unitLine);
+  if (align.equals(alignTo) === true) {
+    return [];
+  }
+
+  let rotations = determinRotations(align, alignTo, reverse);
+  if (!reverse || rotations.length > 3) return rotations;
+  const combine = {x: 0, y: 0, z:0};
+  rotations.forEach(r => {
+    combine.x += r.x ? r.x : 0;
+    combine.y += r.y ? r.y : 0;
+    combine.z += r.z ? r.z : 0;
+  })
+  return combine;
+}
+
+Line3D.combineOrder = (line1, line2) => {
+  const unitVec1 = line1.vector().unit();
+  let unitVec2 = line2.vector().unit();
+  if (!unitVec1.equals(unitVec2)) {
+    line2 = line2.negitive();
+    unitVec2 = line2.vector().unit();
+    if (!unitVec1.equals(unitVec2)) return null;
+  }
+  const verts = [line1.startVertex, line1.endVertex,line2.startVertex, line2.endVertex];
+  verts.sort(Vertex3D.sortByCenter(Vertex3D.center(...verts)));
+  verts.sort(Vertex3D.sortByCenter(verts[verts.length - 1]));
+  let longest = new Line3D(verts[0], verts[verts.length - 1]);
+  const shorterBy = line1.length() + line2.length() - longest.length();
+  if (shorterBy < 0) return null;
+  if (!unitVec1.equals(longest.vector().unit())) longest = longest.negitive();
+  verts.sort(Vertex3D.sortByCenter(longest.startVertex));
+  let first = new Line3D(verts[0], verts[1]);
+  let second = new Line3D(verts[0], verts[2]);
+  if (!((unitVec1.equals(first.vector().unit()) || first.isPoint()) &&
+      (unitVec1.equals(second.vector().unit()) || second.isPoint()))) return null;
+  verts.shorterBy = shorterBy;
+  return verts;
+}
+
 
 // const testRun = () => {
 //   const instStartTime = new Date().getTime();

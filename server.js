@@ -168,13 +168,14 @@ try {
   for (let i = 0; i < services.length; i += 1) {
     var id = services[i];
     if (exclude.indexOf(id) == -1) {
+      console.log(`Attempting To Start ${id}`);
       var loc = '/' + id;
       var dir = './services' + loc;
       var project = dir + loc;
       app.use(loc, express.static(dir + '/public'));
       const flags = global.ENV === 'local' ? '' : '-build';
       const buildCmd = `cd ${dir} && node ./watch.js ENV='${global.ENV}' ${flags}`;
-      console.log(buildCmd);
+      console.log(`Started ${id} - build command '${buildCmd}'`);
       try {
         shell.exec(buildCmd, {async: true, silent: true});
       } catch (e) {}

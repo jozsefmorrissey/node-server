@@ -13,11 +13,30 @@ function rangeStr(lower, upper) {
   return `${round(lower)} => ${round(upper)}`;
 }
 
-function boundsFunc(attr, attributeMap, tolerance) {
+function parseTolAbs(attr, attributeMap, tolerance, absoluteValue) {
   const singleValue = attr === undefined;
+  if (!singleValue) {
+    if ((typeof attributeMap[attr]) === 'string') {
+      const match = attributeMap[attr].match(stringTolReg);
+      if (match) {
+        absoluteValue = true;
+        tolerance = Number.parseFloat(match[1] || DEFAULT_TOLERANCE);
+      } else {
+        tolerance = attributeMap[attr] || DEFAULT_TOLERANCE;
+      }
+    } else {
+      tolerance ||= DEFAULT_TOLERANCE;
+    }
+  }
+  return {tolerance, absoluteValue, singleValue};
+}
+
+function boundsFunc(attr, attributeMap, tolerance, absoluteValue) {
+  const props = parseTolAbs(attr, attributeMap, tolerance, absoluteValue);
   return (elem) => {
-    const tol = singleValue ? tolerance : attributeMap[attr];
-    const value = singleValue ? elem : Object.pathValue(elem, attr);
+    const tol = props.tolerance;
+    let value = props.singleValue ? elem : Object.pathValue(elem, attr);
+    if (props.absoluteValue && value < 0) value *= -1;
     let lower, upper, center;
     if (Number.NaNfinity(value)) return {lower: value, upper: value, id: rangeStr(value, value)};
     else {
@@ -36,17 +55,21 @@ function boundsFunc(attr, attributeMap, tolerance) {
   }
 }
 
-function withinBounds(attr, attributeMap, tolerance) {
-  const singleValue = attr === undefined;
+const stringTolReg = /\+(([0-9]{1,}|)(\.[0-9]{1,}|))/;
+function withinBounds(attr, attributeMap, tolerance, absoluteValue) {
+  const props = parseTolAbs(attr, attributeMap, tolerance, absoluteValue);
   return (value1, value2) => {
+    if (props.absoluteValue) {
+      value1 = Math.abs(value1);
+      value2 = Math.abs(value2);
+    }
     if (value1 === value2) return true;
-    const tol = singleValue ? tolerance : attributeMap[attr];
-    return Math.abs(value1 - value2) < tol;
+    return Math.abs(value1 - value2) < props.tolerance;
   }
 }
 
 class Tolerance {
-  constructor(attributeMap, tolerance) {
+  constructor(attributeMap, tolerance, absoluteValue) {
     attributeMap ||= {};
     let within, bounds;
     const attrs = Object.keys(attributeMap);
@@ -56,8 +79,8 @@ class Tolerance {
       this.attributes = () => attrs;
     else {
       tolerance ||= DEFAULT_TOLERANCE;
-      bounds = boundsFunc();
-      within = withinBounds(undefined, undefined, tolerance);
+      bounds = boundsFunc(undefined, undefined, tolerance, absoluteValue);
+      within = withinBounds(undefined, undefined, tolerance, absoluteValue);
     }
 
     this.finalAttr = () => attrs[attrs.length - 1];

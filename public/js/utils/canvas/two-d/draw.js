@@ -190,7 +190,7 @@ class Draw2d {
       ctx().stroke();
       ctx().fill();
 
-      if (text) {
+      if (!draw.canvas().simple && text) {
         ctx().beginPath();
         ctx().lineWidth = 4;
         ctx().strokeStyle = 'black';
@@ -214,6 +214,7 @@ class Draw2d {
     }
 
     draw.text = (text, point, props) => {
+      if (draw.canvas().simple) return;
       props ||= {};
       point = new Vertex2d(point);
       text = '' + text;

@@ -8,7 +8,7 @@ class Group extends Lookup {
     super(id);
     room ||= Group.defaultRoom;
     const initialVals = {
-      name: name || new String(groupIndex++),
+      name: name || (room && Array.isArray(room.groups) ? room.groups.length + 1 : 1),
     }
     Object.getSet(this, initialVals);
     this.propertyConfig = new PropertyConfig();

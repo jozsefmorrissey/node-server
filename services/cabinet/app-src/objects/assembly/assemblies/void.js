@@ -129,18 +129,17 @@ class Void extends Cutter {
     }, this, 'alwaysOn');
 
     let called = [];
-    const toModel = (index) => new FunctionCache(() => {
+    const toModel = (index) => new FunctionCache((incommingJoints) => {
       updateAllJoints();
       const biPoly = biPolyFuncs[index]();
 
       const offsetSet = offsetSets[this.jointSet()];
       const joints = offsetSet.joints().filter(j => j.femalePartCode() === panels[index].partCode());
-      // TODO: not sure what if this is preventing recursive additions...
       if (!called[index]) {
+        called[index] = true;
         joints.concatInPlace(panels[index].getJoints().female);
-        called[index] = true;;
       }
-      const model = biPoly.toModel(joints);
+      const model = biPoly.toModel(incommingJoints || joints);
       called[index] = false;
 
       return model;

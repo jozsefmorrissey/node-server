@@ -12,9 +12,9 @@ function sortByAttr(attr) {
 }
 
 class ToleranceMap {
-  constructor(attributeMap, toleranceMap) {
+  constructor(attributeMap, toleranceMap, absoluteValue) {
     const map = toleranceMap || {};
-    const tolerance = new Tolerance(attributeMap);
+    const tolerance = new Tolerance(attributeMap, null, absoluteValue);
     const finalAttrSort = sortByAttr(tolerance.finalAttr());
 
     this.clone = () => {

@@ -376,6 +376,10 @@ class Snap2d extends Lookup {
         const corners = snapLoc.parent().object().neighbors(snapLoc.center(), -2, 2);
         const otherCorner = corners.filter(parrelleFilter(wall, snapLoc.center()))[0];
         const otherSnap = snapLoc.parent().snapLocations.at(otherCorner);
+        if (otherSnap === null) {
+          console.warn('I dont think this should happen');
+          return;
+        }
         const otherCenter = otherSnap.at({center: snapLoc.center()});
         const otherPairCenter = pairWith.at({center: otherSnap.center()});
 
@@ -545,7 +549,7 @@ class Snap2d extends Lookup {
         // TODO: these should be the same object but they are not.... its convoluted.
         if (object !== parent.obj3D()) {
           const otherSnap = object.snap2d.top();
-          const combinedRadius = otherSnap.maxRadius() + instance.maxRadius();
+          const combinedRadius = (otherSnap.maxRadius() + instance.maxRadius())/4;
           const center2centerDist = otherSnap.object().center().distance(instCenter);
           if (center2centerDist - 1 < combinedRadius) {
             const snapLocs = otherSnap.snapLocations();

@@ -656,23 +656,14 @@ class SectionProperties extends KeyValue{
       const innerCenter = this.innerCenter();
       const coordinates = this.coordinates();
       const divider = this.divider();
-      if (!this.verticalDivisions()) {
-        const outer = coordinates.outer;
-        const point1 = outer[3];
-        const point2 = outer[2];
-        addDividerJoints(point1, point2);
-        let depthVector = normal.scale(depth);
-        const point3 = point2.translate(depthVector, true);
-        const point4 = point1.translate(depthVector, true);
-        const points = [point1, point2, point3, point4];
-        const offset = divider.panelThickness() / 2;
-        return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset);
-      }
       const outer = coordinates.outer;
-      const point1 = outer[1];
+      const point1 = this.verticalDivisions() ? outer[1] : outer[3];
       const point2 = outer[2];
       addDividerJoints(point1, point2);
       let depthVector = normal.scale(depth);
+      let heightVector = new Line3D(point1, point2).vector().unit();
+      let thicknessVector  = depthVector.crossProduct(heightVector);
+      divider.panel().normals(true, [depthVector.unit(), heightVector, thicknessVector]);
       const point3 = point2.translate(depthVector, true);
       const point4 = point1.translate(depthVector, true);
       const points = [point1, point2, point3, point4];

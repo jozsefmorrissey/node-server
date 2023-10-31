@@ -11,6 +11,14 @@ h3,h4,h5 {
   margin: 0;
 }
 
+body {
+  margin: 0;
+}
+
+.font-medium {
+  font-size: medium;
+}
+
 #order-select-cnt.saving {
   background-color: #ffa5008c;
   padding: 0 10pt;
@@ -18,7 +26,14 @@ h3,h4,h5 {
 }
 
 #order-select-cnt {
-  width: fit-content;
+  top: 0;
+  position: fixed;
+  background-color: whitesmoke;
+  z-index: 1000;
+  width: 100%;
+  border-style: solid;
+  border-width: 0 0 1pt 0;
+  padding: 2pt 0;
 }
 
 .nowrap {
@@ -256,14 +271,16 @@ a {
   padding: 3pt;
 }
 
+#model-display-cnt {
+  display: inline-flex;
+}
+
 #model-controller {
   width: fit-content;
   background-color: white;
   padding: 20pt 5pt;
   overflow: auto;
   max-height: 80vh;
-  position: absolute;
-  left: 0;
 }
 
 .indent {
@@ -281,8 +298,8 @@ a {
   top: 0;
   z-index: 20;
   min-height: 50vh;
-  min-width: 50vw;
-  background-color: #ffffff94;
+  max-width: 50vw;
+  /* background-color: #ffffff94; */
 }
 
 #display-menu {
@@ -310,13 +327,17 @@ a {
 #order-cnt {
   position: absolute;
   z-index: 10;
-  top: 15%;
   left: 1vw;
-  min-width: 50vw;
+  top: 5%;
 }
 
 #app {
   position: absolute;
+}
+
+#order-display-cnt > #model-cnt {
+  position: fixed;
+  top: 15%;
 }
 
 .inline {
@@ -494,7 +515,6 @@ td[dir] {
 
 #single-order-cnt {
   height: 200vh;
-  width: 60vw;
 }
 
 .ruler {

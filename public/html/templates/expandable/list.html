@@ -6,7 +6,8 @@
       <div class="expand-header {{type()}}"  ex-list-id='{{id()}}' key='{{key}}'>
         {{getHeader(item, key)}}
       </div>
-      <div class="expand-body {{type()}}"  ex-list-id='{{id()}}' key='{{key}}'>
+      <div class="expand-body {{type()}}"  ex-list-id='{{id()}}' key='{{key}}'
+          {{active() === item ? '' : 'hidden'}}>
         {{getBody && getBody(item, key)}}
       </div>
     </div>

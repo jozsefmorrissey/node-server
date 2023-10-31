@@ -5,6 +5,7 @@ const EPNTS = require('../generated/EPNTS.js');
 const Test = require('../../../public/js/utils/test/test').Test;
 
 if (EPNTS.getEnv() === 'local') {
+  require('../../../public/js/utils/test/tests/vector3D');
   require('../../../public/js/utils/test/tests/polygon3d');
   require('../../../public/js/utils/test/tests/navigator');
   require('../../../public/js/utils/test/tests/compress-string');

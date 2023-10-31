@@ -22,9 +22,9 @@ function getVectorObj(line, normal) {
   const midNormOffset = line.midpoint().translate(normal);
   const lineNormPoly = new Polygon3D([line.startVertex.copy(), line.endVertex.copy(), midNormOffset]);
   return {
-    depth: normal,
-    width: line.vector().unit(),
-    height: lineNormPoly.normal(),
+    z: normal,
+    x: line.vector().unit(),
+    y: lineNormPoly.normal(),
   };
 }
 
@@ -34,10 +34,10 @@ function pull(baseCenter, line, normal, projection, cTOc) {
   const vecObj = getVectorObj(line, normal);
 
   let sideProjection = projection - gerth;
-  const centerRL = baseCenter.translate(vecObj.depth.scale(sideProjection/2), true);
-  const centerLeft = centerRL.translate(vecObj.width.scale(cTOc/-2), true);
-  const centerRight = centerRL.translate(vecObj.width.scale(cTOc/2), true);
-  const centerMain = baseCenter.translate(vecObj.depth.scale(projection - gerth/2));
+  const centerRL = baseCenter.translate(vecObj.z.scale(sideProjection/2), true);
+  const centerLeft = centerRL.translate(vecObj.x.scale(cTOc/-2), true);
+  const centerRight = centerRL.translate(vecObj.x.scale(cTOc/2), true);
+  const centerMain = baseCenter.translate(vecObj.z.scale(projection - gerth/2));
 
   var lCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerLeft, vecObj);
   var rCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerRight, vecObj);

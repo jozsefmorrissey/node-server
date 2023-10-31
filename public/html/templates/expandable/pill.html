@@ -3,10 +3,8 @@
   <div class="expand-list-cnt {{type()}}" ex-list-id='{{id()}}'>
     <div:t repeat='key, item in list()' key='{{key}}'>
       <div class="expand-item">
-        <div class='expand-rm-btn-cnt'>
-          <button class='expandable-item-rm-btn' ex-list-id='{{id()}}' key='{{key}}'>X</button>
-        </div>
-        <div class="expand-header {{type()}}" ex-list-id='{{id()}}' key='{{key}}'>
+        <button class='expandable-item-rm-btn' ex-list-id='{{id()}}' key='{{key}}'>X</button>
+        <div class="expand-header {{type()}}{{active() === item ? ' active' : ''}}" ex-list-id='{{id()}}' key='{{key}}'>
           {{getHeader(item, key)}}
         </div>
       </div>
@@ -21,6 +19,9 @@
     <div class='error' id='{{ERROR_CNT_ID()}}'></div>
   </div>
   <div class='expand-tab'>
-    <div class="expand-body {{type()}}" ex-list-id='{{id()}}' key='{{key}}'></div>
+    <div class="expand-body {{type()}}" ex-list-id='{{id()}}' key='{{key}}'
+          {{active() ? '' : 'hidden'}}>
+      {{active() ? getBody(active()) : ''}}
+    </div>
   </div>
 </div>

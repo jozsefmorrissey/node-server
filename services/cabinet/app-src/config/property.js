@@ -4,10 +4,9 @@ const Measurement = require('../../../../public/js/utils/measurement.js');
 
 
 
-class Property extends Lookup {
+class Property {
   // clone constructor(code, value) {
   constructor(code, name, props) {
-    super();
     let value;// = (typeof props) === 'object' && props !== null ? props.value : undefined;
     const children = [];
 

@@ -129,7 +129,7 @@ class Expandable {
         setTimeout(() => {
           try {
             props.inputs.forEach((input) => input.id = input.id || String.random(7));
-            const parent = document.querySelector(props.parentSelector);
+            const parent = Expandable.getCnt(instance.id());
             const focusInfo = du.focusInfo();
             const html = this.html();
             if (parent && html !== undefined) {
@@ -190,7 +190,8 @@ class Expandable {
       return this.hasBody() ? this.getBody(this.list()[key], key) : '';
     }
     this.list = () => props.list;
-    this.refresh();
+    const cnt = du.find(this.parentSelector());
+    if (cnt) cnt.innerHTML = this.html();
     // setTimeout(() => {
     //   const headerSelector = `.expand-header[ex-list-id='${props.id}'][key='${this.activeKey()}']`;
     //   const activeHeader = du.find(headerSelector);
@@ -273,6 +274,8 @@ Expandable.set = (target, value) => {
   const idKey = Expandable.getIdAndKey(target);
   Expandable.lists[idKey.id].set(idKey.key, value);
 }
+
+Expandable.getCnt = (id) => du.find(`[ex-list-id='${id}']`);
 
 Expandable.value = (key, value, target) => {
   return Expandable.getValueFunc(target)(key, value);

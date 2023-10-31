@@ -19,9 +19,9 @@ Panel.abbriviation = 'pn';
 class PanelModel extends Panel {
   constructor(partCode, partNameFunc, toModel, toBiPolygon) {
     super(partCode);
-    this.toModel = new FunctionCache(() => {
-      let joints = this.getJoints().female;
-      let model = toModel();
+    this.toModel = new FunctionCache((joints) => {
+      joints ||= this.getJoints().female;
+      let model = toModel(joints);
       return Joint.apply(model, joints);
     }, this, 'alwaysOn');
     if (toBiPolygon) this.toBiPolygon = toBiPolygon;

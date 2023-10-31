@@ -66,7 +66,7 @@ function init(body){
 
   if (urlSuffix && urlSuffix !== 'order') {
       require('./cost/init-costs.js');
-      const mainDisplayManager = new DisplayManager('display-ctn', 'menu', 'menu-btn', pageId);
+      Global.displays.main(new DisplayManager('display-ctn', 'menu', 'menu-btn', pageId));
       if (urlSuffix === 'cost') {
         const CostManager = require('./displays/managers/cost.js');
         const costManager = new CostManager('cost-manager', 'cost');

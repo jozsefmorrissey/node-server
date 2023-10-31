@@ -117,6 +117,9 @@ Lookup.convert = function (obj, attr, id, singleton) {
   registerConstructor();
   addSelectListFuncToConstructor();
 
+  if (id.toString() === 'Group_9kcdyju') {
+    console.log('foundOne');
+  }
 
   if (!Lookup.byId[cxtrName][id.index(-1)])
     Lookup.byId[cxtrName][id.index(-1)] = obj;

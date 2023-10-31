@@ -5,32 +5,38 @@ const EscapeMap = require('../maps/escape.js');
 const Polygon2d = require('../objects/polygon');
 const Line2d = require('../objects/line');
 const Vertex2d = require('../objects/vertex');
+const Line3D = require('../../../../../../services/cabinet/app-src/three-d/objects/line.js')
 
 const defaultNormals = {front: new Vector3D(0,0,-1), right: new Vector3D(-1,0,0), top: new Vector3D(0,-1,0)};
-
+const defaultNormArr = [defaultNormals.front, defaultNormals.top, defaultNormals.right];
 class ThreeView {
   constructor(polygons, normals, gap) {
-    normals ||= defaultNormals;
     gap ||= 10;
+    normals ||= defaultNormals;
+    Polygon3D.merge(polygons);
 
     this.normals = {};
     this.normals.front = () => normals.front;
     this.normals.right = () => normals.right;
     this.normals.top = () => normals.top;
 
-    const frontView = Polygon3D.viewFromVector(polygons, normals.front);
-    const rightView = Polygon3D.viewFromVector(polygons, normals.right);
-    const topview = Polygon3D.viewFromVector(polygons, normals.top);
+    const frontView = Polygon3D.viewFromVector(polygons, defaultNormals.front);
+    const rightView = Polygon3D.viewFromVector(polygons, defaultNormals.right);
+    const topview = Polygon3D.viewFromVector(polygons, defaultNormals.top);
 
     const axis = {};
-    axis.front = Polygon3D.mostInformation(frontView);
-    axis.right = Polygon3D.mostInformation(rightView);
-    axis.top = Polygon3D.mostInformation(topview);
+    axis.front = ['x', 'y'];
+    axis.right = ['z', 'y'];
+    axis.top = ['x', 'z'];
 
-    // Orient properly
-    if (axis.front.indexOf('y') === 0) axis.front.reverse();
-    if (axis.top.indexOf(axis.front[0]) !== 0) axis.top.reverse();
-    if (axis.right.indexOf(axis.front[1]) !== 1) axis.right.reverse();
+    // axis.front = Polygon3D.mostInformation(frontView);
+    // axis.right = Polygon3D.mostInformation(rightView);
+    // axis.top = Polygon3D.mostInformation(topview);
+    //
+    // // Orient properly
+    // if (axis.front.indexOf('y') === 0) axis.front.reverse();
+    // if (axis.top.indexOf(axis.front[0]) !== 0) axis.top.reverse();
+    // if (axis.right.indexOf(axis.front[1]) !== 1) axis.right.reverse();
 
     const to2D = (mi) => (p) => p.to2D(mi[0],mi[1]);
     const front2D = frontView.map(to2D(axis.front));

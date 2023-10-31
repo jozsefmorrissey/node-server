@@ -134,6 +134,8 @@ class CabinetDisplay {
     expandList.afterRemoval(removeFromLayout);
     this.refresh = () => expandList.refresh();
 
+    this.html = expandList.html;
+
     const cabinetKey = (path) => {
       const split = path.split('.');
       const index = split[0];

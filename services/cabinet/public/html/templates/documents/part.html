@@ -1,0 +1,6 @@
+<div class='font-medium'>
+  {{info.parts.length}}) {{disp.demensions(info.dems)}} {{disp.partCodes(info.parts)}}
+  <div:t class='tab font-medium' repeat='cutInfo in info.cutList'>
+    {{cutDisplay(cutInfo)}}
+  </div:t>
+</div>

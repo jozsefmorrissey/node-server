@@ -1,0 +1,16 @@
+
+<div:t repeat='id, room in order.rooms'>
+  <h3>Room: {{room.name()}}</h3>
+  <div:t class='tab' repeat='group in room.groups'>
+    <h5>Group: {{group.name()}}</h5>
+    <div:t class='tab' repeat='cabinet in group.objects'>
+      Cabinet: {{cabinet.name()}}
+      <div:t class='tab' repeat='type, list in sortParts(cabinet.getParts())'>
+        {{type}}
+        <div:t class='tab' repeat='info in list' $t-id='documents/part'>
+        </div:t>
+      </div:t>
+    </div:t>
+  </div:t>
+  <br>
+</div:t>

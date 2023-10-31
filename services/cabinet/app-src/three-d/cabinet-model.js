@@ -73,7 +73,7 @@ class CabinetModel {
           const cxtr = assem.constructor.name;
           if (cxtr !== 'SectionProperties' && !cxtr.match(/(Cutter|Void)/)) {
             if (assem.toModel)
-              csg = csg.union(assems[index].toModel(true));
+              csg = csg.union(assems[index].toModel(simpleJoints(assems[index])));
           }
         }
         const polys = Polygon3D.fromCSG(csg.polygons);
@@ -126,6 +126,16 @@ class CabinetModel {
       return model;
     }
 
+    const simpleJoints = (assem) => {
+      // TODO: this is a hacky way of simplifying... fix
+      const joints = assem.getJoints().female;
+      joints.jointFilter = (assem) =>
+        assem.constructor.name.match(/Cutter/) &&
+        (assem.parentAssembly().parentAssembly() === undefined ||
+        assem.partCode() === 'aoc');
+      return joints;
+    }
+
     this.boxModel = () => {
       let csg = new CSG();
       const assems = Object.values(cabinet.subassemblies);
@@ -134,7 +144,7 @@ class CabinetModel {
         const cxtr = assem.constructor.name;
         if (cxtr !== 'SectionProperties' && !cxtr.match(/(Cutter|Void)/)) {
           if (assem.toModel)
-            csg = csg.union(assems[index].toModel(true));
+            csg = csg.union(assems[index].toModel(simpleJoints(assems[index])));
         }
       }
       return csg;

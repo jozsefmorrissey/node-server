@@ -7,6 +7,7 @@ const ThreeDModel = require('../three-d/three-d-model.js');
 const Layout2D = require('../two-d/layout/layout.js')
 const Draw2D = require('../../../../public/js/utils/canvas/two-d/draw.js');
 const Polygon3D = require('../three-d/objects/polygon.js');
+const Line3D = require('../three-d/objects/line.js');
 const BiPolygon = require('../three-d/objects/bi-polygon.js');
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
@@ -17,6 +18,7 @@ const CabinetModel = require('../three-d/cabinet-model.js');
 const ThreeViewObj = require('../../../../public/js/utils/canvas/two-d/objects/three-view.js')
 const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
 const HoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map.js');
+const construction = require('./documents/construction.js');
 
 FunctionCache.on('three-view', 1000);
 function csgVert(pos, normal) {
@@ -61,26 +63,34 @@ class ThreeView extends Lookup {
     const instance = this;
     const maxDem = window.innerHeight * .45;
     let targetPart;
-    // const p = pull(5,2);
-    // const p = new BiPolygon(new Polygon3D([{x:0, y: 4, z: 0}, {x:4, y: 4, z: 0}, {x:4, y: 0, z: 0}, {x:0, y: 0, z: 0}]),
-    //       new Polygon3D([{x:2, y: 4, z: 4}, {x:6, y: 4, z: 4}, {x:6, y: 0, z: 4}, {x:2, y: 0, z: 4}])).toModel(true);
-    // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
     // p.setColor([0, 255, 0])
     let draw, panz, hovermap;
     let threeDModel;
+    let side = 'right';
+    const threeViewObj = {};
     this.maxDem = () => maxDem;
     this.container = () => cnt || defaultCnt;
+    this.side = (s) => {
+      if (s) {
+        const rebuild = s !== side;
+        side = s;
+        if (rebuild) {
+          threeViewObj.targetPart = undefined;
+          this.build.clearCache()();
+        }
+      }
+      return side;
+    }
     this.container().innerHTML = ThreeView.template.render(this);
 
     const color = 'black';
     const width = .2;
 
-    const threeViewObj = {};
     function getThreeView() {
       if (threeViewObj.targetPart === targetPart) return threeViewObj.threeView;
       if (targetPart) {
-        let model = targetPart.toModel(targetPart.constructor.name === 'Cabinet');
-        const polys = Polygon3D.fromCSG(model.polygons)
+        let model = targetPart.position().normalModel(side === 'left');
+        const polys = Polygon3D.fromCSG(model.polygons);
         threeViewObj.threeView = new ThreeViewObj(polys);
       } else {
         const model = CabinetModel.get();
@@ -101,14 +111,11 @@ class ThreeView extends Lookup {
 
     function build() {
       Layout2D.release(`three-view`);
-      let threeView;
       hovermap.clear();
-      const allLines = instance.toLines(threeView);
+      const allLines = instance.toLines();
       for (let index = 0; index < allLines.length; index++) {
         hovermap.add(allLines[index]);
       }
-      const measures = LineMeasurement2d.measurements(allLines);
-      measures.forEach(m => hovermap.add(m.I().furtherLine(), null, m));
       return true;
     }
     this.build = new FunctionCache(build, this, 'three-view');
@@ -137,7 +144,7 @@ class ThreeView extends Lookup {
       draw = new Draw2D(du.id('three-view'), true);
 
       hovermap = new HoverMap2d();
-      panz = new PanZoomClickMeasure(draw.canvas(), drawView, () => hovermap);
+      panz = new PanZoomClickMeasure(draw.canvas(), drawView, () => hovermap, true);
       panz.disable.move();
       panz.vertexTolerance(.4);
       panz.lineTolerance(.2);
@@ -161,12 +168,20 @@ class ThreeView extends Lookup {
       return model;
     }
 
+    function updatePartInfo(elem) {
+      const infoCnt = du.find.closest('.part-info-cnt', elem);
+      const html = construction.html.part(targetPart);
+      infoCnt.innerHTML = html;
+    }
+
     this.isolatePart = (partId, partCode) => {
       targetPart = ThreeView.get(partId);
       setTimeout(() => {
         panz.once();
       }, 500);
-      du.id(`three-view-part-code-${this.id()}`).innerText = `${partCode}: ${partId}`;
+      const partCodeCnt = du.id(`three-view-part-code-${this.id()}`);
+      partCodeCnt.innerText = `${partCode}: ${partId}`;
+      updatePartInfo(partCodeCnt);
     }
 
     this.threeDModel = () => threeDModel;
@@ -184,6 +199,7 @@ class ThreeView extends Lookup {
     }
 
     du.on.match('click', `#${this.id()} .ruler`, rulerClick);
+    du.on.match('click', `#${this.id()} [name='side']`, (e) => this.side(e.value));
 
     setTimeout(init, 1000);
   }

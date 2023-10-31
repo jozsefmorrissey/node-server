@@ -232,6 +232,15 @@ CSG.prototype = {
     return {x,y,z};
   },
 
+  demensions: function () {
+    const epts = this.endpoints();
+    return {
+      x: epts.x - epts['-x'],
+      y: epts.y - epts['-y'],
+      z: epts.z - epts['-z']
+    }
+  },
+
   rotate: function (rotations, pivot) {
     pivot ||= {x: 1, y:1, z:1};
     if (Array.isArray(rotations)) {
@@ -275,6 +284,25 @@ CSG.prototype = {
     }
     this.translate(offset);
     return newCenter;
+  },
+
+  normalize: function (rotations, leftSide, leftOfAxis) {
+    if (leftSide) {
+      if (rotations) {
+        if (Array.isArray(rotations)) rotations = rotations.concat([{y:180}]);
+        else rotations = [rotations, {y: 180}];
+      } else rotations = [{y:180}];
+    }
+    const clone = this.clone();
+    if (rotations) clone.rotate(rotations);
+    const dems = clone.demensions();
+    const divisor = leftOfAxis ? -2 : 2;
+    const normCenter = {x: dems.x/divisor, y: dems.y/2, z: dems.z/2};
+    // const translationVector = new CSG.Vector(clone.center()).minus(normCenter);
+    const translationVector = new CSG.Vector(normCenter).minus(clone.center());
+    clone.translate(translationVector);
+    const side = leftSide ? 'Left' : 'Right';
+    return {poly: clone, translationVector, rotations, normCenter, side};
   }
 };
 
@@ -764,6 +792,7 @@ CSG.Node.prototype = {
 */
 function ArbitraryRotate(point, degreestheta, radius)
 {
+  if (!Number.isFinite(degreestheta)) return point;
   theta = degreestheta * Math.PI/180;
   let p = point;
   let r = radius;
@@ -794,19 +823,22 @@ function ArbitraryRotate(point, degreestheta, radius)
 }
 
 function rotate (point, rotation) {
+  if (Array.isArray(rotation)) return rotation.forEach(r => rotate(point, r));
+  if (!(rotation instanceof Object)) return;
   let newPos = point;
-  newPos = ArbitraryRotate(newPos, rotation.x, {x: 1, y:0, z:0});
-  newPos = ArbitraryRotate(newPos, rotation.y, {x: 0, y:1, z:0});
-  newPos = ArbitraryRotate(newPos, rotation.z, {x: 0, y:0, z:1});
+  newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
+  newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
+  newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});
   return newPos;
 }
 
 function reverseRotate (point, rotation) {
+  if (Array.isArray(rotation)) return rotation.forEach(r => reverseRotate(point, r));
   rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
   let newPos = point;
-  newPos = ArbitraryRotate(newPos, rotation.z, {x: 0, y:0, z:1});
-  newPos = ArbitraryRotate(newPos, rotation.y, {x: 0, y:1, z:0});
-  newPos = ArbitraryRotate(newPos, rotation.x, {x: 1, y:0, z:0});
+  newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});
+  newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
+  newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
   return newPos;
 }
 
@@ -841,6 +873,8 @@ function reverseRotateAll (points, rotation) {
 }
 
 function rotatePointAroundCenter(rotation, point, center, reverse) {
+  if (Array.isArray(rotation)) return rotation.forEach(r => rotatePointAroundCenter(r, point, center, reverse));
+  if (!(rotation instanceof Object)) return;
   center ||= {x:0, y:0, z:0};
   point.x -=  center.x;
   point.y -= center.y;

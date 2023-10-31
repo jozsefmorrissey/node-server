@@ -69,11 +69,12 @@
 .expand-rm-btn-cnt {
   position: absolute;
   pointer-events: none;
-  width: 100%;
+  right: 0;
 }
 
 .expandable-item-rm-btn {
-  float: right;
+  position: absolute;
+  right: 0;
   padding: 0 2pt;
   font-size: small;
   font-weight: bold;
@@ -108,14 +109,13 @@
 .expand-header.pill {
   display: inline-block;
   border-radius: 10pt 10pt 0pt 0pt;
-  padding: 0 10pt;
+  padding: 0 30pt 4pt 10pt;
 }
 
 .expand-body {
   padding-left: 20pt;
   border-radius: 0pt 0pt 10pt 10pt;
   background-color: whitesmoke;
-  display: none;
   padding-bottom: 10pt;
 }
 
@@ -123,11 +123,14 @@
   padding-left: 10pt;
 }
 
+.expandable-item-rm-btn:hover {
+    background-color: black;
+}
+
 .expand-body.pill {
   display: inline-block;
   border-radius: 0pt 0pt 10pt 10pt;
   background-color: whitesmoke;
-  display: none;
   padding: 0;
   padding-bottom: 10pt;
 

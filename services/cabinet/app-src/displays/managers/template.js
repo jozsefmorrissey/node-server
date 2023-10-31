@@ -715,7 +715,8 @@ function addExpandable(template, type) {
   TemplateManager.bodyTemplate[type] = TemplateManager.bodyTemplate[type] === undefined ?
                     new $t(`managers/template/${type.toKebab()}/body`) : TemplateManager.bodyTemplate[type];
   let getHeader = (obj) => TemplateManager.headTemplate[type].render(getScope(type, obj));
-  let getBody = TemplateManager.bodyTemplate[type] ? ((obj) => TemplateManager.bodyTemplate[type].render(getScope(type, obj))) : undefined;
+  let getBody =
+    TemplateManager.bodyTemplate[type] ? ((obj) => TemplateManager.bodyTemplate[type].render(getScope(type, obj))) : undefined;
   const expListProps = {
     idAttribute: 'name',
     list: template[type](),
@@ -848,8 +849,13 @@ class TemplateManager extends Lookup {
       listElemLable: 'Template',
       type: 'sidebar'
     };
-    setTimeout(initTemplate(expListProps.list[0]), 200);
-    const expandList = new ExpandableList(expListProps);
+    let expandList;
+    Global.displays.main().onSwitch((changeInfo) => {
+      console.log('booyacacha', changeInfo);
+      if (changeInfo.to.id === 'template-manager') {
+        expandList = new ExpandableList(expListProps);
+      }
+    });
 
     this.update = () => {
       expandList.refresh();
@@ -1043,6 +1049,5 @@ du.on.match('change', '.template-input', function (elem) {
 });
 
 du.on.match('change', 'input,select',   () => setTimeout(validateOpenTemplate, 0));
-
 
 module.exports = TemplateManager

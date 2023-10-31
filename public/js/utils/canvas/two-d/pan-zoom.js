@@ -155,7 +155,7 @@ class PanZoom {
       const doxAbs = Math.abs(dt.dox);
       const doyAbs = Math.abs(dt.doy);
       dt.moving = dt.moving || dxAbs > 1 || dyAbs > 1;
-      dt.scoping = dt.scoping || doxAbs > 1 || doyAbs > 1;
+      dt.scoping = doxAbs > 1 || doyAbs > 1;
       if (dt.moving && dxAbs < .1 && dyAbs < .1) {
         dt.moving = false;
         runOn('translated', this);
@@ -164,6 +164,10 @@ class PanZoom {
       //   dt.scoping = false;
       //   runOn('zoom', this);
       // }
+    }
+
+    this.canvasSimple = () => {
+      return displayTransform.moving || displayTransform.scoping;
     }
 
     // terms.
@@ -348,6 +352,7 @@ class PanZoom {
       displayTransform.setHome();
       ctx.clearRect(0,0,canvas.width,canvas.height);
       displayTransform.setTransform();
+      canvas.simple = instance.canvasSimple();
       draw(canvas);
       ctx.fillStyle = "white";
       if(mouse.buttonRaw === 4){ // right click to return to homw

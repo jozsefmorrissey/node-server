@@ -107,6 +107,7 @@ class DrawLayout extends Draw {
     const hblank = blank/2;
     function drawMeasurementValue(line, midpoint, measurement) {
       if (line === undefined) return;
+      if (draw.canvas().simple) return;
       const ctx = draw.ctx();
       midpoint = line.midpoint();
 
@@ -237,6 +238,7 @@ class DrawLayout extends Draw {
     }
 
     function drawAngle(vertex) {
+      if (draw.canvas().simple) return;
       const text = Math.round(vertex.angle() * 10) / 10;
       const bisector = vertex.bisector(30);
       const sv = bisector.startVertex();
@@ -278,6 +280,7 @@ class DrawLayout extends Draw {
         const hovered = hoverin === obj.snap2d.top();
         const color =  hovered ? 'green' : defaultColor;
         draw(obj.snap2d.top(), color, 3);
+        if (draw.canvas().simple) return;
         if (!dontDrawSnapLocs) {
           obj.snap2d.top().snapLocations().forEach((snapLoc, i) => {
             const beingHovered = hoverId() === snapLoc.toString();

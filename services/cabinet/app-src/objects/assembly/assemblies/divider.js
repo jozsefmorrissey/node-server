@@ -77,17 +77,6 @@ class Divider extends Assembly {
       return secProps;
     }
 
-    // this.toModel = () => {
-    //   const sas = Object.values(this.subassemblies);
-    //   if (sas.length < 1) return;
-    //   const models = sas.filter(sa => sa instanceof Panel);
-    //   let model = sas[0].toModel();
-    //   for (let index = 1; index < sas.length; index++) {
-    //     model = model.union(sas[index].toModel());
-    //   }
-    //   return model;
-    // }
-
     const panels = {};
     const cutters = {};
 
@@ -112,6 +101,8 @@ class Divider extends Assembly {
         let cutter, panel;
         if (panels[partCode] === undefined) {
           panel = new PanelModel(partCode, partName, panelModel, toBiPolygon);
+          panel.normals = instance.normals;
+          panel.position().normalizingRotations = instance.position().normalizingRotations;
           panels[partCode] = panel;
           panel.parentAssembly(instance);
           cutter = new Cutter.Poly(translated);
@@ -160,6 +151,8 @@ class Divider extends Assembly {
         const pc = ':p';
         if (panels[pc] === undefined) {
           panels[pc] = new PanelModel(pc, 'panel', panelModel);
+          panels[pc].normals = instance.normals;
+          panels[pc].position().normalizingRotations = instance.position().normalizingRotations;
         }
         const panel = panels[pc];
         instance.subassemblies.deleteAll();

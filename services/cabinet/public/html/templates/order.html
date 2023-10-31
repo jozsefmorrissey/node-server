@@ -12,32 +12,27 @@
     <title>CComp</title>
   </head>
   <body>
-    <div id='order-select-cnt'>
+    <div id='order-select-cnt' class='center'>
       <span id='order-selector-cnt' hidden></span>
       <button type="button" class='auto-save-btn' name="button">Choose Save Location</button>
       <span id='save-time-cnt'></span>
     </div>
     <div class='expandable-list' id='single-order-cnt'>
-      <div class='center'>
-        <button id='paste-order'>Paste Order Json</button>
-        <input id='order-name-input' class='header-input' size='20' type="text" name="order-name">
-        <input id='order-version-input' class='header-input' size='20' type="text" name="order-version">
-        <button id='copy-order'>Copy Order Json</button>
-      </div>
       <div id='main-display-menu' class='display-manager center'></div>
       <div id='display-cnt'>
-
         <div id='order-display-cnt'>
           <div id='order-cnt'>
-            <div id='order-name-save-cnt'></div>
-            <div id='room-cnt'></div>
+            <div class='center pad'>
+              <input id='order-name-input' class='header-input' size='20' type="text" name="order-name">
+              <input id='order-version-input' class='header-input' size='20' type="text" name="order-version">
+            </div>
+            <div id="order-tab-cnt"></div>
+            <div id='room-cnt' hidden></div>
           </div>
-          <div:t class='tab' $t-id='canvas-displays'>autoLocProps</div:t>
+          <div:t class='tab' $t-id='canvas-displays'></div:t>
         </div>
         <div id='information-display'>
-          <utility-filter id='uf-order-info' edit='true'>
-          []
-          </utility-filter>
+          <utility-filter id='uf-order-info' edit='true'></utility-filter>
         </div>
       </div>
     </div>

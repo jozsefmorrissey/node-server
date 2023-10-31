@@ -5,7 +5,7 @@ const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 
 class Displays {
   constructor() {
-    Object.getSet(this, 'order', 'room', 'cabinet', 'template', 'property')
+    Object.getSet(this, 'order', 'room', 'cabinet', 'template', 'property', 'main')
   }
 }
 
@@ -13,7 +13,7 @@ class Global {
   constructor() {
     // TODO: implementValidation when setting room cabinet and order
     // validate object and make sure they are related.
-    Object.getSet(this, 'order', 'room', 'cabinet');
+    Object.getSet(this, 'order', 'room', 'cabinet', 'displayManager');
     Object.defineProperty(this, 'displays', {
         value: new Displays(),
         writable: false
@@ -22,17 +22,19 @@ class Global {
     const orderChangeEvent = new CustomEvent('orderChanged');
     const roomChangeEvent = new CustomEvent('roomChanged');
     const cabinetChangeEvent = new CustomEvent('cabinetChanged');
+    const groupChangeEvent = new CustomEvent('cabinetChanged');
 
     Object.defineProperty(this, 'onChange', {
         value: {
           order: orderChangeEvent.on,
           room: roomChangeEvent.on,
-          cabinet: cabinetChangeEvent.on
+          cabinet: cabinetChangeEvent.on,
+          group: groupChangeEvent.on
         },
         writable: false
     });
 
-    let ORDER, ROOM, CABINET;
+    let ORDER, ROOM, GROUP, CABINET;
     this.order = (order) => {
       if (!order && ORDER === undefined) {
         var options = {  year: 'numeric', day: 'numeric' };
@@ -44,7 +46,7 @@ class Global {
         const details = {from: ORDER, to: order};
         ORDER = order;
         orderChangeEvent.trigger(details);
-        ROOM = undefined; CABINET = undefined;
+        ROOM = undefined; GROUP = undefined; CABINET = undefined;
         this.room();
       }
       return ORDER;
@@ -58,9 +60,19 @@ class Global {
       if (room && room instanceof Room) {
         const details = {from: ROOM, to: room};
         ROOM = room;
+        GROUP = undefined; CABINET = undefined;
         roomChangeEvent.trigger(details);
       }
       return ROOM;
+    }
+    this.group = (group) => {
+      if (group && group instanceof Cabinet) {
+        const details = {from: GROUP, to: group};
+        GROUP = group;
+        CABINET = undefined;
+        groupChangeEvent.trigger(details);
+      }
+      return CABINET;
     }
     this.cabinet = (cabinet) => {
       if (cabinet && cabinet instanceof Cabinet) {

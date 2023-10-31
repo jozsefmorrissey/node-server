@@ -82,22 +82,33 @@ class Joint {
       return femalePartCode;
     }
 
-    this.maleModel = (filter) => {
+    this.maleModels = (filter) => {
       if (parent === undefined) throw new Error(`You need to set parentAssembly for '${this.toString()}'`);
       const mens = parent.getAssembly(malePartCode, true);
-      let model;
+      let models = [];
       const runFilter = filter instanceof Function;
       for (let index = 0; index < mens.length; index++) {
         const male = mens[index];
         try {
           if ((!runFilter || filter(male)) && male.includeJoints()) {
-            if (model === undefined) model = male.toModel();
-            else model = model.union(male.toModel());
+            const model = male.toModel();
+            if (model !== undefined) {
+              models.push(male.toModel());
+            }
           }
         } catch (e) {
           console.warn(e);
-          this.parentAssembly().eval("d.y");
         }
+      }
+      return models;
+    }
+
+    this.maleModel = (filter) => {
+      if (parent === undefined) throw new Error(`You need to set parentAssembly for '${this.toString()}'`);
+      const models = this.maleModels(filter);
+      let model = new CSG();
+      for (let index = 0; index < models.length; index++) {
+        model = model.union(models[index]);
       }
       return model;
     }

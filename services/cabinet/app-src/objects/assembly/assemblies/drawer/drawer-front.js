@@ -13,9 +13,10 @@ class DrawerFront extends HasPull {
     this.biPolygon = () => this.parentAssembly().getBiPolygon(partCode);
     this.inElivation = true;
 
-    this.toModel = () => {
+    this.toModel = (joints) => {
       const biPolygon = this.biPolygon();
-      if (biPolygon) return biPolygon.toModel(this.getJoints().female);
+      joints ||= this.getJoints().female;
+      if (biPolygon) return biPolygon.toModel(joints);
       return undefined;
     }
 

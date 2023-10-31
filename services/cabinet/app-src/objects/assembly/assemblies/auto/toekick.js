@@ -35,12 +35,29 @@ class AutoToekick extends Assembly {
     const children = {}
 
     function toModel(name, index) {
-      return () => {
+      return (joints) => {
         instance.update();
         const assem = children[name];
-        return assem.toModel();
+        return assem.toModel(joints);
       }
     }
+
+    const leftCornerCutter = new CutterModel('lcc', 'LeftCornerCutter', () => {
+      const leftModel = instance.getAssembly('L').toModel([]).clone();
+      const tkh = cabinet.value('tkh');
+      leftModel.translate({x:0, y:tkh, z:0});
+      return leftModel;
+    });
+    const rightCornerCutter = new CutterModel('rcc', 'RightCornerCutter', () => {
+      const rightModel = instance.getAssembly('R').toModel([]).clone();
+      const tkh = cabinet.value('tkh');
+      rightModel.translate({x:0, y:tkh, z:0});
+      return rightModel;
+    });
+    leftCornerCutter.parentAssembly(this);
+    this.addSubAssembly(leftCornerCutter);
+    leftCornerCutter.parentAssembly(this);
+    this.addSubAssembly(rightCornerCutter);
 
     const joint = (part) => (otherPartCode, condition) =>
       part.addJoints(new Butt(part.partCode(true), otherPartCode, condition));
@@ -48,6 +65,8 @@ class AutoToekick extends Assembly {
     joint(toeKickPanel)('R');
     joint(toeKickPanel)('B');
     joint(toeKickPanel)('L');
+    joint(leftCornerCutter)(toeKickPanel.partCode(true));
+    joint(rightCornerCutter)(toeKickPanel.partCode(true));
     const cutter = new CutterModel('tkc', `${atkid}.Cutter`, toModel('vOid'));
     joint(cutter)('R', () => !this.rightEndStyle());
     joint(cutter)('L', () => !this.leftEndStyle());
@@ -149,7 +168,15 @@ class AutoToekick extends Assembly {
 
       const buttToePoly2 = toPoly(topInner, bottomInner);
       const buttToePoly1 = toPoly(topOuter, bottomOuter);
+      const rightThickness = instance.getAssembly('R').thickness();
+      const leftThickness = instance.getAssembly('L').thickness();
       toeKick = new BiPolygon(buttToePoly1, buttToePoly2);
+      const normalVector = {
+        x: faces[0].lines()[3].vector().unit(),
+        y: faces[0].lines()[0].vector().unit(),
+        z: buttToePoly2.normal()
+      };
+      toeKickPanel.normals(false, normalVector)
       children.toeKick = toeKick;
     }
 

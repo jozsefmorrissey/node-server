@@ -50,7 +50,7 @@ class Assembly extends KeyValue {
     if (Array.isArray(subAssems)) {
       console.log('wtff');
     }
-    Object.getSet(this, initialVals, 'subassemblies', 'joints');
+    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'normals');
     Object.defineProperty(this, "subassemblies", {
       writable: false,
       enumerable: false,
@@ -222,6 +222,15 @@ class Assembly extends KeyValue {
       let currAssem = this;
       while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
       return currAssem;
+    }
+
+    let normObj;
+    this.normals = (array, normalObj) => {
+      if (normalObj instanceof Object) {
+        if (!Array.isArray(normalObj)) normObj = normalObj;
+        else normObj = {x: normalObj[0], y: normalObj[1], z: normalObj[2]};
+      }
+      return array ? (normObj ? [normObj.x, normObj.y, normObj.z] : undefined) : normObj;
     }
 
     // decendents = (assem) => {

@@ -17,23 +17,29 @@ const LoadingDisplay = require('../../../../public/js/utils/display/loading.js')
 const Global = require('../services/global');
 
 class RoomDisplay extends Lookup {
-  constructor(parentSelector) {
+  constructor(parentSelector, order) {
     super();
 
-    const groupDisplays = {};
+    const groupDisp = new GroupDisplay();
     const getHeader = (room, $index) =>
         RoomDisplay.headTemplate.render({room, $index});
 
     const getBody = (room, $index) => {
-      TwoDLayout.set(room.layout());
+      Global.room(room);
+      TwoDLayout.panZoom.once();
+      groupDisp.active(room.groups[0]);
       return RoomDisplay.bodyTemplate.render({$index, room, groupHtml});
     }
 
-    const groupHtml = (group) => {
-      if (groupDisplays[group.id()] === undefined) {
-        groupDisplays[group.id()] = new GroupDisplay(group);
+    this.order = (ord) => {
+      if (ord) {
+        order = ord;
       }
-      return groupDisplays[group.id()].html();
+      return order || Global.order();
+    }
+
+    const groupHtml = (group) => {
+      return groupDisp.html(group);
     }
 
     const getObject = (values) => {
@@ -42,44 +48,41 @@ class RoomDisplay extends Lookup {
     }
     this.active = () => expandList.active();
 
+    const expListProps = {
+      getHeader, getBody, getObject, parentSelector,
+      inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
+      listElemLable: 'Room', type: 'pill',
+      inputTree: RoomDisplay.configInputTree()
+    };
+    const expandList = new ExpandableObject(expListProps);
+
+
     function getExpandList() {
       const order = Global.order();
-      const expandParentSelector = `${parentSelector}[order-id="${order.id()}"]`;
-      const expandList = ExpandableObject.bySelector(expandParentSelector);
-      if (expandList) return expandList;
-
-      const expListProps = {
-        getHeader, getBody, getObject,
-        list: order.rooms,
-        parentSelector: expandParentSelector,
-        inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
-        listElemLable: 'Room', type: 'pill',
-        inputTree: RoomDisplay.configInputTree()
-      };
-      return new ExpandableObject(expListProps);
+      expListProps.list = order.rooms;
+      return expandList;
     }
 
     this.setHtml =() => {
-
-      du.find(parentSelector).setAttribute('order-id', Global.order().id());
+      du.find(parentSelector).setAttribute('order-id', this.order().id());
       getExpandList();
     }
     this.setHtml();
     Global.onChange.room(this.setHtml);
 
+    this.html = () => getExpandList().html();
 
-    this.refresh = () => expandList.refresh();
+
+    this.refresh = () => getExpandList().refresh();
+
+    du.on.match('click', '.group-add-btn', (target) => {
+      const room = Global.room();
+      room.addGroup();
+      this.refresh();
+    });
+
   }
 }
-
-du.on.match('click', '.group-add-btn', (target) => {
-  const id = target.getAttribute('room-id');
-  const room = Room.get(id);
-  const orderId = du.find.up('[order-id]', target).getAttribute('order-id');
-  const roomDisplay = RoomDisplay.get(orderId);
-  room.addGroup();
-  roomDisplay.refresh();
-});
 
 RoomDisplay.configInputTree = () => {
   const dit = new DecisionInputTree('Room', {inputArray: [Inputs('name')]});

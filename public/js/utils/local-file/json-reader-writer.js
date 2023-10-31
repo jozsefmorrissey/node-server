@@ -3,7 +3,7 @@ const Navigator = require('navigator');
 
 class JsonReaderWriter {
   constructor() {
-    let maxLen = 10000;
+    let maxLen = 65500;
     this.maxLen = (val) => val ? (maxLen = val) : maxLen;
 
     function getPath(directoryHelper, path) {
@@ -66,8 +66,12 @@ class JsonReaderWriter {
       return true;
     }
 
+    let lastDeconstruction;
+    let savePending = false;
     this.write = async (data, rootDirectoryHelper) => {
+      if (savePending) return false;
       if (!this.changesMade(data, rootDirectoryHelper)) return false;
+      savePending = true;
       const hash = JSON.stringify(data).hash();
       const replaceLoc = await getReplaceLocation(rootDirectoryHelper.absPath());
       const rootJsonFileName = rootDirectoryHelper.absPath() + '.json';
@@ -92,9 +96,12 @@ class JsonReaderWriter {
         //       structure is the same. Since keys are not ordered this method
         //       may return true for identical objects with a diffrent reference order.
         lastHashes[rootDirectoryHelper.absPath()] = hash;
+        lastDeconstruction = jsonD;
         return true;
       } catch (e) {
         throw e;
+      } finally {
+        savePending = false;
       }
     }
   }

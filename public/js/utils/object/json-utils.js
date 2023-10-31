@@ -63,7 +63,7 @@ Function.safeStdLibAddition(JSON, 'deconstruct',   function (obj, maxObjLen, spa
     obj = obj.copy();
     deconstruction = deconstructionOfSparceArrays(obj);
   }
-  const str = JSON.stringify(obj, null, space);
+  const str = JSON.stringify(obj);
   maxObjLen ||= 1000;
   path ||= '';
   if (!(obj instanceof Object) || str.length < maxObjLen) {
@@ -76,7 +76,7 @@ Function.safeStdLibAddition(JSON, 'deconstruct',   function (obj, maxObjLen, spa
     const key = keys[index];
     winterIsComing(obj, key);
     let currObj = Object.pathValue(obj, key);
-    let currStr = JSON.stringify(currObj, null, space);
+    let currStr = JSON.stringify(currObj);
     if (currStr.length > keyMaxLen) {
       const currPath = path === '' ? key : `${path}.${key}`;
       JSON.deconstruct(currObj, maxObjLen, space, currPath, deconstruction);
@@ -85,7 +85,7 @@ Function.safeStdLibAddition(JSON, 'deconstruct',   function (obj, maxObjLen, spa
   }
   if (Array.isArray(obj) && obj.empty()) obj.length = 0;
   else if (Object.keys(obj).length !== 0) {
-    deconstruction[path] = JSON.stringify(obj, null, space);
+    deconstruction[path] = JSON.stringify(obj);
   }
   return deconstruction;
 }, true);
@@ -120,7 +120,11 @@ Function.safeStdLibAddition(JSON, 'reconstruct',   function (obj) {
   const constructed = mainDef ? JSON.parse(obj['']) : {};
   for (let index = (mainDef ? 1 : 0); index < paths.length; index++) {
     const path = paths[index];
-    Object.pathValue(constructed, path, JSON.parse(obj[path]));
+    try {
+      Object.pathValue(constructed, path, JSON.parse(obj[path]));
+    } catch (e) {
+      console.warn(e);
+    }
   }
   return constructed;
 }, true);

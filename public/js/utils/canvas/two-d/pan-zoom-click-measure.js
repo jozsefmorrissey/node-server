@@ -13,8 +13,8 @@ const Draw2D = require('draw');
 FunctionCache.on('pan-zoom', 500);
 
 class PanZoomClickMeasure extends PanZoomClick {
-  constructor(canvas, draw, getHoverMap) {
-    const draw2d = new Draw2D(canvas);
+  constructor(canvas, draw, getHoverMap, invertY) {
+    const draw2d = new Draw2D(canvas, invertY);
     let measEnabled = false;
     let measurementLines = [];
     let vertTol = 15;

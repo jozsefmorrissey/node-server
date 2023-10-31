@@ -2,6 +2,8 @@
 const $t = require('../$t');
 const du = require('../dom-utils');
 const Lookup = require('../object/lookup');
+const CustomEvent = require('../custom-event.js');
+
 
 class FileTabDisplay extends Lookup {
   constructor() {
@@ -12,6 +14,7 @@ class FileTabDisplay extends Lookup {
     this.register = (title, htmlFunc) => {
       list[title] = htmlFunc;
     }
+    CustomEvent.all(this, 'change', 'beforeChange', 'close', 'open');
     this.type = (type) => type !== undefined ? (tYpe = type) : tYpe;
     this.selected = (title) => title !== undefined ? (selected = title) : selected;
     this.unregister = (title) => delete list[title];
@@ -41,16 +44,22 @@ du.on.match('click', '.file-tab-cnt > ul > li', (elem, event) => {
 
   const container = du.find.closest('.file-tab-cnt', elem);
   const ftd = FileTabDisplay.get(container.id);
+  const from = ftd.selected();
   if (close) {
-    ftd.selected(null)
+    ftd.selected(null);
+    ftd.trigger.close({from});
+    ftd.trigger.change({from});
     return du.class.remove(container, 'open');
   }
 
-  const content = du.find.closest('.content', elem);
-  ftd.selected(elem.innerText);
+  const content = du.find.down('.content', container);
+  const to = elem.innerText;
+  ftd.selected(to);
   content.innerHTML = ftd.selectedHtml();
-  du.class.add(container, 'open')
+  du.class.add(container, 'open');
   du.class.add(elem, 'selected');
+  if (from == undefined) ftd.trigger.open({to});
+  ftd.trigger.change({from, to});
 });
 
 FileTabDisplay.template = new $t('lists/file-tab');

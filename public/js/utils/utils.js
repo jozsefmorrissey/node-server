@@ -185,11 +185,15 @@ Function.safeStdLibAddition(Array, 'copy',   function (other) {
   if (Array.isArray(other)) {
     this.deleteAll();
     this.merge(other, false);
-    if (!objEq(this, other)) throw new Error('toodles');
+    if (!objEq(this, other)) {
+      throw new Error('toodles');
+    }
   } else {
     const newArr = [];
     newArr.merge(this, false);
-    if (!objEq(this, newArr)) throw new Error('toodles');
+    if (!objEq(this, newArr)) {
+      throw new Error('toodles');
+    }
     return newArr;
   }
 });
@@ -960,6 +964,9 @@ function setToJson(obj, options) {
 function staticFromJson(cxtr) {
   const fromJson = (json) => {
     const obj = new cxtr();
+    if (json.id === "tiltzzw4x3mglwy2bktod910p5g3m7ib") {
+      console.log('her');
+    }
     obj.fromJson(json);
     return obj;
   };
@@ -974,8 +981,8 @@ function setFromJson(obj, options) {
     cxtr.fromJson = staticFromJson(cxtr);
   const parentFromJson = obj.fromJson;
   obj.fromJson = (json) => {
-    if (json._TYPE === 'KeyValue') {
-      console.log('hey');
+    if (options.attrs.indexOf('rooms') !== -1) {
+      console.log('rooms');
     }
     for (let index = 0; index < options.attrs.length; index += 1) {
       const attr = options.attrs[index];
@@ -987,11 +994,18 @@ function setFromJson(obj, options) {
             obj[attr](Object.fromJson(json[attr]));
           }
         }
-        else
+        else {
+          if (attr === 'rooms') {
+            console.log('rooms');
+          }
           obj[attr] = Object.fromJson(json[attr]);
+        }
       }
-      if ((typeof parentFromJson) === 'function') parentFromJson(json);
+      if (json._TYPE === 'Order') {
+        console.log('foundzzzyss')
+      }
     };
+    if ((typeof parentFromJson) === 'function') parentFromJson(json);
     return obj;
   }
 }
@@ -1302,6 +1316,7 @@ Function.safeStdLibAddition(Array, 'swap', function (i, j, doNotModify) {
   const temp = arr[i];
   arr[i] = arr[j];
   arr[j] = temp;
+  return arr;
 });
 
 Function.safeStdLibAddition(Array, 'scale', function (valueOfuncOarray, doNotModify) {

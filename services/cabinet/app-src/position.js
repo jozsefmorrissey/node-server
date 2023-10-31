@@ -3,6 +3,7 @@
 
 const getDefaultSize = require('./utils.js').getDefaultSize;
 const Vertex3D = require('./three-d/objects/vertex');
+const Line3D = require('./three-d/objects/line');
 const BiPolygon = require('./three-d/objects/bi-polygon');
 const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
 
@@ -127,11 +128,15 @@ class Position {
     }
 
     //TODO: this could be simpler and more effecient using vector rotations instead of line rotations.
-    const modelVecObj = (rotations) => ({
-        width: new Vertex3D(1,0,0).rotate(rotations).vector(),
-        height: new Vertex3D(0,1,0).rotate(rotations).vector(),
-        depth: new Vertex3D(0,0,1).rotate(rotations).vector()
-    });
+    this.normals = (array) => {
+      const rotation = this.rotation();
+      const normObj = {
+          x: new Vertex3D(1,0,0).rotate(rotation).vector(),
+          y: new Vertex3D(0,1,0).rotate(rotation).vector(),
+          z: new Vertex3D(0,0,1).rotate(rotation).vector()
+      };
+      return array ? [normObj.x, normObj.y, normObj.z] : normObj;
+    }
 
     this.biPolyNormVector = () => {
       const root = assembly.getRoot();
@@ -142,21 +147,34 @@ class Position {
       const current = this.current();
       const dem = current.demension;
       const center = new Vertex3D(current.center);
-      const vecObj = modelVecObj(current.rotation);
+      const vecObj = this.normals();
       return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj, this.biPolyNormVector());
     };
 
-    this.toModel = new FunctionCache((simple) => {
-      let joints = assembly.getJoints().female;
-      // TODO: this is a hacky way of simplifying... fix
-      if (simple) joints.jointFilter = (assem) =>
-        assem.constructor.name.match(/Cutter/) &&
-        (assem.parentAssembly().parentAssembly() === undefined ||
-        assem.partCode() === 'aoc');
-
+    this.toModel = new FunctionCache((joints) => {
+      joints ||= assembly.getJoints().female;
       let model = this.toBiPolygon().toModel(joints);
       return model;
     }, this, 'position');
+
+    this.normalizingRotations = () => {
+      const normals = assembly.normals(true);
+      if (normals) {
+        // TODO: reverse rotate does not work fix.
+        //revRotation = Line3D.coDirectionalRotations(normals, null, true);
+        return Line3D.coDirectionalRotations(normals);
+      }else {
+        // rotation = this.rotation();
+        // model.reverseRotate(rotation);
+        return Line3D.coDirectionalRotations(this.normals(true));
+      }
+    }
+
+    this.normalModel = (left) => {
+      const model = assembly.toModel();
+      const rotz = this.normalizingRotations();
+      return model.normalize(rotz, left).poly;
+    }
 
     this.set = (obj, type, value, getter) => {
       if ((typeof type) !== 'string') {

@@ -225,9 +225,9 @@ Vertex3D.nearest = (vertices, target) => {
 
 Vertex3D.sortByCenter = (center) => {
   return (v1, v2) => {
-    const d1 = v1.distance(v2);
-    const d2 = v2.distance(v1);
-    d1 === d2 ? 0 : (d1 < d2 ? -1 : 1);
+    const d1 = v1.distance(center);
+    const d2 = v2.distance(center);
+    return d1-d2;
   }
 }
 
