@@ -2,3 +2,4 @@ node_modules/
 public/json/configure.json
 **/index.js
 **/html-templates.js
+**/generated/**
