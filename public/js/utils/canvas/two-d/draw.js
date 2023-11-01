@@ -61,6 +61,11 @@ class Draw2d {
         }
       }
     }
+    draw.invertY = (yes) => {
+      if (yes === true) invertY = true;
+      if (yes === false) invertY = false;
+      return invertY;
+    }
 
     draw.canvas = canvas;
     draw.ctx = ctx;

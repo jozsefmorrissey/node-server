@@ -6,8 +6,8 @@ const Vertex2d = require('./objects/vertex');
 
 
 class PanZoomClick extends PanZoom {
-  constructor(canvas, draw, getHoverMap) {
-    super(canvas, draw);
+  constructor(canvas, draw, getHoverMap, invertY) {
+    super(canvas, draw, invertY);
     const instance = this;
 
     this.hoverMap = getHoverMap;
@@ -50,12 +50,14 @@ class PanZoomClick extends PanZoom {
       return clickStack.slice(startIndex, toIndex);
     }
 
+    const y = (event) =>  (invertY ? -1 : 1) * event.imageY;
+
     let clickHoldCount = 0;
     let dragging = false;
     this.onMove((event) => {
       dragging = false;
       if (!active || !moveActive) return;
-      const vertex = new Vertex2d(event.imageX, event.imageY);
+      const vertex = new Vertex2d(event.imageX, y(event));
       if (clickHolding && eventsEnabled) {
         if (++clickHoldCount > 30) {
           dragEvent.trigger(clickHolding, event);
@@ -83,7 +85,7 @@ class PanZoomClick extends PanZoom {
 
     this.onClick((event) => {
       if (!active) return;
-      const vertex = new Vertex2d(event.imageX, event.imageY);
+      const vertex = new Vertex2d(event.imageX, y(event));
       const hovering = this.hoverMap().hovering(vertex);
       clickStack = [hovering].concat(clickStack);
       clickStack.splice(stackLimit);
@@ -91,14 +93,14 @@ class PanZoomClick extends PanZoom {
     });
     this.onMouseup((event) => {
       if (!active) return;
-      const vertex = new Vertex2d(event.imageX, event.imageY);
+      const vertex = new Vertex2d(event.imageX, y(event));
       const hovering = this.hoverMap().hovering(vertex);
       clickHolding = false;
       clickHoldCount = 0;
       return hovering !== null;
     });
     this.onMousedown((event) => {
-      const vertex = new Vertex2d(event.imageX, event.imageY);
+      const vertex = new Vertex2d(event.imageX, y(event));
       const hovering = this.hoverMap().hovering(vertex);
       clickHolding = hovering;
       return hovering !== null;

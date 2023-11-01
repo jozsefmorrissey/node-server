@@ -145,9 +145,9 @@ class ThreeView extends Lookup {
 
       hovermap = new HoverMap2d();
       panz = new PanZoomClickMeasure(draw.canvas(), drawView, () => hovermap, true);
-      panz.disable.move();
-      panz.vertexTolerance(.4);
-      panz.lineTolerance(.2);
+      // panz.disable.move();
+      panz.vertexTolerance(1.6);
+      panz.lineTolerance(.8);
       panz.centerOn(0, 0);
 
       du.on.match('change', '[name="partSelector"]', onPartSelect);

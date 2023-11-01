@@ -200,8 +200,8 @@ function removeUnneccisaryCuts(cutList, joints, noJointmodel) {
   let allJointModel = applyJoints(noJointmodel, joints);
   for (let index = 0; index < cutList.length; index++) {
     const cut = cutList[index];
-    const cutLine = cut.line.clone();
     if (cut.type === 'cut') {
+      const cutLine = cut.line.clone();
       let isOn = false;
       const normalized = allJointModel.clone();
       const lines2d = modelToLines(allJointModel.clone(), cut.normalizeInfo);
@@ -221,8 +221,10 @@ function removeUnneccisaryCuts(cutList, joints, noJointmodel) {
   }
 }
 
+const jointsFromCutlist = (cl) => cl.map(c => c instanceof Joint ? c : c.joint).unique();
+
 function simplifyChannelCutts(cutList, noJointmodel) {
-  const joints = cutList.filter(c => c.type === cut).map(c => c.joint).unique();
+  const joints = jointsFromCutlist(cutList);
   const cutModel = applyJoints(noJointmodel, joints);
   console.log(Line2d.toDrawString(Polygon3D.lines2d(Polygon3D.fromCSG(cutModel.polygons))));
 }
@@ -268,14 +270,14 @@ function buildCutList(joints, noJointmodel, normInfoRight, normInfoLeft) {
             cut(jointModel, cutList, normInfo, joint);
           }
         }
-      } else {
+      } else if (jointModel.polygons.length > 0) {
         cutList.push(joint);
       }
     }
   }
-  const cutModelLeft = applyJoints(noJointmodel, cutList.map(c => c.joint));
+  const cutModelLeft = applyJoints(noJointmodel, jointsFromCutlist(cutList));
   applyNormalInfo(cutModelLeft, normInfoLeft);
-  const cutModelRight = applyJoints(noJointmodel, cutList.map(c => c.joint));
+  const cutModelRight = applyJoints(noJointmodel, jointsFromCutlist(cutList));
   applyNormalInfo(cutModelRight, normInfoRight);
   for (let index = 0; index < channels.length; index++) {
     const chan = channels[index];
@@ -291,13 +293,13 @@ function buildCutList(joints, noJointmodel, normInfoRight, normInfoLeft) {
 
 function addSideViews(info, noJointmodel, normInfoRight, normInfoLeft) {
   const cuts = info.cutList.filter(c => c.type === 'cut');
-  const cutJoints = cuts.map(c => c.joint);
+  const cutJoints = jointsFromCutlist(cuts);
   let cutModelRight = applyJoints(noJointmodel, cutJoints);
   let cutModelLeft = cutModelRight.clone();
 
   const channels = info.cutList.filter(c => c.type === 'channel');
-  const rightChannels = channels.filter(c => c.normalizeInfo.side === 'Right').map(c => c.joint);
-  const leftChannels = channels.filter(c => c.normalizeInfo.side === 'Left').map(c => c.joint);
+  const rightChannels = jointsFromCutlist(channels.filter(c => c.normalizeInfo.side === 'Right'));
+  const leftChannels = jointsFromCutlist(channels.filter(c => c.normalizeInfo.side === 'Left'));
   cutModelRight = applyJoints(cutModelRight, rightChannels);
   cutModelLeft = applyJoints(cutModelLeft, leftChannels);
 

@@ -97,7 +97,9 @@ class PanZoomClickMeasure extends PanZoomClick {
     }
 
     const measDraw = () => measurements.enabled() ? drawMeasurements() : draw();
-    super(canvas, measDraw, getHoverMap);
+    measDraw.invertY = draw.invertY;
+
+    super(canvas, measDraw, getHoverMap, invertY);
     const instance = this;
     this.hoverMap = () => measurements.enabled() ? measurmentHoverMap : getHoverMap();
     this.vertexTolerance = (tol) => vertTol = Number.isFinite(tol) ? tol : vertTol;
