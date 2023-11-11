@@ -24,3 +24,11 @@
   padding: 2pt 5pt;
   border-radius: 5pt;
 }
+
+.center {
+  text-align: center;
+}
+
+#three-d-display {
+  position: relative;
+}

@@ -8,6 +8,12 @@ const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/ve
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Polygon3D = require('../../three-d/objects/polygon.js');
 const Joint = require('../../objects/joint/joint.js');
+const Draw2d = require('../../../../../public/js/utils/canvas/two-d/draw.js');
+const du = require('../../../../../public/js/utils/dom-utils');
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+
+const within = Tolerance.within(.0001);
+
 const template = new $t('documents/construction');
 const partTemplate = new $t('documents/part');
 
@@ -79,17 +85,24 @@ const longestLine = (polys) => {
   return lineFromOrigin(longestLine);
 }
 
+function print(allJointCsg, fenceLine, cutLine) {
+  str = '';
+  str += Polygon3D.toDrawString2d(Polygon3D.fromCSG(allJointCsg), 'x', 'y');
+  str += Line2d.toDrawString([fenceLine, cutLine], 'red', 'green', 'blue', 'purple');
+  console.log(str);
+}
+
 const round = (val) => Math.round(val * 1000)/1000;
 const zNormFilter = (p) => (norm = p.normal()) | norm.k() === -1 && !norm.i() && !norm.j();
 const yNormFilter = (p) => (norm = p.normal()) | norm.j() && !norm.i() && !norm.k();
 const xNormFilter = (p) => (norm = p.normal()) | norm.i() && !norm.j() && !norm.k();
 let c = 0;
 const checkNormal = (model, normalInfo, joint) => {
-  applyNormalInfo(model, normalInfo);
+  model = applyNormalInfo(model.clone(), normalInfo);
   let polygons = Polygon3D.fromCSG(model.polygons);
   const face = polygons.filter(zNormFilter)[0];
   if (face === undefined) return null;
-  return round(face.center().z) === 0 ? model : null;
+  return within(face.center().z, 0) ? model : null;
 }
 
 function linesFromEndpoints(epts) {
@@ -100,25 +113,26 @@ function linesFromEndpoints(epts) {
 }
 
 const normalize = (model, normInfoLeft, normInfoRight, joint) => {
-  let side = 'Right';
   let normalizedRight = checkNormal(model.clone(), normInfoRight, joint);
-  side = 'Left';
   let normalizedLeft = checkNormal(model.clone(), normInfoLeft);
 
   if (!normalizedRight && !normalizedLeft) return null;
   const both = normalizedRight && normalizedLeft;
-  normInfoLeft = normalizedLeft ? normInfoLeft : undefined;
-  normInfoRight = normalizedRight ? normInfoRight : undefined;
   let normInfo = {right: normInfoRight, left: normInfoLeft, type: both ? 'cut' : 'channel'};
-  if (both) normInfo.normalized = normalizedRight;
-  else normInfo.normalized = normalizedRight ? normalizedRight : normalizedLeft;
+  if (!both) normInfo.side = normalizedLeft ? 'Left' : 'Right';
+  normInfo.normalized = normalizedRight ? normalizedRight : normalizedLeft;
   return normInfo;
 }
 
-function cut(jointModel, cutList, normalizeInfo,  joint) {
-  const normJMod = applyNormalInfo(jointModel.clone(), normalizeInfo);
+function cut(cutInfo, cutList, channels) {
+  const normalizeInfo = cutInfo.normalizeInfo;
+  const jointModel = cutInfo.jointModel;
+  const joint = cutInfo.joint;
+  normalizeInfo.side = 'Left';
+  const normInfoRight = normalizeInfo.right;
+  const normJMod = applyNormalInfo(jointModel.clone(), normInfoRight);
 
-  const modelLines = linesFromEndpoints(normalizeInfo.poly.endpoints());
+  const modelLines = linesFromEndpoints(normInfoRight.poly.endpoints());
   const jointLines = linesFromEndpoints(normJMod.endpoints());
 
   const lines = [];
@@ -138,11 +152,52 @@ function cut(jointModel, cutList, normalizeInfo,  joint) {
 }
 
 
+let staticZfilter = (p) => {
+  const verts = p.vertices();
+  let total = 0;
+  for (let index = 0; index < verts.length; index++) {
+    const vert = verts[index];
+    if (total === 0) total = vert.z;
+    else {
+      if (!within(vert.z, (total / (index)))) return false;
+      total += vert.z;
+    }
+  }
+  return true;
+}
 
 function channel(jointModel, cutList, normalizeInfo, joint) {
-  const normJMod = applyNormalInfo(jointModel.clone(), normalizeInfo);
+  const side = normalizeInfo.side === 'Left' ? 'right' : 'left';
+  const relivantNormInfo = normalizeInfo[side];
+  const normJMod = applyNormalInfo(jointModel.clone(), relivantNormInfo);
   jointDems = normJMod.demensions();
   const polygons = Polygon3D.fromCSG(normJMod.polygons);
+
+  const zPolys = polygons.filter(staticZfilter);
+  if (zPolys.length !== 2) {
+    throw new Error('This is not a channel need to detect this somehow');
+  }
+  const poly0 = zPolys[0];
+  const poly1 = zPolys[1];
+  const lineGroup = Line3D.parrelleSets(poly0.lines());
+  let longestParrelleInfo = {length: 0, index: null};
+  for (let index = 0; index < lineGroup.length; index++) {
+    const group = lineGroup[index];
+    if (group.length === 2) {
+      const line1 = group[0];
+      const line2 = group[1];
+      const length = line1.length() > line2.length() ? line1.length() : line2.length();
+      if (length > longestParrelleInfo.length) {
+        longestParrelleInfo = {length, index}
+      }
+    }
+  }
+  if (longestParrelleInfo.index === null) {
+    throw new Error('This is not a channel need to detect this somehow');
+  }
+  const zLine = Line3D.averageLine(lineGroup[longestParrelleInfo.index]);
+  const zWidth = poly0.distance(poly1);
+
   const yPolys = polygons.filter(yNormFilter);
   const xPolys = polygons.filter(xNormFilter);
   let yPlanes = yPolys.map(p => p.toPlane());
@@ -159,6 +214,7 @@ function channel(jointModel, cutList, normalizeInfo, joint) {
   const xWidth = maxXDist < maxYDist;
   const depth = jointDems.z;
   const width = xWidth ? maxXDist : maxYDist;
+  Polygon3D.parrelleSets(polygons, .0002);
   if (xWidth) {
     line = longestLine(yPolys);
   } else {
@@ -184,7 +240,7 @@ function combineLinearCuts(cutList) {
 }
 
 function modelToLines(model, normalizeInfo) {
-  applyNormalInfo(model, normalizeInfo);
+  model = applyNormalInfo(model.clone(), normalizeInfo);
   return Polygon3D.lines2d(Polygon3D.fromCSG(model.polygons), 'x', 'y');
 }
 
@@ -204,7 +260,7 @@ function removeUnneccisaryCuts(cutList, joints, noJointmodel) {
       const cutLine = cut.line.clone();
       let isOn = false;
       const normalized = allJointModel.clone();
-      const lines2d = modelToLines(allJointModel.clone(), cut.normalizeInfo);
+      const lines2d = modelToLines(allJointModel.clone(), cut.normalizeInfo.right);
       for (let lIndex = 0; !isOn && lIndex < lines2d.length; lIndex++) {
         const line = lines2d[lIndex].clone();
         const consoldated = Line2d.consolidate(cutLine, line);
@@ -225,7 +281,7 @@ const jointsFromCutlist = (cl) => cl.map(c => c instanceof Joint ? c : c.joint).
 
 function simplifyChannelCutts(cutList, noJointmodel) {
   const joints = jointsFromCutlist(cutList);
-  const cutModel = applyJoints(noJointmodel, joints);
+  const cutModel = applyJoints(noJointmodel.clone(), joints);
   console.log(Line2d.toDrawString(Polygon3D.lines2d(Polygon3D.fromCSG(cutModel.polygons))));
 }
 
@@ -241,33 +297,28 @@ function determineCutNormInfo(jointModel, noJointmodel, normalizeInfo) {
   const leftEpts = applyNormalInfo(noJointmodel.clone(), normalizeInfo.left).endpoints();
   const rightXDist = Math.abs(rightCenter.x + rightEpts.x)/2;
   const leftXDist = Math.abs(leftCenter.x + leftEpts.x)/2;
-  return rightXDist > leftXDist ? normalizeInfo.right : normalizeInfo.left;
-}
-
-function determineChannelNormInfo(channelInfo, modelRight, modelLeft) {
-  console.log(channelInfo);
-  console.log(Line2d.toDrawString(Polygon3D.lines2d(Polygon3D.fromCSG(modelRight.polygons), 'x', 'y')));
-  console.log(Line2d.toDrawString(Polygon3D.lines2d(Polygon3D.fromCSG(modelLeft.polygons), 'x', 'y')));
+  normalizeInfo.side = rightXDist > leftXDist ? 'right' : 'left';
 }
 
 function buildCutList(joints, noJointmodel, normInfoRight, normInfoLeft) {
   const cutList = [];
   const channels = [];
+  const cuts = [];
   for (let index = 0; index < joints.length; index++) {
     const joint = joints[index];
     const maleModels = joint.maleModels();
     for (let mi = 0; mi < maleModels.length; mi++) {
       const maleModel = maleModels[mi];
-      const jointModel = noJointmodel.intersect(maleModel);
+      const jointModel = noJointmodel.clone().intersect(maleModel);
       const normalizeInfo = normalize(jointModel, normInfoLeft, normInfoRight, joint);
       if (normalizeInfo) {
         let jointDems = normalizeInfo.normalized.demensions();
-        if (jointDems.x > 0 || jointDems.y > 0 || jointDems.z > 0) {
+        if (jointDems.x > 0 || jointDems.y > 0 || jointDems.z < 0) {
           if (normalizeInfo.type === 'channel') {
             channels.push({jointModel, normalizeInfo, joint});
           } else if (normalizeInfo.type === 'cut') {
-            const normInfo = determineCutNormInfo(jointModel, noJointmodel, normalizeInfo);
-            cut(jointModel, cutList, normInfo, joint);
+            // const normInfo = determineCutNormInfo(jointModel, noJointmodel, normalizeInfo);
+            cuts.push({jointModel, normalizeInfo, joint});
           }
         }
       } else if (jointModel.polygons.length > 0) {
@@ -275,26 +326,57 @@ function buildCutList(joints, noJointmodel, normInfoRight, normInfoLeft) {
       }
     }
   }
-  const cutModelLeft = applyJoints(noJointmodel, jointsFromCutlist(cutList));
-  applyNormalInfo(cutModelLeft, normInfoLeft);
-  const cutModelRight = applyJoints(noJointmodel, jointsFromCutlist(cutList));
-  applyNormalInfo(cutModelRight, normInfoRight);
+
+  cuts.forEach(cutInfo => cut(cutInfo, cutList, channels));
+
+  let cutModelLeft = applyJoints(noJointmodel.clone(), jointsFromCutlist(cutList));
+  cutModelLeft = applyNormalInfo(cutModelLeft, normInfoLeft);
+  let cutModelRight = applyJoints(noJointmodel.clone(), jointsFromCutlist(cutList));
+  cutModelRight = applyNormalInfo(cutModelRight, normInfoRight);
   for (let index = 0; index < channels.length; index++) {
     const chan = channels[index];
     const jointModel = chan.jointModel;
     const normalizeInfo = chan.normalizeInfo;
     const joint = chan.joint;
-    determineChannelNormInfo(chan, cutModelRight, cutModelLeft);
-    channel(jointModel, cutList, normalizeInfo.right ? normalizeInfo.right : normalizeInfo.left, joint);
+    channel(jointModel, cutList, normalizeInfo, joint);
   }
   cleanCutList(cutList, joints, noJointmodel);
   return cutList;
 }
 
+const scaledMidpoint = (l, center, coeficient, transLine) => {
+  const midpoint = l.clone().translate(transLine).midpoint();
+  let CSGv = new CSG.Vertex({x:midpoint.x(),y: midpoint.y(),z: 0}, [1,0,0]);
+  CSGv.scale(center,  coeficient);
+  return {
+    x: ((midpoint.x() - center.x)*coeficient) + center.x,
+    y: ((midpoint.y() - center.y)*coeficient) + center.y
+  }
+}
+
+const textProps = {size: '10px', radians: Math.PI};
+function buildCanvas(model, info) {
+  model = model.clone();
+  const canvas = du.create.element('canvas', {class: 'upside-down'});
+  const newCenter = {x: canvas.width / 2, y: canvas.height/2, z:0};
+  const sideLabelCenter = {x: canvas.width - 5, y: canvas.height - 10, z:0};
+  const dems = model.demensions();
+  const coeficient = ((canvas.height*.6) / dems.y);
+  model.scale(coeficient);
+  model.center(newCenter);
+  const draw = new Draw2d(canvas);
+  const lines = Polygon3D.lines2d(Polygon3D.fromCSG(model), 'x', 'y');
+  draw(lines, null, .3);
+  draw.text(info.side, sideLabelCenter, textProps);
+  const transLine = new Line2d(Vertex2d.center(Line2d.vertices(info.sides)), newCenter);
+  info.sides.forEach(l => draw.text(l.label, scaledMidpoint(l, newCenter, coeficient, transLine), textProps));
+  return canvas;
+}
+
 function addSideViews(info, noJointmodel, normInfoRight, normInfoLeft) {
   const cuts = info.cutList.filter(c => c.type === 'cut');
   const cutJoints = jointsFromCutlist(cuts);
-  let cutModelRight = applyJoints(noJointmodel, cutJoints);
+  let cutModelRight = applyJoints(noJointmodel.clone(), cutJoints);
   let cutModelLeft = cutModelRight.clone();
 
   const channels = info.cutList.filter(c => c.type === 'channel');
@@ -304,12 +386,71 @@ function addSideViews(info, noJointmodel, normInfoRight, normInfoLeft) {
   cutModelLeft = applyJoints(cutModelLeft, leftChannels);
 
 
-  applyNormalInfo(cutModelRight, normInfoRight);
-  applyNormalInfo(cutModelLeft, normInfoLeft);
-  console.log(Polygon3D.toDrawString2d(Polygon3D.fromCSG(cutModelRight)))
-  console.log(Polygon3D.toDrawString2d(Polygon3D.fromCSG(cutModelLeft)))
+  cutModelRight = applyNormalInfo(cutModelRight, normInfoRight);
+  cutModelLeft = applyNormalInfo(cutModelLeft, normInfoLeft);
+  info.views = {
+    right: buildCanvas(cutModelRight, normInfoRight),
+    left: buildCanvas(cutModelLeft, normInfoLeft)
+  }
+}
 
+function addModels(info, noJointmodel, normInfoRight, normInfoLeft) {
+  const cuts = info.cutList.filter(c => c.type === 'cut').map(c => c.joint);
+  const others = info.cutList.filter(c => c.type !== 'cut').map(c => c.joint);
 
+  let cutModelRight = applyJoints(noJointmodel.clone(), cuts);
+  let cutModelLeft = cutModelRight.clone();
+
+  let allJointModelRight = applyJoints(cutModelRight.clone(), others);
+  let allJointModelLeft = allJointModelRight.clone();
+
+  cutModelRight = applyNormalInfo(cutModelRight, normInfoRight);
+  cutModelLeft = applyNormalInfo(cutModelLeft, normInfoLeft);
+  allJointModelRight = applyNormalInfo(allJointModelRight, normInfoRight);
+  allJointModelLeft = applyNormalInfo(allJointModelLeft, normInfoLeft);
+  normInfoRight.models = {
+    none: noJointmodel,
+    all: allJointModelRight,
+    cuts: cutModelRight
+  }
+  normInfoLeft.models = {
+    none: noJointmodel,
+    all: allJointModelLeft,
+    cuts: cutModelLeft
+  }
+}
+
+let fenceSides = (sides, reverse) => {
+  let pairs = {};
+  let fenceSs = [];
+  for (let index = 0; index < sides.length; index++) {
+    const side = sides[index];
+    const rads = round((side.radians() + Math.PI * 2) % Math.PI);
+    const targetGroup = Object.values(pairs).filter(p => Math.modTolerance(rads, p.number, Math.PI, .001));
+    if (targetGroup.length === 0) {
+      pairs[rads] = parrelleSides(sides, side);
+      pairs[rads].number = rads;
+    }
+  }
+  Object.values(pairs).forEach(sides => sides.forEach(side => fenceSs.push(side)));
+
+  fenceSs.sort(Line2d.sorter(Line2d.center(fenceSs), -135));
+  if (reverse) {
+    fenceSs = fenceSs.slice(1,).concat(fenceSs[0]);
+    fenceSs.reverse();
+  }
+  return fenceSs;
+}
+
+function addSideList(info, noJointmodel, normInfoRight, normInfoLeft) {
+  normInfoRight.sides = Polygon3D.lines2d(Polygon3D.fromCSG(normInfoRight.models.cuts), 'x', 'y');
+  normInfoLeft.sides = Polygon3D.lines2d(Polygon3D.fromCSG(normInfoLeft.models.cuts), 'x', 'y');
+
+  const lines = normInfoRight.sides.concat(normInfoLeft.sides);
+  let index = 'A'.charCodeAt(0);
+  fenceSides(normInfoRight.sides).forEach(l => l.label = String.fromCharCode(index++));
+  index = 'A'.charCodeAt(0);
+  fenceSides(normInfoLeft.sides, true).forEach(l => l.label = String.fromCharCode(index++));
 }
 
 function partInfo(part) {
@@ -317,8 +458,8 @@ function partInfo(part) {
   const noJointmodel = part.toModel([]);
 
   const normRotz = part.position().normalizingRotations();
-  const normInfoRight = noJointmodel.normalize(normRotz, false, true);
-  const normInfoLeft = noJointmodel.normalize(normRotz, true, true);
+  const normInfoRight = noJointmodel.clone().normalize(normRotz, true, true);
+  const normInfoLeft = noJointmodel.clone().normalize(normRotz, false, true);
 
   const model = part.toModel();
   const dems = model.demensions();
@@ -327,6 +468,8 @@ function partInfo(part) {
   const parts = [part];
   const info = {parts, model, dems, joints, cutList}
   if (cutList) {
+    addModels(info, noJointmodel, normInfoRight, normInfoLeft);
+    addSideList(info, noJointmodel, normInfoRight, normInfoLeft);
     addSideViews(info, noJointmodel, normInfoRight, normInfoLeft);
   }
   return info;
@@ -355,24 +498,160 @@ function sortParts(parts) {
   return sorted;
 }
 
+function notOnSideAndIntersectsBeforeCut(lines, cutLine, info) {
+  const cut3d = new Line3D(cutLine.startVertex().point(), cutLine.endVertex().point());
+  const cutStartY = Math.min(cutLine.startVertex().y(), cutLine.endVertex().y());
+  info.noIntersections = true;
+  return (poly) => {
+    const intersection = poly.intersection.line(cut3d);
+    if (!intersection) return false;
+    let found = false;
+    const polyLines = poly.to2D('x', 'y').lines();
+    lines.forEach(l1 => {
+      let liesOn = true;
+      polyLines.forEach(l2 => liesOn &&= l1.isOn(l2.midpoint()));
+      found ||= liesOn;
+    });
+    if (!found) {
+      info.noIntersections = false;
+    }
+    if (intersection.y > cutStartY) return false;
+    return !found;
+  }
+}
+
+const sideFilter = (cl) => {
+  const min = round(Math.min(cl.startVertex().y(), cl.endVertex().y()));
+  console.log(min);
+  return (s) => !s.isParrelle(cl) && min >= round(cl.findIntersection(s).y());
+}
+
+function cutStartsOnSideClosestToBlade(sides, cutLine, info) {
+  const perpCloseToBladeSides = sides.filter(sideFilter(cutLine));
+  perpCloseToBladeSides.sort((a,b) => a.startVertex().y() - b.startVertex().y());
+  const side = perpCloseToBladeSides[0];
+  if (!side) return false;
+  const intersection = side.findIntersection(cutLine);
+  return intersection.equals(side.endVertex()) || intersection.equals(side.startVertex());
+}
+
+const lineDistanceSorter = (cl) => (a,b) => a.distance(cl) - b.distance(cl);
+
+function determineCutLength(cutLine, lines, info) {
+  const intersectingSides = lines.filter(sideFilter(cutLine));
+  intersectingSides.sort(lineDistanceSorter(cutLine));
+  const startSide = intersectingSides[0];
+  const startVertex = cutLine.findIntersection(startSide);
+  info.cutLength = new Line2d(startVertex, cutLine.endVertex()).combine(cutLine).length();
+}
+
+function validateTableSawPosition(lines, cutLine, info, allJointCsg) {
+    switch(info.type) {
+      case 'channel':
+        const filter = notOnSideAndIntersectsBeforeCut(lines, cutLine, info);
+        const allJointPoly = Polygon3D.fromCSG(allJointCsg);
+        let intersected = allJointPoly.filter(filter);
+        determineCutLength(cutLine, lines, info);
+        return intersected.length === 0;
+      case 'cut':
+        const valid = cutStartsOnSideClosestToBlade(lines, cutLine, info);
+        determineCutLength(cutLine, lines, info);
+        return valid;
+    }
+}
+
+function checkFenceLine(cutLine, lines, fenceLine, allJointCsg, info) {
+  const sidesCenter = Line2d.center(lines);
+  const rads = -fenceLine.perpendicular.connect(sidesCenter).negitive().radians();
+  const linesCenter = Line2d.center(lines);
+  allJointCsg.rotateAroundPoint({z: Math.toDegrees(rads)}, {x: linesCenter.x(), y: linesCenter.y(), z: 0});
+  cutLine.rotate(rads, linesCenter);
+  lines.forEach(l => l.rotate(rads, linesCenter));
+
+  const cut3d = new Line3D(cutLine.startVertex().point(), cutLine.endVertex().point())
+  print(allJointCsg, fenceLine, cutLine);
+  return validateTableSawPosition(lines, cutLine, info, allJointCsg) ? fenceLine : null;
+}
+
+function parrelleSides(sides, cutLine) {
+  const parrelle = {right: [], left: [], equal: []};
+  for(let index = 0; index < sides.length; index++) {
+    const side = sides[index];
+    if (side.isParrelle(cutLine)) {
+      const midpoint = side.midpoint();
+      const dist = cutLine.distance(side);
+      if (cutLine.isRight(midpoint)) parrelle.right.push({side, dist});
+      else if (cutLine.isLeft(midpoint)) parrelle.left.push({side, dist});
+      else if (cutLine.equals(side)) parrelle.equal.push({side, dist});
+    }
+  }
+  parrelle.right.sortByAttr('dist', true);
+  parrelle.left.sortByAttr('dist', true);
+  if (parrelle.right.length === 0) parrelle.right = parrelle.equal;
+  else if (parrelle.left.length === 0) parrelle.left = parrelle.equal;
+  const list = [parrelle.right[0], parrelle.left[0]].filter(s => s);
+  list.sortByAttr('dist', true);
+  return list.map(details => details.side)
+}
+
+const copySide = (side) => {let c = side.clone(); c.label = side.label; return c;};
+
+function channelLengthDisplay(fenceLine, cutLine, info) {
+  if (fenceLine === null || info.noIntersections) return '';
+  return ` for <b>${disp(info.cutLength)}</b>`;
+}
+
+const endpointEquals = (l, v) => l.endVertex().equals(v) || l.startVertex().equals();
+function tableSawcutDisplay(info) {
+  const upSide = info.normalizeInfo.side === 'Left' ? 'Right' : 'Left';
+  const normInfoUp = info.normalizeInfo[upSide.toLowerCase()];
+  const sides = normInfoUp.sides.map(copySide);
+  let cutLine = info.line.clone();
+  const parrelles = parrelleSides(sides, cutLine);
+  let furthest = parrelles[0];
+  let closest = parrelles[1];
+
+  const allJointCopy = normInfoUp.models.all.clone();
+  let targetLine = checkFenceLine(cutLine, sides, furthest, allJointCopy, info) ||
+              checkFenceLine(cutLine, sides, closest, allJointCopy, info);
+
+  const width = info.width ? info.width/2 : 0;
+  const fenceDistance = disp(cutLine.distance(targetLine) - width);
+  const lenDisp = channelLengthDisplay(targetLine, cutLine, info);
+  const prefix = info.type === 'cut' ? '' : `<b>${disp(info.depth)}</b> deep, <b>${disp(info.width)}</b> wide, `;
+  return targetLine === null ?
+      `See scematics for joint: ${info.joint.toString()}` :
+      `${prefix}<b>${upSide}</b> face up, <b>${targetLine.label}</b> against fence, @<b>${fenceDistance}</b>${lenDisp}`;
+}
+
 function cutDisplay(cutInfo) {
   if (cutInfo.hide === true) return;
   if (cutInfo instanceof Joint)
     return disp.joint(cutInfo);
   else if (cutInfo.type === 'channel')
-    return disp.channel(cutInfo);
+    return tableSawcutDisplay(cutInfo);
   else if (cutInfo.type === 'cut')
-    return disp.cut(cutInfo);
+    return tableSawcutDisplay(cutInfo);
 }
 
+function viewContainer(view) {
+  const id = `view-container-${String.random()}`;
+  setTimeout(() => {
+    if (view) {
+      const cnt = du.id(id);
+      cnt.append(view);
+    }
+  });
+  return id;
+}
 const html = {
   order: (order) => {
     order ||= Global.order();
-    return template.render({order, sortParts, cutDisplay, disp});
+    return template.render({order, sortParts, cutDisplay, disp, viewContainer});
   },
   part: (part) => {
     const info = partInfo(part);
-    return partTemplate.render({info, cutDisplay, disp});
+    return partTemplate.render({info, cutDisplay, disp, viewContainer});
   }
 };
 

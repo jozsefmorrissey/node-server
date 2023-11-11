@@ -68,6 +68,30 @@ CSG = function() {
   }
 };
 
+const colors = {
+  indianred: [205, 92, 92],
+  gray: [128, 128, 128],
+  fuchsia: [255, 0, 255],
+  lime: [0, 255, 0],
+  black: [0, 0, 0],
+  lightsalmon: [255, 160, 122],
+  red: [255, 0, 0],
+  maroon: [128, 0, 0],
+  yellow: [255, 255, 0],
+  olive: [128, 128, 0],
+  lightcoral: [240, 128, 128],
+  green: [0, 128, 0],
+  aqua: [0, 255, 255],
+  white: [255, 255, 255],
+  teal: [0, 128, 128],
+  darksalmon: [233, 150, 122],
+  blue: [0, 0, 255],
+  navy: [0, 0, 128],
+  salmon: [250, 128, 114],
+  silver: [192, 192, 192],
+  purple: [128, 0, 128]
+}
+
 // Construct a CSG solid from a list of `CSG.Polygon` instances.
 CSG.fromPolygons = function(polygons, deepCopy) {
   var csg = new CSG();
@@ -113,6 +137,11 @@ CSG.prototype = {
     //csg.normals = this.normals;
     csg.polygons = this.polygons.map(function(p) { return p.clone(); });
     return csg;
+  },
+
+  scale: function(coeficient) {
+    const center = this.center();
+    this.polygons.map(function(p) { return p.scale(center, coeficient); });
   },
 
   toPolygons: function() {
@@ -241,6 +270,14 @@ CSG.prototype = {
     }
   },
 
+  rotateAroundPoint: function (rotations, point) {
+    const returnVector = new CSG.Vector(point);
+    const centerVector = returnVector.negated();
+    this.translate(centerVector);
+    this.rotate(rotations);
+    this.translate(returnVector);
+  },
+
   rotate: function (rotations, pivot) {
     pivot ||= {x: 1, y:1, z:1};
     if (Array.isArray(rotations)) {
@@ -266,6 +303,14 @@ CSG.prototype = {
     }));
   },
 
+  ArbitraryRotate: function(degrees, pivot) {
+    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+        let newPos = vertex.pos;
+        newPos = ArbitraryRotate(newPos, degrees, pivot);
+        return new CSG.Vertex(newPos, vertex.normal);
+    }));
+  },
+
   translate: function (offset) {
     this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
       vertex.pos.x += offset.x;
@@ -286,8 +331,8 @@ CSG.prototype = {
     return newCenter;
   },
 
-  normalize: function (rotations, leftSide, leftOfAxis) {
-    if (leftSide) {
+  normalize: function (rotations, rightSide, leftOfAxis) {
+    if (rightSide) {
       if (rotations) {
         if (Array.isArray(rotations)) rotations = rotations.concat([{y:180}]);
         else rotations = [rotations, {y: 180}];
@@ -301,7 +346,7 @@ CSG.prototype = {
     // const translationVector = new CSG.Vector(clone.center()).minus(normCenter);
     const translationVector = new CSG.Vector(normCenter).minus(clone.center());
     clone.translate(translationVector);
-    const side = leftSide ? 'Left' : 'Right';
+    const side = !rightSide ? 'Left' : 'Right';
     return {poly: clone, translationVector, rotations, normCenter, side};
   }
 };
@@ -345,6 +390,102 @@ CSG.cube = function(options) {
     }));
   }));
 };
+
+CSG.Point = function (center, radius, color) {
+  const sphere = new CSG.sphere({radius, center});
+  sphere.setColor(color);
+  return sphere;
+}
+
+function vecotrOvertexModel(start, end, model, defaultColor) {
+  let color = end.color || defaultColor;
+  if (end instanceof CSG.Vector) {
+    const unit = end.minus(new CSG.Vector(start)).unit().times(10);
+    start = end.minus(unit);
+    return new CSG.cone({start, end, model, color});
+  } else {
+    return new CSG.Point(end, 1, color).union(model);
+  }
+}
+
+CSG.Line = function (options) {
+  options ||= {};
+  const start = options.start || [0,0,0];
+  const end = options.end || [0,0,0];
+  const radius = options.radius || .2;
+  let model = new CSG.cylinder({start, end, radius});
+  model = vecotrOvertexModel(end, start, model, options.color);
+  model.setColor(options.color);
+  return vecotrOvertexModel(start, end, model, options.color);
+}
+
+
+CSG.Rectangle = function (demensions, center, yVector, xVector) {
+  yVector = new CSG.Vector(yVector || [0,1,0]).unit();
+  const defaultVector = !Object.equals(yVector, {x:1, y:0, z:0}) ? {x:1, y:0, z:0} : {x:0, y:0, z:1};
+  xVector = new CSG.Vector(xVector || defaultVector);
+  center = new CSG.Vector(center || [0,0,0]);
+  const demVector = new CSG.Vector(demensions || [3,5,1]);
+  const width = demVector.x;
+  const length = demVector.y;
+  const depth = demVector.z;
+  const zVector = xVector.cross(yVector).unit();
+
+  const vs = {
+    x: yVector.times(length/2),
+    y: xVector.times(width/2),
+    z: zVector.times(depth/2),
+    nx: yVector.times(length/2).negated(),
+    ny: xVector.times(width/2).negated(),
+    nz: zVector.times(depth/2).negated()
+  }
+
+  const vert = (...args) => {
+    const vertex = new CSG.Vertex(center);
+    for(let index = 0; index < args.length; index++) vertex.plus(args[index]);
+    return vertex;
+  }
+
+  // const front = new CSG.Polygon([vert(vs.x, vs.y), vert(vs.nx, vs.y), vert(vs.nx, vs.ny), vert(vs.x, vs.ny)]);
+  let v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.nz);
+  let v2 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.nz);
+  let v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.nz);
+  let v4 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.nz);
+  const front = new CSG.Polygon([v1,v2,v3,v4]);
+
+  // const back = new CSG.Polygon([vert(vs.x,vs.y,vs.z),vert(vs.nx,vs.y,vs.z),vert(vs.nx,vs.ny,vs.z),vert(vs.x,vs.ny,vs.z)]);
+  v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.z);
+  v2 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.z);
+  v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.z);
+  v4 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.z);
+  const back = new CSG.Polygon([v4,v3,v2,v1]);
+
+  v1 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.y);
+  v2 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.y);
+  v3 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.y);
+  v4 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.y);
+  const top = new CSG.Polygon([v4,v3,v2,v1]);
+
+  v1 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.ny);
+  v2 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.ny);
+  v4 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.ny);
+  v3 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.ny);
+  const bottom = new CSG.Polygon([v4,v3,v2,v1]);
+
+  v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.x);
+  v2 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.x);
+  v3 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.x);
+  v4 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.x);
+  const left = new CSG.Polygon([v1,v2,v3,v4]);
+
+  v4 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.nx);
+  v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.nx);
+  v2 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.nx);
+  v1 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.nx);
+  const right = new CSG.Polygon([v1,v2,v3,v4]);
+
+  return CSG.fromPolygons([front, back, top, bottom, left, right])
+}
 
 // Construct a solid sphere. Optional parameters are `center`, `radius`,
 // `slices`, and `stacks`, which default to `[0, 0, 0]`, `1`, `16`, and `8`.
@@ -430,10 +571,84 @@ CSG.cylinder = function(options) {
   return CSG.fromPolygons(polygons);
 };
 
-function axis(vector, origin, color) {
+let crossVect;
+const perpendicularVector = (vector) => {
+  let other;
+  const option1Mag = vector.z*vector.z+vector.y*vector.y;
+  const option2Mag = vector.z*vector.z+vector.x*vector.x;
+  const option3Mag = vector.y*vector.y+vector.x*vector.x;
+  if (option1Mag > option2Mag && option1Mag > option3Mag) {
+    other = new CSG.Vector(0, vector.z, -vector.y);
+  } else if (option2Mag > option3Mag) {
+    other = new CSG.Vector(-vector.z, 0, vector.x);
+  } else {
+    other = new CSG.Vector(-vector.y, vector.x, 0);
+  }
+  crossVect = other;
+  return other;
+}
+
+CSG.cone = function (options) {
+  options ||= {};
+  let length = options.length || 10;
+  const start = new CSG.Vector(options.start || [0,0,0]);
+  const end = new CSG.Vector(options.end || start.add([0,length,0]));
+  length = end.minus(start).length();
+  const point = new CSG.sphere({radius: 1, center: end});
+  const radius = options.radius || 5;
+  const slices = options.slices || 16;
+  let cylinder = new CSG.cylinder({start, end, radius, slices});
+  let cone = cylinder.clone();
+  cone.setColor(options.color);
+  const sliceRotation = 360/slices;
+  const rotationVector = end.minus(start).unit();
+  const lengthVector = rotationVector.clone().times(length);
+  const perpVector = perpendicularVector(rotationVector.clone()).times(radius/-2);
+  const widthVector = perpVector.cross(rotationVector).unit().times(30);
+  const cutterCenter = end;
+  const plane = new CSG.Rectangle([30, length*10, radius], cutterCenter, rotationVector.unit(), widthVector.unit());
+  const planeCenter = new CSG.Vector(plane.center());
+  plane.setColor(options.color);
+  plane.translate(perpVector);
+  plane.translate(cutterCenter.negated());
+  plane.ArbitraryRotate(5, widthVector.unit());
+  plane.translate(cutterCenter);
+
+  for (let index = 0; index < slices; index++) {
+    plane.translate(cutterCenter.negated());
+    plane.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+        let newPos = vertex.pos;
+        newPos = ArbitraryRotate(newPos, sliceRotation, rotationVector.unit());
+        return new CSG.Vertex(newPos, vertex.normal);
+      }));
+      plane.translate(cutterCenter);
+      cone = cone.subtract(plane);
+  }
+
+  if(options.model) {
+    const model = options.model.subtract(cylinder);
+    cone = cone.union(model);
+  }
+
+  // const e = rotationVector.times(1000);
+  // const s = cutterCenter;
+  // const p = perpVector.times(100);
+  // const w = widthVector.times(100);
+  // const r = cutterCenter.plus(lengthVector);
+  // // const line = new CSG.Line({start: [s.x,s.y,s.z], end: [e.x,e.y,e.z]});
+  // const line1 = new CSG.Line({start: [0,0,0], end: [w.x,w.y,w.z], color: 'green'});
+  // const line2 = new CSG.Line({start: [0,0,0], end: [p.x,p.y,p.z], color: 'blue'});
+  // const line3 = new CSG.Line({start: [0,0,0], end: [e.x,e.y,e.z], color: 'yellow'});
+  // // const line4 = new CSG.Line({start: [0,0,0], end: [r.x,r.y,r.z], color: 'red'});
+  // return line1.union(line2).union(line3).union(cone);//.union(line4).union(line);//.union(options.model);//cylinder.union(line);
+
+  return cone;
+}
+
+function axis(vector, origin, color, size) {
   origin ||= [0,0,0];
   const end = [vector[0]+origin[0],vector[1]+origin[1],vector[2]+origin[2]]
-  const ax = CSG.cylinder({start: origin, end})
+  const ax = CSG.cylinder({start: origin, end, radius: size/1000})
   ax.setColor(color);
   return ax;
 }
@@ -441,10 +656,10 @@ function axis(vector, origin, color) {
 CSG.axis =  function (size, origin) {
   size ||= 100;
   origin ||= [0,0,0];
-  const center = CSG.sphere({center: origin, radius: size/50})
-  const xAxis = axis([size,0,0], origin, [255,0,0]);
-  const yAxis = axis([0,size,0], origin, [0,128,0]);
-  const zAxis = axis([0,0,size], origin, [0,0,255]);
+  const center = CSG.sphere({center: origin, radius: size/500})
+  const xAxis = axis([size,0,0], origin, [255,0,0], size);
+  const yAxis = axis([0,size,0], origin, [0,128,0], size);
+  const zAxis = axis([0,0,size], origin, [0,0,255], size);
   return center.union(xAxis.union(yAxis).union(zAxis));
 }
 
@@ -515,12 +730,21 @@ CSG.Vector.prototype = {
     return this.dividedBy(this.length());
   },
 
+  distance: function (other) {
+    const vector = this.minus(other);
+    return vector.length();
+  },
+
   cross: function(a) {
     return new CSG.Vector(
       this.y * a.z - this.z * a.y,
       this.z * a.x - this.x * a.z,
       this.x * a.y - this.y * a.x
     );
+  },
+
+  toString: function() {
+    return `(${this.x},${this.y},${this.z})`
   }
 };
 
@@ -538,7 +762,27 @@ CSG.Vertex = function(pos, normal) {
   this.pos = new CSG.Vector(pos);
   this.normal = new CSG.Vector(normal);
   this.toString = () => `(${this.pos.x},${this.pos.y},${this.pos.z})`;
+
+  this.scale = (center, coeficient) => {
+    const centerVector = new CSG.Vector(center);
+    const vector = new CSG.Vector(pos.x - center.x, pos.y - center.y, pos.z - center.z);
+    const scaled = vector.times(coeficient);
+    this.pos = centerVector.plus(scaled);
+  }
 };
+
+CSG.Vertex.Center = function (vertices) {
+  vertices = vertices.map(v => new CSG.Vector(v));
+  const total = {x:0, y:0,z:0};
+  vertices.forEach(v => {
+    total.x += v.x;total.y += v.y;total.z += v.z;
+  })
+  return {
+    x: total.x / vertices.length,
+    y: total.y / vertices.length,
+    z: total.z / vertices.length
+  }
+}
 
 CSG.Vertex.prototype = {
   clone: function() {
@@ -671,6 +915,10 @@ CSG.Polygon.prototype = {
     return new CSG.Polygon(vertices, this.shared);
   },
 
+  scale: function(center, coeficient) {
+    this.vertices.forEach(function(v) { return v.scale(center, coeficient); });
+  },
+
   flip: function() {
     this.vertices.reverse().map(function(v) { v.flip(); });
     this.plane.flip();
@@ -683,6 +931,7 @@ CSG.Polygon.prototype = {
     }
   },
   setColor: function(r, g, b) {
+    if (colors[r]) r = colors[r];
     if (Array.isArray(r)) {
       g = r[1];
       b = r[2];
@@ -691,6 +940,43 @@ CSG.Polygon.prototype = {
     this.shared = [r/255, g/255, b/255];
   }
 };
+
+CSG.Polygon.Enclosed = function (verts, width, color) {
+  width ||= .1;
+  const centerNormal = (verts) => {
+    const center = CSG.Vertex.Center(verts);
+    const v1 = new CSG.Vector(verts[0]).minus(center)
+    const v2 = new CSG.Vector(verts[1]).minus(center)
+    return v1.cross(v2).unit()
+  }
+
+  const normal = centerNormal(verts);
+  const transVert = (normal) => (pos) => {let v = new CSG.Vertex(pos, normal); return translate(v, normal.times(width/2));}
+  const vert = (normal) => (pos) => new CSG.Vertex(pos, normal);
+  const frontVerts = verts.map(vert(normal));
+  let front = new CSG.Polygon(frontVerts);
+
+
+  const backVerts = verts.map(transVert(normal.negated()));
+  let back = new CSG.Polygon(backVerts.map(v => v.clone()).reverse());
+
+  const polys = [front, back];
+  if (width > 0) {
+    for (let index = 0; index < frontVerts.length; index++) {
+      const index2 = (index + 1) % frontVerts.length;
+      let sideVerts = [backVerts[index].pos, backVerts[index2].pos, frontVerts[index2].pos, frontVerts[index].pos];
+      const sideNormal = centerNormal(sideVerts);
+      sideVerts = sideVerts.map((v) => new CSG.Vertex(v, sideNormal));
+      let side = new CSG.Polygon(sideVerts);
+      polys.push(side);
+    }
+  }
+
+  let model = new CSG.fromPolygons(polys);
+  verts.forEach(v => v.color && (model = model.union(new CSG.Point(v, 1, v.color))));
+  model.setColor(color);
+  return model;//model.union(vect);
+}
 
 // # class Node
 
@@ -793,16 +1079,17 @@ CSG.Node.prototype = {
 function ArbitraryRotate(point, degreestheta, radius)
 {
   if (!Number.isFinite(degreestheta)) return point;
+  radius = radius.copy();
   theta = degreestheta * Math.PI/180;
   let p = point;
   let r = radius;
    let q = {x: 0.0, y: 0.0, z: 0.0};
    let costheta,sintheta;
 
-   const Normalise = (obj, attr) => obj[attr] *= obj[attr] > 0 ? 1 : -1;
-   Normalise(r, 'x',);
-   Normalise(r, 'y',);
-   Normalise(r, 'z',);
+   // const Normalise = (obj, attr) => obj[attr] *= obj[attr] > 0 ? 1 : -1;
+   // Normalise(r, 'x',);
+   // Normalise(r, 'y',);
+   // Normalise(r, 'z',);
 
    costheta = Math.cos(theta);
    sintheta = Math.sin(theta);
@@ -843,11 +1130,25 @@ function reverseRotate (point, rotation) {
 }
 
 function transRotate (point, offset, rotation) {
-  let newPos = rotate (offset, rotation);
-  newPos.x += point.x;
-  newPos.y += point.y;
-  newPos.z += point.z;
-  return newPos;
+  let newPos = rotate(offset, rotation);
+  return translate(newPos, offset);
+}
+
+function translate (point, offset) {
+  if (point instanceof CSG.Vertex) {
+    const newPos = point.clone();
+    newPos.pos.x += offset.x;
+    newPos.pos.y += offset.y;
+    newPos.pos.z += offset.z;
+    return newPos;
+
+  } else {
+    const newPos = point.clone();
+    newPos.x += offset.x;
+    newPos.y += offset.y;
+    newPos.z += offset.z;
+    return newPos;
+  }
 }
 
 function transRotateAll (points, offset, rotation) {
@@ -897,9 +1198,146 @@ CSG.ArbitraryRotate = ArbitraryRotate;
 CSG.rotatePointsAroundCenter = rotatePointsAroundCenter;
 CSG.rotatePointAroundCenter = rotatePointAroundCenter;
 CSG.transRotate = transRotate;
+CSG.translate = translate;
 CSG.rotateAll = rotateAll;
 CSG.transRotateAll = transRotateAll;
 CSG.reverseRotateAll = reverseRotateAll;
 CSG.rotate = rotate;
 CSG.reverseRotate = reverseRotate;
 module.exports = CSG;
+
+
+
+
+
+
+function isZero(val) {
+  return Vector3D.tolerance.bounds.i.within(val, 0);
+}
+
+function isZeros() {
+  for (let index = 0; index < arguments.length; index++) {
+    if (!isZero(arguments[index])) return false;
+  }
+  return true;
+}
+
+
+class Vector3D {
+  constructor(i, j, k) {
+    if (i instanceof Vector3D) return i;
+    if (i instanceof Object) {
+      if (i.x !== undefined) {
+        k = i.z;
+        j = i.y;
+        i = i.x;
+      } else {
+        k = i.k;
+        j = i.j;
+        i = i.i;
+      }
+    }
+    // i = isZero(i) ? 0 : i;
+    // j = isZero(j) ? 0 : j;
+    // k = isZero(k) ? 0 : k;
+    this.i = () => i;
+    this.j = () => j;
+    this.k = () => k;
+
+    this.magnitude = () => Math.sqrt(this.i()*this.i() + this.j()*this.j() + this.k()*this.k());
+    this.magnitudeSQ = () => this.i()*this.i() + this.j()*this.j() + this.k()*this.k();
+    this.minus = (vector) => {
+      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+      return new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k());
+    }
+    this.add = (vector) => {
+      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+      return new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k());
+    }
+    this.scale = (coef) => {
+      return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
+    }
+    this.sameDirection = (otherVect) => {
+      // console.warn('Changed this function with out looking into the consequences');
+      return this.dot(otherVect) >= 0;
+      // return approximate.sameSign(otherVect.i(), this.i()) &&
+      //         approximate.sameSign(otherVect.j(), this.j()) &&
+      //         approximate.sameSign(otherVect.k(), this.k());
+    }
+    this.divide = (vector) => {
+      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
+      return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());
+    }
+    this.toArray = () => [this.i(), this.j(), this.k()];
+    this.dot = (vector) =>
+      this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
+    this.perpendicular = (vector) =>
+      Vector3D.tolerance.within(this.dot(vector), 0);
+    this.parrelle = (vector) => {
+      let coef = isZero(this.i()) ? 0 : this.i() / vector.i();
+      if (isZero(coef)) coef = isZero(this.j()) ? 0 : this.j() / vector.j();
+      if (isZero(coef)) coef = isZero(this.k()) ? 0 : this.k() / vector.k();
+      if (isZero(coef)) return false;
+      const equivVect = new Vector3D(vector.i() * coef, vector.j() * coef, vector.k() * coef);
+      return Vector3D.tolerance.within(equivVect, this);
+    }
+    this.crossProduct = (other) => {
+      const i = this.j() * other.k() - this.k() * other.j();
+      const j = this.i() * other.k() - this.k() * other.i();
+      const k = this.i() * other.j() - this.j() * other.i();
+      const mag = Math.sqrt(i*i+j*j+k*k);
+      return new Vector3D(i/mag || 0,j/-mag || 0,k/mag || 0);
+    }
+    this.inverse = () => new Vector3D(this.i()*-1, this.j()*-1, this.k()*-1);
+
+    this.projectOnTo = (v) => {
+      const multiplier = this.dot(v) / v.magnitudeSQ();
+      return v.scale(multiplier);
+    }
+
+    this.hash = () => {
+      let hash = 1;
+      if (i) hash*=i > 0 ? i : -i; else hash*=1000000;
+      if (j) hash*=j > 0 ? j : -j; else hash*=1000000;
+      if (k) hash*=k > 0 ? k : -k; else hash*=1000000;
+      return hash;
+    }
+
+    this.unit = () => {
+      const i = this.i();const j = this.j();const k = this.k();
+      const magnitude = Math.sqrt(i*i+j*j+k*k);
+      return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
+    }
+
+    this.positive = () =>
+      i > 0 || (isZero(i) && j > 0) || (isZeros(i,j) && k > 0) ||
+      isZeros(i, j, k);
+
+    this.positiveUnit = () => {
+      if (this.positive()) return this;
+      if (!this.inverse().positive()) throw new Error('if this happens algorythums will fail 11/07/2023');
+      return this.inverse();
+    }
+
+    this.equals = (vector, tol) => !tol ? Vector3D.tolerance.within(vector, this) :
+                  new Tolerance({i: tol, j: tol, k: tol}).within(vector, this);
+    this.toString = () => `<${i},  ${j},  ${k}>`;
+  }
+}
+
+const tol = .00000001;
+
+Vector3D.mostInLine = (vectors, target) => {
+  let closest;
+  target = target.unit();
+  for (let index = 0; index < vectors.length; index++) {
+    const vector = vectors[index];
+    const dist = vector.minus(target).magnitude();
+    if (closest === undefined || closest.dist > dist) {
+      closest = {dist, vector};
+    }
+  }
+  return closest.vector;
+}
+
+// module.exports = Vector3D;

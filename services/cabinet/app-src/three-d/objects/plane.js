@@ -1,4 +1,4 @@
-const CSG = require('../../../public/js/3d-modeling/csg.js');
+const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 const Vector3D = require('vector');
 const Vertex3D = require('vertex');
 const Matrix = require('matrix');
@@ -196,8 +196,8 @@ class Plane extends Array {
 
       if (Math.abs(dot) > epsilon) {
         let w = vect0.minus(planePoint);
-        let fac = -planeNormal.dot(w) / dot;
-        u = u.scale(fac);
+        let frac = -planeNormal.dot(w) / dot;
+        u = u.scale(frac);
         const intersection = new Vertex3D(vect0.add(u));
         if (segment) {
           if (frac <= 1 && frac >= 0) return intersection;

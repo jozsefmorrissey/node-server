@@ -1,5 +1,5 @@
 
-const CSG = require('../../../public/js/3d-modeling/csg.js');
+const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 const Line3D = require('line');
 const Vector3D = require('vector');
 const Vertex3D = require('vertex');

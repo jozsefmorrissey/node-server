@@ -58,7 +58,7 @@ function boundsFunc(attr, attributeMap, tolerance, absoluteValue) {
 const stringTolReg = /\+(([0-9]{1,}|)(\.[0-9]{1,}|))/;
 function withinBounds(attr, attributeMap, tolerance, absoluteValue) {
   const props = parseTolAbs(attr, attributeMap, tolerance, absoluteValue);
-  return (value1, value2) => {
+  const func = (value1, value2) => {
     if (props.absoluteValue) {
       value1 = Math.abs(value1);
       value2 = Math.abs(value2);
@@ -66,6 +66,10 @@ function withinBounds(attr, attributeMap, tolerance, absoluteValue) {
     if (value1 === value2) return true;
     return Math.abs(value1 - value2) < props.tolerance;
   }
+  func.tolerance = props.tolerance;
+  func.absoluteValue = props.absoluteValue;
+  func.singleValue = props.singleValue;
+  return func;
 }
 
 class Tolerance {
@@ -83,7 +87,18 @@ class Tolerance {
       within = withinBounds(undefined, undefined, tolerance, absoluteValue);
     }
 
-    this.finalAttr = () => attrs[attrs.length - 1];
+    this.attributes = () => attrs.map(a => a);
+
+    this.elemHash = (elem) => {
+      if (singleValue) return elem.toString().hash();
+      if (!elem._TOLERANCE_ID) elem._TOLERANCE_ID = String.random();
+      let str = elem._TOLERANCE_ID;
+      for (let index = 0; index < attrs.length; index++) {
+        const attr = attrs[index];
+        str += ':' + Object.pathValue(elem, attr);
+      }
+      return str.hash();
+    }
 
     this.details = (elem) => {
       if (singleValue) return bounds(elem);

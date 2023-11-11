@@ -4,7 +4,7 @@ const Vector3D = require('./vector');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex');
 const approximate = require('../../../../../public/js/utils/approximate.js');
 const approx10 = approximate.new(10);
-const CSG = require('../../../public/js/3d-modeling/csg.js');
+const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 

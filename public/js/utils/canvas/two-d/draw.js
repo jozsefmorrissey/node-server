@@ -219,7 +219,7 @@ class Draw2d {
     }
 
     draw.text = (text, point, props) => {
-      if (draw.canvas().simple) return;
+      if (text === undefined || draw.canvas().simple) return;
       props ||= {};
       point = new Vertex2d(point);
       text = '' + text;

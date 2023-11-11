@@ -1,6 +1,6 @@
 
 
-const CSG = require('../../../public/js/3d-modeling/csg');
+const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 const Polygon3D = require('../objects/polygon.js');
 const BiPolygon = require('../objects/bi-polygon.js');
 

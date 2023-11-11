@@ -9,7 +9,7 @@ const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const within = Tolerance.within(.0000001);
 
-const CSG = require('../../../public/js/3d-modeling/csg.js');
+const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 let lastMi;
 
 const place = (vert, no, one, two, three) => {
@@ -472,6 +472,39 @@ class Polygon3D {
       const dist2 = tar.startVertex.distance(line.endVertex);
       return dist1 <  dist2 ? dist1 : dist2;
     }
+
+    this.distance = (other) => {
+      let overlaps = false;
+      const normal = this.normal();
+      const thisView = this.viewFromVector(normal);
+      const otherView = other.viewFromVector(normal);
+      const thisVVerts = otherView.vertices();
+      const otherVVerts = other.vertices();
+      for (let index = 0; !overlaps && index < thisVVerts.length; index++) {
+        overlaps = otherView.isWithin2d(thisVVerts[index], false, 'x', 'y');
+      }
+      for (let index = 0; !overlaps && index < otherVVerts.length; index++) {
+        overlaps = thisView.isWithin2d(otherVVerts[index], false, 'x', 'y');
+      }
+      if (overlaps) {
+        const center = this.center();
+        const line = new Line3D(center.clone(), center.clone().translate(normal));
+        const intersection = other.toPlane().intersection.line(line);
+        return new Line3D(center, intersection).length();
+      } else {
+        const thisVerts = this.vertices();
+        const otherVerts = other.vertices();
+        let minDistance = Number.MAX_SAFE_INTEGER;
+        for (let index = 0; index < thisVerts.length; index++) {
+          for (let odex = 0; odex < otherVerts.length; odex++) {
+             const dist = thisVerts[index].distance(otherVerts[odex]);
+             if (dist < minDistance) minDistance = dist;
+          }
+        }
+        return minDistance;
+      }
+    }
+
     this.merge = (other) => {
       if (!this.normal().parrelle(other.normal())) return;
       const thisPlane = this.toPlane();
@@ -522,7 +555,7 @@ class Polygon3D {
       }
     }
 
-    this.viewFromVector = () => Polygon3D.viewFromVector([this])[0];
+    this.viewFromVector = (vector) => Polygon3D.viewFromVector([this], vector)[0];
     this.mostInformation = () => Polygon3D.mostInformation([this])[0];
 
     this.to2D = (x, y) => {
@@ -546,6 +579,16 @@ class Polygon3D {
       const poly2d = this.to2D(x, y);
       const vert2d = vertex.to2D(x, y);
       return poly2d.isWithin(vert2d, exclusive);
+    }
+
+    this.intersection = {};
+    this.intersection.line = (line, exclusive) => {
+      const planeIntersection = this.toPlane().intersection.line(line);
+      if (!planeIntersection) return null;
+      const ortho = this.viewFromVector(line.vector());
+      const interView = planeIntersection.viewFromVector(line.vector())[0];
+      if (ortho.isWithin2d(interView, exclusive, 'x', 'y')) return planeIntersection;
+      return null;
     }
 
     this.toString = () => {
@@ -646,6 +689,15 @@ Polygon3D.toTwoD = (polygons, vector, axis) => {
   return twoDlines;
 }
 
+Polygon3D.parrelleSets = (polygons, tolerance) => {
+  const tolmap = new ToleranceMap({'normal.positiveUnit.i': tolerance,
+                                  'normal.positiveUnit.j': tolerance,
+                                  'normal.positiveUnit.k': tolerance});
+  tolmap.addAll(polygons);
+  const groups = tolmap.group();
+  return groups;
+}
+
 Polygon3D.toThreeView = (polygons, normals, gap) => {
   const ThreeView = require('../../../../../public/js/utils/canvas/two-d/objects/three-view.js');
   return new ThreeView(polygons, normals, gap);
@@ -689,10 +741,19 @@ Polygon3D.fromVectorObject =
 }
 
 Polygon3D.fromLines = (lines) => {
+  lines = lines.map(l => l.clone());
+  const center = Vertex3D.center(...Line3D.vertices(lines));
+  const radialLine = new Line3D(center, lines[0].startVertex);
+  const normalVector = radialLine.vector().crossProduct(new Line3D(center, lines[0].endVertex).vector());
+  Line3D.radialSort(lines, center, normalVector);
   const verts = [];
   for (let index = 0; index < lines.length; index += 1) {
-    if (!lines[index].startVertex.equals(lines[Math.mod(index - 1, lines.length)].endVertex)) throw new Error('Lines must be connected');
-    verts.push(lines[index].startVertex);
+    const nextLine = lines[index];
+    const targetLine = lines[Math.mod(index - 1, lines.length)];
+    if (!nextLine.startVertex.equals(targetLine.endVertex)) {
+      verts.push(targetLine.endVertex);
+    }
+    verts.push(nextLine.startVertex);
   }
   return new Polygon3D(verts);
 }

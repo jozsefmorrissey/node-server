@@ -20,6 +20,6 @@
   <div>
   </div>
   <div class="expand-body {{type()}}" ex-list-id='{{id()}}' key='{{activeKey()}}'>
-    {{getBody(active())}}
+    {{active() && getBody(active())}}
   </div>
 </div>

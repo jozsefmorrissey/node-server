@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <script type="text/javascript" src='/canvas-buddy/js/index.js'></script>
+    <link rel="stylesheet" href="/styles/expandable-list.css">
     <link rel="stylesheet" href="/canvas-buddy/styles/index.css">
     <style>
       .inline-flex{ display: inline-flex}
@@ -14,6 +15,12 @@
     <div class='inline-flex'>
       <div>
         <div>
+          <div class='center'>
+            <label>2D</label>
+            <input type='radio' name='parcer' value='2D'>
+            <label>3D</label>
+            <input type='radio' name='parcer' value='3D' checked>
+          </div>
           <textarea rows='40' cols='50'></textarea>
         </div>
         <div>
@@ -22,7 +29,12 @@
         </div>
       </div>
       <div>
-        <canvas>
+        <div id='two-d-display' hidden>
+          <canvas></canvas>
+        </div>
+        <div id='three-d-display'>
+          <div class='orientation-controls'></div>
+        </div>
       </div>
     </div>
   </body>

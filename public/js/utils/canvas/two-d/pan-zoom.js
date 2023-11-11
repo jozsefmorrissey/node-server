@@ -121,18 +121,28 @@ class PanZoom {
         instance.wake();
     }
 
+    let active = true;
+    this.oft = (on_off_toggle) => {
+      if (on_off_toggle === true) active = true;
+      if (on_off_toggle === false) active = false;
+      if (on_off_toggle === null) active = !active;
+      return active
+    }
+    function  activeListener(func) {
+      return (...args) => active && func(...args);
+    }
     function setupMouse(e) {
-        e.addEventListener('mousemove', mouseMove);
-        e.addEventListener('mousedown', mouseMove);
-        e.addEventListener('mouseup', mouseMove);
-        e.addEventListener('mouseout', mouseMove);
-        e.addEventListener('mouseover', mouseMove);
-        e.addEventListener('mousewheel', mouseMove);
-        e.addEventListener('DOMMouseScroll', mouseMove); // fire fox
+        e.addEventListener('mousemove', activeListener(mouseMove));
+        e.addEventListener('mousedown', activeListener(mouseMove));
+        e.addEventListener('mouseup', activeListener(mouseMove));
+        e.addEventListener('mouseout', activeListener(mouseMove));
+        e.addEventListener('mouseover', activeListener(mouseMove));
+        e.addEventListener('mousewheel', activeListener(mouseMove));
+        e.addEventListener('DOMMouseScroll', activeListener(mouseMove)); // fire fox
 
-        e.addEventListener("contextmenu", function (e) {
+        e.addEventListener("contextmenu", activeListener(function (e) {
             e.preventDefault();
-        }, false);
+        }), false);
     }
     setupMouse(canvas);
 

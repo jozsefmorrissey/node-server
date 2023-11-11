@@ -179,3 +179,15 @@
   border-radius: 5pt;
   box-shadow: 3px 3px 6px black, 3px 3px 6px grey, 3px 3px 6px lightgrey;
 }
+
+
+.orientation-arrows-table, .orientation-arrows-table > tbody,
+.orientation-arrows-table > tbody > tr, .orientation-arrows-table > tbody > tr > td {
+  border: none;
+}
+
+.orientation-arrows {
+  position: absolute;
+  bottom: 0;
+  right: 10px;
+}

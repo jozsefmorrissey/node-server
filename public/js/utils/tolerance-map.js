@@ -15,7 +15,7 @@ class ToleranceMap {
   constructor(attributeMap, toleranceMap, absoluteValue) {
     const map = toleranceMap || {};
     const tolerance = new Tolerance(attributeMap, null, absoluteValue);
-    const finalAttrSort = sortByAttr(tolerance.finalAttr());
+    const instance = this;
 
     this.clone = () => {
       const tMap = new ToleranceMap(attributeMap);
@@ -57,7 +57,7 @@ class ToleranceMap {
 
       if (attrIndex === 0) {
         const matchList = list.filter((other) => tolerance.within(elem, other));
-        matchList.sort(finalAttrSort);
+        matchList.sortByAttrs(tolerance.attributes());
         return matchList;
       }
     }
@@ -83,14 +83,14 @@ class ToleranceMap {
     this.maxSet = () => {
       const maxSet = [];
       forEachSet((set) => maxSet.push(set[0]));
-      maxSet.sort(finalAttrSort);
+      maxSet.sortByAttrs(tolerance.attributes());
       maxSet.reverse();
       return maxSet;
     }
     this.minSet = () => {
       const minSet = [];
       forEachSet((set) => minSet.push(set[set.length - 1]));
-      minSet.sort(finalAttrSort);
+      minSet.sortByAttrs(tolerance.attributes());
       return minSet;
     }
     this.forEach = (func, detailed) => {
@@ -113,7 +113,7 @@ class ToleranceMap {
     this.add = (elem) => {
       let matchArr = getSet(elem);
       matchArr.push(elem);
-      matchArr.sort(finalAttrSort);
+      matchArr.sortByAttrs(tolerance.attributes());
     }
 
     this.remove = (elem) => {
@@ -124,6 +124,7 @@ class ToleranceMap {
       }
     }
 
+    // TODO: this filters the existing map... not a good idea.
     this.filter = (elem, filter) => {
       const matchArr = matches(elem);
       const filtered = filter(Array.from(matchArr), elem);
@@ -140,13 +141,91 @@ class ToleranceMap {
       }
     }
 
+    function averageObject(list) {
+      const obj = {};
+      const attrs = Object.keys(attributeMap);
+      for (let index = 0; index < attrs.length; index++) {
+        Object.pathValue(obj, attrs[index], 0);
+      }
+      for (let index = 0; index < list.length; index++) {
+        for (let aIndex = 0; aIndex < attrs.length; aIndex++) {
+          const path = attrs[aIndex];
+          const currTotal = Object.pathValue(obj, path);
+          const addValue = Object.pathValue(list[index], path) / list.length;
+          Object.pathValue(obj, path, currTotal + addValue);
+        }
+      }
+      return obj;
+    }
+
+    function bestGroup(list) {
+      const avgObj = averageObject(list);
+      return instance.matches(avgObj);
+    }
+
+    this.distance = (elem1, elem2) => {
+      const maxDist = 0;
+      const attrs = Object.keys(attributeMap);
+      for (let aIndex = 0; aIndex < attrs.length; aIndex++) {
+        const path = attrs[aIndex];
+        const val1 = Object.pathValue(elem1, path);
+        const val2 = Object.pathValue(elem2, path);
+        const tol = tolerance.bounds[path].within.tolerance;
+        const dist = Math.abs(val1 - val2) / tol;
+        if (dist > maxDist) maxDist = dist;
+      }
+      return maxDist;
+    }
+
+    const filterAlreadyFound = (spokenFor, onDeck) => (e) => {
+      const hash = tolerance.elemHash(e);
+      return !spokenFor[hash] && !onDeck[hash];
+    }
+
+    this.group = () => {
+      const values = this.values();
+      const spokenFor = {};
+      const groups = [];
+      const matches = [];
+      while (values.length > 0) {
+        const elem = values[0];
+        const onDeck = {};
+        let newMatches = this.matches(elem)
+                          .filter(filterAlreadyFound(spokenFor, onDeck));
+        newMatches.forEach(e => onDeck[tolerance.elemHash(e)] = true);
+        let moreMatchesFound = true;
+        while(moreMatchesFound) {
+          const startMatches = this.matches(newMatches[0])
+                                .filter(filterAlreadyFound(spokenFor, onDeck));
+          const endMatches = this.matches(newMatches[newMatches.length - 1])
+                                .filter(filterAlreadyFound(spokenFor, onDeck));
+          if (startMatches.length > 0 && endMatches.length > 0) {
+            if (this.distance(startMatches[0], endMatches[endMatches.length - 1]) < 3) {
+              newMatches = startMatches.concat(newMatches.concat(endMatches));
+              newMatches.forEach(e => onDeck[tolerance.elemHash(e)] = true);
+              moreMatchesFound = true;
+            } else moreMatchesFound = false;
+          }
+          else moreMatchesFound = false;
+        }
+        const group = bestGroup(newMatches);
+        for (let index = 0; index < group.length; index++) {
+          spokenFor[tolerance.elemHash(group[index])] = true;
+          values.splice(values.indexOf(group[index]), 1);
+        }
+        groups.push(group);
+      }
+      // TODO: I should sort this... but too lazy;
+      return groups;
+    }
+
     this.addAll = (list) => {
       for (let index = 0; index < list.length; index++) {
         const elem = list[index];
         let matchArr = getSet(elem);
         matchArr.push(elem);
+        matchArr.sortByAttrs(tolerance.attributes());
       }
-      matchArr.sort(finalAttrSort);
     }
 
     this.map = () => map;

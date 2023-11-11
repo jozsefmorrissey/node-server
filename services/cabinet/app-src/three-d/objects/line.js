@@ -4,7 +4,9 @@ const Vertex3D = require('./vertex');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
 const Plane = require('./plane');
 const FixedValue = require('./fixed-value');
-const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(.00000001).within;
+const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+const tol = .00000001;
+const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(tol).within;
 
 const zero = (val) => {
   if (withinTol(val, 0)) return 0
@@ -21,6 +23,15 @@ class Line3D {
 
     this.clone = () => new Line3D(this.startVertex.clone(), this.endVertex.clone());
 
+    this.invert = () => {
+      const temp = [this.startVertex.x, this.startVertex.y, this.startVertex.z];
+      this.startVertex.x = this.endVertex.x;
+      this.startVertex.y = this.endVertex.y;
+      this.startVertex.z = this.endVertex.z;
+      this.endVertex.x = temp[0];
+      this.endVertex.y = temp[1];
+      this.endVertex.z = temp[2];
+    }
     this.negitive = () => new Line3D(this.endVertex, this.startVertex);
     this.equals = (other) => this.startVertex && this.endVertex && other &&
         this.startVertex.equals(other.startVertex) && this.endVertex.equals(other.endVertex);
@@ -85,6 +96,8 @@ class Line3D {
       (this.endVertex.z +this.startVertex.z) / 2
     );
 
+    this.viewFromVector = (vector) => Line3D.viewFromVector([this], vector)[0];
+
     this.length = () => this.vector().magnitude();
 
     this.fromStart = (distance) => this.startVertex.translate(this.vector().unit().scale(distance), true);
@@ -108,6 +121,7 @@ class Line3D {
     }
 
     this.polarize = (vertex) => {
+      vertex ||= {x:0, y:0, z:0}
       if (this.startVertex.distance(vertex) > this.endVertex.distance(vertex)) {
         const temp = this.startVertex;
         this.startVertex = this.endVertex;
@@ -152,6 +166,17 @@ class Line3D {
                             trendSetter.endVertex.distance(this.startVertex);
       if (shouldReverse) return this.negitive();
       return this;
+    }
+
+    this.acquies = (trendSetter) => {
+      const acLine = this.acquiescent(trendSetter);
+      const temp = [this.startVertex.x, this.startVertex.y, this.startVertex.z];
+      this.startVertex.x = acLine.endVertex.x;
+      this.startVertex.y = acLine.endVertex.y;
+      this.startVertex.z = acLine.endVertex.z;
+      this.endVertex.x = temp[0];
+      this.endVertex.y = temp[1];
+      this.endVertex.z = temp[2];
     }
 
     this.combineOrder = (other) => Line3D.combineOrder(this, other);
@@ -394,18 +419,60 @@ Line3D.combineOrder = (line1, line2) => {
   return verts;
 }
 
+Line3D.averageLine = (lines) => {
+  const startPoint = {x: 0, y:0, z:0};
+  const endPoint = {x: 0, y:0, z:0};
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index].polarize({x: 0, y:0, z:0});
+    startPoint.x += line.startVertex.x / lines.length;
+    startPoint.y += line.startVertex.y / lines.length;
+    startPoint.z += line.startVertex.z / lines.length;
+    endPoint.x += line.endVertex.x / lines.length;
+    endPoint.y += line.endVertex.y / lines.length;
+    endPoint.z += line.endVertex.z / lines.length;
+  }
+  return new Line3D(startPoint, endPoint);
+}
 
-// const testRun = () => {
-//   const instStartTime = new Date().getTime();
-//   for (let index = 0; index < 900000; index++) {
-//     const start = new Vertex3D(1,2,3);
-//     const end = new Vertex3D(2,3,4);
-//     new Line3D(start, end).toString();
-//   }
-//   const instEndTime = new Date().getTime();
-//   const instTime = instEndTime - instStartTime;
-//
-//   console.log(instTime);
-// }
+function radianDifference(center, line1, line2) {
+  const v1 = line1.startVertex;
+  const v2 = line1.endVertex;
+  const v3 = line2.startVertex;
+  const v4 = line2.endVertex;
+
+}
+
+function radianlyOrientLine(center, line, line2d) {
+  const radial1 = new Line2d(center, line2d.startVertex());
+  const radial2 = new Line2d(center, line2d.endVertex());
+  if (radial2.thetaBetween(radial1) < Math.PI) {
+    line.invert();
+  }
+}
+
+Line3D.radialSorter = (center, vector) => (line1, line2) => {
+  const line12d = line1.viewFromVector(vector).to2D('x', 'y');
+  const line22d = line2.viewFromVector(vector).to2D('x', 'y');
+  radianlyOrientLine(center, line1, line12d);
+  radianlyOrientLine(center, line2, line22d);
+  const radial1 = new Line2d(center, line12d.midpoint());
+  const radial2 = new Line2d(center, line22d.midpoint());
+  return radial1.radians() - radial2.radians();
+}
+
+Line3D.radialSort = (lines, center, vector) => {
+  lines.sort(Line3D.radialSorter(center, vector));
+}
+
+Line3D.parrelleSets = (lines, tolerance) => {
+  tolerance ||= tol;
+  const tolmap = new ToleranceMap({'vector.positiveUnit.i': tolerance,
+                                  'vector.positiveUnit.j': tolerance,
+                                  'vector.positiveUnit.k': tolerance});
+  tolmap.addAll(lines);
+  const groups = tolmap.group();
+  return groups;
+}
+
 
 module.exports = Line3D;

@@ -132,6 +132,7 @@ class Line2d {
       const yOffset = line.endVertex().y() - line.startVertex().y();
       this.startVertex().translate(xOffset, yOffset);
       this.endVertex().translate(xOffset, yOffset);
+      return this;
     }
 
     this.length = (value) => {
@@ -268,7 +269,7 @@ class Line2d {
 
     this.isOn = (vertex) => {
       const y = this.y(vertex.x());
-      return (y === vertex.y() || Math.abs(y) === Infinity) && this.withinSegmentBounds(vertex);
+      return (withinTol(y, vertex.y()) || Math.abs(y) === Infinity) && this.withinSegmentBounds(vertex);
     }
 
     this.measureTo = (verts) => {
@@ -359,20 +360,16 @@ class Line2d {
       return Line2d.startAndTheta(mp, rotated.radians(), distance);
     }
 
+    this.perpendicular.connect = (vertex) => {
+      const perpLine = this.perpendicular(null, vertex);
+      const intersection = perpLine.findIntersection(this);
+      return new Line2d(intersection, vertex);
+    }
+
     this.rotate = (radians, pivot) => {
       pivot ||= this.midpoint();
-
-      const sv = this.startVertex();
-      const spl = new Line2d(pivot, sv);
-      const sRadOffset = radians + spl.radians();
-      const sfl = Line2d.startAndTheta(pivot, sRadOffset, spl.length());
-      sv.point(sfl.endVertex());
-
-      const ev = this.endVertex();
-      const epl = new Line2d(pivot, ev);
-      const eRadOffset = radians + epl.radians();
-      const efl = Line2d.startAndTheta(pivot, eRadOffset, epl.length());
-      ev.point(efl.endVertex());
+      this.startVertex().rotate(radians, pivot);
+      this.endVertex().rotate(radians, pivot);
       return this;
     }
 
@@ -503,10 +500,7 @@ class Line2d {
     }
 
     this.isParrelle = (other) => {
-      const posRads = Math.mod(this.radians(), 2*Math.PI);
-      const negRads = Math.mod(this.radians() + Math.PI, 2*Math.PI);
-      const otherRads = Math.mod(other.radians(), 2*Math.PI);
-      return withinTol(posRads, otherRads) || withinTol(negRads, otherRads);
+      return Math.modTolerance(this.radians(), other.radians(), Math.PI, tol);
     }
 
     this.radianDifference = (other) => {
@@ -660,12 +654,19 @@ class Line2d {
       this.endVertex().point().y = newEnd.y;
     };
 
+    // TODO: figure out where this is used and fix. should use radians to determine acquiescence
     this.acquiescent = (trendSetter) => {
       if (!(trendSetter instanceof Line2d)) return this;
       const shouldReverse = trendSetter.endVertex().distance(this.endVertex()) <
                             trendSetter.endVertex().distance(this.startVertex());
       if (shouldReverse) return this.negitive();
       return this;
+    }
+
+    this.invert = () => {
+      const temp = this.startVertex().point();
+      this.startVertex().point(this.endVertex().point());
+      this.endVertex().point(temp);
     }
 
     this.negitive = () => new Line2d(this.endVertex(), this.startVertex());
@@ -730,6 +731,10 @@ Line2d.vertices = (lines) => {
   }
   return Object.values(verts);
 }
+
+Line2d.center = (lines) => Vertex2d.center(Line2d.vertices(lines));
+
+Line2d.rotate = (lines, radians, pivot) => lines.forEach(l => l.rotate(radians, pivot));
 
 Line2d.consolidate = (...lines) => {
   // TODO: this should be absSlope...
@@ -927,6 +932,17 @@ const perpInterSectDist = (line, vertex, other, perpendicular) => {
   const intersection = other.findSegmentIntersection(line);
   const dist = intersection ? vertex.distance(intersection) : null;
   return {intersection, dist, vertex, line, other};
+}
+
+Line2d.sorter = (center, degrees) => (l1, l2) => {
+  let line1 = new Line2d(center.clone(), l1.midpoint());
+  let line2 = new Line2d(center.clone(), l2.midpoint());
+  if (degrees) {
+    const rads = Math.toRadians(degrees);
+    line1.rotate(rads, center);
+    line2.rotate(rads, center);
+  }
+  return line2.degrees() - line1.degrees();
 }
 
 Line2d.between = (lineOvert1, lineOvert2) => {

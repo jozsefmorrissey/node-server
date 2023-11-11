@@ -1,5 +1,5 @@
 
-const CSG = require('../../../public/js/3d-modeling/csg.js');
+const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 const SimpleModel = require('./simple');
 
 class Toilet extends SimpleModel {

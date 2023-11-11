@@ -104,7 +104,14 @@ class Vector3D {
     this.positive = () =>
       i > 0 || (isZero(i) && j > 0) || (isZeros(i,j) && k > 0) ||
       isZeros(i, j, k);
-    this.equals = (vector, tol) => !tol ? Vector3D.tolerance.within(vector, this) : 
+
+    this.positiveUnit = () => {
+      if (this.positive()) return this;
+      if (!this.inverse().positive()) throw new Error('if this happens algorythums will fail 11/07/2023');
+      return this.inverse();
+    }
+
+    this.equals = (vector, tol) => !tol ? Vector3D.tolerance.within(vector, this) :
                   new Tolerance({i: tol, j: tol, k: tol}).within(vector, this);
     this.toString = () => `<${i},  ${j},  ${k}>`;
   }

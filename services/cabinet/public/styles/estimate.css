@@ -331,13 +331,25 @@ a {
   top: 5%;
 }
 
+.upside-down {
+  transform: rotate(180deg);
+}
+
+.cut-info-cnt {
+  font-size: small;
+}
+
+.cut-info-cnt > b {
+  font-size: medium;
+}
+
 #app {
   position: absolute;
 }
 
 #order-display-cnt > #model-cnt {
   position: fixed;
-  top: 15%;
+  top: 5%;
 }
 
 .inline {
@@ -493,17 +505,6 @@ td[dir] {
   font-size: 20pt;
 }
 
-.orientation-arrows-table, .orientation-arrows-table > tbody,
-.orientation-arrows-table > tbody > tr, .orientation-arrows-table > tbody > tr > td {
-  border: none;
-}
-
-.orientation-arrows {
-  position: absolute;
-  bottom: 0;
-  right: 10px;
-}
-
 #header-input {
   padding: 5pt 10pt;
   border: none;
@@ -523,4 +524,9 @@ td[dir] {
 .ruler.active {
   background-color: black;
   color: white;
+}
+
+.part-cnt {
+  overflow: auto;
+  max-height: 40vh;
 }

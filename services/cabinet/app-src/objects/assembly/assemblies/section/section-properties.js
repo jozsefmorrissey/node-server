@@ -7,7 +7,7 @@ const BiPolygon = require('../../../../three-d/objects/bi-polygon.js');
 const KeyValue = require('../../../../../../../public/js/utils/object/key-value.js');
 const Assembly = require('../../assembly.js');
 const Cutter = require('../cutter.js');
-const CSG = require('../../../../../public/js/3d-modeling/csg.js');
+const CSG = require('../../../../../../../public/js/utils/3d-modeling/csg.js');
 const DividerSection = require('./partition/divider.js');
 const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
@@ -635,14 +635,12 @@ class SectionProperties extends KeyValue{
       } else {
         const length = point1.distance(point2) + jointOffset - right.panelThickness()/2;
         Line3D.adjustVertices(point1, point2, length, true);
-        instance.dividerJoint.zero(divider.panel(), right.panel(), 'right');
       }
       if (!(left instanceof DividerSection)) {
         Line3D.adjustVertices(point2, point1, maxLen, true);
       } else {
         const length = point1.distance(point2) + jointOffset - left.panelThickness()/2;
         Line3D.adjustVertices(point2, point1, length, true);
-        instance.dividerJoint.zero(divider.panel(), left.panel(), 'left');
       }
     }
 
@@ -773,11 +771,31 @@ class SectionProperties extends KeyValue{
       for (let index = 0; index < sectionCutters.length; index++) {
         const cutter = sectionCutters[index];
         const locId = cutter.reference().partCode(true);
-        divider.panel().addJoints(new Joint(cutter.partCode(true), divider.panel().partCode(true), null, locId));
+        divider.addJoints(new Joint(cutter.partCode(true), divider.partCode(true), null, locId));
       }
     }
 
     this.borders = () => [this.right, this.left, this.top, this.bottom, this.back]
+
+    function addNieghborJoints(divider) {
+      if (instance.root() !== instance) {
+        if (instance.parentAssembly().isVertical()) {
+          const top = instance.top();
+          const bottom = instance.bottom();
+          const topDivider = top instanceof DividerSection ? top.panel() : top;
+          const bottomDivider = bottom instanceof DividerSection ? bottom.panel() : bottom;
+          instance.dividerJoint.zero(divider.panel(),topDivider, 'top');
+          instance.dividerJoint.zero(divider.panel(), bottomDivider, 'bottom');
+        } else {
+          const left = instance.left();
+          const right = instance.right();
+          const leftDivider = left instanceof DividerSection ? left.panel() : left;
+          const rightDivider = right instanceof DividerSection ? right.panel() : right;
+          instance.dividerJoint.zero(divider.panel(),leftDivider, 'left');
+          instance.dividerJoint.zero(divider.panel(), rightDivider, 'right');
+        }
+      }
+    }
 
     this.addJoints = (divider) => {
       divider ||= this.divider();
@@ -785,15 +803,17 @@ class SectionProperties extends KeyValue{
       const cabinet = instance.getCabinet();
       if (cabinet === undefined) return;
       const panel = divider.panel();
+      addNieghborJoints(divider);
       const subAssems = [];//Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Auto|Section)/))
       subAssems.concatInPlace(divider.parentAssembly().borders().map(f => f().panel ? f().panel() : f()));
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
         this.dividerJoint.zero(panel, assem, panel.partCode(true));
       }
-      this.addCutters(divider);
+      this.addCutters(panel);
     }
 
+    let initialized = false;
     const initialze = (target) => () => {
       const parent = target.parentAssembly();
       if (instance.getCabinet()) {

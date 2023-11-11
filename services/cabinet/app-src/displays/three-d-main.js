@@ -1,6 +1,6 @@
 
 
-// const CSG = require('../../public/js/3d-modeling/csg');
+// const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
 
 const Assembly = require('../objects/assembly/assembly');
 const Handle = require('../objects/assembly/assemblies/hardware/pull.js');

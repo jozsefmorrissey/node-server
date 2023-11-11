@@ -92,9 +92,13 @@ class Builder {
       fileOdir = fileOdir.trim().replace(/^(.*?)\/*$/, '$1');
       positions[fileOdir] = position++;
       const stat = fs.stat(fileOdir, function(err, stats) {
-        stats.name = fileOdir;
-        if (stats.isDirectory() || stats.isFile()){
-          watch(stats);
+        if (stats === undefined) {
+          console.error(`Location: ${fileOdir}\n\tHas the following error:\n\t\t${err}`);
+        } else {
+          stats.name = fileOdir;
+          if (stats.isDirectory() || stats.isFile()){
+            watch(stats);
+          }
         }
       });
       return this;

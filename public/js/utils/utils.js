@@ -78,7 +78,7 @@ class Event {
     this.trigger = (info) => {
       const run = !triggered;
       triggered = info;
-      if (run) list.sortByAttr('orderIndex').forEach(fo => fo.func(info));
+      if (run) list.sortByAttrs('orderIndex').forEach(fo => fo.func(info));
     }
     return ;
   }
@@ -870,23 +870,35 @@ Function.safeStdLibAddition(Array, 'concatInPlace', function (arr, checkForDupli
   }
 });
 
-function sortByAttr(attr) {
+function sortByAttrs(attrs, reverse) {
   function sort(obj1, obj2) {
-    const val1 = Object.pathValue(obj1, attr);
-    const val2 = Object.pathValue(obj2, attr);
-    if (val2 === val1) {
-      return 0;
+    for (let index = 0; index < attrs.length; index++) {
+      const attr = attrs[index];
+      const val1 = Object.pathValue(obj1, attr);
+      const val2 = Object.pathValue(obj2, attr);
+      if (index === attrs.length && val2 === val1) {
+        return 0;
+      }
+      if (val2 !== val1) {
+        if (reverse) {
+          return val1 > val2 ? -1 : 1;
+        }
+        return val1 > val2 ? 1 : -1;
+      }
     }
-    return val1 > val2 ? 1 : -1;
   }
   return sort;
 }
 
 const nativeSort = Array.sort;
-Function.safeStdLibAddition(Array, 'sortByAttr', function(stringOfunc) {
+Function.safeStdLibAddition(Array, 'sortByAttr', function(stringOfunc, reverse) {
   if ((typeof stringOfunc) === 'string')
-    return this.sort.apply(this, [sortByAttr(stringOfunc)]);
+    return this.sort.apply(this, [sortByAttrs([stringOfunc], reverse)]);
   return this.sort.apply(this, arguments);
+});
+
+Function.safeStdLibAddition(Array, 'sortByAttrs', function(list, reverse) {
+  return this.sort.apply(this, [sortByAttrs(list, reverse)]);
 });
 
 Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {

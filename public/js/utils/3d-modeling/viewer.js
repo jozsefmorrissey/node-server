@@ -1,7 +1,7 @@
 
 
 
-const du = require('../../../../../public/js/utils/dom-utils.js');
+const du = require('../dom-utils.js');
 const CSG = require('./csg.js');
 const GL = require('./lightgl.js');
 

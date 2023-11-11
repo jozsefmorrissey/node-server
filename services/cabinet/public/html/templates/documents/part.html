@@ -1,6 +1,9 @@
-<div class='font-medium'>
+<div class='font-medium part-cnt'>
   {{info.parts.length}}) {{disp.demensions(info.dems)}} {{disp.partCodes(info.parts)}}
-  <div:t class='tab font-medium' repeat='cutInfo in info.cutList'>
+  <br>
+  <span class='tab' id='{{viewContainer(info.views.left)}}'></span>
+  <span class='tab' id='{{viewContainer(info.views.right)}}'></span>
+  <div:t class='cut-info-cnt tab font-medium' repeat='cutInfo in info.cutList'>
     {{cutDisplay(cutInfo)}}
   </div:t>
 </div>
