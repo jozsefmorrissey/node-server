@@ -330,7 +330,7 @@
         const key = du.param.get('name');
         const value = du.param.get('token');
         const json = stateObject();
-        notify = (status) => alert(`Save ${status}`);
+        notify = (status) => () => alert(`Save ${status}`);
         Request.post('/pssst/save/json', {group: 'custom-calc', key, value, json}, notify('Successful'), notify('Failed'));
       }
 
