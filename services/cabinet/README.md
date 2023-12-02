@@ -1,6 +1,6 @@
 # Cabinet Builder
 
-## Build
+## Build And Run
 - envs
   - local
   - dev
@@ -12,24 +12,24 @@
 
 
 ### watch.js
-Simple watch bundler that builds your html and js files on change.
+&nbsp;&nbsp;Simple watch bundler that builds your html and js files on change.
 
 ## Services
 
 ### public/js/utils/utils.js
-This file is used to safely add to the standard library.
+&nbsp;&nbsp;This file is used to safely add to the standard library.
 
 ### public/js/utils/dom-utils.js
-Dom reading and manipulation functions.
+&nbsp;&nbsp;Dom reading and manipulation functions.
 
 ### public/js/utils/string-math-evaluator
-Has a global and a local used to evaluate mathmatical expressions.
+&nbsp;&nbsp;Has a global and a local scope used to evaluate mathmatical expressions.
 
 ### public/js/utils/$t.js
-Simple html templating function.
+&nbsp;&nbsp;Simple html templating function.
 
-#### Repeat Array
-<pre><[tag]:t repeat='[elem] in [array]'>[html]</[tag]:t></pre>
+&nbsp;&nbsp;<b>Repeat Array</b>
+&nbsp;&nbsp;&nbsp;&nbsp;<pre><[tag]:t repeat='[elem] in [array]'>[html]</[tag]:t></pre>
 
 #### Repeat Object
 <pre><[tag]:t repeat='key, [elem] in [array]'>[html]</[tag]:t></pre>
@@ -44,6 +44,7 @@ Simple html templating function.
 #### Urgent
 
 #### Annoying
+HTML build changes are only applied the next time server is started.
 Parts3D display is not reflecting divider type on create (base:T is always full on creation)
 
 #### When I get around to it
