@@ -26,13 +26,13 @@
 &nbsp;&nbsp;Has a global and a local scope used to evaluate mathmatical expressions.
 
 ### public/js/utils/$t.js
-&nbsp;&nbsp;Simple html templating function.
+&nbsp;&nbsp;Simple html templating function. "Angularesk" {{js code}}
 
 &nbsp;&nbsp;<b>Repeat Array</b>
 <pre>      <[tag]:t repeat='[elem] in [array]'>[html]<&#47;[tag]:t></pre>
 
 &nbsp;&nbsp;<b>Repeat Object</b>
-<pre>      <[tag]:t repeat='key, [elem] in [object]'>[html]<&#47;[tag]:t></pre>
+<pre>      <[tag]:t repeat='[key], [elem] in [object]'>[html]<&#47;[tag]:t></pre>
 
 &nbsp;&nbsp;<b>Repeat Over Indices</b>
 <pre>      <[tag]:t repeat='[index] in [startIndex]..[endIndex]'>[html]<&#47;[tag]:t></pre>
@@ -51,9 +51,9 @@ HTML build changes are only applied the next time server is started.
 Parts3D display is not reflecting divider type on create (base:T is always full on creation)
 
 #### When I get around to it
-"Imperial (us)" does not add implicit multiplication stringMathEval
-hover help/error text
-Clean and seperate Object.(getSet|get|set);
-figure out three-view hidden lines
-ensure if new property is added existing configs updated with default value
-StringMathEvaluator: Math.atan(3/4)* (180/Math.PI) works but Math.atan(3/4)*(180/Math.PI) does not
+-"Imperial (us)" does not add implicit multiplication stringMathEval
+-hover help/error text
+-Clean and seperate Object.(getSet|get|set);
+-figure out three-view hidden lines
+-ensure if new property is added existing configs updated with default value
+-StringMathEvaluator: Math.atan(3/4)* (180/Math.PI) works but Math.atan(3/4)*(180/Math.PI) does not
