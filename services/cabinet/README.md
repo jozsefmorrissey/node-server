@@ -41,7 +41,7 @@
 <pre>      <[tag]:t [repeatExpression] $t-id='[templateLocation]'><&#47;[tag]:t></pre>
 
 &nbsp;&nbsp;<b>Defined Template</b>
-<pre>      <[tag]:t $t-id='[templateLocation]'><&#47;[tag]:t></pre>
+<pre>      <[tag]:t $t-id='[templateLocation]'><&#47;[tag]:t>[scopeVariable]</pre>
 
 ### TODO
 #### Urgent
