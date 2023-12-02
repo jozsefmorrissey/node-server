@@ -25,11 +25,14 @@ function clean(text) {
 }
 
 let lastHash;
+let scale = 1;
 function parse(elem, event) {
   const thisHash = input.value.hash();
-  if (lastHash !== thisHash) {
+  const sc = Number.parseFloat(du.find('[name="scale"]').value || 1);
+  if (lastHash !== thisHash || (sc !== scale)) {
     lastHash = thisHash;
-    parcer === '2D' ? TwoD.parse(clean(text2d = input.value)) : ThreeD.parse(clean(text3d = input.value));
+    scale = sc;
+    parcer === '2D' ? TwoD.parse(clean(text2d = input.value), scale) : ThreeD.parse(clean(text3d = input.value), scale);
   }
 }
 
@@ -45,13 +48,13 @@ du.on.match('change', '[name="parcer"]', (elem) => {
   const is3D = parcer === '3D';
   twoDDisplay.hidden = !is2D;
   threeDDisplay.hidden = !is3D;
-  if (is2D) TwoD.parse(clean(input.value = text2d));
-  if (is3D) ThreeD.parse(clean(input.value = text3d));
+  if (is2D) TwoD.parse(clean(input.value = text2d), scale);
+  if (is3D) ThreeD.parse(clean(input.value = text3d), scale);
   TwoD.oft(is2D);
   ThreeD.oft(is3D);
 });
 
-du.on.match('keyup', 'textarea', parse);
+du.on.match('keyup', 'textarea,[name="scale"]', parse);
 
 console.log(parcer);
-ThreeD.parse(clean(input.value))
+ThreeD.parse(clean(input.value), 1)

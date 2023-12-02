@@ -147,14 +147,18 @@ class ToleranceMap {
       for (let index = 0; index < attrs.length; index++) {
         Object.pathValue(obj, attrs[index], 0);
       }
+      let total = 0;
       for (let index = 0; index < list.length; index++) {
         for (let aIndex = 0; aIndex < attrs.length; aIndex++) {
           const path = attrs[aIndex];
           const currTotal = Object.pathValue(obj, path);
-          const addValue = Object.pathValue(list[index], path) / list.length;
-          Object.pathValue(obj, path, currTotal + addValue);
+          const value = Object.pathValue(list[index], path);
+          const addValue = value === 0 ? 0 : value / list.length;
+          if (addValue != 0) Object.pathValue(obj, path, currTotal + addValue);
+          total += addValue;
         }
       }
+      if (!Number.isFinite(total)) throw new Error('Object containes attribue that returns a non-finite value. This is unacceptable');
       return obj;
     }
 

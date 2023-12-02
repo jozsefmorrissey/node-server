@@ -4,6 +4,7 @@
 const Assembly = require('../assembly.js');
 const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
 const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
+const Joint = require('../../joint/joint.js');
 
 FunctionCache.on('cutter', 500);
 
@@ -42,7 +43,7 @@ class CutterReference extends Cutter {
       const multiplier = sameDir ? -1 : 1;
       const distance = 10 * length;
       biPoly = BiPolygon.fromPolygon(poly, 0, multiplier * distance, {x: distance, y:distance});
-      return biPoly.toModel(joints);
+      return Joint.apply(biPoly.toModel(), joints);
     }, this, 'cutter');
 
     this.partName = () => `CutterRef(${reference.partCode()}${offset >= 0 ? '+' + offset : offset}@${fromPoint()})`;
@@ -64,7 +65,7 @@ class CutterPoly extends Cutter {
       poly.lines().forEach(l => length += l.length());
       const distance = length;
       const biPoly = BiPolygon.fromPolygon(poly, 0, distance, {x: distance, y:distance});
-      return biPoly.toModel(joints);
+      return Joint.apply(biPoly.toModel(), joints);
     }, this, 'cutter');
 
     this.partName = () => `CutterPoly(${poly.toString()})`;

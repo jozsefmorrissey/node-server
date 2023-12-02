@@ -23,7 +23,7 @@ class DividerSection extends Assembly {
     function toModel(joints) {
       joints ||= this.getJoints().female;
       const biPoly = sectionProperties.dividerInfo();
-      return biPoly.toModel();
+      return Joint.apply(biPoly.toModel(), joints);
     }
 
     const toPanelModel = new FunctionCache(toModel, this, 'alwaysOn');

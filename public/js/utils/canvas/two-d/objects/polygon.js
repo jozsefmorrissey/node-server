@@ -395,6 +395,7 @@ class Polygon2d {
     }
     this.ensureClockWise = () => ensure();
     this.ensureAntiClockWise = () => ensure(true);
+    this.passesThrough = (line, inclusive) => Polygon2d.passesThrough(line, this.lines(), inclusive);
     this.isWithin = (vert, exclusive) => Polygon2d.isWithin(vert, this.lines(), exclusive);
 
     this.removeLoops = () => {
@@ -460,6 +461,7 @@ Polygon2d.build = (lines) => {
 Polygon2d.fromLines = (lines) => {
   if (lines === undefined || lines.length === 0) return null;
   let lastLine = lines[0];
+  // Line2d.radialSort(lines);
   const verts = [lastLine.startVertex()];
   for (let index = 1; index < lines.length; index++) {
     let line = lines[index].acquiescent(lastLine);
@@ -526,28 +528,64 @@ Polygon2d.fromString = (str) => {
   return new Polygon2d(verts);
 }
 
-Polygon2d.isWithin = (vertex, lines, exclusive) => {
-  vertex = new Vertex2d(vertex);
-  const escapeLine = Line2d.startAndTheta(vertex, Math.random()*3.14*2, 10000000);
+Polygon2d.passesThrough = (line, lines, inclusive) => {
+  if (Polygon2d.isWithin(line.startVertex(), lines, !inclusive)) return true;
+  if (Polygon2d.isWithin(line.endVertex(), lines, !inclusive)) return true;
   const intersections = [];
-  let onLine = false;
-  const allIntersections = [];
-  lines.forEach((line) => {
+  let onSide = false;
+  lines.forEach((side) => {
+    const intersection = side.findSegmentIntersection(line, true);
+    onSide ||= line.equals(side);
+    if (intersection) intersections.push(intersection);
+  });
+  if (onSide && intersections.length > 2) return true;
+  if (onSide) return inclusive === true;
+  if (intersections.length >= 2) return true;
+  return false;
+}
 
+Polygon2d.isWithin = (vertex, lines, exclusive, intersectionsCheck) => {
+  vertex = new Vertex2d(vertex);
+  // let shortLines = lines.filter(l => l.length() < 1);
+  // if (shortLines.length > 0) {
+  //   const min = Math.min(...shortLines.map(l => l.length()));
+  //   const multiplier = 1/min;
+  //   for (let index = 0; index < lines.length; index++) {
+  //     lines[index] = lines[index].clone();
+  //     lines[index].length(multiplier * lines[index].length());
+  //   }
+  // }
+
+  let escapeLine;
+  let onLine = Line2d.vertices(lines).filter(v => vertex.equals(v)).length > 0;
+  if (onLine) return !exclusive;
+  let count = 0;
+  do {
+    escapeLine = Line2d.startAndTheta(vertex, Math.random()*3.14*2, 10000000);
+    if (count > 10) throw new Error('Verticies are to dense to determine within and too sparce to be considered on the parimeter');
+    count++;
+  } while (Line2d.vertices(lines).filter(v => escapeLine.distance(v) < .1).length > 0);
+  const intersections = [];
+
+  for (let index = 0; !onLine && index < lines.length; index++) {
+    const line = lines[index];
     const intersection = line.findSegmentIntersection(escapeLine, true);
-    allIntersections.push(intersection);
-    if (intersection) {
+    if (intersection instanceof Vertex2d) {
       const isOnLine = intersection.equals(vertex);
       if (isOnLine) onLine = true;
       if (!isOnLine) {
         intersections.push(intersection);
       }
     }
-  });
-  if (exclusive && onLine) return false;
+  }
+
+  // if (intersectionsCheck === undefined) return Polygon2d.isWithin(vertex, lines, exclusive, intersections);
+  // if (intersections.length !== intersectionsCheck.length) return Polygon2d.isWithin(vertex, lines, exclusive);
   const isWithin = onLine || intersections.length % 2 === 1;
+  if (exclusive && onLine) return false;
   return isWithin;
 }
+
 
 const tol = .1;
 Polygon2d.toParimeter = (lines, recurseObj) => {
@@ -608,6 +646,19 @@ Polygon2d.toParimeter = (lines, recurseObj) => {
   if (recurseObj === undefined)
     biggest = biggest.clockWise() ? biggest : new Polygon2d(biggest.vertices().reverse());
   return biggest;
+}
+
+Polygon2d.fromDemensions = (dems, center) => {
+  center = new Vertex2d(center).point();
+  const halfWidth = dems.x / 2;
+  const halfLen = dems.y / 2;
+  const verts = [
+    new Vertex2d(center.x - halfWidth, center.y + halfLen),
+    new Vertex2d(center.x + halfWidth, center.y + halfLen),
+    new Vertex2d(center.x + halfWidth, center.y - halfLen),
+    new Vertex2d(center.x - halfWidth, center.y - halfLen)
+  ];
+  return new Polygon2d(verts);
 }
 
 

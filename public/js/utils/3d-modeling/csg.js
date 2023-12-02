@@ -400,9 +400,9 @@ CSG.Point = function (center, radius, color) {
 function vecotrOvertexModel(start, end, model, defaultColor) {
   let color = end.color || defaultColor;
   if (end instanceof CSG.Vector) {
-    const unit = end.minus(new CSG.Vector(start)).unit().times(10);
+    const unit = end.minus(new CSG.Vector(start)).unit().times(6);
     start = end.minus(unit);
-    return new CSG.cone({start, end, model, color});
+    return new CSG.cone({start, end, model, color, radius: 5});
   } else {
     return new CSG.Point(end, 1, color).union(model);
   }
@@ -1130,8 +1130,11 @@ function reverseRotate (point, rotation) {
 }
 
 function transRotate (point, offset, rotation) {
-  let newPos = rotate(offset, rotation);
-  return translate(newPos, offset);
+  let newPos = rotate (offset, rotation);
+  newPos.x += point.x;
+  newPos.y += point.y;
+  newPos.z += point.z;
+  return newPos;
 }
 
 function translate (point, offset) {

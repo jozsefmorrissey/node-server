@@ -177,7 +177,7 @@ try {
       const buildCmd = `cd ${dir} && node ./watch.js ENV='${global.ENV}' ${flags}`;
       console.log(`Started ${id} - build command '${buildCmd}'`);
       try {
-        shell.exec(buildCmd, {async: true, silent: true});
+        shell.exec(buildCmd, {async: true});
       } catch (e) {}
       require(project).endpoints(app, loc, ip);
     }

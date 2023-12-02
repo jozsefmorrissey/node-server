@@ -59,11 +59,14 @@ class AutoToekick extends Assembly {
     leftCornerCutter.parentAssembly(this);
     this.addSubAssembly(rightCornerCutter);
 
-    const joint = (part) => (otherPartCode, condition) =>
-      part.addJoints(new Butt(part.partCode(true), otherPartCode, condition));
+    const joint = (part, fullLength) => (otherPartCode, condition) => {
+      const joint = new Butt(part.partCode(true), otherPartCode, condition);
+      joint.fullLength(fullLength);
+      part.addJoints(joint);
+    }
     const toeKickPanel = new PanelModel('tkb', `${atkid}.Backer`, toModel('toeKick'));
     joint(toeKickPanel)('R');
-    joint(toeKickPanel)('B');
+    joint(toeKickPanel, true)('B');
     joint(toeKickPanel)('L');
     joint(leftCornerCutter)(toeKickPanel.partCode(true));
     joint(rightCornerCutter)(toeKickPanel.partCode(true));
@@ -117,12 +120,12 @@ class AutoToekick extends Assembly {
       const shortBottom = longBottom.clone();
 
       const targetFront = Line3D.fromVector(innerFront.vector().unit().scale(height), newStart);
-      shortBottom.adjustLength(depth1, true);
+      shortBottom.length(depth1, true);
       const shortVector = shortBottom.vector();
       const shortTop = Line3D.fromVector(shortVector, targetFront.endVertex);
 
       if (depth2) {
-        longBottom.adjustLength(depth2, true);
+        longBottom.length(depth2, true);
         const longVector = longBottom.vector();
         const longTop = Line3D.fromVector(longVector, targetFront.endVertex);
         return [shortTop.endVertex, longTop.endVertex,

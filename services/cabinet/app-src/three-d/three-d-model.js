@@ -308,7 +308,7 @@ class ThreeDModel {
           let e = 1.3;
           const partCenter = new Vertex3D(partModel.center());
           const dist = buildCenter.distance(partCenter);
-          Line3D.adjustVertices(buildCenter, partCenter, dist*e, true)
+          Line3D.adjustDistance(buildCenter, partCenter, dist*e, true)
           partModel.center(partCenter);
           model = model.union(partModel);
         }

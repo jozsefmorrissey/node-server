@@ -35,7 +35,7 @@ class Vertex3D {
       this.z = x[2];
     }
 
-    this.viewFromVector = (vector) => Vertex3D.viewFromVector([this], vector);
+    this.viewFromVector = (vector) => Vertex3D.viewFromVector([this], vector)[0];
 
     this.translate = (vector, doNotModify) => {
       let vertex = this;
@@ -51,6 +51,10 @@ class Vertex3D {
       this.x = vertex.x;
       this.y = vertex.y;
       this.z = vertex.z;
+    }
+
+    this.finite = () => {
+      return Number.isFinite(this.x + this.y + this.z);
     }
 
     this.usless = () => Number.NaNfinity(x, y, z);
@@ -113,11 +117,11 @@ class Vertex3D {
       return Vertex3D.tolerance.within(this, new Vertex3D(otherOx, y, z));
     }
     this.toString = () => `(${approx10(this.x)},${approx10(this.y)},${approx10(this.z)})`;
-    this.toAccurateString = () => `${approximate(this.x)},${approximate(this.y)},${approximate(this.z)}`;
+    this.toAccurateString = () => `(${approximate(this.x)},${approximate(this.y)},${approximate(this.z)})`;
   }
 }
 
-const tol = .000000001;
+const tol = .001;
 Vertex3D.tolerance = new Tolerance({x: tol, y: tol, z: tol});
 
 // returned direction is of list2 relitive to list 1
@@ -229,6 +233,39 @@ Vertex3D.sortByCenter = (center) => {
     const d2 = v2.distance(center);
     return d1-d2;
   }
+}
+
+Vertex3D.origin = new Vertex3D(0,0,0);
+
+Vertex3D.vectorSorter = (vector, center) => {
+  center ||= new Vertex3D(0,0,0);
+  vector ||= new Vector3D(1,1,1);
+  const sorter = (vert1, vert2, recurse) => {
+    const vect1 = vert1.minus(center).unit();
+    const vect2 = vert2.minus(center).unit();
+    const line1dot = vector.dot(vect1);
+    const line2dot = vector.dot(vect2);
+    const dotDiff = line1dot - line2dot;
+    if (dotDiff !== 0) return dotDiff;
+    if (vect1.equals(vect2) || recurse) return 0;
+    return sorter(new Vertex3D(vect1.add(center)), new Vertex3D(vect2.add(center)), true);
+  }
+  return sorter;
+}
+
+Vertex3D.vectorSort = (vertices, vector, center) => {
+  if (vertices.length === 0) return;
+  center ||= Vertex3D.center(...vertices);
+  vertices.sort(Vertex3D.vectorSorter(vector, center));
+}
+
+let valueCount = (v, attr) => v[attr] > .01 || v[attr] < -.01  ? 1 : 0;
+Vertex3D.informationSorter = (v1, v2) => {
+  const v1Count = valueCount(v1, 'x') + valueCount(v1, 'y') + valueCount(v1, 'z');
+  const v2Count = valueCount(v2, 'x') + valueCount(v2, 'y') + valueCount(v2, 'z');
+  if (v1Count !== v2Count) return v2Count - v1Count;
+  return (Math.abs(v2.x) + Math.abs(v2.y) + Math.abs(v2.z)) -
+            (Math.abs(v1.x) + Math.abs(v1.y) + Math.abs(v1.z));
 }
 
 class SimpleVertex3D {

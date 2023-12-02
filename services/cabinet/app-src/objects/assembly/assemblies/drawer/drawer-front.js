@@ -3,6 +3,7 @@
 
 const HasPull = require('../has-pull.js');
 const Handle = require('../hardware/pull.js');
+const Joint = require('../../../joint/joint.js');
 
 class DrawerFront extends HasPull {
   constructor(partCode, partName) {
@@ -16,7 +17,7 @@ class DrawerFront extends HasPull {
     this.toModel = (joints) => {
       const biPolygon = this.biPolygon();
       joints ||= this.getJoints().female;
-      if (biPolygon) return biPolygon.toModel(joints);
+      if (biPolygon) return Joint.apply(biPolygon.toModel(), joints);
       return undefined;
     }
 

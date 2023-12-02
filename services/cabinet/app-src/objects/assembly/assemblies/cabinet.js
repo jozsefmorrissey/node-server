@@ -225,7 +225,9 @@ class Cabinet extends Assembly {
 
     this.index = () => {
       const group = this.group();
-      return `${group.name()}-${group.objects.equalIndexOf(this)}`;
+      const gIndex = group.objects.equalIndexOf(this);
+      if (gIndex === -1) return null;
+      return `${group.name()}-${gIndex}`;
     }
 
     this.borders = (borderObj) => {
@@ -257,13 +259,13 @@ class Cabinet extends Assembly {
       }, 50);
     };
 
-    this.normals = () => {
-      const normals = [];
-      for (let index = 0; index < this.openings.length; index++) {
-        normals.push(this.openings[index].normal());
-      }
-      return normals;
-    }
+    // this.faceNormals = () => {
+    //   const normals = [];
+    //   for (let index = 0; index < this.openings.length; index++) {
+    //     normals.push(this.openings[index].normal());
+    //   }
+    //   return normals;
+    // }
 
     this.width = updateOpeningPoints(this.width, (w) => w && this.width() !== w);
     this.length = updateOpeningPoints(this.length, (l) => l && this.length() !== l, true);

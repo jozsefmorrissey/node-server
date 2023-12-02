@@ -20,14 +20,14 @@ class DualDoorSection extends Assembly {
       const lines = JSON.clone(poly.lines());
       const offset = (lines[0].length() - instance.gap()) / 2;
       if (left) {
-        lines[0].adjustLength(offset, true);
+        lines[0].length(offset, true);
         lines[1].startVertex = lines[0].endVertex;
-        lines[2].adjustLength(-offset, false);
+        lines[2].length(-offset, false);
         lines[1].endVertex = lines[2].startVertex;
       } else {
-        lines[0].adjustLength(-offset, false);
+        lines[0].length(-offset, false);
         lines[3].endVertex = lines[0].startVertex;
-        lines[2].adjustLength(offset, true);
+        lines[2].length(offset, true);
         lines[3].startVertex = lines[2].endVertex;
       }
       return Polygon3D.fromLines(lines);

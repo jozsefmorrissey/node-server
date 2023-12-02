@@ -630,17 +630,17 @@ class SectionProperties extends KeyValue{
       const left = vert ? instance.top() : instance.left();
       let maxLen = c.width() + c.length() + c.thickness();
       if (!(right instanceof DividerSection)) {
-        Line3D.adjustVertices(point1, point2, maxLen, true);
+        Line3D.adjustDistance(point1, point2, maxLen, true);
         maxLen *= 1.5;
       } else {
         const length = point1.distance(point2) + jointOffset - right.panelThickness()/2;
-        Line3D.adjustVertices(point1, point2, length, true);
+        Line3D.adjustDistance(point1, point2, length, true);
       }
       if (!(left instanceof DividerSection)) {
-        Line3D.adjustVertices(point2, point1, maxLen, true);
+        Line3D.adjustDistance(point2, point1, maxLen, true);
       } else {
         const length = point1.distance(point2) + jointOffset - left.panelThickness()/2;
-        Line3D.adjustVertices(point2, point1, length, true);
+        Line3D.adjustDistance(point2, point1, length, true);
       }
     }
 

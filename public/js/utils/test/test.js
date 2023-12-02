@@ -137,7 +137,8 @@ class TestStatus {
 
     function printError(msg, stackOffset) {
       stackOffset = stackOffset || 4;
-      console.error(`%c${Error.reducedStack(msg, stackOffset)}`, 'color: red');
+      if (msg instanceof Error) console.error(msg);
+      else console.error(`%c${Error.reducedStack(msg, stackOffset)}`, 'color: red');
     }
     function assert(b) {
       assertT++;

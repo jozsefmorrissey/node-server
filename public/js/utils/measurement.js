@@ -22,6 +22,37 @@ let units = [
 ]
 let unit = units[1];
 
+let areaUnits = [
+  'SQMM',
+  'SQCM',
+  'SQM',
+  'SQIN',
+  'SQFT'
+]
+
+const convertMetricToUs = (standardDecimal) =>  standardDecimal / 2.54;
+const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+
+const determineUnit = (notMetric) => {
+  if ((typeof notMetric === 'string')) {
+    const index = units.indexOf(notMetric);
+    if (index !== -1) return units[index];
+  } else if ((typeof notMetric) === 'boolean') {
+    if (notMetric === true) return unit;
+  }
+  return units[0];
+}
+
+function standardize(ambiguousDecimal, notMetric) {
+  switch (determineUnit(notMetric)) {
+    case units[0]:
+      return ambiguousDecimal;
+    case units[1]:
+      return convertUsToMetric(ambiguousDecimal);
+    default:
+      throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
+  }
+}
 
 class Measurement {
   constructor(value, notMetric) {
@@ -30,16 +61,6 @@ class Measurement {
     }
 
     this.clone = () => new Measurement(this.decimal());
-
-    const determineUnit = () => {
-      if ((typeof notMetric === 'string')) {
-        const index = units.indexOf(notMetric);
-        if (index !== -1) return units[index];
-      } else if ((typeof notMetric) === 'boolean') {
-        if (notMetric === true) return unit;
-      }
-      return units[0];
-    }
 
     let decimal = 0;
     let nan = value === null || value === undefined;
@@ -145,32 +166,35 @@ class Measurement {
       return NaN;
     }
 
-    const convertMetricToUs = (standardDecimal) =>  standardDecimal / 2.54;
-    const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
-
-    function standardize(ambiguousDecimal) {
-      switch (determineUnit()) {
-        case units[0]:
-          return ambiguousDecimal;
-        case units[1]:
-          return convertUsToMetric(ambiguousDecimal);
-        default:
-          throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
-      }
-    }
-
     if ((typeof value) === 'number') {
-      decimal = standardize(value);
+      decimal = standardize(value, notMetric);
     } else if ((typeof value) === 'string') {
       try {
         const ambiguousDecimal = getDecimalEquivalant(value);
-        decimal = standardize(ambiguousDecimal);
+        decimal = standardize(ambiguousDecimal, notMetric);
       } catch (e) {
         nan = true;
       }
     } else {
       nan = true;
     }
+  }
+}
+
+Measurement.display = (value, notMetric) => {
+  return new Measurement(value, notMetric).display();
+}
+
+Measurement.display.area = (SQCM, units, percision) => {
+  percision ||= .1;
+  switch (units) {
+    case 'SQMM': return `${Measurement.round(SQCM * 100, percision)} mm2`;
+    case 'SQM': return `${Measurement.round(SQCM / 10000, percision)} M2`;
+    case 'SQIN': return `${Measurement.round(SQCM / 6.4516, percision)} SQIN`;
+    case 'SQFT': return `${Measurement.round(SQCM / 929.0304, percision)} SQFT`;
+
+    default: return `${SQCM} cm2`;
+
   }
 }
 
@@ -201,6 +225,15 @@ Measurement.validation = function (range) {
     if (decimal === NaN) return false;
     return minCheck(decimal) && maxCheck(decimal);
   }
+}
+
+Measurement.area = function (demensions, notMetric) {
+  let area = 0;
+  for (let index = 0; index < demensions.length; index++) {
+    const dem = demensions[index];
+    area += standardize(dem.x, notMetric) * standardize(dem.y, notMetric);
+  }
+  return area;
 }
 
 Measurement.decimal = (value) => {

@@ -156,34 +156,6 @@ class Matrix extends Array {
       return new Matrix(unique);
     }
 
-    function eliminateConfusion(matrix) {
-      for(let cIndex = 0; matrix.rows() > matrix.columns() && cIndex < matrix.columns(); cIndex++) {
-        let values = {};
-        for(let rIndex = 0; rIndex < matrix.rows(); rIndex++) {
-          if (values[matrix[rIndex][cIndex]] !== undefined) {
-            matrix = matrix.remove(rIndex);
-            break;
-          } else values[matrix[rIndex][cIndex]] = true;
-        }
-      }
-      while(matrix.rows() > matrix.columns()) matrix = matrix.remove(matrix.rows()-1);
-      return matrix;
-    }
-
-    this.properDemension = () => {
-      const info = {fixedValues: []};
-      let rowReduced = this.uniqueRows();
-      const fixedColumns = rowReduced.fixedColumns();
-      for (let index = columns; fixedColumns && index >= 0; index--) {
-         if (fixedColumns[index]) {
-           info.fixedValues[index] = new FixedValue(rowReduced[0][index], index);
-           rowReduced = rowReduced.remove(null, index);
-         }
-      }
-      info.matrix = eliminateConfusion(rowReduced);
-      return info;
-    }
-
     this.rowEchelon = (reduced) => {
       const echelon = this.toArray();
       let pivot = 0;
@@ -268,7 +240,7 @@ class Matrix extends Array {
       return sum;
     }
 
-    this.solve2 = (answer) => {
+    this.solve = (answer) => {
       const consiseObj = this.consise();
       const consiseMatrix = consiseObj.matrix;
       const removedColumns = consiseObj.removedColumns;
@@ -283,28 +255,6 @@ class Matrix extends Array {
           const matrix = consiseMatrix.copy()
           matrix.replaceColumn(consiseIndex++, answer);
           const matrixDeterminate = matrix.determinate();
-          value = matrixDeterminate / determinate;
-        }
-        solution[j][0] = value;
-      }
-      return solution;
-    }
-
-    this.solve = (answer) => {
-      const properDemension = this.properDemension();
-      const matrix = properDemension.matrix;
-      const fixedValues = properDemension.fixedValues;
-      const solution = new Matrix(null, columns, 1);
-      answer ||= new Array(columns).fill(0);
-      let consiseIndex = 0;
-      const determinate = matrix.determinate();
-      for (let j = 0; j < columns; j++) {
-        let value;
-        if (fixedValues[j] !== undefined) value = fixedValues[j];//new Number(fixedValues[j]);
-        else {
-          const detMat = matrix.copy()
-          detMat.replaceColumn(consiseIndex++, answer);
-          const matrixDeterminate = detMat.determinate();
           value = matrixDeterminate / determinate;
         }
         solution[j][0] = value;
@@ -379,11 +329,11 @@ class Matrix extends Array {
     this.multiply = (other) => {
       const result = new Matrix(null, this.rows(), other.columns());
       for (let i = 0; i < this.rows(); i++) {
-        for (let j = 0; j < this.columns(); j++) {
+        for (let h = 0; h < other.columns(); h++) {
           let sum = 0
-          for (let k = 0; k < other.rows(); k++) {
-            sum = sum + this[i][k] * other[k][j]
-            result[i][j] = sum
+          for (let j = 0; j < this.columns(); j++) {
+              sum = sum + this[i][j] * other[j][h];
+              result[i][h] = sum
           }
         }
       }
@@ -423,8 +373,8 @@ class Matrix extends Array {
         const decimalIndex = val.indexOf('.');
         let spaceBefore, spaceAfter;
         if (decimalIndex === -1) {
-          spaceBefore = new Array(maxLen.before - val.length).fill(' ').join('');
-          spaceAfter = new Array(maxLen.after).fill(' ').join('');
+          spaceBefore = new Array(maxLen.before - val.length).fill(' ').join('') || ' ';
+          spaceAfter = new Array(maxLen.after).fill(' ').join('') || ' ';
         } else {
           spaceBefore = new Array(maxLen.before - decimalIndex).fill(' ').join('');
           spaceAfter = new Array(maxLen.after - (val.length - decimalIndex)).fill(' ').join('');

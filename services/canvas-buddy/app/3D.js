@@ -79,7 +79,8 @@ pointReg.vector = (string) => {
   return vector;
 }
 
-const num = Number.parseFloat;
+let scale;
+const num = (str) => Number.parseFloat(str) * (scale || 1);
 pointReg.model = (match) => new CSG.Point({
     x: num(match[2]),
     y: num(match[7]),
@@ -97,7 +98,7 @@ lineReg.model = (match) => {
 polyReg.model = (match) => {
   const color = match[1].trim();
   const verts = match[2].match(pointsReg).map(str => pointReg.Array(str));
-  return new CSG.Polygon.Enclosed(verts, null, color);0
+  return new CSG.Polygon.Enclosed(verts, null, color);
 };
 
 planeReg.model = (match) => {
@@ -109,11 +110,12 @@ const regExps = [planeReg, polyReg, lineReg, pointReg];
 
 const is = (line, type) => console.log(`${line} is of type ${type}`);
 let call = 0;
-function parse(lines) {
+function parse(lines, sc) {
+  scale = sc;
   callId = ++call;
   setTimeout(() => {
     if (callId === call) {
-      let model = new CSG();
+      let model = CSG.axis();
       for (let index = 0; index < lines.length; index++) {
         let found = false;
         try {

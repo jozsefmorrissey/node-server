@@ -1,0 +1,28 @@
+<div>
+  Panel Area: {{display.area(Panel.area, 'SQFT')}}
+  <br>
+  Door Area: {{display.area(Door.area, 'SQFT')}}
+  <br>
+  Drawer Front Area: {{display.area(DrawerFront.area, 'SQFT')}}
+  <br>
+  Handle Count: {{Handle.length}}
+  <br>
+  <br>
+  Door List
+  <div:t repeat='i, dem in Door.demensions'>
+    {{i}}) {{display(dem.x)}} X {{display(dem.y)}} X {{display(dem.z)}}
+  </div:t>
+  <br>
+  <br>
+  Drawer Front List
+  <div:t repeat='i, dem in DrawerFront.demensions'>
+    {{i}}) {{display(dem.x)}} X {{display(dem.y)}} X {{display(dem.z)}}
+  </div:t>
+  <br>
+  <br>
+  Drawer Box List
+  <div:t repeat='i, dem in DrawerBox.demensions'>
+    {{i}}) {{display(dem.x)}} X {{display(dem.y)}} X {{display(dem.z)}}
+  </div:t>
+  <br>
+</div>

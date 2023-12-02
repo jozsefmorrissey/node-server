@@ -284,13 +284,14 @@ class $t {
 		}
 
 		function type(scope, expression) {
+      const noExpression = expression === undefined || expression === null || expression === '';
 			if ((typeof scope) === 'string' && scope.match($t.rangeAttemptExpReg)) {
 				if (scope.match($t.rangeItExpReg)) {
 					return 'rangeExp'
 				}
 				return 'rangeExpFormatError';
 			} else if (Array.isArray(scope)) {
-				if (expression === undefined) {
+				if (noExpression) {
 					return 'defaultArray';
 				} else if (expression.match($t.nameScopeExpReg)) {
 					return 'nameArrayExp';
@@ -298,7 +299,7 @@ class $t {
 			}
 
 			if ((typeof scope) === 'object') {
-				if (expression === undefined) {
+				if (noExpression) {
 					return 'defaultObject';
 				} else if (expression.match($t.objectNameReg)){
 					return 'itOverObject';

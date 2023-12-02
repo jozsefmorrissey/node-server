@@ -2,7 +2,7 @@
 const approximate10 = require('../../../approximate.js').new(10);
 const ToleranceMap = require('../../../tolerance-map.js');
 const Tolerance = require('../../../tolerance.js');
-const tol = .001;
+const tol = .01;
 const within = Tolerance.within(tol);
 
 
@@ -148,6 +148,7 @@ Vertex2d.center = (...vertices) => {
   return new Vertex2d(centerX, centerY);
 }
 
+Vertex2d.origin = new Vertex2d(0,0);
 Vertex2d.weightedCenter = (...vertices) => {
   if (Array.isArray(vertices[0])) vertices = vertices[0];
   let x = 0;
@@ -184,6 +185,14 @@ Vertex2d.sortByMax = (verts) => {
     const d2 = v2.distance(max.v);
     return d2 - d1;
   });
+}
+
+Vertex2d.sortByCenter = (center) => {
+  return (v1, v2) => {
+    const d1 = v1.distance(center);
+    const d2 = v2.distance(center);
+    return d1-d2;
+  }
 }
 
 Vertex2d.centerOn = (newCenter, vertices) => {

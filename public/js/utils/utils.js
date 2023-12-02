@@ -198,17 +198,11 @@ Function.safeStdLibAddition(Array, 'copy',   function (other) {
   }
 });
 
-Function.safeStdLibAddition(Array, 'filterSplit',   function (filter, ...keys) {
-  let truthy = true;
-  if (keys.length === 0) keys = [true, false];
-  else truthy = false;
+Function.safeStdLibAddition(Array, 'filterSplit',   function (filter, truthy) {
   const retVal = {};
-  for (index = 0; index < keys.length; index++) {
-    retVal[keys[index]] = [];
-  }
   for (let index = 0; index < this.length; index++) {
     let value = filter(this[index]);
-    if (truthy) value = value && true;
+    if (truthy === true) value = value && true;
     if (retVal[value] === undefined) retVal[value] = [];
     retVal[value].push(this[index]);
   }
@@ -1224,6 +1218,7 @@ const colors = [
 ];
 let colorIndex = 0;
 Function.safeStdLibAddition(String, 'nextColor', () => colors[index++ % colors.length], true);
+Function.safeStdLibAddition(String, 'color', () => colors[index % colors.length], true);
 
 const numberReg = /^[0-9]{1,}$/;
 Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
@@ -1243,8 +1238,10 @@ Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
         return;
       }
     }
+    let nextIsFunction = target[attr] && (typeof target[attr][attrs[index+1]]) === 'function';
     parent = target;
-    target = (typeof target[attr]) === 'function' ? target[attr]() : target[attr];
+    target = (typeof target[attr]) === 'function' && !nextIsFunction  ?
+                target[attr]() : target[attr];
   }
   return {parent, target, attr: lastAttr, created}
 });
@@ -1323,8 +1320,10 @@ Function.safeStdLibAddition(Array, 'remap', function (func) {
   }
 });
 
-Function.safeStdLibAddition(Array, 'swap', function (i, j, doNotModify) {
-  const arr = doNotModify === true ? Array.from(this) : this;
+Function.safeStdLibAddition(Object, 'swap', function (i, j, doNotModify) {
+  const arr = doNotModify === true ?
+              (Array.isArray(this) ? Array.from(this) : this.copy())
+              : this;
   const temp = arr[i];
   arr[i] = arr[j];
   arr[j] = temp;

@@ -5,7 +5,6 @@ const Vector3D = require('vector');
 const Vertex3D = require('vertex');
 const Polygon3D = require('polygon');
 const Plane = require('plane');
-const Joint = require('../../objects/joint/joint.js');
 
 class BiPolygon {
   constructor(polygon1, polygon2) {
@@ -67,7 +66,7 @@ class BiPolygon {
         const fromStart = posMag > negMag;
         const magnitude = fromStart ? posMag : -negMag;
         if (line.length() !== Math.abs(magnitude)) {
-          line.adjustLength(magnitude, fromStart);
+          line.length(magnitude, fromStart);
         }
       }
     }
@@ -186,7 +185,9 @@ class BiPolygon {
       }
       // front.plane.normal = front.vertices[0].normal.clone();//new CSG.Vector([0,1, 0,0]);
       const backNorm = new Vertex3D(new Line3D(this.center(), this.back().center()).vector().unit());
-      const back = new CSG.Polygon(normalize(face2, flippedNormal));
+      // TODO we should make backNorm face opposite of front Norm may clear up confusion
+      const flipBackNorm = this.back().normal().equals(this.front().normal()) ? flippedNormal : !flippedNormal;
+      const back = new CSG.Polygon(normalize(face2, flipBackNorm));
       if (!backNorm.equals(back.plane.normal)) {
         console.log.subtle('different');
       }
@@ -203,19 +204,12 @@ class BiPolygon {
          const polyNorm = new Vertex3D(new Line3D(this.center(), polyCenter).vector().unit());
          const back = new CSG.Polygon(normalize(face2, flippedNormal));
          if (!polyNorm.equals(poly.plane.normal)) {
-           console.log.subtle('different');
+           console.error.subtle('different');
          }
-         // polygonSets[polygonSets.length - 1].plane.normal = normalized[0].normal.clone();
       }
       // polygonSets.forEach(p => p.setColor(0,0,255));
 
-      const polys = CSG.fromPolygons(polygonSets);
-      // polys.normals = {
-      //   front: this.normal(),
-      //   right: this.normalRight(),
-      //   top: this.normalTop()
-      // }
-      return Joint.apply(polys, joints);
+      return CSG.fromPolygons(polygonSets);
     }
 
     this.toPolygons = () => {
@@ -290,19 +284,23 @@ BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
 
 BiPolygon.fromVectorObject =
     (width, height, depth, center, vectorObj, normalVector) => {
-      center ||= new Vertex3D(0,0,0);
-      vectorObj ||= {x: new Vector3D(1,0,0), y: new Vector3D(0,1,0), z: new Vector3D(0,0,1)};
-      const frontCenter = center.translate(vectorObj.z.scale(depth/-2), true);
-      const front = Polygon3D.fromVectorObject(width, height, frontCenter, vectorObj);
-      const backCenter = center.translate(vectorObj.z.scale(depth/2), true);
-      const back = Polygon3D.fromVectorObject(width, height, backCenter, vectorObj);
-      let poly;
-      if (!normalVector || frontCenter.minus(backCenter).sameDirection(normalVector)) {
-        poly = new BiPolygon(front, back);
-      } else {
-        poly = new BiPolygon(back, front);
+      try {
+        center ||= new Vertex3D(0,0,0);
+        vectorObj ||= {x: new Vector3D(1,0,0), y: new Vector3D(0,1,0), z: new Vector3D(0,0,1)};
+        const frontCenter = center.translate(vectorObj.z.scale(depth/-2), true);
+        const front = Polygon3D.fromVectorObject(width, height, frontCenter, vectorObj);
+        const backCenter = center.translate(vectorObj.z.scale(depth/2), true);
+        const back = Polygon3D.fromVectorObject(width, height, backCenter, vectorObj);
+        let poly;
+        if (!normalVector || frontCenter.minus(backCenter).sameDirection(normalVector)) {
+          poly = new BiPolygon(front, back);
+        } else {
+          poly = new BiPolygon(back, front);
+        }
+        return poly;
+      } catch(e) {
+        console.error(e);
       }
-      return poly;
 }
 
 module.exports = BiPolygon;

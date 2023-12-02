@@ -290,44 +290,6 @@ Test.add('Matrix: uniqueRows', (ts) => {
   ts.success();
 });
 
-Test.add('Matrix: properDemension', (ts) => {
-  let matrix = new Matrix([
-    [8,6,1],
-    [8,6,1],
-    [1,4,1],
-  ]);
-
-  const zero = new FixedValue(0);
-  const one = new FixedValue(1);
-  let properDemension = matrix.properDemension();
-  ts.assertTrue(properDemension.matrix.equals(new Matrix([[8,6],[1,4]])));
-  ts.assertTrue(properDemension.fixedValues.equals([,,one]));
-
-  matrix = new Matrix([
-    [0,0,3,-5,4,0,0,1],
-    [0,0,3,-5,4,0,0,1],
-    [0,0,5,2,1,0,0,1],
-    [0,0,5,2,1,0,0,1],
-    [0,0,2,3,-2,0,0,1],
-  ]);
-
-  properDemension = matrix.properDemension(true);
-  ts.assertTrue(properDemension.matrix.equals(new Matrix([[3,-5,4],[5,2,1],[2,3,-2]])));
-  ts.assertTrue(properDemension.fixedValues.equals([zero,zero,,,,zero,zero,one]));
-
-  matrix = new Matrix([
-    [8,7,1],
-    [8,7,1],
-    [1,4,1],
-  ]);
-
-  properDemension = matrix.properDemension();
-  ts.assertTrue(properDemension.matrix.equals(new Matrix([[8,7],[1,4]])));
-  ts.assertTrue(properDemension.fixedValues.equals([,,one]));
-
-  ts.success();
-});
-
 Test.add('Matrix: consise',(ts) => {
   let cloudyMatirx = new Matrix([
     [0,0,3,-5,4,0,0],

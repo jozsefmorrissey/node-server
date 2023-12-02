@@ -76,140 +76,16 @@ Test.add('Vector3D: coDirectionalRotations(complex)', (ts) => {
 
 
 
-
-
-const centerSorter = (center) => (info1, info2) =>
-      center.distance(info1.start) - center.distance(info2.start);
-function buildPolyLine3D(line1, line2) {
-  const interInfo = [];
-  const intersectionInfo = (line, plane, start) => {
-    const end = plane.intersection.line.segment(line);
-    if (end) {
-      interInfo.push({end, start});
-    }
-  }
-  const unitVec = line1.vector().unit();
-  const plane1 = Plane.fromPointNormal(line1.startVertex, unitVec);
-  const plane2 = Plane.fromPointNormal(line1.endVertex, unitVec);
-  const plane3 = Plane.fromPointNormal(line2.startVertex, unitVec);
-  const plane4 = Plane.fromPointNormal(line2.endVertex, unitVec);
-  intersectionInfo(line2, plane1, line1.startVertex);
-  intersectionInfo(line2, plane2, line1.endVertex);
-  intersectionInfo(line1, plane3, line2.startVertex);
-  intersectionInfo(line1, plane4, line2.endVertex);
-  const center = Vertex3D.center(line1.startVertex, line1.endVertex, line2.startVertex, line2.endVertex);
-  interInfo.sort(centerSorter(center));
-  const polyLine1 = new Line3D(interInfo[0].start, interInfo[0].end).polarize();
-  const polyLine2 = new Line3D(interInfo[1].start, interInfo[1].end).polarize();
-
-  const poly = Polygon3D.fromLines([line1, polyLine1, line2, polyLine2]);
-
-  console.log(line1.toString(), line2.toString());
-}
-
-
-
-
-
-
-// Stole from https://stackoverflow.com/a/28701387
-// Thank You, Alexandre Giordanelli
-var closestDistanceBetweenLines = function(line1, line2, clampAll, clampA0, clampA1, clampB0, clampB1) {
-  line2 = line2.polarize();
-  line1 = line1.polarize();
-  const a0 = line1.startVertex; const a1 = line1.endVertex;
-  const b0 = line2.startVertex; const b1 = line2.endVertex;
-    //Given two lines defined by numpy.array pairs (a0,a1,b0,b1)
-    //Return distance, the two closest points, and their average
-
-    clampA0 = clampAll || clampA0 || false;
-    clampA1 = clampAll || clampA1 || false;
-    clampB0 = clampAll || clampB0 || false;
-    clampB1 = clampAll || clampB1 || false;
-    clampAll = clampAll || clampAll || false;
-
-    //Calculate denomitator
-    var A = a1.minus(a0);
-    var B = b1.minus(b0);
-    var _A = A.unit();
-    var _B = B.unit();
-    var cross = _A.crossProduct(_B);
-    var denom = Math.pow(cross.magnitude(), 2);
-
-    //If denominator is 0, lines are parallel: Calculate distance with a projection and evaluate clamp edge cases
-    if (denom == 0){
-        var d0 = _A.dot(b0.minus(a0));
-        var d = _A.scale(d0).add(a0).minus(b0).magnitude();
-
-        //If clamping: the only time we'll get closest points will be when lines don't overlap at all. Find if segments overlap using dot products.
-        if(clampA0 || clampA1 || clampB0 || clampB1){
-            var d1 = _A.dot(b1.minus(a0));
-
-            //Is segment B before A?
-            if(d0 <= 0 && 0 >= d1){
-                if(clampA0 == true && clampB1 == true){
-                    if(Math.abs(d0) < Math.abs(d1)){
-                        return new Line3D(b0, a0);
-                    }
-                    return new Line3D(b1, a0);
-                }
-            }
-            //Is segment B after A?
-            else if(d0 >= A.magnitude() && A.magnitude() <= d1){
-                if(clampA1 == true && clampB0 == true){
-                    if(Math.abs(d0) < Math.abs(d1)){
-                        return new Line3D(b0, a1);
-                    }
-                    return new Line3D(b1, a1);
-                }
-            }
-
-        }
-
-        //If clamping is off, or segments overlapped, we have infinite results, just return position.
-        buildPolyLine3D(line1, line2);
-        return [null, null, d];
-    }
-
-    //Lines criss-cross: Calculate the dereminent and return points
-    var t = b0.minus(a0);
-    var det0 = new Matrix([t, _B, cross]).determinate();
-    var det1 = new Matrix([t, _A, cross]).determinate();
-
-    var t0 = det0 / denom;
-    var t1 = det1 / denom;
-
-    var pA = _A.scale(t0).add(a0);
-    var pB = _B.scale(t1).add(b0);
-
-    //Clamp results to line segments if needed
-    if(clampA0 || clampA1 || clampB0 || clampB1){
-
-        if(t0 < 0 && clampA0)
-            pA = a0;
-        else if(t0 > A.magnitude() && clampA1)
-            pA = a1;
-
-        if(t1 < 0 && clampB0)
-            pB = b0;
-        else if(t1 > B.magnitude() && clampB1)
-            pB = b1;
-
-    }
-
-    return new Line3D(pA, pB);
-}
-
-
 function shuffleCheck(line1, line2, answer, ts) {
-  if (!answer) answer = closestDistanceBetweenLines(line1, line2 ,true);
-  else ts.assertTrue(closestDistanceBetweenLines(line1, line2 ,true).equals(answer));
+  if (!answer) answer =line1.connect.line.segment(line2, true);
+  else ts.assertTrue(line1.connect.line.segment(line2, true).equals(answer));
   line1 = line1.negitive();
-  ts.assertTrue(closestDistanceBetweenLines(line1, line2 ,true).equals(answer));
+  ts.assertTrue(line1.connect.line.segment(line2, true).equals(answer));
   line2 = line2.negitive();
-  ts.assertTrue(closestDistanceBetweenLines(line1, line2 ,true).equals(answer));
+  ts.assertTrue(line1.connect.line.segment(line2, true).equals(answer));
   line1 = line1.negitive();
-  ts.assertTrue(closestDistanceBetweenLines(line1, line2 ,true).equals(answer));
+  ts.assertTrue(line1.connect.line.segment(line2, true).equals(answer));
+  return answer;
 }
 
 function shuffleLines(lines, answer, rotations) {
@@ -228,34 +104,308 @@ Test.add('Polygon3D: fromLines', (ts) => {
                 new Line3D([2,0,0],[1,0,0])];
   const answer = new Polygon3D(Line3D.vertices(lines));
   let poly = Polygon3D.fromLines(lines);
-  console.log(Polygon3D.toDrawString2d([poly], 'x', 'y'));
   ts.assertTrue(answer.equals(poly));
   shuffleLines(lines);
   poly = Polygon3D.fromLines(lines);
-  console.log(Polygon3D.toDrawString2d([poly], 'x', 'y'));
   ts.assertTrue(answer.equals(poly));
   shuffleLines(lines, answer, {z: 33, y:76});
   poly = Polygon3D.fromLines(lines);
-  console.log(Polygon3D.toDrawString2d([poly], 'x', 'y'));
   ts.assertTrue(answer.equals(poly));
 
   ts.success();
 });
 
-Test.add('Line3D: distance (line)', (ts) => {
+
+const lines = [
+  new Line3D([-2,0,0],[-3,2,0]),
+  new Line3D([0,1,0],[-1,0,0]),
+  new Line3D([1,3,0],[1,1,0]),
+  new Line3D([1,0,0],[2,0,0]),
+  new Line3D([2,1,0],[2,-1,0]),
+  new Line3D([3,3,0],[3,6,0]),
+  new Line3D([4,4.5,0],[5,4.5,0])
+];
+
+
+const intPoint = [-1 -2/3, -2/3, 0];
+lines[0].connections = {
+  connection: new Line3D([-1 -2/3, -2/3, 0],[-1 -2/3, -2/3, 0]),
+  segment: new Line3D({x: -2, y: 0, z: 0}, {x: -1.5, y: -0.5, z: 0}),
+  segmentBoth: new Line3D([-1, 0, 0],[-2, 0, 0]),
+  directional: new Line3D({x: -2, y: 0, z: 0}, {x: -1.5, y: -0.5, z: 0}),
+  directionalBoth: new Line3D({x: -2, y: 0, z: 0}, {x: -1.5, y: -0.5, z: 0})
+};
+lines[1].connections = {
+  connection: new Line3D([1,2,0],[1,2,0]),
+  segment: new Line3D([0,1,0],[1,1,0]),
+  segmentBoth: new Line3D([0,1,0],[1,1,0]),
+  directional: new Line3D([0,1,0],[1,1,0]),
+  directionalBoth: new Line3D([0,1,0],[1,1,0])
+};
+
+lines[2].connections = {
+  connection: new Line3D([1,0,0],[1,0,0]),
+  segment: new Line3D([1,1,0],[1,0,0]),
+  segmentBoth: new Line3D([1,1,0],[1,0,0]),
+  directional: new Line3D([1,0,0],[1,0,0]),
+  directionalBoth: new Line3D([1,0,0],[1,0,0])
+};
+
+lines[3].connections = {
+  connection: new Line3D([2,0,0],[2,0,0]),
+  segment: new Line3D([2,0,0],[2,0,0]),
+  segmentBoth: new Line3D([2,0,0],[2,0,0]),
+  directional: new Line3D([2,0,0],[2,0,0]),
+  directionalBoth: new Line3D([2,0,0],[2,0,0])
+};
+
+const centerLine4S = new Line3D([2,1,0],[2,-1,0]);
+const centerLine4E = new Line3D([3,3,0],[3,6,0]);
+lines[4].connections = {
+  connection: new Line3D.Poly(centerLine4S, centerLine4E),
+  segment: new Line3D.Poly(centerLine4S, centerLine4E, false, true, true),
+  segmentBoth: new Line3D([2,1,0],[3,3,0]),
+  directional: new Line3D.Poly(centerLine4S, centerLine4E, false, true, false, false, false),
+  directionalBoth: new Line3D([2,1,0],[3,3,0])
+};
+
+const vert5S = new Vertex3D(3,4.5,0);
+const vert5E = new Vertex3D(4,4.5,0);
+lines[5].connections = {
+  connection: new Line3D(vert5S, vert5S),
+  segment:  new Line3D(vert5S, vert5S),
+  segmentBoth:  new Line3D(vert5S, vert5E),
+  directional:  new Line3D(vert5S, vert5S),
+  directionalBoth:  new Line3D(vert5S, vert5E)
+};
+
+
+
+lines.forEach(l => l.color = String.nextColor());
+
+const compareConnections = (conn, answer, ts) => {
+  ts.assertTrue(conn.equals(answer));
+  ts.assertTrue(conn.negitive().equals(answer));
+  if (conn.inverse) {
+    ts.assertTrue(conn.inverse().equals(answer));
+    ts.assertTrue(conn.negitive().inverse().equals(answer));
+  }
+}
+
+function checkConnections(line1, line2, connection, segment, segmentBoth, directional, directionalBoth, ts) {
+  let color = String.nextColor()
+  let conn = line1.connect.line(line2);
+  let answer = connection;
+  compareConnections(conn, answer, ts);
+  lineSets.push({line1, line2, answer, color});
+
+  conn = line1.connect.line.segment(line2);
+  answer = segment;
+  compareConnections(conn, answer, ts);
+  lineSets.push({line1, line2, answer, color});
+
+  conn = line1.connect.line.segment(line2, true);
+  answer = segmentBoth;
+  compareConnections(conn, answer, ts);
+  lineSets.push({line1, line2, answer, color});
+
+  conn = line1.connect.line.directional(line2);
+  answer = directional;
+  compareConnections(conn, answer, ts);
+  lineSets.push({line1, line2, answer, color});
+
+  conn = line1.connect.line.directional(line2, true);
+  answer = directionalBoth;
+  compareConnections(conn, answer, ts);
+  lineSets.push({line1, line2, answer, color});
+}
+
+const lineSets = [];
+const printLineSets = () => {
+  console.log(lineSets.map(s => Object.values(s).filter(o => o instanceof Line3D)
+            .map(l => l.toDrawString(s.color)).join('\n')).join('\n\n'));
+}
+
+Test.add('Line3D: connect (line)', (ts) => {
+  const center = new Vertex3D([0,0,0]);
+  const yLines = [
+    new Line3D([-1, 2, 0], [1,2,0]),
+    new Line3D([-1, 1, 0], [1,1,0]),
+    new Line3D([-1, 0, 0], [1,0,0]),
+    new Line3D([-1, -1, 0], [1,-1,0]),
+    new Line3D([-1, -2, 0], [1,-2,0]),
+  ];
+
+  const xLines = [
+    new Line3D([2,-1, 0], [2,1,0]),
+    new Line3D([1,-1, 0], [1,1,0]),
+    new Line3D([0,-1, 0], [0,1,0]),
+    new Line3D([-1,-1, 0], [-1,1,0]),
+    new Line3D([-2,-1, 0], [-2,1,0]),
+  ];
+
+  const both = yLines.concat(xLines);
+  yLines.shuffle();xLines.shuffle();both.shuffle();
+  // Line3D.radialSort(yLines, center);
+  // Line3D.radialSort(xLines, center);
+  // Line3D.radialSort(both, center);
+
+  Line3D.vectorSort(yLines, null, new Vector3D(100,0, 0));
+  Line3D.vectorSort(xLines, new Vector3D(1,0,0), new Vector3D(0, 100, 0));
+
+
+  // console.log(lines.map(l => l.toDrawString(l.color)).join('\n'));
   //example
   var line1 = new Line3D([-1,0,0], [-1,0,1]);
   var line2 = new Line3D([0,0,0], [0,0,1]);
-  console.log(closestDistanceBetweenLines(line1, line2 ,true));
+  let answer = shuffleCheck(line1, line2, null, ts);
+  lineSets.push({line1, line2, answer, color: String.nextColor()});
 
   line1 = new Line3D([-1,-1,-1], [-10,-10,-10]);
   line2 = new Line3D([1,-1,-1], [10,10,10]);
-  var answer = new Line3D([-1,-1,-1], [1,-1,-1]);
+  answer = new Line3D([-1,-1,-1], [1,-1,-1]);
   shuffleCheck(line1, line2, answer, ts);
+  lineSets.push({line1, line2, answer, color: String.nextColor()});
 
   line1 = new Line3D([27.83, 31.74, -26.60], [13.43, 21.77, 46.81]);
   line2 = new Line3D([77.54, 7.53, 6.22], [26.99, 12.39, 11.18]);
-  shuffleCheck(line1, line2, null, ts);
+  answer = shuffleCheck(line1, line2, null, ts);
+  lineSets.push({line1, line2, answer, color: String.nextColor()});
+
+  line1 = new Line3D([27.83,31.74,-26.6], [20.63,26.755,10.105]);
+  answer = shuffleCheck(line1, line2, null, ts);
+  lineSets.push({line1, line2, answer, color: String.nextColor()});
+
+  for (let i = 0; i < lines.length - 1; i++) {
+    const target = lines[i];
+    const other = lines[i+1];
+    const c = target.connections;
+    checkConnections(target, other, c.connection, c.segment, c.segmentBoth, c.directional, c.directionalBoth, ts);
+  }
+
+  // printLineSets();
+  ts.success();
+});
+
+printDrawString = (lines, colors) => {
+  console.log(lines.map((l,i) => l.toDrawString(colors[i])).join('\n'))
+}
+
+const q1Vect = new Vector3D(1,1,1).unit();
+const q2Vect = new Vector3D(1,1,-1).unit();
+const q3Vect = new Vector3D(1,-1,1).unit();
+const q4Vect = new Vector3D(-1,1,1).unit();
+const q5Vect = new Vector3D(-1,-1,1).unit();
+const q6Vect = new Vector3D(1,-1,-1).unit();
+const q7Vect = new Vector3D(-1,1,-1).unit();
+const q8Vect = new Vector3D(-1,-1,-1).unit();
+const qVects = [q1Vect, q2Vect, q3Vect, q4Vect, q5Vect, q6Vect, q7Vect, q8Vect]
+
+function randVert(scale, startVertex) {
+  scale ||= 10;
+  startVertex ||= new Vertex3D();
+  let i = Math.random() - .5;
+  let j = Math.random() - .5;
+  let k = Math.random() - .5;
+  const vector = new Vector3D(i, j, k).unit().scale(scale).add(startVertex);
+  return new Vertex3D(vector);
+}
+
+function generateVerts(count, scale, startVertex) {
+  count ||= 6;
+  let verts = [];
+  for (let index = 0; index < count; index++) {
+    verts.push(randVert(scale, startVertex));
+  }
+  return verts;
+}
+
+function generateLines(count, startVertex, scale) {
+  count ||= 6;
+  let lines = [];
+  for (let index = 0; index < count; index++) {
+    const start = startVertex || randVert(scale, startVertex);
+    const end = randVert(scale, start.clone());
+    lines.push(new Line3D(start.clone(), end));
+  }
+  return lines;
+}
+
+
+
+const origin = new Vertex3D();
+let avgLines = [];
+function testVector(vector, ts) {
+  const verts = generateVerts();
+  const lines = [];
+  for (let index = 0; index < verts.length; index++) {
+    const randLen = Math.random() * 10 + 10;
+    const line = Line3D.fromVector(vector.scale(randLen), verts[index]);
+    const bestPole = Line3D.bestPole([line]);
+    ts.assertTrue(bestPole.equals(line.startVertex));
+    lines.push(line);
+  }
+  let vectorPole = vector.inverse();
+  vectorPole = vectorPole.scale(1000);
+  vectorPole = new Vertex3D(vectorPole);
+  let avgLine = Line3D.averageLine(lines);
+  ts.assertTrue(avgLine.vector().unit().equals(vector.unit()));
+
+  let randomLines = generateLines(2, origin.clone());
+  avgLine = Line3D.averageLine(randomLines);
+  const color = String.nextColor();
+  avgLines.push([randomLines[0].toDrawString(color), randomLines[1].toDrawString(color), avgLine.toDrawString(color)].join('\n'));
+  ts.assertTrue(avgLine.startVertex.equals(origin));
+
+  randomLines = generateLines(20, origin.clone());
+  avgLine = Line3D.averageLine(randomLines, vectorPole);
+  ts.assertTrue(avgLine.vector().dot(vector) > 0);
+
+  randomLines = generateLines(50, origin.clone());
+  avgLine = Line3D.averageLine(randomLines, vectorPole);
+  ts.assertTrue(avgLine.vector().dot(vector) > 0);
+
+  randomLines = generateLines(100);
+  avgLine = Line3D.averageLine(randomLines, vectorPole);
+  ts.assertTrue(avgLine.vector().dot(vector) > 0);
+}
+Test.add('Line3D: bestPole/averageLine', (ts) => {
+  for (let index = 0; index < qVects.length; index++) {
+    testVector(qVects[index], ts);
+  }
 
   ts.success();
 });
+
+
+
+
+
+
+// Test.add('Line3D: bestFit', (ts) => {
+//  //  const a = new Matrix([[1,2,3],
+//  //                        [4,5,6]]);
+//  // const b = new Matrix([[1,2],
+//  //                       [3,4],
+//  //                       [5,6]]);
+//  //  console.log(a.multiply(b));
+//
+//
+//   const verts = generateVerts();
+//   const center = Vertex3D.center(...verts);
+//   const A = new Matrix(verts.map(v => [v.x,v.y,v.z]));
+//   const AA = A.transpose().multiply(A);
+//   const point = new Matrix([[center.x], [center.y], [center.z]]);
+//   // const a = AA.inverse().multiply(point);
+//   const re = a.transpose().rowEchelon(true);
+//   const rre = re.remove(null, 0).remove(null, 0).remove(null, 0).rowEchelon(true);
+//   console.log(rre.toString());
+//   const vector = new Vector3D(rre[0][3], rre[1][3], rre[2][3]);
+//   const start = vector.inverse().add(center);
+//   const end = vector.add(center);
+//   const line = new Line3D(start, end);
+//
+//   console.log(line.toDrawString())
+//   console.log(verts.join('\n'));
+//   ts.success();
+// });

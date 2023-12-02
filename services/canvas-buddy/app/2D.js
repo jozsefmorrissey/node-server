@@ -68,10 +68,11 @@ function color(lineOvert, color) {
   return colors[key];
 }
 
+const parseFloat = (str) => Number.parseFloat(str) * scale;
 function vertColorReplace(garb, c, vertStr) {
   const match = vertStr.match(pointReg)
-  const x = Number.parseFloat(match[2]);
-  const y = Number.parseFloat(match[5]);
+  const x = parseFloat(match[2]);
+  const y = parseFloat(match[5]);
   color(new Vertex2d(x,y), c);
   return vertStr;
 }
@@ -81,8 +82,8 @@ function pathColorReplace(garb, c, pathStr) {
   const points = [];
   pointStrs.forEach((pointStr) => {
     const match = pointStr.match(pointReg)
-    const x = Number.parseFloat(match[2]);
-    const y = Number.parseFloat(match[5]);
+    const x = parseFloat(match[2]);
+    const y = parseFloat(match[5]);
     points.push(new Vertex2d(x,y));
     if (points.length > 1) color(new Line2d(points[points.length - 2], points[points.length - 1]), c);
   });
@@ -115,8 +116,8 @@ function splitLocationData(str) {
     else {
       pointStrs.forEach(pointStr => {
         const match = pointStr.match(pointReg)
-        const x = Number.parseFloat(match[2]);
-        const y = Number.parseFloat(match[5]);
+        const x = parseFloat(match[2]);
+        const y = parseFloat(match[5]);
         illustrateFunc(x,y);
       });
     }
@@ -142,14 +143,11 @@ draw = new Draw2D(canvas, true);
 panZ = new panZoom(canvas, drawFunc);
 draw.circle(new Circle2d(2, new Vertex2d(10,10)), null, 'green');
 
-let lastHash;
-function parse(newLines) {
+let scale;
+function parse(newLines, sc) {
+  scale = sc;
   lines = newLines;
-  const thisHash = lines.join('\n').hash();
-  if (thisHash !== lastHash) {
-    lastHash = thisHash;
-    panZ.once();
-  }
+  panZ.once();
 }
 
 let hovering;

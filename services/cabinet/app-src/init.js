@@ -10,6 +10,7 @@ const User = require('./displays/user.js');
 // require('./bind.js');
 require('./objects/assembly/init-assem');
 require('./objects/joint/init');
+require('./displays/documents/init.js');
 const Assembly = require('./objects/assembly/assembly.js');
 const Properties = require('./config/properties.js');
 const PopUp = require('../../../public/js/utils/display/pop-up.js');

@@ -24,6 +24,8 @@ function parseTolAbs(attr, attributeMap, tolerance, absoluteValue) {
       } else {
         tolerance = attributeMap[attr] || DEFAULT_TOLERANCE;
       }
+    } else if ((typeof attributeMap[attr]) === 'number') {
+      tolerance = attributeMap[attr];
     } else {
       tolerance ||= DEFAULT_TOLERANCE;
     }

@@ -79,34 +79,58 @@ class Polygon3D {
       }
     }
 
-    function calcNormal() {
+    function calcNormal(otherPoints) {
       let points = this.vertices();
-      let vector1, vector2;
-      let parrelle = true;
-      let index = 0;
-      while (parrelle && index < points.length - 2) {
-        vector1 = points[index + 1].minus(points[index])
-        vector2 = points[index + 2].minus(points[index]);
-        parrelle = vector1.parrelle(vector2);
-        index++;
+      if (!Array.isArray(otherPoints)) {
+        otherPoints = points.slice(2);
+      } else {
+        points.sort(Vertex3D.informationSorter);
       }
-      if (parrelle)
-        throw new Error('InvalidPolygon: points are in a line');
+      let magnitude = 0;
+      const vector1 = points[1].minus(points[0]);
+      let vector2, normVect;
+      for (let index = 0; magnitude == 0 && index < otherPoints.length; index++) {
+        vector2 = otherPoints[index].minus(points[1]);
+        normVect = vector1.crossProduct(vector2);
+        magnitude = normVect.magnitude()
+      }
 
-      const normVect = vector1.crossProduct(vector2);
-      const mag = normVect.magnitude();
-      if (mag === 0) throw new Error('InvalidPolygon: normal vector magnitude === 0');
-      return normVect.scale(1 / mag);
+      if (magnitude === 0) {
+        this.normal(otherPoints);
+        throw new Error('InvalidPolygon: normal vector magnitude === 0');
+      }
+      return normVect.unit();
     }
     this.normal = calcNormal;
 
     this.valid = () => {
+      let posNormal;
       try {
-        this.normal();
-        return true;
+        posNormal = this.normal().positiveUnit();
       } catch (e) {
         return false;
       }
+      const verts = this.vertices();
+      for (let i = 0; i < verts.length; i++) {
+        const vert1 = verts[i];
+        for (let j = i + 1; j < verts.length; j++) {
+          const vert2 = verts[j];
+          const vector1 = vert1.minus(vert2);
+          for (let k = j + 1; k < verts.length; k++) {
+            const vert3 = verts[k];
+            const vector2 = vert2.minus(vert3);
+            const normVect = vector1.crossProduct(vector2);
+            const dot = vector1.unit().dot(vector2.unit());
+            if (!Tolerance.within(.5)(Math.abs(dot), 1)) {
+              const mag = normVect.magnitude();
+              if (mag !== 0 && !normVect.positiveUnit().equals(posNormal)) {
+                return false;
+              }
+            }
+          }
+        }
+      }
+      return true;
     }
 
     this.translate = (vector) => {
@@ -128,37 +152,42 @@ class Polygon3D {
     this.inXZ = () => this.perpendicular(xzPoly);
 
     this.parrelle = (poly) => {
-      const normal = this.normal();
-      if (normal === undefined || poly.normal() === undefined) return false;
-      return normal.parrelle(poly.normal());
+      try {
+        const normal = this.normal();
+        if (normal === undefined || poly.normal() === undefined) return false;
+        return normal.parrelle(poly.normal());
+      } catch (e) {
+        console.warn(e);
+        return false;
+      }
     }
 
     this.offset = (left, right, up, down) => {
-      lines[0].adjustLength(left - lines[0].length(), false);
-      lines[0].adjustLength(lines[0].length() - right, true);
-      lines[2].adjustLength(lines[2].length() - left, true);
-      lines[2].adjustLength(right - lines[2].length(), false);
+      lines[0].length(left - lines[0].length(), false);
+      lines[0].length(lines[0].length() - right, true);
+      lines[2].length(lines[2].length() - left, true);
+      lines[2].length(right - lines[2].length(), false);
 
-      lines[1].adjustLength(up - lines[1].length(), false);
-      lines[1].adjustLength(lines[1].length() - down, true);
-      lines[3].adjustLength(lines[3].length() - up, true);
-      lines[3].adjustLength(down - lines[3].length(), false);
+      lines[1].length(up - lines[1].length(), false);
+      lines[1].length(lines[1].length() - down, true);
+      lines[3].length(lines[3].length() - up, true);
+      lines[3].length(down - lines[3].length(), false);
     }
 
     this.resize = (width, height) => {
-      lines[0].adjustLength(width);
-      lines[2].adjustLength(width);
+      lines[0].length(width);
+      lines[2].length(width);
 
-      lines[1].adjustLength(height);
-      lines[3].adjustLength(height);
+      lines[1].length(height);
+      lines[3].length(height);
     }
 
     this.scale = (width, height) => {
-      lines[0].adjustLength(lines[0].length()*width);
-      lines[2].adjustLength(lines[2].length()*width);
+      lines[0].length(lines[0].length()*width);
+      lines[2].length(lines[2].length()*width);
 
-      lines[1].adjustLength(lines[1].length()*height);
-      lines[3].adjustLength(lines[3].length()*height);
+      lines[1].length(lines[1].length()*height);
+      lines[3].length(lines[3].length()*height);
     }
 
     this.parrelleAt = (distance) => {
@@ -237,7 +266,7 @@ class Polygon3D {
       for (let index = 0; index < verts.length * 2; index += 1) {
         const vIndex = index % verts.length;
         if (otherIndex === undefined) {
-          if (index > verts.length) {
+          if (index >= verts.length) {
             return false
           } if(verts[index].equals(otherVerts[0])) {
             otherIndex = otherVerts.length * 2;
@@ -473,18 +502,24 @@ class Polygon3D {
       return dist1 <  dist2 ? dist1 : dist2;
     }
 
+    // TODO: doesnt work very well.
     this.distance = (other) => {
       let overlaps = false;
-      const normal = this.normal();
-      const thisView = this.viewFromVector(normal);
-      const otherView = other.viewFromVector(normal);
-      const thisVVerts = otherView.vertices();
-      const otherVVerts = other.vertices();
+      let normal = other.normal();
+      let thisView = this.viewFromVector(normal);
+      let otherView = other.viewFromVector(normal);
+      let thisVVerts = otherView.vertices();
+      let otherVVerts = other.vertices();
       for (let index = 0; !overlaps && index < thisVVerts.length; index++) {
-        overlaps = otherView.isWithin2d(thisVVerts[index], false, 'x', 'y');
+        overlaps = otherView.isWithin2d(thisVVerts[index], false);
       }
+      normal = this.normal();
+      thisView = this.viewFromVector(normal);
+      otherView = other.viewFromVector(normal);
+      thisVVerts = otherView.vertices();
+      otherVVerts = other.vertices();
       for (let index = 0; !overlaps && index < otherVVerts.length; index++) {
-        overlaps = thisView.isWithin2d(otherVVerts[index], false, 'x', 'y');
+        overlaps = thisView.isWithin2d(otherVVerts[index], false);
       }
       if (overlaps) {
         const center = this.center();
@@ -505,8 +540,10 @@ class Polygon3D {
       }
     }
 
+    // TODO: Needs work. I think just polys that share multipleLines...
     this.merge = (other) => {
       if (!this.normal().parrelle(other.normal())) return;
+      if (this.equals(other)) return this.copy();
       const thisPlane = this.toPlane();
       const otherPlane = other.toPlane();
       // if (!thisPlane.equivalent(otherPlane)) return;
@@ -556,7 +593,7 @@ class Polygon3D {
     }
 
     this.viewFromVector = (vector) => Polygon3D.viewFromVector([this], vector)[0];
-    this.mostInformation = () => Polygon3D.mostInformation([this])[0];
+    this.mostInformation = () => Polygon3D.mostInformation([this]);
 
     this.to2D = (x, y) => {
       if (!x || !y) {
@@ -572,13 +609,65 @@ class Polygon3D {
     }
 
     this.isWithin2d = (vertex, exclusive, x, y) => {
+      const viewedFromNorm = this.viewFromVector(this.normal());
       if (x === undefined || y === undefined) {
-        const mi = Polygon3D.mostInformation([this]);
-        x = mi[0]; y = mi[1];
+        const axises = Polygon3D.mostInformation([viewedFromNorm]);
+        x = axises[0];y = axises[1];
       }
-      const poly2d = this.to2D(x, y);
-      const vert2d = vertex.to2D(x, y);
+
+      const poly2d = viewedFromNorm.to2D(x, y);
+      const vert2d = vertex.viewFromVector(this.normal()).to2D(x, y);
       return poly2d.isWithin(vert2d, exclusive);
+    }
+
+    this.isWithin = (vertex, exclusive) => {
+      const verts = this.vertices();
+      if (verts.length < 3) return false;
+      const other = new Polygon3D(verts[0], verts[1], vertex);
+      if (!other.parrelle(other)) return false;
+      return isWithin2d(vertex, exclusive);
+    }
+
+    this.withinPlane = (other) => {
+      try {
+        const posUnit = this.normal().positiveUnit();
+        if (!other.normal().positiveUnit().equals(posUnit)) return false;
+        if (!this.normal(other.vertices()).positiveUnit().equals(posUnit)) return false;
+      } catch (e) {
+        console.error(e);
+        return false;
+      }
+      return true;
+    }
+
+    function vertexJustInside(endpoint, center) {
+      const vector = new Line3D(endpoint, center).vector().unit().scale(.001);
+      return endpoint.translate(vector, true);
+    }
+
+    this.overlaps = (other, returnInfo) => {
+      if (!this.parrelle(other) || !this.withinPlane(other)) return false;
+      const verts = this.vertices();
+      const otherVerts = other.vertices();
+      const info = {within: [], outside: []};
+      const isWithin = () => info.within.length > 0 || info.isWithin;
+      for (let index = 0; (returnInfo || !isWithin()) && index < otherVerts.length; index++) {
+          if (this.isWithin2d(otherVerts[index], true)) {
+            info.isWithin = true;
+            info.within.push(otherVerts[index]);
+          } else info.outside.push(otherVerts[index]);
+      }
+      for (let index = 0; !isWithin() && index < verts.length; index++) {
+          if (other.isWithin2d(verts[index], true)) {
+            info.isWithin = true;
+          }
+      }
+
+      let within = isWithin();
+      within ||= other.isWithin2d(this.center());
+      within ||= this.isWithin2d(other.center());
+      delete info.isWithin;
+      return within ? (returnInfo ? info : true) : false;
     }
 
     this.intersection = {};
@@ -587,16 +676,29 @@ class Polygon3D {
       if (!planeIntersection) return null;
       const ortho = this.viewFromVector(line.vector());
       const interView = planeIntersection.viewFromVector(line.vector())[0];
-      if (ortho.isWithin2d(interView, exclusive, 'x', 'y')) return planeIntersection;
+      if (ortho.isWithin2d(interView, exclusive)) return planeIntersection;
       return null;
     }
 
     this.toString = () => {
-      let str = '';
+      let str = '[';
       for (let index = 0; index < lines.length; index++) {
         str += ` => ${lines[index].startVertex.toString()}`;
       }
       return `${str.substring(4)} normal: ${this.normal()}`;
+    }
+
+    this.toDrawString = (color) => {
+      const colorString = (typeof color) === 'string' ? color : '';
+      let str = '';
+      for (let index = 0; index < lines.length; index++) {
+        str += `,${lines[index].startVertex.toString()}`;
+      }
+      const start = this.center();
+      const end = new Vertex3D(this.normal().scale(10).add(start));
+      const normalStr = `[${start},${end})`;
+      return `${colorString}[${str.substring(1)}]\n${colorString}${normalStr}`;
+
     }
 
 
@@ -637,6 +739,7 @@ Polygon3D.merge = (polygons) => {
     }
     currIndex++;
   }
+  return polygons;
 }
 
 const xyPoly = new Polygon3D([[1,10,0],[11,2,0],[22,1,0]]);
@@ -663,9 +766,11 @@ Polygon3D.mostInformation = (polygons) => {
 }
 
 Polygon3D.lines2d = (polygons, x, y) => {
+  if (polygons instanceof Polygon3D) polygons = [polygons];
+  if (polygons instanceof CSG) polygons = Polygon3D.fromCSG(polygons);
   Polygon3D.merge(polygons);
   let lines = [];
-  polygons.map(p => p.to2D('x', 'y')).forEach(p => lines.concatInPlace(p.lines()));
+  polygons.map(p => p.to2D(x, y)).forEach(p => lines.concatInPlace(p.lines()));
   return Line2d.consolidate(...lines);
 }
 
@@ -694,7 +799,7 @@ Polygon3D.parrelleSets = (polygons, tolerance) => {
                                   'normal.positiveUnit.j': tolerance,
                                   'normal.positiveUnit.k': tolerance});
   tolmap.addAll(polygons);
-  const groups = tolmap.group();
+  const groups = tolmap.group().sortByAttr('length').reverse();
   return groups;
 }
 
@@ -722,6 +827,7 @@ Polygon3D.fromCSG = (polys) => {
     }
   }
   if (!isArray) return poly3Ds[0];
+  // Polygon3D.merge(poly3Ds);
   return poly3Ds;
 }
 
@@ -781,6 +887,62 @@ Polygon3D.viewFromVector = (polygons, vector) => {
     orthoPolys.push(new Polygon3D(orthoVerts));
   }
   return orthoPolys;
+}
+
+Polygon3D.toDrawString = (polygons, ...colors) => {
+  if (polygons instanceof CSG) polygons = Polygon3D.fromCSG(polygons);
+  let str = '';
+  polygons.forEach((p, i) => str += p.toDrawString(colors[i%colors.length]).split('\n')[0] + '\n')
+  return str;
+}
+
+// This only really makes since for a four sided polygon that has atleast one set of parrelle sides.
+Polygon3D.normals = (polygon) => {
+  const lines = polygon.lines();
+  Line3D.combine(lines);
+  if (lines.length !== 4) return;
+  const pSets = Line3D.parrelleSets(lines);
+  if (pSets[0].length !== 2) return;
+  let set = pSets[0];
+  if (pSets[1].length === 2) {
+    if (pSets[0][0].distance(pSets[0][1]) > pSets[1][0].distance(pSets[1][1])) {
+      set = pSets[1];
+    }
+  }
+  const normals = {
+    z: polygon.normal(),
+    y: set[0].vector().unit(),
+  }
+  normals.x = normals.z.crossProduct(normals.y).unit();
+  return normals;
+}
+
+const addVector = (normals, axes, attr, centerLine) => {
+  const vector = centerLine.vector();
+  if (centerLine.isParrelle(normals[attr])) {
+    if (!vector.unit().equals(normals[attr])) centerLine = centerLine.negitive();
+    axes[attr].push(centerLine);
+    return true;
+  }
+  return false;
+}
+
+Polygon3D.axes = (polygons, normals) => {
+  const axes = {x: [], y: [], z: []};
+  for (let i = 0; i < polygons.length; i++) {
+    let polyi = polygons[i];
+    for (let j = 0; j < polygons.length; j++) {
+      let polyj = polygons[j];
+      const centerLine = new Line3D(polyi.center(), polyj.center());
+      addVector(normals, axes, 'x', centerLine) ||
+          addVector(normals, axes, 'y', centerLine) ||
+          addVector(normals, axes, 'z', centerLine);
+    }
+  }
+  axes.x = Line3D.averageLine(axes.x, Vertex3D.origin);
+  axes.y = Line3D.averageLine(axes.y, Vertex3D.origin);
+  axes.z = Line3D.averageLine(axes.z, Vertex3D.origin);
+  return axes;
 }
 
 Polygon3D.fromIntersections = (intersected, intersectors) => {

@@ -1,5 +1,7 @@
 
-const Lookup = require('../../../../../public/js/utils/object/lookup.js')
+const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+const BiPolygon = require('../../three-d/objects/bi-polygon.js');
+const Polygon3D = require('../../three-d/objects/polygon.js');
 // const Assembly = require('../assembly/assembly.js');
 
 const REASSIGNMENT_ERROR = () => new Error('Make a new joint, joints cannot be reassined');
@@ -10,7 +12,7 @@ class Joint {
     const initialVals = {
       maleOffset: 0, femaleOffset: 0, parentAssemblyId:  undefined,
       malePartCode, femalePartCode, demensionAxis: '', centerAxis: '',
-      locationId
+      locationId, fullLength: false,
     }
     Object.getSet(this, initialVals);
 
@@ -35,6 +37,7 @@ class Joint {
       clone.femaleOffset(this.femaleOffset());
       clone.demensionAxis(this.demensionAxis());
       clone.centerAxis(this.centerAxis());
+      clone.fullLength(this.fullLength());
       if ((typeof parentOid) === 'string') clone.parentAssemblyId(parentOid);
       else clone.parentAssembly(parentOid);
       return clone;
@@ -140,6 +143,13 @@ Joint.new = function (id, json) {
   return new Joint.classes[id]().fromJson(json);
 }
 
+let distSorter = (s1, s2) => {
+  if (s1.length !== 2 && s2.length !== 2) return 0;
+  if (s1.length !== 2) return 1;
+  if (s2.length !== 2) return -1;
+  return s2[0].distance(s2[1]) - s1[0].distance(s1[1]);
+}
+
 Joint.apply = (model, joints) => {
   if (!joints || !Array.isArray(joints)) return model;
   let m = model; // preventCouruption
@@ -148,7 +158,20 @@ Joint.apply = (model, joints) => {
       try {
         const maleModel = joint.maleModel(joints.jointFilter);
         if (m.polygons.length > 0 && maleModel && maleModel.polygons.length > 0) {
-          m = m.subtract(maleModel);
+          // if (joint.fullLength()) {
+          //   const intersection = Polygon3D.fromCSG(maleModel.intersect(m));
+          //   const sets = Polygon3D.parrelleSets(intersection);
+          //   sets.sort(distSorter);
+          //   const vector = sets[0][0].center().vector().minus(sets[0][1].center()).unit()
+          //   let front = sets[0][0];//.translate(vector.scale(10000000));
+          //   let back = sets[0][1];//.translate(vector.scale(-10000000));
+          //   if (!front.isClockwise()) front = front.reverse();
+          //   if (!back.isClockwise()) back = back.reverse();
+          //   const biPoly = new BiPolygon(sets[0][0], sets[0][1]);
+          //   m = m.subtract(biPoly.toModel());
+          // } else {
+            m = m.subtract(maleModel);
+          // }
         }
       } catch (e) {
         console.error('Most likely caused by a circular joint reference',e);

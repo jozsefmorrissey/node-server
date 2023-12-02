@@ -102,6 +102,7 @@ class Divider extends Assembly {
         if (panels[partCode] === undefined) {
           panel = new PanelModel(partCode, partName, panelModel, toBiPolygon);
           panel.normals = instance.normals;
+          panel.position().normals = instance.position().normals;
           panel.position().normalizingRotations = instance.position().normalizingRotations;
           panels[partCode] = panel;
           panel.parentAssembly(instance);
@@ -152,6 +153,7 @@ class Divider extends Assembly {
         if (panels[pc] === undefined) {
           panels[pc] = new PanelModel(pc, 'panel', panelModel);
           panels[pc].normals = instance.normals;
+          panels[pc].position().normals = instance.position().normals;
           panels[pc].position().normalizingRotations = instance.position().normalizingRotations;
         }
         const panel = panels[pc];

@@ -6,6 +6,7 @@ const Vertex3D = require('./three-d/objects/vertex');
 const Line3D = require('./three-d/objects/line');
 const BiPolygon = require('./three-d/objects/bi-polygon');
 const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
+const Joint = require('./objects/joint/joint.js');
 
 FunctionCache.on('position', 100);
 
@@ -129,6 +130,11 @@ class Position {
 
     //TODO: this could be simpler and more effecient using vector rotations instead of line rotations.
     this.normals = (array) => {
+      const assemNorms = assembly.normals(array);
+      if (assemNorms && Object.keys(assemNorms).length < 3) {
+        assembly.normals(array);
+      }
+      if (assemNorms) return assemNorms;
       const rotation = this.rotation();
       const normObj = {
           x: new Vertex3D(1,0,0).rotate(rotation).vector(),
@@ -153,7 +159,7 @@ class Position {
 
     this.toModel = new FunctionCache((joints) => {
       joints ||= assembly.getJoints().female;
-      let model = this.toBiPolygon().toModel(joints);
+      let model = Joint.apply(this.toBiPolygon().toModel(), joints);
       return model;
     }, this, 'position');
 

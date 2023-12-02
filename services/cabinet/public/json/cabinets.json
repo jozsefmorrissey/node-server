@@ -150,7 +150,8 @@
 	      "malePartCode": "BACK",
 	      "femalePartCode": "R",
 	      "demensionAxis": "x",
-	      "centerAxis": "+x"
+	      "centerAxis": "+x",
+				"fullLength": true
 	    },
 	    {
 	      "_TYPE": "Dado",
@@ -159,7 +160,8 @@
 	      "malePartCode": "BACK",
 	      "femalePartCode": "L",
 	      "demensionAxis": "x",
-	      "centerAxis": "-x"
+	      "centerAxis": "-x",
+				"fullLength": true
 	    },
 	    {
 	      "_TYPE": "Dado",
@@ -1791,7 +1793,8 @@
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
-				"centerAxis": "-x"
+				"centerAxis": "-x",
+				"fullLength": true
 			},
 			{
 				"malePartCode": "BACK",
@@ -1799,7 +1802,8 @@
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
-				"centerAxis": "+x"
+				"centerAxis": "+x",
+				"fullLength": true
 			},
 			{
 				"malePartCode": "tkb",
@@ -1988,7 +1992,8 @@
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
 				"demensionAxis": "x",
-				"centerAxis": "+x"
+				"centerAxis": "+x",
+				"fullLength": true
 			},
 			{
 				"_TYPE": "Dado",
@@ -2004,7 +2009,8 @@
 				"femalePartCode": "L",
 				"maleOffset": "L.t/2",
 				"demensionAxis": "x",
-				"centerAxis": "-x"
+				"centerAxis": "-x",
+				"fullLength": true
 			}
 		],
 		"dividerJoint": {
@@ -2249,7 +2255,8 @@
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
-				"centerAxis": "-x"
+				"centerAxis": "-x",
+				"fullLength": true
 			},
 			{
 				"malePartCode": "BACK",
@@ -2257,7 +2264,8 @@
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
-				"centerAxis": "+x"
+				"centerAxis": "+x",
+				"fullLength": true
 			},
 			{
 				"malePartCode": "tkb",
@@ -2630,7 +2638,8 @@
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
-				"centerAxis": "-x"
+				"centerAxis": "-x",
+				"fullLength": true
 			},
 			{
 				"malePartCode": "BACK",
@@ -2638,7 +2647,8 @@
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
-				"centerAxis": "+x"
+				"centerAxis": "+x",
+				"fullLength": true
 			},
 			{
 				"malePartCode": "tkb",
@@ -3810,7 +3820,8 @@
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
 				"demensionAxis": "x",
-				"centerAxis": "+x"
+				"centerAxis": "+x",
+				"fullLength": true
 			},
 			{
 				"_TYPE": "Dado",
@@ -3826,7 +3837,8 @@
 				"femalePartCode": "L",
 				"maleOffset": "L.t/2",
 				"demensionAxis": "x",
-				"centerAxis": "-x"
+				"centerAxis": "-x",
+				"fullLength": true
 			}
 		],
 		"dividerJoint": {
@@ -3984,7 +3996,8 @@
 				"femalePartCode": "R",
 				"maleOffset": "R.t/2",
 				"demensionAxis": "x",
-				"centerAxis": "+x"
+				"centerAxis": "+x",
+				"fullLength": true
 			},
 			{
 				"_TYPE": "Dado",
@@ -4000,7 +4013,8 @@
 				"femalePartCode": "L",
 				"maleOffset": "L.t/2",
 				"demensionAxis": "x",
-				"centerAxis": "-x"
+				"centerAxis": "-x",
+				"fullLength": true
 			}
 		],
 		"dividerJoint": {

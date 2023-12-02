@@ -158,6 +158,14 @@ class Plane extends Array {
       return pts;
     }
 
+    this.within = (vertex) => {
+      const normal = this.normal();
+      const points = this.points();
+      const plane = new Plane(points[0], points[1], vertex);
+      if (!plane.valid()) return true;
+      return plane.normal().equals(normal) || plane.normal().inverse().equals(normal);
+    }
+
     this.parrelleTo = (axis) => {
       const pts = this.points();
       return approximate.eq(pts[0][axis], pts[1][axis], pts[2][axis]);

@@ -106,9 +106,9 @@ class Vector3D {
       isZeros(i, j, k);
 
     this.positiveUnit = () => {
-      if (this.positive()) return this;
+      if (this.positive()) return this.unit();
       if (!this.inverse().positive()) throw new Error('if this happens algorythums will fail 11/07/2023');
-      return this.inverse();
+      return this.inverse().unit();
     }
 
     this.equals = (vector, tol) => !tol ? Vector3D.tolerance.within(vector, this) :
