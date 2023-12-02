@@ -34,11 +34,14 @@
 &nbsp;&nbsp;<b>Repeat Object</b>
 <pre>      <[tag]:t repeat='key, [elem] in [object]'>[html]<&#47;[tag]:t></pre>
 
-&nbsp;&nbsp;<b>Repeat Over Indexes</b>
+&nbsp;&nbsp;<b>Repeat Over Indices</b>
 <pre>      <[tag]:t repeat='[index] in [startIndex]..[endIndex]'>[html]<&#47;[tag]:t></pre>
 
 &nbsp;&nbsp;<b>Repeat Defined Template</b>
-<pre>      <[tag]:t repeat='[elem] in [array]' $t-id='[templateLocation]'><&#47;[tag]:t></pre>
+<pre>      <[tag]:t [repeatExpression] $t-id='[templateLocation]'><&#47;[tag]:t></pre>
+
+&nbsp;&nbsp;<b>Defined Template</b>
+<pre>      <[tag]:t $t-id='[templateLocation]'><&#47;[tag]:t></pre>
 
 ### TODO
 #### Urgent
