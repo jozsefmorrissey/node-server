@@ -29,16 +29,16 @@
 &nbsp;&nbsp;Simple html templating function.
 
 &nbsp;&nbsp;<b>Repeat Array</b>
-<pre>      <[tag]:t repeat='[elem] in [array]'>[html]</[tag]:t></pre>
+<pre>      <[tag]:t repeat='[elem] in [array]'>[html]<\/[tag]:t></pre>
 
 &nbsp;&nbsp;<b>Repeat Object</b>
-<pre>      <[tag]:t repeat='key, [elem] in [array]'>[html]</[tag]:t></pre>
+<pre>      <[tag]:t repeat='key, [elem] in [object]'>[html]<\/[tag]:t></pre>
 
 &nbsp;&nbsp;<b>Repeat Over Indexes</b>
-<pre>      <[tag]:t repeat='[index] in [startIndex]..[endIndex]'>[html]</[tag]:t></pre>
+<pre>      <[tag]:t repeat='[index] in [startIndex]..[endIndex]'>[html]<\/[tag]:t></pre>
 
 &nbsp;&nbsp;<b>Repeat Defined Template</b>
-<pre>      <[tag]:t repeat='[elem] in [array]' $t-id='[templateLocation]'></[tag]:t></pre>
+<pre>      <[tag]:t repeat='[elem] in [array]' $t-id='[templateLocation]'><\/[tag]:t></pre>
 
 ### TODO
 #### Urgent
