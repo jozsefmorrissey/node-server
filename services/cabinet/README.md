@@ -11,10 +11,10 @@
 </pre>
 
 
+## Corner Stone Code Locations
+
 ### watch.js
 &nbsp;&nbsp;Simple watch bundler that builds your html and js files on change.
-
-## Services
 
 ### public/js/utils/utils.js
 &nbsp;&nbsp;This file is used to safely add to the standard library.
@@ -51,9 +51,9 @@ HTML build changes are only applied the next time server is started.
 Parts3D display is not reflecting divider type on create (base:T is always full on creation)
 
 #### When I get around to it
--"Imperial (us)" does not add implicit multiplication stringMathEval
--hover help/error text
--Clean and seperate Object.(getSet|get|set);
--figure out three-view hidden lines
--ensure if new property is added existing configs updated with default value
--StringMathEvaluator: Math.atan(3/4)* (180/Math.PI) works but Math.atan(3/4)*(180/Math.PI) does not
+- "Imperial (us)" does not add implicit multiplication stringMathEval
+- hover help/error text
+- Clean and seperate Object.(getSet|get|set);
+- figure out three-view hidden lines
+- ensure if new property is added existing configs updated with default value
+- StringMathEvaluator: Math.atan(3/4)* (180/Math.PI) works but Math.atan(3/4)*(180/Math.PI) does not
