@@ -162,7 +162,7 @@ app.delete('/print/body', printCall('DELETE'));
 
 
 var ip = '192.168.254.10';
-var services = global.service ? [global.service] : shell.ls('./services/');
+var services = global.service ? new String(global.service).split(',') : shell.ls('./services/');
 var exclude = ['uss', 'uus', 'mitch', 'weather-fax', 'content-explained', 'premier', 'info-directory', 'homework-help', 'debug-gui'];
 try {
   for (let i = 0; i < services.length; i += 1) {
@@ -174,7 +174,11 @@ try {
       var project = dir + loc;
       app.use(loc, express.static(dir + '/public'));
       const flags = global.ENV === 'local' ? '' : '-build';
-      const buildCmd = `cd ${dir} && node ./watch.js ENV='${global.ENV}' ${flags}`;
+      const watcherExists = fs.existsSync(`${dir}/watch.js`);
+      let buildCmd = `cd ${dir}`;
+      if (watcherExists) {
+        buildCmd += ` && node ./watch.js ENV='${global.ENV}' ${flags}`;
+      }
       console.log(`Started ${id} - build command '${buildCmd}'`);
       try {
         shell.exec(buildCmd, {async: true});
