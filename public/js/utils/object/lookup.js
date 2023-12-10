@@ -207,4 +207,4 @@ Lookup.fromJson = (json) => {
 Lookup.IdString = IdString;
 try {
   module.exports = Lookup;
-} catch (e) {/* TODO: Consider Removing */}
+} catch (e) {}

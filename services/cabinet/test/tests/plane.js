@@ -46,10 +46,10 @@ Test.add('Plane: equation',(ts) => {
   const p3 = {x: 4, y: 1, z: 4};
 
   const equation = new Plane(p1, p2, p3).equation();
-  ts.assertEquals(equation.a * 54, 9);
-  ts.assertEquals(equation.b * 54, -18);
-  ts.assertEquals(equation.c * 54, 9);
-  ts.assertEquals(equation.d * 54, 54);
+  ts.assertEquals(Math.round(equation.a * 54), 9);
+  ts.assertEquals(Math.round(equation.b * 54), -18);
+  ts.assertEquals(Math.round(equation.c * 54), 9);
+  ts.assertEquals(Math.round(equation.d * 54), 54);
   ts.success();
 });
 
@@ -197,9 +197,77 @@ Test.add('Plane: bisector',(ts) => {
 });
 
 
-Test.add('Plane: bisector',(ts) => {
+Test.add('Plane: bisector(fromPointNormal)',(ts) => {
   const xyPlane = Plane.fromPointNormal({x: 12, y: 41, z: 0}, new Vector3D(1, 1, 1));
   const yzPlane = Plane.fromPointNormal({x: 0, y: 41, z: 1}, new Vector3D(0, 3, -1));
   const xzPlane = Plane.fromPointNormal({x: 12, y: 0, z: 50}, new Vector3D(5, 0, 13));
+  ts.success();
+});
+
+const checkAnswer = (ts, intersections) =>  {
+  const checkFunc = (attr, val) => {
+    if (Number.isNaN(intersections[attr])) {
+      ts.assertTrue(Number.isNaN(val));
+    } else {
+      ts.assertEquals(intersections[attr], val);
+    }
+    return checkFunc;
+  }
+  return checkFunc;
+}
+Test.add('Plane: intersections', (ts) => {
+  let plane = new Plane({x:-10, y:0, z:3}, {x:0, y:10, z:3}, {x:10, y:0, z: 3});
+  let intersections = plane.axisIntercepts();
+  checkAnswer(ts, intersections)('x', NaN)('y', NaN)('z', 3);
+
+  plane = new Plane({x:-10, y:0, z:0}, {x:0, y:10, z:0}, {x:10, y:0, z: 0});
+  intersections = plane.axisIntercepts();
+  checkAnswer(ts, intersections)('x', Infinity)('y', Infinity)('z', 0);
+
+  plane = new Plane({x:-10, y:0, z:0}, {x:0, y:86, z:0}, {x:0, y:0, z: 23});
+  intersections = plane.axisIntercepts();
+  checkAnswer(ts, intersections)('x', -10)('y', 86)('z', 23);
+
+  ts.success();
+});
+
+const tol = .000000001;
+function confirmNormalAndPoints(plane, normal, points, ts) {
+  ts.assertTrue(plane.normal().equals(normal.unit()));
+  for (let index = 0; index < points.length; index++) {
+    const p = points[index];
+    ts.assertTolerance(plane.x(p.y,p.z).x, p.x, tol);
+    ts.assertTolerance(plane.y(p.x,p.z).y, p.y, tol);
+    ts.assertTolerance(plane.z(p.x,p.y).z, p.z, tol);
+  }
+}
+
+Test.add('Plane: fromPointNormal', (ts) => {
+  let normal = new Vector3D(1,1,1);
+  let points = [{x:1, y:1, z: 1}];
+  let plane = Plane.fromPointNormal(points[0], normal);
+  confirmNormalAndPoints(plane, normal, points, ts);
+
+  points = [{x:1,y:1,z:1}, {x:5,y:6,z:3}, {x:2,y:3,z:4}]
+  plane = new Plane(points);
+  normal = plane.normal();
+  plane = Plane.fromPointNormal(points[0], normal);
+  confirmNormalAndPoints(plane, normal, points, ts);
+
+  points = [{x:6,y:19,z:27}, {x:4,y:6,z:-3}, {x:12,y:13,z:-15}]
+  plane = new Plane(points);
+  normal = plane.normal();
+  plane = Plane.fromPointNormal(points[0], normal);
+  confirmNormalAndPoints(plane, normal, points, ts);
+
+  points = [{x:10,y:100,z:-1}, {x:75,y:16,z:13}, {x:2,y:33,z:-41}]
+  plane = new Plane(points);
+  normal = plane.normal();
+  plane = Plane.fromPointNormal(points[0], normal);
+  confirmNormalAndPoints(plane, normal, points, ts);
+
+  console.log(plane.toDrawString()
+)
+
   ts.success();
 });

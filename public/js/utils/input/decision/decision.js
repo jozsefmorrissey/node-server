@@ -1,9 +1,4 @@
 
-// TODO IMPORTANT: refactor this garbage!!!!!!
-// ... its extreamly unIntuitive.
-
-
-
 const DecisionTree = require('../../decision-tree.js');
 const Conditions = require('../../conditions.js');
 const Input = require('../input.js');

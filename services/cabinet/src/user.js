@@ -63,7 +63,7 @@ class User {
     let user;
     let token;
 
-    // TODO: change this, implement a consitant id;
+    // TODO: change this, implement a consitant id - Not important unless we are going to create a user Server;
     this.id = function () {
 			let hashString = email;
 			let hash = 0;

@@ -17,11 +17,14 @@ function isDefined(...values) {
 class Plane extends Array {
   constructor(...points) {
     super();
-    let equation;
+    // points = points.map(p => new Vertex3D(p).clone())
+    let equation, normal, intercepts, axis;
     const instance = this;
+    let equationDriven = false;
     if (Array.isArray(points[0])) points = points[0];
     if (isDefined(points[0], points[0].a, points[0].b, points[0].c, points[0].d)) {
       equation = points[0];
+      equationDriven = true;
       points = [];
     }
     for (let index = 0; index < points.length; index++) {
@@ -35,7 +38,7 @@ class Plane extends Array {
       return -1;
     }
 
-    this.points = () => this.length > 2 ? this : this.findPoints();
+    this.points = () => this.length > 2 ? this : generateEquationPoints(3);
 
     this.equivalent = (other) => {
       if (!(other instanceof Plane)) return false;
@@ -72,11 +75,22 @@ class Plane extends Array {
       return rotationMatrix;
     }
 
+    this.axis = () => {
+      if (axis === undefined) {
+        const z = this.normal();
+        const x = z.getPerpendicular().unit();
+        const y = z.crossProduct(x).unit();
+        axis = {x,y,z};
+      }
+      return axis;
+    }
+
     this.rotate = (rotation, center) => {
       center ||= this.center();
       for (let index = 0; index < this.length; index++) {
         this[index].rotate(rotation, center);
       }
+      equation = normal = intercepts = axis = undefined;
     }
 
     this.matrixRotation = (rotationMatrix) => {
@@ -91,42 +105,89 @@ class Plane extends Array {
       for (let index = 0; index < this.length; index++) {
         this[index].reverseRotate(rotation, center);
       }
+      equation = normal = intercepts = axis = undefined;
     }
 
-    this.x = (y,z, vertex) => {
+    function conformToIntercepts(eqn, vertex) {
+      if (points.length < 3) return vertex;
+      if (eqn.a === 0 || eqn.b === 0 || eqn.c === 0) {
+        const intercepts = instance.axisIntercepts();
+        if (eqn.a === 0) vertex.x = intercepts.x;
+        if (eqn.b === 0) vertex.y = intercepts.y;
+        if (eqn.c === 0) vertex.z = intercepts.z;
+      }
+      return vertex;
+    }
+
+    this.x = (y,z, doNotConform) => {
       y ||= 0;
       z ||= 0;
       const eqn = this.equation();
-      const x = (eqn.b * y + eqn.c * z + eqn.d) / eqn.a
-      if (x) return new Vertex3D(x,y,z);
-      return x;
+      const x = (-eqn.b * y - eqn.c * z + eqn.d) / eqn.a
+      return conformToIntercepts(eqn, new Vertex3D(x,y,z));
     }
 
-    this.y = (x,z, vertex) => {
+    this.y = (x,z, doNotConform) => {
       x ||= 0;
       z ||= 0;
       const eqn = this.equation();
-      const y = (eqn.a * x + eqn.c * z + eqn.d) / eqn.b
-      if (y) return new Vertex3D(x,y,z);
-      return y;
+      const y = (-eqn.a * x - eqn.c * z + eqn.d) / eqn.b
+      return conformToIntercepts(eqn, new Vertex3D(x,y,z));
     }
 
-    this.z = (x,y, vertex) => {
+    this.z = (x,y, doNotConform) => {
       x ||= 0;
       y ||= 0;
       const eqn = this.equation();
-      const z = (eqn.b * y + eqn.a * x + eqn.d) / eqn.c;
-      if (z) return new Vertex3D(x,y,z);
-      return z;
+      const z = (-eqn.b * y - eqn.a * x + eqn.d) / eqn.c;
+      return conformToIntercepts(eqn, new Vertex3D(x,y,z));
+    }
+
+
+    this.axisIntercepts = () => {
+      if (intercepts) return intercepts;
+      const eqn = this.equation();
+      const normal = this.normal().positiveUnit();
+      if (normal.equals(Vector3D.i)) {
+        return {
+          x: points[0].x,
+          y: points[0].x === 0 ? Infinity : NaN,
+          z: points[0].x === 0 ? Infinity : NaN
+        }
+      } else if (normal.equals(Vector3D.j)) {
+        return {
+          y: points[0].y,
+          x: points[0].y === 0 ? Infinity : NaN,
+          z: points[0].y === 0 ? Infinity : NaN
+        }
+      } else if (normal.equals(Vector3D.k)) {
+        return {
+          z: points[0].z,
+          x: points[0].z === 0 ? Infinity : NaN,
+          y: points[0].z === 0 ? Infinity : NaN
+        }
+      }
+      intercepts = {
+        x: eqn.d/eqn.a,
+        y: eqn.d/eqn.b,
+        z: eqn.d/eqn.c
+      }
+
+      return intercepts;
     }
 
     this.equation = () => {
-      if (equation && this.length < 3) return equation;
-      const systemOfEquations = Matrix.mapObjects(this.points(), ['x','y','z']);
+      if (equation) return equation;
+      let systemOfEquations = Matrix.mapObjects(this.points(), ['x','y','z', 1]);
 
       try {
-        const answer = systemOfEquations.solve([1,1,1]);
-        const returnValue = {a: answer[0][0], b: answer[1][0], c: answer[2][0], d: 1};
+        const answer = systemOfEquations.rowEchelon(true);
+        const returnValue = {
+          a: answer[0][3],
+          b: answer[1][3],
+          c: answer[2][3],
+          d: 1
+        };
         return returnValue;
       } catch (e) {
         console.warn(e);
@@ -139,23 +200,48 @@ class Plane extends Array {
       return `(${a(eqn.a)}x + ${a(eqn.b)}y + ${a(eqn.d)}) / ${a(eqn.c)}`;
     }
 
-    // TODO: this function does not work!
-    this.findPoints = (count) => {
-      console.warn.subtle(60000, 'This Function does not work properly');
+    function generateEquationPoints(count) {
       count ||= 3;
-      const limit = count * 3 + 11;
       const pts = [];
       let state = 0;
       let value = 100000;
+      let tries = 0;
       while (pts.length < count) {
-         let func = state === 0 ? this.x : (state === 1 ? this.y : this.z);
-         let point = value % 2 ? func(value * 2, value*-1, true) : func(value, value, true);
-         if (!point.usless() && (pts.length === 0 || (pts.equalIndexOf(point)))) pts.push(point);
-         value += 13;
+         let func = state === 0 ? instance.x : (state === 1 ? instance.y : instance.z);
+         const coef1 = Math.floor(Math.random() * 10) * (Math.random() > .5 ? -1 : 1);
+         const coef2 = Math.floor(Math.random() * 10) * (Math.random() > .5 ? -1 : 1);
+         let point = func(value * coef1, value*coef2, true);
+         if (!point.usless() && (pts.length === 0 || (pts.equalIndexOf(point)))) {
+           pts.push(point);
+         }
+         value += 13 * tries;
+         tries++;
          state = ++state % 3;
-         // if (value > limit) throw new Error('Cant find points');
+         if (tries > count * 3 + 1)
+          throw new Error('Cant find points');
       }
+      Vertex3D.vectorSort(pts, pts[0].minus(pts[1]).unit(), Vertex3D.center(pts));
+      points.concatInPlace(pts);
       return pts;
+    }
+
+    function generateAxisPoints(count) {
+      const axis = instance.axis();
+      let vects = [axis.y, axis.x, axis.y.inverse(), axis.x.inverse()];
+      while (vects.length < count) {
+        for (let index = 0; index < vects.length && vects.length < count; index += 2) {
+          const newVect = vects[index].add(vects[(index+1) % vects.length]).unit();
+          vects = vects.slice(0,index+1).concat([newVect]).concat(vects.slice(index+1));
+        }
+      }
+
+
+      const points = vects.map(v => new Vertex3D().translate(v.scale(100)));
+      return points;
+    }
+
+    this.findPoints = (count) => {
+      return generateAxisPoints(count);
     }
 
     this.within = (vertex) => {
@@ -172,11 +258,13 @@ class Plane extends Array {
     }
 
     this.normal = () => {
+      if (normal) return normal;
       const points = this.points();
       const vector1 = points[1].vector().minus(points[0]);
       const vector2 = points[2].vector().minus(points[0]);
       const normVect = vector1.crossProduct(vector2);
-      return normVect.scale(1 / normVect.magnitude());
+      normal = normVect.scale(1 / normVect.magnitude());
+      return normal;
     }
 
     this.valid = () => !Number.isNaN(this.normal().magnitude());
@@ -237,6 +325,15 @@ class Plane extends Array {
         if (!this[i].equals(other[i])) return false;
       }
       return true;
+    }
+
+    this.toDrawString = (color) => {
+      color ||= '';
+      const verts = Array.from(this.findPoints(30));
+      // Vertex3D.vectorSort(verts, verts[0].minus(verts[1]).unit());
+      const arr = verts.map(v => `${color}${v.toString()}`);
+      console.log(`${color}[${arr.join(',')}]`);
+      return `${color}[${arr.join(',')}]`;
     }
   }
 }
@@ -314,8 +411,8 @@ Plane.bisector = (p1, p2) => {
   return {obtuse: plane2, accute: plane1};
 }
 
-// TODO: not used but could be helpful. - fix
 Plane.fromPointNormal = (point, normal) => {
+  normal = normal.unit();
   const fixed = [];
   const a = normal.i();
   const b = normal.j();
@@ -337,7 +434,6 @@ Plane.fromPointNormal = (point, normal) => {
     const answer = (vectArray[aI]*(x-pointArray[aI])+vectArray[bI]*(y-pointArray[bI])-vectArray[ansI]*pointArray[ansI])/-vectArray[ansI];
     const p = [];p[ansI] = answer;p[aI] = x;p[bI] = y;
     return new Vertex3D(...p);
-    // (a*(x-x0)+b*(y-y0)-c*z0)/-c;
   }
   // there is a chance that these three points will be colinear.... not likely and I have more important stuff to do.
 

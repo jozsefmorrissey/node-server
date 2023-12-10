@@ -25,10 +25,10 @@ class Assembly extends KeyValue {
 
     const pcIsFunc = partCode instanceof Function;
     function pCode(full) {
-      const pc = pcIsFunc ? partCode(full) : partCode;
+      const pc = pcIsFunc ? partCode(full) : partCode || 'unk';
       if (!full) return pc;
-      const subPartCode = pc.match(/:.{1,}$/);
       const parent = this.parentAssembly();
+      const subPartCode = pc.match(/:.{1,}$/);
       const connector = subPartCode ? '' : '_'
       if (parent) return `${parent.partCode(full)}${connector}${pc}`;
       return pc;
@@ -45,7 +45,6 @@ class Assembly extends KeyValue {
       propertyId: undefined,
     }
 
-    // TODO: should change subassemblies to an Array not an object;
     const subAssems = this.subassemblies;
     if (Array.isArray(subAssems)) {
       console.log('wtff');
@@ -164,6 +163,46 @@ class Assembly extends KeyValue {
     }
     this.allAssemblies = new FunctionCache(allAssemblies, this, 'alwaysOn');
 
+    const constructUserFriendlyId = (idMap) => (part) => {
+      const pc = part.partCode();
+      if (!pc.startsWith(':')) return pc;
+      const parent = part.parentAssembly();
+      if (parent) {
+        const parentId = idMap[parent.id()];
+        if (parentId) return `${parentId}${pc}`;
+        else return 'unidentified';
+      }
+      return pc;
+    }
+
+    function buildUserFriendlyIdMap() {
+      let unidentified = this.allAssemblies();
+      const idMap = {};
+      do {
+        const split = unidentified.filterSplit(constructUserFriendlyId(idMap));
+        const keys = Object.keys(split);
+        for(let index = 0; index < keys.length; index++) {
+          const key = keys[index];
+          const set = split[key];
+          if (set.length === 1) idMap[set[0].id()] = key;
+          else {
+            for (let si = 0; si < set.length; si++) {
+              idMap[set[si].id()] = `${key}${si+1}`;
+            }
+          }
+        }
+        unidentified = split.unidentified;
+      } while (unidentified && unidentified.length > 0);
+      return idMap;
+    }
+    let userFriendlyIdMap = new FunctionCache(buildUserFriendlyIdMap, this, 'alwaysOn');
+
+    this.userFrendlyId = (id) => {
+      id ||= this.id();
+      if (this.parentAssembly() !== undefined) return this.getRoot().userFrendlyId(id);
+      return userFriendlyIdMap()[id];
+    }
+
     function nearestAssembly(partCode) {
       const searchReg = Assembly.partCodeReg(partCode);
       const searchList = [instance];
@@ -277,7 +316,7 @@ class Assembly extends KeyValue {
       console.log.subtle('built');
       jointList = joints.male.concat(joints.female);
       return joints;
-    }, this, 'hash'); // TODO: this should be under a different group...I think
+    }, this, 'always-on');
 
 
     let jointList;
@@ -295,10 +334,6 @@ class Assembly extends KeyValue {
       if (clazz === undefined) return parts;
       return parts.filter((p) => p instanceof clazz);
     }
-
-    // TODO: wierd dependency on inherited class.... fix!!!
-    // const defaultPartCode = () =>
-    //   instance.partCode(instance.partCode() || Assembly.partCode(this));
 
     let parentAssembly;
     this.parentAssembly = (pa) => {

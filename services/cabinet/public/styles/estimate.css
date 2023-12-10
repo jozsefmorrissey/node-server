@@ -1,4 +1,33 @@
 
+@media print {
+  .no-print, .no-print *
+  {
+      display: none !important;
+  }
+  button.print
+  {
+      display: none !important;
+  }
+}
+.page {
+  break-after: page;
+}
+
+.avoid-page-break {
+  break-inside: avoid-page;
+}
+
+th {
+  border-style: solid;
+}
+
+tr {
+  border-style: solid;
+  border-color: grey;
+  border-width: .2px;
+}
+
+
 /* #layout-sketch-cnt {
   transform: scale(1, -1);
 } */
@@ -335,6 +364,14 @@ a {
   transform: rotate(180deg);
 }
 
+.mirror-x {
+  transform: rotateX(180deg);
+}
+
+.mirror-y {
+  transform: rotateY(180deg);
+}
+
 .cut-info-cnt {
   font-size: small;
 }
@@ -538,5 +575,29 @@ td[dir] {
 }
 
 .part-cnt[hidden] {
+  display: none;
+}
+
+.part-header {
+  margin: 0;
+}
+
+.part-ids-cnt {
+  padding: 0 0 0 20pt
+}
+
+.part-header-cnt {
+  display: flex;
+}
+
+.local-only {
+    background-color: #32cd3224;
+    border-radius: 8pt;
+    border-color: limegreen;
+    border-width: 3pt;
+    border-style: dotted;
+}
+
+.local-only:empty {
   display: none;
 }

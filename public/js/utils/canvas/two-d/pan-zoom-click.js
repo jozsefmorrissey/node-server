@@ -6,8 +6,8 @@ const Vertex2d = require('./objects/vertex');
 
 
 class PanZoomClick extends PanZoom {
-  constructor(canvas, draw, getHoverMap, invertY) {
-    super(canvas, draw, invertY);
+  constructor(canvas, draw, getHoverMap) {
+    super(canvas, draw);
     const instance = this;
 
     this.hoverMap = getHoverMap;
@@ -50,7 +50,7 @@ class PanZoomClick extends PanZoom {
       return clickStack.slice(startIndex, toIndex);
     }
 
-    const y = (event) =>  (invertY ? -1 : 1) * event.imageY;
+    const y = (event) =>  event.imageY;
 
     let clickHoldCount = 0;
     let dragging = false;

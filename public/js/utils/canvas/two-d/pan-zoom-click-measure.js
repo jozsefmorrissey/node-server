@@ -13,8 +13,8 @@ const Draw2D = require('draw');
 FunctionCache.on('pan-zoom', 500);
 
 class PanZoomClickMeasure extends PanZoomClick {
-  constructor(canvas, draw, getHoverMap, invertY) {
-    const draw2d = new Draw2D(canvas, invertY);
+  constructor(canvas, draw, getHoverMap) {
+    const draw2d = new Draw2D(canvas);
     let measEnabled = false;
     let measurementLines = [];
     let vertTol = 15;
@@ -86,9 +86,11 @@ class PanZoomClickMeasure extends PanZoomClick {
       const filter = obj => obj === hovering || obj === measurements.lastClicked() ? 'highlight' : 'normal';
       const split = objs.filterSplit(filter, 'highlight', 'normal');
 
-      for (let index = 0; index < split.highlight.length; index++) {
-        const obj = split.highlight[index];
-        draw2d(obj, 'blue', width * 4 );
+      if (split.highlight) {
+        for (let index = 0; index < split.highlight.length; index++) {
+          const obj = split.highlight[index];
+          draw2d(obj, 'blue', width * 4 );
+        }
       }
       for (let index = 0; index < split.normal.length; index++) {
         const obj = split.normal[index];
@@ -97,9 +99,8 @@ class PanZoomClickMeasure extends PanZoomClick {
     }
 
     const measDraw = () => measurements.enabled() ? drawMeasurements() : draw();
-    measDraw.invertY = draw.invertY;
 
-    super(canvas, measDraw, getHoverMap, invertY);
+    super(canvas, measDraw, getHoverMap);
     const instance = this;
     this.hoverMap = () => measurements.enabled() ? measurmentHoverMap : getHoverMap();
     this.vertexTolerance = (tol) => vertTol = Number.isFinite(tol) ? tol : vertTol;

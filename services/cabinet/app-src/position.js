@@ -128,7 +128,6 @@ class Position {
       }
     }
 
-    //TODO: this could be simpler and more effecient using vector rotations instead of line rotations.
     this.normals = (array) => {
       const assemNorms = assembly.normals(array);
       if (assemNorms && Object.keys(assemNorms).length < 3) {

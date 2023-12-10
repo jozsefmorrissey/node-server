@@ -22,7 +22,6 @@ const DrawLayout = require('./draw/layout');
 const LayoutHoverMap = require('../services/layout-hover-map.js');
 
 const localEnv = EPNTS.getEnv() === 'local';
-// TODO: Rename
 const TwoDLayout = {};
 
 let draw;
@@ -228,11 +227,6 @@ du.on.match('enter', '.measurement-mod', (elem) => {
   getPopUpAttrs(elem).obj.modify(value);
   panZ.once();
 });
-
-// TODO: define cache better.
-function clearCache() {
-  measurementIs = {};
-}
 
 function undo(target) {
   getLayout().history().back();

@@ -25,6 +25,7 @@ class Divider extends Assembly {
     Object.getSet(this, 'type');
 
     if (toBiPolygon) this.toBiPolygon = toBiPolygon;
+    if (panelModel) this.toModel = panelModel;
 
     this.part = () => false;
     const parentToJson = this.toJson;
@@ -33,6 +34,8 @@ class Divider extends Assembly {
       json.subassemblies = [];
       return json;
     }
+    this.maxWidth = () => 2.54*3/4;
+
 
     instance.includeJoints(false);
 

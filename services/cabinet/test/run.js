@@ -13,10 +13,9 @@ if (EPNTS.getEnv() === 'local') {
   require('../../../public/js/utils/test/tests/utils');
   require('../../../public/js/utils/test/tests/imposter');
   require('./tests/cabinet');
-  // TODO: write new tests
+  // TODO: write new tests - not important until we start working on the programmable cost interface.
   // require('../../../public/js/utils/test/tests/decision-tree');
-  // TODO: fix
-  // require('../../../public/js/utils/test/tests/star-line-map');
+  require('../../../public/js/utils/test/tests/star-line-map');
   require('./tests/polygon-merge');
   require('./tests/array-math');
   require('./tests/plane');

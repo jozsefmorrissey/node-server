@@ -20,8 +20,7 @@ class DrawerSection extends Assembly {
     }
     this.getBiPolygon = getFrontBiPolygon;
 
-    // TODO: change ff to df.
-    if (!front) front = new DrawerFront('ff', 'DrawerFront');
+    if (!front) front = new DrawerFront('df', 'DrawerFront');
     front.partName = () => `${sectionProps().partName()}-df`;
     this.front = () => door;
     this.pull = (i) => front.pull(i);
@@ -57,7 +56,7 @@ class DrawerSection extends Assembly {
     this.getBiPolygon = (partCode) => {
       switch (partCode) {
         case 'db': return getFrontPoly();
-        case 'ff': return getFrontBiPolygon();
+        case 'df': return getFrontBiPolygon();
         default: throw new Error(`PartCode: '${partCode}' biPolygon has not been defined for this object`);
       }
     }
@@ -70,8 +69,8 @@ class DrawerSection extends Assembly {
 }
 
 DrawerSection.fromJson = (json) => {
-  const drawerFront = Object.fromJson(json.subassemblies.ff);
-  const drawerBox = Object.fromJson(json.subassemblies.df);
+  const drawerFront = Object.fromJson(json.subassemblies.df);
+  const drawerBox = Object.fromJson(json.subassemblies.db);
   return new DrawerSection(drawerFront, drawerBox);
 }
 

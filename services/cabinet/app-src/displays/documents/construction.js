@@ -45,7 +45,7 @@ function buildCanvas(info, rightOleft) {
   model.scale(coeficient);
   model.center(newCenter);
   const draw = new Draw2d(canvas);
-  const lines = Polygon3D.lines2d(Polygon3D.fromCSG(model), 'x', 'y');
+  const lines = Polygon3D.lines2d(Polygon3D.merge(Polygon3D.fromCSG(model)), 'x', 'y');
   draw(lines, null, .3);
   const side = rightOleft ? 'Right' : 'Left';
   draw.text(side, sideLabelCenter, textProps);
@@ -107,6 +107,10 @@ function viewContainer(view) {
   });
   return id;
 }
+
+const openingCanvasId = (cabinet) => `construction-opening-sketch-${cabinet.id()}`;
+
+
 const html = {
   order: (order) => {
     order ||= Global.order();

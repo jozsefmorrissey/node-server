@@ -48,8 +48,8 @@ class ThreeView {
     const frontMinMax = Polygon2d.minMax(...front2D);
     const rightMinMax = Polygon2d.minMax(...right2D);
     const topMinMax = Polygon2d.minMax(...top2D);
-    const rightCenterOffset = frontMinMax.max.x() + gap + (rightMinMax.max.x() - rightMinMax.min.x())/2;
-    const topCenterOffset = frontMinMax.max.y() + gap + (topMinMax.max.y() - topMinMax.min.y())/2;
+    const rightCenterOffset = -(frontMinMax.max.x() + gap + (rightMinMax.max.x() - rightMinMax.min.x())/2);
+    const topCenterOffset = -(frontMinMax.max.y() + gap + (topMinMax.max.y() - topMinMax.min.y())/2);
 
     Polygon2d.centerOn({x:rightCenterOffset, y:0}, right2D);
     Polygon2d.centerOn({x:0,y:topCenterOffset}, top2D);

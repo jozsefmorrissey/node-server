@@ -14,12 +14,20 @@ const zero = (val) => {
   return val;
 }
 
-// TODO: It would be nice if this[0] === this.startvertex && this[1] === endVertex
 class Line3D {
   constructor(startVertex, endVertex) {
     if (startVertex === undefined || endVertex === undefined) throw new Error('Lines must have a start and an end point');
     this.startVertex = new Vertex3D(startVertex);
     this.endVertex = new Vertex3D(endVertex);
+
+    Object.defineProperty(this, '0', {
+      get: () => this.startVertex,
+      set: (val) => this.startVertex = val
+    });
+    Object.defineProperty(this, '1', {
+      get: () => this.endVertex,
+      set: (val) => this.endVertex = val
+    });
     const instance = this;
 
     this.clone = () => new Line3D(this.startVertex.clone(), this.endVertex.clone());
@@ -261,12 +269,14 @@ class Line3D {
 
     this.to2D = (x,y) => Line3D.to2D([this], x, y)[0];
 
+    // Ensures returnLine startVertex is closer to trendSetter endVertex.
+    // Get In Line
     this.acquiescent = (trendSetter) => {
       if (!(trendSetter instanceof Line2d)) return this;
       const shouldReverse = trendSetter.endVertex.distance(this.endVertex) <
                             trendSetter.endVertex.distance(this.startVertex);
       if (shouldReverse) return this.negitive();
-      return this;
+      return this.clone();
     }
 
     this.isParrelle = (other) => {

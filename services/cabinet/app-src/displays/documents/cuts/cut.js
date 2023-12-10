@@ -6,8 +6,11 @@ const Vertex3D = require('../../../three-d/objects/vertex.js');
 const Line3D = require('../../../three-d/objects/line.js');
 const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
-const within = require('../../../../../../public/js/utils/tolerance.js').within(.0001);
+const Tolerance = require('../../../../../../public/js/utils/tolerance.js');
+const ToleranceMap = require('../../../../../../public/js/utils/tolerance-map.js');
+const within = Tolerance.within(.0001);
 const $t = require('../../../../../../public/js/utils/$t.js');
+const EPNTS = require('../../../../generated/EPNTS.js');
 
 class CutInfo {
   constructor(set, jointInfo, maleModel) {
@@ -174,15 +177,43 @@ function removeFullLengthPolys(existsInBoth, jointInfo) {
   }
 }
 
+function existsInBothSets(set1, set2) {
+  const tol = .001;
+  const tolMap = new ToleranceMap({'normal.positiveUnit.i': tol,
+                        'normal.positiveUnit.j': tol,
+                        'normal.positiveUnit.k': tol,
+                        'toPlane.axisIntercepts.x': tol,
+                        'toPlane.axisIntercepts.y': tol,
+                        'toPlane.axisIntercepts.z': tol});
+  tolMap.addAll(set2);
+  const existsInBoth = [];
+  for (let index = 0; index < set1.length; index++) {
+    const poly = set1[index];
+    const matches = tolMap.matches(poly);
+    let found = false;
+    for (let j = 0; !found && j < matches.length; j++) {
+      if (poly.overlaps(matches[j], true)) {
+        existsInBoth.push(poly);
+        found = true;
+      }
+    }
+  }
+  return existsInBoth;
+}
+
+let partModels = {};
 let time = 0;
 CutInfo.get = (maleModel, jointInfo) => {
-  const jointModel = jointInfo.partInfo().parts()[0].toModel();
+  const start = new Date().getTime();
+  const part = jointInfo.partInfo().parts()[0];
+  const jointModel = part.toModel();
   let noJointmodel = jointInfo.partInfo().noJointmodel();
   const intersection = maleModel.intersect(noJointmodel);
   if (intersection.polygons.length === 0) return;
   const intersectionPolys = Polygon3D.merge(Polygon3D.fromCSG(intersection));
-  const modelPolys = Polygon3D.fromCSG(jointModel);
-  // Polygon3D.merge(modelPolys);
+  const modelPolys = partModels[part.id()] ? partModels[part.id()] : Polygon3D.fromCSG(jointModel);
+  partModels[part.id()] = modelPolys;
+  Polygon3D.merge(modelPolys);
   let existsInBoth = {};
   for (let i = 0; i < modelPolys.length; i++) {
     const mPoly = modelPolys[i];
@@ -190,17 +221,17 @@ CutInfo.get = (maleModel, jointInfo) => {
     for (let j = 0; !found && j < intersectionPolys.length; j++) {
       let intPoly = intersectionPolys[j];
       let hash = intPoly.toDetailString().hash();
-      const start = new Date().getTime();
       if (mPoly.overlaps(intPoly, true) && existsInBoth[hash] === undefined) {
         existsInBoth[hash] = intPoly;
         found = true;
       }
-      const end = new Date().getTime();
-      time += end - start;
     }
   }
+  const end = new Date().getTime();
+  time += end - start;
   console.log(time / 1000);
   existsInBoth = Object.values(existsInBoth);
+  // existsInBoth = existsInBothSets(intersectionPolys, modelPolys);
   // TODO: ideally we would remove full length in joint application
   removeFullLengthPolys(existsInBoth, jointInfo);
 
@@ -246,7 +277,6 @@ CutInfo.sorter = (cut1, cut2) => {
   if (cut1.constructor === cut2.constructor) {
     const dems1 = cut1.demensions();
     const dems2 = cut2.demensions();
-    //TODO: use length of cut;
     return dems2.y - dems1.y;
   } else {
     return cut1.constructor.priority - cut2.constructor.priority;
@@ -287,13 +317,19 @@ CutInfo.display.partIds = (parts) => {
   const cId = parts[0].getAssembly('c').index();
   if (!cId) return '';
   let partStr;
-  if (parts.length === 1) partStr = parts[0].index;
-  else partStr = `[${parts.map(p => p.index).join('\n')}]`;
+  if (parts.length === 1) partStr = parts[0].userFrendlyId();
+  else partStr = `[${parts.map(p => p.userFrendlyId()).join(',')}]`;
   return `${cId}-${partStr}`;
 }
-// CutInfo.display.joint = (joint) => `See model for joint: ${joint.toString()}`;
-// CutInfo.display.channel = (cutInfo) => `<b>${cutInfo.normalizeInfo.side}</b> side <b>${disp(cutInfo.depth)}</b> deep and <b>${disp(cutInfo.width)}</b> wide from <b>${disp.vertex2d(cutInfo.line.startVertex())}</b> to <b>${disp.vertex2d(cutInfo.line.endVertex())}</b>`;
-// CutInfo.display.cut = (cutInfo) => `<b>${cutInfo.normalizeInfo.side}</b> side cut from <b>${disp.vertex2d(cutInfo.line.startVertex())}</b> to <b>${disp.vertex2d(cutInfo.line.endVertex())}</b>`;
+
+CutInfo.display.partCodes = (parts) => {
+  if (EPNTS.getEnv() !== 'local') return '';
+  let partStr;
+  if (parts.length === 1) partStr = parts[0].partCode(true);
+  else partStr = `[${parts.map(p => p.partCode(true)).join(',')}]`;
+  return `${partStr}`;
+}
+
 
 CutInfo.printPolys = (csgs, colors) => {
   colors ||= [];

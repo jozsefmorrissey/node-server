@@ -377,6 +377,10 @@ Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
   return val % mod;
 }, true);
 
+Function.safeStdLibAddition(Math, 'copysign',  function (a, b) {
+  return b < 0 ? -Math.abs(a) : Math.abs(a);
+}, true);
+
 Function.safeStdLibAddition(Math, 'modWithin',  function (val, mod, lowerLimit, upperLimit) {
   val = Math.mod(val, mod);
   lowerLimit = Math.mod(lowerLimit, mod);
@@ -513,7 +517,6 @@ clazz.filter = (filterFunc) => {
 }
 
 const filterOutUndefined = (obj) => (key) => obj[key] !== undefined;
-// TODO: Fix i dont know what i was doint/thinking
 function objEq(obj1, obj2) {
   const isObj1 = obj1 instanceof Object;
   const isObj2 = obj2 instanceof Object;
@@ -1082,7 +1085,6 @@ function setGettersAndSetters(obj, options) {
   }
 }
 
-// TODO: test/fix for normal Object(s);
 Function.safeStdLibAddition(Object, 'getSet',   function (obj, initialVals, ...attrs) {
   const cxtrName = obj.constructor.name;
   const isObject = cxtrName === 'Object'
@@ -1246,7 +1248,6 @@ Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
   return {parent, target, attr: lastAttr, created}
 });
 
-// TODO: should remove this non instance method. its a relic
 Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
   const valueDefined = value !== undefined;
   const pathInfo = obj.pathInfo(path, valueDefined);

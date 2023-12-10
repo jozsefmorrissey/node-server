@@ -120,7 +120,7 @@ Test.add('Matrix: remove',(ts) => {
 });
 
 
-Test.add('Matrix: remove',(ts) => {
+Test.add('Matrix: remove(complex)',(ts) => {
   let matrix = new Matrix([
     [7,8],
     [9,3],
@@ -182,6 +182,7 @@ Test.add('Matrix: remove',(ts) => {
   ts.success();
 });
 
+Test.add('do not report in', (ts) => {})
 
 Test.add('Matrix: identity',(ts) => {
   let identity2 = Matrix.identity(2);

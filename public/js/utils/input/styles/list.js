@@ -4,7 +4,6 @@ const du = require('../../dom-utils');
 const CustomEvent = require('../../custom-event');
 const Input = require('../input');
 
-// TODO: extend InputObject (class functionality overlap)
 class InputList extends Input {
   constructor(props) {
     super(props);

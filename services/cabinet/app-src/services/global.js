@@ -11,8 +11,6 @@ class Displays {
 
 class Global {
   constructor() {
-    // TODO: implementValidation when setting room cabinet and order
-    // validate object and make sure they are related.
     Object.getSet(this, 'order', 'room', 'cabinet', 'displayManager');
     Object.defineProperty(this, 'displays', {
         value: new Displays(),

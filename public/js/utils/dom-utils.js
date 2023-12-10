@@ -27,12 +27,29 @@ function parseSeperator(string, seperator, isRegex) {
   return json;
 }
 
+function querySelector(selector, context) {
+  if (context) {
+    if (context.matches(selector)) return context;
+    return context.querySelector(selector);
+  }
+  return document.querySelector(selector);
+}
+
+function querySelectorAll(selector, context) {
+  const list = [];
+  if (context) {
+    if (context.matches(selector)) list.push(context);
+    list.concatInPlace(context.querySelectorAll(selector))
+    return list;
+  }
+  return document.querySelectorAll(selector);
+}
 
 const du = {create: {}, class: {}, cookie: {}, param: {}, style: {}, is: {},
       scroll: {}, input: {}, on: {}, move: {}, url: {}, fade: {}, position: {},
       bounds: {}};
-du.find = (selector) => document.querySelector(selector);
-du.find.all = (selector) => document.querySelectorAll(selector);
+du.find = (selector, context) => querySelector(selector, context);
+du.find.all = (selector, context) => querySelectorAll(selector, context);
 du.validSelector = VS;
 
 du.input.valueObject = (elem) => {
@@ -375,6 +392,44 @@ du.find.closest = function(selector, node) {
   return recurse(node, 0).node;
 }
 
+// TODO: apply this to all relevant functions. (selector, target)|(selector)|(target)
+//      target - starting element for function
+//      selector - filtering of identified elements
+function selectorAndTarget(selector, target) {
+  const targetDef = target !== undefined;
+  const selectorDef = selector !== undefined;
+  if ((typeof target) === 'string') target = du.find(target);
+  if (targetDef && selectorDef) return {selector, target};
+  if (!targetDef && !selectorDef) return {selector: '*'};
+  if (!selector) return {target, selector: '*'}
+  if (!targetDef) {
+    if (selector instanceof HTMLElement) return {target: selector, selector: '*'};
+    return {selector};
+  }
+  throw new Error('This should not Happen');
+}
+
+du.find.siblings = (selector, elem) => {
+  const selTar = selectorAndTarget(selector, elem);
+  selector = selTar.selector; elem = selTar.target;
+  const siblings = [];
+  let currP = elem;
+  let currN = elem;
+  while(currP = currP.previousElementSibling) siblings.push(currP);
+  while(currN = currN.nextElementSibling) siblings.push(currN);
+  return siblings;
+}
+
+du.find.relations = (selector, elem) => {
+  const selTar = selectorAndTarget(selector, elem);
+  selector = selTar.selector; elem = selTar.target;
+  const relations = {};
+  relations.ancestors = du.find.upAll(selector, elem);
+  relations.distants = [];
+  relations.ancestors.forEach(e => relations.distants.concatInPlace(du.find.siblings(selector, e)));
+  relations.ancestors.splice(0, 1);
+  return relations;
+}
 
 const selectors = {};
 let matchRunIdCount = 0;
@@ -495,8 +550,9 @@ let keyPressId = 0;
 function onKeycombo(event, func, args) {
   const keysDown = {};
   const allPressed = () => {
-    let is = true;
     const keys = Object.keys(keysDown);
+    if (keys.length !== args.length) return false;
+    let is = true;
     const minTime = new Date().getTime() - 1000;
     for (let index = 0; index < keys.length; index++) {
       if (keysDown[keys[index]] < minTime) delete keysDown[keys[index]];
@@ -538,6 +594,28 @@ function onKeycombo(event, func, args) {
   return {event: 'keydown', func: keydown};
 }
 
+function created(elem, selectors) {
+  selectors ||= Object.keys(onCreateSelectors);
+  for (let index = 0; index < selectors.length; index++) {
+    const selector = selectors[index];
+    if (elem.matches(selector)) onCreateSelectors[selector](elem);
+  }
+  for (let ci = 0; ci < elem.children.length; ci++) {
+    created(elem.children[ci], selectors);
+  }
+}
+
+function onCreate(event) {
+  if (event.target instanceof HTMLElement) created(event.target);
+}
+
+const onCreateSelectors = {};
+function create(func, selector) {
+  if (func instanceof Function) onCreateSelectors[selector] = func;
+}
+
+document.addEventListener('DOMNodeInserted', onCreate);
+
 function onNoactivity(event, func, selector, args) {
   let time = Number.parseInt(args[0]);
   if (!Number.isFinite(time)) time = 500;
@@ -570,6 +648,9 @@ function filterCustomEvent(event, func, selector) {
     break;
     case 'noactivity':
       customEvent = onNoactivity(event, func, selector, args);
+    case 'create':
+      create(func, selector);
+      customEvent = null;
   }
   return customEvent;
 }
@@ -578,6 +659,7 @@ du.on.match = function(event, selector, func, target) {
   const events = event.split(':');
   if (events.length > 1) return events.forEach((e) => du.on.match(e, selector, func, target));
   const filter = filterCustomEvent(event, func, selector);
+  if (filter === null) return;
   target = target || document;
   selector = VS(selector);
   if (selector === null) return;
@@ -717,19 +799,25 @@ du.param.remove = function (name) {
 }
 
 du.style = function(elem, style, time) {
-  const save = {};
-  const keys = Object.keys(style);
-  keys.forEach((key) => {
-    save[key] = elem.style[key];
-    elem.style[key] = style[key];
-  });
+  if (!(elem instanceof HTMLElement)) {
+    for (let index = 0; index < elem.length; index++) {
+      du.style(elem[index], style, time);
+    }
+  } else {
+    const save = {};
+    const keys = Object.keys(style);
+    keys.forEach((key) => {
+      save[key] = elem.style[key];
+      elem.style[key] = style[key];
+    });
 
-  if (time) {
-    setTimeout(() => {
-      keys.forEach((key) => {
-        elem.style[key] = save[key];
-      });
-    }, time);
+    if (time) {
+      setTimeout(() => {
+        keys.forEach((key) => {
+          elem.style[key] = save[key];
+        });
+      }, time);
+    }
   }
 }
 
@@ -869,6 +957,22 @@ du.paste.json = (elem, success, fail, validate) => {
   du.paste(elem, successWrapper, fail, validateWrapper);
 }
 
+du.print = {};
+du.print.elem = (selectorOelem) => {
+  let elem = selectorOelem;
+  if (!(elem instanceof HTMLElement)) elem = du.find(selectorOelem);
+  if (elem instanceof HTMLElement) {
+   const relations = du.find.relations(elem)
+   du.hide(relations.distants);
+   du.style(relations.ancestors, {all: 'unset'});
+   window.print();
+   du.show(relations.distants);
+   du.style(relations.ancestors, {all: ''});
+ } else console.error(`Cant find HTMLElement '${selectorOelem}'`);
+}
+
+du.on.match('click', 'button.print', (elem) => du.print.elem(elem.parentElement));
+
 const attrReg = /^[a-zA-Z-]*$/;
 du.uniqueSelector = function selector(focusElem) {
   if (!focusElem) return '';
@@ -965,6 +1069,25 @@ du.convertCssUnit = function( cssValue, target ) {
 
     return cssValue;
 };
+
+function createTimerShortCut() {
+  let timers = [];
+  du.on.match('keycombo(s,t)', '*', () => timers.push(new Date().getTime()));
+  du.on.match('keycombo(t)', '*', (info, info2) => {
+    if (timers.length === 0) return;
+    const endTime = new Date().getTime();
+    let str = '';
+    for (let index = 0; index < timers.length; index++) {
+      let time = endTime - timers[index];
+      if (time < 2000) time = `${time/100} msec`;
+      else time = `${time/1000} sec`;
+      str += `${index}) ${time}\n`;
+    }
+    if (str) alert(str);
+    timers = [];
+  });
+}
+createTimerShortCut();
 
 try {
   module.exports = du;

@@ -22,10 +22,10 @@
     <div id='menu' hidden></div>
     <div id='login'><div id='login-cnt' class='center-all'></div></div>
     <div id='display-ctn'>
-      <div id='app' name='Orders' {{id !== 'home' ? "link='/cabinet/home'" : ''}} hidden>
+      <div id='app' name='Orders' {{pageId !== 'home' ? "link='/cabinet/home'" : ''}} hidden>
         <div id='order-cnt'></div>
       </div>
-      <div name='Property Manager' {{id !== 'home' ? "link='/cabinet/property'" : ''}}
+      <div name='Property Manager' {{pageId !== 'home' ? "link='/cabinet/property'" : ''}}
         id='property-manager-cnt' hidden>
         <div class='center'>
           <button id='property-manager-save-all'>Save All</button>
@@ -33,11 +33,11 @@
         <div id='property-manager'></div>
       </div>
       <div id='cost-manager' "link='/cabinet/cost'" name='Cost Manager'
-          {{id !== 'cost' ? "link='/cabinet/cost'" : ''}} hidden></div>
+          {{pageId !== 'cost' ? "link='/cabinet/cost'" : ''}} hidden></div>
       <div id='template-manager' name='Template Manager'
-          {{id !== 'template' ? "link='/cabinet/template'" : ''}} hidden>Temp Man</div>
+          {{pageId !== 'template' ? "link='/cabinet/template'" : ''}} hidden>Temp Man</div>
       <div id='pattern-manager' name='Pattern Manager'
-          {{id !== 'home' ? "link='/cabinet/pattern'" : ''}} hidden>Pat Man</div>
+          {{pageId !== 'home' ? "link='/cabinet/pattern'" : ''}} hidden>Pat Man</div>
     </div>
     <div:t class='tab' $t-id='canvas-displays'>autoLocProps</div:t>
     <div id='property-select-cnt'></div>

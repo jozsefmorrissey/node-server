@@ -18,11 +18,6 @@ const Global = require('../services/global.js');
 // const cube = new CSG.cube({radius: [3,5,1]});
 const consts = require('../../globals/CONSTANTS');
 
-// TODO: ????
-function displayPart(part) {
-  return true;
-}
-
 function groupParts(cabinet) {
   const grouping = {group: {groups: {}, parts: {}, level: 0}};
   const parts = cabinet.getParts();

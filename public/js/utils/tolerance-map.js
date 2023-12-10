@@ -56,7 +56,7 @@ class ToleranceMap {
       matches(elem, node[bounds.prevId], attrs, list, attrIndex + 1);
 
       if (attrIndex === 0) {
-        const matchList = list.filter((other) => tolerance.within(elem, other));
+        const matchList = list.filter((other) => true || tolerance.within(elem, other));
         matchList.sortByAttrs(tolerance.attributes());
         return matchList;
       }
@@ -124,7 +124,6 @@ class ToleranceMap {
       }
     }
 
-    // TODO: this filters the existing map... not a good idea.
     this.filter = (elem, filter) => {
       const matchArr = matches(elem);
       const filtered = filter(Array.from(matchArr), elem);

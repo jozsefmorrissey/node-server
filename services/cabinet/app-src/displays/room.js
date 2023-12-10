@@ -26,7 +26,7 @@ class RoomDisplay extends Lookup {
 
     const getBody = (room, $index) => {
       Global.room(room);
-      TwoDLayout.panZoom.once();
+      if (TwoDLayout.panZoom) TwoDLayout.panZoom.once();
       groupDisp.active(room.groups[0]);
       return RoomDisplay.bodyTemplate.render({$index, room, groupHtml});
     }
@@ -52,6 +52,7 @@ class RoomDisplay extends Lookup {
       getHeader, getBody, getObject, parentSelector,
       inputValidation: (values) => values.name !== '' ? true : 'name must be defined',
       listElemLable: 'Room', type: 'pill',
+      list: Global.order().rooms,
       inputTree: RoomDisplay.configInputTree()
     };
     const expandList = new ExpandableObject(expListProps);

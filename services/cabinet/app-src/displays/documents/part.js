@@ -72,6 +72,13 @@ class PartInfo {
       return this.normalize(rightOleft, model);
     }, 'long-refresh', this);
 
+    this.polygons = new FunctionCache((rightOleft, joints) => {
+      let model = this.model(rightOleft, joints);
+
+      Polygon3D.merge(Polygon3D.fromCSG(model));
+      return polys;
+    });
+
     this.noJointmodel = new FunctionCache((rightOleft) => {
       return this.normalize(rightOleft, part.toModel([]));
     }, 'long-refresh', this);
@@ -147,10 +154,10 @@ class PartInfo {
     this.edges = (rightOleft, availbleEdgesOnly) => {
       let applicableEdges;
       if (availbleEdgesOnly === undefined) {
-        const cutsOnly = this.cutsOnlyModel(rightOleft);
+        const cutsOnly = Polygon3D.merge(this.cutsOnlyModel(rightOleft));
         applicableEdges = Polygon3D.lines2d(cutsOnly, 'x', 'y');
       } else {
-        applicableEdges = Polygon3D.lines2d(this.noJointmodel(true), 'x', 'y');
+        applicableEdges = Polygon3D.lines2d(Polygon3D.merge(this.noJointmodel(true)), 'x', 'y');
         if (availbleEdgesOnly === true) {
           applicableEdges.concatInPlace(sidesCut.map(l => this.to2D(rightOleft, l)));
         }

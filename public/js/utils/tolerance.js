@@ -43,7 +43,8 @@ function boundsFunc(attr, attributeMap, tolerance, absoluteValue) {
     if (Number.NaNfinity(value)) return {lower: value, upper: value, id: rangeStr(value, value)};
     else {
       const mod = value % tol;
-      const center = mod > tol/2 ? value + (tol - mod) : value - mod;
+      let center = mod > tol/2 ? value + (tol - mod) : value - mod;
+      if (absoluteValue) center = Math.abs(center);
       lower = round(center - tol);
       upper = round(center + tol);
       if (lower>upper) {const temp = lower; lower = upper; upper = temp;}

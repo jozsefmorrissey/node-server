@@ -148,8 +148,9 @@ class Measurement {
 
     this.decimal = (accuracy) => {
       if (nan) return NaN;
-      accuracy = accuracy % 10 ? accuracy : 10000;
-      return Math.round(decimal * accuracy) / accuracy;
+      accuracy ||= .0001;
+      const multiplier = 1/accuracy;
+      return Math.round(decimal * multiplier) / multiplier;
     }
 
     function getDecimalEquivalant(string) {
@@ -228,6 +229,7 @@ Measurement.validation = function (range) {
 }
 
 Measurement.area = function (demensions, notMetric) {
+  if (demensions.length === 0) return 0;
   let area = 0;
   for (let index = 0; index < demensions.length; index++) {
     const dem = demensions[index];
@@ -248,4 +250,4 @@ Measurement.round = (value, percision) => {
 
 try {
   module.exports = Measurement;
-} catch (e) {/* TODO: Consider Removing */}
+} catch (e) {}

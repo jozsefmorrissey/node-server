@@ -36,16 +36,15 @@ const indexHtml = fs.readFileSync('./services/cabinet/public/html/estimate.html'
 const indexTemplate = new $t('index');
 const orderTemplate = new $t('order');
 const orderRedirectTemplate = new $t('order-redirect');
-function servePage(id, scopeFunc) {
+function servePage(pageId, scopeFunc) {
   let template = indexTemplate;
-  switch (id) {
+  switch (pageId) {
     case 'order': template = orderTemplate; break;
     case 'order-redirect': template = orderRedirectTemplate; break;
   }
   return (req, res) => {
     scope = (typeof bodyFunc) === 'function' ? scopeFunc(req, res) : {};
-    // TODO: should probably change this to pageId;
-    scope.id = id;
+    scope.pageId = pageId;
     res.setHeader('Content-Type', 'text/html');
     res.send(template.render(scope));
   }

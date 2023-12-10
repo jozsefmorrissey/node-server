@@ -24,11 +24,13 @@ class StringMathEvaluator {
 
     function resolve (path, currObj, globalCheck) {
       if (path === '') return currObj;
-      // TODO: this try is a patch... resolve path/logic needs to be mapped properly
       try {
         const resolved = !globalCheck && resolver && resolver(path, currObj);
         if (Number.isFinite(resolved)) return resolved;
-      } catch (e) {}
+      } catch (e) {
+        console.error('FIX!!! my former self believed this is an avoidable issue');
+        console.error(e);
+      }
       try {
         if ((typeof path) === 'string') path = path.split(splitter);
         for (let index = 0; index < path.length; index += 1) {
@@ -377,4 +379,4 @@ StringMathEvaluator.toFraction = function (decimal, accuracy) {
 
 try {
   module.exports = StringMathEvaluator;
-} catch (e) {/* TODO: Consider Removing */}
+} catch (e) {}

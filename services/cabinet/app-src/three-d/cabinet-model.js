@@ -9,7 +9,6 @@ const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/poly
 const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex');
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line');
 const SnapPolygon = require('../../../../public/js/utils/canvas/two-d/objects/snap/polygon');
-const StarLineMap = require('../../../../public/js/utils/canvas/two-d/maps/star-line-map');
 const EscapeMap = require('../../../../public/js/utils/canvas/two-d/maps/escape');
 const Global = require('../services/global');
 
@@ -162,8 +161,6 @@ class CabinetModel {
       }
       for (let i = 0; i < assemblies.length; i++) {
         if (in2D) {
-          // TODO: overwiting this.toModel causes the commented line to fail.... should be rectified.
-          // const twoDlines = Polygon3D.toTwoD(assemblies[i].toBiPolygon().toPolygons(), vector, axis);
           const polygons = Polygon3D.fromCSG(assemblies[i].toModel().polygons);
           const twoDlines = Polygon3D.toTwoD(polygons, vector, axis);
           output.concatInPlace(twoDlines);

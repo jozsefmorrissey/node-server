@@ -23,8 +23,8 @@ function partSpliter(p) {
 }
 
 const setDemensions = (obj, attr, setArea) => {
-  if (obj[attr] === undefined) return;
-  obj[attr].demensions = obj[attr].map(o => o.toModel().demensions());
+  if (obj[attr] === undefined) obj[attr] = [];
+  obj[attr].demensions = obj[attr].map(o => o.position().normalModel(true).demensions());
   if (setArea) obj[attr].area = Measurement.area(obj[attr].demensions);
 }
 

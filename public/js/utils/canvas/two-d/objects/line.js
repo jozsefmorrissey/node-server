@@ -27,6 +27,15 @@ class Line2d {
       return endVertex;
     }
 
+    Object.defineProperty(this, '0', {
+      get: this.startVertex,
+      set: this.startVertex
+    });
+    Object.defineProperty(this, '1', {
+      get: this.endVertex,
+      set: this.endVertex
+    });
+
     this.mirrorPoints = (points) => {
       for (let index = 0; index < points.length; index++) {
         const point = points[index];
@@ -265,22 +274,19 @@ class Line2d {
       return (y - this.yIntercept())/slope;
     }
 
-    //TODO: fix!!!!
-    this.liesOn = (vertices, tolerance) => {
-      const liesOn = [];
-      const inTol = tolerance === undefined ? withinTol : Tolerance.within(tolerance);
-      for (let index = 0; index < vertices.length; index += 1) {
-        const v = vertices[index];
-        const dist = this.distance(v);
-        if (inTol(dist, 0)) {
-          liesOn.push(v);
+    this.isOn = (vertexOvertices) => {
+      if (Array.isArray(vertexOvertices)) {
+        const vertices = vertexOvertices;
+        const liesOn = [];
+        for (let index = 0; index < vertices.length; index += 1) {
+          if (this.isOn(vertices[index])) {
+            liesOn.push(vertices[index]);
+          }
         }
+        liesOn.sort(Vertex2d.sort);
+        return liesOn;
       }
-      liesOn.sort(Vertex2d.sort);
-      return liesOn;
-    }
-
-    this.isOn = (vertex) => {
+      const vertex = vertexOvertices;
       const y = this.y(vertex.x());
       return (withinTol(y, vertex.y()) || Math.abs(y) === Infinity) && this.withinSegmentBounds(vertex);
     }
@@ -448,9 +454,17 @@ class Line2d {
       if (!intersection) return false;
       if (intersection === Infinity) {
         if (this.withinSegmentBounds(line)) {
-          // TODO: if endpoints are the only point that touches we should return that point
-          // dont use combine because combine calls this function...
-          return Infinity;
+          if (this.isPoint()) return this.startVertex();
+          if (line.isPoint()) return line.startVertex();
+          const acqui = line.alignRadially(this);
+          const startEqual = acqui.startVertex().equals(this.startVertex);
+          const endEqual = acqui.endVertex().equals(this.startVertex);
+          if ((startEqual && endEqual) || !(startEqual && endEqual)) return Infinity;
+          const acquiEndIsOn = this.isOn(acqui.endVertex()) || acqui.isOn(this.endVertex());
+          if (startEqual) return acquiEndIsOn ? Infinity : this.startVertex();
+          const acquiStartIsOn = this.isOn(acqui.startVertex()) || acqui.isOn(this.startVertex());
+          if (endEqual) return acquiStartIsOn ? Infinity : this.endVertex();
+          throw new Error('This shouldnt happen 12/03/23');
         }
         return false;
       }
@@ -628,6 +642,13 @@ class Line2d {
       return fractured;
     }
 
+    this.scale = (scale , doNotModify) => {
+      if (doNotModify) return this.clone().scale(scale);
+      this[0].scale(scale);
+      this[1].scale(scale);
+      return this;
+    }
+
     this.trimmed = (distance, both) => {
       if ((typeof distance) !== 'number' || distance === 0) throw new Error('distance (arg1) must be of type number && a non-zero value');
       const trimBack = distance < 0;
@@ -680,13 +701,19 @@ class Line2d {
       this.endVertex().point().y = newEnd.y;
     };
 
-    // TODO: figure out where this is used and fix. should use radians to determine acquiescence
+    // Ensures returnLine startVertex is closer to trendSetter endVertex.
+    // Get In Line
     this.acquiescent = (trendSetter) => {
       if (!(trendSetter instanceof Line2d)) return this;
       const shouldReverse = trendSetter.endVertex().distance(this.endVertex()) <
                             trendSetter.endVertex().distance(this.startVertex());
-      if (shouldReverse) return this.negitive();
-      return this;
+                            return shouldReverse ? this.negitive() : this.clone();
+    }
+
+    this.alignRadially = (trendSetter) => {
+      if (!(trendSetter instanceof Line2d)) return this;
+      const shouldReverse = this.radianDifference(trendSetter) > Math.PI;
+      return shouldReverse ? this.negitive() : this.clone();
     }
 
     this.invert = (condition) => {
@@ -796,8 +823,7 @@ Line2d.center = (lines) => Vertex2d.center(Line2d.vertices(lines));
 Line2d.rotate = (lines, radians, pivot) => lines.forEach(l => l.rotate(radians, pivot));
 
 Line2d.consolidate = (...lines) => {
-  // TODO: this should be absSlope...
-  const tolMap = new ToleranceMap({'slope': tol});
+  const tolMap = new ToleranceMap({'slope': `+${tol}`});
   const lineMap = {};
   for (let index = 0; index < lines.length; index += 1) {
     if (!lines[index].isPoint()) {
@@ -1005,6 +1031,22 @@ function polarize(line, center) {
   const sl = new Line2d(center,line.startVertex());
   const el = new Line2d(center,line.startVertex());
   if (Math.mod(sl.radians() - el.radians(), Math.PI/2) > 0) line.invert();
+}
+
+Line2d.translate = (lines, offset) => {
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    line[0].translate(offset.x, offset.y);
+    line[1].translate(offset.x, offset.y);
+  }
+}
+
+Line2d.centerOn = (lines, center) => {
+  center = new Vertex2d(center);
+  const currCenter = Vertex2d.center(Line2d.vertices(lines));
+  const offset = {x: center.x() - currCenter.x(), y: center.y() - currCenter.y()};
+  Line2d.translate(lines, offset);
+  return offset;
 }
 
 Line2d.sorter = (center, degreesOstartpoint) => (l1, l2) => {

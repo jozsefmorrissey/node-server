@@ -16,7 +16,6 @@ class ExpandableObject extends Expandable {
       mappedObject = props.mappedObject || {}
     }
     super(props);
-	//TODO: Set aciveKey
 
     const superRemove = this.remove;
     this.remove = (key) => {

@@ -29,9 +29,9 @@ class BiPolygon {
     this.normalRight = () => this.normalTop().crossProduct(this.normal()).unit().inverse();
 
     this.normals = () => ({
-      top: this.normalTop(),
-      front: this.normal(),
-      right: this.normalRight()
+      x: this.normalRight(),
+      y: this.normalTop(),
+      z: this.normal()
     });
 
     this.valid = () => this.front().valid() && this.back().valid();
@@ -256,7 +256,6 @@ class BiPolygon {
   }
 }
 
-// TODO: Fix offset!... is it broken??? yes it is need to expand consitantly regaurdless of line angle.
 BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   distance2 ||= 0;
   // if (distance2 > distance1) {
@@ -268,7 +267,6 @@ BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   // if (verts.length < 4) return undefined;
   if (verts.length < 3) return undefined;
   const verts1 = JSON.clone(verts);
-  // TODO: consider moving/fixing
   if (offset) {
     Line3D.adjustVertices(verts1[0], verts1[1], offset.x);
     Line3D.adjustVertices(verts1[2], verts1[3], offset.x);

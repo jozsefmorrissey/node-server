@@ -5,7 +5,7 @@ const JsonReaderWriter = require('json-reader-writer');
 const ROOT_OBJ_NAME = '_AUTO_SAVE_root.json';
 // TODO: I would prefer if name was not an argument... but i tried removing it
 //       and everything broke. My theory was that only one instance of a given
-//       file or directory can referenced at a time. Since the root directory
+//       file or directory can be referenced at a time. Since the root directory
 //       is never accessed when reading and writing, this eliminates the multiple
 //       reference problem.(If that was the problem...)
 class AutoSave {

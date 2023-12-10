@@ -10,8 +10,8 @@ const Layout2D = require('../../two-d/layout/layout.js');
 
 
 class DrawLayout extends Draw {
-  constructor(canvasOselector, getLayout, invertY) {
-    super(canvasOselector, invertY);
+  constructor(canvasOselector, getLayout) {
+    super(canvasOselector);
     const parent = this;
 
     function filter (object) {
@@ -308,9 +308,11 @@ class DrawLayout extends Draw {
       const filter = obj => obj === hoverMap.hovered()  || obj === hoverMap.lastClicked() ? 'highlight' : 'normal';
       const split = objs.filterSplit(filter, 'highlight', 'normal');
 
-      for (let index = 0; index < split.highlight.length; index++) {
-        const obj = split.highlight[index];
-        draw(obj, 'blue', width * 4 );
+      if (split.highlight) {
+        for (let index = 0; index < split.highlight.length; index++) {
+          const obj = split.highlight[index];
+          draw(obj, 'blue', width * 4 );
+        }
       }
       for (let index = 0; index < split.normal.length; index++) {
         const obj = split.normal[index];

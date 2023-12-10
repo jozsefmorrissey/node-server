@@ -24,12 +24,12 @@ const TwoDLayout = require('./displays/two-d-layout.js');
 const ThreeDMainModel = require('./displays/three-d-main.js');
 require('./three-d/layout/init');
 require('./objects/simple/init')
+require('./displays/opening-sketch.js')
 const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');
 const utils = require('./utils.js');
 
 let orderDisplay;
-
 
 // Run Tests
 if (EPNTS.getEnv() === 'local') {

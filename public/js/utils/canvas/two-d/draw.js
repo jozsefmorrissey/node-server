@@ -8,8 +8,7 @@ const tol = .1;
 let vertLocTolMap;
 
 class Draw2d {
-  constructor(canvasOselector, invertY) {
-    const yCoef = invertY ? -1 : 1;
+  constructor(canvasOselector) {
     let takenLocations;
     let coloredLocations;
 
@@ -17,6 +16,7 @@ class Draw2d {
       if (typeof canvasOid === 'string') return du.find(canvasOselector);
       return canvasOselector;
     }
+
     const ctx = () => canvas().getContext('2d');
 
     function draw(object, color, width) {
@@ -61,10 +61,10 @@ class Draw2d {
         }
       }
     }
-    draw.invertY = (yes) => {
-      if (yes === true) invertY = true;
-      if (yes === false) invertY = false;
-      return invertY;
+
+    let scale = 1;
+    draw.scale = (x, y) => {
+      ctx().scale(x, y);
     }
 
     draw.canvas = canvas;
@@ -102,9 +102,9 @@ class Draw2d {
     }
 
     const midpointFlag = (point, radians) => {
-      ctx().moveTo(point.x(), yCoef * point.y());
+      ctx().moveTo(point.x(), point.y());
       const ev = Line2d.startAndTheta(point, radians, 15).endVertex();
-      ctx().lineTo(ev.x(), yCoef * ev.y());
+      ctx().lineTo(ev.x(), ev.y());
     }
     function midpointFlags(line) {
       midpointFlag(line.midpoint(), Math.toRadians(line.degrees() - 135));
@@ -122,8 +122,8 @@ class Draw2d {
       ctx().beginPath();
       ctx().strokeStyle = color;
       ctx().lineWidth = width;
-      ctx().moveTo(line.startVertex().x(), yCoef * line.startVertex().y());
-      ctx().lineTo(line.endVertex().x(), yCoef * line.endVertex().y());
+      ctx().moveTo(line.startVertex().x(), line.startVertex().y());
+      ctx().lineTo(line.endVertex().x(), line.endVertex().y());
       if (Draw2d.debug.showFlags) midpointFlags(line);
       ctx().stroke();
       // identifyVertices(line);
@@ -168,14 +168,14 @@ class Draw2d {
       // if ((typeof poly.getTextInfo) === 'function') {
       //   ctx().save();
       //   const info = poly.getTextInfo();
-      //   ctx().translate(info.center.x(), yCoef * info.center.y());
+      //   ctx().translate(info.center.x(), info.center.y());
       //   ctx().rotate(info.radians);
       //   ctx().beginPath();
       //   ctx().lineWidth = 4;
       //   ctx().strokeStyle = color;
       //   ctx().fillStyle =  color;
       //   const text = info.limit === undefined ? info.text : (info.text || '').substring(0, info.limit);
-      //   ctx().fillText(text, info.x, yCoef * info.y, info.maxWidth);
+      //   ctx().fillText(text, info.x, info.y, info.maxWidth);
       //   ctx().stroke()
       //   ctx().restore();
       // }
@@ -189,7 +189,7 @@ class Draw2d {
       ctx().fillStyle = color;
 
       const center = square.center();
-      ctx().translate(center.x(), yCoef * center.y());
+      ctx().translate(center.x(), center.y());
       ctx().rotate(square.radians());
       ctx().rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
       ctx().stroke();
@@ -213,7 +213,7 @@ class Draw2d {
       ctx().lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
       ctx().strokeStyle = lineColor || 'black';
       ctx().fillStyle = fillColor || 'white';
-      ctx().arc(center.x(),yCoef * center.y(), circle.radius(),0, 2*Math.PI);
+      ctx().arc(center.x(), center.y(), circle.radius(),0, 2*Math.PI);
       ctx().stroke();
       ctx().fill();
     }
@@ -228,9 +228,8 @@ class Draw2d {
       ctx.save();
       ctx.lineWidth = 0;
       const textLength = text.length;
-      ctx.translate(point.x(), yCoef * point.y());
+      ctx.translate(point.x(), point.y());
       let radians = props.radians || 0;
-      if (yCoef === -1) radians += Math.PI/2;
       ctx.rotate(props.radians);
       ctx.beginPath();
       ctx.fillStyle = props.fillColor || "white";
@@ -244,7 +243,10 @@ class Draw2d {
       ctx.lineWidth = .2;
       ctx.strokeStyle = props.color || 'black';
       ctx.fillStyle =  props.color || 'black';
-      ctx.fillText(text, props.x || 0, yCoef * (props.y || 0), props.maxWidth);
+      if (props.mirrorX && props.mirrorY) ctx.scale(-1, -1);
+      else if (props.mirrorX) ctx.scale(1, -1);
+      else if (props.mirrorY) ctx.scale(-1, 1);
+      ctx.fillText(text, props.x || 0, (props.y || 0), props.maxWidth);
       ctx.stroke()
       ctx.restore();
     }
@@ -260,7 +262,7 @@ class Draw2d {
       ctx.lineWidth = 0;
       const length = measurement.display();
       const textLength = length.length;
-      ctx.translate(midpoint.x(), yCoef * midpoint.y());
+      ctx.translate(midpoint.x(), midpoint.y());
       ctx.rotate(line.radians());
       ctx.beginPath();
       ctx.fillStyle = "white";

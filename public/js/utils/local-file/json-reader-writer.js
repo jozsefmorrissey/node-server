@@ -92,9 +92,6 @@ class JsonReaderWriter {
         await removeExisting(rootDirectoryHelper);
         replaceLoc.move(rootDirectoryHelper.absPath());
         if (replaceFile) await replaceFile.move(rootJsonFileName);
-        // TODO: should create hash function that takes returns true is an object
-        //       structure is the same. Since keys are not ordered this method
-        //       may return true for identical objects with a diffrent reference order.
         lastHashes[rootDirectoryHelper.absPath()] = hash;
         lastDeconstruction = jsonD;
         return true;

@@ -73,6 +73,33 @@ class Vector3D {
       const equivVect = new Vector3D(vector.i() * coef, vector.j() * coef, vector.k() * coef);
       return Vector3D.tolerance.within(equivVect, this);
     }
+
+    this.toDrawString = (color) => {
+      color ||= '';
+      return `${color}[(0,0,0),(${i},${j},${k}))`;
+    }
+
+    const scalarStr = (val) => val >= 0 ? '+' : '-';
+    this.sectorScalar = () => {
+      const scaleStr = `${scalarStr(i)}${scalarStr(j)}${scalarStr(k)}`;
+      switch (scaleStr) {
+        case '+++': return 1;
+        case '-++': return 2;
+        case '++-': return 3;
+        case '+-+': return 4;
+        case '-+-': return 5;
+        case '--+': return 6;
+        case '+--': return 7;
+        case '---': return 8;
+      }
+    }
+
+    this.getPerpendicular = () => new Vector3D(
+      Math.copysign(k, i),
+      Math.copysign(k,j),
+      -Math.copysign(i,k) - Math.copysign(j,k)
+    );
+
     this.crossProduct = (other) => {
       const i = this.j() * other.k() - this.k() * other.j();
       const j = this.i() * other.k() - this.k() * other.i();
@@ -132,5 +159,9 @@ Vector3D.mostInLine = (vectors, target) => {
   }
   return closest.vector;
 }
+
+Vector3D.i = new Vector3D(1,0,0);
+Vector3D.j = new Vector3D(0,1,0);
+Vector3D.k = new Vector3D(0,0,1);
 
 module.exports = Vector3D;

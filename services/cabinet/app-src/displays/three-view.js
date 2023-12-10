@@ -141,10 +141,10 @@ class ThreeView extends Lookup {
     }
 
     function init() {
-      draw = new Draw2D(du.id('three-view'), true);
+      draw = new Draw2D(du.id('three-view'));
 
       hovermap = new HoverMap2d();
-      panz = new PanZoomClickMeasure(draw.canvas(), drawView, () => hovermap, true);
+      panz = new PanZoomClickMeasure(draw.canvas(), drawView, () => hovermap);
       // panz.disable.move();
       panz.vertexTolerance(1.6);
       panz.lineTolerance(.8);

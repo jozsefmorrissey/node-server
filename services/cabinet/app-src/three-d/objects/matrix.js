@@ -225,6 +225,7 @@ class Matrix extends Array {
       return {removedColumns, matrix:  new Matrix(keepRows)};
     }
 
+    // TODO: write non recurse faster algorithum
     this.determinate = () => {
       if (rows === 2) return this[0][0] * this[1][1] - this[0][1] * this[1][0];
 
@@ -491,12 +492,13 @@ Matrix.fromVertex = (vertex) => {
 }
 
 Matrix.mapObjects = (objects, attrs) => {
-  const matrix = new Matrix(null, attrs.length, attrs.length);
+  const matrix = new Matrix(null, objects.length, attrs.length);
   const val = (funcOval) => (typeof funcOval) === 'function' ? funcOval() : funcOval;
   for (let i = 0; i < objects.length; i++) {
     const obj = objects[i];
     for (let j = 0; j < attrs.length; j++) {
-      matrix[i][j] = Function.orVal(obj[attrs[j]]);
+      if ((typeof attrs[j]) !== 'string') matrix[i][j] = attrs[j];
+      else matrix[i][j] = Function.orVal(obj[attrs[j]]);
     }
   }
   return matrix;

@@ -326,7 +326,7 @@ class Snap2d extends Lookup {
 
 
     function nearestSnapsOnWall(center, wall) {
-      const filter = (snapLoc) => wall.liesOn([snapLoc.center()], 5).length === 1;
+      const filter = (snapLoc) => wall.isOn([snapLoc.center()], 5).length === 1;
       const objects = instance.parent().layout().activeObjects();
       const neighbors = [];
       for (let index = 0; index < objects.length; index++) {

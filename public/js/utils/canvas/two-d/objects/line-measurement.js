@@ -139,7 +139,7 @@ LineMeasurement2d.measurements = (lines) => {
   const measurements = [];
   const lengthMap = new ToleranceMap({length: .00001});
   for (let tIndex = 0; tIndex < lines.length; tIndex += 1) {
-    const tarVerts = lines[tIndex].liesOn(verts);
+    const tarVerts = lines[tIndex].isOn(verts);
     if (tarVerts.length > 2) {
       for (let index = 1; index < tarVerts.length; index += 1) {
         const sv = tarVerts[index - 1];

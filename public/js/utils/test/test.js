@@ -193,6 +193,19 @@ TestStatus.successAssertions = 0;
 TestStatus.failAssertions = 0;
 
 const ran = {};
+const ensureAllComplete = (test) => (runAgainIn) => {
+  if (test.EAC_INITIALIZED) {
+    const notReportedIn = test.notReportedIn();
+    if (notReportedIn.length === 0) return;
+    notReportedIn.forEach(name => console.warn(`Test has not Reported In: ${name}`));
+  }
+  else test.EAC_INITIALIZED = true;
+  let nextRunTime = runAgainIn*2;
+  nextRunTime = nextRunTime > 60000 ? 60000 : nextRunTime;
+  setTimeout(() => ensureAllComplete(test)(nextRunTime), runAgainIn)
+}
+
+let allRunCheck = false;
 const Test = {
   tests: {},
   add: (name, func) => {
@@ -220,11 +233,14 @@ const Test = {
             }
           });
         } catch (e) {
-          if (e !== failureError) try {ts.fail(e);} catch(e) {}
+          if (e !== failureError) try {ts.fail(e);} catch(e) {
+            console.error(e);
+          }
         }
         ran[testName] = true;
       }
     }
+    if (!allRunCheck) ensureAllComplete(Test)(500) & (allRunCheck = true);
   },
   results: () => ({
     tests: {
@@ -255,12 +271,19 @@ const Test = {
     const reportNames = Object.keys(reported).sort();
     return ranNames.equals(reportNames);
   },
+  notReportedIn: () => {
+    const ranNames = Object.keys(ran).sort();
+    const reportNames = Object.keys(reported).sort();
+    ranNames.removeAll(reportNames);
+    return ranNames;
+  },
   reportIn: (ts) => {
     if (reported[ts.name()]) throw new Error(`Test: '${ts.name()}' is double reporting.\n\t\tonly one call should be made to fail || success`);
     if (ts.failed() || !ts.succeed()) TestStatus.failCount++;
     else TestStatus.successCount++;
     Test.printResults();
     ts.cleanUp();
+    reported[ts.name()] = ts;
     //runCollectiveCleanup(); ... implement
   }
 }

@@ -6,7 +6,7 @@ const BiPolygon = require('../three-d/objects/bi-polygon.js');
 const Cutter = require('../objects/assembly/assemblies/cutter.js');
 const Panel = require('../objects/assembly/assemblies/panel.js');
 const Butt = require('../objects/joint/joints/butt.js');
-// TODO: fix required coordinate layout leftTop, rightTop, RightBottom, leftBottom
+
 class CabinetOpeningCorrdinates {
   constructor(cabinet, sectionProperties) {
     const config = sectionProperties.config();

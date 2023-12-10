@@ -108,6 +108,8 @@ class Vertex2d {
       return new Vertex2d(copy);
     }
 
+    this.scale = () => Vertex2d
+
     this.copy = () => new Vertex2d([this.x(), this.y()]);
 
     this.differance = (x, y) => {
@@ -206,14 +208,11 @@ Vertex2d.centerOn = (newCenter, vertices) => {
 }
 
 Vertex2d.scale = (scaleX, scaleY, vertices) => {
-  const center = Vertex2d.center(vertices);
-  Vertex2d.centerOn(new Vertex2d(0,0), vertices);
   for (let index = 0; index < vertices.length; index++) {
     const vert = vertices[index];
     vert.x(vert.x() * 1);
     vert.y(vert.y() * -1);
   }
-  Vertex2d.centerOn(center, vertices);
 }
 
 Vertex2d.toleranceMap = (tolerance, vertices) => {

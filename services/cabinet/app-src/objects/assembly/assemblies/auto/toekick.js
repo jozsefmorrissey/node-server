@@ -88,6 +88,7 @@ class AutoToekick extends Assembly {
     //   return supportPanels;
     // }
 
+    this.tkb = () => toeKickPanel;
     this.part = () => false;
     this.children = () => this.getSubassemblies();
 
@@ -284,7 +285,7 @@ class AutoToekick extends Assembly {
       for (let index = 0; index < openings.length; index++) {
         opening = openingToeKick(openings[index]);
       }
-      return opening;
+      return panel.toBiPolygon();
     }
 
     this.toModel = () => this.toBiPolygon().toModel();

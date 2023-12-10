@@ -57,7 +57,7 @@ class Vertex3D {
       return Number.isFinite(this.x + this.y + this.z);
     }
 
-    this.usless = () => Number.NaNfinity(x, y, z);
+    this.usless = () => Number.NaNfinity(this.x, this.y, this.z);
 
     this.vector = (vector) => {
       const v = vector;
@@ -240,15 +240,17 @@ Vertex3D.origin = new Vertex3D(0,0,0);
 Vertex3D.vectorSorter = (vector, center) => {
   center ||= new Vertex3D(0,0,0);
   vector ||= new Vector3D(1,1,1);
-  const sorter = (vert1, vert2, recurse) => {
+  const sorter = (vert1, vert2) => {
     const vect1 = vert1.minus(center).unit();
     const vect2 = vert2.minus(center).unit();
-    const line1dot = vector.dot(vect1);
-    const line2dot = vector.dot(vect2);
-    const dotDiff = line1dot - line2dot;
-    if (dotDiff !== 0) return dotDiff;
-    if (vect1.equals(vect2) || recurse) return 0;
-    return sorter(new Vertex3D(vect1.add(center)), new Vertex3D(vect2.add(center)), true);
+    if (vect1.positive() === vect2.positive()) {
+      const line1dot = vector.dot(vect1);
+      const line2dot = vector.dot(vect2);
+      const dotDiff = line1dot - line2dot;
+      if (dotDiff !== 0) return dotDiff;
+      if (vect1.equals(vect2)) return 0;
+    }
+    return vect1.positive() ? -1 : 1;
   }
   return sorter;
 }
@@ -294,32 +296,6 @@ class SimpleVertex3D {
     }
   }
 }
-
-// TODO: play with optimization
-// const testRun = () => {
-//   const instStartTime = new Date().getTime();
-//   for (let index = 0; index < 900000; index++) {
-//     new Vertex3D(0,1,0);
-//   }
-//   const instEndTime = new Date().getTime();
-//   const instTime = instEndTime - instStartTime;
-//
-//   const simpStartTime = new Date().getTime();
-//   for (let index = 0; index < 900000; index++) {
-//     new Vertex3D.Simple(0,1,0);
-//   }
-//   const simpEndTime = new Date().getTime();
-//   const simpTime = simpEndTime - simpStartTime;
-//
-//   const objStartTime = new Date().getTime();
-//   for (let index = 0; index < 900000; index++) {
-//     obj = {x:0, y:1, z:0};
-//   }
-//   const objEndTime = new Date().getTime();
-//   const objTime = objEndTime - objStartTime;
-//
-//   console.log(instTime, simpTime, objTime);
-// }
 
 Vertex3D.Simple = SimpleVertex3D;
 

@@ -51,9 +51,9 @@ class SectionProperties extends KeyValue{
       return conf;
     }
 
-    // TODO: consider getting rid of, sections and cover are the only ones that matter.
     this.subassemblies = [];
     const sectionCutters = [];
+    this.userFrendlyId = () => this.getRoot().userFrendlyId(this.id());
 
 
     // index ||= 0;
@@ -661,7 +661,7 @@ class SectionProperties extends KeyValue{
       let depthVector = normal.scale(depth);
       let heightVector = new Line3D(point1, point2).vector().unit();
       let thicknessVector  = depthVector.crossProduct(heightVector);
-      divider.panel().normals(true, [depthVector.unit(), heightVector, thicknessVector]);
+      divider.panel().normals(true, [heightVector, depthVector.unit(), thicknessVector]);
       const point3 = point2.translate(depthVector, true);
       const point4 = point1.translate(depthVector, true);
       const points = [point1, point2, point3, point4];
@@ -745,15 +745,11 @@ class SectionProperties extends KeyValue{
     this.divider(divider);
     divider.parentAssembly(this);
     this.value('vertical', false);
-    // TODO:updateFlag Use update flag instead;
     this.pattern().onChange(this.reevaluate);
-    // this.vertical(true);
-    // coordinates.onAfterChange(this.reevaluate);
 
     function buildCutters () {
       const cabinet = instance.getCabinet();
       const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Void|Auto|Section)/))
-      // const subAssems = [instance.right(), instance.left(), instance.top(), instance.bottom(), instance.back()];
       for (let index = 0; index < subAssems.length; index++) {
         const reference = subAssems[index];
         let offset = instance.dividerJoint().maleOffset();

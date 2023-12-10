@@ -11,6 +11,7 @@ const within = Tolerance.within(.0000001);
 
 const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 let lastMi;
+const NormalMagnitudeIsZero = new Error('InvalidPolygon: normal vector magnitude === 0');
 
 const place = (vert, no, one, two, three) => {
   let count = 0;
@@ -80,7 +81,7 @@ class Polygon3D {
     }
 
     function calcNormal(otherPoints) {
-      let points = this.vertices();
+      let points = instance.vertices();
       if (!Array.isArray(otherPoints)) {
         otherPoints = points.slice(2);
       } else {
@@ -96,8 +97,7 @@ class Polygon3D {
       }
 
       if (magnitude === 0) {
-        this.normal(otherPoints);
-        throw new Error('InvalidPolygon: normal vector magnitude === 0');
+        throw NormalMagnitudeIsZero;
       }
       return normVect.unit();
     }
@@ -336,14 +336,20 @@ class Polygon3D {
           const line = new Line3D(startVertex, endVertex);
           lines.push(line);
           const prevLine = lines[lines.length - 2];
-          // TODO: This is a plane conformity check... Could be useful if it could detect errors accruatly.
-          // if (lines.length > 1 && !(normal instanceof Vector3D)) normal = calcNormal(line, prevLine);
-          // else if (lines.length > 2) {
-          //   const equal = normal.equals(calcNormal(line, prevLine));
-          //   if (equal === false) {
-          //     console.warn('Trying to add vertex that does not lie in the existing plane');
-          //   }
-          // }
+          if (lines.length > 2 && !(normal instanceof Vector3D)) {
+            try {
+              normal = calcNormal().positiveUnit();
+            } catch (e) {
+              if (e !== NormalMagnitudeIsZero) {
+                console.error(e);
+              }
+            }
+          } else if (lines.length > 3) {
+            const equal = normal.equals(calcNormal(endVertex).positiveUnit());
+            if (equal === false) {
+              console.warn('Trying to add vertex that does not lie in the existing plane');
+            }
+          }
         }
       }
       if (verts.length > 0 && lines.length > 0) {
@@ -438,10 +444,7 @@ class Polygon3D {
             }
           }
         }
-        // TODO: not sure if this will cause an issue but polygons should not have less than 3 vertices this will break toPlane functionality.
-        // if (lines.length < 3) {
-        //   console.warn('che che check it out', lines.length);
-        // }
+
         if (removed) this.lineMap(true);
       }
     }
@@ -543,6 +546,12 @@ class Polygon3D {
     // TODO: Needs work. I think just polys that share multipleLines...
     this.merge = (other) => {
       if (!this.normal().parrelle(other.normal())) return;
+      // try {
+      //   const combined = new Polygon3D(this.vertices().concat(other.vertices()));
+      //   if (!combined.normal.parrelle(normal)) return;
+      // } catch (e) {
+      //   return;
+      // }
       if (this.equals(other)) return this.copy();
       const thisPlane = this.toPlane();
       const otherPlane = other.toPlane();
@@ -724,21 +733,37 @@ function printMerge(target, other, merged) {
 
 let doIt = false;
 Polygon3D.merge = (polygons) => {
-  let currIndex = 0;
-  while (currIndex < polygons.length - 1) {
-    const target = polygons[currIndex];
-    for (let index = currIndex + 1; index < polygons.length; index += 1) {
-      const other = polygons[index];
-      const merged = target.merge(other);
-      if (merged) {
-        if (doIt) printMerge(target, other, merged);
-        polygons[currIndex--] = merged;
-        polygons.splice(index, 1);
-        break;
+  if (polygons instanceof CSG) polygons = Polygon3D.fromCSG(polygons);
+  const tol = '+.001';
+  const tolMap = new ToleranceMap({'normal.positiveUnit.i': tol,
+                        'normal.positiveUnit.j': tol,
+                        'normal.positiveUnit.k': tol,
+                        'toPlane.axisIntercepts.x': tol,
+                        'toPlane.axisIntercepts.y': tol,
+                        'toPlane.axisIntercepts.z': tol});
+  tolMap.addAll(polygons);
+
+  polygons.deleteAll();
+  tolMap.forEachSet((polys) => {
+    let currIndex = 0;
+    while (currIndex < polys.length - 1) {
+      const target = polys[currIndex];
+      for (let index = currIndex + 1; index < polys.length; index += 1) {
+        const other = polys[index];
+        const merged = target.merge(other);
+        if (merged) {
+          if (doIt) printMerge(target, other, merged);
+          polys[currIndex--] = merged;
+          polys.splice(index, 1);
+          break;
+        }
       }
+      currIndex++;
     }
-    currIndex++;
-  }
+    polygons.concatInPlace(polys);
+  });
+
+
   return polygons;
 }
 
@@ -768,7 +793,7 @@ Polygon3D.mostInformation = (polygons) => {
 Polygon3D.lines2d = (polygons, x, y) => {
   if (polygons instanceof Polygon3D) polygons = [polygons];
   if (polygons instanceof CSG) polygons = Polygon3D.fromCSG(polygons);
-  Polygon3D.merge(polygons);
+  // Polygon3D.merge(polygons);
   let lines = [];
   polygons.map(p => p.to2D(x, y)).forEach(p => lines.concatInPlace(p.lines()));
   return Line2d.consolidate(...lines);
@@ -880,11 +905,13 @@ for (let index = 0; index < 10000; index++) {
 }
 
 Polygon3D.viewFromVector = (polygons, vector) => {
+  if (polygons instanceof CSG) polygons = Polygon3D.fromCSG(polygons);
   const orthoPolys = [];
   for (let p = 0; p < polygons.length; p++) {
     const vertices = polygons[p].vertices();
     const orthoVerts = Vertex3D.viewFromVector(vertices, vector);
-    orthoPolys.push(new Polygon3D(orthoVerts));
+    const poly = new Polygon3D(orthoVerts);
+    orthoPolys.push(poly);
   }
   return orthoPolys;
 }

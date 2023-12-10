@@ -62,10 +62,16 @@ class Cabinet extends Assembly {
 
     const parentGetSubAssems = this.getSubassemblies;
     let toeKick;
+    const getToeKick = () => {
+      if (!this.autoToeKick()) return undefined;
+      if (toeKick === undefined) toeKick = new AutoToekick(this);
+      return toeKick;
+    }
+
     this.getSubassemblies = (childrenOnly) => {
       const subs = parentGetSubAssems(childrenOnly);
-      if (this.autoToeKick()) {
-        if (toeKick === undefined) toeKick = new AutoToekick(this);
+      const toeKick = getToeKick();
+      if (toeKick) {
         subs.push(toeKick);
         if (!childrenOnly) subs.concatInPlace(toeKick.getSubassemblies());
         return subs;
@@ -190,12 +196,10 @@ class Cabinet extends Assembly {
 
         const pointArr = [points.top.left, points.top.right, points.bottom.right, points.bottom.left];
         let center = Vertex3D.center.apply(null, pointArr);
-        // CSG.rotatePointsAroundCenter(rotation, pointArr, center, true);
 
         const width = new Vertex3D(points.top.left).distance(new Vertex3D(points.top.right));
         const length = new Vertex3D(points.bottom.left).distance(new Vertex3D(points.top.left));
 
-        //TODO: calculate real value;
         const depth = 20 * 2.54;
 
         const position = {};
@@ -245,6 +249,21 @@ class Cabinet extends Assembly {
         }
         return func(...args);
       }
+    }
+
+    this.toModel = () => {
+      const subs = Object.values(this.subassemblies);
+      const toeKick = getToeKick();
+      if (toeKick) {
+        subs.push(toeKick.tkb());
+      }
+      let csg = new CSG();
+      for (let index = 0; index < subs.length; index++) {
+        if (subs[index].toModel instanceof Function) {
+          csg = csg.union(subs[index].toModel([]));
+        }
+      }
+      return csg;
     }
 
     let lastCallId = 0;

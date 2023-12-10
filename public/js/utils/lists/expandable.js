@@ -51,11 +51,10 @@ class Expandable {
     this.getBody = props.getBody; delete props.getBody;
     props.id = Expandable.lists.length;
     const firstKey = Object.keys(props.list)[0];
-    props.activeKey = props.startClosed ?  undefined : firstKey || 0; //TODO ???
+    props.activeKey = props.startClosed ?  undefined : firstKey || 0;
     Object.getSet(this, props, 'listElemLable');
     let pendingRefresh = false;
     let lastRefresh = new Date().getTime();
-    const storage = {};
     Expandable.lists[props.id] = this;
     this.inputTree = () => props.inputTree;
     this.parentSelector = () => props.parentSelector;
@@ -146,14 +145,7 @@ class Expandable {
     this.activeKey = (value) => value === undefined ? props.activeKey : (props.activeKey = value);
     this.getKey = () => this.list().length;
     this.active = () => props.list[this.activeKey()];
-    // TODO: figure out why i wrote this and if its neccisary.
-    this.value = (key) => (key2, value) => {
-      if (props.activeKey === undefined) props.activeKey = 0;
-      if (key === undefined) key = props.activeKey;
-      if (storage[key] === undefined) storage[key] = {};
-      if (value === undefined) return storage[key][key2];
-      storage[key][key2] = value;
-    }
+
     this.inputHtml = () => this.hasInputTree() ?
           this.inputTree().html() : Expandable.inputRepeatTemplate.render(this);
     this.set = (key, value) => props.list[key] = value;
