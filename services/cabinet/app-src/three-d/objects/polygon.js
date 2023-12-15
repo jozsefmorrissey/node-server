@@ -927,9 +927,15 @@ Polygon3D.toDrawString = (polygons, ...colors) => {
 Polygon3D.normals = (polygon) => {
   const lines = polygon.lines();
   Line3D.combine(lines);
-  if (lines.length !== 4) return;
+  if (lines.length !== 4) {
+    console.warn('Cannot determine normals');
+    return;
+  }
   const pSets = Line3D.parrelleSets(lines);
-  if (pSets[0].length !== 2) return;
+  if (pSets[0].length !== 2) {
+    console.warn('Cannot determine normals');
+    return;
+  } 
   let set = pSets[0];
   if (pSets[1].length === 2) {
     if (pSets[0][0].distance(pSets[0][1]) > pSets[1][0].distance(pSets[1][1])) {

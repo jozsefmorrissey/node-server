@@ -34,7 +34,7 @@ class OpeningSketch {
         const openingCenter = new Vertex3D(JSON.copy(section.innerCenter()))
                                   .viewFromVector(normal).to2D('x', 'y');
         const center = openingCenter.translate(offset.x, offset.y, true).point();
-        sketch.text(section.userFrendlyId(), center, idProps);
+        sketch.text(section.userFriendlyId(), center, idProps);
       }
     }
 
@@ -44,7 +44,7 @@ class OpeningSketch {
         const dividerCenter = new Vertex3D(dp.toModel().center())
                                   .viewFromVector(normal).to2D('x', 'y');
         const center = dividerCenter.translate(offset.x, offset.y, true).point();
-        sketch.text(dp.userFrendlyId(), center, idProps);
+        sketch.text(dp.userFriendlyId(), center, idProps);
       }
     }
 

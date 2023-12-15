@@ -727,19 +727,18 @@ class $t {
 		}
 
     // format: <[tagName]:t .*$t-id='[templateName]'.*>[scopeVariableName]</[tagName]:t>
-		const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>(((?!(<\1:t[^>]*>|<\/\1:t>)).)*)<\/)\1:t>/;
+    const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>(((?!(<\1:t[^>]*>|<\/\1:t>)).)*)<\/)\1:t>/;
 		function formatTemplate(string) {
 			let match;
 			while (match = string.match(templateReg)) {
 				let tagContents = match[7];
 				let tagName = match[1];
-				let realScope = match[7];
 				let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
 				let templateName = match[0].replace(/.*\$t-id=('|")([0-9\.a-zA-Z-_\/]*?)(\1).*/, '$2');
-				let scope = 'scope';
 				template = templateName !== tagContents ? templateName : template;
-				let resolvedScope = "get('scope')";;
-				string = string.replace(match[0], `{{ new $t('${templateName}').render(get('${realScope}'), undefined, get)}}`);
+				console.log("Template!!!", template)
+				let resolvedScope = ExprDef.parse(expression, match[7] || "scope");
+				string = string.replace(match[0], `{{ new $t('${templateName}').render(${resolvedScope}, undefined, get)}}`);
 			}
 			return string;
 		}

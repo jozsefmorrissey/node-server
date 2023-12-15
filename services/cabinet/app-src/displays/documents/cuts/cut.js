@@ -19,6 +19,7 @@ class CutInfo {
     this.set = () => set;
     this.normalize = jointInfo.partInfo().normalize;
     this.primarySide = jointInfo.partInfo().primarySide;
+    this.toolType = () => 'tableSaw';
     this.intersectModel = () => (maleModel === undefined ? jointInfo.model() :
       maleModel).intersect(jointInfo.partInfo().noJointmodel());
 
@@ -109,8 +110,12 @@ class CutInfo {
     const max = (line, vector, curr) => line.vector().positiveUnit().equals(vector) &&
             curr < line.length() ? line.length() : curr;
     this.demensions = () => {
-      const axes = this.axes();
-      return {x: axes.x.length(), y: axes.y.length(), z: axes.z.length(), axes};
+      try {
+        const axes = this.axes();
+        return {x: axes.x.length(), y: axes.y.length(), z: axes.z.length(), axes};
+      } catch (e) {
+        return {x: -1, y: -1, z: -1}
+      }
     }
 
     this.normals = () => {
@@ -122,7 +127,9 @@ class CutInfo {
       const lines = zPolys[0].lines();
       if (lines.length > 4)
         lines[0].combineOrder(lines[4]);
-      if (zPolys.length === 1) return Polygon3D.normals(zPolys[0]);
+      if (zPolys.length === 1) {
+        return Polygon3D.normals(zPolys[0]);
+      }
       throw new Error('Have not coded for this yet(shouldnt have too)');
     }
 
@@ -242,17 +249,20 @@ CutInfo.get = (maleModel, jointInfo) => {
 
   const sets = Polygon3D.parrelleSets(existsInBoth);
 
-  const validObjects = [];
-  for (let index = 0; index < registered.length; index++) {
-    const clazz = registered[index];
-    if (clazz.evaluateSets(sets, zPolys)) validObjects.push(new clazz(existsInBoth, jointInfo, maleModel));
+  try {
+    const validObjects = [];
+    for (let index = 0; index < registered.length; index++) {
+      const clazz = registered[index];
+      if (clazz.evaluateSets(sets, zPolys)) validObjects.push(new clazz(existsInBoth, jointInfo, maleModel));
+    }
+    const cutObj = validObjects[0];
+    if (cutObj) {
+      return cutObj;
+    }
+    throw new Error('This shouldn\'t happen! ' + jointInfo.joint().toString());
+  } catch(e) {
+    return new CutInfo.UNDEFINED_CONSTRUCTOR(sets, jointInfo, maleModel);
   }
-  const cutObj = validObjects[0];
-  if (cutObj) {
-    return cutObj;
-  }
-
-  throw new Error('This shouldn\'t happen! ' + jointInfo.joint().toString());
 }
 
 const removeMergeable = (cut, set, cuts) => (c) => {
@@ -302,6 +312,7 @@ CutInfo.clean = (cuts) => {
     }
   }
   cuts.sort(CutInfo.sorter);
+  cuts.split = cuts.filterSplit(c => c.toolType());
 }
 
 // intersectionPolys[1]
@@ -317,8 +328,8 @@ CutInfo.display.partIds = (parts) => {
   const cId = parts[0].getAssembly('c').index();
   if (!cId) return '';
   let partStr;
-  if (parts.length === 1) partStr = parts[0].userFrendlyId();
-  else partStr = `[${parts.map(p => p.userFrendlyId()).join(',')}]`;
+  if (parts.length === 1) partStr = parts[0].userFriendlyId();
+  else partStr = `[${parts.map(p => p.userFriendlyId()).join(',')}]`;
   return `${cId}-${partStr}`;
 }
 
@@ -347,10 +358,14 @@ CutInfo.printPolys = (csgs, colors) => {
 
 const registered = [];
 let priority = 0;
+const undefinedCutConstructor = 'UnknownInfo';
 CutInfo.register = (clazz) => {
   if (registered.indexOf(clazz) === -1) {
     registered.push(clazz);
-    clazz.priority = priority++;
+    if (clazz.name === undefinedCutConstructor) {
+      CutInfo.UNDEFINED_CONSTRUCTOR = clazz;
+      clazz.priority = Number.MIN_SAFE_INTEGER;
+    } else clazz.priority = priority++;
   }
 }
 CutInfo.register(CutInfo);

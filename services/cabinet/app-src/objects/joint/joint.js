@@ -6,6 +6,39 @@ const Polygon3D = require('../../three-d/objects/polygon.js');
 
 const REASSIGNMENT_ERROR = () => new Error('Make a new joint, joints cannot be reassined');
 
+function isMatch(partCodeOlocationCodeOassemblyOregex, obj) {
+  let pclcar = partCodeOlocationCodeOassemblyOregex;
+  if ((typeof pclcar) === 'string') {
+    return obj.partCode() === pclcar || obj.locationCode() === pclcar;
+  }
+  if (pclcar instanceof RegExp) {
+    return pclcar.match(obj.partCode()) || pclcar.match(obj.locationCode());
+  }
+  return obj === pclcar;
+}
+
+function getModels(partCodeOlocationCodeOassemblyOregex, filter) {
+  let pclcar = partCodeOlocationCodeOassemblyOregex;
+  if (parent === undefined) throw new Error(`You need to set parentAssembly for '${this.toString()}'`);
+  const mens = parent.allAssemblies()
+  let models = [];
+  const runFilter = filter instanceof Function;
+  for (let index = 0; index < mens.length; index++) {
+    const male = mens[index];
+    try {
+      if (male.includeJoints() && isMatch(pclar, male) && (!runFilter || filter(male))) {
+        const model = male.toModel();
+        if (model !== undefined) {
+          models.push(male.toModel());
+        }
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+  return models;
+}
+
 class Joint {
   constructor(malePartCode, femalePartCode, condition, locationId) {
     let parent, parentId;
@@ -85,26 +118,7 @@ class Joint {
       return femalePartCode;
     }
 
-    this.maleModels = (filter) => {
-      if (parent === undefined) throw new Error(`You need to set parentAssembly for '${this.toString()}'`);
-      const mens = parent.getAssembly(malePartCode, true);
-      let models = [];
-      const runFilter = filter instanceof Function;
-      for (let index = 0; index < mens.length; index++) {
-        const male = mens[index];
-        try {
-          if ((!runFilter || filter(male)) && male.includeJoints()) {
-            const model = male.toModel();
-            if (model !== undefined) {
-              models.push(male.toModel());
-            }
-          }
-        } catch (e) {
-          console.warn(e);
-        }
-      }
-      return models;
-    }
+    this.maleModels = (filter) => getModels(malePartCode, filter);
 
     this.maleModel = (filter) => {
       if (parent === undefined) throw new Error(`You need to set parentAssembly for '${this.toString()}'`);
@@ -115,6 +129,8 @@ class Joint {
       }
       return model;
     }
+
+    this.femaleModels = (filter) => getModels(femalePartCode, filter)
 
     this.getDemensions = () => {
       const malePos = male();

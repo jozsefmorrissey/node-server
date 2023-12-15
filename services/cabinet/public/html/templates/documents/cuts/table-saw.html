@@ -1,0 +1,16 @@
+<span{{tableSaw ? '' : ' hidden'}}>
+  <table>
+    <caption><b>Table Saw</b></caption>
+    <tr>
+      <th>Width</th>
+      <th>Side&nbsp;Up</th>
+      <th>Edge</th>
+      <th>Fence&nbsp;@</th>
+      <th>Length</th>
+      <th>OOB</th>
+    </tr>
+    <tr:t class='cut-info-cnt tab font-medium' repeat='cutInfo in tableSaw'>
+      {{cutInfo.toString()}}
+    </tr:t>
+  </table>
+</span>

@@ -197,9 +197,9 @@ class Assembly extends KeyValue {
     }
     let userFriendlyIdMap = new FunctionCache(buildUserFriendlyIdMap, this, 'alwaysOn');
 
-    this.userFrendlyId = (id) => {
+    this.userFriendlyId = (id) => {
       id ||= this.id();
-      if (this.parentAssembly() !== undefined) return this.getRoot().userFrendlyId(id);
+      if (this.parentAssembly() !== undefined) return this.getRoot().userFriendlyId(id);
       return userFriendlyIdMap()[id];
     }
 
@@ -375,14 +375,15 @@ class Assembly extends KeyValue {
 
     this.children = () => Object.values(this.getSubassemblies(true));
 
-    this.getSubassemblies = (childrenOnly) => {
+    this.getSubassemblies = new FunctionCache((childrenOnly) => {
       const assemblies = [];
       Object.values(this.subassemblies).forEach((assem) => {
         assemblies.push(assem);
         if (!childrenOnly) assemblies.concatInPlace(assem.getSubassemblies());
       });
       return assemblies;
-    }
+    }, this, 'always-on')
+
     this.getParts = () => {
       return this.getSubassemblies().filter((a) => {
         return a.part() && a.included()

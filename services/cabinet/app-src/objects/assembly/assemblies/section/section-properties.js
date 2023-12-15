@@ -53,7 +53,7 @@ class SectionProperties extends KeyValue{
 
     this.subassemblies = [];
     const sectionCutters = [];
-    this.userFrendlyId = () => this.getRoot().userFrendlyId(this.id());
+    this.userFriendlyId = () => this.getRoot().userFriendlyId(this.id());
 
 
     // index ||= 0;

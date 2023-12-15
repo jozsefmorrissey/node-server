@@ -19,11 +19,15 @@ class ChannelInfo extends CutInfo {
       }
       const lines = [];
       let jointSet = Polygon3D.merge(Polygon3D.fromCSG(this.intersectModel()));
-      const axes = Polygon3D.axes(jointSet, normals);
-      axes.x = this.normalize(rightOleft, axes.x);
-      axes.y = this.normalize(rightOleft, axes.y);
-      axes.z = this.normalize(rightOleft, axes.z);
-      return axes;
+      try {
+        const axes = Polygon3D.axes(jointSet, normals);
+        axes.x = this.normalize(rightOleft, axes.x);
+        axes.y = this.normalize(rightOleft, axes.y);
+        axes.z = this.normalize(rightOleft, axes.z);
+        return axes;
+      } catch (e) {
+        console.log(e);
+      }
     }
   }
 }

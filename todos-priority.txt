@@ -1,0 +1,20 @@
+
+
+
+finish formatting documents
+ensure cuts work for voids
+rework ids (partcode, locationcode, userid, id)
+cabinet model divider generic object
+add frames
+miter joints
+
+
+
+isolate parimeter given a set of lines
+add walls floor and ceiling (allow to toggle on and off) 3d-model
+improve lighting 3d-model
+corner L cabinet
+property descriptions
+
+
+web-workers

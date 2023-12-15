@@ -445,14 +445,12 @@ class $t {
 			while (match = string.match(templateReg)) {
 				let tagContents = match[7];
 				let tagName = match[1];
-				let realScope = match[7];
 				let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
 				let templateName = match[0].replace(/.*\$t-id=('|")([0-9\.a-zA-Z-_\/]*?)(\1).*/, '$2');
-				let scope = 'scope';
 				template = templateName !== tagContents ? templateName : template;
 				console.log("Template!!!", template)
-				let resolvedScope = "get('scope')";;
-				string = string.replace(match[0], `{{ new $t('${templateName}').render(get('${realScope}'), undefined, get)}}`);
+				let resolvedScope = ExprDef.parse(expression, match[7] || "scope");
+				string = string.replace(match[0], `{{ new $t('${templateName}').render(get('${resolvedScope}'), undefined, get)}}`);
 			}
 			return string;
 		}

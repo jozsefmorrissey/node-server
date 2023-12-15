@@ -4,6 +4,8 @@ const ChannelInfo = require('./channel');
 class UnknownInfo extends ChannelInfo {
   constructor(set, jointInfo, maleModel) {
     super(set, jointInfo, maleModel);
+    this.toolType = () => 'unknown';
+    this.toString = () => jointInfo.joint().toString();
   }
 }
 
