@@ -266,8 +266,5 @@ Test.add('Plane: fromPointNormal', (ts) => {
   plane = Plane.fromPointNormal(points[0], normal);
   confirmNormalAndPoints(plane, normal, points, ts);
 
-  console.log(plane.toDrawString()
-)
-
   ts.success();
 });

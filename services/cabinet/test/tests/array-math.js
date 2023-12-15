@@ -182,7 +182,6 @@ Test.add('Matrix: remove(complex)',(ts) => {
   ts.success();
 });
 
-Test.add('do not report in', (ts) => {})
 
 Test.add('Matrix: identity',(ts) => {
   let identity2 = Matrix.identity(2);

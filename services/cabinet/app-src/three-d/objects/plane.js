@@ -330,9 +330,7 @@ class Plane extends Array {
     this.toDrawString = (color) => {
       color ||= '';
       const verts = Array.from(this.findPoints(30));
-      // Vertex3D.vectorSort(verts, verts[0].minus(verts[1]).unit());
       const arr = verts.map(v => `${color}${v.toString()}`);
-      console.log(`${color}[${arr.join(',')}]`);
       return `${color}[${arr.join(',')}]`;
     }
   }

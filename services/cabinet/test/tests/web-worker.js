@@ -7,11 +7,24 @@ const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 
 /**
   Priority 1)
-      Construct CSG(.toModel) object with webWorker.
+      Construct CSG(\.(toModel|toBipoly)) object with webWorker.
   Priority 2)
       Reorganize and isolate CSG building code so that web-worker and index
-      have very little code overlap.
+      have very little overlaping code.
       -- files constructed by watch.js
+
+  ./app-src/three-d/
+        objects/ should be moved to ~/public/js/utils
+              existing folder 3d-modeling should be within a modeling folder under three-d
+        models/ should be moved to web-worker
+        ThreeDModel.js asynconisly run off of web worker
+
+  ./app-src/objects
+      if possible do not use this.
+
+  navigator.hardwareConcurrency - number of availible processors
+
+
 **/
 
 Test.add('web-worker: toModel',async (ts) => {
