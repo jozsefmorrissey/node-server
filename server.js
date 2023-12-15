@@ -162,7 +162,7 @@ app.delete('/print/body', printCall('DELETE'));
 
 
 var ip = '192.168.254.10';
-var services = global.service ? new String(global.service).split(',') : shell.ls('./services/');
+var services = global.services ? new String(global.services).split(',') : shell.ls('./services/');
 var exclude = ['uss', 'uus', 'mitch', 'weather-fax', 'content-explained', 'premier', 'info-directory', 'homework-help', 'debug-gui'];
 try {
   for (let i = 0; i < services.length; i += 1) {
