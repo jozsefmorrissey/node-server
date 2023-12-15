@@ -20,6 +20,7 @@ if (EPNTS.getEnv() === 'local') {
   require('./tests/array-math');
   require('./tests/plane');
   require('./tests/line2d');
+  require('./tests/web-worker');
   require('./tests/line-consolidate');
 }
 

@@ -1,8 +1,8 @@
 {
   "_envs": {
     "local": "http://localhost:3000/cabinet",
-    "dev": "https://dev.jozsefmorrissey.com/cabinet",
-    "prod": "https://node.jozsefmorrissey.com/cabinet"
+    "dev": "https://node.jozsefmorrissey.com/cabinet",
+    "prod": "http://www.deku.cab/cabinet"
   },
   "user": {
     "register": "/register",
