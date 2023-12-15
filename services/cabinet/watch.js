@@ -34,7 +34,7 @@ const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add('./public/json/cabinets.json')
         .add('./app-src');
 
-const wwDumpLoc = './public/js/web-worker';
+const wwDumpLoc = './public/js/web-worker-bundle';
 const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/init.js', projectDir: '../../'});
 const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         .add('./globals/')

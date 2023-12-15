@@ -1,6 +1,6 @@
 node_modules/
 public/json/configure.json
 **/index.js
-**/web-worker.js
+**/web-worker-bundle.js
 **/html-templates.js
 **/generated/**
