@@ -7,7 +7,7 @@
   - prod
 - commands
 <pre>
-  node ./server.js ENV=[ENV] service=cabinet,canvas-buddy
+  node ./server.js ENV=[ENV] services=cabinet,canvas-buddy
 </pre>
 
 
