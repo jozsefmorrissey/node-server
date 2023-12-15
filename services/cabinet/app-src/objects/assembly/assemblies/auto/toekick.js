@@ -285,7 +285,7 @@ class AutoToekick extends Assembly {
       for (let index = 0; index < openings.length; index++) {
         opening = openingToeKick(openings[index]);
       }
-      return panel.toBiPolygon();
+      return children.toeKick;
     }
 
     this.toModel = () => this.toBiPolygon().toModel();

@@ -63,6 +63,8 @@ class Global {
       }
       return ROOM;
     }
+    this.room.DEFAULT = new Room('FOR_TESTING_PURPOSES_ONLY');
+
     this.group = (group) => {
       if (group && group instanceof Cabinet) {
         const details = {from: GROUP, to: group};
