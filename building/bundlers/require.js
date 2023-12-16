@@ -271,7 +271,8 @@ class RequireJS {
     }
 
     this.footer = () => {
-      return `window.onload = () => RequireJS.init('${main}')\n`;
+      return `try {window.onload = () => RequireJS.init('${main}')}
+              catch {RequireJS.init('${main}')}\n`;
     }
 
     let guess = false;
