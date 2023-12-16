@@ -89,7 +89,7 @@ class ThreeDModel {
       if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
       switch (inclusiveTarget.type) {
         case 'prefix':
-          return part.partCode(true).match(inclusiveTarget.prefixReg) !== null;
+          return part.locationCode().match(inclusiveTarget.prefixReg) !== null;
           break;
         case 'part-name':
           return part.partName() === inclusiveTarget.value;
@@ -150,8 +150,8 @@ class ThreeDModel {
       let targetPart = instance.object().getAssembly(targetPartCode);
       let joints = targetPart.getJoints();
       joints = joints.male.concat(joints.female);
-      const otherCodes = joints.map(j => j.malePartCode() !== targetPartCode ?
-            j.malePartCode() : j.femalePartCode());
+      const otherCodes = joints.map(j => j.maleJointSelector() !== targetPartCode ?
+            j.maleJointSelector() : j.femaleJointSelector());
       return otherCodes.indexOf(part.partCode()) !== -1;
     }
 
@@ -163,7 +163,7 @@ class ThreeDModel {
       if (instance.hidePartId(part.id())) return true;
       if (instance.hidePartName(part.partName())) return true;
       buildHiddenPrefixReg();
-      if (hiddenPrefixReg && part.partCode(true).match(hiddenPrefixReg)) return true;
+      if (hiddenPrefixReg && part.locationCode().match(hiddenPrefixReg)) return true;
       return false;
     }
     this.hidden = hidden;
@@ -204,7 +204,6 @@ class ThreeDModel {
 
     function buildModel(assem) {
       let a = assem.toModel();
-      assem.partCode(true);
       a.setColor(...getColor());
       partModels[assem.id()] = a;
       return a;

@@ -24,13 +24,20 @@ class Assembly extends KeyValue {
     super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly', object: true});
 
     const pcIsFunc = partCode instanceof Function;
-    function pCode(full) {
-      const pc = pcIsFunc ? partCode(full) : partCode || 'unk';
-      if (!full) return pc;
+    function pCode() {
+      const pc = pcIsFunc ? partCode() : partCode || 'unk';
+      const parent = this.parentAssembly();
+      const subPartCode = pc.match(/:.{1,}$/);
+      if (parent && subPartCode) return `${parent.partCode()}${pc}`;
+      return pc;
+    }
+
+    function lCode() {
+      const pc = pcIsFunc ? partCode() : partCode || 'unk';
       const parent = this.parentAssembly();
       const subPartCode = pc.match(/:.{1,}$/);
       const connector = subPartCode ? '' : '_'
-      if (parent) return `${parent.partCode(full)}${connector}${pc}`;
+      if (parent) return `${parent.locationCode()}${connector}${pc}`;
       return pc;
     }
 
@@ -42,6 +49,7 @@ class Assembly extends KeyValue {
       included: true,
       includeJoints: true,
       config, partCode: pCode, partName,
+      locationCode: lCode,
       propertyId: undefined,
     }
 
@@ -165,7 +173,7 @@ class Assembly extends KeyValue {
 
     const constructUserFriendlyId = (idMap) => (part) => {
       const pc = part.partCode();
-      if (!pc.startsWith(':')) return pc;
+      // if (!pc.startsWith(':')) return pc;
       const parent = part.parentAssembly();
       if (parent) {
         const parentId = idMap[parent.id()];
@@ -213,7 +221,7 @@ class Assembly extends KeyValue {
       while (searchIndex < searchList.length) {
         const part = searchList[searchIndex];
         if (searched[part.id()] === undefined) {
-          if (part.partCode(true).match(searchReg)) {
+          if (part.locationCode().match(searchReg)) {
             return part;
           }
           const parent = part.parentAssembly();
@@ -241,7 +249,7 @@ class Assembly extends KeyValue {
         const list = [];
         for (let index = 0; index < assems.length; index++) {
           const assem = assems[index];
-          if (assem.partCode(true).match(searchReg)) list.push(assem);
+          if (assem.locationCode().match(searchReg)) list.push(assem);
         }
         return list;
       }
@@ -318,6 +326,17 @@ class Assembly extends KeyValue {
       return joints;
     }, this, 'always-on');
 
+    this.getAllJoints = new FunctionCache((assem) => {
+      assem ||= this;
+      const root = this.getRoot();
+      if (root !== this) return root.getJoints(assem);
+
+      const assemList = this.allAssemblies();
+      let allJoints = [].concat(this.joints);
+      // if (assem) allJoints.concatInPlace(assem.joints);
+      assemList.forEach((assem) => allJoints.concatInPlace(assem.joints));
+      return allJoints;
+    }, this, 'always-on');
 
     let jointList;
     this.getJointList = () => {
@@ -355,9 +374,9 @@ class Assembly extends KeyValue {
         if (joint instanceof Joint) {
           const parent = joint.parentAssembly();
           if (parent === undefined) joint.parentAssembly(this);
-          const mpc = joint.malePartCode();
-          const fpc = joint.femalePartCode();
-          const pc = this.partCode(true);
+          const mpc = joint.maleJointSelector();
+          const fpc = joint.femaleJointSelector();
+          const pc = this.locationCode();
           const locId = joint.locationId();
           if (locId) {
             this.joints.removeWhere(j => j.locationId() === locId);
@@ -375,14 +394,15 @@ class Assembly extends KeyValue {
 
     this.children = () => Object.values(this.getSubassemblies(true));
 
-    this.getSubassemblies = new FunctionCache((childrenOnly) => {
+    this.getSubassemblies = (childrenOnly) => {
       const assemblies = [];
-      Object.values(this.subassemblies).forEach((assem) => {
+      const subList = Object.values(this.subassemblies);
+      subList.forEach((assem) => {
         assemblies.push(assem);
         if (!childrenOnly) assemblies.concatInPlace(assem.getSubassemblies());
       });
       return assemblies;
-    }, this, 'always-on')
+    }
 
     this.getParts = () => {
       return this.getSubassemblies().filter((a) => {
@@ -531,6 +551,8 @@ Assembly.partCode = (assembly) => {
     return `${assembly.constructor.abbriviation}`;
   }
 }
+
+Assembly.joinable = true;
 
 // PartCode reg matches starting from the end aswell as at each simicolon
 // The simicolon tells you that it is to be considered the preceding

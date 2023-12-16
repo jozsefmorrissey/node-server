@@ -23,7 +23,7 @@ function groupParts(cabinet) {
   const parts = cabinet.getParts();
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
-    const namePieces = part.partCode(true).split(/-|:/);
+    const namePieces = part.locationCode().split(/-|:/);
     let currObj = grouping.group;
     let level = 0;
     let prefix = '';
@@ -36,8 +36,8 @@ function groupParts(cabinet) {
       currObj.prefix = prefix;
       prefix += '-'
     }
-    if (currObj.parts[part.partCode] !== undefined) console.error('PartCode collision' + part.partCode(true));
-    currObj.parts[part.partCode()] = part;
+    if (currObj.parts[part.locationCode()] !== undefined) console.error('PartCode collision' + part.locationCode());
+    currObj.parts[part.locationCode()] = part;
   }
   return grouping;
 }
@@ -46,8 +46,8 @@ const modelContTemplate = new $t('model-controller');
 
 du.on.match('click', '.model-state', (target, event) => {
   if (event.target.matches('[type="checkbox"]')) return;
-  let partCode = du.find.up('[prefix]', target).getAttribute('prefix');
-  partCode = partCode.replace('-:', ':');
+  let locationCode = du.find.up('[prefix]', target).getAttribute('prefix');
+  locationCode = locationCode.replace('-:', ':');
   const has = target.matches('.active');
   deselectPrefix();
   if (!has) {
@@ -60,7 +60,7 @@ du.on.match('click', '.model-state', (target, event) => {
     const tdm = ThreeDModel.get(cabinet);
     let targetSelected = label.hasAttribute('target') || target.hasAttribute('target');
     // tdm.setTargetPartCode(partCode);
-    tdm.inclusiveTarget('prefix', partCode);
+    tdm.inclusiveTarget('prefix', locationCode);
   }
   Canvas.render();
 });

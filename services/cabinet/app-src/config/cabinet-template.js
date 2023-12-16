@@ -63,8 +63,8 @@ class CabinetTemplate extends Lookup {
     this.validOffset = (offset) => offset && offset.match(offsetReg) !== null;
     const vo = this.validOffset;
 
-    this.validateJoint = (joint, malePartCode, femalePartCode) => {
-      let isValid = vpc(malePartCode) && vpc(femalePartCode);
+    this.validateJoint = (joint, maleJointSelector, femaleJointSelector) => {
+      let isValid = vpc(maleJointSelector) && vpc(femaleJointSelector);
       switch (joint.type) {
         case "Dado":
           return isValid && joint.maleOffset > 0 && vo(joint.demensionToOffset) &&

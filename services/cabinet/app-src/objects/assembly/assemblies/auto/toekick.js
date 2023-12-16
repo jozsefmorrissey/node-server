@@ -60,19 +60,19 @@ class AutoToekick extends Assembly {
     this.addSubAssembly(rightCornerCutter);
 
     const joint = (part, fullLength) => (otherPartCode, condition) => {
-      const joint = new Butt(part.partCode(true), otherPartCode, condition);
+      const joint = new Butt(part.locationCode(), otherPartCode, condition);
       joint.fullLength(fullLength);
       part.addJoints(joint);
     }
     const toeKickPanel = new PanelModel('tkb', `${atkid}.Backer`, toModel('toeKick'));
-    joint(toeKickPanel)('R');
-    joint(toeKickPanel, true)('B');
-    joint(toeKickPanel)('L');
-    joint(leftCornerCutter)(toeKickPanel.partCode(true));
-    joint(rightCornerCutter)(toeKickPanel.partCode(true));
+    joint(toeKickPanel)(/^R:/);
+    joint(toeKickPanel, true)(/^B:/);
+    joint(toeKickPanel)(/^L:/);
+    joint(leftCornerCutter)(toeKickPanel.locationCode());
+    joint(rightCornerCutter)(toeKickPanel.locationCode());
     const cutter = new CutterModel('tkc', `${atkid}.Cutter`, toModel('vOid'));
-    joint(cutter)('R', () => !this.rightEndStyle());
-    joint(cutter)('L', () => !this.leftEndStyle());
+    joint(cutter)(/^R:/, () => !this.rightEndStyle());
+    joint(cutter)(/^L:/, () => !this.leftEndStyle());
 
     toeKickPanel.parentAssembly(this);
     cutter.parentAssembly(this);

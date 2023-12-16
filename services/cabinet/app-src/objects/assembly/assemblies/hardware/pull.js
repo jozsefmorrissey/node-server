@@ -10,7 +10,7 @@ const pull = require('../../../../three-d/models/pull.js');
     g,h,i
 */
 class Handle extends Assembly {
-  constructor(partCode, partName, door, location, index, count) {
+  constructor(partCode, partName, location) {
     let instance;
     location ||= Handle.location.CENTER;
     function baseCenter() {
@@ -75,28 +75,31 @@ class Handle extends Assembly {
     Object.getSet(this, {location});
     this.partName = () =>
       `${this.parentAssembly().partName()}.Pull.${this.location().position}`;
-    this.partCode = (full) => {
-      if (!full) return partCode;
+    this.partCode = () => partCode;
+    this.locationCode = () => {
       const parent = this.parentAssembly();
-      const parentStr = parent ? `${parent.partCode(true)}-` : '';
-      const indexStr = this.count() > 0 ? `-${index}` : '';
+      const parentStr = parent ? `${parent.locationCode()}:` : '';
+      const indexStr = this.count() > 0 ? `${this.index()}` : '';
       return `${parentStr}${partCode}${indexStr}`;
     }
     this.inElivation = true;
     instance = this;
-    index = index || 0;
-    count = count || 1;
+
+    this.index = () => {
+      const parent = this.parentAssembly();
+      if (!parent) return 1;
+      return parent.pulls().indexOf(this) + 1;
+    }
 
     this.count = (c) => {
-      if (c > 0) {
-        count = c;
-      }
-      return count;
+      const parent = this.parentAssembly();
+      if (!parent) return 1;
+      return parent.pulls().length;
     }
 
     function offset(center, distance) {
-      const spacing = distance / count;
-      return center - (distance / 2) + spacing / 2 + spacing * (index);
+      const spacing = distance / count();
+      return center - (distance / 2) + spacing / 2 + spacing * (instance.index());
     }
 
     this.toModel = (simple) => {
@@ -126,6 +129,8 @@ Handle.location.BOTTOM = {multiple: true, position: 'BOTTOM'};
 Handle.location.RIGHT = {multiple: true, rotate: true, position: 'RIGHT'};
 Handle.location.LEFT = {multiple: true, rotate: true, position: 'LEFT'};
 Handle.location.CENTER = {multiple: true, position: 'CENTER'};
+
+Handle.joinable = false;
 
 Handle.abbriviation = 'hn';
 

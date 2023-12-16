@@ -9,10 +9,11 @@ class HasPull extends Assembly {
     this.pull = (index) => pulls[index || 0];
     this.addPull = (location) => {
       let handle = location;
-      if (!(handle instanceof Handle)) handle = new Handle('pu', 'Pull', this, location, pullCount++);
+      if (!(handle instanceof Handle)) handle = new Handle('pu', 'Pull', location);
       pulls.push(handle);
       this.addSubAssembly(pulls[pulls.length - 1]);
     }
+    this.pulls = () => pulls;
     this.setPulls = (locations) => {
       pulls.deleteAll();
       this.subassemblies.deleteAll();

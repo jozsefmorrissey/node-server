@@ -446,9 +446,9 @@ function validateOpenTemplate (elem) {
   subCodeInputs.forEach(variableNameCheck);
 
   const pcc = partCodeCheck(template);
-  const jointMaleInputs = du.find.downAll('input[attr="joints"][name="malePartCode"]', templateBody);
+  const jointMaleInputs = du.find.downAll('input[attr="joints"][name="maleJointSelector"]', templateBody);
   jointMaleInputs.forEach(pcc);
-  const jointFemaleInputs = du.find.downAll('input[attr="joints"][name="femalePartCode"]', templateBody);
+  const jointFemaleInputs = du.find.downAll('input[attr="joints"][name="femaleJointSelector"]', templateBody);
   jointFemaleInputs.forEach(pcc);
 
   const openingCodeInputs = du.find.downAll('input[attr="openings"][name="partCode"]', templateBody);
@@ -1012,7 +1012,7 @@ du.on.match('change', '.opening-part-code-input', updateOpeningsTemplate);
 du.on.match('change', '.template-shape-input', updateViewShape);
 du.on.match('change', '[name="xyz"]', switchEqn);
 du.on.match('change', '[name="openingLocation"]', updateOpeningPartCode);
-du.on.match('change', '.template-input[name="malePartCode"],.template-input[name="femalePartCode"]', updateJointPartCode);
+du.on.match('change', '.template-input[name="maleJointSelector"],.template-input[name="femaleJointSelector"]', updateJointPartCode);
 du.on.match('click', '.copy-template', (elem) => {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
   const template = CabinetTemplate.get(templateId);

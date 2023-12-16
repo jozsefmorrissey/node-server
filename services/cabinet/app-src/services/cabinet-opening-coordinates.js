@@ -119,7 +119,7 @@ class CabinetOpeningCorrdinates {
       const cutter = new Cutter.Model(partCode, () => partName, biPoly.toModel);
       cutter.parentAssembly(sectionProperties);
       subassemblies = [cutter];
-      const joint = (otherPartCode) => new Butt(cutter.partCode(true), otherPartCode);
+      const joint = (otherPartCode) => new Butt(cutter.locationCode(), otherPartCode);
       // TODO: this should not be hard coded
       cutter.addJoints(joint('T'), joint('B'), joint('R'), joint('L'));
     }

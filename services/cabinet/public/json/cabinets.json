@@ -129,8 +129,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": 0.9525,
 	      "femaleOffset": 0,
-	      "malePartCode": "T",
-	      "femalePartCode": "R",
+	      "maleJointSelector": "T",
+	      "femaleJointSelector": "R",
 	      "demensionAxis": "y",
 	      "centerAxis": "-x"
 	    },
@@ -138,8 +138,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": 0.9525,
 	      "femaleOffset": 0,
-	      "malePartCode": "T",
-	      "femalePartCode": "L",
+	      "maleJointSelector": "T",
+	      "femaleJointSelector": "L",
 	      "demensionAxis": "y",
 	      "centerAxis": "+x"
 	    },
@@ -147,8 +147,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "0.9525",
 	      "femaleOffset": 0,
-	      "malePartCode": "BACK",
-	      "femalePartCode": "R",
+	      "maleJointSelector": "BACK",
+	      "femaleJointSelector": "R",
 	      "demensionAxis": "x",
 	      "centerAxis": "+x",
 				"fullLength": true
@@ -157,8 +157,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "0.9525",
 	      "femaleOffset": 0,
-	      "malePartCode": "BACK",
-	      "femalePartCode": "L",
+	      "maleJointSelector": "BACK",
+	      "femaleJointSelector": "L",
 	      "demensionAxis": "x",
 	      "centerAxis": "-x",
 				"fullLength": true
@@ -167,8 +167,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": 0.9525,
 	      "femaleOffset": 0,
-	      "malePartCode": "B",
-	      "femalePartCode": "R",
+	      "maleJointSelector": "B",
+	      "femaleJointSelector": "R",
 	      "demensionAxis": "y",
 	      "centerAxis": "-x"
 	    },
@@ -176,8 +176,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": 0.9525,
 	      "femaleOffset": 0,
-	      "malePartCode": "B",
-	      "femalePartCode": "L",
+	      "maleJointSelector": "B",
+	      "femaleJointSelector": "L",
 	      "demensionAxis": "y",
 	      "centerAxis": "+x"
 	    }
@@ -465,8 +465,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "BACK",
-	      "femalePartCode": "B",
+	      "maleJointSelector": "BACK",
+	      "femaleJointSelector": "B",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -474,8 +474,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "BACK",
-	      "femalePartCode": "pbl",
+	      "maleJointSelector": "BACK",
+	      "femaleJointSelector": "pbl",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -483,8 +483,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "BACK",
-	      "femalePartCode": "pbr",
+	      "maleJointSelector": "BACK",
+	      "femaleJointSelector": "pbr",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -492,8 +492,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "L.t / 2",
 	      "femaleOffset": 0,
-	      "malePartCode": "B",
-	      "femalePartCode": "L",
+	      "maleJointSelector": "B",
+	      "femaleJointSelector": "L",
 	      "demensionAxis": "y",
 	      "centerAxis": "-z"
 	    },
@@ -501,8 +501,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "R.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "B",
-	      "femalePartCode": "R",
+	      "maleJointSelector": "B",
+	      "femaleJointSelector": "R",
 	      "demensionAxis": "x",
 	      "centerAxis": "-x"
 	    },
@@ -510,8 +510,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "pbr.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "B",
-	      "femalePartCode": "pbr",
+	      "maleJointSelector": "B",
+	      "femaleJointSelector": "pbr",
 	      "demensionAxis": "y",
 	      "centerAxis": "+z"
 	    },
@@ -519,8 +519,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "pbl.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "B",
-	      "femalePartCode": "pbl",
+	      "maleJointSelector": "B",
+	      "femaleJointSelector": "pbl",
 	      "demensionAxis": "x",
 	      "centerAxis": "+x"
 	    },
@@ -528,8 +528,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "L.t / 2",
 	      "femaleOffset": 0,
-	      "malePartCode": "T",
-	      "femalePartCode": "L",
+	      "maleJointSelector": "T",
+	      "femaleJointSelector": "L",
 	      "demensionAxis": "y",
 	      "centerAxis": "-z"
 	    },
@@ -537,8 +537,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "R.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "T",
-	      "femalePartCode": "R",
+	      "maleJointSelector": "T",
+	      "femaleJointSelector": "R",
 	      "demensionAxis": "x",
 	      "centerAxis": "-x"
 	    },
@@ -546,8 +546,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "pbr.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "T",
-	      "femalePartCode": "pbr",
+	      "maleJointSelector": "T",
+	      "femaleJointSelector": "pbr",
 	      "demensionAxis": "y",
 	      "centerAxis": "+z"
 	    },
@@ -555,8 +555,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "pbl.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "T",
-	      "femalePartCode": "pbl",
+	      "maleJointSelector": "T",
+	      "femaleJointSelector": "pbl",
 	      "demensionAxis": "x",
 	      "centerAxis": "+x"
 	    },
@@ -564,8 +564,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "pbr.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "pbr",
-	      "femalePartCode": "R",
+	      "maleJointSelector": "pbr",
+	      "femaleJointSelector": "R",
 	      "demensionAxis": "x",
 	      "centerAxis": "-z"
 	    },
@@ -573,8 +573,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "L.t / 2",
 	      "femaleOffset": 0,
-	      "malePartCode": "pbl",
-	      "femalePartCode": "L",
+	      "maleJointSelector": "pbl",
+	      "femaleJointSelector": "L",
 	      "demensionAxis": "x",
 	      "centerAxis": "-x"
 	    },
@@ -582,8 +582,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "BACK",
-	      "femalePartCode": "T",
+	      "maleJointSelector": "BACK",
+	      "femaleJointSelector": "T",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -591,8 +591,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cb",
-	      "femalePartCode": "T",
+	      "maleJointSelector": "cb",
+	      "femaleJointSelector": "T",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -600,8 +600,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cb",
-	      "femalePartCode": "B",
+	      "maleJointSelector": "cb",
+	      "femaleJointSelector": "B",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -609,8 +609,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cb",
-	      "femalePartCode": "pbl",
+	      "maleJointSelector": "cb",
+	      "femaleJointSelector": "pbl",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -618,8 +618,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cb",
-	      "femalePartCode": "pbr",
+	      "maleJointSelector": "cb",
+	      "femaleJointSelector": "pbr",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -627,8 +627,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cpbl",
-	      "femalePartCode": "BACK",
+	      "maleJointSelector": "cpbl",
+	      "femaleJointSelector": "BACK",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -636,8 +636,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cpbr",
-	      "femalePartCode": "BACK",
+	      "maleJointSelector": "cpbr",
+	      "femaleJointSelector": "BACK",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    }
@@ -940,8 +940,8 @@
       "_TYPE": "Butt",
       "maleOffset": 0,
       "femaleOffset": 0,
-      "malePartCode": "BACK",
-      "femalePartCode": "B",
+      "maleJointSelector": "BACK",
+      "femaleJointSelector": "B",
       "demensionAxis": "",
       "centerAxis": ""
     },
@@ -949,8 +949,8 @@
       "_TYPE": "Butt",
       "maleOffset": 0,
       "femaleOffset": 0,
-      "malePartCode": "BACK",
-      "femalePartCode": "pbl",
+      "maleJointSelector": "BACK",
+      "femaleJointSelector": "pbl",
       "demensionAxis": "",
       "centerAxis": ""
     },
@@ -958,8 +958,8 @@
       "_TYPE": "Butt",
       "maleOffset": 0,
       "femaleOffset": 0,
-      "malePartCode": "BACK",
-      "femalePartCode": "pbr",
+      "maleJointSelector": "BACK",
+      "femaleJointSelector": "pbr",
       "demensionAxis": "",
       "centerAxis": ""
     },
@@ -967,8 +967,8 @@
       "_TYPE": "Dado",
       "maleOffset": "L.t / 2",
       "femaleOffset": 0,
-      "malePartCode": "B",
-      "femalePartCode": "L",
+      "maleJointSelector": "B",
+      "femaleJointSelector": "L",
       "demensionAxis": "y",
       "centerAxis": "-z"
     },
@@ -976,8 +976,8 @@
       "_TYPE": "Dado",
       "maleOffset": "R.t/2",
       "femaleOffset": 0,
-      "malePartCode": "B",
-      "femalePartCode": "R",
+      "maleJointSelector": "B",
+      "femaleJointSelector": "R",
       "demensionAxis": "x",
       "centerAxis": "-x"
     },
@@ -985,8 +985,8 @@
       "_TYPE": "Dado",
       "maleOffset": "pbr.t/2",
       "femaleOffset": 0,
-      "malePartCode": "B",
-      "femalePartCode": "pbr",
+      "maleJointSelector": "B",
+      "femaleJointSelector": "pbr",
       "demensionAxis": "y",
       "centerAxis": "+z"
     },
@@ -994,8 +994,8 @@
       "_TYPE": "Dado",
       "maleOffset": "pbl.t/2",
       "femaleOffset": 0,
-      "malePartCode": "B",
-      "femalePartCode": "pbl",
+      "maleJointSelector": "B",
+      "femaleJointSelector": "pbl",
       "demensionAxis": "x",
       "centerAxis": "+x"
     },
@@ -1003,8 +1003,8 @@
       "_TYPE": "Dado",
       "maleOffset": "L.t / 2",
       "femaleOffset": 0,
-      "malePartCode": "T",
-      "femalePartCode": "L",
+      "maleJointSelector": "T",
+      "femaleJointSelector": "L",
       "demensionAxis": "y",
       "centerAxis": "-z"
     },
@@ -1012,8 +1012,8 @@
       "_TYPE": "Dado",
       "maleOffset": "R.t/2",
       "femaleOffset": 0,
-      "malePartCode": "T",
-      "femalePartCode": "R",
+      "maleJointSelector": "T",
+      "femaleJointSelector": "R",
       "demensionAxis": "x",
       "centerAxis": "-x"
     },
@@ -1021,8 +1021,8 @@
       "_TYPE": "Dado",
       "maleOffset": "pbr.t/2",
       "femaleOffset": 0,
-      "malePartCode": "T",
-      "femalePartCode": "pbr",
+      "maleJointSelector": "T",
+      "femaleJointSelector": "pbr",
       "demensionAxis": "y",
       "centerAxis": "+z"
     },
@@ -1030,8 +1030,8 @@
       "_TYPE": "Dado",
       "maleOffset": "pbl.t/2",
       "femaleOffset": 0,
-      "malePartCode": "T",
-      "femalePartCode": "pbl",
+      "maleJointSelector": "T",
+      "femaleJointSelector": "pbl",
       "demensionAxis": "x",
       "centerAxis": "+x"
     },
@@ -1039,8 +1039,8 @@
       "_TYPE": "Dado",
       "maleOffset": "pbr.t/2",
       "femaleOffset": 0,
-      "malePartCode": "pbr",
-      "femalePartCode": "R",
+      "maleJointSelector": "pbr",
+      "femaleJointSelector": "R",
       "demensionAxis": "x",
       "centerAxis": "-z"
     },
@@ -1048,8 +1048,8 @@
       "_TYPE": "Dado",
       "maleOffset": "L.t / 2",
       "femaleOffset": 0,
-      "malePartCode": "pbl",
-      "femalePartCode": "L",
+      "maleJointSelector": "pbl",
+      "femaleJointSelector": "L",
       "demensionAxis": "x",
       "centerAxis": "-x"
     },
@@ -1057,8 +1057,8 @@
       "_TYPE": "Butt",
       "maleOffset": 0,
       "femaleOffset": 0,
-      "malePartCode": "BACK",
-      "femalePartCode": "T",
+      "maleJointSelector": "BACK",
+      "femaleJointSelector": "T",
       "demensionAxis": "",
       "centerAxis": ""
     },
@@ -1066,8 +1066,8 @@
       "_TYPE": "Butt",
       "maleOffset": 0,
       "femaleOffset": 0,
-      "malePartCode": "cb",
-      "femalePartCode": "T",
+      "maleJointSelector": "cb",
+      "femaleJointSelector": "T",
       "demensionAxis": "",
       "centerAxis": ""
     },
@@ -1075,8 +1075,8 @@
       "_TYPE": "Butt",
       "maleOffset": 0,
       "femaleOffset": 0,
-      "malePartCode": "cb",
-      "femalePartCode": "B",
+      "maleJointSelector": "cb",
+      "femaleJointSelector": "B",
       "demensionAxis": "",
       "centerAxis": ""
     },
@@ -1084,8 +1084,8 @@
       "_TYPE": "Butt",
       "maleOffset": 0,
       "femaleOffset": 0,
-      "malePartCode": "cb",
-      "femalePartCode": "pbl",
+      "maleJointSelector": "cb",
+      "femaleJointSelector": "pbl",
       "demensionAxis": "",
       "centerAxis": ""
     },
@@ -1093,8 +1093,8 @@
       "_TYPE": "Butt",
       "maleOffset": 0,
       "femaleOffset": 0,
-      "malePartCode": "cb",
-      "femalePartCode": "pbr",
+      "maleJointSelector": "cb",
+      "femaleJointSelector": "pbr",
       "demensionAxis": "",
       "centerAxis": ""
     },
@@ -1102,8 +1102,8 @@
       "_TYPE": "Butt",
       "maleOffset": 0,
       "femaleOffset": 0,
-      "malePartCode": "cpbl",
-      "femalePartCode": "BACK",
+      "maleJointSelector": "cpbl",
+      "femaleJointSelector": "BACK",
       "demensionAxis": "",
       "centerAxis": ""
     },
@@ -1111,8 +1111,8 @@
       "_TYPE": "Butt",
       "maleOffset": 0,
       "femaleOffset": 0,
-      "malePartCode": "cpbr",
-      "femalePartCode": "BACK",
+      "maleJointSelector": "cpbr",
+      "femaleJointSelector": "BACK",
       "demensionAxis": "",
       "centerAxis": ""
     }
@@ -1403,8 +1403,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "BACK",
-	      "femalePartCode": "B",
+	      "maleJointSelector": "BACK",
+	      "femaleJointSelector": "B",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -1412,8 +1412,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "BACK",
-	      "femalePartCode": "pbl",
+	      "maleJointSelector": "BACK",
+	      "femaleJointSelector": "pbl",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -1421,8 +1421,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "BACK",
-	      "femalePartCode": "pbr",
+	      "maleJointSelector": "BACK",
+	      "femaleJointSelector": "pbr",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -1430,8 +1430,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "L.t / 2",
 	      "femaleOffset": 0,
-	      "malePartCode": "B",
-	      "femalePartCode": "L",
+	      "maleJointSelector": "B",
+	      "femaleJointSelector": "L",
 	      "demensionAxis": "y",
 	      "centerAxis": "-z"
 	    },
@@ -1439,8 +1439,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "R.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "B",
-	      "femalePartCode": "R",
+	      "maleJointSelector": "B",
+	      "femaleJointSelector": "R",
 	      "demensionAxis": "x",
 	      "centerAxis": "-x"
 	    },
@@ -1448,8 +1448,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "pbr.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "B",
-	      "femalePartCode": "pbr",
+	      "maleJointSelector": "B",
+	      "femaleJointSelector": "pbr",
 	      "demensionAxis": "y",
 	      "centerAxis": "+z"
 	    },
@@ -1457,8 +1457,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "pbl.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "B",
-	      "femalePartCode": "pbl",
+	      "maleJointSelector": "B",
+	      "femaleJointSelector": "pbl",
 	      "demensionAxis": "x",
 	      "centerAxis": "+x"
 	    },
@@ -1466,8 +1466,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "L.t / 2",
 	      "femaleOffset": 0,
-	      "malePartCode": "T",
-	      "femalePartCode": "L",
+	      "maleJointSelector": "T",
+	      "femaleJointSelector": "L",
 	      "demensionAxis": "y",
 	      "centerAxis": "-z"
 	    },
@@ -1475,8 +1475,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "R.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "T",
-	      "femalePartCode": "R",
+	      "maleJointSelector": "T",
+	      "femaleJointSelector": "R",
 	      "demensionAxis": "x",
 	      "centerAxis": "-x"
 	    },
@@ -1484,8 +1484,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "pbr.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "T",
-	      "femalePartCode": "pbr",
+	      "maleJointSelector": "T",
+	      "femaleJointSelector": "pbr",
 	      "demensionAxis": "y",
 	      "centerAxis": "+z"
 	    },
@@ -1493,8 +1493,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "pbl.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "T",
-	      "femalePartCode": "pbl",
+	      "maleJointSelector": "T",
+	      "femaleJointSelector": "pbl",
 	      "demensionAxis": "x",
 	      "centerAxis": "+x"
 	    },
@@ -1502,8 +1502,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "pbr.t/2",
 	      "femaleOffset": 0,
-	      "malePartCode": "pbr",
-	      "femalePartCode": "R",
+	      "maleJointSelector": "pbr",
+	      "femaleJointSelector": "R",
 	      "demensionAxis": "x",
 	      "centerAxis": "-z"
 	    },
@@ -1511,8 +1511,8 @@
 	      "_TYPE": "Dado",
 	      "maleOffset": "L.t / 2",
 	      "femaleOffset": 0,
-	      "malePartCode": "pbl",
-	      "femalePartCode": "L",
+	      "maleJointSelector": "pbl",
+	      "femaleJointSelector": "L",
 	      "demensionAxis": "x",
 	      "centerAxis": "-x"
 	    },
@@ -1520,8 +1520,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "BACK",
-	      "femalePartCode": "T",
+	      "maleJointSelector": "BACK",
+	      "femaleJointSelector": "T",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -1529,8 +1529,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cb",
-	      "femalePartCode": "T",
+	      "maleJointSelector": "cb",
+	      "femaleJointSelector": "T",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -1538,8 +1538,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cb",
-	      "femalePartCode": "B",
+	      "maleJointSelector": "cb",
+	      "femaleJointSelector": "B",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -1547,8 +1547,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cb",
-	      "femalePartCode": "pbl",
+	      "maleJointSelector": "cb",
+	      "femaleJointSelector": "pbl",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -1556,8 +1556,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cb",
-	      "femalePartCode": "pbr",
+	      "maleJointSelector": "cb",
+	      "femaleJointSelector": "pbr",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -1565,8 +1565,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cpbl",
-	      "femalePartCode": "BACK",
+	      "maleJointSelector": "cpbl",
+	      "femaleJointSelector": "BACK",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    },
@@ -1574,8 +1574,8 @@
 	      "_TYPE": "Butt",
 	      "maleOffset": 0,
 	      "femaleOffset": 0,
-	      "malePartCode": "cpbr",
-	      "femalePartCode": "BACK",
+	      "maleJointSelector": "cpbr",
+	      "femaleJointSelector": "BACK",
 	      "demensionAxis": "",
 	      "centerAxis": ""
 	    }
@@ -1772,24 +1772,24 @@
 			}
 		],
 		"joints": [{
-				"malePartCode": "T",
-				"femalePartCode": "L",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "T",
-				"femalePartCode": "R",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "BACK",
-				"femalePartCode": "L",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
@@ -1797,8 +1797,8 @@
 				"fullLength": true
 			},
 			{
-				"malePartCode": "BACK",
-				"femalePartCode": "R",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
@@ -1806,40 +1806,40 @@
 				"fullLength": true
 			},
 			{
-				"malePartCode": "tkb",
-				"femalePartCode": "L",
+				"maleJointSelector": "tkb",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "tkb",
-				"femalePartCode": "R",
+				"maleJointSelector": "tkb",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "L",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "R",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "tkb",
-				"femalePartCode": "B",
+				"maleJointSelector": "tkb",
+				"femaleJointSelector": "B",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "x",
@@ -1847,8 +1847,8 @@
 			},
 			{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "T",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "T",
 				"maleOffset": "T.t/2",
 				"demensionAxis": "x",
 				"centerAxis": "+y"
@@ -1980,16 +1980,16 @@
 		],
 		"joints": [{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "T",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "T",
 				"maleOffset": "T.t/2",
 				"demensionAxis": "y",
 				"centerAxis": "+y"
 			},
 			{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "R",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "R",
 				"maleOffset": "R.t/2",
 				"demensionAxis": "x",
 				"centerAxis": "+x",
@@ -1997,16 +1997,16 @@
 			},
 			{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "B",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "B",
 				"maleOffset": "B.t/2",
 				"demensionAxis": "y",
 				"centerAxis": "-y"
 			},
 			{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "L",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "L",
 				"maleOffset": "L.t/2",
 				"demensionAxis": "x",
 				"centerAxis": "-x",
@@ -2218,40 +2218,40 @@
 			}
 		],
 		"joints": [{
-				"malePartCode": "T",
-				"femalePartCode": "L",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "T",
-				"femalePartCode": "R",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "pt2",
-				"femalePartCode": "L",
+				"maleJointSelector": "pt2",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "pt2",
-				"femalePartCode": "R",
+				"maleJointSelector": "pt2",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "BACK",
-				"femalePartCode": "L",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
@@ -2259,8 +2259,8 @@
 				"fullLength": true
 			},
 			{
-				"malePartCode": "BACK",
-				"femalePartCode": "R",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
@@ -2268,40 +2268,40 @@
 				"fullLength": true
 			},
 			{
-				"malePartCode": "tkb",
-				"femalePartCode": "L",
+				"maleJointSelector": "tkb",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "tkb",
-				"femalePartCode": "R",
+				"maleJointSelector": "tkb",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "L",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "R",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "tkb",
-				"femalePartCode": "B",
+				"maleJointSelector": "tkb",
+				"femaleJointSelector": "B",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "x",
@@ -2601,40 +2601,40 @@
 			}
 		],
 		"joints": [{
-				"malePartCode": "T",
-				"femalePartCode": "L",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "T",
-				"femalePartCode": "R",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "pt2",
-				"femalePartCode": "L",
+				"maleJointSelector": "pt2",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "pt2",
-				"femalePartCode": "R",
+				"maleJointSelector": "pt2",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "BACK",
-				"femalePartCode": "L",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
@@ -2642,8 +2642,8 @@
 				"fullLength": true
 			},
 			{
-				"malePartCode": "BACK",
-				"femalePartCode": "R",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
@@ -2651,40 +2651,40 @@
 				"fullLength": true
 			},
 			{
-				"malePartCode": "tkb",
-				"femalePartCode": "L",
+				"maleJointSelector": "tkb",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "tkb",
-				"femalePartCode": "R",
+				"maleJointSelector": "tkb",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "L",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "R",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "tkb",
-				"femalePartCode": "B",
+				"maleJointSelector": "tkb",
+				"femaleJointSelector": "B",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "x",
@@ -2984,32 +2984,32 @@
 			}
 		],
 		"joints": [{
-				"malePartCode": "T",
-				"femalePartCode": "R",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "T",
-				"femalePartCode": "L",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "x",
 				"centerAxis": "-z"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "R",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "L",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
@@ -3017,58 +3017,58 @@
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "BACK",
-				"femalePartCode": "T"
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "T"
 			},
 			{
-				"malePartCode": "BACK",
-				"femalePartCode": "B",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "B",
 				"_TYPE": "Butt"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbr",
-				"femalePartCode": "BACK"
+				"maleJointSelector": "cpbr",
+				"femaleJointSelector": "BACK"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "BACK",
-				"femalePartCode": "R"
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "R"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbl",
-				"femalePartCode": "L"
+				"maleJointSelector": "cpbl",
+				"femaleJointSelector": "L"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbr",
-				"femalePartCode": "BACK"
+				"maleJointSelector": "cpbr",
+				"femaleJointSelector": "BACK"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbl",
-				"femalePartCode": "BACK"
+				"maleJointSelector": "cpbl",
+				"femaleJointSelector": "BACK"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "R"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "R"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "L"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "L"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "T"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "T"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "B"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "B"
 			}
 		],
 		"dividerJoint": {
@@ -3280,32 +3280,32 @@
 			}
 		],
 		"joints": [{
-				"malePartCode": "T",
-				"femalePartCode": "R",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "T",
-				"femalePartCode": "L",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "x",
 				"centerAxis": "-z"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "R",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "L",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
@@ -3313,58 +3313,58 @@
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "BACK",
-				"femalePartCode": "T"
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "T"
 			},
 			{
-				"malePartCode": "BACK",
-				"femalePartCode": "B",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "B",
 				"_TYPE": "Butt"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbr",
-				"femalePartCode": "BACK"
+				"maleJointSelector": "cpbr",
+				"femaleJointSelector": "BACK"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "BACK",
-				"femalePartCode": "R"
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "R"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbl",
-				"femalePartCode": "L"
+				"maleJointSelector": "cpbl",
+				"femaleJointSelector": "L"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbr",
-				"femalePartCode": "BACK"
+				"maleJointSelector": "cpbr",
+				"femaleJointSelector": "BACK"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbl",
-				"femalePartCode": "BACK"
+				"maleJointSelector": "cpbl",
+				"femaleJointSelector": "BACK"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "R"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "R"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "L"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "L"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "T"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "T"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "B"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "B"
 			}
 		],
 		"dividerJoint": {
@@ -3576,32 +3576,32 @@
 			}
 		],
 		"joints": [{
-				"malePartCode": "T",
-				"femalePartCode": "R",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "y",
 				"centerAxis": "+x"
 			},
 			{
-				"malePartCode": "T",
-				"femalePartCode": "L",
+				"maleJointSelector": "T",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": "0.9525",
 				"demensionAxis": "x",
 				"centerAxis": "-z"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "R",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "R",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
 				"centerAxis": "-x"
 			},
 			{
-				"malePartCode": "B",
-				"femalePartCode": "L",
+				"maleJointSelector": "B",
+				"femaleJointSelector": "L",
 				"_TYPE": "Dado",
 				"maleOffset": 0.9525,
 				"demensionAxis": "y",
@@ -3609,58 +3609,58 @@
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "BACK",
-				"femalePartCode": "T"
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "T"
 			},
 			{
-				"malePartCode": "BACK",
-				"femalePartCode": "B",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "B",
 				"_TYPE": "Butt"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbr",
-				"femalePartCode": "BACK"
+				"maleJointSelector": "cpbr",
+				"femaleJointSelector": "BACK"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "BACK",
-				"femalePartCode": "R"
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "R"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbl",
-				"femalePartCode": "L"
+				"maleJointSelector": "cpbl",
+				"femaleJointSelector": "L"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbr",
-				"femalePartCode": "BACK"
+				"maleJointSelector": "cpbr",
+				"femaleJointSelector": "BACK"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cpbl",
-				"femalePartCode": "BACK"
+				"maleJointSelector": "cpbl",
+				"femaleJointSelector": "BACK"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "R"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "R"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "L"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "L"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "T"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "T"
 			},
 			{
 				"_TYPE": "Butt",
-				"malePartCode": "cb",
-				"femalePartCode": "B"
+				"maleJointSelector": "cb",
+				"femaleJointSelector": "B"
 			}
 		],
 		"dividerJoint": {
@@ -3808,16 +3808,16 @@
 		],
 		"joints": [{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "T",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "T",
 				"maleOffset": "T.t/2",
 				"demensionAxis": "y",
 				"centerAxis": "+y"
 			},
 			{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "R",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "R",
 				"maleOffset": "R.t/2",
 				"demensionAxis": "x",
 				"centerAxis": "+x",
@@ -3825,16 +3825,16 @@
 			},
 			{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "B",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "B",
 				"maleOffset": "B.t/2",
 				"demensionAxis": "y",
 				"centerAxis": "-y"
 			},
 			{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "L",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "L",
 				"maleOffset": "L.t/2",
 				"demensionAxis": "x",
 				"centerAxis": "-x",
@@ -3984,16 +3984,16 @@
 		],
 		"joints": [{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "T",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "T",
 				"maleOffset": "T.t/2",
 				"demensionAxis": "y",
 				"centerAxis": "+y"
 			},
 			{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "R",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "R",
 				"maleOffset": "R.t/2",
 				"demensionAxis": "x",
 				"centerAxis": "+x",
@@ -4001,16 +4001,16 @@
 			},
 			{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "B",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "B",
 				"maleOffset": "B.t/2",
 				"demensionAxis": "y",
 				"centerAxis": "-y"
 			},
 			{
 				"_TYPE": "Dado",
-				"malePartCode": "BACK",
-				"femalePartCode": "L",
+				"maleJointSelector": "BACK",
+				"femaleJointSelector": "L",
 				"maleOffset": "L.t/2",
 				"demensionAxis": "x",
 				"centerAxis": "-x",

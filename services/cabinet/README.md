@@ -64,7 +64,7 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 &nbsp;&nbsp;defines all parts and thier sub parts.
 - id() - a globally "unique" identifier
 - partCode() - object type identifier
-- partCode(true) - location identifier
+- locationCode() - location identifier
 - userFriendlyId() - Cabinet specific unique indexed identifier (for display purposes)
 
 ### TODO

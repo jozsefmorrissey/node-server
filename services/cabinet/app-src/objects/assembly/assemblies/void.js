@@ -32,7 +32,7 @@ class Void extends Cutter {
         const subs = Object.values(cabinet.getParts()).filter(filter(excludeParts));
         for (let index = 0; index < subs.length; index++) {
           const sub = subs[index];
-          part.addJoints(new joint(part.partCode(true), sub.partCode(true), condition));
+          part.addJoints(new joint(part.locationCode(), sub.locationCode(), condition));
         }
       }
     }
@@ -49,7 +49,7 @@ class Void extends Cutter {
 
     const getJoint = (mi, oi) => {
       const condition = () => instance.includedSides()[mi] === true;
-      const joint = new Dado(panels[mi].partCode(), panels[Math.mod(oi, 6)].partCode(), condition);
+      const joint = new Dado(panels[mi].locationCode(), panels[Math.mod(oi, 6)].locationCode(), condition);
       joint.parentAssemblyId(panels[mi].id());
       return joint;
     }
@@ -134,21 +134,22 @@ class Void extends Cutter {
       const biPoly = biPolyFuncs[index]();
 
       const offsetSet = offsetSets[this.jointSet()];
-      const joints = offsetSet.joints().filter(j => j.femalePartCode() === panels[index].partCode());
+      const joints = offsetSet.joints().filter(j => j.femaleJointSelector() === panels[index].locationCode());
       if (!called[index]) {
         called[index] = true;
         joints.concatInPlace(panels[index].getJoints().female);
       }
-      const model = biPoly.toModel(incommingJoints || joints);
+      const model = biPoly.toModel();
+
       called[index] = false;
 
-      return model;
+      return Dado.apply(model, joints);;
     }, this, 'always-on');
 
     const toModelFuncs = [];
     const biPolyFuncs = [];
     const buildPanel = (index) => {
-      const partCode = this.partCode() + `p${index}`
+      const partCode = `:p${index}`;
       const partName = this.partName() + `-panel-${index}`
       const toMod = toModelFuncs[index] ||= toModel(index);
       const toBP = biPolyFuncs[index] ||= toBiPoly(index);
@@ -187,7 +188,7 @@ class Void extends Cutter {
 
     const abyssToModel = new FunctionCache(abyssModel, this, 'alwaysOn');
 
-    const controlableAbyss = new Cutter.Model(`${this.partCode()}abs`, `${this.partName()}-abyss`, abyssToModel);
+    const controlableAbyss = new Cutter.Model(`:abs`, `${this.partName()}-abyss`, abyssToModel);
     // controlableAbyss.included(true);
     // controlableAbyss.part(true);
     this.addSubAssembly(controlableAbyss);

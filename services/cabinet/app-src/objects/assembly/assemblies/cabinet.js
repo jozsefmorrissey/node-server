@@ -69,7 +69,7 @@ class Cabinet extends Assembly {
     }
 
     this.getSubassemblies = (childrenOnly) => {
-      const subs = parentGetSubAssems(childrenOnly);
+      const subs = parentGetSubAssems(childrenOnly).map(sa => sa);
       const toeKick = getToeKick();
       if (toeKick) {
         subs.push(toeKick);
@@ -325,7 +325,7 @@ Cabinet.build = (type, group, config) => {
   });
 
   config.joints.forEach((jointConfig) => {
-    const male = cabinet.getAssembly(jointConfig.malePartCode);
+    const male = cabinet.getAssembly(jointConfig.maleJointSelector);
     if (male === undefined) console.warn(`No male found for joint: ${jointConfig}`);
     else male.addJoints(Object.fromJson(jointConfig));
   });

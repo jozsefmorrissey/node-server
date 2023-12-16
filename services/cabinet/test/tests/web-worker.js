@@ -17,7 +17,7 @@ const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 Test.add('web-worker: toModel',async (ts) => {
   const cabinet = Cabinet.build('base');
   CabinetLayouts.map['test'].build(cabinet);
-  let webWorker = new Worker("/cabinet/js/web-worker.js");
+  // let webWorker = new Worker("/cabinet/js/web-worker.js");
   const cabinetClone = Cabinet.fromJson(cabinet.toJson());
 
 

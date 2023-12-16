@@ -2,8 +2,8 @@
 const Joint = require('../joint.js');
 
 class Dado extends Joint {
-  constructor(malePartCode, femalePartCode, condition, locationId) {
-    super(malePartCode, femalePartCode, condition, locationId);
+  constructor(maleJointSelector, femaleJointSelector, condition, locationId) {
+    super(maleJointSelector, femaleJointSelector, condition, locationId);
 
     this.updatePosition = (position) => {
       const applied = position.applied && position.applied[this.toString()];

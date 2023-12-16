@@ -4,8 +4,8 @@
 const Joint = require('../joint.js');
 
 class Butt extends Joint {
-  constructor(malePartCode, femalePartCode, condition) {
-    super(malePartCode, femalePartCode, condition);
+  constructor(maleJointSelector, femaleJointSelector, condition) {
+    super(maleJointSelector, femaleJointSelector, condition);
   }
 }
 

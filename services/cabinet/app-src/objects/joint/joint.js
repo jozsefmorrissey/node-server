@@ -8,25 +8,24 @@ const REASSIGNMENT_ERROR = () => new Error('Make a new joint, joints cannot be r
 
 function isMatch(partCodeOlocationCodeOassemblyOregex, obj) {
   let pclcar = partCodeOlocationCodeOassemblyOregex;
-  if ((typeof pclcar) === 'string') {
-    return obj.partCode() === pclcar || obj.locationCode() === pclcar;
-  }
+  if ((typeof pclcar) === 'string') pclcar = new RegExp(`^${pclcar}(:.*|)$`);
   if (pclcar instanceof RegExp) {
-    return pclcar.match(obj.partCode()) || pclcar.match(obj.locationCode());
+    return obj.partCode().match(pclcar) || obj.locationCode().match(pclcar);
   }
   return obj === pclcar;
 }
 
-function getModels(partCodeOlocationCodeOassemblyOregex, filter) {
+function getModels(partCodeOlocationCodeOassemblyOregex, filter, joint) {
   let pclcar = partCodeOlocationCodeOassemblyOregex;
-  if (parent === undefined) throw new Error(`You need to set parentAssembly for '${this.toString()}'`);
-  const mens = parent.allAssemblies()
+  const parent = joint.parentAssembly();
+  if (parent === undefined) throw new Error(`You need to set parentAssembly for '${joint.toString()}'`);
+  const joinable = parent.allAssemblies().filter(a => a.constructor.joinable);
   let models = [];
   const runFilter = filter instanceof Function;
-  for (let index = 0; index < mens.length; index++) {
-    const male = mens[index];
+  for (let index = 0; index < joinable.length; index++) {
+    const male = joinable[index];
     try {
-      if (male.includeJoints() && isMatch(pclar, male) && (!runFilter || filter(male))) {
+      if (male.includeJoints() && isMatch(pclcar, male) && (!runFilter || filter(male))) {
         const model = male.toModel();
         if (model !== undefined) {
           models.push(male.toModel());
@@ -40,11 +39,11 @@ function getModels(partCodeOlocationCodeOassemblyOregex, filter) {
 }
 
 class Joint {
-  constructor(malePartCode, femalePartCode, condition, locationId) {
+  constructor(maleJointSelector, femaleJointSelector, condition, locationId) {
     let parent, parentId;
     const initialVals = {
       maleOffset: 0, femaleOffset: 0, parentAssemblyId:  undefined,
-      malePartCode, femalePartCode, demensionAxis: '', centerAxis: '',
+      maleJointSelector, femaleJointSelector, demensionAxis: '', centerAxis: '',
       locationId, fullLength: false,
     }
     Object.getSet(this, initialVals);
@@ -60,9 +59,9 @@ class Joint {
       return parentId;
     }
 
-    this.clone = (parentOid, malePartCode, femalePartCode, cond, locId) => {
-      const mpc = malePartCode || this.malePartCode();
-      const fpc = femalePartCode || this.femalePartCode();
+    this.clone = (parentOid, maleJointSelector, femaleJointSelector, cond, locId) => {
+      const mpc = maleJointSelector || this.maleJointSelector();
+      const fpc = femaleJointSelector || this.femaleJointSelector();
       locId ||= locationId;
       parentOid ||= this.parentAssembly() || this.parentAssemblyId();
       const clone = Object.class.new(this, mpc, fpc, cond || condition, locId);
@@ -90,35 +89,27 @@ class Joint {
     this.updatePosition = () => {};
 
     let maleReg, femaleReg;
-    this.isFemale = (assem) => {
-      if (parent === undefined) return false;
-      femaleReg ||= parent.constructor.partCodeReg(femalePartCode);
-      return assem.partCode(true).match(femaleReg) !== null;
-    }
+    this.isFemale = (assem) => isMatch(femaleJointSelector, assem);
 
-    this.isMale = (assem) => {
-      if (parent === undefined) return false;
-      maleReg ||= parent.constructor.partCodeReg(malePartCode);
-      return assem.partCode(true).match(maleReg) !== null;
-    }
+    this.isMale = (assem) => isMatch(maleJointSelector, assem);
 
-    this.malePartCode = (pc) => {
-      if (pc && malePartCode) throw new Error('Create new Joint cannot be reassined');
+    this.maleJointSelector = (pc) => {
+      if (pc && maleJointSelector) throw new Error('Create new Joint cannot be reassined');
       if (pc) {
-        malePartCode = pc;
+        maleJointSelector = pc;
       }
-      return malePartCode;
+      return maleJointSelector;
     }
 
-    this.femalePartCode = (pc) => {
-      if (pc && femalePartCode) throw new Error('Create new Joint cannot be reassined');
+    this.femaleJointSelector = (pc) => {
+      if (pc && femaleJointSelector) throw new Error('Create new Joint cannot be reassined');
       if (pc) {
-        femalePartCode = pc;
+        femaleJointSelector = pc;
       }
-      return femalePartCode;
+      return femaleJointSelector;
     }
 
-    this.maleModels = (filter) => getModels(malePartCode, filter);
+    this.maleModels = (filter) => getModels(maleJointSelector, filter, this);
 
     this.maleModel = (filter) => {
       if (parent === undefined) throw new Error(`You need to set parentAssembly for '${this.toString()}'`);
@@ -130,7 +121,7 @@ class Joint {
       return model;
     }
 
-    this.femaleModels = (filter) => getModels(femalePartCode, filter)
+    this.femaleModels = (filter) => getModels(femaleJointSelector, filter, this);
 
     this.getDemensions = () => {
       const malePos = male();
@@ -139,12 +130,12 @@ class Joint {
       throw new Error('this is nonsense who is using it?...');
       return undefined;
     }
-    this.toString = () => `${this.constructor.name}(${locationId}):${this.malePartCode()}->${this.femalePartCode()}`;
+    this.toString = () => `${this.constructor.name}(${locationId}):${this.maleJointSelector()}->${this.femaleJointSelector()}`;
 
-    if (Joint.list[this.malePartCode()] === undefined) Joint.list[this.malePartCode()] = [];
-    if (Joint.list[this.femalePartCode()] === undefined) Joint.list[this.femalePartCode()] = [];
-    Joint.list[this.malePartCode()].push(this);
-    Joint.list[this.femalePartCode()].push(this);
+    if (Joint.list[this.maleJointSelector()] === undefined) Joint.list[this.maleJointSelector()] = [];
+    if (Joint.list[this.femaleJointSelector()] === undefined) Joint.list[this.femaleJointSelector()] = [];
+    Joint.list[this.maleJointSelector()].push(this);
+    Joint.list[this.femaleJointSelector()].push(this);
   }
 }
 Joint.list = {};
@@ -211,8 +202,8 @@ class JointReferences {
       const list = [];
       for (let index = 0; index < orig.length; index++) {
         let j = orig[index];
-        if (j.femalePartCode() === origPartCode) j = j.clone(parent, null, parent.partCode(true));
-        else if (j.malePartCode() === origPartCode) j = j.clone(parent, parent.partCode(true));
+        if (j.femaleJointSelector() === origPartCode) j = j.clone(parent, null, parent.locationCode());
+        else if (j.maleJointSelector() === origPartCode) j = j.clone(parent, parent.locationCode());
         // j.maleOffset(-.9525/2);
         list.push(j);
       }
@@ -220,6 +211,75 @@ class JointReferences {
     }
   }
 }
+
+class JointApplicator {
+  constructor(assembly) {
+    const joints = assembly.getAllJoints();
+
+    function isMatch(partCodeOlocationCodeOassemblyOregex, obj) {
+      let pclcar = partCodeOlocationCodeOassemblyOregex;
+      if ((typeof pclcar) === 'string') pclcar = new RegExp(`^${pclcar}(:.*|)$`);
+      if (pclcar instanceof RegExp) {
+        return obj.partCode().match(pclcar) || obj.locationCode().match(pclcar);
+      }
+      return obj === pclcar;
+    }
+
+    function getModels(partCodeOlocationCodeOassemblyOregex, filter, joint) {
+      let pclcar = partCodeOlocationCodeOassemblyOregex;
+      const parent = joint.parentAssembly();
+      if (parent === undefined) throw new Error(`You need to set parentAssembly for '${joint.toString()}'`);
+      const joinable = parent.allAssemblies().filter(a => a.constructor.joinable);
+      let models = [];
+      const runFilter = filter instanceof Function;
+      for (let index = 0; index < joinable.length; index++) {
+        const male = joinable[index];
+        try {
+          if (male.includeJoints() && isMatch(pclcar, male) && (!runFilter || filter(male))) {
+            const model = male.toModel();
+            if (model !== undefined) {
+              models.push(male.toModel());
+            }
+          }
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+      return models;
+    }
+
+    this.maleModels = (filter) => getModels(maleJointSelector, filter, this);
+    this.femaleModels = (filter) => getModels(femaleJointSelector, filter, this);
+
+    this.maleModel = (filter) => {
+      const models = this.maleModels(filter);
+      let model = new CSG();
+      for (let index = 0; index < models.length; index++) {
+        model = model.union(models[index]);
+      }
+      return model;
+    }
+
+    this.apply = (model) => {
+      if (!joints || !Array.isArray(joints)) return model;
+      let m = model; // preventCouruption
+      joints.forEach((joint) => {
+        if (joint.apply()) {
+          try {
+            const maleModel = joint.maleModel(joints.jointFilter);
+            if (m.polygons.length > 0 && maleModel && maleModel.polygons.length > 0) {
+              m = m.subtract(maleModel);
+            }
+          } catch (e) {
+            console.error('Most likely caused by a circular joint reference',e);
+          }
+        }
+      });
+      return m;
+    }
+  }
+}
+
 
 Joint.References = JointReferences;
 

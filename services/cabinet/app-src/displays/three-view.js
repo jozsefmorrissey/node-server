@@ -49,9 +49,9 @@ function updatePartsDataList(container) {
   let htmlArr = ['<option value="ASSEMBLY"></option>'];
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
-    const partCode = part.partCode(true);
+    const locationCode = part.locationCode();
     const partName = part.partName();
-    htmlArr.push(`<option value='${partCode}' part-id='${part.id()}'></option>`);
+    htmlArr.push(`<option value='${locationCode}' part-id='${part.id()}'></option>`);
   }
   htmlArr.sort()
   datalist.innerHTML = htmlArr.join('');

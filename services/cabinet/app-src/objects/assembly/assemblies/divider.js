@@ -116,7 +116,7 @@ class Divider extends Assembly {
         }
         panel = panels[partCode];
         cutter = cutters[partCode];
-        panel.addJoints(new Joint(cutter.partCode(true), panel.partCode(true), null, 'only'));
+        panel.addJoints(new Joint(cutter.locationCode(), panel.locationCode(), null, 'only'));
         cutter.poly(translated);
 
         if (Array.isArray(instance.subassemblies)) {

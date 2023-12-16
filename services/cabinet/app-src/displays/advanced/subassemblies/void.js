@@ -23,8 +23,7 @@ class VoidDisplay extends Lookup {
     this.displayLength = (voId) => new Measurement(voId.length()).display();
     this.displayWidth = (voId) => new Measurement(voId.width()).display();
     this.cabinet = () => cabinetGetter();
-    this.partCodes = () => Object.values(cabinetGetter().subassemblies).map(a => a.partCode(true));
-
+    this.partCodes = () => Object.values(cabinetGetter().subassemblies).map(a => a.locationCode());
     this.html = () => VoidDisplay.template.render(this);
   }
 }

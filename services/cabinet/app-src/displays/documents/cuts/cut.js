@@ -336,8 +336,8 @@ CutInfo.display.partIds = (parts) => {
 CutInfo.display.partCodes = (parts) => {
   if (EPNTS.getEnv() !== 'local') return '';
   let partStr;
-  if (parts.length === 1) partStr = parts[0].partCode(true);
-  else partStr = `[${parts.map(p => p.partCode(true)).join(',')}]`;
+  if (parts.length === 1) partStr = parts[0].userFriendlyId();
+  else partStr = `[${parts.map(p => p.userFriendlyId()).join(',')}]`;
   return `${partStr}`;
 }
 

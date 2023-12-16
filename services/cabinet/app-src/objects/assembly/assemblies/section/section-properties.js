@@ -104,13 +104,16 @@ class SectionProperties extends KeyValue{
 
     this.divideRight = () =>
       this.parentAssembly().sectionCount && this.parentAssembly().sectionCount() !== index;
-    this.partCode = (full) => {
-      if (!full) return 'S';
-        const parent = this.parentAssembly();
-        const pc = 'S' + index + (this.vertical() ? 'V' : 'H');
-        if (parent) return `${parent.partCode(full)}_${pc}`;
-        return pc;
+    this.partCode = () => 'S'
+
+    this.locationCode = () => {
+      const parent = this.parentAssembly();
+      const pc = 'S' + index;
+      if (parent) return `${parent.locationCode()}_${pc}`;
+      return pc;
     };
+
+
     this.partName = () => {
       const orientation = this.vertical() ? 'V' : 'H';
       if (!(this.parentAssembly() instanceof SectionProperties)) return orientation;
@@ -168,7 +171,7 @@ class SectionProperties extends KeyValue{
     const depthPartReg = /Cabinet|Cutter|Section|Void|Auto|Handle|Drawer|Door/;
     const depthDvReg = /_dv/;
     const depthPartFilter = a => !a.constructor.name.match(depthPartReg) &&
-                                  !a.partCode(true).match(depthDvReg);
+                                  !a.locationCode().match(depthDvReg);
 
     function polyInformation() {
       const root = instance.root();
@@ -181,7 +184,7 @@ class SectionProperties extends KeyValue{
           polys.push(a.toBiPolygon());
           assemblies.push(a);
         } catch (e) {
-          console.warn(`toBiPolygon issue with part ${a.partCode(true)}\n`, e);
+          console.warn(`toBiPolygon issue with part ${a.locationCode()}\n`, e);
         }
       });
       return {assemblies, polys};
@@ -289,24 +292,24 @@ class SectionProperties extends KeyValue{
 
     this.propertyConfig = () => this.getCabinet().propertyConfig();
 
-    this.getAssembly = (partCode, callingAssem) => {
+    this.getAssembly = (locationCode, callingAssem) => {
       if (callingAssem === this) return undefined;
-      if (this.partCode() === partCode) return this;
+      if (this.locationCode() === locationCode) return this;
       const subAssems = ({}).merge(this.subassemblies);
-      sectionCutters.forEach(sc => subAssems[sc.partCode()] = sc);
-      if (subAssems[partCode]) return subAssems[partCode];
+      sectionCutters.forEach(sc => subAssems[sc.locationCode()] = sc);
+      if (subAssems[locationCode]) return subAssems[locationCode];
       if (callingAssem !== undefined) {
         const children = Object.values(this.subassemblies);
         if (this.divideRight()) children.concatInPlace(divider);
         const cover = this.cover()
         if (cover) children.concatInPlace(cover);
         for (let index = 0; index < children.length; index += 1) {
-          const assem = children[index].getAssembly(partCode, this);
+          const assem = children[index].getAssembly(locationCode, this);
           if (assem !== undefined) return assem;
         }
       }
       if (this.parentAssembly() !== undefined && this.parentAssembly() !== callingAssem)
-        return this.parentAssembly().getAssembly(partCode, this);
+        return this.parentAssembly().getAssembly(locationCode, this);
       return undefined;
     }
 
@@ -718,12 +721,12 @@ class SectionProperties extends KeyValue{
     }
 
     this.dividerJoint.zero = (male, female, locId) => {
-      const key = `${male.partCode(true)}=>${female.partCode(true)}`;
+      const key = `${male.locationCode()}=>${female.locationCode()}`;
       const joint = this.dividerJoint();
 
       let mpc, fpc, id;
-      if (male) mpc = male.partCode(true);
-      if (female) fpc = female.partCode(true);
+      if (male) mpc = male.locationCode();
+      if (female) fpc = female.locationCode();
       const clone = joint.clone(male, mpc, fpc, null, locId);
       clone.maleOffset(0);
       male.addJoints(clone);
@@ -766,8 +769,8 @@ class SectionProperties extends KeyValue{
       if (sectionCutters.length === 0) buildCutters();
       for (let index = 0; index < sectionCutters.length; index++) {
         const cutter = sectionCutters[index];
-        const locId = cutter.reference().partCode(true);
-        divider.addJoints(new Joint(cutter.partCode(true), divider.partCode(true), null, locId));
+        const locId = cutter.reference().locationCode();
+        divider.addJoints(new Joint(cutter.locationCode(), divider.locationCode(), null, locId));
       }
     }
 
@@ -804,7 +807,7 @@ class SectionProperties extends KeyValue{
       subAssems.concatInPlace(divider.parentAssembly().borders().map(f => f().panel ? f().panel() : f()));
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
-        this.dividerJoint.zero(panel, assem, panel.partCode(true));
+        this.dividerJoint.zero(panel, assem, panel.locationCode());
       }
       this.addCutters(panel);
     }
@@ -826,6 +829,8 @@ class SectionProperties extends KeyValue{
     // setTimeout(() => this.addJoints(this.divider()));
   }
 }
+
+SectionProperties.joinable = false;
 
 const list = [];
 const byId = {};
