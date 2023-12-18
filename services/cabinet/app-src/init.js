@@ -1,6 +1,3 @@
-
-
-
 require('../../../public/js/utils/utils.js');
 const $t = require('../../../public/js/utils/$t');
 $t.loadFunctions(require('../generated/html-templates'));
@@ -28,13 +25,14 @@ require('./displays/opening-sketch.js')
 const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');
 const utils = require('./utils.js');
+const { RenderingExecutor } = require('./web-worker-client.js');
 
 let orderDisplay;
 
-// Run Tests
-if (EPNTS.getEnv() === 'local') {
-  require('../test/run');
-}
+// // Run Tests
+// if (EPNTS.getEnv() === 'local') { // why is test code part of the app code??
+//   require('../test/run');
+// }
 
 function updateDivisions (target) {
   const name = target.getAttribute('name');
@@ -144,5 +142,15 @@ new QRious({
         });
 
 // window.onbeforeunload = () => 'Unsaved data may be lost';
+
+const webWorker = new Worker('/cabinet/js/web-worker-bundle.js');
+
+//webWorker.onmessage = (messageFromWorker) => {
+//  console.log('main-thread', 'message received from worker:', messageFromWorker);
+//};
+//webWorker.postMessage('test');
+
+const renderingExecutor = new RenderingExecutor(webWorker);
+renderingExecutor.submit3dModelTask('test').then(x => console.log(x));
 
 module.exports = {orderDisplay: () => orderDisplay};

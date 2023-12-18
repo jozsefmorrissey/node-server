@@ -22,9 +22,9 @@ fs.writeFile(`./generated/EPNTS.js`, ENPTSTemplate, () => {});
 
 
 const { JsBundler } = require('../../building/bundlers/js.js');
+
 const jsDumpLoc = './public/js/index';
 const jsBundler = new JsBundler(jsDumpLoc, [], {main: './services/cabinet/app-src/init.js', projectDir: '../../'});
-
 const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add('./globals/')
         .add('./public/json/endpoints.json')
@@ -33,23 +33,26 @@ const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add(htmlDumpLoc)
         .add('./public/json/cabinets.json')
         .add('./app-src');
+if (global.ENV === 'local') {
+  jsWatcher.add('./test');
+}
+
 
 const wwDumpLoc = './public/js/web-worker-bundle';
 const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/init.js', projectDir: '../../'});
 const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
-        .add('./globals/')
-        .add('./public/json/endpoints.json')
-        .add('./generated/EPNTS.js')
-        .add('../../public/js/utils/')
-        .add(htmlDumpLoc)
-        .add('./public/json/cabinets.json')
-        .add('./app-src')
-        .add('./web-worker');
+        // .add('./globals/')
+        // .add('./public/json/endpoints.json')
+        // .add('./generated/EPNTS.js')
+        // .add('../../public/js/utils/')
+        // .add(htmlDumpLoc)
+        // .add('./public/json/cabinets.json')
+        // .add('./app-src')
+        .add('./app-src/web-worker-client.js')
+        .add('./web-worker/');
 
         // .add('three-d')
         // .add('web-worker')
-        // .add('./app-src/objects') maybe
+        // .add('./app-src/objects') maybe - contains all models to build the objects
+        // 
 
-if (global.ENV === 'local') {
-  jsWatcher.add('./test');
-}
