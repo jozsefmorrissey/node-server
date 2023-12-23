@@ -2,6 +2,8 @@
 const Test = require('../../../../public/js/utils/test/test').Test;
 const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
 const CabinetLayouts = require('../../app-src/config/cabinet-layouts.js');
+const Layer = require('../../app-src/three-d/objects/layer.js');
+const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 const approximate = require('../../../../public/js/utils/approximate.js').new(100);
 
 
@@ -152,6 +154,14 @@ const cleanJson = (json) => Object.filter(json, (c, key) =>
   key && key.match(/(id|parentAssemblyId)/), false).complement;
 Test.add('Cabinet: to/from Json',(ts) => {
   const cabinet = Cabinet.build('base');
+  // CabinetLayouts.map.test.build(cabinet);
+  // const layers = Layer.fromCSG(cabinet.toModel());
+  // console.log(Layer.toWireDrawString(layers))
+  // const pLayers = Layer.parrelleSets(layers);
+  //
+  // console.log(console.log(layers[3].toWireDrawString()));
+  // console.log(Polygon3D.toDrawString(layers[3].polygons()));
+
   CabinetLayouts.map['test'].build(cabinet);
   const json = cleanJson(cabinet.toJson());
   const copy = Cabinet.fromJson(cabinet.toJson());

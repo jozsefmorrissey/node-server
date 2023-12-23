@@ -27,10 +27,14 @@ class JointInfo {
       const normals = partInfo.normals();
       const zPos = normals.z;
       const zNeg = zPos.inverse();
-      const leftOnlyCuts = this.cuts.filter(sideFilter(zPos));
-      const rightOnlyCuts = this.cuts.filter(sideFilter(zNeg));
-      if (leftOnlyCuts.length === 0 && rightOnlyCuts.length === 0) return 'Both';
-      return leftOnlyCuts.length < rightOnlyCuts.length ? 'Left' : 'Right';
+      try {
+        const leftOnlyCuts = this.cuts.filter(sideFilter(zPos));
+        const rightOnlyCuts = this.cuts.filter(sideFilter(zNeg));
+        if (leftOnlyCuts.length === 0 && rightOnlyCuts.length === 0) return 'Both';
+        return leftOnlyCuts.length < rightOnlyCuts.length ? 'Left' : 'Right';
+      } catch (e) {
+        console.log(e);
+      }
     }, 'long-refresh', this);
 
     this.type = () => {

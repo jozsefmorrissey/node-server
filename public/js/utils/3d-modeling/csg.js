@@ -397,9 +397,11 @@ CSG.Point = function (center, radius, color) {
   return sphere;
 }
 
-function vecotrOvertexModel(start, end, model, defaultColor) {
-  let color = end.color || defaultColor;
-  if (end instanceof CSG.Vector) {
+function vecotrOvertexModel(start, end, model, options) {
+  if (options.lineDisplayType === CSG.Line.DISPLAY_TYPES.LINE_ONLY) return model;
+  let color = end.color || options.color;
+  if (CSG.Line.DISPLAY_TYPES.VECTOR === options.lineDisplayType &&
+          end instanceof CSG.Vector) {
     const unit = end.minus(new CSG.Vector(start)).unit().times(6);
     start = end.minus(unit);
     return new CSG.cone({start, end, model, color, radius: 5});
@@ -414,11 +416,14 @@ CSG.Line = function (options) {
   const end = options.end || [0,0,0];
   const radius = options.radius || .2;
   let model = new CSG.cylinder({start, end, radius});
-  model = vecotrOvertexModel(end, start, model, options.color);
+  model = vecotrOvertexModel(end, start, model, options);
   model.setColor(options.color);
-  return vecotrOvertexModel(start, end, model, options.color);
+  return vecotrOvertexModel(start, end, model, options);
 }
 
+CSG.Line.DISPLAY_TYPES = {};
+CSG.Line.DISPLAY_TYPES.LINE_ONLY = 'lineOnly';
+CSG.Line.DISPLAY_TYPES.VECTOR = 'vector';
 
 CSG.Rectangle = function (demensions, center, yVector, xVector) {
   yVector = new CSG.Vector(yVector || [0,1,0]).unit();

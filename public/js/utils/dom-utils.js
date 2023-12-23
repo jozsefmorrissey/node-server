@@ -83,8 +83,18 @@ du.create.event = (eventName) => {
       event.eventName = eventName;
       event.eventType = eventName;
   }
+  event.trigger = (elem) => {
+    elem ||= document;
+    if(document.createEvent){
+      elem.dispatchEvent(event);
+    } else {
+      elem.fireEvent("on" + event.eventType, event);
+    }
+  }
   return event;
 }
+
+
 
 // Ripped off of: https://ourcodeworld.com/articles/read/189/how-to-create-a-file-and-generate-a-download-with-javascript-in-the-browser-without-a-server
 du.download = (filename, contents) => {
@@ -713,10 +723,11 @@ du.trigger = (eventName, elemOid) => {
   const elem = (typeof elemOid) === 'string' ? du.id(elemOid) : elemOid;
   if (elem instanceof HTMLElement) {
     const event = du.create.event(eventName);
+    // event.target = elem;
     if(document.createEvent){
-      elem.dispatchEvent(this.event);
+      elem.dispatchEvent(event);
     } else {
-      elem.fireEvent("on" + this.event.eventType, this.event);
+      elem.fireEvent("on" + event.eventType, event);
     }
   }
 }

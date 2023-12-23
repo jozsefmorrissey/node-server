@@ -24,8 +24,9 @@ class Assembly extends KeyValue {
     super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly', object: true});
 
     const pcIsFunc = partCode instanceof Function;
-    function pCode() {
-      const pc = pcIsFunc ? partCode() : partCode || 'unk';
+    function pCode(doNotAppendParent) {
+      const pc = pcIsFunc ? partCode(doNotAppendParent) : partCode || 'unk';
+      if (doNotAppendParent === true) return pc;
       const parent = this.parentAssembly();
       const subPartCode = pc.match(/:.{1,}$/);
       if (parent && subPartCode) return `${parent.partCode()}${pc}`;
@@ -78,6 +79,9 @@ class Assembly extends KeyValue {
           default: return true;
         }
     }
+
+    const parentIncludeJoints = this.includeJoints;
+    this.includeJoints = (trueOfalse) => parentIncludeJoints(trueOfalse) && this.included();
 
     function getValueSmeFormatter(path) {
       const split = path.split('.');
@@ -172,8 +176,8 @@ class Assembly extends KeyValue {
     this.allAssemblies = new FunctionCache(allAssemblies, this, 'alwaysOn');
 
     const constructUserFriendlyId = (idMap) => (part) => {
-      const pc = part.partCode();
-      // if (!pc.startsWith(':')) return pc;
+      const pc = part.partCode(true);
+      if (!pc.startsWith(':')) return pc;
       const parent = part.parentAssembly();
       if (parent) {
         const parentId = idMap[parent.id()];

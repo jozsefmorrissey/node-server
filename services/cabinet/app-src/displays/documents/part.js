@@ -3,10 +3,12 @@ const JointInfo = require('./joint');
 const CutInfo = require('./cuts/cut');
 const Vertex3D = require('../../three-d/objects/vertex.js');
 const Line3D = require('../../three-d/objects/line.js');
+const Layer = require('../../three-d/objects/layer.js');
 const Polygon3D = require('../../three-d/objects/polygon.js');
 const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+const Polygon2d = require('../../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 
 FunctionCache.on('long-refresh', 4000);
 
@@ -85,8 +87,9 @@ class PartInfo {
 
     this.cutsOnlyModel = new FunctionCache((rightOleft) => {
       const cuts = this.cutInfo().filter(ji => ji.constructor === CutInfo);
-      const joints = cuts.map(c => c.jointInfo().joint());
-      return this.model(rightOleft, joints);
+      let model = this.model(rightOleft, []);
+      cuts.map(c => (model = model.subtract(this.normalize(rightOleft, c.jointInfo().model()))));
+      return model;
     }, 'long-refresh', this);
 
     const rightFilter = (type) => ji => ji.primarySide() === 'Both' || (ji.primarySide() === 'Left' && (type === undefined || type === ji.type()));
@@ -113,9 +116,10 @@ class PartInfo {
       const jointInfo = this.jointInfo();
       const cutInfo = [];
       jointInfo.forEach(ji => cutInfo.concatInPlace(ji.cutInfo()));
-//console.log(cutInfo.map(c => `//${c.jointInfo().joint().toString()}\n${Polygon3D.toDrawString(c.set(), String.nextColor())}`).join('\n\n'))
+console.log(cutInfo.map(c => `//${c.jointInfo().joint().toString()}\n${Polygon3D.toDrawString(c.set(), String.nextColor())}`).join('\n\n'))
       CutInfo.clean(cutInfo);
       this.cuts = cutInfo;
+      console.log(CutInfo.toDrawString(this.cuts))
       return cutInfo;
     }, 'long-refresh', this);
 
@@ -135,7 +139,8 @@ class PartInfo {
 
     this.to2D = (rightOleft, csgOpolyOlineOvertex) => {
       const normalized = this.normalize(rightOleft, csgOpolyOlineOvertex);
-      if(csgOpolyOlineOvertex instanceof Vertex3D || csgOpolyOlineOvertex instanceof Line3D) {
+      if(csgOpolyOlineOvertex instanceof Vertex3D || csgOpolyOlineOvertex instanceof Line3D ||
+          csgOpolyOlineOvertex instanceof Layer) {
         return normalized.to2D('x', 'y');
       }
       return Polygon3D.lines2d(normalized, 'x', 'y');
@@ -154,8 +159,7 @@ class PartInfo {
     this.edges = (rightOleft, availbleEdgesOnly) => {
       let applicableEdges;
       if (availbleEdgesOnly === undefined) {
-        const cutsOnly = Polygon3D.merge(this.cutsOnlyModel(rightOleft));
-        applicableEdges = Polygon3D.lines2d(cutsOnly, 'x', 'y');
+        applicableEdges = Layer.to2D(this.cutsOnlyModel(rightOleft), 'x', 'y');
       } else {
         applicableEdges = Polygon3D.lines2d(Polygon3D.merge(this.noJointmodel(true)), 'x', 'y');
         if (availbleEdgesOnly === true) {
@@ -164,6 +168,7 @@ class PartInfo {
       }
       let index = 'A'.charCodeAt(0);
       const center = Line2d.center(applicableEdges);
+      applicableEdges = Polygon2d.toParimeter(applicableEdges).lines();
       applicableEdges.sort(Line2d.sorter(center, furthestVertexFromOrign(rightOleft)));
       if (rightOleft) {
         // applicableEdges = applicableEdges.slice(1,).concat(applicableEdges[0]);
@@ -172,6 +177,17 @@ class PartInfo {
       applicableEdges.forEach(l => l.label = String.fromCharCode(index++));
       applicableEdges.center = center;
       return applicableEdges;
+    }
+
+    this.fenceEdges = (rightOleft, availbleEdgesOnly) => {
+      const edges = this.edges(rightOleft, availbleEdgesOnly);
+      const center = Line2d.center(edges);
+      const sets = Line2d.parrelleSets(edges);
+      sets.forEach(s => s.sort(Line2d.distanceSort(center, false)));
+      sets.map(s => s.map(l => l.length()))
+      const fenceEdges = [];
+      sets.forEach(s => fenceEdges.push(s[s.length - 1]) && fenceEdges.push(s[s.length - 2]));
+      return fenceEdges;
     }
   }
 }

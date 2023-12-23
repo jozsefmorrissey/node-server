@@ -11,7 +11,7 @@ FunctionCache.on('cutter', 500);
 class Cutter extends Assembly {
   constructor(partCode, partName, config) {
     super(partCode, partName, config);
-    this.included(false);
+    this.part(false);
   }
 }
 Cutter.abbriviation = 'cut';

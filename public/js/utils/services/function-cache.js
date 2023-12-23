@@ -2,7 +2,7 @@
 const cacheState = {};
 
 class FunctionCache {
-  constructor(func, context, group) {
+  constructor(func, context, group, argumentEndIndex) {
     if ((typeof func) !== 'function') return func;
     let cache = {};
     let awaitingClear = false;
@@ -10,7 +10,8 @@ class FunctionCache {
       lastGroupCall[cacheFunc.group()] = new Date().getTime();
       if (FunctionCache.isOn(cacheFunc.group())) {
         let c = cache;
-        for (let index = 0; index < arguments.length; index += 1) {
+        const endIndex = argumentEndIndex || arguments.length;
+        for (let index = 0; index < endIndex; index += 1) {
           if (c[arguments[index]] === undefined) c[arguments[index]] = {};
           c = c[arguments[index]];
         }

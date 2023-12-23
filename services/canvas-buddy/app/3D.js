@@ -4,6 +4,20 @@ const Viewer = require('../../../public/js/utils/3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../../public/js/utils/3d-modeling/viewer.js').addViewer;
 const OrientationArrows = require('../../../public/js/utils/display/orientation-arrows.js')
 
+let lineDisplayType;
+
+const checkedLineDispSelector = '#display-radios-3d>input:checked';
+const setLineDisplayType = () => {
+  const selected = du.find(checkedLineDispSelector);
+  if (selected) {
+    lineDisplayType = CSG.Line.DISPLAY_TYPES[selected.value];
+    du.trigger('refresh', du.find('textarea'));
+  }
+}
+
+setLineDisplayType();
+du.on.match('change', checkedLineDispSelector, setLineDisplayType);
+
 let lastViewId;
 function centerOnObj(x,y,z, viewId) {
   const center = model.center();
@@ -92,6 +106,7 @@ lineReg.model = (match) => {
     start: match[3] === '[' ? pointReg.Array(match[4]) : pointReg.vector(match[4]),
     end: match[38] === ']' ? pointReg.Array(match[21]) : pointReg.vector(match[21]),
     color: match[1].trim(),
+    lineDisplayType,
   })
 };
 

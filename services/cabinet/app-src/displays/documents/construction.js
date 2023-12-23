@@ -49,7 +49,7 @@ function buildCanvas(info, rightOleft) {
   draw(lines, null, .3);
   const side = rightOleft ? 'Right' : 'Left';
   draw.text(side, sideLabelCenter, textProps);
-  const edges = info.edges(rightOleft);
+  const edges = info.fenceEdges(rightOleft);
   const transLine = new Line2d(Vertex2d.center(Line2d.vertices(edges)), newCenter);
   edges.forEach(l => l.length() > dems.y / 8 && draw.text(l.label, scaledMidpoint(l, newCenter, coeficient, transLine), textProps));
   return canvas;

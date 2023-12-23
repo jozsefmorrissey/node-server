@@ -340,7 +340,7 @@ class Polygon2d {
       if (lineList.length > 100) throw new Error('This algorythum is slow: you should either find a way to speed it up or use a different method');
       const lastLine = lines[lines.length - 2];
       const endVert = lastLine.endVertex();
-      lineList.sort(Line2d.distanceSort(endVert));
+      lineList.sort(Line2d.endpointDistanceSort(endVert));
       const nextLine = lineList[0].acquiescent(lastLine);
       const connectLine = new Line2d(endVert, nextLine.startVertex());
       endVert.translate(connectLine.run()/2, connectLine.rise()/2);
@@ -587,65 +587,135 @@ Polygon2d.isWithin = (vertex, lines, exclusive, intersectionsCheck) => {
 }
 
 
+// function parimeterDataObj(lines) {
+//   const center = Vertex2d.center(Line2d.vertices(lines));
+//   const isolate = Line2d.isolateFurthestLine(center, lines);
+//   return {
+//     lineMap: Line2d.toleranceMap(tol, true, lines),
+//     splitMap: Vertex2d.toleranceMap(),
+//     parimeter: [isolate.line]
+//   }
+// }
+//
+// function parimeterBroken(pdObj) {
+//   pdObj.parimeter.slice(1).forEach((l) => {
+//     if (pdObj.splitMap.matches(l.startVertex()).length === 0)
+//       throw new Error('ParimeterBroken!!??: this should not happen');
+//   });
+// }
+//
 const tol = .1;
-Polygon2d.toParimeter = (lines, recurseObj) => {
-  if (lines.length < 2) throw new Error('Not enough lines to create a parimeter');
-  let lineMap, splitMap, parimeter;
-  if (recurseObj) {
-    lineMap = recurseObj.lineMap;
-    splitMap = recurseObj.splitMap;
-    parimeter = recurseObj.parimeter;
-  } else {
-    lineMap = Line2d.toleranceMap(tol, true, lines);
-    const center = Vertex2d.center(Line2d.vertices(lines));
-    const isolate = Line2d.isolateFurthestLine(center, lines);
-    splitMap = Vertex2d.toleranceMap();
-    // splitMap.add(isolate.line.startVertex());
-    parimeter = [isolate.line];
-  }
-  parimeter.slice(1).forEach((l) => {
-    if (splitMap.matches(l.startVertex()).length === 0)
-      throw new Error('wtf');
-  });
-  if (parimeter.length > lines.length) return null;
-  const sv = parimeter[0].startVertex();
-  const ev = parimeter[parimeter.length - 1].endVertex();
-  const alreadyVisitedStart = splitMap.matches(sv).length !== 0;
-  const alreadyVisitedEnd = splitMap.matches(ev).length !== 0;
-  if (alreadyVisitedEnd || alreadyVisitedStart) return null;
-  const madeItAround = parimeter.length > 1 && sv.equals(ev);
-  if (madeItAround) return Polygon2d.fromLines(parimeter);
+// Polygon2d.toParimeter = (lines, pdObj) => {
+//   if (lines.length < 2) throw new Error('Not enough lines to create a parimeter');
+//   pdObj ||= parimeterDataObj(lines);
+//   parimeterBroken(pdObj);
+//   if (pdObj.parimeter.length > lines.length) throw new Error('Parimeter should not be longer than the number of input lines');
+//   const sv = pdObj.parimeter[0].startVertex();
+//   const ev = pdObj.parimeter[pdObj.parimeter.length - 1].endVertex();
+//   const alreadyVisitedStart = pdObj.splitMap.matches(sv).length !== 0;
+//   const alreadyVisitedEnd = pdObj.splitMap.matches(ev).length !== 0;
+//   if (alreadyVisitedEnd || alreadyVisitedStart) return null;
+//   const madeItAround = pdObj.parimeter.length > 1 && sv.equals(ev);
+//   if (madeItAround) return Polygon2d.fromLines(pdObj.parimeter);
+//
+//   const startLine = pdObj.parimeter[0];
+//   const partialParimeters = []
+//   const lastLine = pdObj.parimeter[pdObj.parimeter.length - 1];
+//   let matches = pdObj.lineMap.matches(lastLine.negitive());
+//   if (matches.length < 2) {
+//     if (pdObj.parimeter.length === 1) {
+//       lines.remove(lastLine);
+//       return Polygon2d.toParimeter(lines);
+//     } else return null;
+//   }
+//     // throw new Error('A parimeter must exist between lines for function to work');
+//   for (let index = 0; index < matches.length; index++) {
+//     if (pdObj.splitMap.matches(matches[index].endVertex()).length === 0) {
+//       const newParim = Array.from(pdObj.parimeter).concat(matches[index]);
+//       const newSplitMap = pdObj.splitMap.clone();
+//       newSplitMap.add(matches[index].startVertex());
+//       partialParimeters.push({parimeter: newParim, splitMap: newSplitMap, lineMap: pdObj.lineMap});
+//     }
+//   }
+//
+//   let biggest = null;
+//   for (let index = 0; index < partialParimeters.length; index ++) {
+//     const recObj = partialParimeters[index];
+//     const searchResult = Polygon2d.toParimeter(lines, recObj);
+//     if (biggest === null || (searchResult !== null && biggest.area() < searchResult.area()))
+//       biggest = searchResult;
+//   }
+//   if (recurseObj === undefined)
+//     biggest = biggest.clockWise() ? biggest : new Polygon2d(biggest.vertices().reverse());
+//   return biggest;
+// }
 
-  const startLine = parimeter[0];
-  const partialParimeters = []
-  const lastLine = parimeter[parimeter.length - 1];
-  let matches = lineMap.matches(lastLine.negitive());
-  if (matches.length < 2) {
-    if (parimeter.length === 1) {
-      lines.remove(lastLine);
-      return Polygon2d.toParimeter(lines);
-    } else return null;
+function parimeterDataObj(lines) {
+  const center = Vertex2d.center(Line2d.vertices(lines));
+  const isolate = Line2d.isolateFurthestLine(center, lines);
+  return {
+    lineMap: Line2d.toleranceMap(tol, true, lines),
+    vertexMap: Vertex2d.toleranceMap(),
+    parimeter: [isolate.line]
   }
-    // throw new Error('A parimeter must exist between lines for function to work');
+}
+
+function parimeterFinished(parimeters, index) {
+  const pdObj = parimeters[index];
+  if (pdObj instanceof Polygon2d) return 1;
+  const sv = pdObj.parimeter[0].startVertex();
+  const ev = pdObj.parimeter[pdObj.parimeter.length - 1].endVertex();
+  const alreadyVisitedStart = pdObj.vertexMap.matches(sv).length !== 0;
+  const alreadyVisitedEnd = pdObj.vertexMap.matches(ev).length !== 0;
+  if (alreadyVisitedEnd || alreadyVisitedStart) {
+    parimeters.splice(index, 1);
+    return parimeterFinished(parimeters, index);
+  }
+  const madeItAround = sv.equals(ev);
+  if (madeItAround) {
+    parimeters[index] = Polygon2d.fromLines(pdObj.parimeter);
+    return  1;
+  }
+  return 0;
+}
+
+function splitAtEndVertex(parimeters, index) {
+  const pdObj = parimeters[index];
+  const startLine = pdObj.parimeter[0];
+  const partialParimeters = []
+  const lastLine = pdObj.parimeter[pdObj.parimeter.length - 1];
+  const lastLineNeg = lastLine.negitive();
+  let matches = pdObj.lineMap.matches(lastLineNeg);
+  parimeters.splice(index, 1);
   for (let index = 0; index < matches.length; index++) {
-    if (splitMap.matches(matches[index].endVertex()).length === 0) {
-      const newParim = Array.from(parimeter).concat(matches[index]);
-      const newSplitMap = splitMap.clone();
-      newSplitMap.add(matches[index].startVertex());
-      partialParimeters.push({parimeter: newParim, splitMap: newSplitMap, lineMap});
+    const targetLine = matches[index].acquiescent(lastLine);
+    if (!targetLine.equals(lastLine)) {
+      parimeters.push({
+        lineMap: pdObj.lineMap.clone([targetLine]),
+        vertexMap: pdObj.vertexMap.clone([targetLine.startVertex()]),
+        parimeter: pdObj.parimeter.concat(targetLine)
+      })
     }
   }
+  return 0;
+}
 
-  let biggest = null;
-  for (let index = 0; index < partialParimeters.length; index ++) {
-    const recObj = partialParimeters[index];
-    const searchResult = Polygon2d.toParimeter(lines, recObj);
-    if (biggest === null || (searchResult !== null && biggest.area() < searchResult.area()))
-      biggest = searchResult;
+Polygon2d.toParimeter = (lines) => {
+  lines = Line2d.sliceAll(lines);
+  const parimeters = [parimeterDataObj(lines)];
+  let index = 0;
+  let found = true;
+  while (index < parimeters.length) {
+    index += parimeterFinished(parimeters, index) || splitAtEndVertex(parimeters, index);
   }
-  if (recurseObj === undefined)
-    biggest = biggest.clockWise() ? biggest : new Polygon2d(biggest.vertices().reverse());
-  return biggest;
+  let longest = null;
+  for (let index = 0; index < parimeters.length; index++) {
+    const poly = parimeters[index];
+    const length = poly.lines().sum(l => l.length());
+    if (longest === null || longest.length < length) longest = {poly, longest};
+  }
+
+  return longest.poly;
 }
 
 Polygon2d.fromDemensions = (dems, center) => {

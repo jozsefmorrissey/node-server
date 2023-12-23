@@ -8,23 +8,16 @@ class ChannelInfo extends CutInfo {
     super(set, jointInfo, maleModel);
     this.primarySide = jointInfo.primarySide;
 
-    this.axes = (rightOleft) => {
+    this.axis = (rightOleft) => {
       const normals = this.normals();
-      const nLines = {};
       try {
-        nLines.x = Line3D.fromVector(normals.x);nLines.y = Line3D.fromVector(normals.y);nLines.z = Line3D.fromVector(normals.z);
-      } catch (e) {
-        console.log(e);
-        this.normals();
-      }
-      const lines = [];
-      let jointSet = Polygon3D.merge(Polygon3D.fromCSG(this.intersectModel()));
-      try {
-        const axes = Polygon3D.axes(jointSet, normals);
-        axes.x = this.normalize(rightOleft, axes.x);
-        axes.y = this.normalize(rightOleft, axes.y);
-        axes.z = this.normalize(rightOleft, axes.z);
-        return axes;
+        const axis = Polygon3D.axis(set, normals).max;
+        const center = this.intersectModel().center();
+        Object.values(axis).forEach(l => l.centerOn(center));
+        axis.x = this.normalize(rightOleft, axis.x);
+        axis.y = this.normalize(rightOleft, axis.y);
+        axis.z = this.normalize(rightOleft, axis.z);
+        return axis;
       } catch (e) {
         console.log(e);
       }

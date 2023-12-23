@@ -616,7 +616,7 @@ class Line2d {
       for (let index = 0; index < lines.length; index++) {
         if (!lines[index].equals(this)) {
           const intersect = this.findSegmentIntersection(lines[index], true);
-          if (intersect && !this.isEndpoint(intersect)) {
+          if (intersect instanceof Vertex2d && !this.isEndpoint(intersect)) {
             intersections[intersect.toString()] = intersect;
           }
         }
@@ -1012,13 +1012,20 @@ Line2d.mirror = (lines) => {
   return Vertex2d.mirror(Line2d.vertices(lines));
 }
 
-Line2d.distanceSort = (target) => (l1,l2) => {
+Line2d.endpointDistanceSort = (target) => (l1,l2) => {
   const ds1 = target.distance(l1.startVertex());
   const ds2 = target.distance(l2.startVertex());
   const de1 = target.distance(l1.endVertex());
   const de2 = target.distance(l2.endVertex());
   return (ds1 < de1 ? ds1 : de1) - (ds2 < de2 ? ds2 : de2);
 }
+
+Line2d.distanceSort = (target, segment) => (l1,l2) => {
+  const ds1 = l1.distance(target, segment);
+  const ds2 = l2.distance(target, segment);
+  return ds1 - ds2;
+}
+
 
 const perpInterSectDist = (line, vertex, other, perpendicular) => {
   if (perpendicular) line = line.perpendicular(null, vertex);

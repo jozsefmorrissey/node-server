@@ -16,23 +16,21 @@ class Void extends Cutter {
     super(partCode, partName, config);
     const instance = this;
     Object.getSet(this, {includedSides: [true, true], jointSet: 1});
-    // this.included(true);
-    // this.part(true);
     this.included = (index) => this.includedSides()[index];
 
     const filter = exclude => s => !(s instanceof Cutter) && exclude.equalIndexOf(s) === -1;
-    const updateJoints = (part, joint, condition) => {
+    const updateJoints = (joint) => {
       const cabinet = this.getAssembly('c');
       if (cabinet) {
-        part.joints = [];
+        instance.joints = [];
         const voids = Object.keys(cabinet.subassemblies).map(s => s.match(/void.*/) && cabinet.subassemblies[s]).filter(s => s);
         const voidIndex = voids.equalIndexOf(instance);
-        const excludeParts = [];
-        if (!(part instanceof Cutter)) voids.slice(0, voidIndex + 1).forEach(v => excludeParts.concatInPlace(v.getParts()));
-        const subs = Object.values(cabinet.getParts()).filter(filter(excludeParts));
+        // const excludeParts = [];
+        // if (!(part instanceof Cutter)) voids.slice(0, voidIndex + 1).forEach(v => excludeParts.concatInPlace(v.getParts()));
+        const subs = Object.values(cabinet.getParts());//.filter(filter(excludeParts));
         for (let index = 0; index < subs.length; index++) {
           const sub = subs[index];
-          part.addJoints(new joint(part.locationCode(), sub.locationCode(), condition));
+          instance.addJoints(new Butt(instance.partCode(), sub.locationCode()));
         }
       }
     }
@@ -106,8 +104,7 @@ class Void extends Cutter {
 
     const updateAllJoints = new FunctionCache(() => {
       const includeCond = (index) => () => instance.includedSides()[index];
-      panels.forEach((p, index) => updateJoints(p, Dado, includeCond(index)));
-      updateJoints(controlableAbyss, Butt);
+      updateJoints();
       return true;
     }, this, 'always-on');
 
@@ -189,8 +186,6 @@ class Void extends Cutter {
     const abyssToModel = new FunctionCache(abyssModel, this, 'alwaysOn');
 
     const controlableAbyss = new Cutter.Model(`:abs`, `${this.partName()}-abyss`, abyssToModel);
-    // controlableAbyss.included(true);
-    // controlableAbyss.part(true);
     this.addSubAssembly(controlableAbyss);
     this.on.parentSet(updateAllJoints);
 

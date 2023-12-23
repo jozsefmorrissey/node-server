@@ -43,6 +43,7 @@ class Line3D {
         this.endVertex.z = temp[2];
       }
     }
+
     this.negitive = () => new Line3D(this.endVertex, this.startVertex);
     this.equals = (other) => {
       if (this.startVertex && this.endVertex && other instanceof Line3D) {
@@ -115,6 +116,9 @@ class Line3D {
       (this.endVertex.z +this.startVertex.z) / 2
     );
 
+    this.centerOn = (newMidpoint) =>
+      this.translate(new Vertex3D(newMidpoint).minus(this.midpoint()));
+
     this.viewFromVector = (vector) => Line3D.viewFromVector([this], vector)[0];
 
     function resize(length, fromStartVertex) {
@@ -170,7 +174,15 @@ class Line3D {
       return this;
     }
 
-    this.connect = {};
+    this.connect = (other, segment) => {
+      if (other instanceof Vertex3D) return this.connect.vertex(other);
+      if (other instanceof Line3D) {
+        if (segment !== false) return this.connect.line.segment(other);
+        return this.connect.line(other);
+      }
+      throw new Error(`Trying to connect unkownObject '${other.constructor.name}'`);
+    };
+
     this.connect.line = (other) =>
       Line3D.intersectingLine(this, other);
 
@@ -181,7 +193,7 @@ class Line3D {
       Line3D.intersectingLine(this, other, false, true, false, both, false);
 
     this.distance = (other, notSegment) => {
-      if (notSegment) return this.connect.line(other).length();
+      if (notSegment) return this.connect(other).length();
       return this.connect.line.segment(other, true).length();
     }
     this.intersection = (other) => {
@@ -267,6 +279,9 @@ class Line3D {
      return this;
     }
 
+    this.positiveVectorLine = () =>
+      this.vector().positive() ? this : this.negitive();
+
     this.to2D = (x,y) => Line3D.to2D([this], x, y)[0];
 
     // Ensures returnLine startVertex is closer to trendSetter endVertex.
@@ -331,6 +346,7 @@ class Line3D {
         return new Line3D(this.midpoint(), other);
       }
     }
+    this.connect.vertex = this.perpendicular;
 
     this.combineOrder = (other) => Line3D.combineOrder(this, other);
   }
@@ -695,6 +711,11 @@ Line3D.radialSort = (lines, center, vector) => {
   lines.sort(Line3D.radialSorter(center, vector));
 }
 
+Line3D.distanceSort = (target, segment) => (l1,l2) => {
+  const ds1 = l1.distance(target, segment);
+  const ds2 = l2.distance(target, segment);
+  return ds1 - ds2;
+}
 
 Line3D.parrelleSets = (lines, tolerance) => {
   tolerance ||= tol;
@@ -702,7 +723,8 @@ Line3D.parrelleSets = (lines, tolerance) => {
                                   'vector.positiveUnit.j': tolerance,
                                   'vector.positiveUnit.k': tolerance});
   tolmap.addAll(lines);
-  const groups = tolmap.group().sortByAttr('length').reverse();
+  const groups = tolmap.group().sortByAttr('0.length', true);
+  groups.forEach(set => set.sortByAttr('length', true));
   return groups;
 }
 
@@ -733,9 +755,12 @@ Line3D.longest = (startVertex, ...endVerts) => {
   return longest;
 }
 
-// Line3D.TrendLine = (verticies) => {
-//   const min =
-// }
+Line3D.connectPlane = (plane, vert) => {
+  const line = Line3D.fromVector(plane.normal(), vert);
+  const planeInter = plane.intersection.line(line);
+  return new Line3D(planeInter, vert);
+}
+
 
 const tinyVertScale = .1;
 function parrellePointLine(line1, line2) {
@@ -898,6 +923,8 @@ const getCenterLine = (l1, l2) => new Line3D({
   y: (l1.endVertex.y + l2.endVertex.y)/2,
   z: (l1.endVertex.z + l2.endVertex.z)/2,
 });
+
+// TODO: it would be good to seperate this but right now Line3D and Plane are tightly coupled... sorry
 class PolyLine3D extends Line3D {
   constructor(line1, line2, clampAll, clampA0, clampA1, clampB0, clampB1) {
     line1 = line1.clone();

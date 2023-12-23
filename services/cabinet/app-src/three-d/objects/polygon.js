@@ -28,6 +28,7 @@ const place = (vert, no, one, two, three) => {
 
 class Polygon3D {
   constructor(initialVertices) {
+    if (initialVertices instanceof Polygon3D) return initialVertices;
     let lines = [];
     let map;
     let normal;
@@ -103,6 +104,18 @@ class Polygon3D {
     }
     this.normal = calcNormal;
 
+    this.connect = {};
+    this.connect.vertex = (vert) => {
+      const line = Line3D.fromVector(this.normal(), vert);
+      const planeInter = this.toPlane().intersection.line(line);
+      if (this.isWithin(planeInter)) return new Line3D(planeInter, vert);
+      const connectionLines = [];
+      const lines = this.lines();
+      lines.forEach(l => connectionLines.push(l.connect(vert)));
+      connectionLines.sortByAttr('length');
+      return connectionLines[connectionLines.length - 1];
+    }
+
     this.valid = () => {
       let posNormal;
       try {
@@ -133,6 +146,7 @@ class Polygon3D {
       return true;
     }
 
+    // TODO(Discuss): I am inconsitantly createing code that does not modify object directly
     this.translate = (vector) => {
       const verts = [];
       for (let index = 0; index < lines.length; index++) {
@@ -543,8 +557,20 @@ class Polygon3D {
       }
     }
 
+    let printMerge = (poly, otherPoly, target, curr, combineInfo) =>{
+      let str = '';
+      str += `//target poly\n${poly.toDrawString('red')}`;
+      str += `\n//target\n${target.toDrawString('red')}`;
+      str += `\n\n//curr poly\n${otherPoly.toDrawString('blue')}`;
+      str += `\n//curr\n${curr.toDrawString('blue')}`;
+      str += '\n\n' + combineInfo.map(v => v.toString()).join('\n');
+      str += '\n//merge\n' + poly.merge(otherPoly, true).toDrawString('green');
+      console.log(str);
+    }
+
     // TODO: Needs work. I think just polys that share multipleLines...
-    this.merge = (other) => {
+    this.merge = (other, recursive) => {
+      const pm = printMerge;
       if (!this.normal().parrelle(other.normal())) return;
       // try {
       //   const combined = new Polygon3D(this.vertices().concat(other.vertices()));
@@ -553,8 +579,8 @@ class Polygon3D {
       //   return;
       // }
       if (this.equals(other)) return this.copy();
-      const thisPlane = this.toPlane();
-      const otherPlane = other.toPlane();
+      // const thisPlane = this.toPlane();
+      // const otherPlane = other.toPlane();
       // if (!thisPlane.equivalent(otherPlane)) return;
       const lineMap = this.lineMap();
       const allOtherLines = other.lines();
@@ -632,9 +658,10 @@ class Polygon3D {
     this.isWithin = (vertex, exclusive) => {
       const verts = this.vertices();
       if (verts.length < 3) return false;
-      const other = new Polygon3D(verts[0], verts[1], vertex);
+      verts.concat(vertex);
+      const other = new Polygon3D(verts);
       if (!other.parrelle(other)) return false;
-      return isWithin2d(vertex, exclusive);
+      return this.isWithin2d(vertex, exclusive);
     }
 
     this.withinPlane = (other) => {
@@ -697,12 +724,13 @@ class Polygon3D {
       return `${str.substring(4)} normal: ${this.normal()}`;
     }
 
-    this.toDrawString = (color) => {
-      const colorString = (typeof color) === 'string' ? color : '';
+    this.toDrawString = (color, excludeNormal) => {
+      const colorString = (typeof color) === 'string' ? color : 'blue';
       let str = '';
       for (let index = 0; index < lines.length; index++) {
         str += `,${lines[index].startVertex.toString()}`;
       }
+      if (excludeNormal) return `${colorString}[${str.substring(1)}]`;
       const start = this.center();
       const end = new Vertex3D(this.normal().scale(10).add(start));
       const normalStr = `[${start},${end})`;
@@ -715,8 +743,8 @@ class Polygon3D {
       let startStr = '';
       let endStr = '';
       for (let index = 0; index < lines.length; index++) {
-        startStr += ` => ${lines[index].startVertex.toString()}`;
-        endStr += ` => ${lines[Math.mod(index - 1, lines.length)].endVertex.toString()}`;
+        startStr += ` => ${lines[index].startVertex.toAccurateString()}`;
+        endStr += ` => ${lines[Math.mod(index - 1, lines.length)].endVertex.toAccurateString()}`;
       }
       return `Start Vertices: ${startStr.substring(4)}\nEnd   Vertices: ${endStr.substring(4)}`;
     }
@@ -724,14 +752,6 @@ class Polygon3D {
   }
 }
 
-function printMerge(target, other, merged) {
-  console.log(`target: ${target.toString()}`);
-  console.log(`other: ${other.toString()}`);
-  console.log(`merged: ${merged.toString()}`);
-  target.merge(other);
-}
-
-let doIt = false;
 Polygon3D.merge = (polygons) => {
   if (polygons instanceof CSG) polygons = Polygon3D.fromCSG(polygons);
   const tol = '+.001';
@@ -752,7 +772,6 @@ Polygon3D.merge = (polygons) => {
         const other = polys[index];
         const merged = target.merge(other);
         if (merged) {
-          if (doIt) printMerge(target, other, merged);
           polys[currIndex--] = merged;
           polys.splice(index, 1);
           break;
@@ -917,6 +936,7 @@ Polygon3D.viewFromVector = (polygons, vector) => {
 }
 
 Polygon3D.toDrawString = (polygons, ...colors) => {
+  colors ||= ['blue']
   if (polygons instanceof CSG) polygons = Polygon3D.fromCSG(polygons);
   let str = '';
   polygons.forEach((p, i) => str += p.toDrawString(colors[i%colors.length]).split('\n')[0] + '\n')
@@ -927,55 +947,49 @@ Polygon3D.toDrawString = (polygons, ...colors) => {
 Polygon3D.normals = (polygon) => {
   const lines = polygon.lines();
   Line3D.combine(lines);
-  if (lines.length !== 4) {
-    console.warn('Cannot determine normals');
-    return;
-  }
   const pSets = Line3D.parrelleSets(lines);
-  if (pSets[0].length !== 2) {
-    console.warn('Cannot determine normals');
-    return;
-  } 
-  let set = pSets[0];
-  if (pSets[1].length === 2) {
-    if (pSets[0][0].distance(pSets[0][1]) > pSets[1][0].distance(pSets[1][1])) {
-      set = pSets[1];
-    }
-  }
   const normals = {
     z: polygon.normal(),
-    y: set[0].vector().unit(),
+    y: pSets[0][0].vector().unit(),
   }
   normals.x = normals.z.crossProduct(normals.y).unit();
   return normals;
 }
 
-const addVector = (normals, axes, attr, centerLine) => {
+const addVector = (normals, axis, attr, centerLine) => {
   const vector = centerLine.vector();
-  if (centerLine.isParrelle(normals[attr])) {
-    if (!vector.unit().equals(normals[attr])) centerLine = centerLine.negitive();
-    axes[attr].push(centerLine);
+  const scalar = vector.dot(normals[attr]);
+  if (scalar != 0) {
+    const axesVector = normals[attr].scale(centerLine.length() * scalar);
+    const axes = Line3D.fromVector(axesVector);
+    axis[attr].push(axes);
     return true;
   }
   return false;
 }
 
-Polygon3D.axes = (polygons, normals) => {
-  const axes = {x: [], y: [], z: []};
+Polygon3D.axis = (polygons, normals) => {
+  const axis = {x: [], y: [], z: []};
   for (let i = 0; i < polygons.length; i++) {
-    let polyi = polygons[i];
-    for (let j = 0; j < polygons.length; j++) {
-      let polyj = polygons[j];
-      const centerLine = new Line3D(polyi.center(), polyj.center());
-      addVector(normals, axes, 'x', centerLine) ||
-          addVector(normals, axes, 'y', centerLine) ||
-          addVector(normals, axes, 'z', centerLine);
+    let poly = polygons[i];
+    const lines = poly.lines();
+    for (let j = 0; j < lines.length; j++) {
+      const line = lines[j];
+      addVector(normals, axis, 'x', line);
+      addVector(normals, axis, 'y', line);
+      addVector(normals, axis, 'z', line);
     }
   }
-  axes.x = Line3D.averageLine(axes.x, Vertex3D.origin);
-  axes.y = Line3D.averageLine(axes.y, Vertex3D.origin);
-  axes.z = Line3D.averageLine(axes.z, Vertex3D.origin);
-  return axes;
+  axis.x.sortByAttr('length');axis.y.sortByAttr('length');axis.z.sortByAttr('length');
+  const org = Vertex3D.origin;
+  const min = {x: axis.x[0] || org, y: axis.y[0] || org, z: axis.z[0] || org}
+  const max = {x: axis.x[axis.x.length - 1], y: axis.y[axis.y.length - 1], z: axis.z[axis.z.length - 1]}
+  axis.x = Line3D.averageLine(axis.x, org);
+  axis.y = Line3D.averageLine(axis.y, org);
+  axis.z = Line3D.averageLine(axis.z, org);
+  axis.min = min;
+  axis.max = max;
+  return axis;
 }
 
 Polygon3D.fromIntersections = (intersected, intersectors) => {

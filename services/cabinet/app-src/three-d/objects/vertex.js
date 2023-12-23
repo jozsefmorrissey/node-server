@@ -111,10 +111,12 @@ class Vertex3D {
 
     this.copy = () => new Vertex3D(this.x, this.y, this.z);
     this.clone = this.copy;
-    this.equals = (otherOx, y, z) => {
+    this.equals = (otherOx, y, z, tolerance) => {
+      const tol = tolerance ? new Tolerance({x: tolerance, y: tolerance, z: tolerance}) :
+                              Vertex3D.tolerance;
       if (otherOx instanceof Object)
-        return Vertex3D.tolerance.within(this, otherOx);
-      return Vertex3D.tolerance.within(this, new Vertex3D(otherOx, y, z));
+        return tol.within(this, otherOx);
+      return tol.within(this, new Vertex3D(otherOx, y, z));
     }
     this.toString = () => `(${approx10(this.x)},${approx10(this.y)},${approx10(this.z)})`;
     this.toAccurateString = () => `(${approximate(this.x)},${approximate(this.y)},${approximate(this.z)})`;

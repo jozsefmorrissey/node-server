@@ -302,6 +302,8 @@ a {
 
 #model-display-cnt {
   display: inline-flex;
+  max-height: 80vh;
+  overflow: auto;
 }
 
 #model-controller {

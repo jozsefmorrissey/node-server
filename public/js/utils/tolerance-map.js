@@ -17,9 +17,10 @@ class ToleranceMap {
     const tolerance = new Tolerance(attributeMap, null, absoluteValue);
     const instance = this;
 
-    this.clone = () => {
+    this.clone = (newElems) => {
       const tMap = new ToleranceMap(attributeMap);
       this.forEach(value => tMap.add(value));
+      tMap.addAll(newElems);
       return tMap;
     }
     function forEachSet(func, node, attrs, attrIndex) {
@@ -58,7 +59,9 @@ class ToleranceMap {
       if (attrIndex === 0) {
         const matchList = list.filter((other) => true || tolerance.within(elem, other));
         matchList.sortByAttrs(tolerance.attributes());
-        return matchList;
+
+        // TODO: I feel like the algorithum could prevent duplications if written correctly.... maybe not
+        return matchList.unique();
       }
     }
 
@@ -157,7 +160,7 @@ class ToleranceMap {
           total += addValue;
         }
       }
-      if (!Number.isFinite(total)) throw new Error('Object containes attribue that returns a non-finite value. This is unacceptable');
+      // if (!Number.isFinite(total)) throw new Error('Object containes attribue that returns a non-finite value. This is unacceptable');
       return obj;
     }
 
@@ -223,6 +226,7 @@ class ToleranceMap {
     }
 
     this.addAll = (list) => {
+      if (!Array.isArray(list)) return;
       for (let index = 0; index < list.length; index++) {
         const elem = list[index];
         let matchArr = getSet(elem);

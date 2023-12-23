@@ -59,8 +59,6 @@ class Divider extends Assembly {
           builders[type]();
           if (type === 'frontAndBack') {
             const front = panels[':f'];
-            // cutters[':f'].part(true);
-            // cutters[':f'].included(true);
             builders[type]();
           }
         }
@@ -94,11 +92,6 @@ class Divider extends Assembly {
         const flip = normal.sameDirection(poly.normal());
         const copy = flip ? poly.reverse() : poly.copy();
         const translated = copy.translate(offsetVect);
-        // cutter.part(true);cutter.included(true);
-        // if (location === 'back') {
-        //   cutter.included(true);
-        //   cutter.part(true);
-        // }
         const partCode = `:${location[0]}`;
         const partName = `${location}`;
         let cutter, panel;
