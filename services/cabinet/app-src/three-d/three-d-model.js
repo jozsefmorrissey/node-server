@@ -192,12 +192,15 @@ class ThreeDModel {
     let lm;
     this.lastModel = () => lm;
 
+    // todo(pibe2) dependencies: partModels
     function buildModel(assem) {
-      let a = assem.toModel();
-      assem.partCode(true);
-      a.setColor(...getColor());
-      partModels[assem.id()] = a;
-      return a;
+      if (!partModels[assem.id()]) {
+        const a = assem.toModel();
+        assem.partCode(true);
+        a.setColor(...getColor());
+        partModels[assem.id()] = a;
+      }
+      return partModels[assem.id()];
     }
 
     function cacheId() {
@@ -205,6 +208,8 @@ class ThreeDModel {
     }
 
     let cabinetModel, lastHash;
+
+    // todo(pibe2) dependencies: object, FunctionCache(?)
     function buildObject(options) {
       if (instance.object() === undefined)return;
       // todo: for debugging; uncomment
@@ -276,6 +281,7 @@ class ThreeDModel {
       return new Promise(resolver);
     }
 
+    // todo(pibe2): main 1
     async function renderParts() {
       let model = new CSG();
       const obj = instance.object();
@@ -287,10 +293,7 @@ class ThreeDModel {
       for (let index = 0; index < assems.length; index++) {
         const part = assems[index];
         if (!hidden(part)) {
-          let partModel = partModels[part.id()];
-          if (partModel === undefined) {
-            partModel = buildModel(part);
-          }
+          let partModel = buildModel(part);
           partModel = partModel.clone();
           if (targetPartCode) {
             partModel.setColor(colors[targetPartCode === part.partCode() ? 'green' : 'blue'])
@@ -308,6 +311,7 @@ class ThreeDModel {
     }
     this.renderParts = renderParts;
 
+    // todo(pibe2): main 2
     this.render = async function (options) {
       const startTime = new Date().getTime();
       await instance.buildObject();
@@ -447,6 +451,9 @@ class GroupThreeDModel extends ThreeDModel{
       }
       return combined;
     }
+
+
+    // todo(pibe2): main 3
     this.render = async (options) => {
       lastModel = await this.buildObject();
       ThreeDModel.lastActive = this;
