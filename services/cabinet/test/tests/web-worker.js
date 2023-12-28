@@ -37,6 +37,17 @@ const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
     dividerOffsetInfo - calculates divider position information
     coverInfo - calculates drawerFront\door biPolygon;
     dividerInfo - calculates divider biPolygon
+
+
+---
+
+  * pull out the toBipolygon and toModel out of the assembly objects and run in the webworker
+  * webwork entry point is webworker/init.js -- shoudn't need to reference assembly objects ... probably
+  * don't necessarily need to reuse the toJson(), may be better to create model classes as needed
+  * 
+  * cabinet.subassemblies.R.position
+---
+
 **/
 
 Test.add('web-worker: toModel',async (ts) => {

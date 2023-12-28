@@ -6,7 +6,7 @@
 // const CabinetLayouts = require('../../app-src/config/cabinet-layouts.js');
 // const Polygon3D = require('../three-d/objects/polygon.js');
 
-const { RenderingResponse } = require("../app-src/web-worker-client");
+const { RenderingTask, RenderingResult } = require("../app-src/web-worker-client");
 
 
 // const cabinet = Cabinet.build('base');
@@ -18,6 +18,9 @@ const { RenderingResponse } = require("../app-src/web-worker-client");
 // // console.log('hello from web-worker');
 
 
+/**
+ * @param {MessageEvent<RenderingTask>} messageFromMain
+ */
 onmessage = (messageFromMain) => {
-    postMessage(new RenderingResponse(messageFromMain.data.taskId, `response for request: ${messageFromMain.data.body}`));
+    postMessage(new RenderingResult(messageFromMain.data.taskId, `response for request: ${messageFromMain.data.task}`));
 };

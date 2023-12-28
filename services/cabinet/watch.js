@@ -42,17 +42,14 @@ const wwDumpLoc = './public/js/web-worker-bundle';
 const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/init.js', projectDir: '../../'});
 const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         // .add('./globals/')
-        // .add('./public/json/endpoints.json')
-        // .add('./generated/EPNTS.js')
-        // .add('../../public/js/utils/')
+        .add('../../public/js/utils/')
         // .add(htmlDumpLoc)
         // .add('./public/json/cabinets.json')
         // .add('./app-src')
         .add('./app-src/web-worker-client.js')
-        .add('./web-worker/');
+        .add('./app-src/objects')
+        .add('./web-worker/')
 
         // .add('three-d')
-        // .add('web-worker')
-        // .add('./app-src/objects') maybe - contains all models to build the objects
         // 
 

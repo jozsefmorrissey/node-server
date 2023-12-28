@@ -144,13 +144,7 @@ new QRious({
 // window.onbeforeunload = () => 'Unsaved data may be lost';
 
 const webWorker = new Worker('/cabinet/js/web-worker-bundle.js');
-
-//webWorker.onmessage = (messageFromWorker) => {
-//  console.log('main-thread', 'message received from worker:', messageFromWorker);
-//};
-//webWorker.postMessage('test');
-
 const renderingExecutor = new RenderingExecutor(webWorker);
-renderingExecutor.submit3dModelTask('test').then(x => console.log(x));
+renderingExecutor.submit3dModelTask('test').then(x => console.log(x));  // todo: for debugging; remove
 
 module.exports = {orderDisplay: () => orderDisplay};

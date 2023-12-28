@@ -1,12 +1,6 @@
-
-
 const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
-
 const du = require('../../../../public/js/utils/dom-utils.js');
-const $t = require('../../../../public/js/utils/$t.js');
 const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
-
-const Polygon3D = require('./objects/polygon');
 const Vertex3D = require('./objects/vertex');
 const Line3D = require('./objects/line');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
@@ -56,7 +50,6 @@ class ThreeDModel {
     const hiddenPartNames = {};
     const hiddenPrefixes = {};
     const instance = this;
-    let hiddenPrefixReg;
     let partModels = {};
     let extraObjects = [];
     let inclusiveTarget = {};
@@ -125,7 +118,7 @@ class ThreeDModel {
           list.push(key);
         }
       }
-      hiddenPrefixReg = list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
+      return list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
     }
 
     this.hidePartId = manageHidden(hiddenPartIds);
@@ -147,6 +140,7 @@ class ThreeDModel {
     function relatedToTarget(part) {
       if (part.partCode() === targetPartCode) return true;
       return false;
+
       let targetPart = instance.object().getAssembly(targetPartCode);
       let joints = targetPart.getJoints();
       joints = joints.male.concat(joints.female);
@@ -162,7 +156,7 @@ class ThreeDModel {
       if (im !== null) return !im;
       if (instance.hidePartId(part.id())) return true;
       if (instance.hidePartName(part.partName())) return true;
-      buildHiddenPrefixReg();
+      const hiddenPrefixReg = buildHiddenPrefixReg();
       if (hiddenPrefixReg && part.partCode(true).match(hiddenPrefixReg)) return true;
       return false;
     }
@@ -217,9 +211,10 @@ class ThreeDModel {
     let cabinetModel, lastHash;
     function buildObject(options) {
       if (instance.object() === undefined)return;
-      if (lastHash === instance.object().hash()) {
-        return CabinetModel.get(instance.object());
-      }
+      // todo: for debugging; uncomment
+      // if (lastHash === instance.object().hash()) {
+      //   return CabinetModel.get(instance.object());
+      // }
       options ||= {};
       const cId = cacheId();
       // FunctionCache.clearAllCaches();
@@ -228,7 +223,7 @@ class ThreeDModel {
         FunctionCache.on(cId);
       }
 
-      buildHiddenPrefixReg();
+      const hiddenPrefixReg = buildHiddenPrefixReg();
 
       const assemblies = instance.object().getParts();
       const root = assemblies[0].getRoot();
@@ -252,7 +247,7 @@ class ThreeDModel {
           if (assem.partName() === targetPartCode) {
             lm = b.clone();
             const lastModel = this.lastModel();
-            lastModelUpdateEvent.trigger(undefined, lastModel);
+            lastModelUpdateEvent.trigger(undefined, lastModel); // todo(pibe2): move this event trigger outside of this method
           }
         }
       }
@@ -277,11 +272,11 @@ class ThreeDModel {
             console.error(e);
             reject(e);
           } finally {
-            loadingDisplay.deactivate();
+            loadingDisplay.deactivate();  // todo(pibe2): move loadingDisplay logic out of this method
           }
         });
       };
-      loadingDisplay.activate();
+      loadingDisplay.activate();  // todo(pibe2): move loadingDisplay logic out of this method
       return new Promise(resolver);
     }
 
@@ -313,7 +308,7 @@ class ThreeDModel {
           model = model.union(partModel);
         }
       }
-      ThreeDModel.display(model);
+      ThreeDModel.display(model); // todo(pibe2): separate this interaction with html canvas/web-gl
     }
     this.renderParts = renderParts;
 
@@ -324,6 +319,8 @@ class ThreeDModel {
         let displayModel = cabinetModel.complexModel();//a.simple ? a.simple : a;
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
         extraObjects.forEach(obj => displayModel.polygons.concatInPlace(obj.polygons));
+
+        // todo(pibe2): separate below code that interacts with html canvas/web-gl
         ThreeDModel.display(displayModel);
         lastRendered = cabinetModel;
         renderObjectUpdateEvent.trigger(undefined, lastRendered);
