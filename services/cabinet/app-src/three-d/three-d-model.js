@@ -61,10 +61,7 @@ class ThreeDModel {
       targetPartCode = id;
     this.getLastRendered = () => lastRendered;
 
-    this.object = (a) => {
-      if (a !== undefined) {
-        object = a;
-      }
+    this.object = () => {
       return object;
     }
 

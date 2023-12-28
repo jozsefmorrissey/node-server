@@ -158,7 +158,6 @@ class ThreeView extends Lookup {
       const cabinet = Global.cabinet();
       if (cabinet === undefined) return;
       if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet);
-      threeDModel.object(cabinet);
       const model = threeDModel.buildObject();
       draw.clear();
       setTimeout(() => {
