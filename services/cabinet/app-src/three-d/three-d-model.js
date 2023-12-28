@@ -80,7 +80,6 @@ class ThreeDModel {
       switch (inclusiveTarget.type) {
         case 'prefix':
           return part.partCode(true).match(inclusiveTarget.prefixReg) !== null;
-          break;
         case 'part-name':
           return part.partName() === inclusiveTarget.value;
         case 'part-id':
@@ -126,7 +125,7 @@ class ThreeDModel {
     function hasHidden(hiddenObj) {
       const keys = Object.keys(hiddenObj);
       for(let i = 0; i < hiddenObj.length; i += 1)
-        if (hidden[keys[index]])return true;
+        if (hidden(keys[index]))return true;
       return false;
     }
     this.noneHidden = () => !hasHidden(hiddenPartIds) &&
