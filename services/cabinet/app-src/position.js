@@ -87,7 +87,8 @@ class Position {
       const position = {
         center: this.center(),
         demension: this.demension(),
-        rotation: this.rotation()
+        rotation: this.rotation(),
+        normals: this.normals()
       };
       assembly.getJoints().male.forEach((joint) =>
         joint.updatePosition(position)

@@ -44,18 +44,29 @@ const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
   * pull out the toBipolygon and toModel out of the assembly objects and run in the webworker
   * webwork entry point is webworker/init.js -- shoudn't need to reference assembly objects ... probably
   * don't necessarily need to reuse the toJson(), may be better to create model classes as needed
-  * 
+  *
   * cabinet.subassemblies.R.position
 ---
 
 **/
 
-Test.add('web-worker: toModel',async (ts) => {
-  const cabinet = Cabinet.build('base');
-  CabinetLayouts.map['test'].build(cabinet);
-  let webWorker = new Worker("/cabinet/js/web-worker.js");
-  const cabinetClone = Cabinet.fromJson(cabinet.toJson());
 
+//toModel([]);
+//position.current();
+Test.add('web-worker: toModel(simple)',async (ts) => {
+  const frame = new Frame('f', 'Frame', '0,0,0', '4, 196, .75');
+  const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
+
+  const regularModel = frame.toModel();
+  const info = frame.wwinfo();
+  const wwModel = webWorker(info);
+  Object.equals(regularModel, wwModel);
 
   console.log(Polygon3D.toDrawString(cabinetClone.toModel(), 'blue'));
+});
+
+
+Test.add('web-worker: toModel(sectionProperties)',async (ts) => {
+  // In /sections
+  const cabinet = Cabinet.build('base');
 });
