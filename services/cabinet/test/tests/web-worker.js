@@ -3,6 +3,8 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
 const CabinetLayouts = require('../../app-src/config/cabinet-layouts.js');
 const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
+const Frame = require('../../app');
+const Panel = require('../../app-src/objects/assembly/assemblies/panel.js');
 
 
 /**
@@ -53,7 +55,14 @@ const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 
 //toModel([]);
 //position.current();
-Test.add('web-worker: toModel(simple)',async (ts) => {
+
+
+const webWorker = new Worker('/cabinet/js/web-worker-bundle.js');
+const renderingExecutor = new RenderingExecutor(webWorker);
+renderingExecutor._submit3dModelTask('test').then(x => console.log(x)).catch(e => console.log(e));  // todo: for debugging; remove
+
+
+Test.add('web-worker: toModel(simple)', async (ts) => {
   const frame = new Frame('f', 'Frame', '0,0,0', '4, 196, .75');
   const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
 
@@ -66,7 +75,7 @@ Test.add('web-worker: toModel(simple)',async (ts) => {
 });
 
 
-Test.add('web-worker: toModel(sectionProperties)',async (ts) => {
+Test.add('web-worker: toModel(sectionProperties)', async (ts) => {
   // In /sections
   const cabinet = Cabinet.build('base');
 });
@@ -108,8 +117,8 @@ function testCSGvsExistingObjects(objects, ts) {
       position.toModel
       position.toBiPolygon
 **/
-Test.add('web-worker: toModel(Frame,Panel)',async (ts) => {
-  testCSGvsExistingObjects(get(/^Frame|Panel$/), ts);$/), ts);
+Test.add('web-worker: toModel(Frame,Panel)', async (ts) => {
+  testCSGvsExistingObjects(get(/^Frame|Panel$/), ts);
   ts.success();
 });
 
@@ -121,7 +130,7 @@ Test.add('web-worker: toModel(Frame,Panel)',async (ts) => {
       toModel
       baseCenter
 **/
-Test.add('web-worker: toModel(Handle)',async (ts) => {
+Test.add('web-worker: toModel(Handle)', async (ts) => {
   testCSGvsExistingObjects(get('Handle'), ts);
   ts.success();
 });
@@ -140,7 +149,7 @@ Test.add('web-worker: toModel(Handle)',async (ts) => {
       buildPolyCutter
       builders
 **/
-Test.add('web-worker: toModel(Divider)',async (ts) => {
+Test.add('web-worker: toModel(Divider)', async (ts) => {
   testCSGvsExistingObjects(get(/^Divider$/), ts);
   ts.success();
 });
@@ -216,7 +225,7 @@ function testWWvsExistingFunctions(funcName, sections, ts, ...args) {
   })
 
 }
-Test.add('web-worker: toModel(SectionProperties)',async (ts) => {
+Test.add('web-worker: toModel(SectionProperties)', async (ts) => {
   const sections = get('SectionProperties');
   testWWvsExistingFunctions('converage', sections, ts);
   testWWvsExistingFunctions('coverInfo', sections, ts);
@@ -238,7 +247,7 @@ Test.add('web-worker: toModel(SectionProperties)',async (ts) => {
 
 // The test cabinet does not currently have any spaceSections to add one
 // Search for 'new CabinetLayout('test',' It should be obviose how to change a section.
-Test.add('web-worker: toModel(SpaceSection)',async (ts) => {
+Test.add('web-worker: toModel(SpaceSection)', async (ts) => {
   const sections = get('SpaceSection');
   testWWvsExistingFunctions('coverable', sections, ts);
   testWWvsExistingFunctions('pattern', sections, ts);
@@ -246,7 +255,7 @@ Test.add('web-worker: toModel(SpaceSection)',async (ts) => {
   ts.success();
 });
 
-Test.add('web-worker: toModel(DrawerSection)',async (ts) => {
+Test.add('web-worker: toModel(DrawerSection)', async (ts) => {
   const sections = get('DrawerSection');
   testWWvsExistingFunctions('dividerInfo', sections, ts);
 
@@ -278,7 +287,7 @@ Test.add('web-worker: toModel(DrawerSection)',async (ts) => {
 **/
 
 // The AutoToekick is not currently accessible outside of the Cabinet object.
-Test.add('web-worker: toModel(AutoToekick)',async (ts) => {
+Test.add('web-worker: toModel(AutoToekick)', async (ts) => {
   const sections = get(/AutoToekick/);
   testWWvsExistingFunctions('dividerInfo', sections, ts);
 
@@ -296,22 +305,22 @@ Test.add('web-worker: toModel(AutoToekick)',async (ts) => {
   CutterPoly
 **/
 
-Test.add('web-worker: toModel(Cutter)',async (ts) => {
+Test.add('web-worker: toModel(Cutter)', async (ts) => {
   testCSGvsExistingObjects(get(/Cutter/), ts);
   ts.success();
 });
 
-Test.add('web-worker: toModel(CutterReference)',async (ts) => {
+Test.add('web-worker: toModel(CutterReference)', async (ts) => {
   testCSGvsExistingObjects(get(/CutterReference/), ts);
   ts.success();
 });
 
-Test.add('web-worker: toModel(CutterModel)',async (ts) => {
+Test.add('web-worker: toModel(CutterModel)', async (ts) => {
   testCSGvsExistingObjects(get(/CutterModel/), ts);
   ts.success();
 });
 
-Test.add('web-worker: toModel(CutterPoly)',async (ts) => {
+Test.add('web-worker: toModel(CutterPoly)', async (ts) => {
   testCSGvsExistingObjects(get(/CutterPoly/), ts);
   ts.success();
 });
@@ -326,7 +335,7 @@ Test.add('web-worker: toModel(CutterPoly)',async (ts) => {
       toModel()
       abyssModel()
 **/
-Test.add('web-worker: toModel(Void)',async (ts) => {
+Test.add('web-worker: toModel(Void)', async (ts) => {
   const sections = get(/Void/);
   testWWvsExistingFunctions('dividerInfo', sections, ts);
 
@@ -341,7 +350,7 @@ Test.add('web-worker: toModel(Void)',async (ts) => {
       Position
     }
 **/
-Test.add('web-worker: toModel(sectionProperties)',async (ts) => {
+Test.add('web-worker: toModel(sectionProperties)', async (ts) => {
   const cabinet = Cabinet.build('base');
   CabinetLayouts.map['test'].build(cabinet);
 

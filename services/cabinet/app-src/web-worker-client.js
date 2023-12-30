@@ -1,7 +1,38 @@
+const { Vector } = require("../../../public/js/utils/3d-modeling/csg");
+const Panel = require("./objects/assembly/assemblies/panel");
+const Frame = require("./objects/assembly/assemblies/frame");
+
+
+const AssemblyTypes = Object.freeze({
+    PANEL: 'PANEL',
+    FRAME: 'FRAME'
+});
+
+class AssemblyDto {
+    /**
+     * @param {string} assemblyType 
+     * @param {Vector} center 
+     * @param {Vector} normal 
+     * @param {Vector} biPolyNormal
+     * @param {Vector} extent 
+     */
+    constructor(assemblyType, center, normal, biPolyNormal, extent) {
+        this.type = assemblyType;
+        this.center = center;
+        this.extent = extent;
+        this.normal = normal;
+        this.biPolyNormal = biPolyNormal;
+    }
+}
+
 class RenderingTask {
-    constructor(taskId, task) {
+    /**
+     * @param {Number} taskId 
+     * @param {AssemblyDto} assemblyDto 
+     */
+    constructor(taskId, assemblyDto) {
         this.taskId = taskId;
-        this.task = task;
+        this.assemblyDto = assemblyDto;
     }
 }
 
@@ -28,37 +59,71 @@ class RenderingExecutor {
             const taskId = messageFromWorker.data.taskId;
             if (this.taskResolvers.has(taskId)) {
                 console.debug(`Received worker's response for task ${taskId}. Resolving.`);
-                const [taskResolver, taskRejecter] = this.taskResolvers.get(taskId);
+                const [taskResolver, _] = this.taskResolvers.get(taskId);
                 taskResolver(messageFromWorker.data.result);
                 this.taskResolvers.delete(taskId);
             }
             else {
                 console.warn('Cannot find associated task for webworker message. Doing nothing.', messageFromWorker);
             }
-            
-        console.log('[main-thread] message received from worker:', messageFromWorker);
+
+            console.log('[main-thread] message received from worker:', messageFromWorker);
         };
 
     }
 
     /**
-     * @param {RenderingTask} task 
+     * @param {AssemblyDto} assembly
      * @returns {Promise<RenderingResult>}
      */
-    submit3dModelTask(task) {
+    _submit3dModelTask(assembly) {
         let resolver, rejecter;
         const taskResultPromise = new Promise((resolve, reject) => {
             resolver = resolve;
             rejecter = reject;
         });
 
-        const taskId = Math.floor(Math.random() * 1000000000000000); 
+        const taskId = Math.floor(Math.random() * 1000000000000000);
         this.taskResolvers.set(taskId, [resolver, rejecter]);
 
-        this.webWorker.postMessage(new RenderingTask(taskId, task));
+        const task = new RenderingTask(taskId, assembly);
+        this.webWorker.postMessage(task);
+        console.trace('task submitted to webworker: ', task);  // todo(pibe2): for debugging; remove
         return taskResultPromise;
     }
 
+    /**
+     * @param {Panel}
+     * @returns {Promise<RenderingResult>}
+     */
+    submitPanelToBipolygonTask(panel) {
+        const current = panel.current();
+        const panelDto = new AssemblyDto(
+            AssemblyTypes.PANEL,
+            new Vector(current.center),
+            new Vector(current.demension),
+            new Vector(current.normals),
+            new Vector(current.biPolyNormal)
+        );
+        return this._submit3dModelTask(panelDto);
+
+        /*
+        // this needs to run in webworker
+        return BiPolygon.fromVectorObject(dimensions.x, dimensions.y, dimensions.z, center, vecObj, panel.biPolyNormVector()); // todo: panel.biPolyNormVector???
+        */
+    }
+
+
+    /**
+     * @param {Frame}
+     * @returns {Promise<RenderingResult>}
+     */
+    submitFrameToBipolygonTask(frame) {
+
+    }
+
+
+
 }
 
-module.exports = {RenderingExecutor, RenderingTask, RenderingResult}
+module.exports = { AssemblyDto, AssemblyTypes, RenderingExecutor, RenderingTask, RenderingResult }

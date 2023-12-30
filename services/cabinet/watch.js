@@ -1,8 +1,8 @@
 const fs = require('fs');
 const Builder = require('../../building/builder');
-
 const { HtmlBundler } = require('../../building/bundlers/html.js');
 const htmlDumpLoc = './generated/html-templates.js';
+
 
 const cleanName = (name) => name.replace(/(..\/..|\.)\/public\/html\/templates\/(.*).html/, '$2');
 const htmlBundler = new HtmlBundler(htmlDumpLoc, cleanName);
@@ -46,9 +46,9 @@ const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         // .add(htmlDumpLoc)
         // .add('./public/json/cabinets.json')
         // .add('./app-src')
-        .add('./app-src/web-worker-client.js')
         .add('./app-src/objects')
         .add('./web-worker/')
+        .add('./app-src/web-worker-client.js')
 
         // .add('three-d')
         // 

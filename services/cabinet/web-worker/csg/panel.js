@@ -1,3 +1,4 @@
+const BiPolygon = require('../../app-src/three-d/objects/bi-polygon.js');
 
 
 class PanelWW {

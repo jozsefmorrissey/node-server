@@ -145,6 +145,8 @@ new QRious({
 
 const webWorker = new Worker('/cabinet/js/web-worker-bundle.js');
 const renderingExecutor = new RenderingExecutor(webWorker);
-renderingExecutor.submit3dModelTask('test').then(x => console.log(x));  // todo: for debugging; remove
+console.trace('test');
+renderingExecutor._submit3dModelTask({test: 'test'}).then(x => console.log(x)).catch(e => console.log(e));  // todo: for debugging; remove
+console.trace('test');
 
 module.exports = {orderDisplay: () => orderDisplay};
