@@ -103,6 +103,10 @@ function testCSGvsExistingObjects(objects, ts) {
 /**
   Frame
   Panel
+    infoObj: position.current();
+    functions to move
+      position.toModel
+      position.toBiPolygon
 **/
 Test.add('web-worker: toModel(Frame,Panel)',async (ts) => {
   testCSGvsExistingObjects(get(/^Frame|Panel$/), ts);$/), ts);
@@ -254,7 +258,7 @@ Test.add('web-worker: toModel(DrawerSection)',async (ts) => {
   ToeKick
     infoObj:
       openings are the root sectionProperties, cabinets can have multiple
-      and if autoToeKicks are enabled each one is genrated using each opening
+      and if autoToeKicks are enabled one is genrated using each opening
       cabinet.value('tkh')
       cabinet.value('tkd')
       cabinet.value('tkbw')
@@ -263,11 +267,11 @@ Test.add('web-worker: toModel(DrawerSection)',async (ts) => {
     functions to be moved
       toModel()
       toBiPolygon()
-      corners() // I dont think
+      corners()
       buildOffset()
       buildToeKick()
       addExtraSupports() // Needs fixed but should be relocated
-      buildSupports() // nfbsbr
+      buildSupports() // Needs fixed but should be relocated
       sidePoly()
       openingToeKick()
 
@@ -287,10 +291,9 @@ Test.add('web-worker: toModel(AutoToekick)',async (ts) => {
 
   CutterReference(infoObj: {reference})
 
+  // should probably have a conversation with me before trying to tackle these
   CutterModel
   CutterPoly
-    Feel free to take a stab at these, I feel like thier toModel functions a
-    difficult to trace
 **/
 
 Test.add('web-worker: toModel(Cutter)',async (ts) => {
