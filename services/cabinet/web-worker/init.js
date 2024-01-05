@@ -1,4 +1,4 @@
-require('../../../public/js/utils/utils.js');
+// require('../../../public/js/utils/utils.js');
 // require('../app-src/objects/assembly/init-assem.js');
 // require('../app-src/objects/joint/init.js');
 // require('../app-src/config/properties.js');
@@ -6,7 +6,7 @@ require('../../../public/js/utils/utils.js');
 // const CabinetLayouts = require('../../app-src/config/cabinet-layouts.js');
 // const Polygon3D = require('../three-d/objects/polygon.js');
 
-const { RenderingTask, RenderingResult } = require("../app-src/web-worker-client");
+const { RenderingTask, RenderingResult } = require("../app-src/web-worker-models");
 
 
 // const cabinet = Cabinet.build('base');
