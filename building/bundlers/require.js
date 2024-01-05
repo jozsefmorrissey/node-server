@@ -59,8 +59,8 @@ class MapScript {
               if (!filesRefd[refMap.absPath()]) {
                 filesRefd[refMap.absPath()] = true;
                 const moduleExport = refMap.exports.length === 1;
-                const relitivePath = await MapScript.toRelitivePath(refMap.absPath(), this.dir());
-                requireStr += `const ${formattedRef} = require('${relitivePath}')`;
+                const relativePath = await MapScript.toRelativePath(refMap.absPath(), this.dir());
+                requireStr += `const ${formattedRef} = require('${relativePath}')`;
                 requireStr += moduleExport ? ';\n' : `.${formattedRef};\n`
               }
             }
@@ -168,7 +168,7 @@ MapScript.simplifyPath = function (path) {
   return simplified;
 }
 
-MapScript.toRelitivePath = async function (path, dir) {
+MapScript.toRelativePath = async function (path, dir) {
   const cmd = `realpath --relative-to='${dir}' '${path}'`;
   const promise = new Promise((resolve) => {
     function resolver(data) {
@@ -202,13 +202,13 @@ class RequireJS {
       Object.keys(scripts).forEach((path) => {
         const name = path.replace(nameReg, '$2').toLowerCase();
         if (name === fileName) {
-          guesses.push(determinRelitivePath(currFile, path));
+          guesses.push(determineRelativePath(currFile, path));
         }
       });
       return guesses;
     }
 
-    function determinRelitivePath(from, to) {
+    function determineRelativePath(from, to) {
       from = trimPrefix(MapScript.simplifyPath(from))
       from = from.replace(nameReg, '$1');
       from = from.split('/');
@@ -227,21 +227,21 @@ class RequireJS {
       return './' + to.slice(index).join('/');
     }
 
-    function requireWrapper (absDir, relitivePath, filePath) {
-      relitivePath = MapScript.simplifyPath(relitivePath);
-      const path = MapScript.simplifyPath(`${absDir}${relitivePath}`);
+    function requireWrapper (absDir, relativePath, filePath) {
+      relativePath = MapScript.simplifyPath(relativePath);
+      const path = MapScript.simplifyPath(`${absDir}${relativePath}`);
       if (scripts[path] instanceof Unloaded) {
         scripts[path] = scripts[path].load();
       }
       if (scripts[path] === undefined)
-        console.warn(`Trying to load a none exisant js file
-\t'${relitivePath}' from file '${filePath}'
-\t\tDid you mean:\n\t\t\t${guessFilePath(relitivePath, filePath).join('\n\t\t\t')}`);
+        console.warn(`Trying to load a none existant js file
+\t'${relativePath}' from file '${filePath}'
+\t\tDid you mean:\n\t\t\t${guessFilePath(relativePath, filePath).join('\n\t\t\t')}`);
       return scripts[path];
     }
 
     function requireFunc (absoluteDir, filePath) {
-      return (relitivePath) => requireWrapper(absoluteDir, relitivePath, filePath);
+      return (relativePath) => requireWrapper(absoluteDir, relativePath, filePath);
     }
 
     const loadPath = [];
@@ -304,7 +304,7 @@ class RequireJS {
       const map = new MapScript(absolutePath, script);
       async function resolver (resolve) {
         if (pathCache[absolutePath] === undefined) {
-          pathCache[absolutePath] = await MapScript.toRelitivePath(absolutePath, projectDir);
+          pathCache[absolutePath] = await MapScript.toRelativePath(absolutePath, projectDir);
         }
         const body = await resolveBody(script);
         const encaps = `RequireJS.addFunction('${pathCache[absolutePath]}',
