@@ -233,10 +233,11 @@ class RequireJS {
       if (scripts[path] instanceof Unloaded) {
         scripts[path] = scripts[path].load();
       }
-      if (scripts[path] === undefined)
-        console.warn(`Trying to load a none existant js file
+      if (scripts[path] === undefined) {
+        console.warn(`Trying to load a non existent js file
 \t'${relativePath}' from file '${filePath}'
 \t\tDid you mean:\n\t\t\t${guessFilePath(relativePath, filePath).join('\n\t\t\t')}`);
+      }
       return scripts[path];
     }
 

@@ -1,4 +1,4 @@
-// require('../../../public/js/utils/utils.js');
+require('../../../public/js/utils/utils.js');
 // require('../app-src/objects/assembly/init-assem.js');
 // require('../app-src/objects/joint/init.js');
 // require('../app-src/config/properties.js');

@@ -1,6 +1,3 @@
-
-
-
 const getDefaultSize = require('./utils.js').getDefaultSize;
 const Vertex3D = require('./three-d/objects/vertex');
 const Line3D = require('./three-d/objects/line');

@@ -1,6 +1,3 @@
-
-
-
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 const Position = require('../../position.js');
 const getDefaultSize = require('../../utils.js').getDefaultSize;
