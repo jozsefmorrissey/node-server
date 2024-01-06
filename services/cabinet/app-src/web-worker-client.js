@@ -49,7 +49,7 @@ class RenderingExecutor {
 
         const task = new RenderingTask(taskId, assembly);
         this.webWorker.postMessage(task);
-        console.trace('task submitted to webworker: ', task);  // todo(pibe2): for debugging; remove
+        console.log('[main-thread]', 'task submitted to webworker: ', task);  // todo(pibe2): for debugging; remove
         return taskResultPromise;
     }
 

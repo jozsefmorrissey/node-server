@@ -61,3 +61,6 @@ const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         // .add('three-d')
         // 
 
+if (global.ENV === 'local') {
+        wwWatcher.add('./test');
+}

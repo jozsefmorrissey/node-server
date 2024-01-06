@@ -59,7 +59,7 @@ const Panel = require('../../app-src/objects/assembly/assemblies/panel.js');
 
 const webWorker = new Worker('/cabinet/js/web-worker-bundle.js');
 const renderingExecutor = new RenderingExecutor(webWorker);
-renderingExecutor._submit3dModelTask('test').then(x => console.log(x)).catch(e => console.log(e));  // todo: for debugging; remove
+renderingExecutor._submit3dModelTask('test: test').then(x => console.trace(x)).catch(e => console.log(e));  // todo: for debugging; remove
 
 
 Test.add('web-worker: toModel(simple)', async (ts) => {
