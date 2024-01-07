@@ -1,7 +1,7 @@
-const { Vector } = require("../../../public/js/utils/3d-modeling/csg");
-const Panel = require("./objects/assembly/assemblies/panel");
-const Frame = require("./objects/assembly/assemblies/frame");
-const { AssemblyDto, AssemblyTypes, RenderingTask, RenderingResult } = require("./web-worker-models");
+const { Vector } = require("../../../../public/js/utils/3d-modeling/csg");
+const Panel = require("../../app-src/objects/assembly/assemblies/panel");
+const Frame = require("../../app-src/objects/assembly/assemblies/frame");
+const { AssemblyDto, AssemblyTypes, RenderingTask, RenderingResult } = require("../shared/web-worker-models");
 
 
 class RenderingExecutor {
@@ -82,8 +82,6 @@ class RenderingExecutor {
     submitFrameToBipolygonTask(frame) {
 
     }
-
-
 
 }
 

@@ -32,14 +32,17 @@ const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add('../../public/js/utils/')
         .add(htmlDumpLoc)
         .add('./public/json/cabinets.json')
-        .add('./app-src');
+        .add('./app-src/')
+        .add('./web-worker/shared/')
+        .add('./web-worker/external/')
+
 if (global.ENV === 'local') {
   jsWatcher.add('./test');
 }
 
 
 const wwDumpLoc = './public/js/web-worker-bundle';
-const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/init.js', projectDir: '../../'});
+const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/internal/init.js', projectDir: '../../'});
 const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         // .add('./globals/')
         // .add('../../public/js/utils/')
@@ -53,14 +56,6 @@ const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         // .add('./app-src/objects/assembly/assemblies/section/sections/')
         // .add('./app-src/utils.js')
         // .add('./app-src/position.js')
-        // .add('./app-src/web-worker-client.js')
         .add('../../public/js/utils/3d-modeling/csg.js')
-        .add('./app-src/web-worker-models.js')
-        .add('./web-worker/')
-
-        // .add('three-d')
-        // 
-
-if (global.ENV === 'local') {
-        wwWatcher.add('./test');
-}
+        .add('./web-worker/shared/')
+        .add('./web-worker/internal/')

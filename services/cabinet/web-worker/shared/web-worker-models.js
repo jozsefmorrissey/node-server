@@ -1,4 +1,4 @@
-const { Vector } = require("../../../public/js/utils/3d-modeling/csg");
+const { Vector } = require("../../../../public/js/utils/3d-modeling/csg");
 
 
 const AssemblyTypes = Object.freeze({

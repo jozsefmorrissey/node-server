@@ -25,14 +25,14 @@ require('./displays/opening-sketch.js')
 const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');
 const utils = require('./utils.js');
-const { RenderingExecutor } = require('./web-worker-client.js');
+const { RenderingExecutor } = require('../web-worker/external/web-worker-client.js');
 
 let orderDisplay;
 
-// // Run Tests
-// if (EPNTS.getEnv() === 'local') { // why is test code part of the app code??
-//   require('../test/run');
-// }
+// Run Tests
+if (EPNTS.getEnv() === 'local') {
+  require('../test/run');
+}
 
 function updateDivisions (target) {
   const name = target.getAttribute('name');

@@ -1,10 +1,10 @@
-
 const Test = require('../../../../public/js/utils/test/test').Test;
 const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
 const CabinetLayouts = require('../../app-src/config/cabinet-layouts.js');
 const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
-const Frame = require('../../app');
 const Panel = require('../../app-src/objects/assembly/assemblies/panel.js');
+const Frame = require('../../app-src/objects/assembly/assemblies/frame.js');
+const { RenderingExecutor } = require('../../web-worker/external/web-worker-client.js');
 
 
 /**
