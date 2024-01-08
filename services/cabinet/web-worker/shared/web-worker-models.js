@@ -6,20 +6,48 @@ const AssemblyTypes = Object.freeze({
     FRAME: 'FRAME'
 });
 
+class VectorDto {
+    /**
+     * @param {Number} x 
+     * @param {Number} y 
+     * @param {Number} z 
+     */
+    constructor(x, y, z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+}
+
+class VectorBasisDto {
+
+    /**
+     * @param {VectorDto} i 
+     * @param {VectorDto} j 
+     * @param {VectorDto} k 
+     */
+    constructor(i, j, k) {
+        this.i = i;
+        this.j = j;
+        this.k = k;
+    }
+
+}
+
 class AssemblyDto {
     /**
      * @param {string} assemblyType 
-     * @param {Vector} center 
-     * @param {Vector} normal 
-     * @param {Vector} biPolyNormal
-     * @param {Vector} extent 
+     * @param {VectorDto} center 
+     * @param {VectorDto} extent 
+     * @param {VectorBasisDto} normal 
+     * @param {VectorDto} biPolyNorm
      */
-    constructor(assemblyType, center, normal, biPolyNormal, extent) {
+    constructor(assemblyType, center, extent, normal, biPolyNorm) {
         this.type = assemblyType;
         this.center = center;
         this.extent = extent;
         this.normal = normal;
-        this.biPolyNormal = biPolyNormal;
+        this.biPolyNorm = biPolyNorm;
     }
 }
 
@@ -41,4 +69,4 @@ class RenderingResult {
     }
 }
 
-module.exports = { AssemblyDto, AssemblyTypes, RenderingTask, RenderingResult }
+module.exports = { VectorDto, VectorBasisDto, AssemblyDto, AssemblyTypes, RenderingTask, RenderingResult }

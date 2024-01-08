@@ -23,5 +23,5 @@ const { RenderingTask, RenderingResult } = require("../shared/web-worker-models"
  */
 onmessage = (messageFromMain) => {
     console.log('[web-worker]', 'message received from main: ', messageFromMain);   // todo(pibe2): for debugging; remove
-    postMessage(new RenderingResult(messageFromMain.data.taskId, `response for request: ${messageFromMain.data.assemblyDto}`));
+    postMessage(new RenderingResult(messageFromMain.data.taskId, `response for request: ${JSON.stringify(messageFromMain.data.assemblyDto)}`));
 };

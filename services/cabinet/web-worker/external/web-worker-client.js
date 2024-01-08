@@ -1,7 +1,22 @@
 const { Vector } = require("../../../../public/js/utils/3d-modeling/csg");
 const Panel = require("../../app-src/objects/assembly/assemblies/panel");
 const Frame = require("../../app-src/objects/assembly/assemblies/frame");
-const { AssemblyDto, AssemblyTypes, RenderingTask, RenderingResult } = require("../shared/web-worker-models");
+const { VectorDto, AssemblyDto, AssemblyTypes, RenderingTask, RenderingResult, VectorBasisDto } = require("../shared/web-worker-models");
+
+
+
+function toVectorDto(v) {
+    return new VectorDto(v.x, v.y, v.z);
+}
+
+function toVectorBasisDto(normals) {
+    return new VectorBasisDto(
+        new VectorDto(normals.x.i(), normals.x.j(), normals.x.k()),
+        new VectorDto(normals.y.i(), normals.y.j(), normals.y.k()),
+        new VectorDto(normals.z.i(), normals.z.j(), normals.z.k())
+    );
+}
+
 
 
 class RenderingExecutor {
@@ -58,13 +73,13 @@ class RenderingExecutor {
      * @returns {Promise<RenderingResult>}
      */
     submitPanelToBipolygonTask(panel) {
-        const current = panel.current();
+        const current = panel.position().current();
         const panelDto = new AssemblyDto(
             AssemblyTypes.PANEL,
-            new Vector(current.center),
-            new Vector(current.demension),
-            new Vector(current.normals),
-            new Vector(current.biPolyNormal)
+            toVectorDto(current.center),
+            toVectorDto(current.demension),
+            toVectorBasisDto(current.normals),
+            new VectorDto(current.biPolyNorm.i(), current.biPolyNorm.j(), current.biPolyNorm.k())
         );
         return this._submit3dModelTask(panelDto);
 
