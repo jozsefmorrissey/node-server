@@ -36,17 +36,17 @@ class VectorBasisDto {
 
 class AssemblyDto {
     /**
-     * @param {string} assemblyType 
+     * @param {keyof AssemblyTypes} assemblyType 
      * @param {VectorDto} center 
      * @param {VectorDto} extent 
-     * @param {VectorBasisDto} normal 
+     * @param {VectorBasisDto} normals 
      * @param {VectorDto} biPolyNorm
      */
-    constructor(assemblyType, center, extent, normal, biPolyNorm) {
+    constructor(assemblyType, center, extent, normals, biPolyNorm) {
         this.type = assemblyType;
         this.center = center;
         this.extent = extent;
-        this.normal = normal;
+        this.normal = normals;
         this.biPolyNorm = biPolyNorm;
     }
 }

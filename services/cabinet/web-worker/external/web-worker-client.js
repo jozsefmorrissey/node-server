@@ -10,6 +10,7 @@ function toVectorDto(v) {
 }
 
 function toVectorBasisDto(normals) {
+    console.log('[normals]', normals);
     return new VectorBasisDto(
         new VectorDto(normals.x.i(), normals.x.j(), normals.x.k()),
         new VectorDto(normals.y.i(), normals.y.j(), normals.y.k()),
