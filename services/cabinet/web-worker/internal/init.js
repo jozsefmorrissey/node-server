@@ -7,7 +7,7 @@ require('../../../../public/js/utils/utils.js');
 // const Polygon3D = require('../../three-d/objects/polygon.js');
 
 const BiPolygon = require("../../app-src/three-d/objects/bi-polygon");
-const { RenderingTask, RenderingResult, AssemblyDto, AssemblyTypes } = require("../shared/web-worker-models");
+const { RenderingTask, RenderingResult, AssemblyDto, AssemblyTypes, DtoUtil, BiPolygonDto } = require("../shared/web-worker-models");
 
 
 // const cabinet = Cabinet.build('base');
@@ -23,19 +23,37 @@ const { RenderingTask, RenderingResult, AssemblyDto, AssemblyTypes } = require("
  * @param {MessageEvent<RenderingTask>} messageFromMain
  */
 onmessage = (messageFromMain) => {
-    const result = handleMessage(messageFromMain.data);
-    console.log('[web-worker]', 'message received from main: ', messageFromMain);   // todo(pibe2): for debugging; remove
-    postMessage(new RenderingResult(messageFromMain.data.taskId, `response for request: ${JSON.stringify(messageFromMain.data.assemblyDto)}`));
+    const result = handleMessage(messageFromMain.data.assemblyDto);
+    console.log('[worker] result: ', result);
+    postMessage(new RenderingResult(messageFromMain.data.taskId, result));
 };
 
 
 /**
  * 
  * @param {AssemblyDto} assemblyDto 
+ * @returns {BiPolygonDto}
  */
 function handleMessage(assemblyDto) {
-    if (assemblyDto.type === AssemblyTypes.FRAME) {
-        const extent = assemblyDto.extent;
-        return BiPolygon.fromVectorObject(extent.x, extent.y, extent.z, assemblyDto.center, assemblyDto.normal, assemblyDto.biPolyNorm);
+    console.log(assemblyDto);
+    switch (assemblyDto.type) {
+        case (AssemblyTypes.FRAME):
+        case (AssemblyTypes.PANEL): {
+            const extent = assemblyDto.extent;
+            const vectorBasis = assemblyDto.normals;
+            const biPoly = BiPolygon.fromVectorObject(
+                extent.x, extent.y, extent.z,
+                DtoUtil.toVertex3d(assemblyDto.center),
+                {
+                    x: DtoUtil.toVector3d(vectorBasis.i),
+                    y: DtoUtil.toVector3d(vectorBasis.j),
+                    z: DtoUtil.toVector3d(vectorBasis.k)
+                },
+                DtoUtil.toVector3d(assemblyDto.biPolyNorm)
+            );
+            return DtoUtil.toBiPolygonDto(biPoly);
+        }
+        default:
+            throw new Error(`Unsupported assembly type ${assemblyDto.type}`);
     }
 }
