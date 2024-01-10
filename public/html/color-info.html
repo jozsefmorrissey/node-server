@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Mandy's Sheets!</title>
+    <style>
+      img {
+          height: 200pt;
+      }
+    </style>
+    <script>
+      window.onload = () => {
+        const fileInput = document.querySelector('input[type=file]');
+        const colorInput = document.querySelector('input[type=color]');
+        const fakeBtn = document.querySelector('button');
+        fakeBtn.addEventListener('click', function (e) {
+          fileInput.click()
+        });
+        fileInput.addEventListener('change', function(e) {
+          for (var i = 0; i < e.srcElement.files.length; i++) {
+            var file = e.srcElement.files[i];
+            var img = document.createElement("img");
+            var reader = new FileReader();
+            reader.onloadend = function() {
+              img.src = reader.result;
+            }
+            reader.readAsDataURL(file);
+            fileInput.before(img);
+          }
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <button>Select Image</button>
+    <input type='file' hidden>
+    <input type='color'>
+  </body>
+</html>
