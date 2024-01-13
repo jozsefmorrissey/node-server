@@ -54,7 +54,7 @@ class SectionProperties extends KeyValue{
     this.subassemblies = [];
     const sectionCutters = [];
     this.userFriendlyId = () => this.getRoot().userFriendlyId(this.id());
-
+    this.allAssemblies = () => this.getRoot().allAssemblies();
 
     // index ||= 0;
     const coordinates = {inner: [v(),v(10,0,0),v(10,10,0),v(0,0,10)], outer: [v(),v(20,0,0),v(20,20,0),v(0,0,20)]};
@@ -104,12 +104,12 @@ class SectionProperties extends KeyValue{
 
     this.divideRight = () =>
       this.parentAssembly().sectionCount && this.parentAssembly().sectionCount() !== index;
-    this.partCode = () => 'S'
+    this.partCode = () => 'S';
 
     this.locationCode = () => {
       const parent = this.parentAssembly();
       const pc = 'S' + index;
-      if (parent) return `${parent.locationCode()}_${pc}`;
+      if (parent && parent.locationCode) return `${parent.locationCode()}_${pc}`;
       return pc;
     };
 
@@ -168,6 +168,8 @@ class SectionProperties extends KeyValue{
       return curr;
     }
 
+    this.isRoot = () => this.root() === this;
+
     const depthPartReg = /Cabinet|Cutter|Section|Void|Auto|Handle|Drawer|Door/;
     const depthDvReg = /_dv/;
     const depthPartFilter = a => !a.constructor.name.match(depthPartReg) &&
@@ -191,10 +193,14 @@ class SectionProperties extends KeyValue{
     }
     this.polyInformation = new FunctionCache(polyInformation, this, 'alwaysOn');
 
+    const defaultDepth = 4*2.54;
     this.innerDepth = () => {
       const back = this.back();
-      if (back) return back.toBiPolygon().distance(this.innerCenter());
-      return 4*2.54;
+      if (back) {
+        const calcDepth = back.toBiPolygon().distance(this.innerCenter());
+        if (calcDepth > defaultDepth/4) return calcDepth;
+      }
+      return defaultDepth;
     }
 
     this.drawerDepth = new FunctionCache(() => {
@@ -231,6 +237,17 @@ class SectionProperties extends KeyValue{
       }
       return closest ? closest.dist : 0;
     }, this, 'alwaysOn');
+
+    const clear = (attr) => {
+      if (this[attr] instanceof Function && this[attr].clearCache instanceof Function)
+      this[attr].clearCache();
+      return clear;
+    }
+    this.clearCaches = () => {
+      //TODO: Find better way of reseting all caches
+      clear('polyInformation')('drawerDepth');
+      this.children().forEach(c => c.clearCaches());
+    }
 
     function offsetCenter(center, left, right, up, down, forward, backward) {
       center = JSON.copy(center);
@@ -308,8 +325,9 @@ class SectionProperties extends KeyValue{
           if (assem !== undefined) return assem;
         }
       }
-      if (this.parentAssembly() !== undefined && this.parentAssembly() !== callingAssem)
-        return this.parentAssembly().getAssembly(locationCode, this);
+      const pa = this.parentAssembly();
+      if (pa !== undefined && pa !== callingAssem && pa.getAssembly)
+        return pa.getAssembly(locationCode, this);
       return undefined;
     }
 
@@ -720,18 +738,6 @@ class SectionProperties extends KeyValue{
       return joint.clone();
     }
 
-    this.dividerJoint.zero = (male, female, locId) => {
-      const key = `${male.locationCode()}=>${female.locationCode()}`;
-      const joint = this.dividerJoint();
-
-      let mpc, fpc, id;
-      if (male) mpc = male.locationCode();
-      if (female) fpc = female.locationCode();
-      const clone = joint.clone(male, mpc, fpc, null, locId);
-      clone.maleOffset(0);
-      male.addJoints(clone);
-    }
-
     let called = {coverage: 0, dividerOffsetInfo: 0, coverInfo: 0, dividerInfo: 0};
     this.setSection = (constructorIdOobject) => {
       if (constructorIdOobject === null) this.cover(null);
@@ -750,6 +756,20 @@ class SectionProperties extends KeyValue{
     this.value('vertical', false);
     this.pattern().onChange(this.reevaluate);
 
+    const isMatch = (assem, dir) => instance[dir]().isSubPart(assem);
+    function isNeigbor(assem) {
+      if (instance.divideRight()) {
+        if (instance.parentAssembly().isVertical()) {
+          return isMatch(assem, 'top') || isMatch(assem, 'bottom');
+        } else {
+          return isMatch(assem, 'left') || isMatch(assem, 'right');
+        }
+      }
+    }
+    const neigborJoint = new Joint(divider.isSubPart, isNeigbor);
+    divider.addJoints(neigborJoint);
+
+
     function buildCutters () {
       const cabinet = instance.getCabinet();
       const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Void|Auto|Section)/))
@@ -760,71 +780,39 @@ class SectionProperties extends KeyValue{
         const cutter = new Cutter.Reference(reference, cabinet.buildCenter, offset);
         sectionCutters.push(cutter);
         cutter.parentAssembly(instance);
-      }
-    }
-
-    this.addCutters = (divider) => {
-      const root = this.root();
-      if (root !== this) return root.addCutters(divider);
-      if (sectionCutters.length === 0) buildCutters();
-      for (let index = 0; index < sectionCutters.length; index++) {
-        const cutter = sectionCutters[index];
-        const locId = cutter.reference().locationCode();
-        divider.addJoints(new Joint(cutter.locationCode(), divider.locationCode(), null, locId));
+        const dvReg = new RegExp(`${instance.locationCode()}_.*dv(|:.)$`);
+        instance.addJoints(new Joint(cutter.locationCode(), dvReg));
       }
     }
 
     this.borders = () => [this.right, this.left, this.top, this.bottom, this.back]
 
-    function addNieghborJoints(divider) {
-      if (instance.root() !== instance) {
-        if (instance.parentAssembly().isVertical()) {
-          const top = instance.top();
-          const bottom = instance.bottom();
-          const topDivider = top instanceof DividerSection ? top.panel() : top;
-          const bottomDivider = bottom instanceof DividerSection ? bottom.panel() : bottom;
-          instance.dividerJoint.zero(divider.panel(),topDivider, 'top');
-          instance.dividerJoint.zero(divider.panel(), bottomDivider, 'bottom');
-        } else {
-          const left = instance.left();
-          const right = instance.right();
-          const leftDivider = left instanceof DividerSection ? left.panel() : left;
-          const rightDivider = right instanceof DividerSection ? right.panel() : right;
-          instance.dividerJoint.zero(divider.panel(),leftDivider, 'left');
-          instance.dividerJoint.zero(divider.panel(), rightDivider, 'right');
+    this.addJoints = function () {
+      for (let i = 0; i < arguments.length; i += 1) {
+        const joint = arguments[i];
+        if (joint instanceof Joint) {
+          const parent = joint.parentAssembly();
+          if (parent === undefined) joint.parentAssembly(this);
+          const mpc = joint.maleJointSelector();
+          const fpc = joint.femaleJointSelector();
+          const pc = this.locationCode();
+          const locId = joint.locationId();
+          if (locId) {
+            this.joints.removeWhere(j => j.locationId() === locId);
+          }
         }
+        this.joints.push(joint.clone(this));
       }
     }
 
-    this.addJoints = (divider) => {
-      divider ||= this.divider();
-      divider.panel().joints.deleteAll();
-      const cabinet = instance.getCabinet();
-      if (cabinet === undefined) return;
-      const panel = divider.panel();
-      addNieghborJoints(divider);
-      const subAssems = [];//Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Auto|Section)/))
-      subAssems.concatInPlace(divider.parentAssembly().borders().map(f => f().panel ? f().panel() : f()));
-      for (let index = 0; index < subAssems.length; index++) {
-        const assem = subAssems[index];
-        this.dividerJoint.zero(panel, assem, panel.locationCode());
-      }
-      this.addCutters(panel);
+    this.on.parentSet(p => this.getAssembly('c') && this.isRoot() && buildCutters());
+
+    this.toDrawString = (notRecursive) => {
+      let str = `//  ${this.userFriendlyId()}:${this.locationCode()}`;
+      if (notRecursive !== true)
+        this.children().forEach(c => {try {str += c.toDrawString() + '\n\n'} catch (e) {}});
+      return str;
     }
-
-    let initialized = false;
-    const initialze = (target) => () => {
-      const parent = target.parentAssembly();
-      if (instance.getCabinet()) {
-        instance.on.change(() => {
-          setSectionCoordinates(true)
-          instance.addJoints();
-        });
-      } else parent.on.parentSet(initialze(parent));
-
-    }
-
-    this.on.parentSet(initialze(this));
 
     // setTimeout(() => this.addJoints(this.divider()));
   }
@@ -878,8 +866,9 @@ SectionProperties.fromJson = (json) => {
   if (sp.cover()) sp.cover().parentAssembly(sp);
 
   json.constructed(() => {
-    sp.addJoints()
+    // sp.addJoints()
     sp.divider().panel().fromJson(json.divider.subassemblies.dv);
+    sp.divider().panel().build();
   });
   return sp;
 }

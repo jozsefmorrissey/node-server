@@ -43,7 +43,7 @@ class RoomDisplay extends Lookup {
     }
 
     const getObject = (values) => {
-      const room = new Room(values.name);
+      const room = new Room(values.name, this.order());
       return room;
     }
     this.active = () => expandList.active();

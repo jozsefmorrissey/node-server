@@ -5,6 +5,7 @@ const getDefaultSize = require('./utils.js').getDefaultSize;
 const Vertex3D = require('./three-d/objects/vertex');
 const Line3D = require('./three-d/objects/line');
 const BiPolygon = require('./three-d/objects/bi-polygon');
+const Polygon3D = require('./three-d/objects/polygon');
 const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
 const Joint = require('./objects/joint/joint.js');
 
@@ -163,7 +164,14 @@ class Position {
     }, this, 'position');
 
     this.normalizingRotations = () => {
-      const normals = assembly.normals(true);
+      let normals;
+      if (assembly.normals.DETERMINE_FROM_MODEL) {
+        const model = assembly.toModel();
+        const normObj = Polygon3D.normals(Polygon3D.fromCSG(model));
+        normals = [normObj.x, normObj.y, normObj.z];
+      } else {
+        normals = assembly.normals(true);
+      }
       if (normals) {
         // TODO: reverse rotate does not work fix.
         //revRotation = Line3D.coDirectionalRotations(normals, null, true);

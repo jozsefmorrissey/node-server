@@ -69,6 +69,9 @@ CSG = function() {
 };
 
 const colors = {
+  babyblue: [34,183,232],
+  limegreen: [50, 205, 50],
+
   indianred: [205, 92, 92],
   gray: [128, 128, 128],
   fuchsia: [255, 0, 255],
@@ -142,6 +145,14 @@ CSG.prototype = {
   scale: function(coeficient) {
     const center = this.center();
     this.polygons.map(function(p) { return p.scale(center, coeficient); });
+  },
+
+  setColors: function(func, g, b) {
+    if (func instanceof Function) {
+      this.polygons.forEach(p => p.setColor(func(p)));
+    } else {
+      this.polygons.forEach(p => p.setColor(func, g, b));
+    }
   },
 
   toPolygons: function() {

@@ -41,8 +41,7 @@ du.on.match('click', `.void-display-cnt .add-void-btn`, (elem) => {
 
   const cabinet = getCabinet(elem);
   const partName = `void-${refPartCode}-${width}x${height}`;
-  const partCode = cabinet.subassemblies.undefinedKey('void');
-  const vOid = new Void(partCode, partName, config);
+  const vOid = new Void(cabinet, partName, config);
   cabinet.addSubAssembly(vOid);
   const voidId = du.find.up('[void-id]', elem).getAttribute('void-id');
   const voidDisplay = VoidDisplay.get(voidId);
@@ -78,7 +77,7 @@ du.on.match('change', `.void-display-cnt .set-selector`, (elem) => {
   const index = du.find.up('[index]', elem).getAttribute('index');
   const cabinet = getCabinet(elem);
   const vOid = voids(cabinet)[index];
-  vOid.jointSet(elem.value);
+  vOid.jointSetIndex(elem.value);
 });
 
 du.on.match('change', '.void-dem', (elem) => {

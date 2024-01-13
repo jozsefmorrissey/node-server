@@ -27,7 +27,7 @@ class CabinetModel {
       if (assembly && assembly.inElivation) {
         assemblies.push(assembly);
       }
-      if (cabinet.children().indexOf(assembly) !== -1) {
+      if (assembly.locationCode().count('_') === 1) {
         // TODO: Hacky fix errors created by toModel not including joint information
         if (cabinetCSG === undefined) cabinetCSG = csg;
         else cabinetCSG = cabinetCSG.union(csg);
@@ -46,20 +46,18 @@ class CabinetModel {
     this.normal = () => new Vector3D(Math.mean(this.normals(), ['i', 'j', 'k']));
 
     this.center = () => {
-      if (!center) {
-        if (cabinetCSG === undefined) return new Vertex3D(0,0,0);
-        const polys = cabinetCSG.polygons;
-        for (let index = 0; index < polys.length; index++) {
-          const poly = polys[index];
-          const verts = poly.vertices;
-          const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
-          const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
-          poly.center = new Vertex3D(midrangePoint);
-          poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
-        }
-        const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
-        center = new Vertex3D(Math.midrange(polys, targetAttrs));
+      if (cabinetCSG === undefined) return new Vertex3D(0,0,0);
+      const polys = cabinetCSG.polygons;
+      for (let index = 0; index < polys.length; index++) {
+        const poly = polys[index];
+        const verts = poly.vertices;
+        const targetAttrs = {'pos.x': 'x', 'pos.y': 'y', 'pos.z': 'z'};
+        const midrangePoint = Math.midrange(poly.vertices, targetAttrs);
+        poly.center = new Vertex3D(midrangePoint);
+        poly.plane = new Plane(...verts.slice(0,3).map(v =>v.pos));
       }
+      const targetAttrs = {'center.x': 'x', 'center.y': 'y', 'center.z': 'z'};
+      center = new Vertex3D(Math.midrange(polys, targetAttrs));
       return center;
     }
 
@@ -155,7 +153,6 @@ class CabinetModel {
       if (in2D) {
         output = Polygon3D.toTwoD(output.toPolygons(), vector, axis);
         axis ||= output.axis;
-        // output = Polygon2d.toParimeter(output).lines();
       } else {
         output = output.toModel();
       }

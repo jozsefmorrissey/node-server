@@ -154,20 +154,17 @@ const cleanJson = (json) => Object.filter(json, (c, key) =>
   key && key.match(/(id|parentAssemblyId)/), false).complement;
 Test.add('Cabinet: to/from Json',(ts) => {
   const cabinet = Cabinet.build('base');
-  // CabinetLayouts.map.test.build(cabinet);
-  // const layers = Layer.fromCSG(cabinet.toModel());
-  // console.log(Layer.toWireDrawString(layers))
-  // const pLayers = Layer.parrelleSets(layers);
-  //
-  // console.log(console.log(layers[3].toWireDrawString()));
-  // console.log(Polygon3D.toDrawString(layers[3].polygons()));
 
-  CabinetLayouts.map['test'].build(cabinet);
-  const json = cleanJson(cabinet.toJson());
-  const copy = Cabinet.fromJson(cabinet.toJson());
-  const copyJson = cleanJson(copy.toJson());
-  Lookup.release(cabinet.allAssemblies());
-  Lookup.release(copy.allAssemblies());
-  ts.assertTrue(Object.equals(json, copyJson));
-  ts.success();
+  try {
+    CabinetLayouts.map['test'].build(cabinet);
+    const json = cleanJson(cabinet.toJson());
+    const copy = Cabinet.fromJson(cabinet.toJson());
+    const copyJson = cleanJson(copy.toJson());
+    Lookup.release(cabinet.allAssemblies());
+    Lookup.release(copy.allAssemblies());
+    ts.assertTrue(Object.equals(json, copyJson));
+    ts.success();
+  } catch (e) {
+    ts.fail(e.message);
+  }
 });

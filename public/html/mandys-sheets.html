@@ -8,16 +8,36 @@
           height: 200pt;
       }
     </style>
+    <script>
+      window.onload = () => {
+        const fileInput = document.querySelector('input[type=file]');
+        fileInput.addEventListener('change', function(e) {
+          for (var i = 0; i < e.srcElement.files.length; i++) {
+            var file = e.srcElement.files[i];
+            var img = document.createElement("img");
+            var reader = new FileReader();
+            reader.onloadend = function() {
+              img.src = reader.result;
+            }
+            reader.readAsDataURL(file);
+            fileInput.after(img);
+          }
+        });
+      }
+    </script>
   </head>
   <body>
     <h3>Brown?</h3>
     <img src='/images/mandys-sheets.jpg'/>
     <img src='/images/brownQ.jpg'/>
+    <input type='color'>
     <br/>
     <h3>Grey?</h3>
     <img src='/images/mandys-grey-sheet.jpg'/>
     <img src='/images/greyQ.png'/>
+    <input type='color'>
     <br/>
     Its supprizing how similar these colors are...
+    <input type='file'>
   </body>
 </html>

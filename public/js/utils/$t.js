@@ -180,7 +180,7 @@ class $t {
 			for (let index = 0; index < get('scope').length; index += 1) {
 				if (elemName) {
 					const obj = {};
-          obj.$index = index;
+					obj.$index = index;
 					obj[elemName] = get(index);
 					resp += new $t(template).render(obj, undefined, get);
 				} else {
@@ -212,8 +212,9 @@ class $t {
 			const isArray = Array.isArray(obj);
 			let built = '';
 			for (let index = 0; index < keys.length; index += 1) {
-				const key = keys[index];
+				let key = keys[index];
 				if (!isArray || key.match(/^[0-9]{1,}$/)) {
+					if (isArray) key = Number.parseInt(key);
 					const childScope = {};
 					childScope[keyName] = key;
 					childScope[valueName] = obj[key];

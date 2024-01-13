@@ -1,8 +1,10 @@
-<span{{tableSaw ? '' : ' hidden'}}>
-  <table>
+<span>
+  <table class='no-border-cells'>
     <caption><b>Table Saw</b></caption>
     <tr>
+      <th class='no-border'></th>
       <th>Width</th>
+      <th>Depth</th>
       <th>Angle</th>
       <th>Side&nbsp;Up</th>
       <th>Edge</th>
@@ -10,8 +12,7 @@
       <th>Length</th>
       <th>OOB</th>
     </tr>
-    <tr:t class='cut-info-cnt tab font-medium' repeat='cutInfo in tableSaw'>
-      {{cutInfo.toString()}}
-    </tr:t>
+    <no-tag:t class='cut-info-cnt tab font-medium' repeat='item in list' $t-id='documents/cuts/table-data'>
+    </no-tag:t>
   </table>
 </span>

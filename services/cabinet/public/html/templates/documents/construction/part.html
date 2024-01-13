@@ -8,7 +8,7 @@
   </div>
   <div class="part-ids-cnt local-only no-print">{{disp.partCodes(info.parts())}}</div>
   <div class='font-medium part-cnt' {{info.cutInfo().length === 0 ? 'hidden' : ''}}>
-    <div:t $t-id='documents/cuts/cuts'>info.cutInfo().split</div:t>
+    <div>{{info.toolsDocumentation().html()}}</div>
     <span class='tab' id='{{viewContainer(info.views.left)}}'></span>
     <span class='tab' id='{{viewContainer(info.views.right)}}'></span>
   </div>

@@ -20,7 +20,7 @@ let orderModified = false;
 const preSaveLocationChecks = () => {
   if (saveMan.initialized()) return;
   const order = Global.order();
-  if (order.worthSaveing()) {
+  if (order.worthSaving()) {
     if (orderNameInput.value !== '') {
       chooseSaveLocBtn.disabled = false;
       du.class.remove(orderNameInput, 'error');
@@ -51,6 +51,7 @@ const documents = require('./documents/documents.js');
 fileTabDisp.register('Designer', roomDisplay.html);
 fileTabDisp.selected('Designer');
 fileTabDisp.register('Documents', documents.html);
+fileTabDisp.on.change((info) => info.to === 'Documents' && documents.update());
 const orderTabCnt = du.id('order-tab-cnt');
 orderTabCnt.innerHTML = fileTabDisp.html();
 
@@ -185,7 +186,7 @@ async function switchOrder(elem, details) {
   try {
     if (details.contents) {
       let shouldSwitch = true;
-      if (firstSwitch && order.worthSaveing()) {
+      if (firstSwitch && order.worthSaving()) {
         const name = order.name();
         const version = order.versionId();
         shouldSwitch = false;

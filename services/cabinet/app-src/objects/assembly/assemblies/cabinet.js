@@ -32,12 +32,26 @@ class Cabinet extends Assembly {
     Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick', 'dividerJoint');
     const instance = this;
     let toeKickHeight = 4;
-    this.part = false;
+    this.part = () => false;
     this.currentPosition = () => this.position().current();
     this.display = false;
     this.overlay = OVERLAY.HALF;
     this.openings = new NotifictionArray(false);
     this.type = CABINET_TYPE.FRAMED;
+
+    let name;
+    this.name = (value) => {
+      const group = this.group();
+      if (value) {
+        const list = group && group.objects ? group.objects : [];
+        name =  list.map(g => g.name()).uniqueStringValue(value);
+      }
+      return name;
+    }
+
+
+    this.userFriendlyId = () => `c${this.groupIndex() + 1}`;
+    this.userIdentifier = () => this.name() || this.userFriendlyId();
     const panels = 0;
     const framePieces = 0;
     const addFramePiece = (piece) => framePieces.push(piece);
@@ -227,11 +241,11 @@ class Cabinet extends Assembly {
       }
     }
 
-    this.index = () => {
+    this.groupIndex = () => {
       const group = this.group();
       const gIndex = group.objects.equalIndexOf(this);
-      if (gIndex === -1) return null;
-      return `${group.name()}-${gIndex}`;
+      if (gIndex === -1) return 1;
+      return gIndex;
     }
 
     this.borders = (borderObj) => {
@@ -255,7 +269,7 @@ class Cabinet extends Assembly {
       const subs = Object.values(this.subassemblies);
       const toeKick = getToeKick();
       if (toeKick) {
-        subs.push(toeKick.tkb());
+        subs.concatInPlace(toeKick.getParts());
       }
       let csg = new CSG();
       for (let index = 0; index < subs.length; index++) {
@@ -267,15 +281,19 @@ class Cabinet extends Assembly {
     }
 
     let lastCallId = 0;
-    this.updateOpenings = () => {
-      const callId = ++lastCallId;
-      setTimeout(() => {
-        if (callId === lastCallId) {
-          for (let index = 0; index < this.openings.length; index++) {
-            this.openings[index].update();
-          }
+    function updateOpenings(callId) {
+      if (callId === lastCallId) {
+        instance.clearCaches();
+        for (let index = 0; index < instance.openings.length; index++) {
+          instance.openings[index].update();
         }
-      }, 50);
+        const toeKick = getToeKick();
+        if(toeKick) toeKick.update();
+      }
+    }
+    this.updateOpenings = (force) => {
+      const callId = ++lastCallId;
+      force ? updateOpenings(callId) : setTimeout(() => updateOpenings(callId), 50);
     };
 
     // this.faceNormals = () => {
@@ -315,8 +333,8 @@ Cabinet.build = (type, group, config) => {
     }
     const subAssem = Assembly.new(type, subAssemConfig.code, name, posConfig);
     // TODO: This should use Object.fromJson so more complex objects can easily save/load values.
-    if (subAssem.jointSet) {
-      subAssem.jointSet(subAssemConfig.jointSet);
+    if (subAssem.jointSetIndex) {
+      subAssem.jointSetIndex(subAssemConfig.jointSetIndex);
       subAssem.includedSides(subAssemConfig.includedSides);
     }
     subAssem.partCode(subAssemConfig.code);
@@ -371,17 +389,10 @@ Cabinet.fromJson = (assemblyJson, group) => {
   const joints = Object.fromJson(assemblyJson.joints);
   assembly.addJoints.apply(assembly, joints);
   assembly.autoToeKick(assemblyJson.autoToeKick);
-  trigger();
 
-  //TODO: Find better way of reseting all caches
-  assembly.allAssemblies().forEach(a => {
-    const clear = (attr) => {
-      if (a[attr] instanceof Function && a[attr].clearCache instanceof Function)
-        a[attr].clearCache();
-      return clear;
-    }
-    clear('getJoints')('allAssemblies')('getAssembly')('hash')('toModel');
-  });
+  assembly.clearCaches();
+
+  trigger();
   return assembly;
 }
 Cabinet.abbriviation = 'c';

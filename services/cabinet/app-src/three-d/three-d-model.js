@@ -8,6 +8,7 @@ const FunctionCache = require('../../../../public/js/utils/services/function-cac
 
 const Polygon3D = require('./objects/polygon');
 const Vertex3D = require('./objects/vertex');
+const Vector3D = require('./objects/vector');
 const Line3D = require('./objects/line');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const OrientationArrows = require('../../../../public/js/utils/display/orientation-arrows.js');
@@ -204,7 +205,7 @@ class ThreeDModel {
 
     function buildModel(assem) {
       let a = assem.toModel();
-      a.setColor(...getColor());
+      a.setColor(...getColor(assem.value('color')));
       partModels[assem.id()] = a;
       return a;
     }
@@ -284,6 +285,33 @@ class ThreeDModel {
       return new Promise(resolver);
     }
 
+    function faceColoring(part, partModel) {
+      const normals = part.position().normals();
+      normals.nx = normals.x.inverse()
+      normals.ny = normals.y.inverse()
+      normals.nz = normals.z.inverse()
+      partModel.setColors(p => {
+        const pNorm = new Vector3D(p.plane.normal);
+        if (normals.x.equals(pNorm)) return 'red';
+        if (normals.nx.equals(pNorm)) return 'maroon';
+        if (normals.y.equals(pNorm)) return 'limegreen';
+        if (normals.ny.equals(pNorm)) return 'green';
+        if (normals.z.equals(pNorm)) return 'babyblue';
+        if (normals.nz.equals(pNorm)) return 'blue';
+        return 'grey';
+      });
+      console.log(part);
+    }
+
+    function explodeFromCenter(center, model, byFactor) {
+      byFactor ||= 1.3;
+      const modelCenter = new Vertex3D(model.center());
+      const dist = center.distance(modelCenter);
+      Line3D.adjustDistance(center, modelCenter, dist*byFactor, true)
+      model.center(modelCenter);
+      return model;
+    }
+
     async function renderParts() {
       let model = new CSG();
       const obj = instance.object();
@@ -291,26 +319,17 @@ class ThreeDModel {
       if (obj === undefined || obj.buildCenter === undefined) return;
       await instance.buildObject();
       const buildCenter = obj.buildCenter();
-      const assems = obj.getParts();
+      const assems = obj.getParts().filter(p => !hidden(p));
       for (let index = 0; index < assems.length; index++) {
         const part = assems[index];
-        if (!hidden(part)) {
-          let partModel = partModels[part.id()];
-          if (partModel === undefined) {
-            partModel = buildModel(part);
-          }
-          partModel = partModel.clone();
-          if (targetPartCode) {
-            partModel.setColor(colors[targetPartCode === part.partCode() ? 'green' : 'blue'])
-          }
-          const c = part.position().center();
-          let e = 1.3;
-          const partCenter = new Vertex3D(partModel.center());
-          const dist = buildCenter.distance(partCenter);
-          Line3D.adjustDistance(buildCenter, partCenter, dist*e, true)
-          partModel.center(partCenter);
-          model = model.union(partModel);
+        let partModel = partModels[part.id()];
+        if (partModel === undefined) {
+          partModel = buildModel(part);
         }
+        partModel = partModel.clone();
+        if (assems.length === 1) faceColoring(part, partModel);
+        explodeFromCenter(buildCenter, partModel);
+        model = model.union(partModel);
       }
       ThreeDModel.display(model);
     }

@@ -21,6 +21,8 @@ class Divider extends Assembly {
       panelModel = this.position().toModel;
     }
     const instance = this;
+    let pieces = [];
+    const addPiece = (piece) => piece.parentAssembly(this) && pieces.push(piece);
 
     Object.getSet(this, 'type');
 
@@ -28,14 +30,16 @@ class Divider extends Assembly {
     if (panelModel) this.toModel = panelModel;
 
     this.part = () => false;
-    const parentToJson = this.toJson;
-    this.toJson = () => {
-      const json = parentToJson();
-      json.subassemblies = [];
-      return json;
-    }
     this.maxWidth = () => 2.54*3/4;
-
+    this.getSubassemblies = (childrenOnly) => {
+      const children = pieces.concat(Object.values(this.subassemblies));
+      if (childrenOnly) return children;
+      const decendents = [];
+      for (let index = 0; index < children.length; index++) {
+        decendents.concatInPlace(children[index].getSubassemblies(false));
+      }
+      return children.concat(decendents);
+    }
 
     instance.includeJoints(false);
 
@@ -64,6 +68,7 @@ class Divider extends Assembly {
         }
       } else console.warn.subtle(`SectionProperties has not been defined for object '${instance.id()}'`);
     }
+    this.build = build;
 
     this.sectionProperties = () => {
       const parent = this.parentAssembly();
@@ -97,34 +102,35 @@ class Divider extends Assembly {
         let cutter, panel;
         if (panels[partCode] === undefined) {
           panel = new PanelModel(partCode, partName, panelModel, toBiPolygon);
-          panel.normals = instance.normals;
-          panel.position().normals = instance.position().normals;
-          panel.position().normalizingRotations = instance.position().normalizingRotations;
           panels[partCode] = panel;
           panel.parentAssembly(instance);
           cutter = new Cutter.Poly(translated);
           cutters[partCode] = cutter;
-          instance.addSubAssembly(panel);
-          instance.addSubAssembly(cutter);
+          cutter.addJoints(new Joint(cutter.locationCode(), panel.locationCode(), null, 'only'));
+          setTimeout(() => {
+            //TODO: Timeouts are never a good solution
+            panel.normals = (array) => {
+              let simple = biPoly.toModel();
+              simple = simple.subtract(cutter.toModel([]));
+              const normObj = Polygon3D.normals(Polygon3D.fromCSG(simple));
+              return array ? [normObj.x, normObj.y, normObj.z] : normObj;
+            }
+          });
         }
         panel = panels[partCode];
         cutter = cutters[partCode];
-        panel.addJoints(new Joint(cutter.locationCode(), panel.locationCode(), null, 'only'));
         cutter.poly(translated);
 
-        if (Array.isArray(instance.subassemblies)) {
-          console.log('wtff');
-        }
-        if (!append) instance.subassemblies.deleteAll();
-        instance.addSubAssembly(panel);
-        instance.addSubAssembly(cutter);
+        if (!append) pieces = [];
+        addPiece(panel);
+        addPiece(cutter);
       }
     }
 
     const builders = {
       front: (append) => {
         const secProps = instance.sectionProperties();
-        const intersected = instance.sectionProperties().outerPoly();
+        const intersected = secProps.outerPoly();
         const normal = secProps.normal();
         buildPolyCutter(intersected, -4 * 2.54, normal, append, 'front');
       },
@@ -144,7 +150,6 @@ class Divider extends Assembly {
       },
       frontAndBack: () => builders.front() | builders.back(true),
       full: () => {
-        instance.subassemblies.deleteAll();
         const pc = ':p';
         if (panels[pc] === undefined) {
           panels[pc] = new PanelModel(pc, 'panel', panelModel);
@@ -153,8 +158,8 @@ class Divider extends Assembly {
           panels[pc].position().normalizingRotations = instance.position().normalizingRotations;
         }
         const panel = panels[pc];
-        instance.subassemblies.deleteAll();
-        instance.addSubAssembly(panel);
+        pieces = [];
+        addPiece(panel);
       },
     }
 
@@ -175,9 +180,12 @@ Divider.abbriviation = 'dv';
 
 Divider.fromJson = (json) => {
   const obj = Assembly.fromJson(json);
-  json.constructed(() =>
-    obj.type(json.type)
-  , 1000);
+  json.constructed(() => {
+    if (obj.type() !== json.type) {
+      obj.type(json.type);
+      obj.build();
+    }
+  }, 2000);
   return obj;
 }
 

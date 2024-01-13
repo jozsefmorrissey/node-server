@@ -20,7 +20,8 @@
   },
   "config": {
     "get": "/config/get",
-    "save": "/config/save"
+    "save": "/config/save",
+    "default": "/json/cabinets.json"
   },
   "costs": {
     "save": "/costs/save",

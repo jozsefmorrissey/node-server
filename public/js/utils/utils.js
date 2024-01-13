@@ -78,7 +78,7 @@ class Event {
     this.trigger = (info) => {
       const run = !triggered;
       triggered = info;
-      if (run) list.sortByAttrs('orderIndex').forEach(fo => fo.func(info));
+      if (run) list.sortByAttr('orderIndex').forEach(fo => fo.func(info));
     }
     return ;
   }
@@ -354,6 +354,71 @@ const decimalReg = new RegExp(`^${decimalRegString}$`);
 Function.safeStdLibAddition(String, 'isNumber', function (len) {
   return this.trim().match(decimalReg) !== null;
 });
+
+const npiweblt = 'No Positive Integer (lt 10) Will Ever Be Less Than 0 (Duh)';
+const npiwebgt = 'No Positive Integer (lt 10) Will Ever Be Greater Than 9 (Duh)';
+const lessThanRegSingle = (int) => int >= 0 ? `[0-${int}]` : npiweblt;
+const greaterThanRegSingle = (int) => int <= 9 ? `[${int}-9]` : npiwebgt;
+const lessThanFormat = (prefix, leadInt, length) => {
+  const lessButSameLength = leadInt !== 0 ? `|[0-${leadInt - 1}][0-9]{${length-1}}` : ''
+  return `(${prefix}${lessButSameLength}|[0-9]{0,${length-1}})`;
+}
+const greaterThanFormat = (prefix, leadInt, length) => {
+  const greaterButSameLength = leadInt !== 9 ? `|[${leadInt + 1}-9][0-9]{${length-1}}` : ''
+  return `(${prefix}${greaterButSameLength}|[1-9][0-9]{${length},})`;
+}
+
+const integerCompareReg = (lessThan, equalTo) => (integer, asString) => {
+  lessThan = lessThan === true;
+  const ints = (integer + '').split('');
+  const compareFunc = lessThan ? lessThanRegSingle : greaterThanRegSingle;
+  const compareOffset = lessThan ? -1 : 1;
+  let offset = equalTo === true ? 0 : compareOffset;
+  let leadInt;
+  let reg = '';
+  let endOrVals = [];
+  let secondToLast;
+  let singleDigit = ints.length === 1;
+  for (let index = 0; index < ints.length; index++) {
+    const int = Number.parseInt(ints[index]);
+    if (index === 0) leadInt = int;
+    const str = index === ints.length - 1 ? compareFunc(int + offset) : compareFunc(int);
+    if (index === ints.length - 2) secondToLast = int;
+    const lastTwo = index > ints.length - 3;
+    if (!singleDigit && lastTwo && ((!lessThan && secondToLast !== 9) || (lessThan && secondToLast !== 0))) {
+      endOrVals.push(str);
+      const orValue = index !== ints.length - 1 ? compareFunc(int + compareOffset) : '[0-9]';
+      endOrVals.push(orValue);
+    } else reg += str;
+  }
+  if (endOrVals.length !== 0) {
+    reg = `${reg}(${endOrVals[0]}${endOrVals[2]}|${endOrVals[1]}${endOrVals[3]})`;
+  }
+  reg = (lessThan ? lessThanFormat : greaterThanFormat)(reg, leadInt, ints.length);
+  return asString ? reg : new RegExp(`^${reg}$`);
+}
+
+Function.safeStdLibAddition(RegExp, 'lessThan', integerCompareReg(true, false), true);
+Function.safeStdLibAddition(RegExp, 'greaterThan',  integerCompareReg(false, false), true);
+Function.safeStdLibAddition(RegExp, 'lessThanEqual',  integerCompareReg(true, true), true);
+Function.safeStdLibAddition(RegExp, 'greaterThanEqual',  integerCompareReg(false, true), true);
+
+
+const test = (testUpTo, funcName, test) => {
+  for (let value = 0; value < testUpTo; value++) {
+    for (let index = 0; index < 100; index++) {
+      try {
+        if (!test(index, value, `${index}`.match(RegExp[funcName](value)))) {
+          throw new Error('FAILED!!!');
+        }
+      } catch (e) {
+        console.log(`'${index}'.match(RegExp.${funcName}(${value})); //Failed`);
+        RegExp[funcName](value);
+        break;
+      }
+    }
+  }
+}
 
 Function.safeStdLibAddition(String, 'number',  function (str) {
   str = new String(str);
@@ -729,6 +794,20 @@ Function.safeStdLibAddition(Array, 'systematicSuffle', function (numberOfSuffles
   return Object.keys(map).length;
 });
 
+Function.safeStdLibAddition(Array, 'uniqueStringValue', function (value) {
+  const matchingIndexes = [true];
+  const valReg = new RegExp(`(${RegExp.escape(value)})([0-9]*)`);
+  for (let index = 0; index < this.length; index++) {
+    const curr = new String(this[index]);
+    const match = curr.match(valReg);
+    if (match) {
+      matchingIndexes[match[2] || -1] = value;
+    }
+  }
+  if (matchingIndexes[-1] === undefined) return value;
+  const emptyIndex = matchingIndexes.findIndex(str => str === undefined);
+  return value + (emptyIndex === -1 ? matchingIndexes.length : emptyIndex);
+});
 
 Function.safeStdLibAddition(Array, 'reorder', function () {
   let count = 2;
@@ -1219,7 +1298,10 @@ const colors = [
   'teal', 'darksalmon', 'blue', 'navy', 'salmon', 'silver', 'purple'
 ];
 let colorIndex = 0;
-Function.safeStdLibAddition(String, 'nextColor', () => colors[index++ % colors.length], true);
+Function.safeStdLibAddition(String, 'nextColor', (...exclude) => {
+  const filteredColors = colors.filter(c => exclude.indexOf(c) === -1)
+  return filteredColors[index++ % filteredColors.length];
+}, true);
 Function.safeStdLibAddition(String, 'color', () => colors[index % colors.length], true);
 
 const numberReg = /^[0-9]{1,}$/;
@@ -1266,8 +1348,8 @@ Function.safeStdLibAddition(Object, 'pathValue', function (path, value) {
   return Object.pathValue(this, path, value);
 });
 
-Function.safeStdLibAddition(Object, 'undefinedKey', function (key, joinStr) {
-  if (this[key] === undefined) return key;
+Function.safeStdLibAddition(Object, 'undefinedKey', function (key, joinStr, requireIndex) {
+  if (!requireIndex && this[key] === undefined) return key;
   if (joinStr === undefined) joinStr = '';
   let index = 1;
   while(this[`${key}${joinStr}${index}`] !== undefined) index++;

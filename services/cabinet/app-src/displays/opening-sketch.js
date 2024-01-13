@@ -4,6 +4,7 @@ const Draw2D = require('../../../../public/js/utils/canvas/two-d/draw.js');
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
+const Parimeters2d = require('../../../../public/js/utils/canvas/two-d/maps/parimeters.js');
 const EscapeMap = require('../../../../public/js/utils/canvas/two-d/maps/escape.js');
 const Vertex3D = require('../three-d/objects/vertex.js');
 const Line3D = require('../three-d/objects/line.js');
@@ -11,10 +12,13 @@ const Polygon3D = require('../three-d/objects/polygon.js');
 const PanZoom = require('../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+const Global = require('../services/global.js');
 
 class OpeningSketch {
   constructor(id, cabinet) {
     let sketch, panZ, elem;
+    const instance = this;
+    this.cabinet = () => cabinet || Global.cabinet();
 
     function getSections(sections, list) {
       list ||= [];
@@ -48,7 +52,7 @@ class OpeningSketch {
       }
     }
 
-    function drawLabels(offset, normal) {
+    function drawLabels(offset, normal, cabinet) {
       for (let index = 0; index < cabinet.openings.length; index++) {
         const sections = getSections(cabinet.openings[index].sections);
         for (let si = 0; si < sections.length; si++) {
@@ -60,9 +64,11 @@ class OpeningSketch {
     }
 
     function draw() {
+      const cabinet = instance.cabinet();
       if (cabinet === undefined) return;
       if (cabinet.openings.length === 0) return;
       if (cabinet.openings.length > 1) throw new Error('Not Set Up for multiple openings: Should consider creating seperate canvas for each opening');
+      sketch.clear()
       // sketch.ctx().drawImage(0,0)
 
       let innerLines = [];
@@ -91,7 +97,7 @@ class OpeningSketch {
       const model = cabinet.toModel();
       const view = Polygon3D.viewFromVector(model, normal);
       const lines2d = Polygon3D.lines2d(view, 'x', 'y');
-      const cabinetOutlines = Polygon2d.toParimeter(lines2d).lines().map(l => l.clone());
+      const cabinetOutlines = Parimeters2d.lines(lines2d).map(l => l.clone());
 
 
       innerLines = Line3D.to2D(Line3D.viewFromVector(innerLines, normal), 'x', 'y');
@@ -107,25 +113,23 @@ class OpeningSketch {
       // sketch(outerLines, 'green', .3);
       sketch(cabinetOutlines, 'red', .3);
 
-      drawLabels(offset, normal);
+      drawLabels(offset, normal, cabinet);
       // const measurements = LineMeasurement2d.measurements(allLines);
       // sketch(measurements, 'grey', 1);
     }
+    this.draw = draw;
 
     function init() {
       let canvas = du.id(id);
       if (canvas.tagName !== 'CANVAS') {
         let elem = canvas;
-        canvas = du.create.element('canvas');
+        canvas = du.create.element('canvas', {class: 'upside-down mirror-x'});
         elem.append(canvas);
       }
       sketch = new Draw2D(canvas, true);
       draw();
       // panZ = new PanZoom(sketch.canvas(), draw);
     }
-
-    this.cabinet = (cab) => (cab.constructor.name === 'Cabinet' && (cabinet = cab)) || cabinet;
-
 
     init();
   }

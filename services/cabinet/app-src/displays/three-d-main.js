@@ -36,7 +36,8 @@ function groupParts(cabinet) {
       currObj.prefix = prefix;
       prefix += '-'
     }
-    if (currObj.parts[part.locationCode()] !== undefined) console.error('PartCode collision' + part.locationCode());
+    if (currObj.parts[part.locationCode()] !== undefined)
+      console.error('PartCode collision' + part.locationCode());
     currObj.parts[part.locationCode()] = part;
   }
   return grouping;

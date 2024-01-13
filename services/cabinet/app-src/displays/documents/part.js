@@ -2,13 +2,17 @@
 const JointInfo = require('./joint');
 const CutInfo = require('./cuts/cut');
 const Vertex3D = require('../../three-d/objects/vertex.js');
+const Vector3D = require('../../three-d/objects/vector.js');
 const Line3D = require('../../three-d/objects/line.js');
+const Plane = require('../../three-d/objects/plane.js');
 const Layer = require('../../three-d/objects/layer.js');
 const Polygon3D = require('../../three-d/objects/polygon.js');
 const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Polygon2d = require('../../../../../public/js/utils/canvas/two-d/objects/polygon.js');
+const Parimeters2d = require('../../../../../public/js/utils/canvas/two-d/maps/parimeters.js');
+const ToolsDocumentation = require('./tools/tools');
 
 FunctionCache.on('long-refresh', 4000);
 
@@ -26,7 +30,10 @@ class PartInfo {
       return false;
     }
 
-    this.normals = () => part.position().normals();
+    this.normals = () => {
+      if (part.normals.DETERMINE_FROM_MODEL) return;
+      return part.position().normals();
+    }
 
     this.noJointmodel = new FunctionCache((rightOleft) => {
       return part.toModel([]);
@@ -48,6 +55,7 @@ class PartInfo {
     const normInfoLeft = this.noJointmodel().normalize(normRotz, false, false);
 
     this.normalize = new FunctionCache((rightOleft, model) => {
+      if (model === undefined) return;
       let normalizeInfo;
       if (rightOleft === true) normalizeInfo = normInfoRight;
       else if (rightOleft === false) normalizeInfo = normInfoLeft;
@@ -86,7 +94,7 @@ class PartInfo {
     }, 'long-refresh', this);
 
     this.cutsOnlyModel = new FunctionCache((rightOleft) => {
-      const cuts = this.cutInfo().filter(ji => ji.constructor === CutInfo);
+      const cuts = this.cutInfo().filter(ci => ci.constructor === CutInfo || ci.constructor.cutsOnly === true);
       let model = this.model(rightOleft, []);
       cuts.map(c => (model = model.subtract(this.normalize(rightOleft, c.jointInfo().model()))));
       return model;
@@ -116,7 +124,7 @@ class PartInfo {
       const jointInfo = this.jointInfo();
       const cutInfo = [];
       jointInfo.forEach(ji => cutInfo.concatInPlace(ji.cutInfo()));
-console.log(cutInfo.map(c => `//${c.jointInfo().joint().toString()}\n${Polygon3D.toDrawString(c.set(), String.nextColor())}`).join('\n\n'))
+console.log(cutInfo.map(c => `//${c.jointInfo().joint().toString()}\n${Polygon3D.toDrawString(c.set(), String.nextColor())}`).join('\n\n'));
       CutInfo.clean(cutInfo);
       this.cuts = cutInfo;
       console.log(CutInfo.toDrawString(this.cuts))
@@ -125,12 +133,17 @@ console.log(cutInfo.map(c => `//${c.jointInfo().joint().toString()}\n${Polygon3D
 
     const round = (val) => Math.round(val * 1000)/1000;
     this.demensions = new FunctionCache(() => {
-      const model = part.toModel();
+      const model = this.normalize(true, part.toModel());
       const dems = model.demensions();
       dems.x = round(dems.x); dems.y = round(dems.y); dems.z = round(dems.z);
       return dems;
     }, 'long-refresh', this);
 
+    let toolsDocumentation;
+    this.toolsDocumentation = () => {
+      if (toolsDocumentation === undefined) toolsDocumentation = new ToolsDocumentation(this.cutInfo());
+      return toolsDocumentation;
+    }
 
     const sidesCut = [];
     this.cutMade = (cutLine3D) => {
@@ -156,6 +169,13 @@ console.log(cutInfo.map(c => `//${c.jointInfo().joint().toString()}\n${Polygon3D
       return vert2d;
     }
 
+    this.demensionEdges = (rightOleft) => {
+      const model = this.model(rightOleft);
+      const center = new Vertex3D(model.center()).to2D('x', 'y');
+      const dems = model.demensions();
+      return Polygon2d.fromDemensions(dems, center).lines();
+    }
+
     this.edges = (rightOleft, availbleEdgesOnly) => {
       let applicableEdges;
       if (availbleEdgesOnly === undefined) {
@@ -168,7 +188,7 @@ console.log(cutInfo.map(c => `//${c.jointInfo().joint().toString()}\n${Polygon3D
       }
       let index = 'A'.charCodeAt(0);
       const center = Line2d.center(applicableEdges);
-      applicableEdges = Polygon2d.toParimeter(applicableEdges).lines();
+      applicableEdges = new Parimeters2d(applicableEdges).largest().lines();
       applicableEdges.sort(Line2d.sorter(center, furthestVertexFromOrign(rightOleft)));
       if (rightOleft) {
         // applicableEdges = applicableEdges.slice(1,).concat(applicableEdges[0]);
@@ -186,8 +206,18 @@ console.log(cutInfo.map(c => `//${c.jointInfo().joint().toString()}\n${Polygon3D
       sets.forEach(s => s.sort(Line2d.distanceSort(center, false)));
       sets.map(s => s.map(l => l.length()))
       const fenceEdges = [];
-      sets.forEach(s => fenceEdges.push(s[s.length - 1]) && fenceEdges.push(s[s.length - 2]));
+      const pushIndex = (s, index) => s[index] && fenceEdges.push(s[index]);
+      sets.forEach(s => pushIndex(s, s.length - 1) & pushIndex(s, s.length - 2));
       return fenceEdges;
+    }
+
+    this.fencePlanes = (rightOleft, availbleEdgesOnly) => {
+      const fenceEdges = this.fenceEdges(rightOleft, availbleEdgesOnly);
+      const lines3D = Line3D.from2D(fenceEdges);
+      const planes = lines3D.map(l => Plane.fromPointNormal(l.midpoint(), l.vector().unit().crossProduct(Vector3D.k)));
+      lines3D.forEach((l, i) => l.label = fenceEdges[i].label);
+      planes.LINES = lines3D;
+      return planes;
     }
   }
 }

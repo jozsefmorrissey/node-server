@@ -145,26 +145,26 @@ new CabinetLayout('test', (cabinet) => {
   right.sections[1].divider().panel().type('front');
 
   let config = Void.referenceConfig('horizontal', 'c_BACK', 5*2.54, 5*2.54);
-  let vOid = new Void('void1', 'Void1', config);
+  let vOid = new Void(cabinet, 'Void1', config);
   cabinet.addSubAssembly(vOid);
 
   config = Void.referenceConfig('vertical', 'c_BACK', 5*2.54, 5*2.54);
-  vOid = new Void('void2', 'Void2', config);
+  vOid = new Void(cabinet, 'Void2', config);
   cabinet.addSubAssembly(vOid);
 
   config = Void.referenceConfig('horizontal', 'c_L', 5*2.54, 5*2.54);
-  vOid = new Void('void3', 'Void3', config);
+  vOid = new Void(cabinet, 'Void3', config);
   cabinet.addSubAssembly(vOid);
 
   config = Void.referenceConfig('vertical', 'c_L', 5*2.54, 5*2.54);
-  vOid = new Void('void4', 'Void4', config);
+  vOid = new Void(cabinet, 'Void4', config);
   cabinet.addSubAssembly(vOid);
 
   config = Void.referenceConfig('horizontal', 'c_R', 5*2.54, 5*2.54);
-  vOid = new Void('void5', 'Void5', config);
+  vOid = new Void(cabinet, 'Void5', config);
   cabinet.addSubAssembly(vOid);
 
   config = Void.referenceConfig('vertical', 'c_R', 5*2.54, 5*2.54);
-  vOid = new Void('void6', 'Void6', config);
+  vOid = new Void(cabinet, 'Void6', config);
   cabinet.addSubAssembly(vOid);
 });

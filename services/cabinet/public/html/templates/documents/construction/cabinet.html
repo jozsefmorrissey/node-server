@@ -1,0 +1,6 @@
+<h3>Cabinet: {{cabinet.name()}}</h3>
+<canvas class="mirror-x opening-sketch" cabinet-id='{{cabinet.id()}}' width="300" height="300"></canvas>
+<div:t class='tab' repeat='type, list in sortParts(cabinet.getParts())'>
+  <div:t class='tab' repeat='info in list' $t-id='documents/construction/part'>
+  </div:t>
+</div:t>

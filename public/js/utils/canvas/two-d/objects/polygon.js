@@ -151,6 +151,20 @@ class Polygon2d {
       return list;
     }
 
+    this.combine = () => {
+      for (let index1 = 0; index1 < lines.length; index1++) {
+        const index2 = (index1+1) % lines.length;
+        const line1 = lines[index1];
+        const line2 = lines[index2];
+        const combined = line1.combine(line2);
+        if (combined) {
+          lines[index1] = combined;
+          lines.splice(index2, 1);
+          index1--;
+        }
+      }
+    }
+
     this.radians = (rads) => {
       if (this.faces().length === 0) return 0;
       const currRads = new Line2d(this.center(), this.faces()[0].midpoint()).radians();
@@ -194,7 +208,8 @@ class Polygon2d {
       if (lines.length === 0) return {};
       map = {};
       let lastEnd;
-      if (!lines[0].startVertex().equals(lines[lines.length - 1].endVertex())) throw new Error('Broken Polygon');
+      if (!lines[0].startVertex().equals(lines[lines.length - 1].endVertex()))
+        throw new Error('Broken Polygon');
       for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];
         if (lastEnd && !line.startVertex().equals(lastEnd)) throw new Error('Broken Polygon');
@@ -546,23 +561,19 @@ Polygon2d.passesThrough = (line, lines, inclusive) => {
 
 Polygon2d.isWithin = (vertex, lines, exclusive, intersectionsCheck) => {
   vertex = new Vertex2d(vertex);
-  // let shortLines = lines.filter(l => l.length() < 1);
-  // if (shortLines.length > 0) {
-  //   const min = Math.min(...shortLines.map(l => l.length()));
-  //   const multiplier = 1/min;
-  //   for (let index = 0; index < lines.length; index++) {
-  //     lines[index] = lines[index].clone();
-  //     lines[index].length(multiplier * lines[index].length());
-  //   }
-  // }
 
   let escapeLine;
   let onLine = Line2d.vertices(lines).filter(v => vertex.equals(v)).length > 0;
   if (onLine) return !exclusive;
   let count = 0;
   do {
+    if (count % 4 === 0) {
+      lines = lines.map(l => l.scale(10, true));
+      vertex = vertex.scale(10, true);
+    }
     escapeLine = Line2d.startAndTheta(vertex, Math.random()*3.14*2, 10000000);
-    if (count > 10) throw new Error('Verticies are to dense to determine within and too sparce to be considered on the parimeter');
+    if (count > 24)
+      throw new Error('My guess is vertices are equal');
     count++;
   } while (Line2d.vertices(lines).filter(v => escapeLine.distance(v) < .1).length > 0);
   const intersections = [];
@@ -586,137 +597,6 @@ Polygon2d.isWithin = (vertex, lines, exclusive, intersectionsCheck) => {
   return isWithin;
 }
 
-
-// function parimeterDataObj(lines) {
-//   const center = Vertex2d.center(Line2d.vertices(lines));
-//   const isolate = Line2d.isolateFurthestLine(center, lines);
-//   return {
-//     lineMap: Line2d.toleranceMap(tol, true, lines),
-//     splitMap: Vertex2d.toleranceMap(),
-//     parimeter: [isolate.line]
-//   }
-// }
-//
-// function parimeterBroken(pdObj) {
-//   pdObj.parimeter.slice(1).forEach((l) => {
-//     if (pdObj.splitMap.matches(l.startVertex()).length === 0)
-//       throw new Error('ParimeterBroken!!??: this should not happen');
-//   });
-// }
-//
-const tol = .1;
-// Polygon2d.toParimeter = (lines, pdObj) => {
-//   if (lines.length < 2) throw new Error('Not enough lines to create a parimeter');
-//   pdObj ||= parimeterDataObj(lines);
-//   parimeterBroken(pdObj);
-//   if (pdObj.parimeter.length > lines.length) throw new Error('Parimeter should not be longer than the number of input lines');
-//   const sv = pdObj.parimeter[0].startVertex();
-//   const ev = pdObj.parimeter[pdObj.parimeter.length - 1].endVertex();
-//   const alreadyVisitedStart = pdObj.splitMap.matches(sv).length !== 0;
-//   const alreadyVisitedEnd = pdObj.splitMap.matches(ev).length !== 0;
-//   if (alreadyVisitedEnd || alreadyVisitedStart) return null;
-//   const madeItAround = pdObj.parimeter.length > 1 && sv.equals(ev);
-//   if (madeItAround) return Polygon2d.fromLines(pdObj.parimeter);
-//
-//   const startLine = pdObj.parimeter[0];
-//   const partialParimeters = []
-//   const lastLine = pdObj.parimeter[pdObj.parimeter.length - 1];
-//   let matches = pdObj.lineMap.matches(lastLine.negitive());
-//   if (matches.length < 2) {
-//     if (pdObj.parimeter.length === 1) {
-//       lines.remove(lastLine);
-//       return Polygon2d.toParimeter(lines);
-//     } else return null;
-//   }
-//     // throw new Error('A parimeter must exist between lines for function to work');
-//   for (let index = 0; index < matches.length; index++) {
-//     if (pdObj.splitMap.matches(matches[index].endVertex()).length === 0) {
-//       const newParim = Array.from(pdObj.parimeter).concat(matches[index]);
-//       const newSplitMap = pdObj.splitMap.clone();
-//       newSplitMap.add(matches[index].startVertex());
-//       partialParimeters.push({parimeter: newParim, splitMap: newSplitMap, lineMap: pdObj.lineMap});
-//     }
-//   }
-//
-//   let biggest = null;
-//   for (let index = 0; index < partialParimeters.length; index ++) {
-//     const recObj = partialParimeters[index];
-//     const searchResult = Polygon2d.toParimeter(lines, recObj);
-//     if (biggest === null || (searchResult !== null && biggest.area() < searchResult.area()))
-//       biggest = searchResult;
-//   }
-//   if (recurseObj === undefined)
-//     biggest = biggest.clockWise() ? biggest : new Polygon2d(biggest.vertices().reverse());
-//   return biggest;
-// }
-
-function parimeterDataObj(lines) {
-  const center = Vertex2d.center(Line2d.vertices(lines));
-  const isolate = Line2d.isolateFurthestLine(center, lines);
-  return {
-    lineMap: Line2d.toleranceMap(tol, true, lines),
-    vertexMap: Vertex2d.toleranceMap(),
-    parimeter: [isolate.line]
-  }
-}
-
-function parimeterFinished(parimeters, index) {
-  const pdObj = parimeters[index];
-  if (pdObj instanceof Polygon2d) return 1;
-  const sv = pdObj.parimeter[0].startVertex();
-  const ev = pdObj.parimeter[pdObj.parimeter.length - 1].endVertex();
-  const alreadyVisitedStart = pdObj.vertexMap.matches(sv).length !== 0;
-  const alreadyVisitedEnd = pdObj.vertexMap.matches(ev).length !== 0;
-  if (alreadyVisitedEnd || alreadyVisitedStart) {
-    parimeters.splice(index, 1);
-    return parimeterFinished(parimeters, index);
-  }
-  const madeItAround = sv.equals(ev);
-  if (madeItAround) {
-    parimeters[index] = Polygon2d.fromLines(pdObj.parimeter);
-    return  1;
-  }
-  return 0;
-}
-
-function splitAtEndVertex(parimeters, index) {
-  const pdObj = parimeters[index];
-  const startLine = pdObj.parimeter[0];
-  const partialParimeters = []
-  const lastLine = pdObj.parimeter[pdObj.parimeter.length - 1];
-  const lastLineNeg = lastLine.negitive();
-  let matches = pdObj.lineMap.matches(lastLineNeg);
-  parimeters.splice(index, 1);
-  for (let index = 0; index < matches.length; index++) {
-    const targetLine = matches[index].acquiescent(lastLine);
-    if (!targetLine.equals(lastLine)) {
-      parimeters.push({
-        lineMap: pdObj.lineMap.clone([targetLine]),
-        vertexMap: pdObj.vertexMap.clone([targetLine.startVertex()]),
-        parimeter: pdObj.parimeter.concat(targetLine)
-      })
-    }
-  }
-  return 0;
-}
-
-Polygon2d.toParimeter = (lines) => {
-  lines = Line2d.sliceAll(lines);
-  const parimeters = [parimeterDataObj(lines)];
-  let index = 0;
-  let found = true;
-  while (index < parimeters.length) {
-    index += parimeterFinished(parimeters, index) || splitAtEndVertex(parimeters, index);
-  }
-  let longest = null;
-  for (let index = 0; index < parimeters.length; index++) {
-    const poly = parimeters[index];
-    const length = poly.lines().sum(l => l.length());
-    if (longest === null || longest.length < length) longest = {poly, longest};
-  }
-
-  return longest.poly;
-}
 
 Polygon2d.fromDemensions = (dems, center) => {
   center = new Vertex2d(center).point();

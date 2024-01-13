@@ -4,7 +4,9 @@
 const EPNTS = require('../generated/EPNTS.js');
 const Test = require('../../../public/js/utils/test/test').Test;
 
-if (EPNTS.getEnv() === 'local') {
+const skipTests = window.location.href.match(/(\?|&)skipTests=true($|&)/) !== null;
+if (!skipTests && EPNTS.getEnv() === 'local') {
+  require('./tests/polygon2d');
   require('../../../public/js/utils/test/tests/vector3D');
   require('../../../public/js/utils/test/tests/polygon3d');
   require('../../../public/js/utils/test/tests/navigator');
@@ -15,7 +17,6 @@ if (EPNTS.getEnv() === 'local') {
   require('./tests/cabinet');
   // TODO: write new tests - not important until we start working on the programmable cost interface.
   // require('../../../public/js/utils/test/tests/decision-tree');
-  require('../../../public/js/utils/test/tests/star-line-map');
   require('./tests/polygon-merge');
   require('./tests/array-math');
   require('./tests/plane');

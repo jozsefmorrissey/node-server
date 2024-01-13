@@ -459,6 +459,7 @@ class $t {
 			function get(name) {
 				if (name === 'scope') return scope;
 				const split = new String(name).split('.');
+        if (split.length === 0) return currObj[split]
 				let currObj = scope;
 				for (let index = 0; currObj != undefined && index < split.length; index += 1) {
 					currObj = currObj[split[index]];
@@ -502,7 +503,7 @@ class $t {
 			return built;
 		}
 
-		function itOverObject(varNames, get) {
+    function itOverObject(varNames, get) {
 			const match = varNames.match($t.objectNameReg);
 			const keyName = match[1];
 			const valueName = match[2];
@@ -511,8 +512,9 @@ class $t {
 			const isArray = Array.isArray(obj);
 			let built = '';
 			for (let index = 0; index < keys.length; index += 1) {
-				const key = keys[index];
+				let key = keys[index];
 				if (!isArray || key.match(/^[0-9]{1,}$/)) {
+					if (isArray) key = Number.parseInt(key);
 					const childScope = {};
 					childScope[keyName] = key;
 					childScope[valueName] = obj[key];

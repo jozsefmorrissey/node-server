@@ -8,10 +8,14 @@ const du = require('../../../../../public/js/utils/dom-utils');
 const PartInfo = require('./part');
 const Panel = require('../../objects/assembly/assemblies/panel.js');
 const CutInfo = require('./cuts/cut.js');
+const Select = require('../../../../../public/js/utils/input/styles/select.js');
+const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js')
 
-
-const template = new $t('documents/construction');
-const partTemplate = new $t('documents/part');
+const orderTemplate = new $t('documents/construction');
+const roomTemplate = new $t('documents/construction/room');
+const groupTemplate = new $t('documents/construction/group');
+const cabinetTemplate = new $t('documents/construction/cabinet');
+const partTemplate = new $t('documents/construction/part');
 
 const typeFilter = (obj) => {
   const cn = obj.constructor.name;
@@ -51,7 +55,7 @@ function buildCanvas(info, rightOleft) {
   draw.text(side, sideLabelCenter, textProps);
   const edges = info.fenceEdges(rightOleft);
   const transLine = new Line2d(Vertex2d.center(Line2d.vertices(edges)), newCenter);
-  edges.forEach(l => l.length() > dems.y / 8 && draw.text(l.label, scaledMidpoint(l, newCenter, coeficient, transLine), textProps));
+  edges.forEach(l => draw.text(l.label, scaledMidpoint(l, newCenter, coeficient, transLine), textProps));
   return canvas;
 }
 
@@ -108,20 +112,146 @@ function viewContainer(view) {
   return id;
 }
 
+function targetSelected(values) {
+  const order = Global.order();
+  let htmlStr;
+  const room = order.rooms[values.room];
+  if (room === undefined) throw new Error('Must select room');
+  const groupObj = values[values.room];
+  const group = room.groups.find(g => g.name() === groupObj.group);
+  if(group === undefined) htmlStr = Room.html(room);
+  else {
+    cabName = groupObj[groupObj.group].cabinet
+    const cabinet = group.objects.find(c => c.userFriendlyId() === cabName);
+    if(cabinet === undefined) htmlStr = Group.html(group);
+    else {
+      htmlStr = Cabinet.html(cabinet);
+    }
+  }
+  const printBody = du.id('print-body');
+  du.show(printBody);
+  const cnt = du.find.down('.document-cnt', printBody);
+  cnt.innerHTML = htmlStr;
+}
+
+function getCabinetSelect(group) {
+  return new Select({
+    label: 'Cabinet',
+    name: 'cabinet',
+    inline: true,
+    class: 'center',
+    optional: true,
+    value: group.objects[0].userIdentifier(),
+    list: [''].concat(group.objects.map(c => c.userIdentifier()))
+  });
+}
+
+function getGroupSelect(room) {
+  return new Select({
+    label: 'Group',
+    name: 'group',
+    inline: true,
+    class: 'center',
+    optional: true,
+    value: room.groups[0].name(),
+    list: [''].concat(room.groups.map(g => g.name()))
+  });
+}
+
+function buildTargetInputSelector(order) {
+  const rooms = Object.values(order.rooms);
+  const roomInput = new Select({
+    label: 'Room',
+    name: 'room',
+    inline: true,
+    class: 'center',
+    value: rooms[0].name(),
+    list: [''].concat(rooms.map(r => r.name()))
+  });
+  const props = {buttonText: 'Select Scope'}
+  const inputTree = new DecisionInputTree('Document', {inputArray: [roomInput]}, props);
+  let roomBranch = inputTree.root();
+  for (let index = 0; index < rooms.length; index++) {
+    const room = rooms[index];
+    const roomName = room.name();
+    const groupSelect = getGroupSelect(room);
+    groupBranch = roomBranch.then(roomName, {inputArray: [groupSelect]});
+    const cond = DecisionInputTree.getCondition('room', roomName);
+    roomBranch.conditions.add(cond, roomName);
+    for (let index = 0; index < room.groups.length; index++) {
+      const group = room.groups[index];
+      const groupName = group.name();
+      const cabinetSelect = getCabinetSelect(group);
+      const cond = DecisionInputTree.getCondition('group', groupName);
+      cabinetBranch = groupBranch.then(groupName, {inputArray: [cabinetSelect]});
+      groupBranch.conditions.add(cond, groupName);
+    }
+  }
+  inputTree.onSubmit(targetSelected);
+  return inputTree;
+}
+
 const openingCanvasId = (cabinet) => `construction-opening-sketch-${cabinet.id()}`;
 
+function orderStructureHash(order) {
+  const rooms = Object.values(order.rooms);
+  const roomKeys = Object.keys(order.rooms)
+  const groups = [];
+  rooms.forEach(r => groups.concatInPlace(r.groups));
+  const groupKeys = groups.map(g => g.name());
+  const cabinets = [];
+  groups.forEach(g => cabinets.concatInPlace(g.objects));
+  const cabinetKeys = cabinets.map(c => c.userFriendlyId());
+  const hashStr = `${roomKeys}${groupKeys}${cabinetKeys}`;
+  const hash = hashStr.hash();
+  return hash;
+}
 
-const html = {
-  order: (order) => {
+const NO_CABINETS_EXIST_HTML = '<h2>Must define atleast one cabinet</h2>';
+const Order = {
+  html: (order) => {
     order ||= Global.order();
-    return template.render({order, sortParts, viewContainer, disp: CutInfo.display});
+    const targetInputSelector = order.worthSaving() ? buildTargetInputSelector(order) : null;
+    const selectorHtml = targetInputSelector ? targetInputSelector.html() : NO_CABINETS_EXIST_HTML;
+    const hash = orderStructureHash(order);
+    return orderTemplate.render({order, sortParts, viewContainer, targetInputSelector,
+                  selectorHtml, hash, disp: CutInfo.display});
   },
-  part: (part) => {
+  shouldRender: (container) => {
+    const hash = Number.parseInt(du.find.down('[hash]', container).getAttribute('hash'));
+    return hash !== orderStructureHash(Global.order());
+  }
+}
+
+const Room ={
+  html: (room) => {
+    order = Global.order();
+    return roomTemplate.render({order, room, sortParts, viewContainer,
+      disp: CutInfo.display});
+  }
+}
+
+const Group = {
+  html: (group) => {
+    order = Global.order();
+    return groupTemplate.render({order, group, sortParts, viewContainer,
+                  disp: CutInfo.display});
+  }
+}
+
+const Cabinet = {
+  html: (cabinet) => {
+    order = Global.order();
+    return cabinetTemplate.render({order, cabinet, sortParts, viewContainer,
+                  disp: CutInfo.display});
+  }
+}
+
+const Part = {
+  html: (part) => {
     const info = partInfo(part);
     return partTemplate.render({info, viewContainer, disp: CutInfo.display});
   }
 };
 
-module.exports = {
-  html
-}
+module.exports = {Order, Room, Group, Cabinet, Part};

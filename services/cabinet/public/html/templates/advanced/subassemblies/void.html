@@ -29,7 +29,7 @@
       <div class='tab chev-dropdown' hidden>
         <label>Joint Set:</label>
         <select class='set-selector'>
-          <option:t repeat='i in 0..6' {{jointSet === i ? 'selected' : ''}}>
+          <option:t repeat='i in 0..6' {{void.jointSetIndex() === i ? 'selected' : ''}}>
             {{i}}
           </option:t>
         </select>

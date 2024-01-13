@@ -4,6 +4,7 @@ const Vertex3D = require('../../../../../services/cabinet/app-src/three-d/object
 const Polygon3D = require('../../../../../services/cabinet/app-src/three-d/objects/polygon.js');
 const Plane = require('../../../../../services/cabinet/app-src/three-d/objects/plane.js');
 const Line3D = require('../../../../../services/cabinet/app-src/three-d/objects/line.js');
+const PolyLine = require('../../../../../services/cabinet/app-src/three-d/objects/poly-line.js');
 const Matrix = require('../../../../../services/cabinet/app-src/three-d/objects/matrix.js');
 const Test = require('../test.js').Test;
 
@@ -162,10 +163,10 @@ lines[3].connections = {
 const centerLine4S = new Line3D([2,1,0],[2,-1,0]);
 const centerLine4E = new Line3D([3,3,0],[3,6,0]);
 lines[4].connections = {
-  connection: new Line3D.Poly(centerLine4S, centerLine4E),
-  segment: new Line3D.Poly(centerLine4S, centerLine4E, false, true, true),
+  connection: new PolyLine(centerLine4S, centerLine4E),
+  segment: new PolyLine(centerLine4S, centerLine4E, false, true, true),
   segmentBoth: new Line3D([2,1,0],[3,3,0]),
-  directional: new Line3D.Poly(centerLine4S, centerLine4E, false, true, false, false, false),
+  directional: new PolyLine(centerLine4S, centerLine4E, false, true, false, false, false),
   directionalBoth: new Line3D([2,1,0],[3,3,0])
 };
 

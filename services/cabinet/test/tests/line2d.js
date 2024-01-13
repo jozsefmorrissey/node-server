@@ -25,7 +25,7 @@ const vertices = [
   new Vertex2d(2,0) // 16
 ];
 
-const parimeter = new Polygon2d(vertices.slice(1));
+const parimeter = new Polygon2d(Line2d.vertices(Line2d.consolidate(...new Polygon2d(vertices.slice(1)).lines())));
 
 const getLine = (index1, index2) => new Line2d(vertices[index1],vertices[index2]);
 const noise = [
@@ -54,24 +54,10 @@ Test.add('Line2d parimeter',(ts) => {
 });
 
 Test.add('Line2d parimeterArea',(ts) => {
-  let p = Polygon2d.toParimeter(parimeter.lines(), undefined, true);
-  ts.assertEquals(p.area(), 13);
-  ts.assertTrue(p.equals(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
-  let keepGoing = false;
-  while (keepGoing) {
-    noise.shuffle();
-    const randNoise = noise.slice(0, Math.floor(Math.random() * noise.length));
-    let lines = parimeter.lines().concat(randNoise);
-    lines.shuffle();
-    p = Polygon2d.toParimeter(lines);
-    try {
-      ts.assertEquals(p.area(), 13);
-      ts.assertTrue(p.equals(parimeter), `Polygons do not equal: \n${p.toString()}, ${parimeter.toString()}`);
-    } catch (e) {
-      Polygon2d.toParimeter(lines, undefined, true);
-      Polygon2d.toParimeter(lines, undefined, true);
-      throw e;
-    }
-  }
+  ts.assertEquals(parimeter.area(), 13);
+  parimeter.rotate(15);
+  ts.assertTolerance(parimeter.area(), 13, .00000000001)
+  parimeter.rotate(111.13);
+  ts.assertTolerance(parimeter.area(), 13, .00000000001)
   ts.success();
 });

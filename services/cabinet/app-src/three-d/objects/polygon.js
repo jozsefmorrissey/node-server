@@ -50,6 +50,23 @@ class Polygon3D {
       return noZeros.concat(oneZero).concat(twoZeros).concat(origin);
     }
 
+    this.web = () => {
+      const vertices = this.vertices();
+      const lineMap = {};
+      for (let i = 0; i < vertices.length; i++) {
+        for (let j = 0; j < vertices.length; j++) {
+          if (i != j) {
+            const line = new Line3D(vertices[i].clone(), vertices[j].clone()).positiveVectorLine();
+            const detStr = line.toDetailString();
+            if (!line.isPoint() && lineMap[detStr] === undefined) {
+              lineMap[detStr] = line;
+            }
+          }
+        }
+      }
+      return Object.values(lineMap);
+    }
+
     this.reverse = () => {
       const verts = this.vertices();
       verts.reverse();
@@ -521,6 +538,7 @@ class Polygon3D {
 
     // TODO: doesnt work very well.
     this.distance = (other) => {
+      if (other instanceof Vertex3D) return this.connect.vertex(other).length();
       let overlaps = false;
       let normal = other.normal();
       let thisView = this.viewFromVector(normal);
@@ -643,15 +661,22 @@ class Polygon3D {
       return new Polygon2D(Vertex3D.to2D(this.vertices(),  x, y));
     }
 
-    this.isWithin2d = (vertex, exclusive, x, y) => {
-      const viewedFromNorm = this.viewFromVector(this.normal());
-      if (x === undefined || y === undefined) {
-        const axises = Polygon3D.mostInformation([viewedFromNorm]);
-        x = axises[0];y = axises[1];
-      }
+    const zVector = new Vector3D(0,0,1);
+    this.coDirectionalRotations = (vector) => Line3D.coDirectionalRotations(this.normal(), vector || zVector);
 
-      const poly2d = viewedFromNorm.to2D(x, y);
-      const vert2d = vertex.viewFromVector(this.normal()).to2D(x, y);
+    this.alignZpolyNorms = () => {
+      const copy = this.copy();
+      copy.rotate(this.coDirectionalRotations());
+      return copy;
+    }
+
+    this.isWithin2d = (vertex, exclusive) => {
+      const zAligned = this.alignZpolyNorms();
+      vertex = vertex.copy();
+      vertex.rotate(this.coDirectionalRotations(), this.center());
+
+      const poly2d = zAligned.to2D('x', 'y');
+      const vert2d = vertex.to2D('x', 'y');
       return poly2d.isWithin(vert2d, exclusive);
     }
 
@@ -681,8 +706,8 @@ class Polygon3D {
       return endpoint.translate(vector, true);
     }
 
-    this.overlaps = (other, returnInfo) => {
-      if (!this.parrelle(other) || !this.withinPlane(other)) return false;
+    this.overlaps = (other, returnInfo, otherIsParrelle) => {
+      if (!(otherIsParrelle || this.parrelle(other)) || !this.withinPlane(other)) return false;
       const verts = this.vertices();
       const otherVerts = other.vertices();
       const info = {within: [], outside: []};
@@ -943,11 +968,27 @@ Polygon3D.toDrawString = (polygons, ...colors) => {
   return str;
 }
 
-// This only really makes since for a four sided polygon that has atleast one set of parrelle sides.
-Polygon3D.normals = (polygon) => {
+const centerSort = (center) => (p1, p2) => p2.distance(center) - p1.distance(center);
+function normalsGivinPolygons(polygons) {
+  const sets = Polygon3D.parrelleSets(polygons);
+  const positionObjs = [];
+  for (let index = 0; index < sets.length; index++) {
+    const set = sets[index];
+    if (set.length > 1) {
+      const center = Vertex3D.center(polygons.map(p => p.center()));
+      set.sort(centerSort(center));
+      const distance = set[0].distance(set[1])
+      positionObjs.push({index, distance});
+    }
+  }
+  positionObjs.sortByAttr('distance');
+  return Polygon3D.normals(sets[positionObjs[0].index][0]);
+}
+
+function normalsGivenAPolygon(polygon) {
   const lines = polygon.lines();
   Line3D.combine(lines);
-  const pSets = Line3D.parrelleSets(lines);
+  const pSets = Line3D.parrelleSets(lines).filter(s => s.length > 1);
   const normals = {
     z: polygon.normal(),
     y: pSets[0][0].vector().unit(),
@@ -956,11 +997,17 @@ Polygon3D.normals = (polygon) => {
   return normals;
 }
 
+// This only really makes since for a four sided polygon that has atleast one set of parrelle sides.
+Polygon3D.normals = (polygonOs) => {
+  if (Array.isArray(polygonOs)) return normalsGivinPolygons(polygonOs);
+  return normalsGivenAPolygon(polygonOs);
+}
+
 const addVector = (normals, axis, attr, centerLine) => {
   const vector = centerLine.vector();
   const scalar = vector.dot(normals[attr]);
   if (scalar != 0) {
-    const axesVector = normals[attr].scale(centerLine.length() * scalar);
+    const axesVector = normals[attr].scale(scalar);
     const axes = Line3D.fromVector(axesVector);
     axis[attr].push(axes);
     return true;
@@ -972,7 +1019,7 @@ Polygon3D.axis = (polygons, normals) => {
   const axis = {x: [], y: [], z: []};
   for (let i = 0; i < polygons.length; i++) {
     let poly = polygons[i];
-    const lines = poly.lines();
+    const lines = poly.web();
     for (let j = 0; j < lines.length; j++) {
       const line = lines[j];
       addVector(normals, axis, 'x', line);

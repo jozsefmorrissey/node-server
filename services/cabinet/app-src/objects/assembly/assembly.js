@@ -5,6 +5,7 @@ const StringMathEvaluator = require('../../../../../public/js/utils/string-math-
 const Position = require('../../position.js');
 const getDefaultSize = require('../../utils.js').getDefaultSize;
 const Vertex3D = require('../../three-d/objects/vertex.js');
+const Line3D = require('../../three-d/objects/line.js');
 const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
 const Joint = require('../joint/joint');
@@ -27,7 +28,7 @@ class Assembly extends KeyValue {
     function pCode(doNotAppendParent) {
       const pc = pcIsFunc ? partCode(doNotAppendParent) : partCode || 'unk';
       if (doNotAppendParent === true) return pc;
-      const parent = this.parentAssembly();
+      const parent = instance.parentAssembly();
       const subPartCode = pc.match(/:.{1,}$/);
       if (parent && subPartCode) return `${parent.partCode()}${pc}`;
       return pc;
@@ -35,7 +36,7 @@ class Assembly extends KeyValue {
 
     function lCode() {
       const pc = pcIsFunc ? partCode() : partCode || 'unk';
-      const parent = this.parentAssembly();
+      const parent = instance.parentAssembly();
       const subPartCode = pc.match(/:.{1,}$/);
       const connector = subPartCode ? '' : '_'
       if (parent) return `${parent.locationCode()}${connector}${pc}`;
@@ -113,7 +114,10 @@ class Assembly extends KeyValue {
     // KeyValue setup
     const funcReg = /length|width|thickness/;
     this.value.addCustomFunction((key, value) => key.match(funcReg) ? this[code](value) : undefined)
-    this.value.evaluators.string = (value) => sme.eval(value, this);
+    this.value.evaluators.string = (value) => {
+      const evaled = sme.eval(value, this);
+      return Number.isNaN(evaled) ? value : evaled;
+    }
     this.value.defaultFunction = (key) => this.propertyConfig(this.constructor.name, key);
 
     this.eval = (eqn) => sme.eval(eqn, this);
@@ -207,12 +211,11 @@ class Assembly extends KeyValue {
       } while (unidentified && unidentified.length > 0);
       return idMap;
     }
-    let userFriendlyIdMap = new FunctionCache(buildUserFriendlyIdMap, this, 'alwaysOn');
-
+    this.userFriendlyIdMap = new FunctionCache(buildUserFriendlyIdMap, this, 'alwaysOn');
     this.userFriendlyId = (id) => {
       id ||= this.id();
-      if (this.parentAssembly() !== undefined) return this.getRoot().userFriendlyId(id);
-      return userFriendlyIdMap()[id];
+      if (this.parentAssembly() !== undefined) return this.getRoot().userFriendlyIdMap()[id];
+      return this.userFriendlyIdMap()[id];
     }
 
     function nearestAssembly(partCode) {
@@ -325,7 +328,6 @@ class Assembly extends KeyValue {
         }
       };
       allJoints.forEach(addJoint);
-      console.log.subtle('built');
       jointList = joints.male.concat(joints.female);
       return joints;
     }, this, 'always-on');
@@ -367,6 +369,7 @@ class Assembly extends KeyValue {
       return parentAssembly;
     }
     this.addSubAssembly = (assembly) => {
+      assembly.parentAssembly(this);
       this.subassemblies[assembly.partCode()] = assembly;
     }
 
@@ -414,6 +417,10 @@ class Assembly extends KeyValue {
       });
     }
 
+    this.isSubPart = (assem) => {
+      assem.locationCode().startsWith(`${this.locationCode()}:`)
+    }
+
     if (Assembly.idCounters[this.objId] === undefined) {
       Assembly.idCounters[this.objId] = 0;
     }
@@ -452,6 +459,37 @@ class Assembly extends KeyValue {
       }
       return buildCenter;
     }
+
+    const clear = (attr) => {
+      if (this[attr] instanceof Function && this[attr].clearCache instanceof Function)
+      this[attr].clearCache();
+      return clear;
+    }
+    this.clearCaches = () => {
+      //TODO: Find better way of reseting all caches
+      clear('getJoints')('allAssemblies')('getAssembly')('hash')('toModel');
+      this.children().forEach(c => c.clearCaches());
+    }
+
+    const normColors = ['red', 'green', 'blue'];
+    const normalStr = (v,i,c) =>
+      Line3D.fromVector(v.scale(10), c).toDrawString(normColors[i]);
+    this.toDrawString = (notRecursive) => {
+      let str = `//  ${this.userFriendlyId()}:${this.locationCode()}\n`;
+      if (this.part() || notRecursive === true) {
+        const model = this.toModel();
+        const c = model.center();
+        const norms = this.position().normals(true).map((v,i) => normalStr(v, i, c));
+        const normStr = `//${norms[0]}\n//${norms[1]}\n//${norms[2]}\n`
+        const modStr = model.toString().trim()
+                        .replace(/(^|\n)/g, `$1${String.nextColor(...normColors)}`);
+        str += `${normStr}${modStr}`;
+      }
+      if (notRecursive !== true)
+        this.children().forEach(c => {try {str += c.toDrawString() + '\n\n'} catch (e) {}});
+      return str;
+    }
+
     this.on.change(() => {
       const joints = this.getJoints();
       jointList = joints.male.concat(joints.female);

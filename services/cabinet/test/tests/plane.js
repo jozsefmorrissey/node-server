@@ -216,17 +216,26 @@ const checkAnswer = (ts, intersections) =>  {
   return checkFunc;
 }
 Test.add('Plane: intersections', (ts) => {
-  let plane = new Plane({x:-10, y:0, z:3}, {x:0, y:10, z:3}, {x:10, y:0, z: 3});
-  let intersections = plane.axisIntercepts();
+  let plane1 = new Plane({x:-10, y:0, z:3}, {x:0, y:10, z:3}, {x:10, y:0, z: 3});
+  let intersections = plane1.axisIntercepts();
   checkAnswer(ts, intersections)('x', NaN)('y', NaN)('z', 3);
 
-  plane = new Plane({x:-10, y:0, z:0}, {x:0, y:10, z:0}, {x:10, y:0, z: 0});
-  intersections = plane.axisIntercepts();
+  let plane2 = new Plane({x:-10, y:0, z:0}, {x:0, y:10, z:0}, {x:10, y:0, z: 0});
+  intersections = plane2.axisIntercepts();
   checkAnswer(ts, intersections)('x', Infinity)('y', Infinity)('z', 0);
 
-  plane = new Plane({x:-10, y:0, z:0}, {x:0, y:86, z:0}, {x:0, y:0, z: 23});
-  intersections = plane.axisIntercepts();
+  let plane3 = new Plane({x:-10, y:0, z:0}, {x:0, y:86, z:0}, {x:0, y:0, z: 23});
+  intersections = plane3.axisIntercepts();
   checkAnswer(ts, intersections)('x', -10)('y', 86)('z', 23);
+
+  let plane4 = new Plane({x:0, y:100, z:23}, {x:0, y:86, z:45}, {x:0, y:86, z: -12});
+  plane4.toDrawString();
+  intersections = plane4.axisIntercepts();
+  checkAnswer(ts, intersections)('x', 0)('y', Infinity)('z', Infinity);
+
+  let plane5 = new Plane({x:6, y:100, z:23}, {x:6, y:86, z:45}, {x:6, y:86, z: -12});
+  intersections = plane5.axisIntercepts();
+  checkAnswer(ts, intersections)('x', 6)('y', NaN)('z', NaN);
 
   ts.success();
 });

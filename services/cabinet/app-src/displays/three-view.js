@@ -170,7 +170,7 @@ class ThreeView extends Lookup {
 
     function updatePartInfo(elem) {
       const infoCnt = du.find.closest('.part-info-cnt', elem);
-      const html = construction.html.part(targetPart);
+      const html = construction.Part.html(targetPart);
       infoCnt.innerHTML = html;
     }
 

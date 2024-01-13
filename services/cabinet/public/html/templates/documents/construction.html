@@ -1,18 +1,8 @@
-<div id='print-body'>
+<div class='target-input-selector' hash='{{hash}}'>
+  {{selectorHtml}}
+</div>
+<div id='print-body' hidden>
   <button class='print'>Print</button>
-  <div:t repeat='id, room in order.rooms' class='page'>
-    <h3>Room: {{room.name()}}</h3>
-    <div:t class='tab' repeat='group in room.groups'>
-      <h3>Group: {{group.name()}}</h3>
-      <div:t class='tab page' repeat='cabinet in group.objects'>
-        <h3>Cabinet: {{cabinet.name()}}</h3>
-        <canvas class="mirror-x opening-sketch" cabinet-id='{{cabinet.id()}}' width="300" height="300"></canvas>
-        <div:t class='tab' repeat='type, list in sortParts(cabinet.getParts())'>
-          <div:t class='tab' repeat='info in list' $t-id='documents/part'>
-          </div:t>
-        </div:t>
-      </div:t>
-    </div:t>
-  </div:t>
+  <div class='document-cnt'></div>
   <button class='print'>Print</button>
 </div>

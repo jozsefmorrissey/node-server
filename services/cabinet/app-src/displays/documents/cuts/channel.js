@@ -7,6 +7,7 @@ class ChannelInfo extends CutInfo {
   constructor(set, jointInfo, maleModel) {
     super(set, jointInfo, maleModel);
     this.primarySide = jointInfo.primarySide;
+    this.center = () => this.intersectionModel().center();
 
     this.axis = (rightOleft) => {
       const normals = this.normals();

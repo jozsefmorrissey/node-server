@@ -1,0 +1,6 @@
+table.no-border-cells {border-collapse: collapse;border: none;}
+table.no-border-cells > tbody {border: none;}
+table.no-border-cells > tr {border: none;}
+table.no-border-cells > th, td {border: 1px solid black;}
+table.no-border-cells > th, td > .no-border {border: 1px solid black;}
+table.no-border-cells > td {text-align: center; vertical-align: middle;}

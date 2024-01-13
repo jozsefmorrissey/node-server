@@ -53,8 +53,10 @@ class Vertex3D {
       this.z = vertex.z;
     }
 
-    this.finite = () => {
-      return Number.isFinite(this.x + this.y + this.z);
+    this.finite = (limit) => {
+      limit ||= Vertex3D.infinity;
+      const sum = this.x + this.y + this.z;
+      return Number.isFinite(sum) && sum < limit && sum > -limit;
     }
 
     this.usless = () => Number.NaNfinity(this.x, this.y, this.z);
@@ -111,20 +113,24 @@ class Vertex3D {
 
     this.copy = () => new Vertex3D(this.x, this.y, this.z);
     this.clone = this.copy;
-    this.equals = (otherOx, y, z, tolerance) => {
+    this.equals = (otherOx, toleranceOy, z, tolerance) => {
       const tol = tolerance ? new Tolerance({x: tolerance, y: tolerance, z: tolerance}) :
                               Vertex3D.tolerance;
-      if (otherOx instanceof Object)
-        return tol.within(this, otherOx);
-      return tol.within(this, new Vertex3D(otherOx, y, z));
+      if (otherOx instanceof Object) return this.equals(otherOx.x, otherOx.y, otherOx.z, toleranceOy);
+      return tol.within(this, new Vertex3D(otherOx, toleranceOy, z));
     }
-    this.toString = () => `(${approx10(this.x)},${approx10(this.y)},${approx10(this.z)})`;
+    this.toString = (accuracy) => {
+      const approx = accuracy ? approximate.new(1/accuracy) : approx10;
+      return `(${approx(this.x)},${approx(this.y)},${approx(this.z)})`;
+    }
     this.toAccurateString = () => `(${approximate(this.x)},${approximate(this.y)},${approximate(this.z)})`;
   }
 }
 
 const tol = .001;
 Vertex3D.tolerance = new Tolerance({x: tol, y: tol, z: tol});
+Vertex3D.infinity = 1000000000;
+
 
 // returned direction is of list2 relitive to list 1
 // dirArr = [forward, backward, up, down, left, right];
@@ -176,21 +182,12 @@ Vertex3D.uniqueFilter = () => {
 
 Vertex3D.center = (...vertices) => {
   if (Array.isArray(vertices[0])) vertices = vertices[0];
-  let x = 0;
-  let y = 0;
-  let z = 0;
-  let count = 0;
-  vertices.forEach((vertex) => {
-    if (Number.isFinite(vertex.x + vertex.y + vertex.z)) {
-      count++;
-      x += vertex.x;
-      y += vertex.y;
-      z += vertex.z;
-    } else {
-      throw new Error("Vertex contains a non-number");
-    }
-  });
-  return new Vertex3D({x: x/count, y: y/count, z: z/count});
+  return new Vertex3D(Math.mean(vertices, ['x', 'y', 'z']));
+}
+
+Vertex3D.midrange = (...vertices) => {
+  if (Array.isArray(vertices[0])) vertices = vertices[0];
+  return new Vertex3D(Math.midrange(vertices, ['x', 'y', 'z']));
 }
 
 Vertex3D.to2D = (vertices, x, y) => {

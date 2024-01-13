@@ -7,37 +7,39 @@ const Dado = require('../../joint/joints/dado.js');
 const PanelModel = require('./panel.js').Model;
 const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
 const Line3D = require('../../../three-d/objects/line.js');
+const Polygon3D = require('../../../three-d/objects/polygon.js');
 const Assembly = require('../assembly.js');
 
 FunctionCache.on('always-on', 200);
 
 class Void extends Cutter {
-  constructor(partCode, partName, config) {
+  constructor(rootAssembly, partName, config) {
+    let partCode = 'void';
+    let index;
+    try {
+      partCode = rootAssembly.subassemblies.undefinedKey('void', '-', true);
+      index = Number.parseInt(partCode.match(/void-([0-9]{1,})/)[1])
+    } catch (e) {};
     super(partCode, partName, config);
     const instance = this;
-    Object.getSet(this, {includedSides: [true, true], jointSet: 1});
+    Object.getSet(this, {includedSides: [true, true], jointSetIndex: 1});
     this.included = (index) => this.includedSides()[index];
 
-    const filter = exclude => s => !(s instanceof Cutter) && exclude.equalIndexOf(s) === -1;
-    const updateJoints = (joint) => {
-      const cabinet = this.getAssembly('c');
-      if (cabinet) {
-        instance.joints = [];
-        const voids = Object.keys(cabinet.subassemblies).map(s => s.match(/void.*/) && cabinet.subassemblies[s]).filter(s => s);
-        const voidIndex = voids.equalIndexOf(instance);
-        // const excludeParts = [];
-        // if (!(part instanceof Cutter)) voids.slice(0, voidIndex + 1).forEach(v => excludeParts.concatInPlace(v.getParts()));
-        const subs = Object.values(cabinet.getParts());//.filter(filter(excludeParts));
-        for (let index = 0; index < subs.length; index++) {
-          const sub = subs[index];
-          instance.addJoints(new Butt(instance.partCode(), sub.locationCode()));
-        }
+    this.voidRelation = (accending) => {
+      if (index) {
+        const regFunc = accending ? RegExp.greaterThan : RegExp.lessThan;
+        const rankVoidReg = new RegExp(`^void-${regFunc(index, true)}:p[0-5]`);
+        instance.addJoints(new Butt(instance.locationCode(), rankVoidReg, '', 'rankVoids'));
       }
     }
 
+    this.voidRelation(true);
+    const nonVoidReg = new RegExp(/^((?!void).)*$/);
+    instance.addJoints(new Butt(instance.locationCode(), nonVoidReg));
+
     const parentHash = this.hash;
     this.hash = () => {
-      const hash = this.includedSides().toString().hash() + this.jointSet();
+      const hash = this.includedSides().toString().hash() + setIndex;
       return hash + parentHash();
     }
 
@@ -48,73 +50,89 @@ class Void extends Cutter {
     const getJoint = (mi, oi) => {
       const condition = () => instance.includedSides()[mi] === true;
       const joint = new Dado(panels[mi].locationCode(), panels[Math.mod(oi, 6)].locationCode(), condition);
-      joint.parentAssemblyId(panels[mi].id());
+      joint.parentAssemblyId(instance.id());
       return joint;
     }
-    const getJoints = (setIndex, mainIndex, maleIndex, femaleIndex) => {
-      if (panels.length !== 6) return;
-      jointSets[setIndex] =  [getJoint(mainIndex, mainIndex+2), getJoint(mainIndex, mainIndex+3),
-              getJoint(mainIndex, mainIndex+4), getJoint(mainIndex, mainIndex+5),
-              getJoint(mainIndex+1, mainIndex+2), getJoint(mainIndex+1, mainIndex+3),
-              getJoint(mainIndex+1, mainIndex+4), getJoint(mainIndex+1, mainIndex+5),
-              getJoint(maleIndex, femaleIndex), getJoint(maleIndex, femaleIndex + 1),
-              getJoint(maleIndex + 1, femaleIndex), getJoint(maleIndex + 1, femaleIndex + 1)];
-      return jointSets[setIndex];
+
+    const capRegExDado = (capIndex) => ({
+      male: new RegExp(`${instance.locationCode()}:p(${capIndex}|${capIndex + 1})`),
+      female: new RegExp(`${instance.locationCode()}:p[^${capIndex}^${capIndex + 1}]`),
+    });
+    const dadoSideRegExp = (dadoedIndex, dadeedIndex) => ({
+      female: new RegExp(`${instance.locationCode()}:p(${dadoedIndex}|${dadoedIndex + 1})`),
+      male: new RegExp(`${instance.locationCode()}:p(${dadeedIndex}|${dadeedIndex + 1})`),
+    });
+
+
+    let setIndex = 0;
+    const jointSets = [];
+    this.jointSetIndex = (index) => {
+      if (index === undefined || index > 5 || index < 0) return setIndex;
+      setIndex = index;
+      if (jointSets[setIndex] === undefined) {
+        const capIndex = Math.floor(setIndex / 2) * 2;
+        let dadoedIndex = (capIndex + 2) % 6;
+        let dadeedIndex = (capIndex + 4) % 6;
+        if(setIndex % 2 === 1) {
+          const temp = dadoedIndex; dadoedIndex = dadeedIndex; dadeedIndex = temp;
+        }
+        const capJointReg = capRegExDado(capIndex);
+        const dadoSideReg = dadoSideRegExp(dadoedIndex, dadeedIndex);
+
+        jointSets[setIndex] =  [new Dado(capJointReg.male, capJointReg.female, '', 'capJoint'),
+                                new Dado(dadoSideReg.male, dadoSideReg.female, '', 'dadoJoint')];
+        jointSets[setIndex].forEach(j => j.parentAssemblyId(instance.id()));
+      }
+
+      instance.addJoints(jointSets[setIndex][0]);
+      instance.addJoints(jointSets[setIndex][1]);
+      return setIndex;
     }
     const pt = panelThickness;
-    const jointSets = [];
     const offsetSets = [
       {
-        first: {x: pt*2, y: pt*2},
-        second: {x: 2*pt, y: pt},
-        third: {x: pt, y: pt},
-        joints: () => jointSets[1] || getJoints(1, 4, 2, 0)
-      },
-      {
-        first: {x: pt*2, y: pt*2},
-        third: {x: 2*pt, y: pt},
-        second: {x: pt, y: pt},
-        joints: () => jointSets[0] || getJoints(0, 2, 4, 0)
+        first: {x: pt, y: pt},
+        second: {x: pt*2, y: pt*2},
+        third: {x: pt, y: pt*2},
       },
       {
         first: {x: pt, y: pt},
-        second: {x: pt*2, y: pt*2},
-        third: {x: pt, y: 2*pt},
-        joints: () => jointSets[3] || getJoints(3, 0, 4, 2)
+        third: {x: pt*2, y: pt*2},
+        second: {x: pt, y: pt*2},
       },
+
+
       {
-        first: {x: 2*pt, y: pt},
-        second: {x: pt*2, y: pt*2},
-        third: {x: pt, y: pt},
-        joints: () => jointSets[4] || getJoints(4, 4, 0, 2)
-      },
-      {
-        first: {x: pt, y: 2*pt},
+        first: {x: pt, y: pt*2},
         second: {x: pt, y: pt},
         third: {x: pt*2, y: pt*2},
-        joints: () => jointSets[5] || getJoints(5, 2, 0, 4)
       },
       {
-        first: {x: pt, y: pt},
-        second: {x: pt, y: 2*pt},
-        third: {x: pt*2, y: pt*2},
-        joints: () => jointSets[6] || getJoints(6, 0, 2, 4)
+        first: {x: pt*2, y: pt*2},
+        second: {x: pt, y: pt},
+        third: {x: pt*2, y: pt},
+      },
+
+
+      {
+        first: {x: pt*2, y: pt*2},
+        second: {x: pt*2, y: pt},
+        third: {x: pt, y: pt},
+      },
+      {
+        first: {x: pt*2, y: pt},
+        second: {x: pt*2, y: pt*2},
+        third: {x: pt, y: pt},
       },
     ]
 
-    const updateAllJoints = new FunctionCache(() => {
-      const includeCond = (index) => () => instance.includedSides()[index];
-      updateJoints();
-      return true;
-    }, this, 'always-on');
-
     const toBiPoly = (index) => new FunctionCache(() => {
-      const startIndex = this.jointSet();
+      const startIndex = setIndex;
       const biPoly = this.toBiPolygon();
       let polys = biPoly.toPolygons();
       polys.swap(3,4);
       const spliceIndex = Math.mod(startIndex + index, 6);
-      const offsetSet = offsetSets[this.jointSet()];
+      const offsetSet = offsetSets[setIndex];
       const offset = index < 2 ? offsetSet.first : (index < 4 ? offsetSet.second : offsetSet.third);
       let pt = panelThickness;
       const center = biPoly.center();
@@ -125,22 +143,14 @@ class Void extends Cutter {
       return BiPolygon.fromPolygon(polys[index], pt, 0, offset);
     }, this, 'alwaysOn');
 
-    let called = [];
     const toModel = (index) => new FunctionCache((incommingJoints) => {
-      updateAllJoints();
       const biPoly = biPolyFuncs[index]();
-
-      const offsetSet = offsetSets[this.jointSet()];
-      const joints = offsetSet.joints().filter(j => j.femaleJointSelector() === panels[index].locationCode());
-      if (!called[index]) {
-        called[index] = true;
-        joints.concatInPlace(panels[index].getJoints().female);
-      }
-      const model = biPoly.toModel();
-
-      called[index] = false;
-
-      return Dado.apply(model, joints);;
+      const joints = incommingJoints || panels[index].getJoints().female;
+      const model = Dado.apply(biPoly.toModel(), joints);
+      let color = Math.floor(index / 2) === 0 ? 'blue' : (Math.floor(index/2) === 1 ? 'green' : 'red');
+      panels[index].value('color', color);
+      panels[index].value('color');
+      return model;
     }, this, 'always-on');
 
     const toModelFuncs = [];
@@ -152,6 +162,10 @@ class Void extends Cutter {
       const toBP = biPolyFuncs[index] ||= toBiPoly(index);
       panels[index] = new PanelModel(partCode, partName, toMod, toBP);
       this.addSubAssembly(panels[index]);
+      panels[index].normals = (array) => {
+        const normObj = biPolyFuncs[index]().normals();
+        return array ? [normObj.x, normObj.y, normObj.z] : normObj;
+      }
       panels[index].included = () => instance.includedSides()[index] === true;
     }
 
@@ -162,13 +176,12 @@ class Void extends Cutter {
     buildPanel(4);
     buildPanel(5);
 
-    this.updateJoints = updateAllJoints;
-
     function abyssModel() {
       const biPoly = instance.toBiPolygon();
       const polys = biPoly.toPolygons();
       polys.swap(3,4);
       const center = biPoly.center();
+      const joints = controlableAbyss.getJoints();
       const polyVects = polys.map(p => new Line3D(center.copy(), p.center()).vector().unit());
       for (let index = 0; index < polys.length; index++) {
         const poly = polys[index].copy();
@@ -187,10 +200,9 @@ class Void extends Cutter {
 
     const controlableAbyss = new Cutter.Model(`:abs`, `${this.partName()}-abyss`, abyssToModel);
     this.addSubAssembly(controlableAbyss);
-    this.on.parentSet(updateAllJoints);
 
     if (config) {
-      this.jointSet(config.jointSet);
+      this.jointSetIndex(config.jointSetIndex);
       this.includedSides(config.includedSides);
     }
 
@@ -204,15 +216,16 @@ class Void extends Cutter {
       json.subassemblies = {}
       return json;
     }
+
+    instance.getJoints.clearCache();
   }
 }
 
 Void.fromJson = (json) => {
   const voId = Assembly.fromJson(json);
-  voId.jointSet(json.jointSet);
+  voId.jointSetIndex(json.jointSetIndex);
   voId.includedSides(json.includedSides);
   json.constructed(() => {
-    voId.updateJoints.clearCache()()
     voId.unCache();
   }, 2000);
   return voId;
@@ -221,7 +234,7 @@ Void.fromJson = (json) => {
 Void.referenceConfig = (type, refPartCode, width, height) => {
   let o = {c:{},d:{},r:{},}; //offset
   let includedSides = [false, false, true, true, true, true];;
-  let jointSet = 0;
+  let jointSetIndex = 0;
   const oStr = (attr1,attr2) => o[attr1][attr2] ? o[attr1][attr2] : '';
   switch (type) {
     case 'vertical':
@@ -232,7 +245,7 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
           o.c.z = `+ d.x/2 + ${refPartCode}.d.z/2`;
           o.d.z = `${refPartCode}.d.y - 3*2.54/2`;
           includedSides = [false, false, true, true, false, true];
-          jointSet = 1;
+          jointSetIndex = 1;
           break
         case 'c_L':
           o.r.y = ' + 90';
@@ -240,9 +253,9 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
           o.d.z = `${refPartCode}.d.y - 3*2.54/4`;
           o.c.z = ' + 3*2.54/16';
           o.c.y = ``;
-          o.c.x = ` + d.x/2 + 3*2.54/4`;
+          o.c.x = ` + d.x/2 + 3*2.54/8`;
           includedSides = [false, false, true, true, false, true];
-          jointSet = 0;
+          jointSetIndex = 1;
           break;
         case 'c_R':
           o.r.y = ' - 90';
@@ -250,9 +263,9 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
           o.d.z = `${refPartCode}.d.y - 3*2.54/4`;
           o.c.z = ' + 3*2.54/16';
           o.c.y = ``;
-          o.c.x = ` - d.x/2 - 3*2.54/4`;
+          o.c.x = ` - d.x/2 - 3*2.54/8`;
           includedSides = [false, false, true, true, false, true];
-          jointSet = 0;
+          jointSetIndex = 1;
       }
       break;
     default:
@@ -263,7 +276,7 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
           o.c.z = ` + d.x/2 + 3*2.54/8`;
           o.d.z = `${refPartCode}.d.x - 3*2.54/4`;
           includedSides = [false, false, true, false, false, true];
-          jointSet = 2;
+          jointSetIndex = 0;
           break;
         case 'c_L':
           o.r.y = ' + 90';
@@ -272,7 +285,7 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
           o.c.y = ` - ${refPartCode}.d.y/2 + d.y/2 + 3*2.54/8`;
           o.c.x = ` + d.x/2 + 3*2.54/4`;
           includedSides = [false, false, true, false, false, true];
-          jointSet = 0;
+          jointSetIndex = 0;
           break;
         case 'c_R':
           o.r.y = ' - 90';
@@ -281,7 +294,7 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
           o.c.y = ` - ${refPartCode}.d.y/2 + d.y/2 + 3*2.54/8`;
           o.c.x = ` - d.x/2 - 3*2.54/4`;
           includedSides = [false, false, true, false, false, true];
-          jointSet = 0;
+          jointSetIndex = 0;
         }
 
 
@@ -303,7 +316,7 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
       y: `${refPartCode}.r.y${oStr('r', 'y')}`,
       z: `${refPartCode}.r.z${oStr('r', 'z')}`
     },
-    includedSides, jointSet
+    includedSides, jointSetIndex
   };
 };
 

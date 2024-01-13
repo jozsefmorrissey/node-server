@@ -1,10 +1,14 @@
 <div class='file-tab-cnt {{type()}}{{isOpen() ? ' open' : ''}}' id='{{id()}}'>
-  <ul>
-    <li:t repeat='title in list()' {{title === selected() ? 'class="selected"' : ''}}>
+  <ul class='list'>
+    <li:t repeat='title in list()' {{title === selected() ? 'class="selected"' : ''}}
+        title='{{title}}'>
       {{title}}
     </li:t>
   </ul>
-  <div class='content'>
-    {{selectedHtml()}}
+  <div class='content-cnt'>
+    <div:t repeat='title in list()' {{selected.is(title) ? 'class="selected"' : 'empty-contents'}}
+          title='{{title}}' {{selected.is(title) ? '' : 'hidden'}}>
+          {{selected.is(title) ? html(title) : ''}}
+    </div:t>
   </div>
 </div>

@@ -1,675 +1,4 @@
 {
-	"base": {
-	  "_TYPE": "CabinetTemplate",
-
-	  "ID_ATTRIBUTE": "id",
-	  "type": "base",
-	  "values": [
-	    {
-	      "key": "innerWidth",
-	      "eqn": "c.w - pwt34 * 2",
-	      "id": "itqsm1j"
-	    },
-	    {
-	      "key": "innerWidthCenter",
-	      "eqn": "innerWidth + pwt34",
-	      "id": "pwaarfr"
-	    }
-	  ],
-	  "subassemblies": [
-	    {
-	      "name": "Panel.Right",
-	      "type": "Divider",
-	      "code": "R",
-	      "center": [
-	        "c.w - (R.t / 2)",
-	        "R.l / 2",
-	        "(w / -2)"
-	      ],
-	      "demensions": [
-	        "c.t",
-	        "c.l",
-	        "pwt34"
-	      ],
-	      "rotation": [
-	        0,
-	        90,
-	        0
-	      ],
-	      "id": "mcf6dft"
-	    },
-	    {
-	      "name": "Panel.Left",
-	      "type": "Divider",
-	      "code": "L",
-	      "center": [
-	        "(L.t / 2)",
-	        "L.l / 2",
-	        " (w/-2)"
-	      ],
-	      "demensions": [
-	        "c.t",
-	        "c.l",
-	        "pwt34"
-	      ],
-	      "rotation": [
-	        0,
-	        90,
-	        0
-	      ],
-	      "id": "r1xpfd9"
-	    },
-	    {
-	      "name": "Back",
-	      "type": "Panel",
-	      "code": "BACK",
-	      "center": [
-	        " w / 2 + R.t",
-	        "(BACK.h / 2) + tkh",
-	        " -1*(c.t - (t / 2))"
-	      ],
-	      "demensions": [
-	        "innerWidth",
-	        "c.l - tkh",
-	        "pwt34"
-	      ],
-	      "rotation": [
-	        0,
-	        0,
-	        "0"
-	      ],
-	      "id": "0hvikg4"
-	    },
-	    {
-	      "name": "Bottom",
-	      "type": "Divider",
-	      "code": "B",
-	      "center": [
-	        "c.w / 2",
-	        "tkh + (t/2)",
-	        "w / -2"
-	      ],
-	      "demensions": [
-	        "c.t - BACK.t",
-	        "innerWidth",
-	        "pwt34"
-	      ],
-	      "rotation": [
-	        90,
-	        90,
-	        0
-	      ],
-	      "id": "vho2lw6"
-	    },
-	    {
-	      "name": "Top",
-	      "type": "Divider",
-	      "code": "T",
-	      "center": [
-	        "c.w / 2",
-	        "c.h - pwt34/2",
-	        "(w / -2)"
-	      ],
-	      "demensions": [
-	        "(c.t - BACK.t)",
-	        "innerWidth",
-	        "pwt34"
-	      ],
-	      "rotation": [
-	        90,
-	        90,
-	        0
-	      ],
-
-	      "dividerType": "frontAndBack"
-	    }
-	  ],
-	  "joints": [
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": 0.9525,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "T",
-	      "femaleJointSelector": "R",
-	      "demensionAxis": "y",
-	      "centerAxis": "-x"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": 0.9525,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "T",
-	      "femaleJointSelector": "L",
-	      "demensionAxis": "y",
-	      "centerAxis": "+x"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "0.9525",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "BACK",
-	      "femaleJointSelector": "R",
-	      "demensionAxis": "x",
-	      "centerAxis": "+x",
-				"fullLength": true
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "0.9525",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "BACK",
-	      "femaleJointSelector": "L",
-	      "demensionAxis": "x",
-	      "centerAxis": "-x",
-				"fullLength": true
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": 0.9525,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "B",
-	      "femaleJointSelector": "R",
-	      "demensionAxis": "y",
-	      "centerAxis": "-x"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": 0.9525,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "B",
-	      "femaleJointSelector": "L",
-	      "demensionAxis": "y",
-	      "centerAxis": "+x"
-	    }
-	  ],
-	  "dividerJoint": {
-	    "_TYPE": "Dado",
-	    "maleOffset": 0.635,
-	    "femaleOffset": 0,
-	    "demensionAxis": "",
-	    "centerAxis": ""
-	  },
-	  "shape": "square",
-	  "width": 45.72,
-	  "height": "baseh",
-	  "thickness": "based",
-	  "fromFloor": 0,
-	  "openings": [
-	    {
-	      "top": "T",
-	      "bottom": "B",
-	      "left": "L",
-	      "right": "R",
-	      "back": "BACK",
-	      "id": "dle5hwy"
-	    }
-	  ],
-	  "autoToeKick": true,
-	  "_FORCE_FROM_JSON": true
-	},
-	"diagonal-corner-wall": {
-	  "_TYPE": "CabinetTemplate",
-
-	  "ID_ATTRIBUTE": "id",
-	  "type": "diagonal-corner-wall",
-	  "values": [
-	    {
-	      "key": "bo",
-	      "eqn": "4*2.54",
-	      "id": "8cwyvgp"
-	    },
-	    {
-	      "key": "fwr",
-	      "eqn": "c.t - rw",
-	      "id": "vzcc1yz"
-	    },
-	    {
-	      "key": "fwl",
-	      "eqn": "c.w - lw",
-	      "id": "qufd443"
-	    },
-	    {
-	      "key": "lw",
-	      "eqn": "30.48",
-	      "id": "6dvwx43"
-	    },
-	    {
-	      "key": "rw",
-	      "eqn": "30.48",
-	      "id": "c9cwwen"
-	    },
-	    {
-	      "key": "pbw",
-	      "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
-	      "id": "2lwcxpp"
-	    },
-	    {
-	      "key": "backhype",
-	      "eqn": "Math.sqrt(bo*bo/2)",
-	    }
-	  ],
-	  "subassemblies": [
-	    {
-	      "type": "Panel",
-	      "center": [
-	        "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
-	        "c.h/2",
-	        "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
-	      ],
-	      "demensions": [
-	        "pbw",
-	        "c.h",
-	        "pwt14"
-	      ],
-	      "rotation": [
-	        0,
-	        "135",
-	        0
-	      ],
-	      "name": "Panel.Back",
-	      "code": "BACK",
-	      "id": "apm1547"
-	    },
-	    {
-	      "type": "Cutter",
-	      "center": [
-	        "c.w",
-	        "c.h/2",
-	        "-c.t"
-	      ],
-	      "demensions": [
-	        "bo*2",
-	        "c.h",
-	        "backhype*2 - BACK.t/2"
-	      ],
-	      "rotation": [
-	        0,
-	        "135",
-	        0
-	      ],
-	      "name": "Cutter.Back",
-	      "code": "cb",
-	      "id": "orxxake"
-	    },
-	    {
-	      "type": "Divider",
-	      "center": [
-	        "c.w - R.w/2",
-	        "c.h / 2",
-	        "R.t/-2"
-	      ],
-	      "demensions": [
-	        "rw + 2",
-	        "c.h",
-	        "pwt34"
-	      ],
-	      "rotation": [
-	        0,
-	        "0",
-	        0
-	      ],
-	      "name": "Panel.Right",
-	      "code": "R",
-	      "id": "bmr0kns"
-	    },
-	    {
-	      "type": "Divider",
-	      "center": [
-	        "L.t/2",
-	        "c.h/2",
-	        "-c.t + L.w/2"
-	      ],
-	      "demensions": [
-	        "lw + 2",
-	        "c.h",
-	        "pwt34"
-	      ],
-	      "rotation": [
-	        0,
-	        "90",
-	        0
-	      ],
-	      "name": "Panel.Left",
-	      "code": "L",
-	      "id": "xp4embf"
-	    },
-	    {
-	      "type": "Panel",
-	      "center": [
-	        "pbl.w / 2 + R.t ",
-	        "c.h/2",
-	        "-(c.t - t / 2)"
-	      ],
-	      "demensions": [
-	        "c.w - bo",
-	        "c.h",
-	        "pwt34"
-	      ],
-	      "rotation": [
-	        0,
-	        0,
-	        0
-	      ],
-	      "name": "Panel.Back.Left",
-	      "code": "pbl",
-	      "id": "zyb9ykf"
-	    },
-	    {
-	      "type": "Cutter",
-	      "center": [
-	        "pbr.c.x + cpbl.t",
-	        "pbr.c.y",
-	        "pbr.c.z"
-	      ],
-	      "demensions": [
-	        "pbr.d.x",
-	        "pbr.d.y",
-	        "pbr.d.z"
-	      ],
-	      "rotation": [
-	        "pbr.r.x",
-	        "pbr.r.y",
-	        "pbr.r.z"
-	      ],
-	      "name": "Cutter.Back.Left",
-	      "code": "cpbl",
-	      "id": "jjl8m38"
-	    },
-	    {
-	      "type": "Panel",
-	      "center": [
-	        "c.w - pbl.t/2",
-	        "c.h/2",
-	        "-(pbr.w/2 + L.t)"
-	      ],
-	      "demensions": [
-	        "c.t - bo",
-	        "c.h",
-	        "pwt34"
-	      ],
-	      "rotation": [
-	        0,
-	        "90",
-	        0
-	      ],
-	      "name": "Panel.Back.Right",
-	      "code": "pbr",
-	      "id": "65n39kv"
-	    },
-	    {
-	      "type": "Cutter",
-	      "center": [
-	        "pbl.c.x",
-	        "pbl.c.y",
-	        "pbl.c.z - cpbr.t"
-	      ],
-	      "demensions": [
-	        "pbl.d.x",
-	        "pbl.d.y",
-	        "pbl.d.z"
-	      ],
-	      "rotation": [
-	        "pbl.r.x",
-	        "pbl.r.y",
-	        "pbl.r.z"
-	      ],
-	      "name": "Cutter.Back.Right",
-	      "code": "cpbr",
-	      "id": "kmursqf"
-	    },
-	    {
-	      "type": "Divider",
-	      "center": [
-	        "c.w / 2",
-	        "c.h - tid - T.t / 2",
-	        "c.t / -2"
-	      ],
-	      "demensions": [
-	        "c.w - pbl.t - R.t",
-	        "c.t - pbr.t - L.t",
-	        "pwt34"
-	      ],
-	      "rotation": [
-	        "90",
-	        "0",
-	        0
-	      ],
-	      "name": "Panel.Top",
-	      "code": "T",
-	      "id": "tm2c0lx"
-	    },
-	    {
-	      "type": "Divider",
-	      "center": [
-	        "c.w / 2",
-	        "bid + B.t / 2",
-	        "c.t / -2"
-	      ],
-	      "demensions": [
-	        "c.w - pbl.t - R.t",
-	        "c.t - pbr.t - L.t",
-	        "pwt34"
-	      ],
-	      "rotation": [
-	        "90",
-	        "0",
-	        0
-	      ],
-	      "name": "Panel.Bottom",
-	      "code": "B",
-	      "id": "2ww11zr"
-	    }
-	  ],
-	  "joints": [
-	    {
-	      "_TYPE": "Butt",
-	      "maleOffset": 0,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "BACK",
-	      "femaleJointSelector": "B",
-	      "demensionAxis": "",
-	      "centerAxis": ""
-	    },
-	    {
-	      "_TYPE": "Butt",
-	      "maleOffset": 0,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "BACK",
-	      "femaleJointSelector": "pbl",
-	      "demensionAxis": "",
-	      "centerAxis": ""
-	    },
-	    {
-	      "_TYPE": "Butt",
-	      "maleOffset": 0,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "BACK",
-	      "femaleJointSelector": "pbr",
-	      "demensionAxis": "",
-	      "centerAxis": ""
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "L.t / 2",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "B",
-	      "femaleJointSelector": "L",
-	      "demensionAxis": "y",
-	      "centerAxis": "-z"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "R.t/2",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "B",
-	      "femaleJointSelector": "R",
-	      "demensionAxis": "x",
-	      "centerAxis": "-x"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "pbr.t/2",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "B",
-	      "femaleJointSelector": "pbr",
-	      "demensionAxis": "y",
-	      "centerAxis": "+z"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "pbl.t/2",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "B",
-	      "femaleJointSelector": "pbl",
-	      "demensionAxis": "x",
-	      "centerAxis": "+x"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "L.t / 2",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "T",
-	      "femaleJointSelector": "L",
-	      "demensionAxis": "y",
-	      "centerAxis": "-z"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "R.t/2",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "T",
-	      "femaleJointSelector": "R",
-	      "demensionAxis": "x",
-	      "centerAxis": "-x"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "pbr.t/2",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "T",
-	      "femaleJointSelector": "pbr",
-	      "demensionAxis": "y",
-	      "centerAxis": "+z"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "pbl.t/2",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "T",
-	      "femaleJointSelector": "pbl",
-	      "demensionAxis": "x",
-	      "centerAxis": "+x"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "pbr.t/2",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "pbr",
-	      "femaleJointSelector": "R",
-	      "demensionAxis": "x",
-	      "centerAxis": "-z"
-	    },
-	    {
-	      "_TYPE": "Dado",
-	      "maleOffset": "L.t / 2",
-	      "femaleOffset": 0,
-	      "maleJointSelector": "pbl",
-	      "femaleJointSelector": "L",
-	      "demensionAxis": "x",
-	      "centerAxis": "-x"
-	    },
-	    {
-	      "_TYPE": "Butt",
-	      "maleOffset": 0,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "BACK",
-	      "femaleJointSelector": "T",
-	      "demensionAxis": "",
-	      "centerAxis": ""
-	    },
-	    {
-	      "_TYPE": "Butt",
-	      "maleOffset": 0,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "cb",
-	      "femaleJointSelector": "T",
-	      "demensionAxis": "",
-	      "centerAxis": ""
-	    },
-	    {
-	      "_TYPE": "Butt",
-	      "maleOffset": 0,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "cb",
-	      "femaleJointSelector": "B",
-	      "demensionAxis": "",
-	      "centerAxis": ""
-	    },
-	    {
-	      "_TYPE": "Butt",
-	      "maleOffset": 0,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "cb",
-	      "femaleJointSelector": "pbl",
-	      "demensionAxis": "",
-	      "centerAxis": ""
-	    },
-	    {
-	      "_TYPE": "Butt",
-	      "maleOffset": 0,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "cb",
-	      "femaleJointSelector": "pbr",
-	      "demensionAxis": "",
-	      "centerAxis": ""
-	    },
-	    {
-	      "_TYPE": "Butt",
-	      "maleOffset": 0,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "cpbl",
-	      "femaleJointSelector": "BACK",
-	      "demensionAxis": "",
-	      "centerAxis": ""
-	    },
-	    {
-	      "_TYPE": "Butt",
-	      "maleOffset": 0,
-	      "femaleOffset": 0,
-	      "maleJointSelector": "cpbr",
-	      "femaleJointSelector": "BACK",
-	      "demensionAxis": "",
-	      "centerAxis": ""
-	    }
-	  ],
-	  "dividerJoint": {
-	    "_TYPE": "Dado",
-	    "maleOffset": 0.635,
-	    "femaleOffset": 0,
-	    "demensionAxis": "",
-	    "centerAxis": ""
-	  },
-	  "shape": "corner",
-	  "width": "walld*2",
-	  "height": "wallh",
-	  "thickness": "walld*2",
-	  "fromFloor": "walle",
-	  "openings": [
-	    {
-	      "_Type": "slice",
-	      "top": "T",
-	      "bottom": "B",
-	      "left": "L",
-	      "right": "R",
-	      "back": "BACK",
-	      "leftDepth": "lw",
-	      "rightDepth": "rw",
-	      "id": "bnwtye8"
-	    }
-	  ],
-	  "autoToeKick": false,
-	  "_FORCE_FROM_JSON": true
-	},
 	"diagonal-corner-base": {
   "_TYPE": "CabinetTemplate",
 
@@ -698,7 +27,7 @@
     },
     {
       "key": "rw",
-      "eqn": "60.96",
+      "eqn": "30.48",
       "id": "357t6g4"
     },
     {
@@ -1144,6 +473,677 @@
   ],
   "autoToeKick": true,
   "_FORCE_FROM_JSON": true
+},
+"base": {
+	"_TYPE": "CabinetTemplate",
+
+	"ID_ATTRIBUTE": "id",
+	"type": "base",
+	"values": [
+		{
+			"key": "innerWidth",
+			"eqn": "c.w - pwt34 * 2",
+			"id": "itqsm1j"
+		},
+		{
+			"key": "innerWidthCenter",
+			"eqn": "innerWidth + pwt34",
+			"id": "pwaarfr"
+		}
+	],
+	"subassemblies": [
+		{
+			"name": "Panel.Right",
+			"type": "Divider",
+			"code": "R",
+			"center": [
+				"c.w - (R.t / 2)",
+				"R.l / 2",
+				"(w / -2)"
+			],
+			"demensions": [
+				"c.t",
+				"c.l",
+				"pwt34"
+			],
+			"rotation": [
+				0,
+				90,
+				0
+			],
+			"id": "mcf6dft"
+		},
+		{
+			"name": "Panel.Left",
+			"type": "Divider",
+			"code": "L",
+			"center": [
+				"(L.t / 2)",
+				"L.l / 2",
+				" (w/-2)"
+			],
+			"demensions": [
+				"c.t",
+				"c.l",
+				"pwt34"
+			],
+			"rotation": [
+				0,
+				90,
+				0
+			],
+			"id": "r1xpfd9"
+		},
+		{
+			"name": "Back",
+			"type": "Panel",
+			"code": "BACK",
+			"center": [
+				" w / 2 + R.t",
+				"(BACK.h / 2) + tkh",
+				" -1*(c.t - (t / 2))"
+			],
+			"demensions": [
+				"innerWidth",
+				"c.l - tkh",
+				"pwt34"
+			],
+			"rotation": [
+				0,
+				0,
+				"0"
+			],
+			"id": "0hvikg4"
+		},
+		{
+			"name": "Bottom",
+			"type": "Divider",
+			"code": "B",
+			"center": [
+				"c.w / 2",
+				"tkh + (t/2)",
+				"w / -2"
+			],
+			"demensions": [
+				"c.t - BACK.t",
+				"innerWidth",
+				"pwt34"
+			],
+			"rotation": [
+				90,
+				90,
+				0
+			],
+			"id": "vho2lw6"
+		},
+		{
+			"name": "Top",
+			"type": "Divider",
+			"code": "T",
+			"center": [
+				"c.w / 2",
+				"c.h - pwt34/2",
+				"(w / -2)"
+			],
+			"demensions": [
+				"(c.t - BACK.t)",
+				"innerWidth",
+				"pwt34"
+			],
+			"rotation": [
+				90,
+				90,
+				0
+			],
+
+			"dividerType": "frontAndBack"
+		}
+	],
+	"joints": [
+		{
+			"_TYPE": "Dado",
+			"maleOffset": 0.9525,
+			"femaleOffset": 0,
+			"maleJointSelector": "T",
+			"femaleJointSelector": "R",
+			"demensionAxis": "y",
+			"centerAxis": "-x"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": 0.9525,
+			"femaleOffset": 0,
+			"maleJointSelector": "T",
+			"femaleJointSelector": "L",
+			"demensionAxis": "y",
+			"centerAxis": "+x"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "0.9525",
+			"femaleOffset": 0,
+			"maleJointSelector": "BACK",
+			"femaleJointSelector": "R",
+			"demensionAxis": "x",
+			"centerAxis": "+x",
+			"fullLength": true
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "0.9525",
+			"femaleOffset": 0,
+			"maleJointSelector": "BACK",
+			"femaleJointSelector": "L",
+			"demensionAxis": "x",
+			"centerAxis": "-x",
+			"fullLength": true
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": 0.9525,
+			"femaleOffset": 0,
+			"maleJointSelector": "B",
+			"femaleJointSelector": "R",
+			"demensionAxis": "y",
+			"centerAxis": "-x"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": 0.9525,
+			"femaleOffset": 0,
+			"maleJointSelector": "B",
+			"femaleJointSelector": "L",
+			"demensionAxis": "y",
+			"centerAxis": "+x"
+		}
+	],
+	"dividerJoint": {
+		"_TYPE": "Dado",
+		"maleOffset": 0.635,
+		"femaleOffset": 0,
+		"demensionAxis": "",
+		"centerAxis": ""
+	},
+	"shape": "square",
+	"width": 45.72,
+	"height": "baseh",
+	"thickness": "based",
+	"fromFloor": 0,
+	"openings": [
+		{
+			"top": "T",
+			"bottom": "B",
+			"left": "L",
+			"right": "R",
+			"back": "BACK",
+			"id": "dle5hwy"
+		}
+	],
+	"autoToeKick": true,
+	"_FORCE_FROM_JSON": true
+},
+"diagonal-corner-wall": {
+	"_TYPE": "CabinetTemplate",
+
+	"ID_ATTRIBUTE": "id",
+	"type": "diagonal-corner-wall",
+	"values": [
+		{
+			"key": "bo",
+			"eqn": "4*2.54",
+			"id": "8cwyvgp"
+		},
+		{
+			"key": "fwr",
+			"eqn": "c.t - rw",
+			"id": "vzcc1yz"
+		},
+		{
+			"key": "fwl",
+			"eqn": "c.w - lw",
+			"id": "qufd443"
+		},
+		{
+			"key": "lw",
+			"eqn": "30.48",
+			"id": "6dvwx43"
+		},
+		{
+			"key": "rw",
+			"eqn": "30.48",
+			"id": "c9cwwen"
+		},
+		{
+			"key": "pbw",
+			"eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
+			"id": "2lwcxpp"
+		},
+		{
+			"key": "backhype",
+			"eqn": "Math.sqrt(bo*bo/2)",
+		}
+	],
+	"subassemblies": [
+		{
+			"type": "Panel",
+			"center": [
+				"c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+				"c.h/2",
+				"-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+			],
+			"demensions": [
+				"pbw",
+				"c.h",
+				"pwt14"
+			],
+			"rotation": [
+				0,
+				"135",
+				0
+			],
+			"name": "Panel.Back",
+			"code": "BACK",
+			"id": "apm1547"
+		},
+		{
+			"type": "Cutter",
+			"center": [
+				"c.w",
+				"c.h/2",
+				"-c.t"
+			],
+			"demensions": [
+				"bo*2",
+				"c.h",
+				"backhype*2 - BACK.t/2"
+			],
+			"rotation": [
+				0,
+				"135",
+				0
+			],
+			"name": "Cutter.Back",
+			"code": "cb",
+			"id": "orxxake"
+		},
+		{
+			"type": "Divider",
+			"center": [
+				"c.w - R.w/2",
+				"c.h / 2",
+				"R.t/-2"
+			],
+			"demensions": [
+				"rw + 2",
+				"c.h",
+				"pwt34"
+			],
+			"rotation": [
+				0,
+				"0",
+				0
+			],
+			"name": "Panel.Right",
+			"code": "R",
+			"id": "bmr0kns"
+		},
+		{
+			"type": "Divider",
+			"center": [
+				"L.t/2",
+				"c.h/2",
+				"-c.t + L.w/2"
+			],
+			"demensions": [
+				"lw + 2",
+				"c.h",
+				"pwt34"
+			],
+			"rotation": [
+				0,
+				"90",
+				0
+			],
+			"name": "Panel.Left",
+			"code": "L",
+			"id": "xp4embf"
+		},
+		{
+			"type": "Panel",
+			"center": [
+				"pbl.w / 2 + R.t ",
+				"c.h/2",
+				"-(c.t - t / 2)"
+			],
+			"demensions": [
+				"c.w - bo",
+				"c.h",
+				"pwt34"
+			],
+			"rotation": [
+				0,
+				0,
+				0
+			],
+			"name": "Panel.Back.Left",
+			"code": "pbl",
+			"id": "zyb9ykf"
+		},
+		{
+			"type": "Cutter",
+			"center": [
+				"pbr.c.x + cpbl.t",
+				"pbr.c.y",
+				"pbr.c.z"
+			],
+			"demensions": [
+				"pbr.d.x",
+				"pbr.d.y",
+				"pbr.d.z"
+			],
+			"rotation": [
+				"pbr.r.x",
+				"pbr.r.y",
+				"pbr.r.z"
+			],
+			"name": "Cutter.Back.Left",
+			"code": "cpbl",
+			"id": "jjl8m38"
+		},
+		{
+			"type": "Panel",
+			"center": [
+				"c.w - pbl.t/2",
+				"c.h/2",
+				"-(pbr.w/2 + L.t)"
+			],
+			"demensions": [
+				"c.t - bo",
+				"c.h",
+				"pwt34"
+			],
+			"rotation": [
+				0,
+				"90",
+				0
+			],
+			"name": "Panel.Back.Right",
+			"code": "pbr",
+			"id": "65n39kv"
+		},
+		{
+			"type": "Cutter",
+			"center": [
+				"pbl.c.x",
+				"pbl.c.y",
+				"pbl.c.z - cpbr.t"
+			],
+			"demensions": [
+				"pbl.d.x",
+				"pbl.d.y",
+				"pbl.d.z"
+			],
+			"rotation": [
+				"pbl.r.x",
+				"pbl.r.y",
+				"pbl.r.z"
+			],
+			"name": "Cutter.Back.Right",
+			"code": "cpbr",
+			"id": "kmursqf"
+		},
+		{
+			"type": "Divider",
+			"center": [
+				"c.w / 2",
+				"c.h - tid - T.t / 2",
+				"c.t / -2"
+			],
+			"demensions": [
+				"c.w - pbl.t - R.t",
+				"c.t - pbr.t - L.t",
+				"pwt34"
+			],
+			"rotation": [
+				"90",
+				"0",
+				0
+			],
+			"name": "Panel.Top",
+			"code": "T",
+			"id": "tm2c0lx"
+		},
+		{
+			"type": "Divider",
+			"center": [
+				"c.w / 2",
+				"bid + B.t / 2",
+				"c.t / -2"
+			],
+			"demensions": [
+				"c.w - pbl.t - R.t",
+				"c.t - pbr.t - L.t",
+				"pwt34"
+			],
+			"rotation": [
+				"90",
+				"0",
+				0
+			],
+			"name": "Panel.Bottom",
+			"code": "B",
+			"id": "2ww11zr"
+		}
+	],
+	"joints": [
+		{
+			"_TYPE": "Butt",
+			"maleOffset": 0,
+			"femaleOffset": 0,
+			"maleJointSelector": "BACK",
+			"femaleJointSelector": "B",
+			"demensionAxis": "",
+			"centerAxis": ""
+		},
+		{
+			"_TYPE": "Butt",
+			"maleOffset": 0,
+			"femaleOffset": 0,
+			"maleJointSelector": "BACK",
+			"femaleJointSelector": "pbl",
+			"demensionAxis": "",
+			"centerAxis": ""
+		},
+		{
+			"_TYPE": "Butt",
+			"maleOffset": 0,
+			"femaleOffset": 0,
+			"maleJointSelector": "BACK",
+			"femaleJointSelector": "pbr",
+			"demensionAxis": "",
+			"centerAxis": ""
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "L.t / 2",
+			"femaleOffset": 0,
+			"maleJointSelector": "B",
+			"femaleJointSelector": "L",
+			"demensionAxis": "y",
+			"centerAxis": "-z"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "R.t/2",
+			"femaleOffset": 0,
+			"maleJointSelector": "B",
+			"femaleJointSelector": "R",
+			"demensionAxis": "x",
+			"centerAxis": "-x"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "pbr.t/2",
+			"femaleOffset": 0,
+			"maleJointSelector": "B",
+			"femaleJointSelector": "pbr",
+			"demensionAxis": "y",
+			"centerAxis": "+z"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "pbl.t/2",
+			"femaleOffset": 0,
+			"maleJointSelector": "B",
+			"femaleJointSelector": "pbl",
+			"demensionAxis": "x",
+			"centerAxis": "+x"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "L.t / 2",
+			"femaleOffset": 0,
+			"maleJointSelector": "T",
+			"femaleJointSelector": "L",
+			"demensionAxis": "y",
+			"centerAxis": "-z"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "R.t/2",
+			"femaleOffset": 0,
+			"maleJointSelector": "T",
+			"femaleJointSelector": "R",
+			"demensionAxis": "x",
+			"centerAxis": "-x"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "pbr.t/2",
+			"femaleOffset": 0,
+			"maleJointSelector": "T",
+			"femaleJointSelector": "pbr",
+			"demensionAxis": "y",
+			"centerAxis": "+z"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "pbl.t/2",
+			"femaleOffset": 0,
+			"maleJointSelector": "T",
+			"femaleJointSelector": "pbl",
+			"demensionAxis": "x",
+			"centerAxis": "+x"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "pbr.t/2",
+			"femaleOffset": 0,
+			"maleJointSelector": "pbr",
+			"femaleJointSelector": "R",
+			"demensionAxis": "x",
+			"centerAxis": "-z"
+		},
+		{
+			"_TYPE": "Dado",
+			"maleOffset": "L.t / 2",
+			"femaleOffset": 0,
+			"maleJointSelector": "pbl",
+			"femaleJointSelector": "L",
+			"demensionAxis": "x",
+			"centerAxis": "-x"
+		},
+		{
+			"_TYPE": "Butt",
+			"maleOffset": 0,
+			"femaleOffset": 0,
+			"maleJointSelector": "BACK",
+			"femaleJointSelector": "T",
+			"demensionAxis": "",
+			"centerAxis": ""
+		},
+		{
+			"_TYPE": "Butt",
+			"maleOffset": 0,
+			"femaleOffset": 0,
+			"maleJointSelector": "cb",
+			"femaleJointSelector": "T",
+			"demensionAxis": "",
+			"centerAxis": ""
+		},
+		{
+			"_TYPE": "Butt",
+			"maleOffset": 0,
+			"femaleOffset": 0,
+			"maleJointSelector": "cb",
+			"femaleJointSelector": "B",
+			"demensionAxis": "",
+			"centerAxis": ""
+		},
+		{
+			"_TYPE": "Butt",
+			"maleOffset": 0,
+			"femaleOffset": 0,
+			"maleJointSelector": "cb",
+			"femaleJointSelector": "pbl",
+			"demensionAxis": "",
+			"centerAxis": ""
+		},
+		{
+			"_TYPE": "Butt",
+			"maleOffset": 0,
+			"femaleOffset": 0,
+			"maleJointSelector": "cb",
+			"femaleJointSelector": "pbr",
+			"demensionAxis": "",
+			"centerAxis": ""
+		},
+		{
+			"_TYPE": "Butt",
+			"maleOffset": 0,
+			"femaleOffset": 0,
+			"maleJointSelector": "cpbl",
+			"femaleJointSelector": "BACK",
+			"demensionAxis": "",
+			"centerAxis": ""
+		},
+		{
+			"_TYPE": "Butt",
+			"maleOffset": 0,
+			"femaleOffset": 0,
+			"maleJointSelector": "cpbr",
+			"femaleJointSelector": "BACK",
+			"demensionAxis": "",
+			"centerAxis": ""
+		}
+	],
+	"dividerJoint": {
+		"_TYPE": "Dado",
+		"maleOffset": 0.635,
+		"femaleOffset": 0,
+		"demensionAxis": "",
+		"centerAxis": ""
+	},
+	"shape": "corner",
+	"width": "walld*2",
+	"height": "wallh",
+	"thickness": "walld*2",
+	"fromFloor": "walle",
+	"openings": [
+		{
+			"_Type": "slice",
+			"top": "T",
+			"bottom": "B",
+			"left": "L",
+			"right": "R",
+			"back": "BACK",
+			"leftDepth": "lw",
+			"rightDepth": "rw",
+			"id": "bnwtye8"
+		}
+	],
+	"autoToeKick": false,
+	"_FORCE_FROM_JSON": true
 },
 	"diagonal-corner-ut": {
 	  "_TYPE": "CabinetTemplate",

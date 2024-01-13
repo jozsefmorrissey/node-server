@@ -1,6 +1,7 @@
 const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
-const Vector3D = require('vector');
 const Vertex3D = require('vertex');
+const Vector3D = require('vector');
+const Line3D = require('line');
 const Matrix = require('matrix');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
@@ -29,6 +30,7 @@ class Plane extends Array {
     }
     for (let index = 0; index < points.length; index++) {
       this[index] = new Vertex3D(points[index]);
+      points[index] = this[index];
     }
 
     this.indexOf = (point) => {
@@ -75,7 +77,7 @@ class Plane extends Array {
       return rotationMatrix;
     }
 
-    this.axis = () => {
+    this.normals = () => {
       if (axis === undefined) {
         const z = this.normal();
         const x = z.getPerpendicular().unit();
@@ -85,8 +87,18 @@ class Plane extends Array {
       return axis;
     }
 
+    this.axis = () => {
+      const point = this.point();
+      const normals = this.normals();
+      return {
+        x: Line3D.fromVector(normals.x.scale(1000), point),
+        y: Line3D.fromVector(normals.y.scale(1000), point),
+        z: Line3D.fromVector(normals.z.scale(1000), point)
+      }
+    }
+
     this.rotate = (rotation, center) => {
-      center ||= this.center();
+      center ||= this.point();
       for (let index = 0; index < this.length; index++) {
         this[index].rotate(rotation, center);
       }
@@ -101,7 +113,7 @@ class Plane extends Array {
     }
 
     this.reverseRotate = (rotation, center) => {
-      center ||= this.center();
+      center ||= this.point();
       for (let index = 0; index < this.length; index++) {
         this[index].reverseRotate(rotation, center);
       }
@@ -112,12 +124,21 @@ class Plane extends Array {
       if (points.length < 3) return vertex;
       if (eqn.a === 0 || eqn.b === 0 || eqn.c === 0) {
         const intercepts = instance.axisIntercepts();
-        if (eqn.a === 0) vertex.x = intercepts.x;
-        if (eqn.b === 0) vertex.y = intercepts.y;
-        if (eqn.c === 0) vertex.z = intercepts.z;
+        if (eqn.a === 0 && !Number.isNaN(intercepts.x)) vertex.x = intercepts.x;
+        if (eqn.b === 0 && !Number.isNaN(intercepts.y)) vertex.y = intercepts.y;
+        if (eqn.c === 0 && !Number.isNaN(intercepts.z)) vertex.z = intercepts.z;
       }
       return vertex;
     }
+
+    function concreat(attr, val1, val2) {
+      const res = instance[attr](val1, val2);
+      if (res.x === Infinity) res.x = 0;
+      if (res.y === Infinity) res.y = 0;
+      if (res.z === Infinity) res.z = 0;
+      return res;
+    }
+
 
     this.x = (y,z, doNotConform) => {
       y ||= 0;
@@ -126,6 +147,7 @@ class Plane extends Array {
       const x = (-eqn.b * y - eqn.c * z + eqn.d) / eqn.a
       return conformToIntercepts(eqn, new Vertex3D(x,y,z));
     }
+    this.x.concrete = (y, z) => concreat('x', y, z);
 
     this.y = (x,z, doNotConform) => {
       x ||= 0;
@@ -134,6 +156,7 @@ class Plane extends Array {
       const y = (-eqn.a * x - eqn.c * z + eqn.d) / eqn.b
       return conformToIntercepts(eqn, new Vertex3D(x,y,z));
     }
+    this.y.concrete = (x, z) => concreat('y', x, z);
 
     this.z = (x,y, doNotConform) => {
       x ||= 0;
@@ -142,38 +165,41 @@ class Plane extends Array {
       const z = (-eqn.b * y - eqn.a * x + eqn.d) / eqn.c;
       return conformToIntercepts(eqn, new Vertex3D(x,y,z));
     }
+    this.z.concrete = (x, y) => concreat('z', x, y);
 
 
     this.axisIntercepts = () => {
       if (intercepts) return intercepts;
+      // const point = this.points();
       const eqn = this.equation();
       const normal = this.normal().positiveUnit();
       if (normal.equals(Vector3D.i)) {
-        return {
+        intercepts = {
           x: points[0].x,
           y: points[0].x === 0 ? Infinity : NaN,
           z: points[0].x === 0 ? Infinity : NaN
         }
       } else if (normal.equals(Vector3D.j)) {
-        return {
+        intercepts = {
           y: points[0].y,
           x: points[0].y === 0 ? Infinity : NaN,
           z: points[0].y === 0 ? Infinity : NaN
         }
       } else if (normal.equals(Vector3D.k)) {
-        return {
+        intercepts = {
           z: points[0].z,
           x: points[0].z === 0 ? Infinity : NaN,
           y: points[0].z === 0 ? Infinity : NaN
         }
-      }
-      intercepts = {
-        x: eqn.d/eqn.a,
-        y: eqn.d/eqn.b,
-        z: eqn.d/eqn.c
+      } else {
+        intercepts = {
+          x: eqn.d/eqn.a,
+          y: eqn.d/eqn.b,
+          z: eqn.d/eqn.c
+        }
       }
 
-      return intercepts;
+      return new Vertex3D(intercepts);
     }
 
     this.equation = () => {
@@ -204,7 +230,7 @@ class Plane extends Array {
       count ||= 3;
       const pts = [];
       let state = 0;
-      let value = 100000;
+      let value = 1000000000;
       let tries = 0;
       while (pts.length < count) {
          let func = state === 0 ? instance.x : (state === 1 ? instance.y : instance.z);
@@ -225,8 +251,10 @@ class Plane extends Array {
       return pts;
     }
 
-    function generateAxisPoints(count) {
-      const axis = instance.axis();
+    function generateAxisPoints(count, radius) {
+      radius ||= 100;
+      const point = instance.point();
+      const normals = instance.normals();
       let vects = [axis.y, axis.x, axis.y.inverse(), axis.x.inverse()];
       while (vects.length < count) {
         for (let index = 0; index < vects.length && vects.length < count; index += 2) {
@@ -236,12 +264,12 @@ class Plane extends Array {
       }
 
 
-      const points = vects.map(v => new Vertex3D().translate(v.scale(100)));
+      const points = vects.map(v => point.translate(v.scale(radius), true));
       return points;
     }
 
-    this.findPoints = (count) => {
-      return generateAxisPoints(count);
+    this.findPoints = (count, radius) => {
+      return generateAxisPoints(count, radius);
     }
 
     this.within = (vertex) => {
@@ -252,9 +280,15 @@ class Plane extends Array {
       return plane.normal().equals(normal) || plane.normal().inverse().equals(normal);
     }
 
-    this.parrelleTo = (axis) => {
+    this.parrelle = {};
+    this.parrelle.axis = (axis) => {
       const pts = this.points();
       return approximate.eq(pts[0][axis], pts[1][axis], pts[2][axis]);
+    }
+    this.parrelle.line = (line) => {
+      const startDist = this.connect.vertex(line[0]).length();
+      const endDist = this.connect.vertex(line[1]).length();
+      return withinTol(startDist, endDist);
     }
 
     this.normal = () => {
@@ -269,17 +303,32 @@ class Plane extends Array {
 
     this.valid = () => !Number.isNaN(this.normal().magnitude());
 
-    this.distance = (vertex) => {
-      if (!(vertex instanceof Vertex3D)) throw new Error('Sorry... I only implemented this relitive to a Vertex3D');
-      const v = vertex;
-      const eqn = this.equation();
-      const c = this.center();
-      const num = Math.abs(eqn.a*(v.x-c.x)+eqn.b*(v.y-c.y)+eqn.c*(v.z-c.z));
-      const denom = Math.sqrt(eqn.a*eqn.a+eqn.b*eqn.b+eqn.c*eqn.c);
-      return num/denom;
+    this.distance = (vertex) =>
+      this.connect.vertex(vertex).length();
+
+    this.angle = {}
+    this.angle.line = (line) => {
+      const intersection = this.intersection.line(line);
+      const startConn = this.connect.vertex(line[0]);
+      const endConn = this.connect.vertex(line[1]);
+      const furthest = startConn.length() > endConn.length() ? startConn : endConn;
+      const vect1 = new Line3D(furthest[1], intersection).vector();
+      const vect2 = new Line3D(furthest[0], intersection).vector();
+      const angle = vect1.angle(vect2);
+      return angle;
     }
 
-    this.center = () => Vertex3D.center.apply(null, this);
+    this.point = () => {
+      if (this.length > 3) Vertex3D.center.apply(null, this);
+      let xInt = this.x.concrete(0,0);
+      let yInt = this.y.concrete(0,0);
+      let zInt = this.z.concrete(0,0);
+
+      const finite = xInt.finite() ? xInt : (yInt.finite() ? yInt : (zInt.finite() ? zInt : null));
+      if (finite === null)
+        throw new Error('Invalid Plane');
+      return finite;
+    };
 
     const epsilon = 1e-6;
     function lineIntersection(line, segment, directional) {
@@ -316,6 +365,18 @@ class Plane extends Array {
     this.intersection.line.segment = (line) => lineIntersection(line, true);
     this.intersection.line.directional = (line) => lineIntersection(line, null, true);
 
+    this.connect = {}
+    this.connect.vertex = (vertex) => {
+      const line = Line3D.fromVector(this.normal(), vertex);
+      const planeInter = this.intersection.line(line);
+      return new Line3D(planeInter, vertex);
+    }
+    this.connect.line = (line) => {
+      const startOnPlane = this.connect.vertex(line[0])[0];
+      const endOnPlane = this.connect.vertex(line[1])[0];
+      return line.connect(new Line3D(startOnPlane, endOnPlane));
+    }
+
     this.equals = (other) => {
       if (!Array.isArray(other) || this.length !== other.length) return false;
       const startIndex = this.indexOf(other[0]);
@@ -327,14 +388,18 @@ class Plane extends Array {
       return true;
     }
 
-    this.toDrawString = (color) => {
+    this.toDrawString = (color, radius) => {
       color ||= '';
-      const verts = Array.from(this.findPoints(30));
+      const verts = Array.from(this.findPoints(30, radius));
       const arr = verts.map(v => `${color}${v.toString()}`);
       return `${color}[${arr.join(',')}]`;
     }
   }
 }
+
+Plane.xy = new Plane([[0,0,0], [10,0,0], [10,10,0]]);
+Plane.yz = new Plane([[0,0,0], [0,10,0], [0,10,10]]);
+Plane.xz = new Plane([[0,0,0], [10,0,0], [10,0,10]]);
 
 Plane.makePlane1MeetPlane2 = function (plane1, plane2, rotation) {
   const centerP1 = Vertex3D.center.apply(null, plane1);
@@ -440,5 +505,7 @@ Plane.fromPointNormal = (point, normal) => {
   const point3 = get(107,563);
   return new Plane(point1, point2, point3);
 }
+
+
 
 module.exports = Plane;

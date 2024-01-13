@@ -4,7 +4,7 @@ const Line3D = require('line');
 const Vertex3D = require('vertex');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
-const tol = .00000001;
+const tol = .0001;
 
 class Layer {
   constructor(polygonOs) {
@@ -33,6 +33,8 @@ class Layer {
 
     this.normal = () => primary.normal();
     this.toPlane = () => primary.toPlane();
+    this.parrelle = (other) => primary.parrelle(other);
+    this.withinPlane = (other) => primary.withinPlane(other);
 
     this.rotate = (rotations, center) => {
       for (let index = 0; index < list.length; index++) {
@@ -45,22 +47,40 @@ class Layer {
       return new Layer(polys);
     }
 
-
     this.copy = () => new Layer(list);
+
+    this.web = () => {
+      const vertices = Line3D.vertices(this.lines());
+      const lineMap = {};
+      for (let i = 0; i < vertices.length; i++) {
+        for (let j = 0; j < vertices.length; j++) {
+          if (i != j) {
+            const line = new Line3D(vertices[i].clone(), vertices[j].clone()).positiveVectorLine();
+            const detStr = line.toString(.000001);
+            if (!line.isPoint() && lineMap[detStr] === undefined) {
+              lineMap[detStr] = line;
+            }
+          }
+        }
+      }
+      return Object.values(lineMap);
+    }
 
     this.center = () => {
       const verts = [];
       list.forEach(p => verts.concatInPlace(p.vertices()));
-      return Vertex3D.center(verts);
+      return Vertex3D.midrange(verts);
     }
 
     this.overlaps = (other) => {
+      const otherIsParrelle = this.parrelle(other);
+      if (!otherIsParrelle) return false;
       if (!(other instanceof Layer)) throw new Error(`'${other}' is not an instance of Layer`);
       const otherPolys = other.polygons();
       let overlaps = false;
       for (let i = 0; !overlaps && i < otherPolys.length; i++) {
         for (let j = 0; !overlaps && j < list.length; j++) {
-          overlaps = list[j].overlaps(otherPolys[i]);
+          overlaps = list[j].overlaps(otherPolys[i], null, otherIsParrelle);
         }
       }
       return overlaps;
@@ -88,9 +108,9 @@ class Layer {
       return twoDlines;
     }
 
-    this.toDrawString = (color) => {
+    this.toDrawString = (color, excludeNormal) => {
       color ||= 'blue';
-      let str = primary.toDrawString(color);
+      let str = primary.toDrawString(color, excludeNormal);
       list.forEach(p => str += `\n\t${p.toDrawString(color, true)}`);
       return str;
     }
@@ -142,9 +162,9 @@ Layer.to2D = (layersOcsg, x, y) => {
   return Line2d.consolidate(...lines2d);
 }
 
-Layer.toDrawString = (layers) => {
+Layer.toDrawString = (layers, ...colors) => {
   let str = '';
-  layers.forEach(l => str += l.toDrawString() + '\n\n');
+  layers.forEach((l,i) => str += l.toDrawString(colors[i % colors.length], true) + '\n\n');
   return str;
 }
 

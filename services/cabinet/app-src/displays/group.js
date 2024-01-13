@@ -158,7 +158,7 @@ du.on.match('click', `.group-display-header`, (target) => {
 GroupDisplay.valueUpdate = (target) => {
   const group = Group.get(target.getAttribute('group-id'));
   const value = target.value;
-  group.name(value);
+  target.value = group.name(value);
 }
 
 du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);

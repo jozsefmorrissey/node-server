@@ -1,5 +1,9 @@
 
 const DEFAULT_TOLERANCE = .0001;
+const infinity = 1000000000;
+const changeToInfinity = (value) =>
+  value < infinity ? value : value * Infinity;
+
 
 function round(val) {
   return Math.round(1000000000000 * val)/1000000000000
@@ -38,9 +42,10 @@ function boundsFunc(attr, attributeMap, tolerance, absoluteValue) {
   return (elem) => {
     const tol = props.tolerance;
     let value = props.singleValue ? elem : Object.pathValue(elem, attr);
+    value = changeToInfinity(value);
     if (props.absoluteValue && value < 0) value *= -1;
     let lower, upper, center;
-    if (Number.NaNfinity(value)) return {lower: value, upper: value, id: rangeStr(value, value)};
+    if (Number.NaNfinity(value)) return {lower: value, upper: value, id: rangeStr(Infinity * value, Infinity * value)};
     else {
       const mod = value % tol;
       let center = mod > tol/2 ? value + (tol - mod) : value - mod;

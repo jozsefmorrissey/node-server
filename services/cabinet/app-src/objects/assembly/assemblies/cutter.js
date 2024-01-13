@@ -17,8 +17,9 @@ class Cutter extends Assembly {
 Cutter.abbriviation = 'cut';
 
 class CutterModel extends Cutter {
-  constructor(partCode, partName, toModel) {
+  constructor(partCode, partName, toModel, toBiPolygon) {
     super(partCode);
+    this.toBiPolygon = toBiPolygon;
     this.toModel = toModel;
     this.partName = partName instanceof Function ? partName : () => partName;
   }
@@ -59,12 +60,16 @@ class CutterPoly extends Cutter {
       return poly;
     }
 
+    this.toBiPolygon = () => {
+      poly.lines().forEach(l => length += l.length());
+      const distance = length;
+      return BiPolygon.fromPolygon(poly, 0, distance, {x: distance, y:distance});
+    }
+
     this.toModel = new FunctionCache((joints) => {
       let length = 20;
       joints ||= this.getJoints().female;
-      poly.lines().forEach(l => length += l.length());
-      const distance = length;
-      const biPoly = BiPolygon.fromPolygon(poly, 0, distance, {x: distance, y:distance});
+      const biPoly = this.toBiPolygon();
       return Joint.apply(biPoly.toModel(), joints);
     }, this, 'cutter');
 

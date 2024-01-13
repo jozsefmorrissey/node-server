@@ -127,15 +127,18 @@ class BiPolygon {
     }
 
     this.closerPlane = (vertex) => {
-      const poly1 = new Plane(...face1);
-      const poly2 = new Plane(...face2);
-      return poly1.center().distance(vertex) < poly2.center().distance(vertex) ? poly1 : poly2;
+      const center1 = Vertex3D.center(face1);
+      const center2 = Vertex3D.center(face2);
+      const targetFace = center1.distance(vertex) < center2.distance(vertex) ? face1 : face2;
+      return new Plane(...targetFace);
     }
 
     this.furtherPlane = (vertex) => {
-      const poly1 = new Plane(...face1);
-      const poly2 = new Plane(...face2);
-      return poly1.center().distance(vertex) > poly2.center().distance(vertex) ? poly1 : poly2;
+      const center1 = Vertex3D.center(face1);
+      const center2 = Vertex3D.center(face2);
+      const targetFace = center1.distance(vertex) > center2.distance(vertex) ? face1 : face2;
+      return new Plane(...targetFace);
+
     }
 
     this.flippedNormal = () => {

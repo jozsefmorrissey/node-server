@@ -78,7 +78,8 @@ const defalutCustomCoords = () => ({"inner": [{"x": "R.t","y": "T.c.y - T.t/2","
           {"x": "c.w","y": "B.c.y - B.t/2","z": "0"},
           {"x": "0","y": "B.c.y - B.t/2","z": "0"}]});
 
-const openingSketch = new OpeningSketch('opening-sketch-cnt');
+let openingSketch;
+const getOpeningSketch = () => openingSketch || (openingSketch = new OpeningSketch('opening-sketch-cnt'));
 const faceSketch = new FaceSketch('front-sketch');
 function updateState(elem) {
   const opening = ExpandableList.get(elem);
@@ -119,7 +120,7 @@ function applyDividers() {
 function applyTestConfiguration() {
   const cabinet = Global.cabinet();
   cabinet.width(60*2.54);
-  cabinet.updateOpenings()
+  cabinet.updateOpenings(true)
 
   cabinet.openings.forEach((opening) => {
     opening.sectionProperties().pattern('bab').value('a', 30*2.54);
@@ -130,34 +131,36 @@ function applyTestConfiguration() {
     const right = opening.sections[2];
     const a = 6*2.54
 
-    // left.divide(2);
-    // left.vertical(false);
-    // left.sections[0].setSection("DrawerSection");
-    // left.sections[1].setSection("DrawerSection");
-    // left.sections[2].setSection("DrawerSection");
-    // left.pattern('abb').value('a', a*2);
-    //
-    // center.divide(1);
-    // center.vertical(false);
-    // center.sections[1].setSection('DualDoorSection');
-    // center.pattern('ab').value('a', a);
-    // const centerTop = center.sections[0];
-    //
-    // centerTop.divide(2);
-    // centerTop.vertical(true);
-    // centerTop.sections[0].setSection("DoorSection");
-    // centerTop.sections[1].setSection("FalseFrontSection");
-    // centerTop.sections[2].setSection("DoorSection");
-    // centerTop.pattern('ztz').value('t', 15*2.54);
-    // centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
-    // centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
-    //
-    // right.divide(2);
-    // right.vertical(false);
-    // right.sections[0].setSection("DrawerSection");
-    // right.sections[1].setSection("DrawerSection");
-    // right.sections[2].setSection("DrawerSection");
-    // right.pattern('abb').value('a', a);
+    left.divide(2);
+    left.vertical(false);
+    left.sections[0].setSection("DrawerSection");
+    left.sections[1].setSection("DrawerSection");
+    left.sections[2].setSection("DrawerSection");
+    left.pattern('abb').value('a', a*2);
+
+    center.divide(1);
+    center.vertical(false);
+    center.sections[1].setSection('DualDoorSection');
+    opening.update(true);
+    center.pattern('ab').value('a', a);
+    const centerTop = center.sections[0];
+
+    centerTop.divide(2);
+    centerTop.vertical(true);
+    centerTop.sections[0].setSection("DoorSection");
+    centerTop.sections[1].setSection("FalseFrontSection");
+    centerTop.sections[2].setSection("DoorSection");
+    centerTop.pattern('ztz').value('t', 15*2.54);
+    centerTop.sections[0].cover().pull().location(Handle.location.RIGHT);
+    centerTop.sections[2].cover().pull().location(Handle.location.LEFT);
+
+    right.divide(2);
+    right.vertical(false);
+    right.sections[0].setSection("DrawerSection");
+    right.sections[1].setSection("DrawerSection");
+    right.sections[2].setSection("DrawerSection");
+    right.pattern('abb').value('a', a);
+    opening.update(true);
   });
 }
 
@@ -193,9 +196,13 @@ function getCabinet(elem) {
 
   if (sectionState.testDividers) applyTestConfiguration();
   else applyDividers();
-  openingSketch.cabinet(cabinet);
+  cabinet.clearCaches();
+  // console.log(cabinet.toDrawString());
+  setTimeout(() => getOpeningSketch().draw());
   return cabinet;
 }
+
+getCabinet = new FunctionCache(getCabinet, null, 'alwaysOn', 1);
 
 const toDisplay = (value, notMetric) =>  {
   if ((typeof value) === 'string' && value.isNumber()) value = Number.parseFloat(value);
@@ -455,7 +462,7 @@ function validateOpenTemplate (elem) {
   openingsCodeCheck(template, openingCodeInputs);
 
   try {
-    getCabinet(templateBody);
+    getCabinet.clearCache()(templateBody);
 
     const depthInputs = du.find.downAll('[name=depth]', templateBody);
     depthInputs.forEach(valueEqnCheck(template));

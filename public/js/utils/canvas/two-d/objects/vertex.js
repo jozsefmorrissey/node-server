@@ -108,7 +108,12 @@ class Vertex2d {
       return new Vertex2d(copy);
     }
 
-    this.scale = () => Vertex2d
+    this.scale = (scale, doNotModify) => {
+      if (doNotModify === true) return this.clone().scale(scale);
+      this.x(this.x() * scale);
+      this.y(this.y() * scale);
+      return this;
+    }
 
     this.copy = () => new Vertex2d([this.x(), this.y()]);
 

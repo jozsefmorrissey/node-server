@@ -17,15 +17,15 @@ const getId = (cab) => {
   return tkCounters[cab.id()]++;
 }
 
-class AutoToekick extends Assembly {
-  constructor(cabinet) {
+class OpeningToeKick extends Assembly {
+  constructor(autoToeKick, opening) {
+    const cabinet = autoToeKick.rootAssembly();
     const id = getId(cabinet);
     const atkid = `AutoToeKick${id}`;
     super(`AUTOTK`, atkid);
+    this.parentAssembly(autoToeKick);
 
-    Object.getSet(this, {rightEndStyle: false, leftEndStyle: false});
     const instance = this;
-    this.parentAssembly(cabinet);
     let toeKick;
     let vOid;
     let offsetToeKickPoly;
@@ -34,11 +34,14 @@ class AutoToekick extends Assembly {
 
     const children = {}
 
+    function toBiPolygon(name, index) {
+      return () => children[name];
+    }
+
     function toModel(name, index) {
       return (joints) => {
-        instance.update();
-        const assem = children[name];
-        return assem.toModel(joints);
+        const biPoly = children[name];
+        return biPoly.toModel(joints);
       }
     }
 
@@ -54,9 +57,7 @@ class AutoToekick extends Assembly {
       rightModel.translate({x:0, y:tkh, z:0});
       return rightModel;
     });
-    leftCornerCutter.parentAssembly(this);
     this.addSubAssembly(leftCornerCutter);
-    leftCornerCutter.parentAssembly(this);
     this.addSubAssembly(rightCornerCutter);
 
     const joint = (part, fullLength) => (otherPartCode, condition) => {
@@ -64,18 +65,22 @@ class AutoToekick extends Assembly {
       joint.fullLength(fullLength);
       part.addJoints(joint);
     }
-    const toeKickPanel = new PanelModel('tkb', `${atkid}.Backer`, toModel('toeKick'));
+    const toeKickPanel = new PanelModel('tkb', `${atkid}.Backer`, toModel('toeKick'), toBiPolygon('toeKick'));
     joint(toeKickPanel)(/^R:/);
     joint(toeKickPanel, true)(/^B:/);
     joint(toeKickPanel)(/^L:/);
     joint(leftCornerCutter)(toeKickPanel.locationCode());
     joint(rightCornerCutter)(toeKickPanel.locationCode());
-    const cutter = new CutterModel('tkc', `${atkid}.Cutter`, toModel('vOid'));
-    joint(cutter)(/^R:/, () => !this.rightEndStyle());
-    joint(cutter)(/^L:/, () => !this.leftEndStyle());
+    const cutter = new CutterModel('tkc', `${atkid}.Cutter`, toModel('vOid'), toBiPolygon('vOid'));
+    const openNorm = opening.normal();
+    const rParrelleToOpening = openNorm.parrelle(instance.getAssembly('R').position().normals().x);
+    if (rParrelleToOpening) {
+      joint(cutter)(/^R:/, () => !autoToeKick.rightEndStyle());
+    } else {
+      console.log();
+    }
+    joint(cutter)(/^L:/, () => !autoToeKick.leftEndStyle());
 
-    toeKickPanel.parentAssembly(this);
-    cutter.parentAssembly(this);
     this.addSubAssembly(toeKickPanel);
     this.addSubAssembly(cutter);
 
@@ -90,21 +95,9 @@ class AutoToekick extends Assembly {
 
     this.tkb = () => toeKickPanel;
     this.part = () => false;
-    this.children = () => this.getSubassemblies();
 
     let lastState;
-    this.update = () => {
-      const currState = cabinet.modificationState();
-      if (currState !== lastState) {
-        try{
-          lastState = currState;
-          this.toBiPolygon();
-        } catch (e) {
-          console.error('AutoToeKick: update exception');
-          console.error(e);
-        }
-      }
-    }
+    this.update = updateToeKick;
 
     function corners(side, openingCenter, targetCorner, innerPoly, height, depth1, depth2) {
       const biPoly = side.position().toBiPolygon();
@@ -154,8 +147,8 @@ class AutoToekick extends Assembly {
     }
 
     function buildToeKick(tkBiPoly, tkSpacePoly) {
-      const leftInOut = instance.leftEndStyle() ? 'inner' : 'outer';
-      const rightInOut = instance.rightEndStyle() ? 'inner' : 'outer';
+      const leftInOut = autoToeKick.leftEndStyle() ? 'inner' : 'outer';
+      const rightInOut = autoToeKick.rightEndStyle() ? 'inner' : 'outer';
       const toPoly = (intObjTop, intObjBottom) => {
         const vert1 = intObjTop.positive[rightInOut].intersection;
         const vert2 = intObjTop.negitive[leftInOut].intersection;
@@ -253,7 +246,7 @@ class AutoToekick extends Assembly {
     //   return supports[0];
     // }
 
-    function openingToeKick(opening) {
+    function updateToeKick() {
       const right = opening.right();
       const left = opening.left();
       const coords = opening.coordinates();
@@ -277,18 +270,39 @@ class AutoToekick extends Assembly {
 
       // return toeKick;
     }
+    updateToeKick();
+  }
+}
 
-    this.toBiPolygon = () => {
-      const openings = cabinet.openings;
-      let opening;
-      if (openings.length > 1) throw new Error('Not yet implemented for multiple openings...');
-      for (let index = 0; index < openings.length; index++) {
-        opening = openingToeKick(openings[index]);
+class AutoToekick extends Assembly {
+  constructor(cabinet) {
+    const id = getId(cabinet);
+    const atkid = `AutoToeKick${id}`;
+    super(`AUTOTK`, atkid);
+    this.part = () => false;
+
+    Object.getSet(this, {rightEndStyle: false, leftEndStyle: false});
+    const instance = this;
+    this.parentAssembly(cabinet);
+
+    let lastHash;
+    this.update = () => {
+      const hash = cabinet.hash();
+      if (hash !== lastHash) {
+        try{
+          this.subassemblies.deleteAll()
+          const openings = cabinet.openings;
+          if (openings.length > 1) throw new Error('Not yet implemented for multiple openings...');
+          for (let index = 0; index < openings.length; index++) {
+            const otk = new OpeningToeKick(this, openings[index]);
+            instance.addSubAssembly(otk);
+          }
+        } catch (e) {
+          console.error('AutoToeKick: update exception');
+          console.error(e);
+        }
       }
-      return children.toeKick;
     }
-
-    this.toModel = () => this.toBiPolygon().toModel();
   }
 }
 

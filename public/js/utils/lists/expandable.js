@@ -128,13 +128,20 @@ class Expandable {
         setTimeout(() => {
           try {
             props.inputs.forEach((input) => input.id = input.id || String.random(7));
-            const parent = Expandable.getCnt(instance.id());
+            let parent = Expandable.getCnt(instance.id());
             const focusInfo = du.focusInfo();
             const html = this.html();
+            if (!parent) {
+              const cnt = du.find(this.parentSelector());
+              if (cnt) cnt.innerHTML = this.html();
+              parent = Expandable.getCnt(instance.id());
+            }
             if (parent && html !== undefined) {
               parent.innerHTML = html;
               du.focus(focusInfo);
               afterRefreshEvent.trigger();
+            } else {
+              console.warn('Expandable: parent contaier and or html content is not defined');
             }
           } finally {
             pendingRefresh = false;

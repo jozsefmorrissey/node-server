@@ -64,10 +64,15 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 
 ### ~/app-src/objects/assembly/assembly.js
 &nbsp;&nbsp;defines all parts and thier sub parts.
+#### Identifiers
 - id() - a globally "unique" identifier
 - partCode() - object type identifier
 - locationCode() - location identifier
 - userFriendlyId() - Cabinet specific unique indexed identifier (for display purposes)
+#### Subassemblies
+- subassemblies - list of subassmblies that must be saved
+- getSubassemblies() - all decendents
+- children() - direct decendents
 
 ### TODO
 #### Urgent
@@ -77,6 +82,11 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 - HTML build changes are only applied the next time server is started.
 - Parts3D display is not reflecting divider type on create (base:T is always full on creation)
 
+### Before Release
+- test cabinet width > 80 throws errors
+- corner L cabinets
+- 1 < openings (autoToeKick, outer corner L)
+
 #### When I get around to it
 - "Imperial (us)" does not add implicit multiplication stringMathEval
 - hover help/error text
@@ -84,3 +94,18 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 - figure out three-view hidden lines
 - ensure if new property is added existing configs updated with default value
 - StringMathEvaluator: Math.atan(3/4)* (180/Math.PI) works but Math.atan(3/4)*(180/Math.PI) does not
+
+
+### git commands lines modified by user
+    <a href='https://stackoverflow.com/a/20414465'>Thanks Dan</a>
+
+TODO: Create a script at some point
+####All lines within cabinet service
+<pre>
+git log --shortstat --pretty="%cE" "./services/cabinet/*" | sed 's/\(.*\)@.*/\1/' | grep -v "^$" | awk 'BEGIN { line=""; } !/^ / { if (line=="" || !match(line, $0)) {line = $0 "," line }} /^ / { print line " # " $0; line=""}' | sort | sed -E 's/# //;s/ files? changed,//;s/([0-9]+) ([0-9]+ deletion)/\1 0 insertions\(+\), \2/;s/\(\+\)$/\(\+\), 0 deletions\(-\)/;s/insertions?\(\+\), //;s/ deletions?\(-\)//' | awk 'BEGIN {name=""; files=0; insertions=0; deletions=0;} {if ($1 != name && name != "") { print name ": " files " files changed, " insertions " insertions(+), " deletions " deletions(-), " insertions-deletions " net"; files=0; insertions=0; deletions=0; name=$1; } name=$1; files+=$2; insertions+=$3; deletions+=$4} END {print name ": " files " files changed, " insertions " insertions(+), " deletions " deletions(-), " insertions-deletions " net";}'
+</pre>
+
+####Lines that should not be counted
+<pre>
+git log --shortstat --pretty="%cE" "./services/cabinet/*/html-templates.js" "./services/cabinet/*/index.js" | sed 's/\(.*\)@.*/\1/' | grep -v "^$" | awk 'BEGIN { line=""; } !/^ / { if (line=="" || !match(line, $0)) {line = $0 "," line }} /^ / { print line " # " $0; line=""}' | sort | sed -E 's/# //;s/ files? changed,//;s/([0-9]+) ([0-9]+ deletion)/\1 0 insertions\(+\), \2/;s/\(\+\)$/\(\+\), 0 deletions\(-\)/;s/insertions?\(\+\), //;s/ deletions?\(-\)//' | awk 'BEGIN {name=""; files=0; insertions=0; deletions=0;} {if ($1 != name && name != "") { print name ": " files " files changed, " insertions " insertions(+), " deletions " deletions(-), " insertions-deletions " net"; files=0; insertions=0; deletions=0; name=$1; } name=$1; files+=$2; insertions+=$3; deletions+=$4} END {print name ": " files " files changed, " insertions " insertions(+), " deletions " deletions(-), " insertions-deletions " net";}'
+</pre>

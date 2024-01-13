@@ -7,7 +7,7 @@ const Layout2D = require('../two-d/layout/layout.js');
 
 
 class Room extends Lookup {
-  constructor(name, id, layout) {
+  constructor(name, order, id, layout) {
     super(id || String.random());
     const instance = this;
 
@@ -40,12 +40,21 @@ class Room extends Lookup {
     Object.getSet(this, initialVals, 'groups');
     this.groups = [new Group(this)];
     this.addGroup = () => this.groups.push(new Group(this));
+
+    this.name = (value) => {
+      if (value) {
+        const list = order && order.rooms ? order.rooms : {};
+        name =  Object.values(list).map(r => r.name()).uniqueStringValue(value);
+      }
+      return name;
+    }
+    this.name(name);
   }
 };
 Room.count = 0;
 
 Room.fromJson = (json) => {
-  const room = new Room(json.name, json.id, Object.fromJson(json.layout));
+  const room = new Room(json.name, json.order, json.id, Object.fromJson(json.layout));
   room.groups = [];
   for (let index = 0; index < json.groups.length; index++) {
     const groupJson = json.groups[index];

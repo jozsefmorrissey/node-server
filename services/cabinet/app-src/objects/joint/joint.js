@@ -6,30 +6,40 @@ const Polygon3D = require('../../three-d/objects/polygon.js');
 
 const REASSIGNMENT_ERROR = () => new Error('Make a new joint, joints cannot be reassined');
 
-function isMatch(partCodeOlocationCodeOassemblyOregex, obj) {
-  let pclcar = partCodeOlocationCodeOassemblyOregex;
-  if ((typeof pclcar) === 'string') pclcar = new RegExp(`^${pclcar}(:.*|)$`);
-  if (pclcar instanceof RegExp) {
-    return obj.partCode().match(pclcar) || obj.locationCode().match(pclcar);
+function isMatch(partCodeOlocationCodeOassemblyOregexOfunc, obj) {
+  let pclcarf = partCodeOlocationCodeOassemblyOregexOfunc;
+  if (pclcarf instanceof Function) return pclcarf(obj) === true;
+  if ((typeof pclcarf) === 'string') pclcarf = new RegExp(`^${pclcarf}(:.*|)$`);
+  if (pclcarf instanceof RegExp) {
+    return null !== (obj.partCode().match(pclcarf) || obj.locationCode().match(pclcarf));
   }
-  return obj === pclcar;
+  return obj === pclcarf;
 }
 
-function getModels(partCodeOlocationCodeOassemblyOregex, filter, joint) {
-  let pclcar = partCodeOlocationCodeOassemblyOregex;
+const matchFilter = (pclcarf, filter) => {
+  const runFilter = filter instanceof Function;
+  return (a) => {
+    return a.constructor.joinable && a.includeJoints() && isMatch(pclcarf, a) && (!runFilter || filter(a));
+  }
+}
+
+function getMatches (partCodeOlocationCodeOassemblyOregexOfunc, filter, joint) {
+  let pclcarf = partCodeOlocationCodeOassemblyOregexOfunc;
   const parent = joint.parentAssembly();
   if (parent === undefined) throw new Error(`You need to set parentAssembly for '${joint.toString()}'`);
-  const joinable = parent.allAssemblies().filter(a => a.constructor.joinable);
+  return parent.allAssemblies().filter(matchFilter(pclcarf, filter, joint));
+}
+
+function getModels(partCodeOlocationCodeOassemblyOregexOfunc, filter, joint) {
+  let pclcarf = partCodeOlocationCodeOassemblyOregexOfunc;
+  const joinable = getMatches(pclcarf, filter, joint);
   let models = [];
-  const runFilter = filter instanceof Function;
   for (let index = 0; index < joinable.length; index++) {
-    const male = joinable[index];
+    const assem = joinable[index];
     try {
-      if (male.includeJoints() && isMatch(pclcar, male) && (!runFilter || filter(male))) {
-        const model = male.toModel();
-        if (model !== undefined) {
-          models.push(male.toModel());
-        }
+      const model = assem.toModel();
+      if (model !== undefined) {
+        models.push(assem.toModel());
       }
     } catch (e) {
       console.warn(e);
@@ -90,8 +100,9 @@ class Joint {
 
     let maleReg, femaleReg;
     this.isFemale = (assem) => isMatch(femaleJointSelector, assem);
-
     this.isMale = (assem) => isMatch(maleJointSelector, assem);
+    this.men = (filter) => getMatches(maleJointSelector, filter, this);
+    this.women = (filter) => getMatches(maleJointSelector, filter, this);
 
     this.maleJointSelector = (pc) => {
       if (pc && maleJointSelector) throw new Error('Create new Joint cannot be reassined');
@@ -150,11 +161,42 @@ Joint.new = function (id, json) {
   return new Joint.classes[id]().fromJson(json);
 }
 
-let distSorter = (s1, s2) => {
-  if (s1.length !== 2 && s2.length !== 2) return 0;
-  if (s1.length !== 2) return 1;
-  if (s2.length !== 2) return -1;
-  return s2[0].distance(s2[1]) - s1[0].distance(s1[1]);
+const jointCompexityObject = (id, complexityObj) => {
+  const assembly = complexityObj[id].assembly;
+  const obj = complexityObj[assembly.id()];
+  if (obj.complexity) return;
+  let complexity = NaN;
+  obj.partCode = assembly.partCode();
+  obj.joints = assembly.getJoints().female;
+  obj.dependencies = [];
+  obj.joints.forEach(j => obj.dependencies.concatInPlace(j.men().map(m => m.id())));
+  obj.complexity = () => {
+    if (!Number.isNaN(complexity)) return complexity;
+    complexity = 1;
+    for (let index = 0; index < obj.dependencies.length; index++) {
+      const id = obj.dependencies[index];
+      complexity += complexityObj[id].complexity();
+      if (Number.isNaN(complexity)) return NaN;
+    }
+    return complexity;
+  }
+  return obj;
+}
+
+Joint.sorter = (assemblies) => {
+  assemblies = assemblies.filter(a => a.toModel instanceof Function);
+  const complexityObj = {};
+  assemblies.forEach(a => (complexityObj[a.id()] = {assembly: a}));
+  let index = 0;
+  while(index < assemblies.length) {
+    const assem = assemblies[index];
+    const obj = jointCompexityObject(assem.id(), complexityObj);
+    if (obj) obj.dependencies.forEach(id => jointCompexityObject(id, complexityObj));
+    index++;
+  }
+  const objs = Object.values(complexityObj);
+  objs.sortByAttr('complexity');
+  return objs;
 }
 
 Joint.apply = (model, joints) => {
@@ -165,53 +207,17 @@ Joint.apply = (model, joints) => {
       try {
         const maleModel = joint.maleModel(joints.jointFilter);
         if (m.polygons.length > 0 && maleModel && maleModel.polygons.length > 0) {
-          // if (joint.fullLength()) {
-          //   const intersection = Polygon3D.fromCSG(maleModel.intersect(m));
-          //   const sets = Polygon3D.parrelleSets(intersection);
-          //   sets.sort(distSorter);
-          //   const vector = sets[0][0].center().vector().minus(sets[0][1].center()).unit()
-          //   let front = sets[0][0];//.translate(vector.scale(10000000));
-          //   let back = sets[0][1];//.translate(vector.scale(-10000000));
-          //   if (!front.isClockwise()) front = front.reverse();
-          //   if (!back.isClockwise()) back = back.reverse();
-          //   const biPoly = new BiPolygon(sets[0][0], sets[0][1]);
-          //   m = m.subtract(biPoly.toModel());
-          // } else {
-            m = m.subtract(maleModel);
-          // }
+          m = m.subtract(maleModel);
         }
       } catch (e) {
         console.error('Most likely caused by a circular joint reference',e);
+        const cp = joint.parentAssembly()
+        cp.parentAssembly().build()
       }
     }
   });
   return m;
 }
 
-class JointReferences {
-  constructor(parent, getJoints, origPartCode) {
-    const initialVals = {
-      origPartCode
-    }
-    Object.getSet(this, initialVals);
-
-    this.clone = () => new JointReferences(parent, getJoints, origPartCode);
-
-    this.list = () => {
-      const orig = getJoints();
-      const list = [];
-      for (let index = 0; index < orig.length; index++) {
-        let j = orig[index];
-        if (j.femaleJointSelector() === origPartCode) j = j.clone(parent, null, parent.locationCode());
-        else if (j.maleJointSelector() === origPartCode) j = j.clone(parent, parent.locationCode());
-        // j.maleOffset(-.9525/2);
-        list.push(j);
-      }
-      return list;
-    }
-  }
-}
-
-Joint.References = JointReferences;
 
 module.exports = Joint

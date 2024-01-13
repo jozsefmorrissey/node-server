@@ -1,10 +1,12 @@
 
 const Line3D = require('line');
+const Vertex3D = require('vertex');
+const Plane = require('plane');
+const Matrix = require('matrix');
 
-const tinyVertScale = .1;
 function parrellePointLine(line1, line2) {
-  const tinyVect1 = line1.vector().unit().scale(tinyVertScale);
-  const tinyVect2 = line2.vector().unit().scale(tinyVertScale);
+  const vect1 = line1.vector();
+  const vect2 = line2.vector();
   let closest = {dist: Number.MAX_SAFE_INTEGER};
   for (let i = 0; i < 2; i++) {
     for (let j = 0; j < 2; j++) {
@@ -14,15 +16,16 @@ function parrellePointLine(line1, line2) {
       if (dist < closest.dist) closest = {dist, vert1, vert2};
     }
   }
-  const tinyPerp1 = Line3D.fromVector(tinyVect1, new Vertex3D(tinyVect1.scale(-.5).add(closest.vert2.vector())))
-  const tinyPerp2 = Line3D.fromVector(tinyVect2, new Vertex3D(tinyVect2.scale(-.5).add(closest.vert1.vector())))
-  const perpConn1 = Line3D.intersectingLine(tinyPerp1, line1, false, true, true, line1.startVertex.clamp, line1.endVertex.clamp);
-  const perpConn2 = Line3D.intersectingLine(tinyPerp2, line2, false, true, true, line2.startVertex.clamp, line2.endVertex.clamp);
+  const perp1 = Line3D.fromVector(vect1, new Vertex3D(vect1.scale(-.5).add(closest.vert2.vector())))
+  const perp2 = Line3D.fromVector(vect2, new Vertex3D(vect2.scale(-.5).add(closest.vert1.vector())))
+  const perpConn1 = Line3D.intersectingLine(perp1, line1, false, true, true, line1.startVertex.clamp, line1.endVertex.clamp);
+  const perpConn2 = Line3D.intersectingLine(perp2, line2, false, true, true, line2.startVertex.clamp, line2.endVertex.clamp);
   let shortestConnection = perpConn1.length() < perpConn2.length() ? perpConn1 : perpConn2;
-  if (!perpConn1.finite() && !perpConn2.finite()) throw new Error('Sorry I guess you have to deal with this issue: Matrix that is created does not have a single solution');
+  if (!perpConn1.finite() && !perpConn2.finite())
+    throw new Error('Sorry I guess you have to deal with this issue: Matrix that is created does not have a single solution');
   if (perpConn1.finite() && !perpConn2.finite()) shortestConnection = perpConn1;
   if (perpConn2.finite() && !perpConn1.finite()) shortestConnection = perpConn2;
-  if (shortestConnection instanceof Line3D.Poly) shortestConnection = shortestConnection.centerLine();
+  if (shortestConnection instanceof PolyLine3D) shortestConnection = shortestConnection.centerLine();
   return shortestConnection;
 }
 
@@ -95,7 +98,7 @@ Line3D.intersectingLine = (line1, line2, clampAll, clampA0, clampA1, clampB0, cl
           clampB1 = temp;
         }
         //If clamping is off, or segments overlapped, we have infinite results, just return position.
-        return new Line3D.Poly(line1, line2, clampAll, clampA0, clampA1, clampB0, clampB1);
+        return new PolyLine3D(line1, line2, clampAll, clampA0, clampA1, clampB0, clampB1);
     }
 
     var t = b0.minus(a0);

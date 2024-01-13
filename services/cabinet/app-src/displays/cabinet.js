@@ -59,8 +59,9 @@ class CabinetDisplay {
     function displayValue(val) {
       return new Measurement(val).display();
     }
-    const getHeader = (cabinet, $index) =>
-        CabinetDisplay.headTemplate.render({cabinet, $index, displayValue, displayId});
+    const getHeader = (cabinet, $index) => {
+      return CabinetDisplay.headTemplate.render({cabinet, $index, displayValue, displayId});
+    }
     const showTypes = Show.listTypes();
     const display = (value) => new Measurement(value).display();
     const getBody = (cabinet, $index) => {

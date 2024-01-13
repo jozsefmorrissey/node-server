@@ -4,6 +4,7 @@ const Polygon3D = require('../../../three-d/objects/polygon.js');
 const Vector3D = require('../../../three-d/objects/vector.js');
 const Vertex3D = require('../../../three-d/objects/vertex.js');
 const Line3D = require('../../../three-d/objects/line.js');
+const Plane = require('../../../three-d/objects/plane.js');
 const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Tolerance = require('../../../../../../public/js/utils/tolerance.js');
@@ -11,7 +12,6 @@ const ToleranceMap = require('../../../../../../public/js/utils/tolerance-map.js
 const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
 const Layer = require('../../../three-d/objects/layer.js');
 
-const within = Tolerance.within(.0001);
 const $t = require('../../../../../../public/js/utils/$t.js');
 const EPNTS = require('../../../../generated/EPNTS.js');
 
@@ -19,10 +19,19 @@ class CutInfo {
   constructor(set, jointInfo, maleModel) {
     let instance = this;
     this.jointInfo = () => jointInfo;
+    let documented = true;
+    this.documented = (isDocumented) => {
+      if (isDocumented === true || isDocumented === false) {
+        documented = isDocumented;
+      }
+      return documented;
+    }
     this.set = () => set;
     this.normalize = jointInfo.partInfo().normalize;
     this.primarySide = jointInfo.partInfo().primarySide;
-    this.toolType = () => 'tableSaw';
+    this.toolType = () => 'table-saw';
+    this.center = () =>
+      set[0].center();
     this.intersectModel = () => (maleModel === undefined ? jointInfo.model() :
       maleModel).intersect(jointInfo.partInfo().noJointmodel());
 
@@ -33,83 +42,11 @@ class CutInfo {
         console.log(str);
     }
 
-    function yCutLine(yAxis, rightOleft, edges) {
-      if (instance.constructor === CutInfo) {
-        const edges = jointInfo.partInfo().edges(rightOleft, true);
-        const cut = yAxis.to2D('x', 'y');
-        let foundStart = false; let foundEnd = false;
-        for (let index = 0; index < edges.length; index++) {
-          foundStart ||= edges[index].isOn(cut.startVertex());
-          foundEnd ||= edges[index].isOn(cut.endVertex());
-        }
-        if (foundStart && foundEnd) return;
-        if (foundStart) return cut;
-        if (foundEnd) return cut.negitive();
-        throw new Error('This shouldnt happen!10/29/2023');
-      } else {
-        const setNormalized = set.map(p => instance.normalize(rightOleft, p));
-        const blockingPolys = setNormalized.filter(p => yAxis.isParrelle(p.normal()));
-        if (blockingPolys.length > 1) throw new Error('This Should Not Happen');
-        if (blockingPolys[0] === undefined) return;
-        const intersectingLine = Line3D.fromVector(blockingPolys[0].normal(), yAxis.midpoint());
-        const intersection = blockingPolys[0].toPlane().intersection.line(intersectingLine);
-        const line3D = new Line3D(intersection, yAxis.midpoint());
-        let line2d = jointInfo.partInfo().to2D(null, line3D);
-        let intersections = edges.map(e => line2d.findDirectionalIntersection(e))
-                                 .filter(v => v instanceof Vertex2d);
-        intersections.sort(Vertex2d.sortByCenter(yAxis.midpoint()));
-        line2d.endVertex(intersections[intersections.length - 1]);
-        return line2d.negitive();
-      }
-    }
 
-    const FENCE = Line2d.startAndTheta(null, Math.PI12, 10000);
-    /**    y+         0        y-
-      +z|-------------------------
-        |
-       0|   0   ------o-----       tableTop: xy-plane
-        |  -|- |__TableSaw__|      fence: y-axis (right hand side of table)
-      -z|  / \  /          \
-    **/
+    let tableSawInformation;
     this.tableSawInformation = () => {
-//console.log(Line2d.toDrawString(edges) + '\n\nyellow' + Line2d.toDrawString([y2d]) + '\n\n' + Polygon3D.toDrawString(set, 'red'))
-      const angle = this.angle();
-      if (angle !== 0) {
-        console.log('none zero angle');
-      }
-      const upSide = this.primarySide();
-      const rightOleft = upSide === 'Left' ? true : false;
-      const edges = jointInfo.partInfo().fenceEdges(rightOleft);
-      // if (rightOleft) edges.reverse();
-      const axis = this.axis(rightOleft);
-      const y2d = axis.y.to2D('x', 'y');
-      const parrelleSets = Line2d.parrelleSets(edges);
-      const possibleFenceEdges = parrelleSets.filter(s => s[0].isParrelle(y2d))[0];
-      const y2dExt = Line2d.startAndTheta(y2d.midpoint(), y2d.radians(), 1000)
-          .combine(Line2d.startAndTheta(y2d.midpoint(), y2d.negitive().radians(), 1000));
-      let fenceEdge = possibleFenceEdges[0];
-      let yCutL = yCutLine(axis.y, rightOleft, edges);
-      if (yCutL) {
-        if (!within(fenceEdge.radians(), yCutL.radians()))
-          fenceEdge = possibleFenceEdges[1];
-        if (!within(fenceEdge.radians(), yCutL.radians()))
-          throw new Error('Shouldn\'t happen!28Nov2023');
-      }
-      // fenceEdge.rotate(Math.mod(Math.PI12 - fenceEdge.radians(), Math.PI * 2), edges.center);
-      const length = yCutL ? yCutL.length() : null;
-      const width = axis.x.length();
-      const depth = null;
-      const fenceDistance = fenceEdge.distance(y2d, false) - width/2;
-      let outsideOfBlade = length !== null && within(width, 0); //&& joint dist < cutDist
-      if (outsideOfBlade) {
-        const model = this.intersectModel();
-        const normCenter = this.normalize(rightOleft, model).center();
-        const jointCenter = new Vertex3D(normCenter).to2D('x', 'y');
-        outsideOfBlade = fenceEdge.distance(jointCenter, false) < fenceDistance + width;
-      }
-      return {length, width, depth, fenceDistance, fenceEdge, outsideOfBlade,
-              upSide, angle,
-              display: CutInfo.display, jointInfo}
+      if (tableSawInformation === undefined) tableSawInformation = new TableSawDocumentation(this);
+      return tableSawInformation;
     }
 
     const max = (line, vector, curr) => line.vector().positiveUnit().equals(vector) &&
@@ -124,11 +61,10 @@ class CutInfo {
     }
 
     this.angle = (rightOleft) => {
+      if (rightOleft !== true && rightOleft !== false) rightOleft = true;
       let zAxis = this.normalize(rightOleft, this.axis().z);
-      const z2d = zAxis.to2D('x', 'z');
-      const degrees = z2d.degrees();
-      const multiplier = degrees > 180 ? -1 : 1;
-      return (degrees % 180) * multiplier;
+      const angle = Plane.xy.angle.line(zAxis);
+      return Number.isNaN(angle) ? 0 : 90 - angle;
     }
 
     this.normals = () => {
@@ -136,13 +72,15 @@ class CutInfo {
       const zNorm = partNormals.z.positiveUnit();
       if (set.length === 1) {
         const normals = Polygon3D.normals(set[0]).swap('x', 'z');
-        let yMoreInlineWithZ = normals.z.dot(zNorm) < normals.y.dot(zNorm)
+        let yMoreInlineWithZ = Math.abs(normals.z.dot(zNorm)) < Math.abs(normals.y.dot(zNorm));
         if (yMoreInlineWithZ)
           normals.swap('z', 'y')
+        normals.x = normals.x.scale(0);
         return normals;
       }
       const zPolys = set.filter(p => p.normal().positiveUnit().equals(zNorm));
-      if (zPolys.length > 1) throw new Error('Have not coded for this yet.(shouldnt have too)');
+      if (zPolys.length > 1)
+        throw new Error('Have not coded for this yet.(shouldnt have too)');
       const lines = zPolys[0].lines();
       if (lines.length > 4)
         lines[0].combineOrder(lines[4]);
@@ -154,44 +92,40 @@ class CutInfo {
 
     this.axis = (rightOleft) => {
       const normals = this.normals();
-      const nLines = {};
-      try {
-        nLines.x = Line3D.fromVector(normals.x);nLines.y = Line3D.fromVector(normals.y);nLines.z = Line3D.fromVector(normals.z);
-      } catch (e) {
-        console.log(e);
-        this.normals();
-      }
-      const lines = [];
-      set.forEach(p => lines.concatInPlace(p.lines()));
-      const axis = {x: [], y: [], z: [], normals};
-      for (let index = 0; index < lines.length; index++) {
-        const line = lines[index];
-        if (line.isParrelle(nLines.x)) axis.x.push(line);
-        else if (line.isParrelle(nLines.y)) axis.y.push(line);
-        else if (line.isParrelle(nLines.z)) axis.z.push(line);
-      }
-      const zeroVert = new Vertex3D(0,0,0);
-      axis.x = this.normalize(rightOleft, Line3D.averageLine(axis.x, zeroVert));
-      axis.y = this.normalize(rightOleft, Line3D.averageLine(axis.y, zeroVert));
-      axis.z = this.normalize(rightOleft, Line3D.averageLine(axis.z, zeroVert));
+
+      const axis = Polygon3D.axis(set, normals);
+      const center = this.center();
+      axis.max.x ||= new Line3D([0,0,0],[0,0,0]);
+      axis.max.x.centerOn(center);
+      axis.max.y.centerOn(center);
+      axis.max.z.centerOn(center);
+      axis.x = this.normalize(rightOleft, axis.max.x);
+      axis.y = this.normalize(rightOleft, axis.max.y);
+      axis.z = this.normalize(rightOleft, axis.max.z);
+      delete axis.min; delete axis.max;
+
+
       return axis;
     }
 
-    this.toString = () =>
-      CutInfo.template.render(this.tableSawInformation());
+    this.toDrawString = (color) => {
+      const axis = this.axis();
+      let str = Layer.toDrawString(this.set(), color) + '\n\n';
+      str += axis.x.toDrawString('red') + '\n';
+      str += axis.y.toDrawString('green') + '\n';
+      str += axis.z.toDrawString('blue')  + '\n\n';
+      return str;
+    }
+
+    this.toString = this.toDrawString;
   }
 }
 
 CutInfo.toDrawString = (cuts, ...colors) => {
   let str = '';
   for (let index = 0; index < cuts.length; index++) {
-    const cut = cuts[index];
     const color = colors[index % colors.length];
-    const axis = cut.axis();
-    str += Polygon3D.toDrawString(cut.set(), color) + '\n\n';
-    str += axis.x.toDrawString('red') + '\n';
-    str += axis.y.toDrawString('green') + '\n';
-    str += axis.z.toDrawString('blue')  + '\n\n';
+    str += cuts[index].toDrawString(color);
   }
   return str;
 }
@@ -231,7 +165,7 @@ function alignZpolyNorms(zPolys, intersectionLayers, zPolyFilter) {
       }
     }
     if (!found) {
-      const connector = Line3D.connectPlane(mzp.toPlane(), zPolys[0].center());
+      const connector = mzp.toPlane().connect.vertex(zPolys[0].center());
       zUnitDir = connector.vector().unit();
     }
   }
@@ -276,9 +210,12 @@ function partModelInfo(id, part, jointInfo, maleModel) {
 CutInfo.partModelInfo = new FunctionCache(partModelInfo, null, 'always-on', 1);
 
 let partModels = {};
-let time = 0;
+// let time = 0;
+// const start = new Date().getTime();
+// const end = new Date().getTime();
+// time += end - start;
+// console.log(time / 1000);
 CutInfo.get = (maleModel, jointInfo) => {
-  const start = new Date().getTime();
   const part = jointInfo.partInfo().parts()[0];
   const modelInfo = CutInfo.partModelInfo(part.id(), part, jointInfo, maleModel);
 
@@ -296,15 +233,13 @@ CutInfo.get = (maleModel, jointInfo) => {
       if (equivNorms) {
         let hash = intLayer.toDetailString().hash();
         if (existsInBoth[hash] === undefined && mLayer.overlaps(intLayer, true)) {
+          mLayer.overlaps(intLayer, true);
           existsInBoth[hash] = intLayer;
           found = true;
         }
       }
     }
   }
-  const end = new Date().getTime();
-  time += end - start;
-  console.log(time / 1000);
   existsInBoth = Object.values(existsInBoth);
   // existsInBoth = existsInBothSets(intersectionLayers, modelPolys);
   // TODO: ideally we would remove full length in joint application
@@ -360,6 +295,10 @@ const splitMultipleCuts = (cuts, jointInfo) => p => {
 };
 
 CutInfo.sorter = (cut1, cut2) => {
+  if (!cut1.documented() && !cut2.documented()) return 0;
+  if (!cut1.documented()) return 1;
+  if (!cut2.documented()) return -1;
+
   if (cut1.constructor === cut2.constructor) {
     const dems1 = cut1.demensions();
     const dems2 = cut2.demensions();
@@ -367,45 +306,67 @@ CutInfo.sorter = (cut1, cut2) => {
   } else {
     const cut1AngleNonZero = cut1.angle() !== 0;
     const cut2AngleNonZero = cut2.angle() !== 0;
-    if (cut1AngleNonZero && !cut2AngleNonZero) return -1;
-    if (!cut1AngleNonZero && cut2AngleNonZero) return 1;
+    if (cut1AngleNonZero && !cut2AngleNonZero) return 1;
+    if (!cut1AngleNonZero && cut2AngleNonZero) return -1;
     if (cut1AngleNonZero) return -1*(cut1.constructor.priority - cut2.constructor.priority);
     return cut1.constructor.priority - cut2.constructor.priority;
   }
 }
 
-CutInfo.clean = (cuts) => {
+function unDocumentDemensionalCut(cuts, index, demEdges) {
+  const cut = cuts[index];
+  const y2D = cut.axis(true).y.to2D('x', 'y');
+  if (demEdges.equalIndexOf(y2D) !== -1) {
+    cut.documented(false);
+  }
+  return false;
+}
+
+function unDocumentExtranious(cuts) {
+  const demEdges = cuts[0].jointInfo().partInfo().demensionEdges(true);
+  for (let i = 0; i < cuts.length; i++) {
+    const cut1 = cuts[i];
+    const isCut1 = cut1.constructor === CutInfo;
+    if (isCut1) {
+      if (unDocumentDemensionalCut(cuts, i, demEdges)) {
+        i--;
+      } else {
+        for (let j = i + 1; j < cuts.length; j++) {
+          const cut2 = cuts[j];
+          if (cut2.constructor === CutInfo) {
+            if (removeMergeable(cuts, i, j)) {
+              i--;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+function splitCutOperations(cuts) {
   const cutInfos = [];
   for (let index = 0; index < cuts.length; index++) {
     const cut = cuts[index];
     const jointInfo = cut.jointInfo();
     if (cut.constructor === CutInfo) {
       const set = cuts[index].set();
-      if (set.length === 0) {
-        cuts.remove(cut);
-        index--;
-      } else if (set.length > 1) {
+      if (set.length > 1) {
         cuts.remove(cut);
         index--;
         set.forEach(splitMultipleCuts(cuts, jointInfo, cutInfos));
       } else cutInfos.push(cut);
     }
   }
-  for (let i = 0; i < cuts.length; i++) {
-    const cut1 = cuts[i];
-    for (let j = i + 1; j < cuts.length; j++) {
-      const cut2 = cuts[j];
-      if (cut1.constructor === CutInfo && cut2.constructor === CutInfo) {
-        if (removeMergeable(cuts, i, j)) {
-          i--;
-          break;
-        }
-      }
-    }
-  }
+}
+
+CutInfo.clean = (cuts) => {
+  if (cuts.length === 0) return;
+  splitCutOperations(cuts);
+  unDocumentExtranious(cuts);
 
   cuts.sort(CutInfo.sorter);
-  cuts.split = cuts.filterSplit(c => c.toolType());
 }
 
 // intersectionPolys[1]
@@ -417,9 +378,10 @@ const disp = CutInfo.display.measurement;
 CutInfo.display.vertex3D = (vert) => `(${disp(vert.x)}, ${disp(vert.y)})`;//` X ${disp(vert.z)}`;
 CutInfo.display.vertex2d = (vert) => `(${disp(vert.x())}, ${disp(vert.y())})`;
 CutInfo.display.demensions = (dems) => `${disp(dems.x)} X ${disp(dems.y)} X ${disp(dems.z)}`;
+CutInfo.display.degrees = (degrees) => `${Math.round(degrees * 10) / 10}`;
 CutInfo.display.partIds = (parts) => {
-  const cId = parts[0].getAssembly('c').index();
-  if (!cId) return '';
+  const cId = parts[0].getAssembly('c').groupIndex();
+  if (!Number.isFinite(cId)) return '';
   let partStr;
   if (parts.length === 1) partStr = parts[0].userFriendlyId();
   else partStr = `[${parts.map(p => p.userFriendlyId()).join(',')}]`;

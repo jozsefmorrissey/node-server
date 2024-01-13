@@ -17,17 +17,6 @@
   break-inside: avoid-page;
 }
 
-th {
-  border-style: solid;
-}
-
-tr {
-  border-style: solid;
-  border-color: grey;
-  border-width: .2px;
-}
-
-
 /* #layout-sketch-cnt {
   transform: scale(1, -1);
 } */
@@ -64,6 +53,13 @@ body {
   border-width: 0 0 1pt 0;
   padding: 2pt 0;
 }
+
+table.no-border-cells {border-collapse: collapse;border: none;}
+table.no-border-cells > tbody {border: none;}
+table.no-border-cells tr {border: none;}
+table.no-border-cells th, table.no-border-cells td {border: 1px solid black;}
+table.no-border-cells .no-border {border: none;}
+table.no-border-cells td {text-align: center; vertical-align: middle;}
 
 .nowrap {
   white-space: nowrap;

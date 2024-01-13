@@ -114,6 +114,11 @@ class Vector3D {
       return v.scale(multiplier);
     }
 
+    this.radians = (v) => {
+      return Math.acos(this.unit().dot(v.unit()));
+    }
+    this.angle = (v) => Math.toDegrees(this.radians(v));
+
     this.hash = () => {
       let hash = 1;
       if (i) hash*=i > 0 ? i : -i; else hash*=1000000;
@@ -139,7 +144,7 @@ class Vector3D {
     }
 
     this.equals = (vector, tol) => !tol ? Vector3D.tolerance.within(vector, this) :
-                  new Tolerance({i: tol, j: tol, k: tol}).within(vector, this);
+                  new Tolerance({i: tol, j: tol, k: tol}).within(new Vector3D(vector), this);
     this.toString = () => `<${i},  ${j},  ${k}>`;
   }
 }

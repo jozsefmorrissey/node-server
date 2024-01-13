@@ -6,13 +6,21 @@ let groupIndex = -2;
 class Group extends Lookup {
   constructor(room, name, id) {
     super(id);
-    const initialVals = {
-      name: name || (room && Array.isArray(room.groups) ? room.groups.length + 1 : 1),
-    }
+    name ||= 'Group ';
+    room ||= Group.defaultRoom;
+    const initialVals = {name}
     Object.getSet(this, initialVals);
     this.propertyConfig = new PropertyConfig();
     this.objects = [];
     this.room = () => room;
+
+    this.name = (value) => {
+      if (value) {
+        const list = room && Array.isArray(room.groups) ? room.groups : [];
+        name =  list.map(g => g.name()).uniqueStringValue(value);
+      }
+      return name;
+    }
 
     this.resolve = (one, two, three) => {
       const lower = two ? two.toLowerCase() : null;
@@ -42,6 +50,7 @@ class Group extends Lookup {
       json.propertyConfig = this.propertyConfig.toJson();
       return json;
     }
+    this.name(name);
   }
 }
 

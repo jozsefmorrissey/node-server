@@ -2,9 +2,10 @@
 
 
 require('../../../public/js/utils/utils.js');
+require('../../../public/js/utils/object/json-utils.js');
 const $t = require('../../../public/js/utils/$t');
 $t.loadFunctions(require('../generated/html-templates'));
-const User = require('./displays/user.js');
+// const User = require('./displays/user.js');
 
 // Object Classes
 // require('./bind.js');
@@ -72,8 +73,9 @@ function init(body){
         const CostManager = require('./displays/managers/cost.js');
         const costManager = new CostManager('cost-manager', 'cost');
       } else if (urlSuffix === 'template') {
+        console.log('hello template????');
         const TemplateManager = require('./displays/managers/template.js');
-        const templateDisplayManager = new TemplateManager('template-manager');
+        // const templateDisplayManager = new TemplateManager('template-manager');
       } else {
         require('./displays/canvas');
         const propertyDisplay = new PropertyDisplay('#property-manager');
@@ -94,7 +96,7 @@ function init(body){
   }
 }
 
-if (User.loginAvailible()) Request.get(EPNTS.config.get(), init, console.error);
+if (urlSuffix === 'template') Request.get(EPNTS.config.get(), init, console.error);
 else init();
 
 const popUp = new PopUp({resize: false, noBackdrop: true});

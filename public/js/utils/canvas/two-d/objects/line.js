@@ -565,7 +565,7 @@ class Line2d {
     }
 
 
-    const withinPointTol = Tolerance.within(.1);
+    const withinPointTol = Tolerance.within(.001);
     this.isPoint = () => withinPointTol(this.length(), 0);
     this.clean = (other) => {
       if (!(other instanceof Line2d)) return;
@@ -643,7 +643,7 @@ class Line2d {
     }
 
     this.scale = (scale , doNotModify) => {
-      if (doNotModify) return this.clone().scale(scale);
+      if (doNotModify === true) return this.clone().scale(scale);
       this[0].scale(scale);
       this[1].scale(scale);
       return this;
@@ -823,7 +823,7 @@ Line2d.center = (lines) => Vertex2d.center(Line2d.vertices(lines));
 Line2d.rotate = (lines, radians, pivot) => lines.forEach(l => l.rotate(radians, pivot));
 
 Line2d.consolidate = (...lines) => {
-  const tolMap = new ToleranceMap({'slope': `+${tol}`});
+  const tolMap = new ToleranceMap({'slope': `+${tol}`, 'yIntercept': tol});
   const lineMap = {};
   for (let index = 0; index < lines.length; index += 1) {
     if (!lines[index].isPoint()) {

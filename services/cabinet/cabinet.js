@@ -170,7 +170,9 @@ function endpoints(app, prefix) {
   app.get(prefix + EPNTS.config.get(), function (req, res) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Type', 'application/json');
-    res.send(getUser(req).loadData('config') || []);
+    const user = getUser(req, true);
+    if (user.validate(true)) res.send(user.loadData('config') || []);
+    else res.redirect('/cabinet/' + EPNTS.config.default());
   });
 
   //  ---------------------------- Template -----------------------------//

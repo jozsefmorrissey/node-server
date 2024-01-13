@@ -1,11 +1,16 @@
 
 const ChannelInfo = require('./channel');
+const Layer = require('../../../three-d/objects/layer.js');
 
 class UnknownInfo extends ChannelInfo {
   constructor(set, jointInfo, maleModel) {
     super(set, jointInfo, maleModel);
     this.toolType = () => 'unknown';
     this.toString = () => jointInfo.joint().toString();
+
+    this.angle = () => -0;
+
+    this.toDrawString = () => Layer.toDrawString(set);
   }
 }
 
