@@ -153,7 +153,7 @@ new QRious({
 // const frame = new Frame('f', 'Frame', '0,0,0', '4, 196, .75');
 // const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
 // 
-// renderingExecutor.submitPanelToBipolygonTask(panel)
+// renderingExecutor.panelToBiPolygon(panel)
 //   .then(x => {
 //     console.log(x);
 //   })

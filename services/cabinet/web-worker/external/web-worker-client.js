@@ -1,6 +1,7 @@
 const Panel = require("../../app-src/objects/assembly/assemblies/panel");
 const Frame = require("../../app-src/objects/assembly/assemblies/frame");
 const { VectorDto, AssemblyDto, AssemblyTypes, RenderingTask, RenderingResult, DtoUtil } = require("../shared/web-worker-models");
+const BiPolygon = require("../../app-src/three-d/objects/bi-polygon");
 
 
 class RenderingExecutor {
@@ -36,7 +37,7 @@ class RenderingExecutor {
      * @param {AssemblyDto} assembly
      * @returns {Promise<RenderingResult>}
      */
-    _submit3dModelTask(assembly) {
+    async _submitCsgModelTask(assembly) {
         let resolver, rejecter;
         const taskResultPromise = new Promise((resolve, reject) => {
             resolver = resolve;
@@ -49,14 +50,14 @@ class RenderingExecutor {
         const task = new RenderingTask(taskId, assembly);
         console.log('[main] submitting task to webworker: ', task);  // todo(pibe2): for debugging; remove
         this.webWorker.postMessage(task);
-        return taskResultPromise;
+        return await taskResultPromise;
     }
 
     /**
      * @param {Panel}
-     * @returns {Promise<RenderingResult>}
+     * @returns {Promise<BiPolygon>}
      */
-    submitPanelToBipolygonTask(panel) {
+    async panelToBiPolygon(panel) {
         const current = panel.position().current();
         const panelDto = new AssemblyDto(
             AssemblyTypes.PANEL,
@@ -65,21 +66,8 @@ class RenderingExecutor {
             DtoUtil.toVectorBasisDto(current.normals),
             new VectorDto(current.biPolyNorm.i(), current.biPolyNorm.j(), current.biPolyNorm.k())
         );
-        return this._submit3dModelTask(panelDto);
-
-        /*
-        // this needs to run in webworker
-        return BiPolygon.fromVectorObject(dimensions.x, dimensions.y, dimensions.z, center, vecObj, panel.biPolyNormVector()); // todo: panel.biPolyNormVector???
-        */
-    }
-
-
-    /**
-     * @param {Frame}
-     * @returns {Promise<RenderingResult>}
-     */
-    submitFrameToBipolygonTask(frame) {
-
+        const biPolyDto = await this._submitCsgModelTask(panelDto);
+        return DtoUtil.toBiPolygon(biPolyDto);
     }
 
 }

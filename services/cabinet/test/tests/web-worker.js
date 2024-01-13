@@ -67,35 +67,33 @@ Test.add('webworker: setup', async (ts) => {
   ts.success();
 });
 
-Test.add('webworker: sanity check', async (ts) => {
-  renderingExecutor._submit3dModelTask('test: test: test')
-    .then(x => {
-      console.log(x);
-      ts.success();
-    })
-    .catch(e => {
-      console.error(e);
-      ts.failed();
-    });
-});
 
-Test.add('web-worker: toModel(simple)', async (ts) => {
-  const frame = new Frame('f', 'Frame', '0,0,0', '4, 196, .75');
+Test.add('web-worker: toBiPolygon(Panel)', async (ts) => {
+  // const frame = new Frame('f', 'Frame', '0,0,0', '4, 196, .75');
   const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
 
-  const renderingResult = await renderingExecutor.submitPanelToBipolygonTask(panel);
-  const expectedResult = panel.toBiPolygon();
-  console.log('actual', renderingResult);
-  console.log('expected', expectedResult);
+  const expected = panel.toBiPolygon();
+  const actual = await renderingExecutor.panelToBiPolygon(panel);
+  ts.assertTrue(Object.equals(expected, actual));
   ts.success();
-
-  // const regularModel = frame.toModel();
-  // const info = frame.wwinfo();
-  // const wwModel = webWorker(info);
-  // Object.equals(regularModel, wwModel);
-
-  // console.log(Polygon3D.toDrawString(cabinetClone.toModel(), 'blue'));
 });
+
+// Test.add('web-worker: toModel(Panel)', async (ts) => {
+//   const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
+
+//   const expected = panel.toModel();
+//   const actual = await renderingExecutor.panelToModel(panel);
+//   ts.assertTrue(Object.equals(expected, actual));
+//   ts.success();
+
+//   // const regularModel = frame.toModel();
+//   // const info = frame.wwinfo();
+//   // const wwModel = webWorker(info);
+//   // Object.equals(regularModel, wwModel);
+
+//   // console.log(Polygon3D.toDrawString(cabinetClone.toModel(), 'blue'));
+// });
+
 
 
 

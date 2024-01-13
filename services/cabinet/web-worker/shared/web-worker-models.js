@@ -55,18 +55,18 @@ class AssemblyDto {
 
 class BiPolygonDto {
     /**
-     * @param {PolygonDto} poly1 
-     * @param {PolygonDto} poly2 
+     * @param {PolygonDto} front 
+     * @param {PolygonDto} back 
      */
-    constructor(poly1, poly2) {
-        this.poly1 = poly1;
-        this.poly2 = poly2;
+    constructor(front, back) {
+        this.front = front;
+        this.back = back;
     }
 }
 
 class PolygonDto {
     /**
-     * @param {VectorDto[]} poly2 
+     * @param {VectorDto[]} vertices 
      */
     constructor(vertices) {
         this.vertices = vertices;
@@ -148,7 +148,10 @@ class DtoUtil {
      * @returns {BiPolygon}
      */
     static toBiPolygon(biPolyDto) {
-
+        return new BiPolygon(
+            this.toPolygon3d(biPolyDto.front),
+            this.toPolygon3d(biPolyDto.back),
+        );
     }
 
     /**
@@ -156,7 +159,7 @@ class DtoUtil {
      * @returns {Polygon3D}
      */
     static toPolygon3d(polyDto) {
-
+        return new Polygon3D(polyDto.vertices);
     }
 
 }
