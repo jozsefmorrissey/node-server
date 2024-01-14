@@ -5,8 +5,6 @@
 const Assembly = require('../objects/assembly/assembly');
 const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
 const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
-const pull = require('../three-d/models/pull.js');
-const drawerBox = require('../three-d/models/drawer-box.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const ThreeDModel = require('../three-d/three-d-model.js');
@@ -154,11 +152,6 @@ function update(part, force) {
 }
 
 function init() {
-  // const p = pull(5,2);
-  // const p = CSG.sphere({center: {x:0, y:0, z: 0}, radius: 10});
-  // p.setColor('black')
-  // const db = drawerBox(10, 15, 22);
-
   const setZFunc = setGreaterZindex('order-cnt', 'model-cnt');
   du.on.match('click', '#model-cnt', setZFunc);
   du.on.match('click', '#order-cnt', setZFunc);

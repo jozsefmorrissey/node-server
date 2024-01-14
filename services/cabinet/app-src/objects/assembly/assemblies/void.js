@@ -4,7 +4,7 @@ const Position = require('../../../position.js');
 const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
 const Butt = require('../../joint/joints/butt.js');
 const Dado = require('../../joint/joints/dado.js');
-const PanelModel = require('./panel.js').Model;
+const PanelVoidIndex = require('./panel.js').VoidIndex;
 const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
 const Line3D = require('../../../three-d/objects/line.js');
 const Polygon3D = require('../../../three-d/objects/polygon.js');
@@ -45,7 +45,6 @@ class Void extends Cutter {
 
     const dadoDepth = 3 * 2.54/8;
     const panelThickness = 3*2.54/4;
-    const panels = [];
 
     const getJoint = (mi, oi) => {
       const condition = () => instance.includedSides()[mi] === true;

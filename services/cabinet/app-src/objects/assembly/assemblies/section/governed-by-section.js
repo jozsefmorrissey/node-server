@@ -47,4 +47,10 @@ GovernedBySection.Door = DoorGoverned;
 GovernedBySection.DuelDoor = DuelDoorGoverned;
 GovernedBySection.Panel = PanelGoverned;
 
+GovernedBySection.Panel.Full = PanelFullGoverned;
+GovernedBySection.Panel.Front = PanelFrontGoverned;
+GovernedBySection.Panel.Back = PanelBackGoverned;
+GovernedBySection.Panel.Front.Cutter = CutterFrontGoverned;
+GovernedBySection.Panel.Back.Cutter = CutterBackGoverned;
+
 module.exports = GovernedBySection;

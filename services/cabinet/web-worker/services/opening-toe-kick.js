@@ -1,17 +1,11 @@
 
-const Vertex3D = require('../../../../three-d/objects/vertex');
-const Vector3D = require('../../../../three-d/objects/vector');
-const Line3D = require('../../../../three-d/objects/line');
-const Polygon3D = require('../../../../three-d/objects/polygon');
-const BiPolygon = require('../../../../three-d/objects/bi-polygon');
+const Vertex3D = require('../../app-src/three-d/objects/vertex');
+const Vector3D = require('../../app-src/three-d/objects/vector');
+const Line3D = require('../../app-src/three-d/objects/line');
+const Polygon3D = require('../../app-src/three-d/objects/polygon');
+const BiPolygon = require('../../app-src/three-d/objects/bi-polygon');
 
 const so = 3*2.54;
-
-const tkCounters = {};
-const getId = (cab) => {
-  if (tkCounters[cab.id()] === undefined) tkCounters[cab.id()] = 0;
-  return tkCounters[cab.id()]++;
-}
 
 class OpeningToeKick {
   constructor(openingToeKickDto) {

@@ -15,9 +15,9 @@ class Panel extends Assembly {
 }
 
 class PanelVoidIndex extends Panel {
-  constructor(index, void) {
+  constructor(index, vOid) {
     const partCode = `:p${index}`;
-    const partName = void.partName() + `-panel-${index}`
+    const partName = vOid.partName() + `-panel-${index}`
     super(partCode, partName);
     this.index = index;
   }
@@ -30,5 +30,8 @@ class PanelToeKickBacker extends Panel {
 }
 
 Panel.abbriviation = 'pn';
+
+Panel.VoidIndex = PanelVoidIndex;
+Panel.ToeKickBacker = PanelToeKickBacker;
 
 module.exports = Panel

@@ -1,7 +1,11 @@
 
 const Assembly = require('../../assembly');
-const PanelModel = require('../panel').Model;
-const CutterModel = require('../cutter').Model;
+const Panel = require('../panel');
+const PanelToeKickBacker = Panel.ToeKickBacker;
+const Cutter = require('../cutter');
+const CutterLeftCorner = Cutter.LeftCorner;
+const CutterRightCorner = Cutter.RightCorrner;
+const CutterToeKick = Cutter.ToeKick;
 const Vertex3D = require('../../../../three-d/objects/vertex');
 const Vector3D = require('../../../../three-d/objects/vector');
 const Line3D = require('../../../../three-d/objects/line');
@@ -9,12 +13,11 @@ const Polygon3D = require('../../../../three-d/objects/polygon');
 const BiPolygon = require('../../../../three-d/objects/bi-polygon');
 const Butt = require('../../../joint/joints/butt.js');
 
+
 class OpeningToeKick extends Assembly {
-  constructor(autoToeKick, opening) {
-    const cabinet = autoToeKick.rootAssembly();
-    const id = getId(cabinet);
-    const atkid = `AutoToeKick${id}`;
-    super(`AUTOTK`, atkid);
+  constructor(autoToeKick, opening, index) {
+    const atkid = 'OpeningToeKick' + index;
+    super(`OpenTK`, atkid);
     this.parentAssembly(autoToeKick);
     this.autoToeKick = () => autoToeKick;
     this.opening = () => opening;
@@ -57,9 +60,7 @@ class OpeningToeKick extends Assembly {
 
 class AutoToekick extends Assembly {
   constructor(cabinet) {
-    const id = getId(cabinet);
-    const atkid = `AutoToeKick${id}`;
-    super(`AUTOTK`, atkid);
+    super(`AUTOTK`, 'AutoToeKick');
     this.part = () => false;
 
     Object.getSet(this, {rightEndStyle: false, leftEndStyle: false});
@@ -75,7 +76,7 @@ class AutoToekick extends Assembly {
           const openings = cabinet.openings;
           if (openings.length > 1) throw new Error('Not yet implemented for multiple openings...');
           for (let index = 0; index < openings.length; index++) {
-            const otk = new OpeningToeKick(this, openings[index]);
+            const otk = new OpeningToeKick(this, openings[index], index);
             instance.addSubAssembly(otk);
           }
         } catch (e) {

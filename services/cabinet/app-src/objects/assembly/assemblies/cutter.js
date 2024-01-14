@@ -40,7 +40,7 @@ class CutterReference extends Cutter {
     super(partCode);
     if (reference instanceof Assembly) {
       const joint = new Joint.DependentOn(reference.locationCode(), this.locationCode())
-      this.addJoint(joint);
+      this.addJoints(joint);
     }
     offset ||= 0;
 
@@ -60,6 +60,12 @@ class CutterPoly extends Cutter {
     }
 
     this.partName = () => `CutterPoly(${poly.toString()})`;
+  }
+}
+
+class ControlableAbyss extends CutterModel {
+  constructor(...args) {
+    super(...args)
   }
 }
 

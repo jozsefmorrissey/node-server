@@ -7,7 +7,7 @@ const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
 const Joint = require('../joint/joint');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
-const ToModel = require('to-model');
+const ToModel = require('../../../web-worker/services/to-model.js');
 
 FunctionCache.on('hash', 250);
 const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
@@ -458,11 +458,6 @@ class Assembly extends KeyValue {
       if (this[attr] instanceof Function && this[attr].clearCache instanceof Function)
       this[attr].clearCache();
       return clear;
-    }
-    this.clearCaches = () => {
-      //TODO: Find better way of reseting all caches
-      clear('getJoints')('allAssemblies')('getAssembly')('hash');
-      this.children().forEach(c => c.clearCaches());
     }
 
     const normColors = ['red', 'green', 'blue'];

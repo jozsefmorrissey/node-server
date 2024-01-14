@@ -3,7 +3,7 @@ const Polygon3D = require('../objects/polygon.js');
 const BiPolygon = require('../objects/bi-polygon.js');
 const to = {};
 
-to.SimpleModelDto.model (simpleModelDto) => {
+to.SimpleModelDto.model = (simpleModelDto) => {
   const biPoly = BiPolygon.fromVectorObject(obj3D.width(), obj3D.height(), obj3D.thickness(), obj3D.center());
   return biPoly.toModel();
 }

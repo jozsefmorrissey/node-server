@@ -268,7 +268,6 @@ class Cabinet extends Assembly {
     let lastCallId = 0;
     function updateOpenings(callId) {
       if (callId === lastCallId) {
-        instance.clearCaches();
         for (let index = 0; index < instance.openings.length; index++) {
           instance.openings[index].update();
         }
@@ -342,7 +341,6 @@ Cabinet.build = (type, group, config) => {
   });
   config.subassemblies.filter(sac => sac.dividerType).forEach((sac) =>
       cabinet.subassemblies[sac.code].type(sac.dividerType));
-  cabinet.clearCaches();
   cabinet.updateOpenings(true);
   return cabinet;
 }
@@ -376,8 +374,6 @@ Cabinet.fromJson = (assemblyJson, group) => {
   const joints = Object.fromJson(assemblyJson.joints);
   assembly.addJoints.apply(assembly, joints);
   assembly.autoToeKick(assemblyJson.autoToeKick);
-
-  assembly.clearCaches();
 
   trigger();
   return assembly;

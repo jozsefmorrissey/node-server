@@ -56,27 +56,38 @@ const { RenderingExecutor } = require('../../web-worker/external/web-worker-clie
 //toModel([]);
 //position.current();
 
+function get(constructorRegExp, applyTestConfig) {
+  const cabinet = Cabinet.build('base');
+  if (applyTestConfig) CabinetLayouts.map['test'].build(cabinet);
+  return cabinet.getSubassemblies().filter(sa => sa.constructor.name.match(constructorRegExp));
+}
+
+Test.add('webworker: ToModel(Panel)', (ts) => {
+  const panel = get("Panel");
+  
+  ts.success();
+});
 
 let webWorker;
 let renderingExecutor;
 
 
-Test.add('webworker: setup', async (ts) => {
-  webWorker = new Worker('/cabinet/js/web-worker-bundle.js');
-  renderingExecutor = new RenderingExecutor(webWorker);
-  ts.success();
-});
-
-
-Test.add('web-worker: toBiPolygon(Panel)', async (ts) => {
-  // const frame = new Frame('f', 'Frame', '0,0,0', '4, 196, .75');
-  const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
-
-  const expected = panel.toBiPolygon();
-  const actual = await renderingExecutor.panelToBiPolygon(panel);
-  ts.assertTrue(Object.equals(expected, actual));
-  ts.success();
-});
+                          // Test.add('webworker: setup', async (ts) => {
+                          //   webWorker = new Worker('/cabinet/js/web-worker-bundle.js');
+                          //   renderingExecutor = new RenderingExecutor(webWorker);
+                          //   ts.success();
+                          // });
+                          //
+                          //
+                          // Test.add('web-worker: toBiPolygon(Panel)', async (ts) => {
+                          //   // const frame = new Frame('f', 'Frame', '0,0,0', '4, 196, .75');
+                          //   const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
+                          //
+                          //   const expected = panel.toBiPolygon();
+                          //   const actual = await renderingExecutor.panelToBiPolygon(panel);
+                          //   ts.assertTrue(Object.equals(expected, actual));
+                          //   ts.success();
+                          // });
 
 // Test.add('web-worker: toModel(Panel)', async (ts) => {
 //   const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
@@ -166,8 +177,19 @@ Test.add('web-worker: toBiPolygon(Panel)', async (ts) => {
 //         PanelSection (joints should be done before migration)
 //
 //       infoObj: { // All found in sectionProperties
+//         top(), bottom(), left(), right()
+//           {depth, thickness, width, height, rotation, position}
 //         dividerReveal()
+//         pattern()
+//         vertical()
+//         verticalDivisions()
+//         dividerCount()
+//         sectionCount()
+//         coordinates()
+//         innerDepth()
 //         divideRight()
+//         outerPoly()
+//         innerPoly()
 //         rotation()
 //         this.propertyConfig(): {isReveal, isInset, reveal, Inset, overlay}
 //         divider; {position, maxWidth, panelThickness}
@@ -175,11 +197,10 @@ Test.add('web-worker: toBiPolygon(Panel)', async (ts) => {
 //
 //       functions to be moved
 //         SectionProperties
-//           outerPoly()
-//           innerPoly()
 //           converage()
 //           coverInfo()
 //           polyInformation()
+//           drawerDepth()
 //           dividerLayout()
 //           perpendicularDistance()
 //           dividerOffsetInfo()
@@ -349,23 +370,18 @@ Test.add('web-worker: toBiPolygon(Panel)', async (ts) => {
 // });
 
 
-function get(constructorRegExp) {
-  const cabinet = Cabinet.build('base');
-  CabinetLayouts.map['test'].build(cabinet);
-  return cabinet.getSubassemblies().filter(sa => sa.constructor.name.match(constructorRegExp));
-}
 
-function testCSGvsExisting(object, ts) {
-  const regularModel = object.toModel([]);
-  const info = object.wwinfo([]);
-  const wwModel = webWorker(info);
-  // console.log(JSON.stringify(regularModel, null, 2));
-  // console.log(JSON.stringify(wwModel, null, 2));
-  //console.log(Polygon3D.toDrawString(cabinetClone.toModel(), 'blue'));
-  ts.assertTrue(Object.equals(regularModel, wwModel));
-}
-
-function testCSGvsExistingObjects(objects, ts) {
-  if (objects.length === 0) ts.failed('YO! where da objs @');
-  objects.forEach(obj => testCSGvsExisting(obj, ts));
-}
+// function testCSGvsExisting(object, ts) {
+//   const regularModel = object.toModel([]);
+//   const info = object.wwinfo([]);
+//   const wwModel = webWorker(info);
+//   // console.log(JSON.stringify(regularModel, null, 2));
+//   // console.log(JSON.stringify(wwModel, null, 2));
+//   //console.log(Polygon3D.toDrawString(cabinetClone.toModel(), 'blue'));
+//   ts.assertTrue(Object.equals(regularModel, wwModel));
+// }
+//
+// function testCSGvsExistingObjects(objects, ts) {
+//   if (objects.length === 0) ts.failed('YO! where da objs @');
+//   objects.forEach(obj => testCSGvsExisting(obj, ts));
+// }

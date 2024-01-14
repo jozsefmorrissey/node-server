@@ -13,8 +13,6 @@ const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
 const CustomEvent = require('../../../../../../../public/js/utils/custom-event.js')
 const FunctionCache = require('../../../../../../../public/js/utils/services/function-cache.js');
-const SectionPropertiesDto = require('web-worker-models');
-const SPSvc = require('../section-properties');
 
 const v = (x,y,z) => new Vertex3D(x,y,z);
 class SectionProperties extends KeyValue{
@@ -238,7 +236,6 @@ class SectionProperties extends KeyValue{
     }
 
     this.coverage = (startOffset, endOffset) => {
-      called.coverage++;
       const info = [];
       const propConfig = this.propertyConfig();
       const isReveal = propConfig.isReveal();
@@ -345,9 +342,8 @@ class SectionProperties extends KeyValue{
         return;
       }
 
-      const spSvc = new SPSpc(new SectionPropertiesDto(this));
-      const dividerOffsetInfo = spSvc.dividerOffsetInfo();
-      const coverage = spSvc.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
+      const dividerOffsetInfo = instance.dividerOffsetInfo();
+      const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
 
       if (coverage.length > 1) {
         const patternInfo = calcPattern(coverage._TOTAL);
@@ -377,6 +373,39 @@ class SectionProperties extends KeyValue{
       }
     }
 
+    this.outerCenter = () => {
+      if (true || outerCenter === null) outerCenter = Vertex3D.center(coordinates.outer);
+      return outerCenter;
+    }
+
+    this.innerCenter = () => {
+      if (true || innerCenter === null) innerCenter = Vertex3D.center(coordinates.inner);
+      return innerCenter;
+    }
+
+    this.outerLength = () => {
+      if (true || outerLength === null)
+        outerLength = coordinates.outer[0].distance(coordinates.outer[3]);
+      return outerLength;
+    }
+
+    this.outerWidth = () => {
+      if (true || outerWidth === null)
+        outerWidth = coordinates.outer[0].distance(coordinates.outer[1]);
+      return outerWidth;
+    }
+
+    this.innerLength = () => {
+      if (true || innerLength === null)
+        innerLength = coordinates.inner[0].distance(coordinates.inner[3]);
+      return innerLength;
+    }
+
+    this.innerWidth = () => {
+      if (true || innerWidth === null)
+        innerWidth = coordinates.inner[0].distance(coordinates.inner[1]);
+      return innerWidth;
+    }
 
     this.divide = (dividerCount, dontUpdateCoords) => {
       init();
@@ -474,7 +503,48 @@ class SectionProperties extends KeyValue{
       setSectionCoordinates(true);
     }
 
+    function perpendicularDistance(point, line) {
+      if (instance.sectionCount() !== 0) {
+        const plane = Plane.fromPointNormal(point, line.vector());
+        const intersection = plane.intersection.line(line);
+        const distance = line.startVertex.distance(intersection);
+        return distance;
+      }
+      return 0;
+    }
 
+    this.dividerOffsetInfo = () => {
+    let startOffset = 0;
+    let endOffset = 0;
+
+    const coords = this.coordinates();
+    const outer = coords.outer;
+    const inner = coords.inner;
+    if (this.vertical()) {
+       startOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[2]));
+       endOffset = perpendicularDistance(outer[2], new Line3D(inner[2], inner[3]));
+     } else {
+       startOffset = perpendicularDistance(outer[0], new Line3D(inner[0], inner[3]));
+       endOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[0]));
+     }
+     const info = [{offset: startOffset}];
+     info.startOffset = startOffset;
+     info.endOffset = endOffset;
+
+    let offset = this.isVertical() ? this.outerLength() : this.outerWidth();
+    const propConfig = this.propertyConfig();
+    for (let index = 0; index < this.sections.length; index += 1) {
+      if (index < this.sections.length - 1) {
+        const section = this.sections[index];
+        const divider = section.divider();
+        const offset = divider.maxWidth();
+        info[index + 1] = {offset, divider};
+      } else {
+        info[index + 1] = {offset: endOffset};
+      }
+    }
+    return info;
+  }
 
     let dividerJoint;
     this.dividerJoint = (joint) => {
@@ -483,7 +553,6 @@ class SectionProperties extends KeyValue{
       return joint.clone();
     }
 
-    let called = {coverage: 0, dividerOffsetInfo: 0, coverInfo: 0, dividerInfo: 0};
     this.setSection = (constructorIdOobject) => {
       if (constructorIdOobject === null) this.cover(null);
       else {

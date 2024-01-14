@@ -1,11 +1,8 @@
 
 
 
-const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
-const Polygon3D = require('../../../three-d/objects/polygon.js');
-const Cutter = require('./cutter.js');
-const Panel = require('./panel');
-const PanelModel = Panel.Model;
+const BiPolygon = require('../../app-src/three-d/objects/bi-polygon.js');
+const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 
 class DividerGoverned {
   constructor(dividerGovernedDto) {
@@ -96,11 +93,11 @@ class DividerGoverned {
 }
 
 const built = {};
-OpeningToeKick.instance = (openingToeKickDto) => {
+DividerGoverned.instance = (openingToeKickDto) => {
   if (built[openingToeKickDto.id] === undefined) {
-    built[openingToeKickDto.id] = new OpeningToeKick(openingToeKickDto);
+    built[openingToeKickDto.id] = new DividerGoverned(openingToeKickDto);
   }
   return built[openingToeKickDto.id];
 }
 
-module.exports = Divider
+module.exports = DividerGoverned

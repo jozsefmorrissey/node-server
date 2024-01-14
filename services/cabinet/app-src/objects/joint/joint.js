@@ -2,7 +2,6 @@
 const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 const BiPolygon = require('../../three-d/objects/bi-polygon.js');
 const Polygon3D = require('../../three-d/objects/polygon.js');
-const JointWW = requ
 // const Assembly = require('../assembly/assembly.js');
 
 const REASSIGNMENT_ERROR = () => new Error('Make a new joint, joints cannot be reassined');

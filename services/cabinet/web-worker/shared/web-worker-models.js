@@ -191,7 +191,7 @@ class OpeningToeKickDto extends LookupDto {
 
 class DrawerBoxOpeningDto extends GovernedSectionDto {constructor(drawerBox) {super(drawerBox)}};
 
-class HandleGovernedDto extends GovernedBySection {
+class HandleGovernedDto extends GovernedSectionDto {
   constructor(handle) {
     super(handle);
     this.projection = handle.projection();

@@ -2,7 +2,6 @@
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils');
-const pull = require('../three-d/models/pull.js');
 const ThreeDModel = require('../three-d/three-d-model.js');
 const Layout2D = require('../two-d/layout/layout.js')
 const Draw2D = require('../../../../public/js/utils/canvas/two-d/draw.js');

@@ -8,6 +8,12 @@ const Cutter = require('./cutter.js');
 const Panel = require('./panel');
 const PanelModel = Panel.Model;
 const Joint = require('../../joint/joint.js');
+const GovernedBySection = require('./section/governed-by-section.js');
+const PanelFullGoverned = GovernedBySection.Panel.Full;
+const PanelFrontGoverned = GovernedBySection.Panel.Front;
+const CutterFrontGoverned = GovernedBySection.Panel.Front.Cutter;
+const PanelBackGoverned = GovernedBySection.Panel.Back;
+const CutterBackGoverned = GovernedBySection.Panel.Back.Cutter;
 
 class Divider extends Assembly {
   constructor(partCode, partName, config) {
@@ -20,9 +26,9 @@ class Divider extends Assembly {
     const parts = [
       new PanelFullGoverned(':full', 'panel-full'),
       new PanelFrontGoverned(':f', 'panel-front'),
-      new CutterBackGoverned(':f', 'cutter-front'),
+      new CutterFrontGoverned(':b', 'cutter-back'),
       new PanelBackGoverned(':b', 'panel-back'),
-      new CutterFrontGoverned(':b', 'cutter-back')
+      new CutterBackGoverned(':f', 'cutter-front')
     ];
 
     this.addJoints(new Joint(parts[2].locationCode(), parts[1].locationCode(), null, 'only'));
@@ -56,9 +62,6 @@ class Divider extends Assembly {
     this.type = (t) => {
       const index = Divider.Types.indexOf(t);
       if (index !== -1) type = Divider.Types[index];
-      if (this.parentAssembly()) {
-        build();
-      }
       return type;
     }
 

@@ -35,6 +35,9 @@ const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add('./app-src/')
         .add('./web-worker/shared/')
         .add('./web-worker/external/')
+        // TODO: remove once webworkers are implemented properly this is no longer neccissary
+        .add('./web-worker/services/')
+
 
 if (global.ENV === 'local') {
   jsWatcher.add('./test');

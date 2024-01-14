@@ -196,7 +196,6 @@ function getCabinet(elem) {
 
   if (sectionState.testDividers) applyTestConfiguration();
   else applyDividers();
-  cabinet.clearCaches();
   // console.log(cabinet.toDrawString());
   setTimeout(() => getOpeningSketch().draw());
   return cabinet;

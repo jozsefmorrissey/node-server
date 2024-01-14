@@ -40,7 +40,7 @@ class DividerSection extends Assembly {
     const panelPartName = () =>
         `${this.partName()}.Divider.Panel`;
 
-    panel ||= new Divider(null, panelPartName, null, toPanelModel, toBiPolygon);
+    panel ||= new Divider(null, panelPartName);
     // const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
     panel.parentAssembly(this);
     this.addSubAssembly(panel);

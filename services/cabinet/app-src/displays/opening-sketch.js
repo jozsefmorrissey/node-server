@@ -13,7 +13,7 @@ const PanZoom = require('../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const Global = require('../services/global.js');
-const ToModel = require('to-model');
+const ToModel = require('../../web-worker/services/to-model.js');
 
 class OpeningSketch {
   constructor(id, cabinet) {

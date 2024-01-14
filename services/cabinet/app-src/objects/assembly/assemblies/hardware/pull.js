@@ -3,7 +3,6 @@
 
 const Assembly = require('../../assembly.js');
 const CSG = require('../../../../../../../public/js/utils/3d-modeling/csg.js');
-const pull = require('../../../../three-d/models/pull.js');
 /*
     a,b,c
     d,e,f

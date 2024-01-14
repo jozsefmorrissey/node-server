@@ -59,7 +59,7 @@ class SectionProperties {
       }
       drawerDepth = closest ? closest.dist : 0;
       return drawerDepth;
-    });
+    };
 
     const depthPartReg = /Cabinet|Cutter|Section|Void|Auto|Handle|Drawer|Door/;
     const depthDvReg = /_dv/;
@@ -91,13 +91,13 @@ class SectionProperties {
       let biPolygon, backOffset, frontOffset, offset, coords;
       const doorThickness = 3 * 2.54/4;
       const bumperThickness = 3 * 2.54 / 16;
-      if (spDto.isInset {
+      if (spDto.isInset) {
         coords = this.coordinates().inner;
         offset = spDto.insetIs * -2;
         const projection = 3 * 2.54/64;
         frontOffset = projection;
         backOffset = projection - doorThickness;
-      } else if (spDto.isReveal {
+      } else if (spDto.isReveal) {
         coords = this.coordinates().outer;
         offset = -spDto.revealR;
         frontOffset = (doorThickness + bumperThickness);
@@ -131,16 +131,6 @@ class SectionProperties {
       }
     }
 
-    function perpendicularDistance(point, line) {
-      if (instance.sectionCount() !== 0) {
-        const plane = Plane.fromPointNormal(point, line.vector());
-        const intersection = plane.intersection.line(line);
-        const distance = line.startVertex.distance(intersection);
-        return distance;
-      }
-      return 0;
-    }
-
     function addDividerJoints(point1, point2) {
       const c = instance.getCabinet();
       const panelThickness = divider.panelThickness();
@@ -156,7 +146,7 @@ class SectionProperties {
         const length = point1.distance(point2) + jointOffset - right.panelThickness()/2;
         Line3D.adjustDistance(point1, point2, length, true);
       }
-      if (!(left.type 'DividerSection')) {
+      if (!(left.type === 'DividerSection')) {
         Line3D.adjustDistance(point2, point1, maxLen, true);
       } else {
         const length = point1.distance(point2) + jointOffset - left.panelThickness()/2;
@@ -186,75 +176,5 @@ class SectionProperties {
       const offset = spDto.divider.panelThickness / 2;
       return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset);
     }
-
-
-    let dividerOffsetInfo;
-    this.dividerOffsetInfo = () => {
-      if (dividerOffsetInfo) return dividerOffsetInfo;
-      let startOffset = 0;
-      let endOffset = 0;
-
-      const coords = spDto.coordinates;
-      const outer = coords.outer;
-      const inner = coords.inner;
-      if (spDto.vertical) {
-         startOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[2]));
-         endOffset = perpendicularDistance(outer[2], new Line3D(inner[2], inner[3]));
-       } else {
-         startOffset = perpendicularDistance(outer[0], new Line3D(inner[0], inner[3]));
-         endOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[0]));
-       }
-       const info = [{offset: startOffset}];
-       info.startOffset = startOffset;
-       info.endOffset = endOffset;
-
-      let offset = spDto.isVertical ? this.outerLength() : this.outerWidth();
-      for (let index = 0; index < spDto.sectionCount; index += 1) {
-        if (index < spDto.sectionCount - 1) {
-          const offset = spDto.dividersMaxWidth[index];
-          info[index + 1] = {offset, divider};
-        } else {
-          info[index + 1] = {offset: endOffset};
-        }
-      }
-      dividerOffsetInfo = info;
-      return dividerOffsetInfo;
-    }
-
-    this.outerCenter = () => {
-      if (true || outerCenter === null) outerCenter = Vertex3D.center(coordinates.outer);
-      return outerCenter;
-    }
-
-    this.innerCenter = () => {
-      if (true || innerCenter === null) innerCenter = Vertex3D.center(coordinates.inner);
-      return innerCenter;
-    }
-
-    this.outerLength = () => {
-      if (true || outerLength === null)
-        outerLength = coordinates.outer[0].distance(coordinates.outer[3]);
-      return outerLength;
-    }
-
-    this.outerWidth = () => {
-      if (true || outerWidth === null)
-        outerWidth = coordinates.outer[0].distance(coordinates.outer[1]);
-      return outerWidth;
-    }
-
-    this.innerLength = () => {
-      if (true || innerLength === null)
-        innerLength = coordinates.inner[0].distance(coordinates.inner[3]);
-      return innerLength;
-    }
-
-    this.innerWidth = () => {
-      if (true || innerWidth === null)
-        innerWidth = coordinates.inner[0].distance(coordinates.inner[1]);
-      return innerWidth;
-    }
-
-
   }
 }

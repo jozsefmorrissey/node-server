@@ -1,31 +1,32 @@
 
 const JU = require('./joint');
 const ApplyJoint = require('./joint');
-const BiPolygon = require('bi-polygon');
-const Line3D = require('line');
-const Vertex3D = require('vertex');
+const BiPolygon = require('../../app-src/three-d/objects/bi-polygon.js');
+const Line3D = require('../../app-src/three-d/objects/line.js');
+const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
 
 const to = {}
 
-to.CutterReference.model(dto, modelMap, joints) {
-  const biPoly = to.CutterReference.biPolygon(dto, modelMap);
-  if (!isBiPoly) joints ||= modelMap.joints.female(dto);
-  return JU.apply(biPoly.model(), joints);
-}
-
-to.CutterReference.biPolygon = function(dto, modelMap) {
-  let ref = dto.reference;
-  const isBiPoly = ref instanceof BiPolygon;
-  let biPoly = isBiPoly ? ref : modelMap[id];
-  if (biPoly === undefined) throw new Error('Invalid Reference or assemblies not ordered properly');
-  biPoly.offset(fromPoint(), offset);
-  let poly = (front ? biPoly.front() : biPoly.back()).reverse();
-  let length = 0;
-  poly.lines().forEach(l => length += l.length());
-  const sameDir = biPoly.normal().sameDirection(poly.normal());
-  const multiplier = sameDir ? -1 : 1;
-  const distance = 10 * length;
-  return BiPolygon.fromPolygon(poly, 0, multiplier * distance, {x: distance, y:distance});
+to.CutterReference = {
+  model: (dto, modelMap, joints) => {
+    const biPoly = to.CutterReference.biPolygon(dto, modelMap);
+    if (!isBiPoly) joints ||= modelMap.joints.female(dto);
+    return JU.apply(biPoly.model(), joints);
+  },
+  biPolygon: function(dto, modelMap) {
+    let ref = dto.reference;
+    const isBiPoly = ref instanceof BiPolygon;
+    let biPoly = isBiPoly ? ref : modelMap[id];
+    if (biPoly === undefined) throw new Error('Invalid Reference or assemblies not ordered properly');
+    biPoly.offset(fromPoint(), offset);
+    let poly = (front ? biPoly.front() : biPoly.back()).reverse();
+    let length = 0;
+    poly.lines().forEach(l => length += l.length());
+    const sameDir = biPoly.normal().sameDirection(poly.normal());
+    const multiplier = sameDir ? -1 : 1;
+    const distance = 10 * length;
+    return BiPolygon.fromPolygon(poly, 0, multiplier * distance, {x: distance, y:distance});
+  }
 }
 
 to.CutterPoly = {
@@ -82,7 +83,7 @@ to.PanelCover = {
 }
 
 to.DoorSection = {
-  biPolygon: sectionProps().coverInfo().biPolygon
+  biPolygon: () => sectionProps().coverInfo().biPolygon
 }
 
 function getDrawerDepth() {
@@ -92,7 +93,7 @@ function getDrawerDepth() {
   return Math.floor((adjustedDepth/3) * 3) * 2.54;
 }
 
-to.DrawerBoxGoverned = () => {
+to.DrawerBoxGoverned = {
   normal: () => sectionProps().normal(),
   biPolygon: () => {
     const propConfig = sectionProps().getRoot().group().propertyConfig;
@@ -114,7 +115,7 @@ to.DrawerBoxGoverned = () => {
   }
 }
 
-to.DrawerFrontGoverned => {
+to.DrawerFrontGoverned = () => {
   biPolygon: sectionProps().coverInfo().biPolygon
 }
 
@@ -280,7 +281,7 @@ to.CutterOpening = {
 
 const Void = require('void');
 to.PanelVoidIndex = {
-  toBiPolygon: (dto) => Void.instance(dto).panel(dto.index).biPolygon();
+  toBiPolygon: (dto) => Void.instance(dto).panel(dto.index).biPolygon()
 }
 
-module.exports = {CutterReference};
+module.exports = to;
