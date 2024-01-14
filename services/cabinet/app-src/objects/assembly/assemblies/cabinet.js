@@ -357,6 +357,8 @@ Cabinet.build = (type, group, config) => {
   });
   config.subassemblies.filter(sac => sac.dividerType).forEach((sac) =>
       cabinet.subassemblies[sac.code].type(sac.dividerType));
+  cabinet.clearCaches();
+  cabinet.updateOpenings(true);
   return cabinet;
 }
 

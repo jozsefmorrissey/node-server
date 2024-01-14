@@ -3,6 +3,7 @@ const Test = require('../../../../public/js/utils/test/test').Test;
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
+const Parimeters2d = require('../../../../public/js/utils/canvas/two-d/maps/parimeters.js');
 
 
 const vertices = [
@@ -25,7 +26,7 @@ const vertices = [
   new Vertex2d(2,0) // 16
 ];
 
-const parimeter = new Polygon2d(Line2d.vertices(Line2d.consolidate(...new Polygon2d(vertices.slice(1)).lines())));
+const parimeter = new Parimeters2d(new Polygon2d(vertices.slice(1)).lines(), 1).largest();
 
 const getLine = (index1, index2) => new Line2d(vertices[index1],vertices[index2]);
 const noise = [

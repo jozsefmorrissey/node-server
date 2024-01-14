@@ -319,9 +319,7 @@ class Assembly extends KeyValue {
       assemList.forEach((assem) => allJoints.concatInPlace(assem.joints));
       let joints = {male: [], female: []};
       const addJoint = (joint) => {
-        if (joint instanceof Joint.References) {
-          joint.list().forEach(addJoint);
-        } else if (joint.isMale(assem)) {
+        if (joint.isMale(assem)) {
           joints.male.push(joint);
         } else if (joint.isFemale(assem)) {
           joints.female.push(joint);
