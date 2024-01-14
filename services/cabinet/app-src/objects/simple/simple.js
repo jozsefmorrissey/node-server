@@ -3,10 +3,6 @@ const BiPolygon = require('../../three-d/objects/bi-polygon');
 
 class SimpleModel {
   constructor(obj3D) {
-    this.toModel = () => {
-      const biPoly = BiPolygon.fromVectorObject(obj3D.width(), obj3D.height(), obj3D.thickness(), obj3D.center());
-      return biPoly.toModel();
-    }
   }
 }
 

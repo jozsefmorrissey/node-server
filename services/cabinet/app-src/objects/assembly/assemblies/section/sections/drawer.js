@@ -7,64 +7,29 @@ const DrawerBox = require('../../drawer/drawer-box.js');
 const DrawerFront = require('../../drawer/drawer-front.js');
 const Assembly = require('../../../assembly.js');
 const Polygon3D = require('../../../../../three-d/objects/polygon.js');
+const GovernedBySection = require('../governed-by-section');
+const DrawerFrontGoverned = GovernedBySection.DrawerFront;
+const DrawerBoxGoverned = GovernedBySection.DrawerBox;
 
-class DrawerSection extends Assembly {
+class DrawerSection extends GovernedBySection {
   constructor(front, box) {
     super('d');
     const instance = this;
     const sectionProps = () => instance.parentAssembly();
     this.part = () => false;
 
-    function getFrontBiPolygon () {
-      return sectionProps().coverInfo().biPolygon;
-    }
-    this.getBiPolygon = getFrontBiPolygon;
-
-    if (!front) front = new DrawerFront('df', 'DrawerFront');
-    front.partName = () => `${sectionProps().partName()}-df`;
-    this.front = () => door;
+    this.front = () => front;
     this.pull = (i) => front.pull(i);
-    this.addSubAssembly(front);
-
-
-
-    function getDrawerDepth() {
-      const depth = sectionProps().drawerDepth();
-      const adjustedDepth = (depth/2.54) - 1;
-      if (adjustedDepth < 3) return 0;
-      return Math.floor((adjustedDepth/3) * 3) * 2.54;
-    }
-    this.drawerDepth = getDrawerDepth;
-
-    this.getNormal = () => front.biPolygon().normal();
-
-    function getFrontPoly() {
-      const propConfig = sectionProps().getRoot().group().propertyConfig;
-      const props = propConfig('Guides');
-      const innerPoly = new Polygon3D(sectionProps().coordinates().inner);
-      const coverInfo = sectionProps().coverInfo();
-      const biPoly = front.biPolygon();
-      const depth = getDrawerDepth(sectionProps().innerDepth);
-      const offsetVect = biPoly.normal().scale(-coverInfo.backOffset);
-      const sideOffset = props.dbsos.value();
-      const topOffset = props.dbtos.value();
-      const bottomOffset = props.dbbos.value();
-      innerPoly.offset(sideOffset/2, sideOffset/2, topOffset, bottomOffset);
-      return innerPoly.translate(offsetVect);
-    }
-
-    this.getBiPolygon = (partCode) => {
-      switch (partCode) {
-        case 'db': return getFrontPoly();
-        case 'df': return getFrontBiPolygon();
-        default: throw new Error(`PartCode: '${partCode}' biPolygon has not been defined for this object`);
-      }
-    }
-
-    if (!box) box = new DrawerBox('db', 'Drawer.Box');
-    box.partName = () => `${sectionProps().partName()}-db`;
     this.box = () => box;
-    this.addSubAssembly(box);
+
+    this.initialize = () => {
+      if (!front) front = new DrawerFrontGoverned('df', 'DrawerFront');
+      front.partName = () => `${sectionProps().partName()}-df`;
+      this.addSubAssembly(front);
+      if (!box) box = new DrawerBoxGoverned('db', 'Drawer.Box');
+      box.partName = () => `${sectionProps().partName()}-db`;
+      this.addSubAssembly(box);
+    }
   }
 }
 

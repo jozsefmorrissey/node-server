@@ -8,19 +8,6 @@ class Door extends HasPull {
   constructor(partCode, partName) {
     super(partCode, partName);
 
-    this.biPolygon = () => this.parentAssembly().getBiPolygon(partCode);
-    this.normals = (array) => {
-      const norms = this.biPolygon().normals();
-      return !array ? norms : [norms.x, norms.y, norms.z];
-    }
-    this.toModel = () => {
-      const biPolygon = this.biPolygon();
-      if (biPolygon) {
-        return biPolygon.toModel();
-      }
-      return undefined;
-    }
-
     this.inElivation = true;
 
     this.front = () => {

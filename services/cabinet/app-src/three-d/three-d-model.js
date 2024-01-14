@@ -197,7 +197,7 @@ class ThreeDModel {
     // todo(pibe2) dependencies: partModels
     function buildModel(assem) {
       if (!partModels[assem.id()]) {
-        const a = assem.toModel();
+        const a = ToModel(assem);
         assem.partCode(true);
         a.setColor(...getColor(assem.value('color')));
         partModels[assem.id()] = a;
@@ -467,7 +467,7 @@ class GroupThreeDModel extends ThreeDModel{
         try {
           for (let index = 0; index < options.extraObjects.length; index++) {
             const obj = options.extraObjects[index];
-            const model = obj.toModel ? obj.toModel() : obj;
+            const model = obj instanceof CSG ? obj : ToModel(obj);
             lastModel = lastModel.union(model);
           }
         } catch (e) {

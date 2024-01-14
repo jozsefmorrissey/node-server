@@ -148,23 +148,11 @@ class Position {
       const objCent = root.buildCenter();
       return objCent.minus(this.center());
     }
-    this.toBiPolygon =() => {
-      const current = this.current();
-      const dem = current.demension;
-      const center = new Vertex3D(current.center);
-      const vecObj = this.normals();
-      return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj, this.biPolyNormVector());
-    };
-
-    this.toModel = new FunctionCache((joints) => {
-      joints ||= assembly.getJoints().female;
-      let model = Joint.apply(this.toBiPolygon().toModel(), joints);
-      return model;
-    }, this, 'position');
 
     this.normalizingRotations = () => {
       let normals;
       if (assembly.normals.DETERMINE_FROM_MODEL) {
+        throw new Error('Needs to be in ww');
         const model = assembly.toModel();
         const normObj = Polygon3D.normals(Polygon3D.fromCSG(model));
         normals = [normObj.x, normObj.y, normObj.z];
@@ -183,6 +171,7 @@ class Position {
     }
 
     this.normalModel = (left) => {
+      throw new Error('Needs to be in ww');
       const model = assembly.toModel();
       const rotz = this.normalizingRotations();
       return model.normalize(rotz, left).poly;

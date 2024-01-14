@@ -17,35 +17,34 @@ class Cutter extends Assembly {
 Cutter.abbriviation = 'cut';
 
 class CutterModel extends Cutter {
-  constructor(partCode, partName, toModel, toBiPolygon) {
+  constructor(partCode, partName) {
     super(partCode);
-    this.toBiPolygon = toBiPolygon;
-    this.toModel = toModel;
     this.partName = partName instanceof Function ? partName : () => partName;
   }
 }
+
+class CutterLeftCorner extends CutterModel {constructor(...args) {super(...args)}};
+class CutterRightCorner extends CutterModel {constructor(...args) {super(...args)}};
+class CutterToeKick extends CutterModel {constructor(...args) {super(...args)}};
+class CutterOpening extends CutterModel {constructor(...args) {super(...args)}};
+
+Cutter.LeftCorner = CutterLeftCorner;
+Cutter.RightCorrner = CutterRightCorner;
+Cutter.ToeKick = CutterToeKick;
+Cutter.Opening = CutterOpening;
 
 class CutterReference extends Cutter {
     constructor (reference, fromPoint, offset, front) {
     front = front === false ? false : true;
     const partCode = `CR${reference.locationCode().hash(9949, false)}`;
     super(partCode);
+    if (reference instanceof Assembly) {
+      const joint = new Joint.DependentOn(reference.locationCode(), this.locationCode())
+      this.addJoint(joint);
+    }
     offset ||= 0;
 
     this.reference = () => reference;
-    this.toModel = new FunctionCache((joints) => {
-      let biPoly = reference instanceof BiPolygon ? reference : reference.toBiPolygon();
-      joints ||= this.getJoints().female;
-      biPoly.offset(fromPoint(), offset);
-      let poly = (front ? biPoly.front() : biPoly.back()).reverse();
-      let length = 0;
-      poly.lines().forEach(l => length += l.length());
-      const sameDir = biPoly.normal().sameDirection(poly.normal());
-      const multiplier = sameDir ? -1 : 1;
-      const distance = 10 * length;
-      biPoly = BiPolygon.fromPolygon(poly, 0, multiplier * distance, {x: distance, y:distance});
-      return Joint.apply(biPoly.toModel(), joints);
-    }, this, 'cutter');
 
     this.partName = () => `CutterRef(${reference.partCode()}${offset >= 0 ? '+' + offset : offset}@${fromPoint()})`;
   }
@@ -59,19 +58,6 @@ class CutterPoly extends Cutter {
       if (p) poly = p;
       return poly;
     }
-
-    this.toBiPolygon = () => {
-      poly.lines().forEach(l => length += l.length());
-      const distance = length;
-      return BiPolygon.fromPolygon(poly, 0, distance, {x: distance, y:distance});
-    }
-
-    this.toModel = new FunctionCache((joints) => {
-      let length = 20;
-      joints ||= this.getJoints().female;
-      const biPoly = this.toBiPolygon();
-      return Joint.apply(biPoly.toModel(), joints);
-    }, this, 'cutter');
 
     this.partName = () => `CutterPoly(${poly.toString()})`;
   }

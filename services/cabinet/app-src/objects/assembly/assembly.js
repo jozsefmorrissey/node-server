@@ -7,6 +7,7 @@ const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
 const Joint = require('../joint/joint');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
+const ToModel = require('to-model');
 
 FunctionCache.on('hash', 250);
 const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
@@ -264,8 +265,6 @@ class Assembly extends KeyValue {
     this.config = position.configuration;
 
     this.position = () => position;
-    this.toModel = this.position().toModel;
-    this.toBiPolygon = this.position().toBiPolygon;
     this.updatePosition = () => position = new Position(this, sme);
     this.joints = [];
     this.values = {};
@@ -462,7 +461,7 @@ class Assembly extends KeyValue {
     }
     this.clearCaches = () => {
       //TODO: Find better way of reseting all caches
-      clear('getJoints')('allAssemblies')('getAssembly')('hash')('toModel');
+      clear('getJoints')('allAssemblies')('getAssembly')('hash');
       this.children().forEach(c => c.clearCaches());
     }
 
@@ -472,7 +471,7 @@ class Assembly extends KeyValue {
     this.toDrawString = (notRecursive) => {
       let str = `//  ${this.userFriendlyId()}:${this.locationCode()}\n`;
       if (this.part() || notRecursive === true) {
-        const model = this.toModel();
+        const model = ToModel(this);
         const c = model.center();
         const norms = this.position().normals(true).map((v,i) => normalStr(v, i, c));
         const normStr = `//${norms[0]}\n//${norms[1]}\n//${norms[2]}\n`

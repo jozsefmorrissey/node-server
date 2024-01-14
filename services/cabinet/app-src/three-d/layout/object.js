@@ -134,9 +134,6 @@ class Object3D extends Lookup {
     this.snap2d.top = () => topview;
     this.shouldSave = () => true;
 
-    let modler = new SimpleModel(this);
-    this.toModel = () => modler.toModel();
-
     this.modeler = (modelerName) => {
       if (modelerName) {
         const mod = SimpleModel.get(modelerName, this);

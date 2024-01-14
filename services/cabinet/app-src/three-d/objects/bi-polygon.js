@@ -1,3 +1,4 @@
+
 const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 const Line3D = require('line');
 const Vector3D = require('vector');
@@ -178,7 +179,7 @@ class BiPolygon {
       return true;
     }
 
-    this.toModel = (joints) => {
+    this.model = (joints) => {
       const flippedNormal = this.flippedNormal();
       const frontNorm = new Vertex3D(new Line3D(this.center(), this.front().center()).vector().unit());
       const front = new CSG.Polygon(normalize(face1, !flippedNormal));

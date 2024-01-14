@@ -166,19 +166,8 @@ Test.add('web-worker: toBiPolygon(Panel)', async (ts) => {
 //         PanelSection (joints should be done before migration)
 //
 //       infoObj: { // All found in sectionProperties
-//         top(), bottom(), left(), right()
-//           {depth, thickness, width, height, rotation, position}
 //         dividerReveal()
-//         pattern()
-//         vertical()
-//         verticalDivisions()
-//         dividerCount()
-//         sectionCount()
-//         coordinates()
-//         innerDepth()
 //         divideRight()
-//         outerPoly()
-//         innerPoly()
 //         rotation()
 //         this.propertyConfig(): {isReveal, isInset, reveal, Inset, overlay}
 //         divider; {position, maxWidth, panelThickness}
@@ -186,10 +175,11 @@ Test.add('web-worker: toBiPolygon(Panel)', async (ts) => {
 //
 //       functions to be moved
 //         SectionProperties
+//           outerPoly()
+//           innerPoly()
 //           converage()
 //           coverInfo()
 //           polyInformation()
-//           drawerDepth()
 //           dividerLayout()
 //           perpendicularDistance()
 //           dividerOffsetInfo()

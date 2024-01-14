@@ -2,29 +2,25 @@
 
 const SectionProperties = require('../section-properties.js');
 const Door = require('../../door/door.js');
-const Assembly = require('../../../assembly.js');
+const GovernedBySection = require('../governed-by-section');
+const DoorGoverned = GovernedBySection.Door;
 
-class DoorSection extends Assembly {
+class DoorSection extends GovernedBySection {
   constructor(door) {
     super('D');
     const sectionProps = () => instance.parentAssembly();
     const instance = this;
     this.part = () => false;
 
-
-    function getBiPolygon () {
-      return sectionProps().coverInfo().biPolygon;
+    this.initialize = () => {
+      if (!door) {
+        door = new DoorGoverned('d', 'Door');
+        this.door = () => door;
+        this.pull = (i) => door.pull(i);
+      }
+      door.partName = () => `${sectionProps().partName()}-d`;
+      this.addSubAssembly(door);
     }
-    this.getBiPolygon = getBiPolygon;
-
-    if (!door) {
-      door = new Door('d', 'Door');
-      this.door = () => door;
-      this.pull = (i) => door.pull(i);
-    }
-    door.partName = () => `${sectionProps().partName()}-d`;
-
-    this.addSubAssembly(door);
   }
 }
 

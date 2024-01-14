@@ -28,7 +28,7 @@ class CabinetModel {
         assemblies.push(assembly);
       }
       if (assembly.locationCode().count('_') === 1) {
-        // TODO: Hacky fix errors created by toModel not including joint information
+        // TODO: Hacky fix errors created by ToModel not including joint information
         if (cabinetCSG === undefined) cabinetCSG = csg;
         else cabinetCSG = cabinetCSG.union(csg);
       }
@@ -71,8 +71,8 @@ class CabinetModel {
           const assem = assems[index];
           const cxtr = assem.constructor.name;
           if (cxtr !== 'SectionProperties' && !cxtr.match(/(Cutter|Void)/)) {
-            if (assem.toModel)
-              csg = csg.union(assems[index].toModel(simpleJoints(assems[index])));
+            if (ToModel(assem))
+              csg = csg.union(ToModel(assems[index], simpleJoints(assems[index])));
           }
         }
         const polys = Polygon3D.fromCSG(csg.polygons);
@@ -114,12 +114,12 @@ class CabinetModel {
     }
 
     // todo(pibe2): delegate to webworker
-    this.toModel = (simpler, centerOn) => {
+    this.model = (simpler, centerOn) => {
       // const offset = new Vertex3D(new Vertex3D(centerOn).minus(this.center()));
-      let model = this.cabinetSilhouette().top.toModel(simpler);
+      let model = this.cabinetSilhouette().top.model(simpler);
       // model.translate(offset);
       for (let index = 0; !simpler && index < assemblies.length; index++) {
-        const csg = assemblies[index].toModel(simpler);
+        const csg = ToModel(assemblies[index], true);
         // csg.translate(offset);
         model = model.union(csg);
       }
@@ -144,8 +144,9 @@ class CabinetModel {
         const assem = assems[index];
         const cxtr = assem.constructor.name;
         if (cxtr !== 'SectionProperties' && !cxtr.match(/(Cutter|Void)/)) {
-          if (assem.toModel)
-            csg = csg.union(assems[index].toModel(simpleJoints(assems[index])));
+          if (assem.canBeModled)
+            csg = csg.union(ToModel(assems[index], simpleJoints(assems[index])));
+          else throw new Error('canBeModled is an attribute that should be added to assemblies');
         }
       }
       return csg;
@@ -159,15 +160,15 @@ class CabinetModel {
         output = Polygon3D.toTwoD(output.toPolygons(), vector, axis);
         axis ||= output.axis;
       } else {
-        output = output.toModel();
+        output = ToModel(output);
       }
       for (let i = 0; i < assemblies.length; i++) {
         if (in2D) {
-          const polygons = Polygon3D.fromCSG(assemblies[i].toModel().polygons);
+          const polygons = Polygon3D.fromCSG(ToModel(assemblies[i]).polygons);
           const twoDlines = Polygon3D.toTwoD(polygons, vector, axis);
           output.concatInPlace(twoDlines);
         } else
-          output.union(assemblies[i].toModel());
+          output.union(ToModel(assemblies[i]));
       }
       return output;
     }

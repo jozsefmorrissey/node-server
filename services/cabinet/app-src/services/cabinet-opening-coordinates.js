@@ -109,20 +109,6 @@ class CabinetOpeningCorrdinates {
       return {in: faces[0].toPlane(), out: faces[1].toPlane()};
     }
 
-    function addCutter(outer) {
-      const outerPoly = new Polygon3D(outer);
-      const corner2corner = outer[0].distance(outer[2]);
-
-      const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2, 0, {x:0, y:1000});
-      const partCode = 'aoc';
-      const partName = 'auto-opening-crop';
-      const cutter = new Cutter.Model(partCode, () => partName, biPoly.toModel);
-      cutter.parentAssembly(sectionProperties);
-      subassemblies = [cutter];
-      const joint = (otherPartCode) => new Butt(cutter.locationCode(), otherPartCode);
-      // TODO: this should not be hard coded
-      cutter.addJoints(joint('T'), joint('B'), joint('R'), joint('L'));
-    }
 
     function sliceCoordinates(leftLen, rightLen) {
       const top = instance.top().toBiPolygon();
@@ -161,6 +147,8 @@ class CabinetOpeningCorrdinates {
           case 'location':
             coords = manualCoordinates(config.coordinates); break;
           case 'slice':
+            const cutter = new Cutter.Opening('aoc', 'auto-opening-crop');
+            subassemblies = [cutter];
             coords = sliceCoordinates(cabinet.eval(config.leftDepth), cabinet.eval(config.rightDepth));break;
         }
       } catch (e) {

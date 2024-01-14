@@ -265,21 +265,6 @@ class Cabinet extends Assembly {
       }
     }
 
-    this.toModel = () => {
-      const subs = Object.values(this.subassemblies);
-      const toeKick = getToeKick();
-      if (toeKick) {
-        subs.concatInPlace(toeKick.getParts());
-      }
-      let csg = new CSG();
-      for (let index = 0; index < subs.length; index++) {
-        if (subs[index].toModel instanceof Function) {
-          csg = csg.union(subs[index].toModel([]));
-        }
-      }
-      return csg;
-    }
-
     let lastCallId = 0;
     function updateOpenings(callId) {
       if (callId === lastCallId) {

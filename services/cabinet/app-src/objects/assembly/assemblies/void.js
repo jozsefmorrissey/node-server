@@ -89,125 +89,22 @@ class Void extends Cutter {
       return setIndex;
     }
     const pt = panelThickness;
-    const offsetSets = [
-      {
-        first: {x: pt, y: pt},
-        second: {x: pt*2, y: pt*2},
-        third: {x: pt, y: pt*2},
-      },
-      {
-        first: {x: pt, y: pt},
-        third: {x: pt*2, y: pt*2},
-        second: {x: pt, y: pt*2},
-      },
 
-
-      {
-        first: {x: pt, y: pt*2},
-        second: {x: pt, y: pt},
-        third: {x: pt*2, y: pt*2},
-      },
-      {
-        first: {x: pt*2, y: pt*2},
-        second: {x: pt, y: pt},
-        third: {x: pt*2, y: pt},
-      },
-
-
-      {
-        first: {x: pt*2, y: pt*2},
-        second: {x: pt*2, y: pt},
-        third: {x: pt, y: pt},
-      },
-      {
-        first: {x: pt*2, y: pt},
-        second: {x: pt*2, y: pt*2},
-        third: {x: pt, y: pt},
-      },
+    const panels = [
+      new PanelVoidIndex(0),
+      new PanelVoidIndex(1),
+      new PanelVoidIndex(2),
+      new PanelVoidIndex(3),
+      new PanelVoidIndex(4),
+      new PanelVoidIndex(5)
     ]
 
-    const toBiPoly = (index) => new FunctionCache(() => {
-      const startIndex = setIndex;
-      const biPoly = this.toBiPolygon();
-      let polys = biPoly.toPolygons();
-      polys.swap(3,4);
-      const spliceIndex = Math.mod(startIndex + index, 6);
-      const offsetSet = offsetSets[setIndex];
-      const offset = index < 2 ? offsetSet.first : (index < 4 ? offsetSet.second : offsetSet.third);
-      let pt = panelThickness;
-      const center = biPoly.center();
-      const centerVect = new Line3D(center.copy(), polys[index].center()).vector();
-
-      if (!centerVect.sameDirection(polys[index].normal())) pt *= -1;
-
-      return BiPolygon.fromPolygon(polys[index], pt, 0, offset);
-    }, this, 'alwaysOn');
-
-    const toModel = (index) => new FunctionCache((incommingJoints) => {
-      const biPoly = biPolyFuncs[index]();
-      const joints = incommingJoints || panels[index].getJoints().female;
-      const model = Dado.apply(biPoly.toModel(), joints);
-      let color = Math.floor(index / 2) === 0 ? 'blue' : (Math.floor(index/2) === 1 ? 'green' : 'red');
-      panels[index].value('color', color);
-      panels[index].value('color');
-      return model;
-    }, this, 'always-on');
-
-    const toModelFuncs = [];
-    const biPolyFuncs = [];
-    const buildPanel = (index) => {
-      const partCode = `:p${index}`;
-      const partName = this.partName() + `-panel-${index}`
-      const toMod = toModelFuncs[index] ||= toModel(index);
-      const toBP = biPolyFuncs[index] ||= toBiPoly(index);
-      panels[index] = new PanelModel(partCode, partName, toMod, toBP);
-      this.addSubAssembly(panels[index]);
-      panels[index].normals = (array) => {
-        const normObj = biPolyFuncs[index]().normals();
-        return array ? [normObj.x, normObj.y, normObj.z] : normObj;
-      }
-      panels[index].included = () => instance.includedSides()[index] === true;
-    }
-
-    buildPanel(0);
-    buildPanel(1);
-    buildPanel(2);
-    buildPanel(3);
-    buildPanel(4);
-    buildPanel(5);
-
-    function abyssModel() {
-      const biPoly = instance.toBiPolygon();
-      const polys = biPoly.toPolygons();
-      polys.swap(3,4);
-      const center = biPoly.center();
-      const joints = controlableAbyss.getJoints();
-      const polyVects = polys.map(p => new Line3D(center.copy(), p.center()).vector().unit());
-      for (let index = 0; index < polys.length; index++) {
-        const poly = polys[index].copy();
-        if (instance.includedSides()[index] !== true) {
-          const vector = polyVects[index];
-          biPoly.extend(vector.scale(2000));
-        }
-      }
-
-      // biPoly.rotate(this.position().rotation(), this.position().center());
-      const model =  biPoly.toModel();
-      return model;
-    }
-
-    const abyssToModel = new FunctionCache(abyssModel, this, 'alwaysOn');
-
-    const controlableAbyss = new Cutter.Model(`:abs`, `${this.partName()}-abyss`, abyssToModel);
+    const controlableAbyss = new ControlableAbyss(`:abs`, `${this.partName()}-abyss`);
     this.addSubAssembly(controlableAbyss);
 
     if (config) {
       this.jointSetIndex(config.jointSetIndex);
       this.includedSides(config.includedSides);
-    }
-
-    this.unCache = () => {
-      toModelFuncs.forEach(f => f.clearCache());
     }
 
     const parentToJson = this.toJson;
@@ -216,8 +113,6 @@ class Void extends Cutter {
       json.subassemblies = {}
       return json;
     }
-
-    instance.getJoints.clearCache();
   }
 }
 
@@ -225,9 +120,6 @@ Void.fromJson = (json) => {
   const voId = Assembly.fromJson(json);
   voId.jointSetIndex(json.jointSetIndex);
   voId.includedSides(json.includedSides);
-  json.constructed(() => {
-    voId.unCache();
-  }, 2000);
   return voId;
 }
 

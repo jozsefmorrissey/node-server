@@ -13,6 +13,8 @@ const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
 const CustomEvent = require('../../../../../../../public/js/utils/custom-event.js')
 const FunctionCache = require('../../../../../../../public/js/utils/services/function-cache.js');
+const SectionPropertiesDto = require('web-worker-models');
+const SPSvc = require('../section-properties');
 
 const v = (x,y,z) => new Vertex3D(x,y,z);
 class SectionProperties extends KeyValue{
@@ -122,8 +124,6 @@ class SectionProperties extends KeyValue{
     }
 
     this.config = () => JSON.copy(config);
-    this.outerPoly = () => new Polygon3D(this.coordinates().outer);
-    this.innerPoly = () => new Polygon3D(this.coordinates().inner);
     this.coordinates = () => JSON.clone(coordinates);
     this.reverseInner = () => CSG.reverseRotateAll(this.coordinates().inner);
     this.reverseOuter = () => CSG.reverseRotateAll(this.coordinates().outer);
@@ -170,114 +170,13 @@ class SectionProperties extends KeyValue{
 
     this.isRoot = () => this.root() === this;
 
-    const depthPartReg = /Cabinet|Cutter|Section|Void|Auto|Handle|Drawer|Door/;
-    const depthDvReg = /_dv/;
-    const depthPartFilter = a => !a.constructor.name.match(depthPartReg) &&
-                                  !a.locationCode().match(depthDvReg);
 
-    function polyInformation() {
-      const root = instance.root();
-      if (root !== instance) return root.polyInformation();
-      let assems = this.getRoot().allAssemblies().filter(depthPartFilter);
-      const mi = Polygon3D.mostInformation([this.innerPoly()]);
-      const assemblies = []; const polys = [];
-      assems.forEach(a => {
-        try {
-          polys.push(a.toBiPolygon());
-          assemblies.push(a);
-        } catch (e) {
-          console.warn(`toBiPolygon issue with part ${a.locationCode()}\n`, e);
-        }
-      });
-      return {assemblies, polys};
-    }
-    this.polyInformation = new FunctionCache(polyInformation, this, 'alwaysOn');
-
-    const defaultDepth = 4*2.54;
-    this.innerDepth = () => {
-      const back = this.back();
-      if (back) {
-        const calcDepth = back.toBiPolygon().distance(this.innerCenter());
-        if (calcDepth > defaultDepth/4) return calcDepth;
-      }
-      return defaultDepth;
-    }
-
-    this.drawerDepth = new FunctionCache(() => {
-      const cabinet = this.getCabinet();
-      const polyInfo = this.polyInformation();
-      const polyList = polyInfo.polys;
-      const assems = polyInfo.assemblies;
-      const innerPoly = this.innerPoly();
-      const mi = Polygon3D.mostInformation([innerPoly]);
-      const vector = innerPoly.normal().inverse();
-      const verts = [];
-      innerPoly.lines().forEach(l => verts.push(l.startVertex) | verts.push(l.midpoint()));
-      const lines = verts.map(v => Line3D.fromVector(vector, v));
-      let closest;
-      for (let index = 0; index < polyList.length; index++) {
-        const biPoly = polyList[index];
-        for (let lIndex = 0; lIndex < lines.length; lIndex++) {
-          const line = lines[lIndex];
-          const plane = biPoly.closerPlane(line.startVertex);
-          const intersection = plane.intersection.line(line);
-          if (intersection) {
-            const poly = new Polygon3D(plane);
-            const withinPoly = poly.isWithin2d(intersection, true);
-            if (withinPoly) {
-              poly.isWithin2d(intersection);
-              innerPoly.isWithin2d(intersection, false)
-              const dist = intersection.distance(line.startVertex);
-              if (dist > 0 && (closest === undefined || closest.dist > dist)) {
-                closest = {dist, line};
-              }
-            }
-          }
-        }
-      }
-      return closest ? closest.dist : 0;
-    }, this, 'alwaysOn');
 
     const clear = (attr) => {
       if (this[attr] instanceof Function && this[attr].clearCache instanceof Function)
       this[attr].clearCache();
       return clear;
     }
-    this.clearCaches = () => {
-      //TODO: Find better way of reseting all caches
-      clear('polyInformation')('drawerDepth');
-      this.children().forEach(c => c.clearCaches());
-    }
-
-    function offsetCenter(center, left, right, up, down, forward, backward) {
-      center = JSON.copy(center);
-      const offset = {
-        x: (right - left) / 2,
-        y: (up - down) / 2,
-        z: (forward - backward) / -2
-      }
-      const rotated = CSG.rotatePointAroundCenter(instance.rotation(), offset, {x:0,y:0, z:0});
-
-      return {x: center.x + rotated.x, y: center.y + rotated.y, z: center.z + rotated.z};
-    }
-
-    function offsetRotatedPoint(point, x, y, z, rotation) {
-      rotation ||= instance.rotation();
-      point = JSON.copy(point);
-      const originalPosition = CSG.reverseRotate(point, rotation);
-      originalPosition.x += x;
-      originalPosition.y += y;
-      originalPosition.z -= z;
-      return CSG.rotate(originalPosition, rotation);
-    }
-    this.offsetRotatedPoint = offsetRotatedPoint;
-    this.transRotate = CSG.transRotate;
-
-    function offsetPoint(point, x, y, z) {
-      const offset = {x,y,z};
-      return CSG.transRotate(point, offset, instance.rotation());
-    }
-    this.offsetPoint = offsetPoint;
 
     function init () {
       if (instance.sections.length === 0) {
@@ -331,112 +230,11 @@ class SectionProperties extends KeyValue{
       return undefined;
     }
 
-    // TODO: innerOffset - proorly named and implemented values produced are in the ball park but not correct.
-    function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset) {
-      const coords = {};
-      const fresh = instance.coordinates();
-      const outer = fresh.outer;
-      const inner = fresh.inner;
-      const rotation = instance.rotation();
-      if (!instance.vertical()) {
-        const leftOutLine = new Line3D(outer[0], outer[3]);
-        const leftInnerLine = new Line3D(inner[0], inner[3]);
-        const rightOutLine = new Line3D(outer[1], outer[2]);
-        const rightInnerLine = new Line3D(inner[1], inner[2]);
-        coords.outer = [leftOutLine.pointAtDistance(startOuter),
-                        rightOutLine.pointAtDistance(startOuter),
-                        rightOutLine.pointAtDistance(endOuter),
-                        leftOutLine.pointAtDistance(endOuter)];
-        coords.inner = [
-                        leftInnerLine.pointAtDistance((startInner - innerOffset)),
-                        rightInnerLine.pointAtDistance((startInner - innerOffset)),
-                        rightInnerLine.pointAtDistance((endInner - innerOffset)),
-                        leftInnerLine.pointAtDistance((endInner - innerOffset))
-                                    ];
-
-
-      } else {
-        const topOutLine = new Line3D(outer[0], outer[1]);
-        const topInnerLine = new Line3D(inner[0], inner[1]);
-        const bottomOutLine = new Line3D(outer[3], outer[2]);
-        const bottomInnerLine = new Line3D(inner[3], inner[2]);
-        coords.outer = [topOutLine.pointAtDistance(startOuter),
-                        topOutLine.pointAtDistance(endOuter),
-                        bottomOutLine.pointAtDistance(endOuter),
-                        bottomOutLine.pointAtDistance(startOuter)];
-        coords.inner = [topInnerLine.pointAtDistance(startInner - innerOffset),
-                        topInnerLine.pointAtDistance(endInner - innerOffset),
-                        bottomInnerLine.pointAtDistance(endInner - innerOffset),
-                        bottomInnerLine.pointAtDistance(startInner - innerOffset)];
-      }
-      section.updateCoordinates(coords);
-    }
-
-    function calcPattern(dist) {
-      try {
-        return instance.pattern().calc(dist);
-      } catch (e) {
-        instance.pattern().calc(dist);
-        return instance.pattern('z').calc(dist);
-      }
-    }
-
     this.dividerLayout = () => {
       init();
       const dividerOffsetInfo = instance.dividerOffsetInfo();
       const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
       return calcPattern(coverage._TOTAL);
-    }
-
-
-    function setSectionCoordinates(force) {
-      if (!force) {
-        console.log('Found One!!!!!')
-        return;
-      }
-      if (!instance.coordinates.valid()) {
-        console.warn('invalid coordinates');
-        return;
-      }
-      const dividerOffsetInfo = instance.dividerOffsetInfo();
-      const coverage = instance.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
-
-      if (coverage.length > 1) {
-        const patternInfo = calcPattern(coverage._TOTAL);
-
-        let offset = 0;
-        const innerOffset = dividerOffsetInfo[0].offset;
-        for (let index = 0; index < instance.sections.length; index++) {
-          const section = instance.sections[index];
-          const patVal = patternInfo.list;
-          const overlayOffset = coverage[index * 2].overlay + coverage[index * 2 + 1].overlay;
-          let startOuter, startInner, endInner, endOuter;
-
-          startOuter = offset;
-          if (index === 0) {
-            startInner = dividerOffsetInfo[0].offset;
-          } else {
-            startInner = startOuter + dividerOffsetInfo[index].offset/2;
-          }
-
-          endInner = (startInner + patVal[index] - overlayOffset);
-          if (index === instance.sections.length - 1) endOuter = endInner + dividerOffsetInfo[index + 1].offset;
-          else endOuter = endInner + dividerOffsetInfo[index + 1].offset / 2;
-          if (index < instance.sections.length - 1) section.divideRight(true);
-          updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset);
-          offset = endOuter;
-        }
-      }
-    }
-
-    function perpendicularDistance(point, line) {
-      if (instance.sectionCount() !== 0) {
-        const plane = Plane.fromPointNormal(point, line.vector());
-        const intersection = plane.intersection.line(line);
-        const distance = line.startVertex.distance(intersection);
-        return distance;
-      }
-      return 0;
     }
 
     this.coverage = (startOffset, endOffset) => {
@@ -484,39 +282,101 @@ class SectionProperties extends KeyValue{
       return info;
     }
 
-    this.dividerOffsetInfo = () => {
-      called.dividerOffsetInfo++;
-      let startOffset = 0;
-      let endOffset = 0;
 
-      const coords = this.coordinates();
-      const outer = coords.outer;
-      const inner = coords.inner;
-      if (this.vertical()) {
-         startOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[2]));
-         endOffset = perpendicularDistance(outer[2], new Line3D(inner[2], inner[3]));
-       } else {
-         startOffset = perpendicularDistance(outer[0], new Line3D(inner[0], inner[3]));
-         endOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[0]));
-       }
-       const info = [{offset: startOffset}];
-       info.startOffset = startOffset;
-       info.endOffset = endOffset;
+    // TODO: innerOffset - proorly named and implemented values produced are in the ball park but not correct.
+    function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset) {
+      const coords = {};
+      const fresh = instance.coordinates();
+      const outer = fresh.outer;
+      const inner = fresh.inner;
+      const rotation = instance.rotation();
+      if (!instance.vertical()) {
+        const leftOutLine = new Line3D(outer[0], outer[3]);
+        const leftInnerLine = new Line3D(inner[0], inner[3]);
+        const rightOutLine = new Line3D(outer[1], outer[2]);
+        const rightInnerLine = new Line3D(inner[1], inner[2]);
+        coords.outer = [leftOutLine.pointAtDistance(startOuter),
+                        rightOutLine.pointAtDistance(startOuter),
+                        rightOutLine.pointAtDistance(endOuter),
+                        leftOutLine.pointAtDistance(endOuter)];
+        coords.inner = [
+                        leftInnerLine.pointAtDistance((startInner - innerOffset)),
+                        rightInnerLine.pointAtDistance((startInner - innerOffset)),
+                        rightInnerLine.pointAtDistance((endInner - innerOffset)),
+                        leftInnerLine.pointAtDistance((endInner - innerOffset))
+                                    ];
 
-      let offset = this.isVertical() ? this.outerLength() : this.outerWidth();
-      const propConfig = this.propertyConfig();
-      for (let index = 0; index < this.sections.length; index += 1) {
-        if (index < this.sections.length - 1) {
-          const section = this.sections[index];
-          const divider = section.divider();
-          const offset = divider.maxWidth();
-          info[index + 1] = {offset, divider};
-        } else {
-          info[index + 1] = {offset: endOffset};
+
+      } else {
+        const topOutLine = new Line3D(outer[0], outer[1]);
+        const topInnerLine = new Line3D(inner[0], inner[1]);
+        const bottomOutLine = new Line3D(outer[3], outer[2]);
+        const bottomInnerLine = new Line3D(inner[3], inner[2]);
+        coords.outer = [topOutLine.pointAtDistance(startOuter),
+                        topOutLine.pointAtDistance(endOuter),
+                        bottomOutLine.pointAtDistance(endOuter),
+                        bottomOutLine.pointAtDistance(startOuter)];
+        coords.inner = [topInnerLine.pointAtDistance(startInner - innerOffset),
+                        topInnerLine.pointAtDistance(endInner - innerOffset),
+                        bottomInnerLine.pointAtDistance(endInner - innerOffset),
+                        bottomInnerLine.pointAtDistance(startInner - innerOffset)];
+      }
+      section.updateCoordinates(coords);
+    }
+
+
+    function calcPattern(dist) {
+      try {
+        return instance.pattern().calc(dist);
+      } catch (e) {
+        instance.pattern().calc(dist);
+        return instance.pattern('z').calc(dist);
+      }
+    }
+
+
+    function setSectionCoordinates(force) {
+      if (!force) {
+        console.log('Found One!!!!!')
+        return;
+      }
+      if (!instance.coordinates.valid()) {
+        console.warn('invalid coordinates');
+        return;
+      }
+
+      const spSvc = new SPSpc(new SectionPropertiesDto(this));
+      const dividerOffsetInfo = spSvc.dividerOffsetInfo();
+      const coverage = spSvc.coverage(dividerOffsetInfo.startOffset, dividerOffsetInfo.endOffset);
+
+      if (coverage.length > 1) {
+        const patternInfo = calcPattern(coverage._TOTAL);
+
+        let offset = 0;
+        const innerOffset = dividerOffsetInfo[0].offset;
+        for (let index = 0; index < instance.sections.length; index++) {
+          const section = instance.sections[index];
+          const patVal = patternInfo.list;
+          const overlayOffset = coverage[index * 2].overlay + coverage[index * 2 + 1].overlay;
+          let startOuter, startInner, endInner, endOuter;
+
+          startOuter = offset;
+          if (index === 0) {
+            startInner = dividerOffsetInfo[0].offset;
+          } else {
+            startInner = startOuter + dividerOffsetInfo[index].offset/2;
+          }
+
+          endInner = (startInner + patVal[index] - overlayOffset);
+          if (index === instance.sections.length - 1) endOuter = endInner + dividerOffsetInfo[index + 1].offset;
+          else endOuter = endInner + dividerOffsetInfo[index + 1].offset / 2;
+          if (index < instance.sections.length - 1) section.divideRight(true);
+          updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset);
+          offset = endOuter;
         }
       }
-      return info;
     }
+
 
     this.divide = (dividerCount, dontUpdateCoords) => {
       init();
@@ -564,39 +424,6 @@ class SectionProperties extends KeyValue{
       return pattern;
     }
 
-    this.outerCenter = () => {
-      if (true || outerCenter === null) outerCenter = Vertex3D.center(coordinates.outer);
-      return outerCenter;
-    }
-
-    this.innerCenter = () => {
-      if (true || innerCenter === null) innerCenter = Vertex3D.center(coordinates.inner);
-      return innerCenter;
-    }
-
-    this.outerLength = () => {
-      if (true || outerLength === null)
-        outerLength = coordinates.outer[0].distance(coordinates.outer[3]);
-      return outerLength;
-    }
-
-    this.outerWidth = () => {
-      if (true || outerWidth === null)
-        outerWidth = coordinates.outer[0].distance(coordinates.outer[1]);
-      return outerWidth;
-    }
-
-    this.innerLength = () => {
-      if (true || innerLength === null)
-        innerLength = coordinates.inner[0].distance(coordinates.inner[3]);
-      return innerLength;
-    }
-
-    this.innerWidth = () => {
-      if (true || innerWidth === null)
-        innerWidth = coordinates.inner[0].distance(coordinates.inner[1]);
-      return innerWidth;
-    }
 
     this.longestRadius = () => {
       const oc = this.outerCenter();
@@ -607,88 +434,6 @@ class SectionProperties extends KeyValue{
       }
       return max;
     };
-
-    this.coverInfo = () => {
-      called.coverInfo++;
-      const propConfig = this.propertyConfig();
-      let biPolygon, backOffset, frontOffset, offset, coords;
-      const doorThickness = 3 * 2.54/4;
-      const bumperThickness = 3 * 2.54 / 16;
-      if (propConfig.isInset()) {
-        coords = this.coordinates().inner;
-        offset = propConfig('Inset').is.value() * -2;
-        const projection = 3 * 2.54/64;
-        frontOffset = projection;
-        backOffset = projection - doorThickness;
-      } else if (propConfig.isReveal()) {
-        coords = this.coordinates().outer;
-        offset = -propConfig.reveal().r.value();
-        frontOffset = (doorThickness + bumperThickness);
-        backOffset = bumperThickness;
-      } else {
-        coords = this.coordinates().inner;
-        offset = propConfig.overlay() * 2;
-        frontOffset = (doorThickness + bumperThickness);
-        backOffset = bumperThickness;
-      }
-
-      frontOffset *= -1;
-      backOffset *= -1;
-      const offsetObj = {x: offset, y: offset};
-      biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj);
-      return {biPolygon, frontOffset, backOffset};
-    }
-
-    this.normal = () => this.coverInfo().biPolygon.normal()
-
-    function addDividerJoints(point1, point2) {
-      const c = instance.getCabinet();
-      const divider = instance.divider();
-      const panelThickness = divider.panelThickness();
-      const jointOffset = instance.dividerJoint().maleOffset();
-      const vert = instance.verticalDivisions();
-      const right = vert ? instance.bottom() : instance.right();
-      const left = vert ? instance.top() : instance.left();
-      let maxLen = c.width() + c.length() + c.thickness();
-      if (!(right instanceof DividerSection)) {
-        Line3D.adjustDistance(point1, point2, maxLen, true);
-        maxLen *= 1.5;
-      } else {
-        const length = point1.distance(point2) + jointOffset - right.panelThickness()/2;
-        Line3D.adjustDistance(point1, point2, length, true);
-      }
-      if (!(left instanceof DividerSection)) {
-        Line3D.adjustDistance(point2, point1, maxLen, true);
-      } else {
-        const length = point1.distance(point2) + jointOffset - left.panelThickness()/2;
-        Line3D.adjustDistance(point2, point1, length, true);
-      }
-    }
-
-    this.dividerInfo = (panelThickness) => {
-      called.dividerInfo++;
-      const coverInfo = this.coverInfo();
-      const normal = coverInfo.biPolygon.normal().inverse();
-      const depth = this.innerDepth();
-      const length = this.innerLength();
-      const width = this.innerWidth();
-      const innerCenter = this.innerCenter();
-      const coordinates = this.coordinates();
-      const divider = this.divider();
-      const outer = coordinates.outer;
-      const point1 = this.verticalDivisions() ? outer[1] : outer[3];
-      const point2 = outer[2];
-      addDividerJoints(point1, point2);
-      let depthVector = normal.scale(depth);
-      let heightVector = new Line3D(point1, point2).vector().unit();
-      let thicknessVector  = depthVector.crossProduct(heightVector);
-      divider.panel().normals(true, [heightVector, depthVector.unit(), thicknessVector]);
-      const point3 = point2.translate(depthVector, true);
-      const point4 = point1.translate(depthVector, true);
-      const points = [point1, point2, point3, point4];
-      const offset = divider.panelThickness() / 2;
-      return BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset);
-    }
 
     const assemToJson = this.toJson;
     this.toJson = () => {

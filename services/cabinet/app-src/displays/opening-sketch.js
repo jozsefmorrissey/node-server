@@ -13,6 +13,7 @@ const PanZoom = require('../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const Global = require('../services/global.js');
+const ToModel = require('to-model');
 
 class OpeningSketch {
   constructor(id, cabinet) {
@@ -45,7 +46,7 @@ class OpeningSketch {
     function drawDividerLabel(section, offset, normal) {
       if (section.divideRight()) {
         const dp = section.divider().panel();
-        const dividerCenter = new Vertex3D(dp.toModel().center())
+        const dividerCenter = new Vertex3D(ToModel(dp).center())
                                   .viewFromVector(normal).to2D('x', 'y');
         const center = dividerCenter.translate(offset.x, offset.y, true).point();
         sketch.text(dp.userFriendlyId(), center, idProps);
@@ -94,7 +95,7 @@ class OpeningSketch {
         }
       }
       const cabDems = cabinet.position().demension();
-      const model = cabinet.toModel();
+      const model = ToModel(cabinet);
       const view = Polygon3D.viewFromVector(model, normal);
       const lines2d = Polygon3D.lines2d(view, 'x', 'y');
       const cabinetOutlines = Parimeters2d.lines(lines2d).map(l => l.clone());

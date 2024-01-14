@@ -14,20 +14,21 @@ class Panel extends Assembly {
   }
 }
 
-Panel.abbriviation = 'pn';
-
-class PanelModel extends Panel {
-  constructor(partCode, partNameFunc, toModel, toBiPolygon) {
-    super(partCode);
-    this.toModel = new FunctionCache((joints) => {
-      joints ||= this.getJoints().female;
-      let model = toModel(joints);
-      return Joint.apply(model, joints);
-    }, this, 'alwaysOn');
-    if (toBiPolygon) this.toBiPolygon = toBiPolygon;
-    this.partName = (typeof partNameFunc) === 'function' ? partNameFunc : () => partNameFunc;
+class PanelVoidIndex extends Panel {
+  constructor(index, void) {
+    const partCode = `:p${index}`;
+    const partName = void.partName() + `-panel-${index}`
+    super(partCode, partName);
+    this.index = index;
   }
 }
 
-Panel.Model = PanelModel;
+class PanelToeKickBacker extends Panel {
+  constructor(...args) {
+    super(...args);
+  }
+}
+
+Panel.abbriviation = 'pn';
+
 module.exports = Panel

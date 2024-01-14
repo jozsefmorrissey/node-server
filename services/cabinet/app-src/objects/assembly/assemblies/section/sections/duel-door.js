@@ -7,61 +7,36 @@ const Handle = require('../../hardware/pull.js');
 const Assembly = require('../../../assembly.js');
 const Polygon3D = require('../../../../../three-d/objects/polygon.js');
 const BiPolygon = require('../../../../../three-d/objects/bi-polygon.js');
+const GovernedBySection = require('../governed-by-section');
+const DoorLeftGoverned = GovernedBySection.DoorLeftGoverned;
+const DoorRightGoverned = GovernedBySection.DoorRightGoverned;
 
-class DualDoorSection extends Assembly {
+class DualDoorSection extends GovernedBySection {
   constructor(leftDoor, rightDoor) {
     super('DD', 'Duel.Door.Section');
     const instance = this;
     const sectionProps = () => instance.parentAssembly();
 
     this.part = () => false;
-
-    function shrinkPoly(poly, left) {
-      const lines = JSON.clone(poly.lines());
-      const offset = (lines[0].length() - instance.gap()) / 2;
-      if (left) {
-        lines[0].length(offset, true);
-        lines[1].startVertex = lines[0].endVertex;
-        lines[2].length(-offset, false);
-        lines[1].endVertex = lines[2].startVertex;
-      } else {
-        lines[0].length(-offset, false);
-        lines[3].endVertex = lines[0].startVertex;
-        lines[2].length(offset, true);
-        lines[3].startVertex = lines[2].endVertex;
-      }
-      return Polygon3D.fromLines(lines);
-
-    }
-
-    function getBiPolygon(left) {
-      const fullPoly = sectionProps().coverInfo().biPolygon;
-      const front = shrinkPoly(fullPoly.front(), left);
-      const back = shrinkPoly(fullPoly.back(), left);
-      return new BiPolygon(front, back);
-    }
-
-    this.getBiPolygon = (partCode) => {
-      return getBiPolygon(partCode === 'dl');
-    }
-
-    if (!leftDoor) {
-      leftDoor = new Door('dl', 'DoorLeft');
-      leftDoor.setPulls([Handle.location.TOP_RIGHT]);
-    }
-    this.addSubAssembly(leftDoor);
-    leftDoor.partName = () => `${sectionProps().partName()}-dl`;
     this.left = () => leftDoor;
-
-    if (!rightDoor) {
-      rightDoor ||= new Door('dr', 'DoorRight');
-      rightDoor.setPulls([Handle.location.TOP_LEFT]);
-    }
-    this.addSubAssembly(rightDoor);
-    rightDoor.partName = () => `${sectionProps().partName()}-dr`;
     this.right = () => rightDoor;
-
     this.gap = () => 2.54 / 16;
+
+    this.initialize = () => {
+      if (!leftDoor) {
+        leftDoor = new DoorLeftGoverned('dl', 'DoorLeft');
+        leftDoor.setPulls([Handle.location.TOP_RIGHT]);
+      }
+      leftDoor.partName = () => `${sectionProps().partName()}-dl`;
+      this.addSubAssembly(leftDoor);
+
+      if (!rightDoor) {
+        rightDoor ||= new DoorRightGoverned('dr', 'DoorRight');
+        rightDoor.setPulls([Handle.location.TOP_LEFT]);
+      }
+      this.addSubAssembly(rightDoor);
+      rightDoor.partName = () => `${sectionProps().partName()}-dr`;
+    }
   }
 }
 
