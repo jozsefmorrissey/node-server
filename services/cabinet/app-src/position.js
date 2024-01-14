@@ -1,6 +1,3 @@
-
-
-
 const getDefaultSize = require('./utils.js').getDefaultSize;
 const Vertex3D = require('./three-d/objects/vertex');
 const Line3D = require('./three-d/objects/line');
@@ -88,7 +85,9 @@ class Position {
       const position = {
         center: this.center(),
         demension: this.demension(),
-        rotation: this.rotation()
+        rotation: this.rotation(),
+        normals: this.normals(),
+        biPolyNorm: this.biPolyNormVector()
       };
       assembly.getJoints().male.forEach((joint) =>
         joint.updatePosition(position)

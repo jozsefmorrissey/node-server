@@ -23,7 +23,8 @@
   },
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "cabinet-local": "node ./server.js ENV=local services=cabinet,canvas-buddy"  
   },
   "repository": {
     "type": "git",

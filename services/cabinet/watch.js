@@ -1,8 +1,8 @@
 const fs = require('fs');
 const Builder = require('../../building/builder');
-
 const { HtmlBundler } = require('../../building/bundlers/html.js');
 const htmlDumpLoc = './generated/html-templates.js';
+
 
 const cleanName = (name) => name.replace(/(..\/..|\.)\/public\/html\/templates\/(.*).html/, '$2');
 const htmlBundler = new HtmlBundler(htmlDumpLoc, cleanName);
@@ -22,9 +22,9 @@ fs.writeFile(`./generated/EPNTS.js`, ENPTSTemplate, () => {});
 
 
 const { JsBundler } = require('../../building/bundlers/js.js');
+
 const jsDumpLoc = './public/js/index';
 const jsBundler = new JsBundler(jsDumpLoc, [], {main: './services/cabinet/app-src/init.js', projectDir: '../../'});
-
 const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add('./globals/')
         .add('./public/json/endpoints.json')
@@ -32,24 +32,31 @@ const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add('../../public/js/utils/')
         .add(htmlDumpLoc)
         .add('./public/json/cabinets.json')
-        .add('./app-src');
-
-const wwDumpLoc = './public/js/web-worker-bundle';
-const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/init.js', projectDir: '../../'});
-const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
-        .add('./globals/')
-        .add('./public/json/endpoints.json')
-        .add('./generated/EPNTS.js')
-        .add('../../public/js/utils/')
-        .add(htmlDumpLoc)
-        .add('./public/json/cabinets.json')
-        .add('./app-src')
-        .add('./web-worker');
-
-        // .add('three-d')
-        // .add('web-worker')
-        // .add('./app-src/objects') maybe
+        .add('./app-src/')
+        .add('./web-worker/shared/')
+        .add('./web-worker/external/')
 
 if (global.ENV === 'local') {
   jsWatcher.add('./test');
 }
+
+
+const wwDumpLoc = './public/js/web-worker-bundle';
+const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/internal/init.js', projectDir: '../../'});
+const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
+        // .add('./globals/')
+        .add('../../public/js/utils/utils.js')
+        .add('../../public/js/utils/')
+        // .add(htmlDumpLoc)
+        // .add('./public/json/cabinets.json')
+        // .add('./app-src')
+        .add('./app-src/three-d/objects/')
+        // .add('./app-src/objects/assembly/assembly.js')
+        // .add('./app-src/objects/joint/')
+        // .add('./app-src/objects/assembly/assemblies/panel.js')
+        // .add('./app-src/objects/assembly/assemblies/section/sections/')
+        // .add('./app-src/utils.js')
+        // .add('./app-src/position.js')
+        .add('../../public/js/utils/3d-modeling/csg.js')
+        .add('./web-worker/shared/')
+        .add('./web-worker/internal/')

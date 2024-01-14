@@ -45,6 +45,7 @@ class CabinetModel {
 
     this.normal = () => new Vector3D(Math.mean(this.normals(), ['i', 'j', 'k']));
 
+    // todo(pibe2): delegate to webworker (? given it's dependence on cabinetCSG)
     this.center = () => {
       if (cabinetCSG === undefined) return new Vertex3D(0,0,0);
       const polys = cabinetCSG.polygons;
@@ -61,6 +62,7 @@ class CabinetModel {
       return center;
     }
 
+    // todo(pibe2): delegate to webworker
     this.threeView = () => {
       if (!threeView) {
         let csg = new CSG();
@@ -111,6 +113,7 @@ class CabinetModel {
       return silhouette;
     }
 
+    // todo(pibe2): delegate to webworker
     this.toModel = (simpler, centerOn) => {
       // const offset = new Vertex3D(new Vertex3D(centerOn).minus(this.center()));
       let model = this.cabinetSilhouette().top.toModel(simpler);
@@ -133,6 +136,7 @@ class CabinetModel {
       return joints;
     }
 
+    // todo(pibe2): delegate to webworker
     this.boxModel = () => {
       let csg = new CSG();
       const assems = Object.values(cabinet.subassemblies);
@@ -147,6 +151,7 @@ class CabinetModel {
       return csg;
     }
 
+    // todo(pibe2): delegate to webworker
     this.viewFromVector = (vector, in2D, axis) => {
       let output = cabinet.toBiPolygon();
       output.center(this.center());

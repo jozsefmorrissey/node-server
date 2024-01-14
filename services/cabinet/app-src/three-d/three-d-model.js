@@ -1,12 +1,6 @@
-
-
 const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
-
 const du = require('../../../../public/js/utils/dom-utils.js');
-const $t = require('../../../../public/js/utils/$t.js');
 const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
-
-const Polygon3D = require('./objects/polygon');
 const Vertex3D = require('./objects/vertex');
 const Vector3D = require('./objects/vector');
 const Line3D = require('./objects/line');
@@ -57,7 +51,6 @@ class ThreeDModel {
     const hiddenPartNames = {};
     const hiddenPrefixes = {};
     const instance = this;
-    let hiddenPrefixReg;
     let partModels = {};
     let extraObjects = [];
     let inclusiveTarget = {};
@@ -69,10 +62,7 @@ class ThreeDModel {
       targetPartCode = id;
     this.getLastRendered = () => lastRendered;
 
-    this.object = (a) => {
-      if (a !== undefined) {
-        object = a;
-      }
+    this.object = () => {
       return object;
     }
 
@@ -90,8 +80,7 @@ class ThreeDModel {
       if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
       switch (inclusiveTarget.type) {
         case 'prefix':
-          return part.locationCode().match(inclusiveTarget.prefixReg) !== null;
-          break;
+          return part.partCode(true).match(inclusiveTarget.prefixReg) !== null;
         case 'part-name':
           return part.partName() === inclusiveTarget.value;
         case 'part-id':
@@ -126,7 +115,7 @@ class ThreeDModel {
           list.push(key);
         }
       }
-      hiddenPrefixReg = list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
+      return list.length > 0 ? new RegExp(`^${list.join('|')}`) : null;
     }
 
     this.hidePartId = manageHidden(hiddenPartIds);
@@ -137,7 +126,7 @@ class ThreeDModel {
     function hasHidden(hiddenObj) {
       const keys = Object.keys(hiddenObj);
       for(let i = 0; i < hiddenObj.length; i += 1)
-        if (hidden[keys[index]])return true;
+        if (hidden(keys[index]))return true;
       return false;
     }
     this.noneHidden = () => !hasHidden(hiddenPartIds) &&
@@ -148,6 +137,7 @@ class ThreeDModel {
     function relatedToTarget(part) {
       if (part.partCode() === targetPartCode) return true;
       return false;
+
       let targetPart = instance.object().getAssembly(targetPartCode);
       let joints = targetPart.getJoints();
       joints = joints.male.concat(joints.female);
@@ -163,8 +153,9 @@ class ThreeDModel {
       if (im !== null) return !im;
       if (instance.hidePartId(part.id())) return true;
       if (instance.hidePartName(part.partName())) return true;
-      buildHiddenPrefixReg();
-      if (hiddenPrefixReg && part.locationCode().match(hiddenPrefixReg)) return true;
+      const hiddenPrefixReg = buildHiddenPrefixReg();
+      if (hiddenPrefixReg && part.partCode(true).match(hiddenPrefixReg)) return true;
+
       return false;
     }
     this.hidden = hidden;
@@ -203,11 +194,15 @@ class ThreeDModel {
     let lm;
     this.lastModel = () => lm;
 
+    // todo(pibe2) dependencies: partModels
     function buildModel(assem) {
-      let a = assem.toModel();
-      a.setColor(...getColor(assem.value('color')));
-      partModels[assem.id()] = a;
-      return a;
+      if (!partModels[assem.id()]) {
+        const a = assem.toModel();
+        assem.partCode(true);
+        a.setColor(...getColor(assem.value('color')));
+        partModels[assem.id()] = a;
+      }
+      return partModels[assem.id()];
     }
 
     function cacheId() {
@@ -215,11 +210,14 @@ class ThreeDModel {
     }
 
     let cabinetModel, lastHash;
+
+    // todo(pibe2) dependencies: object, FunctionCache(?)
     function buildObject(options) {
       if (instance.object() === undefined)return;
-      if (lastHash === instance.object().hash()) {
-        return CabinetModel.get(instance.object());
-      }
+      // todo: for debugging; uncomment
+      // if (lastHash === instance.object().hash()) {
+      //   return CabinetModel.get(instance.object());
+      // }
       options ||= {};
       const cId = cacheId();
       // FunctionCache.clearAllCaches();
@@ -228,7 +226,7 @@ class ThreeDModel {
         FunctionCache.on(cId);
       }
 
-      buildHiddenPrefixReg();
+      const hiddenPrefixReg = buildHiddenPrefixReg();
 
       const assemblies = instance.object().getParts();
       const root = assemblies[0].getRoot();
@@ -252,7 +250,7 @@ class ThreeDModel {
           if (assem.partName() === targetPartCode) {
             lm = b.clone();
             const lastModel = this.lastModel();
-            lastModelUpdateEvent.trigger(undefined, lastModel);
+            lastModelUpdateEvent.trigger(undefined, lastModel); // todo(pibe2): move this event trigger outside of this method
           }
         }
       }
@@ -277,41 +275,15 @@ class ThreeDModel {
             console.error(e);
             reject(e);
           } finally {
-            loadingDisplay.deactivate();
+            loadingDisplay.deactivate();  // todo(pibe2): move loadingDisplay logic out of this method
           }
         });
       };
-      loadingDisplay.activate();
+      loadingDisplay.activate();  // todo(pibe2): move loadingDisplay logic out of this method
       return new Promise(resolver);
     }
 
-    function faceColoring(part, partModel) {
-      const normals = part.position().normals();
-      normals.nx = normals.x.inverse()
-      normals.ny = normals.y.inverse()
-      normals.nz = normals.z.inverse()
-      partModel.setColors(p => {
-        const pNorm = new Vector3D(p.plane.normal);
-        if (normals.x.equals(pNorm)) return 'red';
-        if (normals.nx.equals(pNorm)) return 'maroon';
-        if (normals.y.equals(pNorm)) return 'limegreen';
-        if (normals.ny.equals(pNorm)) return 'green';
-        if (normals.z.equals(pNorm)) return 'babyblue';
-        if (normals.nz.equals(pNorm)) return 'blue';
-        return 'grey';
-      });
-      console.log(part);
-    }
-
-    function explodeFromCenter(center, model, byFactor) {
-      byFactor ||= 1.3;
-      const modelCenter = new Vertex3D(model.center());
-      const dist = center.distance(modelCenter);
-      Line3D.adjustDistance(center, modelCenter, dist*byFactor, true)
-      model.center(modelCenter);
-      return model;
-    }
-
+    // todo(pibe2): main 1
     async function renderParts() {
       let model = new CSG();
       const obj = instance.object();
@@ -322,19 +294,30 @@ class ThreeDModel {
       const assems = obj.getParts().filter(p => !hidden(p));
       for (let index = 0; index < assems.length; index++) {
         const part = assems[index];
-        let partModel = partModels[part.id()];
-        if (partModel === undefined) {
-          partModel = buildModel(part);
+        if (!hidden(part)) {
+          let partModel = buildModel(part);
+          partModel = partModel.clone();
+          if (targetPartCode) {
+            partModel.setColor(colors[targetPartCode === part.partCode() ? 'green' : 'blue'])
+          }
+          const c = part.position().center();
+          let e = 1.3;
+          const partCenter = new Vertex3D(partModel.center());
+          const dist = buildCenter.distance(partCenter);
+          Line3D.adjustDistance(buildCenter, partCenter, dist*e, true)
+          partModel.center(partCenter);
+          model = model.union(partModel);
         }
         partModel = partModel.clone();
         if (assems.length === 1) faceColoring(part, partModel);
         explodeFromCenter(buildCenter, partModel);
         model = model.union(partModel);
       }
-      ThreeDModel.display(model);
+      ThreeDModel.display(model); // todo(pibe2): separate this interaction with html canvas/web-gl
     }
     this.renderParts = renderParts;
 
+    // todo(pibe2): main 2
     this.render = async function (options) {
       const startTime = new Date().getTime();
       await instance.buildObject();
@@ -342,6 +325,8 @@ class ThreeDModel {
         let displayModel = cabinetModel.complexModel();//a.simple ? a.simple : a;
         console.log(`Precalculations - ${(startTime - new Date().getTime()) / 1000}`);
         extraObjects.forEach(obj => displayModel.polygons.concatInPlace(obj.polygons));
+
+        // todo(pibe2): separate below code that interacts with html canvas/web-gl
         ThreeDModel.display(displayModel);
         lastRendered = cabinetModel;
         renderObjectUpdateEvent.trigger(undefined, lastRendered);
@@ -472,6 +457,9 @@ class GroupThreeDModel extends ThreeDModel{
       }
       return combined;
     }
+
+
+    // todo(pibe2): main 3
     this.render = async (options) => {
       lastModel = await this.buildObject();
       ThreeDModel.lastActive = this;
