@@ -31,6 +31,13 @@ class Divider extends Assembly {
       new CutterBackGoverned(':f', 'cutter-front')
     ];
 
+    const pToJson = this.toJson;
+    this.toJson = () => {
+      const json = pToJson();
+      json.joints = json.joints.filter(j => !j.locationId);
+      return json;
+    }
+
     this.addJoints(new Joint(parts[2].locationCode(), parts[1].locationCode(), null, 'only'));
     this.addJoints(new Joint(parts[4].locationCode(), parts[3].locationCode(), null, 'only'));
 
@@ -77,12 +84,7 @@ Divider.abbriviation = 'dv';
 
 Divider.fromJson = (json) => {
   const obj = Assembly.fromJson(json);
-  json.constructed(() => {
-    if (obj.type() !== json.type) {
-      obj.type(json.type);
-      obj.build();
-    }
-  }, 2000);
+  obj.type(json.type);
   return obj;
 }
 

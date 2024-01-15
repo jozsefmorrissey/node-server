@@ -1,14 +1,14 @@
 
-const Polygon3D = require('../objects/polygon.js');
-const BiPolygon = require('../objects/bi-polygon.js');
+const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
+const BiPolygon = require('../../app-src/three-d/objects/bi-polygon.js');
 const to = {};
 
-to.SimpleModelDto.model = (simpleModelDto) => {
+to.SimpleModel = (simpleModelDto) => {
   const biPoly = BiPolygon.fromVectorObject(obj3D.width(), obj3D.height(), obj3D.thickness(), obj3D.center());
   return biPoly.toModel();
 }
 
-to.ShowerBase.model = (simpleModelDto) => {
+to.ShowerBase = (simpleModelDto) => {
   const curbHeight = 2*2.54;
   const curbWidth = 3*2.54;
   const objCenter = obj3D.center();
@@ -24,7 +24,7 @@ to.ShowerBase.model = (simpleModelDto) => {
   return base.toModel().union(curb.toModel());
 }
 
-to.Toilet.model = (simpleModelDto) => {
+to.Toilet = (simpleModelDto) => {
   const third = obj3D.thickness()/3;
   const center = obj3D.center();
   const height = obj3D.height();
@@ -82,7 +82,7 @@ to.Toilet.model = (simpleModelDto) => {
   return model;
 }
 
-to.Stairs.model = () => {
+to.Stairs = () => {
   const count = this.count();
   const treadLength = this.treadLength();
   const rise = obj3D.height() / count;
@@ -130,7 +130,7 @@ function unionAll(...polygons) {
   return model;
 }
 
-to.DrawerBox.model = (frontPoly, normal, length, props) => {
+to.DrawerBox = (frontPoly, normal, length, props) => {
   const sideThickness = props.dbst.value();
   const bottomThickness = props.dbbt.value();
   const bottomHeight = props.dbid.value();
@@ -177,7 +177,7 @@ function getVectorObj(line, normal) {
   };
 }
 
-to.Pull.model = (baseCenter, line, normal, projection, cTOc) => {
+to.Pull = (baseCenter, line, normal, projection, cTOc) => {
   var gerth = 2.54/4;
   let length = cTOc + gerth;
   const vecObj = getVectorObj(line, normal);
@@ -195,7 +195,7 @@ to.Pull.model = (baseCenter, line, normal, projection, cTOc) => {
   return mainCyl.toModel().union(lCyl.toModel()).union(rCyl.toModel());
 }
 
-to.Pull.model.simple = (baseCenter, line, normal, projection, cTOc) => {
+to.Pull.Simple = (baseCenter, line, normal, projection, cTOc) => {
   var gerth = 2.54/4;
   let length = cTOc + gerth;
   const vecObj = getVectorObj(line, normal);

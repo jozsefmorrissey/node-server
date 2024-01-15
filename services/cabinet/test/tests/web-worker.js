@@ -64,7 +64,7 @@ function get(constructorRegExp, applyTestConfig) {
 
 Test.add('webworker: ToModel(Panel)', (ts) => {
   const panel = get("Panel");
-  
+
   ts.success();
 });
 

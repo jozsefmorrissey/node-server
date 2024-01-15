@@ -52,6 +52,8 @@ class AssemblyDto extends LookupDto {
      * @param {VectorDto} biPolyNorm
      */
     constructor(assembly) {
+        this.parent = assembly.parentAssembly().id();
+        this.partCode = assembly.partCode();
         this.partCode = assembly.partCode();
         this.locationCode = assembly.locationCode();
         this.center = DtoUtil.toVectorDto(current.center);

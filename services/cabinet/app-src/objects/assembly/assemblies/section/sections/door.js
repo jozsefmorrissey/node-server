@@ -1,26 +1,25 @@
 
-
+const Assembly = require('../../../assembly.js');
 const SectionProperties = require('../section-properties.js');
 const Door = require('../../door/door.js');
-const GovernedBySection = require('../governed-by-section');
-const DoorGoverned = GovernedBySection.Door;
 
-class DoorSection extends GovernedBySection {
+class DoorSection extends Assembly {
   constructor(door) {
     super('D');
     const sectionProps = () => instance.parentAssembly();
     const instance = this;
     this.part = () => false;
+    this.door = () => door;
+    this.pull = (...args) => door && door.pull(...args);
 
-    this.initialize = () => {
-      if (!door) {
-        door = new DoorGoverned('d', 'Door');
-        this.door = () => door;
-        this.pull = (i) => door.pull(i);
-      }
-      door.partName = () => `${sectionProps().partName()}-d`;
-      this.addSubAssembly(door);
+    if (!door) {
+      door = new Door('d', 'Door');
+      door.modelingMethod('Section');
+      this.door = () => door;
+      this.pull = (i) => door.pull(i);
     }
+    door.partName = () => `${sectionProps().partName()}-d`;
+    this.addSubAssembly(door);
   }
 }
 

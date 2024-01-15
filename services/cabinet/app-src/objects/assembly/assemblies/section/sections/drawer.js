@@ -2,16 +2,11 @@
 
 
 const SectionProperties = require('../section-properties.js');
-const PULL_TYPE = require('../../../../../../globals/CONSTANTS.js').PULL_TYPE;
 const DrawerBox = require('../../drawer/drawer-box.js');
 const DrawerFront = require('../../drawer/drawer-front.js');
 const Assembly = require('../../../assembly.js');
-const Polygon3D = require('../../../../../three-d/objects/polygon.js');
-const GovernedBySection = require('../governed-by-section');
-const DrawerFrontGoverned = GovernedBySection.DrawerFront;
-const DrawerBoxGoverned = GovernedBySection.DrawerBox;
 
-class DrawerSection extends GovernedBySection {
+class DrawerSection extends Assembly {
   constructor(front, box) {
     super('d');
     const instance = this;
@@ -23,10 +18,12 @@ class DrawerSection extends GovernedBySection {
     this.box = () => box;
 
     this.initialize = () => {
-      if (!front) front = new DrawerFrontGoverned('df', 'DrawerFront');
+      if (!front) front = new DrawerFront('df', 'DrawerFront');
+      front.modelingMethod('Solid');
       front.partName = () => `${sectionProps().partName()}-df`;
       this.addSubAssembly(front);
-      if (!box) box = new DrawerBoxGoverned('db', 'Drawer.Box');
+      if (!box) box = new DrawerBox('db', 'Drawer.Box');
+      box.modelingMethod('Section');
       box.partName = () => `${sectionProps().partName()}-db`;
       this.addSubAssembly(box);
     }

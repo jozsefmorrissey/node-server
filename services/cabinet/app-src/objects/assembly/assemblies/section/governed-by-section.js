@@ -1,27 +1,33 @@
 
 const Assembly = require('../../assembly.js');
 
+const sectionRegex = /^Section|Section$/
 // Probably shouldnt extend assembly but its how these classes are currently written.
 class GovernedBySection extends Assembly {
   constructor(...args) {
     super(...args);
+    const instance = this;
 
+    let governer;
     this.governingSection = () => {
-      throw new Error('Implement Dummy!!');
+      if (governer) return governer;
+      governer = this;
+      do {
+        if (!governer) throw new Error('No Governer... wtf');
+        governer = governer.parentAssembly();
+      } while (governer.constructor.name.match(sectionRegex) === null);
+      return governer;
     }
 
     const initialize = (assem) => () => {
-      if (assem instanceof Cabinet) {
+      const root = assem.getRoot();
+      if (root.constructor.name === 'Cabinet') {
         const governingSection = this.governingSection();
         if (this.initialize) this.initialize(governingSection);
       } else {
         const parent = instance.parentAssembly();
         parent.on.parentSet(initialize(parent));
       }
-      // setTimeout(() => );
-      // panel.part(false);
-      this.addSubAssembly(panel);
-
     }
 
     this.on.parentSet(initialize(this));
@@ -31,6 +37,8 @@ class GovernedBySection extends Assembly {
 class DrawerBoxGoverned extends GovernedBySection {constructor(...args) {super(...args);}}
 class DrawerFrontGoverned extends GovernedBySection {constructor(...args) {super(...args);}}
 class DoorGoverned extends GovernedBySection {constructor(...args) {super(...args);}}
+class DoorLeftGoverned extends GovernedBySection {constructor(...args) {super(...args);}}
+class DoorRightGoverned extends GovernedBySection {constructor(...args) {super(...args);}}
 class DuelDoorGoverned extends GovernedBySection {constructor(...args) {super(...args);}}
 class PanelGoverned extends GovernedBySection {constructor(...args) {super(...args);}}
 class DividerGoverned extends GovernedBySection {constructor(...args) {super(...args);}}
@@ -44,6 +52,8 @@ class CutterFrontGoverned extends GovernedBySection {constructor(...args) {super
 GovernedBySection.DrawerBox = DrawerBoxGoverned;
 GovernedBySection.DrawerFront = DrawerFrontGoverned;
 GovernedBySection.Door = DoorGoverned;
+GovernedBySection.DoorLeft = DoorLeftGoverned;
+GovernedBySection.DoorRight = DoorRightGoverned;
 GovernedBySection.DuelDoor = DuelDoorGoverned;
 GovernedBySection.Panel = PanelGoverned;
 

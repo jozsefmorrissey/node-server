@@ -20,7 +20,8 @@ function maxHeight(a, b, c) {
 class Assembly extends KeyValue {
   constructor(partCode, partName, config, parent) {
     // TODO should pass this in as and object
-    super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly', object: true});
+    super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly',
+          object: true});
 
     const pcIsFunc = partCode instanceof Function;
     function pCode(doNotAppendParent) {
@@ -57,7 +58,7 @@ class Assembly extends KeyValue {
     if (Array.isArray(subAssems)) {
       console.log('wtff');
     }
-    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'normals');
+    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'normals', 'modelingMethod');
     Object.defineProperty(this, "subassemblies", {
       writable: false,
       enumerable: false,
@@ -544,6 +545,7 @@ Assembly.fromJson = (assemblyJson) => {
   const clazz = Object.class.get(assemblyJson._TYPE);
   const assembly = new (clazz)(partCode, partName, assemblyJson.config);
   assembly.id(assemblyJson.id);
+  assembly.modelingMethod(assemblyJson.modelingMethod);
   assembly.value.all(assemblyJson.value.values);
   assembly.parentAssembly(assemblyJson.parent)
   Object.values(assemblyJson.subassemblies).forEach((json) => {

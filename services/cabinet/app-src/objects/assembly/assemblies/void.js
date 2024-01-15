@@ -90,15 +90,16 @@ class Void extends Cutter {
     const pt = panelThickness;
 
     const panels = [
-      new PanelVoidIndex(0),
-      new PanelVoidIndex(1),
-      new PanelVoidIndex(2),
-      new PanelVoidIndex(3),
-      new PanelVoidIndex(4),
-      new PanelVoidIndex(5)
+      new PanelVoidIndex(0, this),
+      new PanelVoidIndex(1, this),
+      new PanelVoidIndex(2, this),
+      new PanelVoidIndex(3, this),
+      new PanelVoidIndex(4, this),
+      new PanelVoidIndex(5, this)
     ]
 
-    const controlableAbyss = new ControlableAbyss(`:abs`, `${this.partName()}-abyss`);
+    const controlableAbyss = new Cutter(`:abs`, `${this.partName()}-abyss`);
+    controlableAbyss.modelingMethod('Abyss')
     this.addSubAssembly(controlableAbyss);
 
     if (config) {

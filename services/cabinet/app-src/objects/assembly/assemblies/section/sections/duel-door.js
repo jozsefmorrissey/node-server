@@ -5,13 +5,8 @@ const SectionProperties = require('../section-properties.js');
 const Door = require('../../door/door.js');
 const Handle = require('../../hardware/pull.js');
 const Assembly = require('../../../assembly.js');
-const Polygon3D = require('../../../../../three-d/objects/polygon.js');
-const BiPolygon = require('../../../../../three-d/objects/bi-polygon.js');
-const GovernedBySection = require('../governed-by-section');
-const DoorLeftGoverned = GovernedBySection.DoorLeftGoverned;
-const DoorRightGoverned = GovernedBySection.DoorRightGoverned;
 
-class DualDoorSection extends GovernedBySection {
+class DualDoorSection extends Assembly {
   constructor(leftDoor, rightDoor) {
     super('DD', 'Duel.Door.Section');
     const instance = this;
@@ -24,14 +19,16 @@ class DualDoorSection extends GovernedBySection {
 
     this.initialize = () => {
       if (!leftDoor) {
-        leftDoor = new DoorLeftGoverned('dl', 'DoorLeft');
+        leftDoor = new Door('dl', 'DoorLeft');
+        leftDoor.modelingMethod('Left');
         leftDoor.setPulls([Handle.location.TOP_RIGHT]);
       }
       leftDoor.partName = () => `${sectionProps().partName()}-dl`;
       this.addSubAssembly(leftDoor);
 
       if (!rightDoor) {
-        rightDoor ||= new DoorRightGoverned('dr', 'DoorRight');
+        rightDoor ||= new Door('dr', 'DoorRight');
+        rightDoor.modelingMethod('Right');
         rightDoor.setPulls([Handle.location.TOP_LEFT]);
       }
       this.addSubAssembly(rightDoor);

@@ -62,6 +62,9 @@ class SectionProperties extends KeyValue{
     const temporaryInitialVals = {parent, _TEMPORARY: true};
     Object.getSet(this, temporaryInitialVals, 'parentAssembly');
     Object.getSet(this, {divideRight: false, config, index}, 'divider', 'cover');
+    this.normal = () => this.outerPoly().normal()
+    this.outerPoly = () => new Polygon3D(coordinates.outer);
+    this.innerPoly = () => new Polygon3D(coordinates.inner);
 
     if (sections) {
       for (let index = 0; index < sections.length; index++) {
@@ -680,9 +683,7 @@ SectionProperties.fromJson = (json) => {
   if (sp.cover()) sp.cover().parentAssembly(sp);
 
   json.constructed(() => {
-    // sp.addJoints()
     sp.divider().panel().fromJson(json.divider.subassemblies.dv);
-    sp.divider().panel().build();
   });
   return sp;
 }

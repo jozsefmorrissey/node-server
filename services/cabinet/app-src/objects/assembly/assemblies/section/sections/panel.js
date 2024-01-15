@@ -5,11 +5,10 @@ const SectionProperties = require('../section-properties.js');
 const Panel = require('../../panel');
 const Joint = require('../../../../joint/joint.js');
 const DividerSection = require('../partition/divider.js');
-const GovernedBySection = require('../governed-by-section');
-const PanelGoverned = GovernedBySection.Panel;
+const Assembly = require('../../../assembly.js');
 
 let count = 0;
-class PanelSection extends GovernedBySection {
+class PanelSection extends Assembly {
   constructor(panel) {
     super('ps', 'panelSection');
     const instance = this;
@@ -24,7 +23,8 @@ class PanelSection extends GovernedBySection {
 
     this.initialize = (governingSection) => {
       this.on.change(updateJoints);
-      if (!panel) panel = new PanelGoverned('ps', 'Panel-' + count++, governingSection);
+      if (!panel) panel = new Panel('ps', 'Panel-' + count++);
+      panel.modelingMethod('Section')
     }
 
     function updateJoints() {

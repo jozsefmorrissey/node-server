@@ -155,7 +155,7 @@ const cleanJson = (json) => Object.filter(json, (c, key) =>
 Test.add('Cabinet: to/from Json',(ts) => {
   const cabinet = Cabinet.build('base');
 
-  // CabinetLayouts.map['test'].build(cabinet);
+  CabinetLayouts.map['test'].build(cabinet);
   const json = cleanJson(cabinet.toJson());
   const copy = Cabinet.fromJson(cabinet.toJson());
   const copyJson = cleanJson(copy.toJson());
