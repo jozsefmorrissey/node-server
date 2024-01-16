@@ -4,13 +4,30 @@ const BiPolygon = require('../../three-d/objects/bi-polygon.js');
 const Polygon3D = require('../../three-d/objects/polygon.js');
 // const Assembly = require('../assembly/assembly.js');
 
+function isMatch(partCodeOlocationCodeOassemblyOregexOfunc, assem) {
+  let pclcarf = partCodeOlocationCodeOassemblyOregexOfunc;
+  if (pclcarf instanceof Function) return pclcarf(assem) === true;
+  if ((typeof pclcarf) === 'string') pclcarf = new RegExp(`^${pclcarf}(:.*|)$`);
+  if (pclcarf instanceof RegExp) {
+    return null !== (assem.partCode().match(pclcarf) || assem.locationCode().match(pclcarf));
+  }
+  return assem === pclcarf;
+}
+
+const matchFilter = (pclcarf, filter) => {
+  const runFilter = filter instanceof Function;
+  return (a) => {
+    return a.constructor.joinable && a.includeJoints() && isMatch(pclcarf, a) && (!runFilter || filter(a));
+  }
+}
+
 const REASSIGNMENT_ERROR = () => new Error('Make a new joint, joints cannot be reassined');
 
-class Joint {
+class Joint extends Lookup {
   constructor(maleJointSelector, femaleJointSelector, condition, locationId) {
-    let parent, parentId;
+    super();
     const initialVals = {
-      maleOffset: 0, femaleOffset: 0, parentAssemblyId:  undefined,
+      maleOffset: 0, femaleOffset: 0,
       maleJointSelector, femaleJointSelector, demensionAxis: '', centerAxis: '',
       locationId, fullLength: false,
     }
@@ -18,40 +35,19 @@ class Joint {
 
     this.apply = () => (typeof condition === 'function') ? condition(this) : true;
 
-    this.parentAssemblyId = (id) => {
-      if (id && parentId) throw REASSIGNMENT_ERROR();
-      if (id) {
-        parentId = id;
-        this.parentAssembly();
-      }
-      return parentId;
-    }
 
-    this.clone = (parentOid, maleJointSelector, femaleJointSelector, cond, locId) => {
+
+    this.clone = (maleJointSelector, femaleJointSelector, cond, locId) => {
       const mpc = maleJointSelector || this.maleJointSelector();
       const fpc = femaleJointSelector || this.femaleJointSelector();
       locId ||= locationId;
-      parentOid ||= this.parentAssembly() || this.parentAssemblyId();
       const clone = Object.class.new(this, mpc, fpc, cond || condition, locId);
       clone.maleOffset(this.maleOffset());
       clone.femaleOffset(this.femaleOffset());
       clone.demensionAxis(this.demensionAxis());
       clone.centerAxis(this.centerAxis());
       clone.fullLength(this.fullLength());
-      if ((typeof parentOid) === 'string') clone.parentAssemblyId(parentOid);
-      else clone.parentAssembly(parentOid);
       return clone;
-    }
-
-    this.parentAssembly = (p) => {
-      if (parent && p)  throw REASSIGNMENT_ERROR();
-      if (p) {
-        parent = p;
-      }
-      if (!parent && this.parentAssemblyId()) {
-        parent = Lookup.get(this.parentAssemblyId());
-      }
-      return parent;
     }
 
     this.updatePosition = () => {};
@@ -63,6 +59,8 @@ class Joint {
       }
       return maleJointSelector;
     }
+    this.isMale = (assem) => isMatch(this.maleJointSelector(), assem);
+    this.isFemale = (assem) => isMatch(this.femaleJointSelector(), assem);
 
     this.femaleJointSelector = (pc) => {
       if (pc && femaleJointSelector) throw new Error('Create new Joint cannot be reassined');
@@ -72,7 +70,9 @@ class Joint {
       return femaleJointSelector;
     }
 
-    this.toString = () => `${this.constructor.name}(${locationId}):${this.maleJointSelector()}->${this.femaleJointSelector()}`;
+
+    this.discriptor = () => `${this.constructor.name}(${locationId}):${this.maleJointSelector()}->${this.femaleJointSelector()}`;
+    this.toString = this.discriptor;
   }
 }
 
@@ -88,6 +88,15 @@ Joint.register = (clazz) => {
 }
 Joint.new = function (id, json) {
   return new Joint.classes[id]().fromJson(json);
+}
+
+Joint.fromJson = (json) => {
+  const joint = new (Object.class.get(json._TYPE))(json.maleJointSelector, json.femaleJointSelector);
+  joint.centerAxis(json.centerAxis);
+  joint.demensionAxis(json.demensionAxis);
+  joint.maleOffset(json.maleOffset);
+  joint.femaleOffset(json.femaleOffset);
+  return joint;
 }
 
 

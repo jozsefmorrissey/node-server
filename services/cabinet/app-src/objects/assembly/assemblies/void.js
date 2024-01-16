@@ -49,7 +49,6 @@ class Void extends Cutter {
     const getJoint = (mi, oi) => {
       const condition = () => instance.includedSides()[mi] === true;
       const joint = new Dado(panels[mi].locationCode(), panels[Math.mod(oi, 6)].locationCode(), condition);
-      joint.parentAssemblyId(instance.id());
       return joint;
     }
 
@@ -80,7 +79,6 @@ class Void extends Cutter {
 
         jointSets[setIndex] =  [new Dado(capJointReg.male, capJointReg.female, '', 'capJoint'),
                                 new Dado(dadoSideReg.male, dadoSideReg.female, '', 'dadoJoint')];
-        jointSets[setIndex].forEach(j => j.parentAssemblyId(instance.id()));
       }
 
       instance.addJoints(jointSets[setIndex][0]);

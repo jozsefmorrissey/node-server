@@ -313,7 +313,7 @@ class Assembly extends KeyValue {
       const assemList = this.allAssemblies();
       let allJoints = [].concat(this.joints);
       if (assem) allJoints.concatInPlace(assem.joints);
-      assemList.forEach((assem) => allJoints.concatInPlace(assem.joints));
+      assemList.forEach((assem) => allJoints.concatInPlace(assem.joints || []));
       let joints = {male: [], female: []};
       const addJoint = (joint) => {
         if (joint.isMale(assem)) {
@@ -327,7 +327,7 @@ class Assembly extends KeyValue {
       return joints;
     }, this, 'always-on');
 
-    this.getAllJoints = new FunctionCache((assem) => {
+    this.getAllJoints = (assem) => {
       assem ||= this;
       const root = this.getRoot();
       if (root !== this) return root.getJoints(assem);
@@ -335,9 +335,29 @@ class Assembly extends KeyValue {
       const assemList = this.allAssemblies();
       let allJoints = [].concat(this.joints);
       // if (assem) allJoints.concatInPlace(assem.joints);
-      assemList.forEach((assem) => allJoints.concatInPlace(assem.joints));
+      assemList.forEach((a) => a.joints && allJoints.concatInPlace(a.joints));
       return allJoints;
-    }, this, 'always-on');
+    };
+
+    this.jointMap = () => {
+      const assems = this.allAssemblies();
+      const allJs = this.getAllJoints();
+      const jMap = {female: {}, male: {}};
+      for (let ji = 0; ji < allJs.length; ji++) {
+        const joint = allJs[ji];
+        const jid = joint.id();
+        jMap.male[jid] = [];
+        for (let ai = 0; ai < assems.length; ai++) {
+          const assem = assems[ai];
+          const aid = assem.id();
+          if (!jMap.female[aid]) jMap.female[aid] = [];
+          if (joint.isMale(assem)) jMap.male[jid].push(aid);
+          if (joint.isFemale(assem)) jMap.female[aid].push(jid);
+        }
+      }
+      return jMap;
+    }
+
 
     let jointList;
     this.getJointList = () => {
@@ -372,17 +392,13 @@ class Assembly extends KeyValue {
       for (let i = 0; i < arguments.length; i += 1) {
         const joint = arguments[i];
         if (joint instanceof Joint) {
-          const parent = joint.parentAssembly();
-          if (parent === undefined) joint.parentAssembly(this);
-          const mpc = joint.maleJointSelector();
-          const fpc = joint.femaleJointSelector();
           const pc = this.locationCode();
           const locId = joint.locationId();
           if (locId) {
             this.joints.removeWhere(j => j.locationId() === locId);
           }
         }
-        this.joints.push(joint.clone(this));
+        this.joints.push(joint.clone());
       }
     }
 

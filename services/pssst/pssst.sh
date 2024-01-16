@@ -814,6 +814,7 @@ if [ "${booleans['-help']}" == 'true' ] || [ -z "${args[0]}" ]
 then
   _help
 else
+  echo 'wtf'
   ifDebugging "debuggui keyValue command '$1' -group '$dgGroup' -id '${flags[dg-id]}'"
   ifDebugging "debuggui keyValue 'arg1(probably group)' '$2' -group '$dgGroup' -id '${flags[dg-id]}'"
   ifDebugging "debuggui keyValue 'arg2(probably key)' '$3' -group '$dgGroup' -id '${flags[dg-id]}'"

@@ -1,6 +1,6 @@
 
 const JointDto = require('./web-worker-models').JointDto;
-const JU = require('../services/joint');
+const JU = require('../services/modeling/utils/joint.js');
 
 const jointCompexityObject = (id, complexityObj) => {
   const assembly = complexityObj[id].assembly;
@@ -40,14 +40,14 @@ const sorter = (assemblies) => {
   return objs;
 }
 
-class PartModelMap {
-  constructor(assembliesDto) {
+class Modeler {
+  constructor(assemblies, target) {
     assemblies = sorter(assemblies);
     const assemMap = {};
     assemblies.forEach(a => assemMap[id] = a);
     const modelMap = {};
     const biPolygonMap = {};
-    const joints = assemblies.getAllJoints().map(j => new JointDto(j));
+    // const joints = assemblies.getAllJoints().map(j => new JointDto(j));
 
 
     // Need to have some way of determining if a model is not returned...
@@ -90,4 +90,4 @@ class PartModelMap {
 }
 
 
-module.exports = PartModelMap;
+module.exports = Modeler;

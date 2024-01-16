@@ -5,8 +5,8 @@ const BiPolygon = require('../../app-src/three-d/objects/bi-polygon.js');
 const Line3D = require('../../app-src/three-d/objects/line.js');
 const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
 const OpeningToeKick = require('opening-toe-kick');
-const DividerGoverned = require('divider-governed');
-const SimpleModels = require('../shared/generic-models');
+const Divider = require('divider');
+const SimpleModels = require('./generic-models');
 const Void = require('void');
 
 function getDrawerDepth() {
@@ -253,10 +253,10 @@ to.Cutter = {
     biPolygon: (dto) => OpeningToeKick.instance(dto).Cutter
   },
   Front: {
-    biPolygon: (dto) => DividerGoverned.instance(dto).Front.Cutter
+    biPolygon: (dto) => Divider.instance(dto).Front.Cutter
   },
   Back: {
-    biPolygon: (dto) => DividerGoverned.instance(dto).Back.Cutter
+    biPolygon: (dto) => Divider.instance(dto).Back.Cutter
   },
   Abyss: {
     biPolygon: () => {
@@ -306,13 +306,13 @@ to.Panel = {
     biPolygon: (dto) => OpeningToeKick.instance(dto).Backer
   },
   Full: {
-    biPolygon: (dto) => DividerGoverned.instance(dto).Full
+    biPolygon: (dto) => Divider.instance(dto).Full
   },
   Front: {
-    biPolygon: (dto) => DividerGoverned.instance(dto).Front
+    biPolygon: (dto) => Divider.instance(dto).Front
   },
   Back: {
-    biPolygon: (dto) => DividerGoverned.instance(dto).Back
+    biPolygon: (dto) => Divider.instance(dto).Back
   }
 }
 

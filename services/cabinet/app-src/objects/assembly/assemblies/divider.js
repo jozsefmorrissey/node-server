@@ -13,6 +13,7 @@ class Divider extends Assembly {
     partCode ||= 'dv';
     super(partCode, partName, config);
     const instance = this;
+    const pToJson = this.toJson;
 
     Object.getSet(this, 'type');
 
@@ -28,10 +29,10 @@ class Divider extends Assembly {
     pcBack.modelingMethod('Back');
     pBack.modelingMethod('Back');
     const parts = [pFull, pFront, pcFront, pBack, pcBack];
-
-    const pToJson = this.toJson;
+    parts.forEach(p => p.parentAssembly(this));
     this.toJson = () => {
       const json = pToJson();
+      json.type = this.type();
       json.joints = json.joints.filter(j => !j.locationId);
       return json;
     }
@@ -54,7 +55,7 @@ class Divider extends Assembly {
     this.getSubassemblies = (childrenOnly) => {
       const children = activeParts().concat(Object.values(this.subassemblies));
       if (childrenOnly) return children;
-      const decendents = [];
+      const decendents = children.map(c => c);
       for (let index = 0; index < children.length; index++) {
         decendents.concatInPlace(children[index].getSubassemblies(false));
       }

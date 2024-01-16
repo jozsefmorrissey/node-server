@@ -608,8 +608,6 @@ class SectionProperties extends KeyValue{
       for (let i = 0; i < arguments.length; i += 1) {
         const joint = arguments[i];
         if (joint instanceof Joint) {
-          const parent = joint.parentAssembly();
-          if (parent === undefined) joint.parentAssembly(this);
           const mpc = joint.maleJointSelector();
           const fpc = joint.femaleJointSelector();
           const pc = this.locationCode();
@@ -618,7 +616,7 @@ class SectionProperties extends KeyValue{
             this.joints.removeWhere(j => j.locationId() === locId);
           }
         }
-        this.joints.push(joint.clone(this));
+        this.joints.push(joint.clone());
       }
     }
 

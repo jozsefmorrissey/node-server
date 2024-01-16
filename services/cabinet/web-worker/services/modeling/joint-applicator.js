@@ -13,9 +13,9 @@ class JointApplicator {
     }
 
     function getModels(selector, filter, joint) {
-      const parent = joint.parentAssembly();
-      if (parent === undefined) throw new Error(`You need to set parentAssembly for '${joint.toString()}'`);
-      const joinable = parent.allAssemblies().filter(a => a.constructor.joinable);
+      // const parent = joint.parentAssembly();
+      // if (parent === undefined) throw new Error(`You need to set parentAssembly for '${joint.toString()}'`);
+      // const joinable = parent.allAssemblies().filter(a => a.constructor.joinable);
       let models = [];
       const runFilter = filter instanceof Function;
       for (let index = 0; index < joinable.length; index++) {

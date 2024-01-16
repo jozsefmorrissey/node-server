@@ -56,17 +56,22 @@ const { RenderingExecutor } = require('../../web-worker/external/web-worker-clie
 //toModel([]);
 //position.current();
 
-function get(constructorRegExp, applyTestConfig) {
+function get(filter, dontApplyTestConfig) {
+  if (filter === undefined) filter = /.*/;
+  if (filter instanceof RegExp) {
+    const reg = filter;
+    filter = sa => sa.constructor.name.match(reg);
+  }
   const cabinet = Cabinet.build('base');
-  if (applyTestConfig) CabinetLayouts.map['test'].build(cabinet);
-  return cabinet.allAssemblies().filter(sa => sa.constructor.name.match(constructorRegExp));
+  if (!dontApplyTestConfig) CabinetLayouts.map['test'].build(cabinet);
+  return cabinet.allAssemblies().filter(filter);
 }
 
-const DTO = require('../../web-worker/services/to-dto.js');
-Test.add('webworker: DTO', (ts) => {
-  const all = get(/.*/, true);
-  const dtos = DTO.to(all);
-  const reconnected = DTO.reconnect(dtos);
+const MDTO = require('../../web-worker/services/modeling/modeling-data-transfer-object.js');
+Test.add('MDTO', (ts) => {
+  const all = get(/.*/);
+  const dtos = MDTO.to(all);
+  const reconnected = MDTO.reconnect(dtos);
 
   ts.assertEquals(reconnected.length + dtos.length, all.length *2, 'Incorrect Number of objects returned by conversion');
 
@@ -94,6 +99,18 @@ Test.add('webworker: DTO', (ts) => {
   ts.assertTrue(sectionProps.bottom().id().equals(reconnectedSP.bottom().id), 'Id extraction, maping, or reconnection contains Error/s');
   ts.assertTrue(sectionProps.left().id().equals(reconnectedSP.left().id), 'Id extraction, maping, or reconnection contains Error/s');
   ts.assertTrue(sectionProps.right().id().equals(reconnectedSP.right().id), 'Id extraction, maping, or reconnection contains Error/s');
+
+  ts.success();
+});
+
+const Modeler = require('../../web-worker/shared/modeler.js');
+Test.add('Modeler', (ts) => {
+  const allAssemblies = get();
+  const joints = allAssemblies[0].getAllJoints().map(j => MDTO.to(j));
+  const jointMap = allAssemblies[0].jointMap();
+  const assemMdtos = MDTO.to(allAssemblies);
+  const panel = assemMdtos.filter(a => a.partCode === 'R')[0];
+  const modeler = new Modeler(allAssemblies, joints, panel);
 
   ts.success();
 });

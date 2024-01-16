@@ -4,7 +4,7 @@
 const BiPolygon = require('../../app-src/three-d/objects/bi-polygon.js');
 const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 
-class DividerGoverned {
+class Divider {
   constructor(dividerGovernedDto) {
     const instance = this;
 
@@ -93,11 +93,11 @@ class DividerGoverned {
 }
 
 const built = {};
-DividerGoverned.instance = (openingToeKickDto) => {
+Divider.instance = (openingToeKickDto) => {
   if (built[openingToeKickDto.id] === undefined) {
-    built[openingToeKickDto.id] = new DividerGoverned(openingToeKickDto);
+    built[openingToeKickDto.id] = new Divider(openingToeKickDto);
   }
   return built[openingToeKickDto.id];
 }
 
-module.exports = DividerGoverned
+module.exports = Divider
