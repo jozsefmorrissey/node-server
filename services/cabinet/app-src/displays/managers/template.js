@@ -126,9 +126,9 @@ function applyTestConfiguration() {
     opening.sectionProperties().pattern('bab').value('a', 30*2.54);
     opening.divide(2);
     opening.vertical(true);
-    const left = opening.sections[0];
-    const center = opening.sections[1];
-    const right = opening.sections[2];
+    const left = opening.sections()[0];
+    const center = opening.sections()[1];
+    const right = opening.sections()[2];
     const a = 6*2.54
 
     left.divide(2);

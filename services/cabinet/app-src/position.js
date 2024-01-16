@@ -87,7 +87,7 @@ class Position {
         demension: this.demension(),
         rotation: this.rotation(),
         normals: this.normals(),
-        biPolyNorm: this.biPolyNormVector()
+        biPolyNorm: this.biPolyNormVector() // Ask? Explode
       };
       assembly.getJoints().male.forEach((joint) =>
         joint.updatePosition(position)

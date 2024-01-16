@@ -61,9 +61,9 @@ new CabinetLayout('3dsb3d', (cabinet) => {
   opening.divide(2);
   opening.sectionProperties().pattern('232');
   opening.vertical(true);
-  const left = opening.sections[0];
-  const center = opening.sections[1];
-  const right = opening.sections[2];
+  const left = opening.sections()[0];
+  const center = opening.sections()[1];
+  const right = opening.sections()[2];
   const a = 6*2.54
 
   left.divide(2);
@@ -103,9 +103,9 @@ new CabinetLayout('test', (cabinet) => {
   opening.divide(2);
   opening.sectionProperties().pattern('232');
   opening.vertical(true);
-  const left = opening.sections[0];
-  const center = opening.sections[1];
-  const right = opening.sections[2];
+  const left = opening.sections()[0];
+  const center = opening.sections()[1];
+  const right = opening.sections()[2];
   const a = 6*2.54
 
   left.divide(2);

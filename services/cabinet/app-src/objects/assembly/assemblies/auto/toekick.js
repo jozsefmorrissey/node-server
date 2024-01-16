@@ -3,9 +3,6 @@ const Assembly = require('../../assembly');
 const Panel = require('../panel');
 const PanelToeKickBacker = Panel.ToeKickBacker;
 const Cutter = require('../cutter');
-const CutterLeftCorner = Cutter.LeftCorner;
-const CutterRightCorner = Cutter.RightCorrner;
-const CutterToeKick = Cutter.ToeKick;
 const Vertex3D = require('../../../../three-d/objects/vertex');
 const Vector3D = require('../../../../three-d/objects/vector');
 const Line3D = require('../../../../three-d/objects/line');
@@ -25,8 +22,8 @@ class OpeningToeKick extends Assembly {
     const instance = this;
 
 
-    const leftCornerCutter = new CutterLeftCorner('lcc', 'LeftCornerCutter');
-    const rightCornerCutter = new CutterRightCorner('rcc', 'RightCornerCutter');
+    const leftCornerCutter = new Cutter('lcc', 'LeftCornerCutter');
+    const rightCornerCutter = new Cutter('rcc', 'RightCornerCutter');
     this.addSubAssembly(leftCornerCutter);
     this.addSubAssembly(rightCornerCutter);
     this.leftCornerCutter = () => leftCornerCutter;
@@ -43,7 +40,7 @@ class OpeningToeKick extends Assembly {
     joint(toeKickPanel)(/^L:/);
     joint(leftCornerCutter)(toeKickPanel.locationCode());
     joint(rightCornerCutter)(toeKickPanel.locationCode());
-    const cutter = new CutterToeKick('tkc', `${atkid}.Cutter`);
+    const cutter = new Cutter('tkc', `${atkid}.Cutter`);
     const openNorm = opening.normal();
     const rParrelleToOpening = openNorm.parrelle(instance.getAssembly('R').position().normals().x);
     joint(cutter)(/^R:/, () => !autoToeKick.rightEndStyle());

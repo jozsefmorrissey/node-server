@@ -6,16 +6,20 @@ const BiPolygon = require('../three-d/objects/bi-polygon.js');
 const Cutter = require('../objects/assembly/assemblies/cutter.js');
 const Panel = require('../objects/assembly/assemblies/panel.js');
 const Butt = require('../objects/joint/joints/butt.js');
+const KeyValue = require('../../../../public/js/utils/object/key-value.js');
 
-class CabinetOpeningCorrdinates {
+class CabinetOpeningCorrdinates extends KeyValue {
   constructor(cabinet, sectionProperties) {
+    // TODO need to remove openings from cabinet and use this class to list sectionProperies
+    super({parentAttribute: 'parentAssembly'});
     const config = sectionProperties.config();
     let subassemblies = [];
     const instance = this;
-
+    Object.getSet(this, 'parentAssembly', 'partCode');
+    this.partCode('COC')
     this.divide = sectionProperties.divide;
     this.setSection = sectionProperties.setSection;
-    this.sections = sectionProperties.sections;
+    this.sections = () => sectionProperties.sections;
     this.vertical = sectionProperties.vertical;
     this.normal = sectionProperties.normal;
     this.sectionProperties = () => sectionProperties;

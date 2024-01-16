@@ -257,6 +257,24 @@ to.Cutter = {
   },
   Back: {
     biPolygon: (dto) => DividerGoverned.instance(dto).Back.Cutter
+  },
+  Abyss: {
+    biPolygon: () => {
+      const biPoly = instance.toBiPolygon();
+      const polys = biPoly.toPolygons();
+      polys.swap(3,4);
+      const center = biPoly.center();
+      const joints = controlableAbyss.getJoints();
+      const polyVects = polys.map(p => new Line3D(center.copy(), p.center()).vector().unit());
+      for (let index = 0; index < polys.length; index++) {
+        const poly = polys[index].copy();
+        if (instance.includedSides()[index] !== true) {
+          const vector = polyVects[index];
+          biPoly.extend(vector.scale(2000));
+        }
+      }
+      return biPoly;
+    }
   }
 }
 

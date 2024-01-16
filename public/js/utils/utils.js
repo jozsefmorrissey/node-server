@@ -47,6 +47,19 @@ Function.safeStdLibAddition(Object, 'definedPropertyNames', function(object) {
   return names;
 }, true);
 
+const isNotUndefined = (key, obj) => obj[key] !== undefined;
+Function.safeStdLibAddition(Object, 'defined', function(...keys) {
+  let condition = isNotUndefined;
+  if (keys[0] instanceof Object) {
+    const conditionMap = keys[0];
+    keys = Object.keys(conditionMap);
+    condition = (key) =>
+      conditionMap[key](this[key]);
+  }
+  for (var index in keys) if (!condition(keys[index], this)) return false;
+  return true;
+});
+
 Function.safeStdLibAddition(Function, 'AsyncRunIgnoreSuccessPrintError', function(afunc, args) {
   afunc(args).then(() => {}, (e) => console.error(e));
 }, true);
@@ -1326,6 +1339,7 @@ Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
     parent = target;
     target = (typeof target[attr]) === 'function' && !nextIsFunction  ?
                 target[attr]() : target[attr];
+    if (target === undefined || target === null) return target;
   }
   return {parent, target, attr: lastAttr, created}
 });

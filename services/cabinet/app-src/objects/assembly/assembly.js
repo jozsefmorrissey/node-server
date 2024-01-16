@@ -176,7 +176,7 @@ class Assembly extends KeyValue {
       }
       return list;
     }
-    this.allAssemblies = new FunctionCache(allAssemblies, this, 'alwaysOn');
+    this.allAssemblies = allAssemblies;
 
     const constructUserFriendlyId = (idMap) => (part) => {
       const pc = part.partCode(true);
@@ -367,8 +367,6 @@ class Assembly extends KeyValue {
       assembly.parentAssembly(this);
       this.subassemblies[assembly.partCode()] = assembly;
     }
-
-    this.objId = this.constructor.name;
 
     this.addJoints = function () {
       for (let i = 0; i < arguments.length; i += 1) {

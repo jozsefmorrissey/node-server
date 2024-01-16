@@ -93,6 +93,10 @@ class Cabinet extends Assembly {
       return subs;
     }
 
+    const parentAllAssems = this.allAssemblies;
+    this.allAssemblies = () =>
+      parentAllAssems().concat(this.openings);
+
     this.partCenter = () => {
       const centers = [];
       const subAssems = Object.values(this.subassemblies);

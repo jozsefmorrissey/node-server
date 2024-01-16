@@ -23,16 +23,6 @@ class CutterModel extends Cutter {
   }
 }
 
-class CutterLeftCorner extends CutterModel {constructor(...args) {super(...args)}};
-class CutterRightCorner extends CutterModel {constructor(...args) {super(...args)}};
-class CutterToeKick extends CutterModel {constructor(...args) {super(...args)}};
-class CutterOpening extends CutterModel {constructor(...args) {super(...args)}};
-
-Cutter.LeftCorner = CutterLeftCorner;
-Cutter.RightCorrner = CutterRightCorner;
-Cutter.ToeKick = CutterToeKick;
-Cutter.Opening = CutterOpening;
-
 class CutterReference extends Cutter {
     constructor (reference, fromPoint, offset, front) {
     front = front === false ? false : true;

@@ -59,11 +59,41 @@ const { RenderingExecutor } = require('../../web-worker/external/web-worker-clie
 function get(constructorRegExp, applyTestConfig) {
   const cabinet = Cabinet.build('base');
   if (applyTestConfig) CabinetLayouts.map['test'].build(cabinet);
-  return cabinet.getSubassemblies().filter(sa => sa.constructor.name.match(constructorRegExp));
+  return cabinet.allAssemblies().filter(sa => sa.constructor.name.match(constructorRegExp));
 }
 
-Test.add('webworker: ToModel(Panel)', (ts) => {
-  const panel = get("Panel");
+const DTO = require('../../web-worker/services/to-dto.js');
+Test.add('webworker: DTO', (ts) => {
+  const all = get(/.*/, true);
+  const dtos = DTO.to(all);
+  const reconnected = DTO.reconnect(dtos);
+
+  ts.assertEquals(reconnected.length + dtos.length, all.length *2, 'Incorrect Number of objects returned by conversion');
+
+  const firstA = all[0];
+  const firstR = reconnected[0];
+  const center = firstR.position.current.center.object();
+  const normals = firstR.position.current.normals;
+  ts.assertTrue(center.equals(firstA.position().center()), 'Vertex3D conversion contains Error/s');
+  ts.assertTrue(normals instanceof Object, 'plane js Object conversion contains Error/s');
+  ts.assertTrue(Object.equals(firstA.position().normals(), normals), 'Vector3D conversion contains Error/s');
+
+  const lastA = all[all.length - 1];
+  const lastR = reconnected[all.length - 1];
+  const innerPoly = lastR.coordinates.inner.object();
+  const outerPoly = lastR.coordinates.outer.object();
+
+  ts.assertTrue(innerPoly.equals(lastA.sectionProperties().innerPoly()))
+  ts.assertTrue(outerPoly.equals(lastA.sectionProperties().outerPoly()))
+
+  const sectPropsIndex = all.findIndex(sp => sp.constructor.name === 'SectionProperties');
+  const sectionProps = all[sectPropsIndex];
+  const reconnectedSP = reconnected[sectPropsIndex];
+
+  ts.assertTrue(sectionProps.top().id().equals(reconnectedSP.top().id), 'Id extraction, maping, or reconnection contains Error/s');
+  ts.assertTrue(sectionProps.bottom().id().equals(reconnectedSP.bottom().id), 'Id extraction, maping, or reconnection contains Error/s');
+  ts.assertTrue(sectionProps.left().id().equals(reconnectedSP.left().id), 'Id extraction, maping, or reconnection contains Error/s');
+  ts.assertTrue(sectionProps.right().id().equals(reconnectedSP.right().id), 'Id extraction, maping, or reconnection contains Error/s');
 
   ts.success();
 });

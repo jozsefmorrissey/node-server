@@ -6,14 +6,7 @@ const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
 const Polygon3D = require('../../../three-d/objects/polygon.js');
 const Cutter = require('./cutter.js');
 const Panel = require('./panel');
-const PanelModel = Panel.Model;
 const Joint = require('../../joint/joint.js');
-const GovernedBySection = require('./section/governed-by-section.js');
-const PanelFullGoverned = GovernedBySection.Panel.Full;
-const PanelFrontGoverned = GovernedBySection.Panel.Front;
-const CutterFrontGoverned = GovernedBySection.Panel.Front.Cutter;
-const PanelBackGoverned = GovernedBySection.Panel.Back;
-const CutterBackGoverned = GovernedBySection.Panel.Back.Cutter;
 
 class Divider extends Assembly {
   constructor(partCode, partName, config) {
@@ -23,13 +16,18 @@ class Divider extends Assembly {
 
     Object.getSet(this, 'type');
 
-    const parts = [
-      new PanelFullGoverned(':full', 'panel-full'),
-      new PanelFrontGoverned(':f', 'panel-front'),
-      new CutterFrontGoverned(':b', 'cutter-back'),
-      new PanelBackGoverned(':b', 'panel-back'),
-      new CutterBackGoverned(':f', 'cutter-front')
-    ];
+    const pFull = new Panel(':full', 'panel-full');
+    const pFront = new Panel(':f', 'panel-front');
+    const pcFront = new Cutter(':f', 'cutter-front');
+    const pBack = new Panel(':b', 'panel-back');
+    const pcBack = new Cutter(':b', 'cutter-back');
+
+    pFull.modelingMethod('Full');
+    pBack.modelingMethod('Back');
+    pcFront.modelingMethod('Front');
+    pcBack.modelingMethod('Back');
+    pBack.modelingMethod('Back');
+    const parts = [pFull, pFront, pcFront, pBack, pcBack];
 
     const pToJson = this.toJson;
     this.toJson = () => {

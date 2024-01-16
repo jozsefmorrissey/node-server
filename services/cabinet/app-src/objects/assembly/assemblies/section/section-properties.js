@@ -589,7 +589,7 @@ class SectionProperties extends KeyValue{
 
     function buildCutters () {
       const cabinet = instance.getCabinet();
-      const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cutter|Void|Auto|Section)/))
+      const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section)/))
       for (let index = 0; index < subAssems.length; index++) {
         const reference = subAssems[index];
         let offset = instance.dividerJoint().maleOffset();

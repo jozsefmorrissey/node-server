@@ -33,7 +33,6 @@ class KeyValue extends Lookup {
     const parentAttr = properties.parentAttribute;
     const customFuncs = [];
     const parentSetEvent = new CustomEvent('parent-set');
-    this.parentSetEvent = parentSetEvent;
 
 
     if (childAttr) {
