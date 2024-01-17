@@ -1,9 +1,9 @@
 
-const Vertex3D = require('../../app-src/three-d/objects/vertex');
-const Vector3D = require('../../app-src/three-d/objects/vector');
-const Line3D = require('../../app-src/three-d/objects/line');
-const Polygon3D = require('../../app-src/three-d/objects/polygon');
-const BiPolygon = require('../../app-src/three-d/objects/bi-polygon');
+const Vertex3D = require('../../../../app-src/three-d/objects/vertex');
+const Vector3D = require('../../../../app-src/three-d/objects/vector');
+const Line3D = require('../../../../app-src/three-d/objects/line');
+const Polygon3D = require('../../../../app-src/three-d/objects/polygon');
+const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon');
 
 const so = 3*2.54;
 

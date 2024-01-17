@@ -287,7 +287,11 @@ BiPolygon.fromVectorObject =
     (width, height, depth, center, vectorObj, normalVector) => {
       try {
         center ||= new Vertex3D(0,0,0);
-        vectorObj ||= {x: new Vector3D(1,0,0), y: new Vector3D(0,1,0), z: new Vector3D(0,0,1)};
+        if (vectorObj === undefined) {
+          vectorObj = {x: new Vector3D(1,0,0), y: new Vector3D(0,1,0), z: new Vector3D(0,0,1)};
+        } else {
+          vectorObj = {x: new Vector3D(vectorObj.x), y: new Vector3D(vectorObj.y), z: new Vector3D(vectorObj.z) }
+        }
         const frontCenter = center.translate(vectorObj.z.scale(depth/-2), true);
         const front = Polygon3D.fromVectorObject(width, height, frontCenter, vectorObj);
         const backCenter = center.translate(vectorObj.z.scale(depth/2), true);

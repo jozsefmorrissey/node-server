@@ -1,13 +1,13 @@
 
-const JU = require('./joint');
-const ApplyJoint = require('./joint');
-const BiPolygon = require('../../app-src/three-d/objects/bi-polygon.js');
-const Line3D = require('../../app-src/three-d/objects/line.js');
-const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
-const OpeningToeKick = require('opening-toe-kick');
-const Divider = require('divider');
+const JU = require('./utils/joint');
+const ApplyJoint = require('./utils/joint');
+const BiPolygon = require('../../../app-src/three-d/objects/bi-polygon.js');
+const Line3D = require('../../../app-src/three-d/objects/line.js');
+const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
+const OpeningToeKick = require('./utils/opening-toe-kick');
+const Divider = require('./utils/divider');
 const SimpleModels = require('./generic-models');
-const Void = require('void');
+const Void = require('./utils/void');
 
 function getDrawerDepth() {
   const depth = sectionProps().drawerDepth();
@@ -113,7 +113,14 @@ const handleModel = (simple) => {
 }
 
 
-const to = {}
+const to = function defaultToModel(assemMdto) {
+  const current = assemMdto.position.current;
+  const dem = current.demension;
+  const center = current.center.object();
+  const vecObj = current.normals;
+  const biPolyNormVect = current.biPolyNorm.object();
+  return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj, biPolyNormVect);
+}
 
 to.Cabinet = {
   Simple: {

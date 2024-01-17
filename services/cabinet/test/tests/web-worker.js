@@ -103,14 +103,14 @@ Test.add('MDTO', (ts) => {
   ts.success();
 });
 
-const Modeler = require('../../web-worker/shared/modeler.js');
+const ModelItterator = require('../../web-worker/services/model-itterator.js');
+const Modeler = require('../../web-worker/services/modeler.js');
 Test.add('Modeler', (ts) => {
-  const allAssemblies = get();
-  const joints = allAssemblies[0].getAllJoints().map(j => MDTO.to(j));
-  const jointMap = allAssemblies[0].jointMap();
-  const assemMdtos = MDTO.to(allAssemblies);
-  const panel = assemMdtos.filter(a => a.partCode === 'R')[0];
-  const modeler = new Modeler(allAssemblies, joints, panel);
+  const allAssemblies = get(undefined, true);
+  const panel = allAssemblies.filter(a => a.partCode() === 'R')[0];
+  const modelItt = new ModelItterator(allAssemblies, panel);
+  const modeler = new Modeler(modelItt);
+
 
   ts.success();
 });
