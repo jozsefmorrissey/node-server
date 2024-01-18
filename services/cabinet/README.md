@@ -69,6 +69,10 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 - partCode() - object type identifier
 - locationCode() - location identifier
 - userFriendlyId() - Cabinet specific unique indexed identifier (for display purposes)
+#### Modeling Flags
+- part() - model (when included) will exist in within reality
+- included() - given current configuration part exists in reality
+- includeJoints() - whether jointMatches are applied
 #### Subassemblies
 - subassemblies - list of subassmblies that must be saved
 - getSubassemblies() - all decendents

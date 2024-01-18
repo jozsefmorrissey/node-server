@@ -102,6 +102,7 @@ class PropertyConfig {
 
     const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
     function getProperties(clazz, code) {
+      if (clazz === undefined) return props;
       clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
       const classProps = props[clazz] || {};
       if (code === undefined) return classProps;

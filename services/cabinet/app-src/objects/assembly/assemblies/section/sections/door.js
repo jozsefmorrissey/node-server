@@ -13,8 +13,7 @@ class DoorSection extends Assembly {
     this.pull = (...args) => door && door.pull(...args);
 
     if (!door) {
-      door = new Door('d', 'Door');
-      door.modelingMethod('Section');
+      door = new Door('d', 'Section');
       this.door = () => door;
       this.pull = (i) => door.pull(i);
     }

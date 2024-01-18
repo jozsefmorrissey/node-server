@@ -23,8 +23,7 @@ class PanelSection extends Assembly {
 
     this.initialize = (governingSection) => {
       this.on.change(updateJoints);
-      if (!panel) panel = new Panel('ps', 'Panel-' + count++);
-      panel.modelingMethod('Section')
+      if (!panel) panel = new Panel('ps', 'Section');
     }
 
     function updateJoints() {

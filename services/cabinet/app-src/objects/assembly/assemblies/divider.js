@@ -17,17 +17,12 @@ class Divider extends Assembly {
 
     Object.getSet(this, 'type');
 
-    const pFull = new Panel(':full', 'panel-full');
-    const pFront = new Panel(':f', 'panel-front');
-    const pcFront = new Cutter(':f', 'cutter-front');
-    const pBack = new Panel(':b', 'panel-back');
-    const pcBack = new Cutter(':b', 'cutter-back');
+    const pFull = new Panel(':full', 'Full');
+    const pFront = new Panel(':f', 'Front');
+    const pcFront = new Cutter('dcf', 'Front');
+    const pBack = new Panel(':b', 'Back');
+    const pcBack = new Cutter('dcb', 'Back');
 
-    pFull.modelingMethod('Full');
-    pBack.modelingMethod('Back');
-    pcFront.modelingMethod('Front');
-    pcBack.modelingMethod('Back');
-    pBack.modelingMethod('Back');
     const parts = [pFull, pFront, pcFront, pBack, pcBack];
     parts.forEach(p => p.parentAssembly(this));
     this.toJson = () => {
@@ -37,8 +32,9 @@ class Divider extends Assembly {
       return json;
     }
 
-    this.addJoints(new Joint(parts[2].locationCode(), parts[1].locationCode(), null, 'only'));
-    this.addJoints(new Joint(parts[4].locationCode(), parts[3].locationCode(), null, 'only'));
+    const partCheck = (index) => (assem) => parts[index].locationCode() === assem.locationCode();
+    this.addJoints(new Joint(parts[2], parts[1]));
+    this.addJoints(new Joint(parts[4], parts[3]));
 
     this.part = () => false;
     this.maxWidth = () => 2.54*3/4;

@@ -89,8 +89,11 @@ class Position {
         normals: this.normals(),
         biPolyNorm: this.biPolyNormVector() // Ask? Explode
       };
+      if (assembly.partCode() === 'T:f') {
+        console.log('target');
+      }
       assembly.getJoints().male.forEach((joint) =>
-        joint.updatePosition(position)
+        joint.updatePosition(position, assembly)
       );
       return position;
     }

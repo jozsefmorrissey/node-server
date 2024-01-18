@@ -113,13 +113,31 @@ const handleModel = (simple) => {
 }
 
 
-const to = function defaultToModel(assemMdto) {
-  const current = assemMdto.position.current;
+function defaultToModel(assemMrMdto) {
+  const current = assemMrMdto.position.current;
   const dem = current.demension;
   const center = current.center.object();
   const vecObj = current.normals;
   const biPolyNormVect = current.biPolyNorm.object();
   return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj, biPolyNormVect);
+}
+
+const defalt = {biPolygon: defaultToModel};
+
+const getRoot = (rMdto) => rMdto.linkListFind('parentAssembly', (a) => a.parentAssembly === undefined);
+const find = (rMdto, partCode) => {
+  const up = rMdto.linkListFind('parentAssembly', (a) => a.partCode === partCode || a.parentAssembly === undefined);
+  if (up.partCode === partCode) return up;
+  const func = up.linkListFind('children', (a) => (a instanceof Function ? a() : a).partCode === partCode);
+  return func ? func() : null;
+}
+
+const idReg = /^(.*?)_(.*)$/;
+const to = (rMdto, onlyCustomBuilders) => {
+  const id = rMdto.id
+  const cxtr = id.replace(idReg, '$1');
+  let partName = rMdto.partName;
+  return to[cxtr] && to[cxtr][partName] || (!onlyCustomBuilders && defalt);
 }
 
 to.Cabinet = {
@@ -147,7 +165,7 @@ to.DrawerBox = {
   },
   Section: {
     normal: () => sectionProps().normal(),
-    biPolygon: () => {
+    biPolygon: (rMdto, modelMap) => {
       const propConfig = sectionProps().getRoot().group().propertyConfig;
       const props = propConfig('Guides');
       const innerPoly = new Polygon3D(sectionProps().coordinates().inner);
@@ -161,7 +179,7 @@ to.DrawerBox = {
       innerPoly.offset(sideOffset/2, sideOffset/2, topOffset, bottomOffset);
       return innerPoly.translate(offsetVect);
     },
-    model: () => {
+    model: (rMdto, modelMap) => {
       const props = this.getRoot().group().propertyConfig('DrawerBox');
       return to.DrawerBox.Simple(this.biPolygon(), this.normal(), getDrawerDepth(), props);
     }
@@ -170,43 +188,37 @@ to.DrawerBox = {
 
 to.DrawerFront = {
   Solid: {
-    biPolygon: () => sectionProps().coverInfo().biPolygon
+    biPolygon: (rMdto, modelMap) => sectionProps().coverInfo().biPolygon
   }
 }
 
 to.Door = {
   Section: {
-    biPolygon: () => sectionProps().coverInfo().biPolygon
+    biPolygon: (rMdto, modelMap) => sectionProps().coverInfo().biPolygon
   },
   Left: {
-    biPolygon: () => getBiPolygon(true)
+    biPolygon: (rMdto, modelMap) => getBiPolygon(true)
   },
   Right: {
-    biPolygon: () => getBiPolygon(false)
+    biPolygon: (rMdto, modelMap) => getBiPolygon(false)
   }
 }
 
 to.Handle = {
   Simple: {
-    model: () => handleModel(true)
+    model: (rMdto, modelMap) => handleModel(true)
   },
   Complex: {
-    model: () => handleModel(false)
+    model: (rMdto, modelMap) => handleModel(false)
   }
 }
 
-
-to.Cutter = {
+to.CutterReference = {
   Reference: {
-    model: (dto, modelMap, joints) => {
-      const biPoly = to.CutterReference.biPolygon(dto, modelMap);
-      if (!isBiPoly) joints ||= modelMap.joints.female(dto);
-      return JU.apply(biPoly.model(), joints);
-    },
-    biPolygon: function(dto, modelMap) {
-      let ref = dto.reference;
+    biPolygon: function(rMdto, modelMap) {
+      let ref = rMdto.reference;
       const isBiPoly = ref instanceof BiPolygon;
-      let biPoly = isBiPoly ? ref : modelMap[id];
+      let biPoly = isBiPoly ? ref : modelMap[ref.id];
       if (biPoly === undefined) throw new Error('Invalid Reference or assemblies not ordered properly');
       biPoly.offset(fromPoint(), offset);
       let poly = (front ? biPoly.front() : biPoly.back()).reverse();
@@ -217,39 +229,41 @@ to.Cutter = {
       const distance = 10 * length;
       return BiPolygon.fromPolygon(poly, 0, multiplier * distance, {x: distance, y:distance});
     }
-  },
+  }
+}
+
+to.Cutter = {
   Poly: {
-    biPolygon: () => {
-      poly.lines().forEach(l => length += l.length());
-      const distance = length;
+    biPolygon: (rMdto, modelInfo) => {
+      let poly = rMdto.poly;
+      let distance = 0;
+      poly.lines().forEach(l => distance += l.length());
       return BiPolygon.fromPolygon(poly, 0, distance, {x: distance, y:distance});
-    },
-    model: (joints) => {
-      let length = 20;
-      joints ||= this.getJoints().female;
-      const biPoly = to.CutterPoly.biPolygon();
-      return Joint.apply(biPoly.model(), joints);
     }
   },
   LeftCorner: {
-    model: () => {
-      const leftModel = instance.getAssembly('L').toModel([]).clone();
-      const tkh = cabinet.value('tkh');
-      leftModel.translate({x:0, y:tkh, z:0});
-      return leftModel;
+    model: (rMdto, modelInfo) => {
+      const root = getRoot(rMdto);
+      const left = find(rMdto, 'L');
+      const model = to(left).model();
+      const tkh = modelInfo.propertyConfig.Cabinet.tkh;
+      model.translate({x:0, y:tkh, z:0});
+      return model;
     }
   },
   RightCorner: {
-    model: () => {
-      const rightModel = instance.getAssembly('R').toModel([]).clone();
-      const tkh = cabinet.value('tkh');
-      rightModel.translate({x:0, y:tkh, z:0});
-      return rightModel;
+    model: (rMdto, modelInfo) => {
+      const root = getRoot(rMdto);
+      const right = find(rMdto, 'R');
+      const model = to(right).model();
+      const tkh = modelInfo.propertyConfig.Cabinet.tkh;
+      model.translate({x:0, y:tkh, z:0});
+      return model;
     }
   },
   Opening: {
-    toBiPolygon: () => {
-      const outer = dto.outer;
+    toBiPolygon: (rMdto, modelInfo) => {
+      const outer = rMdto.outer;
       const outerPoly = new Polygon3D(outer);
       const corner2corner = outer[0].distance(outer[2]);
       const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2, 0, {x:0, y:1000});
@@ -257,16 +271,23 @@ to.Cutter = {
     }
   },
   ToeKick: {
-    biPolygon: (dto) => OpeningToeKick.instance(dto).Cutter
+    biPolygon: (rMdto, modelInfo) =>
+        OpeningToeKick.instance(rMdto, modelInfo).Cutter.biPolygon()
   },
   Front: {
-    biPolygon: (dto) => Divider.instance(dto).Front.Cutter
+    biPolygon: (rMdto, modelInfo) => {
+      let poly = Divider.instance(rMdto, modelInfo).Front.Cutter.polygon();
+      return to.Cutter.Poly.biPolygon({poly});
+    }
   },
   Back: {
-    biPolygon: (dto) => Divider.instance(dto).Back.Cutter
+    biPolygon: (rMdto, modelInfo) => {
+      let poly = Divider.instance(rMdto, modelInfo).Back.Cutter.polygon();
+      return to.Cutter.Poly.biPolygon({poly});
+    }
   },
   Abyss: {
-    biPolygon: () => {
+    biPolygon: (rMdto, modelMap) => {
       const biPoly = instance.toBiPolygon();
       const polys = biPoly.toPolygons();
       polys.swap(3,4);
@@ -287,7 +308,7 @@ to.Cutter = {
 
 to.Panel = {
   Section: {
-    biPolygon: () => {
+    biPolygon: (rMdto, modelMap) => {
       const sp = sectionProps();
       const ip = sp.innerPoly();
       const tt = sp.top().thickness();
@@ -307,19 +328,21 @@ to.Panel = {
     }
   },
   Void: {
-    toBiPolygon: (dto) => Void.instance(dto).panel(dto.index).biPolygon()
+    toBiPolygon: (rMdto, modelInfo) => Void.instance(rMdto, modelInfo).panel(rMdto.index).biPolygon()
   },
   ToeKickBacker: {
-    biPolygon: (dto) => OpeningToeKick.instance(dto).Backer
+    biPolygon: (rMdto, modelInfo) => OpeningToeKick.instance(rMdto, modelInfo).Backer
   },
   Full: {
-    biPolygon: (dto) => Divider.instance(dto).Full
+    biPolygon: (rMdto, modelInfo) =>
+      Divider.instance(rMdto, modelInfo).Full.biPolygon()
   },
   Front: {
-    biPolygon: (dto) => Divider.instance(dto).Front
+    biPolygon: (rMdto, modelInfo) =>
+      Divider.instance(rMdto, modelInfo).Front.biPolygon()
   },
   Back: {
-    biPolygon: (dto) => Divider.instance(dto).Back
+    biPolygon: (rMdto, modelInfo) => Divider.instance(rMdto, modelInfo).Back.biPolygon()
   }
 }
 

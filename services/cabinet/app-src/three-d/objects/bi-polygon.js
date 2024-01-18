@@ -8,6 +8,8 @@ const Plane = require('plane');
 
 class BiPolygon {
   constructor(polygon1, polygon2) {
+    if (Array.isArray(polygon1)) polygon1 = new Polygon3D(polygon1);
+    if (Array.isArray(polygon2)) polygon2 = new Polygon3D(polygon2);
     const face1 = polygon1.vertices();
     const face2 = polygon2.vertices();
     const instance = this;
@@ -71,6 +73,7 @@ class BiPolygon {
       }
     }
 
+    this.toArray = () => [polygon1.vertices(), polygon2.vertices()];
     this.orderBy = {};
     this.orderBy.polygon = (polygon) => {
       const faces = this.closestOrder(polygon.center());

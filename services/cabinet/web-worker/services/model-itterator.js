@@ -1,6 +1,25 @@
 
 const JU = require('../services/modeling/utils/joint.js');
 const MDTO = require('../services/modeling/modeling-data-transfer-object.js');
+const MFC = require('../services/modeling/modeling-function-configuration.js');
+
+
+function sortAssemMtdos(assemMtdos) {
+  let cab, back;
+  const defaultBuilt = [];
+  const customBuilt = [];
+  for (let index = 0; index < assemMtdos.length; index++) {
+    const a = assemMtdos[index];
+    if (a.partCode === 'c') cab = a;
+    else if (a.partCode === 'BACK') back = a;
+    else {
+      (MFC(a, true) === false ? defaultBuilt : customBuilt).push(a);
+    }
+  }
+  defaultBuilt.sortByAttr('partCode.length');
+  customBuilt.sortByAttr('partCode.length');
+  return [cab, back].concat(defaultBuilt).concat(customBuilt);
+}
 
 const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
   const assembly = complexityObj[id].assembly;
@@ -62,29 +81,48 @@ const needsToBeRendered = (jointMap, targetMdto, byId) => {
   return Object.values(needsRendered);
 }
 
+
+
 class ModelItterator {
   constructor(assemblies, target) {
     const jointMap = MDTO.to(assemblies[0].jointMap());
     const jointMdtos = MDTO.to(assemblies[0].getAllJoints());
     const assemMdtos = MDTO.to(assemblies);
     const byId = {};
+    const propertyConfig = MDTO.to(assemblies[0].group().propertyConfig());
     jointMdtos.forEach(j => byId[j.id] = j);
     assemMdtos.forEach(a => byId[a.id] = a);
     const targetMdto = MDTO.to(target);
-    let needsRendered = sorter(assemMdtos, jointMap);//needsToBeRendered(jointMap, targetMdto, byId);
+    assemMdtos.shuffle();
+    const needsRendered = sortAssemMtdos(assemMdtos);
+    let needsJoined = sorter(assemMdtos, jointMap);//needsToBeRendered(jointMap, targetMdto, byId);
 
-    let modelMap = {};
+
+    const modelInfo = {}
     let nextIndex = 0;
     this.nextJob = () => {
-      if (nextIndex > needsRendered.length-1) return null;
-      const next = needsRendered[nextIndex++];
-      return {byId, modelMap, assembly: next.assembly, joints: next.joints};
+      if (nextIndex < needsRendered.length) {
+        const assembly = needsRendered[nextIndex++];
+        const environment = {byId, modelInfo, propertyConfig};
+        return {name: 'build-model', assembly, environment};
+      } else if (nextIndex < needsRendered.length + 1) {
+        nextIndex++;
+        const environment = {byId, modelInfo, jointMap, propertyConfig};
+        return {name: 'apply-joints', assemblies: needsJoined, environment};
+      } else return null;
     }
-    this.model = (id, model) => {
-      if (model !== undefined) {
-        modelMap[id] = model;
+    this.modelInfo = (id, info) => {
+      if (info !== undefined) {
+        modelInfo[id] = info;
       }
-      return modelMap[id];
+      return modelInfo[id];
+    }
+    this.joinedModels = (joinedModelMap) => {
+      const keys = Object.keys(joinedModelMap);
+      for (let index = 0; index < keys.length; index++) {
+        const id = keys[index];
+        modelInfo[id].joinedModel = joinedModelMap[id];
+      }
     }
 
     this.joints = () => joints;
@@ -95,19 +133,21 @@ class ModelItterator {
     this.assembly = (id) => assemMap[id];
     this.models = (filter) => {
       const runFilter = filter instanceof Function;
-      const csg = new CSG();
-      const ids = Object.keys(modelMap);
+      filter ||= (mtdo) => mtdo.part && mtdo.included;
+      let csg = new CSG();
+      const ids = Object.keys(modelInfo);
       for (let index = 0; index < ids.length; index++) {
-        const model = modelMap[ids[index]];
-        if (!runFilter || filter(id, model)) {
+        const id = ids[index];
+        const model = modelInfo[id].joinedModel;
+        const mtdo = byId[id];
+        if (model && filter(mtdo, model)) {
           csg = csg.union(model);
         }
       }
-      return csg;
+      return csg.polygons.length > 0 ? csg : null;
     }
-    this.percentComplete = () =>
-        Object.values(modelMap).length / assemblies.length;
-
+    this.percentBuilt = () =>
+        Object.values(modelInfo).length / assemblies.length;
   }
 }
 

@@ -111,7 +111,8 @@ Test.add('Modeler', (ts) => {
   const modelItt = new ModelItterator(allAssemblies, panel);
   const modeler = new Modeler(modelItt);
 
-
+  ts.assertEquals(modelItt.percentBuilt(), 1);
+  console.log(modelItt.models().toString());
   ts.success();
 });
 

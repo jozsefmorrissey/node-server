@@ -17,8 +17,6 @@ class DividerSection extends Assembly {
     const props = sectionProperties;
     const instance = this;
 
-    this.partCode = (full) => `${sectionProperties.partCode(full)}-dp`;
-
     let count = 0;
 
     let panelThickness = 3*2.54/4;

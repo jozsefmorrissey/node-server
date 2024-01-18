@@ -27,7 +27,7 @@ class CutterReference extends Cutter {
     constructor (reference, fromPoint, offset, front) {
     front = front === false ? false : true;
     const partCode = `CR${reference.locationCode().hash(9949, false)}`;
-    super(partCode);
+    super(partCode, 'Reference');
     if (reference instanceof Assembly) {
       const joint = new Joint.DependentOn(reference.locationCode(), this.locationCode())
       this.addJoints(joint);
@@ -36,7 +36,7 @@ class CutterReference extends Cutter {
 
     this.reference = () => reference;
 
-    this.partName = () => `CutterRef(${reference.partCode()}${offset >= 0 ? '+' + offset : offset}@${fromPoint()})`;
+    this.toString = () => `CutterRef(${reference.partCode()}${offset >= 0 ? '+' + offset : offset}@${fromPoint()})`;
   }
 }
 

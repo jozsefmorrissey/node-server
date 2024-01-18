@@ -47,6 +47,22 @@ Function.safeStdLibAddition(Object, 'definedPropertyNames', function(object) {
   return names;
 }, true);
 
+// TODO: implement depth first search... I cant remember needing it so not worth my time
+Function.safeStdLibAddition(Object, 'linkListFind', function(attr, is) {
+  let toSearch = [this];
+  let index = 0;
+  while(index < toSearch.length && !is(curr = toSearch[index])) {
+    objOArr = curr.pathValue(attr);
+    if (objOArr) {
+      if (Array.isArray(objOArr)) toSearch.concatInPlace(objOArr);
+      else toSearch.push(objOArr);
+    }
+    index++;
+  }
+  return toSearch[index];
+});
+
+
 const isNotUndefined = (key, obj) => obj[key] !== undefined;
 Function.safeStdLibAddition(Object, 'defined', function(...keys) {
   let condition = isNotUndefined;
@@ -1347,7 +1363,7 @@ Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
 Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
   const valueDefined = value !== undefined;
   const pathInfo = obj.pathInfo(path, valueDefined);
-  if (!valueDefined && pathInfo === undefined) return;
+  if (!valueDefined && !pathInfo) return pathInfo;
   const parent = pathInfo.parent;
   const attr = pathInfo.attr;
   if ((typeof parent[attr]) === 'function') {

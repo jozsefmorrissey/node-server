@@ -53,6 +53,7 @@ const MDTO = ModelingDataTransferObject;
 const Joint = require('../../../app-src/objects/joint/joint.js');
 const Assembly = require('../../../app-src/objects/assembly/assembly.js');
 const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
+const Property = require('../../../app-src/config/property.js');
 MDTO.to = function toDto (objectOval) {
   if (objectOval === null || objectOval === undefined) return objectOval;
   if (objectOval instanceof Function) return;
@@ -70,6 +71,9 @@ MDTO.to = function toDto (objectOval) {
   }
   if (objectOval instanceof Joint) {
     evaluateAttributes(objectOval, mdConfig.Joint, dto);
+  }
+  if (objectOval instanceof Property) {
+    return objectOval.value();
   }
   if (mdConfig[objectOval.constructor.name])
     evaluateAttributes(objectOval, mdConfig[objectOval.constructor.name], dto);
@@ -122,9 +126,8 @@ function reconnected(obj, idMap) {
   return rDto;
 }
 
-MDTO.reconnect = function reconnectDtos(dtos) {
-  const idMap = {};
-  return reconnected(dtos, idMap);
+MDTO.reconnect = function reconnectDtos(dtos, idMap) {
+  return reconnected(dtos, idMap || {});
 }
 
 module.exports = MDTO;

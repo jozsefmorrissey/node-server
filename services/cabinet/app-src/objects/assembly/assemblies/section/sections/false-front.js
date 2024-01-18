@@ -17,8 +17,7 @@ class FalseFrontSection extends Assembly {
     this.pull = (i) => front.pull(i);
 
     this.initialize = () => {
-      if (!front) front = new DrawerFront('ff', 'DrawerFront');
-      front.modelingMethod('Solid');
+      if (!front) front = new DrawerFront('ff', 'Solid');
       front.partName = () => `${sectionProps().partName()}-ff`;
       this.addSubAssembly(front);
     }

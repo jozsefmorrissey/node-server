@@ -69,7 +69,7 @@
         "135",
         0
       ],
-      "name": "Panel.Back",
+      "name": "back",
       "code": "BACK",
       "id": "cl3zaet"
     },
@@ -90,7 +90,7 @@
         "135",
         0
       ],
-      "name": "Cutter.Back",
+      "name": "back",
       "code": "cb",
       "id": "fhyq6qr"
     },
@@ -111,7 +111,7 @@
         "0",
         0
       ],
-      "name": "Panel.Right",
+      "name": "right",
       "code": "R",
       "id": "s6u4kxx"
     },
@@ -132,7 +132,7 @@
         "90",
         0
       ],
-      "name": "Panel.Left",
+      "name": "left",
       "code": "L",
       "id": "dx2a1ey"
     },
@@ -153,7 +153,7 @@
         0,
         0
       ],
-      "name": "Panel.Back.Left",
+      "name": "backLeft",
       "code": "pbl",
       "id": "4z3y8g7"
     },
@@ -174,7 +174,7 @@
         "pbr.r.y",
         "pbr.r.z"
       ],
-      "name": "Cutter.Back.Left",
+      "name": "backLeft",
       "code": "cpbl",
       "id": "ztdyiq0"
     },
@@ -195,7 +195,7 @@
         "90",
         0
       ],
-      "name": "Panel.Back.Right",
+      "name": "backRight",
       "code": "pbr",
       "id": "7dm2j9o"
     },
@@ -216,7 +216,7 @@
         "pbl.r.y",
         "pbl.r.z"
       ],
-      "name": "Cutter.Back.Right",
+      "name": "backRight",
       "code": "cpbr",
       "id": "exo6w8h"
     },
@@ -237,7 +237,7 @@
         "0",
         0
       ],
-      "name": "Panel.Top",
+      "name": "top",
       "code": "T",
 
       "dividerType": "frontAndBack"
@@ -259,7 +259,7 @@
         "0",
         0
       ],
-      "name": "Panel.Bottom",
+      "name": "bottom",
       "code": "B",
       "id": "cod71ee"
     }
@@ -493,7 +493,7 @@
 	],
 	"subassemblies": [
 		{
-			"name": "Panel.Right",
+			"name": "right",
 			"type": "Divider",
 			"code": "R",
 			"center": [
@@ -514,7 +514,7 @@
 			"id": "mcf6dft"
 		},
 		{
-			"name": "Panel.Left",
+			"name": "left",
 			"type": "Divider",
 			"code": "L",
 			"center": [
@@ -535,7 +535,7 @@
 			"id": "r1xpfd9"
 		},
 		{
-			"name": "Back",
+			"name": "back",
 			"type": "Panel",
 			"code": "BACK",
 			"center": [
@@ -556,7 +556,7 @@
 			"id": "0hvikg4"
 		},
 		{
-			"name": "Bottom",
+			"name": "bottom",
 			"type": "Divider",
 			"code": "B",
 			"center": [
@@ -577,7 +577,7 @@
 			"id": "vho2lw6"
 		},
 		{
-			"name": "Top",
+			"name": "top",
 			"type": "Divider",
 			"code": "T",
 			"center": [
@@ -741,7 +741,7 @@
 				"135",
 				0
 			],
-			"name": "Panel.Back",
+			"name": "back",
 			"code": "BACK",
 			"id": "apm1547"
 		},
@@ -762,7 +762,7 @@
 				"135",
 				0
 			],
-			"name": "Cutter.Back",
+			"name": "back",
 			"code": "cb",
 			"id": "orxxake"
 		},
@@ -783,7 +783,7 @@
 				"0",
 				0
 			],
-			"name": "Panel.Right",
+			"name": "right",
 			"code": "R",
 			"id": "bmr0kns"
 		},
@@ -804,7 +804,7 @@
 				"90",
 				0
 			],
-			"name": "Panel.Left",
+			"name": "left",
 			"code": "L",
 			"id": "xp4embf"
 		},
@@ -825,7 +825,7 @@
 				0,
 				0
 			],
-			"name": "Panel.Back.Left",
+			"name": "backLeft",
 			"code": "pbl",
 			"id": "zyb9ykf"
 		},
@@ -846,7 +846,7 @@
 				"pbr.r.y",
 				"pbr.r.z"
 			],
-			"name": "Cutter.Back.Left",
+			"name": "backLeft",
 			"code": "cpbl",
 			"id": "jjl8m38"
 		},
@@ -867,7 +867,7 @@
 				"90",
 				0
 			],
-			"name": "Panel.Back.Right",
+			"name": "backRight",
 			"code": "pbr",
 			"id": "65n39kv"
 		},
@@ -888,7 +888,7 @@
 				"pbl.r.y",
 				"pbl.r.z"
 			],
-			"name": "Cutter.Back.Right",
+			"name": "backRight",
 			"code": "cpbr",
 			"id": "kmursqf"
 		},
@@ -909,7 +909,7 @@
 				"0",
 				0
 			],
-			"name": "Panel.Top",
+			"name": "top",
 			"code": "T",
 			"id": "tm2c0lx"
 		},
@@ -930,7 +930,7 @@
 				"0",
 				0
 			],
-			"name": "Panel.Bottom",
+			"name": "bottom",
 			"code": "B",
 			"id": "2ww11zr"
 		}
@@ -1204,7 +1204,7 @@
 	        "135",
 	        0
 	      ],
-	      "name": "Panel.Back",
+	      "name": "back",
 	      "code": "BACK",
 	      "id": "y9lmjat"
 	    },
@@ -1225,7 +1225,7 @@
 	        "135",
 	        0
 	      ],
-	      "name": "Cutter.Back",
+	      "name": "back",
 	      "code": "cb",
 	      "id": "b5c5ltj"
 	    },
@@ -1246,7 +1246,7 @@
 	        "0",
 	        0
 	      ],
-	      "name": "Panel.Right",
+	      "name": "right",
 	      "code": "R",
 	      "id": "nwpbqqp"
 	    },
@@ -1267,7 +1267,7 @@
 	        "90",
 	        0
 	      ],
-	      "name": "Panel.Left",
+	      "name": "left",
 	      "code": "L",
 	      "id": "nyf1l0n"
 	    },
@@ -1288,7 +1288,7 @@
 	        0,
 	        0
 	      ],
-	      "name": "Panel.Back.Left",
+	      "name": "backLeft",
 	      "code": "pbl",
 	      "id": "9ryj4ar"
 	    },
@@ -1309,7 +1309,7 @@
 	        "pbr.r.y",
 	        "pbr.r.z"
 	      ],
-	      "name": "Cutter.Back.Left",
+	      "name": "backLeft",
 	      "code": "cpbl",
 	      "id": "6v1gtns"
 	    },
@@ -1330,7 +1330,7 @@
 	        "90",
 	        0
 	      ],
-	      "name": "Panel.Back.Right",
+	      "name": "backRight",
 	      "code": "pbr",
 	      "id": "ijpsvo0"
 	    },
@@ -1351,7 +1351,7 @@
 	        "pbl.r.y",
 	        "pbl.r.z"
 	      ],
-	      "name": "Cutter.Back.Right",
+	      "name": "backRight",
 	      "code": "cpbr",
 	      "id": "l0wncb5"
 	    },
@@ -1372,7 +1372,7 @@
 	        "0",
 	        0
 	      ],
-	      "name": "Panel.Top",
+	      "name": "top",
 	      "code": "T",
 	      "id": "wzoibm2"
 	    },
@@ -1393,7 +1393,7 @@
 	        "0",
 	        0
 	      ],
-	      "name": "Panel.Bottom",
+	      "name": "bottom",
 	      "code": "B",
 	      "id": "q9bx8ou"
 	    }
@@ -1631,7 +1631,7 @@
 			}
 		],
 		"subassemblies": [{
-				"name": "ToeKickBacker",
+				"name": "toeKickBacker",
 				"type": "Panel",
 				"code": "tkb",
 				"center": [
@@ -1651,7 +1651,7 @@
 				]
 			},
 			{
-				"name": "Right",
+				"name": "right",
 				"type": "Divider",
 				"code": "R",
 				"center": [
@@ -1671,7 +1671,7 @@
 				]
 			},
 			{
-				"name": "Left",
+				"name": "left",
 				"type": "Divider",
 				"code": "L",
 				"center": [
@@ -1691,7 +1691,7 @@
 				]
 			},
 			{
-				"name": "Back",
+				"name": "back",
 				"type": "Panel",
 				"code": "BACK",
 				"center": [
@@ -1711,7 +1711,7 @@
 				]
 			},
 			{
-				"name": "Bottom",
+				"name": "bottom",
 				"type": "Divider",
 				"code": "B",
 				"center": [
@@ -1731,7 +1731,7 @@
 				]
 			},
 			{
-				"name": "Top",
+				"name": "top",
 				"type": "Divider",
 				"code": "T",
 				"center": [
@@ -1767,7 +1767,7 @@
 					"0",
 					"90"
 				],
-				"name": "Panel.Top.Filler",
+				"name": "topFiller",
 				"code": "tf"
 			}
 		],
@@ -1894,7 +1894,7 @@
 					"90",
 					0
 				],
-				"name": "Panel.Right",
+				"name": "right",
 				"code": "R"
 			},
 			{
@@ -1914,7 +1914,7 @@
 					"90",
 					0
 				],
-				"name": "Panel.Left",
+				"name": "left",
 				"code": "L"
 			},
 			{
@@ -1934,7 +1934,7 @@
 					0,
 					0
 				],
-				"name": "Panel.back",
+				"name": "back",
 				"code": "BACK"
 			},
 			{
@@ -1954,7 +1954,7 @@
 					"0",
 					0
 				],
-				"name": "Panel.Top",
+				"name": "top",
 				"code": "T"
 			},
 			{
@@ -1974,7 +1974,7 @@
 					"0",
 					0
 				],
-				"name": "Panal.Bottom",
+				"name": "bottom",
 				"code": "B"
 			}
 		],
@@ -2057,7 +2057,7 @@
 			}
 		],
 		"subassemblies": [{
-				"name": "ToeKickBacker",
+				"name": "toeKickBacker",
 				"type": "Panel",
 				"code": "tkb",
 				"center": [
@@ -2077,7 +2077,7 @@
 				]
 			},
 			{
-				"name": "Right",
+				"name": "right",
 				"type": "Divider",
 				"code": "R",
 				"center": [
@@ -2097,7 +2097,7 @@
 				]
 			},
 			{
-				"name": "Left",
+				"name": "left",
 				"type": "Divider",
 				"code": "L",
 				"center": [
@@ -2117,7 +2117,7 @@
 				]
 			},
 			{
-				"name": "Back",
+				"name": "back",
 				"type": "Panel",
 				"code": "BACK",
 				"center": [
@@ -2137,7 +2137,7 @@
 				]
 			},
 			{
-				"name": "Bottom",
+				"name": "bottom",
 				"type": "Divider",
 				"code": "B",
 				"center": [
@@ -2157,7 +2157,7 @@
 				]
 			},
 			{
-				"name": "Top",
+				"name": "top",
 				"type": "Divider",
 				"code": "T",
 				"center": [
@@ -2177,7 +2177,7 @@
 				]
 			},
 			{
-				"name": "Top2",
+				"name": "top2",
 				"type": "Panel",
 				"code": "pt2",
 				"center": [
@@ -2213,7 +2213,7 @@
 					0,
 					0
 				],
-				"name": "Panel.Blind.MiddleSupport",
+				"name": "blindMiddleSupport",
 				"code": "bms"
 			}
 		],
@@ -2440,7 +2440,7 @@
 			}
 		],
 		"subassemblies": [{
-				"name": "ToeKickBacker",
+				"name": "toeKickBacker",
 				"type": "Panel",
 				"code": "tkb",
 				"center": [
@@ -2460,7 +2460,7 @@
 				]
 			},
 			{
-				"name": "Right",
+				"name": "right",
 				"type": "Divider",
 				"code": "R",
 				"center": [
@@ -2480,7 +2480,7 @@
 				]
 			},
 			{
-				"name": "Left",
+				"name": "left",
 				"type": "Divider",
 				"code": "L",
 				"center": [
@@ -2500,7 +2500,7 @@
 				]
 			},
 			{
-				"name": "Back",
+				"name": "back",
 				"type": "Panel",
 				"code": "BACK",
 				"center": [
@@ -2520,7 +2520,7 @@
 				]
 			},
 			{
-				"name": "Bottom",
+				"name": "bottom",
 				"type": "Divider",
 				"code": "B",
 				"center": [
@@ -2540,7 +2540,7 @@
 				]
 			},
 			{
-				"name": "Top",
+				"name": "top",
 				"type": "Divider",
 				"code": "T",
 				"center": [
@@ -2560,7 +2560,7 @@
 				]
 			},
 			{
-				"name": "Top2",
+				"name": "top2",
 				"type": "Panel",
 				"code": "pt2",
 				"center": [
@@ -2596,7 +2596,7 @@
 					0,
 					0
 				],
-				"name": "Panel.Blind.MiddleSupport",
+				"name": "blindMiddleSupport",
 				"code": "bms"
 			}
 		],
@@ -2839,7 +2839,7 @@
 					"135",
 					0
 				],
-				"name": "Panel.Back",
+				"name": "back",
 				"code": "BACK"
 			},
 			{
@@ -2859,7 +2859,7 @@
 					"135",
 					0
 				],
-				"name": "Cutter.Back",
+				"name": "back",
 				"code": "cb"
 			},
 			{
@@ -2879,7 +2879,7 @@
 					"R.r.y",
 					"R.r.z"
 				],
-				"name": "Cutter.Back.Right",
+				"name": "backRight",
 				"code": "cpbr"
 			},
 			{
@@ -2899,11 +2899,11 @@
 					"L.r.y",
 					"L.r.z"
 				],
-				"name": "Cutter.Back.Left",
+				"name": "backLeft",
 				"code": "cpbl"
 			},
 			{
-				"name": "Panel.Right",
+				"name": "right",
 				"type": "Divider",
 				"code": "R",
 				"center": [
@@ -2923,7 +2923,7 @@
 				]
 			},
 			{
-				"name": "Panel.Left",
+				"name": "left",
 				"type": "Divider",
 				"code": "L",
 				"center": [
@@ -2943,7 +2943,7 @@
 				]
 			},
 			{
-				"name": "Bottom",
+				"name": "bottom",
 				"type": "Divider",
 				"code": "B",
 				"center": [
@@ -2963,7 +2963,7 @@
 				]
 			},
 			{
-				"name": "Top",
+				"name": "top",
 				"type": "Divider",
 				"code": "T",
 				"center": [
@@ -3135,7 +3135,7 @@
 					"135",
 					0
 				],
-				"name": "Panel.Back",
+				"name": "back",
 				"code": "BACK"
 			},
 			{
@@ -3155,7 +3155,7 @@
 					"135",
 					0
 				],
-				"name": "Cutter.Back",
+				"name": "back",
 				"code": "cb"
 			},
 			{
@@ -3175,7 +3175,7 @@
 					"R.r.y",
 					"R.r.z"
 				],
-				"name": "Cutter.Back.Right",
+				"name": "backRight",
 				"code": "cpbr"
 			},
 			{
@@ -3195,11 +3195,11 @@
 					"L.r.y",
 					"L.r.z"
 				],
-				"name": "Cutter.Back.Left",
+				"name": "backLeft",
 				"code": "cpbl"
 			},
 			{
-				"name": "Panel.Right",
+				"name": "right",
 				"type": "Divider",
 				"code": "R",
 				"center": [
@@ -3219,7 +3219,7 @@
 				]
 			},
 			{
-				"name": "Panel.Left",
+				"name": "left",
 				"type": "Divider",
 				"code": "L",
 				"center": [
@@ -3239,7 +3239,7 @@
 				]
 			},
 			{
-				"name": "Bottom",
+				"name": "bottom",
 				"type": "Divider",
 				"code": "B",
 				"center": [
@@ -3259,7 +3259,7 @@
 				]
 			},
 			{
-				"name": "Top",
+				"name": "top",
 				"type": "Divider",
 				"code": "T",
 				"center": [
@@ -3431,7 +3431,7 @@
 					"135",
 					0
 				],
-				"name": "Panel.Back",
+				"name": "back",
 				"code": "BACK"
 			},
 			{
@@ -3451,7 +3451,7 @@
 					"135",
 					0
 				],
-				"name": "Cutter.Back",
+				"name": "back",
 				"code": "cb"
 			},
 			{
@@ -3471,7 +3471,7 @@
 					"R.r.y",
 					"R.r.z"
 				],
-				"name": "Cutter.Back.Right",
+				"name": "backRight",
 				"code": "cpbr"
 			},
 			{
@@ -3491,11 +3491,11 @@
 					"L.r.y",
 					"L.r.z"
 				],
-				"name": "Cutter.Back.Left",
+				"name": "backLeft",
 				"code": "cpbl"
 			},
 			{
-				"name": "Panel.Right",
+				"name": "right",
 				"type": "Divider",
 				"code": "R",
 				"center": [
@@ -3515,7 +3515,7 @@
 				]
 			},
 			{
-				"name": "Panel.Left",
+				"name": "left",
 				"type": "Divider",
 				"code": "L",
 				"center": [
@@ -3535,7 +3535,7 @@
 				]
 			},
 			{
-				"name": "Bottom",
+				"name": "bottom",
 				"type": "Divider",
 				"code": "B",
 				"center": [
@@ -3555,7 +3555,7 @@
 				]
 			},
 			{
-				"name": "Top",
+				"name": "top",
 				"type": "Divider",
 				"code": "T",
 				"center": [
@@ -3721,7 +3721,7 @@
 					"90",
 					0
 				],
-				"name": "Panel.Right",
+				"name": "right",
 				"code": "R"
 			},
 			{
@@ -3741,7 +3741,7 @@
 					"90",
 					0
 				],
-				"name": "Panel.Left",
+				"name": "left",
 				"code": "L"
 			},
 			{
@@ -3761,7 +3761,7 @@
 					0,
 					0
 				],
-				"name": "Panel.back",
+				"name": "back",
 				"code": "BACK"
 			},
 			{
@@ -3781,7 +3781,7 @@
 					"0",
 					0
 				],
-				"name": "Panel.Top",
+				"name": "top",
 				"code": "T",
 				"include": "All"
 			},
@@ -3802,7 +3802,7 @@
 					"0",
 					0
 				],
-				"name": "Panal.Bottom",
+				"name": "bottom",
 				"code": "B"
 			}
 		],
@@ -3897,7 +3897,7 @@
 					"90",
 					0
 				],
-				"name": "Panel.Right",
+				"name": "right",
 				"code": "R"
 			},
 			{
@@ -3917,7 +3917,7 @@
 					"90",
 					0
 				],
-				"name": "Panel.Left",
+				"name": "left",
 				"code": "L"
 			},
 			{
@@ -3937,7 +3937,7 @@
 					0,
 					0
 				],
-				"name": "Panel.back",
+				"name": "back",
 				"code": "BACK"
 			},
 			{
@@ -3957,7 +3957,7 @@
 					"0",
 					0
 				],
-				"name": "Panel.Top",
+				"name": "top",
 				"code": "T",
 				"include": "All"
 			},
@@ -3978,7 +3978,7 @@
 					"0",
 					0
 				],
-				"name": "Panal.Bottom",
+				"name": "bottom",
 				"code": "B"
 			}
 		],

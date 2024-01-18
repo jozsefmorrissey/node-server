@@ -1,9 +1,9 @@
 {
-  "Assembly": ["id","parentAssembly.id","partCode","partCode","locationCode",
-      "part","includeJoints", "position", "modelingMethod"],
+  "Assembly": ["id","parentAssembly.id","partCode","partName","locationCode",
+      "part","includeJoints", "position", "included", "children>id"],
   "Position": ["current.center","current.demension","current.normals","current.biPolyNorm"],
   "DividerSection": [],
-  "SectionProperties": ["id", "top.id", "bottom.id", "left.id", "right.id", "rotation", "coordinates.inner",
+  "SectionProperties": ["id", "back.id", "top.id", "bottom.id", "left.id", "right.id", "rotation", "coordinates.inner",
       "divideRight", "pattern.str", "verticalDivisions", "dividerCount", "sectionCount",
       "coordinates.outer", "dividerJoint", "isVertical", "divider.id", "sections>id", "partCode"],
   "DivideSection": [],
@@ -36,8 +36,9 @@
   "CutterReference": ["reference", "fromPoint", "offset", "front"],
   "CutterPoly": ["poly"],
   "ControlableAbyss": [],
-  "CabinetOpeningCorrdinates": ["coordinates", "partCode", "locationCode"],
+  "CabinetOpeningCorrdinates": ["id", "coordinates", "partCode", "locationCode"],
   "Vector3D": ["i", "j", "k"],
   "Joint": ["id", "maleOffset", "femaleOffset",
-            "demensionAxis", "centerAxis", "fullLength", "discriptor"]
+            "demensionAxis", "centerAxis", "fullLength", "discriptor"],
+  "Property": ["value"]
 }

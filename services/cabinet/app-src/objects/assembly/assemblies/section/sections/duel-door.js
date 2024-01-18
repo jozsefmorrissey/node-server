@@ -19,16 +19,14 @@ class DualDoorSection extends Assembly {
 
     this.initialize = () => {
       if (!leftDoor) {
-        leftDoor = new Door('dl', 'DoorLeft');
-        leftDoor.modelingMethod('Left');
+        leftDoor = new Door('dl', 'Left');
         leftDoor.setPulls([Handle.location.TOP_RIGHT]);
       }
       leftDoor.partName = () => `${sectionProps().partName()}-dl`;
       this.addSubAssembly(leftDoor);
 
       if (!rightDoor) {
-        rightDoor ||= new Door('dr', 'DoorRight');
-        rightDoor.modelingMethod('Right');
+        rightDoor ||= new Door('dr', 'Right');
         rightDoor.setPulls([Handle.location.TOP_LEFT]);
       }
       this.addSubAssembly(rightDoor);

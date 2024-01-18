@@ -22,8 +22,8 @@ class OpeningToeKick extends Assembly {
     const instance = this;
 
 
-    const leftCornerCutter = new Cutter('lcc', 'LeftCornerCutter');
-    const rightCornerCutter = new Cutter('rcc', 'RightCornerCutter');
+    const leftCornerCutter = new Cutter('lcc', 'LeftCorner');
+    const rightCornerCutter = new Cutter('rcc', 'RightCorner');
     this.addSubAssembly(leftCornerCutter);
     this.addSubAssembly(rightCornerCutter);
     this.leftCornerCutter = () => leftCornerCutter;

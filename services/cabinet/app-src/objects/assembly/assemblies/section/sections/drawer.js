@@ -18,12 +18,10 @@ class DrawerSection extends Assembly {
     this.box = () => box;
 
     this.initialize = () => {
-      if (!front) front = new DrawerFront('df', 'DrawerFront');
-      front.modelingMethod('Solid');
+      if (!front) front = new DrawerFront('df', 'Solid');
       front.partName = () => `${sectionProps().partName()}-df`;
       this.addSubAssembly(front);
-      if (!box) box = new DrawerBox('db', 'Drawer.Box');
-      box.modelingMethod('Section');
+      if (!box) box = new DrawerBox('db', 'Section');
       box.partName = () => `${sectionProps().partName()}-db`;
       this.addSubAssembly(box);
     }

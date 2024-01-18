@@ -96,8 +96,7 @@ class Void extends Cutter {
       new PanelVoidIndex(5, this)
     ]
 
-    const controlableAbyss = new Cutter(`:abs`, `${this.partName()}-abyss`);
-    controlableAbyss.modelingMethod('Abyss')
+    const controlableAbyss = new Cutter(`:abs`, `Abyss`);
     this.addSubAssembly(controlableAbyss);
 
     if (config) {

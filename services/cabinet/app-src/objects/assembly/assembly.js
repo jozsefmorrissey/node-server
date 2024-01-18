@@ -58,7 +58,7 @@ class Assembly extends KeyValue {
     if (Array.isArray(subAssems)) {
       console.log('wtff');
     }
-    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'normals', 'modelingMethod');
+    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'normals');
     Object.defineProperty(this, "subassemblies", {
       writable: false,
       enumerable: false,
@@ -305,7 +305,7 @@ class Assembly extends KeyValue {
     //   return related;
     // }
 
-    this.getJoints = new FunctionCache((assem) => {
+    this.getJoints = (assem) => {
       assem ||= this;
       const root = this.getRoot();
       if (root !== this) return root.getJoints(assem);
@@ -325,7 +325,7 @@ class Assembly extends KeyValue {
       allJoints.forEach(addJoint);
       jointList = joints.male.concat(joints.female);
       return joints;
-    }, this, 'always-on');
+    };
 
     this.getAllJoints = (assem) => {
       assem ||= this;
@@ -349,10 +349,15 @@ class Assembly extends KeyValue {
         jMap.male[jid] = [];
         for (let ai = 0; ai < assems.length; ai++) {
           const assem = assems[ai];
-          const aid = assem.id();
-          if (!jMap.female[aid]) jMap.female[aid] = [];
-          if (joint.isMale(assem)) jMap.male[jid].push(aid);
-          if (joint.isFemale(assem)) jMap.female[aid].push(jid);
+          if (assem instanceof Assembly && assem.included()) {
+            const aid = assem.id();
+            if (aid.match(/^Divider_/) && (joint.isFemale(assem) || joint.isFemale(assem))) {
+              console.log();
+            }
+            if (!jMap.female[aid]) jMap.female[aid] = [];
+            if (assem.includeJoints() && joint.isMale(assem)) jMap.male[jid].push(aid);
+            if (joint.isFemale(assem)) jMap.female[aid].push(jid);
+          }
         }
       }
       return jMap;
@@ -559,7 +564,6 @@ Assembly.fromJson = (assemblyJson) => {
   const clazz = Object.class.get(assemblyJson._TYPE);
   const assembly = new (clazz)(partCode, partName, assemblyJson.config);
   assembly.id(assemblyJson.id);
-  assembly.modelingMethod(assemblyJson.modelingMethod);
   assembly.value.all(assemblyJson.value.values);
   assembly.parentAssembly(assemblyJson.parent)
   Object.values(assemblyJson.subassemblies).forEach((json) => {
@@ -571,7 +575,6 @@ Assembly.fromJson = (assemblyJson) => {
   if (Array.isArray(assembly.subassemblies)) {
     console.log('wtff');
   }
-  assembly.getJoints.clearCache()
   return assembly;
 }
 
