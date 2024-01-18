@@ -218,13 +218,17 @@ to.CutterReference = {
     biPolygon: function(rMdto, modelMap) {
       let ref = rMdto.reference;
       const isBiPoly = ref instanceof BiPolygon;
-      let biPoly = isBiPoly ? ref : modelMap[ref.id];
+      let biPoly = ref;
+      if (!(biPoly instanceof BiPolygon)) {
+        let biPolyArr = modelMap.modelInfo[ref.id].biPolygonArray;
+        biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
+      }
       if (biPoly === undefined) throw new Error('Invalid Reference or assemblies not ordered properly');
-      biPoly.offset(fromPoint(), offset);
-      let poly = (front ? biPoly.front() : biPoly.back()).reverse();
+      biPoly.offset(rMdto.fromPoint.object(), rMdto.offset);
+      let poly = (rMdto.front ? biPoly.front() : biPoly.back()).reverse();
       let length = 0;
       poly.lines().forEach(l => length += l.length());
-      const sameDir = biPoly.normal().sameDirection(poly.normal());
+      const sameDir = !biPoly.normal().sameDirection(poly.normal());
       const multiplier = sameDir ? -1 : 1;
       const distance = 10 * length;
       return BiPolygon.fromPolygon(poly, 0, multiplier * distance, {x: distance, y:distance});

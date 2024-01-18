@@ -26,7 +26,6 @@ class Modeler {
           if (maleModel)
             joinedModeMap[assem.id] = model.subtract(maleModel);
           else joinedModeMap[assem.id] = model;
-          console.log(joinedModeMap[assem.id].toString());
         }
       }
       modelItterator.joinedModels(joinedModeMap);
@@ -40,7 +39,7 @@ class Modeler {
       try {
         const modelFuncs = MFC(assembly);
         if (assembly.locationCode === 'c_BACK') {
-          console.log('target');
+          // console.log('target');
         }
         if (!modelFuncs.biPolygon) model = modelFuncs.model(assembly, env);
         else {

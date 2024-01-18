@@ -247,6 +247,10 @@ class BiPolygon {
       return Polygon3D.toTwoD([this.front(), this.back()], vector);
     }
 
+    this.toDrawString = (color) => {
+      return this.toPolygons().map(p => p.toDrawString(color, false)).join('\n\n');
+    }
+
 
     this.toString = () => {
       let face1Str = '';
