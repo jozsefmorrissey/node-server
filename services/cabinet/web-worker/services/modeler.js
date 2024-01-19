@@ -34,13 +34,12 @@ class Modeler {
     function buildModel(job) {
       let env = job.environment;
       let assembly = MTDO.reconnect(job.assembly, env.byId);
-      console.log('Modeling: ', assembly.locationCode);
       let model, biPolygon, biPolygonArray;
       try {
-        const modelFuncs = MFC(assembly);
-        if (assembly.locationCode === 'c_BACK') {
+        if (assembly.locationCode === undefined) {
           // console.log('target');
         }
+        const modelFuncs = MFC(assembly);
         if (!modelFuncs.biPolygon) model = modelFuncs.model(assembly, env);
         else {
           biPolygon = modelFuncs.biPolygon(assembly, env);
@@ -48,7 +47,7 @@ class Modeler {
           model = biPolygon.model();
         }
       } catch (e) {
-        console.warn(e);
+        console.warn(`Error constructing model for '${assembly.locationCode}'`);
       }
       modelItterator.modelInfo(assembly.id, {model, biPolygonArray});
     }

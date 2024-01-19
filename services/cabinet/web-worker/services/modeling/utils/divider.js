@@ -16,7 +16,7 @@ const governingSectionProps = (divider) => {
     funcOobj instanceof Function ? isSectionProps(funcOobj()) : isSectionProps(funcOobj));
   return sectionPropsGetter();
 }
-class Divider {
+class DividerUtil {
   constructor(divider, dividerPart, env) {
     const instance = this;
 
@@ -81,13 +81,11 @@ class Divider {
 
     const builders = {
       front: (append) => {
-        console.log(sectionProps);
         const intersected = sectionProps.coordinates.outer.object();
         const normal = intersected.normal();
         buildPolyCutter(intersected, 4 * 2.54, normal, append, 'front');
       },
       back: (append) => {
-        console.log(sectionProps);
         const backMtdo = sectionProps.back();
         const bbpArray = env.modelInfo[backMtdo.id].biPolygonArray;
         const backBiPoly = new BiPolygon(bbpArray[0], bbpArray[1]);
@@ -108,12 +106,12 @@ class Divider {
 }
 
 const built = {};
-Divider.instance = (rMdto, modelMap) => {
+DividerUtil.instance = (rMdto, modelMap) => {
   let divider = rMdto.linkListFind('parentAssembly', isDivider);
   if (built[divider.id] === undefined) {
-    built[divider.id] = new Divider(divider, rMdto, modelMap);
+    built[divider.id] = new DividerUtil(divider, rMdto, modelMap);
   }
   return built[divider.id];
 }
 
-module.exports = Divider
+module.exports = DividerUtil

@@ -4,16 +4,19 @@ const Vector3D = require('../../../../app-src/three-d/objects/vector');
 const Line3D = require('../../../../app-src/three-d/objects/line');
 const Polygon3D = require('../../../../app-src/three-d/objects/polygon');
 const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon');
+const CabinetUtil = require('./cabinet');
 
 const so = 3*2.54;
 
-class OpeningToeKick {
-  constructor(openingToeKickDto) {
+class OpeningToeKickUtil {
+  constructor(openTk, modelInfo) {
     let toeKick;
     let vOid;
     let offsetToeKickPoly;
     let supports;
     let supportPanels = [];
+    let opening = openTk.opening();
+    let tkbNormals;
 
     const children = {}
 
@@ -30,7 +33,8 @@ class OpeningToeKick {
 
     this.Backer = {
       model: toModel('toeKick'),
-      biPolygon: toBiPolygon('toeKick')
+      biPolygon: toBiPolygon('toeKick'),
+      normals: tkbNormals
     }
     this.Cutter = {
       model: toModel('vOid'),
@@ -39,7 +43,8 @@ class OpeningToeKick {
 
 
     function corners(side, openingCenter, targetCorner, innerPoly, height, depth1, depth2) {
-      const biPoly = side.position().toBiPolygon();
+      const sideBiPolyArr = modelInfo.modelInfo[side.id].biPolygonArray;
+      const biPoly = new BiPolygon(sideBiPolyArr[0], sideBiPolyArr[1]);
       const poly = biPoly.furthestOrder(openingCenter)[1];
       let front = Line3D.centerClosestTo(openingCenter, poly.lines()).polarize(targetCorner);
       const withoutUp = poly.lines().filter(l => !l.equals(front));
@@ -86,8 +91,10 @@ class OpeningToeKick {
     }
 
     function buildToeKick(tkBiPoly, tkSpacePoly) {
-      const leftInOut = autoToeKick.leftEndStyle() ? 'inner' : 'outer';
-      const rightInOut = autoToeKick.rightEndStyle() ? 'inner' : 'outer';
+      const cabinet = openTk.find('c');
+      const autoToeKick = openTk.parentAssembly();
+      const leftInOut = autoToeKick.leftEndStyle ? 'inner' : 'outer';
+      const rightInOut = autoToeKick.rightEndStyle ? 'inner' : 'outer';
       const toPoly = (intObjTop, intObjBottom) => {
         const vert1 = intObjTop.positive[rightInOut].intersection;
         const vert2 = intObjTop.negitive[leftInOut].intersection;
@@ -97,22 +104,22 @@ class OpeningToeKick {
       }
 
       const faces = tkBiPoly.closestOrder(tkSpacePoly.center());
-      const topInner = cabinet.planeIntersection(faces[0].lines()[0]);
-      const bottomInner = cabinet.planeIntersection(faces[0].lines()[2]);
-      const topOuter = cabinet.planeIntersection(faces[1].lines()[0]);
-      const bottomOuter = cabinet.planeIntersection(faces[1].lines()[2]);
+      const cabinetUtil = new CabinetUtil(cabinet, modelInfo);
+      const topInner = cabinetUtil.planeIntersection(faces[0].lines()[0]);
+      const bottomInner = cabinetUtil.planeIntersection(faces[0].lines()[2]);
+      const topOuter = cabinetUtil.planeIntersection(faces[1].lines()[0]);
+      const bottomOuter = cabinetUtil.planeIntersection(faces[1].lines()[2]);
 
       const buttToePoly2 = toPoly(topInner, bottomInner);
       const buttToePoly1 = toPoly(topOuter, bottomOuter);
-      const rightThickness = instance.getAssembly('R').thickness();
-      const leftThickness = instance.getAssembly('L').thickness();
+      const rightThickness = cabinet.find('R').position.current.demension.z;
+      const leftThickness = cabinet.find('L').position.current.demension.z;
       toeKick = new BiPolygon(buttToePoly1, buttToePoly2);
-      const normalVector = {
+      tkbNormals = {
         x: faces[0].lines()[3].vector().unit(),
         y: faces[0].lines()[0].vector().unit(),
         z: buttToePoly2.normal()
       };
-      toeKickPanel.normals(false, normalVector)
       children.toeKick = toeKick;
     }
 
@@ -188,20 +195,24 @@ class OpeningToeKick {
     function build() {
       const right = opening.right();
       const left = opening.left();
-      const coords = opening.coordinates();
-      const center = Vertex3D.center(coords.inner);
-      const innerPoly = new Polygon3D(coords.inner);
+      const coords = opening.coordinates;
+      const innerPoly = opening.coordinates.inner.object();
+      const center = innerPoly.center();
 
-      const tkh = cabinet.value('tkh');
-      const sdepth = cabinet.value('tkd');
-      const dem = cabinet.position().demension();
+      const propConfig = modelInfo.propertyConfig;
+      const tkh = propConfig.Cabinet.tkh;//cabinet.value('tkh');
+      const sdepth = propConfig.Cabinet.tkd;//cabinet.value('tkd');
+      const cabinet = openTk.find('c');
+      const L = cabinet.find.down('L');
+      const dem = cabinet.position.current.demension;
       const xyOffset = {x: dem.x + dem.z + dem.y, y: 0};
       vOid = buildOffset(right, left, center, coords, innerPoly, tkh, sdepth, -10000, xyOffset);
       children.vOid = vOid;
 
       const tkd1 = sdepth;
-      const tkd2 = tkd1 + cabinet.value('tkbw');
-      const tkah = tkh + cabinet.eval('B.t')/2;
+      const tkd2 = tkd1 + propConfig.Cabinet.tkbw;
+      const bottomThickness = cabinet.find.down('B').position.current.demension.z;
+      const tkah = tkh + bottomThickness/2;
       offsetToeKickPoly = buildOffset(right, left, center, coords, innerPoly, tkah, tkd1, tkd2);
 
       return buildToeKick(offsetToeKickPoly, vOid);
@@ -211,11 +222,11 @@ class OpeningToeKick {
 }
 
 const built = {};
-OpeningToeKick.instance = (openingToeKickDto) => {
-  if (built[openingToeKickDto.id] === undefined) {
-    built[openingToeKickDto.id] = new OpeningToeKick(openingToeKickDto);
+OpeningToeKickUtil.instance = (openTk, modelInfo) => {
+  if (built[openTk.id] === undefined) {
+    built[openTk.id] = new OpeningToeKickUtil(openTk, modelInfo);
   }
-  return built[openingToeKickDto.id];
+  return built[openTk.id];
 }
 
-module.exports = OpeningToeKick;
+module.exports = OpeningToeKickUtil;

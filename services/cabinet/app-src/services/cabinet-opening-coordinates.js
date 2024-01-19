@@ -18,6 +18,7 @@ class CabinetOpeningCorrdinates extends KeyValue {
     Object.getSet(this, 'parentAssembly', 'partCode', 'locationCode');
     this.partCode('COC');
     this.locationCode('COC');
+    this.part = () => false;
     this.divide = sectionProperties.divide;
     this.setSection = sectionProperties.setSection;
     this.sections = () => sectionProperties.sections;

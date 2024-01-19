@@ -1,6 +1,6 @@
 
 
-class Void {
+class VoidUtil {
   constructor(voidDto) {
     const offsetSets = [
       {
@@ -87,3 +87,5 @@ class Void {
 
   }
 }
+
+module.exports = VoidUtil;

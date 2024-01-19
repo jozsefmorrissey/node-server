@@ -122,39 +122,6 @@ class Cabinet extends Assembly {
       modificationState;
     this.value.onChange(() => modificationState++);
 
-    // TODO: ???? It is possible to have inner/outer intersections from
-    //       different parts..... not suure its worth the extra calculations
-    this.planeIntersection = (line) => {
-      const center = this.partCenter();
-      const vector = line.vector();
-      let closest = {};
-      const subAssems = Object.values(this.subassemblies).filter(a => !a.constructor.name.match(/Cutter|Void/));
-      for (let index = 0; index < subAssems.length; index++) {
-        const assem = subAssems[index];
-        if ((typeof assem.position) === 'function') {
-          const biPoly = assem.position().toBiPolygon();
-          const faces = biPoly.closestOrder(center);
-          const plane = faces[0].toPlane();
-          const intersection = plane.intersection.line(line);
-          if (intersection) {
-            const dist = line.midpoint().distance(intersection);
-            const intersectLine = new Line3D(line.midpoint(), intersection);
-            const intersectVector = intersectLine.vector();
-            const direction = vector.sameDirection(intersectVector) ? 'positive' : 'negitive';
-            if (closest[direction] === undefined || closest[direction].inner.dist > dist) {
-              const oplane = faces[1].toPlane();
-              plane.intersection.line(line)
-              const ointer = oplane.intersection.line(line);
-              const odist = ointer.distance(line.midpoint());
-              closest[direction] = {assem, inner: {dist, plane, intersection},
-              outer: {dist: odist, plane: oplane, intersection: ointer}};
-            };
-          }
-        }
-      }
-      return closest;
-    }
-
     function bordersByIds(borderIds) {
       const borders = {};
       const center = borderIds.center;

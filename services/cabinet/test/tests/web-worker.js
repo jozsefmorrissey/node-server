@@ -81,7 +81,10 @@ Test.add('MDTO', (ts) => {
   const normals = firstR.position.current.normals;
   ts.assertTrue(center.equals(firstA.position().center()), 'Vertex3D conversion contains Error/s');
   ts.assertTrue(normals instanceof Object, 'plane js Object conversion contains Error/s');
-  ts.assertTrue(Object.equals(firstA.position().normals(), normals), 'Vector3D conversion contains Error/s');
+  const xVectEq = firstA.position().normals().x.equals(normals.x);
+  const yVectEq = firstA.position().normals().x.equals(normals.x);
+  const zVectEq = firstA.position().normals().x.equals(normals.x);
+  ts.assertTrue(xVectEq && yVectEq && zVectEq, 'Vector3D conversion contains Error/s');
 
   const lastA = all[all.length - 1];
   const lastR = reconnected[all.length - 1];
@@ -105,14 +108,21 @@ Test.add('MDTO', (ts) => {
 
 const ModelItterator = require('../../web-worker/services/model-itterator.js');
 const Modeler = require('../../web-worker/services/modeler.js');
-Test.add('Modeler', (ts) => {
+Test.add('Modeler (plane base)', (ts) => {
   const allAssemblies = get(undefined, true);
   const panel = allAssemblies.filter(a => a.partCode() === 'R')[0];
   const modelItt = new ModelItterator(allAssemblies, panel);
   const modeler = new Modeler(modelItt);
 
   ts.assertEquals(modelItt.percentBuilt(), 1);
-  console.log(modelItt.models().toString());
+  const modelInfo = modelItt.modelInfo();
+  const parts = allAssemblies.filter(a => a.part());
+  parts.forEach(p => {
+    const model = modelInfo[p.id()].model;
+    ts.assertTrue(Array.isArray(model.polygons));
+    ts.assertTrue(model.polygons.length > 0);
+  });
+  // console.log(modelItt.models().toString());
   ts.success();
 });
 

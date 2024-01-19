@@ -112,6 +112,7 @@ class ModelItterator {
       } else return null;
     }
     this.modelInfo = (id, info) => {
+      if (id === undefined) return modelInfo;
       if (info !== undefined) {
         modelInfo[id] = info;
       }

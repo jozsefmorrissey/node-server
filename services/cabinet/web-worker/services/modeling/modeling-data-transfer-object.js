@@ -102,6 +102,23 @@ function addMathObjectGetter(dto, rDto) {
   }
 }
 
+const isFunc = (filter) => filter instanceof Function ? filter :
+  (filter instanceof RegExp ? (a) => a.locationCode.match(filter) : a => a.partCode === filter);
+const root = (rMdto) => () => rMdto.linkListFind('parentAssembly', (a) => a.parentAssembly === undefined);
+const up = (rMdto) => (filter) => {
+  return rMdto.linkListFind('parentAssembly', isFunc(filter));
+}
+const down = (rMdto) => filter => {
+  const is = isFunc(filter);
+  const func = rMdto.linkListFind('children', (a) => is(a instanceof Function ? a() : a));
+  return func ? func() : null;
+}
+const find = (rMdto) => (filter) => {
+  let found = up(rMdto)(filter);
+  if (found) return found;
+  return down(root(rMdto))(filter);
+}
+
 class ReconnectedMDTO{constructor(){}};
 function reconnected(obj, idMap) {
   if (Array.isArray(obj)) return obj.map(dto => reconnected(dto, idMap));
@@ -121,6 +138,10 @@ function reconnected(obj, idMap) {
       }
     }
     rDto[key] = value;
+    rDto.find = find(rDto);
+    rDto.find.up = up(rDto);
+    rDto.find.down = down(rDto);
+    rDto.find.root = root(rDto);
 
   }
   return rDto;

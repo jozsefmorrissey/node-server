@@ -247,9 +247,8 @@ to.Cutter = {
   },
   LeftCorner: {
     model: (rMdto, modelInfo) => {
-      const root = getRoot(rMdto);
-      const left = find(rMdto, 'L');
-      const model = to(left).model();
+      const left = rMdto.find('L');
+      const model = modelInfo.modelInfo[left.id].model;;
       const tkh = modelInfo.propertyConfig.Cabinet.tkh;
       model.translate({x:0, y:tkh, z:0});
       return model;
@@ -257,9 +256,8 @@ to.Cutter = {
   },
   RightCorner: {
     model: (rMdto, modelInfo) => {
-      const root = getRoot(rMdto);
-      const right = find(rMdto, 'R');
-      const model = to(right).model();
+      const right = rMdto.find('R');
+      const model = modelInfo.modelInfo[right.id].model;
       const tkh = modelInfo.propertyConfig.Cabinet.tkh;
       model.translate({x:0, y:tkh, z:0});
       return model;
@@ -275,8 +273,10 @@ to.Cutter = {
     }
   },
   ToeKick: {
-    biPolygon: (rMdto, modelInfo) =>
-        OpeningToeKick.instance(rMdto, modelInfo).Cutter.biPolygon()
+    biPolygon: (rMdto, modelInfo) => {
+      const openTk = find(rMdto, 'OpenTK');
+      return OpeningToeKick.instance(openTk, modelInfo).Cutter.biPolygon()
+    }
   },
   Front: {
     biPolygon: (rMdto, modelInfo) => {
@@ -335,7 +335,10 @@ to.Panel = {
     toBiPolygon: (rMdto, modelInfo) => Void.instance(rMdto, modelInfo).panel(rMdto.index).biPolygon()
   },
   ToeKickBacker: {
-    biPolygon: (rMdto, modelInfo) => OpeningToeKick.instance(rMdto, modelInfo).Backer
+    biPolygon: (rMdto, modelInfo) => {
+      const openTk = find(rMdto, 'OpenTK');
+      return OpeningToeKick.instance(openTk, modelInfo).Backer.biPolygon();
+    }
   },
   Full: {
     biPolygon: (rMdto, modelInfo) =>

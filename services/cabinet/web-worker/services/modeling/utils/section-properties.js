@@ -1,7 +1,7 @@
 
 const defaultDepth = 4*2.54;
 
-class SectionProperties {
+class SectionPropertiesUtil {
   constructor(spDto, modelMap) {
     const instance = this;
     let innerDepth;
@@ -178,3 +178,5 @@ class SectionProperties {
     }
   }
 }
+
+module.exports = SectionPropertiesUtil;
