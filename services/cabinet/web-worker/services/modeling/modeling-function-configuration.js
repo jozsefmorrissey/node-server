@@ -1,6 +1,4 @@
 
-const JU = require('./utils/joint');
-const ApplyJoint = require('./utils/joint');
 const BiPolygon = require('../../../app-src/three-d/objects/bi-polygon.js');
 const Line3D = require('../../../app-src/three-d/objects/line.js');
 const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
@@ -50,11 +48,7 @@ function getBiPolygon(rMdto, environment, left) {
 
 function defaultToModel(assemMrMdto) {
   const current = assemMrMdto.position.current;
-  const dem = current.demension;
-  const center = current.center.object();
-  const vecObj = current.normals;
-  const biPolyNormVect = current.biPolyNorm.object();
-  return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj, biPolyNormVect);
+  return BiPolygon.fromPositionObject(current);
 }
 
 const defalt = {biPolygon: defaultToModel};
@@ -225,7 +219,7 @@ to.Cutter = {
   LeftCorner: {
     model: (rMdto, environment) => {
       const left = rMdto.find('L');
-      const model = environment.modelInfo[left.id].model;;
+      const model = Divider.instance(left, environment).biPolygon.model();
       const tkh = environment.propertyConfig.Cabinet.tkh;
       model.translate({x:0, y:tkh, z:0});
       return model;
@@ -234,7 +228,7 @@ to.Cutter = {
   RightCorner: {
     model: (rMdto, environment) => {
       const right = rMdto.find('R');
-      const model = environment.modelInfo[right.id].model;
+      const model = Divider.instance(right, environment).biPolygon.model();
       const tkh = environment.propertyConfig.Cabinet.tkh;
       model.translate({x:0, y:tkh, z:0});
       return model;

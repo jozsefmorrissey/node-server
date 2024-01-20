@@ -25,9 +25,8 @@ class DividerUtil {
     const dividerInfo = env.modelInfo[divider.id];
     if (dividerInfo) {
       this.biPolygon = new BiPolygon(dividerInfo.biPolygonArray[0], dividerInfo.biPolygonArray[1]);
-      this.model = dividerInfo.model.polygons;
     } else {
-      this.biPolygon = SectionPropertiesUtil.instance(sectionProps).dividerInfo();
+      this.biPolygon = SectionPropertiesUtil.instance(sectionProps, env).dividerInfo();
     }
 
     this.Full = {

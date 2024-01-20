@@ -1,8 +1,14 @@
 
-const JU = require('../services/modeling/utils/joint.js');
 const MDTO = require('../services/modeling/modeling-data-transfer-object.js');
 const MFC = require('../services/modeling/modeling-function-configuration.js');
 
+
+const sortUnderScoreCount = (a, b) => {
+  const aC = a.locationCode.count('_');
+  const bC = b.locationCode.count('_');
+  if (aC !== bC) return aC - bC;
+  return a.locationCode.length - b.locationCode.length;
+}
 
 function sortAssemMtdos(assemMtdos) {
   let cab, back;
@@ -19,26 +25,40 @@ function sortAssemMtdos(assemMtdos) {
       else customBuilt.push(a);
     }
   }
-  defaultBuilt.sortByAttr('locationCode.length');
-  customBuilt.sortByAttr('locationCode.length');
-  sectionAssems.sortByAttr('locationCode.length');
-  return [cab, back].concat(defaultBuilt.concat(customBuilt.concat(sectionAssems)));
+  defaultBuilt.sortByAttr(sortUnderScoreCount);
+  customBuilt.sortByAttr(sortUnderScoreCount);
+  sectionAssems.sortByAttr(sortUnderScoreCount);
+  const list = []
+  if (cab) list.push(cab); if (back) list.push(back);
+  return list.concat(defaultBuilt.concat(customBuilt.concat(sectionAssems)));
 }
 
+const dependentReg = /(.{1,}):.{1}/;
 const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
+  if (complexityObj[id] === undefined) {
+    complexityObj[id] = {assembly: byId[id]};
+  }
   const assembly = complexityObj[id].assembly;
   const obj = complexityObj[assembly.id];
   if (obj.complexity) return;
   let complexity = NaN;
+  if (assembly.locationCode === 'c_T:b') {
+    let a = 1 + 2;
+  }
+
   obj.partCode = assembly.partCode;
   obj.joints = jointMap.female[id] || [];
+  const dependentMatch = assembly.locationCode.match(dependentReg);
   obj.dependencies = [];
+  if (dependentMatch) obj.dependencies.push(assembly.parentAssembly.id);
   obj.joints.forEach(jId => obj.dependencies.concatInPlace(jointMap.male[jId]));
+  obj.dependencies.forEach(id => jointCompexityObject(id, complexityObj, jointMap, byId));
   obj.complexity = () => {
     if (!Number.isNaN(complexity)) return complexity;
     complexity = 1;
     for (let index = 0; index < obj.dependencies.length; index++) {
       const id = obj.dependencies[index];
+      if (complexityObj[id] === undefined) jointCompexityObject(id, complexityObj, jointMap, byId);
       complexity += complexityObj[id].complexity();
       if (Number.isNaN(complexity)) return NaN;
     }
@@ -47,14 +67,13 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
   return obj;
 }
 
-const sorter = (assemblies, jointMap) => {
+const sorter = (assemblies, jointMap, byId) => {
   const complexityObj = {};
-  assemblies.forEach(a => (complexityObj[a.id] = {assembly: a}));
   let index = 0;
   while(index < assemblies.length) {
     const assem = assemblies[index];
-    const obj = jointCompexityObject(assem.id, complexityObj, jointMap);
-    if (obj) obj.dependencies.forEach(id => jointCompexityObject(id, complexityObj, jointMap));
+    const obj = jointCompexityObject(assem.id, complexityObj, jointMap, byId);
+    if (obj) obj.dependencies.forEach(id => jointCompexityObject(id, complexityObj, jointMap, byId));
     index++;
   }
   const objs = Object.values(complexityObj);
@@ -87,8 +106,11 @@ const needsToBeRendered = (jointMap, targetMdto, byId) => {
 
 
 
+
+
 class ModelItterator {
-  constructor(assemblies, target) {
+  constructor(assemblies, targets) {
+    if (targets && !Array.isArray(targets)) targets = [targets];
     const jointMap = MDTO.to(assemblies[0].jointMap());
     const jointMdtos = MDTO.to(assemblies[0].getAllJoints());
     const assemMdtos = MDTO.to(assemblies);
@@ -96,10 +118,13 @@ class ModelItterator {
     const propertyConfig = MDTO.to(assemblies[0].group().propertyConfig());
     jointMdtos.forEach(j => byId[j.id] = j);
     assemMdtos.forEach(a => byId[a.id] = a);
-    const targetMdto = MDTO.to(target);
+    if (targets) targets = MDTO.to(targets);
+    else targets = assemMdtos.filter(a => a.part && a.included);
+    // const targetMdto = MDTO.to(target);
     assemMdtos.shuffle();
-    const needsRendered = sortAssemMtdos(assemMdtos);
-    let needsJoined = sorter(assemMdtos, jointMap);//needsToBeRendered(jointMap, targetMdto, byId);
+    let needsJoined = sorter(targets, jointMap, byId);//needsToBeRendered(jointMap, targetMdto, byId);
+    let needsRendered = Object.values(needsJoined).map(ac => ac.assembly);
+    needsRendered = sortAssemMtdos(needsRendered);
 
 
     const modelInfo = {}
@@ -152,7 +177,7 @@ class ModelItterator {
       return csg.polygons.length > 0 ? csg : null;
     }
     this.percentBuilt = () =>
-        Object.values(modelInfo).length / assemblies.length;
+        Object.values(modelInfo).length / needsRendered.length;
   }
 }
 

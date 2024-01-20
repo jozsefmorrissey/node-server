@@ -32,13 +32,11 @@ class CabinetUtil {
       let assems = Object.values(env.byId).filter(depthPartFilter);
       const assemblies = []; const polys = [];
       assems.forEach(mDto => {
-        try {
+        if (env.modelInfo[mDto.id]) {
           const biPolyArr = env.modelInfo[mDto.id].biPolygonArray;
           const biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
           polys.push(biPoly);
           assemblies.push(mDto);
-        } catch (e) {
-          console.warn(`toBiPolygon issue with part ${spDto.locationCode}\n`, e);
         }
       });
       polyInfo = {assemblies, polys};

@@ -204,6 +204,7 @@ CSG.prototype = {
   //          +-------+
   //
   subtract: function(csg) {
+    if (csg.polygons.length === 0) return this.clone();
     var a = new CSG.Node(this.clone().polygons);
     var b = new CSG.Node(csg.clone().polygons);
     a.invert();

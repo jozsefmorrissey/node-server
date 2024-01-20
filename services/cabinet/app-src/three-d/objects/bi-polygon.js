@@ -291,7 +291,7 @@ BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
 }
 
 BiPolygon.fromVectorObject =
-    (width, height, depth, center, vectorObj, normalVector) => {
+    (width, height, depth, center, vectorObj) => {
       try {
         center ||= new Vertex3D(0,0,0);
         if (vectorObj === undefined) {
@@ -304,7 +304,7 @@ BiPolygon.fromVectorObject =
         const backCenter = center.translate(vectorObj.z.scale(depth/2), true);
         const back = Polygon3D.fromVectorObject(width, height, backCenter, vectorObj);
         let poly;
-        if (!normalVector || frontCenter.minus(backCenter).sameDirection(normalVector)) {
+        if (frontCenter.minus(backCenter).sameDirection(vectorObj.z)) {
           poly = new BiPolygon(front, back);
         } else {
           poly = new BiPolygon(back, front);
@@ -313,6 +313,13 @@ BiPolygon.fromVectorObject =
       } catch(e) {
         console.error(e);
       }
+}
+
+BiPolygon.fromPositionObject = (position) => {
+  const dem = position.demension;
+  const center = position.center.object();
+  const vecObj = position.normals;
+  return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj);
 }
 
 module.exports = BiPolygon;

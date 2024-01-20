@@ -86,8 +86,7 @@ class Position {
         center: this.center(),
         demension: this.demension(),
         rotation: this.rotation(),
-        normals: this.normals(),
-        biPolyNorm: this.biPolyNormVector() // Ask? Explode
+        normals: this.normals()
       };
       if (assembly.partCode() === 'T:f') {
         console.log('target');
@@ -144,12 +143,6 @@ class Position {
           z: new Vertex3D(0,0,1).rotate(rotation).vector()
       };
       return array ? [normObj.x, normObj.y, normObj.z] : normObj;
-    }
-
-    this.biPolyNormVector = () => {
-      const root = assembly.getRoot();
-      const objCent = root.buildCenter();
-      return objCent.minus(this.center());
     }
 
     this.normalizingRotations = () => {

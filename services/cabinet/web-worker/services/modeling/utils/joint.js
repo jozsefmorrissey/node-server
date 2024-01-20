@@ -1,73 +1,35 @@
 
-function isMatch(partCodeOlocationCodeOassemblyOregexOfunc, dto) {
-  let pclcarf = partCodeOlocationCodeOassemblyOregexOfunc;
-  if (pclcarf instanceof Function) return pclcarf(dto) === true;
-  if ((typeof pclcarf) === 'string') pclcarf = new RegExp(`^${pclcarf}(:.*|)$`);
-  if (pclcarf instanceof RegExp) {
-    return null !== (dto.partCode().match(pclcarf) || dto.locationCode().match(pclcarf));
-  }
-  return dto === pclcarf;
+function buildMaleModel(joinedModeMap, assem, env) {
+  const joints = env.jointMap.female[assem.id] || [];
+  const males = [];
+  joints.forEach(jId =>
+    males.concatInPlace(env.jointMap.male[jId]));
+  let csg = new CSG();
+  males.forEach(mid =>
+    joinedModeMap[mid] && (csg = csg.union(joinedModeMap[mid])));
+  return csg.polygons.length === 0 ? null : csg;
 }
 
-const matchFilter = (pclcarf, filter) => {
-  const runFilter = filter instanceof Function;
-  return (a) => {
-    return a.constructor.joinable && a.includeJoints() && isMatch(pclcarf, a) && (!runFilter || filter(a));
-  }
-}
-
-function getMatches (partCodeOlocationCodeOassemblyOregexOfunc, filter, allAssemblies) {
-  let pclcarf = partCodeOlocationCodeOassemblyOregexOfunc;
-  return allAssemblies.filter(matchFilter(pclcarf, filter));
-}
-
-function getModels(partCodeOlocationCodeOassemblyOregexOfunc, filter, allAssemblies) {
-  let pclcarf = partCodeOlocationCodeOassemblyOregexOfunc;
-  const joinable = getMatches(pclcarf, filter, joinallAssembliest);
-  let models = [];
-  for (let index = 0; index < joinable.length; index++) {
-    const assem = joinable[index];
-    try {
-      const model = assem.toModel();
-      if (model !== undefined) {
-        models.push(assem.toModel());
+function Apply(job, modelItterator) {
+  const joinedModeMap = {};
+  let env = job.environment;
+  for (let index = 0; index < job.assemblies.length; index++) {
+    const mtdo = job.assemblies[index];
+    const assem = mtdo.assembly;
+    const model = env.modelInfo[assem.id].model;
+    if (model && assem.part && assem.included) {
+      const joints = env.jointMap.female[assem.id] || [];
+      const males = [];
+      const maleModel = buildMaleModel(joinedModeMap, assem, env);
+      if (assem.locationCode.match(/^c_void-3:p5$/)) {
+        let a = 1 + 2;
       }
-    } catch (e) {
-      console.warn(e);
-    }
+      if (maleModel)
+        joinedModeMap[assem.id] = model.subtract(maleModel);
+      else joinedModeMap[assem.id] = model;
+    } else joinedModeMap[assem.id] = model;
   }
-  return models;
+  modelItterator.joinedModels(joinedModeMap);
 }
 
-const models = (filter) => getModels(maleJointSelector, filter, this);
-
-const model = (filter) => {
-  if (parent === undefined) throw new Error(`You need to set parentAssembly for '${this.toString()}'`);
-  const models = this.maleModels(filter);
-  let model = new CSG();
-  for (let index = 0; index < models.length; index++) {
-    model = model.union(models[index]);
-  }
-  return model;
-}
-
-function apply(model, joints, modelMap) {
-  if (!joints || !Array.isArray(joints)) return model;
-  let m = model; // preventCouruption
-  joints.forEach((joint) => {
-    if (joint.apply()) {
-      try {
-        const maleModel = joint.maleModel(joints.jointFilter);
-        if (m.polygons.length > 0 && maleModel && maleModel.polygons.length > 0) {
-          m = m.subtract(maleModel);
-        }
-      } catch (e) {
-        console.error('Most likely caused by a circular joint reference',e);
-      }
-    }
-  });
-  return m;
-}
-
-
-module.exports = {apply, getMatches, getModels, isMatch, models, model};
+module.exports = {Apply};

@@ -107,6 +107,17 @@ Test.add('MDTO', (ts) => {
   ts.success();
 });
 
+function ensureRendered(assems, modelInfo, ts) {
+  for (let index = 0; index < assems.length; index++) {
+    const partId = assems[index].id();
+    const model = modelInfo[partId].model;
+    const msg = `Faild to create model for: ${assems[index].locationCode()}`;
+    ts.assertTrue(model !== undefined, msg);
+    ts.assertTrue(Array.isArray(model.polygons), msg);
+    ts.assertTrue(model.polygons.length > 0, msg);
+  }
+}
+
 const ModelItterator = require('../../web-worker/services/model-itterator.js');
 const Modeler = require('../../web-worker/services/modeler.js');
 // Test.add('Modeler base', (ts) => {
@@ -130,25 +141,34 @@ const Modeler = require('../../web-worker/services/modeler.js');
 Test.add('Modeler base:layout(test)', (ts) => {
   const allAssemblies = get();
   const panel = allAssemblies.filter(a => a.partCode() === 'R')[0];
-  const modelItt = new ModelItterator(allAssemblies, panel);
   const start = new Date().getTime();
-  const modeler = new Modeler(modelItt);
+  const modelItt = new ModelItterator(allAssemblies);
   const end = new Date().getTime();
+  const modeler = new Modeler(modelItt);
 
-  ts.assertEquals(modelItt.percentBuilt(), 1);
   const modelInfo = modelItt.modelInfo();
   console.log(modelItt.models().toString(.0001));
-  const parts = allAssemblies.filter(a => a.part());
-  for (let index = 0; index < parts.length; index++) {
-    const partId = parts[index].id();
-    const model = modelInfo[partId].model;
-    const msg = `Faild to create model for: ${parts[index].locationCode()}`;
-    ts.assertTrue(model !== undefined, msg);
-    ts.assertTrue(Array.isArray(model.polygons), msg);
-    ts.assertTrue(model.polygons.length > 0, msg);
-  }
+  ts.assertEquals(modelItt.percentBuilt(), 1);
+  const parts = allAssemblies.filter(a => a.part() && a.included());
+  ensureRendered(parts, modelInfo, ts);
   ts.success();
 });
+
+// d('Modeler base:layout(R:p)', (ts) => {
+//   const allAssemblies = get();
+//   const panel = allAssemblies.filter(a => a.partCode() === 'R:p')[0];
+//   const start = new Date().getTime();
+//   const modelItt = new ModelItterator(allAssemblies, [panel]);
+//   const end = new Date().getTime();
+//   const modeler = new Modeler(modelItt);
+//
+//   const modelInfo = modelItt.modelInfo();
+//   console.log(modelItt.models().toString(.0001));
+//   ts.assertEquals(modelItt.percentBuilt(), 1);
+//   const parts = allAssemblies.filter(a => a.part() && a.included());
+//   ensureRendered(parts, ts);
+//   ts.success();
+// });
 
 
 

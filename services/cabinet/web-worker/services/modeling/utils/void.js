@@ -6,6 +6,7 @@ class VoidUtil {
   constructor(voidDto, env) {
     const panelThickness = 3*2.54/4;
     const pt = panelThickness;
+    const instance = this;
 
     const offsetSets = [
       {
@@ -52,7 +53,7 @@ class VoidUtil {
     const toBiPoly = (index) => {
       if (biPolys[index]) return biPolys[index];
       const startIndex = voidDto.jointSetIndex;
-      const biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
+      const biPoly = instance.biPolygon;
       let polys = biPoly.toPolygons();
       polys.swap(3,4);
       const spliceIndex = Math.mod(startIndex + index, 6);
@@ -70,8 +71,7 @@ class VoidUtil {
     let abyssBiPoly;
     function abyssBiPolygon() {
       if (abyssBiPoly) return abyssBiPoly;
-      const biPolyArr = env.modelInfo[voidDto.id].biPolygonArray;
-      const biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
+      const biPoly = instance.biPolygon;
       const polys = biPoly.toPolygons();
       polys.swap(3,4);
       const center = biPoly.center();
@@ -88,11 +88,10 @@ class VoidUtil {
       return abyssBiPoly;
     }
 
-    const biPolyArr = env.modelInfo[voidDto.id].biPolygonArray;
-    this.biPolygon = new BiPolygon(biPolyArr[0], biPolyArr[1]);
+    const current = voidDto.position.current;
+    this.biPolygon = BiPolygon.fromPositionObject(current);
 
     this.abyss = {biPolygon: abyssBiPolygon};
-
   }
 }
 
