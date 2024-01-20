@@ -285,7 +285,7 @@ class Polygon3D {
       return map;
     }
 
-    this.copy = () => new Polygon3D(Line3D.vertices(lines, false));
+    this.copy = () => new Polygon3D(Line3D.vertices(lines, true));
 
     this.equals = (other) => {
       if (!(other instanceof Polygon3D)) return false;

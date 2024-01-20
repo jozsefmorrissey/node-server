@@ -5,7 +5,7 @@ const Door = require('../../door/door.js');
 
 class DoorSection extends Assembly {
   constructor(door) {
-    super('D');
+    super('DS');
     const sectionProps = () => instance.parentAssembly();
     const instance = this;
     this.part = () => false;
@@ -13,11 +13,10 @@ class DoorSection extends Assembly {
     this.pull = (...args) => door && door.pull(...args);
 
     if (!door) {
-      door = new Door('d', 'Section');
+      door = new Door('D', 'Section');
       this.door = () => door;
       this.pull = (i) => door.pull(i);
     }
-    door.partName = () => `${sectionProps().partName()}-d`;
     this.addSubAssembly(door);
   }
 }

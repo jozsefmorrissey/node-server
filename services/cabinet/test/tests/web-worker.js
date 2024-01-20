@@ -64,6 +64,7 @@ function get(filter, dontApplyTestConfig) {
   }
   const cabinet = Cabinet.build('base');
   if (!dontApplyTestConfig) CabinetLayouts.map['test'].build(cabinet);
+  cabinet.updateOpenings(true)
   return cabinet.allAssemblies().filter(filter);
 }
 
@@ -108,23 +109,48 @@ Test.add('MDTO', (ts) => {
 
 const ModelItterator = require('../../web-worker/services/model-itterator.js');
 const Modeler = require('../../web-worker/services/modeler.js');
-Test.add('Modeler (plane base)', (ts) => {
-  const allAssemblies = get(undefined, true);
+// Test.add('Modeler base', (ts) => {
+//   const allAssemblies = get(undefined, true);
+//   const panel = allAssemblies.filter(a => a.partCode() === 'R')[0];
+//   const modelItt = new ModelItterator(allAssemblies, panel);
+//   const modeler = new Modeler(modelItt);
+//
+//   ts.assertEquals(modelItt.percentBuilt(), 1);
+//   const modelInfo = modelItt.modelInfo();
+//   const parts = allAssemblies.filter(a => a.part());
+//   parts.forEach(p => {
+//     const model = modelInfo[p.id()].model;
+//     ts.assertTrue(Array.isArray(model.polygons));
+//     ts.assertTrue(model.polygons.length > 0);
+//   });
+//   // console.log(modelItt.models().toString());
+//   ts.success();
+// });
+
+Test.add('Modeler base:layout(test)', (ts) => {
+  const allAssemblies = get();
   const panel = allAssemblies.filter(a => a.partCode() === 'R')[0];
   const modelItt = new ModelItterator(allAssemblies, panel);
+  const start = new Date().getTime();
   const modeler = new Modeler(modelItt);
+  const end = new Date().getTime();
 
   ts.assertEquals(modelItt.percentBuilt(), 1);
   const modelInfo = modelItt.modelInfo();
+  console.log(modelItt.models().toString(.0001));
   const parts = allAssemblies.filter(a => a.part());
-  parts.forEach(p => {
-    const model = modelInfo[p.id()].model;
-    ts.assertTrue(Array.isArray(model.polygons));
-    ts.assertTrue(model.polygons.length > 0);
-  });
-  // console.log(modelItt.models().toString());
+  for (let index = 0; index < parts.length; index++) {
+    const partId = parts[index].id();
+    const model = modelInfo[partId].model;
+    const msg = `Faild to create model for: ${parts[index].locationCode()}`;
+    ts.assertTrue(model !== undefined, msg);
+    ts.assertTrue(Array.isArray(model.polygons), msg);
+    ts.assertTrue(model.polygons.length > 0, msg);
+  }
   ts.success();
 });
+
+
 
 let webWorker;
 let renderingExecutor;

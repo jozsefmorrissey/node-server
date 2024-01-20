@@ -50,13 +50,13 @@
 
 CSG = function() {
   this.polygons = [];
-  this.toString = () => {
+  this.toString = (percision) => {
     let str = '';
     for (let index = 0; index < this.polygons.length; index++) {
       const verts = this.polygons[index].vertices;
       str += '['
       for (let v = 0; v < verts.length; v++) {
-        str += `${verts[v].toString()},`;
+        str += `${verts[v].toString(percision)},`;
       }
       str = `${str.substring(0, str.length - 1)}]\n`;
     }
@@ -119,12 +119,19 @@ CSG.fromPolygons = function(polygons, deepCopy) {
   return csg;
 };
 
-CSG.toString = function () {
+const vertexPercision = (percision, x, y, z) => ({
+  x: percision ? Math.roundTo(x, percision) : x,
+  y: percision ? Math.roundTo(y, percision) : y,
+  z: percision ? Math.roundTo(z, percision) : z
+});
+
+CSG.toString = function (percision) {
   const list = [];
   this.polygons.forEach((polygon) => {
     const obj = {vertices: []};
-    polygon.vertices.forEach((vertex) =>
-        obj.vertices.push({x: vertex.pos.x, y: vertex.pos.y, z: vertex.pos.z}));
+    polygon.vertices.forEach((vertex) => {
+      obj.vertices.push(vertexPercision(percision, vertex.pos.x, vertex.pos.y, vertex.pos.z));
+    });
     list.push(obj);
   });
   return JSON.stringify(list, null, 2);
@@ -755,8 +762,9 @@ CSG.Vector.prototype = {
     );
   },
 
-  toString: function() {
-    return `(${this.x},${this.y},${this.z})`
+  toString: function(percision) {
+    const vertPer = vertexPercision(percision, this.x, this.y, this.z);
+    return `(${vertPer.x},${vertPer.y},${vertPer.z})`
   }
 };
 
@@ -773,7 +781,10 @@ CSG.Vector.prototype = {
 CSG.Vertex = function(pos, normal) {
   this.pos = new CSG.Vector(pos);
   this.normal = new CSG.Vector(normal);
-  this.toString = () => `(${this.pos.x},${this.pos.y},${this.pos.z})`;
+  this.toString = (percision) => {
+    const verPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
+    return `(${verPer.x},${verPer.y},${verPer.z})`;
+  }
 
   this.scale = (center, coeficient) => {
     const centerVector = new CSG.Vector(center);
@@ -800,8 +811,9 @@ CSG.Vertex.prototype = {
   clone: function() {
     return new CSG.Vertex(this.pos.clone(), this.normal.clone());
   },
-  toString: function () {
-    return `(${this.pos.x},${this.pos.y},${this.pos.z})`
+  toString: function (percision) {
+    const vertPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
+    return `(${vertPer.x},${vertPer.y},${vertPer.z})`
   },
 
   // Invert all orientation-specific data (e.g. vertex normal). Called when the
@@ -1336,7 +1348,10 @@ class Vector3D {
 
     this.equals = (vector, tol) => !tol ? Vector3D.tolerance.within(vector, this) :
                   new Tolerance({i: tol, j: tol, k: tol}).within(vector, this);
-    this.toString = () => `<${i},  ${j},  ${k}>`;
+    this.toString = (percision) => {
+      const vertPer = vertexPercision(percision, i, j, k);
+      return `<${vertPer.x},  ${vertPer.y},  ${vertPer.z}>`;
+    }
   }
 }
 

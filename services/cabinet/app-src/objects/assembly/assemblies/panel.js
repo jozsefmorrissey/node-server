@@ -15,11 +15,12 @@ class Panel extends Assembly {
 }
 
 class PanelVoidIndex extends Panel {
-  constructor(index, vOid) {
+  constructor(index, vOid, included) {
     const partCode = `:p${index}`;
     const partName = vOid.partName() + `-panel-${index}`
     super(partCode, partName);
     this.index = index;
+    this.included = included;
   }
 }
 

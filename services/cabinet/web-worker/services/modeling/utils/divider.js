@@ -3,6 +3,7 @@
 
 const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
 const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
+const SectionPropertiesUtil = require('section-properties');
 
 const isSectionProps = (pa) => pa.id.match(/^SectionProperties_/);
 const isDivider = (pa) => pa.id.match(/^Divider_/);
@@ -20,10 +21,14 @@ class DividerUtil {
   constructor(divider, dividerPart, env) {
     const instance = this;
 
+    const sectionProps = divider.find('S');
     const dividerInfo = env.modelInfo[divider.id];
-    this.biPolygon = new BiPolygon(dividerInfo.biPolygonArray[0], dividerInfo.biPolygonArray[1]);
-    this.model = dividerInfo.model.polygons;
-    const sectionProps = governingSectionProps(divider);
+    if (dividerInfo) {
+      this.biPolygon = new BiPolygon(dividerInfo.biPolygonArray[0], dividerInfo.biPolygonArray[1]);
+      this.model = dividerInfo.model.polygons;
+    } else {
+      this.biPolygon = SectionPropertiesUtil.instance(sectionProps).dividerInfo();
+    }
 
     this.Full = {
       biPolygon: () => this.biPolygon,
@@ -86,6 +91,7 @@ class DividerUtil {
         buildPolyCutter(intersected, 4 * 2.54, normal, append, 'front');
       },
       back: (append) => {
+        console.log(sectionProps);
         const backMtdo = sectionProps.back();
         const bbpArray = env.modelInfo[backMtdo.id].biPolygonArray;
         const backBiPoly = new BiPolygon(bbpArray[0], bbpArray[1]);

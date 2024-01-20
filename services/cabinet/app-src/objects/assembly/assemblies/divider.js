@@ -37,12 +37,13 @@ class Divider extends Assembly {
     this.addJoints(new Joint(parts[4], parts[3]));
 
     this.part = () => false;
-    this.maxWidth = () => 2.54*3/4;
+    this.maxWidth = () => this.panelWith();
+    this.panelWith = () => 2.54*3/4;
 
     function activeParts() {
       switch (type) {
-        case 'front': return parts.slice(3,2);
-        case 'back': return parts.slice(1,2);
+        case 'front': return parts.slice(1,3);
+        case 'back': return parts.slice(3,5);
         case 'frontAndBack': return parts.slice(1);
         default: return parts.slice(0,1);
       }
@@ -50,6 +51,10 @@ class Divider extends Assembly {
 
     this.getSubassemblies = (childrenOnly) => {
       const children = activeParts().concat(Object.values(this.subassemblies));
+      if (type === 'front') {
+        let a = 1+2;
+        // console.log('her')
+      }
       if (childrenOnly) return children;
       const decendents = children.map(c => c);
       for (let index = 0; index < children.length; index++) {

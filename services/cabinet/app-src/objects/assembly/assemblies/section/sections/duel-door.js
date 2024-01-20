@@ -8,7 +8,7 @@ const Assembly = require('../../../assembly.js');
 
 class DualDoorSection extends Assembly {
   constructor(leftDoor, rightDoor) {
-    super('DD', 'Duel.Door.Section');
+    super('DDS', 'Duel.Door.Section');
     const instance = this;
     const sectionProps = () => instance.parentAssembly();
 
@@ -17,21 +17,17 @@ class DualDoorSection extends Assembly {
     this.right = () => rightDoor;
     this.gap = () => 2.54 / 16;
 
-    this.initialize = () => {
-      if (!leftDoor) {
-        leftDoor = new Door('dl', 'Left');
-        leftDoor.setPulls([Handle.location.TOP_RIGHT]);
-      }
-      leftDoor.partName = () => `${sectionProps().partName()}-dl`;
-      this.addSubAssembly(leftDoor);
-
-      if (!rightDoor) {
-        rightDoor ||= new Door('dr', 'Right');
-        rightDoor.setPulls([Handle.location.TOP_LEFT]);
-      }
-      this.addSubAssembly(rightDoor);
-      rightDoor.partName = () => `${sectionProps().partName()}-dr`;
+    if (!leftDoor) {
+      leftDoor = new Door('Dl', 'Left');
+      leftDoor.setPulls([Handle.location.TOP_RIGHT]);
     }
+    this.addSubAssembly(leftDoor);
+
+    if (!rightDoor) {
+      rightDoor ||= new Door('Dr', 'Right');
+      rightDoor.setPulls([Handle.location.TOP_LEFT]);
+    }
+    this.addSubAssembly(rightDoor);
   }
 }
 

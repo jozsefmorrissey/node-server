@@ -108,6 +108,7 @@ class SectionProperties extends KeyValue{
     this.divideRight = () =>
       this.parentAssembly().sectionCount && this.parentAssembly().sectionCount() !== index;
     this.partCode = () => 'S';
+    this.partName = () => undefined;
 
     this.locationCode = () => {
       const parent = this.parentAssembly();
@@ -117,12 +118,12 @@ class SectionProperties extends KeyValue{
     };
 
 
-    this.partName = () => {
-      const orientation = this.vertical() ? 'V' : 'H';
-      if (!(this.parentAssembly() instanceof SectionProperties)) return orientation;
-      const pPartName = this.parentAssembly().partName();
-      return `${pPartName}${index}.${orientation}`;
-    }
+    // this.partName = () => {
+    //   const orientation = this.vertical() ? 'V' : 'H';
+    //   if (!(this.parentAssembly() instanceof SectionProperties)) return orientation;
+    //   const pPartName = this.parentAssembly().partName();
+    //   return `${pPartName}${index}.${orientation}`;
+    // }
 
     this.config = () => JSON.copy(config);
     this.coordinates = () => JSON.clone(coordinates);
@@ -196,10 +197,8 @@ class SectionProperties extends KeyValue{
         assems.push(cover);
         if (!childrenOnly) assems.concatInPlace(cover.getSubassemblies());
       }
-      if (this.divideRight()) {
-        assems.push(this.divider());
-        if (!childrenOnly) assems.concatInPlace(this.divider().getSubassemblies());
-      }
+      assems.push(this.divider());
+      if (!childrenOnly) assems.concatInPlace(this.divider().getSubassemblies());
       for (let index = 0; !childrenOnly && index < this.sections.length; index++) {
         assems.concatInPlace(this.sections[index].getSubassemblies());
       }
@@ -256,7 +255,7 @@ class SectionProperties extends KeyValue{
       for (let index = 0; index < this.sections.length * 2; index += 1) {
         const section = this.sections[Math.ceil((index - 1)/2)];
         let offset = 0;
-        const divider = section.divider();
+        const divider = section.divider().divider();
         if (isReveal) {
           if (index % 2 === 0) {
             if (index === 0) info._TOTAL -= reveal;
@@ -539,7 +538,7 @@ class SectionProperties extends KeyValue{
     for (let index = 0; index < this.sections.length; index += 1) {
       if (index < this.sections.length - 1) {
         const section = this.sections[index];
-        const divider = section.divider();
+        const divider = section.divider().divider();
         const offset = divider.maxWidth();
         info[index + 1] = {offset, divider};
       } else {
@@ -597,7 +596,7 @@ class SectionProperties extends KeyValue{
         const cutter = new Cutter.Reference(reference, cabinet.buildCenter, offset);
         sectionCutters.push(cutter);
         cutter.parentAssembly(instance);
-        const dvReg = new RegExp(`${instance.locationCode()}_.*dv(|:.)$`);
+        const dvReg = new RegExp(`${instance.locationCode()}_.*dv(|:[a-z]{1})$`);
         instance.addJoints(new Joint(cutter.locationCode(), dvReg));
       }
     }
@@ -681,7 +680,7 @@ SectionProperties.fromJson = (json) => {
   if (sp.cover()) sp.cover().parentAssembly(sp);
 
   json.constructed(() => {
-    sp.divider().panel().fromJson(json.divider.subassemblies.dv);
+    sp.divider().divider().fromJson(json.divider.subassemblies.dv);
   });
   return sp;
 }

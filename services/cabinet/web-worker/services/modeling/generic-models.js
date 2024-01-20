@@ -123,17 +123,17 @@ function drawerBox(length, width, depth) {
 }
 
 function unionAll(...polygons) {
-  let model = polygons[0].toModel();
+  let model = polygons[0].model();
   for (let index = 1; index < polygons.length; index++) {
-    model = model.union(polygons[index].toModel());
+    model = model.union(polygons[index].model());
   }
   return model;
 }
 
 to.DrawerBox = (frontPoly, normal, length, props) => {
-  const sideThickness = props.dbst.value();
-  const bottomThickness = props.dbbt.value();
-  const bottomHeight = props.dbid.value();
+  const sideThickness = props.dbst;
+  const bottomThickness = props.dbbt;
+  const bottomHeight = props.dbid;
   const norm = normal;
 
   // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: vertices are if facing polygon topLeft, topRight, bottomRight, bottomLeft
@@ -201,7 +201,9 @@ to.Pull.Simple = (baseCenter, line, normal, projection, cTOc) => {
   const vecObj = getVectorObj(line, normal);
 
   let sideProjection = projection - gerth;
-  const center = baseCenter.translate(vecObj.depth.scale((sideProjection + gerth) /2), true);
+  const center = baseCenter.translate(vecObj.z.scale((sideProjection + gerth) /2), true);
 
-  return BiPolygon.fromVectorObject(length, gerth, projection, center, vecObj).toModel();
+  return BiPolygon.fromVectorObject(length, gerth, projection, center, vecObj);
 }
+
+module.exports = to;

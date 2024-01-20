@@ -138,11 +138,11 @@ new CabinetLayout('test', (cabinet) => {
   right.sections[2].setSection("DrawerSection");
   right.pattern('abb');
 
-  centerTop.divider().panel().type('frontAndBack');
-  left.sections[0].divider().panel().type('front');
-  left.sections[1].divider().panel().type('front');
-  right.sections[0].divider().panel().type('front');
-  right.sections[1].divider().panel().type('front');
+  centerTop.divider().divider().type('frontAndBack');
+  left.sections[0].divider().divider().type('front');
+  left.sections[1].divider().divider().type('front');
+  right.sections[0].divider().divider().type('front');
+  right.sections[1].divider().divider().type('front');
 
   let config = Void.referenceConfig('horizontal', 'c_BACK', 5*2.54, 5*2.54);
   let vOid = new Void(cabinet, 'Void1', config);

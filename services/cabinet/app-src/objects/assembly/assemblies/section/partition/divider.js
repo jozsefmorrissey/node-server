@@ -9,9 +9,10 @@ const Joint = require('../../../../joint/joint');
 const FunctionCache = require('../../../../../../../../public/js/utils/services/function-cache.js');
 
 let count = 0;
+// TODO: Rename to Partition
 class DividerSection extends Assembly {
-  constructor(sectionProperties, panel) {
-    super('dv', 'Divider');
+  constructor(sectionProperties, divider) {
+    super('dv', '');
     if (sectionProperties === undefined) return;
     this.parentAssembly(sectionProperties);
     const props = sectionProperties;
@@ -19,32 +20,17 @@ class DividerSection extends Assembly {
 
     let count = 0;
 
-    let panelThickness = 3*2.54/4;
-    this.panelThickness = (thickness) => {
-      if (Number.isFinite(thickness) && thickness >= 0) {
-        panelThickness = thickness;
-      }
-      return panelThickness;
-    }
-
-    this.thickness = () => panelThickness;
     this.part = () => false;
     this.included = () => false;
 
 
-    this.maxWidth = () => 2.54*3/4;
-
-    this.partName = () => `${sectionProperties.partName()}`;
-    const panelPartName = () =>
-        `${this.partName()}.Divider.Panel`;
-
-    panel ||= new Divider(null, panelPartName);
+    divider ||= new Divider(null, 'Section');
     // const frame = new Frame(`df-${index}`, 'Divider.Frame', frameCenterFunc, frameDemFunc, frameRotFunc);
-    panel.parentAssembly(this);
-    this.addSubAssembly(panel);
+    divider.parentAssembly(this);
+    this.addSubAssembly(divider);
     // this.addSubAssembly(frame);
 
-    this.panel = () => panel;
+    this.divider = () => divider;
   }
 }
 

@@ -733,6 +733,13 @@ Function.safeStdLibAddition(Math, 'difference', function (val1, val2) {
   return Math.abs(val2 - val1);
 }, true);
 
+Function.safeStdLibAddition(Math, 'roundTo', function (val, percision) {
+  percision ||= .001;
+  const rounded = Math.round(val*1/percision) / (1/percision);
+  return rounded;
+}, true);
+
+
 Function.safeStdLibAddition(Object, 'forEachConditional', function (obj, func, conditionFunc, modifyObject) {
   if (!modifyObject) obj = JSON.clone(obj);
   conditionFunc = (typeof conditionFunc) === 'function' ? conditionFunc : () => true;

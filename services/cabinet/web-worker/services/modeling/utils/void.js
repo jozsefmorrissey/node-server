@@ -1,7 +1,12 @@
 
+const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
+const Line3D = require('../../../../app-src/three-d/objects/line.js');
 
 class VoidUtil {
-  constructor(voidDto) {
+  constructor(voidDto, env) {
+    const panelThickness = 3*2.54/4;
+    const pt = panelThickness;
+
     const offsetSets = [
       {
         first: {x: pt, y: pt},
@@ -40,18 +45,18 @@ class VoidUtil {
     ]
 
     this.panel = (index) => {
-      biPolygon: () => toBiPoly(index);
+      return toBiPoly(index);
     }
 
     const biPolys = [];
     const toBiPoly = (index) => {
       if (biPolys[index]) return biPolys[index];
-      const startIndex = setIndex;
-      const biPoly = this.toBiPolygon();
+      const startIndex = voidDto.jointSetIndex;
+      const biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
       let polys = biPoly.toPolygons();
       polys.swap(3,4);
       const spliceIndex = Math.mod(startIndex + index, 6);
-      const offsetSet = offsetSets[setIndex];
+      const offsetSet = offsetSets[voidDto.jointSetIndex];
       const offset = index < 2 ? offsetSet.first : (index < 4 ? offsetSet.second : offsetSet.third);
       let pt = panelThickness;
       const center = biPoly.center();
@@ -65,15 +70,15 @@ class VoidUtil {
     let abyssBiPoly;
     function abyssBiPolygon() {
       if (abyssBiPoly) return abyssBiPoly;
-      const biPoly = instance.toBiPolygon();
+      const biPolyArr = env.modelInfo[voidDto.id].biPolygonArray;
+      const biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
       const polys = biPoly.toPolygons();
       polys.swap(3,4);
       const center = biPoly.center();
-      const joints = controlableAbyss.getJoints();
       const polyVects = polys.map(p => new Line3D(center.copy(), p.center()).vector().unit());
       for (let index = 0; index < polys.length; index++) {
         const poly = polys[index].copy();
-        if (instance.includedSides()[index] !== true) {
+        if (voidDto.includedSides[index] !== true) {
           const vector = polyVects[index];
           biPoly.extend(vector.scale(2000));
         }
@@ -83,9 +88,22 @@ class VoidUtil {
       return abyssBiPoly;
     }
 
+    const biPolyArr = env.modelInfo[voidDto.id].biPolygonArray;
+    this.biPolygon = new BiPolygon(biPolyArr[0], biPolyArr[1]);
+
     this.abyss = {biPolygon: abyssBiPolygon};
 
   }
 }
+
+const built = {};
+VoidUtil.instance = (mDto, environment) => {
+  const voidMdto = mDto.parentAssembly();
+  if (built[voidMdto.id] === undefined) {
+    built[voidMdto.id] = new VoidUtil(voidMdto, environment);
+  }
+  return built[voidMdto.id];
+}
+
 
 module.exports = VoidUtil;

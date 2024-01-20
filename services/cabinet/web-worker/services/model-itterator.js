@@ -8,17 +8,21 @@ function sortAssemMtdos(assemMtdos) {
   let cab, back;
   const defaultBuilt = [];
   const customBuilt = [];
+  const sectionAssems = [];
   for (let index = 0; index < assemMtdos.length; index++) {
     const a = assemMtdos[index];
     if (a.partCode === 'c') cab = a;
     else if (a.partCode === 'BACK') back = a;
     else {
-      (MFC(a, true) === false ? defaultBuilt : customBuilt).push(a);
+      if (MFC(a, true) === false) defaultBuilt.push(a);
+      else if (a.locationCode.match(/_S1/)) sectionAssems.push(a);
+      else customBuilt.push(a);
     }
   }
-  defaultBuilt.sortByAttr('partCode.length');
-  customBuilt.sortByAttr('partCode.length');
-  return [cab, back].concat(defaultBuilt).concat(customBuilt);
+  defaultBuilt.sortByAttr('locationCode.length');
+  customBuilt.sortByAttr('locationCode.length');
+  sectionAssems.sortByAttr('locationCode.length');
+  return [cab, back].concat(defaultBuilt.concat(customBuilt.concat(sectionAssems)));
 }
 
 const jointCompexityObject = (id, complexityObj, jointMap, byId) => {

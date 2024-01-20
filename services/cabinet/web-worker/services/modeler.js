@@ -6,9 +6,11 @@ class Modeler {
     function buildMaleModel(joinedModeMap, assem, env) {
       const joints = env.jointMap.female[assem.id] || [];
       const males = [];
-      joints.forEach(jId => males.concatInPlace(env.jointMap.male[jId]));
+      joints.forEach(jId =>
+        males.concatInPlace(env.jointMap.male[jId]));
       let csg = new CSG();
-      males.forEach(mid => joinedModeMap[mid] && (csg = csg.union(joinedModeMap[mid])));
+      males.forEach(mid =>
+        joinedModeMap[mid] && (csg = csg.union(joinedModeMap[mid])));
       return csg.polygons.length === 0 ? null : csg;
     }
 
@@ -19,14 +21,18 @@ class Modeler {
         const mtdo = job.assemblies[index];
         const assem = mtdo.assembly;
         const model = env.modelInfo[assem.id].model;
-        if (model) {
+        if (model && assem.part && assem.included) {
           const joints = env.jointMap.female[assem.id] || [];
           const males = [];
           const maleModel = buildMaleModel(joinedModeMap, assem, env);
+          if (assem.locationCode.match(/^c_void-3:p5$/)) {
+            let a = 1 + 2;
+            buildMaleModel(joinedModeMap, assem, env)
+          }
           if (maleModel)
             joinedModeMap[assem.id] = model.subtract(maleModel);
           else joinedModeMap[assem.id] = model;
-        }
+        } else joinedModeMap[assem.id] = model;
       }
       modelItterator.joinedModels(joinedModeMap);
     }
@@ -36,9 +42,10 @@ class Modeler {
       let assembly = MTDO.reconnect(job.assembly, env.byId);
       let model, biPolygon, biPolygonArray;
       try {
-        if (assembly.locationCode === undefined) {
-          // console.log('target');
-        }
+        // console.log(`Building Model: '${assembly.locationCode}'`)
+        // if (assembly.locationCode.match(/^c_S1_S1_S3_d_df$/)) {
+        //   console.log('target');
+        // }
         const modelFuncs = MFC(assembly);
         if (!modelFuncs.biPolygon) model = modelFuncs.model(assembly, env);
         else {
