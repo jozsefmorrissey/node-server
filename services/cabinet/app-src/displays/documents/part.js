@@ -106,7 +106,7 @@ class PartInfo {
     this.jointInfo = new FunctionCache((rightOleft, type) => {
       let filter = rightOleft === true ? rightFilter(type) :
                    (rightOleft === false ? leftFilter(type) : null);
-      const joints = part.getJoints().female;
+      const joints = part.getDependencies().female;
       let jointInfos = joints.map(j => {
         const hash = j.toString().hash();
         if (jointMap[hash] === undefined) {

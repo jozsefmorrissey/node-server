@@ -23,7 +23,7 @@ class CabinetUtil {
 
     const depthPartReg = /^Panel/;
     const depthDvReg = /_dv/;
-    const depthPartFilter = spDto => spDto.id.match(depthPartReg) &&
+    const depthPartFilter = spDto => spDto.id && spDto.id.match(depthPartReg) &&
                                   !spDto.locationCode.match(depthDvReg);
 
     let polyInfo;
@@ -77,7 +77,7 @@ class CabinetUtil {
   }
 }
 
-const cabinet = {};
+const built = {};
 CabinetUtil.instance = (rMdto, environment) => {
   let cabinet = rMdto.find.up('c');
   if (built[cabinet.id] === undefined) {

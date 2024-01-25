@@ -1,4 +1,11 @@
 
+let domAccessible = false;
+
+try {
+  document;
+  domAccessible = true;
+} catch (e) {}
+
 
 
 
@@ -28,27 +35,33 @@ class CustomEvent {
     }
 
     this.trigger = function (element, detail) {
-      element = element ? element : window;
+      element = element ? element : domAccessible ? window : detail;
       runFuncs(element, detail);
       event.detail = detail;
-      if (element instanceof HTMLElement) {
-        if(document.createEvent){
-          element.dispatchEvent(event);
-        } else {
-          element.fireEvent("on" + event.eventType, event);
+      if (domAccessible) {
+        if (element instanceof HTMLElement) {
+          if(document.createEvent){
+            element.dispatchEvent(event);
+          } else {
+            element.fireEvent("on" + event.eventType, event);
+          }
         }
       }
     }
 //https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
     let event;
-    if(document.createEvent){
+    if (domAccessible) {
+      if(document.createEvent){
         event = document.createEvent("HTMLEvents");
         event.initEvent(name, true, true);
         event.eventName = name;
-    } else {
+      } else {
         event = document.createEventObject();
         event.eventName = name;
         event.eventType = name;
+      }
+    } else {
+      event = {name, type: name};
     }
     this.event = event;
   }

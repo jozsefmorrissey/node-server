@@ -21,17 +21,17 @@ class OpeningToeKick extends Assembly {
     const instance = this;
 
 
-    const leftCornerCutter = new Cutter('lcc', 'LeftCorner');
-    const rightCornerCutter = new Cutter('rcc', 'RightCorner');
+    const leftCornerCutter = new Cutter('lcc', 'LeftCorner', null, 'leftCorner');
+    const rightCornerCutter = new Cutter('rcc', 'RightCorner', null, 'rightCorner');
     this.addSubAssembly(leftCornerCutter);
     this.addSubAssembly(rightCornerCutter);
     this.leftCornerCutter = () => leftCornerCutter;
     this.rightCornerCutter = () => rightCornerCutter;
 
     const joint = (part, fullLength) => (otherPartCode, condition) => {
-      const joint = new Butt(part.locationCode(), otherPartCode, condition);
+      const joint = new Butt(part.locationCode(), otherPartCode, condition, otherPartCode);
       joint.fullLength(fullLength);
-      part.addJoints(joint);
+      part.addDependencies(joint);
     }
     const toeKickPanel = new Panel('tkb', `ToeKickBacker`);
     joint(toeKickPanel)(/^R:/);

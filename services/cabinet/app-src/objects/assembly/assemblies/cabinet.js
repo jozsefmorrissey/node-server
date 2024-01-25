@@ -4,6 +4,7 @@
 const Assembly = require('../assembly.js');
 const cabinetBuildConfig = require('../../../../public/json/cabinets.json');
 const Joint = require('../../joint/joint.js');
+const Dependency = require('../../dependency');
 const CabinetOpeningCorrdinates = require('../../../services/cabinet-opening-coordinates.js');
 const SectionProperties = require('./section/section-properties.js');
 const Measurement = require('../../../../../../public/js/utils/measurement.js');
@@ -27,7 +28,7 @@ const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
 
 class Cabinet extends Assembly {
   constructor(partCode, partName, config) {
-    super(partCode, partName, config);
+    super(partCode, 'Simple', config);
     // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
     Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick', 'dividerJoint');
     const instance = this;
@@ -162,6 +163,13 @@ class Cabinet extends Assembly {
 
         return {borders, position, depth, borderIds, center};
       }
+    }
+
+    const pAddSubAssem = this.addSubAssembly;
+    this.addSubAssembly = (assembly) => {
+      pAddSubAssem(assembly);
+      if (assembly.constructor.name === "Divider" || assembly.part())
+        this.addDependencies(new Dependency(assembly, this));
     }
 
     function bordersByEndPoints (borderObj) {
@@ -300,7 +308,7 @@ Cabinet.build = (type, group, config) => {
   config.joints.forEach((jointConfig) => {
     const male = cabinet.getAssembly(jointConfig.maleJointSelector);
     if (male === undefined) console.warn(`No male found for joint: ${jointConfig}`);
-    else male.addJoints(Object.fromJson(jointConfig));
+    else male.addDependencies(Object.fromJson(jointConfig));
   });
 
   config.openings.forEach((config, i) => {
@@ -343,7 +351,7 @@ Cabinet.fromJson = (assemblyJson, group) => {
     }
   });
   const joints = Object.fromJson(assemblyJson.joints);
-  assembly.addJoints.apply(assembly, joints);
+  assembly.addDependencies.apply(assembly, joints);
   assembly.autoToeKick(assemblyJson.autoToeKick);
 
   trigger();

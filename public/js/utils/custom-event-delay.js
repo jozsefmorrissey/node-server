@@ -48,7 +48,7 @@ class CustomEvent {
     }
 //https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
     this.event;
-    if(document.createEvent){
+    if(document && document.createEvent){
         this.event = document.createEvent("HTMLEvents");
         this.event.initEvent(name, true, true);
         this.event.eventName = name;

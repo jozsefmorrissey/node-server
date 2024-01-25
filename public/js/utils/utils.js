@@ -734,7 +734,7 @@ Function.safeStdLibAddition(Math, 'difference', function (val1, val2) {
 }, true);
 
 Function.safeStdLibAddition(Math, 'roundTo', function (val, percision) {
-  percision ||= .001;
+  if (percision === undefined) percision = .001;
   const rounded = Math.round(val*1/percision) / (1/percision);
   return rounded;
 }, true);

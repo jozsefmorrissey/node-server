@@ -582,8 +582,8 @@ class SectionProperties extends KeyValue{
         }
       }
     }
-    const neigborJoint = new Joint(divider.isSubPart, isNeigbor);
-    divider.addJoints(neigborJoint);
+    const neigborJoint = new Joint(divider.isSubPart, isNeigbor, null, divider.id());
+    divider.addDependencies(neigborJoint);
 
 
     function buildCutters () {
@@ -596,28 +596,12 @@ class SectionProperties extends KeyValue{
         const cutter = new Cutter.Reference(reference, cabinet.buildCenter, offset);
         sectionCutters.push(cutter);
         cutter.parentAssembly(instance);
-        const dvReg = new RegExp(`${instance.locationCode()}_.*dv(|:[a-z]{1})$`);
-        instance.addJoints(new Joint(cutter.locationCode(), dvReg));
+        const dvReg = new RegExp(`${instance.locationCode()}_.*dv(|:[a-z]{1,})$`);
+        cutter.addDependencies(new Joint(cutter.locationCode(), dvReg, null, cutter.id()));
       }
     }
 
     this.borders = () => [this.right, this.left, this.top, this.bottom, this.back]
-
-    this.addJoints = function () {
-      for (let i = 0; i < arguments.length; i += 1) {
-        const joint = arguments[i];
-        if (joint instanceof Joint) {
-          const mpc = joint.maleJointSelector();
-          const fpc = joint.femaleJointSelector();
-          const pc = this.locationCode();
-          const locId = joint.locationId();
-          if (locId) {
-            this.joints.removeWhere(j => j.locationId() === locId);
-          }
-        }
-        this.joints.push(joint.clone());
-      }
-    }
 
     this.on.parentSet(p => this.getAssembly('c') && this.isRoot() && buildCutters());
 
@@ -628,7 +612,6 @@ class SectionProperties extends KeyValue{
       return str;
     }
 
-    // setTimeout(() => this.addJoints(this.divider()));
   }
 }
 

@@ -22,7 +22,7 @@ class DoorSection extends Assembly {
 }
 
 DoorSection.fromJson = (json) => {
-  const door = Object.fromJson(json.subassemblies.d);
+  const door = Object.fromJson(json.subassemblies.D);
   return new DoorSection(door);
 }
 

@@ -29,13 +29,13 @@ class Void extends Cutter {
       if (index) {
         const regFunc = accending ? RegExp.greaterThan : RegExp.lessThan;
         const rankVoidReg = new RegExp(`^void-${regFunc(index, true)}:p[0-5]`);
-        instance.addJoints(new Butt(instance.locationCode(), rankVoidReg, '', 'rankVoids'));
+        instance.addDependencies(new Butt(instance.locationCode(), rankVoidReg, '', 'rankVoids'));
       }
     }
 
     this.voidRelation(true);
     const nonVoidReg = new RegExp(/^((?!void).)*$/);
-    instance.addJoints(new Butt(instance.locationCode(), nonVoidReg));
+    instance.addDependencies(new Butt(instance.locationCode(), nonVoidReg, null, 'voidJoint'));
 
     const parentHash = this.hash;
     this.hash = () => {
@@ -81,8 +81,8 @@ class Void extends Cutter {
                                 new Dado(dadoSideReg.male, dadoSideReg.female, '', 'dadoJoint')];
       }
 
-      instance.addJoints(jointSets[setIndex][0]);
-      instance.addJoints(jointSets[setIndex][1]);
+      instance.addDependencies(jointSets[setIndex][0]);
+      instance.addDependencies(jointSets[setIndex][1]);
       return setIndex;
     }
     const pt = panelThickness;

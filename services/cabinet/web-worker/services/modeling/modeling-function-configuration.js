@@ -10,6 +10,7 @@ const Void = require('./utils/void');
 const SectionPropertiesUtil = require('./utils/section-properties');
 const VoidUtil = require('./utils/void');
 const HandleUtil = require('./utils/handle');
+const CabinetUtil = require('./utils/cabinet');
 
 function getDrawerDepth(depth) {
   const adjustedDepth = (depth/2.54) - 1;
@@ -54,12 +55,17 @@ function defaultToModel(assemMrMdto) {
 const defalt = {biPolygon: defaultToModel};
 
 const idReg = /^(.*?)_(.*)$/;
-const to = (rMdto, onlyCustomBuilders) => {
+const to = (rMdto) => {
   const id = rMdto.id
   const cxtr = id.replace(idReg, '$1');
   let partName = rMdto.partName;
-  return (to[cxtr] && (to[cxtr][partName] || to[cxtr][cxtr])) ||
-          (!onlyCustomBuilders && defalt);
+  if (to.usesDefault(id, partName)) return defalt;
+  return to[cxtr][partName] || to[cxtr][cxtr];
+}
+to.usesDefault = (id, partName) => {
+  const cxtr = id.replace(idReg, '$1');
+  return to[cxtr] === undefined || (to[cxtr][partName] === undefined &&
+                           to[cxtr][cxtr] === undefined)
 }
 
 to.SectionProperties = {
@@ -71,16 +77,19 @@ to.SectionProperties = {
 
 to.Cabinet = {
   Simple: {
-    model: (environment) => {
-      const subs = Object.values(this.subassemblies);
-      const toeKick = getToeKick();
-      if (toeKick) {
-        subs.concatInPlace(toeKick.getParts());
-      }
+    model: (mdto, environment) => {
+      const childs = mdto.children.map(c => c());
+      const simpleKids = childs.filter(c => c.part || c.id.match(/^Divider/));
+      // const toeKickId = getToeKick();
+      // if (toeKick) {
+      //   childIds.concatInPlace(toeKick.getParts());
+      // }
       let csg = new CSG();
-      for (let index = 0; index < subs.length; index++) {
-        if (ToModel(subs[index]) instanceof Function) {
-          csg = csg.union(environment[subs[index].id]);
+      for (let index = 0; index < simpleKids.length; index++) {
+        const id = simpleKids[index].id;
+        const modelInfo = environment.modelInfo[id];
+        if (modelInfo) {
+          csg = csg.union(modelInfo.model);
         }
       }
       return csg;
@@ -199,7 +208,9 @@ to.CutterReference = {
       let poly = (rMdto.front ? biPoly.front() : biPoly.back()).reverse();
       let length = 0;
       poly.lines().forEach(l => length += l.length());
-      const sameDir = biPoly.normal().sameDirection(poly.normal());
+      const cabUtil = CabinetUtil.instance(rMdto, environment);
+      const polyCtoCabC = new Line3D(poly.center(), cabUtil.partCenter());
+      const sameDir = polyCtoCabC.vector().sameDirection(poly.normal());
       const multiplier = sameDir ? -1 : 1;
       const distance = 10 * length;
       return BiPolygon.fromPolygon(poly, 0, multiplier * distance, {x: distance, y:distance});
@@ -302,8 +313,12 @@ to.Panel = {
     }
   },
   Full: {
-    biPolygon: (rMdto, environment) =>
-      Divider.instance(rMdto, environment).Full.biPolygon()
+    biPolygon: (rMdto, environment) => {
+      if (rMdto.locationCode === 'c_L:full') {
+        let a = 1 + 2;
+      }
+      return Divider.instance(rMdto, environment).Full.biPolygon()
+    }
   },
   Front: {
     biPolygon: (rMdto, environment) =>

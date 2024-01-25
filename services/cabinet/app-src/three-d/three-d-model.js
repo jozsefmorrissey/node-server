@@ -139,7 +139,7 @@ class ThreeDModel {
       return false;
 
       let targetPart = instance.object().getAssembly(targetPartCode);
-      let joints = targetPart.getJoints();
+      let joints = targetPart.getDependencies();
       joints = joints.male.concat(joints.female);
       const otherCodes = joints.map(j => j.maleJointSelector() !== targetPartCode ?
             j.maleJointSelector() : j.femaleJointSelector());

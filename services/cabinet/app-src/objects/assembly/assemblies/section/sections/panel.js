@@ -18,7 +18,7 @@ class PanelSection extends Assembly {
     const addJoint = (dir) => {
       const part = sectionProps()[dir]();
       const partCode = (part instanceof DividerSection ? part.panel() : part).locationCode();
-      panel.addJoints(new Joint(panel.locationCode(), partCode));
+      panel.addDependencies(new Joint(panel.locationCode(), partCode, null, this.id()));
     }
 
     this.initialize = (governingSection) => {

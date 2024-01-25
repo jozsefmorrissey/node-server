@@ -48,11 +48,11 @@ class DivideSection extends SpaceSection {
     }
 
     // TODO: will break in future should be calling getJoints.. recursive iissue;
-    this.getJoints = () => {
-      let joints = [];
-      this.children().forEach((child) => joints = joints.concat(child.joints));
-      return joints;
-    }
+    // this.getJoints = () => {
+    //   let joints = [];
+    //   this.children().forEach((child) => joints = joints.concat(child.joints));
+    //   return joints;
+    // }
     this.children = () => this.sections;
     this.partitions = () => this.sections.filter((e, index) => index % 2 === 1);
     this.spaces = () => this.sections.filter((e, index) => index % 2 === 0);

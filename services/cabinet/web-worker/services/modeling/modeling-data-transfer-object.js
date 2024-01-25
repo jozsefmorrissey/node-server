@@ -47,6 +47,22 @@ const useToString = (obj) => {
   return toStrConstructors.indexOf(cxtr) !== -1;
 }
 
+
+
+// Object.values(bi).filter((o, i) => {
+//     try {
+//         worker.postMessage(new TaskMessage(task, o));
+//         false;
+//         console.log(i);
+//     }catch(e) {
+//       console.log('error!!!', i);
+//       return true;
+//     }
+// })
+
+// Object.keys(bi).forEach(k => k.match(/^(Void|SectionProperties|Panel|PanelVoidIndex|Joint|Handle|.*Section|DrawerFront|DrawerBox|Door|Divider|Dado|Cutter|Butt|Joint)_/) && delete bi[k])
+// |CutterReference|OpeningToeKick|AutoToekick|CabinetOpeningCorridinates
+// Cabinet
 class ModelingDataTransferObject{constructor(){}};
 const MDTO = ModelingDataTransferObject;
 
@@ -64,7 +80,7 @@ MDTO.to = function toDto (objectOval) {
   let dto = new ModelingDataTransferObject();
   nonFuntionalAttrs(objectOval, dto);
   if (objectOval instanceof KeyValue) {
-    dto.values = objectOval.value.values;
+    dto.values = MDTO.to(objectOval.value.values);
   }
   if (objectOval instanceof Assembly) {
     evaluateAttributes(objectOval, mdConfig.Assembly, dto);
@@ -73,11 +89,11 @@ MDTO.to = function toDto (objectOval) {
     evaluateAttributes(objectOval, mdConfig.Joint, dto);
   }
   if (objectOval instanceof Property) {
-    return objectOval.value();
+    return MDTO.to(objectOval.value());
   }
   if (mdConfig[objectOval.constructor.name])
     evaluateAttributes(objectOval, mdConfig[objectOval.constructor.name], dto);
-  return Object.keys(dto).length === 0 ? undefined : dto;
+  return dto;
 }
 
 const idReg = /[A-Z][A-Za-z0-9]{1,}_[a-z0-9]{7}/;
@@ -132,9 +148,6 @@ function reconnected(obj, idMap) {
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
     let value = obj[key];
-    if (key === 'includedSides') {
-      console.log('here')
-    }
     let isPrim = isPrimitive(value);
     if (isPrim && key === 'id') {
       if (idMap) idMap[value] = rDto;

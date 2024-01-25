@@ -150,12 +150,16 @@ Test.add('Cabinet: doorIntersect',(ts) => {
   ts.success();
 });
 
+let run = false;
 const cleanJson = (json) => Object.filter(json, (c, key) =>
-  key && key.match(/(id|parentAssemblyId)/), false).complement;
+  key && key.match(/(id|dependsSelector|dependentSelector)/), false).complement;
 Test.add('Cabinet: to/from Json',(ts) => {
+  console.log('hello world');
   const cabinet = Cabinet.build('base');
+  cabinet.toJson();
 
   CabinetLayouts.map['test'].build(cabinet);
+  console.log(cabinet.toJson());
   const json = cleanJson(cabinet.toJson());
   const copy = Cabinet.fromJson(cabinet.toJson());
   const copyJson = cleanJson(copy.toJson());

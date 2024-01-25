@@ -33,8 +33,8 @@ class Divider extends Assembly {
     }
 
     const partCheck = (index) => (assem) => parts[index].locationCode() === assem.locationCode();
-    this.addJoints(new Joint(parts[2], parts[1]));
-    this.addJoints(new Joint(parts[4], parts[3]));
+    parts[2].addDependencies(new Joint(parts[2], parts[1], null, 'frontCutJoint'));
+    parts[4].addDependencies(new Joint(parts[4], parts[3], null, 'backCutJoint'));
 
     this.part = () => false;
     this.maxWidth = () => this.panelWith();
@@ -51,10 +51,6 @@ class Divider extends Assembly {
 
     this.getSubassemblies = (childrenOnly) => {
       const children = activeParts().concat(Object.values(this.subassemblies));
-      if (type === 'front') {
-        let a = 1+2;
-        // console.log('her')
-      }
       if (childrenOnly) return children;
       const decendents = children.map(c => c);
       for (let index = 0; index < children.length; index++) {

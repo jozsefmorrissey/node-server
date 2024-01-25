@@ -88,11 +88,8 @@ class Position {
         rotation: this.rotation(),
         normals: this.normals()
       };
-      if (assembly.partCode() === 'T:f') {
-        console.log('target');
-      }
-      assembly.getJoints().male.forEach((joint) =>
-        joint.updatePosition(position, assembly)
+      assembly.getDependencies().male.forEach((joint) =>
+        joint.updatePosition && joint.updatePosition(position, assembly)
       );
       return position;
     }

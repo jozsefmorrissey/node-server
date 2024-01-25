@@ -128,7 +128,7 @@ class CabinetModel {
 
     const simpleJoints = (assem) => {
       // TODO: this is a hacky way of simplifying... fix
-      const joints = assem.getJoints().female;
+      const joints = assem.getDependencies().female;
       joints.jointFilter = (assem) =>
         assem.constructor.name.match(/Cutter/) &&
         (assem.parentAssembly().parentAssembly() === undefined ||

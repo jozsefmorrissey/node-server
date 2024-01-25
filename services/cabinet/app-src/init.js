@@ -26,7 +26,6 @@ require('./displays/opening-sketch.js')
 const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');
 const utils = require('./utils.js');
-const { RenderingExecutor } = require('../web-worker/external/web-worker-client.js');
 const Frame = require('./objects/assembly/assemblies/frame.js');
 const Panel = require('./objects/assembly/assemblies/panel.js');
 
@@ -144,24 +143,5 @@ new QRious({
           value: 'https://github.com/neocotic/qrious',
           size: 100
         });
-
-// window.onbeforeunload = () => 'Unsaved data may be lost';
-
-// const webWorker = new Worker('/cabinet/js/web-worker-bundle.js');
-// const renderingExecutor = new RenderingExecutor(webWorker);
-// renderingExecutor._submit3dModelTask('test').then(x => console.dir('worker response: ', x)).catch(e => console.log(e));  // todo: for debugging; remove
-// 
-// 
-// const frame = new Frame('f', 'Frame', '0,0,0', '4, 196, .75');
-// const panel = new Panel('p', 'Panel', '0,0,0', '24, 10, .75');
-// 
-// renderingExecutor.panelToBiPolygon(panel)
-//   .then(x => {
-//     console.log(x);
-//   })
-//   .catch(e => {
-//     console.error(e);
-//   });
-
 
 module.exports = {orderDisplay: () => orderDisplay};

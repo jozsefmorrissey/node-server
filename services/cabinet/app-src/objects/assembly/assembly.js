@@ -1,13 +1,13 @@
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 const Position = require('../../position.js');
-const getDefaultSize = require('../../utils.js').getDefaultSize;
 const Vertex3D = require('../../three-d/objects/vertex.js');
 const Line3D = require('../../three-d/objects/line.js');
 const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
 const Joint = require('../joint/joint');
+const Dependency = require('../dependency');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
-const ToModel = require('../../../web-worker/services/to-model.js');
+// const ToModel = require('../../../web-worker/services/to-model.js');
 
 FunctionCache.on('hash', 250);
 const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
@@ -129,23 +129,24 @@ class Assembly extends KeyValue {
     function hash() {
       const valueObj = instance.value.values;
       const keys = Object.keys(valueObj).sort();
-      let hash = 0;
-      if (instance.parentAssembly() === undefined) hash += `${instance.length()}x${instance.width()}x${instance.thickness()}`.hash();
-      hash += Object.hash(this.config());
-      hash += keyValHash();
+      let hashVal = 0;
+      if (instance.parentAssembly() === undefined) hashVal += `${instance.length()}x${instance.width()}x${instance.thickness()}`.hash();
+      hashVal += Object.hash(instance.config());
+      hashVal += keyValHash();
       const subAssems = Object.values(instance.subassemblies).sortByAttr('id');
       for (let index = 0; index < subAssems.length; index++) {
-        hash += subAssems[index].hash(true);
+        hashVal += subAssems[index].hash(true);
       }
-      if (hash !== lastHash) {
+      if (hashVal !== lastHash) {
         changeEvent.trigger(instance);
+        lastHash = hashVal;
+        return hash();
       }
-      lastHash = hash;
-      return hash;
+      return hashVal;
     }
 
     const keyValHash = this.hash;
-    this.hash = new FunctionCache(hash, this, 'hash');
+    this.hash = hash;
 
     this.group = (g) => {
       if (g) group = g;
@@ -284,41 +285,19 @@ class Assembly extends KeyValue {
       return array ? (normObj ? [normObj.x, normObj.y, normObj.z] : undefined) : normObj;
     }
 
-    // decendents = (assem) => {
-    //   const children = [];
-    //   const subAssems = Object.values(assem.subassemblies);
-    //   for (let index = 0; index < subAssems.length; index++) {
-    //     const child = subAssems[index];
-    //     children.push(child);
-    //     children.concatInPlace(decendents(assem));
-    //   }
-    //   return children;
-    // }
-    //
-    // relatedAssemblies = (assem) => {
-    //   const related= [assem];
-    //   let curr = assem;
-    //   while ((curr = curr.parentAssembly())) related.push(curr);
-    //   const root = related[related.length - 1];
-    //   related.concatInPlace(Object.values(root.subassemblies));
-    //   related.concatInPlace(decendents(assem));
-    //   return related;
-    // }
-
-    this.getJoints = (assem) => {
+    this.getDependencies = (assem) => {
       assem ||= this;
       const root = this.getRoot();
-      if (root !== this) return root.getJoints(assem);
-
-      const assemList = this.allAssemblies();
-      let allJoints = [].concat(this.joints);
-      if (assem) allJoints.concatInPlace(assem.joints);
-      assemList.forEach((assem) => allJoints.concatInPlace(assem.joints || []));
+      if (root !== this) return root.getDependencies(assem);
+      const assemList = this.allAssemblies().filter(a => a instanceof Assembly);
+      let allJoints = this.getDependencyList();;
+      if (assem) allJoints.concatInPlace(assem.getDependencyList());
+      assemList.forEach((assem) => allJoints.concatInPlace(assem.getDependencyList()));
       let joints = {male: [], female: []};
       const addJoint = (joint) => {
-        if (joint.isMale(assem)) {
+        if (joint.dependsOn(assem)) {
           joints.male.push(joint);
-        } else if (joint.isFemale(assem)) {
+        } else if (joint.isDependent(assem)) {
           joints.female.push(joint);
         }
       };
@@ -327,21 +306,24 @@ class Assembly extends KeyValue {
       return joints;
     };
 
-    this.getAllJoints = (assem) => {
+    this.getDependencyList = () => Object.values(namedDependencies).concat(this.joints);
+
+    this.getAllDependencies = (assem) => {
       assem ||= this;
       const root = this.getRoot();
-      if (root !== this) return root.getJoints(assem);
+      if (root !== this) return root.getDependencies(assem);
 
       const assemList = this.allAssemblies();
-      let allJoints = [].concat(this.joints);
+      let allJoints = [].concat(this.joints)
+                        .concat(Object.values(namedDependencies));
       // if (assem) allJoints.concatInPlace(assem.joints);
-      assemList.forEach((a) => a.joints && allJoints.concatInPlace(a.joints));
+      assemList.forEach((a) => a.getDependencyList && allJoints.concatInPlace(a.getDependencyList()));
       return allJoints;
     };
 
-    this.jointMap = () => {
+    this.dependencyMap = () => {
       const assems = this.allAssemblies();
-      const allJs = this.getAllJoints();
+      const allJs = this.getAllDependencies();
       const jMap = {female: {}, male: {}};
       for (let ji = 0; ji < allJs.length; ji++) {
         const joint = allJs[ji];
@@ -349,14 +331,17 @@ class Assembly extends KeyValue {
         jMap.male[jid] = [];
         for (let ai = 0; ai < assems.length; ai++) {
           const assem = assems[ai];
+          if (assem.partCode() === 'T:f' && joint.locationId() === 'frontCutJoint') {
+            console.log('here');
+          }
           if (assem instanceof Assembly && assem.included()) {
             const aid = assem.id();
-            if (aid.match(/^Divider_/) && (joint.isFemale(assem) || joint.isFemale(assem))) {
+            if (aid.match(/^Divider_/) && (joint.isDependent(assem) || joint.isDependent(assem))) {
               console.log();
             }
             if (!jMap.female[aid]) jMap.female[aid] = [];
-            if (assem.includeJoints() && joint.isMale(assem)) jMap.male[jid].push(aid);
-            if (joint.isFemale(assem)) jMap.female[aid].push(jid);
+            if (joint.dependsOn(assem)) jMap.male[jid].push(aid);
+            if (joint.isDependent(assem)) jMap.female[aid].push(jid);
           }
         }
       }
@@ -393,17 +378,16 @@ class Assembly extends KeyValue {
       this.subassemblies[assembly.partCode()] = assembly;
     }
 
-    this.addJoints = function () {
+    const namedDependencies = {};
+    this.addDependencies = function () {
       for (let i = 0; i < arguments.length; i += 1) {
         const joint = arguments[i];
-        if (joint instanceof Joint) {
-          const pc = this.locationCode();
+        if (joint instanceof Dependency) {
           const locId = joint.locationId();
-          if (locId) {
-            this.joints.removeWhere(j => j.locationId() === locId);
-          }
+          const pc = this.locationCode();
+          if (locId) namedDependencies[locId] = joint.clone();
+          else this.joints.push(joint.clone());
         }
-        this.joints.push(joint.clone());
       }
     }
 
@@ -500,7 +484,7 @@ class Assembly extends KeyValue {
     }
 
     this.on.change(() => {
-      const joints = this.getJoints();
+      const joints = this.getDependencies();
       jointList = joints.male.concat(joints.female);
       this.children().forEach(c => c.trigger.change());
     });
@@ -571,7 +555,7 @@ Assembly.fromJson = (assemblyJson) => {
     assembly.addSubAssembly(Object.fromJson(json));
   });
   const joints = Object.fromJson(assemblyJson.joints);
-  assembly.addJoints.apply(assembly, joints);
+  assembly.addDependencies.apply(assembly, joints);
   if (Array.isArray(assembly.subassemblies)) {
     console.log('wtff');
   }

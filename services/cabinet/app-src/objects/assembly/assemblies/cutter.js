@@ -4,7 +4,7 @@
 const Assembly = require('../assembly.js');
 const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
 const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
-const Joint = require('../../joint/joint.js');
+const Dependency = require('../../dependency');
 
 FunctionCache.on('cutter', 500);
 
@@ -29,8 +29,8 @@ class CutterReference extends Cutter {
     const partCode = `CR${reference.locationCode().hash(9949, false)}`;
     super(partCode, 'Reference');
     if (reference instanceof Assembly) {
-      const joint = new Joint.DependentOn(reference.locationCode(), this.locationCode())
-      this.addJoints(joint);
+      const joint = new Dependency(reference.locationCode(), this.locationCode())
+      this.addDependencies(joint);
     }
     offset ||= 0;
 
