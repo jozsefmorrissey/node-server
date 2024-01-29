@@ -8,7 +8,7 @@ const Line3D = require('../../../../three-d/objects/line');
 const Polygon3D = require('../../../../three-d/objects/polygon');
 const BiPolygon = require('../../../../three-d/objects/bi-polygon');
 const Butt = require('../../../joint/joints/butt.js');
-
+const Dependency = require('../../../dependency.js');
 
 class OpeningToeKick extends Assembly {
   constructor(autoToeKick, opening, index) {
@@ -23,6 +23,9 @@ class OpeningToeKick extends Assembly {
 
     const leftCornerCutter = new Cutter('lcc', 'LeftCorner', null, 'leftCorner');
     const rightCornerCutter = new Cutter('rcc', 'RightCorner', null, 'rightCorner');
+    rightCornerCutter.addDependencies(new Dependency(this.getAssembly('R'), rightCornerCutter))
+    leftCornerCutter.addDependencies(new Dependency(this.getAssembly('L'), leftCornerCutter))
+
     this.addSubAssembly(leftCornerCutter);
     this.addSubAssembly(rightCornerCutter);
     this.leftCornerCutter = () => leftCornerCutter;
@@ -50,7 +53,6 @@ class OpeningToeKick extends Assembly {
 
     this.tkb = () => toeKickPanel;
     this.part = () => false;
-
   }
 }
 

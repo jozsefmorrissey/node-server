@@ -43,9 +43,6 @@ class KeyValue extends Lookup {
         let curr = this;
         while(curr.parentAssembly() !== undefined) {
           curr = curr.parentAssembly();
-          if (!(curr.parentAssembly instanceof Function)) {
-            console.log('here');
-          }
         }
         return curr;
       }

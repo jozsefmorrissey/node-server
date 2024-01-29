@@ -22,9 +22,9 @@ class DividerUtil {
     const instance = this;
 
     const sectionProps = divider.find('S');
-    const dividerInfo = env.modelInfo[divider.id];
     if (!divider.locationCode.match(/_S/)) {
-      this.biPolygon = new BiPolygon(dividerInfo.biPolygonArray[0], dividerInfo.biPolygonArray[1]);
+      const dividerBiPoly = env.modelInfo.biPolygonArray[divider.id];
+      this.biPolygon = new BiPolygon(dividerBiPoly[0], dividerBiPoly[1]);
     } else {
       this.biPolygon = SectionPropertiesUtil.instance(sectionProps, env).dividerInfo();
     }
@@ -91,7 +91,7 @@ class DividerUtil {
       },
       back: (append) => {
         const backMtdo = sectionProps.back();
-        const bbpArray = env.modelInfo[backMtdo.id].biPolygonArray;
+        const bbpArray = env.modelInfo.biPolygonArray[backMtdo.id];
         const backBiPoly = new BiPolygon(bbpArray[0], bbpArray[1]);
         const front = backBiPoly.front().copy();
         const back = backBiPoly.back().copy();

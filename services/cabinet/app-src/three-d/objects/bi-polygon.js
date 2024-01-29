@@ -186,17 +186,17 @@ class BiPolygon {
       const flippedNormal = this.flippedNormal();
       const frontNorm = new Vertex3D(new Line3D(this.center(), this.front().center()).vector().unit());
       const front = new CSG.Polygon(normalize(face1, !flippedNormal));
-      if (!frontNorm.equals(front.plane.normal)) {
-        console.log.subtle('different');
-      }
+      // if (!frontNorm.equals(front.plane.normal)) {
+      //   console.log.subtle('different');
+      // }
       // front.plane.normal = front.vertices[0].normal.clone();//new CSG.Vector([0,1, 0,0]);
       const backNorm = new Vertex3D(new Line3D(this.center(), this.back().center()).vector().unit());
       // TODO we should make backNorm face opposite of front Norm may clear up confusion
       const flipBackNorm = this.back().normal().equals(this.front().normal()) ? flippedNormal : !flippedNormal;
       const back = new CSG.Polygon(normalize(face2, flipBackNorm));
-      if (!backNorm.equals(back.plane.normal)) {
-        console.log.subtle('different');
-      }
+      // if (!backNorm.equals(back.plane.normal)) {
+      //   console.log.subtle('different');
+      // }
       // back.plane.normal = back.vertices[0].normal.clone();//new CSG.Vector([0,0,1,0,0]);
       const polygonSets = [front, back];
 
@@ -209,9 +209,9 @@ class BiPolygon {
          const polyCenter = Vertex3D.center(...vertices);
          const polyNorm = new Vertex3D(new Line3D(this.center(), polyCenter).vector().unit());
          const back = new CSG.Polygon(normalize(face2, flippedNormal));
-         if (!polyNorm.equals(poly.plane.normal)) {
-           console.error.subtle('different');
-         }
+         // if (!polyNorm.equals(poly.plane.normal)) {
+         //   console.error.subtle('different');
+         // }
       }
       // polygonSets.forEach(p => p.setColor(0,0,255));
 
@@ -317,7 +317,7 @@ BiPolygon.fromVectorObject =
 
 BiPolygon.fromPositionObject = (position) => {
   const dem = position.demension;
-  const center = position.center.object();
+  const center = new Vertex3D(position.center);
   const vecObj = position.normals;
   return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj);
 }

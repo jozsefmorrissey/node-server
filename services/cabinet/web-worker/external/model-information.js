@@ -1,33 +1,35 @@
 
-const MDTO = require('../services/modeling/modeling-data-transfer-object.js');
+const DTO = require('./data-transfer-object.js');
 const MFC = require('../services/modeling/modeling-function-configuration.js');
 
-
+// TODO: move sorting/filtering functions to worker-bundle
 const sortUnderScoreCount = (a, b) => {
-  const aC = a.locationCode().count('_');
-  const bC = b.locationCode().count('_');
+  const aC = a.locationCode().count('_:');
+  const bC = b.locationCode().count('_:');
   if (aC !== bC) return aC - bC;
-  return a.locationCode().length - b.locationCode().length;
+  return a.locationCode() - b.locationCode();
 }
 
 function sortAssemMtdos(assemMtdos) {
-  let cab, back;
+  let cab, back, aoc;
   const defaultBuilt = [];
   const customBuilt = [];
   const sectionAssems = [];
   for (let index = 0; index < assemMtdos.length; index++) {
     const a = assemMtdos[index];
     if (a.partCode() === 'BACK') back = a;
+    else if (a.partCode() === 'aoc') aoc = a;
     else {
       if (MFC.usesDefault(a.id(), a.partName()) === true) defaultBuilt.push(a);
       else if (a.locationCode().match(/_S1/)) sectionAssems.push(a);
       else customBuilt.push(a);
     }
   }
-  defaultBuilt.sortByAttr(sortUnderScoreCount);
-  customBuilt.sortByAttr(sortUnderScoreCount);
-  sectionAssems.sortByAttr(sortUnderScoreCount);
+  defaultBuilt.sort(sortUnderScoreCount);
+  customBuilt.sort(sortUnderScoreCount);
+  sectionAssems.sort(sortUnderScoreCount);
   const list = []
+  if (aoc) defaultBuilt.push(aoc);
   if (back) list.push(back);
   return list.concat(defaultBuilt.concat(customBuilt.concat(sectionAssems)));
 }
@@ -51,9 +53,9 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
   obj.dependencies = [];
   if (dependentMatch) obj.dependencies.push(assembly.parentAssembly().id());
   obj.joints.forEach(jId => obj.dependencies.concatInPlace(jointMap.male[jId]));
-  obj.dependencies.forEach(id => jointCompexityObject(id, complexityObj, jointMap, byId));
   obj.complexity = () => {
     if (!Number.isNaN(complexity)) return complexity;
+    if (assembly.includeJoints() === false && MFC.usesDefault(assembly.id())) return 1;
     complexity = 1;
     for (let index = 0; index < obj.dependencies.length; index++) {
       const id = obj.dependencies[index];
@@ -63,6 +65,7 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
     }
     return complexity;
   }
+  obj.dependencies.forEach(id => jointCompexityObject(id, complexityObj, jointMap, byId));
   return obj;
 }
 
@@ -80,43 +83,21 @@ const sorter = (assemblies, jointMap, byId) => {
   return objs;
 }
 
-const needsToBeRendered = (jointMap, targetMdto, byId) => {
-  if (targetMdto === undefined) return assemblies.map(a => a);
-  const needsSearched = [targetMdto];
-  let buildModels = {};
-  let index = 0;
-  while(needsSearched.length > index) {
-    const assem = needsSearched[index];
-    buildModels[assem.id()] = assem;
-    const associatedJoints = jointMap.female[assem.id()];
-    for (let aji = 0; associatedJoints && aji < associatedJoints.length; aji++) {
-      const jointId = associatedJoints[aji];
-      const maleIds = jointMap.male[jointId];
-      for (let midi = 0; midi < maleIds.length; midi++) {
-        const maleId = maleIds[midi];
-        if (buildModels[maleId] === undefined) {
-          needsSearched.push(maleId);
-          buildModels[maleId] = byId[maleId];
-        }
-      }
-    }
-    index++;
-  }
-  return Object.values(buildModels);
-}
 
 
 
 
+const modelInfoObject = () => ({model: {}, joined: {}, intersection: {}, biPolygonArray: {}});
 
 class ModelInformation {
   constructor(targetOs, props) {
     props ||= {};
+    const instance = this;
     let targets = targetOs;
     if (!Array.isArray(targets)) targets = [targetOs];
     const assemblies = targets[0].allAssemblies();
-    if (props.all === true) targets = assemblies.filter(a => a.part() && a.included());
-    const modelInfo = props.modelInfo || {};
+    if (props.allRelatedParts === true) targets = assemblies.filter(a => a.part() && a.included());
+    const modelInfo = props.modelInfo || modelInfoObject();
     const jointMap = assemblies[0].dependencyMap();
     const dependencies = assemblies[0].getAllDependencies();
     const byId = {};
@@ -131,8 +112,21 @@ class ModelInformation {
     buildModels = Object.values(joinModels).map(ac => ac.assembly);
     buildModels = sortAssemMtdos(buildModels);
 
+    this.buildModels = (models) => {
+      if (models) {
+        buildModels = models;
+      }
+      return buildModels;
+    }
+    this.joinModels = (models) => {
+      if (models) {
+        joinModels = models;
+      }
+      return joinModels;
+    }
+
     const environmentObject = () => {
-      const environment = MDTO.to(props) || {};
+      const environment = DTO(props) || {};
       environment.byId = byId;
       environment.modelInfo = modelInfo;
       environment.propertyConfig = propertyConfig;
@@ -141,64 +135,47 @@ class ModelInformation {
     }
 
     this.environment = environmentObject;
-    this.buildModels = () => buildModels.filter(a => modelInfo[a.id()] === undefined || modelInfo[a.id()].model === undefined);
-    this.joinModels = () => joinModels.filter(o => modelInfo[o.assembly.id()] === undefined ||
-                                modelInfo[o.assembly.id()].joinedModel === undefined);
-    this.slicedModels = () => targets.filter(a => modelInfo[a.id()] === undefined ||
-                                modelInfo[a.id()].joinedModel === undefined ||
-                                Object.keys(modelInfo[a.id()].joinedModel).length < 2);
+    this.needsModeled = () => buildModels.filter(a => modelInfo.model[a.id()] === undefined);
+    this.needsJoined = () => joinModels.filter(o => modelInfo.joined[o.assembly.id()] === undefined);
+    this.needsIntersected = () => targets.filter(a => modelInfo.intersection[a.id()] === undefined);
+    this.needsUnioned = () => unionedCsg ? [] : (props.partsOnly === false ? targets :
+                          targets.filter(a => a.part() && a.included()));
 
-    this.modelInfo = (id) => {
-      return modelInfo[id];
-    }
+    function addTrackingFunctions(...attributes) {
+      for (let index = 0; index < attributes.length; index++) {
+        const attr = attributes[index];
+        instance[attr] = (id) => {
+          return modelInfo[attr][id];
+        }
 
-    this.modelInfos = (modelInfoMap) => {
-      const keys = Object.keys(modelInfoMap);
-      for (let index = 0; index < keys.length; index++) {
-        const id = keys[index];
-        modelInfo[id] = modelInfoMap[id];
-      }
-      return this;
-    }
-    this.joinedModels = (joinedModelMap) => {
-      const keys = Object.keys(joinedModelMap);
-      for (let index = 0; index < keys.length; index++) {
-        const id = keys[index];
-        modelInfo[id].joinedModel = joinedModelMap[id];
-      }
-      return this;
-    }
-
-    this.joints = () => joints;
-    // this.joints.female = (dto) => {
-    //   return joints.filter(j => isMatch(j.femaleJointSelector(), dto));
-    // }
-    this.assemblies = () => assemblies;
-    this.assembly = (id) => assemMap[id];
-    this.models = (filter) => {
-      const runFilter = filter instanceof Function;
-      filter ||= !props.all ? (mtdo) => targets.find(a => a.id().equals(mtdo.id())) :
-                            (mtdo) => mtdo.part && mtdo.included;
-      let csg = new CSG();
-      const ids = Object.keys(modelInfo);
-      for (let index = 0; index < ids.length; index++) {
-        const id = ids[index];
-        if (modelInfo[id]) {
-          let model = modelInfo[id].joinedModel.final;
-          const mtdo = byId[id];
-          if (mtdo.partCode() === 'R:full') {
-            let a = 1 +2;
-          }
-          if (model && filter(mtdo, model)) {
-            if (!(model instanceof CSG)) model = CSG.fromPolygons(model.polygons, true);
-            csg = csg.union(model);
+        instance[`${attr}Map`] = (modelMap) => {
+          const keys = Object.keys(modelMap);
+          for (let index = 0; index < keys.length; index++) {
+            const id = keys[index];
+            modelInfo[attr][id] = modelMap[id];
           }
         }
       }
-      return csg.polygons.length > 0 ? csg : null;
     }
-    this.percentBuilt = () =>
-        Object.values(modelInfo).length / buildModels.length;
+    addTrackingFunctions('model', 'joined', 'intersection', 'biPolygonArray')
+
+    this.assemblies = () => assemblies;
+    this.assembly = (id) => assemMap[id];
+
+    let unionedCsg;
+    this.unioned = (data) => {
+      if (data) unionedCsg = CSG.fromPolygons(data.polygons, true);
+      else return unionedCsg;
+    }
+
+    const attrPercent = (attr, list) => Object.values(modelInfo[attr]).length / list.length;
+    this.status = () => ({
+      models: buildModels ? attrPercent('model', buildModels) : null,
+      joined: buildModels ? attrPercent('joined', joinModels) : null,
+      intersection: buildModels ? attrPercent('intersection', joinModels) : null,
+      biPolygonArray: buildModels ? attrPercent('biPolygonArray', buildModels) : null,
+      unioned: unionedCsg ? true : false
+    })
   }
 }
 
@@ -206,7 +183,7 @@ const all = {};
 const setModelInfomation = (root) => {
   all[root.id()] ||= ({
     hash: root.hash(),
-    modelInfo: {},
+    modelInfo: modelInfoObject(),
   });
   all[root.id()].lastAccess = new Date().getTime();
   return all[root.id()].modelInfo;

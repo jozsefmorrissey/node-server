@@ -18,7 +18,7 @@ class SectionPropertiesUtil {
       const back = spDto.back();
 
       if (back) {
-        const biPolyArr = env.modelInfo[back.id].biPolygonArray;
+        const biPolyArr = env.modelInfo.biPolygonArray[back.id];
         const biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
         if(biPoly) {
           innerDepth = biPoly.distance(this.innerPoly.center());

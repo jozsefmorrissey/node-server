@@ -883,33 +883,54 @@ Function.safeStdLibAddition(Array, 'equalIndexOf', function (elem, startIndex, e
     return -1;
 });
 
-Function.safeStdLibAddition(Array, 'condition', function (initalValue, conditionFunc) {
+Function.safeStdLibAddition(Array, 'condition', function (conditionFunc, initialValue) {
+  // console.warn('Function has been modified make sure results are as expected');
+  let value = initialValue;
   const valueFuncDefined = (typeof valueFunc) === 'function';
   for (let index = 0; index < this.length; index += 1) {
     const elem = this[index];
-    initalValue = conditionFunc(initalValue, elem);
+    value = conditionFunc(elem, value, index);
   }
-  return initalValue;
+  return value;
 });
 
-Function.safeStdLibAddition(Array, 'max', function (max, func) {
+function arrayMaxObj(func, max) {
   const funcDefined = (typeof func) === 'function';
-  const initalValue = max || max === 0 ? {elem: max, value: funcDefined ? func(max) : max} : undefined;
-  return this.condition(initalValue, (max, elem) => {
+  const initialValue = max || max === 0 ?
+        {elem: max, value: funcDefined ? func(max) : max, index: -1} : undefined;
+  return this.condition((elem, max, index) => {
     let value = funcDefined ? func(elem, index) : elem;
-    if (!(max instanceof Object) || value > max.value) return {value, elem};
-    return max
-  }).elem;
+    if (!(max instanceof Object) || value > max.value) return {value, elem, index};
+    return max;
+  }, initialValue);
+}
+
+Function.safeStdLibAddition(Array, 'max', function (func, max) {
+  const obj = arrayMaxObj.apply(this, [func, max]);
+  return obj ? obj.elem : undefined;
+});
+Function.safeStdLibAddition(Array, 'maxIndex', function (func, max) {
+  const obj = arrayMaxObj.apply(this, [func, max]);
+  return obj ? obj.index : -1;
 });
 
-Function.safeStdLibAddition(Array, 'min', function (min, func) {
+function arrayMinObj(func, min) {
   const funcDefined = (typeof func) === 'function';
-  const initalValue = min || min === 0 ? {elem: min, value: funcDefined ? func(min) : min} : undefined;
-  return this.condition(initalValue, (min, elem) => {
+  const initialValue = min || min === 0 ? {elem: min, value: funcDefined ? func(min) : min} : undefined;
+  return this.condition((elem, min, index) => {
     let value = funcDefined ? func(elem, index) : elem;
-    if (!(min instanceof Object) || value < min.value) return {value, elem};
+    if (!(min instanceof Object) || value < min.value) return {value, elem, index};
     return min
-  }).elem;
+  }, initialValue);
+}
+
+Function.safeStdLibAddition(Array, 'min', function (func, min) {
+  const obj = arrayMinObj.apply(this, [func, min]);
+  return obj ? obj.elem : -1;
+});
+Function.safeStdLibAddition(Array, 'minIndex', function (func, min) {
+  const obj = arrayMinObj.apply(this, [func, min]);
+  return obj ? obj.index : -1;
 });
 
 Function.safeStdLibAddition(Array, 'print', function (min, func) {
@@ -1088,9 +1109,6 @@ function setToJson(obj, options) {
 function staticFromJson(cxtr) {
   const fromJson = (json) => {
     const obj = new cxtr();
-    if (json.id === "tiltzzw4x3mglwy2bktod910p5g3m7ib") {
-      console.log('her');
-    }
     obj.fromJson(json);
     return obj;
   };

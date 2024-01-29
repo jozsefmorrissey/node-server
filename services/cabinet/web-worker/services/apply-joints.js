@@ -1,5 +1,7 @@
 
-function determineMales(joinedModelMap, assem, env) {
+const DTO = require('../shared/data-transfer-object')();
+
+function determineMales(assem, env) {
   const joints = env.jointMap.female[assem.id] || [];
   const males = [];
   joints.forEach(jId =>
@@ -7,48 +9,70 @@ function determineMales(joinedModelMap, assem, env) {
   return males;
 }
 
-function removeJonintMaterial(joinedModelMap, assem, env, model, snapShot) {
-  const males = determineMales(joinedModelMap, assem, env);
-  const joinedModels = {final: new CSG()};
+function removeJonintMaterial(map, newMap, assem, env, model, intersections) {
+  const males = determineMales(assem, env);
+  const id = assem.id;
   let malesModel = new CSG();
+  if (intersections) map.intersection[id] = newMap.intersection[id] = {};
   males.forEach(mid => {
-    const mm = joinedModelMap[mid];
-    if (mm && mm.final) {
-      if (!(mm.final instanceof CSG)) mm.final = CSG.fromPolygons(mm.final.polygons, true);
-      if (snapShot) joinedModels[mid] = model.subtract(malesModel);
-      malesModel = malesModel.union(mm.final);
+    let mm = map.joined[mid];
+    if (mm) {
+      if (!(mm instanceof CSG)) mm = map.joined[mid] = CSG.fromPolygons(mm.polygons, true);
+      if (intersections) {
+        const intersection = model.intersect(mm);
+        if (intersection.polygons.length) map.intersection[id][mid] = newMap.intersection[id][mid] = intersection;
+      }
+      malesModel = malesModel.union(mm);
     }
     // else console.warn(`I dont thin you should see this id: '${mid}' does not have a joinedModel`);
   });
   try {
-    joinedModels.final = model.subtract(malesModel);
+    if (map.joined[id] === undefined)
+      map.joined[id] = newMap.joined[id] = model.subtract(malesModel);
   } catch (e) {
     console.log(e);
-    joinedModels.final = model;
+    map.joined[id] = newMap.joined[id] = model;
   }
-  joinedModelMap[assem.id] = joinedModels;
 }
 
-function Apply(assemblies, environment, snapShot) {
+function reportBack(newMap, taskId, intersections) {
+  postMessage({id: taskId, result: {type: 'joined', map: DTO(newMap.joined)}});
+  if (intersections)
+    postMessage({id: taskId, result: {type: 'intersection', map: DTO(newMap.intersection)}});
+}
+
+const alreadyProcessed = (map, id, intersections) =>
+  map.joined[id] !== undefined && (!intersections || map.intersection[id]);
+
+const newMapObj = () => ({intersection: {}, joined: {}});
+function Apply(assemblies, environment, taskId, intersections) {
   let env = environment;
-  const joinedModelMap = {};
-  Object.keys(env.modelInfo).forEach(k => joinedModelMap[k] = env.modelInfo[k].joinedModel);
+  let newMap = newMapObj();
+  let map = {intersection: env.modelInfo.intersection, joined: env.modelInfo.joined};
+  let proccessedIndex = 0;
   for (let index = 0; index < assemblies.length; index++) {
     const mtdo = assemblies[index];
     const assem = mtdo.assembly || mtdo;
-    if (env.modelInfo[assem.id] === undefined) {
+    if (env.modelInfo.model[assem.id] === undefined ||
+        alreadyProcessed(map, assem.id, intersections)) {
       continue;
     }
-    let model = env.modelInfo[assem.id].model;
+    let model = env.modelInfo.model[assem.id];
     if (model && assem.part && assem.included) {
       model = CSG.fromPolygons(model.polygons, true);
       const joints = env.jointMap.female[assem.id] || [];
       const males = [];
-      removeJonintMaterial(joinedModelMap, assem, env, model, snapShot);
-    } else
-      joinedModelMap[assem.id] = {final: model};
+      removeJonintMaterial(map, newMap, assem, env, model, intersections);
+    } else if (map.joined[assem.id] === undefined) {
+      map.joined[assem.id] = newMap.joined[assem.id] = model;
+    }
+
+    if (((++proccessedIndex + 1) % 10) === 0) {
+      reportBack(newMap, taskId, intersections);
+      newMap = newMapObj();
+    }
   }
-  return joinedModelMap;
+  reportBack(newMap, taskId, intersections);
 }
 
 module.exports = Apply;

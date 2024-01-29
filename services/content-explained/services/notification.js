@@ -13,7 +13,6 @@ const { QuestionNotification, CommentNotification, ExplanationNotification,
 
 function notifyAll(notifyFunc, userIdFields, ignoreUserId) {
   return function (connections) {
-    console.log('herrrr', userIdFields, connections);
     let connectionMap = [];
     for (let index = 0; index < connections.length; index += 1) {
       for (let uIndex = 0; uIndex < userIdFields.length; uIndex += 1) {

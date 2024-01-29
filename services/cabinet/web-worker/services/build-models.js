@@ -1,32 +1,48 @@
 
 const MFC = require('./modeling/modeling-function-configuration.js');
-const MTDO = require('./modeling/modeling-data-transfer-object');
+const RDTO = require('./modeling/reconnect-transfer-object');
+const DTO = require('../shared/data-transfer-object')();
 
 
-function BuildModels(assemblies, environment) {
+function reportBack(modelMap, polyMap, taskId) {
+  postMessage({id: taskId, result: {type: 'biPolygon', map: DTO(polyMap)}});
+  postMessage({id: taskId, result: {type: 'model', map: DTO(modelMap)}});
+}
+
+const reportMod = 20;
+function BuildModels(assemblies, environment, taskId) {
+  let newModels = {};
+  let newPolys = {};
   for (let index = 0; index < assemblies.length; index++) {
-    let assembly = MTDO.reconnect(assemblies[index], environment.byId);
+    let assembly = RDTO(assemblies[index], environment.byId);
     let model, biPolygon, biPolygonArray;
     try {
       // console.log(`Building Model: '${assembly.locationCode}'`)
       // if (assembly.partCode.match(/^db$/)) {
-      //     console.log('target');
-      //   }
-        const modelFuncs = MFC(assembly);
-        if (!modelFuncs.biPolygon) model = modelFuncs.model(assembly, environment);
-        else {
-          biPolygon = modelFuncs.biPolygon(assembly, environment);
-          biPolygonArray = biPolygon.toArray();
-          model = biPolygon.model();
-        }
-        environment.modelInfo[assembly.id] = {model, biPolygonArray};
-      } catch (e) {
-        e.msg = 'There are failing models that i have not decided on a way to handle';
-        environment.modelInfo[assembly.id] = {model: null, biPolygonArray: null, msg: e.msg};
+      //   console.log('target');
+      // }
+      const modelFuncs = MFC(assembly);
+      if (!modelFuncs.biPolygon) {
+        biPolygonArray = null;
+        model = modelFuncs.model(assembly, environment);
+      } else {
+        biPolygon = modelFuncs.biPolygon(assembly, environment);
+        biPolygonArray = biPolygon.toArray();
+        model = biPolygon.model();
       }
+      environment.modelInfo.model[assembly.id] = model;
+      environment.modelInfo.biPolygonArray[assembly.id] = biPolygonArray
+      newModels[assembly.id] = model;
+      newPolys[assembly.id] = biPolygonArray;
+    } catch (e) {
+      return new Error(`Failed to Create Model For:\n\t${assembly.locationCode}`)
+    }
+    if ((index + 1) % 20 === 0) {
+      reportBack(newModels, newPolys, taskId);
+      newModels = {}; newPolys = {};
+    }
   }
-
-  return environment.modelInfo;
+  reportBack(newModels, newPolys, taskId);
 }
 
 

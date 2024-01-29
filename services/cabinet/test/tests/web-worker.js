@@ -7,18 +7,20 @@ const Frame = require('../../app-src/objects/assembly/assemblies/frame.js');
 
 
 
-function get(dontApplyTestConfig) {
-  const cabinet = Cabinet.build('base');
-  if (!dontApplyTestConfig) CabinetLayouts.map['test'].build(cabinet);
+function get(layout, type) {
+  const cabinet = Cabinet.build(type || 'base');
+  if (layout !== true || (typeof layout) === 'string')
+    CabinetLayouts.map[layout || 'test'].build(cabinet);
   cabinet.updateOpenings(true)
   return cabinet.allAssemblies();
 }
 
-const MDTO = require('../../web-worker/services/modeling/modeling-data-transfer-object.js');
-Test.add('MDTO', (ts) => {
+const DTO = require('../../web-worker/external/data-transfer-object.js');
+const RTO = require('../../web-worker/services/modeling/reconnect-transfer-object');
+Test.add('DTO', (ts) => {
   const all = get();
-  const dtos = MDTO.to(all);
-  const reconnected = MDTO.reconnect(dtos);
+  const dtos = DTO(all);
+  const reconnected = RTO(dtos);
 
   ts.assertEquals(reconnected.length + dtos.length, all.length *2, 'Incorrect Number of objects returned by conversion');
 
@@ -29,8 +31,8 @@ Test.add('MDTO', (ts) => {
   ts.assertTrue(center.equals(firstA.position().center()), 'Vertex3D conversion contains Error/s');
   ts.assertTrue(normals instanceof Object, 'plane js Object conversion contains Error/s');
   const xVectEq = firstA.position().normals().x.equals(normals.x);
-  const yVectEq = firstA.position().normals().x.equals(normals.x);
-  const zVectEq = firstA.position().normals().x.equals(normals.x);
+  const yVectEq = firstA.position().normals().y.equals(normals.y);
+  const zVectEq = firstA.position().normals().z.equals(normals.z);
   ts.assertTrue(xVectEq && yVectEq && zVectEq, 'Vector3D conversion contains Error/s');
 
   const lastA = all[all.length - 1];
@@ -57,22 +59,21 @@ function ensureRendered(assems, modelInfo, ts, msg) {
   for (let index = 0; index < assems.length; index++) {
     msg ||= `Faild to create model for: ${assems[index].locationCode()}`;
     const partId = assems[index].id();
-    ts.assertTrue(modelInfo[partId] !== undefined, msg);
-    const model = modelInfo[partId].model;
+    const model = modelInfo.model[partId];
     ts.assertTrue(model !== undefined, msg);
     ts.assertTrue(Array.isArray(model.polygons), msg);
     ts.assertTrue(model.polygons.length > 0, msg);
   }
 }
 
-const onComplete = (ts, parts, snapShot) => (modelInfo) => {
-  ts.assertEquals(modelInfo.percentBuilt(), 1);
+const onComplete = (ts, parts, intersections) => (modelInfo) => {
+  ts.assertEquals(modelInfo.status().models, 1);
   parts.forEach(p => {
-    if (snapShot) {
-      const jModelObj = modelInfo.modelInfo(p.id()).joinedModel;
-      ts.assertTrue(Object.keys(jModelObj).length > 1);
+    if (intersections) {
+      const intModelObj = modelInfo.intersection(p.id());
+      ts.assertTrue(Object.keys(intModelObj).length > 1);
     } else {
-      const model = modelInfo.modelInfo(p.id()).model;
+      const model = modelInfo.model(p.id());
       ts.assertTrue(Array.isArray(model.polygons));
       ts.assertTrue(model.polygons.length > 0);
     }
@@ -80,82 +81,101 @@ const onComplete = (ts, parts, snapShot) => (modelInfo) => {
   ts.success();
 }
 
-const CsgBuildTask = require('../../web-worker/external/tasks');
-const ModelInfo = require('../../web-worker/services/model-information.js');
-// Test.add('CsgBuildTask base', (ts) => {
-//   const allAssemblies = get(true);
-//   const parts = allAssemblies.filter(a => a.part() && a.included());
-//   new CsgBuildTask(parts, onComplete(ts, parts)).queue();
-// });
+const onFail = (ts) => (task) => {
+  ts.fail(task.error());
+}
 
-// Test.add('CsgBuildTask base:layout(test)', (ts) => {
-//   const allAssemblies = get();
-//   const parts = allAssemblies.filter(a => a.part() && a.included());
-//   new CsgBuildTask(parts, onComplete(ts, parts)).queue();
-// });
-//
-// Test.add('CsgBuildTask base:R:full', (ts) => {
-//   const allAssemblies = get();
-//   const panel = allAssemblies.filter(a => a.partCode() === 'R:full')[0];
-//   const parts = [panel];
-//   new CsgBuildTask(parts, onComplete(ts, parts)).queue();
-// });
-//
-//
-// Test.add('CsgBuildTask base:layout(c)', (ts) => {
-//   const allAssemblies = get();
-//   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
-//   const parts = [cabinet];
-//   new CsgBuildTask(parts, onComplete(ts, parts, {doNotJoin: true})).queue();
-// });
-//
-// Test.add('CsgBuildTask base:layout(WW)', async (ts) => {
-//   const allAssemblies = get();
-//   const rightPanel = allAssemblies.filter(a => a.partCode() === 'R:full')[0];
-//   const leftPanel = allAssemblies.filter(a => a.partCode() === 'L:full')[0];
-//   const relatedInfo = ModelInfo.related(rightPanel);
-//   let startTime = new Date().getTime();
-//   let leftTime, rightTime, leftTime2;
-//   const msg = 'Right and Left Itterators are not synconised';
-//
-//   const leftComplete2 = () => {
-//     leftTime2 = new Date().getTime();
-//     const completionRatio = (leftTime2 - leftTime) / (leftTime2 - startTime);
-//     ensureRendered([rightPanel, leftPanel], relatedInfo, ts, msg);
-//     ts.assertTrue(completionRatio < .2, 'ModelInfo.related object not reflecting changes');
-//     ts.success();
-//   };
-//
-//   const left2Builder = async () => {
-//     new CsgBuildTask(leftPanel, leftComplete2).queue();
-//   }
-//
-//   const leftComplete = () => {
-//     leftTime = new Date().getTime();
-//     const completionRatio = (leftTime - rightTime) / (leftTime - startTime);
-//     ensureRendered([rightPanel, leftPanel], relatedInfo, ts, msg);
-//     ts.assertTrue(completionRatio < .5, 'ModelInfo.related object not reflecting changes');
-//     left2Builder();
-//   };
-//
-//   const leftBuilder = async () => {
-//     new CsgBuildTask(leftPanel, leftComplete).queue();
-//   }
-//
-//   const rightComplete = () => {
-//     rightTime = new Date().getTime();
-//     ensureRendered([rightPanel], relatedInfo, ts, msg);
-//     leftBuilder();
-//   };
-//
-//   new CsgBuildTask(rightPanel, rightComplete).queue();
-// });
+const Jobs = require('../../web-worker/external/jobs');
+const ModelInfo = require('../../web-worker/external/model-information.js');
+Test.add('CsgBuildTask base', (ts) => {
+  const allAssemblies = get(true);
+  const parts = allAssemblies.filter(a => a.part() && a.included());
+  new Jobs.CSG.Join(parts).then(onComplete(ts, parts), ts.fail).queue();
+});
 
 Test.add('CsgBuildTask base:layout(test)', (ts) => {
+  const allAssemblies = get();
+  const parts = allAssemblies.filter(a => a.part() && a.included());
+  new Jobs.CSG.Join(parts).then(onComplete(ts, parts), onFail(ts)).queue();
+});
+
+Test.add('CsgBuildTask base:R:full', (ts) => {
+  const allAssemblies = get();
+  const panel = allAssemblies.filter(a => a.partCode() === 'R:full')[0];
+  const parts = [panel];
+  new Jobs.CSG.Join(parts).then(onComplete(ts, parts), ts.fail).queue();
+});
+
+Test.add('CsgBuildTask base:layout(c)', (ts) => {
+  const allAssemblies = get();
+  const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
+  const parts = [cabinet];
+  new Jobs.CSG.Model(parts).then(onComplete(ts, parts), ts.fail).queue();
+});
+
+Test.add('CsgBuildTask base:layout(WW)', async (ts) => {
+  const allAssemblies = get();
+  const rightPanel = allAssemblies.filter(a => a.partCode() === 'R:full')[0];
+  const leftPanel = allAssemblies.filter(a => a.partCode() === 'L:full')[0];
+  const relatedInfo = ModelInfo.related(rightPanel);
+  let startTime = new Date().getTime();
+  let leftTime, rightTime, leftTime2;
+  const msg = 'Right and Left Itterators are not synconised';
+
+  const leftComplete2 = () => {
+    leftTime2 = new Date().getTime();
+    const completionRatio = (leftTime2 - leftTime) / (leftTime2 - startTime);
+    ensureRendered([rightPanel, leftPanel], relatedInfo, ts, msg);
+    ts.assertTrue(completionRatio < .2, 'ModelInfo.related object not reflecting changes');
+    ts.success();
+  };
+
+  const left2Builder = async () => {
+    new Jobs.CSG.Join(leftPanel).then(leftComplete2, ts.fail).queue();
+  }
+
+  const leftComplete = () => {
+    leftTime = new Date().getTime();
+    const completionRatio = (leftTime - rightTime) / (leftTime - startTime);
+    ensureRendered([rightPanel, leftPanel], relatedInfo, ts, msg);
+    ts.assertTrue(completionRatio < .5, 'ModelInfo.related object not reflecting changes');
+    left2Builder();
+  };
+
+  const leftBuilder = async () => {
+    new Jobs.CSG.Join(leftPanel).then(leftComplete, ts.fail).queue();
+  }
+
+  const rightComplete = () => {
+    rightTime = new Date().getTime();
+    ensureRendered([rightPanel], relatedInfo, ts, msg);
+    leftBuilder();
+  };
+
+  new Jobs.CSG.Join(rightPanel).then(rightComplete, ts.fail).queue();
+});
+
+Test.add('CsgBuildTask base:layout(intersections)', (ts) => {
   const allAssemblies = get();
   const panelR = allAssemblies.filter(a => a.partCode() === 'R:full')[0];
   const panelL = allAssemblies.filter(a => a.partCode() === 'L:full')[0];
 
   const parts = [panelR, panelL];
-  new CsgBuildTask(parts, onComplete(ts, parts, true), {snapShot: true}).queue();
+  new Jobs.CSG.Intersection(parts).then(onComplete(ts, parts, true), ts.fail).queue();
+});
+
+Test.add('CsgBuildTask diagonal-corner-base', (ts) => {
+  const allAssemblies = get(true, 'diagonal-corner-base');
+  const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
+  const parts = [cabinet];
+  new Jobs.CSG.Model(parts).then(onComplete(ts, parts), ts.fail).queue();
+});
+
+Test.add('CsgBuildTask diagonal-corner-base:layout(3dsb3d)', (ts) => {
+  const allAssemblies = get("3dsb3d", 'diagonal-corner-base');
+  const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
+  const fronts = allAssemblies.filter(a => a.part() && a.partCode().match(/^(d|df|D|ff|Dr|Dl)$/));
+  const pulls = allAssemblies.filter(a => a.part() && a.partCode().match(/^(pu)$/));
+  const parts = [cabinet].concat(fronts).concat(pulls);
+  new Jobs.CSG.Model(parts, false).then(onComplete(ts, parts), ts.fail).queue();
 });

@@ -79,17 +79,29 @@ to.Cabinet = {
   Simple: {
     model: (mdto, environment) => {
       const childs = mdto.children.map(c => c());
-      const simpleKids = childs.filter(c => c.part || c.id.match(/^Divider/));
-      // const toeKickId = getToeKick();
-      // if (toeKick) {
-      //   childIds.concatInPlace(toeKick.getParts());
-      // }
+      const parts = childs.filter(c => c.part || c.id.match(/^Divider/));
+      const cutters = childs.filter(c => c.id.match(/^Cutter/));
+      const cutter = mdto.openings[0].cutter;
+      if (cutter) cutters.push(cutter());
       let csg = new CSG();
-      for (let index = 0; index < simpleKids.length; index++) {
-        const id = simpleKids[index].id;
-        const modelInfo = environment.modelInfo[id];
-        if (modelInfo) {
-          csg = csg.union(modelInfo.model);
+      for (let index = 0; index < parts.length; index++) {
+        const id = parts[index].id;
+        let model = environment.modelInfo.model[id];
+        if (!(model instanceof CSG)) {
+          environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
+        }
+        if (model) {
+          csg = csg.union(model);
+        }
+      }
+      for (let index = 0; index < cutters.length; index++) {
+        const id = cutters[index].id;
+        let model = environment.modelInfo.model[id];
+        if (!(model instanceof CSG)) {
+          environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
+        }
+        if (model) {
+          csg = csg.subtract(model);
         }
       }
       return csg;
@@ -200,7 +212,7 @@ to.CutterReference = {
       const isBiPoly = ref instanceof BiPolygon;
       let biPoly = ref;
       if (!(biPoly instanceof BiPolygon)) {
-        let biPolyArr = environment.modelInfo[ref.id].biPolygonArray;
+        let biPolyArr = environment.modelInfo.biPolygonArray[ref.id];
         biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
       }
       if (biPoly === undefined) throw new Error('Invalid Reference or assemblies not ordered properly');
@@ -246,10 +258,9 @@ to.Cutter = {
     }
   },
   Opening: {
-    toBiPolygon: (rMdto, environment) => {
-      const outer = rMdto.outer;
-      const outerPoly = new Polygon3D(outer);
-      const corner2corner = outer[0].distance(outer[2]);
+    biPolygon: (rMdto, environment) => {
+      const outerPoly = rMdto.parentAssembly().coordinates.outer.object();
+      const corner2corner = outerPoly.vertex(0).distance(outerPoly.vertex(2));
       const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2, 0, {x:0, y:1000});
       return biPoly;
     }

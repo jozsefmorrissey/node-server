@@ -43,7 +43,7 @@ class OpeningToeKickUtil {
 
 
     function corners(side, openingCenter, targetCorner, innerPoly, height, depth1, depth2) {
-      const sideBiPolyArr = modelInfo.modelInfo[side.id].biPolygonArray;
+      const sideBiPolyArr = modelInfo.modelInfo.biPolygonArray[side.id];
       const biPoly = new BiPolygon(sideBiPolyArr[0], sideBiPolyArr[1]);
       const poly = biPoly.furthestOrder(openingCenter)[1];
       let front = Line3D.centerClosestTo(openingCenter, poly.lines()).polarize(targetCorner);
@@ -112,8 +112,6 @@ class OpeningToeKickUtil {
 
       const buttToePoly2 = toPoly(topInner, bottomInner);
       const buttToePoly1 = toPoly(topOuter, bottomOuter);
-      const rightThickness = cabinet.find('R').position.current.demension.z;
-      const leftThickness = cabinet.find('L').position.current.demension.z;
       toeKick = new BiPolygon(buttToePoly1, buttToePoly2);
       tkbNormals = {
         x: faces[0].lines()[3].vector().unit(),
@@ -203,7 +201,6 @@ class OpeningToeKickUtil {
       const tkh = propConfig.Cabinet.tkh;//cabinet.value('tkh');
       const sdepth = propConfig.Cabinet.tkd;//cabinet.value('tkd');
       const cabinet = openTk.find('c');
-      const L = cabinet.find.down('L');
       const dem = cabinet.position.current.demension;
       const xyOffset = {x: dem.x + dem.z + dem.y, y: 0};
       vOid = buildOffset(right, left, center, coords, innerPoly, tkh, sdepth, -10000, xyOffset);

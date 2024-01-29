@@ -38,7 +38,7 @@
   "CutterPoly": ["poly"],
   "ControlableAbyss": [],
   "CabinetOpeningCorrdinates": ["id", "coordinates", "partCode", "locationCode",
-        "right.id", "left.id", "top.id", "bottom.id"],
+        "right.id", "left.id", "top.id", "bottom.id", "cutter.id"],
   "Vector3D": ["i", "j", "k"],
   "Joint": ["id", "maleOffset", "femaleOffset",
             "demensionAxis", "centerAxis", "fullLength", "discriptor"],

@@ -80,9 +80,6 @@ class Parimeters2d {
         const vStr = vert.toString();
         if (!verticesEliminated[vStr] && resultMap[vStr] === undefined) {
           const isWithin = parimeter.isWithin(vert, false);
-          if (isWithin === false) {
-            console.log('here');
-          }
           const matches = allVerticesMap.matches(vert);
           for (let j = 0; j < matches.length; j++) {
             const str = matches[j].toString();

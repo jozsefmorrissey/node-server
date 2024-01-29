@@ -193,17 +193,24 @@ TestStatus.successAssertions = 0;
 TestStatus.failAssertions = 0;
 
 const ran = {};
-const ensureAllComplete = (test) => (runAgainIn) => {
-  if (test.EAC_INITIALIZED) {
-    const notReportedIn = test.notReportedIn();
-    if (notReportedIn.length === 0) return;
-    notReportedIn.forEach(name => console.warn(`Test has not Reported In: ${name}`));
-  }
-  else test.EAC_INITIALIZED = true;
-  let nextRunTime = runAgainIn*2;
-  nextRunTime = nextRunTime > 60000 ? 60000 : nextRunTime;
-  setTimeout(() => ensureAllComplete(test)(nextRunTime), runAgainIn)
-}
+const ensureAllComplete = (test, checkInterval) => {
+  let lastReportCount = 0;
+  let lastPrintCount;
+  const ensureFunc = () => {
+    const reportCount = test.reportedIn().length;
+    if (reportCount === lastReportCount) {
+      const notReportedIn = test.notReportedIn();
+      if (notReportedIn.length === 0) return;
+      if (lastPrintCount !== reportCount) {
+        lastPrintCount = reportCount;
+        notReportedIn.forEach(name => console.warn(`Test has not Reported In: ${name}`));
+      }
+    }
+    lastReportCount = reportCount;
+    setTimeout(ensureFunc, checkInterval)
+  };
+  return ensureFunc;
+};
 
 let allRunCheck = false;
 const Test = {
@@ -212,6 +219,7 @@ const Test = {
     if ((typeof func) === 'function') {
       if (Test.tests[name] ===  undefined) Test.tests[name] = [];
       Test.tests[name].push(func);
+      if (resultsPrinted) resultsPrinted = !(pending = false);
     }
   },
   list: () => Object.keys(Test.tests),
@@ -240,7 +248,7 @@ const Test = {
         ran[testName] = true;
       }
     }
-    if (!allRunCheck) ensureAllComplete(Test)(500) & (allRunCheck = true);
+    if (!allRunCheck) ensureAllComplete(Test, 4000)() & (allRunCheck = true);
   },
   results: () => ({
     tests: {
@@ -254,15 +262,14 @@ const Test = {
   }),
   printResults: (imPending) => {
     if (imPending !== true && pending) return;
-    const res = Test.results();
-    if (Object.equals(res, lastResults)) {
-      pending = false;
+    if (Test.allReportsIn()) {
+      const res = Test.results();
+      resultsPrinted = true;
       const failedColor = (res.tests.failed + res.asserts.failed) > 0 ? 'color:red' : 'color:green';
       console.log(`\n%c Successfull Tests:${res.tests.success} Successful Assertions: ${res.asserts.success}`, 'color: green');
       console.log(`%c Failed Tests:${res.tests.failed} Failed Assertions: ${res.asserts.failed}`, failedColor);
     } else {
       pending = true;
-      lastResults = res;
       setTimeout(() => Test.printResults(true), 1000);
     }
   },
@@ -271,6 +278,7 @@ const Test = {
     const reportNames = Object.keys(reported).sort();
     return ranNames.equals(reportNames);
   },
+  reportedIn: () => Object.keys(reported),
   notReportedIn: () => {
     const ranNames = Object.keys(ran).sort();
     const reportNames = Object.keys(reported).sort();
@@ -281,13 +289,13 @@ const Test = {
     if (reported[ts.name()]) throw new Error(`Test: '${ts.name()}' is double reporting.\n\t\tonly one call should be made to fail || success`);
     if (ts.failed() || !ts.succeed()) TestStatus.failCount++;
     else TestStatus.successCount++;
-    Test.printResults();
+    setTimeout(Test.printResults, 1000);
     ts.cleanUp();
     reported[ts.name()] = ts;
     //runCollectiveCleanup(); ... implement
   }
 }
-let lastResults;
+let resultsPrinted = false;
 let pending = false;
 let reported = {};
 

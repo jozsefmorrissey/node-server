@@ -32,8 +32,8 @@ class CabinetUtil {
       let assems = Object.values(env.byId).filter(depthPartFilter);
       const assemblies = []; const polys = [];
       assems.forEach(mDto => {
-        if (env.modelInfo[mDto.id]) {
-          const biPolyArr = env.modelInfo[mDto.id].biPolygonArray;
+        if (env.modelInfo.biPolygonArray[mDto.id]) {
+          const biPolyArr = env.modelInfo.biPolygonArray[mDto.id];
           const biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
           polys.push(biPoly);
           assemblies.push(mDto);
@@ -52,7 +52,7 @@ class CabinetUtil {
       //Object.values(this.subassemblies).filter(a => !a.constructor.name.match(/Cutter|Void/));
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
-        const sideBiPolyArr = env.modelInfo[assem.id].biPolygonArray;
+        const sideBiPolyArr = env.modelInfo.biPolygonArray[assem.id];
         const biPoly = new BiPolygon(sideBiPolyArr[0], sideBiPolyArr[1]);
         const faces = biPoly.closestOrder(center);
         const plane = faces[0].toPlane();

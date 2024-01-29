@@ -94,6 +94,8 @@ class Position {
       return position;
     }
 
+    this.toBiPolygon = () => BiPolygon.fromPositionObject(this.current());
+
     this.centerAdjust = (center, direction) => {
       const magnitude = direction[0] === '-' ? -1 : 1;
       const axis = direction.replace(/\+|-/, '');

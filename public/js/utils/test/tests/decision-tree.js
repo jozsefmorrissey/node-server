@@ -113,11 +113,7 @@ Test.add('DecisionTree: reachable',(ts) => {
   let nodeCount = 0;
   tree.root().forEach((node) => {
     const errorMsg = errors[node.name()] || errors.default;
-    try {
-      ts.assertNotEquals(kept.indexOf(node.name()), -1, errorMsg);
-    } catch (e) {
-      console.log('here');
-    }
+    ts.assertNotEquals(kept.indexOf(node.name()), -1, errorMsg);
     nodeCount++;
   });
   ts.assertEquals(nodeCount, 12, 'Tree does not traverse the correct nodes');

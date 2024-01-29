@@ -827,10 +827,6 @@ Line2d.consolidate = (...lines) => {
   const lineMap = {};
   for (let index = 0; index < lines.length; index += 1) {
     if (!lines[index].isPoint()) {
-      if (Number.isNaN(lines[index].slope())) {
-        console.log('here');
-        lines[index].slope();
-      }
       tolMap.add(lines[index]);
     }
   }

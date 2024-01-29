@@ -72,7 +72,6 @@ function init(body){
         const CostManager = require('./displays/managers/cost.js');
         const costManager = new CostManager('cost-manager', 'cost');
       } else if (urlSuffix === 'template') {
-        console.log('hello template????');
         const TemplateManager = require('./displays/managers/template.js');
         // const templateDisplayManager = new TemplateManager('template-manager');
       } else {

@@ -6,6 +6,7 @@ const BiPolygon = require('../three-d/objects/bi-polygon.js');
 const Cutter = require('../objects/assembly/assemblies/cutter.js');
 const Panel = require('../objects/assembly/assemblies/panel.js');
 const Butt = require('../objects/joint/joints/butt.js');
+const Dependency = require('../objects/dependency.js');
 const KeyValue = require('../../../../public/js/utils/object/key-value.js');
 
 class CabinetOpeningCorrdinates extends KeyValue {
@@ -15,7 +16,9 @@ class CabinetOpeningCorrdinates extends KeyValue {
     const config = sectionProperties.config();
     let subassemblies = [];
     const instance = this;
+    let cutter;
     Object.getSet(this, 'parentAssembly', 'partCode', 'locationCode');
+    this.parentAssembly(cabinet);
     this.partCode('COC');
     this.locationCode('COC');
     this.part = () => false;
@@ -31,7 +34,9 @@ class CabinetOpeningCorrdinates extends KeyValue {
     this.left = sectionProperties.left;
     this.right = sectionProperties.right;
     this.back = sectionProperties.back;
+    this.cutter = () => cutter;
     this.coordinates = sectionProperties.coordinates;
+    this.children = () => subassemblies;
 
     const origGetSub = sectionProperties.getSubassemblies;
     sectionProperties.getSubassemblies = (childrenOnly) => {
@@ -117,10 +122,10 @@ class CabinetOpeningCorrdinates extends KeyValue {
 
 
     function sliceCoordinates(leftLen, rightLen) {
-      const top = instance.top().toBiPolygon();
-      const bottom = instance.bottom().toBiPolygon();
-      const left = instance.left().toBiPolygon();
-      const right = instance.right().toBiPolygon();
+      const top = instance.top().position().toBiPolygon();
+      const bottom = instance.bottom().position().toBiPolygon();
+      const left = instance.left().position().toBiPolygon();
+      const right = instance.right().position().toBiPolygon();
       right.orderBy.biPolygon(left);
 
       const center = openingCenter(top, bottom, right, left);
@@ -139,12 +144,8 @@ class CabinetOpeningCorrdinates extends KeyValue {
       const bottomLeft = outerPlane.intersection.line(lInfo.innerLines.bottom);
       const inner = [topLeft, topRight, bottomRight, bottomLeft];
 
-      addCutter(outer);
       return {inner, outer};
     }
-
-
-
 
     this.update = () => {
       let coords;
@@ -153,9 +154,13 @@ class CabinetOpeningCorrdinates extends KeyValue {
           case 'location':
             coords = manualCoordinates(config.coordinates); break;
           case 'slice':
-            const cutter = new Cutter.Opening('aoc', 'auto-opening-crop');
+            cutter = new Cutter('aoc', 'Opening');
+            cutter.addDependencies(new Butt(cutter, /^c_[^_]{1,}$/))
+            cabinet.addDependencies(new Butt(cutter, cabinet));
+            cutter.parentAssembly(this);
             subassemblies = [cutter];
-            coords = sliceCoordinates(cabinet.eval(config.leftDepth), cabinet.eval(config.rightDepth));break;
+            coords = sliceCoordinates(cabinet.eval(config.leftDepth), cabinet.eval(config.rightDepth));
+            break;
         }
       } catch (e) {
         console.warn(`Failed to determine coordinates of the specified type: '${config._Type}'`);

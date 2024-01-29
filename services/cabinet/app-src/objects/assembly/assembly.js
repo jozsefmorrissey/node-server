@@ -331,14 +331,11 @@ class Assembly extends KeyValue {
         jMap.male[jid] = [];
         for (let ai = 0; ai < assems.length; ai++) {
           const assem = assems[ai];
-          if (assem.partCode() === 'T:f' && joint.locationId() === 'frontCutJoint') {
-            console.log('here');
-          }
+          // if (assem.partCode() === 'T:f' && joint.locationId() === 'frontCutJoint') {
+          //   console.log('here');
+          // }
           if (assem instanceof Assembly && assem.included()) {
             const aid = assem.id();
-            if (aid.match(/^Divider_/) && (joint.isDependent(assem) || joint.isDependent(assem))) {
-              console.log();
-            }
             if (!jMap.female[aid]) jMap.female[aid] = [];
             if (joint.dependsOn(assem)) jMap.male[jid].push(aid);
             if (joint.isDependent(assem)) jMap.female[aid].push(jid);

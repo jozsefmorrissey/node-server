@@ -61,7 +61,7 @@ function baseCenter(rMdto, environment, parentBiPoly) {
 };
 
 const handleModel = (rMdto, environment, simple) => {
-  const biPolyArr = environment.modelInfo[rMdto.parentAssembly().id].biPolygonArray;
+  const biPolyArr = environment.modelInfo.biPolygonArray[rMdto.parentAssembly().id];
   const biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
   const baseC = baseCenter(rMdto, environment, biPoly);
   const front = biPoly.front();

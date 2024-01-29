@@ -872,7 +872,6 @@ function endpoints(app, prefix, ip) {
   }
 
   app.post(prefix + EPNTS.comment.question.add(), function (req, res, next) {
-    console.log('here')
     const groupId = req.body.groupId;
     const group = groupId === undefined ? undefined : new Group(groupId);
     const question = new Question(req.body.questionId);
