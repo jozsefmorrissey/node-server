@@ -22,6 +22,7 @@ class CabinetOpeningCorrdinates extends KeyValue {
     this.partCode('COC');
     this.locationCode('COC');
     this.part = () => false;
+    this.partName = () => 'CabinetOpeningCorrdinates';
     this.divide = sectionProperties.divide;
     this.setSection = sectionProperties.setSection;
     this.sections = () => sectionProperties.sections;
@@ -156,7 +157,7 @@ class CabinetOpeningCorrdinates extends KeyValue {
           case 'slice':
             cutter = new Cutter('aoc', 'Opening');
             cutter.addDependencies(new Butt(cutter, /^c_[^_]{1,}$/))
-            cabinet.addDependencies(new Butt(cutter, cabinet));
+            cabinet.addDependencies(new Dependency(cutter, cabinet));
             cutter.parentAssembly(this);
             subassemblies = [cutter];
             coords = sliceCoordinates(cabinet.eval(config.leftDepth), cabinet.eval(config.rightDepth));

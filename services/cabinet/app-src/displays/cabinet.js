@@ -85,14 +85,14 @@ class CabinetDisplay {
       return {type: 'You must select a defined type.'};
     }
 
-    async function update3Dmodel(target) {
-      const cabinet = Global.cabinet();
-      target.value = new Measurement(target.value, true).display();
-      await ThreeDModel.build(cabinet);
-      Canvas.render();
-    }
-
-    du.on.match('enter', '.cabinet-cnt .expandable-list-body', update3Dmodel);
+    // async function update3Dmodel(target) {
+    //   const cabinet = Global.cabinet();
+    //   target.value = new Measurement(target.value, true).display();
+    //   await ThreeDModel.build(cabinet);
+    //   Canvas.render();
+    // }
+    //
+    // du.on.match('enter', '.cabinet-cnt .expandable-list-body', update3Dmodel);
 
     function updateCabValue(cabinet, attr) {
       const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);

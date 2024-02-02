@@ -308,7 +308,7 @@ class Assembly extends KeyValue {
 
     this.getDependencyList = () => Object.values(namedDependencies).concat(this.joints);
 
-    this.getAllDependencies = (assem) => {
+    this.getAllDependencies = (assem, noJoints) => {
       assem ||= this;
       const root = this.getRoot();
       if (root !== this) return root.getDependencies(assem);
@@ -318,15 +318,16 @@ class Assembly extends KeyValue {
                         .concat(Object.values(namedDependencies));
       // if (assem) allJoints.concatInPlace(assem.joints);
       assemList.forEach((a) => a.getDependencyList && allJoints.concatInPlace(a.getDependencyList()));
-      return allJoints;
+      return noJoints ? allJoints.filter(d => !(d instanceof Joint)) : allJoints;
     };
 
-    this.dependencyMap = () => {
+    this.dependencyMap = (noJoints) => {
       const assems = this.allAssemblies();
       const allJs = this.getAllDependencies();
       const jMap = {female: {}, male: {}};
       for (let ji = 0; ji < allJs.length; ji++) {
         const joint = allJs[ji];
+        if (noJoints && joint instanceof Joint) continue;
         const jid = joint.id();
         jMap.male[jid] = [];
         for (let ai = 0; ai < assems.length; ai++) {
@@ -334,7 +335,8 @@ class Assembly extends KeyValue {
           // if (assem.partCode() === 'T:f' && joint.locationId() === 'frontCutJoint') {
           //   console.log('here');
           // }
-          if (assem instanceof Assembly && assem.included()) {
+          if (!(assem instanceof Assembly) || (assem.included() &&
+                (!(joint instanceof Joint) || assem.includeJoints()))) {
             const aid = assem.id();
             if (!jMap.female[aid]) jMap.female[aid] = [];
             if (joint.dependsOn(assem)) jMap.male[jid].push(aid);

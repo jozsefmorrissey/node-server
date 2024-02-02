@@ -1,10 +1,9 @@
 
 const STATUS = require('./status');
-const WebWorkerDeligator = require('../deligator.js');
 
 class Task {
-  constructor() {
-    let _status = STATUS.EXICUTE;
+  constructor(initailStatus) {
+    let _status = initailStatus || STATUS.EXICUTE;
     let _error = null;
     CustomEvent.all(this, 'complete', 'failed', 'message', 'exicute', 'pending', 'initiate', 'change');
     this.id = String.random();
@@ -30,12 +29,15 @@ class Task {
 
 class ParrelleTask extends Task {
   constructor(...tasks) {
-    super();
-    const completed = [];
+    super(STATUS.INITIATE);
+    const completed = tasks.map(t => null);
     let hasFailed = false;
     this.on
-    this.completed = completed.map((v, i) => v === true ? tasks[i] : null);
-    this.failed = completed.map((v, i) => v === false ? tasks[i] : null);
+    this.process = () => 'parrelle';
+    this.tasks = () => tasks;
+    this.tasks.finished = () => completed.find(v => v === null) === undefined;
+    this.completed = () => tasks.map((v,i) => completed[i] === true && v).filter(a => a);
+    this.failed = () => tasks.map((v,i) => completed[i] === false && v).filter(a => a);
     this.error = () => tasks.map(t => t.error()).filter(e => e);
 
     tasks.forEach((t, i) => t.on.complete(() => {
@@ -48,49 +50,41 @@ class ParrelleTask extends Task {
     }));
     this.on.initiate(() => {
       this.status(STATUS.PENDING);
-      WebWorkerDeligator.queue(tasks);
     });
-
-    this.status(STATUS.INITIATE);
   }
 }
 
 class SequentialTask extends Task {
-  constructor(...tasks) {
+  constructor(environment, ...tasks) {
     super();
     const completed = tasks.map(t => null);
+    this.process = () => 'sequential';
+    this.environment = environment instanceof Function ? environment : () => environment;
+    this.payload = () => ({tasks, environment: environment()});
     this.tasks = () => tasks;
-    this.tasksFinished = () => completed.find(v => v === null) === undefined;
     this.completed = () => tasks.map((v,i) => completed[i] === true && v).filter(a => a);
     this.failed = () => tasks.map((v,i) => completed[i] === false && v).filter(a => a);
-    this.error = () =>
-      tasks.map(t => t.error()).filter(e => e)[0];
+    this.error = () => tasks.map(t => t.error()).filter(e => e)[0];
 
     tasks.forEach((t, i) => t.on.complete(() => {
       completed[i] = true;
+      if (this.completed().length === tasks.length) this.status(STATUS.COMPLETE);
+      else if (this.failed().length > 0) this.status(STATUS.FAILED);
       this.trigger.change(this);
-      if(this.status() === STATUS.PENDING && i < tasks.length - 1) WebWorkerDeligator.queue(tasks[i+1]);
     }));
     tasks.forEach((t, i) => t.on.failed(() => {
       completed[i] = false;
+      this.status(STATUS.FAILED);
       this.trigger.change(this);
     }));
-    this.on.initiate(() => {
-      this.status(STATUS.PENDING);
-      WebWorkerDeligator.queue(tasks[0]);
-    });
-
-
-    this.status(STATUS.INITIATE);
   }
 }
-
 
 class AndTask extends ParrelleTask {
   constructor(...tasks) {
     super(...tasks);
     this.on.change(() => {
-      if (this.status() === STATUS.PENDING && this.tasksFinished()) {
+      if (this.status() === STATUS.PENDING && this.tasks.finished()) {
         if (this.failed().length === 0) this.status(STATUS.COMPLETE);
         else this.status(STATUS.FAILED);
       }
@@ -99,8 +93,8 @@ class AndTask extends ParrelleTask {
 }
 
 class AndShortCircutTask extends SequentialTask {
-  constructor(...tasks) {
-    super(...tasks);
+  constructor(environment, ...tasks) {
+    super(environment, ...tasks);
     this.on.change(() => {
       if (this.status() === STATUS.PENDING) {
         if (this.completed().length === tasks.length) this.status(STATUS.COMPLETE);
@@ -114,7 +108,7 @@ class OrTask extends Task {
   constructor(...tasks) {
     super(...tasks);
     this.on.change(() => {
-      if (this.status() === STATUS.PENDING && this.tasksFinished()) {
+      if (this.status() === STATUS.PENDING && this.tasks.finished()) {
         if (this.completed().length > 0) this.status(STATUS.COMPLETE);
         else this.status(STATUS.FAILED);
       }

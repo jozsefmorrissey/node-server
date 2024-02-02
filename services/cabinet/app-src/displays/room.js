@@ -12,7 +12,6 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 const Inputs = require('../input/inputs.js');
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const TwoDLayout = require('../displays/two-d-layout');
-const ThreeDModel = require('../three-d/three-d-model.js');
 const LoadingDisplay = require('../../../../public/js/utils/display/loading.js');
 const Global = require('../services/global');
 

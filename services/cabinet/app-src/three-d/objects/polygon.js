@@ -50,6 +50,7 @@ class Polygon3D {
       return noZeros.concat(oneZero).concat(twoZeros).concat(origin);
     }
 
+    this.length = () => lines.length;
     this.web = () => {
       const vertices = this.vertices();
       const lineMap = {};

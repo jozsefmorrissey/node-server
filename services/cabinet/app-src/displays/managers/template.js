@@ -408,6 +408,7 @@ function onOpeningTypeChange(elem) {
 du.on.match('change', '.opening-type-selector', onOpeningTypeChange);
 
 function updateOpeningPoints(template) {
+  throw new Error('Need to point to modelInfo')
   const cabinet = Global.cabinet();
   const threeDModel = ThreeDModel.get();
   if (threeDModel) {

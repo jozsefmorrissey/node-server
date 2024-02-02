@@ -78,7 +78,7 @@ to.SectionProperties = {
 to.Cabinet = {
   Simple: {
     model: (mdto, environment) => {
-      const childs = mdto.children.map(c => c());
+      const childs = mdto.children.map(c => c()).filter(c => c);
       const parts = childs.filter(c => c.part || c.id.match(/^Divider/));
       const cutters = childs.filter(c => c.id.match(/^Cutter/));
       const cutter = mdto.openings[0].cutter;

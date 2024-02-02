@@ -9,12 +9,18 @@ function reportBack(modelMap, polyMap, taskId) {
   postMessage({id: taskId, result: {type: 'model', map: DTO(modelMap)}});
 }
 
+const PART_CODES_THAT_CANNOT_BE_BUILT = ["AUTOTK", "OpenTK", "COC"]
 const reportMod = 20;
 function BuildModels(assemblies, environment, taskId) {
   let newModels = {};
   let newPolys = {};
   for (let index = 0; index < assemblies.length; index++) {
     let assembly = RDTO(assemblies[index], environment.byId);
+    if (PART_CODES_THAT_CANNOT_BE_BUILT.indexOf(assembly.partCode) !== -1) {
+      environment.modelInfo.model[assembly.id] = null;
+      newModels[assembly.id] = null;
+      continue;
+    }
     let model, biPolygon, biPolygonArray;
     try {
       // console.log(`Building Model: '${assembly.locationCode}'`)

@@ -33,6 +33,7 @@ class Cabinet extends Assembly {
     Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick', 'dividerJoint');
     const instance = this;
     let toeKickHeight = 4;
+    this.includeJoints(false);
     this.part = () => false;
     this.currentPosition = () => this.position().current();
     this.display = false;
@@ -168,8 +169,7 @@ class Cabinet extends Assembly {
     const pAddSubAssem = this.addSubAssembly;
     this.addSubAssembly = (assembly) => {
       pAddSubAssem(assembly);
-      if (assembly.constructor.name === "Divider" || assembly.part())
-        this.addDependencies(new Dependency(assembly, this));
+      this.addDependencies(new Dependency(assembly, this));
     }
 
     function bordersByEndPoints (borderObj) {

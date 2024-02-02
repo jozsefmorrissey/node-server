@@ -71,7 +71,7 @@ class VoidUtil {
     let abyssBiPoly;
     function abyssBiPolygon() {
       if (abyssBiPoly) return abyssBiPoly;
-      const biPoly = instance.biPolygon;
+      const biPoly = instance.biPolygon.copy();
       const polys = biPoly.toPolygons();
       polys.swap(3,4);
       const center = biPoly.center();

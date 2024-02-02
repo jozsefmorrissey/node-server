@@ -2,14 +2,6 @@
 const DTO = require('./data-transfer-object.js');
 const TASK_STATUS = require('./tasks/status');
 
-class TaskMessage {
-  constructor(task, payload) {
-    this.id = task.id;
-    this.payload = DTO(payload);
-    this.type = task.constructor.name;
-  }
-}
-
 const maxWorkers = 20;
 class WebWorkerDeligator {
   constructor() {
@@ -50,22 +42,28 @@ class WebWorkerDeligator {
     }
     createWorkers();
 
+  const registerTask = (workerIndex) => (task) => {
+    taskWorkerMap[task.id] = {task, workerIndex};
+    task.status(TASK_STATUS.PENDING);
+  }
 
-    function exicute() {
+  function exicute() {
     while (0 < taskQue.length && workers.length > 0) {
         const task = taskQue.splice(0,1)[0];
         if (task.status() === TASK_STATUS.INITIATE) {
           task.trigger.initiate();
         }
+        const isSequential = task.process() === 'sequential';
         const payload = task.payload ? task.payload() : null;
         const workerIndex = tasksUndertaken.minIndex(l => l.length);
         const worker = workers[workerIndex];
-        taskWorkerMap[task.id] = {task, workerIndex};
         tasksUndertaken[workerIndex].push(task);
         if (task.status() === TASK_STATUS.EXICUTE) {
-          worker.postMessage(new TaskMessage(task, payload));
-          task.status(TASK_STATUS.PENDING);
+          const msg = DTO(task);
+          worker.postMessage(msg);
         }
+        if (isSequential) task.tasks().forEach(registerTask(workerIndex));
+        else registerTask(workerIndex)(task);
         task.initiated = new Date().getTime();
       }
     }

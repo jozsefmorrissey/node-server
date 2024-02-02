@@ -45,26 +45,26 @@ const alreadyProcessed = (map, id, intersections) =>
   map.joined[id] !== undefined && (!intersections || map.intersection[id]);
 
 const newMapObj = () => ({intersection: {}, joined: {}});
-function Apply(assemblies, environment, taskId, intersections) {
+function Apply(assemblyIds, environment, taskId, intersections) {
   let env = environment;
   let newMap = newMapObj();
   let map = {intersection: env.modelInfo.intersection, joined: env.modelInfo.joined};
   let proccessedIndex = 0;
-  for (let index = 0; index < assemblies.length; index++) {
-    const mtdo = assemblies[index];
-    const assem = mtdo.assembly || mtdo;
-    if (env.modelInfo.model[assem.id] === undefined ||
-        alreadyProcessed(map, assem.id, intersections)) {
+  for (let index = 0; index < assemblyIds.length; index++) {
+    const id = assemblyIds[index];
+    const assem = environment.byId[id];
+    if (env.modelInfo.model[id] === undefined ||
+        alreadyProcessed(map, id, intersections)) {
       continue;
     }
-    let model = env.modelInfo.model[assem.id];
+    let model = env.modelInfo.model[id];
     if (model && assem.part && assem.included) {
       model = CSG.fromPolygons(model.polygons, true);
-      const joints = env.jointMap.female[assem.id] || [];
+      const joints = env.jointMap.female[id] || [];
       const males = [];
       removeJonintMaterial(map, newMap, assem, env, model, intersections);
-    } else if (map.joined[assem.id] === undefined) {
-      map.joined[assem.id] = newMap.joined[assem.id] = model;
+    } else if (map.joined[id] === undefined) {
+      map.joined[id] = newMap.joined[id] = model;
     }
 
     if (((++proccessedIndex + 1) % 10) === 0) {

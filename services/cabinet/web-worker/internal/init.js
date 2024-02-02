@@ -7,23 +7,25 @@ const UnionModels = require("../services/union");
 const DTO = require('../shared/data-transfer-object')();
 
 
-function handleTask(type, payload, taskId) {
+function handleTask(process, payload, env, taskId) {
   const assem = payload.assemblies;
-  const env = payload.environment;
-  switch (type) {
-    case 'CsgModelTask': return BuildModels(assem, env, taskId);
-    case 'CsgUnionTask': return UnionModels(assem, env, taskId, true);
-    case 'CsgJoinTask': return ApplyJoints(assem, env, taskId);
-    case 'CsgIntersectionTask': return ApplyJoints(assem, env, taskId, true);
+  switch (process) {
+    case 'model': return BuildModels(assem, env, taskId);
+    case 'union': return UnionModels(assem, env, taskId, true);
+    case 'join': return ApplyJoints(assem, env, taskId);
+    case 'intersection': return ApplyJoints(assem, env, taskId, true);
     default: return new Error('UnkownTask');
   }
 }
 
 onmessage = (messageFromMain) => {
     const data = messageFromMain.data;
-    const taskId = data.id;
-    const type = data.type;
     const payload = data.payload;
-    const result = handleTask(type, payload, taskId);
-    if (result) postMessage({id: taskId, result: DTO(result)});
+    const tasks = payload.tasks ? payload.tasks : [data];
+    const env = payload.environment;
+    for (let index = 0; index < tasks.length; index++) {
+      const task = tasks[index];
+      const result = handleTask(task.process, task.payload, env, task.id);
+      if (result) postMessage({id: task.id, result: DTO(result)});
+    }
 };

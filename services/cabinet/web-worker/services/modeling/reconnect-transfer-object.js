@@ -24,7 +24,7 @@ function addMathObjectGetter(dto, rDto) {
 }
 
 const isFunc = (filter) => filter instanceof Function ? filter :
-  (filter instanceof RegExp ? (a) => a.locationCode.match(filter) : a => a.partCode === filter);
+  (filter instanceof RegExp ? (a) => a && a.locationCode.match(filter) : a => a && a.partCode === filter);
 
 class ReconnectedMDTO{constructor(){}};
 function reconnected(obj, idMap) {
@@ -75,6 +75,7 @@ function reconnected(obj, idMap) {
 }
 
 function reconnectDtos(dtos, idMap) {
+  if ((typeof dtos) === 'string') dtos = idMap[dtos];
   if (!dtos) return dtos;
   if (dtos instanceof ReconnectedMDTO) return dtos;
   return reconnected(dtos, idMap || {});

@@ -126,10 +126,13 @@ class TestStatus {
     let fail = false;
     let failOnError = true;
     let instance = this;
+    let start, end;
 
     this.failed = () => fail;
     this.succeed = () => success;
     this.name = () => testName;
+    this.start = () => start = new Date().getTime();
+    this.time = () => ((end || new Date().getTime()) - start) / 1000;
 
     let cleanUp;
     this.onCleanUp = (func) => cleanUp = func;
@@ -173,6 +176,7 @@ class TestStatus {
       possiblyFail(`${msg}\n\t\t${n1} and ${n2} are not within tolerance ${tol}`, stackOffset);
     }
     this.fail = (msg, stackOffset) => {
+      end = new Date().getTime();
       fail = true;
       failStr();
       printError(msg, stackOffset);
@@ -180,6 +184,7 @@ class TestStatus {
       throw failureError;
     };
     this.success = (msg, stackOffset) => {
+      end = new Date().getTime();
       success = true;
       Test.reportIn(this);
       return successStr(msg, stackOffset);
@@ -230,6 +235,7 @@ const Test = {
       const testName = testNames[index];
       if (!ran[testName]) {
         const ts = new TestStatus(testName);
+        ts.start();
         try {
           Test.tests[testName].forEach((testFunc) => {
             const isAsync = testFunc.constructor.name === "AsyncFunction";
@@ -237,7 +243,7 @@ const Test = {
               testFunc(ts).then(() => {}, (e) =>
                 ts.fail(e.stack || e.msg));
             } else {
-              testFunc(new TestStatus(testName));
+              testFunc(ts);
             }
           });
         } catch (e) {

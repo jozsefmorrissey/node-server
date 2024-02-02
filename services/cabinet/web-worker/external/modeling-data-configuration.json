@@ -42,5 +42,6 @@
   "Vector3D": ["i", "j", "k"],
   "Joint": ["id", "maleOffset", "femaleOffset",
             "demensionAxis", "centerAxis", "fullLength", "discriptor"],
-  "Property": ["value"]
+  "Property": ["value"],
+  "ModelInformation": ["environment"]
 }

@@ -51,9 +51,10 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
   obj.joints = jointMap.female[id] || [];
   const dependentMatch = assembly.locationCode().match(dependentReg);
   obj.dependencies = [];
-  if (dependentMatch) obj.dependencies.push(assembly.parentAssembly().id());
+  if (assembly.parentAssembly()) obj.dependencies.push(assembly.parentAssembly().id());
   obj.joints.forEach(jId => obj.dependencies.concatInPlace(jointMap.male[jId]));
   obj.complexity = () => {
+    if (assembly.includeJoints === undefined) return 1;
     if (!Number.isNaN(complexity)) return complexity;
     if (assembly.includeJoints() === false && MFC.usesDefault(assembly.id())) return 1;
     complexity = 1;
@@ -95,14 +96,14 @@ class ModelInformation {
     const instance = this;
     let targets = targetOs;
     if (!Array.isArray(targets)) targets = [targetOs];
+    targets = targets.map(a => a);
+    targets.push(targets[0].getRoot());
     const assemblies = targets[0].allAssemblies();
     if (props.allRelatedParts === true) targets = assemblies.filter(a => a.part() && a.included());
     const modelInfo = props.modelInfo || modelInfoObject();
-    const jointMap = assemblies[0].dependencyMap();
-    const dependencies = assemblies[0].getAllDependencies();
+    const jointMap = assemblies[0].dependencyMap(props.noJoints);
     const byId = {};
     const propertyConfig = assemblies[0].group().propertyConfig();
-    dependencies.forEach(j => byId[j.id()] = j);
     assemblies.forEach(a => byId[a.id()] = a);
     let buildModels;
     if (targets) buildModels = targets;
@@ -112,34 +113,35 @@ class ModelInformation {
     buildModels = Object.values(joinModels).map(ac => ac.assembly);
     buildModels = sortAssemMtdos(buildModels);
 
-    this.buildModels = (models) => {
-      if (models) {
-        buildModels = models;
-      }
-      return buildModels;
-    }
-    this.joinModels = (models) => {
-      if (models) {
-        joinModels = models;
-      }
-      return joinModels;
-    }
+    buildModels = buildModels.map(a => a.id());
+    const includedParts = targets.filter(a => a.part() && a.included()).map(a => a.id());
+    targets = targets.map(a => a.id());
+    joinModels.forEach(jmo => (jmo.id = jmo.assembly.id()) && delete jmo.assembly &&
+                                                              delete jmo.partCode &&
+                                                              delete jmo.complexity);
+    let requiresReference = {};
+    buildModels.forEach(id => requiresReference[id] = byId[id]);
+    targets.forEach(id => requiresReference[id] = byId[id]);
+    joinModels.forEach(jmo => requiresReference[jmo.id] = byId[jmo.id]);
+    joinModels = joinModels.map(jmo => jmo.id);
+    const dependencies = assemblies[0].getAllDependencies(null, props.noJoints);
+    dependencies.forEach(j => requiresReference[j.id()] = j);
+
+    this.needsModeled = () => buildModels.filter(id => modelInfo.model[id] === undefined);
+    this.needsJoined = () => joinModels.filter(id => modelInfo.joined[id] === undefined);
+    this.needsIntersected = () => targets.filter(id => byId[id].part() && modelInfo.intersection[id] === undefined);
+    this.needsUnioned = () => unionedCsg ? [] :
+                            (props.partsOnly === false ? targets : includedParts);
 
     const environmentObject = () => {
       const environment = DTO(props) || {};
-      environment.byId = byId;
+      environment.byId = requiresReference;
       environment.modelInfo = modelInfo;
       environment.propertyConfig = propertyConfig;
       environment.jointMap = jointMap;
       return environment;
     }
-
     this.environment = environmentObject;
-    this.needsModeled = () => buildModels.filter(a => modelInfo.model[a.id()] === undefined);
-    this.needsJoined = () => joinModels.filter(o => modelInfo.joined[o.assembly.id()] === undefined);
-    this.needsIntersected = () => targets.filter(a => modelInfo.intersection[a.id()] === undefined);
-    this.needsUnioned = () => unionedCsg ? [] : (props.partsOnly === false ? targets :
-                          targets.filter(a => a.part() && a.included()));
 
     function addTrackingFunctions(...attributes) {
       for (let index = 0; index < attributes.length; index++) {

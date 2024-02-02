@@ -2,6 +2,7 @@ const Joint = require('../../app-src/objects/joint/joint.js');
 const Assembly = require('../../app-src/objects/assembly/assembly.js');
 const KeyValue = require('../../../../public/js/utils/object/key-value.js');
 const Property = require('../../app-src/config/property.js');
+const Task = require('./tasks/basic.js').Task;
 const mdConfig = require('./modeling-data-configuration.json');
 const MDTO = require('../shared/data-transfer-object.js');
 
@@ -17,6 +18,10 @@ const objPreProc = (obj, dto, to) => {
   }
   if (obj instanceof Property) {
     return to(obj.value());
+  }
+  if (obj instanceof Task) {
+    dto.payload = to(obj.payload());
+    dto.process = obj.process();
   }
 }
 
