@@ -1,5 +1,5 @@
 
-const DTO = require('../shared/data-transfer-object')();
+const DTO = require('../../shared/data-transfer-object')();
 
 function determineMales(assem, env) {
   const joints = env.jointMap.female[assem.id] || [];

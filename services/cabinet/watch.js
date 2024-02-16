@@ -35,12 +35,11 @@ const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add('./app-src/')
         .add('./web-worker/shared/')
         .add('./web-worker/external/')
-        // TODO: remove once webworkers are implemented properly this is no longer neccissary
-        .add('./web-worker/services/')
 
 
 if (global.ENV === 'local') {
-  jsWatcher.add('./test');
+  jsWatcher.add('./test')
+    .add('./web-worker/internal/services/');
 }
 
 
@@ -57,4 +56,3 @@ const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         .add('./app-src/three-d/objects/')
         .add('./web-worker/shared/')
         .add('./web-worker/internal/')
-        .add('./web-worker/services/')

@@ -1,11 +1,11 @@
 require('../../../../public/js/utils/utils.js');
 
 const BiPolygon = require("../../app-src/three-d/objects/bi-polygon");
-const ApplyJoints = require("../services/apply-joints");
-const BuildModels = require("../services/build-models");
-const BuildSimpleModels = require("../services/build-simple-models");
-const UnionModels = require("../services/union");
-const To2D = require("../services/to-2d");
+const ApplyJoints = require("./services/apply-joints");
+const BuildModels = require("./services/build-models");
+const BuildSimpleModels = require("./services/build-simple-models");
+const UnionModels = require("./services/union");
+const To2D = require("./services/to-2d");
 const dataTransferConfig = require('./math-data-transfer-config.json');
 const DTO = require('../shared/data-transfer-object')(dataTransferConfig);
 

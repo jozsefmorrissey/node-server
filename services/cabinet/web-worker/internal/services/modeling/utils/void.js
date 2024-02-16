@@ -1,6 +1,6 @@
 
-const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
-const Line3D = require('../../../../app-src/three-d/objects/line.js');
+const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
+const Line3D = require('../../../../../app-src/three-d/objects/line.js');
 
 class VoidUtil {
   constructor(voidDto, env) {

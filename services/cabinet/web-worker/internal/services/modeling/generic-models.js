@@ -1,7 +1,7 @@
 
-const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
-const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
-const BiPolygon = require('../../../app-src/three-d/objects/bi-polygon.js');
+const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
+const Vertex3D = require('../../../../app-src/three-d/objects/vertex.js');
+const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
 const to = {};
 
 to.SimpleModel = (simpleModelDto) => {

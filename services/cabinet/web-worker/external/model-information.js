@@ -1,6 +1,7 @@
 
 const DTO = require('./data-transfer-object.js');
-const MFC = require('../services/modeling/modeling-function-configuration.js');
+
+const MFC = require('../internal/services/modeling/modeling-function-configuration.js');
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 

@@ -1,17 +1,8 @@
 const Test = require('../../../../../public/js/utils/test/test').Test;
 const Cabinet = require('../../../app-src/objects/assembly/assemblies/cabinet.js');
-const Room = require('../../../app-src/objects/room');
 const CabinetLayouts = require('../../../app-src/config/cabinet-layouts.js');
-const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
-const Vector3D = require('../../../app-src/three-d/objects/vector.js');
-const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
-const Panel = require('../../../app-src/objects/assembly/assemblies/panel.js');
-const Frame = require('../../../app-src/objects/assembly/assemblies/frame.js');
 const Jobs = require('../../../web-worker/external/jobs');
 const ModelInfo = require('../../../web-worker/external/model-information.js');
-const SimpleModel = require('../../../app-src/objects/simple/simple.js');
-const DTO = require('../../../web-worker/external/data-transfer-object.js');
-const RTO = require('../../../web-worker/services/modeling/reconnect-transfer-object');
 
 
 function get(layout, type, cabinetOnly) {
