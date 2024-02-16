@@ -6,6 +6,7 @@ const ThreeDModel = require('../three-d/three-d-model.js');
 const TwoDLayout = require('../displays/two-d-layout');
 const ThreeView = require('three-view');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+const Jobs = require('../../web-worker/external/jobs.js');
 
 const switchEvent = new CustomEvent('switch');
 
@@ -14,22 +15,25 @@ const threeView = new ThreeView(du.id('disp-canvas-p2d'));
 
 
 function renderRoom() {
-   const room = Global.room();
-  const allObjects = [];
-  for (let index = 0; index < room.groups.length; index++) {
-    allObjects.concatInPlace(room.groups[index].objects);
-  }
-  // TODO: Track non-Assembly objects in a better way.
-  const objects = Global.room().layout().objects().filter(o => o.constructor.name === 'Object3D');
-  ThreeDModel.renderNow(allObjects, {extraObjects: objects});
+  new Jobs.CSG.Room.Simple(Global.room()).then(ThreeDModel.display).queue();
 }
 
 function  renderCabinet() {
-  ThreeDModel.renderNow(Global.cabinet());
+  const target = Global.target();
+  if (target.constructor.name === 'Cabinet') {
+    new Jobs.CSG.Cabinet.Complex(target).then((csg, job) => {
+      ThreeDModel.display(csg);
+    }).queue();
+  } else {
+    new Jobs.CSG.Simple([target]).then((csgs, job) => {
+      ThreeDModel.display(CSG.fromPolygons(csgs[0].polygons));
+    }).queue();
+
+  }
 }
 
 function  renderParts() {
-  ThreeDModel.renderNow(Global.cabinet(), {parts: true});
+  new Jobs.CSG.Cabinet.Simple(Global.cabinet()).then(ThreeDModel.display).queue();
 }
 
 let ids = {

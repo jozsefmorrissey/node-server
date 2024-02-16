@@ -4,7 +4,7 @@ const Vertex3D = require('../../three-d/objects/vertex.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const SnapSquare = require('../../../../../public/js/utils/canvas/two-d/objects/snap/square.js');
 const BiPolygon = require('../objects/bi-polygon');
-const SimpleModel = require('../../objects/simple/simple.js');
+// const SimpleModel = require('../../objects/simple/simple.js');
 
 class Bridge2dTo3D {
   constructor(obj3D, xCoord, xDem, yCoord, yDem) {
@@ -118,7 +118,7 @@ class Object3D extends Lookup {
                           width: 32*2.54,
                           thickness: 24*2.54,
                           rotation: {x: 0, y: 0, z:0},
-                          name: ``}, 'modelerName');
+                          name: ``});
     this.center = (cent) => {
       if (cent) {
         center = new Vertex3D(cent);
@@ -133,18 +133,6 @@ class Object3D extends Lookup {
     let topview = new SnapSquare(this.bridge.top(), 10);
     this.snap2d.top = () => topview;
     this.shouldSave = () => true;
-
-    this.modeler = (modelerName) => {
-      if (modelerName) {
-        const mod = SimpleModel.get(modelerName, this);
-        modler = mod;
-      }
-      return modler;
-    }
-
-    this.modelerName = (modelerName) => {
-      return this.modeler(modelerName).constructor.name;
-    }
 
     this.toString = () => `${this.constructor.name}: at${this.center()}`;
   }

@@ -4,7 +4,8 @@
 const Group = require('./group.js');
 const Lookup = require('../../../../public/js/utils/object/lookup');
 const Layout2D = require('../two-d/layout/layout.js');
-
+let Global;
+const Object3D = require('../three-d/layout/object.js');
 
 class Room extends Lookup {
   constructor(name, order, id, layout) {
@@ -32,9 +33,41 @@ class Room extends Lookup {
         }
       });
     }
+
+    const obj3dMap = {};
+    this.layoutObjects = (target) => {
+      if (instance.groups === undefined) return [];
+      // TODO: hacky fix for circular reference.
+      if (Global === undefined) Global = require('../services/global.js');
+
+      let selectorFunc;
+      if (target === true) target = Global.group();
+      if ((typeof target) === 'number') {
+        selectorFunc = (group, index) => index === target
+      } else if (target instanceof Group) {
+        selectorFunc = (group) => group === target;
+      } else {
+        selectorFunc = () => true
+      }
+      const objs = [];
+      for (let gi = 0; gi < instance.groups.length; gi++) {
+        const group = instance.groups[gi];
+        for (let oi = 0; oi < group.objects.length; oi++) {
+          const obj = group.objects[oi];
+          if (selectorFunc(group, index, obj)) {
+            if (obj3dMap[obj.id()] === undefined) {
+              obj3dMap[obj.id()] = Object3D.new(obj, this.layout());
+            }
+            objs.push(obj3dMap[obj.id()]);
+          }
+        }
+      }
+      return objs;
+    }
+
     const initialVals = {
       name: name || `Room ${Room.count++}`,
-      layout: layout || new Layout2D()
+      layout: layout || new Layout2D(this.layoutObjects)
     }
     initialVals.layout.onStateChange(onLayoutChange);
     Object.getSet(this, initialVals, 'groups');

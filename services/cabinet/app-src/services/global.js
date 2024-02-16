@@ -20,19 +20,21 @@ class Global {
     const orderChangeEvent = new CustomEvent('orderChanged');
     const roomChangeEvent = new CustomEvent('roomChanged');
     const cabinetChangeEvent = new CustomEvent('cabinetChanged');
-    const groupChangeEvent = new CustomEvent('cabinetChanged');
+    const groupChangeEvent = new CustomEvent('groupChanged');
+    const targetChangeEvent = new CustomEvent('targetChanged');
 
     Object.defineProperty(this, 'onChange', {
         value: {
           order: orderChangeEvent.on,
           room: roomChangeEvent.on,
           cabinet: cabinetChangeEvent.on,
+          target: targetChangeEvent.on,
           group: groupChangeEvent.on
         },
         writable: false
     });
 
-    let ORDER, ROOM, GROUP, CABINET;
+    let ORDER, ROOM, GROUP, CABINET, TARGET;
     this.order = (order) => {
       if (!order && ORDER === undefined) {
         var options = {  year: 'numeric', day: 'numeric' };
@@ -81,6 +83,15 @@ class Global {
         cabinetChangeEvent.trigger(details);
       }
       return CABINET;
+    }
+    this.target = (object) => {
+      if (object) {
+        this.cabinet(object);
+        const details = {from: TARGET, to: object};
+        TARGET = object;
+        targetChangeEvent.trigger(details);
+      }
+      return TARGET;
     }
   }
 }

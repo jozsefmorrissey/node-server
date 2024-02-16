@@ -353,7 +353,7 @@ EscapeMap.parimeter = (lines) => {
   const escaped = escapeObj.independent();
   const breakdown = Line2d.sliceAll(escaped);
   const breakdownMap = new EscapeMap(breakdown);
-  const parimeter = Line2d.consolidate(...breakdownMap.escaped());
+  const parimeter = Line2d.consolidate(breakdownMap.escaped());
   const poly = Polygon2d.build(parimeter);
   return poly;
 }

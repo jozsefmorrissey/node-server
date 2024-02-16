@@ -4,7 +4,7 @@ const Vertex2d = require('../objects/vertex')
 const Polygon2d = require('../objects/polygon')
 
 
-const tol = .0000000001;
+const tol = .001;
 class Parimeters2d {
   constructor(lines, onlyOne) {
     lines = Line2d.sliceAll(lines);
@@ -95,6 +95,8 @@ class Parimeters2d {
     this.largest = () => polys[polys.length - 1].copy();
     const findIndexFunc = (visited) => l => l[0].equals(visited) || l[1].equals(visited);
     const parimeterFinished = (parimeter) => {
+      if (parimeter[parimeter.length - 1] === undefined)
+        console.log('her');
       const madeItFullCircle = parimeter[0][0].equals(parimeter[parimeter.length - 1][1]);
       if (madeItFullCircle) {
         const poly = Polygon2d.fromLines(parimeter);
@@ -126,7 +128,7 @@ class Parimeters2d {
     function build() {
       let lineList = lines.map(l => l.copy());
       while (lineList.length > 0) {
-        const furthestLine = Line2d.isolateFurthestLine(center, lineList).line;
+        const furthestLine = Line2d.isolateFurthestLine(center, lineList);
         const rightPoly = follow(new PartialParimeter2d(furthestLine), true);
         const leftPoly = follow(new PartialParimeter2d(furthestLine),false);
         const outerPoly = rightPoly.area() > leftPoly.area() ? rightPoly : leftPoly;

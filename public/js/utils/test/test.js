@@ -154,7 +154,8 @@ class TestStatus {
       return false;
     }
     function successStr(msg) {
-      console.log(`%c ${testName} - Successfull (${assertC}/${assertT})${
+      const secs = Math.round(instance.time() * 10) / 10;
+      console.log(`%c ${testName} - Successfull (${assertC}/${assertT}) ${secs}sec${
           msg ? `\n\t\t${msg}` : ''}`, 'color: green');
     }
     function failStr(msg) {
@@ -197,6 +198,44 @@ TestStatus.failCount = 0;
 TestStatus.successAssertions = 0;
 TestStatus.failAssertions = 0;
 
+async function initializeAndRunTest(func, ts, testName) {
+  try {
+    if (!(func.initialize instanceof Function)) return ts.start() & runTest(ts, func, testName);
+    const initData = await func.initialize();
+    runTest(ts, func, testName, initData);
+  } catch (e) {
+    if (e !== failureError) try {ts.fail(e);} catch(e) {
+      console.error(e);
+    }
+  }
+}
+
+const asyncQueue = [];
+let asyncRunning;
+let oneAtATime = false;
+const runAsync = () => {
+  if ((!oneAtATime || asyncRunning === undefined) && asyncQueue.length) {
+    const nextUp = asyncQueue.splice(0,1)[0];
+    asyncRunning = nextUp;
+    nextUp.ts.start();
+    ran[nextUp.testName] = true;
+    nextUp.func(nextUp.ts, nextUp.initData).then(() => {}, (e) =>
+            nextUp.ts.fail(e.stack || e.msg));
+  }
+}
+
+function runTest(ts, func, testName, initData) {
+  const isAsync = func.constructor.name === "AsyncFunction";
+  if (isAsync) {
+    asyncQueue.push({func, initData, testName, ts});
+    runAsync();
+  } else {
+    ts.start();
+    ran[testName] = true;
+    func(ts, initData);
+  }
+}
+
 const ran = {};
 const ensureAllComplete = (test, checkInterval) => {
   let lastReportCount = 0;
@@ -218,15 +257,20 @@ const ensureAllComplete = (test, checkInterval) => {
 };
 
 let allRunCheck = false;
+let _filter;
 const Test = {
   tests: {},
-  add: (name, func) => {
+  add: (name, func, initFunc) => {
     if ((typeof func) === 'function') {
-      if (Test.tests[name] ===  undefined) Test.tests[name] = [];
-      Test.tests[name].push(func);
-      if (resultsPrinted) resultsPrinted = !(pending = false);
+      if (initFunc instanceof Function) func.initialize = initFunc;
+      if (_filter === undefined || _filter(name)) {
+        if (Test.tests[name] !==  undefined) throw new Error(`Test name(${name}) already declared`);
+        Test.tests[name] = func;
+        if (resultsPrinted) resultsPrinted = !(pending = false);
+      }
     }
   },
+  filter: (filter) => filter instanceof Function && (_filter = filter),
   list: () => Object.keys(Test.tests),
   count: () => Test.list().length,
   run: () => {
@@ -235,26 +279,11 @@ const Test = {
       const testName = testNames[index];
       if (!ran[testName]) {
         const ts = new TestStatus(testName);
-        ts.start();
-        try {
-          Test.tests[testName].forEach((testFunc) => {
-            const isAsync = testFunc.constructor.name === "AsyncFunction";
-            if (isAsync) {
-              testFunc(ts).then(() => {}, (e) =>
-                ts.fail(e.stack || e.msg));
-            } else {
-              testFunc(ts);
-            }
-          });
-        } catch (e) {
-          if (e !== failureError) try {ts.fail(e);} catch(e) {
-            console.error(e);
-          }
-        }
-        ran[testName] = true;
+        const testFunc = Test.tests[testName];
+        initializeAndRunTest(testFunc, ts, testName);
       }
     }
-    if (!allRunCheck) ensureAllComplete(Test, 4000)() & (allRunCheck = true);
+    if (!allRunCheck) ensureAllComplete(Test, 10000)() & (allRunCheck = true);
   },
   results: () => ({
     tests: {
@@ -292,6 +321,10 @@ const Test = {
     return ranNames;
   },
   reportIn: (ts) => {
+    if (asyncRunning && ts.name() === asyncRunning.testName) {
+      asyncRunning = undefined;
+      runAsync();
+    }
     if (reported[ts.name()]) throw new Error(`Test: '${ts.name()}' is double reporting.\n\t\tonly one call should be made to fail || success`);
     if (ts.failed() || !ts.succeed()) TestStatus.failCount++;
     else TestStatus.successCount++;

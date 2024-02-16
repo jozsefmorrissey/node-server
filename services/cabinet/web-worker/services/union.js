@@ -1,5 +1,6 @@
 
-function unionAll(assemIds, environment) {
+function unionAll(payload, environment) {
+  const assemIds = payload.assemblies;
   let csg = new CSG();
   const modelAttr = environment.modelAttribute || 'joined';
   const map = environment.modelInfo[modelAttr];
@@ -10,7 +11,8 @@ function unionAll(assemIds, environment) {
       csg = csg.union(CSG.fromPolygons(model.polygons, true));
     }
   }
-  return csg.polygons.length > 0 ? csg : null;
+  environment.unioned = csg.polygons.length > 0 ? csg : null;
+  return environment.unioned;
 }
 
 module.exports = unionAll;

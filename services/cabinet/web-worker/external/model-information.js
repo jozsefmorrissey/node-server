@@ -1,6 +1,8 @@
 
 const DTO = require('./data-transfer-object.js');
 const MFC = require('../services/modeling/modeling-function-configuration.js');
+const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 
 // TODO: move sorting/filtering functions to worker-bundle
 const sortUnderScoreCount = (a, b) => {
@@ -52,7 +54,7 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
   const dependentMatch = assembly.locationCode().match(dependentReg);
   obj.dependencies = [];
   if (assembly.parentAssembly()) obj.dependencies.push(assembly.parentAssembly().id());
-  obj.joints.forEach(jId => obj.dependencies.concatInPlace(jointMap.male[jId]));
+  obj.joints.forEach(jId => obj.dependencies.concatInPlace(jointMap[jId].male));
   obj.complexity = () => {
     if (assembly.includeJoints === undefined) return 1;
     if (!Number.isNaN(complexity)) return complexity;
@@ -86,9 +88,22 @@ const sorter = (assemblies, jointMap, byId) => {
 
 
 
+const dataConverters = {
+  threeView: (data) => {
+    if (data.front[0] instanceof Line2d) return data;
+    data.front = data.front.map(d => new Line2d(d[0], d[1]));
+    data.right = data.right.map(d => new Line2d(d[0], d[1]));
+    data.top = data.top.map(d => new Line2d(d[0], d[1]));
+    data.threeView = data.threeView.map(d => new Line2d(d[0], d[1]));
+    data.parimeter.threeView = data.parimeter.threeView.map(d => new Line2d(d[0], d[1]));
+    data.parimeter.front = new Polygon2d(data.parimeter.front.vertices);
+    data.parimeter.right = new Polygon2d(data.parimeter.right.vertices);
+    data.parimeter.top = new Polygon2d(data.parimeter.top.vertices);
+    return data;
+  }
+}
 
-
-const modelInfoObject = () => ({model: {}, joined: {}, intersection: {}, biPolygonArray: {}});
+const modelInfoObject = () => ({threeView: {}, model: {}, joined: {}, intersection: {}, biPolygonArray: {}});
 
 class ModelInformation {
   constructor(targetOs, props) {
@@ -97,7 +112,6 @@ class ModelInformation {
     let targets = targetOs;
     if (!Array.isArray(targets)) targets = [targetOs];
     targets = targets.map(a => a);
-    targets.push(targets[0].getRoot());
     const assemblies = targets[0].allAssemblies();
     if (props.allRelatedParts === true) targets = assemblies.filter(a => a.part() && a.included());
     const modelInfo = props.modelInfo || modelInfoObject();
@@ -107,6 +121,8 @@ class ModelInformation {
     assemblies.forEach(a => byId[a.id()] = a);
     let buildModels;
     if (targets) buildModels = targets;
+    const root = targets[0].getRoot();
+    if (buildModels.indexOf(root) === -1) buildModels.push(root);
     else buildModels = assemblies.filter(a => a.part && a.included);
 
     let joinModels = sorter(buildModels, jointMap, byId);
@@ -132,6 +148,8 @@ class ModelInformation {
     this.needsIntersected = () => targets.filter(id => byId[id].part() && modelInfo.intersection[id] === undefined);
     this.needsUnioned = () => unionedCsg ? [] :
                             (props.partsOnly === false ? targets : includedParts);
+    this.needs2dConverted = () => props.unioned ? unioned2D ? [] : [{}]:
+          targets.filter(id => !id.startsWith('Cutter') && modelInfo.threeView[id] === undefined);
 
     const environmentObject = () => {
       const environment = DTO(props) || {};
@@ -147,6 +165,12 @@ class ModelInformation {
       for (let index = 0; index < attributes.length; index++) {
         const attr = attributes[index];
         instance[attr] = (id) => {
+          id = id + '';
+          let obj = modelInfo[attr][id];
+          if (!obj) return obj;
+          if (dataConverters[attr]) modelInfo[attr][id] = dataConverters[attr](obj);
+          if (obj.polygons && !(obj instanceof CSG))
+            modelInfo[attr][id] = CSG.fromPolygons(obj.polygons, true);
           return modelInfo[attr][id];
         }
 
@@ -159,7 +183,7 @@ class ModelInformation {
         }
       }
     }
-    addTrackingFunctions('model', 'joined', 'intersection', 'biPolygonArray')
+    addTrackingFunctions('threeView', 'model', 'joined', 'intersection', 'biPolygonArray')
 
     this.assemblies = () => assemblies;
     this.assembly = (id) => assemMap[id];
@@ -167,6 +191,12 @@ class ModelInformation {
     let unionedCsg;
     this.unioned = (data) => {
       if (data) unionedCsg = CSG.fromPolygons(data.polygons, true);
+      else return unionedCsg;
+    }
+
+    let unioned2D
+    this.unioned2D = (data) => {
+      if (data) unioned2D = data;
       else return unionedCsg;
     }
 

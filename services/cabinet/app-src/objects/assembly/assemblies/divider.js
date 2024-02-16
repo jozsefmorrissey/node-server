@@ -52,7 +52,7 @@ class Divider extends Assembly {
     this.getSubassemblies = (childrenOnly) => {
       const children = activeParts().concat(Object.values(this.subassemblies));
       if (childrenOnly) return children;
-      const decendents = children.map(c => c);
+      const decendents = [];
       for (let index = 0; index < children.length; index++) {
         decendents.concatInPlace(children[index].getSubassemblies(false));
       }

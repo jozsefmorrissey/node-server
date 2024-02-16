@@ -4,24 +4,23 @@
 const Show = require('../show.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
 const ThreeDMain = require('../displays/three-d-main.js');
-const ThreeDModel = require('../three-d/three-d-model.js');
+// const ThreeDModel = require('../three-d/three-d-model.js');
 const TwoDLayout = require('../displays/two-d-layout');
 const OpenSectionDisplay = require('./open-section.js');
 const CabinetConfig = require('../config/cabinet-configs.js');
-const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
 const Measurement = require('../../../../public/js/utils/measurement.js');
 const Request = require('../../../../public/js/utils/request.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
 const $t = require('../../../../public/js/utils/$t.js');
-const Object3D = require('../three-d/layout/object.js');
-const Inputs = require('../input/inputs.js');
 const EPNTS = require('../../generated/EPNTS');
 const Global = require('../services/global');
 const Canvas = require('canvas');
 const FileTabDisplay = require('../../../../public/js/utils/lists/file-tab.js');
 const VoidDisplay = require('./advanced/subassemblies/void.js');
+const ObjectInputTree = require('../input/object-input-tree');
+const SimpleModel = require('../objects/simple/simple.js');
 
 // function getHtmlElemCabinet (elem) {
 //   const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
@@ -70,12 +69,16 @@ class CabinetDisplay {
         TwoDLayout.panZoom.once();
         ThreeDMain.update(cabinet);
       }
-      const valueObj = cabinet.value.values;
-      const keys = Object.keys(valueObj);
-      const modifiableValues = cabinet.modifiableValues();
-      const scope = {$index, cabinet, showTypes, OpenSectionDisplay,
-                      modifiableValues, display, fileTabDisp};
-      return CabinetDisplay.bodyTemplate.render(scope);
+      if (cabinet instanceof SimpleModel) {
+        return CabinetDisplay.simpleBodyTemplate.render({});
+      } else {
+        const valueObj = cabinet.value.values;
+        const keys = Object.keys(valueObj);
+        const modifiableValues = cabinet.modifiableValues();
+        const scope = {$index, cabinet, showTypes, OpenSectionDisplay,
+          modifiableValues, display, fileTabDisp};
+        return CabinetDisplay.bodyTemplate.render(scope);
+      }
     }
 
     function inputValidation(values) {
@@ -118,18 +121,28 @@ class CabinetDisplay {
     }
 
     const getObject = (values) => {
-      const cabinet = CabinetConfig.get(group, values.type, values.layout, values.name);
-      ThreeDMain.update(cabinet, true);
-      return cabinet;
+      if (values.objectType === 'Cabinet') {
+        values = values.CabinetNode;
+        const cabinet = CabinetConfig.get(group, values.type, values.layout, values.name);
+        Global.target(cabinet);
+        Canvas.render();
+        return cabinet;
+      } else {
+        values = values.OtherNode;
+        const sm = SimpleModel.get(values.simpleType);
+        Global.target(sm);
+        Canvas.render();
+        return sm;
+      }
     };
     this.active = () => expandList.active();
     const expListProps = {
       list: group.objects,
       // dontOpenOnAdd: true,
       type: 'top-add-list',
-      inputTree:   CabinetConfig.inputTree(),
+      inputTree:   ObjectInputTree(),
       parentSelector, getHeader, getBody, getObject, inputValidation,
-      listElemLable: 'Cabinet'
+      listElemLable: 'Object'
     };
     const expandList = new ExpandableList(expListProps);
     expandList.afterRemoval(removeFromLayout);
@@ -198,6 +211,8 @@ class CabinetDisplay {
     du.on.match('focusout', '.modifiable-value-input', updateValue);
   }
 }
+
+CabinetDisplay.simpleBodyTemplate = new $t('cabinet/simple');
 CabinetDisplay.bodyTemplate = new $t('cabinet/body');
 CabinetDisplay.headTemplate = new $t('cabinet/head');
 module.exports = CabinetDisplay

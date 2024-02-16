@@ -47,25 +47,35 @@ function getBiPolygon(rMdto, environment, left) {
 
 
 
-function defaultToModel(assemMrMdto) {
+function defaultToModel(assemMrMdto, env) {
   const current = assemMrMdto.position.current;
+  const maleJointIds = env.jointMap.male[assemMrMdto.id] || [];
+  const jointsToUpdate = maleJointIds.map(jid => env.byId[jid])
+                              .filter(d => d.maleOffset);
+  // jointsToUpdate.forEach(j => {throw new Error('notImplemented');});
   return BiPolygon.fromPositionObject(current);
 }
 
 const defalt = {biPolygon: defaultToModel};
+const complexFunctions = (cxtr, partName) => to[cxtr] !== undefined &&
+        (to[cxtr][partName] || to[cxtr][cxtr]);
+const simpleFunctions = (cxtr) =>
+        SimpleModels[cxtr] ? {model: SimpleModels[cxtr]} : null;
+const functions = (cxtr, partName) =>
+        complexFunctions(cxtr, partName) || simpleFunctions(cxtr);
 
 const idReg = /^(.*?)_(.*)$/;
 const to = (rMdto) => {
   const id = rMdto.id
   const cxtr = id.replace(idReg, '$1');
   let partName = rMdto.partName;
-  if (to.usesDefault(id, partName)) return defalt;
-  return to[cxtr][partName] || to[cxtr][cxtr];
+  const funcs = functions(cxtr, partName);
+  return funcs ? funcs : defalt;
 }
+
 to.usesDefault = (id, partName) => {
   const cxtr = id.replace(idReg, '$1');
-  return to[cxtr] === undefined || (to[cxtr][partName] === undefined &&
-                           to[cxtr][cxtr] === undefined)
+  return functions(cxtr, partName) ? false : true;
 }
 
 to.SectionProperties = {

@@ -401,7 +401,7 @@ class Polygon2d {
         const l = lines[index];
         sum += (l.endVertex().x() - l.startVertex().x()) * (l.endVertex().y() + l.startVertex().y());
       }
-      return sum >= 0;
+      return sum <= 0;
     }
 
     function ensure(antiClockWise) {
@@ -521,8 +521,8 @@ Polygon2d.lines = (...polys) => {
     lines = lines.concat(polys[index].lines());
   }
   // return lines;
-  const consolidated = Line2d.consolidate(...lines);
-  if (consolidated.length !== Line2d.consolidate(...consolidated).length) {
+  const consolidated = Line2d.consolidate(lines);
+  if (consolidated.length !== Line2d.consolidate(consolidated).length) {
     console.error.subtle('Line Consolidation malfunction');
   }
   return consolidated;

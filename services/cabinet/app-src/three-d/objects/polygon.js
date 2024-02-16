@@ -841,7 +841,7 @@ Polygon3D.lines2d = (polygons, x, y) => {
   // Polygon3D.merge(polygons);
   let lines = [];
   polygons.map(p => p.to2D(x, y)).forEach(p => lines.concatInPlace(p.lines()));
-  return Line2d.consolidate(...lines);
+  return Line2d.consolidate(lines);
 }
 
 Polygon3D.toDrawString2d = (polygons, x, y,...colors) => {
@@ -955,8 +955,10 @@ Polygon3D.viewFromVector = (polygons, vector) => {
   for (let p = 0; p < polygons.length; p++) {
     const vertices = polygons[p].vertices();
     const orthoVerts = Vertex3D.viewFromVector(vertices, vector);
-    const poly = new Polygon3D(orthoVerts);
-    orthoPolys.push(poly);
+    try {
+      const poly = new Polygon3D(orthoVerts);
+      orthoPolys.push(poly);
+    } catch(e) {}
   }
   return orthoPolys;
 }

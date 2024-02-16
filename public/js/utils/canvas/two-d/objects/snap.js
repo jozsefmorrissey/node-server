@@ -37,7 +37,7 @@ class Snap2d extends Lookup {
     this.withinTol = (...args) => Tolerance.within(this.tolerance())(...args);
 
     this.radians = parent.radians;
-    object.radians = parent.radians;
+    // object.radians = parent.radians;
 
 
     // TODO: implement this as rotation function, allows for rotation of multple connected objects
@@ -436,7 +436,7 @@ class Snap2d extends Lookup {
         } else if (alps.MATCH_WALL_ANGLE) {
           const backLine = instance.backs().sort((a,b) => wall.distance(a.midpoint()) - wall.distance(b.midpoint()))[0];
           wallPairables = [instance.snapLocations.at(backLine.midpoint())];
-          theta = wall.radians() - backLine.radians();
+          theta = backLine.radians() - wall.radians();
         }
         return findBestWallSnapLoc(point, wall, wallPairables, theta) ||
                     findBestWallSnapLoc(point, wall, wallPairables, theta + Math.PI);
@@ -468,7 +468,7 @@ class Snap2d extends Lookup {
       const newCenter = obj.point(targetIndex, {theta: radians, center: otherMidpoint.center()});
       const neighbors = obj.neighbors(targetMidpoint.center(), -1, 0, 1);
       const neighborSeperation = neighbors[0].distance(neighbors[2]);
-      const neighbor = neighbors.min(null, neighborSelectFunc(cursorCenter, neighborSeperation));
+      const neighbor = neighbors.min(neighborSelectFunc(cursorCenter, neighborSeperation), null);
       const neighborIndex = obj.verticesAndMidpoints().equalIndexOf(neighbor);
       const locCount = instance.snapLocations().length;
 
@@ -496,7 +496,7 @@ class Snap2d extends Lookup {
           try {
             const targetMidpoint = snapList[index];
             const tm = targetMidpoint;
-            const radDiff = otherMidpoint.forwardRadians() - targetMidpoint.forwardRadians();
+            const radDiff = targetMidpoint.forwardRadians() - otherMidpoint.forwardRadians();
             const parrelle = findClosestNeighbor(om, radDiff, tm, ol, c);
             const antiParrelle = findClosestNeighbor(om, radDiff + Math.PI, tm, ol, c);
             const furthestCenter =
@@ -553,7 +553,7 @@ class Snap2d extends Lookup {
           const center2centerDist = otherSnap.object().center().distance(instCenter);
           if (center2centerDist - 1 < combinedRadius) {
             const snapLocs = otherSnap.snapLocations();
-            closest = snapLocs.min(closest, distanceFunc(center));
+            closest = snapLocs.min(distanceFunc(center), closest);
           }
         }
       }

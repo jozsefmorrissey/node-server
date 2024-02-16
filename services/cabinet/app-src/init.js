@@ -6,6 +6,7 @@ $t.loadFunctions(require('../generated/html-templates'));
 
 // Object Classes
 // require('./bind.js');
+require('./objects/simple/init')
 require('./objects/assembly/init-assem');
 require('./objects/joint/init');
 require('./displays/documents/init.js');
@@ -21,7 +22,6 @@ require('./objects/room');
 const TwoDLayout = require('./displays/two-d-layout.js');
 const ThreeDMainModel = require('./displays/three-d-main.js');
 require('./three-d/layout/init');
-require('./objects/simple/init')
 require('./displays/opening-sketch.js')
 const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');

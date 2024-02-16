@@ -346,8 +346,8 @@ class ThreeDModel {
 
 let lastViewId;
 function centerOnObj(x,y,z, viewId) {
-  const model = ThreeDModel.lastActive.lastModel();
-  const center = new Vertex3D(model.center());
+  const csg = ThreeDModel.lastRendered;
+  const center = new Vertex3D(csg.center());
   center.x += 200 * y;
   center.y += -200 * x;
   center.z += 100;
@@ -411,10 +411,14 @@ ThreeDModel.render = (partOs, options) => {
   }, 2500);
 };
 
+
 ThreeDModel.display = (displayModel) => {
-  ThreeDModel.getViewer(displayModel);
-  viewer.mesh = displayModel.toMesh();
-  viewer.gl.ondraw();
+  if (displayModel instanceof CSG && displayModel.polygons.length > 0) {
+    ThreeDModel.lastRendered = displayModel;
+    ThreeDModel.getViewer(displayModel);
+    viewer.mesh = displayModel.toMesh();
+    viewer.gl.ondraw();
+  }
 }
 
 ThreeDModel.build = async (cabinet) => {

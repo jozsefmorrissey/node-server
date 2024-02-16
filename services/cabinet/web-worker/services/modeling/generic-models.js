@@ -1,34 +1,42 @@
 
 const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
+const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
 const BiPolygon = require('../../../app-src/three-d/objects/bi-polygon.js');
 const to = {};
 
 to.SimpleModel = (simpleModelDto) => {
-  const biPoly = BiPolygon.fromVectorObject(obj3D.width(), obj3D.height(), obj3D.thickness(), obj3D.center());
-  return biPoly.toModel();
+  const center = simpleModelDto.center.object();
+  const height = simpleModelDto.height;
+  const depth = simpleModelDto.thickness;
+  const width = simpleModelDto.width;
+  const biPoly = BiPolygon.fromVectorObject(width, height, thickness, center);
+  return biPoly.model();
 }
 
 to.ShowerBase = (simpleModelDto) => {
   const curbHeight = 2*2.54;
   const curbWidth = 3*2.54;
-  const objCenter = obj3D.center();
-  const height = obj3D.height();
-  const depth = obj3D.thickness();
-  const base = BiPolygon.fromVectorObject(obj3D.width(), height-curbHeight, depth, objCenter);
+  const objCenter = simpleModelDto.center.object();
+  const height = simpleModelDto.height;
+  const depth = simpleModelDto.thickness;
+  const width = simpleModelDto.width;
+  const base = BiPolygon.fromVectorObject(width, height-curbHeight, depth, objCenter);
   const curbCenter = new Vertex3D({
     x: objCenter.x,
     y: objCenter.y + height/2,
     z: objCenter.z + depth/2 - curbWidth/2
   });
-  const curb = BiPolygon.fromVectorObject(obj3D.width(), curbHeight, curbWidth, curbCenter);
-  return base.toModel().union(curb.toModel());
+  const curb = BiPolygon.fromVectorObject(width, curbHeight, curbWidth, curbCenter);
+  return base.model().union(curb.model());
 }
 
 to.Toilet = (simpleModelDto) => {
-  const third = obj3D.thickness()/3;
-  const center = obj3D.center();
-  const height = obj3D.height();
-  const depth = obj3D.thickness();
+  const third = simpleModelDto.thickness/3;
+  const center = simpleModelDto.center.object();
+  const height = simpleModelDto.height;
+  const depth = simpleModelDto.thickness;
+  const width = simpleModelDto.width;
+
   const bowlCenter = [
     center.x,
     center.y,
@@ -65,7 +73,7 @@ to.Toilet = (simpleModelDto) => {
   const tankHeight = height - pedistalHeight;
   const tankWidth = third - wallOffset;
   const tank = CSG.cube({
-    radius: [obj3D.width()/2, tankHeight/2, tankWidth/2],
+    radius: [width/2, tankHeight/2, tankWidth/2],
     center: [
       center.x,
       (center.y + height/2 - tankHeight/2),
@@ -76,19 +84,19 @@ to.Toilet = (simpleModelDto) => {
   const model = bowl.subtract(bowlCutter).union(pedistal).union(tank);
   const modCenter = model.center();
   model.center({x:0,y:0,z:0});
-  const rotation = obj3D.rotation().copy();
+  const rotation = simpleModelDto.rotation;
   model.rotate(rotation);
   model.center(modCenter);
   return model;
 }
 
-to.Stairs = () => {
-  const count = this.count();
-  const treadLength = this.treadLength();
-  const rise = obj3D.height() / count;
-  const width = obj3D.width();
-  const height = obj3D.height();
-  const center = obj3D.center();
+to.Stairs = (simpleModelDto) => {
+  const count = simpleModelDto.count;
+  const treadLength = simpleModelDto.treadLength;
+  const rise = simpleModelDto.height / count;
+  const width = simpleModelDto.width;
+  const height = simpleModelDto.height;
+  const center = simpleModelDto.center.object();
   let model = new CSG();
   for (let index = 0; index < count; index++) {
     model = model.union(CSG.cube({
@@ -103,7 +111,7 @@ to.Stairs = () => {
 
   const modCenter = model.center();
   model.center({x:0,y:0,z:0});
-  const rotation = obj3D.rotation().copy();
+  const rotation = simpleModelDto.rotation;
   model.rotate(rotation);
   model.center(modCenter);
 
@@ -192,7 +200,7 @@ to.Pull = (baseCenter, line, normal, projection, cTOc) => {
   var rCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerRight, vecObj);
   var mainCyl = BiPolygon.fromVectorObject(length, gerth, gerth, centerMain, vecObj);
 
-  return mainCyl.toModel().union(lCyl.toModel()).union(rCyl.toModel());
+  return mainCyl.model().union(lCyl.model()).union(rCyl.model());
 }
 
 to.Pull.Simple = (baseCenter, line, normal, projection, cTOc) => {

@@ -12,6 +12,7 @@ const Vector3D = require('../three-d/objects/vector.js');
 const Line3D = require('../three-d/objects/line.js');
 const Vertex3D = require('../three-d/objects/vertex.js');
 const Canvas = require('./canvas');
+const Jobs = require('../../web-worker/external/jobs.js');
 const Global = require('../services/global.js');
 // const cube = new CSG.cube({radius: [3,5,1]});
 const consts = require('../../globals/CONSTANTS');
@@ -143,10 +144,8 @@ Canvas.on.switch((id) => {
 
 function update(part, force) {
   if (part) part = Global.cabinet();
-  const threeDModel = ThreeDModel.get(part);
-  if (threeDModel) {
-    threeDModel.buildObject();
-    Canvas.render(part, force);
+  if (part) {
+    new Jobs.CSG.Assembly.Join(part).then(Canvas.render, console.error).queue();
     updateController();
   }
 }

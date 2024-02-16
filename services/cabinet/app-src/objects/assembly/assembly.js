@@ -138,8 +138,8 @@ class Assembly extends KeyValue {
         hashVal += subAssems[index].hash(true);
       }
       if (hashVal !== lastHash) {
-        changeEvent.trigger(instance);
         lastHash = hashVal;
+        changeEvent.trigger(instance);
         return hash();
       }
       return hashVal;
@@ -329,7 +329,6 @@ class Assembly extends KeyValue {
         const joint = allJs[ji];
         if (noJoints && joint instanceof Joint) continue;
         const jid = joint.id();
-        jMap.male[jid] = [];
         for (let ai = 0; ai < assems.length; ai++) {
           const assem = assems[ai];
           // if (assem.partCode() === 'T:f' && joint.locationId() === 'frontCutJoint') {
@@ -338,9 +337,17 @@ class Assembly extends KeyValue {
           if (!(assem instanceof Assembly) || (assem.included() &&
                 (!(joint instanceof Joint) || assem.includeJoints()))) {
             const aid = assem.id();
-            if (!jMap.female[aid]) jMap.female[aid] = [];
-            if (joint.dependsOn(assem)) jMap.male[jid].push(aid);
-            if (joint.isDependent(assem)) jMap.female[aid].push(jid);
+            if (jMap[jid] === undefined) jMap[jid] = {male: [], female: []};
+            if (joint.dependsOn(assem)) {
+              if (!jMap.male[aid]) jMap.male[aid] = [];
+              jMap.male[aid].push(jid);
+              jMap[jid].male.push(aid);
+            }
+            if (joint.isDependent(assem)) {
+              if (!jMap.female[aid]) jMap.female[aid] = [];
+              jMap.female[aid].push(jid);
+              jMap[jid].female.push(aid);
+            }
           }
         }
       }

@@ -30,16 +30,5 @@
   <label>From Ceiling</label>
   <input class='value-2d' member='bridge' type="text" key="fromCeiling" cascade='fromFloor' value="{{display(target.parent().fromCeiling())}}">
   <br>
-  <div {{target.parent().obj3D().constructor.name === 'Object3D' ? '' : 'hidden'}}>
-    <label>Type</label>
-    <select id='modler-selector'>
-      <option>Rectangle</option>
-      <option:t repeat='name in SimpleModel.list()'
-              {{target.parent().obj3D().modeler().constructor.name === name ? 'selected' : ''}}>
-        {{name}}
-      </option:t>
-    </select>
-  </div>
-  <br>
   <button class='remove-btn-2d transparent'>Remove</button>
 </div>

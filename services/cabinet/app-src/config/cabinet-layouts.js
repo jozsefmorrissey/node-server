@@ -24,8 +24,8 @@ new CabinetLayout('1dDD', (cabinet) => {
 
   opening.divide(2);
   opening.vertical(false);
-  opening.sections[0].setSection("DrawerSection");
-  opening.sections[1].setSection("DualDoorSection");
+  opening.sections()[0].setSection("DrawerSection");
+  opening.sections()[1].setSection("DualDoorSection");
   opening.pattern('ab').value('a', 6);
 });
 
@@ -36,8 +36,8 @@ new CabinetLayout('1dD', (cabinet) => {
 
   opening.divide(1);
   opening.vertical(false);
-  opening.sections[0].setSection("DrawerSection");
-  opening.sections[1].setSection("DoorSection");
+  opening.sections()[0].setSection("DrawerSection");
+  opening.sections()[1].setSection("DoorSection");
   opening.pattern('ab').value('a', 6);
 });
 
@@ -48,9 +48,9 @@ new CabinetLayout('3d', (cabinet) => {
 
   opening.divide(2);
   opening.vertical(false);
-  opening.sections[0].setSection("DrawerSection");
-  opening.sections[1].setSection("DrawerSection");
-  opening.sections[2].setSection("DrawerSection");
+  opening.sections()[0].setSection("DrawerSection");
+  opening.sections()[1].setSection("DrawerSection");
+  opening.sections()[2].setSection("DrawerSection");
   opening.pattern('abb').value('a', 6);
 });
 

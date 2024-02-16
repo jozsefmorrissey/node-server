@@ -33,6 +33,8 @@
   "Guides": [],
   "Cabinet": [],
   "Cutter": [],
+  "Object3D": ["id", "height", "width", "thickness", "rotation", "center", "count"],
+  "Stairs": ["count", "treadLength"],
   "CutterModel": [],
   "CutterReference": ["reference", "fromPoint", "offset", "front"],
   "CutterPoly": ["poly"],

@@ -44,7 +44,7 @@ class GroupDisplay extends Lookup {
     }
     function onCabinetStyleSubmit(values) {
       setCurrentStyleState(values);
-      this.active().propertyConfig.set(values.style, values.subStyle);
+      _active.propertyConfig.set(values.style, values.subStyle);
       ThreeDMain.update();
     }
 
@@ -83,10 +83,10 @@ class GroupDisplay extends Lookup {
 
     this.cabinetHtml = (group) =>  this.cabinetDisplay(group) ? this.cabinetDisplay(group).html() : '';
 
-    let a;
+    let _active;
     this.active = (active) => {
-      if (active) a = active;
-      return a;
+      if (active) _active = active;
+      return _active;
     }
   }
 }

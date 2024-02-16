@@ -57,9 +57,10 @@ function getViewer (model) {
   return viewer;
 }
 
+let includeAxis = false;
 const points = [[0,1,0], [0,2,0],[1,3,0],[2,3,0],[3,2,0],[3,1,0],[2,0,0],[1,0,0]];
 // const model = CSG.sphere({r:6});
-let model = CSG.axis();
+let model = includeAxis ? CSG.axis() : new CSG();
 // model = model.union(new CSG.cone({start: [100,100,0], end: [110,110,0]}));
 // model = model.union(new CSG.Line({start: [10,10,0], end: [50,50,0]}));
 // model = model.union(new CSG.Line({start: new CSG.Vector([0,10,10]), end: [0,50,50]}));
@@ -130,7 +131,7 @@ function parse(lines, sc) {
   callId = ++call;
   setTimeout(() => {
     if (callId === call) {
-      let model = CSG.axis();
+      let model = includeAxis ? CSG.axis() : new CSG();
       for (let index = 0; index < lines.length; index++) {
         let found = false;
         try {

@@ -88,9 +88,9 @@ class Position {
         rotation: this.rotation(),
         normals: this.normals()
       };
-      assembly.getDependencies().male.forEach((joint) =>
-        joint.updatePosition && joint.updatePosition(position, assembly)
-      );
+      // assembly.getDependencies().male.forEach((joint) =>
+      //   joint.updatePosition && joint.updatePosition(position, assembly)
+      // );
       return position;
     }
 

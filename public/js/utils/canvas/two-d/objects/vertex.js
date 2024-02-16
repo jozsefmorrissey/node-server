@@ -31,6 +31,7 @@ class Vertex2d {
     }
 
     this.rotate = (radians, pivot, doNotModify) => {
+      // const radians = Math.mod(radians, Math.PI);
       const vertex = doNotModify ? this.copy() : this;
       const point = vertex.point();
       pivot ||= new Vertex2d(0,0);

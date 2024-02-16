@@ -32,11 +32,12 @@ function withinTolerance(point, map) {
 
 const ww = 500;
 class Layout2D extends Lookup {
-  constructor(wallJson) {
+  constructor(objects) {
     super();
+    this.objects = () => (objects instanceof Function ? objects() : objects) || [];
     let walls = [];
     const vertexMap = {};
-    Array.isArray(wallJson) && wallJson.forEach((wallJson) => walls.push(Wall2D.fromJson(wallJson, this, vertexMap)));
+    // Array.isArray(wallJson) && wallJson.forEach((wallJson) => walls.push(Wall2D.fromJson(wallJson, this, vertexMap)));
     let history;
     const addEvent = new CustomEvent('add');
     const removeEvent = new CustomEvent('remove');
@@ -47,7 +48,7 @@ class Layout2D extends Lookup {
     this.onRemove = removeEvent.on;
     this.onStateChange = stateChangeEvent.on;
 
-    Object.getSet(this, {objects: [], walls});
+    Object.getSet(this, {walls});
     const initialized = walls.length > 0;
     const instance = this;
 
@@ -241,41 +242,41 @@ class Layout2D extends Lookup {
       }
     }
 
-    this.addObject = (id, payload, name) => {
-      const obj = Object3D.new(payload, this);
-      obj.id(id);
-      if (obj.center().equals(0,0,0)) {
-        const center = Vertex2d.center.apply(null, this.vertices())
-        obj.bridge.top().center(center);
-        obj.bridge.top().fromFloor(0);
-      }
-      this.objects().push(obj);
-      // history.newState();
-      addEvent.trigger(undefined, payload);
-      return obj;
-    }
+    // this.addObject = (id, payload, name) => {
+    //   const obj = Object3D.new(payload, this);
+    //   obj.id(id);
+    //   if (obj.center().equals(0,0,0)) {
+    //     const center = Vertex2d.center.apply(null, this.vertices())
+    //     obj.bridge.top().center(center);
+    //     obj.bridge.top().fromFloor(0);
+    //   }
+    //   this.objects().push(obj);
+    //   // history.newState();
+    //   addEvent.trigger(undefined, payload);
+    //   return obj;
+    // }
 
-    this.removeObject = (obj) => {
-      for (index = 0; index < this.objects().length; index += 1) {
-        if (this.objects()[index] === obj) {
-          const obj = this.objects().splice(index, 1);
-          removeEvent.trigger(undefined, obj.payload());
-          return obj;
-        }
-      }
-      return null;
-    }
+    // this.removeObject = (obj) => {
+    //   for (index = 0; index < this.objects().length; index += 1) {
+    //     if (this.objects()[index] === obj) {
+    //       const obj = this.objects().splice(index, 1);
+    //       removeEvent.trigger(undefined, obj.payload());
+    //       return obj;
+    //     }
+    //   }
+    //   return null;
+    // }
 
-    this.removeByPayload = (payload) => {
-      for (index = 0; index < this.objects().length; index += 1) {
-        if (this.objects()[index].assembly() === payload) {
-          const obj = this.objects().splice(index, 1);
-          removeEvent.trigger(undefined, payload);
-          return obj;
-        }
-      }
-      return null;
-    }
+    // this.removeByPayload = (payload) => {
+    //   for (index = 0; index < this.objects().length; index += 1) {
+    //     if (this.objects()[index].assembly() === payload) {
+    //       const obj = this.objects().splice(index, 1);
+    //       removeEvent.trigger(undefined, payload);
+    //       return obj;
+    //     }
+    //   }
+    //   return null;
+    // }
 
     this.idMap = () => {
       const idMap = {};
@@ -387,15 +388,15 @@ class Layout2D extends Lookup {
       return true;
     }
 
-    this.payloads = () => {
-      const payloads = [];
-      this.objects().forEach((obj) => {
-        const center = obj.center();
-        const payload = obj.payload();
-        payloads.push({center, payload});
-      });
-      return payloads;
-    }
+    // this.payloads = () => {
+    //   const payloads = [];
+    //   this.objects().forEach((obj) => {
+    //     const center = obj.center();
+    //     const payload = obj.payload();
+    //     payloads.push({center, payload});
+    //   });
+    //   return payloads;
+    // }
 
     function filterCompare(list) {
       list = list.map((o) => o.payload());
@@ -483,14 +484,15 @@ class Layout2D extends Lookup {
     this.hoverMap = () => hoverMap;
 
 
-    this.toDrawString = () => {
-      return Line2d.toDrawString(this.walls());
-    }
+    this.toDrawString = () => this.objects()
+                                .map(a => a.snap2d.top().object().toDrawString())
+                                .concat([Line2d.toDrawString(this.walls())]).join('\n');
   }
 }
 
 // Needs to be internal!!!!
 Layout2D.fromJson = (json) => {
+  throw new Error('do something else')
   const walls = [];
   const layout = new Layout2D(json.walls);
   layout.id(json.id);

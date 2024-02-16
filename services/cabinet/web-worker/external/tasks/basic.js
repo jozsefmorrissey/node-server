@@ -8,11 +8,12 @@ class Task {
     CustomEvent.all(this, 'complete', 'failed', 'message', 'exicute', 'pending', 'initiate', 'change');
     this.id = String.random();
     this.finished = () => _status === STATUS.COMPLETE || _status === STATUS.FAILED;
-    this.status = (status) => {
+    this.status = (status, data) => {
       if (this.finished()) return _status;
       if (status && status !== _status) {
         _status = status;
-        this.trigger[_status](this);
+        data ||= _status === STATUS.FAILED ? _error : this;
+        this.trigger[_status](data, this);
         this.trigger.change(this);
       }
       return _status;
@@ -20,7 +21,7 @@ class Task {
     this.error = (error) => {
       if (error instanceof Error) {
         _error = error;
-        this.status(STATUS.FAILED);
+        this.status(STATUS.FAILED, error);
       }
       return _error;
     }
@@ -72,9 +73,9 @@ class SequentialTask extends Task {
       else if (this.failed().length > 0) this.status(STATUS.FAILED);
       this.trigger.change(this);
     }));
-    tasks.forEach((t, i) => t.on.failed(() => {
+    tasks.forEach((t, i) => t.on.failed((error) => {
       completed[i] = false;
-      this.status(STATUS.FAILED);
+      this.status(STATUS.FAILED, error);
       this.trigger.change(this);
     }));
   }

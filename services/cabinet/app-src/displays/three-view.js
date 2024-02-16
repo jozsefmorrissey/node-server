@@ -2,7 +2,6 @@
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils');
-const ThreeDModel = require('../three-d/three-d-model.js');
 const Layout2D = require('../two-d/layout/layout.js')
 const Draw2D = require('../../../../public/js/utils/canvas/two-d/draw.js');
 const Polygon3D = require('../three-d/objects/polygon.js');
@@ -14,10 +13,10 @@ const PanZoomClickMeasure = require('../../../../public/js/utils/canvas/two-d/pa
 const Global = require('../services/global.js');
 const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
 const CabinetModel = require('../three-d/cabinet-model.js');
-const ThreeViewObj = require('../../../../public/js/utils/canvas/two-d/objects/three-view.js')
 const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
 const HoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map.js');
 const construction = require('./documents/construction.js');
+const Jobs = require('../../web-worker/external/jobs.js');
 
 FunctionCache.on('three-view', 1000);
 function csgVert(pos, normal) {
@@ -64,9 +63,31 @@ class ThreeView extends Lookup {
     let targetPart;
     // p.setColor([0, 255, 0])
     let draw, panz, hovermap;
-    let threeDModel;
     let side = 'right';
-    const threeViewObj = {};
+    let threeViewObj;
+
+    const setThreeView = (target) => (modelInfo) => {
+      threeViewObj = {target, threeView: modelInfo.threeView(target.id())};
+    };
+    let lastHash;
+    function getThreeView() {
+      if (targetPart) {
+        const hash = targetPart.hash();
+        if (lastHash !== hash) {
+          lastHash = hash;
+          new Jobs.CSG.Assembly.To2D(targetPart).then(setThreeView(targetPart));
+        }
+      } else {
+        const cabinet = Global.cabinet();
+        if (cabinet === undefined) return;
+        const hash = cabinet.hash();
+        if (lastHash !== hash) {
+          lastHash = hash;
+          new Jobs.CSG.Cabinet.To2D(cabinet).then(setThreeView(cabinet)).queue();
+        }
+      }
+    }
+
     this.maxDem = () => maxDem;
     this.container = () => cnt || defaultCnt;
     this.side = (s) => {
@@ -74,7 +95,7 @@ class ThreeView extends Lookup {
         const rebuild = s !== side;
         side = s;
         if (rebuild) {
-          threeViewObj.targetPart = undefined;
+          lastHash = undefined;
           this.build.clearCache()();
         }
       }
@@ -85,26 +106,13 @@ class ThreeView extends Lookup {
     const color = 'black';
     const width = .2;
 
-    function getThreeView() {
-      if (threeViewObj.targetPart === targetPart) return threeViewObj.threeView;
-      if (targetPart) {
-        let model = targetPart.position().normalModel(side === 'left');
-        const polys = Polygon3D.fromCSG(model.polygons);
-        threeViewObj.threeView = new ThreeViewObj(polys);
-      } else {
-        const model = CabinetModel.get();
-        if (model) threeViewObj.threeView = model.threeView();
-      }
-      if (threeViewObj.threeView) threeViewObj.targetPart = targetPart;
-      return threeViewObj.threeView;
-    }
-
     this.toLines = () => {
-      const threeView = getThreeView();
-      if (targetPart) {
-        return threeView.top().concat(threeView.right().concat(threeView.front()));
+      if (!threeViewObj) return [];
+      const threeView = threeViewObj.threeView;
+      if (!targetPart) {
+        return threeView.top.concat(threeView.right.concat(threeView.front));
       } else {
-        return threeView.parimeter().allLines();
+        return threeView.parimeter.threeView;
       }
     }
 
@@ -121,7 +129,7 @@ class ThreeView extends Lookup {
 
     let allLines;
     function drawView () {
-      if (getThreeView() === undefined) return;
+      getThreeView();
       instance.build();
 
       const objs = hovermap.targets();
@@ -156,14 +164,11 @@ class ThreeView extends Lookup {
     this.update = () => {
       const cabinet = Global.cabinet();
       if (cabinet === undefined) return;
-      if (threeDModel === undefined) threeDModel = new ThreeDModel(cabinet);
-      const model = threeDModel.buildObject();
       draw.clear();
       setTimeout(() => {
         updatePartsDataList(instance.container());
         drawView(true);
       }, 100);
-      return model;
     }
 
     function updatePartInfo(elem) {
@@ -181,11 +186,6 @@ class ThreeView extends Lookup {
       partCodeCnt.innerText = `${partCode}: ${partId}`;
       updatePartInfo(partCodeCnt);
     }
-
-    this.threeDModel = () => threeDModel;
-    this.lastModel = () => threeDModel ? threeDModel.lastModel() : undefined;
-    this.lastRendered = () => threeDModel ? threeDModel.getLastRendered() : undefined;
-    this.partMap = () => threeDModel ? threeDModel.partMap() : {};
 
     function rulerClick(elem) {
       du.class.toggle(elem, 'active');

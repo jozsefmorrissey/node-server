@@ -11,11 +11,13 @@ function reportBack(modelMap, polyMap, taskId) {
 
 const PART_CODES_THAT_CANNOT_BE_BUILT = ["AUTOTK", "OpenTK", "COC"]
 const reportMod = 20;
-function BuildModels(assemblies, environment, taskId) {
+function BuildModels(payload, environment, taskId) {
+  const assemblies = payload.assemblies;
   let newModels = {};
   let newPolys = {};
+  let byId = environment ? environment.byId : {};
   for (let index = 0; index < assemblies.length; index++) {
-    let assembly = RDTO(assemblies[index], environment.byId);
+    let assembly = RDTO(assemblies[index], byId);
     if (PART_CODES_THAT_CANNOT_BE_BUILT.indexOf(assembly.partCode) !== -1) {
       environment.modelInfo.model[assembly.id] = null;
       newModels[assembly.id] = null;

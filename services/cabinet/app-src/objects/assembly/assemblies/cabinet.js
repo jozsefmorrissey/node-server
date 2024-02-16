@@ -12,6 +12,7 @@ const Group = require('../../group');
 const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line');
 const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex');
 const Vertex3D = require('../../../three-d/objects/vertex.js');
+const Vector3D = require('../../../three-d/objects/vector.js');
 const Line3D = require('../../../three-d/objects/line.js');
 const CSG = require('../../../../../../public/js/utils/3d-modeling/csg.js');
 const AutoToekick = require('./auto/toekick.js');
@@ -40,6 +41,8 @@ class Cabinet extends Assembly {
     this.overlay = OVERLAY.HALF;
     this.openings = new NotifictionArray(false);
     this.type = CABINET_TYPE.FRAMED;
+
+    this.faceNormals = () => this.openings.map(o => o.sectionProperties().normal())
 
     let name;
     this.name = (value) => {
@@ -266,6 +269,14 @@ class Cabinet extends Assembly {
     //   }
     //   return normals;
     // }
+    this.normals = (array) => {
+      if (this.openings.length === 0) return;
+      const normObj = {};
+      normObj.y = new Vector3D(0,1,0);
+      normObj.x = this.openings[0].normal();
+      normObj.z = normObj.x.crossProduct(normObj.y);
+      return array ? [normObj.x, normObj.y, normObj.z] : normObj;
+    }
 
     this.width = updateOpeningPoints(this.width, (w) => w && this.width() !== w);
     this.length = updateOpeningPoints(this.length, (l) => l && this.length() !== l, true);

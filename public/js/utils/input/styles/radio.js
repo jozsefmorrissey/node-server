@@ -17,6 +17,7 @@ class Radio extends Input {
     }
     props.value = undefined;
 
+    this.valid = () => props.list.indexOf(this.value()) !== -1;
     this.setValue(value);
     this.isArray = () => isArray;
     const uniqueName = String.random();

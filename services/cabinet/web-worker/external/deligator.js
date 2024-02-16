@@ -16,7 +16,10 @@ class WebWorkerDeligator {
       const taskObj = taskWorkerMap[data.id];
       if (taskObj) {
         const {task, workerIndex} = taskObj;
-        if (data.result instanceof Error) {
+        if (data.finished) {
+          if (task.completeOnFinish) tast.status(TASK_STATUS.COMPLETED);
+          else if (!task.finished()) task.status(TASK_STATUS.FAILED);
+        } else if (data.result instanceof Error) {
           task.error(data.result);
         } else {
           task.trigger.message(data && data.result);

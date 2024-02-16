@@ -2,17 +2,45 @@
 const {Task} = require('./basic');
 const STATUS = require('./status');
 
+class CsgSimpleTask extends Task {
+  constructor(objects) {
+    super();
+    let _result;
+    this.result = () => _result;
+    this.process = () => 'simple';
+    this.payload = () => ({objects});
+    this.on.message((result) => {
+      _result = result;
+      this.status(STATUS.COMPLETE, _result);
+    });
+  }
+}
+
+class CsgSimpleTo2DTask extends Task {
+  constructor(objects) {
+    super();
+    let _result;
+    this.result = () => _result;
+    this.process = () => 'simpleto2d';
+    this.payload = () => ({objects});
+    this.on.message((result) => {
+      _result = result;
+      this.status(STATUS.COMPLETE, _result);
+    });
+  }
+}
+
 class CsgTask extends Task {
-  constructor(modelInfo, excludeEnv) {
+  constructor(modelInfo) {
     super();
     this.process = () => this.constructor.name.replace(/^Csg(.{1,})Task/, "$1").toLowerCase();
     this.payload = () => {
       if (this.finished()) return null;
       const assemblies = this.remainingModels();
-      const environment = excludeEnv ? null : modelInfo.environment();
       if (assemblies.length === 0) this.status(STATUS.COMPLETE);
-      return {assemblies, environment};
+      return {assemblies};
     };
+    this.modelInfo = () => modelInfo;
     this.on.message((result) => {
       if (result) this.processResult(result);
       this.payload();
@@ -22,8 +50,8 @@ class CsgTask extends Task {
 }
 
 class CsgOrderModelTask  extends CsgTask {
-  constructor(modelInfo, excludeEnv) {
-    super(modelInfo, excludeEnv);
+  constructor(modelInfo) {
+    super(modelInfo);
     this.remainingModels = modelInfo.needsModeled;
     this.processResult = (result) => {
       if (result.type === 'model') modelInfo.modelMap(result.map);
@@ -34,8 +62,8 @@ class CsgOrderModelTask  extends CsgTask {
 }
 
 class CsgJoinTask extends CsgTask {
-  constructor(modelInfo, excludeEnv) {
-    super(modelInfo, excludeEnv);
+  constructor(modelInfo) {
+    super(modelInfo);
     this.remainingModels = modelInfo.needsJoined;
     this.processResult = (result) => {
       if (result.type === 'joined') modelInfo.joinedMap(result.map);
@@ -46,16 +74,16 @@ class CsgJoinTask extends CsgTask {
 }
 
 class CsgIntersectionTask extends CsgJoinTask {
-  constructor(modelInfo, excludeEnv) {
-    super(modelInfo, excludeEnv);
+  constructor(modelInfo) {
+    super(modelInfo);
     this.remainingModels = modelInfo.needsIntersected;
   }
 }
 
 
 class CsgModelTask  extends CsgTask {
-  constructor(modelInfo, excludeEnv) {
-    super(modelInfo, excludeEnv);
+  constructor(modelInfo) {
+    super(modelInfo);
     this.remainingModels = modelInfo.needsModeled;
     this.processResult = (result) => {
       if (result.type === 'model') modelInfo.modelMap(result.map);
@@ -66,22 +94,21 @@ class CsgModelTask  extends CsgTask {
 }
 
 class CsgUnionTask  extends CsgTask {
-  constructor(modelInfo, excludeEnv) {
-    super(modelInfo, excludeEnv);
+  constructor(modelInfo) {
+    super(modelInfo);
     this.remainingModels = modelInfo.needsUnioned;
     this.processResult = modelInfo.unioned;
   }
 }
 
-class SortModelInfoTask extends CsgTask {
-  constructor(modelInfo, excludeEnv) {
-    super(modelInfo, excludeEnv);
-    this.remainingModels = (result) => {
-      throw new Error('implement dummy');
-    };
+class CsgAssembliesTo2DTask extends CsgTask {
+  constructor(modelInfo) {
+    super(modelInfo);
+    this.remainingModels = modelInfo.needs2dConverted;
     this.processResult = (result) => {
-      throw new Error('implement dummy');
-    }
+      if (result.map)  modelInfo.threeViewMap(result.map);
+      else modelInfo.unioned2D(result);
+    };
   }
 }
 
@@ -89,5 +116,8 @@ module.exports = {
   Intersection: CsgIntersectionTask,
   Join: CsgJoinTask,
   Model: CsgModelTask,
-  Union: CsgUnionTask
+  Union: CsgUnionTask,
+  AssembliesTo2D: CsgAssembliesTo2DTask,
+  SimpleTo2D: CsgSimpleTo2DTask,
+  Simple: CsgSimpleTask
 }

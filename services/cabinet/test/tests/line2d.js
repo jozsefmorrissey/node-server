@@ -62,3 +62,27 @@ Test.add('Line2d parimeterArea',(ts) => {
   ts.assertTolerance(parimeter.area(), 13, .00000000001)
   ts.success();
 });
+
+Test.add('Line2d isolateFurthestLine', (ts) => {
+  const star = [];
+  const count = 10;
+  const interval = 2*Math.PI/count;
+  const center = new Vertex2d();
+  for (let index = 0; index < count; index++) {
+    star.push(Line2d.startAndTheta(center, interval * index, 10));
+  }
+
+  for (let index = 0; index < count; index++) {
+    const line = star[index];
+    const target = line[1];
+    const neighborCount = Math.floor((count - 1) / 2);
+    const neighbors = star.filter((l, i) => {
+      return Math.modTolerance(i, index, count, neighborCount + .1);
+    });
+    const furthest = Line2d.isolateFurthestLine(target, neighbors);
+    line.isLeft(furthest.midpoint());
+    neighbors.forEach(l => ts.assertTrue(l[1].distance(target) <= furthest[1].distance(target)));
+  }
+
+  ts.success();
+});

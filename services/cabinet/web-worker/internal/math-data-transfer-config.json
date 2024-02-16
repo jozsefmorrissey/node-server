@@ -1,0 +1,7 @@
+{
+  "Vector3D": ["i", "j", "k"],
+  "Polygon3D": ["vertices"],
+  "Polygon2d": ["vertices"],
+  "Vertex2d": ["x", "y", "z"],
+  "Line2d": ["0","1"]
+}

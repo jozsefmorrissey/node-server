@@ -30,9 +30,16 @@ class SnapPolygon extends Snap2d {
       polygon.copy(other);
     }
 
+    let rotated;
+    let lastTheta;
     this.object = () => {
-      polygon.center(this.center());
-      const rotated = polygon.rotate(this.radians(), null, true);
+      let theta = this.radians();
+      if (lastTheta !== theta) {
+        // I think the direction might have to be variable for different axis...
+        rotated = polygon.rotate(-theta, null, true);
+        lastTheta = theta;
+      }
+      rotated.center(this.center());
       return rotated;
     }
 

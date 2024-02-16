@@ -1,8 +1,10 @@
 const BiPolygon = require('../../three-d/objects/bi-polygon');
+const Object3D = require('../../three-d/layout/object.js');
 
-
-class SimpleModel {
-  constructor(obj3D) {
+class SimpleModel extends Object3D {
+  constructor() {
+    super();
+    this.length = this.height;
   }
 }
 

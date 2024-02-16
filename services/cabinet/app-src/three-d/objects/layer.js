@@ -159,7 +159,7 @@ Layer.to2D = (layersOcsg, x, y) => {
   for (let index = 0; index < layers.length; index++) {
     lines2d.concatInPlace(layers[index].to2D(x, y));
   }
-  return Line2d.consolidate(...lines2d);
+  return Line2d.consolidate(lines2d);
 }
 
 Layer.toDrawString = (layers, ...colors) => {

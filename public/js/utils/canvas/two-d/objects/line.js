@@ -578,7 +578,7 @@ class Line2d {
 
     this.copy = () => new Line2d(this.startVertex().copy(), this.endVertex().copy());
 
-    this.combine = (other) => {
+    this.combine = (other, tolerance) => {
       if (!(other instanceof Line2d)) return;
       const clean = this.clean(other);
       if (clean) return clean;
@@ -593,7 +593,7 @@ class Line2d {
       const ov2 = other.endVertex();
       if (!this.withinSegmentBounds(other)) {
         const dist = this.distance(other);
-        if (dist < tol) {
+        if (dist < tolerance) {
           console.warn('distance is incorrect:', dist);
           this.distance(other);
           this.withinSegmentBounds(other);
@@ -612,9 +612,10 @@ class Line2d {
 
     this.slice = (lines) => {
       if (this.isPoint()) return null;
+      lines = lines.filter(l => !withinTol(this.radianDifference(l), 0));
       const intersections = {};
       for (let index = 0; index < lines.length; index++) {
-        if (!lines[index].equals(this)) {
+        if (!this.isParrelle(lines[index])) {
           const intersect = this.findSegmentIntersection(lines[index], true);
           if (intersect instanceof Vertex2d && !this.isEndpoint(intersect)) {
             intersections[intersect.toString()] = intersect;
@@ -633,8 +634,6 @@ class Line2d {
         if (!line.isPoint()) {
           fractured.push(line);
           prevVert = currVert;
-        } else {
-          console.log('point?');
         }
       }
       const lastLine = new Line2d(prevVert, this.endVertex().copy());
@@ -822,8 +821,9 @@ Line2d.center = (lines) => Vertex2d.center(Line2d.vertices(lines));
 
 Line2d.rotate = (lines, radians, pivot) => lines.forEach(l => l.rotate(radians, pivot));
 
-Line2d.consolidate = (...lines) => {
-  const tolMap = new ToleranceMap({'slope': `+${tol}`, 'yIntercept': tol});
+Line2d.consolidate = (lines, tolerance) => {
+  tolerance ||= tol;
+  const tolMap = new ToleranceMap({'slope': `+${tolerance}`, 'yIntercept': tolerance});
   const lineMap = {};
   for (let index = 0; index < lines.length; index += 1) {
     if (!lines[index].isPoint()) {
@@ -888,21 +888,29 @@ Line2d.withinLineBounds = (vertex, ...lines) => {
   return true;
 }
 
-const distLine = (line, vertex, index) => {
-  return {line, distance: line.distance(vertex), index};
+const vertDistObj = (line, vertex, index) => {
+  const dist0 = line[0].distance(vertex);
+  const dist1 = line[1].distance(vertex);
+  if (dist0 > dist1) return {line, index, furthest: line[0], distance: dist0};
+  else return {line, index, furthest: line[1], distance: dist1};
 }
+const centerThetaDiff = (vertex, vertDistObj) => {
+  const vertToFur = new Line2d(vertex, vertDistObj.furthest);
+  vertDistObj.acute = vertToFur.acute(vertDistObj.line);
+}
+
 Line2d.isolateFurthestLine = (vertex, lines) => {
-  let retLines = [];
-  let max = distLine(lines[0], vertex, index);
+  let max = vertDistObj(lines[0], vertex, 0);
+  centerThetaDiff(vertex, max);
   for (let index = 1; index < lines.length; index++) {
-    let curr = distLine(lines[index], vertex, index);
-    if (curr.distance > max.distance) {
-      retLines = retLines.slice(0, max.index)
-                  .concat([max.line]).concat(retLines.slice(max.index));
+    let curr = vertDistObj(lines[index], vertex, index);
+    if (curr.distance > max.distance ||
+          (curr.furthest.equals(max.furthest) && max.acute < curr.acute)) {
       max = curr;
-    } else retLines.push(curr.line);
+      centerThetaDiff(vertex, max);
+    }
   }
-  return {line: max.line, lines: retLines};
+  return max.line;
 }
 
 Line2d.getSlope = function(x1, y1, x2, y2) {

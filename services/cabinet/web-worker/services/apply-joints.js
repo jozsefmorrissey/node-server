@@ -5,7 +5,7 @@ function determineMales(assem, env) {
   const joints = env.jointMap.female[assem.id] || [];
   const males = [];
   joints.forEach(jId =>
-    males.concatInPlace(env.jointMap.male[jId]));
+    males.concatInPlace(env.jointMap[jId].male));
   return males;
 }
 
@@ -45,7 +45,8 @@ const alreadyProcessed = (map, id, intersections) =>
   map.joined[id] !== undefined && (!intersections || map.intersection[id]);
 
 const newMapObj = () => ({intersection: {}, joined: {}});
-function Apply(assemblyIds, environment, taskId, intersections) {
+function Apply(payload, environment, taskId, intersections) {
+  const assemblyIds = payload.assemblies;
   let env = environment;
   let newMap = newMapObj();
   let map = {intersection: env.modelInfo.intersection, joined: env.modelInfo.joined};

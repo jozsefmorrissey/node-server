@@ -473,10 +473,5 @@ function init() {
   du.on.match('keycombo(Control, )', '*', getLayout().straightenUp);
 }
 
-du.on.match('change', '#modler-selector', (elem) => {
-  const cxtrName = elem.value;
-  getHoverMap().hovering().parent().obj3D().modeler(cxtrName);
-});
-
 TwoDLayout.init = init;
 module.exports = TwoDLayout;
