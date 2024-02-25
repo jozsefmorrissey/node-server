@@ -197,8 +197,10 @@ class SectionProperties extends KeyValue{
         assems.push(cover);
         if (!childrenOnly) assems.concatInPlace(cover.getSubassemblies());
       }
-      assems.push(this.divider());
-      if (!childrenOnly) assems.concatInPlace(this.divider().getSubassemblies());
+      if (this.divideRight()) {
+        assems.push(this.divider());
+        if (!childrenOnly) assems.concatInPlace(this.divider().getSubassemblies());
+      }
       for (let index = 0; !childrenOnly && index < this.sections.length; index++) {
         assems.concatInPlace(this.sections[index].getSubassemblies());
       }
@@ -572,7 +574,11 @@ class SectionProperties extends KeyValue{
     this.value('vertical', false);
     this.pattern().onChange(this.reevaluate);
 
-    const isMatch = (assem, dir) => instance[dir]().isSubPart(assem);
+    const isMatch = (assem, dir) => {
+      let target = instance[dir]();
+      if (target instanceof DividerSection) target = target.divider();
+      return target.isSubPart(assem);
+    }
     function isNeigbor(assem) {
       if (instance.divideRight()) {
         if (instance.parentAssembly().isVertical()) {
@@ -582,9 +588,18 @@ class SectionProperties extends KeyValue{
         }
       }
     }
-    const neigborJoint = new Joint(divider.isSubPart, isNeigbor, null, divider.id());
+    const neigborJoint = new Joint(divider.divider().isSubPart, isNeigbor, null, 'NEIGHBOR_JOINT');
     divider.addDependencies(neigborJoint);
 
+
+    function referenceFront(reference, cabinet) {
+      const refCenter = new Vertex3D(reference.position().center());
+      const cabCenter = cabinet.buildCenter();
+      const refDist = refCenter.distance(cabCenter);
+      refCenter.translate(reference.position().normals().z);
+      const transDist = refCenter.distance(cabCenter);
+      return transDist < refDist;
+    }
 
     function buildCutters () {
       const cabinet = instance.getCabinet();
@@ -593,11 +608,13 @@ class SectionProperties extends KeyValue{
         const reference = subAssems[index];
         let offset = instance.dividerJoint().maleOffset();
         if (reference.thickness() < offset * 1.9) offset = 0;
-        const cutter = new Cutter.Reference(reference, cabinet.buildCenter, offset);
+        const front = referenceFront(reference, cabinet);
+        const cutter = new Cutter.Reference(reference, cabinet.buildCenter, offset, front);
         sectionCutters.push(cutter);
         cutter.parentAssembly(instance);
         const dvReg = new RegExp(`${instance.locationCode()}_.*dv(|:[a-z]{1,})$`);
-        cutter.addDependencies(new Joint(cutter.locationCode(), dvReg, null, cutter.id()));
+        const loc = `Cookie_${cutter.id()}`;
+        cutter.addDependencies(new Joint(cutter.locationCode(), dvReg, null, loc, 10));
       }
     }
 

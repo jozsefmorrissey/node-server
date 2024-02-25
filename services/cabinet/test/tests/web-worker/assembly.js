@@ -24,8 +24,7 @@ function ensureRendered(assems, modelInfo, ts, msg) {
   }
 }
 
-const onComplete = (ts, parts, intersections) => (csg, job) => {
-  const modelInfo = job.modelInfo();
+const onComplete = (ts, parts, intersections) => (modelInfo, job) => {
   ts.assertEquals(modelInfo.status().models, 1);
   parts.forEach(p => {
     if (intersections) {

@@ -599,3 +599,22 @@ td[dir] {
 .local-only:empty {
   display: none;
 }
+
+
+
+/*                loading-css              */
+
+
+.loading-bar-cnt {
+  background-color: #8f8f8f7a;
+  border-radius: 15pt;
+  width: 150pt;
+  margin: 0 15pt;
+}
+
+.loading-bar {
+  background-color: blue;
+  border-radius: 15pt;
+  color: white;
+  height:20px;
+}

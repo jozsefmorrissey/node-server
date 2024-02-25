@@ -43,8 +43,9 @@ class Dependency extends Lookup {
     this.dependsOn = (assem) => isMatch(this.dependsSelector(), assem);
     this.isDependent = (assem) => isMatch(this.dependentSelector(), assem);
 
-    this.discriptor = () => `${this.constructor.name}(${locationId}):${this.dependsSelector()}->${this.dependentSelector()}`;
-    this.toString = this.discriptor;
+    this.descriptor = () => locationId ? `${this.constructor.name}(${locationId})` :
+        `${this.constructor.name}:${this.dependsSelector()}->${this.dependentSelector()}`;
+    this.toString = this.descriptor;
   }
 }
 

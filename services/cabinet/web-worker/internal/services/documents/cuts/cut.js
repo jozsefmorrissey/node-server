@@ -1,24 +1,26 @@
 
-const Measurement = require('../../../../../../public/js/utils/measurement.js');
-const Polygon3D = require('../../../three-d/objects/polygon.js');
-const Vector3D = require('../../../three-d/objects/vector.js');
-const Vertex3D = require('../../../three-d/objects/vertex.js');
-const Line3D = require('../../../three-d/objects/line.js');
-const Plane = require('../../../three-d/objects/plane.js');
-const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line.js');
-const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
-const Tolerance = require('../../../../../../public/js/utils/tolerance.js');
-const ToleranceMap = require('../../../../../../public/js/utils/tolerance-map.js');
-const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
-const Layer = require('../../../three-d/objects/layer.js');
+const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
+const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
+const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
+const Line3D = require('../../../../../app-src/three-d/objects/line.js');
+const Plane = require('../../../../../app-src/three-d/objects/plane.js');
+const Layer = require('../../../../../app-src/three-d/objects/layer.js');
 
-const $t = require('../../../../../../public/js/utils/$t.js');
-const EPNTS = require('../../../../generated/EPNTS.js');
+const Line2d = require('../../../../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Vertex2d = require('../../../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+const Tolerance = require('../../../../../../../public/js/utils/tolerance.js');
+const ToleranceMap = require('../../../../../../../public/js/utils/tolerance-map.js');
 
 class CutInfo {
-  constructor(set, jointInfo, maleModel) {
+  constructor(set, jointInfo, maleId) {
+    const env = jointInfo.partInfo().environment();
+    const partId = jointInfo.partInfo().part().id;
+    let intersectionModel = env.modelInfo.intersection[partId][maleId];
+    intersectionModel ||= jointInfo.model().intersect(jointInfo.partInfo().noJointModel());
+
     let instance = this;
     this.jointInfo = () => jointInfo;
+    this.maleModel = () => env.modelInfo.joined[maleId];
     let documented = true;
     this.documented = (isDocumented) => {
       if (isDocumented === true || isDocumented === false) {
@@ -32,9 +34,7 @@ class CutInfo {
     this.toolType = () => 'table-saw';
     this.center = () =>
       set[0].center();
-    this.intersectModel = () => (maleModel === undefined ? jointInfo.model() :
-      maleModel).intersect(jointInfo.partInfo().noJointmodel());
-
+    this.intersectModel = () => intersectionModel;
     const printInfo = (rightOleft) => {
         const edges = jointInfo.partInfo().edges(rightOleft);
         let str = Line2d.toDrawString(edges) + '\n\n';
@@ -79,7 +79,7 @@ class CutInfo {
         return normals;
       }
       const zPolys = set.filter(p => p.normal().positiveUnit().equals(zNorm));
-      if (zPolys.length > 1)
+      if (zPolys.length > 1 || zPolys.length === 0)
         throw new Error('Have not coded for this yet.(shouldnt have too)');
       const lines = zPolys[0].lines();
       if (lines.length > 4)
@@ -130,7 +130,6 @@ CutInfo.toDrawString = (cuts, ...colors) => {
   return str;
 }
 
-CutInfo.template = new $t('documents/cuts/cut');
 // CutInfo.template.global('display', CutInfo.display);
 
 CutInfo.evaluateSets = (parrelleSets, zPolys) => {
@@ -141,8 +140,8 @@ CutInfo.evaluateSets = (parrelleSets, zPolys) => {
 }
 
 function removeFullLengthPolys(existsInBoth, jointInfo) {
-  if (jointInfo.joint().fullLength()) {
-    const zVect = jointInfo.partInfo().parts()[0].position().normals().z.positiveUnit();
+  if (jointInfo.joint().fullLength) {
+    const zVect = jointInfo.partInfo().normals().z.positiveUnit();
     const zPolys = existsInBoth.filter(p => p.normal().positiveUnit().equals(zVect));
     if (zPolys.length > 0) {
       const normals = Polygon3D.normals(zPolys[0]);
@@ -200,28 +199,32 @@ function existsInBothSets(set1, set2) {
   return existsInBoth;
 }
 
-function partModelInfo(id, part, jointInfo, maleModel) {
-  const jointModel = part.toModel();
-  const noJointmodel = jointInfo.partInfo().noJointmodel();
-  const modelLayers = Layer.fromCSG(jointModel);
-  return {jointModel, noJointmodel, modelLayers};
+function partModelInfo(partId, maleId, env, jointInfo, maleModel) {
+  const jointModel = env.modelInfo.joined[partId];
+  const noJointModel = env.modelInfo.model[partId];
+  if (env.modelInfo.joinedLayer === undefined) env.modelInfo.joinedLayer = {};
+  if (env.modelInfo.joinedLayer[partId] === undefined)
+    env.modelInfo.joinedLayer[partId] = Layer.fromCSG(jointModel);
+  const modelLayers = env.modelInfo.joinedLayer[partId];
+  const intersectionModel = env.modelInfo.intersection[partId][maleId];
+  return {
+    jointModel, noJointModel, modelLayers, intersectionModel
+  };
 }
 
-CutInfo.partModelInfo = new FunctionCache(partModelInfo, null, 'always-on', 1);
+CutInfo.partModelInfo = partModelInfo;
 
 let partModels = {};
-// let time = 0;
-// const start = new Date().getTime();
-// const end = new Date().getTime();
-// time += end - start;
-// console.log(time / 1000);
-CutInfo.get = (maleModel, jointInfo) => {
-  const part = jointInfo.partInfo().parts()[0];
-  const modelInfo = CutInfo.partModelInfo(part.id(), part, jointInfo, maleModel);
+let time = 0;
+CutInfo.get = (maleId, jointInfo, env) => {
+  const part = jointInfo.partInfo().part();
+  if (part.locationCode === 'c_S1_S1_dv_dv:full') {
+    console.log('ladidodido');
+  }
+  const modelInfo = CutInfo.partModelInfo(part.id, maleId, env, jointInfo);
+  if (modelInfo.intersectionModel === undefined) return;
 
-  const intersectionModel = maleModel.intersect(modelInfo.noJointmodel);
-  if (intersectionModel.polygons.length === 0) return;
-  const intersectionLayers = Layer.fromCSG(intersectionModel);
+  const intersectionLayers = Layer.fromCSG(modelInfo.intersectionModel);
   const modelLayers = modelInfo.modelLayers;
   let existsInBoth = {};
   for (let i = 0; i < modelLayers.length; i++) {
@@ -232,33 +235,40 @@ CutInfo.get = (maleModel, jointInfo) => {
       const equivNorms = intLayer.normal().positiveUnit().equals(mLayer.normal().positiveUnit());
       if (equivNorms) {
         let hash = intLayer.toDetailString().hash();
+        const start = new Date().getTime();
         if (existsInBoth[hash] === undefined && mLayer.overlaps(intLayer, true)) {
-          mLayer.overlaps(intLayer, true);
           existsInBoth[hash] = intLayer;
           found = true;
         }
+        const end = new Date().getTime();
+        time += end - start;
       }
     }
   }
   existsInBoth = Object.values(existsInBoth);
+  if (existsInBoth.length === 0) {
+    return;
+  }
   // existsInBoth = existsInBothSets(intersectionLayers, modelPolys);
   // TODO: ideally we would remove full length in joint application
   removeFullLengthPolys(existsInBoth, jointInfo);
 
-  const normals = jointInfo.partInfo().parts()[0].position().normals();
+  const normals = jointInfo.partInfo().normals();
+  const zNorm = normals.z;
   const zPolyFilter = p => p.normal().positiveUnit()
-                      .equals(normals.z.positiveUnit());
+                      .equals(zNorm.positiveUnit());
   const zPolys = existsInBoth.filter(zPolyFilter);
 
   const sets = Polygon3D.parrelleSets(existsInBoth);
 
   alignZpolyNorms(zPolys, intersectionLayers, zPolyFilter);
+  console.log(time / 1000);
 
   try {
     const validObjects = [];
     for (let index = 0; index < registered.length; index++) {
       const clazz = registered[index];
-      if (clazz.evaluateSets(sets, zPolys)) validObjects.push(new clazz(existsInBoth, jointInfo, maleModel));
+      if (clazz.evaluateSets(sets, zPolys)) validObjects.push(new clazz(existsInBoth, jointInfo, maleId));
     }
     const cutObj = validObjects[0];
     if (cutObj) {
@@ -266,7 +276,7 @@ CutInfo.get = (maleModel, jointInfo) => {
     }
     throw new Error('This shouldn\'t happen! ' + jointInfo.joint().toString());
   } catch(e) {
-    return new CutInfo.UNDEFINED_CONSTRUCTOR(existsInBoth, jointInfo, maleModel);
+    return new CutInfo.UNDEFINED_CONSTRUCTOR(existsInBoth, jointInfo, maleId, env);
   }
 }
 
@@ -295,11 +305,9 @@ const splitMultipleCuts = (cuts, jointInfo) => p => {
 };
 
 CutInfo.sorter = (cut1, cut2) => {
-  if (!cut1.documented() && !cut2.documented()) return 0;
-  if (!cut1.documented()) return 1;
-  if (!cut2.documented()) return -1;
-
   if (cut1.constructor === cut2.constructor) {
+    const jointPriorDiff = cut2.jointInfo().joint().priority - cut1.jointInfo().joint().priority;
+    if (jointPriorDiff) return jointPriorDiff;
     const dems1 = cut1.demensions();
     const dems2 = cut2.demensions();
     return dems2.y - dems1.y;
@@ -308,7 +316,6 @@ CutInfo.sorter = (cut1, cut2) => {
     const cut2AngleNonZero = cut2.angle() !== 0;
     if (cut1AngleNonZero && !cut2AngleNonZero) return 1;
     if (!cut1AngleNonZero && cut2AngleNonZero) return -1;
-    if (cut1AngleNonZero) return -1*(cut1.constructor.priority - cut2.constructor.priority);
     return cut1.constructor.priority - cut2.constructor.priority;
   }
 }
@@ -318,6 +325,7 @@ function unDocumentDemensionalCut(cuts, index, demEdges) {
   const y2D = cut.axis(true).y.to2D('x', 'y');
   if (demEdges.equalIndexOf(y2D) !== -1) {
     cut.documented(false);
+    return true;
   }
   return false;
 }
@@ -328,9 +336,7 @@ function unDocumentExtranious(cuts) {
     const cut1 = cuts[i];
     const isCut1 = cut1.constructor === CutInfo;
     if (isCut1) {
-      if (unDocumentDemensionalCut(cuts, i, demEdges)) {
-        i--;
-      } else {
+      if (!unDocumentDemensionalCut(cuts, i, demEdges)) {
         for (let j = i + 1; j < cuts.length; j++) {
           const cut2 = cuts[j];
           if (cut2.constructor === CutInfo) {
@@ -368,34 +374,6 @@ CutInfo.clean = (cuts) => {
 
   cuts.sort(CutInfo.sorter);
 }
-
-// intersectionPolys[1]
-// modelPolys[47]
-
-CutInfo.display = {};
-CutInfo.display.measurement = (val) => new Measurement(Math.abs(val)).display();
-const disp = CutInfo.display.measurement;
-CutInfo.display.vertex3D = (vert) => `(${disp(vert.x)}, ${disp(vert.y)})`;//` X ${disp(vert.z)}`;
-CutInfo.display.vertex2d = (vert) => `(${disp(vert.x())}, ${disp(vert.y())})`;
-CutInfo.display.demensions = (dems) => `${disp(dems.x)} X ${disp(dems.y)} X ${disp(dems.z)}`;
-CutInfo.display.degrees = (degrees) => `${Math.round(degrees * 10) / 10}`;
-CutInfo.display.partIds = (parts) => {
-  const cId = parts[0].getAssembly('c').groupIndex();
-  if (!Number.isFinite(cId)) return '';
-  let partStr;
-  if (parts.length === 1) partStr = parts[0].userFriendlyId();
-  else partStr = `[${parts.map(p => p.userFriendlyId()).join(',')}]`;
-  return `${cId}-${partStr}`;
-}
-
-CutInfo.display.partCodes = (parts) => {
-  if (EPNTS.getEnv() !== 'local') return '';
-  let partStr;
-  if (parts.length === 1) partStr = parts[0].userFriendlyId();
-  else partStr = `[${parts.map(p => p.userFriendlyId()).join(',')}]`;
-  return `${partStr}`;
-}
-
 
 CutInfo.printPolys = (csgs, colors) => {
   colors ||= [];

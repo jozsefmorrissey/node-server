@@ -80,7 +80,7 @@ class ThreeDModel {
       if (!inclusiveTarget.type || !inclusiveTarget.value) return null;
       switch (inclusiveTarget.type) {
         case 'prefix':
-          return part.partCode(true).match(inclusiveTarget.prefixReg) !== null;
+          return part.partCode().match(inclusiveTarget.prefixReg) !== null;
         case 'part-name':
           return part.partName() === inclusiveTarget.value;
         case 'part-id':
@@ -154,7 +154,7 @@ class ThreeDModel {
       if (instance.hidePartId(part.id())) return true;
       if (instance.hidePartName(part.partName())) return true;
       const hiddenPrefixReg = buildHiddenPrefixReg();
-      if (hiddenPrefixReg && part.partCode(true).match(hiddenPrefixReg)) return true;
+      if (hiddenPrefixReg && part.partCode().match(hiddenPrefixReg)) return true;
 
       return false;
     }
@@ -198,7 +198,7 @@ class ThreeDModel {
     function buildModel(assem) {
       if (!partModels[assem.id()]) {
         const a = ToModel(assem);
-        assem.partCode(true);
+        assem.partCode();
         a.setColor(...getColor(assem.value('color')));
         partModels[assem.id()] = a;
       }

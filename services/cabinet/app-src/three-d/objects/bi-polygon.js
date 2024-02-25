@@ -113,12 +113,8 @@ class BiPolygon {
     }
 
     this.offset = (fromPoint, distance) => {
-      const dirVector = this.center().minus(fromPoint);
-      const normal = this.normal();
-      if (!dirVector.sameDirection(normal)) {
-        distance *= -1;
-      }
-      this.translate(normal.scale(distance));
+      const dirVector = this.center().minus(fromPoint).unit();
+      this.translate(dirVector.scale(distance));
     }
 
     this.center = (newCenter) => {

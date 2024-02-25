@@ -1,6 +1,6 @@
 
 const ChannelInfo = require('./channel');
-const Layer = require('../../../three-d/objects/layer.js');
+const Layer = require('../../../../../app-src/three-d/objects/layer.js');
 
 class UnknownInfo extends ChannelInfo {
   constructor(set, jointInfo, maleModel) {

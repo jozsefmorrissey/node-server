@@ -28,10 +28,10 @@ class CutterReference extends Cutter {
     front = front === false ? false : true;
     const partCode = `CR${reference.locationCode().hash(9949, false)}`;
     super(partCode, 'Reference');
-    if (reference instanceof Assembly) {
-      const joint = new Dependency(reference.locationCode(), this.locationCode())
-      this.addDependencies(joint);
-    }
+    // if (reference instanceof Assembly) {
+    //   const joint = new Dependency(reference, this)
+    //   this.addDependencies(joint);
+    // }
     offset ||= 0;
 
     this.reference = () => reference;

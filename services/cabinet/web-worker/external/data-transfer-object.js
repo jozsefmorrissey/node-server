@@ -16,6 +16,7 @@ const objPreProc = (obj, dto, to) => {
   }
   if (obj instanceof Joint) {
     to.evaluateAttributes(obj, mdConfig.Joint, dto);
+    dto.maleOffset = Number.parseFloat(dto.maleOffset);
   }
   if (obj instanceof Property) {
     return to(obj.value());

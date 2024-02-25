@@ -1,16 +1,15 @@
 <div class='avoid-page-break'>
   <div class='part-header-cnt'>
     <h2 class='part-header'>
-      {{info.parts().length}}) {{disp.demensions(info.demensions())}}
+      {{parts.length}}) {{disp.demensions(info.demensions)}}
       &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
-      {{disp.partIds(info.parts())}}
+      {{disp.partIds(parts)}}
     </h2>
   </div>
-  <div class="part-ids-cnt local-only no-print">{{disp.partCodes(info.parts())}}</div>
-  <div class='font-medium part-cnt' {{info.cutInfo().length === 0 ? 'hidden' : ''}}>
-    <div>{{info.toolsDocumentation().html()}}</div>
-    <span class='tab' id='{{viewContainer(info.views.left)}}'></span>
-    <span class='tab' id='{{viewContainer(info.views.right)}}'></span>
+  <div class='font-medium part-cnt'>
+    <div>{{toolingHtml(info.toolingInfo)}}</div>
+    <span class='tab' id='{{viewContainer(views.left)}}'></span>
+    <span class='tab' id='{{viewContainer(views.right)}}'></span>
   </div>
   <br><br>
 </div>

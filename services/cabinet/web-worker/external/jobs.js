@@ -4,15 +4,18 @@ const ModelInfo = require('./model-information');
 const WebWorkerDeligator = require('./deligator');
 const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js');
 const {Intersection, Join, Model, Union, AssembliesTo2D, SimpleTo2D, Simple} = require('./tasks/csg');
+const {Panels} = require('./tasks/documentation');
 const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
 const SimpleModel = require('../../app-src/objects/simple/simple.js');
 const Assembly = require('../../app-src/objects/assembly/assembly.js');
+const Panel = require('../../app-src/objects/assembly/assemblies/panel.js');
 
 class Job {
   constructor(task) {
-    CustomEvent.all(this, 'complete', 'failed');
+    CustomEvent.all(this, 'complete', 'failed', 'change');
     let finished = false;
     let _error;
+    task.on.change((data) => this.trigger.change(data, this));
     this.task = () => task;
     this.finished = (is, result) => {
       if (!finished && is === true) {
@@ -65,7 +68,7 @@ class Jobs extends Job {
 
 class SimpleModelJob extends Job {
   constructor(simpleObjs) {
-    const task = new Simple(simpleObjs);
+    const task = Simple(simpleObjs);
     super(task);
     task.on.complete(() =>
         this.trigger.complete(task.result(), this));
@@ -75,7 +78,7 @@ class SimpleModelJob extends Job {
 
 class SimpleTo2DJob extends Job {
   constructor(simpleObjs) {
-    const task = new SimpleTo2D(simpleObjs);
+    const task = SimpleTo2D(simpleObjs);
     super(task);
     task.on.complete(() =>
         this.trigger.complete(task.result(), this));
@@ -83,53 +86,54 @@ class SimpleTo2DJob extends Job {
   }
 }
 
-class CSGSequentialJob extends Job {
-  constructor(modelInfo, ...tasks) {
-    const task = new Sequential(modelInfo.environment, ...tasks);
+class CsgModelInfoJob extends Job {
+  constructor(task, modelInfo) {
     super(task);
-    this.error = task.error;
     this.modelInfo = () => modelInfo;
   }
 }
 
-class CsgModelJob extends CSGSequentialJob {
+class CsgModelJob extends CsgModelInfoJob {
   constructor(assemblyOs, props) {
     props ||= {};
     props.modelAttribute = 'model';
     const modelInfo = ModelInfo.object(assemblyOs, props);
-    super(modelInfo, new Model(modelInfo), new Union(modelInfo));
-    this.task().on.complete(() => this.trigger.complete(modelInfo.unioned(), this));
-    this.task().on.failed((error) => this.trigger.failed(error, this));
-  }
-}
-
-class CsgJoinJob extends CSGSequentialJob {
-  constructor(assemblyOs) {
-    const modelInfo = ModelInfo.object(assemblyOs);
-    super(modelInfo, new Model(modelInfo), new Join(modelInfo), new Union(modelInfo));
-    this.task().on.complete(() => this.trigger.complete(modelInfo.unioned(), this));
-    this.task().on.failed((error) => this.trigger.failed(error, this));
-  }
-}
-
-class CsgIntersectionJob extends CSGSequentialJob {
-  constructor(assemblyOs) {
-    const modelInfo = ModelInfo.object(assemblyOs);
-    super(modelInfo, new Model(modelInfo),  new Join(modelInfo), new Intersection(modelInfo), new Union(modelInfo));
-    this.task().on.complete(() => this.trigger.complete(modelInfo.unioned(), this));
-    this.task().on.failed((error) => this.trigger.failed(error, this));
-  }
-}
-
-class CsgPartsJob extends CSGSequentialJob {
-  constructor(assemblyOs) {
-    const modelInfo = ModelInfo.object(assemblyOs);
-    super(modelInfo, new Model(modelInfo), new Join(modelInfo));
+    super(Model(modelInfo), modelInfo);
     this.task().on.complete(() => this.trigger.complete(modelInfo, this));
     this.task().on.failed((error) => this.trigger.failed(error, this));
   }
 }
+CsgModelJob.task = (modelInfo) => new Sequential(modelInfo.environment, new Model(modelInfo), new Union(modelInfo));
 
+class CsgJoinJob extends CsgModelInfoJob {
+  constructor(assemblyOs) {
+    const modelInfo = ModelInfo.object(assemblyOs);
+    super(Join(modelInfo), modelInfo);
+    this.task().on.complete(() => this.trigger.complete(modelInfo, this));
+    this.task().on.failed((error) => this.trigger.failed(error, this));
+  }
+}
+CsgJoinJob.task = (modelInfo) => new Sequential(modelInfo.environment, new Model(modelInfo), new Join(modelInfo), new Union(modelInfo));
+
+class CsgIntersectionJob extends CsgModelInfoJob {
+  constructor(assemblyOs) {
+    const modelInfo = ModelInfo.object(assemblyOs);
+    super(Intersection(modelInfo), modelInfo);
+    this.task().on.complete(() => this.trigger.complete(modelInfo, this));
+    this.task().on.failed((error) => this.trigger.failed(error, this));
+  }
+}
+CsgIntersectionJob.task = (modelInfo) => new Sequential(modelInfo.environment, new Model(modelInfo), new Join(modelInfo), new Intersection(modelInfo), new Union(modelInfo));
+
+
+class CsgPartsJob extends CsgModelInfoJob {
+  constructor(assemblyOs) {
+    const modelInfo = ModelInfo.object(assemblyOs);
+    super(Join(modelInfo), modelInfo);
+    this.task().on.complete(() => this.trigger.complete(modelInfo, this));
+    this.task().on.failed((error) => this.trigger.failed(error, this));
+  }
+}
 
 class CsgSimpleCabinet extends CsgModelJob {
   constructor(cabinet) {
@@ -149,17 +153,13 @@ class CsgComplexCabinet extends CsgJoinJob {
   }
 }
 
-class CsgAssembliesTo2DJob extends CSGSequentialJob {
+class CsgAssembliesTo2DJob extends CsgModelInfoJob {
   constructor(assemblyOs, props) {
     props ||= {};
     props.modelAttribute ||= 'model';
     const modelInfo = ModelInfo.object(assemblyOs, props);
-    const tasks = [new Model(modelInfo)];
-    if (props.modelAttribute === 'joined') tasks.push(new Joined(modelInfo))
-    if (props.unioned) tasks.push(new Union(modelInfo));
-    tasks.push(new AssembliesTo2D(modelInfo));
-
-    super(modelInfo, ...tasks);
+    const task = AssembliesTo2D(modelInfo, props.modelAttribute === 'joined', props.unioned);
+    super(task, modelInfo);
     this.task().on.complete(() => this.trigger.complete(modelInfo, this));
     this.task().on.failed((error) => this.trigger.failed(error, this));
   }
@@ -196,19 +196,7 @@ class CsgTo2DJob extends Jobs {
 
 class CsgRoomJob extends Job {
   constructor(room) {
-    const tasks = [];
-    const jobs = [];
-    for (let i = 0; i < room.groups.length; i++) {
-      const group = room.groups[i];
-      for (let j = 0; j < group.objects.length; j++) {
-        const obj = group.objects[j];
-        const job = obj instanceof Cabinet ?
-            new CsgSimpleCabinet(obj) : new CsgModelJob(obj);
-        jobs.push(job);
-        tasks.push(job.task());
-      }
-    }
-    const task = new Parrelle(...tasks);
+    const {task, tasks, jobs} = CsgRoomJob.tasksAndJobs(room);
     super(task);
     this.room = () => room;
     this.jobs = () => jobs;
@@ -235,6 +223,38 @@ class CsgRoomJob extends Job {
     task.on.failed((error) => this.trigger.failed(error, this));
   }
 }
+CsgRoomJob.tasksAndJobs = (room) => {
+  const tasks = [];
+  const jobs = [];
+  for (let i = 0; i < room.groups.length; i++) {
+    const group = room.groups[i];
+    for (let j = 0; j < group.objects.length; j++) {
+      const obj = group.objects[j];
+      const job = obj instanceof Cabinet ?
+          new CsgSimpleCabinet(obj) : new CsgModelJob(obj);
+      jobs.push(job);
+      tasks.push(job.task());
+    }
+  }
+  const task = new Parrelle(...tasks);
+  return {tasks, jobs, task};
+}
+
+CsgRoomJob.task = (room) => CsgRoomJob.tasksAndJobs(room).task;
+
+class DocumentationPanelsJob extends Job {
+  constructor(assemblyOs, props) {
+    if (assemblyOs instanceof Cabinet) assemblyOs = assemblyOs.parts();
+    const panels = assemblyOs.filter(part => part instanceof Panel);
+    const modelInfo = ModelInfo.object(panels, props);
+    const task = Panels(modelInfo);
+    super(task);
+    this.panels = () => panels;
+    task.on.complete(() =>
+        this.trigger.complete(task.result(), this));
+    task.on.failed((error) => this.trigger.failed(error, this));
+  }
+}
 
 module.exports = {
   CSG: {
@@ -257,5 +277,8 @@ module.exports = {
     Room: {
       Simple: CsgRoomJob
     }
+  },
+  Documentation: {
+    Panels: DocumentationPanelsJob
   }
 }

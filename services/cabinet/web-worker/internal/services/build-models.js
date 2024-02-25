@@ -25,10 +25,10 @@ function BuildModels(payload, environment, taskId) {
     }
     let model, biPolygon, biPolygonArray;
     try {
-      // console.log(`Building Model: '${assembly.locationCode}'`)
-      // if (assembly.partCode.match(/^db$/)) {
-      //   console.log('target');
-      // }
+      console.log(`Building Model: '${assembly.locationCode}'`)
+      if (assembly.partCode.match(/CR/)) {
+        console.log('target');
+      }
       const modelFuncs = MFC(assembly);
       if (!modelFuncs.biPolygon) {
         biPolygonArray = null;

@@ -1,7 +1,7 @@
 
 const CutInfo = require('./cut');
-const Polygon3D = require('../../../three-d/objects/polygon.js');
-const Line3D = require('../../../three-d/objects/line.js');
+const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
+const Line3D = require('../../../../../app-src/three-d/objects/line.js');
 
 class ChannelInfo extends CutInfo {
   constructor(set, jointInfo, maleModel) {

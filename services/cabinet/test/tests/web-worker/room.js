@@ -21,7 +21,6 @@ function get(layout, type, cabinetOnly) {
 
 const onRoomComplete = (ts) => (csg, roomJob) => {
   ts.assertTrue(csg && csg.polygons && csg.polygons.length > 0);
-  const modelInfo = roomJob.task().tasks()[0].tasks()[0].modelInfo();
   const cabinets = [];
   roomJob.room().groups.forEach(g => cabinets.concatInPlace(g.objects));
   for (let index = 0; index < cabinets.length; index++) {

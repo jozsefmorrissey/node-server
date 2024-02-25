@@ -19,7 +19,8 @@ const testFiles = [
   "./tests/web-worker/data-transfer-objects",
   "./tests/web-worker/simple",
   "./tests/web-worker/assembly",
-  "./tests/web-worker/room"];
+  "./tests/web-worker/room",
+  "./tests/web-worker/documentation"];
 
 const testAll = window.location.href.match(/(\?|&)testAll=true($|&)/) !== null;
 const fileContainsMatch = window.location.href.match(/(\?|&)testFile=(.{1,}?)($|&)/);

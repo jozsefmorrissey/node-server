@@ -1,0 +1,10 @@
+<div:t repeat='task in tasks'>
+  {{task.process()}})
+  {{task.status()}}
+  {{task.progress()}}%
+  <div class="loading-bar-cnt">
+    <div class="loading-bar center" style="width:{{task.progress()}}%">
+      {{task.progress()}}%
+    </div>
+  </div>
+</div:t>

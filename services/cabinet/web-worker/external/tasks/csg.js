@@ -1,5 +1,5 @@
 
-const {Task} = require('./basic');
+const {Task, Sequential} = require('./basic');
 const STATUS = require('./status');
 
 class CsgSimpleTask extends Task {
@@ -33,7 +33,9 @@ class CsgSimpleTo2DTask extends Task {
 class CsgTask extends Task {
   constructor(modelInfo) {
     super();
+    let initialModelCount;
     this.process = () => this.constructor.name.replace(/^Csg(.{1,})Task/, "$1").toLowerCase();
+    this.progress = () => Math.floor(100*(1 - (this.remainingModels().length/initialModelCount))) || 0;
     this.payload = () => {
       if (this.finished()) return null;
       const assemblies = this.remainingModels();
@@ -42,6 +44,7 @@ class CsgTask extends Task {
     };
     this.modelInfo = () => modelInfo;
     this.on.message((result) => {
+      if (initialModelCount === undefined) initialModelCount = this.remainingModels().length;
       if (result) this.processResult(result);
       this.payload();
       return modelInfo;
@@ -112,12 +115,28 @@ class CsgAssembliesTo2DTask extends CsgTask {
   }
 }
 
+const AssembliesTo2D = (modelInfo, joined, unioned) => {
+  const tasks = [new CsgModelTask(modelInfo)];
+  if (joined) tasks.push(new CsgJoinTask(modelInfo))
+  if (unioned) tasks.push(new CsgUnionTask(modelInfo));
+  tasks.push(new CsgAssembliesTo2DTask(modelInfo));
+  return new Sequential(modelInfo.environment, ...tasks);
+};
+
 module.exports = {
-  Intersection: CsgIntersectionTask,
-  Join: CsgJoinTask,
-  Model: CsgModelTask,
-  Union: CsgUnionTask,
-  AssembliesTo2D: CsgAssembliesTo2DTask,
-  SimpleTo2D: CsgSimpleTo2DTask,
-  Simple: CsgSimpleTask
+  Intersection: (modelInfo) => new Sequential(modelInfo.environment,
+                                        new CsgModelTask(modelInfo),
+                                        new CsgJoinTask(modelInfo),
+                                        new CsgIntersectionTask(modelInfo),
+                                        new CsgUnionTask(modelInfo)),
+  Join: (modelInfo) => new Sequential(modelInfo.environment,
+                                        new CsgModelTask(modelInfo),
+                                        new CsgJoinTask(modelInfo),
+                                        new CsgUnionTask(modelInfo)),
+  Model: (modelInfo) => new Sequential(modelInfo.environment,
+                                        new CsgModelTask(modelInfo),
+                                        new CsgUnionTask(modelInfo)),
+  AssembliesTo2D,
+  SimpleTo2D: (objects) => new CsgSimpleTo2DTask(objects),
+  Simple: (objects) => new CsgSimpleTask(objects)
 }

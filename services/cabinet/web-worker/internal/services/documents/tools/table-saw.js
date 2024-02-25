@@ -1,22 +1,23 @@
 
-const Vector3D = require('../../../three-d/objects/vector.js');
-const Vertex3D = require('../../../three-d/objects/vertex.js');
-const Line3D = require('../../../three-d/objects/line.js');
-const Plane = require('../../../three-d/objects/plane.js');
-const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line.js');
-const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const CutInfo = require('../cuts/cut');
-const Tolerance = require('../../../../../../public/js/utils/tolerance.js');
-const $t = require('../../../../../../public/js/utils/$t.js');
+
+const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
+const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
+const Line3D = require('../../../../../app-src/three-d/objects/line.js');
+const Plane = require('../../../../../app-src/three-d/objects/plane.js');
+
+const Line2d = require('../../../../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Vertex2d = require('../../../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+const Tolerance = require('../../../../../../../public/js/utils/tolerance.js');
 
 const within = Tolerance.within(.0001);
 const FENCE = Line2d.startAndTheta(null, Math.PI12, 10000);
-/**    y+         0        y-
-  +z|-------------------------
-    |
-   0|   0   ------o-----       tableTop: xy-plane
-    |  -|- |__TableSaw__|      fence: y-axis (right hand side of table)
-  -z|  / \  /          \
+/**
+                     +z
+                      |
+     y+   0   --------o-------   y-  tableTop: xy-plane
+         -|- |__Table | Saw___|      fence: y-axis (right hand side of table)
+         / \  /      -z      \
 **/
 class TableSawDocumentation {
   constructor(cut) {
@@ -25,21 +26,40 @@ class TableSawDocumentation {
     this.angle = cut.angle();
     this.jointInfo = cut.jointInfo();
     this.partInfo = this.jointInfo.partInfo();
-    this.type = () => TableSawDocumentation.type;
+    this.type = TableSawDocumentation.type;
     this.valid = true;
     const instance = this;
+    let makeCut = false;
 
     function cutInfoDirectionalCutLine(yAxis, rightOleft) {
       const edges = instance.partInfo.edges(rightOleft, true);
       const cut = yAxis.to2D('x', 'y');
-      let foundStart = false; let foundEnd = false;
+      let foundStart = false; let foundEnd = false; let intersections = [];
       for (let index = 0; index < edges.length; index++) {
-        foundStart ||= edges[index].isOn(cut.startVertex());
-        foundEnd ||= edges[index].isOn(cut.endVertex());
+        const edge = edges[index];
+        foundStart ||= edge.isOn(cut.startVertex());
+        foundEnd ||= edge.isOn(cut.endVertex());
+        if(!foundStart || !foundEnd) {
+          const int = edge.findSegmentIntersection(cut, true);
+          if (int) intersections.push(int);
+        }
       }
-      if (foundStart && foundEnd) return null;
+      if ((foundStart && foundEnd) || intersections.length === 2) {
+        makeCut = true;
+        return null;
+      }
       if (foundStart) return cut;
       if (foundEnd) return cut.negitive();
+
+      if (intersections.length === 1) {
+        const center = Line2d.center(edges);
+        const startCloser = cut[0].distance(center) < cut[1].distance(center);
+        return new Line2d(intersections[0], (startCloser ? cut[0] : cut[1]));
+      }
+
+
+      instance.partInfo.edges(true, true);
+      instance.partInfo.edges(false, true);
       throw new Error('This shouldnt happen!10/29/2023');
     }
 
@@ -71,9 +91,9 @@ class TableSawDocumentation {
           .combine(Line2d.startAndTheta(y2d.midpoint(), y2d.negitive().radians(), 1000));
       let fenceEdge = possibleFenceEdges[0];
       if (yCutL) {
-        if (!within(fenceEdge.radians(), yCutL.radians()))
+        if (!within(yCutL.radianDifference(fenceEdge), 0))
           fenceEdge = possibleFenceEdges[1];
-        if (!within(fenceEdge.radians(), yCutL.radians()))
+        if (!within(yCutL.radianDifference(fenceEdge), 0))
           throw new Error('Shouldn\'t happen!28Nov2023');
       }
       return fenceEdge;
@@ -97,7 +117,6 @@ class TableSawDocumentation {
       const y2d = axis.y.to2D('x', 'y');
       const edges = instance.partInfo.fenceEdges(rightOleft);
       let yCutL = directionalCutLine(axis.y, rightOleft, edges);
-
       instance.fenceEdge = fenceEdge0deg(y2d, edges, yCutL);
       instance.length = yCutL ? yCutL.length() : null;
       instance.width = axis.x.length();
@@ -184,17 +203,14 @@ class TableSawDocumentation {
 
 
     const angle = cut.angle();
-    if (angle > 45) {
-      return determinePositionGreaterThan45(angle);
-    } else if (angle !== 0) {
-      return determinePositionNon0To45(angle);
-    }
-    return determinePosition0deg();
+    if (angle > 45) determinePositionGreaterThan45(angle);
+    else if (angle !== 0) determinePositionNon0To45(angle);
+    else determinePosition0deg();
+    if (makeCut)
+        instance.partInfo.cutMade(cut);
   }
 }
 
-TableSawDocumentation.template = new $t('documents/cuts/table-saw');
-TableSawDocumentation.render = (list) => TableSawDocumentation.template.render({list});
 TableSawDocumentation.type = 'table-saw';
 
 module.exports = TableSawDocumentation;

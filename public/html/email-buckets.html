@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Email Buckets</title>
+    <style>
+      .email-cnt {
+        word-break: break-word;
+      }
+      .conflicts {
+        background-color: yellow;
+      }
+      .duplicate {
+        background-color: blue;
+        color: white;
+      }
+      .remove {
+        background-color: red;
+        color: white;
+      }
+    </style>
+    <script type="text/javascript">
+      function randStr (len) {
+        len = len || 7;
+        let str = '';
+        while (str.length < len) str += Math.random().toString(36).substr(2);
+        return str.substr(0, len);
+      }
+
+      const repeated = [
+        "bcih0zz80 v0kxlpc15eot5<rpyxeq@5mtij9.2k8>",
+        "r4qc6rju 7ba145zmpu<zh7d8r0z@0f076z.qua>",
+        "31mc0bu 4p262y73v2oiyx<xgs8id1n@qn1s.2ih>",
+        "av8k 7k5<n37r06iyf@63buk.vfs>",
+        "coly7w t40<uwgrino73sjq6ze3@542dwf.p2i>",
+        "52a 5l0a2<1dww@8uwfpo7.lvf>",
+        "3bixg wlue2yto4yij<hrb4sr4i5@8248.t68>",
+        "6h3 zc8mqo179<0e3vc1mw1@qrasg.84p>",
+        "iv4 2ag<h31fl1gbn5aea@uayva.70b>",
+        "ua7dm6msq48 1sg7o9xeq<oij9sv6hyf@511l0.xle>",
+        "yjggatv0p ql5qw5co9n<wf5durorzg0u@wosm2.hhb>",
+        "02hgn63 fatj<ht9n@2mo3.dt8>",
+        "452 ltl556ef0l<y7z45mypavr54von@n25c2h.zzv>",
+        "0a6 jok1tcej98tk2o<tz0aqgbvi4n@g79xz.yse>",
+        "httdw ldz6<t212@nj13.kd6>",
+        "28phc ji04dxkiq4c<jd3ohskh07d6@6vrggs.fpr>",
+        "j27e 0nd2qi6b<mfmveohbg7jsag@ptp4by.pqq>",
+        "9ge47c3o5i 179oeh469<xqv1jd9@qguo03.otb>",
+        "ud0bw2w 9c8akohqmo5ni<ht35pyuo0@f5ml7.r0a>",
+        "ae8r7m 7veeu4cfht<a7pr5e@junzuss.pji>"
+      ];
+
+      function strInt(str) {
+        if (!str) return 0;
+        let int = 0;
+        Array.from(str).forEach(c => int += c.charCodeAt(0));
+        return int;
+      }
+
+      function randomEmails(count) {
+        const emails = [];
+        for (let index = 0; index < count; index++) {
+          if (Math.random() < .5) emails.push(repeated[Math.floor(repeated.length * Math.random())]);
+          else {
+            const firstName = randStr(3 + Math.floor(Math.random()*10));
+            const lastName = randStr(3 + Math.floor(Math.random()*12));
+            const emailId = randStr(3 + Math.floor(Math.random()*15));
+            const domain = randStr(4 + Math.floor(Math.random()*4));
+            const suffix = randStr(3);
+            emails.push(`${firstName} ${lastName}<${emailId}@${domain}.${suffix}>`);
+          }
+        }
+        Math.random() < .5 ? console.log(emails.join(';')) : console.log(emails.join('\n'));
+      }
+
+      const excelReg = /^(.*)\t(.*)\t(.*)\t(.*)/;
+      function parse(str) {
+        const excelMatch = str.match(/^.*\t.*\t.*\t.*/);
+        if (excelMatch) {
+          const buckets = {};
+          const emailStrs = str.match(/(.*)\t(.*)\t(.*)\t(.*)/g);
+          if (emailStrs === null) return [];
+          const emails = emailStrs.forEach((email) => {
+            const match = email.match(excelReg);
+            if (match[1].trim() !== 'Email') {
+              const name = match[2];
+              const type = match[3];
+              if (buckets[name] === undefined) buckets[name] = {name, type, emails: []};
+              const bucket = buckets[name];
+              bucket.emails.push({email: match[1].trim(), name: match[4].trim()});
+            }
+          });
+          return buckets;
+        } else {
+          const emailStrs = str.match(/[^;]*?<[^;]*?>/g);
+          if (emailStrs === null) return [];
+          const emails = emailStrs.map((email) => {
+            const match = email.match(/([^;]*?)<([^;]*?)>/);
+            return {name: match[1].trim(), email: match[2].trim()};
+          });
+          return emails;
+        }
+      }
+
+      window.onload = () => {
+        let buckets = {};
+        const btn = document.querySelector('button');
+        const input = document.querySelector('#bucket-name');
+        const textarea = document.querySelector('textarea');
+        const bucketList = document.querySelector('#bucket-list');
+        const newline = document.querySelector('[value="newline"]');
+        const colon = document.querySelector('[value="colon"]');
+        const excel = document.querySelector('[value="excel"]');
+        const currBuckCnt = document.querySelector('#curr-bucket-cnt');
+        const conflictCnt = document.querySelector('#conflict-cnt');
+        const allBucks = document.querySelector('#all-buckets');
+        const listAll = document.querySelector('#list-all');
+
+        const inputExcel = () => textarea.value.match(excelReg);
+        const inputExcelMultiple = () => inputExcel() && !Array.isArray(parseBucket().emails);
+
+        function updateBucketList() {
+          const keys = Object.keys(buckets);
+          bucketList.innerHTML = keys.map(k => `<option>${k}</option>`);
+        }
+
+        const shouldRemove = (e) => {
+          const bucks = Object.values(buckets);
+          if (!inputExcelMultiple())bucks.push(parseBucket());
+          const removeBucks = bucks.filter(b => b.type === 'remove');
+          return undefined !== removeBucks.find(b => b.emails.find(eobj => eobj.email === e));
+        }
+
+        function removeFromAll() {
+          const bucks = Object.values(buckets);
+          const removeBucks = bucks.filter(b => b.type === 'remove');
+          const keepBucks = bucks.filter(b => b.type === 'keep');
+          const removeEmailMap = {};
+          removeBucks.forEach(b => b.emails.forEach(eobj => removeEmailMap[eobj.email] = true));
+          keepBucks.forEach(b => {
+            for (let index = 0; index < b.emails.length; index++) {
+              const e = b.emails[index].email;
+              if (removeEmailMap[e]) {
+                removeAllFromList(b.emails, eobj => eobj.email === e);
+                index--;
+              }
+            }
+          });
+        }
+
+        function emailStr(bucket, includeHeader) {
+          const format = document.querySelector('[name="format"]:checked').value;
+          if (format === 'excel') {
+            return (includeHeader ? 'Email\tBucket\tType\tName\n' : '') +
+              bucket.emails.map(e => `${e.email}\t${bucket.name}\t${bucket.type}\t${e.name}`).join(`\n`);
+          }
+          const seperator = format === 'newline' ? '\n' : ';';
+          return bucket.emails.map(e => `${e.name}<${e.email}>`).join(seperator);
+        }
+
+        function parseBucket() {
+          const name = input.value.trim();
+          const type = document.querySelector('[name="type"]:checked').value;
+          const obj = parse(textarea.value);
+          if (inputExcel()) {
+            const buckets = Object.values(obj);
+            if (buckets.length === 1) return buckets[0];
+            return obj;
+          } else {
+            const emails = obj;
+            emails.sort((e1, e2) => e1.email === e2.email ? 0 : (e1.email < e2.email ? -1 : 1));
+            return {name, emails, type};
+          }
+        }
+
+        function removeAllFromList(list, funcOelem) {
+          const func = funcOelem instanceof Function ? funcOelem : (e) => e === funcOelem;
+          let index;
+          while((index = list.findIndex(func)) !== -1)
+            list.splice(index--, 1);
+        }
+
+        function cleanBucket(bucket) {
+          const emailObjMap = {};
+          for (let index = 0; index < bucket.emails.length; index++) {
+            const emailObj = bucket.emails[index];
+            const email = emailObj.email;
+            if (bucket.type === 'remove' || !shouldRemove(email)) {
+              emailObjMap[emailObj.email] = emailObj;
+            }
+          }
+          bucket.emails = Object.values(emailObjMap);
+        }
+
+        function containedInBuckets(e) {
+          const containedIn = [];
+          const bucks = Object.values(buckets);
+          const parseBuck = parseBucket();
+          if (buckets[parseBuck.name] === undefined && !inputExcelMultiple()) bucks.push(parceBuck);
+          for (let index = 0; index < bucks.length; index++) {
+            if (bucks[index].emails.find(eobj => eobj.email === e)) {
+              containedIn.push(bucks[index]);
+            }
+          }
+          return containedIn;
+        }
+
+        const emailCount = (bucket, e) => {
+          let count = 0;
+          for (let index = 0; index < bucket.emails.length; index++) {
+            if (bucket.emails[index].email === e) {
+              count++;
+            }
+          }
+          return count;
+        }
+
+        const clazz = (bucket, e) => {
+          const bucks = Object.values(buckets);
+          const keepBucks = bucks.filter(b => b.type === 'keep');
+          if (shouldRemove(e)) return 'remove';
+          if (containedInBuckets(e).length > 1) return 'conflicts';
+          return emailCount(bucket, e) > 1 ? 'duplicate' : 'unique';
+        }
+        function bucketHtml(bucket) {
+          const format = document.querySelector('[name="format"]:checked').value;
+          const seperator = format !== 'colon' ? '<br>' : '; ';
+          const emailStr = bucket.emails.map(e => `<z class='${clazz(bucket, e.email)}'>${e.email}</z>`).join(seperator);
+          return `<div class='ind-bucket-cnt'><h3>${bucket.name}</h3><div class='email-cnt'>${emailStr}</div></div>`;
+        }
+
+        function updateCurrentBucketHtml() {
+          const bucket = parseBucket();
+          currBuckCnt.innerHTML = inputExcelMultiple() ? '' : bucketHtml(bucket);
+        }
+
+        let conflicts;
+        function updateConflictsHtml() {
+          const emailBucketsMap = {};
+          const bucks = Object.values(buckets).filter(b => b.type === 'keep');
+          for (let index = 0; index < bucks.length; index++) {
+            const buck = bucks[index];
+            for (let j = 0; j < buck.emails.length; j++) {
+              const emailObj = buck.emails[j];
+              const email = emailObj.email;
+              if (emailBucketsMap[email] === undefined) {
+                emailBucketsMap[email] = {email, buckets: []};
+              }
+              emailBucketsMap[email].buckets.push(buck);
+            }
+          }
+          conflicts = Object.values(emailBucketsMap).filter(ebo => ebo.buckets.length > 1);
+          let html = '';
+          for (let index = 0; index < conflicts.length; index++) {
+            const conflict = conflicts[index];
+            html += `<div conflict-index='${index}' class='conflicts'><b>${conflict.email}</b><div>`
+            for (let b = 0; b < conflict.buckets.length; b++) {
+              html += `<button email='${conflict.email}'>${conflict.buckets[b].name}</button>`;
+            }
+            html += '</div></div>';
+          }
+          conflictCnt.innerHTML = html;
+        }
+
+        const allBucksDirty = () => allBucks.getAttribute('str-int') !== strInt(allBucks.value) + '';
+        function allHtml() {
+          const format = document.querySelector('[name="format"]:checked').value;
+          const isExcel = format === 'excel';
+          let html = '';
+          const bucks = Object.values(buckets);
+          bucks.forEach((b, i) => {
+            html += (isExcel ? '' : `${b.name}\t\n`) + `${emailStr(b, i === 0)}\n`;
+            if (!isExcel) html += '\n';
+          });
+          allBucks.setAttribute('str-int', strInt(html));
+          allBucks.value = html;
+        }
+        listAll.addEventListener('click', allHtml);
+        allBucks.addEventListener('keyup', () => listAll.innerText =
+          (allBucks.value === '' || !allBucksDirty() ? 'List All' : 'Load Buckets'))
+
+        newline.addEventListener('click', () => {
+          if (!inputExcelMultiple()) textarea.value = emailStr(parseBucket());
+        });
+        excel.addEventListener('click', () => {
+          if (!inputExcelMultiple()) textarea.value = emailStr(parseBucket());
+        });
+        colon.addEventListener('click', () => {
+          if (!inputExcelMultiple()) textarea.value = emailStr(parseBucket());
+        });
+
+        function addBuckets(newBucks) {
+          Object.values(newBucks).forEach(b => {
+            if (buckets[b.name] === undefined) buckets[b.name] = {name: b.name, type: b.type, emails: []};
+            buckets[b.name].emails = buckets[b.name].emails.concat(b.emails);
+          });
+          Object.values(buckets).forEach(b =>
+            cleanBucket(b));
+        }
+
+        btn.addEventListener('click', () => {
+          const parseObj = parseBucket();
+          if (inputExcelMultiple()) {
+            if (Object.keys(buckets).length === 0 || confirm('Add To Existing Buckets?')) {
+              addBuckets(parseObj);
+            } else if (confirm('Remove Existing and Load Parsed')) {
+              buckets = {};
+              addBuckets(parseObj);
+            }
+            updateBucketList();
+            updateConflictsHtml();
+            textarea.value = '';
+            input.disabled = false;
+            return;
+          }
+          buckets[parseObj.name] = parseObj;
+          if (buckets[parseObj.name].type === 'keep') cleanBucket(buckets[input.value]);
+          else removeFromAll();
+          textarea.value = '';
+          input.value = '';
+          currBuckCnt.innerHTML = '';
+          input.setAttribute('bucket-name', '');
+          btn.hidden = true;
+          updateBucketList();
+          updateConflictsHtml();
+          input.disabled = false;
+        });
+
+        input.addEventListener('keyup', () => {
+          const name = input.value.trim();
+          if (textarea.getAttribute('dirty') === 'false') textarea.value = '';
+          if (!name && !inputExcelMultiple()) {
+            btn.hidden = true;
+            updateCurrentBucketHtml();
+            return;
+          }
+
+          if (buckets[name] !== undefined) {
+            if (textarea.value === '' || textarea.getAttribute('dirty') === 'false') {
+              textarea.setAttribute('bucket-name', name);
+              textarea.setAttribute('dirty', 'false');
+              const eStr = emailStr(buckets[name]);
+              textarea.setAttribute('str-int', strInt(eStr));
+              document.querySelector(`[value='${buckets[name].type}']`).click()
+              //
+              // document.querySelector(`[value='${buckets[name].type}']`).checked = true;
+              textarea.value = eStr;
+            }
+
+            btn.hidden = true;
+          } else if (textarea.value.length > 0) {
+            btn.innerText = inputExcelMultiple() ? 'Add Buckets' : 'Add Bucket';
+            btn.hidden = false;
+          }
+          updateCurrentBucketHtml();
+        });
+
+        textarea.addEventListener('keyup', () => {
+          const name = input.value.trim();
+          if (textarea.value === '') {
+            input.value = '';
+            input.disabled = false;
+          }
+          const emailInt = textarea.getAttribute('str-int');
+          const dirty = emailInt !== (strInt(textarea.value) + '');
+          if (dirty) textarea.setAttribute('dirty', true);
+          if (!name && !inputExcel()) {
+            btn.hidden = true;
+          } else if (buckets[name] !== undefined) {
+            btn.innerText = 'Save Changes';
+            btn.hidden = dirty ? false : true;
+            if (textarea.value) input.disabled = true;
+          } else if (textarea.value.length > 0) {
+            btn.innerText = inputExcelMultiple() ? 'Add Buckets' : 'Add Bucket';
+            btn.hidden = false;
+          }
+          if (inputExcel()) {
+            input.value = '';
+            input.disabled = true;
+          }
+          updateCurrentBucketHtml();
+        });
+
+        document.addEventListener('click', (event) => {
+          const parent = event.target.parentElement;
+          if (parent && parent.parentElement) {
+            const conIndex = parent.parentElement.getAttribute('conflict-index');
+            if (conIndex !== null) {
+              const conflict = conflicts[conIndex];
+              const targetBucket = event.target.innerText;
+              const email = event.target.getAttribute('email');
+              conflict.buckets.forEach(bucket => bucket.name !== targetBucket &&
+              removeAllFromList(bucket.emails, (eobj) => eobj.email === email));
+            }
+            updateConflictsHtml();
+            updateCurrentBucketHtml();
+          }
+        });
+
+      }
+    </script>
+  </head>
+  <body>
+    <input type='text' id='bucket-name' placeholder="Bucket Name" list='bucket-list'>
+    <datalist id='bucket-list'></datalist>
+    <br>
+    <label>Keep</label>
+    <input type='radio' name='type' value='keep' checked>
+    <label>Remove</label>
+    <input type='radio' name='type' value='remove'>
+    <br>
+    <label>Excel</label>
+    <input type='radio' name='format' value='excel' checked>
+    <label>Colon</label>
+    <input type='radio' name='format' value='colon'>
+    <label>New Line</label>
+    <input type='radio' name='format' value='newline'>
+    <br>
+    <textarea name="name" rows="8" cols="80" placeholder="emails"></textarea>
+    <br>
+    <button type="button" name="button" hidden></button>
+    <div id='curr-bucket-cnt'></div>
+    <h1>All Buckets</h1>
+    <textarea id='all-buckets'></textarea>
+    <button id='list-all'>ListAll</button>
+    <h1>Conflicts</h1>
+    <div id='conflict-cnt'></div>
+  </body>
+</html>

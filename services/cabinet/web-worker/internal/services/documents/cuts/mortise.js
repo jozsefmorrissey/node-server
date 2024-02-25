@@ -1,7 +1,6 @@
 
-const Measurement = require('../../../../../../public/js/utils/measurement.js');
-const Polygon3D = require('../../../three-d/objects/polygon.js');
-const Vector3D = require('../../../three-d/objects/vector.js');
+const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
+const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
 const ChannelInfo = require('./channel');
 
 class MortiseInfo extends ChannelInfo {

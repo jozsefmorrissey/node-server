@@ -45,10 +45,8 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
   const assembly = complexityObj[id].assembly;
   const obj = complexityObj[assembly.id()];
   if (obj.complexity) return;
-  let complexity = NaN;
-  if (assembly.locationCode() === 'c_T:b') {
-    let a = 1 + 2;
-  }
+  let complexity = 1;
+  let dependencyCount = 0;
 
   obj.partCode = assembly.partCode();
   obj.joints = jointMap.female[id] || [];
@@ -58,7 +56,7 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
   obj.joints.forEach(jId => obj.dependencies.concatInPlace(jointMap[jId].male));
   obj.complexity = () => {
     if (assembly.includeJoints === undefined) return 1;
-    if (!Number.isNaN(complexity)) return complexity;
+    if (dependencyCount === obj.dependencies.length) return complexity;
     if (assembly.includeJoints() === false && MFC.usesDefault(assembly.id())) return 1;
     complexity = 1;
     for (let index = 0; index < obj.dependencies.length; index++) {
@@ -67,6 +65,7 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
       complexity += complexityObj[id].complexity();
       if (Number.isNaN(complexity)) return NaN;
     }
+    dependencyCount = obj.dependencies.length;
     return complexity;
   }
   obj.dependencies.forEach(id => jointCompexityObject(id, complexityObj, jointMap, byId));
@@ -127,6 +126,7 @@ class ModelInformation {
     else buildModels = assemblies.filter(a => a.part && a.included);
 
     let joinModels = sorter(buildModels, jointMap, byId);
+    joinModels[25].complexity();
     buildModels = Object.values(joinModels).map(ac => ac.assembly);
     buildModels = sortAssemMtdos(buildModels);
 

@@ -4,6 +4,7 @@
 const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
 const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
 const SectionPropertiesUtil = require('section-properties');
+const Utils = require('utils');
 
 const isSectionProps = (pa) => pa.id.match(/^SectionProperties_/);
 const isDivider = (pa) => pa.id.match(/^Divider_/);

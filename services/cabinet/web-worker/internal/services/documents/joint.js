@@ -1,9 +1,6 @@
 
-const Polygon3D = require('../../three-d/objects/polygon.js');
+const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
 const CutInfo = require('./cuts/cut');
-const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
-
-FunctionCache.on('long-refresh', 4000);
 
 class JointInfo {
   constructor(joint, partInfo) {
@@ -11,19 +8,22 @@ class JointInfo {
     this.joint = () => joint;
 
     let jointModel;
-    this.model = new FunctionCache((rightOleft, model) => {
+    this.model = (rightOleft, model) => {
       if (model instanceof CSG) jointModel = model;
       if (jointModel) model = jointModel;
       if (!(model instanceof CSG)) {
         let maleModel = new CSG();
-        joint.maleModels().forEach(mm => maleModel = maleModel.union(mm));
+        const env = partInfo.environment();
+        const maleIds = env.jointMap[joint.id].male || [];
+        const maleModels = maleIds.map(id => env.modelInfo.joined[id]);
+        maleModels.forEach(mm => maleModel = maleModel.union(mm));
         model = partInfo.noJointModel().clone().intersect(maleModel);
       }
       return partInfo.normalize(rightOleft, model);
-    }, 'long-refresh', this);
+    };
 
     const sideFilter = (vect) => c => c.set().filter(p => vect.equals(p.normal())).length > 0;
-    this.primarySide = new FunctionCache(() => {
+    this.primarySide = () => {
       const normals = partInfo.normals();
       const zPos = normals.z;
       const zNeg = zPos.inverse();
@@ -35,7 +35,7 @@ class JointInfo {
       } catch (e) {
         console.log(e);
       }
-    }, 'long-refresh', this);
+    };
 
     this.type = () => {
       return 'cut';
@@ -45,13 +45,16 @@ class JointInfo {
 
     this.demensions = () => this.model().demensions();
 
-    this.cutInfo = new FunctionCache(() => {
+    this.cutInfo = () => {
       if (this.cuts && this.cuts.length > 0) return this.cuts;
       const info = [];
       const noJointModel = this.partInfo().noJointModel();
-      joint.maleModels().forEach(mm => {
+      const env = partInfo.environment();
+      const males = env.jointMap[joint.id].male;
+      const modelInfoList = males.forEach(id => env.modelInfo[id]);
+      males.forEach(maleId => {
         try {
-          const cut =  CutInfo.get(mm, this);
+          const cut =  CutInfo.get(maleId, this, env);
           if (cut) info.push(cut);
         } catch (e) {
           console.error(e);
@@ -59,7 +62,7 @@ class JointInfo {
       });
       this.cuts = info;
       return info;
-    }, 'long-refresh', this);
+    };
 
     this.cutInfo();
   }

@@ -4,11 +4,12 @@ const BiPolygon = require('../../three-d/objects/bi-polygon.js');
 const Polygon3D = require('../../three-d/objects/polygon.js');
 
 class Joint extends Dependency {
-  constructor(maleJointSelector, femaleJointSelector, condition, locationId) {
-    super(maleJointSelector, femaleJointSelector, condition, locationId);
+  constructor(maleJointSelector, femaleJointSelector, condition, locationId, priority) {
+    super(maleJointSelector, femaleJointSelector, condition, locationId, priority);
+    priority ||= 0;
     const initialVals = {
       maleOffset: 0, femaleOffset: 0, demensionAxis: '', centerAxis: '',
-      fullLength: false,
+      fullLength: false, priority,
     }
     const parentClone = this.clone;
 
@@ -19,6 +20,7 @@ class Joint extends Dependency {
       clone.femaleOffset(this.femaleOffset());
       clone.demensionAxis(this.demensionAxis());
       clone.centerAxis(this.centerAxis());
+      clone.priority(this.priority());
       clone.fullLength(this.fullLength());
       return clone;
     }

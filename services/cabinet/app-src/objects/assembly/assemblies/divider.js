@@ -22,6 +22,10 @@ class Divider extends Assembly {
     const pcFront = new Cutter('dcf', 'Front');
     const pBack = new Panel(':b', 'Back');
     const pcBack = new Cutter('dcb', 'Back');
+    pFull.normals(false, {DETERMINE_FROM_PARENT: true});
+    pFront.normals(false, {DETERMINE_FROM_PARENT: true});
+    pBack.normals(false, {DETERMINE_FROM_PARENT: true});
+
 
     const parts = [pFull, pFront, pcFront, pBack, pcBack];
     parts.forEach(p => p.parentAssembly(this));
@@ -37,8 +41,8 @@ class Divider extends Assembly {
     parts[4].addDependencies(new Joint(parts[4], parts[3], null, 'backCutJoint'));
 
     this.part = () => false;
-    this.maxWidth = () => this.panelWith();
-    this.panelWith = () => 2.54*3/4;
+    this.panelThickness = () => 2.54*3/4;
+    this.maxWidth = () => this.panelThickness();
 
     function activeParts() {
       switch (type) {

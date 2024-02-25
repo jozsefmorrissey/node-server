@@ -47,7 +47,7 @@ class CabinetUtil {
       const center = this.partCenter();
       const vector = line.vector();
       let closest = {};
-      const subAssems = this.subassemblies.filter(a => !a.id.match(/^(Auto|Cutter|Void|SectionProperties)/));
+      const subAssems = this.subassemblies.filter(a => a && !a.id.match(/^(Auto|Cutter|Void|SectionProperties)/));
 
       //Object.values(this.subassemblies).filter(a => !a.constructor.name.match(/Cutter|Void/));
       for (let index = 0; index < subAssems.length; index++) {

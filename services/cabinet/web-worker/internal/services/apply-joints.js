@@ -4,8 +4,13 @@ const DTO = require('../../shared/data-transfer-object')();
 function determineMales(assem, env) {
   const joints = env.jointMap.female[assem.id] || [];
   const males = [];
-  joints.forEach(jId =>
-    males.concatInPlace(env.jointMap[jId].male));
+  joints.forEach(jId => {
+    const joint = env.byId[jId];
+    if (joint.locationId === 'NEIGHBOR_JOINT') {
+      console.log('found');
+    }
+    males.concatInPlace(env.jointMap[jId].male);
+  });
   return males;
 }
 
@@ -27,6 +32,9 @@ function removeJonintMaterial(map, newMap, assem, env, model, intersections) {
     // else console.warn(`I dont thin you should see this id: '${mid}' does not have a joinedModel`);
   });
   try {
+    if (assem.locationCode === 'c_T:f') {
+      console.log('target');
+    }
     if (map.joined[id] === undefined)
       map.joined[id] = newMap.joined[id] = model.subtract(malesModel);
   } catch (e) {

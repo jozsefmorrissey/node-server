@@ -1,7 +1,7 @@
 {
   "Assembly": ["id","parentAssembly.id","partCode","partName","locationCode",
       "part","includeJoints", "position", "included", "children>id"],
-  "Position": ["current.center","current.demension","current.normals","current.biPolyNorm"],
+  "Position": ["current"],
   "DividerSection": ["divider.id"],
   "SectionProperties": ["id", "back.id", "top.id", "bottom.id", "left.id", "right.id", "rotation", "coordinates.inner",
       "divideRight", "pattern.str", "verticalDivisions", "dividerCount", "sectionCount",
@@ -24,7 +24,7 @@
   "Hinge": [],
   "Door": ["inElivation"],
   "HasPull": [],
-  "Divider": ["maxWidth", "planeThickness", "type"],
+  "Divider": ["maxWidth", "panelThickness", "type"],
   "OpeningToeKick": ["leftCornerCutter.id", "rightCornerCutter.id", "toKickPanel.id",
       "toeKickCutter.id", "opening.id", "autoToeKick.id"],
   "AutoToekick": ["leftEndStyle", "rightEndStyle"],
@@ -42,8 +42,8 @@
   "CabinetOpeningCorrdinates": ["id", "coordinates", "partCode", "locationCode",
         "right.id", "left.id", "top.id", "bottom.id", "cutter.id"],
   "Vector3D": ["i", "j", "k"],
-  "Joint": ["id", "maleOffset", "femaleOffset",
-            "demensionAxis", "centerAxis", "fullLength", "discriptor"],
+  "Joint": ["id", "maleOffset", "femaleOffset", "locationId", "priority",
+            "demensionAxis", "centerAxis", "fullLength", "descriptor"],
   "Property": ["value"],
   "ModelInformation": ["environment"]
 }

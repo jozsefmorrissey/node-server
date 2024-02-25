@@ -45,6 +45,7 @@ class OpeningToeKick extends Assembly {
     const cutter = new Cutter('tkc', `ToeKick`);
     const openNorm = opening.normal();
     const rParrelleToOpening = openNorm.parrelle(instance.getAssembly('R').position().normals().x);
+    toeKickPanel.normals(false, {DETERMINE_FROM_MODEL: true})
     joint(cutter)(/^R:/, () => !autoToeKick.rightEndStyle());
     joint(cutter)(/^L:/, () => !autoToeKick.leftEndStyle());
 

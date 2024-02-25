@@ -3,8 +3,11 @@ const Polygon3D = require('polygon');
 const Line3D = require('line');
 const Vertex3D = require('vertex');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+
 const tol = .0001;
+const within = Tolerance.within(tol);
 
 class Layer {
   constructor(polygonOs) {
@@ -72,12 +75,15 @@ class Layer {
       return Vertex3D.midrange(verts);
     }
 
+    const sortClosest = (vert) => (pa, pb) => pa.center().distance(vert) - pb.center().distance(vert);
     this.overlaps = (other) => {
       const otherIsParrelle = this.parrelle(other);
       if (!otherIsParrelle) return false;
       if (!(other instanceof Layer)) throw new Error(`'${other}' is not an instance of Layer`);
+      if (!this.sameLayer(other)) return false;
       const otherPolys = other.polygons();
       let overlaps = false;
+      list.sort(sortClosest(other.center()));
       for (let i = 0; !overlaps && i < otherPolys.length; i++) {
         for (let j = 0; !overlaps && j < list.length; j++) {
           overlaps = list[j].overlaps(otherPolys[i], null, otherIsParrelle);
@@ -126,6 +132,16 @@ class Layer {
       let str = '';
       list.forEach(p => str += `${p.toDetailString()}\n`);
       return str;
+    }
+
+    const testIntercept = (a, b, attr, within) =>
+        (Number.isNaN(a[attr]) && Number.isNaN(b[attr])) || within(a[attr], b[attr]);
+    this.sameLayer = (other) => {
+      const thisIntercepts = this.toPlane().axisIntercepts();
+      const otherIntercepts = other.toPlane().axisIntercepts();
+      return testIntercept(thisIntercepts, otherIntercepts, 'x', within) &&
+              testIntercept(thisIntercepts, otherIntercepts, 'y', within) &&
+              testIntercept(thisIntercepts, otherIntercepts, 'z', within);
     }
 
     this.hash = () => this.toDetailString().hash();

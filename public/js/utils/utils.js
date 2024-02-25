@@ -579,7 +579,10 @@ Function.safeStdLibAddition(String, 'toDot',  function () {return this.toKebab()
 Function.safeStdLibAddition(String, 'toScreamingDot',  function () {return this.toKebab().replace(/-/g, '.')});
 Function.safeStdLibAddition(String, 'toScreamingSnake',  function () {return this.toSnakeCase().toUpperCase()});
 Function.safeStdLibAddition(String, 'toScreamingKebab',  function () {return this.toKebab().toUpperCase()});
-Function.safeStdLibAddition(String, 'toSentance',  function () {return this.toPascal().replace(/_/g, ' ')});
+Function.safeStdLibAddition(String, 'toSentance',  function () {
+  const pascal = this.toPascal().replace(/_/g, ' ');
+  return pascal[0].toUpperCase() + pascal.substring(1);
+});
 
 Function.safeStdLibAddition(Function, 'orVal',  function (funcOrVal, ...args) {
   return (typeof funcOrVal) === 'function' ? funcOrVal(...args) : funcOrVal;
@@ -1354,7 +1357,7 @@ const colors = [
 let colorIndex = 0;
 Function.safeStdLibAddition(String, 'nextColor', (...exclude) => {
   const filteredColors = colors.filter(c => exclude.indexOf(c) === -1)
-  return filteredColors[index++ % filteredColors.length];
+  return filteredColors[colorIndex++ % filteredColors.length];
 }, true);
 Function.safeStdLibAddition(String, 'color', () => colors[index % colors.length], true);
 

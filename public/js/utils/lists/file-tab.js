@@ -20,8 +20,9 @@ class FileTabDisplay extends Lookup {
     this.register = (title, htmlFunc, shouldRender) => {
       shouldRender = shouldRender instanceof Function ? shouldRender : null;
       list[title] = {html: htmlFunc, shouldRender};
+      this.trigger.register(title, this);
     }
-    CustomEvent.all(this, 'change', 'beforeChange', 'close', 'open');
+    CustomEvent.all(this, 'register', 'change', 'beforeChange', 'close', 'open');
     this.type = (type) => type !== undefined ? (tYpe = type) : tYpe;
     this.selected = (title) => {
       if (title !== undefined && title !== selected) {
@@ -29,6 +30,8 @@ class FileTabDisplay extends Lookup {
       }
       return selected;
     }
+    this.build = () =>
+      fileTabContainer().innerHTML = this.html();
     this.selected.is = (title) => title === selected;
     this.unregister = (title) => delete list[title];
     this.shouldRender = () => list[selected] && list[selected].shouldRender &&
@@ -69,6 +72,7 @@ class FileTabDisplay extends Lookup {
       if (from == undefined) this.trigger.open(info);
       this.trigger.change(info);
     }
+    this.container = (title) => title ? contentContainer(title) : fileTabContainer;
     this.update = (force) => {
       if (force || this.shouldRender()) {
         const contentCnt = contentContainer();

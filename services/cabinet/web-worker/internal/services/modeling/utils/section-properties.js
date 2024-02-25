@@ -136,6 +136,31 @@ class SectionPropertiesUtil {
 
     this.normal = () => this.coverInfo().biPolygon.normal();
 
+    function adjustPoints(point1, point2) {
+      const c = spDto.linkListFind('parentAssembly', pa => pa.parentAssembly === undefined);
+      const cDems = c.position.current.demension;
+      // const divider = instance.divider();
+      // const panelThickness = divider.panelThickness();
+      const jointOffset = spDto.dividerJoint.maleOffset;
+      const vert = spDto.verticalDivisions;
+      const right = vert ? spDto.bottom() : spDto.right();
+      const left = vert ? spDto.top() : spDto.left();
+      let maxLen = cDems.x + cDems.y + cDems.z;
+      if (!right.id.startsWith('DividerSection')) {
+        Line3D.adjustDistance(point1, point2, maxLen, true);
+        maxLen *= 1.5;
+      } else {
+        const length = point1.distance(point2) + jointOffset - right.divider().panelThickness/2;
+        Line3D.adjustDistance(point1, point2, length, true);
+      }
+      if (!left.id.startsWith('DividerSection')) {
+        Line3D.adjustDistance(point2, point1, maxLen, true);
+      } else {
+        const length = point1.distance(point2) + jointOffset - left.divider().panelThickness/2;
+        Line3D.adjustDistance(point2, point1, length, true);
+      }
+    }
+
     let dvInfo;
     this.dividerInfo = (panelThickness) => {
       if (dvInfo === undefined) {
@@ -148,11 +173,14 @@ class SectionPropertiesUtil {
         const outer = coordinates.outer;
         const point1 = this.outerPoly.vertex(spDto.verticalDivisions ? 1 : 3);
         const point2 = this.outerPoly.vertex(2);
+        adjustPoints(point1, point2);
         let depthVector = normal.scale(depth);
         let heightVector = new Line3D(point1, point2).vector().unit();
         let thicknessVector  = depthVector.crossProduct(heightVector);
-        // need to set normals somewhere else.
-        // divider.panel().normals(true, [heightVector, depthVector.unit(), thicknessVector]);
+
+        const normals = spDto.divider().divider().position.current.normals;
+        normals.y = heightVector; normals.x = depthVector.unit(); normals.z = thicknessVector.unit();
+
         const point3 = point2.translate(depthVector, true);
         const point4 = point1.translate(depthVector, true);
         const points = [point1, point2, point3, point4];

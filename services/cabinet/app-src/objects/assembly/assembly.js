@@ -180,7 +180,7 @@ class Assembly extends KeyValue {
     this.allAssemblies = allAssemblies;
 
     const constructUserFriendlyId = (idMap) => (part) => {
-      const pc = part.partCode(true);
+      const pc = part.partCode();
       if (!pc.startsWith(':')) return pc;
       const parent = part.parentAssembly();
       if (parent) {
@@ -290,8 +290,7 @@ class Assembly extends KeyValue {
       const root = this.getRoot();
       if (root !== this) return root.getDependencies(assem);
       const assemList = this.allAssemblies().filter(a => a instanceof Assembly);
-      let allJoints = this.getDependencyList();;
-      if (assem) allJoints.concatInPlace(assem.getDependencyList());
+      let allJoints =[];// this.getDependencyList();;
       assemList.forEach((assem) => allJoints.concatInPlace(assem.getDependencyList()));
       let joints = {male: [], female: []};
       const addJoint = (joint) => {
@@ -314,8 +313,7 @@ class Assembly extends KeyValue {
       if (root !== this) return root.getDependencies(assem);
 
       const assemList = this.allAssemblies();
-      let allJoints = [].concat(this.joints)
-                        .concat(Object.values(namedDependencies));
+      let allJoints = [];
       // if (assem) allJoints.concatInPlace(assem.joints);
       assemList.forEach((a) => a.getDependencyList && allJoints.concatInPlace(a.getDependencyList()));
       return noJoints ? allJoints.filter(d => !(d instanceof Joint)) : allJoints;
@@ -328,19 +326,23 @@ class Assembly extends KeyValue {
       for (let ji = 0; ji < allJs.length; ji++) {
         const joint = allJs[ji];
         if (noJoints && joint instanceof Joint) continue;
+        if (joint.locationId() === 'NEIGHBOR_JOINT') {
+          console.log('target');
+        }
+
         const jid = joint.id();
         for (let ai = 0; ai < assems.length; ai++) {
           const assem = assems[ai];
-          // if (assem.partCode() === 'T:f' && joint.locationId() === 'frontCutJoint') {
-          //   console.log('here');
-          // }
+          const aid = assem.id();
+          if (jMap[jid] === undefined) jMap[jid] = {male: [], female: []};
+          if (joint.dependsOn(assem)) {
+            if (!jMap.male[aid]) jMap.male[aid] = [];
+            jMap.male[aid].push(jid);
+          }
+
           if (!(assem instanceof Assembly) || (assem.included() &&
                 (!(joint instanceof Joint) || assem.includeJoints()))) {
-            const aid = assem.id();
-            if (jMap[jid] === undefined) jMap[jid] = {male: [], female: []};
             if (joint.dependsOn(assem)) {
-              if (!jMap.male[aid]) jMap.male[aid] = [];
-              jMap.male[aid].push(jid);
               jMap[jid].male.push(aid);
             }
             if (joint.isDependent(assem)) {
@@ -404,6 +406,7 @@ class Assembly extends KeyValue {
     }
 
     this.children = () => Object.values(this.getSubassemblies(true));
+    this.isChild = (assem) => this.children().indexOf(assem) !== -1;
 
     this.getSubassemblies = (childrenOnly) => {
       const assemblies = [];
@@ -421,9 +424,8 @@ class Assembly extends KeyValue {
       });
     }
 
-    this.isSubPart = (assem) => {
+    this.isSubPart = (assem) =>
       assem.locationCode().startsWith(`${this.locationCode()}:`)
-    }
 
     if (Assembly.idCounters[this.objId] === undefined) {
       Assembly.idCounters[this.objId] = 0;

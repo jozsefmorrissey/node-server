@@ -33,8 +33,10 @@ const nonFuntionalAttrs = (object, dto, to) => {
   const keys = Object.keys(object);
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
-    const value =  to(object[key]);
-    dto.pathValue(key, value);
+    if ((typeof object[key]) !== 'function') {
+      const value =  to(object[key]);
+      dto.pathValue(key, value);
+    }
   }
 }
 

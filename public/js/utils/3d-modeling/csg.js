@@ -51,6 +51,7 @@
 CSG = function() {
   this.polygons = [];
   this.toString = (percision) => {
+    percision ||= .001;
     let str = '';
     for (let index = 0; index < this.polygons.length; index++) {
       const verts = this.polygons[index].vertices;

@@ -7,15 +7,18 @@ const Draw2d = require('../../../../../public/js/utils/canvas/two-d/draw.js');
 const du = require('../../../../../public/js/utils/dom-utils');
 const PartInfo = require('./part');
 const Panel = require('../../objects/assembly/assemblies/panel.js');
-const CutInfo = require('./cuts/cut.js');
+const Utils = require('./tools/utils.js');
+const Tooling = require('./tooling');
 const Select = require('../../../../../public/js/utils/input/styles/select.js');
-const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js')
+const DecisionInputTree = require('../../../../../public/js/utils/input/decision/decision.js');
+const Jobs = require('../../../web-worker/external/jobs.js');
 
 const orderTemplate = new $t('documents/construction');
 const roomTemplate = new $t('documents/construction/room');
 const groupTemplate = new $t('documents/construction/group');
 const cabinetTemplate = new $t('documents/construction/cabinet');
 const partTemplate = new $t('documents/construction/part');
+const taskCompletionTemplate = new $t('documents/task-completion');
 
 const typeFilter = (obj) => {
   const cn = obj.constructor.name;
@@ -40,7 +43,9 @@ const scaledMidpoint = (l, center, coeficient, transLine) => {
 
 const textProps = {size: '10px', radians: Math.PI};
 function buildCanvas(info, rightOleft) {
-  model = info.model(rightOleft);
+  if (info.model === undefined) return;
+  const side = rightOleft ? 'Right' : 'Left';
+  const model = CSG.fromPolygons(info.model[side.toLowerCase()].polygons, true);
   const canvas = du.create.element('canvas', {class: 'upside-down part-canvas'});
   const newCenter = {x: canvas.width / 2, y: canvas.height/2, z:0};
   const sideLabelCenter = {x: canvas.width - 5, y: canvas.height - 10, z:0};
@@ -51,25 +56,22 @@ function buildCanvas(info, rightOleft) {
   const draw = new Draw2d(canvas);
   const lines = Polygon3D.lines2d(Polygon3D.merge(Polygon3D.fromCSG(model)), 'x', 'y');
   draw(lines, null, .3);
-  const side = rightOleft ? 'Right' : 'Left';
   draw.text(side, sideLabelCenter, textProps);
-  const edges = info.fenceEdges(rightOleft);
+  const infoEdges = info.fenceEdges[side.toLowerCase()];
+  const edges = infoEdges.map(l => new Line2d(l[0], l[1]));
   const transLine = new Line2d(Vertex2d.center(Line2d.vertices(edges)), newCenter);
-  edges.forEach(l => draw.text(l.label, scaledMidpoint(l, newCenter, coeficient, transLine), textProps));
+  edges.forEach((l, i) =>
+    draw.text(infoEdges[i].label, scaledMidpoint(l, newCenter, coeficient, transLine), textProps));
   return canvas;
 }
 
-function partInfo(part) {
-  const info = new PartInfo(part);
-  const cutList = info.cutInfo();
-  if (cutList) {
-    info.views = {
-      right: buildCanvas(info, true),
-      left: buildCanvas(info, false)
-    }
+function buildViews(info) {
+  return views = {
+    right: buildCanvas(info, true),
+    left: buildCanvas(info, false)
   }
-  return info;
 }
+
 
 function sortParts(parts) {
   const sorted = {};
@@ -215,7 +217,7 @@ const Order = {
     const selectorHtml = targetInputSelector ? targetInputSelector.html() : NO_CABINETS_EXIST_HTML;
     const hash = orderStructureHash(order);
     return orderTemplate.render({order, sortParts, viewContainer, targetInputSelector,
-                  selectorHtml, hash, disp: CutInfo.display});
+                  selectorHtml, hash, disp: Utils.display});
   },
   shouldRender: (container) => {
     const hash = Number.parseInt(du.find.down('[hash]', container).getAttribute('hash'));
@@ -227,7 +229,7 @@ const Room ={
   html: (room) => {
     order = Global.order();
     return roomTemplate.render({order, room, sortParts, viewContainer,
-      disp: CutInfo.display});
+      disp: Utils.display});
   }
 }
 
@@ -235,7 +237,7 @@ const Group = {
   html: (group) => {
     order = Global.order();
     return groupTemplate.render({order, group, sortParts, viewContainer,
-                  disp: CutInfo.display});
+                  disp: Utils.display});
   }
 }
 
@@ -243,15 +245,44 @@ const Cabinet = {
   html: (cabinet) => {
     order = Global.order();
     return cabinetTemplate.render({order, cabinet, sortParts, viewContainer,
-                  disp: CutInfo.display});
+                  disp: Utils.display});
   }
 }
 
-const Part = {
-  html: (part) => {
-    const info = partInfo(part);
-    return partTemplate.render({info, viewContainer, disp: CutInfo.display});
+const toolingHtml = (toolingInfo) => new Tooling(toolingInfo).html();
+const panelInfoRender = (_parts, containerOid) => async (map, job) => {
+  const container = containerOid instanceof HTMLElement ? containerOid : du.id(containerOid);
+  if (container) {
+    let html = '';
+    const root = _parts[0].getRoot();
+    const keys = Object.keys(map);
+    for (let index = 0; index < keys.length; index++) {
+      const info = map[keys[index]];
+      const parts = info.partIds.map(id => root.constructor.get(id));
+      const scope = {parts, info, toolingHtml, viewContainer, disp: Utils.display};
+      scope.views = buildViews(info);
+      html += partTemplate.render(scope);
+    }
+    container.innerHTML = html;
   }
+}
+
+const recusiveAddTask = (list, task) => task.tasks  ?
+  task.tasks().forEach(t => recusiveAddTask(list, t)) :
+  (task.task ? recusiveAddTask(list, task.task()) : list.push(task));
+const progressUpdate = (containerOid) => (task, job) => {
+  if (job.task().status() === 'complete') return;
+  const tasks = [];
+  recusiveAddTask(tasks, job);
+  const container = containerOid instanceof HTMLElement ? containerOid : du.id(containerOid);
+  container.innerHTML = taskCompletionTemplate.render({tasks});
+}
+
+const Panels = (parts, containerOid) => {
+  const job = new Jobs.Documentation.Panels(parts);
+  job.on.change(progressUpdate(containerOid));
+  job.then(panelInfoRender(parts, containerOid), console.error).queue();
+  return job;
 };
 
-module.exports = {Order, Room, Group, Cabinet, Part};
+module.exports = {Order, Room, Group, Cabinet, Panels};

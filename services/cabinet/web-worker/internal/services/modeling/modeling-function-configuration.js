@@ -6,57 +6,16 @@ const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
 const OpeningToeKick = require('./utils/opening-toe-kick');
 const Divider = require('./utils/divider');
 const SimpleModels = require('./generic-models');
-const Void = require('./utils/void');
 const SectionPropertiesUtil = require('./utils/section-properties');
 const VoidUtil = require('./utils/void');
 const HandleUtil = require('./utils/handle');
 const CabinetUtil = require('./utils/cabinet');
-
-function getDrawerDepth(depth) {
-  const adjustedDepth = (depth/2.54) - 1;
-  if (adjustedDepth < 3) return 0;
-  return Math.floor((adjustedDepth/3) * 3) * 2.54;
-}
-
-function shrinkPoly(gap, poly, left) {
-  const lines = JSON.clone(poly.lines());
-  const offset = (lines[0].length() - gap) / 2;
-  if (left) {
-    lines[0].length(offset, true);
-    lines[1].startVertex = lines[0].endVertex;
-    lines[2].length(-offset, false);
-    lines[1].endVertex = lines[2].startVertex;
-  } else {
-    lines[0].length(-offset, false);
-    lines[3].endVertex = lines[0].startVertex;
-    lines[2].length(offset, true);
-    lines[3].startVertex = lines[2].endVertex;
-  }
-  return Polygon3D.fromLines(lines);
-
-}
-
-function getBiPolygon(rMdto, environment, left) {
-  const sectionProps = SectionPropertiesUtil.instance(rMdto, environment);
-  const fullPoly = sectionProps.coverInfo().biPolygon;
-  const parent = rMdto.parentAssembly();
-  const front = shrinkPoly(parent.gap, fullPoly.front(), left);
-  const back = shrinkPoly(parent.gap, fullPoly.back(), left);
-  return new BiPolygon(front, back);
-}
+const DrawerBoxUtil = require('./utils/drawer-box');
+const DoorUtil = require('./utils/door');
+const Utils = require('./utils/utils');
 
 
-
-function defaultToModel(assemMrMdto, env) {
-  const current = assemMrMdto.position.current;
-  const maleJointIds = env.jointMap.male[assemMrMdto.id] || [];
-  const jointsToUpdate = maleJointIds.map(jid => env.byId[jid])
-                              .filter(d => d.maleOffset);
-  // jointsToUpdate.forEach(j => {throw new Error('notImplemented');});
-  return BiPolygon.fromPositionObject(current);
-}
-
-const defalt = {biPolygon: defaultToModel};
+const defalt = {biPolygon: Utils.toBiPolygon};
 const complexFunctions = (cxtr, partName) => to[cxtr] !== undefined &&
         (to[cxtr][partName] || to[cxtr][cxtr]);
 const simpleFunctions = (cxtr) =>
@@ -124,23 +83,7 @@ to.DrawerBox = {
     model: SimpleModels.DrawerBox
   },
   Section: {
-    normal: () => sectionProps().normal(),
-    model: (rMdto, environment) => {
-      const sectionUtils = SectionPropertiesUtil.instance(rMdto, environment);
-      const propConfig = environment.propertyConfig;
-      const props = propConfig.Guides;
-      const innerPoly = sectionUtils.innerPoly.copy();
-      const coverInfo = sectionUtils.coverInfo().copy();
-      const depth = getDrawerDepth(sectionUtils.drawerDepth());
-      const normal = coverInfo.biPolygon.normal();
-      const offsetVect = normal.scale(-coverInfo.backOffset);
-      const sideOffset = props.dbsos;
-      const topOffset = props.dbtos;
-      const bottomOffset = props.dbbos;
-      innerPoly.offset(sideOffset/2, sideOffset/2, topOffset, bottomOffset);
-      innerPoly.translate(offsetVect);
-      return SimpleModels.DrawerBox(innerPoly, normal, depth, propConfig.DrawerBox);
-    }
+    model: DrawerBoxUtil
   }
 }
 
@@ -170,14 +113,8 @@ to.Door = {
     biPolygon: (rMdto, environment) =>
       SectionPropertiesUtil.instance(rMdto, environment).coverInfo().biPolygon
   },
-  Left: {
-    biPolygon: (rMdto, environment) =>
-      getBiPolygon(rMdto, environment, true)
-  },
-  Right: {
-    biPolygon: (rMdto, environment) =>
-      getBiPolygon(rMdto, environment, false)
-  }
+  Left: {biPolygon: DoorUtil.Left},
+  Right: {biPolygon: DoorUtil.Right}
 }
 
 to.DualDoorSection = {
@@ -302,7 +239,7 @@ to.Cutter = {
 to.PanelVoidIndex = {
   PanelVoidIndex: {
     biPolygon: (rMdto, environment) =>
-      Void.instance(rMdto, environment).panel(rMdto.index)
+      VoidUtil.instance(rMdto, environment).panel(rMdto.index)
   },
 }
 

@@ -46,8 +46,12 @@ class WebWorkerDeligator {
     createWorkers();
 
   const registerTask = (workerIndex) => (task) => {
-    taskWorkerMap[task.id] = {task, workerIndex};
-    task.status(TASK_STATUS.PENDING);
+    const isSequential = task.process() === 'sequential';
+    if (isSequential) task.tasks().forEach(registerTask(workerIndex));
+    else {
+      taskWorkerMap[task.id] = {task, workerIndex};
+      task.status(TASK_STATUS.PENDING);
+    }
   }
 
   function exicute() {
@@ -65,8 +69,7 @@ class WebWorkerDeligator {
           const msg = DTO(task);
           worker.postMessage(msg);
         }
-        if (isSequential) task.tasks().forEach(registerTask(workerIndex));
-        else registerTask(workerIndex)(task);
+        registerTask(workerIndex)(task);
         task.initiated = new Date().getTime();
       }
     }
