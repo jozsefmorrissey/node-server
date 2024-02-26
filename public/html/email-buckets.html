@@ -276,8 +276,6 @@
           allBucks.value = html;
         }
         listAll.addEventListener('click', allHtml);
-        allBucks.addEventListener('keyup', () => listAll.innerText =
-          (allBucks.value === '' || !allBucksDirty() ? 'List All' : 'Load Buckets'))
 
         newline.addEventListener('click', () => {
           if (!inputExcelMultiple()) textarea.value = emailStr(parseBucket());
@@ -310,10 +308,16 @@
             updateBucketList();
             updateConflictsHtml();
             textarea.value = '';
+            allBucks.value = '';
             input.disabled = false;
             return;
           }
           buckets[parseObj.name] = parseObj;
+          const linkedBucketName = textarea.getAttribute('bucket-name');
+          if (parseObj.name !== linkedBucketName) {
+            console.log('notLinked');
+            delete buckets[linkedBucketName];
+          }
           if (buckets[parseObj.name].type === 'keep') cleanBucket(buckets[input.value]);
           else removeFromAll();
           textarea.value = '';
@@ -324,11 +328,13 @@
           updateBucketList();
           updateConflictsHtml();
           input.disabled = false;
+          allBucks.value = '';
         });
 
         input.addEventListener('keyup', () => {
           const name = input.value.trim();
-          if (textarea.getAttribute('dirty') === 'false') textarea.value = '';
+          const emailInt = textarea.getAttribute('str-int');
+          if (emailInt === (strInt(textarea.value) + '')) textarea.value = '';
           if (!name && !inputExcelMultiple()) {
             btn.hidden = true;
             updateCurrentBucketHtml();
@@ -336,7 +342,7 @@
           }
 
           if (buckets[name] !== undefined) {
-            if (textarea.value === '' || textarea.getAttribute('dirty') === 'false') {
+            if (textarea.value === '' || emailInt === (strInt(textarea.value) + '')) {
               textarea.setAttribute('bucket-name', name);
               textarea.setAttribute('dirty', 'false');
               const eStr = emailStr(buckets[name]);
@@ -356,7 +362,8 @@
         });
 
         textarea.addEventListener('keyup', () => {
-          const name = input.value.trim();
+          const buck = parseBucket()
+          const name = buck.name;
           if (textarea.value === '') {
             input.value = '';
             input.disabled = false;
@@ -374,7 +381,11 @@
             btn.innerText = inputExcelMultiple() ? 'Add Buckets' : 'Add Bucket';
             btn.hidden = false;
           }
-          if (inputExcel()) {
+          if (inputExcel() && !inputExcelMultiple()) {
+            input.value = name;
+            if (!dirty) input.disabled = false;
+          }
+          if (inputExcelMultiple()) {
             input.value = '';
             input.disabled = true;
           }
@@ -391,9 +402,10 @@
               const email = event.target.getAttribute('email');
               conflict.buckets.forEach(bucket => bucket.name !== targetBucket &&
               removeAllFromList(bucket.emails, (eobj) => eobj.email === email));
+              allBucks.value = '';
+              updateConflictsHtml();
+              updateCurrentBucketHtml();
             }
-            updateConflictsHtml();
-            updateCurrentBucketHtml();
           }
         });
 
