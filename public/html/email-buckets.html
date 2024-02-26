@@ -196,7 +196,7 @@
           const containedIn = [];
           const bucks = Object.values(buckets);
           const parseBuck = parseBucket();
-          if (buckets[parseBuck.name] === undefined && !inputExcelMultiple()) bucks.push(parceBuck);
+          if (buckets[parseBuck.name] === undefined && !inputExcelMultiple()) bucks.push(parseBuck);
           for (let index = 0; index < bucks.length; index++) {
             if (bucks[index].emails.find(eobj => eobj.email === e)) {
               containedIn.push(bucks[index]);
@@ -279,12 +279,15 @@
 
         newline.addEventListener('click', () => {
           if (!inputExcelMultiple()) textarea.value = emailStr(parseBucket());
+          allBucks.value = '';
         });
         excel.addEventListener('click', () => {
           if (!inputExcelMultiple()) textarea.value = emailStr(parseBucket());
+          allBucks.value = '';
         });
         colon.addEventListener('click', () => {
           if (!inputExcelMultiple()) textarea.value = emailStr(parseBucket());
+          allBucks.value = '';
         });
 
         function addBuckets(newBucks) {
@@ -365,7 +368,10 @@
           const buck = parseBucket()
           const name = buck.name;
           if (textarea.value === '') {
-            input.value = '';
+            if (textarea.getAttribute('str-int')) {
+              textarea.removeAttribute('str-int');
+              input.value = '';
+            }
             input.disabled = false;
           }
           const emailInt = textarea.getAttribute('str-int');
