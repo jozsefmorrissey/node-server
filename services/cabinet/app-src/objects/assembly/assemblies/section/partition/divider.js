@@ -6,7 +6,6 @@ const Divider = require('../../divider.js');
 const Frame = require('../../frame.js');
 const Assembly = require('../../../assembly.js');
 const Joint = require('../../../../joint/joint');
-const FunctionCache = require('../../../../../../../../public/js/utils/services/function-cache.js');
 
 let count = 0;
 // TODO: Rename to Partition

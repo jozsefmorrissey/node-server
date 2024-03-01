@@ -21,8 +21,8 @@ function renderRoom() {
 function  renderCabinet() {
   const target = Global.target();
   if (target.constructor.name === 'Cabinet') {
-    new Jobs.CSG.Cabinet.Complex(target).then((csg, job) => {
-      ThreeDModel.display(csg);
+    new Jobs.CSG.Cabinet.Complex(target).then((modelInfo, job) => {
+      ThreeDModel.display(modelInfo.unioned());
     }).queue();
   } else {
     new Jobs.CSG.Simple([target]).then((csgs, job) => {
@@ -32,8 +32,30 @@ function  renderCabinet() {
   }
 }
 
+const set = {};
+let locationPrefix, locationCode, _parts, ufidPrefix;
+const resetAll = () => locationCode = _parts = locationPrefix = ufidPrefix = undefined;
+const lcPrefixFilter = p => p.locationCode().match(`^${locationPrefix}(_|:|$)`);
+const pcPrefixFilter = p => p.userFriendlyId().match(`^${ufidPrefix}(_|:|$)`);
+set.locationPrefix = (lp) => resetAll() & (locationPrefix = lp);
+set.ufidPrefix = (pc) => resetAll() & (ufidPrefix = pc);
+set.locationCode = (lc) => resetAll() & (locationCode = lc);
+set.parts = (parts) => resetAll() & (_parts = parts);
 function  renderParts() {
-  new Jobs.CSG.Cabinet.Simple(Global.cabinet()).then(ThreeDModel.display).queue();
+  const cabinet = Global.cabinet();
+  if (!cabinet) return;
+  let parts;
+  if (locationPrefix) parts = cabinet.getParts().filter(lcPrefixFilter);
+  else if (ufidPrefix) parts = cabinet.getParts().filter(pcPrefixFilter);
+  else if (locationCode) parts = [cabinet.getAssembly(locationCode)];
+  else if (_parts) parts = _parts;
+  if (!parts || parts.length === 0) {
+    resetAll();
+    parts = cabinet.getParts();
+  }
+  new Jobs.CSG.Assembly.Join(parts).then((modelInfo, job) => {
+    ThreeDModel.display(modelInfo.unioned());
+  }).queue();
 }
 
 let ids = {
@@ -46,7 +68,8 @@ let ids = {
 
 }
 
-let openTabId = ids.layout;
+let openTabId = ids.parts;
+modelDisplayManager.open(openTabId);
 function render() {
   const isRoom = openTabId === ids.room;
   const isCabinet = openTabId === ids.cabinet;
@@ -108,6 +131,6 @@ Global.onChange.order(async () => {
 });
 
 module.exports = {
-  render, build, hide,
+  render, build, hide, set,
   on: {switch: switchEvent.on}
 }

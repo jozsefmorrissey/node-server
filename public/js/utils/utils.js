@@ -467,7 +467,11 @@ Function.safeStdLibAddition(String, 'number',  function (str) {
 
 Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
   mox = Math.abs(mod);
-  while (val < 0) val += mod;
+
+  if(val < 0) {
+    val -= Math.floor(val/-mod) * mod
+    val += mod;
+  }
   return val % mod;
 }, true);
 

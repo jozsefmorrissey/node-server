@@ -5,12 +5,10 @@ const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
 const Butt = require('../../joint/joints/butt.js');
 const Dado = require('../../joint/joints/dado.js');
 const PanelVoidIndex = require('./panel.js').VoidIndex;
-const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
 const Line3D = require('../../../three-d/objects/line.js');
 const Polygon3D = require('../../../three-d/objects/polygon.js');
 const Assembly = require('../assembly.js');
 
-FunctionCache.on('always-on', 200);
 
 class Void extends Cutter {
   constructor(rootAssembly, partName, config) {

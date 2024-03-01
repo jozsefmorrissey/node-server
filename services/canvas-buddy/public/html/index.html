@@ -31,7 +31,21 @@
       </div>
       <div>
         <div id='two-d-display' hidden>
+          <span>
+            <label>Measurement</label>
+            <input type='checkbox'>
+          </span>
+          <br>
+          <label>Line Display:</label>
+          <div class='tab' id='display-radios-3d'>
+            <lable>Line Only</lable>
+            <input type='radio' name='line-disp-type' value='LINE_ONLY' checked>
+            <lable>Vector</lable>
+            <input type='radio' name='line-disp-type' value='VECTOR'>
+          </div>
+
           <canvas></canvas>
+
         </div>
         <div id='three-d-display'>
           <div class='orientation-controls'></div>

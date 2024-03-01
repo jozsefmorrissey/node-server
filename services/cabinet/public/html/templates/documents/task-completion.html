@@ -1,4 +1,4 @@
-<div:t repeat='task in tasks'>
+<div:t repeat='task in tasks' {{task.progress() === 100 ? 'hidden' : ''}}>
   {{task.process()}})
   {{task.status()}}
   {{task.progress()}}%

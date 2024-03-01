@@ -168,6 +168,8 @@ class Plane extends Array {
     this.z.concrete = (x, y) => concreat('z', x, y);
 
 
+    const infinity = 1000000000;
+    const nanIt = (val) => val > infinity || val < -infinity ? NaN : val;
     this.axisIntercepts = () => {
       if (intercepts) return intercepts;
       // const point = this.points();
@@ -193,11 +195,12 @@ class Plane extends Array {
         }
       } else {
         intercepts = {
-          x: eqn.d/eqn.a,
-          y: eqn.d/eqn.b,
-          z: eqn.d/eqn.c
+          x: nanIt(eqn.d/eqn.a),
+          y: nanIt(eqn.d/eqn.b),
+          z: nanIt(eqn.d/eqn.c)
         }
       }
+
 
       return new Vertex3D(intercepts);
     }

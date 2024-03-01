@@ -578,7 +578,7 @@ class Line2d {
 
     this.copy = () => new Line2d(this.startVertex().copy(), this.endVertex().copy());
 
-    this.combine = (other, tolerance) => {
+    this.combine = (other, tolerance, notSegment) => {
       if (!(other instanceof Line2d)) return;
       const clean = this.clean(other);
       if (clean) return clean;
@@ -591,13 +591,7 @@ class Line2d {
       const v2 = this.endVertex();
       const ov1 = other.startVertex();
       const ov2 = other.endVertex();
-      if (!this.withinSegmentBounds(other)) {
-        const dist = this.distance(other);
-        if (dist < tolerance) {
-          console.warn('distance is incorrect:', dist);
-          this.distance(other);
-          this.withinSegmentBounds(other);
-        }
+      if (notSegment !== true && !this.withinSegmentBounds(other)) {
         return;
       }
       // Fix sort method
@@ -821,7 +815,7 @@ Line2d.center = (lines) => Vertex2d.center(Line2d.vertices(lines));
 
 Line2d.rotate = (lines, radians, pivot) => lines.forEach(l => l.rotate(radians, pivot));
 
-Line2d.consolidate = (lines, tolerance) => {
+Line2d.consolidate = (lines, tolerance, notSegment) => {
   tolerance ||= tol;
   const tolMap = new ToleranceMap({'slope': `+${tolerance}`, 'yIntercept': tolerance});
   const lineMap = {};
@@ -843,7 +837,7 @@ Line2d.consolidate = (lines, tolerance) => {
         let target = matches[tIndex];
         let found = false;
         for (let mIndex = tIndex + 1; mIndex < matches.length; mIndex += 1) {
-          const combined = target.combine(matches[mIndex]);
+          const combined = target.combine(matches[mIndex], tolerance, notSegment);
           if (combined) {
             found = true;;
             const m = matches[mIndex];
@@ -996,7 +990,7 @@ function sectionFromString(str, lines) {
 
 Line2d.parrelleSets = (lines, tolerance) => {
   tolerance ||= tol;
-  const tolmap = new ToleranceMap({'radians.positive': tolerance});
+  const tolmap = new ToleranceMap({'radians.positive': `${tolerance}`});
   tolmap.addAll(lines);
   const groups = tolmap.group().sortByAttr('length').reverse();
   return groups;

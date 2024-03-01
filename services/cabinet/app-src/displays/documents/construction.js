@@ -50,13 +50,16 @@ function buildCanvas(info, rightOleft) {
   const newCenter = {x: canvas.width / 2, y: canvas.height/2, z:0};
   const sideLabelCenter = {x: canvas.width - 5, y: canvas.height - 10, z:0};
   const dems = model.demensions();
-  const coeficient = ((canvas.height*.6) / dems.y);
+  const coefY = ((canvas.height*.6) / dems.y);
+  const coefX = ((canvas.width*.6) / dems.x);
+  const coeficient = coefX > coefY ? coefY : coefX;
   model.scale(coeficient);
   model.center(newCenter);
   const draw = new Draw2d(canvas);
   const lines = Polygon3D.lines2d(Polygon3D.merge(Polygon3D.fromCSG(model)), 'x', 'y');
   draw(lines, null, .3);
-  draw.text(side, sideLabelCenter, textProps);
+  const sideLabel = rightOleft ? 'Right | Up' : 'Left | Down';
+  draw.text(sideLabel, sideLabelCenter, textProps);
   const infoEdges = info.fenceEdges[side.toLowerCase()];
   const edges = infoEdges.map(l => new Line2d(l[0], l[1]));
   const transLine = new Line2d(Vertex2d.center(Line2d.vertices(edges)), newCenter);
@@ -66,6 +69,7 @@ function buildCanvas(info, rightOleft) {
 }
 
 function buildViews(info) {
+  if (!info.toolingInfo || Object.keys(info.toolingInfo).length === 0) return;
   return views = {
     right: buildCanvas(info, true),
     left: buildCanvas(info, false)
@@ -249,21 +253,32 @@ const Cabinet = {
   }
 }
 
-const toolingHtml = (toolingInfo) => new Tooling(toolingInfo).html();
+const area = (dem) => dem.x * dem.y * dem.z;
+function sortParts(keys, map) {
+  const sorter = (k1, k2) => area(map[k2].demensions) - area(map[k1].demensions);
+  keys.sort(sorter);
+}
+
+const toolingHtml = (info) => new Tooling(info).html();
 const panelInfoRender = (_parts, containerOid) => async (map, job) => {
   const container = containerOid instanceof HTMLElement ? containerOid : du.id(containerOid);
   if (container) {
-    let html = '';
-    const root = _parts[0].getRoot();
-    const keys = Object.keys(map);
-    for (let index = 0; index < keys.length; index++) {
-      const info = map[keys[index]];
-      const parts = info.partIds.map(id => root.constructor.get(id));
-      const scope = {parts, info, toolingHtml, viewContainer, disp: Utils.display};
-      scope.views = buildViews(info);
-      html += partTemplate.render(scope);
-    }
-    container.innerHTML = html;
+    container.innerHTML = 'Building Document...';
+    setTimeout(() => {
+      let html = '';
+      const root = _parts[0].getRoot();
+      const keys = Object.keys(map);
+      sortParts(keys, map);
+      for (let index = 0; index < keys.length; index++) {
+        const info = map[keys[index]];
+        const parts = info.partIds.map(id => root.constructor.get(id));
+        info.parts = parts;
+        const scope = {parts, info, toolingHtml, viewContainer, disp: Utils.display};
+        scope.views = buildViews(info);
+        html += partTemplate.render(scope);
+      }
+      container.innerHTML = html;
+    });
   }
 }
 
@@ -281,7 +296,8 @@ const progressUpdate = (containerOid) => (task, job) => {
 const Panels = (parts, containerOid) => {
   const job = new Jobs.Documentation.Panels(parts);
   job.on.change(progressUpdate(containerOid));
-  job.then(panelInfoRender(parts, containerOid), console.error).queue();
+  job.then(panelInfoRender(parts, containerOid), console.error)
+  job.queue();
   return job;
 };
 

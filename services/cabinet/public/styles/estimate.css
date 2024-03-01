@@ -348,7 +348,7 @@ a {
 #display-menu > .display-manager {
   width: fit-content;
   display: inline-flex;
-  position: absolute;
+  position: relitive;
 }
 
 #order-cnt {
@@ -568,7 +568,6 @@ td[dir] {
 
 .part-cnt {
   overflow: auto;
-  max-height: 40vh;
   display: inline-flex;
 }
 

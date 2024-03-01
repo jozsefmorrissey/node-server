@@ -1,7 +1,7 @@
 
 const du = require('../../../public/js/utils/dom-utils');
 const Measurement = require('../../../public/js/utils/measurement');
-const panZoom = require('../../../public/js/utils/canvas/two-d/pan-zoom');
+const panZoom = require('../../../public/js/utils/canvas/two-d/pan-zoom-click-measure');
 const Draw2D = require('../../../public/js/utils/canvas/two-d/draw.js');
 const Circle2d = require('../../../public/js/utils/canvas/two-d/objects/circle.js');
 const Vertex2d = require('../../../public/js/utils/canvas/two-d/objects/vertex.js');
@@ -26,7 +26,7 @@ function addVertex(x, y) {
   return vert;
 }
 
-function polyDrawFunc() {
+function polyAddFunc() {
   let points = [];
   return (x,y) => {
     points.push(addVertex(x,y));
@@ -36,31 +36,22 @@ function polyDrawFunc() {
       const mp = line.midpoint();
       addVertex(mp.x(), mp.y());
       hoverMap.add(line);
-      if (isIdentified(line.startVertex())) drawVertex(line.startVertex());
-      if (isIdentified(mp)) drawVertex(mp);
-      if (isIdentified(line.endVertex())) drawVertex(line.endVertex());
-      const hoveringLine = isHovering(line);
-      if (hoveringLine) {
-        console.log('hover');
-      }
-      draw.line(line, color(line), hoveringLine ? 1 : .5, hoveringLine);
     }
   }
 }
 // (circle, lineColor, fillColor, lineWidth)
-function drawVertex(x, y) {
-  const vert = x instanceof Vertex2d ? x : addVertex(x,y);
-  const radius = isHovering(vert) ? 2 : 1;
-  draw.circle(new Circle2d(radius, vert), null, color(vert), 0);
+function drawObject(obj) {
+  const target = obj.target();
+  if (target instanceof Vertex2d) {
+    draw.circle(new Circle2d(1, target), color(target), 0, color(target));
+  } else {
+    draw.line(target, color(target),  .5);
+  }
 }
 
 
 let colors = {};
-this.isHovering = (obj) => obj && obj.equals(hovering);
-this.isLastClicked = (obj) => obj && obj.equals(lastClicked());
-this.isIdentified = (obj) => isHovering(obj) || isLastClicked(obj);
 function color(lineOvert, color) {
-  if (isHovering(lineOvert) || isLastClicked(lineOvert)) return 'blue';
   const key = lineOvert.toString();
   if (color) {
     colors[key] = color;
@@ -103,6 +94,8 @@ const splitReg = /(\],\[|\],\(|\),\[)/;
 const pointsReg = /\(\s*(((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,}))\s*,\s*((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,})))\s*\)/g;
 const pointReg = /\(\s*(((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,}))\s*,\s*((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,})))\s*\)/;
 
+
+
 function splitLocationData(str) {
   str = parseColors(str);
   const breakdown = str.split(splitReg);
@@ -110,7 +103,7 @@ function splitLocationData(str) {
     const start = index === 0 ? '' : breakdown[index-1].substr(breakdown[index-1].length - 1, 1);
     const end = index === breakdown.length - 1 ? '' : breakdown[index+1].substr(0,1);
     const piece = start + breakdown[index] + end;
-    const illustrateFunc = piece.charAt(0) === '[' ?  polyDrawFunc() : drawVertex;
+    const illustrateFunc = piece.charAt(0) === '[' ?  polyAddFunc() : addVertex;
     const pointStrs = piece.match(pointsReg);
     if (pointStrs === null) reportError(`trouble parsing section ${piece}`);
     else {
@@ -125,14 +118,9 @@ function splitLocationData(str) {
 }
 
 function drawFunc() {
-  colors = {};
   verts = [];
-  hoverMap.clear();
-  lines.forEach((line) =>  {
-    line = line.trim();
-    if (line) splitLocationData(line);
-  })
-
+  hoverMap.objects().forEach(obj => drawObject(obj));
+  console.log('wtf');
 }
 // [(1,.1),(2.2,88888.2),(.000003,3)],[(4445654.345,4),(-5,-5)],(6,7),[(4,4),(5,5)]
 const canvas = du.find('#two-d-display>canvas');
@@ -140,7 +128,9 @@ const height = du.convertCssUnit('100vh');
 canvas.height = height;
 canvas.width = height;
 draw = new Draw2D(canvas, true);
-panZ = new panZoom(canvas, drawFunc);
+
+panZ = new panZoom(canvas, drawFunc, () => hoverMap);
+panZ.disable.move()
 draw.circle(new Circle2d(2, new Vertex2d(10,10)), null, 'green');
 
 let scale;
@@ -148,27 +138,16 @@ function parse(newLines, sc) {
   scale = sc;
   lines = newLines;
   panZ.once();
+  hoverMap.clear();
+  colors = {};
+  lines.forEach((line) =>  {
+    line = line.trim();
+    if (line) splitLocationData(line);
+  })
 }
-
-let hovering;
-panZ.onMove((event) => {
-  const vertex = new Vertex2d(event.imageX, -1*event.imageY);
-  hovering = hoverMap.hovering(event.imageX, -1*event.imageY);
-});
 
 const clickStack = [];
 const lastClicked = () => clickStack[clickStack.length - 1];
-panZ.onMouseup((event) => {
-  const last = lastClicked();
-  if (last && hovering) {
-    const point = {x: event.screenX, y: event.screenY};
-    if (hovering.equals(last)) popUp.open(hovering.toString(), point);
-    else popUp.open(new Measurement(hovering.distance(last)).display(), point);
-    clickStack.push(undefined);
-  } else {
-    clickStack.push(hovering);
-  }
-});
 
 const centerOnVertices = () => {
     if (verts.length === 0) return;
@@ -178,6 +157,10 @@ const centerOnVertices = () => {
     const center = new Vertex2d(x, y);
     panZ.centerOn(center.x(), center.y());
   };
+
+du.on.match('click', '#two-d-display [type="checkbox"]', (elem) => {
+  panZ.measurements[elem.checked ? 'enable' : 'disable']();
+});
 
 
 module.exports = {

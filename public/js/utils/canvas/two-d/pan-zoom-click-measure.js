@@ -76,6 +76,7 @@ class PanZoomClickMeasure extends PanZoomClick {
       const objs = objects.map(o => o.target());
 
       const lastMove = instance.lastMove();
+      if (!lastMove) return;
       const vertex = new Vertex2d(lastMove.imageX, lastMove.imageY);
       const hovering = measurmentHoverMap.hovering(vertex);
 
@@ -92,9 +93,11 @@ class PanZoomClickMeasure extends PanZoomClick {
           draw2d(obj, 'blue', width * 4 );
         }
       }
-      for (let index = 0; index < split.normal.length; index++) {
-        const obj = split.normal[index];
-        draw2d(obj, color, width);
+      if (split.normal) {
+        for (let index = 0; index < split.normal.length; index++) {
+          const obj = split.normal[index];
+          draw2d(obj, color, width);
+        }
       }
     }
 

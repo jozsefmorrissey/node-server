@@ -3,10 +3,7 @@ const Vertex3D = require('./three-d/objects/vertex');
 const Line3D = require('./three-d/objects/line');
 const BiPolygon = require('./three-d/objects/bi-polygon');
 const Polygon3D = require('./three-d/objects/polygon');
-const FunctionCache = require('../../../public/js/utils/services/function-cache.js');
 const Joint = require('./objects/joint/joint.js');
-
-FunctionCache.on('position', 100);
 
 class Position {
   constructor(assembly, sme, config) {

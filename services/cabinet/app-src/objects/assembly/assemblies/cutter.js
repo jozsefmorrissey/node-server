@@ -3,10 +3,8 @@
 
 const Assembly = require('../assembly.js');
 const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
-const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
 const Dependency = require('../../dependency');
 
-FunctionCache.on('cutter', 500);
 
 class Cutter extends Assembly {
   constructor(partCode, partName, config) {

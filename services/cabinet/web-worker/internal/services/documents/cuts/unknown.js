@@ -1,12 +1,13 @@
 
-const ChannelInfo = require('./channel');
+const CutInfo = require('./cut');
 const Layer = require('../../../../../app-src/three-d/objects/layer.js');
 
-class UnknownInfo extends ChannelInfo {
+class UnknownInfo extends CutInfo {
   constructor(set, jointInfo, maleModel) {
     super(set, jointInfo, maleModel);
-    this.toolType = () => 'unknown';
-    this.toString = () => jointInfo.joint().toString();
+    this.toolType = 'unknown';
+    this.joint = jointInfo.joint().descriptor;
+    this.toString = () => jointInfo.joint().descriptor;
 
     this.angle = () => -0;
 
@@ -20,5 +21,5 @@ UnknownInfo.evaluateSets = (parrelleSets) => {
   return lenG2.length > 0 || lenE2.length > 2;
 }
 
-ChannelInfo.register(UnknownInfo);
+CutInfo.register(UnknownInfo);
 module.exports = UnknownInfo;

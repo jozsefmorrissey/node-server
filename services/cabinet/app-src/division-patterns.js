@@ -173,7 +173,8 @@ class Pattern {
 
       const lastVal = dist / lastElem.count;
       if (lastVal < 0) {
-        throw new Error('Invalid size/pattern');
+        // throw new Error('Invalid size/pattern');
+        console.warn('Invalid size/pattern');
       }
       let lastMeas = new Measurement(lastVal);
       values[lastElem.id] = lastMeas.value();

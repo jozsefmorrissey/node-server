@@ -326,9 +326,6 @@ class Assembly extends KeyValue {
       for (let ji = 0; ji < allJs.length; ji++) {
         const joint = allJs[ji];
         if (noJoints && joint instanceof Joint) continue;
-        if (joint.locationId() === 'NEIGHBOR_JOINT') {
-          console.log('target');
-        }
 
         const jid = joint.id();
         for (let ai = 0; ai < assems.length; ai++) {

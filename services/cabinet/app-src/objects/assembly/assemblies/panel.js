@@ -3,7 +3,6 @@
 
 const Assembly = require('../assembly.js');
 const Joint = require('../../joint/joint.js');
-const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
 
 class Panel extends Assembly {
   constructor(partCode, partName, config) {

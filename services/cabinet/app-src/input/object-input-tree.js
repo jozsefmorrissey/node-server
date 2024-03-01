@@ -87,7 +87,7 @@ module.exports = () => {
     name: 'layout',
     inline: true,
     class: 'center',
-    // value: 'test',
+    value: '3d',
     clearOnDblClick: true,
     optional: true,
     list: [''].concat(CabinetLayouts.list())

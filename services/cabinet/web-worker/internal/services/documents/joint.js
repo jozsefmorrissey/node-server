@@ -51,7 +51,6 @@ class JointInfo {
       const noJointModel = this.partInfo().noJointModel();
       const env = partInfo.environment();
       const males = env.jointMap[joint.id].male;
-      const modelInfoList = males.forEach(id => env.modelInfo[id]);
       males.forEach(maleId => {
         try {
           const cut =  CutInfo.get(maleId, this, env);

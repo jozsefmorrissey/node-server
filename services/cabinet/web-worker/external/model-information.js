@@ -126,13 +126,14 @@ class ModelInformation {
     else buildModels = assemblies.filter(a => a.part && a.included);
 
     let joinModels = sorter(buildModels, jointMap, byId);
-    joinModels[25].complexity();
     buildModels = Object.values(joinModels).map(ac => ac.assembly);
     buildModels = sortAssemMtdos(buildModels);
 
     buildModels = buildModels.map(a => a.id());
     const includedParts = targets.filter(a => a.part() && a.included()).map(a => a.id());
     targets = targets.map(a => a.id());
+    const complexityMap = {};
+    joinModels.forEach(jmo => complexityMap[jmo.assembly.id()] = jmo.complexity());
     joinModels.forEach(jmo => (jmo.id = jmo.assembly.id()) && delete jmo.assembly &&
                                                               delete jmo.partCode &&
                                                               delete jmo.complexity);
@@ -161,6 +162,10 @@ class ModelInformation {
       return environment;
     }
     this.environment = environmentObject;
+
+    this.parts = () => byId;
+    this.jointMap = () => jointMap;
+    this.complexityMap = () => complexityMap;
 
     function addTrackingFunctions(...attributes) {
       for (let index = 0; index < attributes.length; index++) {

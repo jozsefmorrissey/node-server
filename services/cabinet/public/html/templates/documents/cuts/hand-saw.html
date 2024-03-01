@@ -1,0 +1,21 @@
+<div class='hand-saw-cnt'>
+  <table class='no-border-cells'>
+    <caption><b>Hand Saw</b></caption>
+    <tr>
+      <th>Width</th>
+      <th>Depth</th>
+      <th>Length</th>
+      <th>Angle</th>
+      <th>Relitive To Vertex</th>
+      <th>Relitive To Vertex</th>
+    </tr>
+    <tr:t class='cut-info-cnt tab font-medium' repeat='item in list'>
+      <td>{{item.width ? display.measurement(item.width) : ''}}</td>
+      <td>{{item.depth ? display.measurement(item.depth) : ''}}</td>
+      <td>{{item.length ? display.measurement(item.length) : ''}}</td>
+      <td>{{item.angle ? display.degrees(item.angle) : ''}}</td>
+      <td:t class='cut-info-cnt tab font-medium' repeat='loc in item.relitiveLocations'>
+        {{loc.vertexLabel}}@{{loc.length ? display.measurement(loc.length) : ''}}</td:t>
+    </tr:t>
+  </table>
+</div>

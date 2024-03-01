@@ -6,7 +6,6 @@ const Line3D = require('../../../../../app-src/three-d/objects/line.js');
 class ChannelInfo extends CutInfo {
   constructor(set, jointInfo, maleModel) {
     super(set, jointInfo, maleModel);
-    this.primarySide = jointInfo.primarySide;
     this.center = () => this.intersectionModel().center();
 
     this.axis = (rightOleft) => {
@@ -26,11 +25,11 @@ class ChannelInfo extends CutInfo {
   }
 }
 
-ChannelInfo.evaluateSets = (parrelleSets) => {
-  const lenG2 = parrelleSets.filter(s => s.length > 2);
-  const lenE2 = parrelleSets.filter(s => s.length === 2);
-  const lenE1 = parrelleSets.filter(s => s.length === 1);
-  return !(lenG2.length > 0 || lenE2.length > 2) && lenE2.length === 1
+ChannelInfo.evaluateSets = (parrelleSets, zPolys) => {
+  const lenG2 = parrelleSets.filter(s => s.length > 2).length;
+  const lenE2 = parrelleSets.filter(s => s.length === 2).length;
+  const lenE1 = parrelleSets.filter(s => s.length === 1).length;
+  return !(lenG2 > 0) && ((lenE2 === 1 && lenE1 === 1) ||  lenE1 === 3);
 }
 
 CutInfo.register(ChannelInfo);

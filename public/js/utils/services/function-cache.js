@@ -46,20 +46,20 @@ class FunctionCache {
 
 const timers = {};
 const lastGroupCall = {};
-async function toggleAt() {
-  const groups = Object.keys(timers);
-  const currTime = new Date().getTime();
-  for (let index = 0; index < groups.length; index++) {
-    const group = groups[index];
-    const itIsTime = lastGroupCall[group] < currTime - timers[group];
-    const firstTime = lastGroupCall[group] === undefined;
-    if (firstTime || itIsTime) {
-      lastGroupCall[group] = currTime;
-    }
-  }
-  setTimeout(toggleAt, 300);
-}
-toggleAt();
+// async function toggleAt() {
+//   const groups = Object.keys(timers);
+//   const currTime = new Date().getTime();
+//   for (let index = 0; index < groups.length; index++) {
+//     const group = groups[index];
+//     const itIsTime = lastGroupCall[group] < currTime - timers[group];
+//     const firstTime = lastGroupCall[group] === undefined;
+//     if (firstTime || itIsTime) {
+//       lastGroupCall[group] = currTime;
+//     }
+//   }
+//   setTimeout(toggleAt, 300);
+// }
+// toggleAt();
 
 FunctionCache.cached = 0;
 FunctionCache.notCahed = 0;

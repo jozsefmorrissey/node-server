@@ -12,6 +12,8 @@ const Tolerance = require('../../../../../../../public/js/utils/tolerance.js');
 
 const within = Tolerance.within(.0001);
 const FENCE = Line2d.startAndTheta(null, Math.PI12, 10000);
+const HAND_SAW_ERROR = new Error('hand-saw');
+
 /**
                      +z
                       |
@@ -32,7 +34,7 @@ class TableSawDocumentation {
     let makeCut = false;
 
     function cutInfoDirectionalCutLine(yAxis, rightOleft) {
-      const edges = instance.partInfo.edges(rightOleft, true);
+      const edges = instance.partInfo.fenceEdges(rightOleft, true);
       const cut = yAxis.to2D('x', 'y');
       let foundStart = false; let foundEnd = false; let intersections = [];
       for (let index = 0; index < edges.length; index++) {
@@ -44,7 +46,10 @@ class TableSawDocumentation {
           if (int) intersections.push(int);
         }
       }
-      if ((foundStart && foundEnd) || intersections.length === 2) {
+      const foundBoth = (foundStart && foundEnd);
+      const found1andIntersection = !foundBoth && ((foundStart || foundEnd) && intersections.length === 1);
+      const found2Intersections = !foundBoth && intersections.length === 2;
+      if (foundBoth || found1andIntersection || found2Intersections) {
         makeCut = true;
         return null;
       }
@@ -67,7 +72,7 @@ class TableSawDocumentation {
       const setNormalized = cut.set().map(p => cut.normalize(rightOleft, p));
       const blockingPolys = setNormalized.filter(p => !within(0, yAxis.vector().unit().dot(p.normal())));
       if (blockingPolys.length > 1) throw new Error('This Should Not Happen');
-      if (blockingPolys[0] === undefined) return;
+      if (blockingPolys[0] === undefined) return null;
       const intersectingLine = Line3D.fromVector(blockingPolys[0].normal(), yAxis.midpoint());
       const intersection = blockingPolys[0].toPlane().intersection.line(intersectingLine);
       const line3D = new Line3D(intersection, yAxis.midpoint());
@@ -89,6 +94,9 @@ class TableSawDocumentation {
       const possibleFenceEdges = parrelleSets.filter(s => s[0].isParrelle(y2d))[0];
       const y2dExt = Line2d.startAndTheta(y2d.midpoint(), y2d.radians(), 1000)
           .combine(Line2d.startAndTheta(y2d.midpoint(), y2d.negitive().radians(), 1000));
+      if (!possibleFenceEdges) {
+        throw HAND_SAW_ERROR;
+      }
       let fenceEdge = possibleFenceEdges[0];
       if (yCutL) {
         if (!within(yCutL.radianDifference(fenceEdge), 0))
@@ -96,14 +104,19 @@ class TableSawDocumentation {
         if (!within(yCutL.radianDifference(fenceEdge), 0))
           throw new Error('Shouldn\'t happen!28Nov2023');
       }
-      return fenceEdge;
+      if (possibleFenceEdges.length < 2) {
+        console.warn('There is probably an error here...\n\tUnless there is only on acceptible fence side')
+        return possibleFenceEdges[0];
+      }
+      return possibleFenceEdges[0].distance(y2d) > possibleFenceEdges[1].distance(y2d) ?
+            possibleFenceEdges[0] : possibleFenceEdges[1];
     }
 
     function outsideOfBlade(rightOleft) {
       let outsideOfBlade = instance.length !== null && within(instance.width, 0);
       if (outsideOfBlade) {
         const model = cut.intersectModel();
-        const normCenter = cut.normalize(rightOleft, model).center();
+        const normCenter = cut.axis(rightOleft).y.midpoint();
         const jointCenter = new Vertex3D(normCenter).to2D('x', 'y');
         outsideOfBlade = instance.fenceEdge.distance(jointCenter, false) < instance.fenceDistance + instance.width;
       }
@@ -111,7 +124,7 @@ class TableSawDocumentation {
     }
 
     function determinePosition0deg() {
-      instance.upSide = cut.primarySide();
+      instance.upSide = cut.secondarySide();
       const rightOleft = instance.upSide === 'Left' ? true : false;
       const axis = cut.axis(rightOleft);
       const y2d = axis.y.to2D('x', 'y');
@@ -129,7 +142,7 @@ class TableSawDocumentation {
       const axis = cut.axis(rightOleft);
       const fencePlanes = instance.partInfo.fencePlanes(rightOleft);
 
-      console.log(fencePlanes.map(p => p.toDrawString()).join('\n\n'));
+      // console.log(fencePlanes.map(p => p.toDrawString()).join('\n\n'));
 
       const model = instance.partInfo.model(rightOleft);
       const modelCenter = new Vertex3D(model.center());
@@ -156,8 +169,7 @@ class TableSawDocumentation {
       const bottomFenceDist = applicablePlanes[0].p.connect.line(bottomY).length();
       const distance = Math.min(topFenceDist, bottomFenceDist);
 
-      const valid = yCutLine === null || within(edge2d.radians(), yCutLine.radians());
-
+      const valid = yCutLine === null || within(yCutLine.radianDifference(edge2d), 0);
       return {
         rightOleft, edge, edges, yCutLine, axis, edge2d, distance, valid,
         planes: fencePlanes

@@ -18,7 +18,6 @@ const CSG = require('../../../../../../public/js/utils/3d-modeling/csg.js');
 const AutoToekick = require('./auto/toekick.js');
 const Notifiction = require('../../../../../../public/js/utils/collections/notification.js');
 const NotifictionArray = Notifiction.Array;
-const FunctionCache = require('../../../../../../public/js/utils/services/function-cache.js');
 
 const OVERLAY = {};
 OVERLAY.FULL = 'Full';
@@ -241,7 +240,9 @@ class Cabinet extends Assembly {
       return (...args) => {
         if (shouldTest && test(...args)) {
           modificationState++;
-          instance.updateOpenings();
+          let value = func(...args);
+          instance.updateOpenings(true);
+          return value;
         }
         return func(...args);
       }

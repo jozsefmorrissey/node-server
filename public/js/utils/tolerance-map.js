@@ -12,9 +12,9 @@ function sortByAttr(attr) {
 }
 
 class ToleranceMap {
-  constructor(attributeMap, toleranceMap, absoluteValue) {
-    const map = toleranceMap || {};
-    const tolerance = new Tolerance(attributeMap, null, absoluteValue);
+  constructor(attributeMap, absoluteValue, modulus) {
+    const map = {};
+    const tolerance = new Tolerance(attributeMap, null, absoluteValue, modulus);
     const instance = this;
 
     this.clone = (newElems) => {
@@ -65,7 +65,7 @@ class ToleranceMap {
       }
     }
 
-    function getSet(elem) {
+    function getSet(elem, error) {
       let curr = map;
       let attrs = tolerance.attributes();
       for (let index = 0; index < attrs.length; index += 1) {
@@ -200,7 +200,7 @@ class ToleranceMap {
                           .filter(filterAlreadyFound(spokenFor, onDeck));
         newMatches.forEach(e => onDeck[tolerance.elemHash(e)] = true);
         let moreMatchesFound = true;
-        while(moreMatchesFound) {
+        while(moreMatchesFound && newMatches.length) {
           const startMatches = this.matches(newMatches[0])
                                 .filter(filterAlreadyFound(spokenFor, onDeck));
           const endMatches = this.matches(newMatches[newMatches.length - 1])
@@ -229,7 +229,7 @@ class ToleranceMap {
       if (!Array.isArray(list)) return;
       for (let index = 0; index < list.length; index++) {
         const elem = list[index];
-        let matchArr = getSet(elem);
+        let matchArr = getSet(elem, index === 37);
         matchArr.push(elem);
         matchArr.sortByAttrs(tolerance.attributes());
       }

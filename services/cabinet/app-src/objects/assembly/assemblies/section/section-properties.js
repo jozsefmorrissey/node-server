@@ -12,7 +12,6 @@ const DividerSection = require('./partition/divider.js');
 const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
 const CustomEvent = require('../../../../../../../public/js/utils/custom-event.js')
-const FunctionCache = require('../../../../../../../public/js/utils/services/function-cache.js');
 
 const v = (x,y,z) => new Vertex3D(x,y,z);
 class SectionProperties extends KeyValue{
@@ -58,7 +57,6 @@ class SectionProperties extends KeyValue{
 
     // index ||= 0;
     const coordinates = {inner: [v(),v(10,0,0),v(10,10,0),v(0,0,10)], outer: [v(),v(20,0,0),v(20,20,0),v(0,0,20)]};
-    let rotation, innerCenter, outerCenter, outerLength, innerLength, outerWidth, innerWidth = null;
     const temporaryInitialVals = {parent, _TEMPORARY: true};
     Object.getSet(this, temporaryInitialVals, 'parentAssembly');
     Object.getSet(this, {divideRight: false, config, index}, 'divider', 'cover');
@@ -135,7 +133,7 @@ class SectionProperties extends KeyValue{
     this.coverType = () => this.cover() && this.cover().constructor.name;
     this.vertical = (is) => {
       const curr = instance.value('vertical', is);
-      if (is !== undefined && curr !== is) removeCachedValues();
+      if (is !== undefined && curr !== is) setSectionCoordinates(true);
       return curr;
     }
     this.coordinates.valid = () => {
@@ -153,9 +151,11 @@ class SectionProperties extends KeyValue{
       if (parent instanceof SectionProperties) return parent.isVertical();
       return false;
     }
+
+    let rotation;
     this.rotation = () => {
       if (config.rotation === undefined || config._Type === 'part-code') return {x:0,y:0,z:0};
-      if (true || rotation === null) rotation = this.getRoot().evalObject(config.rotation);
+      if (rotation === undefined) rotation = this.getRoot().evalObject(config.rotation);
       return JSON.copy(rotation);
     }
 
@@ -377,38 +377,29 @@ class SectionProperties extends KeyValue{
       }
     }
 
+
     this.outerCenter = () => {
-      if (true || outerCenter === null) outerCenter = Vertex3D.center(coordinates.outer);
-      return outerCenter;
+      return Vertex3D.center(coordinates.outer);
     }
 
     this.innerCenter = () => {
-      if (true || innerCenter === null) innerCenter = Vertex3D.center(coordinates.inner);
-      return innerCenter;
+      return Vertex3D.center(coordinates.inner);
     }
 
     this.outerLength = () => {
-      if (true || outerLength === null)
-        outerLength = coordinates.outer[0].distance(coordinates.outer[3]);
-      return outerLength;
+      return coordinates.outer[0].distance(coordinates.outer[3]);
     }
 
     this.outerWidth = () => {
-      if (true || outerWidth === null)
-        outerWidth = coordinates.outer[0].distance(coordinates.outer[1]);
-      return outerWidth;
+      return coordinates.outer[0].distance(coordinates.outer[1]);
     }
 
     this.innerLength = () => {
-      if (true || innerLength === null)
-        innerLength = coordinates.inner[0].distance(coordinates.inner[3]);
-      return innerLength;
+      return coordinates.inner[0].distance(coordinates.inner[3]);
     }
 
     this.innerWidth = () => {
-      if (true || innerWidth === null)
-        innerWidth = coordinates.inner[0].distance(coordinates.inner[1]);
-      return innerWidth;
+      return coordinates.inner[0].distance(coordinates.inner[1]);
     }
 
     this.divide = (dividerCount, dontUpdateCoords) => {
@@ -476,10 +467,6 @@ class SectionProperties extends KeyValue{
       return json;
     }
 
-    function removeCachedValues() {
-      rotation = innerCenter = outerCenter = innerLength = innerWidth = outerLength = outerWidth = null;
-    }
-
     function updateCoordinates(obj, newCoords) {
       let change = false;
       for (let i = 0; i < 4; i++) {
@@ -499,11 +486,9 @@ class SectionProperties extends KeyValue{
     this.updateCoordinates = (newCoords) => {
       updateCoordinates(coordinates.outer, newCoords.outer) | updateCoordinates(coordinates.inner, newCoords.inner);
       setSectionCoordinates(true);
-      removeCachedValues();
     }
 
     this.reevaluate = () => {
-      removeCachedValues(true);
       setSectionCoordinates(true);
     }
 
@@ -623,9 +608,12 @@ class SectionProperties extends KeyValue{
     this.on.parentSet(p => this.getAssembly('c') && this.isRoot() && buildCutters());
 
     this.toDrawString = (notRecursive) => {
-      let str = `//  ${this.userFriendlyId()}:${this.locationCode()}`;
+      const color = String.nextColor();
+      const innerStr = this.coordinates().inner.map(v => color + v.toString()).join('\n');
+      const outerStr = this.coordinates().outer.map(v => color + v.toString()).join('\n');
+      let str = `//  ${this.userFriendlyId()}:${this.locationCode()}\n${outerStr}\n${innerStr}`;
       if (notRecursive !== true)
-        this.children().forEach(c => {try {str += c.toDrawString() + '\n\n'} catch (e) {}});
+        this.sections.forEach(c => {try {str += c.toDrawString() + '\n\n'} catch (e) {}});
       return str;
     }
 

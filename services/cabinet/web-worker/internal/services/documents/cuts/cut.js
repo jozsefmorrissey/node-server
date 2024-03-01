@@ -16,12 +16,18 @@ class CutInfo {
     const env = jointInfo.partInfo().environment();
     const partId = jointInfo.partInfo().part().id;
     let intersectionModel = env.modelInfo.intersection[partId][maleId];
-    intersectionModel ||= jointInfo.model().intersect(jointInfo.partInfo().noJointModel());
+    if (intersectionModel === undefined) {
+      let njm = jointInfo.partInfo().noJointModel();
+      let mm = env.modelInfo.joined[maleId];
+      if ((njm && njm.polygons.length) && (mm && mm.polygons.length))
+        intersectionModel = mm.intersect(njm);
+    }
 
     let instance = this;
+    this.maleId = () => maleId;
     this.jointInfo = () => jointInfo;
     this.maleModel = () => env.modelInfo.joined[maleId];
-    let documented = true;
+    let documented = set.length > 0;
     this.documented = (isDocumented) => {
       if (isDocumented === true || isDocumented === false) {
         documented = isDocumented;
@@ -30,8 +36,23 @@ class CutInfo {
     }
     this.set = () => set;
     this.normalize = jointInfo.partInfo().normalize;
-    this.primarySide = jointInfo.partInfo().primarySide;
-    this.toolType = () => 'table-saw';
+    this.primarySide = () => {
+      if (set.length === 0) return 'Both';
+      const zPos = jointInfo.partInfo().normals().z;
+      const zNeg = zPos.inverse();
+      const leftPolys = this.set().filter(p => zPos.equals(p.normal()));
+      const rightPolys = this.set().filter(p => zNeg.equals(p.normal()));
+      if (leftPolys.length && !rightPolys.length) return 'Left';
+      if (rightPolys.length && !leftPolys.length) return 'Right';
+      return 'Both';
+    };
+    this.secondarySide = () => {
+      const ps = this.primarySide();
+      if (ps === 'Right') return 'Left';
+      if (ps === 'Left') return 'Right';
+      return 'Both';
+    }
+    this.toolType = 'table-saw';
     this.center = () =>
       set[0].center();
     this.intersectModel = () => intersectionModel;
@@ -118,6 +139,13 @@ class CutInfo {
     }
 
     this.toString = this.toDrawString;
+  }
+}
+
+class UndocumentedCut extends CutInfo {
+  constructor(set, jointInfo, maleId) {
+    super(set, jointInfo, maleId);
+    this.documented(false);
   }
 }
 
@@ -214,15 +242,17 @@ function partModelInfo(partId, maleId, env, jointInfo, maleModel) {
 
 CutInfo.partModelInfo = partModelInfo;
 
-let partModels = {};
-let time = 0;
+// let partModels = {};
+// let time = 0;
+// const start = new Date().getTime();
+// const end = new Date().getTime();
+// time += end - start;
+// console.log(time / 1000);
+
 CutInfo.get = (maleId, jointInfo, env) => {
   const part = jointInfo.partInfo().part();
-  if (part.locationCode === 'c_S1_S1_dv_dv:full') {
-    console.log('ladidodido');
-  }
   const modelInfo = CutInfo.partModelInfo(part.id, maleId, env, jointInfo);
-  if (modelInfo.intersectionModel === undefined) return;
+  if (modelInfo.intersectionModel === undefined) return;// new UndocumentedCut([], jointInfo, maleId);
 
   const intersectionLayers = Layer.fromCSG(modelInfo.intersectionModel);
   const modelLayers = modelInfo.modelLayers;
@@ -235,19 +265,16 @@ CutInfo.get = (maleId, jointInfo, env) => {
       const equivNorms = intLayer.normal().positiveUnit().equals(mLayer.normal().positiveUnit());
       if (equivNorms) {
         let hash = intLayer.toDetailString().hash();
-        const start = new Date().getTime();
         if (existsInBoth[hash] === undefined && mLayer.overlaps(intLayer, true)) {
           existsInBoth[hash] = intLayer;
           found = true;
         }
-        const end = new Date().getTime();
-        time += end - start;
       }
     }
   }
   existsInBoth = Object.values(existsInBoth);
   if (existsInBoth.length === 0) {
-    return;
+    return new UndocumentedCut([], jointInfo, maleId);;
   }
   // existsInBoth = existsInBothSets(intersectionLayers, modelPolys);
   // TODO: ideally we would remove full length in joint application
@@ -262,7 +289,6 @@ CutInfo.get = (maleId, jointInfo, env) => {
   const sets = Polygon3D.parrelleSets(existsInBoth);
 
   alignZpolyNorms(zPolys, intersectionLayers, zPolyFilter);
-  console.log(time / 1000);
 
   try {
     const validObjects = [];
@@ -276,6 +302,7 @@ CutInfo.get = (maleId, jointInfo, env) => {
     }
     throw new Error('This shouldn\'t happen! ' + jointInfo.joint().toString());
   } catch(e) {
+    console.error(e);
     return new CutInfo.UNDEFINED_CONSTRUCTOR(existsInBoth, jointInfo, maleId, env);
   }
 }
@@ -288,11 +315,10 @@ const removeMergeable = (cuts, index1, index2) => {
   const merged = layer1.merge(layer2);
   if (merged && merged.lines().length === layer1.lines().length) {
     const set = [merged];
-    const maleModel = cut1.intersectModel().union(cut2.intersectModel());
     const jointInfo = cut1.jointInfo();
     const cut1Index = cuts.equalIndexOf(cut1);
     const cut2Index = cuts.equalIndexOf(cut2);
-    cuts[index1] = new CutInfo(set, jointInfo, maleModel);
+    cuts[index1] = new CutInfo(set, jointInfo);
     cuts.remove(cut2);
     return true;
   }
@@ -305,6 +331,9 @@ const splitMultipleCuts = (cuts, jointInfo) => p => {
 };
 
 CutInfo.sorter = (cut1, cut2) => {
+  if (cut1.documented() === false && cut2.documented() === false) return 0;
+  if (cut1.documented() === false) return -1;
+  if (cut2.documented() === false) return 1;
   if (cut1.constructor === cut2.constructor) {
     const jointPriorDiff = cut2.jointInfo().joint().priority - cut1.jointInfo().joint().priority;
     if (jointPriorDiff) return jointPriorDiff;
@@ -312,10 +341,6 @@ CutInfo.sorter = (cut1, cut2) => {
     const dems2 = cut2.demensions();
     return dems2.y - dems1.y;
   } else {
-    const cut1AngleNonZero = cut1.angle() !== 0;
-    const cut2AngleNonZero = cut2.angle() !== 0;
-    if (cut1AngleNonZero && !cut2AngleNonZero) return 1;
-    if (!cut1AngleNonZero && cut2AngleNonZero) return -1;
     return cut1.constructor.priority - cut2.constructor.priority;
   }
 }
@@ -323,7 +348,8 @@ CutInfo.sorter = (cut1, cut2) => {
 function unDocumentDemensionalCut(cuts, index, demEdges) {
   const cut = cuts[index];
   const y2D = cut.axis(true).y.to2D('x', 'y');
-  if (demEdges.equalIndexOf(y2D) !== -1) {
+
+  if (demEdges.find(l => y2D.combine(l))) {
     cut.documented(false);
     return true;
   }
@@ -334,15 +360,17 @@ function unDocumentExtranious(cuts) {
   const demEdges = cuts[0].jointInfo().partInfo().demensionEdges(true);
   for (let i = 0; i < cuts.length; i++) {
     const cut1 = cuts[i];
-    const isCut1 = cut1.constructor === CutInfo;
-    if (isCut1) {
-      if (!unDocumentDemensionalCut(cuts, i, demEdges)) {
-        for (let j = i + 1; j < cuts.length; j++) {
-          const cut2 = cuts[j];
-          if (cut2.constructor === CutInfo) {
-            if (removeMergeable(cuts, i, j)) {
-              i--;
-              break;
+    if (cut1.documented()) {
+      const isCut1 = cut1.constructor === CutInfo;
+      if (isCut1) {
+        if (!unDocumentDemensionalCut(cuts, i, demEdges)) {
+          for (let j = i + 1; j < cuts.length; j++) {
+            const cut2 = cuts[j];
+            if (cut2.documented() && cut2.constructor === CutInfo) {
+              if (removeMergeable(cuts, i, j)) {
+                i--;
+                break;
+              }
             }
           }
         }
@@ -359,8 +387,7 @@ function splitCutOperations(cuts) {
     if (cut.constructor === CutInfo) {
       const set = cuts[index].set();
       if (set.length > 1) {
-        cuts.remove(cut);
-        index--;
+        cut.documented(false);
         set.forEach(splitMultipleCuts(cuts, jointInfo, cutInfos));
       } else cutInfos.push(cut);
     }
@@ -394,11 +421,13 @@ let priority = 0;
 const undefinedCutConstructor = 'UnknownInfo';
 CutInfo.register = (clazz) => {
   if (registered.indexOf(clazz) === -1) {
-    registered.push(clazz);
     if (clazz.name === undefinedCutConstructor) {
       CutInfo.UNDEFINED_CONSTRUCTOR = clazz;
       clazz.priority = Number.MIN_SAFE_INTEGER;
-    } else clazz.priority = priority++;
+    } else {
+      registered.push(clazz);
+      clazz.priority = priority++;
+    }
   }
 }
 CutInfo.register(CutInfo);

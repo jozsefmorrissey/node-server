@@ -179,7 +179,7 @@ class SectionPropertiesUtil {
         let thicknessVector  = depthVector.crossProduct(heightVector);
 
         const normals = spDto.divider().divider().position.current.normals;
-        normals.y = heightVector; normals.x = depthVector.unit(); normals.z = thicknessVector.unit();
+        normals.y = heightVector; normals.x = depthVector.unit(); normals.z = thicknessVector.unit().inverse();
 
         const point3 = point2.translate(depthVector, true);
         const point4 = point1.translate(depthVector, true);

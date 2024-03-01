@@ -26,7 +26,6 @@ new CabinetLayout('1dDD', (cabinet) => {
   opening.vertical(false);
   opening.sections()[0].setSection("DrawerSection");
   opening.sections()[1].setSection("DualDoorSection");
-  opening.pattern('ab').value('a', 6);
 });
 
 new CabinetLayout('1dD', (cabinet) => {
@@ -38,7 +37,6 @@ new CabinetLayout('1dD', (cabinet) => {
   opening.vertical(false);
   opening.sections()[0].setSection("DrawerSection");
   opening.sections()[1].setSection("DoorSection");
-  opening.pattern('ab').value('a', 6);
 });
 
 new CabinetLayout('3d', (cabinet) => {
@@ -51,7 +49,6 @@ new CabinetLayout('3d', (cabinet) => {
   opening.sections()[0].setSection("DrawerSection");
   opening.sections()[1].setSection("DrawerSection");
   opening.sections()[2].setSection("DrawerSection");
-  opening.pattern('abb').value('a', 6);
 });
 
 new CabinetLayout('3dsb3d', (cabinet) => {
@@ -108,12 +105,13 @@ new CabinetLayout('test', (cabinet) => {
   const right = opening.sections()[2];
   const a = 6*2.54
 
-  left.divide(2);
+  left.divide(3);
   left.vertical(false);
   left.sections[0].setSection("DrawerSection");
   left.sections[1].setSection("DrawerSection");
   left.sections[2].setSection("DrawerSection");
-  left.pattern('abb');
+  left.sections[3].setSection("DrawerSection");
+  left.pattern('aabb');
 
   center.divide(1);
   center.vertical(false);
@@ -141,6 +139,7 @@ new CabinetLayout('test', (cabinet) => {
   centerTop.divider().divider().type('frontAndBack');
   left.sections[0].divider().divider().type('front');
   left.sections[1].divider().divider().type('front');
+  left.sections[2].divider().divider().type('frontAndBack');
   right.sections[0].divider().divider().type('front');
   right.sections[1].divider().divider().type('front');
 

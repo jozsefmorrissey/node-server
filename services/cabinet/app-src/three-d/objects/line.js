@@ -752,3 +752,154 @@ Line3D.from2D = (lines2d) =>
   lines2d.map(l => new Line3D([l[0].x(), l[0].y(), 0], [l[1].x(), l[1].y(), 0]));
 
 module.exports = Line3D;
+
+
+
+
+let PolyLine3D, Plane;
+
+function parrellePointLine(line1, line2) {
+  const vect1 = line1.vector();
+  const vect2 = line2.vector();
+  let closest = {dist: Number.MAX_SAFE_INTEGER};
+  for (let i = 0; i < 2; i++) {
+    for (let j = 0; j < 2; j++) {
+      const vert1 = i === 0 ? line1.startVertex : line1.endVertex;
+      const vert2 = j === 0 ? line2.startVertex : line2.endVertex;
+      const dist = vert1.distance(vert2);
+      if (dist < closest.dist) closest = {dist, vert1, vert2};
+    }
+  }
+  const perp1 = Line3D.fromVector(vect1, new Vertex3D(vect1.scale(-.5).add(closest.vert2.vector())))
+  const perp2 = Line3D.fromVector(vect2, new Vertex3D(vect2.scale(-.5).add(closest.vert1.vector())))
+  const perpConn1 = Line3D.intersectingLine(perp1, line1, false, true, true, line1.startVertex.clamp, line1.endVertex.clamp);
+  const perpConn2 = Line3D.intersectingLine(perp2, line2, false, true, true, line2.startVertex.clamp, line2.endVertex.clamp);
+  let shortestConnection = perpConn1.length() < perpConn2.length() ? perpConn1 : perpConn2;
+  if (!perpConn1.finite() && !perpConn2.finite())
+    throw new Error('Sorry I guess you have to deal with this issue: Matrix that is created does not have a single solution');
+  if (perpConn1.finite() && !perpConn2.finite()) shortestConnection = perpConn1;
+  if (perpConn2.finite() && !perpConn1.finite()) shortestConnection = perpConn2;
+  if (shortestConnection instanceof PolyLine3D) shortestConnection = shortestConnection.centerLine();
+  return shortestConnection;
+}
+
+// Stole from https://stackoverflow.com/a/28701387
+// Thank You, Alexandre Giordanelli
+Line3D.intersectingLine = (line1, line2, clampAll, clampA0, clampA1, clampB0, clampB1) => {
+  if(PolyLine3D === undefined) {
+    PolyLine3D = require('./poly-line');
+    Plane = require('plane');
+  }
+  line1 = line1.clone();line2 = line2.clone();
+  var sameDir = line1.vector().sameDirection(line2.vector());
+  if (!sameDir) {
+    line2 = line2.negitive();
+    const temp = clampB0;
+    clampB0 = clampB1;
+    clampB1 = temp;
+  }
+
+  const a0 = line1.startVertex; const a1 = line1.endVertex;
+  const b0 = line2.startVertex; const b1 = line2.endVertex;
+    //Given two lines defined by numpy.array pairs (a0,a1,b0,b1)
+    //Return distance, the two closest points, and their average
+
+    clampA0 = clampAll || clampA0 || false;
+    clampA1 = clampAll || clampA1 || false;
+    clampB0 = clampAll || clampB0 || false;
+    clampB1 = clampAll || clampB1 || false;
+    a0.clamp = clampA0;a1.clamp = clampA1;b0.clamp = clampB0;b1.clamp = clampB1;
+
+    //Calculate denomitator
+    var A = a1.minus(a0);
+    var B = b1.minus(b0);
+    var _A = A.unit();
+    var _B = B.unit();
+    var cross = _A.crossProduct(_B);
+    var denom = Math.pow(cross.magnitude(), 2);
+
+    //If denominator is 0, lines are parallel: Calculate distance with a projection and evaluate clamp edge cases
+    if (denom == 0){
+        var d0 = _A.dot(b0.minus(a0));
+        var d = _A.scale(d0).add(a0).minus(b0).magnitude();
+
+        //If clamping: the only time we'll get closest points will be when lines don't overlap at all. Find if segments overlap using dot products.
+        if(clampA0 || clampA1 || clampB0 || clampB1){
+            var d1 = _A.dot(b1.minus(a0));
+
+            //Is segment B before A?
+            if(d0 <= 0 && 0 >= d1){
+                if(clampA0 == true && clampB1 == true){
+                    if(Math.abs(d0) < Math.abs(d1)){
+                        return new Line3D(b0, a0);
+                    }
+                    return new Line3D(b1, a0);
+                }
+            }
+            //Is segment B after A?
+            else if(d0 >= A.magnitude() && A.magnitude() <= d1){
+                if(clampA1 == true && clampB0 == true){
+                    if(Math.abs(d0) < Math.abs(d1)){
+                        return new Line3D(b0, a1);
+                    }
+                    return new Line3D(b1, a1);
+                }
+            }
+
+        }
+
+
+        if (!sameDir) {
+          line2 = line2.negitive();
+          const temp = clampB0;
+          clampB0 = clampB1;
+          clampB1 = temp;
+        }
+        //If clamping is off, or segments overlapped, we have infinite results, just return position.
+        return new PolyLine3D(line1, line2, clampAll, clampA0, clampA1, clampB0, clampB1);
+    }
+
+    var t = b0.minus(a0);
+    var det0 = new Matrix([t.toArray(), _B.toArray(), cross.toArray()]).transpose().determinate();
+    var det1 = new Matrix([t.toArray(), _A.toArray(), cross.toArray()]).transpose().determinate();
+
+    const answer = t.toArray();
+    const m = new Matrix([[_A.i(), -_B.i()],
+                          [_A.j(), -_B.j()],
+                          [_A.k(), -_B.k()]]);
+    const Ts = m.solve(t.toArray());
+
+
+    var t0 = Ts[0][0];//det0 / denom;
+    var t1 = Ts[1][0];//det1 / denom;
+
+    var pA = _A.scale(t0).add(a0);
+    var pB = _B.scale(t1).add(b0);
+
+    const plane = new Plane(line1.startVertex, line1.endVertex, line2.startVertex);
+    if (plane.valid() && !plane.within(line2.endVertex)) {
+      return parrellePointLine(line1, line2);
+    }
+
+    //Clamp results to line segments if needed
+    if(clampA0 || clampA1 || clampB0 || clampB1){
+        if (clampA0 && line1.within(pA) === 'BEFORE') {
+          pA = a0;
+          const perpEnd = line2.perpendicular(pA).startVertex;
+          pB = Line3D.shortest(pA, perpEnd, b0, b1).endVertex;
+        } else if(clampA1 && line1.within(pA) === 'AFTER') {
+          pA = a1;
+          const perpEnd = line2.perpendicular(pA).startVertex;
+          pB = Line3D.shortest(pA, perpEnd, b0, b1).endVertex;
+        }
+
+        if(clampB0 && line2.within(pB) === 'BEFORE') {
+          pB = b0;
+        } else if(clampB1 && line2.within(pB) === 'AFTER') {
+          pB = b1;
+        }
+
+    }
+
+    return new Line3D(pA, pB);
+}

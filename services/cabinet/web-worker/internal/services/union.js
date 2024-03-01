@@ -1,4 +1,6 @@
 
+const Color = require('./modeling/utils/color');
+
 function unionAll(payload, environment) {
   const assemIds = payload.assemblies;
   let csg = new CSG();
@@ -8,7 +10,9 @@ function unionAll(payload, environment) {
     const id = assemIds[index];
     let model = map[id];
     if (model) {
-      csg = csg.union(CSG.fromPolygons(model.polygons, true));
+      model = CSG.fromPolygons(model.polygons, true);
+      model.setColors(...Color());
+      csg = csg.union(model);
     }
   }
   environment.unioned = csg.polygons.length > 0 ? csg : null;

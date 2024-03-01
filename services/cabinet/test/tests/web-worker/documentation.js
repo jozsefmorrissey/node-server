@@ -33,8 +33,20 @@ const onTestComplete = (parts, ts) => (result) => {
   console.log(ts.time());
 }
 
-Test.add('Jobs.Documentation.Parts', async (ts) => {
-  const cabinet = get('test', null, true);
+// Test.add('Jobs.Documentation.Parts', async (ts) => {
+//   const cabinet = get('test', null, true);
+//
+//   let parts = cabinet.getParts();
+//
+//   const title = 'Single Part Doc';
+//   HtmlTest.register(title, () => 'Loading...');
+//   const cnt = HtmlTest.container(title);
+//   const job = Construction.Panels(parts, cnt);
+//   job.then(onTestComplete(parts, ts));
+// });
+
+Test.add('Jobs.Documentation.Parts: diagonal-corner-base', async (ts) => {
+  const cabinet = get('3dsb3d', 'diagonal-corner-base', true);
   // const parts = [cabinet.getAssembly('L:full')];
   // parts.concatInPlace(cabinet.getAssembly('R:full'));
   // const parts = [cabinet.getAssembly('B:full')];

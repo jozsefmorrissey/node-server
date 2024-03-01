@@ -3,6 +3,7 @@ const JointInfo = require('./joint');
 const CutInfo = require('./cuts/cut');
 const ToolingInfo = require('./tooling-information');
 const Utils = require('../modeling/utils/utils.js');
+const ToleranceMap = require('../../../../../../public/js/utils/tolerance-map.js');
 
 const Vertex3D = require('../../../../app-src/three-d/objects/vertex.js');
 const Vector3D = require('../../../../app-src/three-d/objects/vector.js');
@@ -46,6 +47,7 @@ class PartInfo {
       const zNeg = zPos.inverse();
       const leftOnlyCuts = this.cuts.filter(sideFilter(zPos));
       const rightOnlyCuts = this.cuts.filter(sideFilter(zNeg));
+      if (leftOnlyCuts.length === rightOnlyCuts.length) return 'Both';
       return leftOnlyCuts.length < rightOnlyCuts.length ? 'Left' : 'Right';
     };
 
@@ -73,16 +75,23 @@ class PartInfo {
     };
 
     this.model = (rightOleft, joints) => {
-      if (joints === undefined) {
-        const jointInfo = this.jointInfo(rightOleft);
-        joints = jointInfo.map(ji => ji.joint());
-      }
       let model = this.noJointModel();
-      const males = [];
-      joints.forEach(j => males.concatInPlace(env.jointMap[j.id].male));
-      const maleModels = males.map(maleId => env.modelInfo.joined[maleId]);
-      maleModels.forEach(csg => model = model.subtract(csg));
+      let maleModels;
+      if (joints === undefined && cutInfo) {
+          const side = rightOleft ? 'Right' : 'Left';
+          const cuts = cutInfo.filter(c => c.primarySide() === side || c.primarySide() === 'Both');
+          maleModels = cuts.map(c => env.modelInfo.joined[c.maleId()]).filter(mm => mm);
+      } else {
+        if (joints === undefined) {
+          const jointInfo = this.jointInfo(rightOleft);
+          joints = jointInfo.map(ji => ji.joint());
+        }
+        const males = [];
+        joints.forEach(j => males.concatInPlace(env.jointMap[j.id].male));
+        maleModels = males.map(maleId => env.modelInfo.joined[maleId]);
+      }
 
+      maleModels.forEach(csg => model = model.subtract(csg));
       return this.normalize(rightOleft, model);
     };
 
@@ -147,7 +156,9 @@ class PartInfo {
     }
 
     this.cutMade = (cutInfo) => {
-      currentModel = currentModel.subtract(cutInfo.maleModel());
+      const mm = cutInfo.maleModel();
+      if (mm && mm.polygons.length > 0)
+        currentModel = currentModel.subtract(mm);
     }
 
     this.to2D = (rightOleft, csgOpolyOlineOvertex) => {
@@ -181,7 +192,7 @@ class PartInfo {
       if (availbleEdgesOnly === undefined) {
         applicableEdges = Layer.to2D(this.cutsOnlyModel(rightOleft), 'x', 'y');
       } else {
-        applicableEdges = Polygon3D.lines2d(Polygon3D.merge(this.currentModel(true)), 'x', 'y');
+        applicableEdges = Layer.to2D(this.currentModel(rightOleft), 'x', 'y');
       }
       let index = 'A'.charCodeAt(0);
       const center = Line2d.center(applicableEdges);
@@ -197,11 +208,34 @@ class PartInfo {
     }
 
     this.fenceEdges = (rightOleft, availbleEdgesOnly) => {
-      const edges = this.edges(rightOleft, availbleEdgesOnly);
-      const center = Line2d.center(edges);
+      let edges = this.edges(rightOleft);
+      let center;
+      if (availbleEdgesOnly) {
+        const tolMap = new ToleranceMap({'radians.positive': `.001`});
+        tolMap.addAll(edges);
+
+        const edgeMap = {};
+        edges = this.edges(rightOleft, availbleEdgesOnly);
+        edges.forEach((l) => {
+          const matches = tolMap.matches(l);
+          const found = matches.filter(m => l.combine(m));
+          if (found) found.forEach(l => edgeMap[Object.hash(l)] = l);
+        });
+        center = edges.center;
+        delete edges.center;
+        edges = Object.values(edgeMap);
+      } else {
+        center = Line2d.center(edges);
+      }
+
       const sets = Line2d.parrelleSets(edges);
       sets.forEach(s => s.sort(Line2d.distanceSort(center, false)));
+
+      if (availbleEdgesOnly && this.part().locationCode.match(/L|R/)) {
+        console.log('her')
+      }
       sets.map(s => s.map(l => l.length()))
+
       const fenceEdges = [];
       const pushIndex = (s, index) => s[index] && fenceEdges.push(s[index]);
       sets.forEach(s => pushIndex(s, s.length - 1) & pushIndex(s, s.length - 2));

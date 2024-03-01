@@ -1,6 +1,5 @@
 const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
-const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
 const Vertex3D = require('./objects/vertex');
 const Vector3D = require('./objects/vector');
 const Line3D = require('./objects/line');
@@ -211,7 +210,6 @@ class ThreeDModel {
 
     let cabinetModel, lastHash;
 
-    // todo(pibe2) dependencies: object, FunctionCache(?)
     function buildObject(options) {
       if (instance.object() === undefined)return;
       // todo: for debugging; uncomment
@@ -220,11 +218,6 @@ class ThreeDModel {
       // }
       options ||= {};
       const cId = cacheId();
-      // FunctionCache.clearAllCaches();
-      FunctionCache.on('sme');
-      if (cId) {
-        FunctionCache.on(cId);
-      }
 
       const hiddenPrefixReg = buildHiddenPrefixReg();
 
@@ -256,10 +249,6 @@ class ThreeDModel {
       }
       // a.center({x:0,y:0,z:0});
       lm = cabinetModel.complexModel(a);
-      if (cId) {
-        FunctionCache.off(cId);
-      }
-      FunctionCache.off('sme');
       lastHash = instance.object().hash();
       return cabinetModel;
     }

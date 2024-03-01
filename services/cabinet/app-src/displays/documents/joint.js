@@ -1,9 +1,6 @@
 
 const Polygon3D = require('../../three-d/objects/polygon.js');
 const CutInfo = require('./cuts/cut');
-const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
-
-FunctionCache.on('long-refresh', 4000);
 
 class JointInfo {
   constructor(joint, partInfo) {
@@ -11,7 +8,7 @@ class JointInfo {
     this.joint = () => joint;
 
     let jointModel;
-    this.model = new FunctionCache((rightOleft, model) => {
+    this.model = (rightOleft, model) => {
       if (model instanceof CSG) jointModel = model;
       if (jointModel) model = jointModel;
       if (!(model instanceof CSG)) {
@@ -20,10 +17,10 @@ class JointInfo {
         model = partInfo.noJointModel().clone().intersect(maleModel);
       }
       return partInfo.normalize(rightOleft, model);
-    }, 'long-refresh', this);
+    };
 
     const sideFilter = (vect) => c => c.set().filter(p => vect.equals(p.normal())).length > 0;
-    this.primarySide = new FunctionCache(() => {
+    this.primarySide = () => {
       const normals = partInfo.normals();
       const zPos = normals.z;
       const zNeg = zPos.inverse();
@@ -35,7 +32,7 @@ class JointInfo {
       } catch (e) {
         console.log(e);
       }
-    }, 'long-refresh', this);
+    };
 
     this.type = () => {
       return 'cut';
@@ -45,7 +42,7 @@ class JointInfo {
 
     this.demensions = () => this.model().demensions();
 
-    this.cutInfo = new FunctionCache(() => {
+    this.cutInfo = () => {
       if (this.cuts && this.cuts.length > 0) return this.cuts;
       const info = [];
       const noJointModel = this.partInfo().noJointModel();
@@ -59,7 +56,7 @@ class JointInfo {
       });
       this.cuts = info;
       return info;
-    }, 'long-refresh', this);
+    };
 
     this.cutInfo();
   }

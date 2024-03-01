@@ -3,7 +3,7 @@
   <td>{{item.width ? display.measurement(item.width) : ''}}</td>
   <td>{{item.depth ? display.measurement(item.depth) : ''}}</td>
   <td>{{item.angle ? display.degrees(item.angle) : ''}}</td>
-  <td>{{item.upSide}}</td>
+  <td>{{item.upSide === 'Both' ? '' : item.upSide}}</td>
   <td>{{item.fenceEdge.label}}</td>
   <td>{{display.measurement(item.fenceDistance)}}</td>
   <td>{{item.length ? display.measurement(item.length) : ''}}</td>

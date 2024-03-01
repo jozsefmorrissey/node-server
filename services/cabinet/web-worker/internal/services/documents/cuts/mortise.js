@@ -10,11 +10,10 @@ class MortiseInfo extends ChannelInfo {
 }
 
 MortiseInfo.evaluateSets = (parrelleSets) => {
-  const lenG2 = parrelleSets.filter(s => s.length > 2);
-  const lenE2 = parrelleSets.filter(s => s.length === 2);
-  const lenE1 = parrelleSets.filter(s => s.length === 1);
-  return !(lenG2.length > 0 || lenE2.length > 2) &&
-    (lenE2.length === 2 || (lenE2.length === 0 && lenE1.length > 2))
+  const lenG2 = parrelleSets.filter(s => s.length > 2).length;
+  const lenE2 = parrelleSets.filter(s => s.length === 2).length;
+  const lenE1 = parrelleSets.filter(s => s.length === 1).length;
+  return lenG2 === 0 && ((lenE2 === 2 && lenE1 === 1) || (lenE2 === 1 && lenE1 === 2));
 }
 
 ChannelInfo.register(MortiseInfo);

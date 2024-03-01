@@ -13,11 +13,11 @@ module.exports = function (payload, env, taskId) {
       partInfo = new PartInfo(part, env);
       partIds = partInfo.parts().map(p => p.id);
       model = {};
-      model.right = partInfo.model(true),
-      model.left = partInfo.model(false)
+      model.right = partInfo.model(true);
+      model.left = partInfo.model(false);
       fenceEdges = {};
-      fenceEdges.right = partInfo.fenceEdges(true),
-      fenceEdges.left = partInfo.fenceEdges(false)
+      fenceEdges.right = partInfo.fenceEdges(true);
+      fenceEdges.left = partInfo.fenceEdges(false);
       demensions = partInfo.demensions();
       toolingInfo = partInfo.toolingInformation();
     } catch (e) {
