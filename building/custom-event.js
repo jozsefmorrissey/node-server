@@ -17,6 +17,9 @@ class CustomEvent {
       }
     }
 
+    this.remove = (func) => 
+      watchers.remove(func);
+
     this.trigger = function (detail) {
       runFuncs(detail);
     }

@@ -1,0 +1,6 @@
+<div class='aerial-views'>
+  <div:t repeat='name, room in order.rooms'>
+    <h3>{{room.name()}}</h3>
+    <canvas class='this-one' order-room='{{order.name().toKebab()}}-{{room.name().toKebab()}}'></canvas>
+  </div:t>
+</div>

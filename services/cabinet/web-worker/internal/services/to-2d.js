@@ -10,7 +10,6 @@ const Line3D = require('../../../app-src/three-d/objects/line.js')
 const dataTransferConfig = require('../math-data-transfer-config.json');
 const DTO = require('../../shared/data-transfer-object')(dataTransferConfig);
 const MFC = require('./modeling/modeling-function-configuration.js');
-const RDTO = require('./modeling/reconnect-transfer-object');
 
 const ThreeView = require('../../../../../public/js/utils/canvas/two-d/objects/three-view');
 
@@ -33,7 +32,7 @@ function To2D(csg, normals, gap) {
 function simpleTo2D (payload) {
   const threeViews = {};
   for (let index = 0; index < payload.objects.length; index++) {
-    const obj = RDTO(payload.objects[index]);
+    const obj = payload.objects[index];
     const funcs = MFC(obj);
     threeViews[obj.id] = funcs.model ? To2D(funcs.model(obj)) : null;
   }
@@ -48,7 +47,6 @@ function setTo2D (payload, env, taskId) {
   for (let index = 0; index < assems.length; index++) {
     const key = assems[index];
     let norms = env.byId[key].position.current.normals;
-    norms = RDTO(norms);
     norms = [norms.x.object(),norms.y.object(),norms.z.object()];
     if (!(modelMap[key] instanceof CSG) && modelMap[key].polygons) {
       modelMap[key] = CSG.fromPolygons(modelMap[key].polygons, true);

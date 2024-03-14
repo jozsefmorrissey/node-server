@@ -3,11 +3,11 @@ const PartInfo = require('./documents/part');
 const dataTransferConfig = require('../math-data-transfer-config.json');
 const DTO = require('../../shared/data-transfer-object')(dataTransferConfig);
 
-
-module.exports = function (payload, env, taskId) {
+function buildPartInfo(payload, env, taskId) {
   const map = {};
   for (let index = 0; index < payload.parts.length; index++) {
     const part = env.byId[payload.parts[index]];
+    const category = part.category;
     let partInfo, toolingInfo, demensions, partIds, model, faceEdges;
     try {
       partInfo = new PartInfo(part, env);
@@ -24,9 +24,11 @@ module.exports = function (payload, env, taskId) {
       console.error(e);
       partInfo.model(false)
     }
-    map[part.id] = {partId: part.id, partIds, demensions, model, fenceEdges, toolingInfo};
-    postMessage({id: taskId, result: DTO(map[part.id])});
+    const result = DTO({partId: part.id, partIds, demensions, model, fenceEdges, toolingInfo, category});
+    postMessage({id: taskId, result});
   }
 }
+
+module.exports = buildPartInfo;
 
 // c_S1_S1_dv_dv:full

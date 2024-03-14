@@ -46,7 +46,7 @@ function reconnected(obj, idMap) {
 
 
   if (Array.isArray(obj)) return obj.map(dto => reconnected(dto, idMap));
-  if (obj.id && Object.keys(obj).length === 1) return () => reconnectDtos(idMap[obj.id], idMap);
+  if (obj.id && Object.keys(obj).length === 1) return () => reconnectDtos(idMap[obj.id], idMap) || obj.id;
   const rDto = new ReconnectedMDTO();
   const keys = Object.keys(obj);
   let hasId = false;

@@ -320,10 +320,35 @@ class DrawLayout extends Draw {
       }
     }
 
+    const defaultScale = .8;
+    // TODO: maybe I am stupid but i cant get thiss center method to work for any scale....
+    function centerAndScaleAppropriatly(layout, scale) {
+      scale ||= defaultScale
+      const ctx = draw.ctx();
+      ctx.save();
+      const canvas = draw.canvas();
+      const layoutDems = layout.demensions();
+      const scaledWidth = (canvas.width * scale);
+      const scaledHeight = (canvas.height * scale);
+      const xScale = scaledWidth / layoutDems.x;
+      const yScale = scaledHeight / layoutDems.y;
+
+      ctx.scale(xScale, yScale);
+
+      const center = layout.center();
+      const transX = canvas.width/2 - center.x()*xScale;
+      const transY = canvas.height/2 - center.y()*yScale;
+      ctx.translate(transX, transY);
+
+    }
+
+    draw.centerAndScaleAppropriatly = centerAndScaleAppropriatly;
+
     let lastHash;
     const drawLayout = () => {
       const layout = getLayout();
       if (layout === undefined) return;
+      // centerAndScaleAppropriatly(layout);
       const hoverMap = layout.hoverMap();
       const hash = layout.hash();
       if (hoverMap && hash !== lastHash) hoverMap.update();
@@ -341,6 +366,8 @@ class DrawLayout extends Draw {
       let allObjects = layout.objects();
       drawObjects(allObjects, '#85858ebd', true);
       drawObjects(objects);
+
+      draw.ctx().restore();
     }
 
     return draw;

@@ -6,7 +6,6 @@ const Vector3D = require('../../app-src/three-d/objects/vector.js');
 const Line3D = require('../../app-src/three-d/objects/line.js');
 const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
 
-const Notification = require('../../../../public/js/utils/collections/notification.js');
 
 
 

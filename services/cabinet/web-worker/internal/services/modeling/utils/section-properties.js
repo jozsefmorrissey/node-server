@@ -184,7 +184,7 @@ class SectionPropertiesUtil {
         const point3 = point2.translate(depthVector, true);
         const point4 = point1.translate(depthVector, true);
         const points = [point1, point2, point3, point4];
-        const offset = spDto.divider().divider().maxWidth / 2;
+        const offset = spDto.divider().divider().width / 2;
         dvInfo = BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset);
       }
       return dvInfo;
@@ -197,8 +197,10 @@ class SectionPropertiesUtil {
 const built = {};
 SectionPropertiesUtil.instance = (rMdto, environment) => {
   let secProps = rMdto.find.up('S');
-  if (built[secProps.id] === undefined) {
+  let rootHash = rMdto.find.root().hash;
+  if (built[secProps.id] === undefined || built[secProps.id].rootHash !== rootHash) {
     built[secProps.id] = new SectionPropertiesUtil(secProps, environment);
+    built[secProps.id].rootHash = rootHash;
   }
   return built[secProps.id];
 }

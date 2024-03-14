@@ -1,0 +1,14 @@
+<div class='small-margin'>
+    <table>
+      <tbody>
+        <tr>
+          <th>Category</th>
+          <th>Size</th>
+        </tr>
+        <tr:t repeat='key, partList in partListMap'>
+          <td>{{partList[0].info.category}}</td>
+          <td>{{disp.materialUnits(partList)}}</td>
+        </tr:t>
+      </tbody>
+  </table>
+</div>

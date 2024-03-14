@@ -33,6 +33,7 @@ class Expandable {
     const afterAddEvent = new CustomEvent('afterAdd');
     const afterRefreshEvent = new CustomEvent('afterRefresh');
     const afterRemovalEvent = new CustomEvent('afterRemoval');
+    const afterSwitchEvent = new CustomEvent('afterSwitch');
     const instance = this;
     const renderBodyOnOpen = props.renderBodyOnOpen === false ? false : true;
     props.getObject = props.getObject || (() => ({}));
@@ -178,11 +179,17 @@ class Expandable {
         if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
         if (props.removeButton !== false) target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
         target.className += ' active' + (this.hasBody() ? '' : ' no-body');
-        afterRenderEvent.trigger();
+        afterRenderEvent.trigger({header: target, body, key}, instance);
         // du.scroll.intoView(target.parentElement, 3, 25, document.body);
       }
     };
     afterRefreshEvent.on(() => {if (this.activeKey() !== undefined)this.renderBody()});
+
+    this.initialBody = (key) => {
+      const item = this.list()[key];
+      let shouldRenderBody = this.hasBody() && (renderBodyOnOpen === false || (this.active() === item && this.getBody));
+      return shouldRenderBody ? this.getBody(item, key) : '';
+    }
 
     this.htmlBody = (key) => {
       Expandable.getBodyCnt(getCnt()).setAttribute('key', key);

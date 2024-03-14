@@ -14,20 +14,21 @@ const FeatureDisplay = require('./feature');
 const Inputs = require('../input/inputs.js');
 const Divider = require('../objects/assembly/assemblies/divider.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
+const Features = require('./advanced/features');
 
-
-class SectionDisplay {
-  constructor (section) {
-    this.render = (scope) => {
-      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
-      const cId = scope.opening.constructor.name;
-      if (cId === 'SectionProperties') {
-        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
-      }
-      return SectionDisplay.template(section).render(scope);
-    }
-  }
-}
+const SectionDisplay = {};
+// class SectionDisplay {
+//   constructor (section) {
+//     this.render = (scope) => {
+//       scope.featureDisplay = new FeatureDisplay(scope.opening).html();
+//       const cId = scope.opening.constructor.name;
+//       if (cId === 'SectionProperties') {
+//         return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
+//       }
+//       return SectionDisplay.template(section).render(scope);
+//     }
+//   }
+// }
 
 SectionDisplay.formatCoverName = (name) => {
   return name.replace(/(.*)Section$/, '$1').toSentance();
@@ -45,21 +46,21 @@ SectionDisplay.template = (section) => {
   }
   const templatePath = fileLocations[cName];
   if (templates[templatePath] === undefined) templates[templatePath] = new $t(templatePath);
-  return templates[templatePath];
+  return templates[templatePath].render({section, Features});
 }
 
-du.on.match('change', '.feature-radio', (target) => {
-  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
-  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
-  target.nextElementSibling.hidden = !target.checked;
-});
+// du.on.match('change', '.feature-radio', (target) => {
+//   const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
+//   allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
+//   target.nextElementSibling.hidden = !target.checked;
+// });
 
-displays = {};
-SectionDisplay.render = (scope) => {
-  const uId = scope.opening.id();
-  if (displays[uId] === undefined) displays[uId] = new SectionDisplay(scope.opening);
-  return displays[uId].render(scope);
-}
+// displays = {};
+// SectionDisplay.render = (scope) => {
+//   const uId = scope.opening.id();
+//   if (displays[uId] === undefined) displays[uId] = new SectionDisplay(scope.opening);
+//   return displays[uId].render(scope);
+// }
 
 const OpenSectionDisplay = {};
 
@@ -69,8 +70,9 @@ OpenSectionDisplay.html = (opening) => {
   if (opening.sectionCount() > 1) OpenSectionDisplay.refresh(opening, true);
   const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
   const sections = SectionProperties.list();
-  return OpenSectionDisplay.template.render({opening, openDispId, patternInputHtml,
-                                            sections, OpenSectionDisplay});
+  const featuresHtml = SectionDisplay.template(opening.cover());
+  return OpenSectionDisplay.template.render({opening, openDispId, patternInputHtml, Features,
+                                            sections, OpenSectionDisplay, featuresHtml});
 }
 
 OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.id()}`;
@@ -121,7 +123,7 @@ OpenSectionDisplay.dividerHtml = (opening) => {
     name: 'dividerType',
     list: Divider.Types,
     class: 'divider-type-selector',
-    value: opening.divider().panel().type(),
+    value: opening.divider().divider().type(),
     inline: true
   });
   return OpenSectionDisplay.dividerControlTemplate.render({opening, patternInputHtml, dividerTypeSelect});
@@ -129,7 +131,7 @@ OpenSectionDisplay.dividerHtml = (opening) => {
 
 du.on.match('change', '.divider-type-selector', (elem) => {
   const obj = ExpandableList.get(elem);
-  obj.divider().panel().type(elem.value);
+  obj.divider().divider().type(elem.value);
 });
 
 OpenSectionDisplay.updateDividers = (opening) => {

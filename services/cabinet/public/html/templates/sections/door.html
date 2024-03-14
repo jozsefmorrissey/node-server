@@ -1,10 +1,10 @@
-<h2>DoorSection({{list.activeKey()}}):</h2>
-<br><br>
 <div>
-  <div:t class='inline' repeat='assem in assemblies'>
-    <h3>{{assem.objId}}</h3>
-    <div>
-      {{getFeatureDisplay(assem)}}
-    </div>
-  </div:t>
+  <div class='inline-flex chev-dropdown-toggle'>
+    Pulls
+    <i class='down gg-chevron-down hidden' ></i>
+    <i class='right gg-chevron-right'></i>
+  </div>
+  <div class='tab chev-dropdown' hidden>
+    {{Features.pulls(section.door())}}
+  </div>
 </div>

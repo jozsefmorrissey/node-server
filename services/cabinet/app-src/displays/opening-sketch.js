@@ -13,13 +13,14 @@ const PanZoom = require('../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const Global = require('../services/global.js');
-const ToModel = require('../../web-worker/services/to-model.js');
 
 class OpeningSketch {
-  constructor(id, cabinet) {
-    let sketch, panZ, elem;
+  constructor(selector, cabinet, modelInfo) {
+    let sketch, panZ, canvas, elem;
     const instance = this;
-    this.cabinet = () => cabinet || Global.cabinet();
+    if (cabinet === undefined) throw new Error('Cannot make a sketch without a cabinet!!!!');
+    this.canvas = canvas;
+
 
     function getSections(sections, list) {
       list ||= [];
@@ -33,40 +34,45 @@ class OpeningSketch {
       return list;
     }
 
-    const idProps = {size: '8px', mirrorX: true};
+    const idProps = {size: '10px'};
     function drawSectionLabel(section, offset, normal) {
       if (section.sections.length < 1) {
         const openingCenter = new Vertex3D(JSON.copy(section.innerCenter()))
                                   .viewFromVector(normal).to2D('x', 'y');
         const center = openingCenter.translate(offset.x, offset.y, true).point();
-        sketch.text(section.userFriendlyId(), center, idProps);
+        center.x -= 5;
+        const text = section.userFriendlyIndex();
+        sketch.text(text, center, idProps);
       }
     }
 
     function drawDividerLabel(section, offset, normal) {
       if (section.divideRight()) {
-        const dp = section.divider().panel();
-        const dividerCenter = new Vertex3D(ToModel(dp).center())
-                                  .viewFromVector(normal).to2D('x', 'y');
+        const dp = section.divider().divider();
+        const outer = section.coordinates().outer;
+        const divideCenter3D = section.parentAssembly().vertical() ?
+                                new Line3D(outer[1], outer[2]).midpoint() :
+                                new Line3D(outer[2], outer[3]).midpoint();
+        const dividerCenter = divideCenter3D.viewFromVector(normal).to2D('x', 'y');
+        dividerCenter.point().x -= 5;
         const center = dividerCenter.translate(offset.x, offset.y, true).point();
-        sketch.text(dp.userFriendlyId(), center, idProps);
+        const text = dp.userFriendlyId().replace(/^dv/, '');
+        sketch.text(text, center, idProps);
       }
     }
 
-    function drawLabels(offset, normal, cabinet) {
+    function drawLabels(offset, normal) {
       for (let index = 0; index < cabinet.openings.length; index++) {
-        const sections = getSections(cabinet.openings[index].sections);
+        const sections = getSections(cabinet.openings[index].sections());
         for (let si = 0; si < sections.length; si++) {
           const section = sections[si];
-          // drawSectionLabel(section, offset, normal);
+          drawSectionLabel(section, offset, normal);
           drawDividerLabel(section, offset, normal);
         }
       }
     }
 
     function draw() {
-      const cabinet = instance.cabinet();
-      if (cabinet === undefined) return;
       if (cabinet.openings.length === 0) return;
       if (cabinet.openings.length > 1) throw new Error('Not Set Up for multiple openings: Should consider creating seperate canvas for each opening');
       sketch.clear()
@@ -76,7 +82,7 @@ class OpeningSketch {
       let outerLines = [];
       const normal = cabinet.openings[0].normal().inverse();
       for (let index = 0; index < cabinet.openings.length; index++) {
-        const sections = getSections(cabinet.openings[index].sections);
+        const sections = getSections(cabinet.openings[index].sections());
         for (let si = 0; si < sections.length; si++) {
           const section = sections[si];
           const inner = JSON.copy(section.coordinates().inner);
@@ -95,7 +101,7 @@ class OpeningSketch {
         }
       }
       const cabDems = cabinet.position().demension();
-      const model = ToModel(cabinet);
+      const model = modelInfo.unioned();
       const view = Polygon3D.viewFromVector(model, normal);
       const lines2d = Polygon3D.lines2d(view, 'x', 'y');
       const cabinetOutlines = Parimeters2d.lines(lines2d).map(l => l.clone());
@@ -103,12 +109,13 @@ class OpeningSketch {
 
       innerLines = Line3D.to2D(Line3D.viewFromVector(innerLines, normal), 'x', 'y');
       outerLines = Line3D.to2D(Line3D.viewFromVector(outerLines, normal), 'x', 'y');
-      const allLines = innerLines;//.concat(outerLines);
-      const offset = Line2d.centerOn(allLines, {
+      const allLines = innerLines.concat(outerLines);
+      const offset = Line2d.centerOn(cabinetOutlines, {
         x: sketch.canvas().width/2,
         y: sketch.canvas().height/2
       });
-      Line2d.translate(cabinetOutlines, offset);
+      // const offset = {x: 0, y:0}
+      Line2d.translate(allLines, offset);
       allLines.concatInPlace(cabinetOutlines);
       sketch(innerLines, undefined, .3);
       // sketch(outerLines, 'green', .3);
@@ -121,29 +128,22 @@ class OpeningSketch {
     this.draw = draw;
 
     function init() {
-      let canvas = du.id(id);
+      let canvas = du.find(selector);
       if (canvas.tagName !== 'CANVAS') {
         let elem = canvas;
-        canvas = du.create.element('canvas', {class: 'upside-down mirror-x'});
+        canvas = du.create.element('canvas', {class: 'build-diagram'});
+        sketch = new Draw2D(canvas, true);
+        // sketch.ctx().canvas.style.width = '100vw';
+        // sketch.ctx().canvas.style.height = '100vh';
+
         elem.append(canvas);
       }
-      sketch = new Draw2D(canvas, true);
       draw();
-      // panZ = new PanZoom(sketch.canvas(), draw);
+      // new PanZoom(canvas, draw);
     }
 
     init();
   }
 }
-
-function autoFill(elem) {
-  const cabinetId = elem.getAttribute('cabinet-id');
-  elem.id ||= `opening-sketch-${cabinetId}-${String.random()}`;
-  const cabinet = Cabinet.get(cabinetId);
-  const sketch = new OpeningSketch(elem.id, cabinet);
-}
-
-du.on.match('create', `.opening-sketch[cabinet-id]`, autoFill);
-
 
 module.exports = OpeningSketch;

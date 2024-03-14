@@ -105,7 +105,8 @@ function withinBounds(attr, attributeMap, tolerance, absoluteValue, modulus) {
 }
 
 class Tolerance {
-  constructor(attributeMap, tolerance, absoluteValue, modulus) {
+  constructor(attributeMap, absoluteValue, modulus) {
+    let tolerance = (typeof attributeMap) === 'number' ? attributeMap : DEFAULT_TOLERANCE;
     attributeMap ||= {};
     let within, bounds;
     const attrs = Object.keys(attributeMap);

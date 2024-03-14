@@ -21,18 +21,20 @@ class Room extends Lookup {
       }
     }
 
-    function onLayoutChange(elem, detail) {
-      const cabGroupMap = {};
-      groupMap(cabGroupMap, detail.objects, 'removed');
-      groupMap(cabGroupMap, detail.objects, 'added');
+    // function onLayoutChange(elem, detail) {
+    //   const cabGroupMap = {};
+    //   groupMap(cabGroupMap, detail.objects, 'removed');
+    //   groupMap(cabGroupMap, detail.objects, 'added');
+    //
+    //   instance.groups.forEach((g) => {
+    //     if (cabGroupMap[g.id()]) {
+    //       g.objects.removeAll(cabGroupMap[g.id()].removed);
+    //       g.objects.concatInPlace(cabGroupMap[g.id()].added);
+    //     }
+    //   });
+    // }
 
-      instance.groups.forEach((g) => {
-        if (cabGroupMap[g.id()]) {
-          g.objects.removeAll(cabGroupMap[g.id()].removed);
-          g.objects.concatInPlace(cabGroupMap[g.id()].added);
-        }
-      });
-    }
+
 
     const obj3dMap = {};
     this.layoutObjects = (target) => {
@@ -69,10 +71,16 @@ class Room extends Lookup {
       name: name || `Room ${Room.count++}`,
       layout: layout || new Layout2D(this.layoutObjects)
     }
-    initialVals.layout.onStateChange(onLayoutChange);
+    // initialVals.layout.onStateChange(onLayoutChange);
     Object.getSet(this, initialVals, 'groups');
     this.groups = [new Group(this)];
-    this.addGroup = () => this.groups.push(new Group(this));
+    this.addGroup = (name) => {
+      const group = new Group(this, name);
+      this.groups.push(group);
+      return group;
+    }
+
+    this.hash = () => name.hash() + this.groups.map(g => g.hash()).sum();
 
     this.name = (value) => {
       if (value) {
@@ -87,8 +95,10 @@ class Room extends Lookup {
 Room.count = 0;
 
 Room.fromJson = (json) => {
-  const room = new Room(json.name, json.order, json.id, Object.fromJson(json.layout));
+  const layout = Object.fromJson(json.layout);
+  const room = new Room(json.name, json.order, json.id, layout);
   room.groups = [];
+  layout.setObjects(room.layoutObjects);
   for (let index = 0; index < json.groups.length; index++) {
     const groupJson = json.groups[index];
     groupJson.room = room;

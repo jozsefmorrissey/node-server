@@ -18,6 +18,7 @@ class VoidDisplay extends Lookup {
     this.cabinetId = () => cabinetGetter().id();
     this.assemblyConfig = (vOid) => new AssemblyConfigInput(vOid);
     this.voids = () => voids(cabinetGetter());
+    this.hash = () => this.voids().map(v => v.hash()).sum();
     this.on.add(this.trigger.change);
     this.on.remove(this.trigger.change);
     this.displayLength = (voId) => new Measurement(voId.length()).display();
@@ -41,7 +42,7 @@ du.on.match('click', `.void-display-cnt .add-void-btn`, (elem) => {
 
   const cabinet = getCabinet(elem);
   const partName = `void-${refPartCode}-${width}x${height}`;
-  const vOid = new Void(cabinet, partName, config);
+  const vOid = new Void(null, partName, config);
   cabinet.addSubAssembly(vOid);
   const voidId = du.find.up('[void-id]', elem).getAttribute('void-id');
   const voidDisplay = VoidDisplay.get(voidId);

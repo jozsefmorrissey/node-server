@@ -162,88 +162,88 @@ module.exports = {
   ],
   "joints": [
     {
-      "maleJointSelector": "T",
-      "femaleJointSelector": "R",
+      "dependsSelector": "T",
+      "dependentSelector": "R",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "-x"
     },
     {
-      "maleJointSelector": "T",
-      "femaleJointSelector": "L",
+      "dependsSelector": "T",
+      "dependentSelector": "L",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "+x"
     },
     {
-      "maleJointSelector": "pt2",
-      "femaleJointSelector": "R",
+      "dependsSelector": "pt2",
+      "dependentSelector": "R",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "-x"
     },
     {
-      "maleJointSelector": "pt2",
-      "femaleJointSelector": "L",
+      "dependsSelector": "pt2",
+      "dependentSelector": "L",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "+x"
     },
     {
-      "maleJointSelector": "BACK",
-      "femaleJointSelector": "R",
+      "dependsSelector": "BACK",
+      "dependentSelector": "R",
       "type": "Dado",
       "maleOffset": "0.9525",
       "demensionAxis": "x",
       "centerAxis": "+x"
     },
     {
-      "maleJointSelector": "BACK",
-      "femaleJointSelector": "L",
+      "dependsSelector": "BACK",
+      "dependentSelector": "L",
       "type": "Dado",
       "maleOffset": "0.9525",
       "demensionAxis": "x",
       "centerAxis": "-x"
     },
     {
-      "maleJointSelector": "tkb",
-      "femaleJointSelector": "R",
+      "dependsSelector": "tkb",
+      "dependentSelector": "R",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "-x"
     },
     {
-      "maleJointSelector": "tkb",
-      "femaleJointSelector": "L",
+      "dependsSelector": "tkb",
+      "dependentSelector": "L",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "+x"
     },
     {
-      "maleJointSelector": "B",
-      "femaleJointSelector": "R",
+      "dependsSelector": "B",
+      "dependentSelector": "R",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "-x"
     },
     {
-      "maleJointSelector": "B",
-      "femaleJointSelector": "L",
+      "dependsSelector": "B",
+      "dependentSelector": "L",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "+x"
     },
     {
-      "maleJointSelector": "tkb",
-      "femaleJointSelector": "B",
+      "dependsSelector": "tkb",
+      "dependentSelector": "B",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "x",
@@ -620,154 +620,154 @@ module.exports = {
     ],
     "joints": [
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "B",
+        "dependsSelector": "BACK",
+        "dependentSelector": "B",
         "type": "Butt"
       },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "pbl",
+        "dependsSelector": "BACK",
+        "dependentSelector": "pbl",
         "type": "Butt"
       },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "pbr",
+        "dependsSelector": "BACK",
+        "dependentSelector": "pbr",
         "type": "Butt"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "L",
+        "dependsSelector": "B",
+        "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "demensionAxis": "y",
         "centerAxis": "-z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "R",
+        "dependsSelector": "B",
+        "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "demensionAxis": "x",
         "centerAxis": "-x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "pbr",
+        "dependsSelector": "B",
+        "dependentSelector": "pbr",
         "maleOffset": "pbr.t/2",
         "demensionAxis": "y",
         "centerAxis": "+z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "pbl",
+        "dependsSelector": "B",
+        "dependentSelector": "pbl",
         "maleOffset": "pbl.t/2",
         "demensionAxis": "x",
         "centerAxis": "+x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "L",
+        "dependsSelector": "T",
+        "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "demensionAxis": "y",
         "centerAxis": "-z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "R",
+        "dependsSelector": "T",
+        "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "demensionAxis": "x",
         "centerAxis": "-x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "pbr",
+        "dependsSelector": "T",
+        "dependentSelector": "pbr",
         "maleOffset": "pbr.t/2",
         "demensionAxis": "y",
         "centerAxis": "+z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "pbl",
+        "dependsSelector": "T",
+        "dependentSelector": "pbl",
         "maleOffset": "pbl.t/2",
         "demensionAxis": "x",
         "centerAxis": "+x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "pbr",
-        "femaleJointSelector": "R",
+        "dependsSelector": "pbr",
+        "dependentSelector": "R",
         "maleOffset": "pbr.t/2",
         "demensionAxis": "x",
         "centerAxis": "-z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "pbl",
-        "femaleJointSelector": "L",
+        "dependsSelector": "pbl",
+        "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "demensionAxis": "x",
         "centerAxis": "-x"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "T"
+        "dependsSelector": "BACK",
+        "dependentSelector": "T"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "T"
+        "dependsSelector": "cut",
+        "dependentSelector": "T"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "B"
+        "dependsSelector": "cut",
+        "dependentSelector": "B"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "L"
+        "dependsSelector": "cut",
+        "dependentSelector": "L"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "R"
+        "dependsSelector": "cut",
+        "dependentSelector": "R"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "T"
+        "dependsSelector": "cb",
+        "dependentSelector": "T"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "B"
+        "dependsSelector": "cb",
+        "dependentSelector": "B"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "pbl"
+        "dependsSelector": "cb",
+        "dependentSelector": "pbl"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "pbr"
+        "dependsSelector": "cb",
+        "dependentSelector": "pbr"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbl",
-        "femaleJointSelector": "BACK"
+        "dependsSelector": "cpbl",
+        "dependentSelector": "BACK"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbr",
-        "femaleJointSelector": "BACK"
+        "dependsSelector": "cpbr",
+        "dependentSelector": "BACK"
       }
     ],
     "dividerJoint": {
@@ -1324,192 +1324,192 @@ module.exports = {
     ],
     "joints": [
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "B",
+        "dependsSelector": "BACK",
+        "dependentSelector": "B",
         "type": "Butt"
       },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "pbl",
+        "dependsSelector": "BACK",
+        "dependentSelector": "pbl",
         "type": "Butt"
       },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "pbr",
+        "dependsSelector": "BACK",
+        "dependentSelector": "pbr",
         "type": "Butt"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "L",
+        "dependsSelector": "B",
+        "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "demensionAxis": "y",
         "centerAxis": "-z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "R",
+        "dependsSelector": "B",
+        "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "demensionAxis": "x",
         "centerAxis": "-x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "pbr",
+        "dependsSelector": "B",
+        "dependentSelector": "pbr",
         "maleOffset": "pbr.t/2",
         "demensionAxis": "y",
         "centerAxis": "+z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "pbl",
+        "dependsSelector": "B",
+        "dependentSelector": "pbl",
         "maleOffset": "pbl.t/2",
         "demensionAxis": "x",
         "centerAxis": "+x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "L",
+        "dependsSelector": "T",
+        "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "demensionAxis": "y",
         "centerAxis": "-z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "R",
+        "dependsSelector": "T",
+        "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "demensionAxis": "x",
         "centerAxis": "-x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "pbr",
+        "dependsSelector": "T",
+        "dependentSelector": "pbr",
         "maleOffset": "pbr.t/2",
         "demensionAxis": "y",
         "centerAxis": "+z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "pbl",
+        "dependsSelector": "T",
+        "dependentSelector": "pbl",
         "maleOffset": "pbl.t/2",
         "demensionAxis": "x",
         "centerAxis": "+x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "pbr",
-        "femaleJointSelector": "R",
+        "dependsSelector": "pbr",
+        "dependentSelector": "R",
         "maleOffset": "pbr.t/2",
         "demensionAxis": "x",
         "centerAxis": "-z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "pbl",
-        "femaleJointSelector": "L",
+        "dependsSelector": "pbl",
+        "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "demensionAxis": "x",
         "centerAxis": "-x"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "T"
+        "dependsSelector": "BACK",
+        "dependentSelector": "T"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "T"
+        "dependsSelector": "cut",
+        "dependentSelector": "T"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "B"
+        "dependsSelector": "cut",
+        "dependentSelector": "B"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "L"
+        "dependsSelector": "cut",
+        "dependentSelector": "L"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "R"
+        "dependsSelector": "cut",
+        "dependentSelector": "R"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "T"
+        "dependsSelector": "cb",
+        "dependentSelector": "T"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "B"
+        "dependsSelector": "cb",
+        "dependentSelector": "B"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "pbl"
+        "dependsSelector": "cb",
+        "dependentSelector": "pbl"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "pbr"
+        "dependsSelector": "cb",
+        "dependentSelector": "pbr"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbl",
-        "femaleJointSelector": "BACK"
+        "dependsSelector": "cpbl",
+        "dependentSelector": "BACK"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbr",
-        "femaleJointSelector": "BACK"
+        "dependsSelector": "cpbr",
+        "dependentSelector": "BACK"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "B",
+        "dependsSelector": "tkb",
+        "dependentSelector": "B",
         "maleOffset": "B.t/2",
         "demensionAxis": "x",
         "centerAxis": "+y"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "L"
+        "dependsSelector": "tkb",
+        "dependentSelector": "L"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "R"
+        "dependsSelector": "tkb",
+        "dependentSelector": "R"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "ctbl",
-        "femaleJointSelector": "tkb"
+        "dependsSelector": "ctbl",
+        "dependentSelector": "tkb"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "ctbr",
-        "femaleJointSelector": "tkb"
+        "dependsSelector": "ctbr",
+        "dependentSelector": "tkb"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "ctbl2",
-        "femaleJointSelector": "tkb"
+        "dependsSelector": "ctbl2",
+        "dependentSelector": "tkb"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "ctbr2",
-        "femaleJointSelector": "tkb"
+        "dependsSelector": "ctbr2",
+        "dependentSelector": "tkb"
       }
     ],
     "dividerJoint": {
@@ -2066,195 +2066,195 @@ module.exports = {
     ],
     "joints": [
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "B",
+        "dependsSelector": "BACK",
+        "dependentSelector": "B",
         "type": "Butt"
       },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "pbl",
+        "dependsSelector": "BACK",
+        "dependentSelector": "pbl",
         "type": "Butt"
       },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "pbr",
+        "dependsSelector": "BACK",
+        "dependentSelector": "pbr",
         "type": "Butt"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "L",
+        "dependsSelector": "B",
+        "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "demensionAxis": "y",
         "centerAxis": "-z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "R",
+        "dependsSelector": "B",
+        "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "demensionAxis": "x",
         "centerAxis": "-x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "pbr",
+        "dependsSelector": "B",
+        "dependentSelector": "pbr",
         "maleOffset": "pbr.t/2",
         "demensionAxis": "y",
         "centerAxis": "+z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "B",
-        "femaleJointSelector": "pbl",
+        "dependsSelector": "B",
+        "dependentSelector": "pbl",
         "maleOffset": "pbl.t/2",
         "demensionAxis": "x",
         "centerAxis": "+x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "L",
+        "dependsSelector": "T",
+        "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "demensionAxis": "y",
         "centerAxis": "-z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "R",
+        "dependsSelector": "T",
+        "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "demensionAxis": "x",
         "centerAxis": "-x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "pbr",
+        "dependsSelector": "T",
+        "dependentSelector": "pbr",
         "maleOffset": "pbr.t/2",
         "demensionAxis": "y",
         "centerAxis": "+z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "T",
-        "femaleJointSelector": "pbl",
+        "dependsSelector": "T",
+        "dependentSelector": "pbl",
         "maleOffset": "pbl.t/2",
         "demensionAxis": "x",
         "centerAxis": "+x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "pbr",
-        "femaleJointSelector": "R",
+        "dependsSelector": "pbr",
+        "dependentSelector": "R",
         "maleOffset": "pbr.t/2",
         "demensionAxis": "x",
         "centerAxis": "-z"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "pbl",
-        "femaleJointSelector": "L",
+        "dependsSelector": "pbl",
+        "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "demensionAxis": "x",
         "centerAxis": "-x"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "T"
+        "dependsSelector": "BACK",
+        "dependentSelector": "T"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "T"
+        "dependsSelector": "cut",
+        "dependentSelector": "T"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "B"
+        "dependsSelector": "cut",
+        "dependentSelector": "B"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "L"
+        "dependsSelector": "cut",
+        "dependentSelector": "L"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cut",
-        "femaleJointSelector": "R"
+        "dependsSelector": "cut",
+        "dependentSelector": "R"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "T"
+        "dependsSelector": "cb",
+        "dependentSelector": "T"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "B"
+        "dependsSelector": "cb",
+        "dependentSelector": "B"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "pbl"
+        "dependsSelector": "cb",
+        "dependentSelector": "pbl"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "pbr"
+        "dependsSelector": "cb",
+        "dependentSelector": "pbr"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbl",
-        "femaleJointSelector": "BACK"
+        "dependsSelector": "cpbl",
+        "dependentSelector": "BACK"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbr",
-        "femaleJointSelector": "BACK"
+        "dependsSelector": "cpbr",
+        "dependentSelector": "BACK"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "B",
+        "dependsSelector": "tkb",
+        "dependentSelector": "B",
         "maleOffset": "B.t/2",
         "demensionAxis": "x",
         "centerAxis": "+y"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "L",
+        "dependsSelector": "tkb",
+        "dependentSelector": "L",
         "maleOffset": ".1",
         "demensionAxis": "x",
         "centerAxis": "+x"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "R"
+        "dependsSelector": "tkb",
+        "dependentSelector": "R"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "ctbl",
-        "femaleJointSelector": "tkb"
+        "dependsSelector": "ctbl",
+        "dependentSelector": "tkb"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "ctbr",
-        "femaleJointSelector": "tkb"
+        "dependsSelector": "ctbr",
+        "dependentSelector": "tkb"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "ctbl2",
-        "femaleJointSelector": "tkb"
+        "dependsSelector": "ctbl2",
+        "dependentSelector": "tkb"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "ctbr2",
-        "femaleJointSelector": "tkb"
+        "dependsSelector": "ctbr2",
+        "dependentSelector": "tkb"
       }
     ],
     "dividerJoint": {
@@ -2495,72 +2495,72 @@ module.exports = {
   ],
   "joints": [
     {
-      "maleJointSelector": "T",
-      "femaleJointSelector": "L",
+      "dependsSelector": "T",
+      "dependentSelector": "L",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "-x"
     },
     {
-      "maleJointSelector": "T",
-      "femaleJointSelector": "R",
+      "dependsSelector": "T",
+      "dependentSelector": "R",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "+x"
     },
     {
-      "maleJointSelector": "BACK",
-      "femaleJointSelector": "L",
+      "dependsSelector": "BACK",
+      "dependentSelector": "L",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "-x"
     },
     {
-      "maleJointSelector": "BACK",
-      "femaleJointSelector": "R",
+      "dependsSelector": "BACK",
+      "dependentSelector": "R",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "+x"
     },
     {
-      "maleJointSelector": "tkb",
-      "femaleJointSelector": "L",
+      "dependsSelector": "tkb",
+      "dependentSelector": "L",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "-x"
     },
     {
-      "maleJointSelector": "tkb",
-      "femaleJointSelector": "R",
+      "dependsSelector": "tkb",
+      "dependentSelector": "R",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "+x"
     },
     {
-      "maleJointSelector": "B",
-      "femaleJointSelector": "L",
+      "dependsSelector": "B",
+      "dependentSelector": "L",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "-x"
     },
     {
-      "maleJointSelector": "B",
-      "femaleJointSelector": "R",
+      "dependsSelector": "B",
+      "dependentSelector": "R",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "+x"
     },
     {
-      "maleJointSelector": "tkb",
-      "femaleJointSelector": "B",
+      "dependsSelector": "tkb",
+      "dependentSelector": "B",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "x",
@@ -2568,8 +2568,8 @@ module.exports = {
     },
     {
       "type": "Dado",
-      "maleJointSelector": "BACK",
-      "femaleJointSelector": "T",
+      "dependsSelector": "BACK",
+      "dependentSelector": "T",
       "maleOffset": "T.t/2",
       "demensionAxis": "x",
       "centerAxis": "+y"
@@ -2705,32 +2705,32 @@ module.exports = {
     "joints": [
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "T",
+        "dependsSelector": "BACK",
+        "dependentSelector": "T",
         "maleOffset": "T.t/2",
         "demensionAxis": "y",
         "centerAxis": "+y"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "R",
+        "dependsSelector": "BACK",
+        "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "demensionAxis": "x",
         "centerAxis": "+x"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "B",
+        "dependsSelector": "BACK",
+        "dependentSelector": "B",
         "maleOffset": "B.t/2",
         "demensionAxis": "y",
         "centerAxis": "-y"
       },
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "L",
+        "dependsSelector": "BACK",
+        "dependentSelector": "L",
         "maleOffset": "L.t/2",
         "demensionAxis": "x",
         "centerAxis": "-x"
@@ -2946,88 +2946,88 @@ module.exports = {
     ],
     "joints": [
       {
-        "maleJointSelector": "T",
-        "femaleJointSelector": "L",
+        "dependsSelector": "T",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"
       },
       {
-        "maleJointSelector": "T",
-        "femaleJointSelector": "R",
+        "dependsSelector": "T",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "+x"
       },
       {
-        "maleJointSelector": "pt2",
-        "femaleJointSelector": "L",
+        "dependsSelector": "pt2",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"
       },
       {
-        "maleJointSelector": "pt2",
-        "femaleJointSelector": "R",
+        "dependsSelector": "pt2",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "+x"
       },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "L",
+        "dependsSelector": "BACK",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"
       },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "R",
+        "dependsSelector": "BACK",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "+x"
       },
       {
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "L",
+        "dependsSelector": "tkb",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"
       },
       {
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "R",
+        "dependsSelector": "tkb",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "+x"
       },
       {
-        "maleJointSelector": "B",
-        "femaleJointSelector": "L",
+        "dependsSelector": "B",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"
       },
       {
-        "maleJointSelector": "B",
-        "femaleJointSelector": "R",
+        "dependsSelector": "B",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "+x"
       },
       {
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "B",
+        "dependsSelector": "tkb",
+        "dependentSelector": "B",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "x",
@@ -3398,88 +3398,88 @@ module.exports = {
     ],
     "joints": [
       {
-        "maleJointSelector": "T",
-        "femaleJointSelector": "L",
+        "dependsSelector": "T",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"
       },
       {
-        "maleJointSelector": "T",
-        "femaleJointSelector": "R",
+        "dependsSelector": "T",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "+x"
       },
       {
-        "maleJointSelector": "pt2",
-        "femaleJointSelector": "L",
+        "dependsSelector": "pt2",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"
       },
       {
-        "maleJointSelector": "pt2",
-        "femaleJointSelector": "R",
+        "dependsSelector": "pt2",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "+x"
       },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "L",
+        "dependsSelector": "BACK",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"
       },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "R",
+        "dependsSelector": "BACK",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "+x"
       },
       {
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "L",
+        "dependsSelector": "tkb",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"
       },
       {
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "R",
+        "dependsSelector": "tkb",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "+x"
       },
       {
-        "maleJointSelector": "B",
-        "femaleJointSelector": "L",
+        "dependsSelector": "B",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"
       },
       {
-        "maleJointSelector": "B",
-        "femaleJointSelector": "R",
+        "dependsSelector": "B",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "+x"
       },
       {
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "B",
+        "dependsSelector": "tkb",
+        "dependentSelector": "B",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "x",
@@ -3915,110 +3915,110 @@ module.exports = {
     ],
     "joints": [
       {
-        "maleJointSelector": "T",
-        "femaleJointSelector": "R",
+        "dependsSelector": "T",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": "0.9525",
         "demensionAxis": "y",
         "centerAxis": "+x"      },
       {
-        "maleJointSelector": "T",
-        "femaleJointSelector": "L",
+        "dependsSelector": "T",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": "0.9525",
         "demensionAxis": "x",
         "centerAxis": "-z"      },
       {
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "R",
+        "dependsSelector": "tkb",
+        "dependentSelector": "R",
         "type": "Butt",
         "maleOffset": "0.9525"      },
       {
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "L",
+        "dependsSelector": "tkb",
+        "dependentSelector": "L",
         "type": "Butt",
         "maleOffset": "0.9525"      },
       {
-        "maleJointSelector": "B",
-        "femaleJointSelector": "R",
+        "dependsSelector": "B",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"      },
       {
-        "maleJointSelector": "B",
-        "femaleJointSelector": "L",
+        "dependsSelector": "B",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "+x"      },
       {
-        "maleJointSelector": "tkb",
-        "femaleJointSelector": "B",
+        "dependsSelector": "tkb",
+        "dependentSelector": "B",
         "type": "Dado",
         "maleOffset": "0.9525",
         "demensionAxis": "x",
         "centerAxis": "+y"      },
       {
         "type": "Butt",
-        "maleJointSelector": "fc",
-        "femaleJointSelector": "T"      },
+        "dependsSelector": "fc",
+        "dependentSelector": "T"      },
       {
         "type": "Butt",
-        "maleJointSelector": "fc",
-        "femaleJointSelector": "R"      },
+        "dependsSelector": "fc",
+        "dependentSelector": "R"      },
       {
         "type": "Butt",
-        "maleJointSelector": "fc",
-        "femaleJointSelector": "L"      },
+        "dependsSelector": "fc",
+        "dependentSelector": "L"      },
       {
         "type": "Butt",
-        "maleJointSelector": "fc",
-        "femaleJointSelector": "B"      },
+        "dependsSelector": "fc",
+        "dependentSelector": "B"      },
       {
         "type": "Butt",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "T"      },
+        "dependsSelector": "BACK",
+        "dependentSelector": "T"      },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "B",
+        "dependsSelector": "BACK",
+        "dependentSelector": "B",
         "type": "Butt"      },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbr",
-        "femaleJointSelector": "BACK"      },
+        "dependsSelector": "cpbr",
+        "dependentSelector": "BACK"      },
       {
         "type": "Butt",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "R"      },
+        "dependsSelector": "BACK",
+        "dependentSelector": "R"      },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbl",
-        "femaleJointSelector": "L"      },
+        "dependsSelector": "cpbl",
+        "dependentSelector": "L"      },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbr",
-        "femaleJointSelector": "BACK"      },
+        "dependsSelector": "cpbr",
+        "dependentSelector": "BACK"      },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbl",
-        "femaleJointSelector": "BACK"      },
+        "dependsSelector": "cpbl",
+        "dependentSelector": "BACK"      },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "R"      },
+        "dependsSelector": "cb",
+        "dependentSelector": "R"      },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "L"      },
+        "dependsSelector": "cb",
+        "dependentSelector": "L"      },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "T"      },
+        "dependsSelector": "cb",
+        "dependentSelector": "T"      },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "B"      }
+        "dependsSelector": "cb",
+        "dependentSelector": "B"      }
     ],
     "dividerJoint": {
       "type": "Dado",
@@ -4402,32 +4402,32 @@ module.exports = {
     ],
     "joints": [
       {
-        "maleJointSelector": "T",
-        "femaleJointSelector": "R",
+        "dependsSelector": "T",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": "0.9525",
         "demensionAxis": "y",
         "centerAxis": "+x"
       },
       {
-        "maleJointSelector": "T",
-        "femaleJointSelector": "L",
+        "dependsSelector": "T",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": "0.9525",
         "demensionAxis": "x",
         "centerAxis": "-z"
       },
       {
-        "maleJointSelector": "B",
-        "femaleJointSelector": "R",
+        "dependsSelector": "B",
+        "dependentSelector": "R",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
         "centerAxis": "-x"
       },
       {
-        "maleJointSelector": "B",
-        "femaleJointSelector": "L",
+        "dependsSelector": "B",
+        "dependentSelector": "L",
         "type": "Dado",
         "maleOffset": 0.9525,
         "demensionAxis": "y",
@@ -4435,78 +4435,78 @@ module.exports = {
       },
       {
         "type": "Butt",
-        "maleJointSelector": "fc",
-        "femaleJointSelector": "T"
+        "dependsSelector": "fc",
+        "dependentSelector": "T"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "fc",
-        "femaleJointSelector": "R"
+        "dependsSelector": "fc",
+        "dependentSelector": "R"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "fc",
-        "femaleJointSelector": "L"
+        "dependsSelector": "fc",
+        "dependentSelector": "L"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "fc",
-        "femaleJointSelector": "B"
+        "dependsSelector": "fc",
+        "dependentSelector": "B"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "T"
+        "dependsSelector": "BACK",
+        "dependentSelector": "T"
       },
       {
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "B",
+        "dependsSelector": "BACK",
+        "dependentSelector": "B",
         "type": "Butt"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbr",
-        "femaleJointSelector": "BACK"
+        "dependsSelector": "cpbr",
+        "dependentSelector": "BACK"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "R"
+        "dependsSelector": "BACK",
+        "dependentSelector": "R"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbl",
-        "femaleJointSelector": "L"
+        "dependsSelector": "cpbl",
+        "dependentSelector": "L"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbr",
-        "femaleJointSelector": "BACK"
+        "dependsSelector": "cpbr",
+        "dependentSelector": "BACK"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cpbl",
-        "femaleJointSelector": "BACK"
+        "dependsSelector": "cpbl",
+        "dependentSelector": "BACK"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "R"
+        "dependsSelector": "cb",
+        "dependentSelector": "R"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "L"
+        "dependsSelector": "cb",
+        "dependentSelector": "L"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "T"
+        "dependsSelector": "cb",
+        "dependentSelector": "T"
       },
       {
         "type": "Butt",
-        "maleJointSelector": "cb",
-        "femaleJointSelector": "B"
+        "dependsSelector": "cb",
+        "dependentSelector": "B"
       }
     ],
     "dividerJoint": {
@@ -4912,52 +4912,52 @@ module.exports = {
   ],
   "joints": [
     {
-      "maleJointSelector": "T",
-      "femaleJointSelector": "R",
+      "dependsSelector": "T",
+      "dependentSelector": "R",
       "type": "Dado",
       "maleOffset": "0.9525",
       "demensionAxis": "y",
       "centerAxis": "+x"
     },
     {
-      "maleJointSelector": "T",
-      "femaleJointSelector": "L",
+      "dependsSelector": "T",
+      "dependentSelector": "L",
       "type": "Dado",
       "maleOffset": "0.9525",
       "demensionAxis": "x",
       "centerAxis": "-z"
     },
     {
-      "maleJointSelector": "tkb",
-      "femaleJointSelector": "R",
+      "dependsSelector": "tkb",
+      "dependentSelector": "R",
       "type": "Butt",
       "maleOffset": "0.9525"
     },
     {
-      "maleJointSelector": "tkb",
-      "femaleJointSelector": "L",
+      "dependsSelector": "tkb",
+      "dependentSelector": "L",
       "type": "Butt",
       "maleOffset": "0.9525"
     },
     {
-      "maleJointSelector": "B",
-      "femaleJointSelector": "R",
+      "dependsSelector": "B",
+      "dependentSelector": "R",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "-x"
     },
     {
-      "maleJointSelector": "B",
-      "femaleJointSelector": "L",
+      "dependsSelector": "B",
+      "dependentSelector": "L",
       "type": "Dado",
       "maleOffset": 0.9525,
       "demensionAxis": "y",
       "centerAxis": "+x"
     },
     {
-      "maleJointSelector": "tkb",
-      "femaleJointSelector": "B",
+      "dependsSelector": "tkb",
+      "dependentSelector": "B",
       "type": "Dado",
       "maleOffset": "0.9525",
       "demensionAxis": "x",
@@ -4965,78 +4965,78 @@ module.exports = {
     },
     {
       "type": "Butt",
-      "maleJointSelector": "fc",
-      "femaleJointSelector": "T"
+      "dependsSelector": "fc",
+      "dependentSelector": "T"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "fc",
-      "femaleJointSelector": "R"
+      "dependsSelector": "fc",
+      "dependentSelector": "R"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "fc",
-      "femaleJointSelector": "L"
+      "dependsSelector": "fc",
+      "dependentSelector": "L"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "fc",
-      "femaleJointSelector": "B"
+      "dependsSelector": "fc",
+      "dependentSelector": "B"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "BACK",
-      "femaleJointSelector": "T"
+      "dependsSelector": "BACK",
+      "dependentSelector": "T"
     },
     {
-      "maleJointSelector": "BACK",
-      "femaleJointSelector": "B",
+      "dependsSelector": "BACK",
+      "dependentSelector": "B",
       "type": "Butt"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "cpbr",
-      "femaleJointSelector": "BACK"
+      "dependsSelector": "cpbr",
+      "dependentSelector": "BACK"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "BACK",
-      "femaleJointSelector": "R"
+      "dependsSelector": "BACK",
+      "dependentSelector": "R"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "cpbl",
-      "femaleJointSelector": "L"
+      "dependsSelector": "cpbl",
+      "dependentSelector": "L"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "cpbr",
-      "femaleJointSelector": "BACK"
+      "dependsSelector": "cpbr",
+      "dependentSelector": "BACK"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "cpbl",
-      "femaleJointSelector": "BACK"
+      "dependsSelector": "cpbl",
+      "dependentSelector": "BACK"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "cb",
-      "femaleJointSelector": "R"
+      "dependsSelector": "cb",
+      "dependentSelector": "R"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "cb",
-      "femaleJointSelector": "L"
+      "dependsSelector": "cb",
+      "dependentSelector": "L"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "cb",
-      "femaleJointSelector": "T"
+      "dependsSelector": "cb",
+      "dependentSelector": "T"
     },
     {
       "type": "Butt",
-      "maleJointSelector": "cb",
-      "femaleJointSelector": "B"
+      "dependsSelector": "cb",
+      "dependentSelector": "B"
     }
   ],
   "dividerJoint": {
@@ -5277,29 +5277,29 @@ module.exports = {
     "joints": [
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "T",
+        "dependsSelector": "BACK",
+        "dependentSelector": "T",
         "maleOffset": "T.t/2",
         "demensionAxis": "y",
         "centerAxis": "+y"      },
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "R",
+        "dependsSelector": "BACK",
+        "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "demensionAxis": "x",
         "centerAxis": "+x"      },
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "B",
+        "dependsSelector": "BACK",
+        "dependentSelector": "B",
         "maleOffset": "B.t/2",
         "demensionAxis": "y",
         "centerAxis": "-y"      },
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "L",
+        "dependsSelector": "BACK",
+        "dependentSelector": "L",
         "maleOffset": "L.t/2",
         "demensionAxis": "x",
         "centerAxis": "-x"      }
@@ -5543,29 +5543,29 @@ module.exports = {
     "joints": [
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "T",
+        "dependsSelector": "BACK",
+        "dependentSelector": "T",
         "maleOffset": "T.t/2",
         "demensionAxis": "y",
         "centerAxis": "+y"      },
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "R",
+        "dependsSelector": "BACK",
+        "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "demensionAxis": "x",
         "centerAxis": "+x"      },
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "B",
+        "dependsSelector": "BACK",
+        "dependentSelector": "B",
         "maleOffset": "B.t/2",
         "demensionAxis": "y",
         "centerAxis": "-y"      },
       {
         "type": "Dado",
-        "maleJointSelector": "BACK",
-        "femaleJointSelector": "L",
+        "dependsSelector": "BACK",
+        "dependentSelector": "L",
         "maleOffset": "L.t/2",
         "demensionAxis": "x",
         "centerAxis": "-x"      }

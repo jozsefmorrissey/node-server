@@ -2,6 +2,7 @@
 const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
 const CutInfo = require('./cuts/cut');
 
+const ensureCsg = (obj) => !(obj instanceof Object) || obj instanceof CSG ? obj : CSG.fromPolygons(obj.polygons, true);
 class JointInfo {
   constructor(joint, partInfo) {
     this.partInfo = () => partInfo;
@@ -15,9 +16,13 @@ class JointInfo {
         let maleModel = new CSG();
         const env = partInfo.environment();
         const maleIds = env.jointMap[joint.id].male || [];
-        const maleModels = maleIds.map(id => env.modelInfo.joined[id]);
-        maleModels.forEach(mm => maleModel = maleModel.union(mm));
-        model = partInfo.noJointModel().clone().intersect(maleModel);
+        try {
+          const maleModels = maleIds.map(id => ensureCsg(env.modelInfo.joined[id]));
+          maleModels.forEach(mm => maleModel = maleModel.union(mm));
+          model = partInfo.noJointModel().clone().intersect(maleModel);
+        } catch (e) {
+          console.log('wtf');
+        }
       }
       return partInfo.normalize(rightOleft, model);
     };

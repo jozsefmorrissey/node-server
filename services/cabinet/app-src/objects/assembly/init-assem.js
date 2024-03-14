@@ -80,8 +80,8 @@ new CutterModel();
 const CutterPoly = Cutter.Poly;
 new CutterPoly();
 
-// const Void = require('./assemblies/void.js');
-// new Void();
+const Void = require('./assemblies/void.js');
+new Void();
 
 Assembly.components = {
   Divider, Panel, Cutter, Door, DrawerBox, DrawerFront, Frame, CutterModel

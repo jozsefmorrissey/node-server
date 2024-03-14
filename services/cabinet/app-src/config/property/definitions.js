@@ -38,6 +38,7 @@ defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPER
 defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US});
 defs.bid = new Property('bid', 'Bottom Inset Depth', {value: 0, notMetric: IMPERIAL_US});
 defs.tid = new Property('tid', 'Top Inset Depth', {value: 0, notMetric: IMPERIAL_US});
+defs.showRight = new Property('showRight', 'Show Right', {value: {type: 'None', endStyle: 'No'}});
 
 // Cabinet.AngledBackCorner
 defs.rbo = new Property('bo', 'Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US});

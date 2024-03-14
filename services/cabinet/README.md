@@ -98,6 +98,8 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 - figure out three-view hidden lines
 - ensure if new property is added existing configs updated with default value
 - StringMathEvaluator: Math.atan(3/4)* (180/Math.PI) works but Math.atan(3/4)*(180/Math.PI) does not
+- $t - implemnt no-tag repeat
+- $t - nested array access: array[0][3][9];
 
 
 ### git commands lines modified by user

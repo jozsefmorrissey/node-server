@@ -19,9 +19,9 @@
     <div class='error' id='{{ERROR_CNT_ID()}}'></div>
   </div>
   <div class='expand-tab'>
-    <div class="expand-body {{type()}}" ex-list-id='{{id()}}' key='{{key}}'
+    <div class="expand-body {{type()}}" ex-list-id='{{id()}}' key='{{activeKey()}}'
           {{active() ? '' : 'hidden'}}>
-      {{active() ? getBody(active()) : ''}}
+      {{initialBody(activeKey())}}
     </div>
   </div>
 </div>

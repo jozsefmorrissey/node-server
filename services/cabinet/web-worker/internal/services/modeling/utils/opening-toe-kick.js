@@ -93,8 +93,8 @@ class OpeningToeKickUtil {
     function buildToeKick(tkBiPoly, tkSpacePoly) {
       const cabinet = openTk.find('c');
       const autoToeKick = openTk.parentAssembly();
-      const leftInOut = autoToeKick.leftEndStyle ? 'inner' : 'outer';
-      const rightInOut = autoToeKick.rightEndStyle ? 'inner' : 'outer';
+      const leftInOut = !autoToeKick.overlayLeft ? 'inner' : 'outer';
+      const rightInOut = !autoToeKick.overlayRight ? 'inner' : 'outer';
       const toPoly = (intObjTop, intObjBottom) => {
         const vert1 = intObjTop.positive[rightInOut].intersection;
         const vert2 = intObjTop.negitive[leftInOut].intersection;
@@ -220,8 +220,10 @@ class OpeningToeKickUtil {
 
 const built = {};
 OpeningToeKickUtil.instance = (openTk, modelInfo) => {
-  if (built[openTk.id] === undefined) {
+  const rootHash = openTk.find.root().hash;
+  if (built[openTk.id] === undefined || built[openTk.id].rootHash !== rootHash) {
     built[openTk.id] = new OpeningToeKickUtil(openTk, modelInfo);
+    built[openTk.id].rootHash = rootHash;
   }
   return built[openTk.id];
 }

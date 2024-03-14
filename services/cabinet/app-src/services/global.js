@@ -81,12 +81,12 @@ class Global {
         const details = {from: CABINET, to: cabinet};
         CABINET = cabinet;
         cabinetChangeEvent.trigger(details);
+        this.target(cabinet);
       }
       return CABINET;
     }
     this.target = (object) => {
       if (object) {
-        this.cabinet(object);
         const details = {from: TARGET, to: object};
         TARGET = object;
         targetChangeEvent.trigger(details);

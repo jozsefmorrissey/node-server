@@ -373,6 +373,7 @@ du.find.down = function(selector, node) {return du.find.downInfo(selector, node)
 du.find.downAll = function(selector, node) {return du.find.downInfo(selector, node).list};
 
 du.find.closest = function(selector, node) {
+  node ||= document.head;
   const visited = [];
   selector = VS(selector);
   function recurse (currNode, distance) {
@@ -401,6 +402,18 @@ du.find.closest = function(selector, node) {
 
   return recurse(node, 0).node;
 }
+
+const findAttrFunc = (findFunc) =>
+  findFunc.attribute = (attribute, node) => {
+  const nearestElem = findFunc(`[${attribute}]`, node);
+  return nearestElem ? nearestElem.getAttribute(attribute) : null;
+};
+findAttrFunc(du.find.closest);
+findAttrFunc(du.find);
+findAttrFunc(du.find.down);
+findAttrFunc(du.find.up);
+
+
 
 // TODO: apply this to all relevant functions. (selector, target)|(selector)|(target)
 //      target - starting element for function
@@ -968,21 +981,21 @@ du.paste.json = (elem, success, fail, validate) => {
   du.paste(elem, successWrapper, fail, validateWrapper);
 }
 
-du.print = {};
-du.print.elem = (selectorOelem) => {
-  let elem = selectorOelem;
-  if (!(elem instanceof HTMLElement)) elem = du.find(selectorOelem);
-  if (elem instanceof HTMLElement) {
-   const relations = du.find.relations(elem)
-   du.hide(relations.distants);
-   du.style(relations.ancestors, {all: 'unset'});
-   window.print();
-   du.show(relations.distants);
-   du.style(relations.ancestors, {all: ''});
- } else console.error(`Cant find HTMLElement '${selectorOelem}'`);
-}
-
-du.on.match('click', 'button.print', (elem) => du.print.elem(elem.parentElement));
+// du.print = {};
+// du.print.elem = (selectorOelem) => {
+//   let elem = selectorOelem;
+//   if (!(elem instanceof HTMLElement)) elem = du.find(selectorOelem);
+//   if (elem instanceof HTMLElement) {
+//    const relations = du.find.relations(elem)
+//    du.hide(relations.distants);
+//    du.style(relations.ancestors, {all: 'unset'});
+//    window.print();
+//    du.show(relations.distants);
+//    du.style(relations.ancestors, {all: ''});
+//  } else console.error(`Cant find HTMLElement '${selectorOelem}'`);
+// }
+//
+// du.on.match('click', 'button.print', (elem) => du.print.elem(elem.parentElement));
 
 const attrReg = /^[a-zA-Z-]*$/;
 du.uniqueSelector = function selector(focusElem) {

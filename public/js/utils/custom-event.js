@@ -10,9 +10,10 @@ try {
 
 
 class CustomEvent {
-  constructor(name, runOnAdd) {
+  constructor(name) {
     const watchers = [];
     this.name = name;
+    let lastArgs;
 
     const runFuncs = (elem, detail) =>
     watchers.forEach((func) => {
@@ -27,14 +28,20 @@ class CustomEvent {
     this.watchers = () => watchers;
     this.on = function (func) {
       if ((typeof func) === 'function') {
-        if (runOnAdd) func();
-        watchers.push(func);
+        if (lastArgs)
+          func(...lastArgs);
+        if (watchers.indexOf(func) === -1) watchers.push(func);
       } else {
         return 'on' + name;
       }
     }
 
+    this.remove = (func) =>
+      watchers.remove(func);
+
+
     this.trigger = function (element, detail) {
+      lastArgs = [element, detail];
       element = element ? element : domAccessible ? window : detail;
       runFuncs(element, detail);
       event.detail = detail;
@@ -70,9 +77,11 @@ class CustomEvent {
 CustomEvent.all = (obj, ...eventNames) => {
   if (obj.on === undefined) obj.on = {};
   if (obj.trigger === undefined) obj.trigger = {};
+  if (obj.events === undefined) obj.events = {};
   for (let index = 0; index < eventNames.length; index++) {
     const name = eventNames[index];
     const e = new CustomEvent(name);
+    obj.events[name] = e;
     obj.on[name] = e.on;
     obj.trigger[name] = (...args) => e.trigger.apply(e, args);
   }

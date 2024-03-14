@@ -8,14 +8,32 @@
   {
       display: none !important;
   }
+  body: {
+    margin: 0;
+    padding: 0;
+  }
 }
 .page {
   break-after: page;
 }
 
+.build-diagram-measurement-cnt {
+  padding-right: 5pt;
+}
+
+@page {
+  margin:0;
+  vertical-align: middle;
+}
+
 .avoid-page-break {
   break-inside: avoid-page;
 }
+
+.side-by-side {
+  display: inline-flex;
+  flex-wrap: wrap;
+};
 
 /* #layout-sketch-cnt {
   transform: scale(1, -1);
@@ -41,6 +59,14 @@ body {
   background-color: #ffa5008c;
   padding: 0 10pt;
   border-radius: 6pt;
+}
+
+.show-cnt {
+  z-index: 1;
+}
+
+.cab-tab-cnt {
+  padding: 15pt;
 }
 
 #order-select-cnt {
@@ -87,8 +113,8 @@ table.no-border-cells td {text-align: center; vertical-align: middle;}
   cursor: pointer;
 }
 
-input[name='maleJointSelector'],
-input[name='femaleJointSelector'],
+input[name='dependsSelector'],
+input[name='dependentSelector'],
 input[name='partCode'],
 input[name='code'] {
   width: 75pt;
@@ -201,8 +227,20 @@ canvas {
   text-align: left;
 }
 
+.align-left {
+  text-align: left;
+}
+
+.align-right {
+  text-align: right;
+}
+
 .save-order-btn {
   float: right;
+  margin: 10pt;
+}
+
+.small-margin {
   margin: 10pt;
 }
 
@@ -443,6 +481,7 @@ a {
 
 .fit {
   width: fit-content;
+  height: fit-content;
 }
 
 .cabinet-header {
@@ -553,6 +592,29 @@ td[dir] {
   height: 200vh;
 }
 
+.build-diagram {
+  height: 55mm;
+  width: 100mm;
+}
+
+table.no-borders, table.no-borders td, table.no-borders th, table.no-borders tr, table.no-borders tbody {
+  border: none;
+}
+
+.build-diagram-cnt {
+  width: 210mm;
+  flex-wrap: wrap;
+
+  margin: auto;
+  vertical-align: middle;
+  text-align: center;
+};
+
+.this-one {
+  width: 80vw;
+  height: 80vw;
+}
+
 .ruler {
   border-radius: 5px;
 }
@@ -616,4 +678,50 @@ td[dir] {
   border-radius: 15pt;
   color: white;
   height:20px;
+}
+
+.ind-task-progress-cnt {
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+
+.main-progress-cnt {
+  margin: auto;
+  width: 400pt;
+}
+
+/*               print-formats           */
+.avery-5160 {
+  width: 100vw;
+  height: 100vh;
+}
+
+.avery-5160>.center-div {
+  margin: auto;
+  vertical-align: middle;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  position: relative;
+  top: 50%;
+  right: 50%;
+  transform: translate(50%, -50%);
+
+}
+
+.avery-5160 table {
+    border: none;
+    margin: auto;
+}
+
+.avery-5160 table>tbody {
+    border: none;
+}
+
+.avery-5160 table td {
+  border: solid 1pt;
+  border-color: #80808040;
+  border-radius: 3px;
+  width: 31.5vw;
+  height: 8.9vh;
 }

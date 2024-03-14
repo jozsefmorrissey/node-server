@@ -1,5 +1,5 @@
 <div class='page'>
-  <h3>Group: {{group.name()}}</h3>
-  <div:t class='tab page' repeat='cabinet in group.objects' $t-id='documents/construction/cabinet'>
+  <div:t class='page' repeat='cabinet in cabinets'>
+    {{DocumentationHtml.panels.cabinet(cabinet)}}
   </div:t>
 </div>

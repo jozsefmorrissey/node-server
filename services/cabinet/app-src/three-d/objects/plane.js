@@ -6,7 +6,8 @@ const Matrix = require('matrix');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
-const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(.00000001).within;
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const withinTol = new Tolerance(.00001).within;
 
 function isDefined(...values) {
   for (let index = 0; index < values.length; index++) {
@@ -289,9 +290,10 @@ class Plane extends Array {
       return approximate.eq(pts[0][axis], pts[1][axis], pts[2][axis]);
     }
     this.parrelle.line = (line) => {
+      const within = new Tolerance(line.length() / 100000).within;
       const startDist = this.connect.vertex(line[0]).length();
       const endDist = this.connect.vertex(line[1]).length();
-      return withinTol(startDist, endDist);
+      return within(startDist, endDist);
     }
 
     this.normal = () => {

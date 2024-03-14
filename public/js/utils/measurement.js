@@ -188,6 +188,7 @@ Measurement.display = (value, notMetric) => {
 
 Measurement.display.area = (SQCM, units, percision) => {
   percision ||= .1;
+  units ||= Measurement.unit() === Measurement.units()[1] ? 'SQFT' : undefined;
   switch (units) {
     case 'SQMM': return `${Measurement.round(SQCM * 100, percision)} mm2`;
     case 'SQM': return `${Measurement.round(SQCM / 10000, percision)} M2`;

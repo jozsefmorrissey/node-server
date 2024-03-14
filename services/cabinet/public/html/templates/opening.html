@@ -13,5 +13,15 @@
     {{section.name.toSentance().replace('Section', '')}}
   </option:t>
 </select>
+<div class='section-feature-cnt'>
+  <div class='inline-flex chev-dropdown-toggle'>
+    Opening Features
+    <i class='down gg-chevron-down hidden' ></i>
+    <i class='right gg-chevron-right'></i>
+  </div>
+  <div class='tab chev-dropdown' hidden>
+    {{featuresHtml}}
+  </div>
+</div>
 <div id='{{openDispId}}'>
 </div>

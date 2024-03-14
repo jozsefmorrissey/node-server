@@ -14,9 +14,11 @@ class FileTabDisplay extends Lookup {
     let tYpe = 'down';
     let selected;
 
-    const fileTabContainer = () => du.find(`[id='${this.id()}']`);
-    const contentContainer = (title) =>
-            du.find.down(`.content-cnt>[title='${title || selected}']`, fileTabContainer());
+    const fileTabContainer = (elem) => du.find.closest(`[id='${this.id()}']`, elem);
+    const containerSelector = (title) =>
+            `[id='${this.id()}'] .content-cnt>[title='${title || selected}']`;
+    const contentContainer = (title, elem) =>
+            du.find.closest(containerSelector(), elem) || containerSelector();
     this.register = (title, htmlFunc, shouldRender) => {
       shouldRender = shouldRender instanceof Function ? shouldRender : null;
       list[title] = {html: htmlFunc, shouldRender};
@@ -37,10 +39,10 @@ class FileTabDisplay extends Lookup {
     this.shouldRender = () => list[selected] && list[selected].shouldRender &&
                               list[selected].shouldRender(contentContainer());
     this.list = () => Object.keys(list);
-    this.switch = (to) => {
+    this.switch = (to, elem) => {
       let close = false;
       if (this.selected.is(to)) close = true;
-      const container = fileTabContainer();
+      const container = fileTabContainer(elem);
       const list = du.find.down('.list', container);
       const tab = du.find.down(`[title='${to}']`, list)
       const contentCnt = du.find.down('.content-cnt', container);
@@ -50,7 +52,7 @@ class FileTabDisplay extends Lookup {
         .forEach(e => du.class.remove(e, 'selected') & du.hide(e));
 
       const from = this.selected();
-      const content = contentContainer(from);
+      const content = contentContainer(from, container);
       const info = {from, content};
       if (close) {
         this.selected(null);
@@ -63,8 +65,8 @@ class FileTabDisplay extends Lookup {
       info.to = to;
       this.trigger.beforeChange(info)
       this.selected(to);
-      info.content = contentContainer(to);
-      this.update(info.content.hasAttribute('empty-contents'));
+      info.content = contentContainer(to, container);
+      this.update(info.content.hasAttribute('empty-contents'), container);
       info.content.removeAttribute('empty-contents');
       du.class.add(container, 'open');
       du.class.add(tab, 'selected');
@@ -72,12 +74,13 @@ class FileTabDisplay extends Lookup {
       if (from == undefined) this.trigger.open(info);
       this.trigger.change(info);
     }
-    this.container = (title) => title ? contentContainer(title) : fileTabContainer;
-    this.update = (force) => {
+    this.container = (title, elem) => title ? contentContainer(title, elem) : fileTabContainer;
+    this.update = (force, elem) => {
       if (force || this.shouldRender()) {
-        const contentCnt = contentContainer();
+        const contentCnt = contentContainer(null, elem);
         if (contentCnt) {
-          contentCnt.innerHTML = this.html(selected);
+          const html = this.html(selected);
+          if ((typeof html) === 'string') contentCnt.innerHTML = html;
         }
       }
     }
@@ -85,8 +88,11 @@ class FileTabDisplay extends Lookup {
     this.isOpen = () => list[selected];
 
     this.selectedHtml = () => list[selected] ? list[selected].html() : '';
-    this.html = (title) => title ?
-          list[title].html() : FileTabDisplay.template.render(this);
+    this.html = (title) => {
+      if (!title) return FileTabDisplay.template.render(this);
+      const html = list[title].html(this.container(title));
+      return html;
+    }
   }
 }
 
@@ -95,7 +101,7 @@ du.on.match('click', '.file-tab-cnt > ul > li', (tab, event) => {
   const container = du.find.closest('.file-tab-cnt', tab);
   const ftd = FileTabDisplay.get(container.id);
   const title = tab.innerText;
-  ftd.switch(title);
+  ftd.switch(title, container);
 });
 
 FileTabDisplay.template = new $t('lists/file-tab');

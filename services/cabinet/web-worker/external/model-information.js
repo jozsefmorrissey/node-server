@@ -43,7 +43,12 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
     complexityObj[id] = {assembly: byId[id]};
   }
   const assembly = complexityObj[id].assembly;
-  const obj = complexityObj[assembly.id()];
+  let obj;
+  try {
+    obj = complexityObj[assembly.id()];
+  } catch (e) {
+    console.log(e);
+  }
   if (obj.complexity) return;
   let complexity = 1;
   let dependencyCount = 0;
@@ -145,18 +150,18 @@ class ModelInformation {
     const dependencies = assemblies[0].getAllDependencies(null, props.noJoints);
     dependencies.forEach(j => requiresReference[j.id()] = j);
 
-    this.needsModeled = () => buildModels.filter(id => modelInfo.model[id] === undefined);
-    this.needsJoined = () => joinModels.filter(id => modelInfo.joined[id] === undefined);
-    this.needsIntersected = () => targets.filter(id => byId[id].part() && modelInfo.intersection[id] === undefined);
+    this.needsModeled = () => buildModels;//.filter(id => modelInfo.model[id] === undefined);
+    this.needsJoined = () => joinModels;//.filter(id => modelInfo.joined[id] === undefined);
+    this.needsIntersected = () => targets.filter(id => byId[id].part());// && modelInfo.intersection[id] === undefined);
     this.needsUnioned = () => unionedCsg ? [] :
                             (props.partsOnly === false ? targets : includedParts);
     this.needs2dConverted = () => props.unioned ? unioned2D ? [] : [{}]:
-          targets.filter(id => !id.startsWith('Cutter') && modelInfo.threeView[id] === undefined);
+          targets.filter(id => !id.startsWith('Cutter'));// && modelInfo.threeView[id] === undefined);
 
     const environmentObject = () => {
       const environment = DTO(props) || {};
       environment.byId = requiresReference;
-      environment.modelInfo = modelInfo;
+      environment.modelInfo = modelInfoObject();//modelInfo;
       environment.propertyConfig = propertyConfig;
       environment.jointMap = jointMap;
       return environment;
@@ -198,6 +203,12 @@ class ModelInformation {
     this.unioned = (data) => {
       if (data) unionedCsg = CSG.fromPolygons(data.polygons, true);
       else return unionedCsg;
+    }
+
+    let partInformation;
+    this.partInformation = (info) => {
+      if (info) modelInfo.partInformation = info;
+      else return modelInfo.partInformation;
     }
 
     let unioned2D

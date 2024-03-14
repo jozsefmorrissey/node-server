@@ -54,29 +54,15 @@ class Cabinet extends Assembly {
     }
 
 
-    this.userFriendlyId = () => `c${this.groupIndex() + 1}`;
-    this.userIdentifier = () => this.name() || this.userFriendlyId();
+    const parentUserFriendlyId = this.userFriendlyId;
+    this.userFriendlyId = (id) => id === undefined ? `c${this.groupIndex() + 1}` : parentUserFriendlyId(id);
+    this.userIdentifier = () => `${this.group().name()}:${this.name() || this.userFriendlyId()}`;
     const panels = 0;
     const framePieces = 0;
     const addFramePiece = (piece) => framePieces.push(piece);
     const framePieceCount = () => pieces.length;
     const addPanel = (panel) => panels.push(panel);
     const panelCount = () => panels.length;
-
-    const resolveOuterReveal = (panel, location) => {
-      const propConfig = this.propertyConfig();
-      if (propConfig.isInset()) {
-        return new Measurement(-1 * props.Inset.is.value()).value();
-      }
-      const definedValue = panel.railThickness() - panel.value(location);
-      let calculatedValue;
-      if (propConfig.isReveal()) {
-        calculatedValue = panel.railThickness() - propConfig.reveal();
-      } else {
-        calculatedValue = propConfig.overlay();
-      }
-      return calculatedValue < definedValue ? calculatedValue : definedValue;
-    }
 
     const parentGetSubAssems = this.getSubassemblies;
     let toeKick;
@@ -126,47 +112,6 @@ class Cabinet extends Assembly {
       modificationState;
     this.value.onChange(() => modificationState++);
 
-    function bordersByIds(borderIds) {
-      const borders = {};
-      const center = borderIds.center;
-      borders.right = instance.getAssembly(borderIds.right);
-      borders.left = instance.getAssembly(borderIds.left);
-      borders.top = instance.getAssembly(borderIds.top);
-      borders.bottom = instance.getAssembly(borderIds.bottom);
-
-      const pb = instance.getAssembly(borderIds.back);
-
-      return () => {
-        const depth = pb.position().center('z') + pb.position().limits('-z');
-
-        const position = {};
-        const propConfig = instance.propertyConfig();
-        if (propConfig.isReveal()) {
-          const revealProps = propConfig.reveal();
-          position.right = borders.right.position().centerAdjust('x', '+z') - revealProps.rvr.value();
-          position.left = borders.left.position().centerAdjust('x', '-z') + revealProps.rvl.value();
-          position.top = borders.top.position().centerAdjust('y', '+z') - revealProps.rvt.value();
-          position.bottom = borders.bottom.position().centerAdjust('y', '-z') + revealProps.rvb.value();
-        } else if (propConfig.isInset()) {
-          const insetValue = propConfig('Inset').is.value();
-          position.right = borders.right.position().centerAdjust('x', '-z') - insetValue;
-          position.left = borders.left.position().centerAdjust('x', '+z') + insetValue;
-          position.top = borders.top.position().centerAdjust('y', '-z') - insetValue;
-          position.bottom = borders.bottom.position().centerAdjust('y', '+z') + insetValue;
-        } else {
-          const ov = propConfig('Overlay').ov.value();
-          position.right = borders.right.position().centerAdjust('x', '-z') + ov;;
-          position.left = borders.left.position().centerAdjust('x', '+z') - ov;
-          position.top = borders.top.position().centerAdjust('y', '-z') + ov;
-          position.bottom = borders.bottom.position().centerAdjust('y', '+z') - ov;
-        }
-
-        position.front = 0;
-        position.back = pb.position().center('z') + pb.position().limits('-z');
-
-        return {borders, position, depth, borderIds, center};
-      }
-    }
 
     const pAddSubAssem = this.addSubAssembly;
     this.addSubAssembly = (assembly) => {
@@ -174,53 +119,6 @@ class Cabinet extends Assembly {
       this.addDependencies(new Dependency(assembly, this));
     }
 
-    function bordersByEndPoints (borderObj) {
-      const bo = borderObj;
-
-      return () => {
-        const rotation = {x: 0, z: 0, y: instance.eval(borderObj.zRotation)};
-        let evaluated;
-
-        let points;
-        const propConfig = instance.propertyConfig();
-        if (propConfig.isReveal()) {
-          points = instance.evalObject(bo.outer);
-        } else {
-          points = instance.evalObject(bo.inner);
-        }
-
-        const pointArr = [points.top.left, points.top.right, points.bottom.right, points.bottom.left];
-        let center = Vertex3D.center.apply(null, pointArr);
-
-        const width = new Vertex3D(points.top.left).distance(new Vertex3D(points.top.right));
-        const length = new Vertex3D(points.bottom.left).distance(new Vertex3D(points.top.left));
-
-        const depth = 20 * 2.54;
-
-        const position = {};
-        if (propConfig.isReveal()) {
-          const revealProps = propConfig.reveal();
-          position.right = center.x + width/2 - revealProps.rvr.value();
-          position.left = center.x - width/2 + revealProps.rvl.value();
-          position.top = center.y + length/2 - revealProps.rvt.value();
-          position.bottom = center.y - length/2 + revealProps.rvb.value();
-        } else if (propConfig.isInset()) {
-          const insetValue = propConfig('Inset').is.value();
-          position.right = center.x + width/2 - insetValue;
-          position.left = center.x - width/2 + insetValue;
-          position.top = center.y + length/2 - insetValue;
-          position.bottom = center.y - length/2 + insetValue;
-        } else {
-          const ov = propConfig('Overlay').ov.value();
-          position.right = center.x + width/2 + ov;;
-          position.left = center.x - width/2 - ov;
-          position.top = center.y + length/2 + ov;
-          position.bottom = center.y - length/2 - ov;
-        }
-
-        return {position, depth, center, rotation};
-      }
-    }
 
     this.groupIndex = () => {
       const group = this.group();
@@ -229,10 +127,11 @@ class Cabinet extends Assembly {
       return gIndex;
     }
 
-    this.borders = (borderObj) => {
-      if (borderObj.inner) return bordersByEndPoints(borderObj);
-      return bordersByIds(borderObj);
+    const parentHash = this.hash;
+    this.hash = () => {
+      return parentHash() + this.openings.map(o => o.sectionProperties().hash()).sum();
     }
+
 
     let openingModState;
     function updateOpeningPoints(func, test, isLen) {
@@ -242,6 +141,7 @@ class Cabinet extends Assembly {
           modificationState++;
           let value = func(...args);
           instance.updateOpenings(true);
+          instance.hash();
           return value;
         }
         return func(...args);
@@ -318,7 +218,7 @@ Cabinet.build = (type, group, config) => {
   });
 
   config.joints.forEach((jointConfig) => {
-    const male = cabinet.getAssembly(jointConfig.maleJointSelector);
+    const male = cabinet.getAssembly(jointConfig.dependsSelector);
     if (male === undefined) console.warn(`No male found for joint: ${jointConfig}`);
     else male.addDependencies(Object.fromJson(jointConfig));
   });
@@ -367,6 +267,7 @@ Cabinet.fromJson = (assemblyJson, group) => {
   assembly.autoToeKick(assemblyJson.autoToeKick);
 
   trigger();
+  assembly.trigger.change();
   return assembly;
 }
 Cabinet.abbriviation = 'c';

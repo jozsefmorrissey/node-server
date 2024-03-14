@@ -11,7 +11,7 @@ const within = Tolerance.within(.0000001);
 
 const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 let lastMi;
-const NormalMagnitudeIsZero = new Error('InvalidPolygon: normal vector magnitude === 0');
+const NormalMagnitudeIsZero = 'InvalidPolygon: normal vector magnitude === 0';
 
 const place = (vert, no, one, two, three) => {
   let count = 0;
@@ -116,7 +116,7 @@ class Polygon3D {
       }
 
       if (magnitude === 0) {
-        throw NormalMagnitudeIsZero;
+        throw new Error(NormalMagnitudeIsZero);
       }
       return normVect.unit();
     }
@@ -372,7 +372,7 @@ class Polygon3D {
             try {
               normal = calcNormal().positiveUnit();
             } catch (e) {
-              if (e !== NormalMagnitudeIsZero) {
+              if (e.message !== NormalMagnitudeIsZero) {
                 console.error(e);
               }
             }
@@ -750,13 +750,13 @@ class Polygon3D {
       return `${str.substring(4)} normal: ${this.normal()}`;
     }
 
-    this.toDrawString = (color, excludeNormal) => {
+    this.toDrawString = (color, includeNormal) => {
       const colorString = (typeof color) === 'string' ? color : 'blue';
       let str = '';
       for (let index = 0; index < lines.length; index++) {
         str += `,${lines[index].startVertex.toString()}`;
       }
-      if (excludeNormal) return `${colorString}[${str.substring(1)}]`;
+      if (includeNormal !== true) return `${colorString}[${str.substring(1)}]`;
       const start = this.center();
       const end = new Vertex3D(this.normal().scale(10).add(start));
       const normalStr = `[${start},${end})`;

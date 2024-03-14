@@ -11,22 +11,26 @@ const Vertex2d = require('../../../../../../../public/js/utils/canvas/two-d/obje
 const Tolerance = require('../../../../../../../public/js/utils/tolerance.js');
 const ToleranceMap = require('../../../../../../../public/js/utils/tolerance-map.js');
 
+const ensureCsg = (obj) => !(obj instanceof Object) || obj instanceof CSG ? obj : CSG.fromPolygons(obj.polygons, true);
 class CutInfo {
-  constructor(set, jointInfo, maleId) {
+  constructor(set, jointInfo, maleId, maleModel) {
     const env = jointInfo.partInfo().environment();
     const partId = jointInfo.partInfo().part().id;
-    let intersectionModel = env.modelInfo.intersection[partId][maleId];
+    let intersectionModel = ensureCsg(env.modelInfo.intersection[partId][maleId]);
     if (intersectionModel === undefined) {
       let njm = jointInfo.partInfo().noJointModel();
-      let mm = env.modelInfo.joined[maleId];
-      if ((njm && njm.polygons.length) && (mm && mm.polygons.length))
-        intersectionModel = mm.intersect(njm);
+      try {
+        intersectionModel = maleModel.intersect(njm);
+
+      }catch (e) {
+        'wtf';
+      }
     }
 
     let instance = this;
     this.maleId = () => maleId;
     this.jointInfo = () => jointInfo;
-    this.maleModel = () => env.modelInfo.joined[maleId];
+    this.maleModel = () => maleModel || ensureCsg(env.modelInfo.joined[maleId]);
     let documented = set.length > 0;
     this.documented = (isDocumented) => {
       if (isDocumented === true || isDocumented === false) {
@@ -228,19 +232,36 @@ function existsInBothSets(set1, set2) {
 }
 
 function partModelInfo(partId, maleId, env, jointInfo, maleModel) {
-  const jointModel = env.modelInfo.joined[partId];
-  const noJointModel = env.modelInfo.model[partId];
+  const jointModel = ensureCsg(env.modelInfo.joined[partId]);
+  const noJointModel = ensureCsg(env.modelInfo.model[partId]);
   if (env.modelInfo.joinedLayer === undefined) env.modelInfo.joinedLayer = {};
   if (env.modelInfo.joinedLayer[partId] === undefined)
     env.modelInfo.joinedLayer[partId] = Layer.fromCSG(jointModel);
   const modelLayers = env.modelInfo.joinedLayer[partId];
-  const intersectionModel = env.modelInfo.intersection[partId][maleId];
+  const intersectionModel = ensureCsg(env.modelInfo.intersection[partId][maleId]);
   return {
     jointModel, noJointModel, modelLayers, intersectionModel
   };
 }
 
 CutInfo.partModelInfo = partModelInfo;
+
+function possibleOverlaps (intersectionLayers, modelLayers) {
+  const vertIndexLength = (il, ml, index) => ml.toPlane().connect.vertex(il.toPlane().points()[index]).length();
+  const planesOverlap = modelLayers.map((ml, mi) => intersectionLayers.map((il, ii) => ({
+    mi,ii,
+    len: Math.max(vertIndexLength(il,ml, 0), vertIndexLength(il,ml, 1), vertIndexLength(il,ml, 2))
+  })).filter(obj => Tolerance.within(.001)(obj.len, 0)));
+
+  let drawStr = '';
+  planesOverlap.forEach(arr => arr.forEach(obj => {
+    drawStr += `// modelLayerIndex(green): ${obj.mi}
+${modelLayers[obj.mi].toDrawString('green')}
+// intersectionLayerIndex(blue): ${obj.ii}
+${intersectionLayers[obj.ii].toDrawString('blue')}\n\n`;
+  }));
+  console.log(drawStr);
+}
 
 // let partModels = {};
 // let time = 0;
@@ -300,6 +321,10 @@ CutInfo.get = (maleId, jointInfo, env) => {
     if (cutObj) {
       return cutObj;
     }
+    if (goDownTheRabbitHole) {
+      possibleOverlaps(intersectionLayers, modelLayers);
+      cutInfo.get(maleId, jointInfo, env);
+    }
     throw new Error('This shouldn\'t happen! ' + jointInfo.joint().toString());
   } catch(e) {
     console.error(e);
@@ -318,15 +343,16 @@ const removeMergeable = (cuts, index1, index2) => {
     const jointInfo = cut1.jointInfo();
     const cut1Index = cuts.equalIndexOf(cut1);
     const cut2Index = cuts.equalIndexOf(cut2);
-    cuts[index1] = new CutInfo(set, jointInfo);
+    const maleModel = cut1.maleModel().union(cut2.maleModel());
+    cuts[index1] = new CutInfo(set, jointInfo, null, maleModel);
     cuts.remove(cut2);
     return true;
   }
   return false;
 };
 
-const splitMultipleCuts = (cuts, jointInfo) => p => {
-  const newCut = new CutInfo([p], jointInfo);
+const splitMultipleCuts = (cuts, jointInfo, cut) => p => {
+  const newCut = new CutInfo([p], jointInfo, null, cut.maleModel());
   cuts.push(newCut);
 };
 
@@ -388,7 +414,7 @@ function splitCutOperations(cuts) {
       const set = cuts[index].set();
       if (set.length > 1) {
         cut.documented(false);
-        set.forEach(splitMultipleCuts(cuts, jointInfo, cutInfos));
+        set.forEach(splitMultipleCuts(cuts, jointInfo, cut));
       } else cutInfos.push(cut);
     }
   }

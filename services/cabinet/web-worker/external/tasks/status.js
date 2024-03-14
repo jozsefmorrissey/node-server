@@ -4,5 +4,5 @@ module.exports = {
   INITIATE: 'initiate',
   EXICUTE: 'exicute',
   PENDING: 'pending',
-  COMPLETE: 'complete'
+  SUCCESS: 'success'
 };

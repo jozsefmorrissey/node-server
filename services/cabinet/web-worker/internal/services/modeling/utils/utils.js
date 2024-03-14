@@ -14,7 +14,7 @@ function updatePosition(position, assem, joint) {
 
 function applyMaleJointExtensions(assem, env) {
   const position = assem.position.current;
-  if (position.extApplied === true) throw new Error('this should only be called once');
+//  if (position.extApplied === true) throw new Error('this should only be called once');
   const maleJointIds = env.jointMap.male[assem.id] || [];
   const jointsToUpdate = maleJointIds.map(jid => env.byId[jid])
                               .filter(d => d.maleOffset);
@@ -26,17 +26,19 @@ function applyMaleJointExtensions(assem, env) {
 
 function toBiPolygon(assem, env) {
   const current = assem.position.current;
+  const dems = current.demension;
   applyMaleJointExtensions(assem, env);
-  return BiPolygon.fromPositionObject(current);
+  if (Math.min(dems.x, dems.y, dems.z) > .001) return BiPolygon.fromPositionObject(current);
+  return null;
 }
 
 const vectObj = (obj) => new Vector3D(obj);
 function normals(part, env) {
   let norms = part.position.current.normals;
   if (part.id.startsWith('PanelVoidIndex')) {
-    norms = Polygon3D.normals(Polygon3D.fromCSG(env.modelInfo.model[part.id]));
+    norms = Polygon3D.normals(Polygon3D.fromCSG(env.modelInfo.model[part.id].polygons, true));
   } else if (norms.DETERMINE_FROM_MODEL) {
-    norms = Polygon3D.normals(Polygon3D.fromCSG(env.modelInfo.model[part.id]));
+    norms = Polygon3D.normals(Polygon3D.fromCSG(env.modelInfo.model[part.id].polygons, true));
   } else if (norms.DETERMINE_FROM_PARENT !== undefined) {
     const parentNorms = normals(part.parentAssembly(), env);
     norms = parentNorms;

@@ -22,6 +22,13 @@ class Group extends Lookup {
       return name;
     }
 
+    this.addObject = (obj) => {
+      if (obj.group) obj.group(this);
+      this.objects.push(obj);
+    }
+
+    this.hash = () => name.hash() + this.objects.map(o => o.hash ? o.hash() : 0).sum();
+
     this.resolve = (one, two, three) => {
       const lower = two ? two.toLowerCase() : null;
       const funcName = propertyFunctionMap[lower];

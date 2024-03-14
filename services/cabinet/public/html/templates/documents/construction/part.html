@@ -1,13 +1,13 @@
 <div class='avoid-page-break'>
   <div class='part-header-cnt'>
     <h2 class='part-header'>
-      {{parts.length}}) {{disp.demensions(info.demensions)}}
+      {{parts.length}}) {{disp.demensions(demensions)}}
       &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
-      {{disp.partIds(parts)}} {{parts[0].locationCode()}}
+      {{disp.partIds(parts)}}
     </h2>
   </div>
   <div class='font-medium part-cnt'>
-    <div>{{toolingHtml(info)}}</div>
+    <div>{{toolingHtml()}}</div>
     <span class='tab' id='{{viewContainer(views.left)}}'></span>
     <span class='tab' id='{{viewContainer(views.right)}}'></span>
   </div>

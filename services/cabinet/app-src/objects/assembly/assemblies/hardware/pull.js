@@ -63,5 +63,7 @@ Handle.fromJson = (json) => {
   return obj;
 }
 
+Handle.MATERIAL_UNIT = 'Qty';
+
 
 module.exports = Handle

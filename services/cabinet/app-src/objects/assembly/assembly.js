@@ -23,6 +23,7 @@ class Assembly extends KeyValue {
     super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly',
           object: true});
 
+    this.category = this.constructor.name;
     const pcIsFunc = partCode instanceof Function;
     function pCode(doNotAppendParent) {
       const pc = pcIsFunc ? partCode(doNotAppendParent) : partCode || 'unk';
@@ -122,14 +123,13 @@ class Assembly extends KeyValue {
     this.eval = (eqn) => sme.eval(eqn, this);
     this.evalObject = (obj) => sme.evalObject(obj, this);
 
-    const changeEvent = new CustomEvent('change', true);
+    const changeEvent = new CustomEvent('change');
     this.on.change = changeEvent.on;
     this.trigger.change = changeEvent.trigger;
     let lastHash;
     function hash() {
       const valueObj = instance.value.values;
-      const keys = Object.keys(valueObj).sort();
-      let hashVal = 0;
+      let hashVal = Object.hash(valueObj);
       if (instance.parentAssembly() === undefined) hashVal += `${instance.length()}x${instance.width()}x${instance.thickness()}`.hash();
       hashVal += Object.hash(instance.config());
       hashVal += keyValHash();
@@ -159,6 +159,7 @@ class Assembly extends KeyValue {
       const group = this.group();
       const groupVal = group.resolve(one, two, three);
       if (groupVal !== undefined) return groupVal;
+      if (two) return null;
       return group.propertyConfig;
     }
 
@@ -325,7 +326,10 @@ class Assembly extends KeyValue {
       const jMap = {female: {}, male: {}};
       for (let ji = 0; ji < allJs.length; ji++) {
         const joint = allJs[ji];
-        if (noJoints && joint instanceof Joint) continue;
+        if (joint.dependentSelector() + '' === '/^R:/') {
+          console.log('found!!');
+        }
+        if (!joint.apply() || (noJoints && joint instanceof Joint)) continue;
 
         const jid = joint.id();
         for (let ai = 0; ai < assems.length; ai++) {
@@ -379,6 +383,8 @@ class Assembly extends KeyValue {
       return parentAssembly;
     }
     this.addSubAssembly = (assembly) => {
+      if (!assembly.parentAssembly)
+        console.log('her')
       assembly.parentAssembly(this);
       this.subassemblies[assembly.partCode()] = assembly;
     }
@@ -460,7 +466,7 @@ class Assembly extends KeyValue {
           z: (maxZ+minZ)/2,
         });
       }
-      return buildCenter;
+      return buildCenter || new Vertex3D();
     }
 
     const clear = (attr) => {
@@ -592,6 +598,7 @@ Assembly.partCode = (assembly) => {
 }
 
 Assembly.joinable = true;
+Assembly.MATERIAL_UNIT = 'SQFT';
 
 // PartCode reg matches starting from the end aswell as at each simicolon
 // The simicolon tells you that it is to be considered the preceding

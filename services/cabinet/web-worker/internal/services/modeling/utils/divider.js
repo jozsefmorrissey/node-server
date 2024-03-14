@@ -113,8 +113,10 @@ class DividerUtil {
 const built = {};
 DividerUtil.instance = (rMdto, modelMap) => {
   let divider = rMdto.linkListFind('parentAssembly', isDivider);
-  if (built[divider.id] === undefined) {
+  const rootHash = rMdto.find.root().hash;
+  if (built[divider.id] === undefined || built[divider.id].rootHash !== rootHash) {
     built[divider.id] = new DividerUtil(divider, rMdto, modelMap);
+    built[divider.id].rootHash = rootHash;
   }
   return built[divider.id];
 }

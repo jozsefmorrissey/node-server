@@ -4,8 +4,8 @@ const BiPolygon = require('../../three-d/objects/bi-polygon.js');
 const Polygon3D = require('../../three-d/objects/polygon.js');
 
 class Joint extends Dependency {
-  constructor(maleJointSelector, femaleJointSelector, condition, locationId, priority) {
-    super(maleJointSelector, femaleJointSelector, condition, locationId, priority);
+  constructor(dependsSelector, dependentSelector, condition, locationId, priority) {
+    super(dependsSelector, dependentSelector, condition, locationId, priority);
     priority ||= 0;
     const initialVals = {
       maleOffset: 0, femaleOffset: 0, demensionAxis: '', centerAxis: '',
@@ -14,8 +14,8 @@ class Joint extends Dependency {
     const parentClone = this.clone;
 
     Object.getSet(this, initialVals);
-    this.clone = (maleJointSelector, femaleJointSelector, cond, locId) => {
-      const clone = parentClone(maleJointSelector, femaleJointSelector, cond, locId);
+    this.clone = (dependsSelector, dependentSelector, cond, locId) => {
+      const clone = parentClone(dependsSelector, dependentSelector, cond, locId);
       clone.maleOffset(this.maleOffset());
       clone.femaleOffset(this.femaleOffset());
       clone.demensionAxis(this.demensionAxis());
@@ -27,8 +27,8 @@ class Joint extends Dependency {
 
     this.updatePosition = () => {};
 
-    this.maleJointSelector = this.dependsSelector;
-    this.femaleJointSelector = this.dependentSelector;
+    this.dependsSelector = this.dependsSelector;
+    this.dependentSelector = this.dependentSelector;
 
     this.isMale = this.dependsOn;
     this.isFemale = this.isDependent;
@@ -50,7 +50,7 @@ Joint.new = function (id, json) {
 }
 
 Joint.fromJson = (json) => {
-  const joint = new (Object.class.get(json._TYPE))(json.maleJointSelector, json.femaleJointSelector);
+  const joint = new (Object.class.get(json._TYPE))(json.dependsSelector, json.dependentSelector);
   joint.centerAxis(json.centerAxis);
   joint.demensionAxis(json.demensionAxis);
   joint.maleOffset(json.maleOffset);

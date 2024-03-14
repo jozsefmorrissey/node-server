@@ -13,22 +13,45 @@ const switchEvent = new CustomEvent('switch');
 const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
 const threeView = new ThreeView(du.id('disp-canvas-p2d'));
 
-
-function renderRoom() {
-  new Jobs.CSG.Room.Simple(Global.room()).then(ThreeDModel.display).queue();
+let extraCsgObjsObj = [];
+function extraCsgObjects(objects, shouldApply) {
+  let obj = {objects, shouldApply,
+    remove: () => extraCsgObjsObj.remove(obj)
+  };
+  extraCsgObjsObj.push(obj);
+  return obj;
 }
 
+const applyExtraObjAndDisplay = (info, csg) => {
+  for (let index = 0; index < extraCsgObjsObj.length; index++) {
+    let ecoObj = extraCsgObjsObj[index];
+    if (ecoObj.shouldApply(info)) {
+      const objs = ecoObj.objects instanceof Function ? ecoObj.objects() : ecoObj.objects;
+      for (let oi = 0; oi < objs.length; oi++) {
+        if (objs[oi] instanceof CSG) csg.polygons.concatInPlace(objs[oi].polygons);
+      }
+    }
+  }
+  ThreeDModel.display(csg);
+}
+
+function renderRoom() {
+  new Jobs.CSG.Room.Simple(Global.room()).then((csg) => {
+    applyExtraObjAndDisplay(Global.room(), csg);
+  }).queue();
+}
+
+// TODO: rename this is actually render cabinet or simple objects
 function  renderCabinet() {
   const target = Global.target();
   if (target.constructor.name === 'Cabinet') {
     new Jobs.CSG.Cabinet.Complex(target).then((modelInfo, job) => {
-      ThreeDModel.display(modelInfo.unioned());
+      applyExtraObjAndDisplay(target, modelInfo.unioned());
     }).queue();
   } else {
     new Jobs.CSG.Simple([target]).then((csgs, job) => {
-      ThreeDModel.display(CSG.fromPolygons(csgs[0].polygons));
+      applyExtraObjAndDisplay(target, CSG.fromPolygons(csgs[0].polygons));
     }).queue();
-
   }
 }
 
@@ -54,7 +77,7 @@ function  renderParts() {
     parts = cabinet.getParts();
   }
   new Jobs.CSG.Assembly.Join(parts).then((modelInfo, job) => {
-    ThreeDModel.display(modelInfo.unioned());
+    applyExtraObjAndDisplay(parts, modelInfo.unioned());
   }).queue();
 }
 
@@ -125,12 +148,13 @@ const hide = (sectionName) => {
   du.find(`[display-id='${ids[sectionName]}']`).hidden = true;
 }
 
-Global.onChange.order(async () => {
+du.on.match('enter', '*', () => {
   // TODO(timeout): this should not be nessisary.
-    setTimeout(renderRoom, 500);
+  console.log('rendering');
+    setTimeout(render, 1500);
 });
 
 module.exports = {
-  render, build, hide, set,
+  render, build, hide, set, extraCsgObjects,
   on: {switch: switchEvent.on}
 }

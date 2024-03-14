@@ -47,7 +47,7 @@ to.SectionProperties = {
 to.Cabinet = {
   Simple: {
     model: (mdto, environment) => {
-      const childs = mdto.children.map(c => c()).filter(c => c);
+      const childs = mdto.children.map(c => c()).filter(c => c instanceof Object);
       const parts = childs.filter(c => c.part || c.id.match(/^Divider/));
       const cutters = childs.filter(c => c.id.match(/^Cutter/));
       const cutter = mdto.openings[0].cutter;
@@ -56,20 +56,20 @@ to.Cabinet = {
       for (let index = 0; index < parts.length; index++) {
         const id = parts[index].id;
         let model = environment.modelInfo.model[id];
-        if (!(model instanceof CSG)) {
-          environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
-        }
         if (model) {
+          if (!(model instanceof CSG)) {
+            environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
+          }
           csg = csg.union(model);
         }
       }
       for (let index = 0; index < cutters.length; index++) {
         const id = cutters[index].id;
         let model = environment.modelInfo.model[id];
-        if (!(model instanceof CSG)) {
-          environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
-        }
         if (model) {
+          if (!(model instanceof CSG)) {
+            environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
+          }
           csg = csg.subtract(model);
         }
       }
@@ -158,21 +158,26 @@ to.CutterReference = {
       let ref = rMdto.reference;
       const isBiPoly = ref instanceof BiPolygon;
       let biPoly = ref;
-      if (!(biPoly instanceof BiPolygon)) {
-        let biPolyArr = environment.modelInfo.biPolygonArray[ref.id];
-        biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
+      if (biPoly instanceof BiPolygon)
+        console.log('do i use this');
+      if (environment.modelInfo.biPolygonArray[ref.id]) {
+        if (!(biPoly instanceof BiPolygon)) {
+          let biPolyArr = environment.modelInfo.biPolygonArray[ref.id];
+          biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
+        }
+        if (biPoly === undefined) throw new Error('Invalid Reference or assemblies not ordered properly');
+        biPoly.offset(rMdto.fromPoint.object(), rMdto.offset);
+        let poly = (rMdto.front ? biPoly.front() : biPoly.back()).reverse();
+        let length = 0;
+        poly.lines().forEach(l => length += l.length());
+        const cabUtil = CabinetUtil.instance(rMdto, environment);
+        const polyCtoCabC = new Line3D(poly.center(), cabUtil.partCenter());
+        const sameDir = polyCtoCabC.vector().sameDirection(poly.normal());
+        const multiplier = sameDir ? -1 : 1;
+        const distance = 10 * length;
+        return BiPolygon.fromPolygon(poly, 0, multiplier * distance, {x: distance, y:distance});
       }
-      if (biPoly === undefined) throw new Error('Invalid Reference or assemblies not ordered properly');
-      biPoly.offset(rMdto.fromPoint.object(), rMdto.offset);
-      let poly = (rMdto.front ? biPoly.front() : biPoly.back()).reverse();
-      let length = 0;
-      poly.lines().forEach(l => length += l.length());
-      const cabUtil = CabinetUtil.instance(rMdto, environment);
-      const polyCtoCabC = new Line3D(poly.center(), cabUtil.partCenter());
-      const sameDir = polyCtoCabC.vector().sameDirection(poly.normal());
-      const multiplier = sameDir ? -1 : 1;
-      const distance = 10 * length;
-      return BiPolygon.fromPolygon(poly, 0, multiplier * distance, {x: distance, y:distance});
+      return null;
     }
   }
 }

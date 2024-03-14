@@ -12,6 +12,7 @@ const DividerSection = require('./partition/divider.js');
 const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
 const CustomEvent = require('../../../../../../../public/js/utils/custom-event.js')
+const PropertyConfig = require('../../../../config/property/config.js');
 
 const v = (x,y,z) => new Vertex3D(x,y,z);
 class SectionProperties extends KeyValue{
@@ -54,9 +55,9 @@ class SectionProperties extends KeyValue{
     const sectionCutters = [];
     this.userFriendlyId = () => this.getRoot().userFriendlyId(this.id());
     this.allAssemblies = () => this.getRoot().allAssemblies();
-
+    this.userFriendlyIndex = () => this.userFriendlyId().replace(/^.*?([0-9]{1,})$/, '$1');
     // index ||= 0;
-    const coordinates = {inner: [v(),v(10,0,0),v(10,10,0),v(0,0,10)], outer: [v(),v(20,0,0),v(20,20,0),v(0,0,20)]};
+    const coordinates = {inner: [v(),v(10,0,0),v(10,10,0),v(0,10,0)], outer: [v(),v(20,0,0),v(20,20,0),v(0,20,0)]};
     const temporaryInitialVals = {parent, _TEMPORARY: true};
     Object.getSet(this, temporaryInitialVals, 'parentAssembly');
     Object.getSet(this, {divideRight: false, config, index}, 'divider', 'cover');
@@ -74,7 +75,7 @@ class SectionProperties extends KeyValue{
     this.index = () => index;
     pattern ||= new Pattern('z');
 
-    const changeEvent = new CustomEvent('change', true);
+    const changeEvent = new CustomEvent('change');
     this.on.change = changeEvent.on;
     this.trigger.change = changeEvent.trigger;
     const keyValHash = this.hash;
@@ -82,7 +83,7 @@ class SectionProperties extends KeyValue{
     let running = false;
     this.hash = () => {
       const cover = this.cover();
-      let hash = (cover ? cover.hash() : 0) + pattern.toString().hash();
+      let hash = pattern.hash();
       hash += keyValHash();
       hash += JSON.stringify(coordinates).hash();
       for (let index = 0; index < this.subassemblies.length; index++) {
@@ -208,7 +209,8 @@ class SectionProperties extends KeyValue{
     }
     this.children = () => this.getSubassemblies(true);
 
-    this.propertyConfig = () => this.getCabinet().propertyConfig();
+    this.propertyConfig = () => this.getCabinet() ?
+          this.getCabinet().propertyConfig() : new PropertyConfig();
 
     this.getAssembly = (locationCode, callingAssem) => {
       if (callingAssem === this) return undefined;
@@ -265,17 +267,17 @@ class SectionProperties extends KeyValue{
           }
           if (index === 0) info.push({overlay: startOffset - reveal / 2});
           if (index === this.sections.length - 1) info.push({overlay: endOffset - reveal / 2});
-          else info.push({overlay: (divider.maxWidth() - reveal)/2});
+          else info.push({overlay: (divider.dividerWidth() - reveal)/2});
         }  else if (isInset) {
           if (index % 2 === 0) {
             if (index === this.sections.length * 2 - 2) info._TOTAL -= insetValue * 2;
-            else info._TOTAL -= (divider.maxWidth() + insetValue * 2);
+            else info._TOTAL -= (divider.dividerWidth() + insetValue * 2);
           }
           info.push({overlay: -insetValue});
         } else {
           if (index % 2 === 0) {
             if (index === this.sections.length * 2 - 2) info._TOTAL += overlay * 2;
-            else info._TOTAL += overlay * 2 - divider.maxWidth();
+            else info._TOTAL += overlay * 2 - divider.dividerWidth();
           }
           info.push({overlay: overlay});
         }
@@ -411,6 +413,7 @@ class SectionProperties extends KeyValue{
         if (dividerCount < currDividerCount) {
           const diff = currDividerCount - dividerCount;
           this.sections.splice(dividerCount + 1);
+          this.pattern().setStr(this.pattern().str.substring(0, dividerCount));
           if (!dontUpdateCoords) setSectionCoordinates(true);
           return true;
         } else {
@@ -419,16 +422,19 @@ class SectionProperties extends KeyValue{
             const section = new SectionProperties(this.childConfig(), index + 2);
             this.sections.push(section);
           }
+          this.pattern().setStr(this.pattern().str + new Array(diff).fill('z').join(''));
           if (!dontUpdateCoords && diff !== 0) setSectionCoordinates(true);
           return diff !== 0;
         }
       }
+
       return false;
     }
 
     this.setPattern = (patternObj) => {
       if (patternObj instanceof Pattern) {
         pattern = patternObj;
+        this.pattern().onChange(this.reevaluate);
       }
     }
 
@@ -436,13 +442,13 @@ class SectionProperties extends KeyValue{
       if ((typeof patternStr) === 'string') {
         const sectionCount = patternStr.length;
         const group = this.getCabinet().group().id();
-        pattern = new Pattern(patternStr, {group});
+        pattern.setStr(patternStr);
         this.divide(sectionCount - 1, true);
         setSectionCoordinates(true);
       } else {
-        if (!pattern || pattern.str.length !== this.sectionCount()) {
+        if (!pattern) {
           const patStr = new Array(this.sectionCount()).fill('z').join('');
-          pattern = pattern.clone(patStr);
+          pattern = pattern.setStr(patStr);
         }
       }
       return pattern;
@@ -521,12 +527,11 @@ class SectionProperties extends KeyValue{
      info.endOffset = endOffset;
 
     let offset = this.isVertical() ? this.outerLength() : this.outerWidth();
-    const propConfig = this.propertyConfig();
     for (let index = 0; index < this.sections.length; index += 1) {
       if (index < this.sections.length - 1) {
         const section = this.sections[index];
         const divider = section.divider().divider();
-        const offset = divider.maxWidth();
+        const offset = divider.dividerWidth();
         info[index + 1] = {offset, divider};
       } else {
         info[index + 1] = {offset: endOffset};
@@ -579,7 +584,7 @@ class SectionProperties extends KeyValue{
 
     function referenceFront(reference, cabinet) {
       const refCenter = new Vertex3D(reference.position().center());
-      const cabCenter = cabinet.buildCenter();
+      const cabCenter = cabinet.buildCenter(true);
       const refDist = refCenter.distance(cabCenter);
       refCenter.translate(reference.position().normals().z);
       const transDist = refCenter.distance(cabCenter);

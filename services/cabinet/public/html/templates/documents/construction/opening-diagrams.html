@@ -1,0 +1,26 @@
+<div cabinet-list-hash={{hash}} class='build-diagram-cnt'>
+  <div:t repeat='set in cabinetSets' class='avoid-page-break inline-flex'>
+    <span:t repeat='cabinet in set' class='fit'>
+      <div class='center'>
+        <b>{{disp.partIdPrefix(cabinet)}}</b>
+      </div>
+      <div id='{{cntId(cabinet.id())}}'></div>
+      <div class='inline-flex'>
+        <table class='no-borders'>
+          <tbody>
+            <tr:t repeat='set in sectionSets(cabinet)'>
+              <no-tag:t repeat='section in set'>
+                <td>{{section.userFriendlyIndex()}})</td>
+                <td>
+                  {{disp.measurement(section.innerWidth())}} X
+                  {{disp.measurement(section.innerLength())}}
+                </td>
+                {{($index % 2) === 0 ? '<td>&nbsp&nbsp&nbsp</td' : ''}}
+              </no-tag:t>
+            </tr:t>
+          </tbody>
+        </table>
+      </div>
+    </span:t>
+  </div:t>
+</div>

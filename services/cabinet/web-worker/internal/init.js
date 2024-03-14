@@ -10,6 +10,8 @@ const To2D = require("./services/to-2d");
 const PartInfo = require("./services/part-information");
 const dataTransferConfig = require('./math-data-transfer-config.json');
 const DTO = require('../shared/data-transfer-object')(dataTransferConfig);
+const RDTO = require('./services/modeling/reconnect-transfer-object');
+goDownTheRabbitHole = false;
 
 
 function handleTask(task, env) {
@@ -24,7 +26,7 @@ function handleTask(task, env) {
     case 'join': return ApplyJoints(payload, env, taskId);
     case 'intersection': return ApplyJoints(payload, env, taskId, true);
     case 'assembliesto2d': return To2D.assemblies(payload, env, taskId);
-    case 'panelsinformation': return PartInfo(payload, env, taskId);
+    case 'partsinformation': return PartInfo(payload, env, taskId);
     default: return new Error('UnkownTask');
   }
 }
@@ -42,7 +44,10 @@ function runTask(task, env) {
 
 function runTasks(task, env) {
   const payload = task.payload;
-  env ||= payload.environment;
+  if (payload.environment) {
+    payload.environment.byId = RDTO(payload.environment.byId);
+    env = payload.environment;
+  }
   if (!Array.isArray(payload.tasks)) return runTask(task, env);
 
   for (let index = 0; index < payload.tasks.length; index++) {
@@ -51,11 +56,8 @@ function runTasks(task, env) {
   }
 }
 
+runCount = 1;
 onmessage = (messageFromMain) => {
     const data = messageFromMain.data;
-    try {
-      runTasks(data);
-    } catch (e) {
-      postMessage({id: data.id, result: e});
-    }
+    runTasks(data);
 };

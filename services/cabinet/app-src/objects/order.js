@@ -14,6 +14,7 @@ class Order {
     }
     Object.getSet(this, initialVals, 'rooms');
     Object.getSet(this, {_TEMPORARY: true, name, versionId});
+    // TODO: I think making rooms and array would make things simpler... athough it will be a chore to convert everything.
     this.rooms = {};
     this.worthSaving = () => {
       const keys = Object.keys(this.rooms);
@@ -23,7 +24,9 @@ class Order {
       const groups = this.rooms[keys[0]].groups;
       return groups && groups[0].objects.length > 0;
     }
-    this.addRoom = (name) => this.rooms[name] = new Room(name, this);
+    this.addRoom = (name) =>
+      this.rooms[name] = new Room(name, this);
+    this.hash = () => name.hash() + Object.values(this.rooms).map(r => r.hash()).sum();
   }
 }
 

@@ -7,8 +7,7 @@ const Joint = require('../../joint/joint.js');
 class Panel extends Assembly {
   constructor(partCode, partName, config) {
     super(partCode, partName, config);
-
-    this.railThickness = () => this.thickness();
+    this.category = 'Panel';
     Object.getSet(this, {hasFrame: false});
   }
 }

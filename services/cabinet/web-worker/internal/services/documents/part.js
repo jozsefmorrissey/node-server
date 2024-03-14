@@ -52,7 +52,8 @@ class PartInfo {
     };
 
     const normRotz = Line3D.coDirectionalRotations(this.normals(true));
-    const noJointModel = env.modelInfo.model[part.id];
+    let noJointModel = env.modelInfo.model[part.id];
+    if (!(noJointModel instanceof CSG)) noJointModel = CSG.fromPolygons(noJointModel.polygons, true);
     const normInfoRight = noJointModel.normalize(normRotz, true, false);
     const normInfoLeft = noJointModel.normalize(normRotz, false, false);
 
@@ -80,7 +81,7 @@ class PartInfo {
       if (joints === undefined && cutInfo) {
           const side = rightOleft ? 'Right' : 'Left';
           const cuts = cutInfo.filter(c => c.primarySide() === side || c.primarySide() === 'Both');
-          maleModels = cuts.map(c => env.modelInfo.joined[c.maleId()]).filter(mm => mm);
+          maleModels = cuts.map(c => c.maleModel());
       } else {
         if (joints === undefined) {
           const jointInfo = this.jointInfo(rightOleft);
@@ -88,7 +89,7 @@ class PartInfo {
         }
         const males = [];
         joints.forEach(j => males.concatInPlace(env.jointMap[j.id].male));
-        maleModels = males.map(maleId => env.modelInfo.joined[maleId]);
+        maleModels = males.map(maleId => this.joinedModel(maleId));
       }
 
       maleModels.forEach(csg => model = model.subtract(csg));
@@ -103,8 +104,13 @@ class PartInfo {
     };
 
     this.noJointModel = (rightOleft) => {
-      return this.normalize(rightOleft, env.modelInfo.model[part.id]);
+      return this.normalize(rightOleft, noJointModel);
     };
+    this.joinedModel = (id) => {
+      let model = env.modelInfo.joined[id];
+      if (!(model instanceof CSG)) model = CSG.fromPolygons(model.polygons, true);
+      return model;
+    }
 
     let currentModel = this.noJointModel();
     this.currentModel = (rightOleft) => {

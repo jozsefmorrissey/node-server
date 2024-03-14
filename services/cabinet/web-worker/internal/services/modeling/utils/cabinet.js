@@ -6,12 +6,13 @@ const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js'
 class CabinetUtil {
   constructor (cabRmdto, env){
     this.subassemblies = cabRmdto.children.map(c => c());
+    this.cabinet = () => cabRmdto;
 
     let partCenter;
     this.partCenter = () => {
       if (!partCenter) {
         const centers = [];
-        const subAssems = this.subassemblies.filter(a => !a.id.match(/^(SectionProperties|Auto|Cutter|Void)/));
+        const subAssems = this.subassemblies.filter(a => a instanceof Object && !a.id.match(/^(SectionProperties|Auto|Cutter|Void)/));
         for (let index = 0; index < subAssems.length; index++) {
           const assem = subAssems[index];
           centers.push(assem.position.current.center);
@@ -53,23 +54,25 @@ class CabinetUtil {
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
         const sideBiPolyArr = env.modelInfo.biPolygonArray[assem.id];
-        const biPoly = new BiPolygon(sideBiPolyArr[0], sideBiPolyArr[1]);
-        const faces = biPoly.closestOrder(center);
-        const plane = faces[0].toPlane();
-        const intersection = plane.intersection.line(line);
-        if (intersection) {
-          const dist = line.midpoint().distance(intersection);
-          const intersectLine = new Line3D(line.midpoint(), intersection);
-          const intersectVector = intersectLine.vector();
-          const direction = vector.sameDirection(intersectVector) ? 'positive' : 'negitive';
-          if (closest[direction] === undefined || closest[direction].inner.dist > dist) {
-            const oplane = faces[1].toPlane();
-            plane.intersection.line(line)
-            const ointer = oplane.intersection.line(line);
-            const odist = ointer.distance(line.midpoint());
-            closest[direction] = {assem, inner: {dist, plane, intersection},
-            outer: {dist: odist, plane: oplane, intersection: ointer}};
-          };
+        if (sideBiPolyArr) {
+          const biPoly = new BiPolygon(sideBiPolyArr[0], sideBiPolyArr[1]);
+          const faces = biPoly.closestOrder(center);
+          const plane = faces[0].toPlane();
+          const intersection = plane.intersection.line(line);
+          if (intersection) {
+            const dist = line.midpoint().distance(intersection);
+            const intersectLine = new Line3D(line.midpoint(), intersection);
+            const intersectVector = intersectLine.vector();
+            const direction = vector.sameDirection(intersectVector) ? 'positive' : 'negitive';
+            if (closest[direction] === undefined || closest[direction].inner.dist > dist) {
+              const oplane = faces[1].toPlane();
+              plane.intersection.line(line)
+              const ointer = oplane.intersection.line(line);
+              const odist = ointer.distance(line.midpoint());
+              closest[direction] = {assem, inner: {dist, plane, intersection},
+              outer: {dist: odist, plane: oplane, intersection: ointer}};
+            };
+          }
         }
       }
       return closest;
@@ -80,7 +83,7 @@ class CabinetUtil {
 const built = {};
 CabinetUtil.instance = (rMdto, environment) => {
   let cabinet = rMdto.find.up('c');
-  if (built[cabinet.id] === undefined) {
+  if (built[cabinet.id] === undefined || built[cabinet.id].cabinet().hash !== cabinet.hash) {
     built[cabinet.id] = new CabinetUtil(cabinet, environment);
   }
   return built[cabinet.id];

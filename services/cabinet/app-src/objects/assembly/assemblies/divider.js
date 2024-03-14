@@ -15,7 +15,10 @@ class Divider extends Assembly {
     const instance = this;
     const pToJson = this.toJson;
 
-    Object.getSet(this, 'type');
+    const initialVals = {
+      panelThickness: 2.54*3/4
+    }
+    Object.getSet(this, initialVals, 'type', 'dividerThickness');
 
     const pFull = new Panel(':full', 'Full');
     const pFront = new Panel(':f', 'Front');
@@ -41,8 +44,15 @@ class Divider extends Assembly {
     parts[4].addDependencies(new Joint(parts[4], parts[3], null, 'backCutJoint'));
 
     this.part = () => false;
-    this.panelThickness = () => 2.54*3/4;
-    this.maxWidth = () => this.panelThickness();
+    let dividerWidth;
+    this.maxWidth = (width) => {
+      const pt = this.panelThickness();
+      if (width) {
+        dividerWidth = width;
+      }
+      if (dividerWidth && dividerWidth < pt) dividerWidth = null;
+      return dividerWidth || pt;
+    }
 
     function activeParts() {
       switch (type) {
@@ -73,7 +83,8 @@ class Divider extends Assembly {
     }
 
     const parentHash = this.hash;
-    this.hash = () => parentHash() + type.hash();
+    this.hash = () => parentHash() +
+        `${type}:${this.maxWidth()}:${this.panelThickness()}`.hash();
   }
 }
 

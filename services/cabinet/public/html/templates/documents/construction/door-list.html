@@ -1,0 +1,24 @@
+<div class='small-margin'>
+    <table>
+      <tbody>
+        <tr>
+          <th>Qt</th>
+          <th>Width</th>
+          <th>Height</th>
+          <th>Thickness</th>
+          <th>Style</th>
+          <th>Location</th>
+          <th>Notes</th>
+        </tr>
+        <tr:t repeat='doorObj in partListMap[type]'>
+          <td>{{doorObj.length}}</td>
+          <td>{{disp.measurement(doorObj.info.demensions.x)}}</td>
+          <td>{{disp.measurement(doorObj.info.demensions.y)}}</td>
+          <td>{{disp.measurement(doorObj.info.demensions.z)}}</td>
+          <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+          <td>{{disp.roots(doorObj)}}
+          <td></td>
+        </tr:t>
+      </tbody>
+    </table>
+</div>

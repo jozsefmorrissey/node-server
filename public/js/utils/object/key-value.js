@@ -5,7 +5,7 @@ const NotifictionArray = Notifiction.Array;
 const CustomEvent = require('../custom-event.js');
 
 function updateParent(keyValue, event) {
-  return (target, detail) => {
+  return (detail, target) => {
     if (detail.new instanceof KeyValue) {
       const parentAttr = detail.new.value.parentAttribute();
       if (parentAttr) {

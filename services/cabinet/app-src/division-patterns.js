@@ -61,18 +61,9 @@ class Pattern {
     let changeEvent = props.changeEvent;
     changeEvent ||= new CustomEvent('change');
     const instance = this;
+    let unique, uniqueStr, elements, values;
+
     this.onChange = changeEvent.on;
-    this.str = str;
-    let unique = {};
-    for (let index = 0; index < str.length; index += 1) {
-      const char = str[index];
-      if (unique[char] === undefined) {
-        unique[char] = {char, count: 1};
-      } else {
-        unique[char].count++;
-      }
-    }
-    const uniqueStr = Object.keys(unique).join('');
     this.unique = () => uniqueStr;
     this.equals = this.unique.length === 1;
 
@@ -96,23 +87,38 @@ class Pattern {
       return valueObj;
     }
 
-    if ((typeof str) !== 'string' || str.length === 0)
+    function setStr(string) {
+      instance.str = string;
+      unique = {};
+      for (let index = 0; index < string.length; index += 1) {
+        const char = string[index];
+        if (unique[char] === undefined) {
+          unique[char] = {char, count: 1};
+        } else {
+          unique[char].count++;
+        }
+      }
+      uniqueStr = Object.keys(unique).join('');
+
+      if ((typeof string) !== 'string' || string.length === 0)
       throw new Error('Must define str (arg0) as string of length > 1');
 
-    const elements = {};
-    const values = {};
-    for (let index = 0; index < str.length; index += 1) {
-      const char = str[index];
-      if (elements[char]) {
-        elements[char].count++;
-        elements[char].indexes.push(index);
-      } else {
-        elements[char] = new Element(char, index, props.group);
+      elements = {};
+      values = {};
+      for (let index = 0; index < string.length; index += 1) {
+        const char = string[index];
+        if (elements[char]) {
+          elements[char].count++;
+          elements[char].indexes.push(index);
+        } else {
+          elements[char] = new Element(char, index, props.group);
+        }
       }
+      instance.ids = Object.keys(elements);
+      instance.size = string.length;
     }
+    this.setStr = setStr;
 
-    this.ids = Object.keys(elements);
-    this.size = str.length;
     this.satisfied = () => {throw new Error('dont know where this is used');}
 
     function onlyOneUnique(uniqueVals, dist) {
@@ -121,10 +127,11 @@ class Pattern {
       const values = new Array(count).fill(value);
       const list = new Array(count).fill(value);
       const fill = [new Measurement(value).display()];
-      return {values, list, fill, str};
+      return {values, list, fill, str: instance.str};
     }
 
     function numbersOnly(uniqueVals, dist) {
+      const str = instance.str;
       let count = 0;
       for (let index = 0; index < str.length; index += 1) {
         count += Number.parseInt(str.charAt(index));
@@ -156,7 +163,7 @@ class Pattern {
       const uniqueVals = Object.values(unique);
       if (uniqueVals.length === 1) return onlyOneUnique(uniqueVals, dist);
 
-      if (str.trim().match(numbersOnlyReg)) return numbersOnly(uniqueVals, dist);
+      if (this.str.trim().match(numbersOnlyReg)) return numbersOnly(uniqueVals, dist);
 
       const updateOrder = uniqueVals.map(uv => uv.char).sort(alphaSorter).slice(0);
       let lastElem;
@@ -181,8 +188,8 @@ class Pattern {
 
       const list = [];
       let fill = [];
-      for (let index = 0; index < str.length; index += 1)
-        list[index] = values[str[index]];
+      for (let index = 0; index < this.str.length; index += 1)
+        list[index] = values[this.str[index]];
       for (let index = 0; index < uniqueVals.length; index += 1) {
         const elem = elements[uniqueVals[index].char];
         if (elem.id === lastElem.id) {
@@ -191,7 +198,7 @@ class Pattern {
           fill[index] = elem.value().display();
         }
       }
-      const retObj = {values, list, fill, str};
+      const retObj = {values, list, fill, str: this.str};
       return retObj;
     }
 
@@ -213,12 +220,14 @@ class Pattern {
     this.toJson = () => {
       return {str: this.str, values: this.values(), props: Object.toJson(props)};
     }
-    this.toString = () => `${this.str}@(${Array.from(str).map(c => instance.value(c)).join(',')})`;
+    this.toString = () => `${this.str}@(${Array.from(this.str).map(c => instance.value(c)).join(',')})`;
 
     this.hash = () => this.toString().hash();
 
     this.elements = elements;
     this.calc = calc;
+
+    setStr(str);
   }
 }
 

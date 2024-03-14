@@ -98,8 +98,10 @@ class VoidUtil {
 const built = {};
 VoidUtil.instance = (mDto, environment) => {
   const voidMdto = mDto.parentAssembly();
-  if (built[voidMdto.id] === undefined) {
+  const rootHash = mDto.find.root().hash;
+  if (built[voidMdto.id] === undefined || built[voidMdto.id].rootHash !== rootHash) {
     built[voidMdto.id] = new VoidUtil(voidMdto, environment);
+    built[voidMdto.id].rootHash = rootHash;
   }
   return built[voidMdto.id];
 }

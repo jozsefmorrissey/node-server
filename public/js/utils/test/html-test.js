@@ -22,7 +22,7 @@ class HtmlTest extends FileTab {
       container.append(tabContainer);
 
 
-      const closeBtnCnt = du.create.element('div', {class: 'center'});
+      const closeBtnCnt = du.create.element('div', {class: 'center no-print'});
       container.append(closeBtnCnt);
 
       const buttonId = id + '-close-btn';

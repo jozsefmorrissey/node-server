@@ -29,11 +29,12 @@ const evaluateAttributes = (to) => (object, attributes, dto) => {
   return dto;
 }
 
+const excludeKeys = ['events', 'trigger', 'on'];
 const nonFuntionalAttrs = (object, dto, to) => {
   const keys = Object.keys(object);
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
-    if ((typeof object[key]) !== 'function') {
+    if ((typeof object[key]) !== 'function' && excludeKeys.indexOf(key) === -1) {
       const value =  to(object[key]);
       dto.pathValue(key, value);
     }

@@ -1,10 +1,10 @@
 
-const {Parrelle, Sequential, And, Or} = require('./tasks/basic.js');
+const {InfoAvailible, Parrelle, Sequential, And, Or} = require('./tasks/basic.js');
 const ModelInfo = require('./model-information');
 const WebWorkerDeligator = require('./deligator');
 const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js');
 const {Intersection, Join, Model, Union, AssembliesTo2D, SimpleTo2D, Simple} = require('./tasks/csg');
-const {Panels} = require('./tasks/documentation');
+const {Parts} = require('./tasks/documentation');
 const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
 const SimpleModel = require('../../app-src/objects/simple/simple.js');
 const Assembly = require('../../app-src/objects/assembly/assembly.js');
@@ -12,7 +12,7 @@ const Panel = require('../../app-src/objects/assembly/assemblies/panel.js');
 
 class Job {
   constructor(task) {
-    CustomEvent.all(this, 'complete', 'failed', 'change');
+    CustomEvent.all(this, 'finished', 'success', 'failed', 'change');
     let finished = false;
     let _error;
     task.on.change((data) => this.trigger.change(data, this));
@@ -20,8 +20,9 @@ class Job {
     this.finished = (is, result) => {
       if (!finished && is === true) {
         finished = true;
-        _error === undefined ? this.trigger.complete(result || this, this) :
+        _error === undefined ? this.trigger.success(result || this, this) :
                                 this.trigger.failed(_error, this);
+        this.trigger.finished(_error, this);
       }
       return finished;
     }
@@ -33,16 +34,20 @@ class Job {
       return _error;
     }
     this.queue = () => {
-      WebWorkerDeligator.queue(task);
-      if (task instanceof Parrelle) {
-        task.tasks().forEach(t => WebWorkerDeligator.queue(t));
-      }
+      setTimeout(() => {
+        WebWorkerDeligator.queue(task);
+      });
     }
-    this.on.complete(() => finished = true);
-    this.on.failed((error) => (finished = true) && (_error === undefined && (_error = error)));
-    this.then = (onComplete, onFailed) => {
-      this.on.complete(onComplete);
-      this.on.failed(onFailed);
+    this.on.success((data) => {
+      this.finished(true, data);
+    });
+    this.on.failed((error) => {
+      if(error !== undefined) _error = error;
+      this.finished(true, _error);
+    });
+    this.then = (onSuccess, onFailed) => {
+      this.on.success(onSuccess);
+      this.on.failed(onFailed || console.error);
       return this;
     }
   }
@@ -70,8 +75,8 @@ class SimpleModelJob extends Job {
   constructor(simpleObjs) {
     const task = Simple(simpleObjs);
     super(task);
-    task.on.complete(() =>
-        this.trigger.complete(task.result(), this));
+    task.on.success(() =>
+        this.trigger.success(task.result(), this));
     task.on.failed((error) => this.trigger.failed(error, this));
   }
 }
@@ -80,8 +85,8 @@ class SimpleTo2DJob extends Job {
   constructor(simpleObjs) {
     const task = SimpleTo2D(simpleObjs);
     super(task);
-    task.on.complete(() =>
-        this.trigger.complete(task.result(), this));
+    task.on.success(() =>
+        this.trigger.success(task.result(), this));
     task.on.failed((error) => this.trigger.failed(error, this));
   }
 }
@@ -99,7 +104,7 @@ class CsgModelJob extends CsgModelInfoJob {
     props.modelAttribute = 'model';
     const modelInfo = ModelInfo.object(assemblyOs, props);
     super(Model(modelInfo), modelInfo);
-    this.task().on.complete(() => this.trigger.complete(modelInfo, this));
+    this.task().on.success(() => this.trigger.success(modelInfo, this));
     this.task().on.failed((error) => this.trigger.failed(error, this));
   }
 }
@@ -109,7 +114,7 @@ class CsgJoinJob extends CsgModelInfoJob {
   constructor(assemblyOs) {
     const modelInfo = ModelInfo.object(assemblyOs);
     super(Join(modelInfo), modelInfo);
-    this.task().on.complete(() => this.trigger.complete(modelInfo, this));
+    this.task().on.success(() => this.trigger.success(modelInfo, this));
     this.task().on.failed((error) => this.trigger.failed(error, this));
   }
 }
@@ -119,7 +124,7 @@ class CsgIntersectionJob extends CsgModelInfoJob {
   constructor(assemblyOs) {
     const modelInfo = ModelInfo.object(assemblyOs);
     super(Intersection(modelInfo), modelInfo);
-    this.task().on.complete(() => this.trigger.complete(modelInfo, this));
+    this.task().on.success(() => this.trigger.success(modelInfo, this));
     this.task().on.failed((error) => this.trigger.failed(error, this));
   }
 }
@@ -130,8 +135,15 @@ class CsgPartsJob extends CsgModelInfoJob {
   constructor(assemblyOs) {
     const modelInfo = ModelInfo.object(assemblyOs);
     super(Join(modelInfo), modelInfo);
-    this.task().on.complete(() => this.trigger.complete(modelInfo, this));
+    this.task().on.success(() => this.trigger.success(modelInfo, this));
     this.task().on.failed((error) => this.trigger.failed(error, this));
+  }
+}
+
+class CsgCabinetBoxOnlyJob extends CsgModelJob {
+  constructor(cabinet) {
+    super([cabinet], {partsOnly: false, noJoints: true});
+    this.cabinet = () => cabinet;
   }
 }
 
@@ -153,6 +165,41 @@ class CsgComplexCabinet extends CsgJoinJob {
   }
 }
 
+const cabinetJobGetter = (type) => {
+  switch (type) {
+    case 'box': return c => new CsgCabinetBoxOnlyJob(c);
+    case 'simple': return c => new CsgSimpleCabinet(c);
+    case 'complex': return c => new CsgComplexCabinet(c);
+  }
+}
+class CsgCabinets extends Job {
+  constructor(cabinets, type) {
+    const jobs = cabinets.map(cabinetJobGetter(type));
+    const tasks = jobs.map(j => j.task());
+    const task = new Parrelle(...tasks);
+    super(task);
+    task.on.success((result) => {
+      console.log(tasks);
+      const modelMaps = {};
+      jobs.forEach(j => modelMaps[j.cabinet().id()] = j.modelInfo());
+      this.trigger.success(modelMaps);
+    });
+  }
+}
+
+class CsgComplexCabinets extends CsgCabinets {
+  constructor(cabinets) { super(cabinets, 'complex');}
+}
+
+class CsgSimpleCabinets extends CsgCabinets {
+  constructor(cabinets) { super(cabinets, 'simple');}
+}
+
+class CsgBoxOnlyCabinets extends CsgCabinets {
+  constructor(cabinets) { super(cabinets, 'box');}
+}
+
+
 class CsgAssembliesTo2DJob extends CsgModelInfoJob {
   constructor(assemblyOs, props) {
     props ||= {};
@@ -160,7 +207,7 @@ class CsgAssembliesTo2DJob extends CsgModelInfoJob {
     const modelInfo = ModelInfo.object(assemblyOs, props);
     const task = AssembliesTo2D(modelInfo, props.modelAttribute === 'joined', props.unioned);
     super(task, modelInfo);
-    this.task().on.complete(() => this.trigger.complete(modelInfo, this));
+    this.task().on.success(() => this.trigger.success(modelInfo, this));
     this.task().on.failed((error) => this.trigger.failed(error, this));
   }
 }
@@ -219,7 +266,7 @@ class CsgRoomJob extends Job {
       console.log('build?:', (new Date().getTime() - start)/1000)
       return csg;
     }
-    task.on.complete(() => this.trigger.complete(this.csg(), this));
+    task.on.success(() => this.trigger.success(this.csg(), this));
     task.on.failed((error) => this.trigger.failed(error, this));
   }
 }
@@ -231,7 +278,7 @@ CsgRoomJob.tasksAndJobs = (room) => {
     for (let j = 0; j < group.objects.length; j++) {
       const obj = group.objects[j];
       const job = obj instanceof Cabinet ?
-          new CsgSimpleCabinet(obj) : new CsgModelJob(obj);
+          new CsgComplexCabinet(obj) : new CsgModelJob(obj);
       jobs.push(job);
       tasks.push(job.task());
     }
@@ -242,17 +289,100 @@ CsgRoomJob.tasksAndJobs = (room) => {
 
 CsgRoomJob.task = (room) => CsgRoomJob.tasksAndJobs(room).task;
 
-class DocumentationPanelsJob extends Job {
+class PartsDocumentationJob extends Job {
   constructor(assemblyOs, props) {
-    if (assemblyOs instanceof Cabinet) assemblyOs = assemblyOs.parts();
-    const panels = assemblyOs.filter(part => part instanceof Panel);
-    const modelInfo = ModelInfo.object(panels, props);
-    const task = Panels(modelInfo);
+    const allParts = assemblyOs instanceof Cabinet;
+    let _result;
+    let completeTriggered = false;
+    if (allParts) assemblyOs = assemblyOs.getParts();
+    const parts = assemblyOs.filter(part => part.part());
+    const modelInfo = ModelInfo.object(parts, props);
+    if (allParts) _result = modelInfo.partInformation();
+    const task = _result ? new InfoAvailible(_result) : Parts(modelInfo);
     super(task);
-    this.panels = () => panels;
-    task.on.complete(() =>
-        this.trigger.complete(task.result(), this));
+    this.modelInfo = () => modelInfo;
+    this.parts = () => parts;
+    task.on.success((result) => {
+      _result = result;
+      if (allParts && !completeTriggered) {
+        completeTriggered = true;
+        modelInfo.partInformation(_result);
+        this.trigger.success(_result, this);
+      }
+    });
     task.on.failed((error) => this.trigger.failed(error, this));
+
+    const parentQueue = this.queue;
+    this.queue = () => {
+      if (_result) this.trigger.success(_result, this);
+      else parentQueue();
+    };
+  }
+}
+
+class CabinetDocumentationJob extends PartsDocumentationJob {
+  constructor(cabinet) {
+    super(cabinet);
+  }
+}
+
+class GroupDocumentationJob extends Job {
+  constructor(group, props) {
+    const tasks = [];
+    const _result = {group, cabinets: []};
+    group.objects.forEach((cabinet, i) => {
+      if (!(cabinet instanceof Cabinet)) return;
+      const task = new CabinetDocumentationJob(cabinet).task();
+      task.on.success(parts =>
+          _result.cabinets[i] = {cabinet, parts});
+      tasks.push(task);
+    });
+
+    const task = new Parrelle(...tasks);
+    task.result = () => _result;
+    super(task);
+    task.on.success(() => this.trigger.success(_result, this));
+  }
+}
+
+class RoomDocumentationJob extends Job {
+  constructor(room, props) {
+    const tasks = [];
+    const _result = {room, groups: []};
+    room.groups.forEach((group, i) => {
+      if (!group.objects.filter(o => o instanceof Cabinet).length) return;
+      const task = new GroupDocumentationJob(group).task();
+      tasks.push(task);
+      task.on.success(result =>
+         _result.groups[i] = result);
+    });
+
+    const task = new Parrelle(...tasks);
+    task.result = () => _result;
+    super(task);
+    task.on.success(() => this.trigger.success(_result, this));
+  }
+}
+
+class OrderDocumentationJob extends Job {
+  constructor(order, props) {
+    const tasks = [];
+    const _result = {order, rooms: []};
+    Object.keys(order.rooms).forEach((key, i) => {
+      const room = order.rooms[key];
+      const task = new RoomDocumentationJob(room).task();
+      if (task.tasks().length > 0) {
+        task.on.success(result =>
+          _result.rooms[i] = result);
+        tasks.push(task);
+      }
+    });
+
+    const task = new Parrelle(...tasks);
+    task.result = () => _result;
+    super(task);
+    task.on.success(() => this.trigger.success(_result, this));
+
   }
 }
 
@@ -274,11 +404,19 @@ module.exports = {
       Complex: CsgComplexCabinet,
       To2D: CsgCabinetTo2DJob
     },
+    Cabinets: {
+      Simple: CsgSimpleCabinets,
+      Complex: CsgComplexCabinets,
+      BoxOnly: CsgBoxOnlyCabinets
+    },
     Room: {
       Simple: CsgRoomJob
     }
   },
   Documentation: {
-    Panels: DocumentationPanelsJob
+    Parts: PartsDocumentationJob,
+    Group: GroupDocumentationJob,
+    Room: RoomDocumentationJob,
+    Order: OrderDocumentationJob
   }
 }

@@ -62,16 +62,14 @@ class TableSawDocumentation {
         return new Line2d(intersections[0], (startCloser ? cut[0] : cut[1]));
       }
 
-
-      instance.partInfo.edges(true, true);
-      instance.partInfo.edges(false, true);
-      throw new Error('This shouldnt happen!10/29/2023');
+      throw HAND_SAW_ERROR;
     }
 
     function defaultDirectionalCutLine(yAxis, rightOleft, edges) {
       const setNormalized = cut.set().map(p => cut.normalize(rightOleft, p));
       const blockingPolys = setNormalized.filter(p => !within(0, yAxis.vector().unit().dot(p.normal())));
-      if (blockingPolys.length > 1) throw new Error('This Should Not Happen');
+      if (blockingPolys.length > 1)
+        throw new Error('This Should Not Happen');
       if (blockingPolys[0] === undefined) return null;
       const intersectingLine = Line3D.fromVector(blockingPolys[0].normal(), yAxis.midpoint());
       const intersection = blockingPolys[0].toPlane().intersection.line(intersectingLine);
@@ -105,7 +103,7 @@ class TableSawDocumentation {
           throw new Error('Shouldn\'t happen!28Nov2023');
       }
       if (possibleFenceEdges.length < 2) {
-        console.warn('There is probably an error here...\n\tUnless there is only on acceptible fence side')
+        console.warn('There maybe an error here...\n\tUnless there is only one acceptible fence side')
         return possibleFenceEdges[0];
       }
       return possibleFenceEdges[0].distance(y2d) > possibleFenceEdges[1].distance(y2d) ?

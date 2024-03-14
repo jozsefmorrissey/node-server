@@ -1358,12 +1358,21 @@ const colors = [
   'maroon', 'yellow', 'olive', 'lightcoral', 'green', 'aqua', 'white',
   'teal', 'darksalmon', 'blue', 'navy', 'salmon', 'silver', 'purple'
 ];
+const colorRGBs = {indianred: [205, 92, 92],gray: [128, 128, 128],fuchsia: [255, 0, 255],
+  lime: [0, 255, 0],black: [0, 0, 0],lightsalmon: [255, 160, 122],red: [255, 0, 0],
+  maroon: [128, 0, 0],yellow: [255, 255, 0],olive: [128, 128, 0],lightcoral: [240, 128, 128],
+  green: [0, 128, 0],aqua: [0, 255, 255],white: [255, 255, 255],teal: [0, 128, 128],
+  darksalmon: [233, 150, 122],blue: [0, 0, 255],navy: [0, 0, 128],salmon: [250, 128, 114],
+  silver: [192, 192, 192],purple: [128, 0, 128]
+}
+
 let colorIndex = 0;
 Function.safeStdLibAddition(String, 'nextColor', (...exclude) => {
   const filteredColors = colors.filter(c => exclude.indexOf(c) === -1)
   return filteredColors[colorIndex++ % filteredColors.length];
 }, true);
 Function.safeStdLibAddition(String, 'color', () => colors[index % colors.length], true);
+String.color.RGB = colorRGBs;
 
 const numberReg = /^[0-9]{1,}$/;
 Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {

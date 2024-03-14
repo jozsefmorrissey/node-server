@@ -1,0 +1,12 @@
+<div class='align-left'>
+  <div:t repeat='part in parts'>
+    <div class='inline-flex chev-dropdown-toggle'>
+      {{part.partCode()}}
+      <i class='down gg-chevron-down hidden' ></i>
+      <i class='right gg-chevron-right'></i>
+    </div>
+    <div class='tab chev-dropdown' hidden>
+      {{partHtml(part)}}
+    </div>
+  </div:t>
+</div>

@@ -1,4 +1,7 @@
 
+const Global = require('../app-src/services/global.js');
+const Order = require('../app-src/objects/order.js');
+
 const testFiles = [
   "./tests/cabinet",
   "./tests/polygon2d",
@@ -27,7 +30,10 @@ const fileContainsMatch = window.location.href.match(/(\?|&)testFile=(.{1,}?)($|
 const fileContains = fileContainsMatch && fileContainsMatch[2];
 const testNameMatch = window.location.href.match(/(\?|&)testName=(.{1,}?)($|&)/);
 const testNameContains = testNameMatch && testNameMatch[2];
+const testOrder = window.location.href.match(/(\?|&)testOrder=true($|&)/);
 
+
+if(testOrder) Global.order(Order.fromJson(require('./tests/test-order.json')))
 
 let filter;
 if (fileContainsMatch) filter = (fileName) => fileName.indexOf(fileContains) !== -1;

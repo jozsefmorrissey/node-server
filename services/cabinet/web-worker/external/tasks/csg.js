@@ -11,7 +11,7 @@ class CsgSimpleTask extends Task {
     this.payload = () => ({objects});
     this.on.message((result) => {
       _result = result;
-      this.status(STATUS.COMPLETE, _result);
+      this.status(STATUS.SUCCESS, _result);
     });
   }
 }
@@ -25,7 +25,7 @@ class CsgSimpleTo2DTask extends Task {
     this.payload = () => ({objects});
     this.on.message((result) => {
       _result = result;
-      this.status(STATUS.COMPLETE, _result);
+      this.status(STATUS.SUCCESS, _result);
     });
   }
 }
@@ -34,12 +34,15 @@ class CsgTask extends Task {
   constructor(modelInfo) {
     super();
     let initialModelCount;
+    this.completeOnFinish = true;
     this.process = () => this.constructor.name.replace(/^Csg(.{1,})Task/, "$1").toLowerCase();
-    this.progress = () => Math.floor(100*(1 - (this.remainingModels().length/initialModelCount))) || 0;
+    this.progress = () => this.completeOnFinish ? (this.status() === STATUS.SUCCESS ? 100 : 0) :
+          (initialModelCount === 0 ? 100 :
+          Math.floor(100*(1 - (this.remainingModels().length/initialModelCount))) || 0);
     this.payload = () => {
       if (this.finished()) return null;
       const assemblies = this.remainingModels();
-      if (assemblies.length === 0) this.status(STATUS.COMPLETE);
+      if (assemblies.length === 0) this.status(STATUS.SUCCESS);
       return {assemblies};
     };
     this.modelInfo = () => modelInfo;
@@ -56,11 +59,6 @@ class CsgOrderModelTask  extends CsgTask {
   constructor(modelInfo) {
     super(modelInfo);
     this.remainingModels = modelInfo.needsModeled;
-    this.processResult = (result) => {
-      if (result.type === 'model') modelInfo.modelMap(result.map);
-      else if (result.type === 'biPolygon') modelInfo.biPolygonArrayMap(result.map);
-      else console.warn(`Unkown result:`, result);
-    }
   }
 }
 
@@ -68,11 +66,6 @@ class CsgJoinTask extends CsgTask {
   constructor(modelInfo) {
     super(modelInfo);
     this.remainingModels = modelInfo.needsJoined;
-    this.processResult = (result) => {
-      if (result.type === 'joined') modelInfo.joinedMap(result.map);
-      else if (result.type === 'intersection') modelInfo.intersectionMap(result.map);
-      else console.warn(`Unkown result:`, result);
-    }
   }
 }
 
@@ -125,16 +118,16 @@ const AssembliesTo2D = (modelInfo, joined, unioned) => {
 };
 
 module.exports = {
-  Intersection: (modelInfo) => new Sequential(modelInfo.environment,
+  Intersection: (modelInfo, envDefined) => new Sequential(envDefined ? null : modelInfo.environment,
                                         new CsgModelTask(modelInfo),
                                         new CsgJoinTask(modelInfo),
                                         new CsgIntersectionTask(modelInfo),
                                         new CsgUnionTask(modelInfo)),
-  Join: (modelInfo) => new Sequential(modelInfo.environment,
+  Join: (modelInfo, envDefined) => new Sequential(envDefined ? null : modelInfo.environment,
                                         new CsgModelTask(modelInfo),
                                         new CsgJoinTask(modelInfo),
                                         new CsgUnionTask(modelInfo)),
-  Model: (modelInfo) => new Sequential(modelInfo.environment,
+  Model: (modelInfo, envDefined) => new Sequential(envDefined ? null : modelInfo.environment,
                                         new CsgModelTask(modelInfo),
                                         new CsgUnionTask(modelInfo)),
   AssembliesTo2D,

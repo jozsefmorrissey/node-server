@@ -23,6 +23,7 @@ class CabinetOpeningCorrdinates extends KeyValue {
     this.locationCode('COC');
     this.part = () => false;
     this.partName = () => 'CabinetOpeningCorrdinates';
+    sectionProperties.back();
     this.divide = sectionProperties.divide;
     this.setSection = sectionProperties.setSection;
     this.sections = () => sectionProperties.sections;

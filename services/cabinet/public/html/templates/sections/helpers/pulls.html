@@ -1,0 +1,13 @@
+<div class='pulls-mod-cnt tab' has-pulls-id='{{hasPulls.id()}}'>
+  <div:t repeat='pull in hasPulls.pulls()' index='{{$index}}'>
+    {{$index + 1}})
+    <label>Location</label>
+    <select name='location'>
+      <option:t repeat='id, location in pull.constructor.location'
+              {{pull.location().position === location.position ? 'selected' : ''}}>
+        {{id}}
+      </option:t>
+    </select>
+  </div:t>
+  <button type="button" class="add-pull">Add Pull</button>
+</div>

@@ -21,9 +21,9 @@ function notify(parentPath, beforeEvent, afterEvent) {
       if (target.isRecusive() && value instanceof Object) value = new Notifiction(true, value, path, beforeEvent, afterEvent);
     }
     const detail = {target, path, old: target[key], new: value};
-    if (change) beforeEvent.trigger(null, detail);
+    if (change) beforeEvent.trigger(detail, target);
     target[key] = value;
-    if (change) afterEvent.trigger(null, detail);
+    if (change) afterEvent.trigger(detail, target);
     return true;
   }
 }

@@ -21,6 +21,7 @@ const FileTabDisplay = require('../../../../public/js/utils/lists/file-tab.js');
 const VoidDisplay = require('./advanced/subassemblies/void.js');
 const ObjectInputTree = require('../input/object-input-tree');
 const SimpleModel = require('../objects/simple/simple.js');
+const CabinetAdvanced = require('./advanced/cabinet');
 
 // function getHtmlElemCabinet (elem) {
 //   const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
@@ -39,10 +40,19 @@ const openingHtml = () => {
   return html
 }
 
+const advancedMenu = () => {
+  return CabinetAdvanced(Global.cabinet());
+}
+
 const voidDisplay = new VoidDisplay(Global.cabinet);
 const fileTabDisp = new FileTabDisplay();
+fileTabDisp.register('Advanced', advancedMenu);
 fileTabDisp.register('Layout', openingHtml);
-fileTabDisp.register('Voids', voidDisplay.html);
+fileTabDisp.register('Voids', voidDisplay.html, (contentCnt) => {
+  const voidCnt = du.find.down('[void-disp-hash]');
+  return (voidCnt && voidCnt.getAttribute('void-disp-hash') === voidDisplay.hash() + '') === true
+});
+
 
 voidDisplay.on.change(fileTabDisp.update);
 
@@ -65,10 +75,7 @@ class CabinetDisplay {
     const display = (value) => new Measurement(value).display();
     const getBody = (cabinet, $index) => {
       Global.cabinet(cabinet);
-      if (expandList.activeKey() === $index) {
-        TwoDLayout.panZoom.once();
-        ThreeDMain.update(cabinet);
-      }
+      if (expandList.activeKey() === $index) Canvas.render();
       if (cabinet instanceof SimpleModel) {
         return CabinetDisplay.simpleBodyTemplate.render({});
       } else {
@@ -209,6 +216,16 @@ class CabinetDisplay {
     bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
     du.on.match('click', '.save-cabinet-btn', save);
     du.on.match('focusout', '.modifiable-value-input', updateValue);
+
+    du.on.match('change', '.show-select', (elem) => {
+      const side = elem.getAttribute('side');
+      const type = du.find.closest('.show-select[name="type"]', elem).value;
+      const endStyle = du.find.closest('.show-select[name="endStyle"]', elem).value;
+      Global.cabinet().value('show' + side, {type, endStyle});
+      Global.cabinet().hash();
+
+      console.log(Global.cabinet().hash());
+    });
   }
 }
 

@@ -1,17 +1,33 @@
 <div>
   <div class='center relitive'>
-    <div class='absolute-top-left'>
-      <label>Show Left</label>
-      <select class="show-left-select">
-        <option:t repeat='showType in showTypes'>{{showType.name}}</option:t>
-      </select>
+    <div class='absolute-top-left show-cnt'>
+      <div class='align-right'>
+        <label>Show</label>
+        <select class="show-select" name='type' side='Left'>
+          <option:t repeat='showType in showTypes'>{{showType.name}}</option:t>
+        </select>
+        <br>
+        <label>End Style</label>
+        <select class="show-select" name='endStyle' side='Left'>
+          <option>No</option>
+          <option>Yes</option>
+        </select>
+      </div>
     </div>
-    {{fileTabDisp.html()}}
-    <div class='absolute-top-right'>
-      <select class="show-right-select">
-        <option:t repeat='showType in showTypes'>{{showType.name}}</option:t>
-      </select>
-      <label>Show Right</label>
+    <div class='cab-tab-cnt'>{{fileTabDisp.html()}}</div>
+    <div class='absolute-top-right show-cnt'>
+      <div class='align-left'>
+        <select class="show-select" name='type' side='Right'>
+          <option:t repeat='showType in showTypes'>{{showType.name}}</option:t>
+        </select>
+        <label>Show</label>
+        <br>
+        <select class="show-select" name='endStyle' side='Right'>
+          <option>No</option>
+          <option>Yes</option>
+        </select>
+        <label>End Style</label>
+      </div>
     </div>
   </div>
   <br>

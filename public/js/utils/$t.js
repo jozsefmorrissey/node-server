@@ -39,7 +39,7 @@ class $t {
 		const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, (.*?), get\)/};
 		const commaProps = {opening: /,/};
 		const colonProps = {opening: /:/};
-		const multiplierProps = {opening: /([-+*\/](=|))/};
+		const multiplierProps = {opening: /([-+*\/%](=|))/};
 		const stringProps = {opening: /('|"|`)(\1|.*?([^\\]((\\\\)*?|[^\\])(\1)))/};
 		const spaceProps = {opening: /\s{1}/};
 		const numberProps = {opening: /([0-9]*((\.)[0-9]{1,})|[0-9]{1,})/};

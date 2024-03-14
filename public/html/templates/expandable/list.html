@@ -8,7 +8,7 @@
       </div>
       <div class="expand-body {{type()}}"  ex-list-id='{{id()}}' key='{{key}}'
           {{active() === item ? '' : 'hidden'}}>
-        {{active() === item && getBody && getBody(item, key)}}
+        {{initialBody(key)}}
       </div>
     </div>
   </div:t>

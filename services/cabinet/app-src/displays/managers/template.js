@@ -197,7 +197,7 @@ function getCabinet(elem) {
   if (sectionState.testDividers) applyTestConfiguration();
   else applyDividers();
   // console.log(cabinet.toDrawString());
-  setTimeout(() => getOpeningSketch().draw());
+  // setTimeout(() => getOpeningSketch().draw());
   return cabinet;
 }
 
@@ -407,35 +407,46 @@ function onOpeningTypeChange(elem) {
 
 du.on.match('change', '.opening-type-selector', onOpeningTypeChange);
 
+const csgVertex = (center, radius, color) => {
+  radius ||= .5;
+  const vertex = CSG.sphere({center, radius});
+  vertex.setColor(...String.color.RGB[color]);
+  return vertex;
+}
+
+du.on.match('click', "[name='autoToeKick']", (elem) => {
+  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+  const template = CabinetTemplate.get(templateId);
+  template.autoToeKick(elem.checked);
+});
+
+
+let openingVerticies = [];
+Canvas.extraCsgObjects(() => openingVerticies, () => true);
 function updateOpeningPoints(template) {
-  throw new Error('Need to point to modelInfo')
-  const cabinet = Global.cabinet();
-  const threeDModel = ThreeDModel.get();
-  if (threeDModel) {
-    threeDModel.removeAllExtraObjects();
-    const openings = cabinet.openings;
-    for (let index = 0; index < openings.length; index++) {
-      const opening = openings[index];
-      const size = modifyingOpening ? 1 : .25;
-      const state = sectionState;
-      const i = state.index;
-      const vertexColor = (io, i) => !modifyingOpening ? 'black' :
-                      ((io !== state.innerOouter) ? 'black' :
-                      (i === state.index ? 'green' : 'white'));
+  openingVerticies = [];
+  const openings = Global.cabinet().openings;
+  for (let index = 0; index < openings.length; index++) {
+    const opening = openings[index];
+    const size = modifyingOpening === index + '' ? 1 : .25;
+    const state = sectionState;
+    const i = state.index;
+    const vertexColor = (io, i) => !modifyingOpening ? 'black' :
+                    ((io !== state.innerOouter) ? 'black' :
+                    (i === state.index ? 'green' : 'white'));
 
-      const vertexSize = (io) => modifyingOpening && io === state.innerOouter ? size*2 : size;
+    const vertexSize = (io) => modifyingOpening && io === state.innerOouter ? size*2 : size;
 
-      const coords = opening.update();
-      threeDModel.addVertex(coords.inner[0], vertexSize('true'), vertexColor('true', 0));
-      threeDModel.addVertex(coords.inner[1], vertexSize('true'), vertexColor('true', 1));
-      threeDModel.addVertex(coords.inner[2], vertexSize('true'), vertexColor('true', 2));
-      threeDModel.addVertex(coords.inner[3], vertexSize('true'), vertexColor('true', 3));
+    const coords = opening.update();
+    openingVerticies.push(csgVertex(coords.inner[0], vertexSize('true'), vertexColor('true', 0)));
+    openingVerticies.push(csgVertex(coords.inner[1], vertexSize('true'), vertexColor('true', 1)));
+    openingVerticies.push(csgVertex(coords.inner[2], vertexSize('true'), vertexColor('true', 2)));
+    openingVerticies.push(csgVertex(coords.inner[3], vertexSize('true'), vertexColor('true', 3)));
 
-      threeDModel.addVertex(coords.outer[0], vertexSize('false'), vertexColor('false', 0));
-      threeDModel.addVertex(coords.outer[1], vertexSize('false'), vertexColor('false', 1));
-      threeDModel.addVertex(coords.outer[2], vertexSize('false'), vertexColor('false', 2));
-      threeDModel.addVertex(coords.outer[3], vertexSize('false'), vertexColor('false', 3));
-    }
+    openingVerticies.push(csgVertex(coords.outer[0], vertexSize('false'), vertexColor('false', 0)));
+    openingVerticies.push(csgVertex(coords.outer[1], vertexSize('false'), vertexColor('false', 1)));
+    openingVerticies.push(csgVertex(coords.outer[2], vertexSize('false'), vertexColor('false', 2)));
+    openingVerticies.push(csgVertex(coords.outer[3], vertexSize('false'), vertexColor('false', 3)));
   }
 }
 
@@ -453,9 +464,9 @@ function validateOpenTemplate (elem) {
   subCodeInputs.forEach(variableNameCheck);
 
   const pcc = partCodeCheck(template);
-  const jointMaleInputs = du.find.downAll('input[attr="joints"][name="maleJointSelector"]', templateBody);
+  const jointMaleInputs = du.find.downAll('input[attr="joints"][name="dependsSelector"]', templateBody);
   jointMaleInputs.forEach(pcc);
-  const jointFemaleInputs = du.find.downAll('input[attr="joints"][name="femaleJointSelector"]', templateBody);
+  const jointFemaleInputs = du.find.downAll('input[attr="joints"][name="dependentSelector"]', templateBody);
   jointFemaleInputs.forEach(pcc);
 
   const openingCodeInputs = du.find.downAll('input[attr="openings"][name="partCode"]', templateBody);
@@ -671,28 +682,29 @@ du.on.match('click', '.template-reference-update-btn', (elem) => {
   btn.hidden = true;
 });
 
-function getOpening(obj) {
-  return {obj, select: getOpeningLocationSelect(), state: sectionState};
+function getOpening(obj, key) {
+  return {obj, select: getOpeningLocationSelect(), state: sectionState, index: key};
 }
 
 const scopes = {};
-function getScope(type, obj) {
-  obj.id = obj.id || String.random();
-  if (scopes[obj.id]) return scopes[obj.id];
+function getScope(type, obj, key) {
+  let id = obj.pathValue('id');
+  if (id === undefined) id = obj.id = String.random();
+  if (scopes[id]) return scopes[id];
   switch (type) {
     case 'joints':
-      scopes[obj.id] = getJoint(obj);
+      scopes[id] = getJoint(obj);
       break;
     case 'subassemblies':
-      scopes[obj.id] = getSubassembly(obj);
+      scopes[id] = getSubassembly(obj);
       break;
     case 'openings':
-      scopes[obj.id] = getOpening(obj);
+      scopes[id] = getOpening(obj, key);
       break;
     default:
-      scopes[obj.id] = {obj};
+      scopes[id] = {obj};
   }
-  return scopes[obj.id];
+  return scopes[id];
 }
 
 const getObjects = {
@@ -714,6 +726,13 @@ function updateTemplateDisplay() {
   }
 }
 
+function updateOpeningVertices(elem) {
+  const idElem = du.find.down('.active [opening-index]', elem.parentElement);
+  modifyingOpening = idElem ? idElem.getAttribute('opening-index') : null;
+  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+  const template = CabinetTemplate.get(templateId);
+  updateOpeningPoints(template)
+};
 
 function addExpandable(template, type) {
   const containerClass = containerClasses[type];
@@ -721,9 +740,10 @@ function addExpandable(template, type) {
   TemplateManager.headTemplate[type] ||= new $t(`managers/template/${type.toKebab()}/head`);
   TemplateManager.bodyTemplate[type] = TemplateManager.bodyTemplate[type] === undefined ?
                     new $t(`managers/template/${type.toKebab()}/body`) : TemplateManager.bodyTemplate[type];
-  let getHeader = (obj) => TemplateManager.headTemplate[type].render(getScope(type, obj));
+  let getHeader = (obj, key) => TemplateManager.headTemplate[type].render(getScope(type, obj, key));
   let getBody =
-    TemplateManager.bodyTemplate[type] ? ((obj) => TemplateManager.bodyTemplate[type].render(getScope(type, obj))) : undefined;
+    TemplateManager.bodyTemplate[type] ? ((obj, key) =>
+        TemplateManager.bodyTemplate[type].render(getScope(type, obj, key))) : undefined;
   const expListProps = {
     idAttribute: 'name',
     list: template[type](),
@@ -733,6 +753,7 @@ function addExpandable(template, type) {
     listElemLable: type.toSentance(),
   };
   const expandList = new ExpandableList(expListProps);
+  expandList.afterRender((details) => updateOpeningVertices(details.header));
   expandList.afterRemoval(updateTemplateDisplay);
   return expandList;
 }
@@ -886,6 +907,8 @@ radioDisplay.afterSwitch(function (header){
     }
   }
 });
+radioDisplay.afterSwitch((elem, detail) => updateOpeningVertices(detail.targetHeader));
+
 
 du.on.match('focusout:enter', '[name="opening-coordinate-value"]', (elem) => {
   sectionState.value(elem.value || undefined);
@@ -913,12 +936,6 @@ TemplateManager.templateShapeInput = (value) => {
     });
 };
 
-radioDisplay.afterSwitch((elem, detail) => {
-  const newState = detail.targetHeader.innerText === 'Openings';
-  const updateModel = newState !== modifyingOpening;
-  modifyingOpening = newState;
-  updateModel && validateOpenTemplate(detail.targetHeader);
-});
 
 TemplateManager.mainTemplate = new $t('managers/template/main');
 TemplateManager.headTemplate = new $t('managers/template/head');
@@ -1019,7 +1036,7 @@ du.on.match('change', '.opening-part-code-input', updateOpeningsTemplate);
 du.on.match('change', '.template-shape-input', updateViewShape);
 du.on.match('change', '[name="xyz"]', switchEqn);
 du.on.match('change', '[name="openingLocation"]', updateOpeningPartCode);
-du.on.match('change', '.template-input[name="maleJointSelector"],.template-input[name="femaleJointSelector"]', updateJointPartCode);
+du.on.match('change', '.template-input[name="dependsSelector"],.template-input[name="dependentSelector"]', updateJointPartCode);
 du.on.match('click', '.copy-template', (elem) => {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
   const template = CabinetTemplate.get(templateId);

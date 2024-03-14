@@ -114,10 +114,10 @@ class Layer {
       return twoDlines;
     }
 
-    this.toDrawString = (color, excludeNormal) => {
+    this.toDrawString = (color, includeNormal) => {
       color ||= 'blue';
-      let str = primary.toDrawString(color, excludeNormal);
-      list.forEach(p => str += `\n\t${p.toDrawString(color, true)}`);
+      let str = primary.toDrawString(color, includeNormal);
+      list.forEach(p => str += `\n\t${p.toDrawString(color)}`);
       return str;
     }
     this.toWireDrawString = (color) => {
@@ -180,7 +180,7 @@ Layer.to2D = (layersOcsg, x, y) => {
 
 Layer.toDrawString = (layers, ...colors) => {
   let str = '';
-  layers.forEach((l,i) => str += l.toDrawString(colors[i % colors.length], true) + '\n\n');
+  layers.forEach((l,i) => str += l.toDrawString(colors[i % colors.length]) + '\n\n');
   return str;
 }
 

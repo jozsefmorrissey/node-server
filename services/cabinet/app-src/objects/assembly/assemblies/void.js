@@ -9,15 +9,12 @@ const Line3D = require('../../../three-d/objects/line.js');
 const Polygon3D = require('../../../three-d/objects/polygon.js');
 const Assembly = require('../assembly.js');
 
-
+let voidCount = 0;
 class Void extends Cutter {
-  constructor(rootAssembly, partName, config) {
-    let partCode = 'void';
-    let index;
-    try {
-      partCode = rootAssembly.subassemblies.undefinedKey('void', '-', true);
-      index = Number.parseInt(partCode.match(/void-([0-9]{1,})/)[1])
-    } catch (e) {};
+  constructor(partCodeOindex, partName, config) {
+    let partCode = (typeof partCodeOindex) === 'string' ? partCodeOindex :
+              `void-${typeof partCodeOindex === 'number' ? partCodeOindex : ++voidCount}`;
+    let index = Number.parseInt(partCode.match(/void-([0-9]{1,})/)[1]);
     super(partCode, partName, config);
     const instance = this;
     Object.getSet(this, {includedSides: [true, true], jointSetIndex: 1});

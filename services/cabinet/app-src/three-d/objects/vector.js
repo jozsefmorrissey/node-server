@@ -149,7 +149,7 @@ class Vector3D {
   }
 }
 
-const tol = .00000001;
+const tol = .0001;
 Vector3D.tolerance = new Tolerance({i: tol, j: tol, k: tol});
 
 Vector3D.mostInLine = (vectors, target) => {

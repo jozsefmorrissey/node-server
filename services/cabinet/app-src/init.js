@@ -29,6 +29,7 @@ const Frame = require('./objects/assembly/assemblies/frame.js');
 const Panel = require('./objects/assembly/assemblies/panel.js');
 
 let orderDisplay;
+goDownTheRabbitHole = false;
 
 // Run Tests
 if (EPNTS.getEnv() === 'local') {
