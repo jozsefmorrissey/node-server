@@ -7,6 +7,11 @@ function buildPartInfo(payload, env, taskId) {
   const map = {};
   for (let index = 0; index < payload.parts.length; index++) {
     const part = env.byId[payload.parts[index]];
+    if (env.modelInfo.model[part.id] === undefined) {
+      const result = DTO({demensions: {x:0,y:0,z:0}, partId: part.id, partIds: [part.id], category: 'ignore'});
+      postMessage({id: taskId, result});
+      continue;
+    }
     const category = part.category;
     let partInfo, toolingInfo, demensions, partIds, model, faceEdges;
     try {

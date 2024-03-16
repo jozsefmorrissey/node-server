@@ -110,10 +110,19 @@ class OpeningSketch {
       innerLines = Line3D.to2D(Line3D.viewFromVector(innerLines, normal), 'x', 'y');
       outerLines = Line3D.to2D(Line3D.viewFromVector(outerLines, normal), 'x', 'y');
       const allLines = innerLines.concat(outerLines);
+
+      const minMax = Vertex2d.minMax(Line2d.vertices(cabinetOutlines));
+      const scaleY = (sketch.canvas().height * .95) / (minMax.max.y() - minMax.min.y());
+      const scaleX = (sketch.canvas().width * .95) / (minMax.max.x() - minMax.min.x());
+      const minScale = Math.min(scaleX, scaleY);
+      sketch.ctx().scale(minScale, minScale);
+
+
       const offset = Line2d.centerOn(cabinetOutlines, {
-        x: sketch.canvas().width/2,
-        y: sketch.canvas().height/2
+        x: sketch.canvas().width * 1.25/2,
+        y: sketch.canvas().height * 1.25/2
       });
+
       // const offset = {x: 0, y:0}
       Line2d.translate(allLines, offset);
       allLines.concatInPlace(cabinetOutlines);

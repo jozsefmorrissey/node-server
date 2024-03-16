@@ -38,10 +38,7 @@ du.on.match('click:keyup', modSelector, preSaveLocationChecks);
 
 
 if (Object.keys(Global.order().rooms).length === 0) {
-  const staticOrder = du.param.get('staticOrder');
-  if (staticOrder) {
-    Global.order(Order.fromJson(require(`../../public/json/orders/${staticOrder}.json`)));
-  } else Global.order().addRoom('kitchen');
+  Global.order().addRoom('kitchen');
 }
 
 const RoomDisplay = require('./room');

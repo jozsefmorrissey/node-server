@@ -655,7 +655,7 @@ function objEq(obj1, obj2) {
 Function.safeStdLibAddition(Object, 'merge', (target, object, soft) => {
   if (!(target instanceof Object)) return;
   if (!(object instanceof Object)) return;
-  if (soft !== false) soft === true;
+  if (soft !== false) soft = true;
   const objKeys = Object.keys(object);
   if (!soft) target.deleteAll();
   for (let index = 0; index < objKeys.length; index++) {

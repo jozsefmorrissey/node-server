@@ -14,7 +14,9 @@ const template = new $t('documents/materials');
 const partTemplate = new $t('documents/cabinet');
 
 function partSpliter(p) {
-  if (p instanceof Panel) return 'Panel';
+  if (p instanceof Panel) {
+    return 'Panel';
+  }
   if (p instanceof DrawerBox) return 'DrawerBox';
   if (p instanceof DrawerFront) return 'DrawerFront';
   if (p instanceof Door) return 'Door';

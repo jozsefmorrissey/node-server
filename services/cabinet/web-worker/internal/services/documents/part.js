@@ -53,7 +53,12 @@ class PartInfo {
 
     const normRotz = Line3D.coDirectionalRotations(this.normals(true));
     let noJointModel = env.modelInfo.model[part.id];
-    if (!(noJointModel instanceof CSG)) noJointModel = CSG.fromPolygons(noJointModel.polygons, true);
+    let poly;
+    try {
+      if (!(noJointModel instanceof CSG)) noJointModel = CSG.fromPolygons(noJointModel.polygons, true);
+    } catch (e) {
+      console.log('here');
+    }
     const normInfoRight = noJointModel.normalize(normRotz, true, false);
     const normInfoLeft = noJointModel.normalize(normRotz, false, false);
 

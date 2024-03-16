@@ -11,14 +11,20 @@ const Joint = require('../../joint/joint.js');
 class Divider extends Assembly {
   constructor(partCode, partName, config) {
     partCode ||= 'dv';
+    let z;
+    // if (config && config.demension.z) {
+    //   z = config.demension.z;
+    //   config.demension.z = 'dw';
+    // }
     super(partCode, partName, config);
     const instance = this;
     const pToJson = this.toJson;
 
-    const initialVals = {
-      panelThickness: 2.54*3/4
-    }
-    Object.getSet(this, initialVals, 'type', 'dividerThickness');
+    // if (z) {
+    //   this.value('dw', z);
+    //   console.log(this.id() + '', z);
+    // }
+    Object.getSet(this, 'type');
 
     const pFull = new Panel(':full', 'Full');
     const pFront = new Panel(':f', 'Front');
@@ -45,13 +51,20 @@ class Divider extends Assembly {
 
     this.part = () => false;
     let dividerWidth;
+    this.panelThickness = (thickness, raw) => {
+      return 3 *2.54 / 4;
+      const val = this.value('dpt', thickness, raw);
+      return raw ? val : this.eval(val);
+    }
+    this.dividerWidth = (width, raw) => {
+      return 3 *2.54 / 4;
+      const val = this.value('dw', width, raw);
+      return raw ? val : this.eval(val);
+    }
     this.maxWidth = (width) => {
-      const pt = this.panelThickness();
-      if (width) {
-        dividerWidth = width;
-      }
-      if (dividerWidth && dividerWidth < pt) dividerWidth = null;
-      return dividerWidth || pt;
+      const pt = this.eval(this.panelThickness());
+      const dw = this.eval(this.dividerWidth());
+      return pt > dw ? pt : dw;
     }
 
     function activeParts() {

@@ -3,12 +3,16 @@
       <tbody>
         <tr>
           <th>Category</th>
+          <th>Unit</th>
           <th>Size</th>
         </tr>
-        <tr:t repeat='key, partList in partListMap'>
-          <td>{{partList[0].info.category}}</td>
-          <td>{{disp.materialUnits(partList)}}</td>
-        </tr:t>
+        <no-tag:t repeat='category, set in partListMap'>
+          <tr:t class='pad' repeat='thickness, partList in set' {{disp.materialUnits(partList,thickness).trim() === '0' ? 'hidden' : ''}}>
+            <td>{{category}}</td>
+            <td class='pad'>{{disp.materialUnits(partList,thickness)}}</td>
+            <td>{{disp.materialArea(partList)}}</td>
+          </tr:t>
+        </no-tag:t>
       </tbody>
   </table>
 </div>

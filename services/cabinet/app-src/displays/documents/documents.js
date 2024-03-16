@@ -14,16 +14,16 @@ let count = 1;
 const notDefined = () => 'Yet To Be Defined:' + count++;
 const fileTabDisp = new FileTabDisplay();
 fileTabDisp.TITLES = {
-  AREAL: {title: 'Areal', html: Construction.Arials},
+  AERIAL: {title: 'Areal', html: Construction.Aerial},
   ELEVATION: {title: 'Elevation', html: notDefined},
   BUILD_DIAGRAM: {title: 'Build Diagram', html: Construction.BuildDiagram},
   MATERIALS: {title: 'Materials', html: Construction.Materials},
   DOOR_LIST: {title: 'Door List', html: Construction.DoorList},
   DRAWER_FRONT_LIST: {title: 'Drawer Front List', html: Construction.DrawerFrontList},
   CUT_LIST: {title: 'Cut List', html: Construction.CutList},
-  COMPLEX_CUT_LIST: {title: 'Complex Cut List', html: Construction.Order},
+  COMPLEX_CUT_LIST: {title: 'Complex Cut List', html: Construction.ComplexCutList},
   SUMMARY: {title: 'Summary', html: notDefined},
-  EVERYTHING: {title: 'Everything', html: notDefined}
+  EVERYTHING: {title: 'Everything', html: Construction.Everything}
 }
 
 // function registerConstruction() {

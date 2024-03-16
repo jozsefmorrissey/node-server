@@ -57,10 +57,10 @@ class Position {
 
 
 
-    function get(func, sme) {
-      if ((typeof func) === 'function' && (typeof func()) === 'object') return func;
-      return sme;
-    }
+    // function get(func, sme) {
+    //   if ((typeof func) === 'function' && (typeof func()) === 'object') return func;
+    //   return sme;
+    // }
 
     // function centerRelitiveToRoot(attr) {
     //   const objectCenter = center(attr);

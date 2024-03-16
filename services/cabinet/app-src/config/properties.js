@@ -34,6 +34,7 @@ add('Frame', [Defs.h,Defs.w,Defs.t]);
 add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
 add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
 add('Opening', []);
+add('Divider', [Defs.dpt,Defs.dw]);
 
 
 function definitionsRequired(group) {

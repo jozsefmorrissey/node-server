@@ -35,39 +35,45 @@ const render = (containerOselector, htmlFunc) => (result) => {
   });
 }
 
-const orderJob = (containerOselector, order, htmlFunc) => {
+const orderJob = (order, containerOselector, htmlFunc) => {
   order ||= Global.order();
   const job = new Jobs.Documentation.Order(order);
   job.on.change(progressUpdate(containerOselector));
-  job.then(render(containerOselector, htmlFunc), err)
+  if (containerOselector && htmlFunc)
+    job.then(render(containerOselector, htmlFunc), err)
   job.queue();
   return job;
 }
 
-const Arials = (containerOselector, order) => {
+const Aerial = (containerOselector, order) => {
   order ||= Global.order();
   const canvasId = `aerial-canvas-cnt`;
-  return DocHtml.aerials(order);
+  const html = DocHtml.aerials(order);
+  if (containerOselector) {
+    const container = containerOselector instanceof HTMLElement ? containerOselector : du.find(containerOselector);
+    container.innerHTML = html;
+  }
+  return html;
 }
 
-const Order = (containerOselector, order) => {
-  return orderJob(containerOselector, order, DocHtml.panels.order);
+const ComplexCutList = (containerOselector, order) => {
+  return orderJob(order, containerOselector, DocHtml.panels.order);
 }
 
 const CutList = (containerOselector, order) => {
-  return orderJob(containerOselector, order, DocHtml.panels.cutList);
+  return orderJob(order, containerOselector, DocHtml.panels.cutList);
 }
 
 const DoorList = (containerOselector, order) => {
-  return orderJob(containerOselector, order, DocHtml.doorList);
+  return orderJob(order, containerOselector, DocHtml.doorList);
 }
 
 const DrawerFrontList = (containerOselector, order) => {
-  return orderJob(containerOselector, order, DocHtml.drawerFrontList);
+  return orderJob(order, containerOselector, DocHtml.drawerFrontList);
 }
 
 const Materials = (containerOselector, order) => {
-  return orderJob(containerOselector, order, DocHtml.materials);
+  return orderJob(order, containerOselector, DocHtml.materials);
 }
 
 const BuildDiagram = (containerOselector, order) => {
@@ -116,7 +122,28 @@ const Parts = (containerOselector, parts) => {
   return job;
 };
 
+const Elevation = () => 'coming soon';
+const Summary = () => 'coming soon';
+
+const everythingSections = {CutList, Summary, Aerial, Elevation, ComplexCutList, BuildDiagram, Materials, DoorList, DrawerFrontList};
+const everythingTemplate = new $t('documents/construction/everything');
+const Everything = (containerOselector, order) => {
+  const htmlFunc = () => {
+    const id = String.random();
+    const sections = Object.keys(everythingSections);
+    setTimeout(() => {
+      for (let index = 0; index < sections.length; index++) {
+        const section = sections[index];
+        const selector = `#everything-cnt-${id} .everything-${section.toKebab()}-cnt`;
+        everythingSections[section](selector, order);
+      }
+    });
+    return everythingTemplate.render({sections, id});
+  }
+  return orderJob(order, containerOselector, htmlFunc);
+}
+
 module.exports = {
-  Order, Room, Group, Cabinet, Parts, CutList, BuildDiagram, DoorList,
-  DrawerFrontList, Materials, Arials
+  ComplexCutList, Room, Group, Cabinet, Parts, CutList, BuildDiagram, DoorList,
+  DrawerFrontList, Materials, Aerial, Everything
 };

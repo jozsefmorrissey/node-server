@@ -93,7 +93,7 @@ class CsgUnionTask  extends CsgTask {
   constructor(modelInfo) {
     super(modelInfo);
     this.remainingModels = modelInfo.needsUnioned;
-    this.progress = () => this.status() === 'complete' ? 100 : 0;
+    this.progress = () => this.status() === 'success' ? 100 : 0;
     this.processResult = modelInfo.unioned;
   }
 }

@@ -62,6 +62,31 @@ function listToTemplate(orderInfo, type, template) {
   return template.render({partListMap, disp, type});
 }
 
+function materialListToTemplate(orderInfo, type, template) {
+  const parts = allPartsOfType(orderInfo, type);
+  const map = {};
+  const disp = Utils.display;
+  parts.forEach(d => {
+    const category = d.part.category;
+    const key = disp.demensions(d.info.demensions);
+    const thickness = disp.measurement(d.info.demensions.z);
+    if (map[category] === undefined) map[category] = {};
+    if (map[category][thickness] === undefined) map[category][thickness] = {};
+    if (map[category][thickness][key] === undefined) {
+      map[category][thickness][key] = [];
+      map[category][thickness][key].info = d.info;
+    }
+    map[category][thickness][key].push(d.part);
+  });
+
+  const partListMap = {};
+  Object.keys(map).forEach(category => Object.keys(map[category]).forEach(thickness => {
+    if (partListMap[category] === undefined) partListMap[category] = {};
+    partListMap[category][thickness] = Object.values(map[category][thickness]);
+  }));
+  return template.render({partListMap, disp, type});
+}
+
 const DocumentationHtml = {}
 DocumentationHtml.print = {};
 DocumentationHtml.print.container = (innerHTML) => {
@@ -145,7 +170,7 @@ DocumentationHtml.drawerFrontList = (orderInfo) => {
 }
 
 DocumentationHtml.materials = (orderInfo) => {
-  return listToTemplate(orderInfo, /.{1,}/, materialsTemplate);
+  return materialListToTemplate(orderInfo, /.{1,}/, materialsTemplate);
 }
 
 

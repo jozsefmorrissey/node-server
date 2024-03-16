@@ -184,7 +184,7 @@ class SectionPropertiesUtil {
         const point3 = point2.translate(depthVector, true);
         const point4 = point1.translate(depthVector, true);
         const points = [point1, point2, point3, point4];
-        const offset = spDto.divider().divider().width / 2;
+        const offset = spDto.divider().divider().panelThickness / 2;
         dvInfo = BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset);
       }
       return dvInfo;

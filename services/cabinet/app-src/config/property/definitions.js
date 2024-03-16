@@ -72,6 +72,7 @@ defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERI
 defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
 
 //   Frame
+defs.fw = new Property('fw', 'Frame Width', {value: 1.5, notMetric: IMPERIAL_US});
 
 //   Handle
 defs.c2c = new Property('c2c', 'Center To Center', null);
@@ -84,5 +85,9 @@ defs.maxol = new Property('maxol', 'Max Door Overlay', null);
 defs.minol = new Property('minol', 'Minimum Door Overlay', null)
 
 //   Opening
+
+// Divider
+defs.dpt = new Property('dpt', 'Divider Panel Thicness', {value: 'pwt34'});
+defs.dw = new Property('dw', 'Divider Width', {value: 0, notMetric: IMPERIAL_US});
 
 module.exports = defs;

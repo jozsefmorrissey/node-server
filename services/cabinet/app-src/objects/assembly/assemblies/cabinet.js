@@ -56,7 +56,10 @@ class Cabinet extends Assembly {
 
     const parentUserFriendlyId = this.userFriendlyId;
     this.userFriendlyId = (id) => id === undefined ? `c${this.groupIndex() + 1}` : parentUserFriendlyId(id);
-    this.userIdentifier = () => `${this.group().name()}:${this.name() || this.userFriendlyId()}`;
+    this.userIdentifier = () => {
+      const groupPrefix = this.group().room().groups.length > 1 ? `${this.group().name()}:` : '';
+      return `${groupPrefix}${this.name() || this.userFriendlyId()}`;
+    }
     const panels = 0;
     const framePieces = 0;
     const addFramePiece = (piece) => framePieces.push(piece);

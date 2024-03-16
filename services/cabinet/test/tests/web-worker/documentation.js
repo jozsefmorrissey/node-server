@@ -112,7 +112,7 @@ Test.add('Construction.Order', async (ts) => {
   const title = 'Documentation Doc';
   HtmlTest.register(title, () => 'Loading...');
   const cnt = HtmlTest.container(title);
-  DocDisplay.selected(DocDisplay.TITLES.CUT_LIST.title)
+  DocDisplay.selected(DocDisplay.TITLES.EVERYTHING.title)
   cnt.innerHTML = DocDisplay.html();
 
 });

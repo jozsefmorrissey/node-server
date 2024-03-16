@@ -100,13 +100,24 @@ class PropertyConfig {
       return value;
     }
 
+    const resolveProps = (code, props) => {
+      if (code === undefined) return props;
+      if (props[code] !== undefined) return props[code].value();
+      const complexResolved = resolveComplexProps(code, props);
+      if (complexResolved !== undefined) return complexResolved;
+    }
+
     const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
     function getProperties(clazz, code) {
       if (clazz === undefined) return props;
       clazz = (typeof clazz) === 'string' ? clazz : clazz.constructor.name;
       const classProps = props[clazz] || {};
-      if (code === undefined) return classProps;
-      return classProps[code] === undefined ? resolveComplexProps(code, props) : classProps[code].value();
+      if (props[clazz]) {
+        let val = resolveProps(code, props[clazz]);
+        if (val !== undefined) return val;
+      }
+      let val = resolveProps(code, Properties(clazz));
+      if (val !== undefined) return val;
     }
 
     function toJson() {

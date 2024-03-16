@@ -27,6 +27,12 @@ const DisplayManager = require('./display-utils/displayManager.js');
 const utils = require('./utils.js');
 const Frame = require('./objects/assembly/assemblies/frame.js');
 const Panel = require('./objects/assembly/assemblies/panel.js');
+const Order = require('./objects/order.js');
+
+const staticOrder = du.param.get('staticOrder');
+if (staticOrder) {
+  Global.order(Order.fromJson(require(`../public/json/orders/${staticOrder}.json`)));
+}
 
 let orderDisplay;
 goDownTheRabbitHole = false;

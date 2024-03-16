@@ -31,6 +31,7 @@ class KeyValue extends Lookup {
     super(properties.id, properties.idAttr);
     const childAttr = properties.childrenAttribute;
     const parentAttr = properties.parentAttribute;
+    const instance = this;
     const customFuncs = [];
     const parentSetEvent = new CustomEvent('parent-set');
 
@@ -66,7 +67,7 @@ class KeyValue extends Lookup {
     this.on.parentSet = parentSetEvent.on;
     this.trigger ||= {};
     this.trigger.parentSet = parentSetEvent.trigger;
-    this.value = (key, value) => {
+    this.value = (key, value, raw) => {
       try {
         const formatted = (typeof this.value.keyFormatter) === 'function' ? this.value.keyFormatter(key) : undefined;
         if (formatted !== undefined) key = formatted;
@@ -82,19 +83,16 @@ class KeyValue extends Lookup {
           const instVal = this.value.values[key];
           if (instVal !== undefined && instVal !== null) {
             const evaluator = this.value.evaluators[(typeof instVal)];
-            if (evaluator) return evaluator(instVal);
+            if (!raw && evaluator) return evaluator(instVal);
             return instVal;
+          }
+          const defaultFunction = this.value.defaultFunction;
+          if (defaultFunction) {
+            value = (typeof this.value.defaultFunction) === 'function' ? this.value.defaultFunction(key, value) : undefined;
+            if (value !== undefined) return value;
           }
           const parent = this[parentAttr]();
           if (parent) return parent.value(key);
-          else {
-            const defaultFunction = this.value.defaultFunction;
-            if (defaultFunction) {
-              value = (typeof this.value.defaultFunction) === 'function' ? this.value.defaultFunction(key, value) : undefined;
-              if (value === undefined) throw new Error();
-              return value;
-            }
-          }
         }
       } catch (e) {
         console.error(`Failed to resolve key: '${key}'`);

@@ -154,13 +154,11 @@ class Assembly extends KeyValue {
     }
     this.layout = () => this.group().room().layout();
     this.propertyConfig = (one, two, three) => {
-      const parent = this.parentAssembly();
-      if (parent instanceof Assembly) return parent.propertyConfig(one, two, tree);
-      const group = this.group();
+      const group = this.getRoot().group();
+      if (!one && !two && !three) return group.propertyConfig;
+      if (group === undefined) return;
       const groupVal = group.resolve(one, two, three);
       if (groupVal !== undefined) return groupVal;
-      if (two) return null;
-      return group.propertyConfig;
     }
 
     let ranCount = 0;
@@ -270,7 +268,6 @@ class Assembly extends KeyValue {
     this.position = () => position;
     this.updatePosition = () => position = new Position(this, sme);
     this.joints = [];
-    this.values = {};
     this.rootAssembly = () => {
       let currAssem = this;
       while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();

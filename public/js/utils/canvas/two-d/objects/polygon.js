@@ -571,11 +571,12 @@ Polygon2d.isWithin = (vertex, lines, exclusive, intersectionsCheck) => {
       lines = lines.map(l => l.scale(10, true));
       vertex = vertex.scale(10, true);
     }
-    escapeLine = Line2d.startAndTheta(vertex, Math.random()*3.14*2, 10000000);
+    escapeLine = Line2d.startAndTheta(vertex, 3.14*2 / 25, 10000000);
     if (count > 24)
       throw new Error('My guess is vertices are equal');
     count++;
   } while (Line2d.vertices(lines).filter(v => escapeLine.distance(v) < .1).length > 0);
+  // console.log(escapeLine.toString());
   const intersections = [];
 
   for (let index = 0; !onLine && index < lines.length; index++) {

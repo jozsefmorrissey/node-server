@@ -16,19 +16,18 @@ const Divider = require('../objects/assembly/assemblies/divider.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
 const Features = require('./advanced/features');
 
-const SectionDisplay = {};
-// class SectionDisplay {
-//   constructor (section) {
-//     this.render = (scope) => {
-//       scope.featureDisplay = new FeatureDisplay(scope.opening).html();
-//       const cId = scope.opening.constructor.name;
-//       if (cId === 'SectionProperties') {
-//         return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
-//       }
-//       return SectionDisplay.template(section).render(scope);
-//     }
-//   }
-// }
+class SectionDisplay {
+  constructor (section) {
+    this.render = (scope) => {
+      scope.featureDisplay = new FeatureDisplay(scope.opening).html();
+      const cId = scope.opening.constructor.name;
+      if (cId === 'SectionProperties') {
+        return OpenSectionDisplay.html(scope.opening, scope.list, scope.sections);
+      }
+      return SectionDisplay.template(section).render(scope);
+    }
+  }
+}
 
 SectionDisplay.formatCoverName = (name) => {
   return name.replace(/(.*)Section$/, '$1').toSentance();
@@ -37,6 +36,7 @@ SectionDisplay.formatCoverName = (name) => {
 const templates = {};
 const fileLocations = {};
 SectionDisplay.template = (section) => {
+  if (section === undefined) return '';
   const cName = section.constructor.name;
   if (fileLocations[cName] === undefined) {
     const filename = cName.replace(/Section$/, '')
@@ -49,18 +49,18 @@ SectionDisplay.template = (section) => {
   return templates[templatePath].render({section, Features});
 }
 
-// du.on.match('change', '.feature-radio', (target) => {
-//   const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
-//   allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
-//   target.nextElementSibling.hidden = !target.checked;
-// });
+du.on.match('change', '.feature-radio', (target) => {
+  const allRadios = document.querySelectorAll(`[name="${target.name}"]`);
+  allRadios.forEach((radio) => radio.nextElementSibling.hidden = true);
+  target.nextElementSibling.hidden = !target.checked;
+});
 
-// displays = {};
-// SectionDisplay.render = (scope) => {
-//   const uId = scope.opening.id();
-//   if (displays[uId] === undefined) displays[uId] = new SectionDisplay(scope.opening);
-//   return displays[uId].render(scope);
-// }
+displays = {};
+SectionDisplay.render = (scope) => {
+  const uId = scope.opening.id();
+  if (displays[uId] === undefined) displays[uId] = new SectionDisplay(scope.opening);
+  return displays[uId].render(scope);
+}
 
 const OpenSectionDisplay = {};
 

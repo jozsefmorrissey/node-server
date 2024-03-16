@@ -55,13 +55,18 @@ Utils.printPolys = (csgs, colors) => {
   console.log(str);
 }
 
-Utils.display.materialUnits = (partList) => {
+Utils.display.materialUnits = (partList, thickness) => {
+  if (partList[0][0].constructor.MATERIAL_UNIT == 'Qty') return 'Qty';
+  return thickness;
+}
+
+Utils.display.materialArea = (partList) => {
   if (partList[0][0].constructor.MATERIAL_UNIT == 'Qty')
     return partList.map(list => list.length).sum();
 
   let area = 0;
   for (let index = 0; index < partList.length; index++) {
-    const list = partList[0];
+    const list = partList[index];
     const qty = list.length;
     area += qty * Measurement.area([list.info.demensions]);
   }

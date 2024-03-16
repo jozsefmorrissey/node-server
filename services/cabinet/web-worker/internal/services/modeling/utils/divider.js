@@ -72,7 +72,13 @@ class DividerUtil {
       const biPoly = instance.biPolygon;
       if (biPoly.valid()) {
         intersected.scale(10000,10000);
-        const poly = Polygon3D.fromIntersections(intersected, [biPoly.front(), biPoly.back()]);
+        let poly;
+        try {
+          poly = Polygon3D.fromIntersections(intersected, [biPoly.front(), biPoly.back()]);
+        } catch (e) {
+          console.log('here');
+          Polygon3D.fromIntersections(intersected, [biPoly.front(), biPoly.back()]);
+        }
         poly.scale(10, 10);
         const offsetVect = normal.scale(depth);
 

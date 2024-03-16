@@ -193,7 +193,7 @@ Measurement.display.area = (SQCM, units, percision) => {
     case 'SQMM': return `${Measurement.round(SQCM * 100, percision)} mm2`;
     case 'SQM': return `${Measurement.round(SQCM / 10000, percision)} M2`;
     case 'SQIN': return `${Measurement.round(SQCM / 6.4516, percision)} SQIN`;
-    case 'SQFT': return `${Measurement.round(SQCM / 929.0304, percision)} SQFT`;
+    case 'SQFT': return `${Measurement.round(SQCM / 929.0304, percision)} SQFT ~ ${Measurement.round(SQCM / 44593.4592, percision)}, 4 X 8 Sheets`;
 
     default: return `${SQCM} cm2`;
 

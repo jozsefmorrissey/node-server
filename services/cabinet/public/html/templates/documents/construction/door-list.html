@@ -10,7 +10,7 @@
           <th>Location</th>
           <th>Notes</th>
         </tr>
-        <tr:t repeat='doorObj in partListMap[type]'>
+        <tr:t repeat='doorObj in partListMap[type]' {{!partListMap[type] ? 'hidden' : ''}}>
           <td>{{doorObj.length}}</td>
           <td>{{disp.measurement(doorObj.info.demensions.x)}}</td>
           <td>{{disp.measurement(doorObj.info.demensions.y)}}</td>
