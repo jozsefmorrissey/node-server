@@ -36,11 +36,11 @@ const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add('./app-src/')
         .add('./web-worker/shared/')
         .add('./web-worker/external/')
+        .add('./web-worker/internal/services/');
 
 
 if (global.ENV === 'local') {
   jsWatcher.add('./test')
-    .add('./web-worker/internal/services/');
 }
 
 
