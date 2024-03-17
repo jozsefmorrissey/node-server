@@ -91,6 +91,8 @@ function exicuteCmd(cmd, req) {
     }
 
     const returnValue = shell.exec(validateCmd, {silent: true});
+    console.log('returnValue:', returnValue);
+    console.log('cmd:', validateCmd);
     lockout(clBody.group, returnValue.code, tokenPinErrorStr(clBody.token, clBody.pstPin))
     return returnValue;
   }
