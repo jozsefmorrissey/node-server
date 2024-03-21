@@ -214,16 +214,28 @@ class BiPolygon {
       return CSG.fromPolygons(polygonSets);
     }
 
-    this.toPolygons = () => {
-      const polygons = [new Polygon3D(face1), new Polygon3D(face2)];
-
+    this.sides = () => {
+      const sides = [];
       for (let index = 0; index < face1.length; index++) {
         const index2 = (index + 1) % face1.length;
         const vertices = [face1[index], face1[index2], face2[index2], face2[index]];
-        polygons.push(new Polygon3D(vertices));
+        sides.push(new Polygon3D(vertices));
       }
+      return sides;
+    }
 
+    this.toPolygons = () => {
+      const polygons = [new Polygon3D(face1), new Polygon3D(face2)];
+      polygons.concatInPlace(this.sides());
       return polygons;
+    }
+
+    const setDot = (set, normal) => new Line3D(set[0].center(), set[1].center()).vector().unit().dot(normal);
+    this.setMostInLineWith = (normal) => {
+      const polys = this.toPolygons();
+      const sets = [[polys[0], polys[1]], [polys[2], polys[4]], [polys[3], polys[5]]];
+      sets.sort((set1, set2) => setDot(set1, normal) - setDot(set2, normal));
+      return sets[0];
     }
 
     this.closestPoly = (vertex) => {

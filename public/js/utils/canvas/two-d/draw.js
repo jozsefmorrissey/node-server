@@ -117,6 +117,7 @@ class Draw2d {
 
     draw.line = (line, color, width, indicateDirection) => {
       if (line === undefined) return;
+      if (indicateDirection === undefined) indicateDirection = line.indicateDirection;
       color = color ||  'black';
       width = width || 10;
       ctx().beginPath();

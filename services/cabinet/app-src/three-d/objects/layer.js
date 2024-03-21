@@ -11,7 +11,7 @@ const within = Tolerance.within(tol);
 
 class Layer {
   constructor(polygonOs) {
-    let list = polygonOs instanceof Polygon3D ? [primary] : polygonOs;
+    let list = polygonOs instanceof Polygon3D ? [polygonOs] : polygonOs;
     this.polygons = () => list.map(p => p.copy());
     list = this.polygons();
     const primary = list[0];

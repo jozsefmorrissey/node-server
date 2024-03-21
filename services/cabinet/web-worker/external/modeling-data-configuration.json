@@ -38,6 +38,7 @@
   "Stairs": ["count", "treadLength"],
   "CutterModel": [],
   "CutterReference": ["reference", "fromPoint", "offset", "front"],
+  "CutterRegExp": ["regexp", "offsetRatio", "axis", "fromPoint", "ingulf"],
   "CutterPoly": ["poly"],
   "ControlableAbyss": [],
   "CabinetOpeningCorrdinates": ["id", "coordinates", "partCode", "locationCode",

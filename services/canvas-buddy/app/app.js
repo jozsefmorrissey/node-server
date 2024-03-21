@@ -20,8 +20,16 @@ let parcer = du.find('[name="parcer"]:checked').value;
 input.value = parcer === '3D' ? text3d : text2d;
 
 const commentReg = /\s*\/\/.*/;
+const zeroReg = /[0-9](|\.[0-9]{1,})e-[1-9][0-9]{1,}/g;
+const negInfinityReg = /\-[0-9](|\.[0-9]{1,})e\+[1-9][0-9]{1,}/g;
+const infinityReg = /[0-9](|\.[0-9]{1,})e\+[1-9][0-9]{1,}/g;
 function clean(text) {
-  return text.split('\n').map(l => l.replace(commentReg, '')).filter(l => l);
+  return text.split('\n')
+          .map(l => l.replace(commentReg, '')
+                      .replace(zeroReg, 0)
+                      .replace(negInfinityReg, Math.floor(Number.MIN_SAFE_INTEGER/10000000000))
+                      .replace(infinityReg, Number.MAX_SAFE_INTEGER))
+                      .filter(l => l);
 }
 
 let lastHash;

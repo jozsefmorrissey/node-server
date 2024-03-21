@@ -1,6 +1,6 @@
 
-const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
 const Line3D = require('../../../../app-src/three-d/objects/line.js');
+const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
 const Vertex3D = require('../../../../app-src/three-d/objects/vertex.js');
 const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
 const OpeningToeKick = require('./utils/opening-toe-kick');
@@ -12,6 +12,7 @@ const HandleUtil = require('./utils/handle');
 const CabinetUtil = require('./utils/cabinet');
 const DrawerBoxUtil = require('./utils/drawer-box');
 const DoorUtil = require('./utils/door');
+const CutterUtil = require('./utils/cutter');
 const Utils = require('./utils/utils');
 
 
@@ -179,6 +180,12 @@ to.CutterReference = {
       }
       return null;
     }
+  }
+}
+
+to.CutterRegExp = {
+  RegExp: {
+    model: (rMdto, environment) => CutterUtil.RegExpModel(rMdto, environment, to)
   }
 }
 

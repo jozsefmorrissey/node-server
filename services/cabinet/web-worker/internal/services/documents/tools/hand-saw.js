@@ -13,7 +13,7 @@ class HandSawDocumentation {
     this.type = HandSawDocumentation.type;
 
     const rightOleft = cut.primarySide() === 'Left' ? false : true;
-    const edges = cut.jointInfo().partInfo().fenceEdges(rightOleft);
+    const edges = cut.jointInfo().partInfo().edges(rightOleft, true);
     const center = cut.jointInfo().partInfo().edges(rightOleft).center;
     const axis = cut.axis(rightOleft);
     const y2d = axis.y.to2D('x', 'y');
@@ -49,7 +49,7 @@ class HandSawDocumentation {
             if (negate) niegbors = niegbors.map(l => l.negitive());
 
             const length = niegbors[0][1].distance(endPoint);
-            // printRelLoc(targetEdges, edge, y2d, niegbors);
+            printRelLoc(targetEdges, edge, y2d, niegbors);
             this.relitiveLocations.push({vertexLabel, length});
           }
         }catch (e) {

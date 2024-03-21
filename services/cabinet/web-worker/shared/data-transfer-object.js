@@ -41,7 +41,7 @@ const nonFuntionalAttrs = (object, dto, to) => {
   }
 }
 
-const toStrConstructors = ['IdString'];
+const toStrConstructors = ['IdString', 'RegExp'];
 const useToString = (obj) => {
   const cxtr = obj.constructor.name;
   return toStrConstructors.indexOf(cxtr) !== -1;

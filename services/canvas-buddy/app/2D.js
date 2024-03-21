@@ -33,6 +33,8 @@ function polyAddFunc() {
     verts.push(points[points.length - 1]);
     if (points.length > 1) {
       const line = new Line2d(points[points.length - 2], points[points.length - 1]);
+      const lineOnly = du.find('input[name="line-disp-type-2d"][value="LINE_ONLY"]').checked;
+      line.indicateDirection = !lineOnly;
       const mp = line.midpoint();
       addVertex(mp.x(), mp.y());
       hoverMap.add(line);
@@ -120,7 +122,6 @@ function splitLocationData(str) {
 function drawFunc() {
   verts = [];
   hoverMap.objects().forEach(obj => drawObject(obj));
-  console.log('wtf');
 }
 // [(1,.1),(2.2,88888.2),(.000003,3)],[(4445654.345,4),(-5,-5)],(6,7),[(4,4),(5,5)]
 const canvas = du.find('#two-d-display>canvas');

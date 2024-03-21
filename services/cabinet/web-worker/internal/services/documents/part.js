@@ -221,7 +221,8 @@ class PartInfo {
     this.fenceEdges = (rightOleft, availbleEdgesOnly) => {
       let edges = this.edges(rightOleft);
       let center;
-      if (availbleEdgesOnly) {
+      // TODO: need to fix algorithm to include only the edges cut thus far;
+      if (false && availbleEdgesOnly) {
         const tolMap = new ToleranceMap({'radians.positive': `.001`});
         tolMap.addAll(edges);
 
@@ -265,8 +266,11 @@ class PartInfo {
     if (this.cuts && this.cuts.length > 0) return this.cuts;
     const jointInfo = this.jointInfo();
     const cutInfo = [];
-    jointInfo.forEach(ji => cutInfo.concatInPlace(ji.cutInfo()));
+    const layersCovered = {};
+    jointInfo.forEach(ji => cutInfo.concatInPlace(ji.cutInfo(layersCovered)));
 // console.log(cutInfo.map(c => `//${c.jointInfo().joint().descriptor}\n${Polygon3D.toDrawString(c.set(), String.nextColor())}`).join('\n\n'));
+    if (this.part().partCode === 'R:full')
+      console.log('here');
     CutInfo.clean(cutInfo);
     this.cuts = cutInfo;
     // console.log(CutInfo.toDrawString(this.cuts))

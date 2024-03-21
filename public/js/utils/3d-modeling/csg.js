@@ -63,6 +63,27 @@ CSG = function() {
     }
     return str;
   }
+  this.toDrawString = (color, percision) =>
+    this.toString(percision).replace(/(^|\[)/g, `${color || 'blue'}$1`);
+  this.vertices = () => {
+    const verts = [];
+    this.polygons.forEach(p => p.vertices.forEach(v => verts.push(v)));
+    return verts;
+  }
+  //TODO: USE TOLERANCE MAP FOR 2N RUNTIME!!!;
+  this.sharesVertex = function (other) {
+    const otherVerts = other.vertices();
+    for (let pi = 0; pi < this.polygons.length; pi++) {
+      const poly = this.polygons[pi];
+      for (let vi = 0; vi < poly.vertices.length; vi++) {
+        const vert = poly.vertices[vi];
+        for (let ovi = 0; ovi < otherVerts.length; ovi++) {
+          if (otherVerts[ovi].equals(vert)) return true;
+        }
+      }
+    }
+    return false;
+  }
 };
 
 const colors = {
@@ -188,6 +209,27 @@ CSG.prototype = {
     b.invert();
     a.build(b.allPolygons());
     return CSG.fromPolygons(a.allPolygons());
+  },
+  islands: function() {
+    const islands = [];
+    let allVerts = [];
+    for (let index = 0; index < this.polygons.length; index++) {
+      const poly = this.polygons[index];
+      let addToIndex = -1;
+      for (let vi = 0; vi < poly.vertices.length; vi++) {
+        const vert = poly.vertices[vi];
+        for (let avi = 0; addToIndex < 0 && avi < allVerts.length; avi++) {
+          if (vert.equals(allVerts[avi].vert)) addToIndex = allVerts[avi].index;
+        }
+        if (addToIndex === -1) addToIndex = islands.push(new CSG()) - 1;
+        islands[addToIndex].polygons.push(poly);
+      }
+      for (let vi = 0; vi < poly.vertices.length; vi++) {
+        allVerts.push({vert: poly.vertices[vi], index: addToIndex});
+      }
+    }
+    CSG.combine(islands);
+    return islands;
   },
 
   // Return a new CSG solid representing space in this solid but not in the
@@ -366,6 +408,38 @@ CSG.prototype = {
     return {poly: clone, translationVector, rotations, normCenter, side};
   }
 };
+
+CSG.combine = function(csgs) {
+  for (let index = csgs.length - 1; index > -1; index--) {
+    const proposer = csgs[index];
+    for (let oi = 0; oi < index; oi++) {
+      const proposeTo = csgs[oi];
+      if (proposer.sharesVertex(proposeTo)) {
+        proposeTo.polygons.concatInPlace(proposer.polygons);
+        csgs.splice(index, 1);
+        break;
+      }
+    }
+  }
+}
+
+CSG.marroonedOn = function(csgOpolyOvertex, islands) {
+  let vertices;
+  if (csgOpolyOvertex instanceof CSG) vertices = csgOpolyOvertex.vertices();
+  else if (csgOpolyOvertex instanceof CSG.Polygon) vertices = csgOpolyOvertex.vertices;
+  else if (csgOpolyOvertex instanceof CSG.Vertex) vertices = [csgOpolyOvertex];
+  else throw new Error(`marroonedOn not configured for input '${csgOpolyOvertex}'`);
+  for(let ii = 0; ii < islands.length; ii++) {
+    const island = islands[ii];
+    const iVerts = island.vertices();
+    for (let ivi = 0; ivi < iVerts.length; ivi++) {
+      for (let vi = 0; vi < vertices.length; vi++) {
+        if (vertices[vi].equals(iVerts[ivi])) return island;
+      }
+    }
+  }
+  return null;
+},
 
 // Construct an axis-aligned solid cuboid. Optional parameters are `center` and
 // `radius`, which default to `[0, 0, 0]` and `[1, 1, 1]`. The radius can be
@@ -793,6 +867,15 @@ CSG.Vertex = function(pos, normal) {
     const vector = new CSG.Vector(pos.x - center.x, pos.y - center.y, pos.z - center.z);
     const scaled = vector.times(coeficient);
     this.pos = centerVector.plus(scaled);
+  }
+
+  const tol = .1
+  const attrSq = (other, attr) => (this.pos[attr]-other.pos[attr]) * (this.pos[attr]-other.pos[attr]);
+  this.equals = (other, tolerance) => {
+    tolerance ||= tol;
+    if (!(other instanceof CSG.Vertex)) return false;
+    const sqrtError = Math.sqrt(attrSq(other, 'x') + attrSq(other, 'y') + attrSq(other, 'z'));
+    return Math.abs(sqrtError) < tol;
   }
 };
 
@@ -1234,142 +1317,3 @@ CSG.reverseRotateAll = reverseRotateAll;
 CSG.rotate = rotate;
 CSG.reverseRotate = reverseRotate;
 module.exports = CSG;
-
-
-
-
-
-
-function isZero(val) {
-  return Vector3D.tolerance.bounds.i.within(val, 0);
-}
-
-function isZeros() {
-  for (let index = 0; index < arguments.length; index++) {
-    if (!isZero(arguments[index])) return false;
-  }
-  return true;
-}
-
-
-class Vector3D {
-  constructor(i, j, k) {
-    if (i instanceof Vector3D) return i;
-    if (i instanceof Object) {
-      if (i.x !== undefined) {
-        k = i.z;
-        j = i.y;
-        i = i.x;
-      } else {
-        k = i.k;
-        j = i.j;
-        i = i.i;
-      }
-    }
-    // i = isZero(i) ? 0 : i;
-    // j = isZero(j) ? 0 : j;
-    // k = isZero(k) ? 0 : k;
-    this.i = () => i;
-    this.j = () => j;
-    this.k = () => k;
-
-    this.magnitude = () => Math.sqrt(this.i()*this.i() + this.j()*this.j() + this.k()*this.k());
-    this.magnitudeSQ = () => this.i()*this.i() + this.j()*this.j() + this.k()*this.k();
-    this.minus = (vector) => {
-      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-      return new Vector3D(this.i() - vector.i(), this.j() - vector.j(), this.k() - vector.k());
-    }
-    this.add = (vector) => {
-      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-      return new Vector3D(this.i() + vector.i(), this.j() + vector.j(), this.k() + vector.k());
-    }
-    this.scale = (coef) => {
-      return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
-    }
-    this.sameDirection = (otherVect) => {
-      // console.warn('Changed this function with out looking into the consequences');
-      return this.dot(otherVect) >= 0;
-      // return approximate.sameSign(otherVect.i(), this.i()) &&
-      //         approximate.sameSign(otherVect.j(), this.j()) &&
-      //         approximate.sameSign(otherVect.k(), this.k());
-    }
-    this.divide = (vector) => {
-      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
-      return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());
-    }
-    this.toArray = () => [this.i(), this.j(), this.k()];
-    this.dot = (vector) =>
-      this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
-    this.perpendicular = (vector) =>
-      Vector3D.tolerance.within(this.dot(vector), 0);
-    this.parrelle = (vector) => {
-      let coef = isZero(this.i()) ? 0 : this.i() / vector.i();
-      if (isZero(coef)) coef = isZero(this.j()) ? 0 : this.j() / vector.j();
-      if (isZero(coef)) coef = isZero(this.k()) ? 0 : this.k() / vector.k();
-      if (isZero(coef)) return false;
-      const equivVect = new Vector3D(vector.i() * coef, vector.j() * coef, vector.k() * coef);
-      return Vector3D.tolerance.within(equivVect, this);
-    }
-    this.crossProduct = (other) => {
-      const i = this.j() * other.k() - this.k() * other.j();
-      const j = this.i() * other.k() - this.k() * other.i();
-      const k = this.i() * other.j() - this.j() * other.i();
-      const mag = Math.sqrt(i*i+j*j+k*k);
-      return new Vector3D(i/mag || 0,j/-mag || 0,k/mag || 0);
-    }
-    this.inverse = () => new Vector3D(this.i()*-1, this.j()*-1, this.k()*-1);
-
-    this.projectOnTo = (v) => {
-      const multiplier = this.dot(v) / v.magnitudeSQ();
-      return v.scale(multiplier);
-    }
-
-    this.hash = () => {
-      let hash = 1;
-      if (i) hash*=i > 0 ? i : -i; else hash*=1000000;
-      if (j) hash*=j > 0 ? j : -j; else hash*=1000000;
-      if (k) hash*=k > 0 ? k : -k; else hash*=1000000;
-      return hash;
-    }
-
-    this.unit = () => {
-      const i = this.i();const j = this.j();const k = this.k();
-      const magnitude = Math.sqrt(i*i+j*j+k*k);
-      return new Vector3D(i/magnitude, j/magnitude, k/magnitude);
-    }
-
-    this.positive = () =>
-      i > 0 || (isZero(i) && j > 0) || (isZeros(i,j) && k > 0) ||
-      isZeros(i, j, k);
-
-    this.positiveUnit = () => {
-      if (this.positive()) return this;
-      if (!this.inverse().positive()) throw new Error('if this happens algorythums will fail 11/07/2023');
-      return this.inverse();
-    }
-
-    this.equals = (vector, tol) => !tol ? Vector3D.tolerance.within(vector, this) :
-                  new Tolerance({i: tol, j: tol, k: tol}).within(vector, this);
-    this.toString = (percision) => {
-      const vertPer = vertexPercision(percision, i, j, k);
-      return `<${vertPer.x},  ${vertPer.y},  ${vertPer.z}>`;
-    }
-  }
-}
-
-const tol = .00000001;
-
-Vector3D.mostInLine = (vectors, target) => {
-  let closest;
-  target = target.unit();
-  for (let index = 0; index < vectors.length; index++) {
-    const vector = vectors[index];
-    const dist = vector.minus(target).magnitude();
-    if (closest === undefined || closest.dist > dist) {
-      closest = {dist, vector};
-    }
-  }
-  return closest.vector;
-}
-
-// module.exports = Vector3D;

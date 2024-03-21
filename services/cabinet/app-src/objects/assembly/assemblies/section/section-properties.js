@@ -6,6 +6,7 @@ const Plane = require('../../../../three-d/objects/plane.js');
 const BiPolygon = require('../../../../three-d/objects/bi-polygon.js');
 const KeyValue = require('../../../../../../../public/js/utils/object/key-value.js');
 const Assembly = require('../../assembly.js');
+const Divider = require('../divider.js');
 const Cutter = require('../cutter.js');
 const CSG = require('../../../../../../../public/js/utils/3d-modeling/csg.js');
 const DividerSection = require('./partition/divider.js');
@@ -591,21 +592,56 @@ class SectionProperties extends KeyValue{
       return transDist < refDist;
     }
 
-    function buildCutters () {
+    function addCookieCutterReg(locCodes, offsetRatio, ingulf) {
+      if (locCodes.length === 0) return;
+      const locationReg = new RegExp(`^(${locCodes.join('|')})$`);
+      const cutter = new Cutter.RegExp(locationReg, offsetRatio, ingulf);
+      sectionCutters.push(cutter);
+      cutter.parentAssembly(instance);
+      const dvReg = new RegExp(`${instance.locationCode()}_.*dv(|:[a-z]{1,})$`);
+      const loc = `Cookie_${cutter.id()}`;
+      cutter.addDependencies(new Joint(cutter.locationCode(), dvReg, null, loc, 10));
+
+    }
+
+    function buildDividerCookieCutter() {
       const cabinet = instance.getCabinet();
-      const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section)/))
+      const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section)/));
+      const outerParimeterLocationCodes = [];
+      const innerParimeterLocationCodes = [];
+      const jointLocationCodes = [];
       for (let index = 0; index < subAssems.length; index++) {
-        const reference = subAssems[index];
-        let offset = instance.dividerJoint().maleOffset();
-        if (reference.thickness() < offset * 1.9) offset = 0;
-        const front = referenceFront(reference, cabinet);
-        const cutter = new Cutter.Reference(reference, cabinet.buildCenter, offset, front);
-        sectionCutters.push(cutter);
-        cutter.parentAssembly(instance);
-        const dvReg = new RegExp(`${instance.locationCode()}_.*dv(|:[a-z]{1,})$`);
-        const loc = `Cookie_${cutter.id()}`;
-        cutter.addDependencies(new Joint(cutter.locationCode(), dvReg, null, loc, 10));
+        const assem = subAssems[index];
+        if (assem instanceof Divider) {
+          outerParimeterLocationCodes.push(assem.locationCode());
+          jointLocationCodes.push(assem.locationCode() + ':.*');
+        } else {
+          const depth = assem.position().demension('z');
+          if (depth > .5 * 2.54) jointLocationCodes.push(assem.locationCode());
+          else innerParimeterLocationCodes.push(assem.locationCode());
+        }
       }
+      addCookieCutterReg(outerParimeterLocationCodes, 1, true);
+      addCookieCutterReg(innerParimeterLocationCodes, 0);
+      addCookieCutterReg(jointLocationCodes, .5);
+    }
+
+    function buildCutters () {
+      // const cabinet = instance.getCabinet();
+      // const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section)/));
+      // for (let index = 0; index < subAssems.length; index++) {
+      //   const reference = subAssems[index];
+      //   let offset = instance.dividerJoint().maleOffset();
+      //   if (reference.thickness() < offset * 1.9) offset = 0;
+      //   const front = referenceFront(reference, cabinet);
+      //   const cutter = new Cutter.Reference(reference, cabinet.buildCenter, offset, front);
+      //   sectionCutters.push(cutter);
+      //   cutter.parentAssembly(instance);
+      //   const dvReg = new RegExp(`${instance.locationCode()}_.*dv(|:[a-z]{1,})$`);
+      //   const loc = `Cookie_${cutter.id()}`;
+      //   cutter.addDependencies(new Joint(cutter.locationCode(), dvReg, null, loc, 10));
+      // }
+      buildDividerCookieCutter();
     }
 
     this.borders = () => [this.right, this.left, this.top, this.bottom, this.back]

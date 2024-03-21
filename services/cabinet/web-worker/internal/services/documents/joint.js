@@ -16,13 +16,9 @@ class JointInfo {
         let maleModel = new CSG();
         const env = partInfo.environment();
         const maleIds = env.jointMap[joint.id].male || [];
-        try {
-          const maleModels = maleIds.map(id => ensureCsg(env.modelInfo.joined[id]));
-          maleModels.forEach(mm => maleModel = maleModel.union(mm));
-          model = partInfo.noJointModel().clone().intersect(maleModel);
-        } catch (e) {
-          console.log('wtf');
-        }
+        const maleModels = maleIds.map(id => ensureCsg(env.modelInfo.joined[id]));
+        maleModels.forEach(mm => maleModel = maleModel.union(mm));
+        model = partInfo.noJointModel().clone().intersect(maleModel);
       }
       return partInfo.normalize(rightOleft, model);
     };
@@ -50,7 +46,7 @@ class JointInfo {
 
     this.demensions = () => this.model().demensions();
 
-    this.cutInfo = () => {
+    this.cutInfo = (layersCovered) => {
       if (this.cuts && this.cuts.length > 0) return this.cuts;
       const info = [];
       const noJointModel = this.partInfo().noJointModel();
@@ -58,7 +54,7 @@ class JointInfo {
       const males = env.jointMap[joint.id].male;
       males.forEach(maleId => {
         try {
-          const cut =  CutInfo.get(maleId, this, env);
+          const cut =  CutInfo.get(maleId, this, env, layersCovered);
           if (cut) info.push(cut);
         } catch (e) {
           console.error(e);
@@ -67,8 +63,6 @@ class JointInfo {
       this.cuts = info;
       return info;
     };
-
-    this.cutInfo();
   }
 }
 

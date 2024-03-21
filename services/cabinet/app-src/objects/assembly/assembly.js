@@ -323,9 +323,6 @@ class Assembly extends KeyValue {
       const jMap = {female: {}, male: {}};
       for (let ji = 0; ji < allJs.length; ji++) {
         const joint = allJs[ji];
-        if (joint.dependentSelector() + '' === '/^R:/') {
-          console.log('found!!');
-        }
         if (!joint.apply() || (noJoints && joint instanceof Joint)) continue;
 
         const jid = joint.id();

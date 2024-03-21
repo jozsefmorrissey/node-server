@@ -28,15 +28,13 @@ class Divider extends Assembly {
 
     const pFull = new Panel(':full', 'Full');
     const pFront = new Panel(':f', 'Front');
-    const pcFront = new Cutter('dcf', 'Front');
     const pBack = new Panel(':b', 'Back');
-    const pcBack = new Cutter('dcb', 'Back');
     pFull.normals(false, {DETERMINE_FROM_PARENT: true});
     pFront.normals(false, {DETERMINE_FROM_PARENT: true});
     pBack.normals(false, {DETERMINE_FROM_PARENT: true});
 
 
-    const parts = [pFull, pFront, pcFront, pBack, pcBack];
+    const parts = [pFull, pFront, pBack];
     parts.forEach(p => p.parentAssembly(this));
     this.toJson = () => {
       const json = pToJson();
@@ -46,8 +44,6 @@ class Divider extends Assembly {
     }
 
     const partCheck = (index) => (assem) => parts[index].locationCode() === assem.locationCode();
-    parts[2].addDependencies(new Joint(parts[2], parts[1], null, 'frontCutJoint'));
-    parts[4].addDependencies(new Joint(parts[4], parts[3], null, 'backCutJoint'));
 
     this.part = () => false;
     let dividerWidth;
