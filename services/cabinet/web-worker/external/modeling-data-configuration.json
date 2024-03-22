@@ -25,7 +25,7 @@
   "Hinge": [],
   "Door": ["inElivation"],
   "HasPull": [],
-  "Divider": ["dividerWidth", "panelThickness", "type"],
+  "Divider": ["maxWidth", "panelThickness", "frameThickness", "type", "scribe"],
   "OpeningToeKick": ["leftCornerCutter.id", "rightCornerCutter.id", "toKickPanel.id",
       "toeKickCutter.id", "opening.id", "autoToeKick.id"],
   "AutoToekick": ["leftEndStyle", "rightEndStyle", "leftShow", "rightShow", "overlayRight", "overlayLeft"],

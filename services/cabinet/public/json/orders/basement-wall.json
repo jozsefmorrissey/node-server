@@ -1121,6 +1121,3710 @@
                 }
               },
               "autoToeKick": true
+            },
+            {
+              "_TYPE": "Cabinet",
+              "id": "Cabinet_vq90gy3",
+              "ID_ATTRIBUTE": "id",
+              "value": {
+                "values": {
+                  "brh": "tkb.w + BACK.t + brr",
+                  "innerWidth": "c.w - pwt34 * 2",
+                  "innerWidthCenter": "innerWidth + pwt34",
+                  "topInsetDepth": "tid",
+                  "innerHeight": "c.h - topInsetDepth - tkh - B.t",
+                  "dividerJoint": {
+                    "_TYPE": "Dado",
+                    "id": "Dado_t9pwdf0",
+                    "ID_ATTRIBUTE": "id",
+                    "maleOffset": 0.635,
+                    "femaleOffset": 0,
+                    "demensionAxis": "",
+                    "centerAxis": "",
+                    "fullLength": false,
+                    "priority": 0
+                  },
+                  "showLeft": {
+                    "type": "Flat",
+                    "endStyle": "Yes"
+                  }
+                }
+              },
+              "part": false,
+              "included": true,
+              "includeJoints": false,
+              "config": {
+                "demension": {
+                  "x": 58.42,
+                  "y": 186.69,
+                  "z": "based"
+                },
+                "center": {
+                  "x": 31.47999999999999,
+                  "y": 0,
+                  "z": 149.59
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 90,
+                  "z": 0
+                }
+              },
+              "partCode": "c",
+              "partName": "Simple",
+              "locationCode": "c",
+              "subassemblies": {
+                "R": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_bblf2hb",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w - (R.t / 2)",
+                      "y": "l / 2",
+                      "z": "w / -2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "R",
+                  "partName": "right",
+                  "locationCode": "c_R",
+                  "subassemblies": {},
+                  "joints": [],
+                  "type": "frontAndBack"
+                },
+                "L": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_pdqw8th",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "(t / 2)",
+                      "y": " l / 2",
+                      "z": "w/-2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "L",
+                  "partName": "left",
+                  "locationCode": "c_L",
+                  "subassemblies": {},
+                  "joints": [],
+                  "type": "full"
+                },
+                "BACK": {
+                  "_TYPE": "Panel",
+                  "id": "Panel_odvzrak",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": true,
+                  "included": true,
+                  "includeJoints": true,
+                  "config": {
+                    "demension": {
+                      "x": "innerWidth +R.t/2 + L.t/2",
+                      "y": "innerHeight",
+                      "z": "pwt14"
+                    },
+                    "center": {
+                      "x": "w/2 + L.t/2",
+                      "y": "BACK.h/2 + B.c.y",
+                      "z": "-(c.t - (t / 2))"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "0",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "BACK",
+                  "partName": "back",
+                  "locationCode": "c_BACK",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_getnqgt",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_l9k816c",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_zn48sl3",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "T",
+                      "maleOffset": "T.t/2",
+                      "femaleOffset": 0,
+                      "demensionAxis": "x",
+                      "centerAxis": "+y",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "hasFrame": false
+                },
+                "B": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_iq2wyrb",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t - BACK.t",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w / 2",
+                      "y": "tkh + (t/2)",
+                      "z": "w / -2"
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "B",
+                  "partName": "bottom",
+                  "locationCode": "c_B",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_kbu4put",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "B",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_9jr1sa7",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "B",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "type": "full"
+                },
+                "T": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_1o0w431",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t - BACK.t",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w / 2 ",
+                      "y": "c.h - pwt34/2 - topInsetDepth",
+                      "z": "w / -2 "
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "T",
+                  "partName": "top",
+                  "locationCode": "c_T",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_9bpa5h6",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "T",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_b6eacao",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "T",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "type": "full"
+                },
+                "tf": {
+                  "_TYPE": "Panel",
+                  "id": "Panel_3z1u9a6",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": true,
+                  "included": true,
+                  "includeJoints": true,
+                  "config": {
+                    "demension": {
+                      "x": "topInsetDepth",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "L.t + innerWidth/2",
+                      "y": "c.h - topInsetDepth/2",
+                      "z": "tf.t/-2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "0",
+                      "z": "90"
+                    }
+                  },
+                  "partCode": "tf",
+                  "partName": "topFiller",
+                  "locationCode": "c_tf",
+                  "subassemblies": {},
+                  "joints": [],
+                  "hasFrame": false
+                },
+                "S": {
+                  "_TYPE": "SectionProperties",
+                  "id": "SectionProperties_ne32ipt",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {
+                      "vertical": false
+                    }
+                  },
+                  "config": {
+                    "top": "T",
+                    "bottom": "B",
+                    "left": "L",
+                    "right": "R",
+                    "back": "BACK",
+                    "id": "prz0b53"
+                  },
+                  "index": 1,
+                  "divider": {
+                    "_TYPE": "DividerSection",
+                    "id": "DividerSection_mgec58x",
+                    "ID_ATTRIBUTE": "id",
+                    "value": {
+                      "values": {}
+                    },
+                    "part": false,
+                    "included": false,
+                    "includeJoints": false,
+                    "config": {
+                      "demension": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "center": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "rotation": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      }
+                    },
+                    "partCode": "dv",
+                    "partName": "",
+                    "locationCode": "c_S1_dv",
+                    "subassemblies": {
+                      "dv": {
+                        "_TYPE": "Divider",
+                        "id": "Divider_9k0v0u1",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": true,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "Section",
+                        "locationCode": "c_S1_dv_dv",
+                        "subassemblies": {},
+                        "joints": [],
+                        "type": "full"
+                      }
+                    },
+                    "joints": []
+                  },
+                  "cover": {
+                    "_TYPE": "DoorSection",
+                    "id": "DoorSection_wbe52d6",
+                    "ID_ATTRIBUTE": "id",
+                    "value": {
+                      "values": {}
+                    },
+                    "part": false,
+                    "included": true,
+                    "includeJoints": true,
+                    "config": {
+                      "demension": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "center": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "rotation": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      }
+                    },
+                    "partCode": "DS",
+                    "locationCode": "c_S1_DS",
+                    "subassemblies": {
+                      "D": {
+                        "_TYPE": "Door",
+                        "id": "Door_0ou2cf5",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": true,
+                        "included": true,
+                        "includeJoints": true,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "D",
+                        "partName": "Section",
+                        "locationCode": "c_S1_DS_D",
+                        "subassemblies": {
+                          "pu": {
+                            "_TYPE": "Handle",
+                            "id": "Handle_7plconp",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": true,
+                            "included": true,
+                            "includeJoints": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "pu",
+                            "partName": "Section.Pull.RIGHT",
+                            "locationCode": "c_S1_DS_D:pu1",
+                            "subassemblies": {},
+                            "joints": [],
+                            "location": {
+                              "multiple": true,
+                              "rotate": true,
+                              "position": "RIGHT"
+                            }
+                          }
+                        },
+                        "joints": []
+                      }
+                    },
+                    "joints": []
+                  },
+                  "pattern": {
+                    "str": "aaaa",
+                    "values": {},
+                    "props": {}
+                  },
+                  "subassemblies": [
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_xawbb8g",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 1,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_xhe2okw",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S1_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_7btxhqi",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S1_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_xrt60j9",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 2,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_4p7kn6s",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S2_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_0yne0lw",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S2_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_npbuc0r",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 3,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_9juz8e1",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S3_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_wqbmzox",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S3_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_gh0bc5v",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": false,
+                      "config": {},
+                      "index": 4,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_3ooikhc",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S4_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_x9x0j5v",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S4_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    }
+                  ]
+                }
+              },
+              "joints": [],
+              "normals": {
+                "y": {},
+                "x": {},
+                "z": {}
+              },
+              "currentPosition": {
+                "center": {
+                  "x": 31.47999999999999,
+                  "y": 0,
+                  "z": 149.59
+                },
+                "demension": {
+                  "x": 58.42,
+                  "y": 186.69,
+                  "z": 60.96
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 90,
+                  "z": 0
+                },
+                "normals": {
+                  "y": {},
+                  "x": {},
+                  "z": {}
+                }
+              },
+              "autoToeKick": true
+            },
+            {
+              "_TYPE": "Cabinet",
+              "id": "Cabinet_joyv6li",
+              "ID_ATTRIBUTE": "id",
+              "value": {
+                "values": {
+                  "brh": "tkb.w + BACK.t + brr",
+                  "innerWidth": "c.w - pwt34 * 2",
+                  "innerWidthCenter": "innerWidth + pwt34",
+                  "topInsetDepth": "tid",
+                  "innerHeight": "c.h - topInsetDepth - tkh - B.t",
+                  "dividerJoint": {
+                    "_TYPE": "Dado",
+                    "id": "Dado_hg3ufc6",
+                    "ID_ATTRIBUTE": "id",
+                    "maleOffset": 0.635,
+                    "femaleOffset": 0,
+                    "demensionAxis": "",
+                    "centerAxis": "",
+                    "fullLength": false,
+                    "priority": 0
+                  }
+                }
+              },
+              "part": false,
+              "included": true,
+              "includeJoints": false,
+              "config": {
+                "demension": {
+                  "x": 74.4538,
+                  "y": 186.69,
+                  "z": "based"
+                },
+                "center": {
+                  "x": 99.13135214937431,
+                  "y": 0,
+                  "z": 31.283798252540137
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0.115,
+                  "z": 0
+                }
+              },
+              "partCode": "c",
+              "partName": "Simple",
+              "locationCode": "c",
+              "subassemblies": {
+                "R": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_svvsoam",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w - (R.t / 2)",
+                      "y": "l / 2",
+                      "z": "w / -2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "R",
+                  "partName": "right",
+                  "locationCode": "c_R",
+                  "subassemblies": {},
+                  "joints": [],
+                  "type": "frontAndBack"
+                },
+                "L": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_59frdxe",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "(t / 2)",
+                      "y": " l / 2",
+                      "z": "w/-2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "L",
+                  "partName": "left",
+                  "locationCode": "c_L",
+                  "subassemblies": {},
+                  "joints": [],
+                  "type": "frontAndBack"
+                },
+                "BACK": {
+                  "_TYPE": "Panel",
+                  "id": "Panel_73civ3t",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": true,
+                  "included": true,
+                  "includeJoints": true,
+                  "config": {
+                    "demension": {
+                      "x": "innerWidth +R.t/2 + L.t/2",
+                      "y": "innerHeight",
+                      "z": "pwt14"
+                    },
+                    "center": {
+                      "x": "w/2 + L.t/2",
+                      "y": "BACK.h/2 + B.c.y",
+                      "z": "-(c.t - (t / 2))"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "0",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "BACK",
+                  "partName": "back",
+                  "locationCode": "c_BACK",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_eznnxyq",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_pz0ngnj",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_tic6nis",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "T",
+                      "maleOffset": "T.t/2",
+                      "femaleOffset": 0,
+                      "demensionAxis": "x",
+                      "centerAxis": "+y",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "hasFrame": false
+                },
+                "B": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_rjsv6dx",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t - BACK.t",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w / 2",
+                      "y": "tkh + (t/2)",
+                      "z": "w / -2"
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "B",
+                  "partName": "bottom",
+                  "locationCode": "c_B",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_qowdn9g",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "B",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_o0n60p0",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "B",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "type": "full"
+                },
+                "T": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_04aznvk",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t - BACK.t",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w / 2 ",
+                      "y": "c.h - pwt34/2 - topInsetDepth",
+                      "z": "w / -2 "
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "T",
+                  "partName": "top",
+                  "locationCode": "c_T",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_ugzhxxk",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "T",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_m3tq25c",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "T",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "type": "full"
+                },
+                "tf": {
+                  "_TYPE": "Panel",
+                  "id": "Panel_64xdxli",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": true,
+                  "included": true,
+                  "includeJoints": true,
+                  "config": {
+                    "demension": {
+                      "x": "topInsetDepth",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "L.t + innerWidth/2",
+                      "y": "c.h - topInsetDepth/2",
+                      "z": "tf.t/-2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "0",
+                      "z": "90"
+                    }
+                  },
+                  "partCode": "tf",
+                  "partName": "topFiller",
+                  "locationCode": "c_tf",
+                  "subassemblies": {},
+                  "joints": [],
+                  "hasFrame": false
+                },
+                "S": {
+                  "_TYPE": "SectionProperties",
+                  "id": "SectionProperties_ca7hw6q",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {
+                      "vertical": false
+                    }
+                  },
+                  "config": {
+                    "top": "T",
+                    "bottom": "B",
+                    "left": "L",
+                    "right": "R",
+                    "back": "BACK",
+                    "id": "prz0b53"
+                  },
+                  "index": 1,
+                  "divider": {
+                    "_TYPE": "DividerSection",
+                    "id": "DividerSection_lt86afr",
+                    "ID_ATTRIBUTE": "id",
+                    "value": {
+                      "values": {}
+                    },
+                    "part": false,
+                    "included": false,
+                    "includeJoints": false,
+                    "config": {
+                      "demension": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "center": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "rotation": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      }
+                    },
+                    "partCode": "dv",
+                    "partName": "",
+                    "locationCode": "c_S1_dv",
+                    "subassemblies": {
+                      "dv": {
+                        "_TYPE": "Divider",
+                        "id": "Divider_fj9mbfw",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": true,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "Section",
+                        "locationCode": "c_S1_dv_dv",
+                        "subassemblies": {},
+                        "joints": [],
+                        "type": "full"
+                      }
+                    },
+                    "joints": []
+                  },
+                  "cover": {
+                    "_TYPE": "DoorSection",
+                    "id": "DoorSection_tpgm1zy",
+                    "ID_ATTRIBUTE": "id",
+                    "value": {
+                      "values": {}
+                    },
+                    "part": false,
+                    "included": true,
+                    "includeJoints": true,
+                    "config": {
+                      "demension": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "center": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "rotation": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      }
+                    },
+                    "partCode": "DS",
+                    "locationCode": "c_S1_DS",
+                    "subassemblies": {
+                      "D": {
+                        "_TYPE": "Door",
+                        "id": "Door_x5nhfec",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": true,
+                        "included": true,
+                        "includeJoints": true,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "D",
+                        "partName": "Section",
+                        "locationCode": "c_S1_DS_D",
+                        "subassemblies": {
+                          "pu": {
+                            "_TYPE": "Handle",
+                            "id": "Handle_7fzihnb",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": true,
+                            "included": true,
+                            "includeJoints": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "pu",
+                            "partName": "Section.Pull.RIGHT",
+                            "locationCode": "c_S1_DS_D:pu1",
+                            "subassemblies": {},
+                            "joints": [],
+                            "location": {
+                              "multiple": true,
+                              "rotate": true,
+                              "position": "RIGHT"
+                            }
+                          }
+                        },
+                        "joints": []
+                      }
+                    },
+                    "joints": []
+                  },
+                  "pattern": {
+                    "str": "aaaa",
+                    "values": {},
+                    "props": {}
+                  },
+                  "subassemblies": [
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_xpedt6p",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 1,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_wodu0mf",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S1_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_zbusaye",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S1_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_icy6ofb",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 2,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_vnrv0sr",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S2_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_ckhm9g9",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S2_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_cttcwlp",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 3,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_ia1jtde",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S3_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_vtunrni",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S3_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_jr7361x",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": false,
+                      "config": {},
+                      "index": 4,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_qzwm9z8",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S4_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_jw758iy",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S4_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    }
+                  ]
+                }
+              },
+              "joints": [],
+              "normals": {
+                "y": {},
+                "x": {},
+                "z": {}
+              },
+              "currentPosition": {
+                "center": {
+                  "x": 99.13135214937431,
+                  "y": 0,
+                  "z": 31.283798252540137
+                },
+                "demension": {
+                  "x": 74.4538,
+                  "y": 186.69,
+                  "z": 60.96
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0.115,
+                  "z": 0
+                },
+                "normals": {
+                  "y": {},
+                  "x": {},
+                  "z": {}
+                }
+              },
+              "autoToeKick": true
+            },
+            {
+              "_TYPE": "Cabinet",
+              "id": "Cabinet_btx8n9r",
+              "ID_ATTRIBUTE": "id",
+              "value": {
+                "values": {
+                  "brh": "tkb.w + BACK.t + brr",
+                  "innerWidth": "c.w - pwt34 * 2",
+                  "innerWidthCenter": "innerWidth + pwt34",
+                  "topInsetDepth": "tid",
+                  "innerHeight": "c.h - topInsetDepth - tkh - B.t",
+                  "dividerJoint": {
+                    "_TYPE": "Dado",
+                    "id": "Dado_tv4cav8",
+                    "ID_ATTRIBUTE": "id",
+                    "maleOffset": 0.635,
+                    "femaleOffset": 0,
+                    "demensionAxis": "",
+                    "centerAxis": "",
+                    "fullLength": false,
+                    "priority": 0
+                  }
+                }
+              },
+              "part": false,
+              "included": true,
+              "includeJoints": false,
+              "config": {
+                "demension": {
+                  "x": 74.4538,
+                  "y": 186.69,
+                  "z": "based"
+                },
+                "center": {
+                  "x": 173.58500217842422,
+                  "y": 0,
+                  "z": 31.134359998555688
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0.115,
+                  "z": 0
+                }
+              },
+              "partCode": "c",
+              "partName": "Simple",
+              "locationCode": "c",
+              "subassemblies": {
+                "R": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_4b68cf6",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w - (R.t / 2)",
+                      "y": "l / 2",
+                      "z": "w / -2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "R",
+                  "partName": "right",
+                  "locationCode": "c_R",
+                  "subassemblies": {},
+                  "joints": [],
+                  "type": "frontAndBack"
+                },
+                "L": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_d10a1fy",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "(t / 2)",
+                      "y": " l / 2",
+                      "z": "w/-2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "L",
+                  "partName": "left",
+                  "locationCode": "c_L",
+                  "subassemblies": {},
+                  "joints": [],
+                  "type": "frontAndBack"
+                },
+                "BACK": {
+                  "_TYPE": "Panel",
+                  "id": "Panel_wmiclwj",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": true,
+                  "included": true,
+                  "includeJoints": true,
+                  "config": {
+                    "demension": {
+                      "x": "innerWidth +R.t/2 + L.t/2",
+                      "y": "innerHeight",
+                      "z": "pwt14"
+                    },
+                    "center": {
+                      "x": "w/2 + L.t/2",
+                      "y": "BACK.h/2 + B.c.y",
+                      "z": "-(c.t - (t / 2))"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "0",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "BACK",
+                  "partName": "back",
+                  "locationCode": "c_BACK",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_sek5dus",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_pyw66nt",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_tf8l1ld",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "T",
+                      "maleOffset": "T.t/2",
+                      "femaleOffset": 0,
+                      "demensionAxis": "x",
+                      "centerAxis": "+y",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "hasFrame": false
+                },
+                "B": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_79j434t",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t - BACK.t",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w / 2",
+                      "y": "tkh + (t/2)",
+                      "z": "w / -2"
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "B",
+                  "partName": "bottom",
+                  "locationCode": "c_B",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_00wob3y",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "B",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_w7defp1",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "B",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "type": "full"
+                },
+                "T": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_4s59zpu",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t - BACK.t",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w / 2 ",
+                      "y": "c.h - pwt34/2 - topInsetDepth",
+                      "z": "w / -2 "
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "T",
+                  "partName": "top",
+                  "locationCode": "c_T",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_24nkgym",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "T",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_svtjlw1",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "T",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "type": "full"
+                },
+                "tf": {
+                  "_TYPE": "Panel",
+                  "id": "Panel_cfhdueu",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": true,
+                  "included": true,
+                  "includeJoints": true,
+                  "config": {
+                    "demension": {
+                      "x": "topInsetDepth",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "L.t + innerWidth/2",
+                      "y": "c.h - topInsetDepth/2",
+                      "z": "tf.t/-2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "0",
+                      "z": "90"
+                    }
+                  },
+                  "partCode": "tf",
+                  "partName": "topFiller",
+                  "locationCode": "c_tf",
+                  "subassemblies": {},
+                  "joints": [],
+                  "hasFrame": false
+                },
+                "S": {
+                  "_TYPE": "SectionProperties",
+                  "id": "SectionProperties_z38g1wh",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {
+                      "vertical": false
+                    }
+                  },
+                  "config": {
+                    "top": "T",
+                    "bottom": "B",
+                    "left": "L",
+                    "right": "R",
+                    "back": "BACK",
+                    "id": "prz0b53"
+                  },
+                  "index": 1,
+                  "divider": {
+                    "_TYPE": "DividerSection",
+                    "id": "DividerSection_4fi6hxu",
+                    "ID_ATTRIBUTE": "id",
+                    "value": {
+                      "values": {}
+                    },
+                    "part": false,
+                    "included": false,
+                    "includeJoints": false,
+                    "config": {
+                      "demension": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "center": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "rotation": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      }
+                    },
+                    "partCode": "dv",
+                    "partName": "",
+                    "locationCode": "c_S1_dv",
+                    "subassemblies": {
+                      "dv": {
+                        "_TYPE": "Divider",
+                        "id": "Divider_tib935k",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": true,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "Section",
+                        "locationCode": "c_S1_dv_dv",
+                        "subassemblies": {},
+                        "joints": [],
+                        "type": "full"
+                      }
+                    },
+                    "joints": []
+                  },
+                  "cover": {
+                    "_TYPE": "DoorSection",
+                    "id": "DoorSection_y2cooqm",
+                    "ID_ATTRIBUTE": "id",
+                    "value": {
+                      "values": {}
+                    },
+                    "part": false,
+                    "included": true,
+                    "includeJoints": true,
+                    "config": {
+                      "demension": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "center": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "rotation": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      }
+                    },
+                    "partCode": "DS",
+                    "locationCode": "c_S1_DS",
+                    "subassemblies": {
+                      "D": {
+                        "_TYPE": "Door",
+                        "id": "Door_bskk1vz",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": true,
+                        "included": true,
+                        "includeJoints": true,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "D",
+                        "partName": "Section",
+                        "locationCode": "c_S1_DS_D",
+                        "subassemblies": {
+                          "pu": {
+                            "_TYPE": "Handle",
+                            "id": "Handle_cxtva6f",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": true,
+                            "included": true,
+                            "includeJoints": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "pu",
+                            "partName": "Section.Pull.LEFT",
+                            "locationCode": "c_S1_DS_D:pu1",
+                            "subassemblies": {},
+                            "joints": [],
+                            "location": {
+                              "multiple": true,
+                              "rotate": true,
+                              "position": "LEFT"
+                            }
+                          }
+                        },
+                        "joints": []
+                      }
+                    },
+                    "joints": []
+                  },
+                  "pattern": {
+                    "str": "aaaa",
+                    "values": {},
+                    "props": {}
+                  },
+                  "subassemblies": [
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_5j4oadm",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 1,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_o8u2qkf",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S1_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_fdmg0z7",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S1_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_9k9tv1s",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 2,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_xv12umg",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S2_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_1hqahk8",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S2_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_5ls4wkd",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 3,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_y6i9qvm",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S3_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_qt4c86j",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S3_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_bwyhwbn",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": false,
+                      "config": {},
+                      "index": 4,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_wcnzp9q",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S4_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_5324p7t",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S4_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    }
+                  ]
+                }
+              },
+              "joints": [],
+              "normals": {
+                "y": {},
+                "x": {},
+                "z": {}
+              },
+              "currentPosition": {
+                "center": {
+                  "x": 173.58500217842422,
+                  "y": 0,
+                  "z": 31.134359998555688
+                },
+                "demension": {
+                  "x": 74.4538,
+                  "y": 186.69,
+                  "z": 60.96
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0.115,
+                  "z": 0
+                },
+                "normals": {
+                  "y": {},
+                  "x": {},
+                  "z": {}
+                }
+              },
+              "autoToeKick": true
+            },
+            {
+              "_TYPE": "Cabinet",
+              "id": "Cabinet_6g0xehl",
+              "ID_ATTRIBUTE": "id",
+              "value": {
+                "values": {
+                  "brh": "tkb.w + BACK.t + brr",
+                  "innerWidth": "c.w - pwt34 * 2",
+                  "innerWidthCenter": "innerWidth + pwt34",
+                  "topInsetDepth": "tid",
+                  "innerHeight": "c.h - topInsetDepth - tkh - B.t",
+                  "dividerJoint": {
+                    "_TYPE": "Dado",
+                    "id": "Dado_kxikrab",
+                    "ID_ATTRIBUTE": "id",
+                    "maleOffset": 0.635,
+                    "femaleOffset": 0,
+                    "demensionAxis": "",
+                    "centerAxis": "",
+                    "fullLength": false,
+                    "priority": 0
+                  },
+                  "showRight": {
+                    "type": "Flat",
+                    "endStyle": "Yes"
+                  }
+                }
+              },
+              "part": false,
+              "included": true,
+              "includeJoints": false,
+              "config": {
+                "demension": {
+                  "x": 74.4538,
+                  "y": 186.69,
+                  "z": "based"
+                },
+                "center": {
+                  "x": 248.09960424475946,
+                  "y": 0,
+                  "z": 30.910018732889952
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0.23,
+                  "z": 0
+                }
+              },
+              "partCode": "c",
+              "partName": "Simple",
+              "locationCode": "c",
+              "subassemblies": {
+                "R": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_tpi90f5",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w - (R.t / 2)",
+                      "y": "l / 2",
+                      "z": "w / -2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "R",
+                  "partName": "right",
+                  "locationCode": "c_R",
+                  "subassemblies": {},
+                  "joints": [],
+                  "type": "full"
+                },
+                "L": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_or1isue",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "(t / 2)",
+                      "y": " l / 2",
+                      "z": "w/-2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "L",
+                  "partName": "left",
+                  "locationCode": "c_L",
+                  "subassemblies": {},
+                  "joints": [],
+                  "type": "frontAndBack"
+                },
+                "BACK": {
+                  "_TYPE": "Panel",
+                  "id": "Panel_0yk0yrv",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": true,
+                  "included": true,
+                  "includeJoints": true,
+                  "config": {
+                    "demension": {
+                      "x": "innerWidth +R.t/2 + L.t/2",
+                      "y": "innerHeight",
+                      "z": "pwt14"
+                    },
+                    "center": {
+                      "x": "w/2 + L.t/2",
+                      "y": "BACK.h/2 + B.c.y",
+                      "z": "-(c.t - (t / 2))"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "0",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "BACK",
+                  "partName": "back",
+                  "locationCode": "c_BACK",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_osucx6f",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_qnlwq9p",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_ajsrth0",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "BACK",
+                      "dependentSelector": "T",
+                      "maleOffset": "T.t/2",
+                      "femaleOffset": 0,
+                      "demensionAxis": "x",
+                      "centerAxis": "+y",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "hasFrame": false
+                },
+                "B": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_bu9gh1d",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t - BACK.t",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w / 2",
+                      "y": "tkh + (t/2)",
+                      "z": "w / -2"
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "B",
+                  "partName": "bottom",
+                  "locationCode": "c_B",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_r2ibvux",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "B",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_r05rnqr",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "B",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "type": "full"
+                },
+                "T": {
+                  "_TYPE": "Divider",
+                  "id": "Divider_noxnzgw",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": false,
+                  "included": true,
+                  "includeJoints": false,
+                  "config": {
+                    "demension": {
+                      "x": "c.t - BACK.t",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "c.w / 2 ",
+                      "y": "c.h - pwt34/2 - topInsetDepth",
+                      "z": "w / -2 "
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "T",
+                  "partName": "top",
+                  "locationCode": "c_T",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_axd8ukr",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "T",
+                      "dependentSelector": "L",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "-x",
+                      "fullLength": false,
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "id": "Dado_sel7sxb",
+                      "ID_ATTRIBUTE": "id",
+                      "dependsSelector": "T",
+                      "dependentSelector": "R",
+                      "maleOffset": 0.9525,
+                      "femaleOffset": 0,
+                      "demensionAxis": "y",
+                      "centerAxis": "+x",
+                      "fullLength": false,
+                      "priority": 0
+                    }
+                  ],
+                  "type": "full"
+                },
+                "tf": {
+                  "_TYPE": "Panel",
+                  "id": "Panel_ihmd6sq",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {}
+                  },
+                  "part": true,
+                  "included": true,
+                  "includeJoints": true,
+                  "config": {
+                    "demension": {
+                      "x": "topInsetDepth",
+                      "y": "innerWidth",
+                      "z": "pwt34"
+                    },
+                    "center": {
+                      "x": "L.t + innerWidth/2",
+                      "y": "c.h - topInsetDepth/2",
+                      "z": "tf.t/-2"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "0",
+                      "z": "90"
+                    }
+                  },
+                  "partCode": "tf",
+                  "partName": "topFiller",
+                  "locationCode": "c_tf",
+                  "subassemblies": {},
+                  "joints": [],
+                  "hasFrame": false
+                },
+                "S": {
+                  "_TYPE": "SectionProperties",
+                  "id": "SectionProperties_41wcmji",
+                  "ID_ATTRIBUTE": "id",
+                  "value": {
+                    "values": {
+                      "vertical": false
+                    }
+                  },
+                  "config": {
+                    "top": "T",
+                    "bottom": "B",
+                    "left": "L",
+                    "right": "R",
+                    "back": "BACK",
+                    "id": "prz0b53"
+                  },
+                  "index": 1,
+                  "divider": {
+                    "_TYPE": "DividerSection",
+                    "id": "DividerSection_ex92cs9",
+                    "ID_ATTRIBUTE": "id",
+                    "value": {
+                      "values": {}
+                    },
+                    "part": false,
+                    "included": false,
+                    "includeJoints": false,
+                    "config": {
+                      "demension": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "center": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "rotation": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      }
+                    },
+                    "partCode": "dv",
+                    "partName": "",
+                    "locationCode": "c_S1_dv",
+                    "subassemblies": {
+                      "dv": {
+                        "_TYPE": "Divider",
+                        "id": "Divider_27fsj3i",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": true,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "Section",
+                        "locationCode": "c_S1_dv_dv",
+                        "subassemblies": {},
+                        "joints": [],
+                        "type": "full"
+                      }
+                    },
+                    "joints": []
+                  },
+                  "cover": {
+                    "_TYPE": "DoorSection",
+                    "id": "DoorSection_kf6gf5z",
+                    "ID_ATTRIBUTE": "id",
+                    "value": {
+                      "values": {}
+                    },
+                    "part": false,
+                    "included": true,
+                    "includeJoints": true,
+                    "config": {
+                      "demension": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "center": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "rotation": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      }
+                    },
+                    "partCode": "DS",
+                    "locationCode": "c_S1_DS",
+                    "subassemblies": {
+                      "D": {
+                        "_TYPE": "Door",
+                        "id": "Door_qne8h9m",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": true,
+                        "included": true,
+                        "includeJoints": true,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "D",
+                        "partName": "Section",
+                        "locationCode": "c_S1_DS_D",
+                        "subassemblies": {
+                          "pu": {
+                            "_TYPE": "Handle",
+                            "id": "Handle_jxqm1pv",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": true,
+                            "included": true,
+                            "includeJoints": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "pu",
+                            "partName": "Section.Pull.LEFT",
+                            "locationCode": "c_S1_DS_D:pu1",
+                            "subassemblies": {},
+                            "joints": [],
+                            "location": {
+                              "multiple": true,
+                              "rotate": true,
+                              "position": "LEFT"
+                            }
+                          }
+                        },
+                        "joints": []
+                      }
+                    },
+                    "joints": []
+                  },
+                  "pattern": {
+                    "str": "aaaa",
+                    "values": {},
+                    "props": {}
+                  },
+                  "subassemblies": [
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_m5a9kaa",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 1,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_erokyh5",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S1_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_n34qcn5",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S1_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_0o57fp4",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 2,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_0zns3ty",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S2_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_4rm5hca",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S2_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_j0t8nkz",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": true,
+                      "config": {},
+                      "index": 3,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_vzv5gif",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S3_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_zv2bb1v",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S3_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    },
+                    {
+                      "_TYPE": "SectionProperties",
+                      "id": "SectionProperties_951ifu9",
+                      "ID_ATTRIBUTE": "id",
+                      "value": {
+                        "values": {
+                          "vertical": false
+                        }
+                      },
+                      "divideRight": false,
+                      "config": {},
+                      "index": 4,
+                      "divider": {
+                        "_TYPE": "DividerSection",
+                        "id": "DividerSection_krll22b",
+                        "ID_ATTRIBUTE": "id",
+                        "value": {
+                          "values": {}
+                        },
+                        "part": false,
+                        "included": false,
+                        "includeJoints": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S4_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "_TYPE": "Divider",
+                            "id": "Divider_wqqdmt5",
+                            "ID_ATTRIBUTE": "id",
+                            "value": {
+                              "values": {}
+                            },
+                            "part": false,
+                            "included": true,
+                            "includeJoints": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S4_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "type": "full"
+                          }
+                        },
+                        "joints": []
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": []
+                    }
+                  ]
+                }
+              },
+              "joints": [],
+              "normals": {
+                "y": {},
+                "x": {},
+                "z": {}
+              },
+              "currentPosition": {
+                "center": {
+                  "x": 248.09960424475946,
+                  "y": 0,
+                  "z": 30.910018732889952
+                },
+                "demension": {
+                  "x": 74.4538,
+                  "y": 186.69,
+                  "z": 60.96
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0.23,
+                  "z": 0
+                },
+                "normals": {
+                  "y": {},
+                  "x": {},
+                  "z": {}
+                }
+              },
+              "autoToeKick": true
             }
           ],
           "_TYPE": "Group",

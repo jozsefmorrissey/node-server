@@ -21,6 +21,10 @@ const governingSectionProps = (divider) => {
     funcOobj instanceof Function ? isSectionProps(funcOobj()) : isSectionProps(funcOobj));
   return sectionPropsGetter();
 }
+
+// console.log(dividerPoly.toDrawString('red') + '\n\n' + furtherPoly.toDrawString('blue') + '\n\n' + biPoly.toDrawString('green'))
+// console.log(ic.toString() + '\nred' + furtherPoly.center().toString() + '\ngreen' + biPoly.center().toString())
+
 class DividerUtil {
   constructor(divider, dividerPart, env) {
     const instance = this;
@@ -34,45 +38,32 @@ class DividerUtil {
       this.biPolygon = sectionUtils.dividerInfo();
     }
 
-    this.Full = {
-      biPolygon: () => this.biPolygon,
+    let full;
+    this.Full = () => {
+      if (!full) {
+        const ic = sectionUtils.innerCenter;
+        const dividerPoly = instance.biPolygon.copy();
+        const furtherPoly = dividerPoly.furthestOrder(ic)[0];
+        const fc = furtherPoly.center();
+        const movedNormDist = fc.translate(furtherPoly.normal(), true);
+        const multiplier = movedNormDist.distance(ic) < fc.distance(ic) ? 1 : -1;
+        const biPoly = BiPolygon.fromPolygon(furtherPoly.copy(), multiplier * divider.panelThickness, 0);
+        biPoly.translate(furtherPoly.normal().scale(multiplier*divider.scribe));
+
+        full = biPoly;
+      }
+      return full;
     }
 
-    this.Back = {
-      biPolygon: () => {
-        return builders.back();
-      },
-    }
-
-    this.Front = {
-      biPolygon: () => {
-        return builders.front();
-      },
-    }
-    this.Right = {
-      biPolygon: () => {
-        return builders.left();
-      },
-    }
-    this.Left = {
-      biPolygon: () => {
-        return builders.right();
-      },
-    }
-
-    this.Front.Cutter = {
-      polygon: () => {
-        if (cutters['f'] === undefined) builders.front();
-        return cutters['f'];
-      },
-    }
-
-    this.Back.Cutter = {
-      polygon: () => {
-        if (cutters['b'] === undefined) builders.back();
-        return cutters['b'];
-      },
-    }
+    const getCutter = (key, builder) => () => (cutters[key] !== undefined || builder()) && cutters[key];
+    this.Frame = buildFramePoly;
+    this.Frame.Cutter = getCutter('fr', this.Frame);
+    this.Back = () => buildPanelPoly(DividerUtil.positions.BACK);
+    this.Front = () => buildPanelPoly(DividerUtil.positions.FRONT);
+    this.Right = () => buildPanelPoly(DividerUtil.positions.RIGHT);
+    this.Left = () => buildPanelPoly(DividerUtil.positions.LEFT);
+    this.Front.Cutter = getCutter('f', this.front);
+    this.Back.Cutter = getCutter('b', this.back);
 
     let type = divider.type;
     let cutter;
@@ -80,8 +71,22 @@ class DividerUtil {
     const panels = {};
     const cutters = {};
 
-    function buildFrontPoly(position) {
-      const biPoly = instance.biPolygon;
+    function buildFramePoly() {
+      const biPoly = instance.biPolygon.copy();
+      const cabUtil = CabinetUtil.instance(divider);
+      const cab = cabUtil.cabinet();
+      const norms = sectionUtils.biPolygon.normals();
+
+      const frontPoly = biPoly.closestPoly(sectionUtils.innerCenter);
+      const frameThickness = divider.frameThickness;
+      const framePoly = BiPolygon.fromPolygon(frontPoly, 0, -frameThickness);
+      const back = framePoly.back();
+      cutters['fr'] = back.translate(back.normal().scale(frameThickness/2));
+      return framePoly;
+    }
+
+    function buildPanelPoly(position) {
+      const biPoly = instance.Full();
       const cabUtil = CabinetUtil.instance(divider);
       const cab = cabUtil.cabinet();
       const norms = sectionUtils.biPolygon.normals();
@@ -98,39 +103,29 @@ class DividerUtil {
       let closerTo;
       switch (position) {
         case DividerUtil.positions.FRONT: closerTo = cabUtil.partCenter().translate(zNorm.scale(100), true); break;
-        case DividerUtil.positions.Back: closerTo = cabUtil.partCenter().translate(zNorm.inverse().scale(100), true); break;
-        case DividerUtil.positions.Left: closerTo = cabUtil.partCenter().translate(xNorm.inverse().scale(100), true); break;
-        case DividerUtil.positions.Right: closerTo = cabUtil.partCenter().translate(xNorm.scale(100), true); break;
+        case DividerUtil.positions.BACK: closerTo = cabUtil.partCenter().translate(zNorm.inverse().scale(100), true); break;
+        case DividerUtil.positions.LEFT: closerTo = cabUtil.partCenter().translate(xNorm.inverse().scale(100), true); break;
+        case DividerUtil.positions.RIGHT: closerTo = cabUtil.partCenter().translate(xNorm.scale(100), true); break;
       }
 
       const sides = biPoly.sides();
       sides.sort((a, b) => a.distance(closerTo) - b.distance(closerTo));
       if (false) polyDrawStrings(cab);
-      return BiPolygon.fromPolygon(sides[0], -4 * 2.54, 0);
-    }
-
-    const builders = {
-      front: (append) => {
-        return buildFrontPoly(DividerUtil.positions.FRONT);
-      },
-      right: (append) => {
-        return buildFrontPoly(DividerUtil.positions.Left);
-      },
-      left: (append) => {
-        return buildFrontPoly(DividerUtil.positions.Right);
-      },
-      back: (append) => {
-        return buildFrontPoly(DividerUtil.positions.Back);
-      }
+      const sc = sectionUtils.biPolygon.center();
+      const c = sides[0].center();
+      const centerPlusNorm = c.translate(sides[0].normal(), true);
+      const multiplier = centerPlusNorm.distance(sc) > c.distance(sc) ? -4 : 4;
+      return BiPolygon.fromPolygon(sides[0], multiplier * 2.54, 0);
     }
   }
 }
 
 DividerUtil.positions = {};
+DividerUtil.positions.FRAME = 'front';
 DividerUtil.positions.FRONT = 'front';
-DividerUtil.positions.Back = 'back';
-DividerUtil.positions.Left = 'left';
-DividerUtil.positions.Right = 'right';
+DividerUtil.positions.BACK = 'back';
+DividerUtil.positions.LEFT = 'left';
+DividerUtil.positions.RIGHT = 'right';
 
 const built = {};
 DividerUtil.instance = (rMdto, modelMap) => {

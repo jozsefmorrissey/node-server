@@ -31,6 +31,8 @@ class CutterReference extends Cutter {
     //   const joint = new Dependency(reference, this)
     //   this.addDependencies(joint);
     // }
+    // this.part(true);
+    // this.included(true);
     offset ||= 0;
 
     this.reference = () => reference;
@@ -38,7 +40,7 @@ class CutterReference extends Cutter {
     this.offset = () => offset;
     this.front = () => front;
 
-    this.toString = () => `CutterRef(${reference.partCode()}${offset >= 0 ? '+' + offset : offset}@${fromPoint()})`;
+    this.toString = () => `CutterRef(${reference.partCode()}${offset >= 0 ? '+' + offset : offset}@${this.fromPoint()})`;
   }
 }
 

@@ -231,10 +231,11 @@ class BiPolygon {
     }
 
     const setDot = (set, normal) => new Line3D(set[0].center(), set[1].center()).vector().unit().dot(normal);
+    const setAbsDot = (set, normal) => Math.abs(setDot(set, normal));
     this.setMostInLineWith = (normal) => {
       const polys = this.toPolygons();
       const sets = [[polys[0], polys[1]], [polys[2], polys[4]], [polys[3], polys[5]]];
-      sets.sort((set1, set2) => setDot(set1, normal) - setDot(set2, normal));
+      sets.sort((set1, set2) => setAbsDot(set2, normal) - setAbsDot(set1, normal));
       return sets[0];
     }
 
@@ -248,7 +249,7 @@ class BiPolygon {
           closest = {poly, dist};
         }
       }
-      return closest && closest.poly;
+      return closest && closest.poly.copy();
     }
 
     this.to2D = (vector) => {

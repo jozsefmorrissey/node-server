@@ -4,6 +4,7 @@ const DTO = require('./data-transfer-object.js');
 const MFC = require('../internal/services/modeling/modeling-function-configuration.js');
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
+const Cutter = require('../../app-src/objects/assembly/assemblies/cutter.js');
 
 // TODO: move sorting/filtering functions to worker-bundle
 const sortUnderScoreCount = (a, b) => {
@@ -60,7 +61,7 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
   if (assembly.parentAssembly()) obj.dependencies.push(assembly.parentAssembly().id());
   obj.joints.forEach(jId => obj.dependencies.concatInPlace(jointMap[jId].male));
   obj.complexity = () => {
-    if (assembly.includeJoints === undefined) return 1;
+    if (assembly.includeJoints === undefined || assembly instanceof Cutter) return 1;
     if (dependencyCount === obj.dependencies.length) return complexity;
     if (assembly.includeJoints() === false && MFC.usesDefault(assembly.id())) return 1;
     complexity = 1;

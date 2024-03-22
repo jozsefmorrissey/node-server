@@ -140,9 +140,9 @@ class TableSawDocumentation {
       instance.depth = cut.constructor === CutInfo ? null : axis.z.length();
       instance.fenceDistance = instance.fenceEdge.distance(y2d, false) - instance.width/2;
       instance.outsideOfBlade = outsideOfBlade(rightOleft, y2d);
-      if (Math.round(instance.fenceDistance*10000)/10000 === 19.75*2.54) {
-        console.log(instance.toDrawString());
-      }
+      // if (Math.round(instance.fenceDistance*10000)/10000 === 19.75*2.54) {
+      //   console.log(instance.toDrawString());
+      // }
       if (instance.outsideOfBlade) {
         if (!secondCall)
           determinePosition0deg(instance.upSide === 'Left' ? 'Right' : 'Left', true);

@@ -232,13 +232,19 @@ to.Cutter = {
   },
   Front: {
     biPolygon: (rMdto, environment) => {
-      let poly = Divider.instance(rMdto, environment).Front.Cutter.polygon();
-      return to.Cutter.Poly.biPolygon({poly: Divider.instance(rMdto, environment).Front.Cutter.polygon()});
+      let poly = Divider.instance(rMdto, environment).Front.Cutter();
+      return to.Cutter.Poly.biPolygon({poly: Divider.instance(rMdto, environment).Front.Cutter()});
+    }
+  },
+  FrameRail: {
+    biPolygon: (rMdto, environment) => {
+      let poly = Divider.instance(rMdto, environment).Frame.Cutter();
+      return to.Cutter.Poly.biPolygon({poly: Divider.instance(rMdto, environment).Frame.Cutter()});
     }
   },
   Back: {
     biPolygon: (rMdto, environment) => {
-      let poly = Divider.instance(rMdto, environment).Back.Cutter.polygon();
+      let poly = Divider.instance(rMdto, environment).Back.Cutter();
       return to.Cutter.Poly.biPolygon({poly});
     }
   },
@@ -253,6 +259,13 @@ to.PanelVoidIndex = {
     biPolygon: (rMdto, environment) =>
       VoidUtil.instance(rMdto, environment).panel(rMdto.index)
   },
+}
+
+to.Frame = {
+  Frame: {
+    biPolygon: (rMdto, environment) =>
+      Divider.instance(rMdto, environment).Frame()
+  }
 }
 
 to.Panel = {
@@ -284,18 +297,15 @@ to.Panel = {
   },
   Full: {
     biPolygon: (rMdto, environment) => {
-      if (rMdto.locationCode === 'c_L:full') {
-        let a = 1 + 2;
-      }
-      return Divider.instance(rMdto, environment).Full.biPolygon()
+      return Divider.instance(rMdto, environment).Full()
     }
   },
   Front: {
     biPolygon: (rMdto, environment) =>
-      Divider.instance(rMdto, environment).Front.biPolygon()
+      Divider.instance(rMdto, environment).Front()
   },
   Back: {
-    biPolygon: (rMdto, environment) => Divider.instance(rMdto, environment).Back.biPolygon()
+    biPolygon: (rMdto, environment) => Divider.instance(rMdto, environment).Back()
   }
 }
 

@@ -24,8 +24,7 @@ defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_U
 defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US});
 
 //   Cabinet
-defs.sr = new Property('sr', 'Scribe Right', {value: 3/8, notMetric: IMPERIAL_US});
-defs.sl = new Property('sl', 'Scribe Left', {value: 3/8, notMetric: IMPERIAL_US});
+defs.dsc = new Property('dsc', 'Default Scribe', {value: 1/8, notMetric: IMPERIAL_US});
 defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US});
 defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US});
 defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US});
@@ -87,7 +86,10 @@ defs.minol = new Property('minol', 'Minimum Door Overlay', null)
 //   Opening
 
 // Divider
-defs.dpt = new Property('dpt', 'Divider Panel Thicness', {value: 'pwt34'});
-defs.dw = new Property('dw', 'Divider Width', {value: 0, notMetric: IMPERIAL_US});
+defs.dpt = new Property('dpt', 'Divider Panel Thickness', {value: 'pwt34'});
+defs.dft = new Property('dft', 'Divider Frame Thickness', {value: .75, notMetric: IMPERIAL_US});
+defs.dw = new Property('dw', 'Divider Width', {value: .75, notMetric: IMPERIAL_US});
+defs.dpt = new Property('dpt', 'Divider Panel Thickness', {value: 'pwt34'});
+defs.sc = new Property('sc', 'Scribe', {value: 'dsc'});
 
 module.exports = defs;

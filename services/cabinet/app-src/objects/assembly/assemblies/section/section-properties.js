@@ -268,17 +268,17 @@ class SectionProperties extends KeyValue{
           }
           if (index === 0) info.push({overlay: startOffset - reveal / 2});
           if (index === this.sections.length - 1) info.push({overlay: endOffset - reveal / 2});
-          else info.push({overlay: (divider.dividerWidth() - reveal)/2});
+          else info.push({overlay: (divider.maxWidth() - reveal)/2});
         }  else if (isInset) {
           if (index % 2 === 0) {
             if (index === this.sections.length * 2 - 2) info._TOTAL -= insetValue * 2;
-            else info._TOTAL -= (divider.dividerWidth() + insetValue * 2);
+            else info._TOTAL -= (divider.maxWidth() + insetValue * 2);
           }
           info.push({overlay: -insetValue});
         } else {
           if (index % 2 === 0) {
             if (index === this.sections.length * 2 - 2) info._TOTAL += overlay * 2;
-            else info._TOTAL += overlay * 2 - divider.dividerWidth();
+            else info._TOTAL += overlay * 2 - divider.maxWidth();
           }
           info.push({overlay: overlay});
         }
@@ -532,7 +532,7 @@ class SectionProperties extends KeyValue{
       if (index < this.sections.length - 1) {
         const section = this.sections[index];
         const divider = section.divider().divider();
-        const offset = divider.dividerWidth();
+        const offset = divider.maxWidth();
         info[index + 1] = {offset, divider};
       } else {
         info[index + 1] = {offset: endOffset};
@@ -568,7 +568,7 @@ class SectionProperties extends KeyValue{
     const isMatch = (assem, dir) => {
       let target = instance[dir]();
       if (target instanceof DividerSection) target = target.divider();
-      return target.isSubPart(assem);
+      return target.isPanel(assem);
     }
     function isNeigbor(assem) {
       if (instance.divideRight()) {
@@ -579,7 +579,7 @@ class SectionProperties extends KeyValue{
         }
       }
     }
-    const neigborJoint = new Joint(divider.divider().isSubPart, isNeigbor, null, 'NEIGHBOR_JOINT');
+    const neigborJoint = new Joint(divider.divider().isPanel, isNeigbor, null, 'NEIGHBOR_JOINT');
     divider.addDependencies(neigborJoint);
 
 

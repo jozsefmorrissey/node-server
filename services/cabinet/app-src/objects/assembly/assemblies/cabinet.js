@@ -120,6 +120,10 @@ class Cabinet extends Assembly {
     this.addSubAssembly = (assembly) => {
       pAddSubAssem(assembly);
       this.addDependencies(new Dependency(assembly, this));
+      const simplePart = assembly.constructor.name.match(/Frame|Panel/);
+      if (simplePart) {
+        this.addDependencies(new Joint(/.*S1:.*[^a-z^A-Z]dv:.*/, assembly));
+      }
     }
 
 

@@ -132,15 +132,15 @@ class DivideSection extends SpaceSection {
       for (let index = 0; index < limitIndex + 2; index += 1) {
         const section = this.sections[index];
         if (section instanceof DividerSection) {
-          const dividerWidth = section.dividerWidth();
+          const maxWidth = section.maxWidth();
           let halfReveal;
           if (this.propertyConfig().isReveal()) {
             halfReveal = this.propertyConfig().reveal().r.value() / 2;
           } else if (this.propertyConfig().isInset()) {
             const insetValue = this.propertyConfig('Inset').is.value();
-            halfReveal = (section.dividerWidth() + insetValue * 2) / 2;
+            halfReveal = (maxWidth + insetValue * 2) / 2;
           } else {
-            halfReveal = (dividerWidth - this.propertyConfig().overlay() * 2)/2;
+            halfReveal = (maxWidth - this.propertyConfig().overlay() * 2)/2;
           }
           offset += index < limitIndex ? halfReveal*2 : halfReveal;
         }
@@ -158,9 +158,9 @@ class DivideSection extends SpaceSection {
             offset += this.propertyConfig().reveal().r.value();
           }  else if (this.propertyConfig().isInset()) {
             const insetValue = this.propertyConfig('Inset').is.value();
-            offset += section.dividerWidth() + insetValue * 2;
+            offset += section.maxWidth() + insetValue * 2;
           } else {
-            offset += section.dividerWidth();
+            offset += section.maxWidth();
             offset -= this.propertyConfig().overlay() * 2;
           }
         }

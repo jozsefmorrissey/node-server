@@ -21,7 +21,7 @@ const add = (key, properties) => properties.forEach((prop) => {
 add('Overlay', [Defs.ov]);
 add('Reveal', [Defs.r,Defs.rvt,Defs.rvb,Defs.rvr,Defs.rvl]);
 add('Inset', [Defs.is]);
-add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.sr,Defs.sl,Defs.rvibr,Defs.rvdd,
+add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.dsc,Defs.rvibr,Defs.rvdd,
                 Defs.tkbw,Defs.tkd,Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,
                 Defs.frw,Defs.frt,Defs.bid,Defs.tid]);
 add('Panel', [Defs.h,Defs.w,Defs.t]);
@@ -34,7 +34,7 @@ add('Frame', [Defs.h,Defs.w,Defs.t]);
 add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
 add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
 add('Opening', []);
-add('Divider', [Defs.dpt,Defs.dw]);
+add('Divider', [Defs.dpt,Defs.dw,Defs.dft,Defs.sc]);
 
 
 function definitionsRequired(group) {
