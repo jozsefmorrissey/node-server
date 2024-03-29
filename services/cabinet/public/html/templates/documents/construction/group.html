@@ -1,5 +1,5 @@
 <div class='page'>
-  <div:t class='page' repeat='cabinet in cabinets'>
-    {{DocumentationHtml.panels.cabinet(cabinet)}}
+  <div:t class='page' repeat='cabinet in groupInfo.cabinets'>
+    {{DocumentationHtml.parts.cabinet(cabinet, partType)}}
   </div:t>
 </div>

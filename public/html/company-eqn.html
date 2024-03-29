@@ -64,7 +64,6 @@
           }
           keyIndex++;
         }
-        console.log(choices);
       }
       let obj;
       window.onload = () => {
@@ -72,7 +71,6 @@
         obj = {};
         const lines = text.split('\n');
         lines.forEach((l) => parseLine(l, obj));
-        console.log(obj);
         display(obj, startKey);
       }
     </script>

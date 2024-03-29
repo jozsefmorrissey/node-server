@@ -46,7 +46,7 @@ class CutterReference extends Cutter {
 
 class CutterRegExp extends Cutter {
     constructor (regexp, offsetRatio, ingulf, axis, fromPoint) {
-    const partCode = `CREG`;
+    const partCode = `CREG${String.random()}`;
     const partName = 'RegExp';
     super(partCode, partName);
     offsetRatio ||= 0;

@@ -56,12 +56,18 @@ const Aerial = (containerOselector, order) => {
   return html;
 }
 
-const ComplexCutList = (containerOselector, order) => {
-  return orderJob(order, containerOselector, DocHtml.panels.order);
+const PanelComplexCutList = (containerOselector, order) => {
+  return orderJob(order, containerOselector, DocHtml.panels);
+}
+const ShelveComplexCutList = (containerOselector, order) => {
+  return orderJob(order, containerOselector, DocHtml.shelves);
 }
 
-const CutList = (containerOselector, order) => {
+const PanelCutList = (containerOselector, order) => {
   return orderJob(order, containerOselector, DocHtml.panels.cutList);
+}
+const ShelveCutList = (containerOselector, order) => {
+  return orderJob(order, containerOselector, DocHtml.shelves.cutList);
 }
 
 const DoorList = (containerOselector, order) => {
@@ -82,50 +88,20 @@ const BuildDiagram = (containerOselector, order) => {
   Object.values(order.rooms).forEach(r => r.groups.forEach(g => g.objects.forEach(obj => {
     if (obj && Array.isArray(obj.openings)) cabinets.push(obj);
   })));
+  const reqId = String.random();
   const job = new Jobs.CSG.Cabinets.BoxOnly(cabinets);
-  job.on.change(() => DocHtml.sketchLayout(cabinets, containerOselector));
-  const renderFunc = (result) => DocHtml.openingDiagram(result, containerOselector);
+  job.on.change(() => DocHtml.sketchLayout(cabinets, containerOselector, reqId));
+  const renderFunc = (result) => DocHtml.openingDiagram(result, reqId);
   job.then(render(containerOselector, renderFunc), err)
   job.queue();
   return job;
 }
 
-const Room = (containerOselector, room) => {
-  const job = new Jobs.Documentation.Parts(room);
-  job.on.change(progressUpdate(containerOselector));
-  job.then(render(containerOselector, DocHtml.panels.room), err)
-  job.queue();
-  return job;
-};
-
-const Group = (containerOselector, group) => {
-  const job = new Jobs.Documentation.Group(room);
-  job.on.change(progressUpdate(containerOselector));
-  job.then(render(containerOselector, DocHtml.panels.group), err)
-  job.queue();
-  return job;
-};
-
-const Cabinet = (containerOselector, cabinet) => {
-  const job = new Jobs.Documentation.Parts(cabinet);
-  job.on.change(progressUpdate(containerOselector));
-  job.then(render(containerOselector, (map) => DocHtml.panels.part(map.Panel)), err)
-  job.queue();
-  return job;
-};
-
-const Parts = (containerOselector, parts) => {
-  const job = new Jobs.Documentation.Parts(parts);
-  job.on.change(progressUpdate(containerOselector));
-  job.then(render(containerOselector, (map) => DocHtml.panels.part(map.Panel)), err)
-  job.queue();
-  return job;
-};
-
 const Elevation = () => 'coming soon';
 const Summary = () => 'coming soon';
 
-const everythingSections = {CutList, Summary, Aerial, Elevation, ComplexCutList, BuildDiagram, Materials, DoorList, DrawerFrontList};
+const everythingSections = {PanelCutList, ShelveCutList, Summary, Aerial, Elevation,
+                      PanelComplexCutList, ShelveComplexCutList, BuildDiagram, Materials, DoorList, DrawerFrontList};
 const everythingTemplate = new $t('documents/construction/everything');
 const Everything = (containerOselector, order) => {
   const htmlFunc = () => {
@@ -144,6 +120,7 @@ const Everything = (containerOselector, order) => {
 }
 
 module.exports = {
-  ComplexCutList, Room, Group, Cabinet, Parts, CutList, BuildDiagram, DoorList,
+  PanelComplexCutList, ShelveComplexCutList, PanelCutList, ShelveCutList,
+  BuildDiagram, DoorList,
   DrawerFrontList, Materials, Aerial, Everything
 };

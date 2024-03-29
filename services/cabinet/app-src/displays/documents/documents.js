@@ -20,8 +20,10 @@ fileTabDisp.TITLES = {
   MATERIALS: {title: 'Materials', html: Construction.Materials},
   DOOR_LIST: {title: 'Door List', html: Construction.DoorList},
   DRAWER_FRONT_LIST: {title: 'Drawer Front List', html: Construction.DrawerFrontList},
-  CUT_LIST: {title: 'Cut List', html: Construction.CutList},
-  COMPLEX_CUT_LIST: {title: 'Complex Cut List', html: Construction.ComplexCutList},
+  PANEL_CL: {title: 'Panel Cut List', html: Construction.PanelCutList},
+  SHELVE_CL: {title: 'Shelve Cut List', html: Construction.ShelveCutList},
+  PANEL_CCL: {title: 'Panel Complex Cut List', html: Construction.PanelComplexCutList},
+  SHELVE_CCL: {title: 'Shelve Complex Cut List', html: Construction.ShelveComplexCutList},
   SUMMARY: {title: 'Summary', html: notDefined},
   EVERYTHING: {title: 'Everything', html: Construction.Everything}
 }

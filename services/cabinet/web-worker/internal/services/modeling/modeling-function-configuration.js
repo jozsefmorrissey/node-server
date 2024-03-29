@@ -1,5 +1,6 @@
 
 const Line3D = require('../../../../app-src/three-d/objects/line.js');
+const Vector3D = require('../../../../app-src/three-d/objects/vector.js');
 const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
 const Vertex3D = require('../../../../app-src/three-d/objects/vertex.js');
 const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
@@ -307,6 +308,24 @@ to.Panel = {
   Back: {
     biPolygon: (rMdto, environment) => Divider.instance(rMdto, environment).Back()
   }
+},
+
+to.Shelve = {
+  Shelve: {
+    biPolygon: (rMdto, environment) => {
+      const parent = rMdto.parentAssembly();
+      const sectionUtils = SectionPropertiesUtil.instance(parent);
+      const divider = parent.divider().divider();
+      const biPoly = Divider.instance(divider, environment).Full().copy();
+      const shelveCount = parent.shelves.length;
+      const index = Number.parseInt(rMdto.partCode.replace(/.*?([0-9]{1,})/, '$1'));
+      const dividerNorms = divider.position.current.normals;
+      rMdto.position.current.normals = dividerNorms;
+      biPoly.translate(new Vector3D(0,sectionUtils.innerLength*index/(shelveCount+1),0));
+      return biPoly;
+    }
+  }
 }
+
 
 module.exports = to;

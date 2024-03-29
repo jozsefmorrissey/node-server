@@ -12,11 +12,14 @@ const CSG = require('../../../../../../../public/js/utils/3d-modeling/csg.js');
 const DividerSection = require('./partition/divider.js');
 const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
+const Dependency = require('../../../dependency.js');
 const CustomEvent = require('../../../../../../../public/js/utils/custom-event.js')
 const PropertyConfig = require('../../../../config/property/config.js');
+//TODO: create shelve constructor
+const Shelve = require('../shelve');
 
 const v = (x,y,z) => new Vertex3D(x,y,z);
-class SectionProperties extends KeyValue{
+class SectionProperties extends KeyValue {
   constructor(config, index, sections, pattern) {
     super({childrenAttribute: 'sections', parentAttribute: 'parentAssembly'})
     const instance = this;
@@ -188,6 +191,19 @@ class SectionProperties extends KeyValue{
       }
     }
 
+    const shelves = [];
+    this.shelves = () => {
+      const shelveCount = this.value('shelves') || 0;
+      const newShelveCount = shelveCount - shelves.length
+      for (let index = 0; index < newShelveCount; index++) {
+        const shelve = new Shelve(`:sh${shelves.length + index + 1}`, 'Shelve');
+        shelve.parentAssembly(this);
+        // shelve.addDependencies(new Joint(this.divider().divider(), shelve));
+        shelves.push(shelve);
+      }
+      return shelves.slice(0, shelveCount);
+    }
+
     this.init = init;
     this.dividerCount = () => this.sections.length - 1;
     this.sectionCount = () => this.sections.length || 1;
@@ -199,10 +215,10 @@ class SectionProperties extends KeyValue{
         assems.push(cover);
         if (!childrenOnly) assems.concatInPlace(cover.getSubassemblies());
       }
-      if (this.divideRight()) {
-        assems.push(this.divider());
-        if (!childrenOnly) assems.concatInPlace(this.divider().getSubassemblies());
-      }
+      assems.push(this.divider());
+      if (!childrenOnly) assems.concatInPlace(this.divider().getSubassemblies());
+
+      assems.concatInPlace(this.shelves());
       for (let index = 0; !childrenOnly && index < this.sections.length; index++) {
         assems.concatInPlace(this.sections[index].getSubassemblies());
       }
@@ -561,6 +577,7 @@ class SectionProperties extends KeyValue{
 
     const divider = new DividerSection(this);
     this.divider(divider);
+    divider.divider().included = this.divideRight;
     divider.parentAssembly(this);
     this.value('vertical', false);
     this.pattern().onChange(this.reevaluate);
@@ -592,13 +609,16 @@ class SectionProperties extends KeyValue{
       return transDist < refDist;
     }
 
-    function addCookieCutterReg(locCodes, offsetRatio, ingulf) {
+
+    function addCookieCutterReg(locCodes, offsetRatio, ingulf, targetPartCode) {
       if (locCodes.length === 0) return;
       const locationReg = new RegExp(`^(${locCodes.join('|')})$`);
       const cutter = new Cutter.RegExp(locationReg, offsetRatio, ingulf);
+      if (targetPartCode)cutter.partCode = () => 'csh';
       sectionCutters.push(cutter);
       cutter.parentAssembly(instance);
-      const dvReg = new RegExp(`${instance.locationCode()}_.*dv(|:[a-z]{1,})$`);
+      targetPartCode ||= '.*dv.*(|:[a-z]{1,})';
+      const dvReg = new RegExp(`^${instance.locationCode()}_${targetPartCode}$`);
       const loc = `Cookie_${cutter.id()}`;
       cutter.addDependencies(new Joint(cutter.locationCode(), dvReg, null, loc, 10));
 
@@ -609,38 +629,31 @@ class SectionProperties extends KeyValue{
       const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section)/));
       const outerParimeterLocationCodes = [];
       const innerParimeterLocationCodes = [];
+      const shelveLocationCodes = [];
       const jointLocationCodes = [];
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
         if (assem instanceof Divider) {
           outerParimeterLocationCodes.push(assem.locationCode());
           jointLocationCodes.push(assem.locationCode() + ':.*');
+          shelveLocationCodes.push(assem.locationCode() + ':.*');
         } else {
           const depth = assem.position().demension('z');
           if (depth > .5 * 2.54) jointLocationCodes.push(assem.locationCode());
           else innerParimeterLocationCodes.push(assem.locationCode());
+          shelveLocationCodes.push(assem.locationCode());
         }
       }
       addCookieCutterReg(outerParimeterLocationCodes, 1, true);
       addCookieCutterReg(innerParimeterLocationCodes, 0);
       addCookieCutterReg(jointLocationCodes, .5);
+
+      addCookieCutterReg(outerParimeterLocationCodes, 1, true, '.*sh[0-9]{1,}');
+      addCookieCutterReg(shelveLocationCodes, -3/(4*8), null, '.*sh[0-9]{1,}');
+      addCookieCutterReg(shelveLocationCodes, 1 - 3/(4*8), true, '.*sh[0-9]{1,}');
     }
 
     function buildCutters () {
-      // const cabinet = instance.getCabinet();
-      // const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section)/));
-      // for (let index = 0; index < subAssems.length; index++) {
-      //   const reference = subAssems[index];
-      //   let offset = instance.dividerJoint().maleOffset();
-      //   if (reference.thickness() < offset * 1.9) offset = 0;
-      //   const front = referenceFront(reference, cabinet);
-      //   const cutter = new Cutter.Reference(reference, cabinet.buildCenter, offset, front);
-      //   sectionCutters.push(cutter);
-      //   cutter.parentAssembly(instance);
-      //   const dvReg = new RegExp(`${instance.locationCode()}_.*dv(|:[a-z]{1,})$`);
-      //   const loc = `Cookie_${cutter.id()}`;
-      //   cutter.addDependencies(new Joint(cutter.locationCode(), dvReg, null, loc, 10));
-      // }
       buildDividerCookieCutter();
     }
 

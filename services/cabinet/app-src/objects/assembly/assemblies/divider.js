@@ -43,7 +43,9 @@ class Divider extends Assembly {
 
     const parts = [pFull, pFront, pBack];
     this.possibleParts = () => parts.concat(frame);
-    parts.forEach(p => p.parentAssembly(this));
+    parts.forEach(p => {
+      p.parentAssembly(this);
+    });
     this.toJson = () => {
       const json = pToJson();
       json.type = this.type();
@@ -92,6 +94,9 @@ class Divider extends Assembly {
     }
 
     function activeParts() {
+      if (!instance.included()) {
+        return [];
+      }
       const active = instance.hasFrame() ? [frame, frameCutter] : [];
       switch (type) {
         case 'front': return parts.slice(1,3).concat(active);

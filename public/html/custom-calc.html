@@ -359,7 +359,6 @@
           isHome = true;
         } else if (name) {
           if (isHome) homeSaved = stateObject().equations;
-          console.log(stateObject());
           Request.get(`/pssst/load/json/custom-calc/${name}`, populate, console.error);
           isHome = false;
           du.find('#name-cnt').innerText = name;
@@ -383,7 +382,6 @@
           du.find('#save-eqs-btn').hidden = false;
         }
         const cannot  = (e) => {
-          console.log(e);
           const match = e.statusText.match(/(locked.*$)/);
           let errorMsg;
           if (match) {

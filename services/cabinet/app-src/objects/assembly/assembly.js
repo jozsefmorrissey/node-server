@@ -56,9 +56,6 @@ class Assembly extends KeyValue {
     }
 
     const subAssems = this.subassemblies;
-    if (Array.isArray(subAssems)) {
-      console.log('wtff');
-    }
     Object.getSet(this, initialVals, 'subassemblies', 'joints', 'normals');
     Object.defineProperty(this, "subassemblies", {
       writable: false,
@@ -377,8 +374,6 @@ class Assembly extends KeyValue {
       return parentAssembly;
     }
     this.addSubAssembly = (assembly) => {
-      if (!assembly.parentAssembly)
-        console.log('her')
       assembly.parentAssembly(this);
       this.subassemblies[assembly.partCode()] = assembly;
     }
@@ -561,9 +556,6 @@ Assembly.fromJson = (assemblyJson) => {
   });
   const joints = Object.fromJson(assemblyJson.joints);
   assembly.addDependencies.apply(assembly, joints);
-  if (Array.isArray(assembly.subassemblies)) {
-    console.log('wtff');
-  }
   return assembly;
 }
 

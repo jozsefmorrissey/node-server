@@ -431,11 +431,6 @@ function unDocumentExtranious(cuts) {
 function splitCutOperations(cuts) {
   for (let index = 0; index < cuts.length; index++) {
     const cut = cuts[index];
-    if (cut.jointInfo().joint().locationId &&
-        cut.jointInfo().joint().locationId.startsWith('Cookie_CutterRegExp') &&
-        cut.jointInfo().partInfo().part().locationCode === 'c_S2_S1_dv_dv:full') {
-      console.log('here?')
-    }
     if (cut.documented()) {
       const jointInfo = cut.jointInfo();
       if (cut.constructor === CutInfo) {

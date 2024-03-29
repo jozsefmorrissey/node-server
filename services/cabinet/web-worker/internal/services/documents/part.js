@@ -243,9 +243,6 @@ class PartInfo {
       const sets = Line2d.parrelleSets(edges);
       sets.forEach(s => s.sort(Line2d.distanceSort(center, false)));
 
-      if (availbleEdgesOnly && this.part().locationCode.match(/L|R/)) {
-        console.log('her')
-      }
       sets.map(s => s.map(l => l.length()))
 
       const fenceEdges = [];

@@ -38,18 +38,15 @@ class Job {
         WebWorkerDeligator.queue(task);
       });
     }
-    this.on.success((data) => {
-      this.finished(true, data);
-    });
-    this.on.failed((error) => {
-      if(error !== undefined) _error = error;
-      this.finished(true, _error);
-    });
     this.then = (onSuccess, onFailed) => {
       this.on.success(onSuccess);
       this.on.failed(onFailed || console.error);
       return this;
     }
+    task.on.finished((_result) => {
+      if (this.result) _result = this.result();
+      this.finished(true, _result)
+    });
   }
 }
 
@@ -95,6 +92,7 @@ class CsgModelInfoJob extends Job {
   constructor(task, modelInfo) {
     super(task);
     this.modelInfo = () => modelInfo;
+    this.result = () => modelInfo;
   }
 }
 
@@ -104,8 +102,6 @@ class CsgModelJob extends CsgModelInfoJob {
     props.modelAttribute = 'model';
     const modelInfo = ModelInfo.object(assemblyOs, props);
     super(Model(modelInfo), modelInfo);
-    this.task().on.success(() => this.trigger.success(modelInfo, this));
-    this.task().on.failed((error) => this.trigger.failed(error, this));
   }
 }
 CsgModelJob.task = (modelInfo) => new Sequential(modelInfo.environment, new Model(modelInfo), new Union(modelInfo));
@@ -178,12 +174,14 @@ class CsgCabinets extends Job {
     const tasks = jobs.map(j => j.task());
     const task = new Parrelle(...tasks);
     super(task);
-    task.on.success((result) => {
-      console.log(tasks);
-      const modelMaps = {};
-      jobs.forEach(j => modelMaps[j.cabinet().id()] = j.modelInfo());
-      this.trigger.success(modelMaps);
-    });
+    let modelMaps;
+    this.result = () => {
+      if (modelMaps === undefined) {
+        modelMaps = {};
+        jobs.forEach(j => modelMaps[j.cabinet().id()] = j.modelInfo());
+      }
+      return modelMaps;
+    };
   }
 }
 
@@ -381,8 +379,6 @@ class OrderDocumentationJob extends Job {
     const task = new Parrelle(...tasks);
     task.result = () => _result;
     super(task);
-    task.on.success(() => this.trigger.success(_result, this));
-
   }
 }
 

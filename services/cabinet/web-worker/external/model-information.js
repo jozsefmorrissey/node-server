@@ -119,7 +119,7 @@ class ModelInformation {
     if (!Array.isArray(targets)) targets = [targetOs];
     targets = targets.map(a => a);
     const assemblies = targets[0].allAssemblies();
-    if (props.allRelatedParts === true) targets = assemblies.filter(a => a.part() && a.included());
+    if (props.allRelatedParts === true) targets = assemblies.filter(a => a.part());
     const modelInfo = props.modelInfo || modelInfoObject();
     const jointMap = assemblies[0].dependencyMap(props.noJoints);
     const byId = {};
@@ -129,7 +129,7 @@ class ModelInformation {
     if (targets) buildModels = targets;
     const root = targets[0].getRoot();
     if (buildModels.indexOf(root) === -1) buildModels.push(root);
-    else buildModels = assemblies.filter(a => a.part && a.included);
+    else buildModels = assemblies.filter(a => a.part());
 
     let joinModels = sorter(buildModels, jointMap, byId);
     buildModels = Object.values(joinModels).map(ac => ac.assembly);
@@ -144,9 +144,11 @@ class ModelInformation {
                                                               delete jmo.partCode &&
                                                               delete jmo.complexity);
     let requiresReference = {};
-    buildModels.forEach(id => requiresReference[id] = byId[id]);
-    targets.forEach(id => requiresReference[id] = byId[id]);
-    joinModels.forEach(jmo => requiresReference[jmo.id] = byId[jmo.id]);
+    Object.keys(byId).forEach(id => requiresReference[id] = byId[id]);
+
+    // buildModels.forEach(id => requiresReference[id] = byId[id]);
+    // targets.forEach(id => requiresReference[id] = byId[id]);
+    // joinModels.forEach(jmo => requiresReference[jmo.id] = byId[jmo.id]);
     joinModels = joinModels.map(jmo => jmo.id);
     const dependencies = assemblies[0].getAllDependencies(null, props.noJoints);
     dependencies.forEach(j => requiresReference[j.id()] = j);

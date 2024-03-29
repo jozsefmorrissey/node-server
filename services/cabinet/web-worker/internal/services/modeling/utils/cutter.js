@@ -21,7 +21,8 @@ function expandPoly(biPoly, offsetDirection, fromPoint, ingulf, offsetVector, fr
   const multiplier = sameDir ? 1 : -1;
   const polyThickness = multiplier * thickness;
   const expandDems = ingulf ? {x: thickness, y: thickness} : undefined;
-  const modelPoly = BiPolygon.fromPolygon(poly, 0, polyThickness, expandDems);
+  const modelPoly = offsetDirection.flipped ? BiPolygon.fromPolygon(poly, 0, -polyThickness, expandDems) :
+                      BiPolygon.fromPolygon(poly, 0, polyThickness, expandDems);
   // console.log('//' + target.locationCode + '\n' +
   // biPoly.toDrawString() + '\n\n\n\n' + modelPoly.toDrawString('red'));
   return modelPoly;
@@ -34,15 +35,17 @@ function getModel(target, axis, offsetRatio, fromPoint, ingulf, environment, to)
   let biPoly = biPolyArr ? new BiPolygon(biPolyArr[0], biPolyArr[1]) : to(target).biPolygon(target, environment);
   if (biPoly === null) return null;
 
-  const {front, back} = getFrontAndBack(biPoly, normals.z);
+  const {front, back} = getFrontAndBack(biPoly, normals.z, offsetRatio + .000001 < 0);
   let length = 0;
   front.lines().forEach(l => length += l.length());
   const overKill = 10 * length;
   const thickness = front.distance(back);
   const expandThickness = (ingulf ? overKill : thickness);
   const distance = thickness * offsetRatio;
-  let offsetVector = normals[axis].scale(distance);
-  const offsetDirection = front.toPlane().connect.vertex(fromPoint).negitive().vector();
+  let offsetVector = normals[axis].unit().scale(distance);
+  let offsetDirection = front.toPlane().connect.vertex(fromPoint).negitive().vector();
+  if (offsetRatio + .000001 < 0) offsetDirection = offsetDirection.inverse();
+  offsetDirection.flipped = offsetRatio + .000001 < 0;
   const modelPoly = expandPoly(biPoly, offsetDirection, fromPoint, ingulf, offsetVector, front, back, expandThickness, target);
   return modelPoly.model();
 }

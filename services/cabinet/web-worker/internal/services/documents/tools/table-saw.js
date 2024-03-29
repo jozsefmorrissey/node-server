@@ -92,7 +92,7 @@ class TableSawDocumentation {
       if (parrelleSets.length === 0) throw HAND_SAW_ERROR;
       const parrelleEdges = parrelleSets.filter(s => s[0].isParrelle(y2d))[0];
       if (yCutL === null) {
-        return parrelleEdges[0].distance(y2d) > parrelleEdges[1].distance(y2d) ?
+        return parrelleEdges[0].distance(y2d) < parrelleEdges[1].distance(y2d) ?
               parrelleEdges[0] : parrelleEdges[1];
       }
 
@@ -234,12 +234,6 @@ class TableSawDocumentation {
     }
 
     function build(callAgaine) {
-      if (!callAgaine && instance.partInfo.part().partCode.startsWith('dv')) {
-        build(true);
-        console.log(instance.toDrawString());
-        console.log(instance.toDrawString(true));
-        console.log('foundIt!');
-      }
       const angle = cut.angle();
       if (angle > 45) determinePositionGreaterThan45(angle);
       else if (angle !== 0) determinePositionNon0To45(angle);
