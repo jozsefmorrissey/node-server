@@ -4,12 +4,6 @@ const IMPERIAL_US = Measurement.units()[1];
 
 const defs = {};
 
-defs.h = new Property('h', 'height', null);
-defs.w = new Property('w', 'width', null);
-defs.d = new Property('d', 'depth', null);
-defs.t = new Property('t', 'thickness', null);
-defs.l = new Property('l', 'length', null);
-
 //   Overlay
 defs.ov = new Property('ov', 'Overlay', {value: 1/4, notMetric: IMPERIAL_US});
 
@@ -33,8 +27,6 @@ defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL
 defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US});
 defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US});
 defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US});
-defs.frw = new Property('frw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US});
-defs.frt = new Property('frt', 'Frame Rail Thicness', {value: .75, notMetric: IMPERIAL_US});
 defs.bid = new Property('bid', 'Bottom Inset Depth', {value: 0, notMetric: IMPERIAL_US});
 defs.tid = new Property('tid', 'Top Inset Depth', {value: 0, notMetric: IMPERIAL_US});
 defs.showRight = new Property('showRight', 'Show Right', {value: {type: 'None', endStyle: 'No'}});
@@ -49,6 +41,9 @@ defs.lw = new Property('lw', 'Distance from Front to Back on the Left', {value: 
 defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value: 24, notMetric: IMPERIAL_US});
 
 //   Panel
+defs.pt34 = new Property('pt34', 'Panel Width ~3/4', {value: .75, notMetric: IMPERIAL_US});
+defs.pt12 = new Property('pt12', 'Panel Width ~1/2', {value: .5, notMetric: IMPERIAL_US});
+defs.pt14 = new Property('pt14', 'Panel Width ~1/4', {value: .25, notMetric: IMPERIAL_US});
 
 //   Guides
 defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', .5*2.54);
@@ -71,7 +66,8 @@ defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERI
 defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
 
 //   Frame
-defs.fw = new Property('fw', 'Frame Width', {value: 1.5, notMetric: IMPERIAL_US});
+defs.fw = new Property('fw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US});
+defs.ft = new Property('ft', 'Frame Rail Thickness', {value: .75, notMetric: IMPERIAL_US});
 
 //   Handle
 defs.c2c = new Property('c2c', 'Center To Center', null);
@@ -86,10 +82,8 @@ defs.minol = new Property('minol', 'Minimum Door Overlay', null)
 //   Opening
 
 // Divider
-defs.dpt = new Property('dpt', 'Divider Panel Thickness', {value: 'pwt34'});
+defs.dpt = new Property('dpt', 'Divider Panel Thickness', {value: 'pt34'});
 defs.dft = new Property('dft', 'Divider Frame Thickness', {value: .75, notMetric: IMPERIAL_US});
-defs.dw = new Property('dw', 'Divider Width', {value: .75, notMetric: IMPERIAL_US});
-defs.dpt = new Property('dpt', 'Divider Panel Thickness', {value: 'pwt34'});
 defs.sc = new Property('sc', 'Scribe', {value: 'dsc'});
 
 module.exports = defs;

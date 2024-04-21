@@ -83,7 +83,7 @@ class PropertyConfig {
         case 'frorr': return new Measurement(1/8, IMPERIAL_US).value();
         case 'r': if (isInset()) return 0;
           if (isReveal()) return new Measurement(props.Reveal.r.value()).value();
-          return new Measurement(props.Cabinet.frw.value() - 2 * props.Overlay.ov.value()).value();
+          return new Measurement(props.Cabinet.fw.value() - 2 * props.Overlay.ov.value()).value();
         default: return resolveCostProps(code, props);
       }
     }

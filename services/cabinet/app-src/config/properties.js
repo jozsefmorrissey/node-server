@@ -13,6 +13,7 @@ Measurement.units().forEach((unit) =>
 UNITS._VALUE = Measurement.unit();
 
 const assemProps = {}
+const allProps = {}
 const add = (key, properties) => properties.forEach((prop) => {
   if (assemProps[key] === undefined) assemProps[key] = {};
   assemProps[key][prop.code()] = prop;
@@ -21,20 +22,20 @@ const add = (key, properties) => properties.forEach((prop) => {
 add('Overlay', [Defs.ov]);
 add('Reveal', [Defs.r,Defs.rvt,Defs.rvb,Defs.rvr,Defs.rvl]);
 add('Inset', [Defs.is]);
-add('Cabinet', [Defs.h,Defs.w,Defs.d,Defs.dsc,Defs.rvibr,Defs.rvdd,
+add('Cabinet', [Defs.dsc,Defs.rvibr,Defs.rvdd, Defs.pt14,Defs.pt12,Defs.pt34,
                 Defs.tkbw,Defs.tkd,Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,
-                Defs.frw,Defs.frt,Defs.bid,Defs.tid]);
-add('Panel', [Defs.h,Defs.w,Defs.t]);
-add('Guides', [Defs.l,Defs.dbtos,Defs.dbsos,Defs.dbbos]);
+                Defs.bid,Defs.tid,Defs.fw,Defs.ft]);
+add('Panel', [Defs.pt14,Defs.pt12,Defs.pt34]);
+add('Guides', [Defs.dbtos,Defs.dbsos,Defs.dbbos]);
 add('DoorAndFront', [Defs.daffrw,Defs.dafip])
-add('Door', [Defs.h,Defs.w,Defs.t]);
-add('DrawerBox', [Defs.h,Defs.w,Defs.d,Defs.dbst,Defs.dbbt,Defs.dbid,Defs.dbn]);
-add('DrawerFront', [Defs.h,Defs.w,Defs.t,Defs.mfdfd]);
-add('Frame', [Defs.h,Defs.w,Defs.t]);
-add('Handle', [Defs.l,Defs.w,Defs.c2c,Defs.proj]);
+add('Door', []);
+add('DrawerBox', [Defs.dbst,Defs.dbbt,Defs.dbid,Defs.dbn]);
+add('DrawerFront', [Defs.mfdfd]);
+add('Frame', [Defs.fw,Defs.ft]);
+add('Handle', [Defs.c2c,Defs.proj]);
 add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
 add('Opening', []);
-add('Divider', [Defs.dpt,Defs.dw,Defs.dft,Defs.sc]);
+add('Divider', [Defs.dpt,Defs.dft,Defs.sc]);
 
 
 function definitionsRequired(group) {

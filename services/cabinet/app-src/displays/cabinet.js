@@ -152,7 +152,7 @@ class CabinetDisplay {
       listElemLable: 'Object'
     };
     const expandList = new ExpandableList(expListProps);
-    expandList.afterRemoval(removeFromLayout);
+    expandList.on.after.removal(removeFromLayout);
     this.refresh = () => expandList.refresh();
 
     this.html = expandList.html;

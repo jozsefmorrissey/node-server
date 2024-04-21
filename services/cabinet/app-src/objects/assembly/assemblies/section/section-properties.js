@@ -12,17 +12,20 @@ const CSG = require('../../../../../../../public/js/utils/3d-modeling/csg.js');
 const DividerSection = require('./partition/divider.js');
 const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
+const Dado = require('../../../joint/joints/dado.js');
 const Dependency = require('../../../dependency.js');
 const CustomEvent = require('../../../../../../../public/js/utils/custom-event.js')
 const PropertyConfig = require('../../../../config/property/config.js');
 //TODO: create shelve constructor
 const Shelve = require('../shelve');
+const SectionPropertiesResolver = require('../../resolvers/section-properties.js');
 
 const v = (x,y,z) => new Vertex3D(x,y,z);
 class SectionProperties extends KeyValue {
   constructor(config, index, sections, pattern) {
     super({childrenAttribute: 'sections', parentAttribute: 'parentAssembly'})
     const instance = this;
+    new SectionPropertiesResolver(this);
     const getPartFunc = (dir) => config[dir] instanceof Function ? config[dir] : () => instance.getAssembly(config[dir]);
     this.top = getPartFunc('top');
     this.bottom = getPartFunc('bottom');
@@ -596,7 +599,7 @@ class SectionProperties extends KeyValue {
         }
       }
     }
-    const neigborJoint = new Joint(divider.divider().isPanel, isNeigbor, null, 'NEIGHBOR_JOINT');
+    const neigborJoint = new Dado(divider.divider().isPanel, isNeigbor, null, 'NEIGHBOR_JOINT');
     divider.addDependencies(neigborJoint);
 
 

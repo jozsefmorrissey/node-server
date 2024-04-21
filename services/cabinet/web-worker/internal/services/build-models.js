@@ -5,6 +5,7 @@ const DTO = require('../../shared/data-transfer-object')();
 
 const PART_CODES_THAT_CANNOT_BE_BUILT = ["AUTOTK", "OpenTK", "COC"]
 const reportMod = 20;
+let callAgain = false;
 function BuildModels(payload, environment, taskId) {
   const assemblies = payload.assemblies;
   let byId = environment ? environment.byId : {};
@@ -16,10 +17,6 @@ function BuildModels(payload, environment, taskId) {
     }
     let model, biPolygon, biPolygonArray, modelFuncs;
     try {
-      // console.log(`Building Model: '${assembly.locationCode}'`)
-      // if (assembly.partCode.match(/R|L/)) {
-        //   console.log('target');
-        // }
         modelFuncs = MFC(assembly);
         if (!modelFuncs.biPolygon) {
           biPolygonArray = null;
@@ -34,8 +31,7 @@ function BuildModels(payload, environment, taskId) {
         environment.modelInfo.model[assembly.id] = model;
         environment.modelInfo.biPolygonArray[assembly.id] = biPolygonArray
       } catch (e) {
-        const bp = modelFuncs.biPolygon(assembly, environment);
-        bp.model();
+        if (callAgain) BuildModels(payload, environment, taskId);
         return new Error(`Failed to Create Model For:\n\t${assembly.locationCode}`)
       }
   }

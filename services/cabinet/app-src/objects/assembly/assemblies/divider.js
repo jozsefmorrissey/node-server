@@ -16,16 +16,12 @@ class Divider extends Assembly {
     let z;
     if (config && config.demension.z) {
       z = config.demension.z;
-      config.demension.z = 'dw';
+      config.demension.z = 'dft';
     }
     super(partCode, partName, config);
     const instance = this;
     const pToJson = this.toJson;
 
-    // if (z) {
-    //   this.value('dw', z);
-    //   console.log(this.id() + '', z);
-    // }
     Object.getSet(this, 'type');
 
     const pFull = new Panel(':full', 'Full');
@@ -58,40 +54,45 @@ class Divider extends Assembly {
     const partCheck = (index) => (assem) => parts[index].locationCode() === assem.locationCode();
 
     this.part = () => false;
-    const parentWidth = this.width;
-    this.thickness = () => eval(this.value('dw'));
+    this.thickness = () => this.resolve('dft');
+
+    this.frameThickness = (rawOthickness) => {
+      if (Boolean.is(rawOthickness)) return this.resolve('dft', rawOthickness);
+      if (rawOthickness !== undefined) {
+        const evaluated = this.resolve(rawOthickness);
+        const pt = this.panelThickness();
+        if (pt >= evaluated) this.value('dpt', rawOthickness);
+        this.value('dft', rawOthickness);
+      }
+      return this.resolve('dft');
+    }
+    this.panelThickness = (rawOthickness) => {
+      if (Boolean.is(rawOthickness)) return this.resolve('dpt', rawOthickness);
+      if (rawOthickness !== undefined) {
+        const evaluated = this.resolve(rawOthickness);
+        const ft = this.frameThickness();
+        if (ft < evaluated) this.value('dpt', rawOthickness);
+        this.value('dpt', rawOthickness);
+      }
+      return this.resolve('dpt', rawOthickness);
+    }
+    this.scribe = (rawOscribe) => {
+      if (Boolean.is(rawOscribe)) return this.resolve('sc', rawOscribe);
+      if (rawOscribe !== undefined) this.value('sc', rawOscribe);
+      const scribe = this.resolve('sc');
+      return this.scribe.valid(scribe) ? scribe : 0;
+    }
+    this.scribe.valid = (scribe) => {
+      const ft = this.frameThickness();
+      const pt = this.panelThickness();
+      scribe ||= this.resolve('sc');
+      return (scribe && ft >= scribe + pt);
+    }
 
     const thicknessWarrentsFrame = (thickness) =>
-      thickness && thickness > this.panelThickness() + 0.1587;
-
-    this.frameThickness = (thickness, raw) => {
-      if (raw) return this.value('dft');
-      thickness = this.eval(this.value('dft', thickness));
-      return thickness;
-    }
-    this.panelThickness = (thickness, raw) => {
-      if (raw) return this.value('dpt');
-      const width = this.eval(this.thickness());
-      thickness = this.eval(this.value('dpt', thickness));
-      return (thickness && width >= thickness) ? thickness : width;
-    }
-    this.scribe = (scribe, raw) => {
-      if (raw) return this.value('sc');
-      const width = this.eval(this.thickness());
-      scribe = this.eval(this.value('sc', scribe));
-      const pt = this.panelThickness();
-      return (scribe && width >= scribe + pt) ? scribe : width - pt;
-    }
+      thickness && thickness > this.panelThickness() + 0.3175;
     this.hasFrame = () => thicknessWarrentsFrame(this.thickness());
-    this.maxWidth = (width, raw) => {
-      if (raw) return this.value('dft');
-      if (width) {
-        if (width === 'dw') this.value('dw', null);
-        else this.value('dw', width);
-      }
-      width = eval(this.value('dw', width));
-      return width;
-    }
+    this.maxWidth = (raw) => this.frameThickness(raw);
 
     function activeParts() {
       if (!instance.included()) {
@@ -130,9 +131,9 @@ class Divider extends Assembly {
         `${type}:${this.maxWidth()}:${this.panelThickness()}`.hash();
 
     const frontPanelReg = `^${this.locationCode()}:f(|ull)$`;
-    const frameCutterDep = new Joint(frameCutter, frontPanelReg, this.hasFrame);
-    const panelDep = new Joint(frontPanelReg, frame, this.hashFrame);
-    this.addDependencies(frameCutterDep, panelDep);
+    const frameCutterDep = new Joint(frameCutter, frontPanelReg, this.hasFrame, 'frameCutter');
+    const panelDep = new Joint(frontPanelReg, frame, this.hasFrame, 'panelCutter');
+    frame.addDependencies(frameCutterDep, panelDep);
   }
 }
 

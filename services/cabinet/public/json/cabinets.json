@@ -12,12 +12,12 @@
     },
     {
       "key": "innerWidth",
-      "eqn": "c.w - pwt34 * 2",
+      "eqn": "c.w - pt34 * 2",
       "id": "t43543r"
     },
     {
       "key": "innerWidthCenter",
-      "eqn": "innerWidth + pwt34",
+      "eqn": "innerWidth + pt34",
       "id": "me96nsd"
     },
     {
@@ -70,7 +70,7 @@
       "demensions": [
         "c.t",
         "c.l",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -91,7 +91,7 @@
       "demensions": [
         "c.t",
         "c.l",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -112,7 +112,7 @@
       "demensions": [
         "c.l - tkb.w",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -133,7 +133,7 @@
       "demensions": [
         "c.t - BACK.t",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         90,
@@ -154,7 +154,7 @@
       "demensions": [
         "c.t",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         90,
@@ -173,7 +173,7 @@
       "demensions": [
         "6*2.54",
         "innerHeight",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -436,7 +436,6 @@
 },
   "diagonal-corner-base": {
     "_TYPE": "CabinetTemplate",
-    "ID_ATTRIBUTE": "id",
     "type": "diagonal-corner-base",
     "values": [
       {
@@ -496,7 +495,7 @@
         "demensions": [
           "pbw",
           "c.h",
-          "pwt14"
+          "pt14"
         ],
         "rotation": [
           0,
@@ -538,7 +537,7 @@
         "demensions": [
           "rw + 4 + backRightScribe",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -559,7 +558,7 @@
         "demensions": [
           "lw + 4 + backLeftScribe",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -580,7 +579,7 @@
         "demensions": [
           "c.w - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -622,7 +621,7 @@
         "demensions": [
           "c.t - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -664,7 +663,7 @@
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -673,7 +672,26 @@
         ],
         "name": "top",
         "code": "T",
-        "dividerType": "frontAndBack"
+        "dividerType": "frontAndBack",
+
+        "normalStyle": "manual",
+        "normals": [
+          [
+            "OP.n.i",
+            "OP.n.j",
+            "OP.n.k"
+          ],
+          [
+            "0",
+            "1",
+            "0"
+          ],
+          [
+            "0",
+            "0",
+            "1"
+          ]
+        ]
       },
       {
         "type": "Divider",
@@ -685,7 +703,7 @@
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -700,183 +718,223 @@
     "joints": [
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
         "dependsSelector": "BACK",
         "dependentSelector": "B",
+        "maleOffset": 0,
+        "femaleOffset": 0,
         "demensionAxis": "",
-        "centerAxis": ""
+        "centerAxis": "",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
         "dependsSelector": "BACK",
         "dependentSelector": "pbl",
+        "maleOffset": 0,
+        "femaleOffset": 0,
         "demensionAxis": "",
-        "centerAxis": ""
+        "centerAxis": "",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
         "dependsSelector": "BACK",
         "dependentSelector": "pbr",
+        "maleOffset": 0,
+        "femaleOffset": 0,
         "demensionAxis": "",
-        "centerAxis": ""
+        "centerAxis": "",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "L.t / 2",
-        "femaleOffset": 0,
         "dependsSelector": "B",
         "dependentSelector": "L",
-        "demensionAxis": "y",
-        "centerAxis": "-z"
-      },
-      {
-        "_TYPE": "Dado",
-        "maleOffset": "R.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "R",
-        "demensionAxis": "x",
-        "centerAxis": "-x"
-      },
-      {
-        "_TYPE": "Dado",
-        "maleOffset": "pbr.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "pbr",
-        "demensionAxis": "y",
-        "centerAxis": "+z"
-      },
-      {
-        "_TYPE": "Dado",
-        "maleOffset": "pbl.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "pbl",
-        "demensionAxis": "x",
-        "centerAxis": "+x"
-      },
-      {
-        "_TYPE": "Dado",
         "maleOffset": "L.t / 2",
         "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "L",
         "demensionAxis": "y",
-        "centerAxis": "-z"
+        "centerAxis": "-z",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Dado",
+        "dependsSelector": "B",
+        "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "R",
         "demensionAxis": "x",
-        "centerAxis": "-x"
+        "centerAxis": "-x",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Dado",
+        "dependsSelector": "B",
+        "dependentSelector": "pbr",
         "maleOffset": "pbr.t/2",
         "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "pbr",
         "demensionAxis": "y",
-        "centerAxis": "+z"
+        "centerAxis": "+z",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Dado",
+        "dependsSelector": "B",
+        "dependentSelector": "pbl",
         "maleOffset": "pbl.t/2",
         "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "pbl",
         "demensionAxis": "x",
-        "centerAxis": "+x"
+        "centerAxis": "+x",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Dado",
+        "dependsSelector": "T",
+        "dependentSelector": "L",
+        "maleOffset": "L.t / 2",
+        "femaleOffset": 0,
+        "demensionAxis": "y",
+        "centerAxis": "-z",
+        "fullLength": false,
+        "priority": 0
+      },
+      {
+        "_TYPE": "Dado",
+        "dependsSelector": "T",
+        "dependentSelector": "R",
+        "maleOffset": "R.t/2",
+        "femaleOffset": 0,
+        "demensionAxis": "x",
+        "centerAxis": "-x",
+        "fullLength": false,
+        "priority": 0
+      },
+      {
+        "_TYPE": "Dado",
+        "dependsSelector": "T",
+        "dependentSelector": "pbr",
         "maleOffset": "pbr.t/2",
         "femaleOffset": 0,
+        "demensionAxis": "y",
+        "centerAxis": "+z",
+        "fullLength": false,
+        "priority": 0
+      },
+      {
+        "_TYPE": "Dado",
+        "dependsSelector": "T",
+        "dependentSelector": "pbl",
+        "maleOffset": "pbl.t/2",
+        "femaleOffset": 0,
+        "demensionAxis": "x",
+        "centerAxis": "+x",
+        "fullLength": false,
+        "priority": 0
+      },
+      {
+        "_TYPE": "Dado",
         "dependsSelector": "pbr",
         "dependentSelector": "R",
+        "maleOffset": "pbr.t/2",
+        "femaleOffset": 0,
         "demensionAxis": "x",
-        "centerAxis": "-z"
+        "centerAxis": "-z",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "L.t / 2",
-        "femaleOffset": 0,
         "dependsSelector": "pbl",
         "dependentSelector": "L",
+        "maleOffset": "L.t / 2",
+        "femaleOffset": 0,
         "demensionAxis": "x",
-        "centerAxis": "-x"
+        "centerAxis": "-x",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
         "dependsSelector": "BACK",
         "dependentSelector": "T",
+        "maleOffset": 0,
+        "femaleOffset": 0,
         "demensionAxis": "",
-        "centerAxis": ""
+        "centerAxis": "",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
         "dependsSelector": "cb",
         "dependentSelector": "T",
+        "maleOffset": 0,
+        "femaleOffset": 0,
         "demensionAxis": "",
-        "centerAxis": ""
+        "centerAxis": "",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
         "dependsSelector": "cb",
         "dependentSelector": "B",
+        "maleOffset": 0,
+        "femaleOffset": 0,
         "demensionAxis": "",
-        "centerAxis": ""
+        "centerAxis": "",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
         "dependsSelector": "cb",
         "dependentSelector": "pbl",
+        "maleOffset": 0,
+        "femaleOffset": 0,
         "demensionAxis": "",
-        "centerAxis": ""
+        "centerAxis": "",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
         "dependsSelector": "cb",
         "dependentSelector": "pbr",
+        "maleOffset": 0,
+        "femaleOffset": 0,
         "demensionAxis": "",
-        "centerAxis": ""
+        "centerAxis": "",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
         "dependsSelector": "cpbl",
         "dependentSelector": "BACK",
+        "maleOffset": 0,
+        "femaleOffset": 0,
         "demensionAxis": "",
-        "centerAxis": ""
+        "centerAxis": "",
+        "fullLength": false,
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
         "dependsSelector": "cpbr",
         "dependentSelector": "BACK",
+        "maleOffset": 0,
+        "femaleOffset": 0,
         "demensionAxis": "",
-        "centerAxis": ""
+        "centerAxis": "",
+        "fullLength": false,
+        "priority": 0
       }
     ],
     "dividerJoint": {
@@ -884,7 +942,9 @@
       "maleOffset": 0.635,
       "femaleOffset": 0,
       "demensionAxis": "",
-      "centerAxis": ""
+      "centerAxis": "",
+      "fullLength": false,
+      "priority": 0
     },
     "shape": "corner",
     "width": "based*1.5",
@@ -914,12 +974,12 @@
     "values": [
       {
         "key": "innerWidth",
-        "eqn": "c.w - pwt34 * 2",
+        "eqn": "c.w - pt34 * 2",
         "id": "itqsm1j"
       },
       {
         "key": "innerWidthCenter",
-        "eqn": "innerWidth + pwt34",
+        "eqn": "innerWidth + pt34",
         "id": "pwaarfr"
       }
     ],
@@ -936,7 +996,7 @@
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -957,7 +1017,7 @@
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -978,7 +1038,7 @@
         "demensions": [
           "innerWidth",
           "c.l - tkh",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -999,7 +1059,7 @@
         "demensions": [
           "c.t - BACK.t",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -1014,13 +1074,13 @@
         "code": "T",
         "center": [
           "c.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "(w / -2)"
         ],
         "demensions": [
           "(c.t - BACK.t)",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -1164,7 +1224,7 @@
         "demensions": [
           "pbw",
           "c.h",
-          "pwt14"
+          "pt14"
         ],
         "rotation": [
           0,
@@ -1206,7 +1266,7 @@
         "demensions": [
           "rw + 2",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1227,7 +1287,7 @@
         "demensions": [
           "lw + 2",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1248,7 +1308,7 @@
         "demensions": [
           "c.w - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1290,7 +1350,7 @@
         "demensions": [
           "c.t - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1332,7 +1392,7 @@
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -1353,7 +1413,7 @@
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -1626,7 +1686,7 @@
         "demensions": [
           "pbw",
           "c.h",
-          "pwt14"
+          "pt14"
         ],
         "rotation": [
           0,
@@ -1668,7 +1728,7 @@
         "demensions": [
           "rw + 4",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1689,7 +1749,7 @@
         "demensions": [
           "lw + 4",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1710,7 +1770,7 @@
         "demensions": [
           "c.w - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1752,7 +1812,7 @@
         "demensions": [
           "c.t - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1794,7 +1854,7 @@
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -1815,7 +1875,7 @@
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -2050,12 +2110,12 @@
     },
     {
       "key": "innerWidth",
-      "eqn": "c.w - pwt34 * 2",
+      "eqn": "c.w - pt34 * 2",
       "id": "2v4bpft"
     },
     {
       "key": "innerWidthCenter",
-      "eqn": "innerWidth + pwt34",
+      "eqn": "innerWidth + pt34",
       "id": "h9aynib"
     },
     {
@@ -2082,7 +2142,7 @@
       "demensions": [
         "c.t",
         "c.l",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -2103,7 +2163,7 @@
       "demensions": [
         "c.t",
         "c.l",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -2124,7 +2184,7 @@
       "demensions": [
         "innerWidth +R.t/2 + L.t/2",
         "innerHeight",
-        "pwt14"
+        "pt14"
       ],
       "rotation": [
         0,
@@ -2145,7 +2205,7 @@
       "demensions": [
         "c.t - BACK.t",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         90,
@@ -2160,13 +2220,13 @@
       "code": "T",
       "center": [
         "c.w / 2 ",
-        "c.h - pwt34/2 - topInsetDepth",
+        "c.h - pt34/2 - topInsetDepth",
         "w / -2 "
       ],
       "demensions": [
         "c.t - BACK.t",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         90,
@@ -2185,7 +2245,7 @@
       "demensions": [
         "topInsetDepth",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -2335,7 +2395,7 @@
         "demensions": [
           "c.t",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2355,7 +2415,7 @@
         "demensions": [
           "c.t",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2375,7 +2435,7 @@
         "demensions": [
           "c.w - L.t - R.t",
           "c.h - B.t -T.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2395,7 +2455,7 @@
         "demensions": [
           "c.w - L.t - R.t",
           "c.t ",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -2415,7 +2475,7 @@
         "demensions": [
           "c.w - L.t - R.t",
           "c.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -2493,12 +2553,12 @@
       },
       {
         "key": "innerWidth",
-        "eqn": "c.w - pwt34 * 2",
+        "eqn": "c.w - pt34 * 2",
         "id": "t43543r"
       },
       {
         "key": "innerWidthCenter",
-        "eqn": "innerWidth + pwt34",
+        "eqn": "innerWidth + pt34",
         "id": "me96nsd"
       },
       {
@@ -2546,7 +2606,7 @@
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2567,7 +2627,7 @@
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2588,7 +2648,7 @@
         "demensions": [
           "c.l - tkb.w",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2609,7 +2669,7 @@
         "demensions": [
           "c.t - BACK.t",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -2624,13 +2684,13 @@
         "code": "T",
         "center": [
           "c.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "w / -2"
         ],
         "demensions": [
           "(c.t - BACK.t) * .2",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -2645,13 +2705,13 @@
         "code": "pt2",
         "center": [
           "c.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "-(c.t - BACK.t - (w / 2))"
         ],
         "demensions": [
           "(c.t - BACK.t) * .2",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -2670,7 +2730,7 @@
         "demensions": [
           "6*2.54",
           "innerHeight",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2952,11 +3012,11 @@
       },
       {
         "key": "innerWidth",
-        "eqn": "c.w - pwt34 * 2"
+        "eqn": "c.w - pt34 * 2"
       },
       {
         "key": "innerWidthCenter",
-        "eqn": "innerWidth + pwt34"
+        "eqn": "innerWidth + pt34"
       },
       {
         "key": "blindDepth",
@@ -3000,7 +3060,7 @@
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3020,7 +3080,7 @@
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3040,7 +3100,7 @@
         "demensions": [
           "c.l - tkb.w",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3060,7 +3120,7 @@
         "demensions": [
           "c.t - BACK.t",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -3074,13 +3134,13 @@
         "code": "T",
         "center": [
           "c.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "w / -2"
         ],
         "demensions": [
           "(c.t - BACK.t) * .2",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -3094,13 +3154,13 @@
         "code": "pt2",
         "center": [
           "c.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "-(c.t - BACK.t - (w / 2))"
         ],
         "demensions": [
           "(c.t - BACK.t) * .2",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -3118,7 +3178,7 @@
         "demensions": [
           "3*2.54",
           "innerHeight",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3368,7 +3428,7 @@
         "demensions": [
           "pbw",
           "c.h",
-          "pwt14"
+          "pt14"
         ],
         "rotation": [
           0,
@@ -3450,7 +3510,7 @@
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3470,7 +3530,7 @@
         "demensions": [
           "c.w",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3490,7 +3550,7 @@
         "demensions": [
           "innerWidth",
           "innerDepth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -3504,13 +3564,13 @@
         "code": "T",
         "center": [
           "T.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "T.h /-2"
         ],
         "demensions": [
           "innerWidth",
           "innerDepth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -3668,7 +3728,7 @@
         "demensions": [
           "pbw",
           "c.h",
-          "pwt14"
+          "pt14"
         ],
         "rotation": [
           0,
@@ -3750,7 +3810,7 @@
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3770,7 +3830,7 @@
         "demensions": [
           "c.w",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3790,7 +3850,7 @@
         "demensions": [
           "innerWidth",
           "innerDepth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -3804,13 +3864,13 @@
         "code": "T",
         "center": [
           "T.w / 2",
-          "c.h - tid - pwt34/2",
+          "c.h - tid - pt34/2",
           "T.h /-2"
         ],
         "demensions": [
           "innerWidth",
           "innerDepth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -3968,7 +4028,7 @@
         "demensions": [
           "pbw",
           "c.h",
-          "pwt14"
+          "pt14"
         ],
         "rotation": [
           0,
@@ -4050,7 +4110,7 @@
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -4070,7 +4130,7 @@
         "demensions": [
           "c.w",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -4090,7 +4150,7 @@
         "demensions": [
           "innerWidth",
           "innerDepth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -4104,13 +4164,13 @@
         "code": "T",
         "center": [
           "T.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "T.h /-2"
         ],
         "demensions": [
           "innerWidth",
           "innerDepth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -4262,7 +4322,7 @@
         "demensions": [
           "maxSide",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -4282,7 +4342,7 @@
         "demensions": [
           "maxSide",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -4302,7 +4362,7 @@
         "demensions": [
           "c.w - L.t - R.t",
           "c.h - B.t -T.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -4322,7 +4382,7 @@
         "demensions": [
           "c.w - L.t - R.t",
           "Math.max(cwl,  cwr)",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -4343,7 +4403,7 @@
         "demensions": [
           "c.w - L.t - R.t",
           "T.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -4442,7 +4502,7 @@
         "demensions": [
           "maxSide",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -4462,7 +4522,7 @@
         "demensions": [
           "maxSide",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -4482,7 +4542,7 @@
         "demensions": [
           "c.w - L.t - R.t",
           "c.h - B.t -T.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -4502,7 +4562,7 @@
         "demensions": [
           "c.w - L.t - R.t",
           "Math.max(cwl,  cwr)",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -4523,7 +4583,7 @@
         "demensions": [
           "c.w - L.t - R.t",
           "T.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",

@@ -67,6 +67,7 @@ class KeyValue extends Lookup {
     this.on.parentSet = parentSetEvent.on;
     this.trigger ||= {};
     this.trigger.parentSet = parentSetEvent.trigger;
+    // TODO: change (key, value, raw) -> ..., (key, rawOvalue)
     this.value = (key, value, raw) => {
       try {
         const formatted = (typeof this.value.keyFormatter) === 'function' ? this.value.keyFormatter(key) : undefined;
@@ -86,13 +87,6 @@ class KeyValue extends Lookup {
             if (!raw && evaluator) return evaluator(instVal);
             return instVal;
           }
-          const defaultFunction = this.value.defaultFunction;
-          if (defaultFunction) {
-            value = (typeof this.value.defaultFunction) === 'function' ? this.value.defaultFunction(key, value) : undefined;
-            if (value !== undefined) return value;
-          }
-          const parent = this[parentAttr]();
-          if (parent) return parent.value(key);
         }
       } catch (e) {
         console.error(`Failed to resolve key: '${key}'`);

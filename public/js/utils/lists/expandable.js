@@ -29,11 +29,7 @@ const $t = require('../$t.js');
 //}
 class Expandable {
   constructor(props) {
-    const afterRenderEvent = new CustomEvent('afterRender');
-    const afterAddEvent = new CustomEvent('afterAdd');
-    const afterRefreshEvent = new CustomEvent('afterRefresh');
-    const afterRemovalEvent = new CustomEvent('afterRemoval');
-    const afterSwitchEvent = new CustomEvent('afterSwitch');
+    CustomEvent.all(this, 'after.render', 'after.add', 'after.removal', 'after.switch', 'after.refresh');
     const instance = this;
     const renderBodyOnOpen = props.renderBodyOnOpen === false ? false : true;
     props.getObject = props.getObject || (() => ({}));
@@ -93,7 +89,7 @@ class Expandable {
           props.list[key] = obj;
           if (!props.dontOpenOnAdd) this.activeKey(key);
           this.refresh();
-          afterAddEvent.trigger();
+          this.trigger.after.add();
       } else {
         const errors = props.inputValidation(inputValues);
         let errorStr;
@@ -113,15 +109,19 @@ class Expandable {
     props.hasInputTree = this.hasInputTree;
 
     this.isSelfClosing = () => props.selfCloseTab;
-    this.remove = (removed) => {
-      afterRemovalEvent.trigger(undefined, removed);
+    this.remove = (remove) => {
+      let removed;
+      if ((typeof remove) === 'string' || (typeof remove) === 'number') {
+        removed = this.list()[remove];
+        delete this.list()[remove];
+      } else {
+        removed = this.list().remove(remove);
+      }
+      this.trigger.after.removal(removed, this);
       this.refresh();
     }
     this.html = () =>
       Expandable[`${instance.type().toCamel()}Template`].render(this);
-    this.afterRender = (func) => afterRenderEvent.on(func);
-    this.afterAdd = (func) => afterAddEvent.on(func);
-    this.afterRemoval = (func) => afterRemovalEvent.on(func);
     this.refresh = (type) => {
       this.type((typeof type) === 'string' ? type : props.type);
       if (!pendingRefresh) {
@@ -140,7 +140,7 @@ class Expandable {
             if (parent && html !== undefined) {
               parent.innerHTML = html;
               du.focus(focusInfo);
-              afterRefreshEvent.trigger();
+              this.trigger.after.refresh();
             } else {
               console.warn('Expandable: parent contaier and or html content is not defined');
             }
@@ -179,11 +179,11 @@ class Expandable {
         if (renderBodyOnOpen) body.innerHTML = this.htmlBody(key);
         if (props.removeButton !== false) target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'block';
         target.className += ' active' + (this.hasBody() ? '' : ' no-body');
-        afterRenderEvent.trigger({header: target, body, key}, instance);
+        this.trigger.after.render({header: target, body, key}, instance);
         // du.scroll.intoView(target.parentElement, 3, 25, document.body);
       }
     };
-    afterRefreshEvent.on(() => {if (this.activeKey() !== undefined)this.renderBody()});
+    this.on.after.refresh(() => {if (this.activeKey() !== undefined)this.renderBody()});
 
     this.initialBody = (key) => {
       const item = this.list()[key];
@@ -312,6 +312,7 @@ du.on.match('click', '.expand-header', (target, event) => {
       target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';
     } else if (!isActive) {
       list.renderBody(target);
+      list.trigger.after.switch(target, list);
     }
   }
 });

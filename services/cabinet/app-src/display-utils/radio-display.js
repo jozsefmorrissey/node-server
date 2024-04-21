@@ -6,8 +6,8 @@ const du = require('../../../../public/js/utils/dom-utils.js');
 
 class RadioDisplay {
   constructor(radioClass, groupAttr, alternateToggleClass) {
-    const afterSwitchEvent = new CustomEvent('afterSwitch');
-    const beforeSwitchEvent = new CustomEvent('beforeSwitch');
+    const instance = this;
+    CustomEvent.all(this, 'after.switch', 'before.switch');
     const selector = (attrVal) => {
       return groupAttr ? `.${radioClass}[${groupAttr}="${attrVal}"]` : `.${radioClass}`;
     }
@@ -34,9 +34,6 @@ class RadioDisplay {
         if (closest) closest.hidden = true;
       }
     }
-    this.beforeSwitch = (func) => beforeSwitchEvent.on(func);
-    this.afterSwitch = (func) => afterSwitchEvent.on(func);
-
 
     du.on.match('scroll', `*`, (target, event) => {
       infoBar.update(path());
@@ -49,7 +46,7 @@ class RadioDisplay {
       const targetBody = target.children[1];
       const hidden = targetBody.hidden;
       targetBody.hidden = !hidden;
-      beforeSwitchEvent.trigger(previousHeader, {previousHeader, targetHeader});
+      instance.trigger.before.switch(previousHeader, {previousHeader, targetHeader});
       if (hidden) {
         du.class.add(targetHeader, 'active');
         du.class.swap(target, 'open', 'close');
@@ -63,12 +60,12 @@ class RadioDisplay {
             du.class.remove(sibHeader, 'active');
           }
         }
-        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
+        instance.trigger.after.switch(targetHeader, {previousHeader, targetHeader, open: true, targetBody});
         previousHeader = targetHeader;
       } else {
         du.class.swap(target, 'close', 'open');
         du.class.remove(targetHeader, 'active');
-        afterSwitchEvent.trigger(targetHeader, {previousHeader, targetHeader});
+        instance.trigger.after.switch(targetHeader, {previousHeader, targetHeader, open: false});
         previousHeader = null;
       }
       infoBar.update(path());

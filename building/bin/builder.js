@@ -335,7 +335,7 @@ class $t {
     const signProps = {opening: /([-+\!])/};
 		const ternaryProps = {opening: /\?/};
 		const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
-		const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, (.*?), get\)/};
+      		const ignoreProps = {opening: /new \$t\(.*?\).render\(.*?, (.*?), get\)|\$t\.clean\(.*?\)/};
 		const commaProps = {opening: /,/};
 		const colonProps = {opening: /:/};
 		const multiplierProps = {opening: /([-+*\/%](=|))/};
@@ -480,7 +480,7 @@ class $t {
 			for (let index = 0; index < get('scope').length; index += 1) {
 				if (elemName) {
 					const obj = {};
-          obj.$index = index;
+					obj.$index = index;
 					obj[elemName] = get(index);
 					resp += new $t(template).render(obj, undefined, get);
 				} else {
@@ -503,7 +503,7 @@ class $t {
 			return built;
 		}
 
-    function itOverObject(varNames, get) {
+		function itOverObject(varNames, get) {
 			const match = varNames.match($t.objectNameReg);
 			const keyName = match[1];
 			const valueName = match[2];
@@ -690,13 +690,17 @@ class $t {
 			return blocks;
 		}
 
-		function compile() {
-			const blocks = isolateBlocks(template);
-			let str = template;
+		function resolve(str) {
+			return ExprDef.parse(expression, str);
+		}
+
+		function compile(strToCompile) {
+      			if (!strToCompile) strToCompile = template;
+			const blocks = isolateBlocks(strToCompile);
+			let str = strToCompile;
 			for (let index = 0; index < blocks.length; index += 1) {
-				const block = blocks[index];
-				const parced = ExprDef.parse(expression, block);
-				str = str.replace(`{{${block}}}`, `\` + $t.clean(${parced}) + \``);
+				const parced = resolve(blocks[index]);
+				str = str.replace(`{{${blocks[index]}}}`, `\` + $t.clean(${parced}) + \``);
 			}
 			return `\`${str}\``;
 		}
@@ -713,8 +717,14 @@ class $t {
 				let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
 				let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
 				let scope = 'scope';
-				template = templateName !== tagContents ? templateName : template;
-				const t = templateName === instance.id() ? instance : eval(`new $t(\`${template}\`)`);
+        let foundTagName = templateName !== tagContents;
+				template = foundTagName ? templateName : template;
+        if (foundTagName && isolateBlocks(templateName)) {
+          templateName = exprToStr(templateName);
+        } else {
+          const t = templateName === instance.id() ? instance : eval(`new $t(\`${template}\`)`);
+          templateName = `'${t.id()}'`;
+        }
         let resolvedScope = "get('scope')";
         try {
 					if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
@@ -723,10 +733,17 @@ class $t {
             resolvedScope = ExprDef.parse(expression, realScope);
           }
         } catch (e) {}
-        string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
+        string = string.replace(match[0], `{{ new $t(${templateName}).render(${resolvedScope}, '${varNames}', get)}}`);
 			}
 			return string;
 		}
+
+    function exprToStr(expr) {
+      if (isolateBlocks(expr).length === 0) return `'${expr}'`;
+      const raw = compile(expr);
+      const formatted = raw.replace(/(^ \+ | \+ $)/, '');
+      return formatted;
+    }
 
     // format: <[tagName]:t .*$t-id='[templateName]'.*>[scopeVariableName]</[tagName]:t>
     const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>(((?!(<\1:t[^>]*>|<\/\1:t>)).)*)<\/)\1:t>/;
@@ -736,10 +753,11 @@ class $t {
 				let tagContents = match[7];
 				let tagName = match[1];
 				let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
-				let templateName = match[0].replace(/.*\$t-id=('|")([0-9\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+				let templateName = match[0].replace(/.*\$t-id=('|")(.*?)(\1).*/, '$2');
+        templateName = exprToStr(templateName);
 				template = templateName !== tagContents ? templateName : template;
 				let resolvedScope = ExprDef.parse(expression, match[7] || "scope");
-				string = string.replace(match[0], `{{ new $t('${templateName}').render(${resolvedScope}, undefined, get)}}`);
+				string = string.replace(match[0], `{{ new $t(${templateName}).render(${resolvedScope}, undefined, get)}}`);
 			}
 			return string;
 		}
@@ -750,7 +768,7 @@ class $t {
 		}
 
 		template = template.replace(/\s{1,}/g, ' ');
-    const fileStringMatch = template.match(/^[a-zA-Z0-1\/\._-]{1,}$/) !== null;
+    const fileStringMatch = template.match(/^[a-zA-Z0-9\/\._-]{1,}$/) !== null;
 		id = fileStringMatch ? template : id || stringHash(template);
     this.id = () => id;
 		if (!$t.functions[id]) {
@@ -765,6 +783,7 @@ class $t {
 		this.render = render;
 		this.type = type;
 		this.isolateBlocks = isolateBlocks;
+    this.id = () => id;
 	}
 }
 
@@ -812,14 +831,14 @@ $t.clean = (val) => val === undefined ? '' : val;
 
 function createGlobalsInterface() {
   const GLOBALS = {};
-  const isMotifiable = () => GLOBALS[name] === undefined ||
+  const isMotifiable = (name) => GLOBALS[name] === undefined ||
         GLOBALS[name].imutable !== 'true';
   $t.global = function (name, value, imutable) {
     if (value === undefined) return GLOBALS[name] ? GLOBALS[name].value : undefined;
-    if (isMotifiable()) GLOBALS[name] = {value, imutable};
+    if (isMotifiable(name)) GLOBALS[name] = {value, imutable};
   }
   $t.rmGlobal = function(name) {
-    if (isMotifiable()) delete GLOBALS[name];
+    if (isMotifiable(name)) delete GLOBALS[name];
   }
 }
 createGlobalsInterface();

@@ -30,7 +30,7 @@ class OrderDisplay {
     function initOrder(order, index) {
       roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
       ToggleDisplayList.onShow(`information-display-${order.id()}`, setInfo(order, index));
-      // expandList.afterRender(setInfo(order, index));
+      // expandList.on.after.render(setInfo(order, index));
       return order;
     }
 
@@ -66,7 +66,7 @@ class OrderDisplay {
       inputTree: OrderDisplay.configInputTree()
     };
     const expandList = new ExpandableObject(expListProps);
-    expandList.afterRender(() => {if (active !== undefined) active.refresh()});
+    expandList.on.after.render(() => {if (active !== undefined) active.refresh()});
 
     const saveSuccess = () => console.log('success');
     const saveFail = () => console.log('failure');

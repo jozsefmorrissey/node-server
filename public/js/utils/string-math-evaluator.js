@@ -24,6 +24,9 @@ class StringMathEvaluator {
 
     function resolve (path, currObj, globalCheck) {
       if (path === '') return currObj;
+      if (path === 'OP.n.k') {
+        console.log('here');
+      }
       try {
         const resolved = !globalCheck && resolver && resolver(path, currObj);
         if (Number.isFinite(resolved)) return resolved;

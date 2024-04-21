@@ -51,6 +51,7 @@ Joint.new = function (id, json) {
 
 Joint.fromJson = (json) => {
   const joint = new (Object.class.get(json._TYPE))(json.dependsSelector, json.dependentSelector);
+  joint.id(json.id);
   joint.centerAxis(json.centerAxis);
   joint.demensionAxis(json.demensionAxis);
   joint.maleOffset(json.maleOffset);

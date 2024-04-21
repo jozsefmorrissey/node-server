@@ -35,7 +35,8 @@ function getModel(target, axis, offsetRatio, fromPoint, ingulf, environment, to)
   let biPoly = biPolyArr ? new BiPolygon(biPolyArr[0], biPolyArr[1]) : to(target).biPolygon(target, environment);
   if (biPoly === null) return null;
 
-  const {front, back} = getFrontAndBack(biPoly, normals.z, offsetRatio + .000001 < 0);
+  const {front, back} =
+    getFrontAndBack(biPoly, normals.z, offsetRatio + .000001 < 0);
   let length = 0;
   front.lines().forEach(l => length += l.length());
   const overKill = 10 * length;

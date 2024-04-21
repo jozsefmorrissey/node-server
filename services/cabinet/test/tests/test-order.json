@@ -188,7 +188,7 @@
                     "demension": {
                       "x": "pbw",
                       "y": "c.h",
-                      "z": "pwt14"
+                      "z": "pt14"
                     },
                     "center": {
                       "x": "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
@@ -345,7 +345,7 @@
                     "demension": {
                       "x": "rw + 4 + backRightScribe",
                       "y": "c.h",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w - R.w/2 + backRightScribe",
@@ -379,7 +379,7 @@
                     "demension": {
                       "x": "lw + 4 + backLeftScribe",
                       "y": "c.h",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "L.t/2",
@@ -413,7 +413,7 @@
                     "demension": {
                       "x": "c.w - bo",
                       "y": "c.h",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "pbl.w / 2 + R.t ",
@@ -504,7 +504,7 @@
                     "demension": {
                       "x": "c.t - bo",
                       "y": "c.h",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w - pbl.t/2",
@@ -595,7 +595,7 @@
                     "demension": {
                       "x": "c.w - pbl.t - R.t",
                       "y": "c.t - pbr.t - L.t",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w / 2",
@@ -674,7 +674,7 @@
                     "demension": {
                       "x": "c.w - pbl.t - R.t",
                       "y": "c.t - pbr.t - L.t",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w / 2",
@@ -1512,8 +1512,8 @@
               "ID_ATTRIBUTE": "id",
               "value": {
                 "values": {
-                  "innerWidth": "c.w - pwt34 * 2",
-                  "innerWidthCenter": "innerWidth + pwt34",
+                  "innerWidth": "c.w - pt34 * 2",
+                  "innerWidthCenter": "innerWidth + pt34",
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "id": "Dado_yl8gjou",
@@ -1565,7 +1565,7 @@
                     "demension": {
                       "x": "c.t",
                       "y": "c.l",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w - (R.t / 2)",
@@ -1599,7 +1599,7 @@
                     "demension": {
                       "x": "c.t",
                       "y": "c.l",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "(L.t / 2)",
@@ -1633,7 +1633,7 @@
                     "demension": {
                       "x": "innerWidth",
                       "y": "c.l - tkh",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": " w / 2 + R.t",
@@ -1690,7 +1690,7 @@
                     "demension": {
                       "x": "c.t - BACK.t",
                       "y": "innerWidth",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w / 2",
@@ -1747,11 +1747,11 @@
                     "demension": {
                       "x": "(c.t - BACK.t)",
                       "y": "innerWidth",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w / 2",
-                      "y": "c.h - pwt34/2",
+                      "y": "c.h - pt34/2",
                       "z": "(w / -2)"
                     },
                     "rotation": {
@@ -2519,8 +2519,8 @@
               "ID_ATTRIBUTE": "id",
               "value": {
                 "values": {
-                  "innerWidth": "c.w - pwt34 * 2",
-                  "innerWidthCenter": "innerWidth + pwt34",
+                  "innerWidth": "c.w - pt34 * 2",
+                  "innerWidthCenter": "innerWidth + pt34",
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "id": "Dado_lonbn5m",
@@ -2572,7 +2572,7 @@
                     "demension": {
                       "x": "c.t",
                       "y": "c.l",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w - (R.t / 2)",
@@ -2606,7 +2606,7 @@
                     "demension": {
                       "x": "c.t",
                       "y": "c.l",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "(L.t / 2)",
@@ -2640,7 +2640,7 @@
                     "demension": {
                       "x": "innerWidth",
                       "y": "c.l - tkh",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": " w / 2 + R.t",
@@ -2697,7 +2697,7 @@
                     "demension": {
                       "x": "c.t - BACK.t",
                       "y": "innerWidth",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w / 2",
@@ -2754,11 +2754,11 @@
                     "demension": {
                       "x": "(c.t - BACK.t)",
                       "y": "innerWidth",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w / 2",
-                      "y": "c.h - pwt34/2",
+                      "y": "c.h - pt34/2",
                       "z": "(w / -2)"
                     },
                     "rotation": {
@@ -5540,7 +5540,7 @@
                     "demension": {
                       "x": "c.t",
                       "y": "c.h",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w - R.t/2",
@@ -5574,7 +5574,7 @@
                     "demension": {
                       "x": "c.t",
                       "y": "c.h",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "L.t/2",
@@ -5608,7 +5608,7 @@
                     "demension": {
                       "x": "c.w - L.t - R.t",
                       "y": "c.h - B.t -T.t",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "L.t + BACK.w/2",
@@ -5687,7 +5687,7 @@
                     "demension": {
                       "x": "c.w - L.t - R.t",
                       "y": "c.t ",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "L.t + T.w / 2",
@@ -5721,7 +5721,7 @@
                     "demension": {
                       "x": "c.w - L.t - R.t",
                       "y": "c.t",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "B.w /2 + L.t",
@@ -6764,7 +6764,7 @@
                     "demension": {
                       "x": "pbw",
                       "y": "c.h",
-                      "z": "pwt14"
+                      "z": "pt14"
                     },
                     "center": {
                       "x": "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
@@ -7022,7 +7022,7 @@
                     "demension": {
                       "x": "c.t",
                       "y": "c.l",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "c.w - (R.t / 2)",
@@ -7056,7 +7056,7 @@
                     "demension": {
                       "x": "c.w",
                       "y": "c.l",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "L.w/2",
@@ -7090,7 +7090,7 @@
                     "demension": {
                       "x": "innerWidth",
                       "y": "innerDepth",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "B.w / 2",
@@ -7147,11 +7147,11 @@
                     "demension": {
                       "x": "innerWidth",
                       "y": "innerDepth",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "T.w / 2",
-                      "y": "c.h - tid - pwt34/2",
+                      "y": "c.h - tid - pt34/2",
                       "z": "T.h /-2"
                     },
                     "rotation": {
@@ -7725,7 +7725,7 @@
               },
               {
                 "_TYPE": "Property",
-                "code": "frw",
+                "code": "fw",
                 "name": "Frame Rail Width",
                 "value": 3.81,
                 "properties": {
@@ -7735,8 +7735,8 @@
               },
               {
                 "_TYPE": "Property",
-                "code": "frt",
-                "name": "Frame Rail Thicness",
+                "code": "ft",
+                "name": "Frame Rail Thickness",
                 "value": 1.905,
                 "properties": {
                   "value": 1.905,

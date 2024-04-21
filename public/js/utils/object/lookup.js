@@ -60,7 +60,6 @@ Lookup.convert = function (obj, attr, id, singleton) {
   if (obj.constructor.name === 'Object' && !obj.toJson) {
     obj.toJson = () => JSON.copy(obj);
   }
-  Object.getSet(obj, attr, Lookup.ID_ATTRIBUTE);
   obj.lookupGroup = (g) => {
     if (group === undefined && g !== undefined) {
       if (Lookup.groups[g] === undefined) Lookup.groups[g] = [];
@@ -84,7 +83,8 @@ Lookup.convert = function (obj, attr, id, singleton) {
   obj[Lookup.ID_ATTRIBUTE] = () => attr;
   obj[attr] = (idStr) => {
     if (modificationWindowOpen) {
-      if (idStr instanceof IdString) {
+      if ((typeof idStr) === 'string' && idStr) idStr = new IdString(idStr);
+      if (idStr instanceof IdString && idStr.split().length === 2) {
         let objId = idStr.index(-1);
         id = new IdString(cxtrName, objId);
         Lookup.byId[cxtr.name][id.index(-1)] = obj;
@@ -198,7 +198,7 @@ Lookup.fromJson = (json) => {
   const obj = Object.fromJson(json);
   if (obj instanceof Lookup) return obj;
   if (attr) {
-    Lookup.convert(obj, obj[attr], attr)
+    Lookup.convert(obj, obj[attr], attr);
     return obj;
   }
   return null;

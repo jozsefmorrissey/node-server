@@ -36,14 +36,17 @@ const indexHtml = fs.readFileSync('./services/cabinet/public/html/estimate.html'
 const indexTemplate = new $t('index');
 const orderTemplate = new $t('order');
 const orderRedirectTemplate = new $t('order-redirect');
-function servePage(pageId, scopeFunc) {
+const projectsTemplate = new $t('static-page');
+function servePage(pageId, scope) {
   let template = indexTemplate;
   switch (pageId) {
     case 'order': template = orderTemplate; break;
     case 'order-redirect': template = orderRedirectTemplate; break;
+    case 'projects': template = projectsTemplate; break;
   }
   return (req, res) => {
-    scope = (typeof bodyFunc) === 'function' ? scopeFunc(req, res) : {};
+    if (!scope) scope = {};
+    scope = (typeof scope) === 'function' ? scope(req, res) : scope;
     scope.pageId = pageId;
     res.setHeader('Content-Type', 'text/html');
     res.send(template.render(scope));
@@ -63,6 +66,8 @@ function endpoints(app, prefix) {
   app.get(prefix + "/template", servePage('template'));
   app.get(prefix + "/property", servePage('home'));
   app.get(prefix + "/pattern", servePage('home'));
+  const projects = require('./public/json/projects.json');
+  app.get(prefix + "/projects", servePage('projects', {title: 'Projects', file: 'projects', projects}));
 
   app.get(prefix + "/order", servePage('order', orderElem));
   app.post(prefix + "/order", servePage('order', orderElem));

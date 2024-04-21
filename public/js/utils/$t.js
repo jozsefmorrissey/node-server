@@ -11,8 +11,7 @@ ExprDef = require('./expression-definition');
 class $t {
 	constructor(template, id, selector) {
 		if (selector) {
-			const afterRenderEvent = new CustomEvent('afterRender');
-			const beforeRenderEvent = new CustomEvent('beforeRender');
+			CustomEvent.all(this, 'after.render', 'before.render');
 		}
 
 		function varReg(prefix, suffix) {
@@ -36,7 +35,7 @@ class $t {
     const signProps = {opening: /([-+\!])/};
 		const ternaryProps = {opening: /\?/};
 		const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
-		const ignoreProps = {opening: /new \$t\('.*?'\).render\(.*?, (.*?), get\)/};
+      		const ignoreProps = {opening: /new \$t\(.*?\).render\(.*?, (.*?), get\)|\$t\.clean\(.*?\)/};
 		const commaProps = {opening: /,/};
 		const colonProps = {opening: /:/};
 		const multiplierProps = {opening: /([-+*\/%](=|))/};
@@ -160,6 +159,7 @@ class $t {
 			function get(name) {
 				if (name === 'scope') return scope;
 				const split = new String(name).split('.');
+        if (split.length === 0) return currObj[split]
 				let currObj = scope;
 				for (let index = 0; currObj != undefined && index < split.length; index += 1) {
 					currObj = currObj[split[index]];
@@ -352,7 +352,7 @@ class $t {
         if (elem !== null) {
           beforeRenderEvent.trigger();
           elem.innerHTML = rendered;
-          afterRenderEvent.trigger();
+					instance.trigger.after.render();
         }
       }
 			return rendered;
@@ -402,12 +402,13 @@ class $t {
 			return ExprDef.parse(expression, str);
 		}
 
-		function compile() {
-			const blocks = isolateBlocks(template);
-			let str = template;
+		function compile(strToCompile) {
+      			if (!strToCompile) strToCompile = template;
+			const blocks = isolateBlocks(strToCompile);
+			let str = strToCompile;
 			for (let index = 0; index < blocks.length; index += 1) {
 				const parced = resolve(blocks[index]);
-				str = str.replace(`{{${block}}}`, `\` + $t.clean(${parced}) + \``);
+				str = str.replace(`{{${blocks[index]}}}`, `\` + $t.clean(${parced}) + \``);
 			}
 			return `\`${str}\``;
 		}
@@ -425,8 +426,12 @@ class $t {
 				let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
 				let scope = 'scope';
 				template = templateName !== tagContents ? templateName : template;
-				const t = templateName === instance.id() ? instance : eval(`new $t(\`${template}\`)`);
-        let resolvedScope = "get('scope')";;
+				templateName = exprToStr(templateName);
+				if (templateName.indexOf(' + ') === -1) {
+					const t = templateName === instance.id() ? instance : eval(`new $t(\`${template}\`)`);
+					templateName = `'${t.id()}'`;
+				}
+        let resolvedScope = "get('scope')";
         try {
 					if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
             resolvedScope = `'${realScope}'`;
@@ -434,42 +439,34 @@ class $t {
             resolvedScope = ExprDef.parse(expression, realScope);
           }
         } catch (e) {}
-        string = string.replace(match[0], `{{ new $t('${t.id()}').render(${resolvedScope}, '${varNames}', get)}}`);
+        string = string.replace(match[0], `{{ new $t(${templateName}).render(${resolvedScope}, '${varNames}', get)}}`);
 			}
 			return string;
 		}
 
-		// format: <[tagName]:t .*$t-id='[templateName]'.*>[scopeVariableName]</[tagName]:t>
-		const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>(((?!(<\1:t[^>]*>|<\/\1:t>)).)*)<\/)\1:t>/;
+    function exprToStr(expr) {
+      if (isolateBlocks(expr).length === 0) return `'${expr}'`;
+      const raw = compile(expr);
+      const formatted = raw.replace(/(^ \+ | \+ $)/, '');
+      return formatted;
+    }
+
+    // format: <[tagName]:t .*$t-id='[templateName]'.*>[scopeVariableName]</[tagName]:t>
+    const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>(((?!(<\1:t[^>]*>|<\/\1:t>)).)*)<\/)\1:t>/;
 		function formatTemplate(string) {
 			let match;
 			while (match = string.match(templateReg)) {
 				let tagContents = match[7];
 				let tagName = match[1];
 				let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
-				let templateName = match[0].replace(/.*\$t-id=('|")([0-9\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+				let templateName = match[0].replace(/.*\$t-id=('|")(.*?)(\1).*/, '$2');
+        templateName = exprToStr(templateName);
 				template = templateName !== tagContents ? templateName : template;
-				console.log("Template!!!", template)
 				let resolvedScope = ExprDef.parse(expression, match[7] || "scope");
-				string = string.replace(match[0], `{{ new $t('${templateName}').render(get('${resolvedScope}'), undefined, get)}}`);
+				string = string.replace(match[0], `{{ new $t(${templateName}).render(${resolvedScope}, undefined, get)}}`);
 			}
 			return string;
 		}
-
-		// const ifReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-if=("|')([^>^\4]*?)\4([^>]*>(((?!(<\1:t[^>]*>|<\/\1:t>)).)*)<\/)\1:t>/;
-		// function formatIf(string) {
-		// 	let match;
-		// 	while (match = string.match(ifReg)) {
-		// 		let tagContents = match[7];
-		// 		let tagName = match[1];
-		// 		let realScope = match[7];
-		// 		let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
-		// 		let conditionStr = match[0].replace(/.*\$t-if=('|")([0-9\.a-zA-Z-_\/]*?)(\1).*/, '$2');
-		// 		let condition = resolve(conditionStr);
-		// 		string = string.replace(match[0], `${condition} ?  '${template}' : ''`;
-		// 	}
-		// 	return string;
-		// }
 
 		if (id) {
 			$t.templates[id] = undefined;
@@ -477,7 +474,8 @@ class $t {
 		}
 
 		template = template.replace(/\s{1,}/g, ' ');
-		id = $t.functions[template] ? template : id || stringHash(template);
+    const fileStringMatch = template.match(/^[a-zA-Z0-9\/\._-]{1,}$/) !== null;
+		id = fileStringMatch ? template : id || stringHash(template);
     this.id = () => id;
 		if (!$t.functions[id]) {
 			if (!$t.templates[id]) {
@@ -489,8 +487,6 @@ class $t {
 		}
 		this.compiled = function () { return $t.templates[id];}
 		this.render = render;
-    this.afterRender = (func) => afterRenderEvent.on(func);
-    this.beforeRender = (func) => beforeRenderEvent.on(func);
 		this.type = type;
 		this.isolateBlocks = isolateBlocks;
     this.id = () => id;
@@ -526,7 +522,7 @@ $t.dumpTemplates = function (debug) {
 	for (let index = 0; index < tempNames.length; index += 1) {
 		const tempName = tempNames[index];
 		if (tempName) {
-			let template = $t.templates[tempName];
+			let template = $t.templates[tempName] || tempName;
       if (debug === true) {
         const endTagReg = /( \+) /g;
         template = template.replace(endTagReg, '$1\n\t\t');

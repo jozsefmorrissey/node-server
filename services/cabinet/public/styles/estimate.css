@@ -21,6 +21,39 @@
   padding-right: 5pt;
 }
 
+.project-cnt {
+  margin: 10pt;
+}
+
+/**
+  <input id="{{id}}" type='checkbox' hidden>
+  <label for='{{id}}'</label>
+  <div></div>
+**/
+.css-dropdown {
+  cursor: pointer;
+  background-color: #0000ff5c;
+  border-radius: 5pt;
+  padding: 2pt 50pt;
+}
+
+input +.css-dropdown +  div {
+  display:none;
+}
+.css-dropdown:after {
+  content:'▼';
+  }
+input:checked  + .css-dropdown:after {
+  content:'▲';
+  }
+input:checked + .css-dropdown + div {
+  display:block;
+}
+
+
+
+
+
 @page {
   margin:0;
   vertical-align: middle;
@@ -79,6 +112,9 @@ body {
   border-width: 0 0 1pt 0;
   padding: 2pt 0;
 }
+
+.border-collapse {border-collapse: collapse;}
+ul {margin-top: 0; margin-bottom: 0}
 
 table.no-border-cells {border-collapse: collapse;border: none;}
 table.no-border-cells > tbody {border: none;}
@@ -303,8 +339,8 @@ canvas {
   background-color: white;
 }
 
-a {
-  font-size: x-small;
+.strike {
+  text-decoration: line-through;
 }
 
 .center-all {
@@ -457,6 +493,7 @@ a {
 
 .center {
   text-align: center;
+  margin: auto;
 }
 
 .tab {

@@ -129,7 +129,7 @@
               "value": {
                 "values": {
                   "innerWidth": "c.w - R.t  - L.t",
-                  "innerWidthCenter": "innerWidth + pwt34",
+                  "innerWidthCenter": "innerWidth + pt34",
                   "blindDepth": "60.96",
                   "innerHeight": "c.h - tkh - B.t-topInsetDepth",
                   "topInsetDepth": "tid",
@@ -622,7 +622,7 @@
                     "demension": {
                       "x": "innerWidth + R.t/2 + L.t/2",
                       "y": "innerHeight - T.t/2 -B.t/2",
-                      "z": "pwt14"
+                      "z": "pt14"
                     },
                     "center": {
                       "x": " (BACK.w / 2) + L.t/2",
@@ -928,7 +928,7 @@
                     },
                     "center": {
                       "x": "c.w / 2",
-                      "y": "c.h - pwt34/2 - topInsetDepth",
+                      "y": "c.h - pt34/2 - topInsetDepth",
                       "z": "w / -2"
                     },
                     "rotation": {
@@ -1165,7 +1165,7 @@
                     "demension": {
                       "x": "6*2.54",
                       "y": "innerHeight",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "blindDepth + 2*2.54 - bms.w/2",
@@ -1199,7 +1199,7 @@
                     "demension": {
                       "x": "topInsetDepth",
                       "y": "innerWidth",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "L.t + innerWidth/2",
@@ -1751,7 +1751,7 @@
                       "demension": {
                         "x": "innerWidth + R.t/2 + L.t/2",
                         "y": "innerHeight - T.t/2 -B.t/2",
-                        "z": "pwt14"
+                        "z": "pt14"
                       },
                       "center": {
                         "x": " (BACK.w / 2) + L.t/2",
@@ -1824,7 +1824,7 @@
                       "demension": {
                         "x": "6*2.54",
                         "y": "innerHeight",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "blindDepth + 2*2.54 - bms.w/2",
@@ -1870,7 +1870,7 @@
                       "demension": {
                         "x": "topInsetDepth",
                         "y": "innerWidth",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "L.t + innerWidth/2",
@@ -1916,7 +1916,7 @@
                       "demension": {
                         "x": "innerWidth + R.t/2 + L.t/2",
                         "y": "innerHeight - T.t/2 -B.t/2",
-                        "z": "pwt14"
+                        "z": "pt14"
                       },
                       "center": {
                         "x": " (BACK.w / 2) + L.t/2",
@@ -1989,7 +1989,7 @@
                       "demension": {
                         "x": "6*2.54",
                         "y": "innerHeight",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "blindDepth + 2*2.54 - bms.w/2",
@@ -2035,7 +2035,7 @@
                       "demension": {
                         "x": "topInsetDepth",
                         "y": "innerWidth",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "L.t + innerWidth/2",
@@ -2100,8 +2100,8 @@
               "value": {
                 "values": {
                   "brh": "tkb.w + BACK.t + brr",
-                  "innerWidth": "c.w - pwt34 * 2",
-                  "innerWidthCenter": "innerWidth + pwt34",
+                  "innerWidth": "c.w - pt34 * 2",
+                  "innerWidthCenter": "innerWidth + pt34",
                   "topInsetDepth": "tid",
                   "innerHeight": "c.h - topInsetDepth - tkh - B.t",
                   "dividerJoint": {
@@ -2589,7 +2589,7 @@
                     "demension": {
                       "x": "innerWidth +R.t/2 + L.t/2",
                       "y": "innerHeight",
-                      "z": "pwt14"
+                      "z": "pt14"
                     },
                     "center": {
                       "x": "w/2 + L.t/2",
@@ -2908,7 +2908,7 @@
                     },
                     "center": {
                       "x": "c.w / 2 ",
-                      "y": "c.h - pwt34/2 - topInsetDepth",
+                      "y": "c.h - pt34/2 - topInsetDepth",
                       "z": "w / -2 "
                     },
                     "rotation": {
@@ -3145,7 +3145,7 @@
                     "demension": {
                       "x": "topInsetDepth",
                       "y": "innerWidth",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "L.t + innerWidth/2",
@@ -3650,7 +3650,7 @@
                       "demension": {
                         "x": "innerWidth +R.t/2 + L.t/2",
                         "y": "innerHeight",
-                        "z": "pwt14"
+                        "z": "pt14"
                       },
                       "center": {
                         "x": "w/2 + L.t/2",
@@ -3736,7 +3736,7 @@
                       "demension": {
                         "x": "topInsetDepth",
                         "y": "innerWidth",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "L.t + innerWidth/2",
@@ -3782,7 +3782,7 @@
                       "demension": {
                         "x": "innerWidth +R.t/2 + L.t/2",
                         "y": "innerHeight",
-                        "z": "pwt14"
+                        "z": "pt14"
                       },
                       "center": {
                         "x": "w/2 + L.t/2",
@@ -3868,7 +3868,7 @@
                       "demension": {
                         "x": "topInsetDepth",
                         "y": "innerWidth",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "L.t + innerWidth/2",
@@ -3933,8 +3933,8 @@
               "value": {
                 "values": {
                   "brh": "tkb.w + BACK.t + brr",
-                  "innerWidth": "c.w - pwt34 * 2",
-                  "innerWidthCenter": "innerWidth + pwt34",
+                  "innerWidth": "c.w - pt34 * 2",
+                  "innerWidthCenter": "innerWidth + pt34",
                   "topInsetDepth": "tid",
                   "innerHeight": "c.h - topInsetDepth - tkh - B.t",
                   "dividerJoint": {
@@ -4418,7 +4418,7 @@
                     "demension": {
                       "x": "innerWidth +R.t/2 + L.t/2",
                       "y": "innerHeight",
-                      "z": "pwt14"
+                      "z": "pt14"
                     },
                     "center": {
                       "x": "w/2 + L.t/2",
@@ -4737,7 +4737,7 @@
                     },
                     "center": {
                       "x": "c.w / 2 ",
-                      "y": "c.h - pwt34/2 - topInsetDepth",
+                      "y": "c.h - pt34/2 - topInsetDepth",
                       "z": "w / -2 "
                     },
                     "rotation": {
@@ -4974,7 +4974,7 @@
                     "demension": {
                       "x": "topInsetDepth",
                       "y": "innerWidth",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "L.t + innerWidth/2",
@@ -5479,7 +5479,7 @@
                       "demension": {
                         "x": "innerWidth +R.t/2 + L.t/2",
                         "y": "innerHeight",
-                        "z": "pwt14"
+                        "z": "pt14"
                       },
                       "center": {
                         "x": "w/2 + L.t/2",
@@ -5565,7 +5565,7 @@
                       "demension": {
                         "x": "topInsetDepth",
                         "y": "innerWidth",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "L.t + innerWidth/2",
@@ -5611,7 +5611,7 @@
                       "demension": {
                         "x": "innerWidth +R.t/2 + L.t/2",
                         "y": "innerHeight",
-                        "z": "pwt14"
+                        "z": "pt14"
                       },
                       "center": {
                         "x": "w/2 + L.t/2",
@@ -5697,7 +5697,7 @@
                       "demension": {
                         "x": "topInsetDepth",
                         "y": "innerWidth",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "L.t + innerWidth/2",
@@ -5762,8 +5762,8 @@
               "value": {
                 "values": {
                   "brh": "tkb.w + BACK.t + brr",
-                  "innerWidth": "c.w - pwt34 * 2",
-                  "innerWidthCenter": "innerWidth + pwt34",
+                  "innerWidth": "c.w - pt34 * 2",
+                  "innerWidthCenter": "innerWidth + pt34",
                   "topInsetDepth": "tid",
                   "innerHeight": "c.h - topInsetDepth - tkh - B.t",
                   "dividerJoint": {
@@ -6247,7 +6247,7 @@
                     "demension": {
                       "x": "innerWidth +R.t/2 + L.t/2",
                       "y": "innerHeight",
-                      "z": "pwt14"
+                      "z": "pt14"
                     },
                     "center": {
                       "x": "w/2 + L.t/2",
@@ -6566,7 +6566,7 @@
                     },
                     "center": {
                       "x": "c.w / 2 ",
-                      "y": "c.h - pwt34/2 - topInsetDepth",
+                      "y": "c.h - pt34/2 - topInsetDepth",
                       "z": "w / -2 "
                     },
                     "rotation": {
@@ -6803,7 +6803,7 @@
                     "demension": {
                       "x": "topInsetDepth",
                       "y": "innerWidth",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "L.t + innerWidth/2",
@@ -7308,7 +7308,7 @@
                       "demension": {
                         "x": "innerWidth +R.t/2 + L.t/2",
                         "y": "innerHeight",
-                        "z": "pwt14"
+                        "z": "pt14"
                       },
                       "center": {
                         "x": "w/2 + L.t/2",
@@ -7394,7 +7394,7 @@
                       "demension": {
                         "x": "topInsetDepth",
                         "y": "innerWidth",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "L.t + innerWidth/2",
@@ -7440,7 +7440,7 @@
                       "demension": {
                         "x": "innerWidth +R.t/2 + L.t/2",
                         "y": "innerHeight",
-                        "z": "pwt14"
+                        "z": "pt14"
                       },
                       "center": {
                         "x": "w/2 + L.t/2",
@@ -7526,7 +7526,7 @@
                       "demension": {
                         "x": "topInsetDepth",
                         "y": "innerWidth",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "L.t + innerWidth/2",
@@ -7591,8 +7591,8 @@
               "value": {
                 "values": {
                   "brh": "tkb.w + BACK.t + brr",
-                  "innerWidth": "c.w - pwt34 * 2",
-                  "innerWidthCenter": "innerWidth + pwt34",
+                  "innerWidth": "c.w - pt34 * 2",
+                  "innerWidthCenter": "innerWidth + pt34",
                   "topInsetDepth": "tid",
                   "innerHeight": "c.h - topInsetDepth - tkh - B.t",
                   "dividerJoint": {
@@ -8080,7 +8080,7 @@
                     "demension": {
                       "x": "innerWidth +R.t/2 + L.t/2",
                       "y": "innerHeight",
-                      "z": "pwt14"
+                      "z": "pt14"
                     },
                     "center": {
                       "x": "w/2 + L.t/2",
@@ -8399,7 +8399,7 @@
                     },
                     "center": {
                       "x": "c.w / 2 ",
-                      "y": "c.h - pwt34/2 - topInsetDepth",
+                      "y": "c.h - pt34/2 - topInsetDepth",
                       "z": "w / -2 "
                     },
                     "rotation": {
@@ -8636,7 +8636,7 @@
                     "demension": {
                       "x": "topInsetDepth",
                       "y": "innerWidth",
-                      "z": "pwt34"
+                      "z": "pt34"
                     },
                     "center": {
                       "x": "L.t + innerWidth/2",
@@ -9141,7 +9141,7 @@
                       "demension": {
                         "x": "innerWidth +R.t/2 + L.t/2",
                         "y": "innerHeight",
-                        "z": "pwt14"
+                        "z": "pt14"
                       },
                       "center": {
                         "x": "w/2 + L.t/2",
@@ -9227,7 +9227,7 @@
                       "demension": {
                         "x": "topInsetDepth",
                         "y": "innerWidth",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "L.t + innerWidth/2",
@@ -9273,7 +9273,7 @@
                       "demension": {
                         "x": "innerWidth +R.t/2 + L.t/2",
                         "y": "innerHeight",
-                        "z": "pwt14"
+                        "z": "pt14"
                       },
                       "center": {
                         "x": "w/2 + L.t/2",
@@ -9359,7 +9359,7 @@
                       "demension": {
                         "x": "topInsetDepth",
                         "y": "innerWidth",
-                        "z": "pwt34"
+                        "z": "pt34"
                       },
                       "center": {
                         "x": "L.t + innerWidth/2",
@@ -9633,7 +9633,7 @@
               },
               {
                 "_TYPE": "Property",
-                "code": "frw",
+                "code": "fw",
                 "name": "Frame Rail Width",
                 "value": 3.81,
                 "properties": {
@@ -9643,8 +9643,8 @@
               },
               {
                 "_TYPE": "Property",
-                "code": "frt",
-                "name": "Frame Rail Thicness",
+                "code": "ft",
+                "name": "Frame Rail Thickness",
                 "value": 1.905,
                 "properties": {
                   "value": 1.905,

@@ -47,6 +47,9 @@ Function.safeStdLibAddition(Object, 'definedPropertyNames', function(object) {
   return names;
 }, true);
 
+Function.safeStdLibAddition(Boolean, 'is', (boolean) =>
+    (typeof boolean) === 'boolean' || boolean instanceof Boolean, true);
+
 // TODO: implement depth first search... I cant remember needing it so not worth my time
 Function.safeStdLibAddition(Object, 'linkListFind', function(attr, is) {
   let toSearch = [this];
@@ -1001,6 +1004,7 @@ Function.safeStdLibAddition(Array, 'compare', function (original, neww, modify) 
 
 Function.safeStdLibAddition(Array, 'concatInPlace', function (arr, checkForDuplicats) {
   if (arr === this) return;
+  if (!Array.isArray(arr)) return;
   for (let index = 0; index < arr.length; index += 1) {
     if (checkForDuplicats && this.indexOf(arr[index]) !== -1) {
       console.error('duplicate');

@@ -53,7 +53,6 @@ class Group extends Lookup {
       this.objects.forEach((obj) => json.objects.push(obj.toJson()));
       json.name = this.name();
       json.id = this.id();
-      json.roomId = this.room().id();
       json.propertyConfig = this.propertyConfig.toJson();
       return json;
     }

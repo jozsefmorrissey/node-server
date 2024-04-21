@@ -81,9 +81,9 @@ CustomEvent.all = (obj, ...eventNames) => {
   for (let index = 0; index < eventNames.length; index++) {
     const name = eventNames[index];
     const e = new CustomEvent(name);
-    obj.events[name] = e;
-    obj.on[name] = e.on;
-    obj.trigger[name] = (...args) => e.trigger.apply(e, args);
+    obj.events.pathValue(name, e);
+    obj.on.pathValue(name, e.on);
+    obj.trigger.pathValue(name, (...args) => e.trigger.apply(e, args));
   }
 }
 

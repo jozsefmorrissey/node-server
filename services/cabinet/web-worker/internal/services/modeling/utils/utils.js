@@ -27,7 +27,7 @@ function applyMaleJointExtensions(assem, env) {
 function toBiPolygon(assem, env) {
   const current = assem.position.current;
   const dems = current.demension;
-  applyMaleJointExtensions(assem, env);
+  // applyMaleJointExtensions(assem, env);
   if (Math.min(dems.x, dems.y, dems.z) > .001) return BiPolygon.fromPositionObject(current);
   return null;
 }
@@ -43,7 +43,7 @@ function normals(part, env) {
     const parentNorms = normals(part.parentAssembly(), env);
     norms = parentNorms;
   } else if (part.id.startsWith('Panel_') && part.parentAssembly().id.startsWith('Divider_')) {
-    normals(part.parentAssembly(), env);
+    return normals(part.parentAssembly(), env);
   } else {
     norms.x = new Vector3D(norms.x); norms.y = new Vector3D(norms.y); norms.z = new Vector3D(norms.z);
   }

@@ -47,9 +47,9 @@ class Builder {
     // TODO: create seperate object that watches
     function process(path, item) {
       return (eventType, filename) => {
+        console.log('File Changed:', `${filename} - ${eventType}`);
         function wait(release) {
           if (pending[path][filename]) {release();return;}
-          console.log('File Changed:', `${filename} - ${eventType}`);
           pending[path][filename] = true;
           release();
           const filePath = item.isFile() ? path : `${path}/${filename}`.replace(/\/{2,}/g, '/');
@@ -78,8 +78,10 @@ class Builder {
       const path = item.isDirectory() || parent === undefined ?
             item.name : `${parent}${item.name}`.replace(/\/{2,}/g, '/');
       pending[path] = {};
-      // console.log(`Watching: ${path} - ${positions[item.name]}`);
-      if (watchFiles) fs.watch(path, { encoding: 'utf8' }, process(path, item));
+      if (watchFiles) {
+        // console.log(`Watching: ${path} - ${positions[item.name]}`);
+        fs.watch(path, { encoding: 'utf8' }, process(path, item));
+      }
       if (item.isDirectory()) {
         runAllFiles(path, positions[item.name]);
       } else if (item.isFile()) {

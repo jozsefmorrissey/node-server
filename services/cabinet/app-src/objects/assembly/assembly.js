@@ -1,11 +1,13 @@
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 const Position = require('../../position.js');
 const Vertex3D = require('../../three-d/objects/vertex.js');
+const Vector3D = require('../../three-d/objects/vector.js');
 const Line3D = require('../../three-d/objects/line.js');
 const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
 const Joint = require('../joint/joint');
 const Dependency = require('../dependency');
+const AssemblyResolver = require('./resolvers/assembly');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
 // const ToModel = require('../../../web-worker/services/to-model.js');
 
@@ -24,6 +26,7 @@ class Assembly extends KeyValue {
           object: true});
 
     this.category = this.constructor.name;
+    new AssemblyResolver(this);
     const pcIsFunc = partCode instanceof Function;
     function pCode(doNotAppendParent) {
       const pc = pcIsFunc ? partCode(doNotAppendParent) : partCode || 'unk';
@@ -78,34 +81,19 @@ class Assembly extends KeyValue {
         }
     }
 
+    const pToJson = this.toJson;
+    this.toJson = () => {
+      const json = pToJson();
+      json.joints = json.joints.filter(j => !j.locationId);
+      return json;
+    }
+
     const parentIncludeJoints = this.includeJoints;
     this.includeJoints = (trueOfalse) => parentIncludeJoints(trueOfalse) && this.included();
 
-    function getValueSmeFormatter(path) {
-      const split = path.split('.');
-      let attr = split[0];
-      let objIdStr;
 
-      const value = Assembly.resolveAttr(instance, path);
-      if (Number.isFinite(value)) return value;
 
-      if (split.length > 1) {
-        objIdStr = split[0];
-        attr = split.slice(1).join('.');
-      }
-
-      let obj;
-      if (objIdStr !== undefined) {
-        obj = instance.getAssembly(objIdStr);
-      }
-
-      if (obj) {
-        const returnVal = Assembly.resolveAttr(obj, attr);
-        return returnVal;
-      }
-    }
-
-    const sme = new StringMathEvaluator({Math, maxHeight}, getValueSmeFormatter);
+    const sme = new StringMathEvaluator({Math, maxHeight}, this.resolve);
     this.sme = () => sme;
 
     // KeyValue setup
@@ -146,6 +134,8 @@ class Assembly extends KeyValue {
     this.hash = hash;
 
     this.group = (g) => {
+      const root = instance.getRoot()
+      if (root !== this) return root.group();
       if (g) group = g;
       return group;
     }
@@ -272,12 +262,26 @@ class Assembly extends KeyValue {
     }
 
     let normObj;
+    const ensureVector = (cno, attr) => cno[attr] instanceof Vector3D ? cno[attr] :
+                            cno[attr] = new Vector3D(this.eval(cno[attr][0]), this.eval(cno[attr][1]), this.eval(cno[attr][2])).unit();
+
     this.normals = (array, normalObj) => {
       if (normalObj instanceof Object) {
         if (!Array.isArray(normalObj)) normObj = normalObj;
         else normObj = {x: normalObj[0], y: normalObj[1], z: normalObj[2]};
+        normObj.calc = normalObj.calc;
+        return;
       }
-      return array ? (normObj ? [normObj.x, normObj.y, normObj.z] : undefined) : normObj;
+      if (normObj === undefined) return;
+      if (!normObj.x && !normObj.y && !normObj.z) return undefined;
+      const calcNormObj = this.evalObject(normObj);
+      ensureVector(calcNormObj, 'x');
+      ensureVector(calcNormObj, 'y');
+      ensureVector(calcNormObj, 'z');
+      if (normObj.calc === 0) calcNormObj.x = calcNormObj.y.crossProduct(calcNormObj.z).unit();
+      if (normObj.calc === 1) calcNormObj.y = calcNormObj.x.crossProduct(calcNormObj.z).unit();
+      if (normObj.calc === 2) calcNormObj.z = calcNormObj.x.crossProduct(calcNormObj.y).unit();
+      return array ? (calcNormObj ? [calcNormObj.x, calcNormObj.y, calcNormObj.z] : undefined) : calcNormObj;
     }
 
     this.getDependencies = (assem) => {
@@ -539,7 +543,8 @@ Assembly.resolveAttr = (assembly, attr) => {
     const group = assembly.group();
     groupVal = group.resolve(assembly, attr);
   }
-  const assemVal = assembly.value(attr);
+  let assemVal = assembly.value(attr);
+  if (assemVal === undefined && assembly.resolver) assemVal = assembly.resolver(attr);
   return Number.isFinite(assemVal) ? assemVal : groupVal;
 }
 Assembly.fromJson = (assemblyJson) => {

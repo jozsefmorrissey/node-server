@@ -42,8 +42,8 @@ class Polygon3D {
 
       for (let index = 0; index < lines.length; index++) {
         const line = lines[index];
-        const sv = line.startVertex;
-        const mp = line.midpoint();
+        const sv = line.startVertex.copy();
+        const mp = line.midpoint().copy();
         place(sv, noZeros, oneZero, twoZeros, origin);
         place(mp, noZeros, oneZero, twoZeros, origin);
       }
@@ -206,20 +206,38 @@ class Polygon3D {
       lines[3].length(down - lines[3].length(), false);
     }
 
-    this.resize = (width, height) => {
+    this.extendTo = (polyOplane, doNotModify) => {
+      if (doNotModify) return this.copy().extendTo(polyOplane);
+      const plane = polyOplane instanceof Polygon3D ? polyOplane.toPlane() : polyOplane;
+      for (let index = 0; index < lines.length; index++) {
+        const line = lines[index];
+        const intersection = plane.intersection.line(line);
+        if (intersection) {
+          const closerIndex = line[0].distance(intersection) < line[1].distance(intersection) ? 0 : 1;
+          line[closerIndex].positionAt(intersection);
+        }
+      }
+      return this;
+    }
+
+    this.resize = (width, height, doNotModify) => {
+      if (doNotModify) return this.copy().resize(width, height);
       lines[0].length(width);
       lines[2].length(width);
 
       lines[1].length(height);
       lines[3].length(height);
+      return this;
     }
 
-    this.scale = (width, height) => {
+    this.scale = (width, height, doNotModify) => {
+      if (doNotModify) return this.copy().scale(width, height);
       lines[0].length(lines[0].length()*width);
       lines[2].length(lines[2].length()*width);
 
       lines[1].length(lines[1].length()*height);
       lines[3].length(lines[3].length()*height);
+      return this;
     }
 
     this.parrelleAt = (distance) => {

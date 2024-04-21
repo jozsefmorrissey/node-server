@@ -81,7 +81,7 @@ class PropertyDisplay {
       };
       setTimeout(() => {
         const expList = new ExpandableObject(expListProps);
-        expList.afterRemoval((element, detail) => {
+        expList.on.after.removal((element, detail) => {
           Properties.changes.delete(detail.properties._ID);
         });
       }, 500);

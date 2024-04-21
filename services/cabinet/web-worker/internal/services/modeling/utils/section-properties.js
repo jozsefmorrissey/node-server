@@ -173,7 +173,7 @@ class SectionPropertiesUtil {
         const outer = coordinates.outer;
         const point1 = this.outerPoly.vertex(spDto.verticalDivisions ? 1 : 3);
         const point2 = this.outerPoly.vertex(2);
-        adjustPoints(point1, point2);
+        // adjustPoints(point1, point2);
         let depthVector = normal.scale(depth);
         let heightVector = new Line3D(point1, point2).vector().unit();
         let thicknessVector  = depthVector.crossProduct(heightVector);

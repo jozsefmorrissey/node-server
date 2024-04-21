@@ -1,0 +1,53 @@
+<div class='center'>
+  <div:t repeat='project in projects' class='project-cnt'>
+    <input id="_{{$index}}" type="checkbox" hidden>
+    <label class="css-dropdown" for="_{{$index}}">
+      <b>
+        <a href='http://localhost:3000/cabinet/order?staticOrder={{project.file}}' target="_blank">
+          {{project.name}}
+        </a>
+      </b> - <b class='project-date'>{{project.date}}</b>
+    </label>
+    <div>
+      {{project.description}}
+      <div>
+        <table border='1' class='border-collapse center'>
+          <tbody>
+            <tr>
+              <th>
+                Design Time
+              </th>
+              <th>Build Time</th>
+              <th>Finished With</th>
+              <th>Finish Time</th>
+            </tr>
+            <tr>
+              <td>{{project.designTime}}</td>
+              <td>{{project.buildTime}}</td>
+              <td>{{project.finishedWith}}</td>
+              <td>{{project.finishTime}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <br>
+      <label><b>Notes</b></label>
+      <div class='center fit'>
+        <ul>
+          <li:t repeat='note in project.notes'>
+            {{note}}
+          </li:t>
+        </ul>
+      </div>
+      <br>
+      <label><b>Issues</b></label>
+      <div class='center fit'>
+        <ul>
+          <li:t class='align-left {{issue.solved ? 'strike' : ''}}' repeat='issue in project.issues'>
+            {{issue.text}}
+          </li:t>
+        </ul>
+      </div>
+    </div>
+  </div:t>
+</div>

@@ -27,6 +27,8 @@ class PolyLine3D extends Line3D {
     let sortedClamps = [line1.startVertex, line1.endVertex, line2.startVertex, line2.endVertex];
     Vertex3D.vectorSort(sortedClamps, line1.vector().unit(), Vertex3D.center(...sortedClamps));
     if (!line1.isParrelle(line2)) {
+      if (line1.isPoint()) return line2.connect.vertex(line1[0], true);
+      if (line2.isPoint()) return line1.connect.vertex(line2[0], true);
       console.warn(`These lines are not parrelle:\n\t${line1.toString()}\n\t${line2.toString()}`);
       return undefined;
     }

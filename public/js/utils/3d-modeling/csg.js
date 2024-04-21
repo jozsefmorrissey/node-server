@@ -740,22 +740,29 @@ CSG.cone = function (options) {
   return cone;
 }
 
-function axis(vector, origin, color, size) {
+function axis(vector, origin, color, size, radius) {
   origin ||= [0,0,0];
-  const end = [vector[0]+origin[0],vector[1]+origin[1],vector[2]+origin[2]]
-  const ax = CSG.cylinder({start: origin, end, radius: size/1000})
+  const end = [vector[0]*size+origin[0],vector[1]*size+origin[1],vector[2]*size+origin[2]]
+  const ax = CSG.cylinder({start: origin, end, radius})
   ax.setColor(color);
   return ax;
 }
 
-CSG.axis =  function (size, origin) {
+CSG.Axis =  function (size, origin, vectors, radius) {
   size ||= 100;
   origin ||= [0,0,0];
+  vectors ||= [[1,0,0], [0,1,0], [0,0,1]];
+  radius ||= size/100;
   const center = CSG.sphere({center: origin, radius: size/500})
-  const xAxis = axis([size,0,0], origin, [255,0,0], size);
-  const yAxis = axis([0,size,0], origin, [0,128,0], size);
-  const zAxis = axis([0,0,size], origin, [0,0,255], size);
-  return center.union(xAxis.union(yAxis).union(zAxis));
+  const xAxis = axis(vectors[0], origin, [255,0,0], size, radius);
+  const yAxis = axis(vectors[1], origin, [0,128,0], size, radius);
+  const zAxis = axis(vectors[2], origin, [0,0,255], size, radius);
+  const csg = new CSG();
+  csg.polygons.concatInPlace(center.polygons);
+  csg.polygons.concatInPlace(xAxis.polygons);
+  csg.polygons.concatInPlace(yAxis.polygons);
+  csg.polygons.concatInPlace(zAxis.polygons);
+  return csg;
 }
 
 // # class Vector
@@ -878,6 +885,10 @@ CSG.Vertex = function(pos, normal) {
     return Math.abs(sqrtError) < tol;
   }
 };
+
+CSG.VertexNoNorm = function (pos) {
+  return new CSG.Vertex(pos, [-1,-1,-1]);
+}
 
 CSG.Vertex.Center = function (vertices) {
   vertices = vertices.map(v => new CSG.Vector(v));

@@ -1,6 +1,7 @@
 
 const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
 
 function isZero(val) {
@@ -60,11 +61,12 @@ class Vector3D {
       if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
       return new Vector3D(this.i() / vector.i(), this.j() / vector.j(), this.k() / vector.k());
     }
-    this.toArray = () => [this.i(), this.j(), this.k()];
+    this.toArray = (percision) => !percision ? [this.i(), this.j(), this.k()] :
+                  [Math.roundTo(this.i(), percision), Math.roundTo(this.j(), percision), Math.roundTo(this.k(), percision)];
     this.dot = (vector) =>
       this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
     this.perpendicular = (vector) =>
-      Vector3D.tolerance.within(this.dot(vector), 0);
+      isZero(this.dot(vector));
     this.parrelle = (vector) => {
       let coef = isZero(this.i()) ? 0 : this.i() / vector.i();
       if (isZero(coef)) coef = isZero(this.j()) ? 0 : this.j() / vector.j();
@@ -127,6 +129,10 @@ class Vector3D {
       return hash;
     }
 
+    this.bisector = (v) => {
+      return v.scale(this.magnitude()).add(this.scale(v.magnitude()));
+    }
+
     this.unit = () => {
       const i = this.i();const j = this.j();const k = this.k();
       const magnitude = Math.sqrt(i*i+j*j+k*k);
@@ -143,6 +149,11 @@ class Vector3D {
       return this.inverse().unit();
     }
 
+    this.acquiescent = (other) => {
+      if (this.positive() && other.positive()) return this;
+      return this.inverse();
+    }
+
     this.equals = (vector, tol) => !tol ? Vector3D.tolerance.within(vector, this) :
                   new Tolerance({i: tol, j: tol, k: tol}).within(new Vector3D(vector), this);
     this.toString = () => `<${i},  ${j},  ${k}>`;
@@ -151,6 +162,15 @@ class Vector3D {
 
 const tol = .0001;
 Vector3D.tolerance = new Tolerance({i: tol, j: tol, k: tol});
+Vector3D.ToleranceMap = (parrelle, tolerance) => {
+  tolerance ||= tol;
+  if (parrelle) return new ToleranceMap({'positiveUnit.i': tolerance,
+                                          'positiveUnit.j': tolerance,
+                                          'positiveUnit.k': tolerance});
+  return new ToleranceMap({i: tolerance,
+                            j: tolerance,
+                            k: tolerance});
+  }
 
 Vector3D.mostInLine = (vectors, target) => {
   let closest;

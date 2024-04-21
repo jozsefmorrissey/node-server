@@ -92,6 +92,7 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 - 1 < openings (autoToeKick, outer corner L)
 
 #### When I get around to it
+- convert builder.js to utilize modular $t and Expression scripts.
 - "Imperial (us)" does not add implicit multiplication stringMathEval
 - hover help/error text
 - Clean and seperate Object.(getSet|get|set);

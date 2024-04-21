@@ -80,6 +80,8 @@ function init(body){
       } else if (urlSuffix === 'template') {
         const TemplateManager = require('./displays/managers/template.js');
         // const templateDisplayManager = new TemplateManager('template-manager');
+      } else if (urlSuffix === 'projects') {
+        console.log('projects!!!');
       } else {
         require('./displays/canvas');
         const propertyDisplay = new PropertyDisplay('#property-manager');
@@ -106,13 +108,16 @@ else init();
 const popUp = new PopUp({resize: false, noBackdrop: true});
 
 du.on.match('click', '*', (elem, event) => {
-  const errorMsg = elem.getAttribute('error-msg');
-  if (errorMsg) {
-    popUp.positionOnElement(elem).bottom();
-    popUp.updateContent(errorMsg);
-    popUp.show();
-    event.stopPropagation();
-  } else popUp.close();
+  const errorElem = du.find.up('[error-msg]', elem);
+  if (errorElem) {
+    const errorMsg = errorElem.getAttribute('error-msg');
+    if (errorMsg) {
+      popUp.positionOnElement(errorElem).bottom();
+      popUp.updateContent(errorMsg);
+      popUp.show();
+      event.stopPropagation();
+    } else popUp.close();
+  }
 });
 
 du.on.match('mousemove', '*', (elem, event) => {

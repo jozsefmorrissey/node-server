@@ -275,6 +275,7 @@ class BiPolygon {
   }
 }
 
+// TODO: fromPolygon(poly, 0, -.6) causing csg modeling issues
 BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   distance2 ||= 0;
   // if (distance2 > distance1) {
@@ -282,7 +283,7 @@ BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   //   distance2 = distance1;
   //   distance1 = temp;
   // }
-  const verts = polygon.vertices();
+  const verts = polygon.copy().vertices();
   // if (verts.length < 4) return undefined;
   if (verts.length < 3) return undefined;
   const verts1 = JSON.clone(verts);

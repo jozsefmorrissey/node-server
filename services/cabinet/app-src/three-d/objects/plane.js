@@ -174,7 +174,6 @@ class Plane extends Array {
     this.axisIntercepts = () => {
       if (intercepts) return intercepts;
       // const point = this.points();
-      const eqn = this.equation();
       const normal = this.normal().positiveUnit();
       if (normal.equals(Vector3D.i)) {
         intercepts = {
@@ -195,6 +194,7 @@ class Plane extends Array {
           y: points[0].z === 0 ? Infinity : NaN
         }
       } else {
+        const eqn = this.equation();
         intercepts = {
           x: nanIt(eqn.d/eqn.a),
           y: nanIt(eqn.d/eqn.b),
@@ -324,7 +324,14 @@ class Plane extends Array {
     }
 
     this.point = () => {
-      if (this.length > 3) Vertex3D.center.apply(null, this);
+      if (this.length > 3) return Vertex3D.center.apply(null, this);
+      const intercepts = this.axisIntercepts();
+      let validIntercept;
+      if (!Number.isNaN(intercepts.x)) validIntercept = new Vertex3D(intercepts.x, 0, 0);
+      else if (!Number.isNaN(intercepts.y)) validIntercept = new Vertex3D(0, intercepts.y, 0);
+      else if (!Number.isNaN(intercepts.z)) validIntercept = new Vertex3D(0, 0, intercepts.z);
+      if (validIntercept) return validIntercept;
+      console.warn('If your encountering an error this is likely to be where problems orignate');
       let xInt = this.x.concrete(0,0);
       let yInt = this.y.concrete(0,0);
       let zInt = this.z.concrete(0,0);
@@ -393,9 +400,9 @@ class Plane extends Array {
       return true;
     }
 
-    this.toDrawString = (color, radius) => {
+    this.toDrawString = (color, radius, points) => {
       color ||= '';
-      const verts = Array.from(this.findPoints(30, radius));
+      const verts = Array.from(this.findPoints(points || 10, radius));
       const arr = verts.map(v => `${color}${v.toString()}`);
       return `${color}[${arr.join(',')}]`;
     }

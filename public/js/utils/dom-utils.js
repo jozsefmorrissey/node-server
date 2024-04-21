@@ -654,6 +654,26 @@ function onNoactivity(event, func, selector, args) {
   return {event: '*', func: anyEvent};
 }
 
+function containerfocusout(event, func, selector, args) {
+  let time = Number.parseInt(args[1]);
+  let identifyingAttr = args[0];
+  if (!Number.isFinite(time)) time = 200;
+  let lastEventId = 0;
+  const onFocus = (out) => (target, event) => {
+    const id = ++lastEventId;
+    if (out) {
+      setTimeout(() => {
+        if (lastEventId === id) {
+          func(target, null);
+        }
+      }, time);
+    }
+  }
+
+  du.on.match('focusin', `${selector}, ${selector} *`, onFocus(false));
+  du.on.match('focusout', selector, onFocus(true));
+}
+
 // TODO: add custom function selectors.
 const argEventReg = /^(.*?)(|:(.*))$/;
 function filterCustomEvent(event, func, selector) {
@@ -673,6 +693,9 @@ function filterCustomEvent(event, func, selector) {
       customEvent = onNoactivity(event, func, selector, args);
     case 'create':
       create(func, selector);
+      customEvent = null;
+    case 'containerfocusout':
+      containerfocusout(event, func, selector, args);
       customEvent = null;
   }
   return customEvent;

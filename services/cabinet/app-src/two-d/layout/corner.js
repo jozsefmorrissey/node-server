@@ -109,7 +109,9 @@ class Corner2d extends Vertex2d {
 }
 
 Corner2d.fromJson = (json) => {
-  return new Corner2d(json.layout, json.point);
+  const corner = new Corner2d(json.layout, json.point);
+  corner.id(json.id);
+  return corner;
 }
 
 module.exports = Corner2d;

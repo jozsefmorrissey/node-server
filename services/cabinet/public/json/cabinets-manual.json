@@ -11,11 +11,11 @@ module.exports = {
     },
     {
       "key": "innerWidth",
-      "eqn": "c.w - pwt34 * 2"
+      "eqn": "c.w - pt34 * 2"
     },
     {
       "key": "innerWidthCenter",
-      "eqn": "innerWidth + pwt34"
+      "eqn": "innerWidth + pt34"
     }
   ],
   "subassemblies": [
@@ -51,7 +51,7 @@ module.exports = {
       "demensions": [
         "c.t",
         "c.l",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -71,7 +71,7 @@ module.exports = {
       "demensions": [
         "c.t",
         "c.l",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -91,7 +91,7 @@ module.exports = {
       "demensions": [
         "innerWidth",
         "c.l - tkh",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -111,7 +111,7 @@ module.exports = {
       "demensions": [
         "c.t - BACK.t",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         90,
@@ -125,13 +125,13 @@ module.exports = {
       "code": "T",
       "center": [
         "c.w / 2",
-        "c.h - pwt34/2",
+        "c.h - pt34/2",
         "(w / -2)"
       ],
       "demensions": [
         "(c.t - BACK.t) * .2",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         90,
@@ -145,13 +145,13 @@ module.exports = {
       "code": "pt2",
       "center": [
         "c.w / 2",
-        "c.h - pwt34/2",
+        "c.h - pt34/2",
         "-1*(c.t - BACK.t - (w / 2))"
       ],
       "demensions": [
         "(c.t - BACK.t) * .2",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         90,
@@ -407,7 +407,7 @@ module.exports = {
         "demensions": [
           "pbw",
           "c.h",
-          "pwt14"
+          "pt14"
         ],
         "rotation": [
           0,
@@ -447,7 +447,7 @@ module.exports = {
         "demensions": [
           "c.w",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -467,7 +467,7 @@ module.exports = {
         "demensions": [
           "c.t",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -487,7 +487,7 @@ module.exports = {
         "demensions": [
           "c.w - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -527,7 +527,7 @@ module.exports = {
         "demensions": [
           "c.t - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -567,7 +567,7 @@ module.exports = {
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -587,7 +587,7 @@ module.exports = {
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -1011,7 +1011,7 @@ module.exports = {
         "demensions": [
           "pbw",
           "c.h",
-          "pwt14"
+          "pt14"
         ],
         "rotation": [
           0,
@@ -1071,7 +1071,7 @@ module.exports = {
         "demensions": [
           "c.w",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1171,7 +1171,7 @@ module.exports = {
         "demensions": [
           "c.t",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1191,7 +1191,7 @@ module.exports = {
         "demensions": [
           "c.w - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1231,7 +1231,7 @@ module.exports = {
         "demensions": [
           "c.t - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1271,7 +1271,7 @@ module.exports = {
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -1291,7 +1291,7 @@ module.exports = {
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -1753,7 +1753,7 @@ module.exports = {
         "demensions": [
           "pbw",
           "c.h",
-          "pwt14"
+          "pt14"
         ],
         "rotation": [
           0,
@@ -1813,7 +1813,7 @@ module.exports = {
         "demensions": [
           "c.w",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1913,7 +1913,7 @@ module.exports = {
         "demensions": [
           "c.t",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1933,7 +1933,7 @@ module.exports = {
         "demensions": [
           "c.w - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -1973,7 +1973,7 @@ module.exports = {
         "demensions": [
           "c.t - bo",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2013,7 +2013,7 @@ module.exports = {
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -2033,7 +2033,7 @@ module.exports = {
         "demensions": [
           "c.w - pbl.t - R.t",
           "c.t - pbr.t - L.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -2340,11 +2340,11 @@ module.exports = {
     },
     {
       "key": "innerWidth",
-      "eqn": "c.w - pwt34 * 2"
+      "eqn": "c.w - pt34 * 2"
     },
     {
       "key": "innerWidthCenter",
-      "eqn": "innerWidth + pwt34"
+      "eqn": "innerWidth + pt34"
     },
     {
       "key": "insetTop",
@@ -2384,7 +2384,7 @@ module.exports = {
       "demensions": [
         "c.t",
         "c.l",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -2404,7 +2404,7 @@ module.exports = {
       "demensions": [
         "c.t",
         "c.l",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -2424,7 +2424,7 @@ module.exports = {
       "demensions": [
         "c.l - tkb.w - T.t - insetTop",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -2444,7 +2444,7 @@ module.exports = {
       "demensions": [
         "c.t - BACK.t",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         90,
@@ -2458,13 +2458,13 @@ module.exports = {
       "code": "T",
       "center": [
         "c.w / 2",
-        "c.h - pwt34/2 - insetTop",
+        "c.h - pt34/2 - insetTop",
         "w / -2"
       ],
       "demensions": [
         "c.t",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         90,
@@ -2482,7 +2482,7 @@ module.exports = {
       "demensions": [
         "insetTop",
         "innerWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -2611,7 +2611,7 @@ module.exports = {
         "demensions": [
           "c.t",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2631,7 +2631,7 @@ module.exports = {
         "demensions": [
           "c.t",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2651,7 +2651,7 @@ module.exports = {
         "demensions": [
           "c.w - L.t - R.t",
           "c.h - B.t -T.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2671,7 +2671,7 @@ module.exports = {
         "demensions": [
           "c.w - L.t - R.t",
           "c.t ",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -2691,7 +2691,7 @@ module.exports = {
         "demensions": [
           "c.w - L.t - R.t",
           "c.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -2767,11 +2767,11 @@ module.exports = {
       },
       {
         "key": "innerWidth",
-        "eqn": "c.w - pwt34 * 2"
+        "eqn": "c.w - pt34 * 2"
       },
       {
         "key": "innerWidthCenter",
-        "eqn": "innerWidth + pwt34"
+        "eqn": "innerWidth + pt34"
       },
       {
         "key": "blindDepth",
@@ -2815,7 +2815,7 @@ module.exports = {
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2835,7 +2835,7 @@ module.exports = {
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2855,7 +2855,7 @@ module.exports = {
         "demensions": [
           "c.l - tkb.w",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -2875,7 +2875,7 @@ module.exports = {
         "demensions": [
           "c.t - BACK.t",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -2889,13 +2889,13 @@ module.exports = {
         "code": "T",
         "center": [
           "c.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "w / -2"
         ],
         "demensions": [
           "(c.t - BACK.t) * .2",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -2909,13 +2909,13 @@ module.exports = {
         "code": "pt2",
         "center": [
           "c.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "-(c.t - BACK.t - (w / 2))"
         ],
         "demensions": [
           "(c.t - BACK.t) * .2",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -2933,7 +2933,7 @@ module.exports = {
         "demensions": [
           "6*2.54",
           "innerHeight",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3219,11 +3219,11 @@ module.exports = {
       },
       {
         "key": "innerWidth",
-        "eqn": "c.w - pwt34 * 2"
+        "eqn": "c.w - pt34 * 2"
       },
       {
         "key": "innerWidthCenter",
-        "eqn": "innerWidth + pwt34"
+        "eqn": "innerWidth + pt34"
       },
       {
         "key": "blindDepth",
@@ -3267,7 +3267,7 @@ module.exports = {
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3287,7 +3287,7 @@ module.exports = {
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3307,7 +3307,7 @@ module.exports = {
         "demensions": [
           "c.l - tkb.w",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3327,7 +3327,7 @@ module.exports = {
         "demensions": [
           "c.t - BACK.t",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -3341,13 +3341,13 @@ module.exports = {
         "code": "T",
         "center": [
           "c.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "w / -2"
         ],
         "demensions": [
           "(c.t - BACK.t) * .2",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -3361,13 +3361,13 @@ module.exports = {
         "code": "pt2",
         "center": [
           "c.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "-(c.t - BACK.t - (w / 2))"
         ],
         "demensions": [
           "(c.t - BACK.t) * .2",
           "innerWidth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -3385,7 +3385,7 @@ module.exports = {
         "demensions": [
           "3*2.54",
           "innerHeight",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3679,7 +3679,7 @@ module.exports = {
         "eqn": "c.w - R.t"      },
       {
         "key": "innerWidthCenter",
-        "eqn": "innerWidth + pwt34"      },
+        "eqn": "innerWidth + pt34"      },
       {
         "key": "frontHype",
         "eqn": "Math.sqrt(c.w*c.w+c.t*c.t)"      },
@@ -3731,7 +3731,7 @@ module.exports = {
         "demensions": [
           "pbw",
           "c.h",
-          "pwt14"
+          "pt14"
         ],
         "rotation": [
           0,
@@ -3828,7 +3828,7 @@ module.exports = {
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3847,7 +3847,7 @@ module.exports = {
         "demensions": [
           "c.w - R.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -3866,7 +3866,7 @@ module.exports = {
         "demensions": [
           "innerWidth",
           "innerDepth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -3879,13 +3879,13 @@ module.exports = {
         "code": "T",
         "center": [
           "T.w / 2",
-          "c.h - pwt34/2",
+          "c.h - pt34/2",
           "T.h /-2"
         ],
         "demensions": [
           "innerWidth",
           "innerDepth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -4162,7 +4162,7 @@ module.exports = {
       },
       {
         "key": "innerWidthCenter",
-        "eqn": "innerWidth + pwt34"
+        "eqn": "innerWidth + pt34"
       },
       {
         "key": "frontHype",
@@ -4228,7 +4228,7 @@ module.exports = {
         "demensions": [
           "pbw",
           "c.h",
-          "pwt14"
+          "pt14"
         ],
         "rotation": [
           0,
@@ -4310,7 +4310,7 @@ module.exports = {
         "demensions": [
           "c.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -4330,7 +4330,7 @@ module.exports = {
         "demensions": [
           "c.w - R.t",
           "c.l",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -4350,7 +4350,7 @@ module.exports = {
         "demensions": [
           "innerWidth",
           "innerDepth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -4364,13 +4364,13 @@ module.exports = {
         "code": "T",
         "center": [
           "T.w / 2",
-          "c.h - tid - pwt34/2",
+          "c.h - tid - pt34/2",
           "T.h /-2"
         ],
         "demensions": [
           "innerWidth",
           "innerDepth",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           90,
@@ -4652,7 +4652,7 @@ module.exports = {
     },
     {
       "key": "innerWidthCenter",
-      "eqn": "innerWidth + pwt34"
+      "eqn": "innerWidth + pt34"
     },
     {
       "key": "frontHype",
@@ -4718,7 +4718,7 @@ module.exports = {
       "demensions": [
         "pbw",
         "c.h",
-        "pwt14"
+        "pt14"
       ],
       "rotation": [
         0,
@@ -4820,7 +4820,7 @@ module.exports = {
       "demensions": [
         "c.t",
         "c.l",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -4840,7 +4840,7 @@ module.exports = {
       "demensions": [
         "c.w - R.t",
         "c.l",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         0,
@@ -4860,7 +4860,7 @@ module.exports = {
       "demensions": [
         "innerWidth",
         "innerDepth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         "90",
@@ -4874,13 +4874,13 @@ module.exports = {
       "code": "T",
       "center": [
         "T.w / 2",
-        "c.h - tid - pwt34/2",
+        "c.h - tid - pt34/2",
         "T.h /-2"
       ],
       "demensions": [
         "innerWidth",
         "innerDepth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         90,
@@ -5187,7 +5187,7 @@ module.exports = {
         "demensions": [
           "maxSide",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -5206,7 +5206,7 @@ module.exports = {
         "demensions": [
           "maxSide",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -5225,7 +5225,7 @@ module.exports = {
         "demensions": [
           "c.w - L.t - R.t",
           "c.h - B.t -T.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -5244,7 +5244,7 @@ module.exports = {
         "demensions": [
           "c.w - L.t - R.t",
           "Math.max(cwl,  cwr)",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -5264,7 +5264,7 @@ module.exports = {
         "demensions": [
           "c.w - L.t - R.t",
           "T.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -5453,7 +5453,7 @@ module.exports = {
         "demensions": [
           "maxSide",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -5472,7 +5472,7 @@ module.exports = {
         "demensions": [
           "maxSide",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -5491,7 +5491,7 @@ module.exports = {
         "demensions": [
           "c.w - L.t - R.t",
           "c.h - B.t -T.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -5510,7 +5510,7 @@ module.exports = {
         "demensions": [
           "c.w - L.t - R.t",
           "Math.max(cwl,  cwr)",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -5530,7 +5530,7 @@ module.exports = {
         "demensions": [
           "c.w - L.t - R.t",
           "T.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",

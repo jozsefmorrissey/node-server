@@ -128,9 +128,6 @@ class Position {
 
     this.normals = (array) => {
       const assemNorms = assembly.normals(array);
-      if (assemNorms && Object.keys(assemNorms).length < 3) {
-        assembly.normals(array);
-      }
       if (assemNorms) return assemNorms;
       const rotation = this.rotation();
       const normObj = {

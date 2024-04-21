@@ -16,6 +16,7 @@ const Vector3D = require('../../../three-d/objects/vector.js');
 const Line3D = require('../../../three-d/objects/line.js');
 const CSG = require('../../../../../../public/js/utils/3d-modeling/csg.js');
 const AutoToekick = require('./auto/toekick.js');
+const CabinetResolver = require('../resolvers/cabinet');
 const Notifiction = require('../../../../../../public/js/utils/collections/notification.js');
 const NotifictionArray = Notifiction.Array;
 
@@ -31,6 +32,9 @@ class Cabinet extends Assembly {
     super(partCode, 'Simple', config);
     // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
     Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick', 'dividerJoint');
+    new CabinetResolver(this);
+    const id = this.id();
+    Object.getSet(this, {id});
     const instance = this;
     let toeKickHeight = 4;
     this.includeJoints(false);
@@ -122,7 +126,7 @@ class Cabinet extends Assembly {
       this.addDependencies(new Dependency(assembly, this));
       const simplePart = assembly.constructor.name.match(/Frame|Panel/);
       if (simplePart) {
-        this.addDependencies(new Joint(/.*S1:.*[^a-z^A-Z]dv:.*/, assembly));
+        this.addDependencies(new Joint(/.*S1:.*[^a-z^A-Z]dv:.*/, assembly, null, assembly.id()));
       }
     }
 
@@ -138,7 +142,6 @@ class Cabinet extends Assembly {
     this.hash = () => {
       return parentHash() + this.openings.map(o => o.sectionProperties().hash()).sum();
     }
-
 
     let openingModState;
     function updateOpeningPoints(func, test, isLen) {
@@ -218,6 +221,9 @@ Cabinet.build = (type, group, config) => {
     if (subAssem.jointSetIndex) {
       subAssem.jointSetIndex(subAssemConfig.jointSetIndex);
       subAssem.includedSides(subAssemConfig.includedSides);
+    }
+    if (subAssemConfig.normalStyle === 'manual') {
+      subAssem.normals(true, subAssemConfig.normals);
     }
     subAssem.partCode(subAssemConfig.code);
     cabinet.addSubAssembly(subAssem);

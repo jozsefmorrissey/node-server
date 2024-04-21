@@ -36,6 +36,9 @@ const approximate = require('../../../../../public/js/utils/approximate').new(10
 const PanZoom = require('../../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 const Divider = require('../../objects/assembly/assemblies/divider.js');
 
+const Line3D = require('../../three-d/objects/line.js');
+const Vector3D = require('../../three-d/objects/vector.js');
+
 let template;
 let modifyingOpening = false;
 
@@ -243,7 +246,7 @@ function updateCss(elem, isValid, errorMsg) {
   if (elem) {
     if (isValid) {
       du.class.remove(elem, 'error');
-      elem.setAttribute('error-msg', '');
+      elem.removeAttribute('error-msg');
     } else {
       du.class.add(elem, 'error');
       elem.setAttribute('error-msg', errorMsg);
@@ -422,7 +425,9 @@ du.on.match('click', "[name='autoToeKick']", (elem) => {
 
 
 let openingVerticies = [];
-Canvas.extraCsgObjects(() => openingVerticies, () => true);
+let partAxis = [];
+let extraObjs = () => partAxis.concat(openingVerticies);
+Canvas.extraCsgObjects(extraObjs, () => true);
 function updateOpeningPoints(template) {
   openingVerticies = [];
   const openings = Global.cabinet().openings;
@@ -450,6 +455,30 @@ function updateOpeningPoints(template) {
   }
 }
 
+function updateNormalLines(obj) {
+  const assem = getCabinet().getAssembly(obj.code);
+  let vectors = assem.position().normals(true).map(v => v.toArray());
+  const center = assem.position().center();
+  const origin = [center.x, center.y, center.z];
+  const dems = assem.position().demension();
+  const size = Math.max(dems.x, dems.y, dems.z) * .6;
+  const axis = new CSG.Axis(size, origin, vectors, .25);
+  partAxis = [axis];
+}
+
+function updatePartAxis(elem, details) {
+  const target = details.targetHeader;
+  if (details.open && target && target.innerText === 'Subassemblies') {
+    const activeSubElem = du.find.down('.expand-header.active', details.targetBody);
+    if (activeSubElem) {
+      const activeObj = ExpandableList.get(activeSubElem);
+      if (activeObj) return updateNormalLines(activeObj);
+    }
+  }
+  partAxis = [];
+}
+
+
 function validateOpenTemplate (elem) {
   const templateBody = du.find('.template-body');
   if (!templateBody || du.is.hidden(templateBody)) return;
@@ -462,6 +491,8 @@ function validateOpenTemplate (elem) {
   subNameInputs.forEach(variableNameCheck);
   const subCodeInputs = du.find.downAll('input[attr="subassemblies"][name="code"]', templateBody);
   subCodeInputs.forEach(variableNameCheck);
+  const calcRadio = du.find.down('.calc-vect-radio', templateBody);
+  validateVectors(calcRadio);
 
   const pcc = partCodeCheck(template);
   const jointMaleInputs = du.find.downAll('input[attr="joints"][name="dependsSelector"]', templateBody);
@@ -626,7 +657,8 @@ function getSubassembly(obj) {
           centerXyzSelect: getXyzSelect('Center'),
           demensionXyzSelect: getWhdSelect('Demension'),
           rotationXyzSelect: getXyzSelect('Rotation'),
-          referenceSelect, getEqn, obj, typeSpecificHtml, dividerTypeSelect
+          referenceSelect, getEqn, obj, typeSpecificHtml, dividerTypeSelect,
+          normalToString
         };
 }
 
@@ -731,7 +763,7 @@ function updateOpeningVertices(elem) {
   modifyingOpening = idElem ? idElem.getAttribute('opening-index') : null;
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
   const template = CabinetTemplate.get(templateId);
-  updateOpeningPoints(template)
+  updateOpeningPoints(template);
 };
 
 function addExpandable(template, type) {
@@ -753,8 +785,9 @@ function addExpandable(template, type) {
     listElemLable: type.toSentance(),
   };
   const expandList = new ExpandableList(expListProps);
-  expandList.afterRender((details) => updateOpeningVertices(details.header));
-  expandList.afterRemoval(updateTemplateDisplay);
+  if (type === 'openings') expandList.on.after.render((details) => updateOpeningVertices(details.header));
+  expandList.on.after.removal(updateTemplateDisplay);
+  if (type === 'subassemblies') expandList.on.after.switch((details, list) => updateNormalLines(list.active()));
   return expandList;
 }
 
@@ -897,7 +930,7 @@ class TemplateManager extends Lookup {
 }
 
 const radioDisplay = new RadioDisplay('cabinet-template-input-cnt', 'template-id');
-radioDisplay.afterSwitch(function (header){
+radioDisplay.on.after.switch(function (header){
   const coordinateInput = du.find.closest('[name="opening-coordinate-value"]', header);
   const opening = ExpandableList.get(coordinateInput);
   if (opening && opening._Type) {
@@ -907,8 +940,108 @@ radioDisplay.afterSwitch(function (header){
     }
   }
 });
-radioDisplay.afterSwitch((elem, detail) => updateOpeningVertices(detail.targetHeader));
+radioDisplay.on.after.switch((elem, detail) => updateOpeningVertices(detail.targetHeader));
+radioDisplay.on.after.switch(updatePartAxis);
 
+const normalTemplate = new $t('managers/template/subassemblies/object/normals');
+du.on.match('change', '.subassem-normal-cnt>[type="radio"]', setVectorValues);
+
+function calcIndexUpdate(elem) {
+  const row = du.find.up('tr', elem);
+  const table = du.find.up('table', row);
+  const targetInputs = du.find.downAll('input.dem', row);
+  const allInputs = du.find.downAll('input.dem', table);
+  allInputs.forEach(i => i.disabled = false);
+  targetInputs.forEach(i => i.disabled = true);
+  ExpandableList.get(elem).normals.calc = Number.parseInt(row.getAttribute('index'));
+  validateVectors(elem);
+}
+du.on.match('change', '.calc-vect-radio', calcIndexUpdate);
+
+const normalToString = (obj, index) => {
+  if (obj.normals === undefined) return 'The computers got this';
+  const cabinet = getCabinet();
+  const i = cabinet.eval(obj.normals[index][0]);
+  const j = cabinet.eval(obj.normals[index][1]);
+  const k = cabinet.eval(obj.normals[index][2]);
+  const vect = new Vector3D(i,j,k).unit();
+  return !obj.normals || index === obj.normals.calc ? 'The computers got this' :
+                  `<${vect.toArray(.001).join(', ')}>`;
+}
+
+const validateAndReturnVectors = (obj, cabinet) => (row, index) => {
+  obj.normals[index] = du.find.downAll('input.dem', row).map(i => i.value);
+  const normObj = obj.normals[index];
+  const i = cabinet.eval(obj.normals[index][0]);
+  const j = cabinet.eval(obj.normals[index][1]);
+  const k = cabinet.eval(obj.normals[index][2]);
+  const vect = new Vector3D(i,j,k).unit();
+
+  const displayInput = du.find.down('[name="display"]', row);
+  displayInput.value = normalToString(obj, index);
+  if (index !== obj.normals.calc) {
+    normObj.valid = !Number.isNaN(vect.i()) && !Number.isNaN(vect.j()) && !Number.isNaN(vect.k());
+  } else {
+    normObj.valid =  true;
+  }
+  updateCss(row, normObj.valid, 'Invalid input');
+  return vect;
+};
+
+
+const valPerInd = (vectors, calc, index) => {
+  if (calc !== index) return true;
+  const nextIndex = (calc + 4) % 3;
+  const prevIndex = (calc + 5) % 3;
+  vectors[calc] = vectors[prevIndex].crossProduct(vectors[nextIndex]);
+  return vectors[prevIndex].perpendicular(vectors[nextIndex]);
+}
+const validatePerpendicular = (vects, calc) => valPerInd(vects, calc, 0) &&
+                      valPerInd(vects, calc, 1) && valPerInd(vects, calc, 2);
+
+function validateVectors(elem) {
+  const obj = ExpandableList.get(elem);
+  if (obj.normalStyle !== 'manual') return true;
+  if (obj.normals === undefined) obj.normals = [];
+  obj.normals.valid = true;
+  const cabinet = getCabinet();
+  if (obj.normals[0] === undefined) {
+    obj.normals = [[1,0,0], [0,1,0], [0,0,1]];
+    obj.normals.calc = 2;
+    du.find.closest('.manual-vector-cnt table', elem).innerHTML = normalTemplate.render({obj, normalToString});
+  }
+
+  const table = du.find.closest('.manual-vector-cnt table', elem);
+  const rows = du.find.downAll('.normal-vector-input-cnt', table);
+  const vectors = rows.map(validateAndReturnVectors(obj, cabinet));
+
+  obj.normals.valid = validatePerpendicular(vectors, obj.normals.calc);
+  updateCss(table, obj.normals.valid, 'Vectors Are Not Perpendicular');
+  if (obj.normals.findIndex(n => n.valid === false) !== -1 || !obj.normals.valid) {
+    return obj.normals.valid =  false;
+  }
+  else return obj.normals.valid = true;
+}
+
+function setVectorValues(elem) {
+  const style = du.find.closest('.subassem-normal-cnt>[type="radio"]:checked', elem).value;
+  const obj = ExpandableList.get(elem);
+  const styleChanged = obj.normalStyle !== style;
+  obj.normalStyle = style;
+  const vectorConfig = validateVectors(elem);
+  const cnt = du.find.closest('.manual-vector-cnt', elem);
+  if(style === 'manual') {
+    if (styleChanged) cnt.innerHTML = normalTemplate.render({obj, normalToString});
+    cnt.hidden = false;
+  } else {
+    cnt.hidden = true;
+  }
+  updateNormalLines(obj);
+}
+
+du.on.match('containerfocusout', ".normal-vector-input-cnt[index='0']", setVectorValues);
+du.on.match('containerfocusout', ".normal-vector-input-cnt[index='1']", setVectorValues);
+du.on.match('containerfocusout', ".normal-vector-input-cnt[index='2']", setVectorValues);
 
 du.on.match('focusout:enter', '[name="opening-coordinate-value"]', (elem) => {
   sectionState.value(elem.value || undefined);
