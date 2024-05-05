@@ -10,10 +10,23 @@ class BiPolygon {
   constructor(polygon1, polygon2) {
     if (Array.isArray(polygon1)) polygon1 = new Polygon3D(polygon1);
     if (Array.isArray(polygon2)) polygon2 = new Polygon3D(polygon2);
+    const orientationVector = new Line3D(polygon2.center(), polygon1.center()).vector();
+    try {
+      if (!polygon1.normal().sameDirection(orientationVector)) {
+        polygon1 = polygon1.reverse();
+        polygon2 = polygon2.reverse();
+      }
+      if (polygon2.normal().sameDirection(orientationVector)) {
+        polygon2 = polygon2.reverse();
+      }
+    } catch (e) {
+      console.log();
+    }
     const face1 = polygon1.vertices();
     const face2 = polygon2.vertices();
     const instance = this;
     if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of vertices');
+
 
     this.copy = () => new BiPolygon(polygon1.copy(), polygon2.copy());
 
@@ -26,7 +39,7 @@ class BiPolygon {
 
     this.faceNormal = (index) => face2[index || 0].distanceVector(face1[index || 0]).unit();
 
-    this.normal = () => this.flippedNormal() ? polygon1.normal() : polygon1.normal().inverse();
+    this.normal = () => polygon1.normal();
     this.normalTop = () => polygon1.lines()[1].vector().unit().inverse();
     this.normalRight = () => this.normalTop().crossProduct(this.normal()).unit().inverse();
 
@@ -44,33 +57,37 @@ class BiPolygon {
       return frontDist < backDist ? frontDist : backDist;
     }
 
-    this.extend = (vector) => {
-      let lines = [];
-      for (let index = 0; index < face1.length; index++) {
-        const endIndex = Math.mod(index + 1, face1.length);
-        lines.push(new Line3D(face1[index], face1[endIndex]));
-      }
-      for (let index = 0; index < face1.length; index++) {
-        const endIndex = Math.mod(index + 1, face1.length);
-        lines.push(new Line3D(face2[index], face2[endIndex]));
-      }
-      for (let index = 0; index < face1.length; index++) {
-        const endIndex = Math.mod(index + 1, face1.length);
-        lines.push(new Line3D(face1[index], face2[index]));
-      }
-      lines = lines.sort((a, b) => a.vector().hash() - b.vector().hash());
-      for (let index = 0; index < lines.length; index++) {
-        const line = lines[index];
-        const lineVect = line.vector();
-        const projection = vector.projectOnTo(lineVect);
-        const posMag = projection.add(lineVect).magnitude();
-        const negMag = projection.minus(lineVect).magnitude();
-        const fromStart = posMag > negMag;
-        const magnitude = fromStart ? posMag : -negMag;
-        if (line.length() !== Math.abs(magnitude)) {
-          line.length(magnitude, fromStart);
+
+    function extendAlongNormal(vector) {
+      const normal = instance.normal();
+      if (vector.dot(normal) > .0001) face1.forEach(v => v.translate(vector));
+      if (vector.dot(normal.inverse()) > .0001) face2.forEach(v => v.translate(vector));
+    }
+
+    /**
+            *                                        *
+               *                                                  *
+        *  face *         <10,0,0> =>            *      face       *
+
+        *       *                                *                 *
+    **/
+    function extendFaces(vector, face) {
+      const center = Vertex3D.center(face);
+      const unitVect = vector.unit();
+      for (let index = 0; index < face.length; index++) {
+        const vert = face[index];
+        const centerRadial = new Line3D(center, vert);
+        const dot = centerRadial.vector().unit().dot(unitVect);
+        if (dot > .0001) {
+          vert.translate(vector);
         }
       }
+    }
+
+    this.extend = (vector) => {
+      extendAlongNormal(vector);
+      extendFaces(vector, face1);
+      extendFaces(vector, face2);
     }
 
     this.toArray = () => [polygon1.vertices(), polygon2.vertices()];
@@ -140,18 +157,12 @@ class BiPolygon {
 
     }
 
-    this.flippedNormal = () => {
-      const face1Norm = new Polygon3D(face1).normal();
-      return this.faceNormal().sameDirection(face1Norm);
-    }
-
-
-    function normalize (verts, reverse) {
+    function normalize (verts) {
       const normal =  new Polygon3D(verts).normal().toArray();
       const returnValue = [];
       for (let index = 0; index < verts.length; index++)
         returnValue[index] = new CSG.Vertex(verts[index], normal);
-      return reverse ? returnValue.reverse() : returnValue;
+      return returnValue;
     }
 
     function allNormsRepresented (polys) {
@@ -179,35 +190,17 @@ class BiPolygon {
     }
 
     this.model = (joints) => {
-      const flippedNormal = this.flippedNormal();
       const frontNorm = new Vertex3D(new Line3D(this.center(), this.front().center()).vector().unit());
-      const front = new CSG.Polygon(normalize(face1, !flippedNormal));
-      // if (!frontNorm.equals(front.plane.normal)) {
-      //   console.log.subtle('different');
-      // }
-      // front.plane.normal = front.vertices[0].normal.clone();//new CSG.Vector([0,1, 0,0]);
+      const front = new CSG.Polygon(normalize(face1));
       const backNorm = new Vertex3D(new Line3D(this.center(), this.back().center()).vector().unit());
-      // TODO we should make backNorm face opposite of front Norm may clear up confusion
-      const flipBackNorm = this.back().normal().equals(this.front().normal()) ? flippedNormal : !flippedNormal;
-      const back = new CSG.Polygon(normalize(face2, flipBackNorm));
-      // if (!backNorm.equals(back.plane.normal)) {
-      //   console.log.subtle('different');
-      // }
-      // back.plane.normal = back.vertices[0].normal.clone();//new CSG.Vector([0,0,1,0,0]);
+      const back = new CSG.Polygon(normalize(face2));
       const polygonSets = [front, back];
+      const sides = this.sides();
 
-      for (let index = 0; index < face1.length; index++) {
-        const index2 = (index + 1) % face1.length;
-         const vertices = [face1[index], face1[index2], face2[index2], face2[index]];
-         const normalized = normalize(vertices, flippedNormal);
+      for (let index = 0; index < sides.length; index++) {
+         const normalized = normalize(sides[index].vertices());
          const poly = new CSG.Polygon(normalized);
          polygonSets.push(poly);
-         const polyCenter = Vertex3D.center(...vertices);
-         const polyNorm = new Vertex3D(new Line3D(this.center(), polyCenter).vector().unit());
-         const back = new CSG.Polygon(normalize(face2, flippedNormal));
-         // if (!polyNorm.equals(poly.plane.normal)) {
-         //   console.error.subtle('different');
-         // }
       }
       // polygonSets.forEach(p => p.setColor(0,0,255));
 
@@ -216,9 +209,12 @@ class BiPolygon {
 
     this.sides = () => {
       const sides = [];
-      for (let index = 0; index < face1.length; index++) {
-        const index2 = (index + 1) % face1.length;
-        const vertices = [face1[index], face1[index2], face2[index2], face2[index]];
+      const len = face1.length;
+      for (let index = 0; index < len; index++) {
+        const index2 = (index + 1) % len;
+        const backIndex = (len - index - 1) % len;
+        const backIndex2 = (2*len - index - 2) % len;
+        const vertices = [face2[backIndex], face2[backIndex2], face1[index2], face1[index]];
         sides.push(new Polygon3D(vertices));
       }
       return sides;
@@ -256,8 +252,8 @@ class BiPolygon {
       return Polygon3D.toTwoD([this.front(), this.back()], vector);
     }
 
-    this.toDrawString = (color) => {
-      return this.toPolygons().map(p => p.toDrawString(color, false)).join('\n\n');
+    this.toDrawString = (color, includeNormals) => {
+      return this.toPolygons().map(p => p.toDrawString(p.equals(this.front()) ? 'red' : color, includeNormals)).join('\n\n');
     }
 
 

@@ -111,8 +111,8 @@ class SectionProperties extends KeyValue {
       return hash;
     }
 
-    this.divideRight = () =>
-      this.parentAssembly().sectionCount && this.parentAssembly().sectionCount() !== index;
+    this.divideRight = () => this.parentAssembly() && this.parentAssembly().sectionCount
+      && this.parentAssembly().sectionCount() !== index;
     this.partCode = () => 'S';
     this.partName = () => undefined;
 
@@ -442,7 +442,10 @@ class SectionProperties extends KeyValue {
             const section = new SectionProperties(this.childConfig(), index + 2);
             this.sections.push(section);
           }
-          this.pattern().setStr(this.pattern().str + new Array(diff).fill('z').join(''));
+          const patStr = this.pattern().str;
+          const patDiff = dividerCount - patStr.length + 1;
+          if (patDiff > 0) this.pattern().setStr(patStr + new Array(patDiff).fill('z').join(''));
+          if (patDiff < 0) this.pattern().setStr(patStr.substring(0, dividerCount));
           if (!dontUpdateCoords && diff !== 0) setSectionCoordinates(true);
           return diff !== 0;
         }
@@ -515,7 +518,7 @@ class SectionProperties extends KeyValue {
     }
 
     this.reevaluate = () => {
-      setSectionCoordinates(true);
+      if (instance.getRoot() !== instance) setSectionCoordinates(true);
     }
 
     function perpendicularDistance(point, line) {
@@ -582,7 +585,6 @@ class SectionProperties extends KeyValue {
     this.divider(divider);
     divider.divider().included = this.divideRight;
     divider.parentAssembly(this);
-    this.value('vertical', false);
     this.pattern().onChange(this.reevaluate);
 
     const isMatch = (assem, dir) => {
@@ -627,42 +629,28 @@ class SectionProperties extends KeyValue {
 
     }
 
-    function buildDividerCookieCutter() {
+    const boxJoint = (selector, index) =>
+      new Dado(/^dv:[^_]{1,}$/, new RegExp(`^${selector}$`), null, `boxJoint${index}`);
+
+    function cabinetBoxDados() {
       const cabinet = instance.getCabinet();
       const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section)/));
-      const outerParimeterLocationCodes = [];
-      const innerParimeterLocationCodes = [];
-      const shelveLocationCodes = [];
-      const jointLocationCodes = [];
+      const joints = [];
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
         if (assem instanceof Divider) {
-          outerParimeterLocationCodes.push(assem.locationCode());
-          jointLocationCodes.push(assem.locationCode() + ':.*');
-          shelveLocationCodes.push(assem.locationCode() + ':.*');
+          joints.push(boxJoint(assem.locationCode() + ':.*', index));
         } else {
-          const depth = assem.position().demension('z');
-          if (depth > .5 * 2.54) jointLocationCodes.push(assem.locationCode());
-          else innerParimeterLocationCodes.push(assem.locationCode());
-          shelveLocationCodes.push(assem.locationCode());
+          joints.push(boxJoint(assem.locationCode(), index));
         }
       }
-      addCookieCutterReg(outerParimeterLocationCodes, 1, true);
-      addCookieCutterReg(innerParimeterLocationCodes, 0);
-      addCookieCutterReg(jointLocationCodes, .5);
-
-      addCookieCutterReg(outerParimeterLocationCodes, 1, true, '.*sh[0-9]{1,}');
-      addCookieCutterReg(shelveLocationCodes, -3/(4*8), null, '.*sh[0-9]{1,}');
-      addCookieCutterReg(shelveLocationCodes, 1 - 3/(4*8), true, '.*sh[0-9]{1,}');
-    }
-
-    function buildCutters () {
-      buildDividerCookieCutter();
+      // TODO: allow dependencies to be added to sectionProperties
+      instance.parentAssembly().addDependencies(...joints);
     }
 
     this.borders = () => [this.right, this.left, this.top, this.bottom, this.back]
 
-    this.on.parentSet(p => this.getAssembly('c') && this.isRoot() && buildCutters());
+    this.on.parentSet(p => this.getAssembly('c') && this.isRoot() && cabinetBoxDados());
 
     this.toDrawString = (notRecursive) => {
       const color = String.nextColor();

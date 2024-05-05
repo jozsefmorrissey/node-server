@@ -266,8 +266,6 @@ class PartInfo {
     const layersCovered = {};
     jointInfo.forEach(ji => cutInfo.concatInPlace(ji.cutInfo(layersCovered)));
 // console.log(cutInfo.map(c => `//${c.jointInfo().joint().descriptor}\n${Polygon3D.toDrawString(c.set(), String.nextColor())}`).join('\n\n'));
-    if (this.part().partCode === 'R:full')
-      console.log('here');
     CutInfo.clean(cutInfo);
     this.cuts = cutInfo;
     // console.log(CutInfo.toDrawString(this.cuts))

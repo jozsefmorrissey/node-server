@@ -150,8 +150,8 @@ class Vector3D {
     }
 
     this.acquiescent = (other) => {
-      if (this.positive() && other.positive()) return this;
-      return this.inverse();
+      if (this.positive() !== other.positive()) return this.inverse();
+      return this;
     }
 
     this.equals = (vector, tol) => !tol ? Vector3D.tolerance.within(vector, this) :

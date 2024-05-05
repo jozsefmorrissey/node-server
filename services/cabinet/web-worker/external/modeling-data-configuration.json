@@ -32,7 +32,7 @@
   "DrawerBox": [],
   "DrawerFront": [],
   "Guides": [],
-  "Cabinet": [],
+  "Cabinet": ["buildCenter"],
   "Cutter": [],
   "Object3D": ["id", "height", "width", "thickness", "rotation", "center", "count"],
   "Stairs": ["count", "treadLength"],

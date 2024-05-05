@@ -22,17 +22,32 @@ function extendFBSetToPoly(poly, frontBackSet) {
   frontBackSet[1].extendTo(poly);
 }
 
-const big = 1000;//Number.MAX_SAFE_INTEGER/100000;
+const big = 1000;//Number.MAX_SAFE_INTEGER/1000000;
 function cropPoly (poly, vector) {
   BiPolygon.fromPolygon(poly, 0, big, {x: big, y: big});
 }
 
-apply.Dado = (assem, femalePolyObj, frontBackSet) => {
+const cutterFurthestZPoly = (femalePolyInfo) => () => {
+  const femalePolyObj = femalePolyInfo();
+  if (femalePolyObj === null) return;
+  return BiPolygon.fromPolygon(femalePolyObj.z[1], 0, big, {x: big, y: big}).model();
+}
+
+const offsetZpolyCutter = (femalePolyInfo, index, dist1, dist2) => () => {
+  const femalePolyObj = femalePolyInfo();
+  if (femalePolyObj === null) return;
+  return BiPolygon.fromPolygon(femalePolyObj.z[index], dist1, dist2).model();
+}
+
+
+apply.Dado = (assem, femalePolyInfo, frontBackSet) => {
+  const femalePolyObj = femalePolyInfo();
+  if (assem.partCode === 'dv:full') {
+    console.log('booya');
+  }
   extendFBSetToPoly(femalePolyObj.z[1], frontBackSet);
-  const cookie = [BiPolygon.fromPolygon(femalePolyObj.z[1], 0, big, {x: big, y: big}).model()];
-  // return [cropBiPoly];
-  const joint = [BiPolygon.fromPolygon(femalePolyObj.z[1], 10, -0.635).model()];
-  // return [dadoCropBiPoly];
+  const cookie = [cutterFurthestZPoly(femalePolyInfo)];
+  const joint = [offsetZpolyCutter(femalePolyInfo, 1, 10, -.9525)];
   return {joint, cookie};
 }
 

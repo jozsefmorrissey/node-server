@@ -206,18 +206,110 @@ class Polygon3D {
       lines[3].length(down - lines[3].length(), false);
     }
 
-    this.extendTo = (polyOplane, doNotModify) => {
-      if (doNotModify) return this.copy().extendTo(polyOplane);
+    function forEachVertex(func) {
+      const locations = [];
+      for (let target = 0; target < lines.length; target++) {
+        const before = (target + lines.length - 1) % lines.length;
+        const after = (target + 1) % lines.length;
+        const line = {before: lines[before], target: lines[target], after: lines[after]};
+        const vertex = {before: lines[before][0], target: lines[target][0], after: lines[after][0]};
+        const index = {before, target, after};
+        const beforeToNext = new Line3D(vertex.before, vertex.after);
+        const connection = beforeToNext.connect.vertex(vertex.target);
+        const info = {connection, line, vertex, index};
+        if (func(info)) {
+          locations.push(info);
+        }
+      }
+      return locations;
+    }
+
+
+    const identifyConcaveLocations = () =>
+      forEachVertex(info => info.line.after.length() + info.line.before.length() >
+          info.vertex.before.distance(info.connection[1]) + info.vertex.after.distance(info.connection[1]) &&
+          !(new Line3D(info.connection[0], info.vertex.before).vector().sameDirection(new Line3D(info.connection[0], info.vertex.after).vector())) &&
+          !instance.isWithin2d(info.connection[0]));
+      const identifyCrissCrossLocations = () =>
+        forEachVertex(info => info.line.before.intersection.segment(info.line.after, true));
+      const identifyParrelleLocations = () =>
+        forEachVertex(info => info.line.after.isParrelle(info.line.target));
+
+    this.irregular = {concave: {}, crissCross: {}, parrelle: {}};
+    this.irregular.parrelle.locations = () =>
+          identifyParrelleLocations().map(info => info.index.target);
+    this.irregular.parrelle.fill = (doNotModify) => {
+      if (doNotModify) return this.copy().this.irregular.concave.fill();
+      const locs = identifyParrelleLocations();
+      locs.sortByAttr('index', true);
+      locs.forEach(info => {
+        info.line.target[1] = info.line.after[1];
+        lines.splice(info.index.after, 1);
+      });
+      return this;
+    }
+
+
+    this.irregular.concave.locations = () =>
+          identifyConcaveLocations().map(info => info.index.target);
+    this.irregular.concave.fill = (doNotModify) => {
+      if (doNotModify) return this.copy().this.irregular.concave.fill();
+      const locs = identifyConcaveLocations();
+      locs.sortByAttr('index', true);
+      locs.forEach(info => {
+        info.line.before[1] = info.line.after[0];
+        lines.splice(info.index.target, 1);
+      });
+      return this;
+    }
+
+    this.irregular.crissCross.locations = () =>
+          identifyCrissCrossLocations().map(info => info.index.target);
+
+    this.irregular.crissCross.fill = (doNotModify) => {
+      if (doNotModify) return this.copy().this.irregular.crissCross.fill();
+      identifyCrissCrossLocations().forEach(info => {
+        const temp = info.line.before.endVertex;
+        info.line.before.endVertex = info.line.after.startVertex;
+        info.line.after.startVertex = temp;
+        info.line.target.startVertex = info.line.before.endVertex;
+        info.line.target.endVertex = temp;
+      });
+      return this;
+    }
+
+
+    /**
+      This could be a better function if i could detect when polygon becomes irregular
+
+              [(-109.932038,61.595,-207.536051), (45.72,61.595,0))
+              [(45.72,61.595,0), (127,61.595,-60.96))
+              [(127,61.595,-60.96), (45.72,61.595,-59.072133))
+              [(45.72,61.595,-59.072133), (-109.932038,61.595,-207.536051))
+    **/
+    function extendByLines(polyOplane) {
       const plane = polyOplane instanceof Polygon3D ? polyOplane.toPlane() : polyOplane;
-      for (let index = 0; index < lines.length; index++) {
+      const len = lines.length;
+      for (let index = 0; index < len; index++) {
+        const before = lines[(index + len - 1) % len];
         const line = lines[index];
+        const after = lines[(index + 1) % len];
         const intersection = plane.intersection.line(line);
-        if (intersection) {
+        if (intersection && !within(line.connect.vertex(intersection, true).length(), 0)) {
           const closerIndex = line[0].distance(intersection) < line[1].distance(intersection) ? 0 : 1;
           line[closerIndex].positionAt(intersection);
         }
       }
-      return this;
+      instance.irregular.parrelle.fill();
+      instance.irregular.crissCross.fill();
+      instance.irregular.concave.fill();
+
+      return instance;
+    }
+
+    this.extendTo = (polyOplane, doNotModify) => {
+      if (doNotModify) return this.copy().extendTo(polyOplane);
+      return extendByLines(polyOplane);
     }
 
     this.resize = (width, height, doNotModify) => {
@@ -902,14 +994,19 @@ Polygon3D.fromCSG = (polys) => {
   if (!isArray) polys = [polys];
   const poly3Ds = [];
   for (let index = 0; index < polys.length; index++) {
-    const poly = polys[index];
+    const csgPoly = polys[index];
     const verts = [];
     try {
-      for (let vIndex = 0; vIndex < poly.vertices.length; vIndex++) {
-        const v = poly.vertices[vIndex];
+      for (let vIndex = 0; vIndex < csgPoly.vertices.length; vIndex++) {
+        const v = csgPoly.vertices[vIndex];
         verts.push(new Vertex3D({x: v.pos.x, y: v.pos.y, z: v.pos.z}));
       }
-      poly3Ds.push(new Polygon3D(verts));
+      let polygon = new Polygon3D(verts);
+      if (!polygon.normal().sameDirection(new Vector3D(csgPoly.plane.normal))) {
+        polygon = polygon.reverse();
+        console.warn('never tested should work...');
+      }
+      poly3Ds.push(polygon);
     } catch {
       console.warn('Error converting CSG polygon:\n\t', 'poly.toString()')
     }

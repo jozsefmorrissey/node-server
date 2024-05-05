@@ -14,10 +14,10 @@ class Divider extends Assembly {
   constructor(partCode, partName, config) {
     partCode ||= 'dv';
     let z;
-    if (config && config.demension.z) {
-      z = config.demension.z;
-      config.demension.z = 'dft';
-    }
+    // if (config && config.demension.z) {
+    //   z = config.demension.z;
+    //   config.demension.z = 'dft';
+    // }
     super(partCode, partName, config);
     const instance = this;
     const pToJson = this.toJson;

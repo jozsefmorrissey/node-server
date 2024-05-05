@@ -28,7 +28,7 @@ const onSimpleComplete = (models, ts) => (csgs) => {
 Test.add('Jobs.CSG.Simple', async (ts) => {
   const models = SimpleModel.list().map(n => SimpleModel.get(n));
   new Jobs.CSG.Simple.Model(models)
-        .then(onSimpleComplete(models, ts)).queue();
+        .then(onSimpleComplete(models, ts), onFail(ts)).queue();
 });
 
 const on2DComplete = (objects, ts) => (result) => {

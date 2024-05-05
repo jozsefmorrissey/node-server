@@ -10,6 +10,7 @@ const Line3D = require('../../../app-src/three-d/objects/line.js')
 const dataTransferConfig = require('../math-data-transfer-config.json');
 const DTO = require('../../shared/data-transfer-object')(dataTransferConfig);
 const MFC = require('./modeling/modeling-function-configuration.js');
+const RDTO = require('./modeling/reconnect-transfer-object');
 
 const ThreeView = require('../../../../../public/js/utils/canvas/two-d/objects/three-view');
 
@@ -30,6 +31,7 @@ function To2D(csg, normals, gap) {
 }
 
 function simpleTo2D (payload) {
+  payload = RDTO(payload);
   const threeViews = {};
   for (let index = 0; index < payload.objects.length; index++) {
     const obj = payload.objects[index];

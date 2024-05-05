@@ -1,7 +1,7 @@
 
 class ResolutionInformation {
   constructor(object, expression, value, evaluation) {
-    Object.getSet({object, expression, value, evaluation});
+    Object.getSet(this, {object, expression, value, evaluation});
 
     this.value = (val) => {
       if (val !== undefined) {

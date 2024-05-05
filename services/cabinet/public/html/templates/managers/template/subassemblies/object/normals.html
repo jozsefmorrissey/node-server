@@ -1,4 +1,4 @@
-<table class='{{!obj.normals || obj.normals.valid ? '' : 'error'}}'>
+<table class='{{!obj.normalInfo || obj.normalInfo.valid ? '' : 'error'}}'>
   <tr>
     <th></th>
     <th:t repeat="char in ['i', 'j', 'k']">{{char}}</th:t>
@@ -6,26 +6,26 @@
     <th>Value</th>
   </tr>
   <tr:t index="{{$index}}" repeat="label in ['Cross Grain', 'With Grain', 'End Grain']"
-          class='tab normal-vector-input-cnt {{!obj.normals || obj.normals[$index] ? '' : 'error'}}'>
+          class='tab normal-vector-input-cnt {{!obj.normalInfo || obj.normalInfo.normals[$index] ? '' : 'error'}}'>
     <td><label>{{label}}</label></td>
     <td>
       <input class="dem" type="text"
-            {{obj.normals && obj.normals.calc === $index ? 'disabled' : ''}}
-            value="{{obj.normals && obj.normals[$index][0]}}">
+            {{obj.normalInfo && obj.normalInfo.calc === $index ? 'disabled' : ''}}
+            value="{{obj.normalInfo && obj.normalInfo.normals[$index][0]}}">
     </td>
     <td>
       <input class="dem" type="text"
-            {{obj.normals && obj.normals.calc === $index ? 'disabled' : ''}}
-            value="{{obj.normals && obj.normals[$index][1]}}">
+            {{obj.normalInfo && obj.normalInfo.calc === $index ? 'disabled' : ''}}
+            value="{{obj.normalInfo && obj.normalInfo.normals[$index][1]}}">
     </td>
     <td>
       <input class="dem" type="text"
-            {{obj.normals && obj.normals.calc === $index ? 'disabled' : ''}}
-            value="{{obj.normals && obj.normals[$index][2]}}">
+            {{obj.normalInfo && obj.normalInfo.calc === $index ? 'disabled' : ''}}
+            value="{{obj.normalInfo && obj.normalInfo.normals[$index][2]}}">
     </td>
     <td>
       <input type='radio' name='calculated-{{obj.id}}' class='calc-vect-radio'
-        {{obj.normals && obj.normals.calc === $index ? 'checked' : ''}}>
+        {{obj.normalInfo && obj.normalInfo.calc === $index ? 'checked' : ''}}>
     </td>
     <td>
       <input name='display' type='text' disabled value='{{normalToString(obj, $index)}}'>

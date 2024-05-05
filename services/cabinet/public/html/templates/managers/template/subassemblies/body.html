@@ -57,10 +57,10 @@
   <div class='subassem-normal-cnt'>
     <label>Normals:</label>
     <label>Automatic</label>
-    <input type='radio' name='normalStyle-{{obj.id}}' value='auto' {{obj.normalStyle !== 'manual' ? 'checked' : ''}}>
+    <input type='radio' name='normalStyle-{{obj.id}}' value='auto' {{!obj.normalInfo || obj.normalInfo.style !== 'manual' ? 'checked' : ''}}>
     <label>Manual</label>
-    <input type='radio' name='normalStyle-{{obj.id}}' value='manual' {{obj.normalStyle === 'manual' ? 'checked' : ''}}>
-    <div class='manual-vector-cnt tab' {{obj.normalStyle === 'manual' ? '' : 'hidden'}}>
+    <input type='radio' name='normalStyle-{{obj.id}}' value='manual' {{obj.normalInfo && obj.normalInfo.style === 'manual' ? 'checked' : ''}}>
+    <div class='manual-vector-cnt tab' {{obj.normalInfo && obj.normalInfo.style === 'manual' ? '' : 'hidden'}}>
       <div:t $t-id='managers/template/subassemblies/object/normals'></div:t>
     </div>
   </div>

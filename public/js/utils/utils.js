@@ -973,7 +973,7 @@ Function.safeStdLibAddition(Array, 'remove', function (elem) {
   return removed;
 });
 
-Function.safeStdLibAddition(Array, 'compare', function (original, neww, modify) {
+Function.safeStdLibAddition(Array, 'diff', function (original, neww, modify) {
     const comparison = {both: [], removed: [], added: []};
     const arr = original.concat(neww);
     const visited = {new: {}, original: {}};
@@ -989,7 +989,7 @@ Function.safeStdLibAddition(Array, 'compare', function (original, neww, modify) 
       }
     });
 
-    if (modify) {
+    if (modify === true) {
       if (comparison.removed.length > 0) {
         let removed = 0;
         comparison.removed.forEach((info) => original.splice(info.index - removed++, 1));

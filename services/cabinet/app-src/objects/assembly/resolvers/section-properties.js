@@ -10,16 +10,19 @@ class SectionPropertiesResolver extends Resolver {
     this.resolve.parse = (expr) => {
       const match = expr.match(openingReg);
       if (match === null) return null;
-      const inOut = match[2];
-      const func = match[4];
-      const dir = match[5];
+      const inOut = match[2] || 'i';
+      const func = match[3];
+      const dir = match[4];
       const value = this.resolve.brokenDown(inOut, func, dir);
-      return value !== undefined ? value : sectionProps.parentAssembly().resolve(expr);
+      return value !== undefined ? value : undefined;
     }
 
     this.resolve.information = (expr) => {
       const parsed = this.resolve.parse(expr);
-      if (parsed) return this.resolve.brokenDown(parsed.index, parsed.inOut, parsed.func, parsed.dir);
+      if (parsed) return parsed;
+      if (sectionProps.parentAssembly() === undefined) {
+        console.warn('This should not happen');
+      }
       return sectionProps.parentAssembly().resolve.information(expr);
     }
 
@@ -28,7 +31,7 @@ class SectionPropertiesResolver extends Resolver {
       const expr = `OP.${inOut}.${func}.${dir}`;
       const info = new Resolver.Info(sectionProps, expr);
       let value;
-      if (func.startsWith('n') && dir.match(/^(i|j|k)$/)) value = opening.normal()[dir]();
+      if (func.startsWith('n') && dir.match(/^(i|j|k)$/)) value = sectionProps.normal()[dir]();
       else if (func.startsWith('d') && dir === 'z') value = 0;
       else if (inOut.startsWith('o')) {
         if (func.startsWith('c')) value = secProps.outerCenter()[dir];
@@ -40,7 +43,7 @@ class SectionPropertiesResolver extends Resolver {
         if (func.startsWith('d') && dir === 'y') value = secProps.innerHeight();
       }
       info.value(value);
-      return info.valid() ? info : parentResolveInfo(expr);
+      return info.valid() ? info : undefined;
     }
   }
 }

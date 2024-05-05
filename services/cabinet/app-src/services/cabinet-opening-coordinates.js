@@ -180,7 +180,7 @@ class CabinetOpeningCorrdinates extends KeyValue {
             coords = manualCoordinates(config.coordinates); break;
           case 'slice':
             cutter = new Cutter('aoc', 'Opening');
-            cutter.addDependencies(new Butt(cutter, /^c_[^_]{1,}$/))
+            cutter.addDependencies(new Butt(cutter, /^.*$/))
             cabinet.addDependencies(new Dependency(cutter, cabinet));
             cutter.parentAssembly(this);
             subassemblies = [cutter];

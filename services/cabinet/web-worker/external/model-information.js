@@ -219,15 +219,6 @@ class ModelInformation {
       if (data) unioned2D = data;
       else return unionedCsg;
     }
-
-    const attrPercent = (attr, list) => Object.values(modelInfo[attr]).length / list.length;
-    this.status = () => ({
-      models: buildModels ? attrPercent('model', buildModels) : null,
-      joined: buildModels ? attrPercent('joined', joinModels) : null,
-      intersection: buildModels ? attrPercent('intersection', joinModels) : null,
-      biPolygonArray: buildModels ? attrPercent('biPolygonArray', buildModels) : null,
-      unioned: unionedCsg ? true : false
-    })
   }
 }
 

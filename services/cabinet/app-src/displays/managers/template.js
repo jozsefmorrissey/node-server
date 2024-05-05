@@ -953,33 +953,35 @@ function calcIndexUpdate(elem) {
   const allInputs = du.find.downAll('input.dem', table);
   allInputs.forEach(i => i.disabled = false);
   targetInputs.forEach(i => i.disabled = true);
-  ExpandableList.get(elem).normals.calc = Number.parseInt(row.getAttribute('index'));
+  ExpandableList.get(elem).normalInfo.calc = Number.parseInt(row.getAttribute('index'));
   validateVectors(elem);
 }
 du.on.match('change', '.calc-vect-radio', calcIndexUpdate);
 
 const normalToString = (obj, index) => {
-  if (obj.normals === undefined) return 'The computers got this';
+  if (obj.normalInfo === undefined) return 'The computers got this';
   const cabinet = getCabinet();
-  const i = cabinet.eval(obj.normals[index][0]);
-  const j = cabinet.eval(obj.normals[index][1]);
-  const k = cabinet.eval(obj.normals[index][2]);
+  const normals = obj.normalInfo.normals;
+  const i = cabinet.eval(normals[index][0]);
+  const j = cabinet.eval(normals[index][1]);
+  const k = cabinet.eval(normals[index][2]);
   const vect = new Vector3D(i,j,k).unit();
-  return !obj.normals || index === obj.normals.calc ? 'The computers got this' :
+  return !obj.normalInfo || index === obj.normalInfo.calc ? 'The computers got this' :
                   `<${vect.toArray(.001).join(', ')}>`;
 }
 
 const validateAndReturnVectors = (obj, cabinet) => (row, index) => {
-  obj.normals[index] = du.find.downAll('input.dem', row).map(i => i.value);
-  const normObj = obj.normals[index];
-  const i = cabinet.eval(obj.normals[index][0]);
-  const j = cabinet.eval(obj.normals[index][1]);
-  const k = cabinet.eval(obj.normals[index][2]);
+  const normals = obj.normalInfo.normals;
+  normals[index] = du.find.downAll('input.dem', row).map((i, ri) => i.value || normals[index][ri]);
+  const normObj = obj.normalInfo.normals[index];
+  const i = cabinet.eval(normals[index][0]);
+  const j = cabinet.eval(normals[index][1]);
+  const k = cabinet.eval(normals[index][2]);
   const vect = new Vector3D(i,j,k).unit();
 
   const displayInput = du.find.down('[name="display"]', row);
   displayInput.value = normalToString(obj, index);
-  if (index !== obj.normals.calc) {
+  if (index !== obj.normalInfo.calc) {
     normObj.valid = !Number.isNaN(vect.i()) && !Number.isNaN(vect.j()) && !Number.isNaN(vect.k());
   } else {
     normObj.valid =  true;
@@ -1001,33 +1003,33 @@ const validatePerpendicular = (vects, calc) => valPerInd(vects, calc, 0) &&
 
 function validateVectors(elem) {
   const obj = ExpandableList.get(elem);
-  if (obj.normalStyle !== 'manual') return true;
-  if (obj.normals === undefined) obj.normals = [];
-  obj.normals.valid = true;
+  if (obj.normalInfo === undefined || obj.normalInfo.style !== 'manual') return true;
+  obj.normalInfo.valid = true;
   const cabinet = getCabinet();
-  if (obj.normals[0] === undefined) {
-    obj.normals = [[1,0,0], [0,1,0], [0,0,1]];
-    obj.normals.calc = 2;
-    du.find.closest('.manual-vector-cnt table', elem).innerHTML = normalTemplate.render({obj, normalToString});
-  }
 
   const table = du.find.closest('.manual-vector-cnt table', elem);
   const rows = du.find.downAll('.normal-vector-input-cnt', table);
   const vectors = rows.map(validateAndReturnVectors(obj, cabinet));
 
-  obj.normals.valid = validatePerpendicular(vectors, obj.normals.calc);
-  updateCss(table, obj.normals.valid, 'Vectors Are Not Perpendicular');
-  if (obj.normals.findIndex(n => n.valid === false) !== -1 || !obj.normals.valid) {
-    return obj.normals.valid =  false;
+  const normals = obj.normalInfo.normals;
+  normals.valid = validatePerpendicular(vectors, obj.normalInfo.calc);
+  updateCss(table, obj.normalInfo.valid, 'Vectors Are Not Perpendicular');
+  if (normals.findIndex(n => n.valid === false) !== -1 || !normals.valid) {
+    return normals.valid = false;
   }
-  else return obj.normals.valid = true;
+  else return normals.valid = true;
 }
 
 function setVectorValues(elem) {
   const style = du.find.closest('.subassem-normal-cnt>[type="radio"]:checked', elem).value;
   const obj = ExpandableList.get(elem);
-  const styleChanged = obj.normalStyle !== style;
-  obj.normalStyle = style;
+  if (obj.normalInfo === undefined) {
+    if (style !== 'manual') return;
+    du.find.closest('.manual-vector-cnt table', elem).innerHTML = normalTemplate.render({obj, normalToString});
+    obj.normalInfo = {normals: [[1,0,0], [0,1,0], [0,0,1]], calc: 2};
+  }
+  const styleChanged = obj.normalInfo.style !== style;
+  obj.normalInfo.style = style;
   const vectorConfig = validateVectors(elem);
   const cnt = du.find.closest('.manual-vector-cnt', elem);
   if(style === 'manual') {

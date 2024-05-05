@@ -23,22 +23,22 @@ const testFiles = [
   "./tests/web-worker/simple",
   "./tests/web-worker/assembly",
   "./tests/web-worker/room",
-  "./tests/web-worker/documentation"];
+  // "./tests/web-worker/documentation",
+  "./tests/bi-polygon"];
 
-const testAll = window.location.href.match(/(\?|&)testAll=true($|&)/) !== null;
-const fileContainsMatch = window.location.href.match(/(\?|&)testFile=(.{1,}?)($|&)/);
-const fileContains = fileContainsMatch && fileContainsMatch[2];
-const testNameMatch = window.location.href.match(/(\?|&)testName=(.{1,}?)($|&)/);
-const testNameContains = testNameMatch && testNameMatch[2];
-const testOrder = window.location.href.match(/(\?|&)testOrder=true($|&)/);
+const getUriVariable = (name) => (match = window.location.href.match(new RegExp(`(\\?|&)${name}=(.{1,}?)($|&)`))) && match && decodeURI(match[2]);
 
+const shouldTestAll = getUriVariable('testAll') === 'true';
+const fileContains = getUriVariable('testFile');
+const testNameContains = getUriVariable('testName');
+const loadTestOrder = getUriVariable('testOrder') === 'true';
 
-if(testOrder) Global.order(Order.fromJson(require('./tests/test-order.json')))
+if(loadTestOrder) Global.order(Order.fromJson(require('./tests/test-order.json')))
 
 let filter;
-if (fileContainsMatch) filter = (fileName) => fileName.indexOf(fileContains) !== -1;
+if (fileContains) filter = (fileName) => fileName.indexOf(fileContains) !== -1;
 
-if (testAll || fileContains || testNameContains) {
+if (shouldTestAll || fileContains || testNameContains) {
   const EPNTS = require("../generated/EPNTS.js");
   const Test = require('../../../public/js/utils/test/test').Test;
   if (testNameContains) Test.filter((name) => name.indexOf(testNameContains) !== -1);

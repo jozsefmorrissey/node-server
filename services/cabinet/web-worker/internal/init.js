@@ -43,7 +43,7 @@ function runTask(task, env) {
 }
 
 function runTasks(task, env) {
-  const payload = task.payload;
+  let payload = task.payload;
   if (payload.environment) {
     payload.environment.byId = RDTO(payload.environment.byId);
     env = payload.environment;

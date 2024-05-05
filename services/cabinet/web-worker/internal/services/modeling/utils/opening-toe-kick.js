@@ -47,8 +47,8 @@ class OpeningToeKickUtil {
       const biPoly = new BiPolygon(sideBiPolyArr[0], sideBiPolyArr[1]);
       const poly = biPoly.furthestOrder(openingCenter)[1];
       let front = Line3D.centerClosestTo(openingCenter, poly.lines()).polarize(targetCorner);
-      const withoutUp = poly.lines().filter(l => !l.equals(front));
-      let longBottom = Line3D.endpointClosestTo(targetCorner, withoutUp).polarize(targetCorner);
+      const withoutFront = poly.lines().filter(l => !l.equals(front));
+      let longBottom = Line3D.endpointClosestTo(targetCorner, withoutFront).polarize(targetCorner);
 
       let innerFront = Line3D.centerClosestTo(openingCenter, innerPoly.lines()).clone().polarize(targetCorner);
 

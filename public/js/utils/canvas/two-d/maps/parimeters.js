@@ -95,8 +95,6 @@ class Parimeters2d {
     this.largest = () => polys[polys.length - 1].copy();
     const findIndexFunc = (visited) => l => l[0].equals(visited) || l[1].equals(visited);
     const parimeterFinished = (parimeter) => {
-      if (parimeter[parimeter.length - 1] === undefined)
-        console.log('her');
       const madeItFullCircle = parimeter[0][0].equals(parimeter[parimeter.length - 1][1]);
       if (madeItFullCircle) {
         const poly = Polygon2d.fromLines(parimeter);

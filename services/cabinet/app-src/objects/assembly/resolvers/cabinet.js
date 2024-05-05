@@ -1,6 +1,6 @@
 
 const Resolver = require('../resolver');
-const openingReg = /^OP([0-9]*).((i|o|inner|outer)\.|)(c|n|d|center|normal|demension)\.(x|y|z|i|j|k)/;
+const openingReg = /^OP([0-9]*)(\.(i|o|inner|outer)|)\.(c|n|d|center|normal|demension)\.(x|y|z|i|j|k)/;
 
 class CabinetResolver extends Resolver {
   constructor(cabinet) {
@@ -11,7 +11,7 @@ class CabinetResolver extends Resolver {
       if (match === null || cabinet.openings.length === 0) return null;
       let index = Number.parseInt(match[1]) || 1;
       if (index > cabinet.openings.length) index = cabinet.openings.length;
-      const inOut = match[2];
+      const inOut = match[2] || 'i';
       const func = match[4];
       const dir = match[5];
       return {index, inOut, func, dir};

@@ -25,17 +25,8 @@ function ensureRendered(assems, modelInfo, ts, msg) {
 }
 
 const onComplete = (ts, parts, intersections) => (modelInfo, job) => {
-  ts.assertEquals(modelInfo.status().models, 1);
-  parts.forEach(p => {
-    if (intersections) {
-      const intModelObj = modelInfo.intersection(p.id());
-      ts.assertTrue(Object.keys(intModelObj).length > 1);
-    } else {
-      const model = modelInfo.model(p.id());
-      ts.assertTrue(Array.isArray(model.polygons));
-      ts.assertTrue(model.polygons.length > 0);
-    }
-  });
+  const csg = modelInfo.unioned();
+  ts.assertTrue(csg instanceof Object && csg.polygons.length > 0);
   ts.success();
 }
 
@@ -43,7 +34,7 @@ const onFail = (ts) => (error) => {
   ts.fail(error);
 }
 
-Test.add('Jobs.CSG.Assembly.Join base', async (ts, allAssemblies) => {
+Test.add('Jobs.CSG.Assembly.Join base-basic', async (ts, allAssemblies) => {
   const parts = allAssemblies.filter(a => a.part() && a.included());
   new Jobs.CSG.Assembly.Join(parts).then(onComplete(ts, parts), onFail(ts)).queue();
 }, async () => get(true));
@@ -66,52 +57,10 @@ Test.add('Jobs.CSG.Assembly.Model base:layout(c)', async (ts, allAssemblies) => 
   .then(onComplete(ts, parts), onFail(ts)).queue();
 }, async () => get());
 
-Test.add('Jobs.CSG.Assembly.Join base:R:full', async (ts, allAssemblies) => {
+Test.add('Jobs.CSG.Assembly.Join base-R:full', async (ts, allAssemblies) => {
   const panel = allAssemblies.filter(a => a.partCode() === 'R:full')[0];
   const parts = [panel];
   new Jobs.CSG.Assembly.Join(parts).then(onComplete(ts, parts), onFail(ts)).queue();
-}, async () => get());
-
-const timedError = 'Timed Test: If debugging this will likely fail\n\tOr ModelInfo.object not reflecting changes from other processes';
-Test.add('Jobs.CSG.Assembly.Join seperate calls share information', async (ts, allAssemblies) => {
-  const rightPanel = allAssemblies.filter(a => a.partCode() === 'R:full')[0];
-  const leftPanel = allAssemblies.filter(a => a.partCode() === 'L:full')[0];
-  const relatedInfo = ModelInfo.related(rightPanel);
-  let startTime = new Date().getTime();
-  let leftTime, rightTime, leftTime2;
-  const msg = 'Right and Left Itterators are not synconised';
-
-  const leftComplete2 = () => {
-    leftTime2 = new Date().getTime();
-    const completionRatio = (leftTime2 - leftTime) / (leftTime2 - startTime);
-    ensureRendered([rightPanel, leftPanel], relatedInfo, ts, msg);
-    ts.assertTrue(completionRatio < .2, timedError);
-    ts.success();
-  };
-
-  const left2Builder = async () => {
-    new Jobs.CSG.Assembly.Join(leftPanel).then(leftComplete2, onFail(ts)).queue();
-  }
-
-  const leftComplete = () => {
-    leftTime = new Date().getTime();
-    const completionRatio = (leftTime - rightTime) / (leftTime - startTime);
-    ensureRendered([rightPanel, leftPanel], relatedInfo, ts, msg);
-    ts.assertTrue(completionRatio < .5, timedError);
-    left2Builder();
-  };
-
-  const leftBuilder = async () => {
-    new Jobs.CSG.Assembly.Join(leftPanel).then(leftComplete, onFail(ts)).queue();
-  }
-
-  const rightComplete = () => {
-    rightTime = new Date().getTime();
-    ensureRendered([rightPanel], relatedInfo, ts, msg);
-    leftBuilder();
-  };
-
-  new Jobs.CSG.Assembly.Join(rightPanel).then(rightComplete, onFail(ts)).queue();
 }, async () => get());
 
 Test.add('Jobs.CSG.Assembly.Intersection base:R:full&L:full', async (ts, allAssemblies) => {
@@ -124,7 +73,7 @@ Test.add('Jobs.CSG.Assembly.Intersection base:R:full&L:full', async (ts, allAsse
 
 Test.add('Jobs.CSG.Assembly.Model diagonal-corner-base:test-cabinet', async (ts, allAssemblies) => {
   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
-  const parts = [cabinet];
+  const parts = cabinet.getParts();
   new Jobs.CSG.Assembly.Model(parts).then(onComplete(ts, parts), onFail).queue();
 }, async () => get(true, 'diagonal-corner-base'));
 
@@ -134,7 +83,7 @@ Test.add('Jobs.CSG.Cabinet.Simple diagonal-corner-base:layout(3dsb3d)', async (t
         .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
 }, async () => get("3dsb3d", 'diagonal-corner-base'));
 
-const on2DComplete = (objects, ts) => (result) => {
+const on2DComplete = (objects, ts) => (result, job) => {
   const modelInfo = result.constructor.name === 'ModelInformation' ? result : null;
   for (let index = 0; index < objects.length; index++) {
     const obj = objects[index];

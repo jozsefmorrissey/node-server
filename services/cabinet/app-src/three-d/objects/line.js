@@ -198,15 +198,7 @@ class Line3D {
     this.distance = (other, notSegment) => {
       if (other instanceof Line3D && other.isPoint()) return this.distance(other[0]);
       if (this.isPoint()) return other.distance(this[0]);
-      if (other instanceof Vertex3D) {
-        const perp = this.perpendicular(other);
-        if (notSegment) return perp.length();
-        const perpDist = this.distance(perp[0]);
-        if (Math.abs(perpDist) < tol) return perp.length();
-        const closest = perp.distance(this[0]) > perp.distance(this[1]) ? this[0] : this[1];
-        perp.startVertex = closest;
-        return perp.length();
-      }
+      if (other instanceof Vertex3D) return this.connect(other).length();
       if (notSegment) return this.connect(other).length();
       return this.connect.line.segment(other, true).length();
     }
@@ -460,7 +452,7 @@ Line3D.centerClosestTo = (vertex, list) => {
 
 Line3D.endpointClosestTo = (vertex, list) => {
   let closest;
-  for (let index = 1; index < list.length; index++) {
+  for (let index = 0; index < list.length; index++) {
     const line = list[index];
     const sdist = list[index].endVertex.distance(vertex);
     const edist = list[index].startVertex.distance(vertex);

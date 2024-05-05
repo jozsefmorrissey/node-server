@@ -4,10 +4,10 @@
       "file": "basement-wall",
       "description": "Storage Utility(UT) Cabinets For Basement",
       "designTime": "tbd",
-      "buildTime": "20hrs",
+      "buildTime": "22hrs",
       "finishedWith": "Roller And Paint Brush",
       "date": "Apr 03 2024",
-      "finishTime": "tbd",
+      "finishTime": "~20hrs",
       "notes": [
         "Frameless Storage Cabinets that attempted to minimize material Costs"
       ],
@@ -24,30 +24,4 @@
         {"solved": false, "text": "Framed Doors needs to be implemented, they would further reduce matirial costs"}
       ]
   }
-
-  ,
-  {
-      "name": "First Project",
-      "file": "basement-wall",
-      "description": "Storage Utility(UT) Cabinets For Basement",
-      "designTime": "tbd",
-      "buildTime": "20hrs",
-      "finishedWith": "Roller And Paint Brush",
-      "date": "Apr 03 2024",
-      "finishTime": "tbd",
-      "notes": [
-        "Frameless Storage Cabinets that attempted to minimize material Costs (Framed Doors needs to be implemented at some point)"
-      ],
-      "photos": [],
-      "videos": [],
-      "issues": [
-        {"solved": false, "text": "Male Joint Algorithm Needs Re-written to an automated format"},
-        {"solved": false, "text": "Material Sqft estimates are not accurate"},
-        {"solved": false, "text": "Tooling instructions not user friendly: <ul><li>Group Identical Parts</li><li>Simplify saw instructions and make consistant</li></ul>"},
-        {"solved": false, "text": "Documentation doesnt work in main application"},
-        {"solved": false, "text": "Layout auto position on walls/corner malfunctioning"},
-        {"solved": false, "text": "Center of objects does not appear to be completely accurate between 2D and 3D models"}
-      ]
-  }
-
 ]

@@ -674,24 +674,28 @@
         "code": "T",
         "dividerType": "frontAndBack",
 
-        "normalStyle": "manual",
-        "normals": [
-          [
-            "OP.n.i",
-            "OP.n.j",
-            "OP.n.k"
+        "normalInfo": {
+          "style": "manual",
+          "calc": 1,
+          "normals": [
+            [
+              "OP.n.i",
+              "OP.n.j",
+              "OP.n.k"
+            ],
+            [
+              "0",
+              "1",
+              "0"
+            ],
+            [
+              "0",
+              "1",
+              "0"
+            ],
+
           ],
-          [
-            "0",
-            "1",
-            "0"
-          ],
-          [
-            "0",
-            "0",
-            "1"
-          ]
-        ]
+        }
       },
       {
         "type": "Divider",

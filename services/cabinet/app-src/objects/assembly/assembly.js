@@ -93,7 +93,7 @@ class Assembly extends KeyValue {
 
 
 
-    const sme = new StringMathEvaluator({Math, maxHeight}, this.resolve);
+    const sme = new StringMathEvaluator({Math, maxHeight}, (expr) => this.resolve(expr));
     this.sme = () => sme;
 
     // KeyValue setup
@@ -275,9 +275,9 @@ class Assembly extends KeyValue {
       if (normObj === undefined) return;
       if (!normObj.x && !normObj.y && !normObj.z) return undefined;
       const calcNormObj = this.evalObject(normObj);
-      ensureVector(calcNormObj, 'x');
-      ensureVector(calcNormObj, 'y');
-      ensureVector(calcNormObj, 'z');
+      if (normObj.calc !== 0) ensureVector(calcNormObj, 'x');
+      if (normObj.calc !== 1) ensureVector(calcNormObj, 'y');
+      if (normObj.calc !== 2) ensureVector(calcNormObj, 'z');
       if (normObj.calc === 0) calcNormObj.x = calcNormObj.y.crossProduct(calcNormObj.z).unit();
       if (normObj.calc === 1) calcNormObj.y = calcNormObj.x.crossProduct(calcNormObj.z).unit();
       if (normObj.calc === 2) calcNormObj.z = calcNormObj.x.crossProduct(calcNormObj.y).unit();

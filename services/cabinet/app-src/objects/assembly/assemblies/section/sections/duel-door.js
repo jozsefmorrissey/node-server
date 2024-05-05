@@ -28,6 +28,17 @@ class DualDoorSection extends Assembly {
       rightDoor.setPulls([Handle.location.TOP_LEFT]);
     }
     this.addSubAssembly(rightDoor);
+    this.on.parentSet(p => {
+      const props = sectionProps();
+      const k = ['OP.i.n.i','OP.i.n.j','OP.i.n.k'];
+      const j = ['c.n.y.i','c.n.y.j','c.n.y.k'];
+      const normArr = [,j,k];
+      normArr.calc = 0;
+
+      rightDoor.normals(true, normArr);
+      leftDoor.normals(true, normArr);
+    });
+
   }
 }
 

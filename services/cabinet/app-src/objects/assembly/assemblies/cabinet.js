@@ -30,11 +30,16 @@ const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
 class Cabinet extends Assembly {
   constructor(partCode, partName, config) {
     super(partCode, 'Simple', config);
+    new CabinetResolver(this);
     // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
     Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick', 'dividerJoint');
-    new CabinetResolver(this);
+
+    // TODO: this is stupid id needs to be added to toJson however getter/setter should not change...
+    const idFunc = this.id;
     const id = this.id();
     Object.getSet(this, {id});
+    this.id = idFunc;
+
     const instance = this;
     let toeKickHeight = 4;
     this.includeJoints(false);
@@ -222,8 +227,9 @@ Cabinet.build = (type, group, config) => {
       subAssem.jointSetIndex(subAssemConfig.jointSetIndex);
       subAssem.includedSides(subAssemConfig.includedSides);
     }
-    if (subAssemConfig.normalStyle === 'manual') {
-      subAssem.normals(true, subAssemConfig.normals);
+    if (subAssemConfig.normalInfo && subAssemConfig.normalInfo.style === 'manual') {
+      subAssemConfig.normalInfo.normals.calc = subAssemConfig.normalInfo.calc;
+      subAssem.normals(true, subAssemConfig.normalInfo.normals);
     }
     subAssem.partCode(subAssemConfig.code);
     cabinet.addSubAssembly(subAssem);

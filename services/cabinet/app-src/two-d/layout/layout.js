@@ -409,11 +409,11 @@ class Layout2D extends Lookup {
       const origWalls = this.walls();
       const vertMap = {};
       const newWalls = json.walls.map(wall => Wall2D.fromJson(wall, this), vertMap);
-      const wallCompare = Array.compare(origWalls, newWalls, true);
+      const wallCompare = Array.diff(origWalls, newWalls, true);
 
       const origObjects = this.objects();
       const newObjects = Object.fromJson(json.objects);
-      const objCompare = Array.compare(origObjects, newObjects, true);
+      const objCompare = Array.diff(origObjects, newObjects, true);
 
       if (objCompare || wallCompare) {
         const detail = {objects: {added: [], removed: []}, walls: {added: [], removed: []}};

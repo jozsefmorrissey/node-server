@@ -161,7 +161,7 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
           o.c.y = ` - ${refPartCode}.d.y/2 + d.y/2 + 3*2.54/4`;
           o.c.z = ` + d.x/2 + 3*2.54/8`;
           o.d.z = `${refPartCode}.d.x - 3*2.54/4`;
-          includedSides = [false, false, true, false, false, true];
+          includedSides = [false, false, false, true, false, true];
           jointSetIndex = 0;
           break;
         case 'c_L':
@@ -170,7 +170,7 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
           o.c.z = ' + 3*2.54/16';
           o.c.y = ` - ${refPartCode}.d.y/2 + d.y/2 + 3*2.54/8`;
           o.c.x = ` + d.x/2 + 3*2.54/4`;
-          includedSides = [false, false, true, false, false, true];
+          includedSides = [false, false, false, true, false, true];
           jointSetIndex = 0;
           break;
         case 'c_R':
@@ -179,7 +179,7 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
           o.c.z = ' + 3*2.54/16';
           o.c.y = ` - ${refPartCode}.d.y/2 + d.y/2 + 3*2.54/8`;
           o.c.x = ` - d.x/2 - 3*2.54/4`;
-          includedSides = [false, false, true, false, false, true];
+          includedSides = [false, false, false, true, false, true];
           jointSetIndex = 0;
         }
 

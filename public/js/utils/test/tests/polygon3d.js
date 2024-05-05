@@ -239,6 +239,24 @@ Test.add('Polygon3D: overlaps(rotated)', (ts) => {
   ts.success();
 });
 
+Test.add('Polygon3D irregular.concave.fill', ts => {
+  const star = new Polygon3D([[0,2,0],[.5,1,0],[2,1,0],[.5,.5,0],[1,-.5,0],[0,0,0],[-1,-.5,0],[-.5,.5,0],[-2,1,0],[-.5,1,0]]);
+  star.concaveLocations.fill();
+  ts.assertTrue(star.equals(new Polygon3D([[0,2,0], [2,1,0], [1,-0.5,0], [-1,-0.5,0], [-2,-1,0]])));
+  ts.success();
+});
+
+Test.add('Polygon3D crissCrossLocations', ts => {
+  const crissCross = new Polygon3D([[-1,1,0],[1,3,0],[-1,3,0],[1,1,0],[2,1,0],[2,-1,0],[1,-1,0],[-1,-2,0],[1,-2,0],[-1,-1,0],[-2,1,0],[-2,-1,0]]);
+  console.log(crissCross.irregular.crissCross.locations());
+  console.log(crissCross.lines().map(v => v.toDrawString()).join('\n'));
+  crissCross.irregular.crissCross.fill();
+  console.log(crissCross.lines().map(v => v.toDrawString()).join('\n'));
+  ts.success();
+});
+
+
+
 // Test.add('async not returning', ts => {
 //   let simplified = Polygon3D.merge(complexPolyList);
 //   console.log(Polygon3D.toDrawString(simplified));
