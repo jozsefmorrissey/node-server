@@ -207,15 +207,25 @@ class BiPolygon {
       return CSG.fromPolygons(polygonSets);
     }
 
+    const counterClockWiseSide = (index, len) => {
+      const index2 = (index + 1) % len;
+      const backIndex = (len - index - 1) % len;
+      const backIndex2 = (2*len - index - 2) % len;
+      const vertices = [face1[index2], face1[index], face2[backIndex], face2[backIndex2]];
+      return new Polygon3D(vertices);
+    }
+    const clockWiseSide = (index, len) => {
+      const index2 = (index + 1) % len;
+      const backIndex = (len - index - 1) % len;
+      const backIndex2 = (2*len - index - 2) % len;
+      const vertices = [face2[backIndex], face2[backIndex2], face1[index2], face1[index]];
+      return new Polygon3D(vertices);
+    }
     this.sides = () => {
       const sides = [];
       const len = face1.length;
       for (let index = 0; index < len; index++) {
-        const index2 = (index + 1) % len;
-        const backIndex = (len - index - 1) % len;
-        const backIndex2 = (2*len - index - 2) % len;
-        const vertices = [face2[backIndex], face2[backIndex2], face1[index2], face1[index]];
-        sides.push(new Polygon3D(vertices));
+        sides.push((index >= len/2 ? clockWiseSide : counterClockWiseSide)(index, len));
       }
       return sides;
     }

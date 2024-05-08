@@ -860,6 +860,7 @@ class Polygon3D {
       return `${str.substring(4)} normal: ${this.normal()}`;
     }
 
+    const vertexColor = (i) => i===0?'red':(i===1?'blue':(i===2?'green':i===3?'black':(String.nextColor())));
     this.toDrawString = (color, includeNormal) => {
       const colorString = (typeof color) === 'string' ? color : 'blue';
       let str = '';
@@ -870,7 +871,10 @@ class Polygon3D {
       const start = this.center();
       const end = new Vertex3D(this.normal().scale(10).add(start));
       const normalStr = `[${start},${end})`;
-      return `${colorString}[${str.substring(1)}]\n${colorString}${normalStr}`;
+
+      const vertexStr = this.vertices().map((v,i) => `\t${vertexColor(i)}${v.toString()}`).join('\n');
+
+      return `${colorString}[${str.substring(1)}]\n${colorString}${normalStr}\n${vertexStr}`;
 
     }
 

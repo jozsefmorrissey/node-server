@@ -42,9 +42,6 @@ const offsetZpolyCutter = (femalePolyInfo, index, dist1, dist2) => () => {
 
 apply.Dado = (assem, femalePolyInfo, frontBackSet) => {
   const femalePolyObj = femalePolyInfo();
-  if (assem.partCode === 'dv:full') {
-    console.log('booya');
-  }
   extendFBSetToPoly(femalePolyObj.z[1], frontBackSet);
   const cookie = [cutterFurthestZPoly(femalePolyInfo)];
   const joint = [offsetZpolyCutter(femalePolyInfo, 1, 10, -.9525)];

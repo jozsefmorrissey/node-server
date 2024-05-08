@@ -62,8 +62,6 @@ class DividerUtil {
     this.Front = () => buildPanelPoly(DividerUtil.positions.FRONT);
     this.Right = () => buildPanelPoly(DividerUtil.positions.RIGHT);
     this.Left = () => buildPanelPoly(DividerUtil.positions.LEFT);
-    this.Front.Cutter = getCutter('f', this.front);
-    this.Back.Cutter = getCutter('b', this.back);
 
     let type = divider.type;
     let cutter;
@@ -115,7 +113,13 @@ class DividerUtil {
       const c = sides[0].center();
       const centerPlusNorm = c.translate(sides[0].normal(), true);
       const multiplier = centerPlusNorm.distance(sc) > c.distance(sc) ? -4 : 4;
-      return BiPolygon.fromPolygon(sides[0], multiplier * 2.54, 0);
+
+      const bp = BiPolygon.fromPolygon(sides[0], multiplier * 2.54, 0);
+      // const polys = Polygon3D.fromCSG(bp.model());
+      // console.log(polys.map(p => p.toDrawString(null, true)).join('\n'));
+      // bp.sides();
+
+      return bp;
     }
   }
 }
