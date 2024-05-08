@@ -147,6 +147,9 @@ function parse(newLines, sc) {
   })
 }
 
+du.on.match('change', 'input[name="line-disp-type-2d"]', () => parse(lines, scale));
+
+
 const clickStack = [];
 const lastClicked = () => clickStack[clickStack.length - 1];
 
