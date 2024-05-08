@@ -936,6 +936,15 @@ CSG.Vertex.prototype = {
 CSG.Plane = function(normal, w) {
   this.normal = normal;
   this.w = w;
+  this.setColor = function(r, g, b) {
+    if (colors[r]) r = colors[r];
+    if (Array.isArray(r)) {
+      g = r[1];
+      b = r[2];
+      r = r[0];
+    }
+    this.shared = [r/255, g/255, b/255];
+  }
 };
 
 // `CSG.Plane.EPSILON` is the tolerance used by `splitPolygon()` to decide if a
@@ -943,6 +952,10 @@ CSG.Plane = function(normal, w) {
 CSG.Plane.EPSILON = 1e-5;//1e-3;
 
 CSG.Plane.fromPoints = function(a, b, c) {
+  if (Array.isArray(a)) (c = a[2]) & (b = a[1]) & (a = a[0]);
+  a = new CSG.Vector(a);
+  b = new CSG.Vector(b);
+  c = new CSG.Vector(c);
   var n = b.minus(a).cross(c.minus(a)).unit();
   return new CSG.Plane(n, n.dot(a));
 };

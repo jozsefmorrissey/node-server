@@ -72,7 +72,7 @@ const numberRegStr = '\\s*((-|)[0-9]{1,}(|\\.[0-9]*)|(-|)(|\\.[0-9]*))\\s*';
 const pointRegStr = `\\s*${colorRegStr}\\(${numberRegStr},${numberRegStr},${numberRegStr}\\)\\s*`;
 const lineRegStr = `${colorRegStr}((\\[|\\()(${pointRegStr}),(${pointRegStr}))((\\]|\\)))`;
 const polyRegStr = `${colorRegStr}\\[((${pointRegStr},){2,}${pointRegStr})\\]`;
-const planeRegStr = `${colorRegStr}\\(${pointRegStr}\\s*,\\s*${pointRegStr},\\s*${pointRegStr}\\)`;
+const planeRegStr = `${colorRegStr}\\(((${pointRegStr},){2,}${pointRegStr})\\)`;
 
 let pointReg = new RegExp(pointRegStr);
 let pointsReg = new RegExp(pointRegStr, 'g');
@@ -118,7 +118,11 @@ polyReg.model = (match) => {
 };
 
 planeReg.model = (match) => {
-  console.log('toBeImplemented');
+  const color = match[1].trim();
+  const verts = match[2].match(pointsReg).map(str => pointReg.Array(str));
+  const plane = new CSG.Plane.fromPoints(verts);
+  plane.setColor(color);
+  return plane;
 };
 
 
@@ -176,6 +180,5 @@ module.exports = {
   parse,
   initialValue: '// Point\nred(5,4,3)\n\n' +
 '// Line\ngreen[(10,20,30),(60,70,80)]\nblue[(20,30,40),(80,70,60))\n((10,10,10),(40,40,40)]//Black\nyellow((60,10,20),(20,10,60))\n\n' +
-'//Polygon\npurple[(5,5,0),(0,10,0),(5,15,0),green(15,15,0),(20,10,0),(15,5,0)]\n\n' +
-'//Plane\naqua((1,5,0),(0,10,0),(5,25,0))'
+'//Polygon\npurple[(5,5,0),(0,10,0),(5,15,0),green(15,15,0),(20,10,0),(15,5,0)]\n\n'
 }
