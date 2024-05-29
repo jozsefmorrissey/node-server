@@ -7,6 +7,8 @@ const Vector3D = require('../../../app-src/three-d/objects/vector.js');
 const BiPolygon = require('../../../app-src/three-d/objects/bi-polygon.js');
 const Utils = require('./modeling/utils/utils');
 const MaleJointApplicators = require('./modeling/male-joint-applicators');
+const CabinetUtil = require('./modeling/utils/cabinet');
+const MFC = require('./modeling/modeling-function-configuration.js');
 
 const ensureCsg = (obj) => !(obj instanceof Object) || obj instanceof CSG ? obj : CSG.fromPolygons(obj.polygons, true);
 function determineMales(assem, env) {
@@ -45,7 +47,7 @@ function removeJonintMaterial(map, assem, env, model, intersections) {
 }
 
 const femalePolyInformation = (femaleId, fbCenter, env) => () => {
-  let femaleModel  = CSG.fromPolygons(env.modelInfo.model[femaleId].polygons, true);
+  let femaleModel  = CSG.fromPolygons(env.modelInfo.extended[femaleId].polygons, true);
   const polys = Polygon3D.fromCSG(femaleModel);
   const assem = env.byId[femaleId];
   const norms = Utils.normals(assem, env);
@@ -60,27 +62,27 @@ const femalePolyInformation = (femaleId, fbCenter, env) => () => {
   return null;
 }
 
-const getFemalePolyInfo = (joint, env, frontBackSet, buildCenter) => {
+const getFemalePolyInfo = (joint, env, frontBackSet, modelCenter) => {
   const females = env.jointMap[joint.id].female;
   if (females.length > 1) {
     let one = 2;
   }
   const femalePolyInfo = [];
-  const fbCenter = buildCenter;//Vertex3D.center(frontBackSet.map(p => p.center()));
+  const fbCenter = modelCenter;//Vertex3D.center(frontBackSet.map(p => p.center()));
   for (let fi = 0; females && fi < females.length; fi++) {
       femalePolyInfo.push(femalePolyInformation(females[fi], fbCenter, env));
   }
   return femalePolyInfo.length === 0 ? null : femalePolyInfo;
 }
 
-function applyMaleJointApplicator(joint, frontBackSet, assem, env, buildCenter) {
+function applyMaleJointApplicator(joint, frontBackSet, assem, env, modelCenter) {
   const maleJointApplicator = MaleJointApplicators(joint);
   if (maleJointApplicator === undefined) return;
-  const femalePolyInfos = getFemalePolyInfo(joint, env, frontBackSet, buildCenter);
+  const femalePolyInfos = getFemalePolyInfo(joint, env, frontBackSet, modelCenter);
   if (femalePolyInfos === null) return;
   const cutters = {cookie: [], joint: []};
   for (let index = 0; index < femalePolyInfos.length; index ++) {
-    const cutObj = maleJointApplicator(assem, femalePolyInfos[index], frontBackSet);
+    const cutObj = maleJointApplicator(assem, joint, femalePolyInfos[index], frontBackSet);
     if (cutObj) {
       cutters.cookie.concatInPlace(cutObj.cookie);
       cutters.joint.concatInPlace(cutObj.joint);
@@ -91,7 +93,7 @@ function applyMaleJointApplicator(joint, frontBackSet, assem, env, buildCenter) 
 
 function getExtendedModel(assem, joints, env) {
   const id = assem.id;
-  let model = env.modelInfo.model[id];
+  let model = env.modelInfo.extended[id];
   if (model === undefined) return;
   const polys = Polygon3D.fromCSG(model.polygons);
   const normals = Utils.normals(assem, env);
@@ -107,10 +109,10 @@ function getExtendedModel(assem, joints, env) {
   try {
     const cropPoly = new BiPolygon(front.resize(big, big, true), back.resize(big, big, true));
     const cutters = {cookie: [], joint: []};
-    const buildCenter = assem.find.root().buildCenter.object();
+    const modelCenter = new Vertex3D(env.modelInfo.model[assem.id].center());
     for (let ji = 0; ji < joints.length; ji++) {
       try {
-        const cutObj = applyMaleJointApplicator(joints[ji], frontBackSet, assem, env, buildCenter);
+        const cutObj = applyMaleJointApplicator(joints[ji], frontBackSet, assem, env, modelCenter);
         if (cutObj) {
           cutters.cookie.concatInPlace(cutObj.cookie);
           cutters.joint.concatInPlace(cutObj.joint);
@@ -121,8 +123,9 @@ function getExtendedModel(assem, joints, env) {
     }
     model = new BiPolygon(frontBackSet[0], frontBackSet[1]).model();
     cutters.cookie.forEach(cutter => model = model.subtract(cutter()));
-    env.modelInfo.model[id] = model;
-    return cutters.joint.map(cf => () => env.modelInfo.model[id] = env.modelInfo.model[id].subtract(cf()));
+    env.modelInfo.extended[id] = model;
+    return cutters.joint.map(cf => () =>
+      env.modelInfo.extended[id] = env.modelInfo.extended[id].subtract(cf()));
   } catch (e) {
     console.warn(e);
     if (goDownTheRabbitHole) getExtendedModel(assem, joints, env);
@@ -153,16 +156,37 @@ function applyMaleJointExtensions(payload, environment) {
     jointCutters.forEach(cutter => cutter());
 }
 
+function exploadedTranslation(assemblyIds, env) {
+  const explosionFactor = env.explosionFactor;
+  if (!explosionFactor) return;
+  for (let index = 0; index < assemblyIds.length; index++) {
+    const id = assemblyIds[index];
+    const assem = env.byId[id];
+    const cabUtil = CabinetUtil.instance(assem, env);
+    const buildCenter = cabUtil.partCenter();
+    const joined = env.modelInfo.joined[assem.id];
+    if (joined) {
+      const joinedCenter = new Vertex3D(joined.center());
+      const centerLine = new Line3D(buildCenter, joinedCenter);
+      centerLine.length(centerLine.length() * explosionFactor, true);
+      joined.center(centerLine[1]);
+    }
+  }
+}
+
 function Apply(payload, environment, taskId, intersections) {
+  let env = environment;
+  // TODO: hacky fix - an extended model should only be crated if model is extended.
+  Object.keys(env.modelInfo.model)
+    .forEach(id => env.modelInfo.model[id] && (env.modelInfo.extended[id] = env.modelInfo.model[id].clone()));
   applyMaleJointExtensions(payload, environment);
   const assemblyIds = payload.assemblies;
-  let env = environment;
   let map = {intersection: env.modelInfo.intersection, joined: env.modelInfo.joined};
   let proccessedIndex = 0;
   for (let index = 0; index < assemblyIds.length; index++) {
     const id = assemblyIds[index];
     const assem = environment.byId[id];
-    let model = env.modelInfo.model[id];
+    let model = env.modelInfo.extended[id];
     if (model && assem.part && assem.included) {
       model = CSG.fromPolygons(model.polygons, true);
       const joints = env.jointMap.female[id] || [];
@@ -170,7 +194,11 @@ function Apply(payload, environment, taskId, intersections) {
     } else if (map.joined[id] === undefined) {
       map.joined[id] = model;
     }
+    const mfc = MFC(assem);
+    if (mfc.joined)
+      env.modelInfo.joined[id] = mfc.joined(assem, environment);
   }
+  exploadedTranslation(assemblyIds, env);
 }
 
 module.exports = Apply;

@@ -87,7 +87,7 @@ module.exports = () => {
     name: 'layout',
     inline: true,
     class: 'center',
-    value: '3d',
+    value: '',
     clearOnDblClick: true,
     optional: true,
     list: [''].concat(CabinetLayouts.list())
@@ -119,12 +119,13 @@ module.exports = () => {
       const type = objConcat(values.CabinetNode, 'type')[0];
       values.CabinetNode.type = type.split('-').reverse().join('-');
 
-      // inputTree.payload().inputArray[1].setValue('', true);
-      // inputTree.children()[0].payload().inputArray[0].setValue('', true)
+      // inputTree.payload().inputArray[1].setValue('', false);
+      // inputTree.children()[0].payload().inputArray[0].setValue('', false)
     }
   });
   const configKeys = Object.keys(Cabinets);
   typeTree(configKeys, inputTree, cabinetNode);
+  inputTree.root().children()[0].children()[0].inputArray()[0].setValue('corner')
 
   return inputTree;
 };

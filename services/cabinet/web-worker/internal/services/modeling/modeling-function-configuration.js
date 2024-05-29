@@ -302,11 +302,13 @@ to.Panel = {
     }
   },
   Front: {
-    biPolygon: (rMdto, environment) =>
-      Divider.instance(rMdto, environment).Front()
+    biPolygon: (rMdto, environment) => Divider.instance(rMdto, environment).Full(),
+    joined: (rMdto, env) =>
+      Divider.instance(rMdto, env).Front(rMdto, env)
   },
   Back: {
-    biPolygon: (rMdto, environment) => Divider.instance(rMdto, environment).Back()
+    biPolygon: (rMdto, environment) => Divider.instance(rMdto, environment).Full(),
+    joined: (rMdto, env) => Divider.instance(rMdto, env).Back(rMdto, env)
   }
 },
 

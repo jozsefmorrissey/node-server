@@ -2,11 +2,22 @@ const $t = require('../../../../../../public/js/utils/$t.js');
 const du = require('../../../../../../public/js/utils/dom-utils.js');
 const Lookup = require('../../../../../../public/js/utils/object/lookup.js');
 const Handle = require('../../../objects/assembly/assemblies/hardware/pull.js');
+const MeasurementInput = require('../../../../../../public/js/utils/input/styles/measurement.js');
+const Measurement = require('../../../../../../public/js/utils/measurement.js');
 
 const template = new $t('sections/helpers/pulls');
 
-const render = (hasPulls) => {
-  return template.render({hasPulls});
+const sizeInputHtmlFunc = (hasPulls) => (index) => {
+  const value = new Measurement(hasPulls.pull(index).centerToCenter()).display();
+  const units = [Measurement.units()[1], Measurement.units()[2]];
+  const unit = units[0];
+  const label = 'c2c';
+  return new MeasurementInput({value, unit, units, name: label, label}).html();
+}
+
+const render = (hasPulls, prefix) => {
+  const sizeInputHtml = sizeInputHtmlFunc(hasPulls);
+  return template.render({hasPulls, sizeInputHtml, prefix});
 };
 
 du.on.match('click', '.pulls-mod-cnt .add-pull', (elem) => {
@@ -21,6 +32,15 @@ du.on.match('change', '.pulls-mod-cnt [name="location"]', (elem) => {
   const hasPulls = Lookup.get(id);
   const index = du.find.up.attribute('index', elem);
   hasPulls.pulls()[index].location(Handle.location[elem.value]);
+});
+
+du.on.match('change', '.pulls-mod-cnt [name="c2c"]', (elem) => {
+  const input = MeasurementInput.get(elem.id);
+  const id = du.find.up.attribute('has-pulls-id', elem);
+  const hasPulls = Lookup.get(id);
+  const index = du.find.up.attribute('index', elem);
+  hasPulls.pulls()[index].centerToCenter(input.measurement().value());
+  console.log(input);
 });
 
 

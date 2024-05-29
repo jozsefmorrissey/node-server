@@ -13,7 +13,8 @@ class Handle extends Assembly {
     let instance;
     location ||= Handle.location.CENTER;
     super('p', 'Handle');
-    Object.getSet(this, {location});
+    this.sliceAtOpening(false);
+    Object.getSet(this, {location, centerToCenter: 9.6});
     this.partName = () =>
       `${this.parentAssembly().partName()}.Pull.${this.location().position}`;
     this.partCode = () => partCode;
@@ -39,7 +40,6 @@ class Handle extends Assembly {
     }
 
     this.projection = () => 2.54;
-    this.centerToCenter = () => 9.6;
   }
 }
 Handle.location = {};

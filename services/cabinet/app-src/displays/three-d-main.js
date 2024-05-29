@@ -143,14 +143,23 @@ function updateController() {
   if (cabinet === undefined) return;
   const controller = du.id('model-controller');
   const grouping = groupParts(cabinet);
-  controller.innerHTML = modelContTemplate.render({groupingType, grouping});
+  const explosionFactor = Canvas.explosionFactor();
+  const dispExplosionFactor = explosionFactor ? Math.floor((explosionFactor-1) * 10) : 0;
+  controller.innerHTML = modelContTemplate.render({groupingType, grouping, dispExplosionFactor});
   controller.hidden = false;
 }
 
-du.on.match('change', '.model-controller-cnt input', (elem) => {
+Global.onChange.cabinet(updateController);
+du.on.match('change', '.model-controller-cnt input[type="radio"]', (elem) => {
   groupingType = elem.value;
   updateController();
 });
+
+du.on.match('change', '.model-controller-cnt [name="explosionFactor"]', (elem) => {
+  const factor = 1 + Number.parseInt(elem.value)/10;
+  Canvas.explosionFactor(factor);
+  Canvas.render.lastCall();
+})
 
 Canvas.on.switch((id) => {
   updateController();

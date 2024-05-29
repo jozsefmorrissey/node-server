@@ -1,7 +1,7 @@
 
-const Joint = require('../joint.js');
+const Dado = require('../joint.js');
 
-class Dado extends Joint {
+class Shelve extends Joint {
   constructor(dependsSelector, dependentSelector, condition, locationId) {
     super(dependsSelector, dependentSelector, condition, locationId);
   }

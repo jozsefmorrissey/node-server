@@ -17,8 +17,9 @@ function regexToObject (str, reg) {
 }
 
 let units = [
-  'Metric',
-  'Imperial (US)'
+  'cm',
+  'inch',
+  'mm'
 ]
 let unit = units[1];
 
@@ -32,6 +33,7 @@ let areaUnits = [
 
 const convertMetricToUs = (standardDecimal) =>  standardDecimal / 2.54;
 const convertUsToMetric = (standardDecimal) => value = standardDecimal * 2.54;
+const convertmmToMetric = (standardDecimal) => value = standardDecimal / 10;
 
 const determineUnit = (notMetric) => {
   if ((typeof notMetric === 'string')) {
@@ -49,6 +51,8 @@ function standardize(ambiguousDecimal, notMetric) {
       return ambiguousDecimal;
     case units[1]:
       return convertUsToMetric(ambiguousDecimal);
+    case units[2]:
+      return convertmmToMetric(ambiguousDecimal);
     default:
       throw new Error('This should not happen, Measurement.unit should be the gate keeper that prevents invalid units from being set');
   }
@@ -135,10 +139,11 @@ class Measurement {
     }
     this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
 
-    this.display = (accuracy) => {
-      switch (unit) {
-        case units[0]: return new String(this.decimal(10));
+    this.display = (accuracy, dispUnit) => {
+      switch (dispUnit || unit) {
+        case units[0]: return new String(Math.floor(this.decimal(.1)*10)/10);
         case units[1]: return this.standardUS(accuracy);
+        case units[2]: return Math.floor(this.decimal(.001)*100)/10;
         default:
             return this.standardUS(accuracy);
       }

@@ -129,9 +129,10 @@ class Polygon3D {
       if (this.isWithin(planeInter)) return new Line3D(planeInter, vert);
       const connectionLines = [];
       const lines = this.lines();
-      lines.forEach(l => connectionLines.push(l.connect(vert)));
+      lines.forEach(l =>
+        connectionLines.push(l.connect(vert, true)));
       connectionLines.sortByAttr('length');
-      return connectionLines[connectionLines.length - 1];
+      return connectionLines[0];
     }
 
     this.valid = () => {
@@ -847,7 +848,10 @@ class Polygon3D {
       const planeIntersection = this.toPlane().intersection.line(line);
       if (!planeIntersection) return null;
       const ortho = this.viewFromVector(line.vector());
-      const interView = planeIntersection.viewFromVector(line.vector())[0];
+      const interView = planeIntersection.viewFromVector(line.vector());
+      if (!(interView instanceof Vertex3D)) {
+        console.warn('interview was being treated as a line not sure why so i canged it to a vertex...');
+      }
       if (ortho.isWithin2d(interView, exclusive)) return planeIntersection;
       return null;
     }

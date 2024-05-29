@@ -25,7 +25,7 @@
   "Hinge": [],
   "Door": ["inElivation"],
   "HasPull": [],
-  "Divider": ["maxWidth", "panelThickness", "frameThickness", "type", "scribe"],
+  "Divider": ["maxWidth", "panelThickness", "frameThickness", "type", "scribe", "partialWidth"],
   "OpeningToeKick": ["leftCornerCutter.id", "rightCornerCutter.id", "toKickPanel.id",
       "toeKickCutter.id", "opening.id", "autoToeKick.id"],
   "AutoToekick": ["leftEndStyle", "rightEndStyle", "leftShow", "rightShow", "overlayRight", "overlayLeft"],
@@ -42,10 +42,10 @@
   "CutterPoly": ["poly"],
   "ControlableAbyss": [],
   "CabinetOpeningCorrdinates": ["id", "coordinates", "partCode", "locationCode",
-        "right.id", "left.id", "top.id", "bottom.id", "cutter.id"],
+        "right.id", "left.id", "top.id", "bottom.id", "cutter.id", "parentAssembly.id"],
   "Vector3D": ["i", "j", "k"],
   "Joint": ["id", "maleOffset", "femaleOffset", "locationId", "priority",
-            "demensionAxis", "centerAxis", "fullLength", "descriptor"],
+            "fullLength", "descriptor"],
   "Property": ["value"],
   "ModelInformation": ["environment"]
 }

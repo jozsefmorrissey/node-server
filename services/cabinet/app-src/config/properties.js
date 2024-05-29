@@ -35,7 +35,7 @@ add('Frame', [Defs.fw,Defs.ft]);
 add('Handle', [Defs.c2c,Defs.proj]);
 add('Hinge', [Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol]);
 add('Opening', []);
-add('Divider', [Defs.dpt,Defs.dft,Defs.sc]);
+add('Divider', [Defs.dpt,Defs.dft,Defs.dpw,Defs.sc]);
 
 
 function definitionsRequired(group) {

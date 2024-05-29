@@ -18,6 +18,7 @@ class WebWorkerDeligator {
       if (taskObj) {
         const {task, worker, primary} = taskObj;
         if (data.result instanceof Error) {
+          console.error(data.result);
           task.error(data.result);
         } else if (data.finished) {
           if (task.completeOnFinish) task.status(TASK_STATUS.SUCCESS);

@@ -1325,6 +1325,22 @@ Function.safeStdLibAddition(Array, 'idObject',   function  (idAttr) {
   return obj;
 });
 
+const lastCallDelay = 1000;
+const lastCallers = {};
+function lastCall(delayOptional, ...args) {
+  const caller = lastCall.caller;
+  let delay = delayOptional;
+  if (!Number.isFinite(delay) || delay > 60000) delay = lastCallDelay;
+  else args = [delayOptional].concat(args)
+  const id = String.random();
+  lastCallers[caller] = id;
+  setTimeout(() => {
+    if (id === lastCallers[caller]) {
+      this(...arguments);
+    }
+  }, delay);
+}
+
 const defaultInterval = 1000;
 const lastTimeStamps = {};
 function intervalFunction() {
@@ -1341,6 +1357,7 @@ function intervalFunction() {
   lastTimeStamps[caller] = thisTime;
 }
 Function.safeStdLibAddition(Function, 'subtle',   intervalFunction);
+Function.safeStdLibAddition(Function, 'lastCall',   lastCall);
 
 Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
   if (isRegex !== true) {

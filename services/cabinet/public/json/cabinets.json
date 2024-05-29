@@ -1,4 +1,196 @@
 {
+  "base": {
+    "_TYPE": "CabinetTemplate",
+    "ID_ATTRIBUTE": "id",
+    "type": "base",
+    "values": [
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - pt34 * 2",
+        "id": "itqsm1j"
+      },
+      {
+        "key": "innerWidthCenter",
+        "eqn": "innerWidth + pt34",
+        "id": "pwaarfr"
+      }
+    ],
+    "subassemblies": [
+      {
+        "name": "right",
+        "type": "Divider",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "R.l / 2",
+          "(w / -2)"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "id": "mcf6dft"
+      },
+      {
+        "name": "left",
+        "type": "Divider",
+        "code": "L",
+        "center": [
+          "(L.t / 2)",
+          "L.l / 2",
+          " (w/-2)"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "id": "r1xpfd9"
+      },
+      {
+        "name": "back",
+        "type": "Panel",
+        "code": "BACK",
+        "center": [
+          " w / 2 + R.t",
+          "(BACK.h / 2) + tkh",
+          " -1*(c.t - (t / 2))"
+        ],
+        "demensions": [
+          "innerWidth",
+          "c.l - tkh",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          "0"
+        ],
+        "id": "0hvikg4"
+      },
+      {
+        "name": "bottom",
+        "type": "Divider",
+        "code": "B",
+        "center": [
+          "c.w / 2",
+          "tkh + (t/2)",
+          "w / -2"
+        ],
+        "demensions": [
+          "c.t - BACK.t",
+          "innerWidth",
+          "pt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "id": "vho2lw6"
+      },
+      {
+        "name": "top",
+        "type": "Divider",
+        "code": "T",
+        "center": [
+          "c.w / 2",
+          "c.h - pt34/2",
+          "(w / -2)"
+        ],
+        "demensions": [
+          "(c.t - BACK.t)",
+          "innerWidth",
+          "pt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "dividerType": "frontAndBack"
+      }
+    ],
+    "joints": [
+      {
+        "_TYPE": "Dado",
+        "maleOffset": 0.9525,
+        "femaleOffset": 0,
+        "dependsSelector": "T",
+        "dependentSelector": "R"
+      },
+      {
+        "_TYPE": "Dado",
+        "maleOffset": 0.9525,
+        "femaleOffset": 0,
+        "dependsSelector": "T",
+        "dependentSelector": "L"
+      },
+      {
+        "_TYPE": "Dado",
+        "maleOffset": "0.9525",
+        "femaleOffset": 0,
+        "dependsSelector": "BACK",
+        "dependentSelector": "R",
+                "fullLength": true
+      },
+      {
+        "_TYPE": "Dado",
+        "maleOffset": "0.9525",
+        "femaleOffset": 0,
+        "dependsSelector": "BACK",
+        "dependentSelector": "L",
+                "fullLength": true
+      },
+      {
+        "_TYPE": "Dado",
+        "maleOffset": 0.9525,
+        "femaleOffset": 0,
+        "dependsSelector": "B",
+        "dependentSelector": "R"
+      },
+      {
+        "_TYPE": "Dado",
+        "maleOffset": 0.9525,
+        "femaleOffset": 0,
+        "dependsSelector": "B",
+        "dependentSelector": "L"
+      }
+    ],
+    "dividerJoint": {
+      "_TYPE": "Dado",
+      "maleOffset": 0.635,
+      "femaleOffset": 0
+    },
+    "shape": "square",
+    "width": 45.72,
+    "height": "baseh",
+    "thickness": "based",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "id": "dle5hwy"
+      }
+    ],
+    "autoToeKick": true,
+    "_FORCE_FROM_JSON": true
+  },
   "blind-corner-ut": {
   "_TYPE": "CabinetTemplate",
 
@@ -194,9 +386,7 @@
       "dependentSelector": "L",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -207,9 +397,7 @@
       "dependentSelector": "R",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -220,9 +408,7 @@
       "dependentSelector": "L",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -233,9 +419,7 @@
       "dependentSelector": "R",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -246,9 +430,7 @@
       "dependentSelector": "L",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -259,9 +441,7 @@
       "dependentSelector": "R",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -272,9 +452,7 @@
       "dependentSelector": "L",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -285,9 +463,7 @@
       "dependentSelector": "R",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -298,9 +474,7 @@
       "dependentSelector": "B",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "x",
-      "centerAxis": "+y",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     }
   ],
@@ -310,8 +484,6 @@
     "ID_ATTRIBUTE": "id",
     "maleOffset": 0.635,
     "femaleOffset": 0,
-    "demensionAxis": "",
-    "centerAxis": "",
     "fullLength": false,
     "priority": 0
   },
@@ -692,9 +864,8 @@
               "0",
               "1",
               "0"
-            ],
-
-          ],
+            ]
+          ]
         }
       },
       {
@@ -726,8 +897,6 @@
         "dependentSelector": "B",
         "maleOffset": 0,
         "femaleOffset": 0,
-        "demensionAxis": "",
-        "centerAxis": "",
         "fullLength": false,
         "priority": 0
       },
@@ -737,8 +906,6 @@
         "dependentSelector": "pbl",
         "maleOffset": 0,
         "femaleOffset": 0,
-        "demensionAxis": "",
-        "centerAxis": "",
         "fullLength": false,
         "priority": 0
       },
@@ -748,8 +915,6 @@
         "dependentSelector": "pbr",
         "maleOffset": 0,
         "femaleOffset": 0,
-        "demensionAxis": "",
-        "centerAxis": "",
         "fullLength": false,
         "priority": 0
       },
@@ -759,9 +924,7 @@
         "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "-z",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -770,9 +933,7 @@
         "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "femaleOffset": 0,
-        "demensionAxis": "x",
-        "centerAxis": "-x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -781,9 +942,7 @@
         "dependentSelector": "pbr",
         "maleOffset": "pbr.t/2",
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "+z",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -792,9 +951,7 @@
         "dependentSelector": "pbl",
         "maleOffset": "pbl.t/2",
         "femaleOffset": 0,
-        "demensionAxis": "x",
-        "centerAxis": "+x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -803,9 +960,7 @@
         "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "-z",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -814,9 +969,7 @@
         "dependentSelector": "R",
         "maleOffset": "R.t/2",
         "femaleOffset": 0,
-        "demensionAxis": "x",
-        "centerAxis": "-x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -825,9 +978,7 @@
         "dependentSelector": "pbr",
         "maleOffset": "pbr.t/2",
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "+z",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -836,9 +987,7 @@
         "dependentSelector": "pbl",
         "maleOffset": "pbl.t/2",
         "femaleOffset": 0,
-        "demensionAxis": "x",
-        "centerAxis": "+x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -847,9 +996,7 @@
         "dependentSelector": "R",
         "maleOffset": "pbr.t/2",
         "femaleOffset": 0,
-        "demensionAxis": "x",
-        "centerAxis": "-z",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -858,9 +1005,7 @@
         "dependentSelector": "L",
         "maleOffset": "L.t / 2",
         "femaleOffset": 0,
-        "demensionAxis": "x",
-        "centerAxis": "-x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -869,8 +1014,6 @@
         "dependentSelector": "T",
         "maleOffset": 0,
         "femaleOffset": 0,
-        "demensionAxis": "",
-        "centerAxis": "",
         "fullLength": false,
         "priority": 0
       },
@@ -880,8 +1023,6 @@
         "dependentSelector": "T",
         "maleOffset": 0,
         "femaleOffset": 0,
-        "demensionAxis": "",
-        "centerAxis": "",
         "fullLength": false,
         "priority": 0
       },
@@ -891,8 +1032,6 @@
         "dependentSelector": "B",
         "maleOffset": 0,
         "femaleOffset": 0,
-        "demensionAxis": "",
-        "centerAxis": "",
         "fullLength": false,
         "priority": 0
       },
@@ -902,8 +1041,6 @@
         "dependentSelector": "pbl",
         "maleOffset": 0,
         "femaleOffset": 0,
-        "demensionAxis": "",
-        "centerAxis": "",
         "fullLength": false,
         "priority": 0
       },
@@ -913,8 +1050,6 @@
         "dependentSelector": "pbr",
         "maleOffset": 0,
         "femaleOffset": 0,
-        "demensionAxis": "",
-        "centerAxis": "",
         "fullLength": false,
         "priority": 0
       },
@@ -924,8 +1059,6 @@
         "dependentSelector": "BACK",
         "maleOffset": 0,
         "femaleOffset": 0,
-        "demensionAxis": "",
-        "centerAxis": "",
         "fullLength": false,
         "priority": 0
       },
@@ -935,8 +1068,6 @@
         "dependentSelector": "BACK",
         "maleOffset": 0,
         "femaleOffset": 0,
-        "demensionAxis": "",
-        "centerAxis": "",
         "fullLength": false,
         "priority": 0
       }
@@ -945,8 +1076,6 @@
       "_TYPE": "Dado",
       "maleOffset": 0.635,
       "femaleOffset": 0,
-      "demensionAxis": "",
-      "centerAxis": "",
       "fullLength": false,
       "priority": 0
     },
@@ -966,212 +1095,6 @@
         "leftDepth": "lw",
         "rightDepth": "rw",
         "id": "mig3pf1"
-      }
-    ],
-    "autoToeKick": true,
-    "_FORCE_FROM_JSON": true
-  },
-  "base": {
-    "_TYPE": "CabinetTemplate",
-    "ID_ATTRIBUTE": "id",
-    "type": "base",
-    "values": [
-      {
-        "key": "innerWidth",
-        "eqn": "c.w - pt34 * 2",
-        "id": "itqsm1j"
-      },
-      {
-        "key": "innerWidthCenter",
-        "eqn": "innerWidth + pt34",
-        "id": "pwaarfr"
-      }
-    ],
-    "subassemblies": [
-      {
-        "name": "right",
-        "type": "Divider",
-        "code": "R",
-        "center": [
-          "c.w - (R.t / 2)",
-          "R.l / 2",
-          "(w / -2)"
-        ],
-        "demensions": [
-          "c.t",
-          "c.l",
-          "pt34"
-        ],
-        "rotation": [
-          0,
-          90,
-          0
-        ],
-        "id": "mcf6dft"
-      },
-      {
-        "name": "left",
-        "type": "Divider",
-        "code": "L",
-        "center": [
-          "(L.t / 2)",
-          "L.l / 2",
-          " (w/-2)"
-        ],
-        "demensions": [
-          "c.t",
-          "c.l",
-          "pt34"
-        ],
-        "rotation": [
-          0,
-          90,
-          0
-        ],
-        "id": "r1xpfd9"
-      },
-      {
-        "name": "back",
-        "type": "Panel",
-        "code": "BACK",
-        "center": [
-          " w / 2 + R.t",
-          "(BACK.h / 2) + tkh",
-          " -1*(c.t - (t / 2))"
-        ],
-        "demensions": [
-          "innerWidth",
-          "c.l - tkh",
-          "pt34"
-        ],
-        "rotation": [
-          0,
-          0,
-          "0"
-        ],
-        "id": "0hvikg4"
-      },
-      {
-        "name": "bottom",
-        "type": "Divider",
-        "code": "B",
-        "center": [
-          "c.w / 2",
-          "tkh + (t/2)",
-          "w / -2"
-        ],
-        "demensions": [
-          "c.t - BACK.t",
-          "innerWidth",
-          "pt34"
-        ],
-        "rotation": [
-          90,
-          90,
-          0
-        ],
-        "id": "vho2lw6"
-      },
-      {
-        "name": "top",
-        "type": "Divider",
-        "code": "T",
-        "center": [
-          "c.w / 2",
-          "c.h - pt34/2",
-          "(w / -2)"
-        ],
-        "demensions": [
-          "(c.t - BACK.t)",
-          "innerWidth",
-          "pt34"
-        ],
-        "rotation": [
-          90,
-          90,
-          0
-        ],
-        "dividerType": "frontAndBack"
-      }
-    ],
-    "joints": [
-      {
-        "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "R",
-        "demensionAxis": "y",
-        "centerAxis": "-x"
-      },
-      {
-        "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "L",
-        "demensionAxis": "y",
-        "centerAxis": "+x"
-      },
-      {
-        "_TYPE": "Dado",
-        "maleOffset": "0.9525",
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "R",
-        "demensionAxis": "x",
-        "centerAxis": "+x",
-        "fullLength": true
-      },
-      {
-        "_TYPE": "Dado",
-        "maleOffset": "0.9525",
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "L",
-        "demensionAxis": "x",
-        "centerAxis": "-x",
-        "fullLength": true
-      },
-      {
-        "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "R",
-        "demensionAxis": "y",
-        "centerAxis": "-x"
-      },
-      {
-        "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "L",
-        "demensionAxis": "y",
-        "centerAxis": "+x"
-      }
-    ],
-    "dividerJoint": {
-      "_TYPE": "Dado",
-      "maleOffset": 0.635,
-      "femaleOffset": 0,
-      "demensionAxis": "",
-      "centerAxis": ""
-    },
-    "shape": "square",
-    "width": 45.72,
-    "height": "baseh",
-    "thickness": "based",
-    "fromFloor": 0,
-    "openings": [
-      {
-        "top": "T",
-        "bottom": "B",
-        "left": "L",
-        "right": "R",
-        "back": "BACK",
-        "id": "dle5hwy"
       }
     ],
     "autoToeKick": true,
@@ -1435,188 +1358,146 @@
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "BACK",
-        "dependentSelector": "B",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "B"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "BACK",
-        "dependentSelector": "pbl",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "pbl"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "BACK",
-        "dependentSelector": "pbr",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "pbr"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "L.t / 2",
         "femaleOffset": 0,
         "dependsSelector": "B",
-        "dependentSelector": "L",
-        "demensionAxis": "y",
-        "centerAxis": "-z"
+        "dependentSelector": "L"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "R.t/2",
         "femaleOffset": 0,
         "dependsSelector": "B",
-        "dependentSelector": "R",
-        "demensionAxis": "x",
-        "centerAxis": "-x"
+        "dependentSelector": "R"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "pbr.t/2",
         "femaleOffset": 0,
         "dependsSelector": "B",
-        "dependentSelector": "pbr",
-        "demensionAxis": "y",
-        "centerAxis": "+z"
+        "dependentSelector": "pbr"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "pbl.t/2",
         "femaleOffset": 0,
         "dependsSelector": "B",
-        "dependentSelector": "pbl",
-        "demensionAxis": "x",
-        "centerAxis": "+x"
+        "dependentSelector": "pbl"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "L.t / 2",
         "femaleOffset": 0,
         "dependsSelector": "T",
-        "dependentSelector": "L",
-        "demensionAxis": "y",
-        "centerAxis": "-z"
+        "dependentSelector": "L"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "R.t/2",
         "femaleOffset": 0,
         "dependsSelector": "T",
-        "dependentSelector": "R",
-        "demensionAxis": "x",
-        "centerAxis": "-x"
+        "dependentSelector": "R"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "pbr.t/2",
         "femaleOffset": 0,
         "dependsSelector": "T",
-        "dependentSelector": "pbr",
-        "demensionAxis": "y",
-        "centerAxis": "+z"
+        "dependentSelector": "pbr"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "pbl.t/2",
         "femaleOffset": 0,
         "dependsSelector": "T",
-        "dependentSelector": "pbl",
-        "demensionAxis": "x",
-        "centerAxis": "+x"
+        "dependentSelector": "pbl"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "pbr.t/2",
         "femaleOffset": 0,
         "dependsSelector": "pbr",
-        "dependentSelector": "R",
-        "demensionAxis": "x",
-        "centerAxis": "-z"
+        "dependentSelector": "R"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "L.t / 2",
         "femaleOffset": 0,
         "dependsSelector": "pbl",
-        "dependentSelector": "L",
-        "demensionAxis": "x",
-        "centerAxis": "-x"
+        "dependentSelector": "L"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "BACK",
-        "dependentSelector": "T",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "T"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cb",
-        "dependentSelector": "T",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "T"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cb",
-        "dependentSelector": "B",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "B"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cb",
-        "dependentSelector": "pbl",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "pbl"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cb",
-        "dependentSelector": "pbr",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "pbr"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cpbl",
-        "dependentSelector": "BACK",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "BACK"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cpbr",
-        "dependentSelector": "BACK",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "BACK"
       }
     ],
     "dividerJoint": {
       "_TYPE": "Dado",
       "maleOffset": 0.635,
-      "femaleOffset": 0,
-      "demensionAxis": "",
-      "centerAxis": ""
+      "femaleOffset": 0
     },
     "shape": "corner",
     "width": "walld*2",
@@ -1897,188 +1778,146 @@
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "BACK",
-        "dependentSelector": "B",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "B"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "BACK",
-        "dependentSelector": "pbl",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "pbl"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "BACK",
-        "dependentSelector": "pbr",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "pbr"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "L.t / 2",
         "femaleOffset": 0,
         "dependsSelector": "B",
-        "dependentSelector": "L",
-        "demensionAxis": "y",
-        "centerAxis": "-z"
+        "dependentSelector": "L"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "R.t/2",
         "femaleOffset": 0,
         "dependsSelector": "B",
-        "dependentSelector": "R",
-        "demensionAxis": "x",
-        "centerAxis": "-x"
+        "dependentSelector": "R"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "pbr.t/2",
         "femaleOffset": 0,
         "dependsSelector": "B",
-        "dependentSelector": "pbr",
-        "demensionAxis": "y",
-        "centerAxis": "+z"
+        "dependentSelector": "pbr"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "pbl.t/2",
         "femaleOffset": 0,
         "dependsSelector": "B",
-        "dependentSelector": "pbl",
-        "demensionAxis": "x",
-        "centerAxis": "+x"
+        "dependentSelector": "pbl"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "L.t / 2",
         "femaleOffset": 0,
         "dependsSelector": "T",
-        "dependentSelector": "L",
-        "demensionAxis": "y",
-        "centerAxis": "-z"
+        "dependentSelector": "L"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "R.t/2",
         "femaleOffset": 0,
         "dependsSelector": "T",
-        "dependentSelector": "R",
-        "demensionAxis": "x",
-        "centerAxis": "-x"
+        "dependentSelector": "R"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "pbr.t/2",
         "femaleOffset": 0,
         "dependsSelector": "T",
-        "dependentSelector": "pbr",
-        "demensionAxis": "y",
-        "centerAxis": "+z"
+        "dependentSelector": "pbr"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "pbl.t/2",
         "femaleOffset": 0,
         "dependsSelector": "T",
-        "dependentSelector": "pbl",
-        "demensionAxis": "x",
-        "centerAxis": "+x"
+        "dependentSelector": "pbl"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "pbr.t/2",
         "femaleOffset": 0,
         "dependsSelector": "pbr",
-        "dependentSelector": "R",
-        "demensionAxis": "x",
-        "centerAxis": "-z"
+        "dependentSelector": "R"
       },
       {
         "_TYPE": "Dado",
         "maleOffset": "L.t / 2",
         "femaleOffset": 0,
         "dependsSelector": "pbl",
-        "dependentSelector": "L",
-        "demensionAxis": "x",
-        "centerAxis": "-x"
+        "dependentSelector": "L"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "BACK",
-        "dependentSelector": "T",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "T"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cb",
-        "dependentSelector": "T",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "T"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cb",
-        "dependentSelector": "B",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "B"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cb",
-        "dependentSelector": "pbl",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "pbl"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cb",
-        "dependentSelector": "pbr",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "pbr"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cpbl",
-        "dependentSelector": "BACK",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "BACK"
       },
       {
         "_TYPE": "Butt",
         "maleOffset": 0,
         "femaleOffset": 0,
         "dependsSelector": "cpbr",
-        "dependentSelector": "BACK",
-        "demensionAxis": "",
-        "centerAxis": ""
+        "dependentSelector": "BACK"
       }
     ],
     "dividerJoint": {
       "_TYPE": "Dado",
       "maleOffset": 0.635,
-      "femaleOffset": 0,
-      "demensionAxis": "",
-      "centerAxis": ""
+      "femaleOffset": 0
     },
     "shape": "corner",
     "width": "based*1.5",
@@ -2270,9 +2109,7 @@
       "dependentSelector": "L",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -2283,9 +2120,7 @@
       "dependentSelector": "R",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -2296,9 +2131,7 @@
       "dependentSelector": "L",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -2309,9 +2142,7 @@
       "dependentSelector": "R",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -2322,9 +2153,7 @@
       "dependentSelector": "L",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "-x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -2335,9 +2164,7 @@
       "dependentSelector": "R",
       "maleOffset": 0.9525,
       "femaleOffset": 0,
-      "demensionAxis": "y",
-      "centerAxis": "+x",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     },
     {
@@ -2348,9 +2175,7 @@
       "dependentSelector": "T",
       "maleOffset": "T.t/2",
       "femaleOffset": 0,
-      "demensionAxis": "x",
-      "centerAxis": "+y",
-      "fullLength": false,
+            "fullLength": false,
       "priority": 0
     }
   ],
@@ -2360,8 +2185,6 @@
     "ID_ATTRIBUTE": "id",
     "maleOffset": 0.635,
     "femaleOffset": 0,
-    "demensionAxis": "",
-    "centerAxis": "",
     "fullLength": false,
     "priority": 0
   },
@@ -2495,35 +2318,27 @@
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "T",
-        "maleOffset": "T.t/2",
-        "demensionAxis": "y",
-        "centerAxis": "+y"
+        "maleOffset": "T.t/2"
       },
       {
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "R",
         "maleOffset": "R.t/2",
-        "demensionAxis": "x",
-        "centerAxis": "+x",
-        "fullLength": true
+                "fullLength": true
       },
       {
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "B",
-        "maleOffset": "B.t/2",
-        "demensionAxis": "y",
-        "centerAxis": "-y"
+        "maleOffset": "B.t/2"
       },
       {
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "L",
         "maleOffset": "L.t/2",
-        "demensionAxis": "x",
-        "centerAxis": "-x",
-        "fullLength": true
+                "fullLength": true
       }
     ],
     "dividerJoint": {
@@ -2754,9 +2569,7 @@
         "dependentSelector": "L",
         "maleOffset": 0.9525,
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "-x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -2766,9 +2579,7 @@
         "dependentSelector": "R",
         "maleOffset": 0.9525,
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "+x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -2778,9 +2589,7 @@
         "dependentSelector": "L",
         "maleOffset": 0.9525,
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "-x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -2790,9 +2599,7 @@
         "dependentSelector": "R",
         "maleOffset": 0.9525,
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "+x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -2802,9 +2609,7 @@
         "dependentSelector": "L",
         "maleOffset": 0.9525,
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "-x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -2814,9 +2619,7 @@
         "dependentSelector": "R",
         "maleOffset": 0.9525,
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "+x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -2826,9 +2629,7 @@
         "dependentSelector": "L",
         "maleOffset": 0.9525,
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "-x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -2838,9 +2639,7 @@
         "dependentSelector": "R",
         "maleOffset": 0.9525,
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "+x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -2850,9 +2649,7 @@
         "dependentSelector": "L",
         "maleOffset": 0.9525,
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "-x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -2862,9 +2659,7 @@
         "dependentSelector": "R",
         "maleOffset": 0.9525,
         "femaleOffset": 0,
-        "demensionAxis": "y",
-        "centerAxis": "+x",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       },
       {
@@ -2874,9 +2669,7 @@
         "dependentSelector": "B",
         "maleOffset": 0.9525,
         "femaleOffset": 0,
-        "demensionAxis": "x",
-        "centerAxis": "+y",
-        "fullLength": false,
+                "fullLength": false,
         "priority": 0
       }
     ],
@@ -2885,8 +2678,6 @@
       "ID_ATTRIBUTE": "id",
       "maleOffset": 0.635,
       "femaleOffset": 0,
-      "demensionAxis": "",
-      "centerAxis": "",
       "fullLength": false,
       "priority": 0
     },
@@ -3198,91 +2989,69 @@
         "dependsSelector": "T",
         "dependentSelector": "L",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x"
+        "maleOffset": 0.9525
       },
       {
         "dependsSelector": "T",
         "dependentSelector": "R",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x"
+        "maleOffset": 0.9525
       },
       {
         "dependsSelector": "pt2",
         "dependentSelector": "L",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x"
+        "maleOffset": 0.9525
       },
       {
         "dependsSelector": "pt2",
         "dependentSelector": "R",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x"
+        "maleOffset": 0.9525
       },
       {
         "dependsSelector": "BACK",
         "dependentSelector": "L",
         "_TYPE": "Dado",
         "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x",
-        "fullLength": true
+                "fullLength": true
       },
       {
         "dependsSelector": "BACK",
         "dependentSelector": "R",
         "_TYPE": "Dado",
         "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x",
-        "fullLength": true
+                "fullLength": true
       },
       {
         "dependsSelector": "tkb",
         "dependentSelector": "L",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x"
+        "maleOffset": 0.9525
       },
       {
         "dependsSelector": "tkb",
         "dependentSelector": "R",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x"
+        "maleOffset": 0.9525
       },
       {
         "dependsSelector": "B",
         "dependentSelector": "L",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x"
+        "maleOffset": 0.9525
       },
       {
         "dependsSelector": "B",
         "dependentSelector": "R",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x"
+        "maleOffset": 0.9525
       },
       {
         "dependsSelector": "tkb",
         "dependentSelector": "B",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "x",
-        "centerAxis": "+y"
+        "maleOffset": 0.9525
       }
     ],
     "dividerJoint": {
@@ -3588,33 +3357,25 @@
         "dependsSelector": "T",
         "dependentSelector": "R",
         "_TYPE": "Dado",
-        "maleOffset": "0.9525",
-        "demensionAxis": "y",
-        "centerAxis": "+x"
+        "maleOffset": "0.9525"
       },
       {
         "dependsSelector": "T",
         "dependentSelector": "L",
         "_TYPE": "Dado",
-        "maleOffset": "0.9525",
-        "demensionAxis": "x",
-        "centerAxis": "-z"
+        "maleOffset": "0.9525"
       },
       {
         "dependsSelector": "B",
         "dependentSelector": "R",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x"
+        "maleOffset": 0.9525
       },
       {
         "dependsSelector": "B",
         "dependentSelector": "L",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x"
+        "maleOffset": 0.9525
       },
       {
         "_TYPE": "Butt",
@@ -3888,33 +3649,25 @@
         "dependsSelector": "T",
         "dependentSelector": "R",
         "_TYPE": "Dado",
-        "maleOffset": "0.9525",
-        "demensionAxis": "y",
-        "centerAxis": "+x"
+        "maleOffset": "0.9525"
       },
       {
         "dependsSelector": "T",
         "dependentSelector": "L",
         "_TYPE": "Dado",
-        "maleOffset": "0.9525",
-        "demensionAxis": "x",
-        "centerAxis": "-z"
+        "maleOffset": "0.9525"
       },
       {
         "dependsSelector": "B",
         "dependentSelector": "R",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x"
+        "maleOffset": 0.9525
       },
       {
         "dependsSelector": "B",
         "dependentSelector": "L",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x"
+        "maleOffset": 0.9525
       },
       {
         "_TYPE": "Butt",
@@ -4188,33 +3941,25 @@
         "dependsSelector": "T",
         "dependentSelector": "R",
         "_TYPE": "Dado",
-        "maleOffset": "0.9525",
-        "demensionAxis": "y",
-        "centerAxis": "+x"
+        "maleOffset": "0.9525"
       },
       {
         "dependsSelector": "T",
         "dependentSelector": "L",
         "_TYPE": "Dado",
-        "maleOffset": "0.9525",
-        "demensionAxis": "x",
-        "centerAxis": "-z"
+        "maleOffset": "0.9525"
       },
       {
         "dependsSelector": "B",
         "dependentSelector": "R",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "-x"
+        "maleOffset": 0.9525
       },
       {
         "dependsSelector": "B",
         "dependentSelector": "L",
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "demensionAxis": "y",
-        "centerAxis": "+x"
+        "maleOffset": 0.9525
       },
       {
         "_TYPE": "Butt",
@@ -4423,35 +4168,27 @@
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "T",
-        "maleOffset": "T.t/2",
-        "demensionAxis": "y",
-        "centerAxis": "+y"
+        "maleOffset": "T.t/2"
       },
       {
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "R",
         "maleOffset": "R.t/2",
-        "demensionAxis": "x",
-        "centerAxis": "+x",
-        "fullLength": true
+                "fullLength": true
       },
       {
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "B",
-        "maleOffset": "B.t/2",
-        "demensionAxis": "y",
-        "centerAxis": "-y"
+        "maleOffset": "B.t/2"
       },
       {
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "L",
         "maleOffset": "L.t/2",
-        "demensionAxis": "x",
-        "centerAxis": "-x",
-        "fullLength": true
+                "fullLength": true
       }
     ],
     "dividerJoint": {
@@ -4603,35 +4340,27 @@
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "T",
-        "maleOffset": "T.t/2",
-        "demensionAxis": "y",
-        "centerAxis": "+y"
+        "maleOffset": "T.t/2"
       },
       {
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "R",
         "maleOffset": "R.t/2",
-        "demensionAxis": "x",
-        "centerAxis": "+x",
-        "fullLength": true
+                "fullLength": true
       },
       {
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "B",
-        "maleOffset": "B.t/2",
-        "demensionAxis": "y",
-        "centerAxis": "-y"
+        "maleOffset": "B.t/2"
       },
       {
         "_TYPE": "Dado",
         "dependsSelector": "BACK",
         "dependentSelector": "L",
         "maleOffset": "L.t/2",
-        "demensionAxis": "x",
-        "centerAxis": "-x",
-        "fullLength": true
+                "fullLength": true
       }
     ],
     "dividerJoint": {

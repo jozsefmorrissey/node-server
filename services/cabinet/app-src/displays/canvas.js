@@ -76,7 +76,7 @@ function  renderParts() {
     resetAll();
     parts = cabinet.getParts();
   }
-  new Jobs.CSG.Assembly.Join(parts).then((modelInfo, job) => {
+  new Jobs.CSG.Assembly.Join(parts, Canvas.explosionFactor()).then((modelInfo, job) => {
     applyExtraObjAndDisplay(parts, modelInfo.unioned());
   }).queue();
 }
@@ -154,7 +154,10 @@ du.on.match('enter', '*', () => {
     setTimeout(render, 1500);
 });
 
-module.exports = {
+Canvas = {
   render, build, hide, set, extraCsgObjects,
   on: {switch: switchEvent.on}
-}
+};
+module.exports = Canvas;
+Object.getSet(Canvas, 'explosionFactor');
+Canvas.explosionFactor(1.1);

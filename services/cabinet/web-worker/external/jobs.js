@@ -111,8 +111,9 @@ class CsgModelJob extends CsgModelInfoJob {
 CsgModelJob.task = (modelInfo) => new Sequential(modelInfo.environment, new Model(modelInfo), new Union(modelInfo));
 
 class CsgJoinJob extends CsgModelInfoJob {
-  constructor(assemblyOs) {
+  constructor(assemblyOs, explosionFactor) {
     const modelInfo = ModelInfo.object(assemblyOs);
+    modelInfo.explosionFactor(explosionFactor);
     super(Join(modelInfo), modelInfo);
   }
 }

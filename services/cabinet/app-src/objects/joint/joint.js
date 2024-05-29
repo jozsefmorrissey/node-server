@@ -8,7 +8,7 @@ class Joint extends Dependency {
     super(dependsSelector, dependentSelector, condition, locationId, priority);
     priority ||= 0;
     const initialVals = {
-      maleOffset: 0, femaleOffset: 0, demensionAxis: '', centerAxis: '',
+      maleOffset: 0, femaleOffset: 0,
       fullLength: false, priority,
     }
     const parentClone = this.clone;
@@ -18,8 +18,6 @@ class Joint extends Dependency {
       const clone = parentClone(dependsSelector, dependentSelector, cond, locId);
       clone.maleOffset(this.maleOffset());
       clone.femaleOffset(this.femaleOffset());
-      clone.demensionAxis(this.demensionAxis());
-      clone.centerAxis(this.centerAxis());
       clone.priority(this.priority());
       clone.fullLength(this.fullLength());
       return clone;
@@ -52,8 +50,6 @@ Joint.new = function (id, json) {
 Joint.fromJson = (json) => {
   const joint = new (Object.class.get(json._TYPE))(json.dependsSelector, json.dependentSelector);
   joint.id(json.id);
-  joint.centerAxis(json.centerAxis);
-  joint.demensionAxis(json.demensionAxis);
   joint.maleOffset(json.maleOffset);
   joint.femaleOffset(json.femaleOffset);
   return joint;

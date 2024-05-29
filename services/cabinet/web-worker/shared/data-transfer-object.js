@@ -7,6 +7,9 @@ const isPrimitive = (val) => (!(val instanceof Object) && !(val instanceof Funct
 const arrayMapReg = /^(.*?)\>(.*)$/
 const evaluateAttributes = (to) => (object, attributes, dto) => {
   dto ||= {};
+  if (object.constructor.name === 'Dado') {
+    console.log('here');
+  }
   for (let index = 0; index < attributes.length; index++) {
     let attr = attributes[index];
     if (attr === 'toString') {

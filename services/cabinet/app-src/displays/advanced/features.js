@@ -1,4 +1,5 @@
 
 const pulls = require('./feature/pulls');
+const opening = require('./feature/opening');
 
-module.exports = {pulls};
+module.exports = {pulls, opening};

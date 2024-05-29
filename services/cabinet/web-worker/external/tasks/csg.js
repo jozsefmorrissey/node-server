@@ -35,6 +35,7 @@ class CsgTask extends Task {
     super();
     let initialModelCount;
     this.completeOnFinish = true;
+    Object.getSet(this, 'explosionFactor');
     this.process = () => this.constructor.name.replace(/^Csg(.{1,})Task/, "$1").toLowerCase();
     this.progress = () => this.completeOnFinish ? (this.status() === STATUS.SUCCESS ? 100 : 0) :
           (initialModelCount === 0 ? 100 :
@@ -43,7 +44,7 @@ class CsgTask extends Task {
       if (this.finished()) return null;
       const assemblies = this.remainingModels();
       if (assemblies.length === 0) this.status(STATUS.SUCCESS);
-      return {assemblies};
+      return {assemblies, explosionFactor: this.explosionFactor()};
     };
     this.modelInfo = () => modelInfo;
     this.on.message((result) => {
@@ -63,8 +64,9 @@ class CsgOrderModelTask  extends CsgTask {
 }
 
 class CsgJoinTask extends CsgTask {
-  constructor(modelInfo) {
+  constructor(modelInfo, explosionFactor) {
     super(modelInfo);
+    this.explosionFactor(explosionFactor);
     this.remainingModels = modelInfo.needsJoined;
   }
 }

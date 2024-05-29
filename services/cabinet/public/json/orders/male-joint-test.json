@@ -112,8 +112,6 @@
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
                     "femaleOffset": 0,
-                    "demensionAxis": "",
-                    "centerAxis": "",
                     "fullLength": false,
                     "priority": 0
                   }
@@ -180,8 +178,6 @@
                       "dependentSelector": "B",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -191,8 +187,6 @@
                       "dependentSelector": "pbl",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -202,8 +196,6 @@
                       "dependentSelector": "pbr",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -213,8 +205,6 @@
                       "dependentSelector": "T",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -257,8 +247,6 @@
                       "dependentSelector": "T",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -268,8 +256,6 @@
                       "dependentSelector": "B",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -279,8 +265,6 @@
                       "dependentSelector": "pbl",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -290,8 +274,6 @@
                       "dependentSelector": "pbr",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -365,8 +347,6 @@
                       "dependentSelector": "^R:f(|ull)$",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -408,8 +388,6 @@
                       },
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -484,8 +462,6 @@
                       "dependentSelector": "^L:f(|ull)$",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -527,8 +503,6 @@
                       },
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -571,8 +545,6 @@
                       "dependentSelector": "L",
                       "maleOffset": "L.t / 2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -615,8 +587,6 @@
                       "dependentSelector": "BACK",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -658,8 +628,6 @@
                       "dependentSelector": "R",
                       "maleOffset": "pbr.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-z",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -702,8 +670,6 @@
                       "dependentSelector": "BACK",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -777,8 +743,6 @@
                       "dependentSelector": "^T:f(|ull)$",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -820,8 +784,6 @@
                       },
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -831,8 +793,6 @@
                       "dependentSelector": "L",
                       "maleOffset": "L.t / 2",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "-z",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -842,8 +802,6 @@
                       "dependentSelector": "R",
                       "maleOffset": "R.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -853,8 +811,6 @@
                       "dependentSelector": "pbr",
                       "maleOffset": "pbr.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+z",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -864,8 +820,6 @@
                       "dependentSelector": "pbl",
                       "maleOffset": "pbl.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -940,8 +894,6 @@
                       "dependentSelector": "^B:f(|ull)$",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -983,8 +935,6 @@
                       },
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -994,8 +944,6 @@
                       "dependentSelector": "L",
                       "maleOffset": "L.t / 2",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "-z",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1005,8 +953,6 @@
                       "dependentSelector": "R",
                       "maleOffset": "R.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1016,8 +962,6 @@
                       "dependentSelector": "pbr",
                       "maleOffset": "pbr.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+z",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1027,8 +971,6 @@
                       "dependentSelector": "pbl",
                       "maleOffset": "pbl.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1150,8 +1092,6 @@
                             "dependentSelector": "^dv:f(|ull)$",
                             "maleOffset": 0,
                             "femaleOffset": 0,
-                            "demensionAxis": "",
-                            "centerAxis": "",
                             "fullLength": false,
                             "priority": 0
                           },
@@ -1193,8 +1133,6 @@
                             },
                             "maleOffset": 0,
                             "femaleOffset": 0,
-                            "demensionAxis": "",
-                            "centerAxis": "",
                             "fullLength": false,
                             "priority": 0
                           }
@@ -1317,8 +1255,6 @@
                                 "dependentSelector": "^dv:f(|ull)$",
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               },
@@ -1360,8 +1296,6 @@
                                 },
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               }
@@ -1485,8 +1419,6 @@
                                     "dependentSelector": "^dv:f(|ull)$",
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   },
@@ -1528,8 +1460,6 @@
                                     },
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   }
@@ -1655,8 +1585,6 @@
                                 "dependentSelector": "^dv:f(|ull)$",
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               },
@@ -1698,8 +1626,6 @@
                                 },
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               }
@@ -1823,8 +1749,6 @@
                                     "dependentSelector": "^dv:f(|ull)$",
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   },
@@ -1866,8 +1790,6 @@
                                     },
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   }
@@ -1993,8 +1915,6 @@
                                 "dependentSelector": "^dv:f(|ull)$",
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               },
@@ -2036,8 +1956,6 @@
                                 },
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               }
@@ -2161,8 +2079,6 @@
                                     "dependentSelector": "^dv:f(|ull)$",
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   },
@@ -2204,8 +2120,6 @@
                                     },
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   }
@@ -2271,8 +2185,6 @@
                         "dependentSelector": "B",
                         "maleOffset": 0,
                         "femaleOffset": 0,
-                        "demensionAxis": "",
-                        "centerAxis": "",
                         "fullLength": false,
                         "priority": 0
                       },
@@ -2284,8 +2196,6 @@
                         "dependentSelector": "pbl",
                         "maleOffset": 0,
                         "femaleOffset": 0,
-                        "demensionAxis": "",
-                        "centerAxis": "",
                         "fullLength": false,
                         "priority": 0
                       },
@@ -2297,8 +2207,6 @@
                         "dependentSelector": "pbr",
                         "maleOffset": 0,
                         "femaleOffset": 0,
-                        "demensionAxis": "",
-                        "centerAxis": "",
                         "fullLength": false,
                         "priority": 0
                       },
@@ -2310,8 +2218,6 @@
                         "dependentSelector": "T",
                         "maleOffset": 0,
                         "femaleOffset": 0,
-                        "demensionAxis": "",
-                        "centerAxis": "",
                         "fullLength": false,
                         "priority": 0
                       }
@@ -2320,8 +2226,6 @@
                   },
                   "maleOffset": 0,
                   "femaleOffset": 0,
-                  "demensionAxis": "",
-                  "centerAxis": "",
                   "fullLength": false,
                   "priority": 0
                 },
@@ -2368,8 +2272,6 @@
                         "dependentSelector": "L",
                         "maleOffset": "L.t / 2",
                         "femaleOffset": 0,
-                        "demensionAxis": "x",
-                        "centerAxis": "-x",
                         "fullLength": false,
                         "priority": 0
                       }
@@ -2378,8 +2280,6 @@
                   },
                   "maleOffset": 0,
                   "femaleOffset": 0,
-                  "demensionAxis": "",
-                  "centerAxis": "",
                   "fullLength": false,
                   "priority": 0
                 },
@@ -2426,8 +2326,6 @@
                         "dependentSelector": "R",
                         "maleOffset": "pbr.t/2",
                         "femaleOffset": 0,
-                        "demensionAxis": "x",
-                        "centerAxis": "-z",
                         "fullLength": false,
                         "priority": 0
                       }
@@ -2436,8 +2334,6 @@
                   },
                   "maleOffset": 0,
                   "femaleOffset": 0,
-                  "demensionAxis": "",
-                  "centerAxis": "",
                   "fullLength": false,
                   "priority": 0
                 }
@@ -2484,8 +2380,6 @@
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
                     "femaleOffset": 0,
-                    "demensionAxis": "",
-                    "centerAxis": "",
                     "fullLength": false,
                     "priority": 0
                   }
@@ -2552,8 +2446,6 @@
                       "dependentSelector": "T",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2563,8 +2455,6 @@
                       "dependentSelector": "B",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2574,8 +2464,6 @@
                       "dependentSelector": "R",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2618,8 +2506,6 @@
                       "dependentSelector": "R",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2629,8 +2515,6 @@
                       "dependentSelector": "L",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2640,8 +2524,6 @@
                       "dependentSelector": "T",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2651,8 +2533,6 @@
                       "dependentSelector": "B",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2694,8 +2574,6 @@
                       "dependentSelector": "BACK",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2705,8 +2583,6 @@
                       "dependentSelector": "BACK",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2748,8 +2624,6 @@
                       "dependentSelector": "L",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2759,8 +2633,6 @@
                       "dependentSelector": "BACK",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2834,8 +2706,6 @@
                       "dependentSelector": "^R:f(|ull)$",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2877,8 +2747,6 @@
                       },
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2953,8 +2821,6 @@
                       "dependentSelector": "^L:f(|ull)$",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2996,8 +2862,6 @@
                       },
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -3072,8 +2936,6 @@
                       "dependentSelector": "^B:f(|ull)$",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -3115,8 +2977,6 @@
                       },
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -3126,8 +2986,6 @@
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -3137,8 +2995,6 @@
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -3213,8 +3069,6 @@
                       "dependentSelector": "^T:f(|ull)$",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -3256,8 +3110,6 @@
                       },
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -3267,8 +3119,6 @@
                       "dependentSelector": "R",
                       "maleOffset": "0.9525",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -3278,8 +3128,6 @@
                       "dependentSelector": "L",
                       "maleOffset": "0.9525",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-z",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -3400,8 +3248,6 @@
                             "dependentSelector": "^dv:f(|ull)$",
                             "maleOffset": 0,
                             "femaleOffset": 0,
-                            "demensionAxis": "",
-                            "centerAxis": "",
                             "fullLength": false,
                             "priority": 0
                           },
@@ -3443,8 +3289,6 @@
                             },
                             "maleOffset": 0,
                             "femaleOffset": 0,
-                            "demensionAxis": "",
-                            "centerAxis": "",
                             "fullLength": false,
                             "priority": 0
                           }
@@ -3567,8 +3411,6 @@
                                 "dependentSelector": "^dv:f(|ull)$",
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               },
@@ -3610,8 +3452,6 @@
                                 },
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               }
@@ -3735,8 +3575,6 @@
                                     "dependentSelector": "^dv:f(|ull)$",
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   },
@@ -3778,8 +3616,6 @@
                                     },
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   }
@@ -3905,8 +3741,6 @@
                                 "dependentSelector": "^dv:f(|ull)$",
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               },
@@ -3948,8 +3782,6 @@
                                 },
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               }
@@ -4073,8 +3905,6 @@
                                     "dependentSelector": "^dv:f(|ull)$",
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   },
@@ -4116,8 +3946,6 @@
                                     },
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   }
@@ -4243,8 +4071,6 @@
                                 "dependentSelector": "^dv:f(|ull)$",
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               },
@@ -4286,8 +4112,6 @@
                                 },
                                 "maleOffset": 0,
                                 "femaleOffset": 0,
-                                "demensionAxis": "",
-                                "centerAxis": "",
                                 "fullLength": false,
                                 "priority": 0
                               }
@@ -4411,8 +4235,6 @@
                                     "dependentSelector": "^dv:f(|ull)$",
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   },
@@ -4454,8 +4276,6 @@
                                     },
                                     "maleOffset": 0,
                                     "femaleOffset": 0,
-                                    "demensionAxis": "",
-                                    "centerAxis": "",
                                     "fullLength": false,
                                     "priority": 0
                                   }
@@ -4521,8 +4341,6 @@
                         "dependentSelector": "T",
                         "maleOffset": 0,
                         "femaleOffset": 0,
-                        "demensionAxis": "",
-                        "centerAxis": "",
                         "fullLength": false,
                         "priority": 0
                       },
@@ -4534,8 +4352,6 @@
                         "dependentSelector": "B",
                         "maleOffset": 0,
                         "femaleOffset": 0,
-                        "demensionAxis": "",
-                        "centerAxis": "",
                         "fullLength": false,
                         "priority": 0
                       },
@@ -4547,8 +4363,6 @@
                         "dependentSelector": "R",
                         "maleOffset": 0,
                         "femaleOffset": 0,
-                        "demensionAxis": "",
-                        "centerAxis": "",
                         "fullLength": false,
                         "priority": 0
                       }
@@ -4557,8 +4371,6 @@
                   },
                   "maleOffset": 0,
                   "femaleOffset": 0,
-                  "demensionAxis": "",
-                  "centerAxis": "",
                   "fullLength": false,
                   "priority": 0
                 }

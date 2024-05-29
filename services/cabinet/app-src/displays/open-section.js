@@ -36,8 +36,7 @@ SectionDisplay.formatCoverName = (name) => {
 const templates = {};
 const fileLocations = {};
 SectionDisplay.template = (section) => {
-  if (section === undefined) return '';
-  const cName = section.constructor.name;
+  const cName = section instanceof SectionProperties ? 'open' : section.constructor.name;
   if (fileLocations[cName] === undefined) {
     const filename = cName.replace(/Section$/, '')
                             .replace(/([a-z])([A-Z])/g, '$1-$2')
@@ -64,13 +63,21 @@ SectionDisplay.render = (scope) => {
 
 const OpenSectionDisplay = {};
 
+OpenSectionDisplay.featuresHtml = (openingOelem) => {
+  if (openingOelem instanceof HTMLElement) {
+    const id = du.find.up('[opening-id]', openingOelem).getAttribute("opening-id");
+    openingOelem = Lookup.get(id);
+  }
+  return SectionDisplay.template(openingOelem.cover() || openingOelem);
+}
+
 OpenSectionDisplay.html = (opening) => {
   const openDispId = OpenSectionDisplay.getId(opening);
   OpenSectionDisplay.sections[opening.id()] = opening;
   if (opening.sectionCount() > 1) OpenSectionDisplay.refresh(opening, true);
   const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
   const sections = SectionProperties.list();
-  const featuresHtml = SectionDisplay.template(opening.cover());
+  const featuresHtml = OpenSectionDisplay.featuresHtml(opening);
   return OpenSectionDisplay.template.render({opening, openDispId, patternInputHtml, Features,
                                             sections, OpenSectionDisplay, featuresHtml});
 }
@@ -264,6 +271,8 @@ OpenSectionDisplay.onSectionChange = (target) => {
   section.setSection(target.value === "Open" ? null : target.value);
   const expandHeader = ExpandableList.getHeaderCnt(target);
   const targetCnt = du.find.down('.open-divider-select', expandHeader);
+  const html = OpenSectionDisplay.featuresHtml(target);
+  du.find.closest('.section-feature-cnt .chev-dropdown').innerHTML = html;
   if (targetCnt) {
     targetCnt.innerText = SectionDisplay.formatCoverName(target.value || 'Open');
   }

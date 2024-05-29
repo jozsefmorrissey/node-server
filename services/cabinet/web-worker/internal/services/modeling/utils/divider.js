@@ -9,6 +9,7 @@ const SectionPropertiesUtil = require('section-properties');
 const CabinetUtil = require('cabinet');
 const Utils = require('utils');
 
+const BIG = 10000000;
 const isSectionProps = (pa) => pa.id.match(/^SectionProperties_/);
 const isDivider = (pa) => pa.id.match(/^Divider_/);
 const isRoot = (pa) => pa.parentAssembly === undefined;
@@ -58,10 +59,10 @@ class DividerUtil {
     const getCutter = (key, builder) => () => (cutters[key] !== undefined || builder()) && cutters[key];
     this.Frame = buildFramePoly;
     this.Frame.Cutter = getCutter('fr', this.Frame);
-    this.Back = () => buildPanelPoly(DividerUtil.positions.BACK);
-    this.Front = () => buildPanelPoly(DividerUtil.positions.FRONT);
-    this.Right = () => buildPanelPoly(DividerUtil.positions.RIGHT);
-    this.Left = () => buildPanelPoly(DividerUtil.positions.LEFT);
+    this.Back = (assem, env) => buildPanelPoly(DividerUtil.positions.BACK, assem, env);
+    this.Front = (assem, env) => buildPanelPoly(DividerUtil.positions.FRONT, assem, env);
+    this.Right = (assem, env) => buildPanelPoly(DividerUtil.positions.RIGHT, assem, env);
+    this.Left = (assem, env) => buildPanelPoly(DividerUtil.positions.LEFT, assem, env);
 
     let type = divider.type;
     let cutter;
@@ -83,43 +84,52 @@ class DividerUtil {
       return framePoly;
     }
 
-    function buildPanelPoly(position) {
+    let front, back, left, right, up, down;
+    function openingOrientationNormals() {
       const biPoly = instance.Full();
       const cabUtil = CabinetUtil.instance(divider);
       const cab = cabUtil.cabinet();
       const norms = sectionUtils.biPolygon.normals();
-      let xNorm = norms.x;
-      let zNorm = norms.z;
-      if (zNorm.dot(biPoly.normal())  > .5) {
-        zNorm = norms.x;
-        xNorm = norms.y;
-      } else if (Math.abs(biPoly.normal().dot(norms.x))  > .5) {
-        xNorm = norms.y;
-      }
-      if (!xNorm.positive()) xNorm = xNorm.inverse();
+      const cabCenter = cabUtil.partCenter();
+      const orientNorms = {front: norms.z, back: norms.z.inverse(), right: norms.x, left: norms.x.inverse(), up: norms.y, down: norms.y.inverse()};
+      if (back = divider.find('BACK'))
+        orientNorms.back = new Line3D(cabCenter, back.position.current.center.object()).vector().unit();
+      if (left = divider.find('L'))
+        orientNorms.left = new Line3D(cabCenter, left.position.current.center.object()).vector().unit();
+      if (right = divider.find('R'))
+        orientNorms.right = new Line3D(cabCenter, right.position.current.center.object()).vector().unit();
+      return orientNorms;
+    }
 
-      let closerTo;
+    function buildPanelPoly(position, assem, env) {
+      const csg = env.modelInfo.joined[assem.id];
+      const norms = Utils.normals(assem, env);
+      const edges = csg.polygons.filter(p => !norms.z.parrelle(new Vector3D(p.plane.normal)));
+      const edgePolys = Polygon3D.fromCSG(edges);
+
+      let centerOffsetVector;
+      const cabUtil = CabinetUtil.instance(divider);
+      const orientNorms = openingOrientationNormals();
       switch (position) {
-        case DividerUtil.positions.FRONT: closerTo = cabUtil.partCenter().translate(zNorm.scale(100), true); break;
-        case DividerUtil.positions.BACK: closerTo = cabUtil.partCenter().translate(zNorm.inverse().scale(100), true); break;
-        case DividerUtil.positions.LEFT: closerTo = cabUtil.partCenter().translate(xNorm.inverse().scale(100), true); break;
-        case DividerUtil.positions.RIGHT: closerTo = cabUtil.partCenter().translate(xNorm.scale(100), true); break;
+        case DividerUtil.positions.FRONT: centerOffsetVector = orientNorms.front; break;
+        case DividerUtil.positions.BACK: centerOffsetVector = orientNorms.back; break;
+        case DividerUtil.positions.LEFT: centerOffsetVector = orientNorms.left; break;
+        case DividerUtil.positions.RIGHT: centerOffsetVector = orientNorms.right; break;
       }
+      const closerTo = cabUtil.partCenter().translate(centerOffsetVector.scale(100), true)
+      const polyDistMap = edgePolys.map((poly, index) => ({dist: poly.distance(closerTo), index, poly}));
+      const minDist = polyDistMap.min(p => p.dist).dist + .01;
+      const closestPolys = polyDistMap.filter(p => p.dist < minDist);
+      const cutterPoly = closestPolys[0].poly;
+      const isFrontBack = position === DividerUtil.positions.FRONT ||
+                          position === DividerUtil.positions.BACK;
+      let vectorObj = {y: norms.z, x: norms.y};
+      if (!isFrontBack) vectorObj.x = norms.x;
+      const multiplier = !cutterPoly.normal().sameDirection(centerOffsetVector) ? 1 : -1;
+      const width = assem.width || divider.partialWidth;
+      const cutterBiPoly = BiPolygon.fromPolygon(cutterPoly, multiplier*width,  multiplier*BIG, {x: BIG, y: BIG});
 
-      const sides = biPoly.sides();
-      sides.sort((a, b) => a.distance(closerTo) - b.distance(closerTo));
-      if (false) polyDrawStrings(cab);
-      const sc = sectionUtils.biPolygon.center();
-      const c = sides[0].center();
-      const centerPlusNorm = c.translate(sides[0].normal(), true);
-      const multiplier = centerPlusNorm.distance(sc) > c.distance(sc) ? -4 : 4;
-
-      const bp = BiPolygon.fromPolygon(sides[0], multiplier * 2.54, 0);
-      // const polys = Polygon3D.fromCSG(bp.model());
-      // console.log(polys.map(p => p.toDrawString(null, true)).join('\n'));
-      // bp.sides();
-
-      return bp;
+      return csg.subtract(cutterBiPoly.model());
     }
   }
 }

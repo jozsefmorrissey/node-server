@@ -93,7 +93,7 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 
 #### When I get around to it
 - convert builder.js to utilize modular $t and Expression scripts.
-- "Imperial (us)" does not add implicit multiplication stringMathEval
+- "inch" does not add implicit multiplication stringMathEval
 - hover help/error text
 - Clean and seperate Object.(getSet|get|set);
 - figure out three-view hidden lines

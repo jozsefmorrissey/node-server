@@ -143,8 +143,6 @@
                     "ID_ATTRIBUTE": "id",
                     "maleOffset": 0.635,
                     "femaleOffset": 0,
-                    "demensionAxis": "",
-                    "centerAxis": "",
                     "fullLength": false,
                     "priority": 0
                   }
@@ -212,8 +210,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -223,8 +219,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -234,8 +228,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -245,8 +237,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -291,8 +281,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -302,8 +290,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -313,8 +299,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -324,8 +308,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -437,8 +419,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "L.t / 2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -483,8 +463,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -528,8 +506,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "pbr.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-z",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -574,8 +550,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -619,8 +593,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "L.t / 2",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "-z",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -630,8 +602,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "R.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -641,8 +611,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "pbr.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+z",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -652,8 +620,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "pbl.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -698,8 +664,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "L.t / 2",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "-z",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -709,8 +673,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "R.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -720,8 +682,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "pbr.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+z",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -731,8 +691,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "pbl.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1520,8 +1478,6 @@
                     "ID_ATTRIBUTE": "id",
                     "maleOffset": 0.635,
                     "femaleOffset": 0,
-                    "demensionAxis": "",
-                    "centerAxis": "",
                     "fullLength": false,
                     "priority": 0
                   }
@@ -1657,8 +1613,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1668,8 +1622,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1714,8 +1666,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1725,8 +1675,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1771,8 +1719,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1782,8 +1728,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2527,8 +2471,6 @@
                     "ID_ATTRIBUTE": "id",
                     "maleOffset": 0.635,
                     "femaleOffset": 0,
-                    "demensionAxis": "",
-                    "centerAxis": "",
                     "fullLength": false,
                     "priority": 0
                   }
@@ -2664,8 +2606,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2675,8 +2615,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2721,8 +2659,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2732,8 +2668,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2778,8 +2712,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2789,8 +2721,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -5495,8 +5425,6 @@
                     "ID_ATTRIBUTE": "id",
                     "maleOffset": 0.635,
                     "femaleOffset": 0,
-                    "demensionAxis": "",
-                    "centerAxis": "",
                     "fullLength": false,
                     "priority": 0
                   }
@@ -5632,8 +5560,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "T.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+y",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -5643,8 +5569,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "R.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -5654,8 +5578,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "B.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "-y",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -5665,8 +5587,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "L.t/2",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -6719,8 +6639,6 @@
                     "ID_ATTRIBUTE": "id",
                     "maleOffset": 0.635,
                     "femaleOffset": 0,
-                    "demensionAxis": "",
-                    "centerAxis": "",
                     "fullLength": false,
                     "priority": 0
                   }
@@ -6788,8 +6706,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6799,8 +6715,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6810,8 +6724,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -6856,8 +6768,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6867,8 +6777,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6878,8 +6786,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6889,8 +6795,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -6934,8 +6838,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6945,8 +6847,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -6990,8 +6890,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -7001,8 +6899,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
                       "femaleOffset": 0,
-                      "demensionAxis": "",
-                      "centerAxis": "",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -7114,8 +7010,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "-x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -7125,8 +7019,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     }
@@ -7171,8 +7063,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
                       "femaleOffset": 0,
-                      "demensionAxis": "y",
-                      "centerAxis": "+x",
                       "fullLength": false,
                       "priority": 0
                     },
@@ -7182,8 +7072,6 @@
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
                       "femaleOffset": 0,
-                      "demensionAxis": "x",
-                      "centerAxis": "-z",
                       "fullLength": false,
                       "priority": 0
                     }

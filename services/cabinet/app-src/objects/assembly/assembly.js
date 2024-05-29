@@ -50,6 +50,7 @@ class Assembly extends KeyValue {
     let group;
     const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
     const initialVals = {
+      sliceAtOpening: true,
       part: true,
       included: true,
       includeJoints: true,
@@ -273,6 +274,7 @@ class Assembly extends KeyValue {
         return;
       }
       if (normObj === undefined) return;
+      if (normObj.DETERMINE_FROM_MODEL) return normObj;
       if (!normObj.x && !normObj.y && !normObj.z) return undefined;
       const calcNormObj = this.evalObject(normObj);
       if (normObj.calc !== 0) ensureVector(calcNormObj, 'x');

@@ -199,7 +199,7 @@ class SectionProperties extends KeyValue {
       const shelveCount = this.value('shelves') || 0;
       const newShelveCount = shelveCount - shelves.length
       for (let index = 0; index < newShelveCount; index++) {
-        const shelve = new Shelve(`:sh${shelves.length + index + 1}`, 'Shelve');
+        const shelve = new Shelve(`:sh${shelves.length + 1}`, 'Shelve');
         shelve.parentAssembly(this);
         // shelve.addDependencies(new Joint(this.divider().divider(), shelve));
         shelves.push(shelve);
@@ -210,6 +210,7 @@ class SectionProperties extends KeyValue {
     this.init = init;
     this.dividerCount = () => this.sections.length - 1;
     this.sectionCount = () => this.sections.length || 1;
+    const shelvelessCoverReg = /^(DrawerSection|PanelSection|FalseFrontSection)$/;
     this.getSubassemblies = (childrenOnly) => {
       const assems = Object.values(this.sections);
       assems.concatInPlace(sectionCutters);
@@ -221,7 +222,8 @@ class SectionProperties extends KeyValue {
       assems.push(this.divider());
       if (!childrenOnly) assems.concatInPlace(this.divider().getSubassemblies());
 
-      assems.concatInPlace(this.shelves());
+      if (!cover || !cover.constructor.name.match(shelvelessCoverReg))
+        assems.concatInPlace(this.shelves());
       for (let index = 0; !childrenOnly && index < this.sections.length; index++) {
         assems.concatInPlace(this.sections[index].getSubassemblies());
       }
@@ -602,6 +604,7 @@ class SectionProperties extends KeyValue {
       }
     }
     const neigborJoint = new Dado(divider.divider().isPanel, isNeigbor, null, 'NEIGHBOR_JOINT');
+    neigborJoint.maleOffset(.9525);
     divider.addDependencies(neigborJoint);
 
 
@@ -629,8 +632,12 @@ class SectionProperties extends KeyValue {
 
     }
 
-    const boxJoint = (selector, index) =>
-      new Dado(/^dv:[^_]{1,}$/, new RegExp(`^${selector}$`), null, `boxJoint${index}`);
+    const boxJoint = (selector, index) => {
+      const bj = new Dado(/^dv:[^_]{1,}$/, new RegExp(`^${selector}$`), null, `boxJoint${index}`);
+      bj.maleOffset(.9525);
+      return bj;
+    }
+
 
     function cabinetBoxDados() {
       const cabinet = instance.getCabinet();

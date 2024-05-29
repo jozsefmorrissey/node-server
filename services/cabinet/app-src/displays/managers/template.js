@@ -546,26 +546,13 @@ function getJointInputTree(func, joint, dividerJoint) {
     value: joint.type
   });
 
-  const centerOffsetInput = new Select({
-    name: 'centerAxis',
-    label: 'Center Axis',
-    list: ['+x', '+y', '+z', '-x', '-y', '-z'],
-    value: joint.centerAxis
-  });
-  const demensionOffsetInput = new Select({
-    name: 'demensionAxis',
-    label: 'Demension Axis',
-    list: ['x', 'y', 'z'],
-    value: joint.demensionAxis
-  });
-
   const depthInput = new Input({
     label: 'Depth',
     name: 'maleOffset',
     value: joint.maleOffset
   });
 
-  const dadoInputs = dividerJoint ? [depthInput] : [depthInput, centerOffsetInput, demensionOffsetInput];
+  const dadoInputs = dividerJoint ? [depthInput] : [depthInput];
 
   const dit = new DecisionInputTree('Type', {inputArray: [selectType]}, {noSubmission: true});
   const type = dit.root();
@@ -585,8 +572,6 @@ const jointOnChange = (vals, dit) => {
   joint.maleOffset = lastDepth || undefined;
   const depthInput = dit.children()[0].payload().inputArray[0];
   // depthInput.updateDisplay();
-  joint.demensionAxis = vals.demensionAxis || undefined;
-  joint.centerAxis = vals.centerAxis || undefined;
   console.log(vals);
 }
 

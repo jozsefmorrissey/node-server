@@ -3,31 +3,9 @@ const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js'
 const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
 const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
 
-function updatePosition(position, assem, joint) {
-  const direction = joint.centerAxis[0] === '-' ? -1 : 1;
-  const centerAxis = joint.centerAxis[1].toLowerCase();
-  const offset = joint.maleOffset;
-  const demAxis = joint.demensionAxis.toLowerCase();
-  position.demension[demAxis] = position.demension[demAxis] + offset;
-  position.center[centerAxis] = position.center[centerAxis] + (offset/2 * direction);
-};
-
-function applyMaleJointExtensions(assem, env) {
-  const position = assem.position.current;
-//  if (position.extApplied === true) throw new Error('this should only be called once');
-  const maleJointIds = env.jointMap.male[assem.id] || [];
-  const jointsToUpdate = maleJointIds.map(jid => env.byId[jid])
-                              .filter(d => d.maleOffset);
-  if (jointsToUpdate.length) {
-    jointsToUpdate.forEach(j => updatePosition(position, assem, j));
-  }
-  position.extApplied = true;
-}
-
 function toBiPolygon(assem, env) {
   const current = assem.position.current;
   const dems = current.demension;
-  // applyMaleJointExtensions(assem, env);
   if (Math.min(dems.x, dems.y, dems.z) > .001) return BiPolygon.fromPositionObject(current);
   return null;
 }
@@ -51,5 +29,5 @@ function normals(part, env) {
 }
 
 module.exports = {
-  toBiPolygon, applyMaleJointExtensions, normals
+  toBiPolygon, normals
 }

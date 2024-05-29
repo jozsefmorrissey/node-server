@@ -3,25 +3,27 @@
   <div class='divider-controls'>
     {{OpenSectionDisplay.dividerHtml(opening)}}
   </div>
-</div>
-<label>Section Type:</label>
-<select class='section-selection'>
-  <option>Open</option>
-  <option:t repeat='section in sections'
-        value='{{section.prototype.constructor.name}}'
-        {{opening.coverType() === section.name ? 'selected' : ''}}>
-    {{section.name.toSentance().replace('Section', '')}}
-  </option:t>
-</select>
-<div class='section-feature-cnt'>
-  <div class='inline-flex chev-dropdown-toggle'>
-    Opening Features
-    <i class='down gg-chevron-down hidden' ></i>
-    <i class='right gg-chevron-right'></i>
+  <div>
+    <label>Section Type:</label>
+    <select class='section-selection'>
+      <option>Open</option>
+      <option:t repeat='section in sections'
+            value='{{section.prototype.constructor.name}}'
+            {{opening.coverType() === section.name ? 'selected' : ''}}>
+        {{section.name.toSentance().replace('Section', '')}}
+      </option:t>
+    </select>
+    <div class='section-feature-cnt'>
+      <div class='inline-flex chev-dropdown-toggle'>
+        Opening Features
+        <i class='down gg-chevron-down hidden' ></i>
+        <i class='right gg-chevron-right'></i>
+      </div>
+      <div class='tab chev-dropdown' hidden>
+        {{featuresHtml}}
+      </div>
+    </div>
+    <div id='{{openDispId}}'>
+    </div>
   </div>
-  <div class='tab chev-dropdown' hidden>
-    {{featuresHtml}}
-  </div>
-</div>
-<div id='{{openDispId}}'>
 </div>

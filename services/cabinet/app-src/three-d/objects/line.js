@@ -168,7 +168,7 @@ class Line3D {
     }
 
     this.connect = (other, segment) => {
-      if (other instanceof Vertex3D) return this.connect.vertex(other);
+      if (other instanceof Vertex3D) return this.connect.vertex(other, segment);
       if (other instanceof Line3D) {
         if (segment !== false) return this.connect.line.segment(other);
         return this.connect.line(other);

@@ -84,6 +84,7 @@ defs.minol = new Property('minol', 'Minimum Door Overlay', null)
 // Divider
 defs.dpt = new Property('dpt', 'Divider Panel Thickness', {value: 'pt34'});
 defs.dft = new Property('dft', 'Divider Frame Thickness', {value: .75, notMetric: IMPERIAL_US});
+defs.dpw = new Property('dpw', 'Divider Partial Width', {value: 4, notMetric: IMPERIAL_US});
 defs.sc = new Property('sc', 'Scribe', {value: 'dsc'});
 
 module.exports = defs;

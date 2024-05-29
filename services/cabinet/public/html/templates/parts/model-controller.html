@@ -1,5 +1,8 @@
 
 <div class='model-controller-cnt'>
+  <label>Explosion Factor</label>
+  <input type='number' min=0 max=10 step=1 name='explosionFactor' value='{{dispExplosionFactor}}'>
+  <br>
   <label>location</label>
   <input type='radio' name='grouping' value='location' {{groupingType === 'location' ? 'checked' : ''}}>
   <label>id</label>

@@ -55,6 +55,7 @@ class Divider extends Assembly {
 
     this.part = () => false;
     this.thickness = () => this.resolve('dft');
+    this.partialWidth = () => this.resolve('dpw');
 
     this.frameThickness = (rawOthickness) => {
       if (Boolean.is(rawOthickness)) return this.resolve('dft', rawOthickness);

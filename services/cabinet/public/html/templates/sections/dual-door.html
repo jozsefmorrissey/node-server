@@ -1,4 +1,5 @@
-<h2>Dual Door: {{list.activeKey()}}</h2>
 <div class='section-feature-ctn'>
-  {{featureDisplay}}
+  {{Features.opening(section)}}
+  {{Features.pulls(section.left(), 'Left')}}
+  {{Features.pulls(section.right(), 'Right')}}
 </div>

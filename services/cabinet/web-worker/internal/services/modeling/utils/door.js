@@ -8,13 +8,13 @@ const Utils = require('utils');
 function doorBiPoly(assem, fullPoly, gap, left) {
   const normals = Utils.normals(assem);
   const demension = {x: 2000, y:2000, z:2000};
-  const scaler = !left ? -1000 + gap/2 : 1000 - gap/2;
+  const scaler = left ? -1000 + gap/2 : 1000 - gap/2;
   const center = fullPoly.center().translate(normals.x.unit().scale(scaler));
   const cutter = BiPolygon.fromPositionObject({demension, normals, center}).model();
   const csg = fullPoly.model().subtract(cutter);
   const parrelleSets = Polygon3D.parrelleSets(Polygon3D.fromCSG(csg));
   const polys = parrelleSets.filter(set => set[0].normal().parrelle(normals.z))[0];
-  if (!polys[0].normal().equals(normals.z)) polys.reverse();
+  if (polys[0].normal().equals(normals.z)) polys.reverse();
   return new BiPolygon(polys[0], polys[1]);
 }
 

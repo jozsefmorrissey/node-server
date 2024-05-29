@@ -109,7 +109,7 @@ const dataConverters = {
   }
 }
 
-const modelInfoObject = () => ({threeView: {}, model: {}, joined: {}, intersection: {}, biPolygonArray: {}});
+const modelInfoObject = () => ({threeView: {}, model: {}, joined: {}, intersection: {}, biPolygonArray: {}, extended: {}});
 
 class ModelInformation {
   constructor(targetOs, props) {
@@ -167,6 +167,7 @@ class ModelInformation {
       environment.modelInfo = modelInfoObject();//modelInfo;
       environment.propertyConfig = propertyConfig;
       environment.jointMap = jointMap;
+      environment.explosionFactor = this.explosionFactor();
       return environment;
     }
     this.environment = environmentObject;
@@ -219,6 +220,10 @@ class ModelInformation {
       if (data) unioned2D = data;
       else return unionedCsg;
     }
+
+    let explosionFactor;
+    this.explosionFactor = (expFactor) => expFactor !== undefined ?
+                  (explosionFactor = expFactor) : explosionFactor;
   }
 }
 
