@@ -191,14 +191,40 @@ Measurement.display = (value, notMetric) => {
   return new Measurement(value, notMetric).display();
 }
 
+const convertSqUnitToStd = (unit) => {
+  const match = unit.match(/^([a-zA-Z]*)2$/);
+  return match ? `SQ${match[1].toUppercase()}` : unit;
+}
+Measurement.tocm2 = (factors, unit) => {
+  unit = convertSqUnitToStd(unit);
+  switch (unit) {
+    case 'SQMM': return factors[0] * factors[1] / 100;
+    case 'SQM': return factors[0] * factors[1] * 100000;
+    case 'SQIN': return factors[0] * factors[1] * 6.4516;
+    case 'SQFT': return factors[0] * factors[1] * 929.0304;
+    case 'SQCM': return factors[0] * factors[1];
+
+    default: throw new Error(`Unkown unit: ${unit}`);
+  }
+}
+
 Measurement.display.area = (SQCM, units, percision) => {
   percision ||= .1;
   units ||= Measurement.unit() === Measurement.units()[1] ? 'SQFT' : undefined;
+  units = convertSqUnitToStd(units);
+  if (units) {
+    const breakdown = Measurement.areaReg.breakdown(units);
+    if (breakdown) {
+      const quantity = Measurement.tocm2(breakdown.factors, breakdown.unit);
+      return `${SQCM/quantity} - ${breakdown.factors[0]} X ${breakdown.factors[1]} ${breakdown.unit} Sheets`;
+    }
+  }
   switch (units) {
     case 'SQMM': return `${Measurement.round(SQCM * 100, percision)} mm2`;
-    case 'SQM': return `${Measurement.round(SQCM / 10000, percision)} M2`;
+    case 'SQM': return `${Measurement.round(SQCM / 100000, percision)} M2`;
     case 'SQIN': return `${Measurement.round(SQCM / 6.4516, percision)} SQIN`;
-    case 'SQFT': return `${Measurement.round(SQCM / 929.0304, percision)} SQFT ~ ${Measurement.round(SQCM / 29729, percision)}, 4 X 8 Sheets`;
+    case 'SQFT': return `${Measurement.round(SQCM / 929.0304, percision)} SQFT`;// ~ ${Measurement.round(SQCM / 29729, percision)}, 4 X 8 Sheets`;
+
 
     default: return `${SQCM} cm2`;
 
@@ -216,7 +242,15 @@ Measurement.units = () => JSON.parse(JSON.stringify(units));
 Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)$/;
 Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
 Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
-Measurement.decimalReg = /(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
+Measurement.decimalRegStr = '(-|)[0-9]*(\\.|)[0-9]*';
+Measurement.decimalReg = new RegExp(`(^${Measurement.decimalRegStr}$)`);///(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
+const areaRegStr = `^(${Measurement.decimalRegStr})(x|X)(${Measurement.decimalRegStr})((SQ)[a-zA-Z]{1,})$`;
+Measurement.areaReg = new RegExp(areaRegStr);
+Measurement.areaReg.breakdown = (str) => {
+  const match = str.match(Measurement.areaReg);
+  return match ? {factors: [Number.parseFloat(match[1]), Number.parseFloat(match[5])],
+                  unit: match[8]} : null;
+}
 
 
 Measurement.validation = function (range) {

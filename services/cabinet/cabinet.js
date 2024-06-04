@@ -27,6 +27,24 @@ const setCredentials = (res, email, secret) => {
   res.header('authorization', `${email}:${secret}`);
 }
 
+const projects = require('./public/json/projects.json');
+function addImageUrls() {
+  try {
+    for (let index = 0; index < projects.length; index++) {
+      const project = projects[index];
+      var imageLocs = shell.ls(`./services/cabinet/public/images/projects/${project.name}`);
+      project.images = [];
+      for (let imdex = 0; imdex < imageLocs.length; imdex++) {
+        const url = `/cabinet/images/projects/First Project/${imageLocs[imdex]}`;
+        console.log(url);
+        project.images.push({url});
+      }
+    }
+  } catch (e) {console.error(e)}
+}
+addImageUrls();
+console.log(JSON.stringify(projects, null, 2))
+
 function orderElem(req, res) {
   return {order: 'poopy cock'};
 }
@@ -66,7 +84,6 @@ function endpoints(app, prefix) {
   app.get(prefix + "/template", servePage('template'));
   app.get(prefix + "/property", servePage('home'));
   app.get(prefix + "/pattern", servePage('home'));
-  const projects = require('./public/json/projects.json');
   app.get(prefix + "/projects", servePage('projects', {title: 'Projects', file: 'projects', projects}));
 
   app.get(prefix + "/order", servePage('order', orderElem));

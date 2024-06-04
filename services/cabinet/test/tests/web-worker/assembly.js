@@ -7,6 +7,7 @@ const ModelInfo = require('../../../web-worker/external/model-information.js');
 
 function get(layout, type, cabinetOnly) {
   const cabinet = Cabinet.build(type || 'base');
+  if (layout === '') return cabinet;
   if (layout !== true || (typeof layout) === 'string')
     CabinetLayouts.map[layout || 'test'].build(cabinet);
   cabinet.updateOpenings(true);
@@ -26,6 +27,7 @@ function ensureRendered(assems, modelInfo, ts, msg) {
 
 const onComplete = (ts, parts, intersections) => (modelInfo, job) => {
   const csg = modelInfo.unioned();
+  const target = parts.find(p => p.partCode() === 'B:full');
   ts.assertTrue(csg instanceof Object && csg.polygons.length > 0);
   ts.success();
 }
@@ -44,6 +46,11 @@ Test.add('Jobs.CSG.Assembly.Join base:layout(test)', async (ts, allAssemblies) =
   new Jobs.CSG.Assembly.Join(parts).then(onComplete(ts, parts), onFail(ts)).queue();
 }, async () => get());
 
+Test.add('Jobs.CSG.Cabinet.Simple dcb', async (ts, cabinet) => {
+  new Jobs.CSG.Cabinet.Simple(cabinet)
+        .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
+}, async () => get("", 'diagonal-corner-base'));
+
 Test.add('Jobs.CSG.Cabinet.Simple base:layout(test)', async (ts, allAssemblies) => {
   const cabinet = allAssemblies[0].getRoot();
   new Jobs.CSG.Cabinet.Simple(cabinet)
@@ -53,7 +60,7 @@ Test.add('Jobs.CSG.Cabinet.Simple base:layout(test)', async (ts, allAssemblies) 
 Test.add('Jobs.CSG.Assembly.Model base:layout(c)', async (ts, allAssemblies) => {
   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
   const parts = [cabinet];
-  new Jobs.CSG.Assembly.Model(parts, {partsOnly: false, noJoints: true})
+  new Jobs.CSG.Assembly.Model(parts, {partsOnly: false})
   .then(onComplete(ts, parts), onFail(ts)).queue();
 }, async () => get());
 
@@ -79,7 +86,7 @@ Test.add('Jobs.CSG.Assembly.Model diagonal-corner-base:test-cabinet', async (ts,
 
 Test.add('Jobs.CSG.Cabinet.Simple diagonal-corner-base:layout(3dsb3d)', async (ts, allAssemblies) => {
   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
-  new Jobs.CSG.Cabinet.Simple(cabinet)
+  new Jobs.CSG.Cabinet.Complex(cabinet)
         .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
 }, async () => get("3dsb3d", 'diagonal-corner-base'));
 
@@ -96,11 +103,9 @@ const on2DComplete = (objects, ts) => (result, job) => {
   ts.success();
 }
 
-Test.add('Jobs.CSG.Cabinet.To2D', async (ts, allAssemblies) => {
-  const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
-  const parts = [cabinet];
+Test.add('Jobs.CSG.Cabinet.To2D', async (ts, cabinet) => {
   const gap = 25;
 
-  new Jobs.CSG.Cabinet.To2D(parts, {gap})
-          .then(on2DComplete(parts, ts), onFail(ts)).queue();
-}, async () => get(true, 'diagonal-corner-base'));
+  new Jobs.CSG.Cabinet.To2D(cabinet, {gap})
+          .then(on2DComplete(cabinet, ts), onFail(ts)).queue();
+}, async () => get('', 'diagonal-corner-base'));

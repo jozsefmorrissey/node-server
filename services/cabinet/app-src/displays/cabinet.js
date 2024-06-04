@@ -145,7 +145,8 @@ class CabinetDisplay {
     this.active = () => expandList.active();
     const expListProps = {
       list: group.objects,
-      // dontOpenOnAdd: true,
+      dontOpenOnAdd: true,
+      startClosed: true,
       type: 'top-add-list',
       inputTree:   ObjectInputTree(),
       parentSelector, getHeader, getBody, getObject, inputValidation,

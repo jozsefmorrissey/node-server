@@ -474,10 +474,10 @@ class Layout2D extends Lookup {
     }
     this.activeObjects = () => this.level() || this.objects();
 
-    // if (!initialized) this.push({x:0, y:0}, {x:ww, y:0}, {x:ww,y:ww}, {x:0,y:ww});
-    if (!initialized) this.push({x:1, y:1}, {x:ww+1, y:0}, {x:ww + 1,y:ww + 1}, {x:1,y:ww});
+    if (!initialized) this.push({x:0, y:0}, {x:ww, y:0}, {x:ww,y:ww}, {x:0,y:ww});
+    // if (!initialized) this.push({x:, y:1}, {x:ww+1, y:0}, {x:ww + 1,y:ww + 1}, {x:1,y:ww});
     // if (!initialized) this.push({x:-250, y:-250}, {x:250, y:-250}, {x:250,y:250}, {x:-250,y:250});
-    // this.walls = () => walls;
+    this.walls = () => walls;
 
     // history = new StateHistory(this.toJson, this.fromJson);
     this.history = () => history;

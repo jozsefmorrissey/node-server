@@ -76,9 +76,6 @@ Lookup.convert = function (obj, attr, id, singleton) {
       const index = Lookup.groups[group] ? Lookup.groups[group].indexOf(obj) : -1;
       if (index !== -1) Lookup.groups[group].splice(index, 1);
     }
-    if (!(obj[attr]().index instanceof Function)) {
-      console.log('her')
-    }
     delete Lookup.byId[cxtr.name][obj[attr]().index(-1)];
   }
 

@@ -52,7 +52,7 @@ class PartInfo {
     };
 
     const normRotz = Line3D.coDirectionalRotations(this.normals(true));
-    let noJointModel = env.modelInfo.model[part.id];
+    let noJointModel = env.modelInfo.extended[part.id] || env.modelInfo.model[part.id];
     let poly;
     try {
       if (!(noJointModel instanceof CSG)) noJointModel = CSG.fromPolygons(noJointModel.polygons, true);
@@ -264,6 +264,9 @@ class PartInfo {
     const jointInfo = this.jointInfo();
     const cutInfo = [];
     const layersCovered = {};
+    if (part.locationCode.match(/sh/)) {
+      console.log('her');
+    }
     jointInfo.forEach(ji => cutInfo.concatInPlace(ji.cutInfo(layersCovered)));
 // console.log(cutInfo.map(c => `//${c.jointInfo().joint().descriptor}\n${Polygon3D.toDrawString(c.set(), String.nextColor())}`).join('\n\n'));
     CutInfo.clean(cutInfo);

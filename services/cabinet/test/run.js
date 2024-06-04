@@ -5,6 +5,7 @@ const Order = require('../app-src/objects/order.js');
 const testFiles = [
   "./tests/cabinet",
   "./tests/polygon2d",
+  "../../../public/js/utils/test/tests/measurement",
   "../../../public/js/utils/test/tests/vector3D",
   "../../../public/js/utils/test/tests/polygon3d",
   "../../../public/js/utils/test/tests/navigator",
@@ -23,7 +24,7 @@ const testFiles = [
   "./tests/web-worker/simple",
   "./tests/web-worker/assembly",
   "./tests/web-worker/room",
-  // "./tests/web-worker/documentation",
+  "./tests/web-worker/documentation",
   "./tests/bi-polygon"];
 
 const getUriVariable = (name) => (match = window.location.href.match(new RegExp(`(\\?|&)${name}=(.{1,}?)($|&)`))) && match && decodeURI(match[2]);

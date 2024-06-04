@@ -45,7 +45,7 @@
         "right.id", "left.id", "top.id", "bottom.id", "cutter.id", "parentAssembly.id"],
   "Vector3D": ["i", "j", "k"],
   "Joint": ["id", "maleOffset", "femaleOffset", "locationId", "priority",
-            "fullLength", "descriptor"],
+            "fullLength", "descriptor", "eval.maleOffset", "eval.femaleOffset"],
   "Property": ["value"],
   "ModelInformation": ["environment"]
 }

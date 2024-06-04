@@ -30,7 +30,7 @@ class DividerUtil {
   constructor(divider, dividerPart, env) {
     const instance = this;
 
-    const sectionProps = divider.find('S');
+    const sectionProps = divider.find(/_S[0-9]{1,}$/);
     const sectionUtils = SectionPropertiesUtil.instance(sectionProps, env);
     if (!divider.locationCode.match(/_S/)) {
       const dividerBiPoly = env.modelInfo.biPolygonArray[divider.id];
@@ -102,7 +102,7 @@ class DividerUtil {
     }
 
     function buildPanelPoly(position, assem, env) {
-      const csg = env.modelInfo.joined[assem.id];
+      const csg = env.modelInfo.extended[assem.id];
       const norms = Utils.normals(assem, env);
       const edges = csg.polygons.filter(p => !norms.z.parrelle(new Vector3D(p.plane.normal)));
       const edgePolys = Polygon3D.fromCSG(edges);

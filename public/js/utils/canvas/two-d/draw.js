@@ -323,7 +323,7 @@ class Draw2d {
       const textInfo = snap.getTextInfo();
       textInfo.color = color || textInfo.color;
       draw.text(textInfo.text.substring(0,10), textInfo.center, textInfo);
-      if (Draw2d.debug.showNormals) draw(snap.object().normals());
+      if (Draw2d.debug.showNormals || draw.canvas().simple) draw(snap.object().normals());
     }
 
     return draw;

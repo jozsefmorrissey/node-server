@@ -212,19 +212,33 @@ DocumentationHtml.sketchLayout = (cabinets, containerOselector, reqId) => {
       if (cabinetSets[i1] === undefined) cabinetSets[i1] = [];
       cabinetSets[i1][i2] = c;
     });
+
+    const includeSection = (section, relitiveCheck) => {
+      const hasCover = section.cover() !== undefined !== null;
+      const includesDivider = section.divideRight();
+      const hasShelves = section.shelves.lengh > 0;
+      if (hasCover || includesDivider || hasShelves) return true;
+      if (relitiveCheck) return false;
+      const sections = section.sections;
+      const childNotIncluded = sections.length === 1 && !includeSection(sections[0], true);
+      const parentNotIncluded = sections.length === 0 &&
+            section.parentAssembly().sections.length === 1 && !includeSection(section.parentAssembly(), true);
+      return childNotIncluded || parentNotIncluded;
+    }
+
     const sectionSets = (cabinet) => {
       const sectionSets = [];
       const sectionPropList = cabinet.openings.map(o => o.sectionProperties());
       let index = 0;
       let setIndex = 0;
       while (target = sectionPropList[index++]) {
-        if (target.sections.length === 0) {
+        if (includeSection(target)) {
           const i1 = Math.floor(setIndex/2);
           const i2 = setIndex++%2;
           if (sectionSets[i1] === undefined) sectionSets[i1] = [];
           sectionSets[i1][i2] = target;
         }
-        else sectionPropList.concatInPlace(target.sections);
+        sectionPropList.concatInPlace(target.sections);
       }
       return sectionSets;
     }

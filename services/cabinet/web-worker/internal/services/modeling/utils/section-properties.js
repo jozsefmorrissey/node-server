@@ -196,7 +196,7 @@ class SectionPropertiesUtil {
 
 const built = {};
 SectionPropertiesUtil.instance = (rMdto, environment) => {
-  let secProps = rMdto.find.up('S');
+  let secProps = rMdto.find.up(/_S[0-9]{1,}$/);
   let rootHash = rMdto.find.root().hash;
   if (built[secProps.id] === undefined || built[secProps.id].rootHash !== rootHash) {
     built[secProps.id] = new SectionPropertiesUtil(secProps, environment);

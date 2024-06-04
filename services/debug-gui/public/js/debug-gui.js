@@ -492,7 +492,6 @@ function DebugGui() {
     createCookie();
   }
 
-console.log('dg here')
   window.addEventListener('load', onLoad);
   return {refresh, displayModalHtml, displayLogs, debug, createCookie,
       copyModal, getUrl, copyReport, getId, updateId, updateHost};

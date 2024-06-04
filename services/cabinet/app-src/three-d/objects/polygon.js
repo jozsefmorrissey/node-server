@@ -1012,11 +1012,11 @@ Polygon3D.fromCSG = (polys) => {
       let polygon = new Polygon3D(verts);
       if (!polygon.normal().sameDirection(new Vector3D(csgPoly.plane.normal))) {
         polygon = polygon.reverse();
-        console.warn('never tested should work...');
+        console.warn.subtle(5000, 'never tested should work...');
       }
       poly3Ds.push(polygon);
-    } catch {
-      console.warn('Error converting CSG polygon:\n\t', 'poly.toString()')
+    } catch (e) {
+      console.warn('Error converting CSG polygon:\n\t', csgPoly.toDrawString());
     }
   }
   if (!isArray) return poly3Ds[0];

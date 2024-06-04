@@ -25,7 +25,7 @@ function sortAssemMtdos(assemMtdos) {
     else if (a.partCode() === 'aoc') aoc = a;
     else {
       if (MFC.usesDefault(a.id(), a.partName()) === true) defaultBuilt.push(a);
-      else if (a.locationCode().match(/_S1/)) sectionAssems.push(a);
+      else if (a.locationCode().match(/_S[0-9]{1,}/)) sectionAssems.push(a);
       else customBuilt.push(a);
     }
   }
@@ -121,7 +121,7 @@ class ModelInformation {
     const assemblies = targets[0].allAssemblies();
     if (props.allRelatedParts === true) targets = assemblies.filter(a => a.part());
     const modelInfo = props.modelInfo || modelInfoObject();
-    const jointMap = assemblies[0].dependencyMap(props.noJoints);
+    const jointMap = assemblies[0].dependencyMap();
     const byId = {};
     const propertyConfig = assemblies[0].group().propertyConfig();
     assemblies.forEach(a => byId[a.id()] = a);
@@ -150,7 +150,7 @@ class ModelInformation {
     // targets.forEach(id => requiresReference[id] = byId[id]);
     // joinModels.forEach(jmo => requiresReference[jmo.id] = byId[jmo.id]);
     joinModels = joinModels.map(jmo => jmo.id);
-    const dependencies = assemblies[0].getAllDependencies(null, props.noJoints);
+    const dependencies = assemblies[0].getAllDependencies();
     dependencies.forEach(j => requiresReference[j.id()] = j);
 
     this.needsModeled = () => buildModels;//.filter(id => modelInfo.model[id] === undefined);
@@ -199,6 +199,7 @@ class ModelInformation {
       }
     }
     addTrackingFunctions('threeView', 'model', 'joined', 'intersection', 'biPolygonArray')
+    this.allInfo = () => modelInfo;
 
     this.assemblies = () => assemblies;
     this.assembly = (id) => assemMap[id];
@@ -217,8 +218,8 @@ class ModelInformation {
 
     let unioned2D
     this.unioned2D = (data) => {
-      if (data) unioned2D = data;
-      else return unionedCsg;
+      if (data) unioned2D = dataConverters.threeView(data);
+      else return unioned2D;
     }
 
     let explosionFactor;

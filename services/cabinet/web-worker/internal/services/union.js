@@ -4,8 +4,7 @@ const Color = require('./modeling/utils/color');
 function unionAll(payload, environment) {
   const assemIds = payload.assemblies;
   let csg = new CSG();
-  const modelAttr = environment.modelAttribute || 'joined';
-  const map = environment.modelInfo[modelAttr];
+  const map = environment.modelInfo.joined;
   for (let index = 0; index < assemIds.length; index++) {
     const id = assemIds[index];
     let model = map[id];

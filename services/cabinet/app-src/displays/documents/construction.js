@@ -89,6 +89,8 @@ const BuildDiagram = (containerOselector, order) => {
     if (obj && Array.isArray(obj.openings)) cabinets.push(obj);
   })));
   const reqId = String.random();
+  // TODO: cabinet information should seperate box/shelve/cover models
+  //        then this call will be no longer nessisary
   const job = new Jobs.CSG.Cabinets.BoxOnly(cabinets);
   job.on.change(() => DocHtml.sketchLayout(cabinets, containerOselector, reqId));
   const renderFunc = (result) => DocHtml.openingDiagram(result, reqId);

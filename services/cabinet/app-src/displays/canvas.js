@@ -44,19 +44,27 @@ function renderRoom() {
 // TODO: rename this is actually render cabinet or simple objects
 function  renderCabinet() {
   const target = Global.target();
-  if (target.constructor.name === 'Cabinet') {
-    new Jobs.CSG.Cabinet.Complex(target).then((modelInfo, job) => {
-      applyExtraObjAndDisplay(target, modelInfo.unioned());
-    }).queue();
-  } else {
-    new Jobs.CSG.Simple([target]).then((csgs, job) => {
-      applyExtraObjAndDisplay(target, CSG.fromPolygons(csgs[0].polygons));
-    }).queue();
+  if (target) {
+    if (target.constructor.name === 'Cabinet') {
+      new Jobs.CSG.Cabinet.Complex(target).then((modelInfo, job) => {
+        applyExtraObjAndDisplay(target, modelInfo.unioned());
+      }).queue();
+    } else {
+      new Jobs.CSG.Simple([target]).then((csgs, job) => {
+        applyExtraObjAndDisplay(target, CSG.fromPolygons(csgs[0].polygons));
+      }).queue();
+    }
   }
+}
+
+const hide = (sectionName) => {
+  du.id(ids.cabinet).hidden = true;
+  du.find(`[display-id='${ids[sectionName]}']`).hidden = true;
 }
 
 const set = {};
 let locationPrefix, locationCode, _parts, ufidPrefix;
+let openTabId;
 const resetAll = () => locationCode = _parts = locationPrefix = ufidPrefix = undefined;
 const lcPrefixFilter = p => p.locationCode().match(`^${locationPrefix}(_|:|$)`);
 const pcPrefixFilter = p => p.userFriendlyId().match(`^${ufidPrefix}(_|:|$)`);
@@ -65,8 +73,8 @@ set.ufidPrefix = (pc) => resetAll() & (ufidPrefix = pc);
 set.locationCode = (lc) => resetAll() & (locationCode = lc);
 set.parts = (parts) => resetAll() & (_parts = parts);
 function  renderParts() {
-  const cabinet = Global.cabinet();
-  if (!cabinet) return;
+  const cabinet = Global.cabinet() || Global.target();
+  if (!cabinet || cabinet.constructor.name !== 'Cabinet') return;
   let parts;
   if (locationPrefix) parts = cabinet.getParts().filter(lcPrefixFilter);
   else if (ufidPrefix) parts = cabinet.getParts().filter(pcPrefixFilter);
@@ -91,8 +99,8 @@ let ids = {
 
 }
 
-let openTabId = ids.parts;
-modelDisplayManager.open(openTabId);
+
+openTabId = ids.layout;
 function render() {
   const isRoom = openTabId === ids.room;
   const isCabinet = openTabId === ids.cabinet;
@@ -117,7 +125,7 @@ function render() {
       if (TwoDLayout.panZoom) TwoDLayout.panZoom.once();
       else {
         du.id(ids.layout).hidden = true;
-        hide('layout');
+        // hide('layout');
         switchTo(ids.cabinet);
         render();
       }
@@ -143,16 +151,11 @@ const build = async (cabinet) => {
   render();
 }
 
-const hide = (sectionName) => {
-  du.id(ids.cabinet).hidden = true;
-  du.find(`[display-id='${ids[sectionName]}']`).hidden = true;
-}
-
 du.on.match('enter', '*', () => {
-  // TODO(timeout): this should not be nessisary.
-  console.log('rendering');
-    setTimeout(render, 1500);
+  render.lastCall();
 });
+
+setTimeout(() => modelDisplayManager.open(openTabId), 20);
 
 Canvas = {
   render, build, hide, set, extraCsgObjects,

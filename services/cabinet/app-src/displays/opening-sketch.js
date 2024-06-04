@@ -73,66 +73,70 @@ class OpeningSketch {
     }
 
     function draw() {
-      if (cabinet.openings.length === 0) return;
-      if (cabinet.openings.length > 1) throw new Error('Not Set Up for multiple openings: Should consider creating seperate canvas for each opening');
-      sketch.clear()
-      // sketch.ctx().drawImage(0,0)
+      try {
+        if (cabinet.openings.length === 0) return;
+        // if (cabinet.openings.length > 1) throw new Error('Not Set Up for multiple openings: Should consider creating seperate canvas for each opening');
+        sketch.clear()
+        // sketch.ctx().drawImage(0,0)
 
-      let innerLines = [];
-      let outerLines = [];
-      const normal = cabinet.openings[0].normal().inverse();
-      for (let index = 0; index < cabinet.openings.length; index++) {
-        const sections = getSections(cabinet.openings[index].sections());
-        for (let si = 0; si < sections.length; si++) {
-          const section = sections[si];
-          const inner = JSON.copy(section.coordinates().inner);
-          const outer = JSON.copy(section.coordinates().outer);
+        let innerLines = [];
+        let outerLines = [];
+        const normal = cabinet.openings[0].normal().inverse();
+        for (let index = 0; index < cabinet.openings.length; index++) {
+          const sections = getSections(cabinet.openings[index].sections());
+          for (let si = 0; si < sections.length; si++) {
+            const section = sections[si];
+            const inner = JSON.copy(section.coordinates().inner);
+            const outer = JSON.copy(section.coordinates().outer);
 
-          // inner[0].x*=-1;inner[1].x*=-1;inner[2].x*=-1;inner[3].x*=-1;
-          // outer[0].x*=-1;outer[1].x*=-1;outer[2].x*=-1;outer[3].x*=-1;
-          innerLines.concatInPlace([new Line3D(inner[0], inner[1]),
-                          new Line3D(inner[1], inner[2]),
-                          new Line3D(inner[2], inner[3]),
-                          new Line3D(inner[3], inner[0])]);
-          outerLines.concatInPlace([new Line2d(outer[0], outer[1]),
-                          new Line3D(outer[1], outer[2]),
-                          new Line3D(outer[2], outer[3]),
-                          new Line3D(outer[3], outer[0])]);
+            // inner[0].x*=-1;inner[1].x*=-1;inner[2].x*=-1;inner[3].x*=-1;
+            // outer[0].x*=-1;outer[1].x*=-1;outer[2].x*=-1;outer[3].x*=-1;
+            innerLines.concatInPlace([new Line3D(inner[0], inner[1]),
+            new Line3D(inner[1], inner[2]),
+            new Line3D(inner[2], inner[3]),
+            new Line3D(inner[3], inner[0])]);
+            outerLines.concatInPlace([new Line2d(outer[0], outer[1]),
+            new Line3D(outer[1], outer[2]),
+            new Line3D(outer[2], outer[3]),
+            new Line3D(outer[3], outer[0])]);
+          }
         }
+        const cabDems = cabinet.position().demension();
+        const model = modelInfo.unioned();
+        const view = Polygon3D.viewFromVector(model, normal);
+        const lines2d = Polygon3D.lines2d(view, 'x', 'y');
+        const cabinetOutlines = Parimeters2d.lines(lines2d).map(l => l.clone());
+
+
+        innerLines = Line3D.to2D(Line3D.viewFromVector(innerLines, normal), 'x', 'y');
+        outerLines = Line3D.to2D(Line3D.viewFromVector(outerLines, normal), 'x', 'y');
+        const allLines = innerLines.concat(outerLines);
+
+        const minMax = Vertex2d.minMax(Line2d.vertices(cabinetOutlines));
+        const scaleY = (sketch.canvas().height * .95) / (minMax.max.y() - minMax.min.y());
+        const scaleX = (sketch.canvas().width * .95) / (minMax.max.x() - minMax.min.x());
+        const minScale = Math.min(scaleX, scaleY);
+        sketch.ctx().scale(minScale, minScale);
+
+
+        const offset = Line2d.centerOn(cabinetOutlines, {
+          x: sketch.canvas().width/(2*minScale),
+          y: sketch.canvas().height/(2*minScale)
+        });
+
+        // const offset = {x: 0, y:0}
+        Line2d.translate(allLines, offset);
+        allLines.concatInPlace(cabinetOutlines);
+        sketch(innerLines, undefined, .3);
+        // sketch(outerLines, 'green', .3);
+        sketch(cabinetOutlines, 'red', .3);
+
+        drawLabels(offset, normal, cabinet);
+        // const measurements = LineMeasurement2d.measurements(allLines);
+        // sketch(measurements, 'grey', 1);
+      } catch (e) {
+        console.error(e);
       }
-      const cabDems = cabinet.position().demension();
-      const model = modelInfo.unioned();
-      const view = Polygon3D.viewFromVector(model, normal);
-      const lines2d = Polygon3D.lines2d(view, 'x', 'y');
-      const cabinetOutlines = Parimeters2d.lines(lines2d).map(l => l.clone());
-
-
-      innerLines = Line3D.to2D(Line3D.viewFromVector(innerLines, normal), 'x', 'y');
-      outerLines = Line3D.to2D(Line3D.viewFromVector(outerLines, normal), 'x', 'y');
-      const allLines = innerLines.concat(outerLines);
-
-      const minMax = Vertex2d.minMax(Line2d.vertices(cabinetOutlines));
-      const scaleY = (sketch.canvas().height * .95) / (minMax.max.y() - minMax.min.y());
-      const scaleX = (sketch.canvas().width * .95) / (minMax.max.x() - minMax.min.x());
-      const minScale = Math.min(scaleX, scaleY);
-      sketch.ctx().scale(minScale, minScale);
-
-
-      const offset = Line2d.centerOn(cabinetOutlines, {
-        x: sketch.canvas().width * 1.25/2,
-        y: sketch.canvas().height * 1.25/2
-      });
-
-      // const offset = {x: 0, y:0}
-      Line2d.translate(allLines, offset);
-      allLines.concatInPlace(cabinetOutlines);
-      sketch(innerLines, undefined, .3);
-      // sketch(outerLines, 'green', .3);
-      sketch(cabinetOutlines, 'red', .3);
-
-      drawLabels(offset, normal, cabinet);
-      // const measurements = LineMeasurement2d.measurements(allLines);
-      // sketch(measurements, 'grey', 1);
     }
     this.draw = draw;
 

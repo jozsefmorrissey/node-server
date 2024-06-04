@@ -56,6 +56,6 @@ Test.add('Jobs.To2D', async (ts) => {
     objects.push(cabinet);
     const gap = 25;
 
-    new Jobs.CSG.To2D(objects, {partsOnly: false, noJoints: true, gap})
+    new Jobs.CSG.To2D(objects, {partsOnly: false, gap})
             .then(on2DComplete(objects, ts), onFail(ts)).queue();
 });

@@ -45,7 +45,7 @@ To2D.simple = simpleTo2D;
 function setTo2D (payload, env, taskId) {
   const assems = payload.assemblies;
   let twoDObjs = {};
-  const modelMap = env.modelInfo[env.modelAttribute];
+  const modelMap = env.modelInfo.joined;
   for (let index = 0; index < assems.length; index++) {
     const key = assems[index];
     let norms = env.byId[key].position.current.normals;

@@ -27,6 +27,12 @@ class CabinetConfig {
     this.get = (group, type, layout, name) => {
       let cabinet = Cabinet.build(type, group);
       if (layout && CabinetLayouts.map[layout]) CabinetLayouts.map[layout].build(cabinet);
+      const layout2d = group.room().layout();
+      if (layout2d) {
+        const layoutCenter = layout2d.center();
+        cabinet.position().setCenter('x', layoutCenter.x());
+        cabinet.position().setCenter('z', layoutCenter.y());
+      }
       cabinet.name(name);
       return cabinet;
     };

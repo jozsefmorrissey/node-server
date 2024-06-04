@@ -150,7 +150,8 @@ class Expandable {
         }, 100);
       }
     };
-    this.activeKey = (value) => value === undefined ? props.activeKey : (props.activeKey = value);
+    this.activeKey = (value) =>
+      value === undefined ? props.activeKey : (props.activeKey = value);
     this.getKey = () => this.list().length;
     this.active = () => props.list[this.activeKey()];
 
@@ -303,8 +304,8 @@ du.on.match('click', '.expand-header', (target, event) => {
   const isActive = target.matches('.active');
   const id = target.getAttribute('ex-list-id');
   const list = Expandable.lists[id];
-  if (list) {
-    if (isActive && !event.target.tagName.match(/INPUT|SELECT/)) {
+  if (list && !event.target.tagName.match(/INPUT|SELECT/)) {
+    if (isActive) {
       du.class.remove(target, 'active');
       const body = du.find.down('.expand-body', du.find.up('.expandable-list', target));
       body.style.display = 'none';

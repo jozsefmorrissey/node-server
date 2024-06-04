@@ -21,11 +21,11 @@ function determineMales(assem, env) {
   return males;
 }
 
-function removeJonintMaterial(map, assem, env, model, intersections) {
+function removeJointMaterial(map, assem, env, model, intersections) {
   const males = determineMales(assem, env);
   const id = assem.id;
   let malesModel = new CSG();
-  if (intersections) map.intersection[id] = {};
+  if (intersections) map.intersection[id] ||= {};
   males.forEach(mid => {
     let mm = map.joined[mid];
     if (mm) {
@@ -36,7 +36,7 @@ function removeJonintMaterial(map, assem, env, model, intersections) {
       }
       malesModel = malesModel.union(mm);
     }
-    // else console.warn(`I dont thin you should see this id: '${mid}' does not have a joinedModel`);
+    // else console.warn(`I dont think you should see this id: '${mid}' does not have a joinedModel`);
   });
   try {
     if (map.joined[id] === undefined)
@@ -47,6 +47,8 @@ function removeJonintMaterial(map, assem, env, model, intersections) {
 }
 
 const femalePolyInformation = (femaleId, fbCenter, env) => () => {
+  if (env.modelInfo.extended[femaleId] === undefined)
+    return null;
   let femaleModel  = CSG.fromPolygons(env.modelInfo.extended[femaleId].polygons, true);
   const polys = Polygon3D.fromCSG(femaleModel);
   const assem = env.byId[femaleId];
@@ -68,7 +70,7 @@ const getFemalePolyInfo = (joint, env, frontBackSet, modelCenter) => {
     let one = 2;
   }
   const femalePolyInfo = [];
-  const fbCenter = modelCenter;//Vertex3D.center(frontBackSet.map(p => p.center()));
+  const fbCenter = modelCenter;
   for (let fi = 0; females && fi < females.length; fi++) {
       femalePolyInfo.push(femalePolyInformation(females[fi], fbCenter, env));
   }
@@ -91,7 +93,32 @@ function applyMaleJointApplicator(joint, frontBackSet, assem, env, modelCenter) 
   return cutters;
 }
 
-function getExtendedModel(assem, joints, env) {
+function applyCutters(assem, cutters, env, group) {
+  const id = assem.id;
+  let model = env.modelInfo.extended[id];
+  for (let index = 0; index < cutters.length; index++) {
+    const cutter = cutters[index] instanceof Function ? cutters[index]() : cutters[index];
+    if (cutter) {
+      const jointId = `AutoJoint_${String.random()}`;
+      const cutterId = `${group}_${jointId}`;
+      const jointObj = {
+        descriptor: cutterId, id: jointId
+      }
+      env.byId[jointId] = jointObj;
+      env.modelInfo.joined[cutterId] = cutter;
+      env.jointMap[jointId] = {male: [cutterId], female: [assem.id]};
+      env.jointMap.female[assem.id] ||= [];
+      env.jointMap.female[assem.id].push(jointId);
+      env.modelInfo.intersection[id] ||= {};
+      env.modelInfo.intersection[id][cutterId] = model.intersect(cutter);
+      model = model.subtract(cutter);
+    }
+  }
+  env.modelInfo.extended[id] = model;
+}
+
+// TODO: model extension is messing up for base corner diagonal
+function buildExtendedModel(assem, joints, env) {
   const id = assem.id;
   let model = env.modelInfo.extended[id];
   if (model === undefined) return;
@@ -121,20 +148,24 @@ function getExtendedModel(assem, joints, env) {
         console.error(e);
       }
     }
-    model = new BiPolygon(frontBackSet[0], frontBackSet[1]).model();
-    cutters.cookie.forEach(cutter => model = model.subtract(cutter()));
-    env.modelInfo.extended[id] = model;
-    return cutters.joint.map(cf => () =>
-      env.modelInfo.extended[id] = env.modelInfo.extended[id].subtract(cf()));
+    env.modelInfo.extended[id] = new BiPolygon(frontBackSet[0], frontBackSet[1]).model();
+    applyCutters(assem, cutters.cookie, env, 'Cookie');
+    return cutters.joint;
   } catch (e) {
     console.warn(e);
-    if (goDownTheRabbitHole) getExtendedModel(assem, joints, env);
+    if (goDownTheRabbitHole) buildExtendedModel(assem, joints, env);
   }
+}
+
+function runMfcFunc(stage, assem, env) {
+  const mfc = MFC(assem);
+  if (mfc[stage])
+    env.modelInfo[stage][assem.id] = mfc[stage](assem, env);
 }
 
 
 function applyMaleJointExtensions(payload, environment) {
-  const jointCutters = [];
+  const jointCutters = {};
     const assemblyIds = payload.assemblies;
     let env = environment;
     let proccessedIndex = 0;
@@ -147,13 +178,16 @@ function applyMaleJointExtensions(payload, environment) {
       .map(jid => env.byId[jid]);
       if(joints.length > 0 && assem.part && assem.included) {
         try {
-          jointCutters.concatInPlace(getExtendedModel(assem, joints, environment));
+          jointCutters[id] ||= {assem, cutters: []};
+          const cutter = buildExtendedModel(assem, joints, environment);
+          jointCutters[id].cutters.concatInPlace(cutter);
         } catch (e) {
           console.warn(e);
         }
       }
+      runMfcFunc('extended', assem, env);
     }
-    jointCutters.forEach(cutter => cutter());
+    Object.values(jointCutters).forEach(obj => applyCutters(obj.assem, obj.cutters, env, 'Joint'));
 }
 
 function exploadedTranslation(assemblyIds, env) {
@@ -190,13 +224,11 @@ function Apply(payload, environment, taskId, intersections) {
     if (model && assem.part && assem.included) {
       model = CSG.fromPolygons(model.polygons, true);
       const joints = env.jointMap.female[id] || [];
-      removeJonintMaterial(map, assem, env, model, intersections);
+      removeJointMaterial(map, assem, env, model, intersections);
     } else if (map.joined[id] === undefined) {
       map.joined[id] = model;
     }
-    const mfc = MFC(assem);
-    if (mfc.joined)
-      env.modelInfo.joined[id] = mfc.joined(assem, environment);
+    runMfcFunc('joined', assem, env);
   }
   exploadedTranslation(assemblyIds, env);
 }

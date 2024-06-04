@@ -103,16 +103,15 @@ class CsgModelInfoJob extends TaskJob {
 class CsgModelJob extends CsgModelInfoJob {
   constructor(assemblyOs, props) {
     props ||= {};
-    props.modelAttribute = 'model';
     const modelInfo = ModelInfo.object(assemblyOs, props);
-    super(Model(modelInfo), modelInfo);
+    super(Join(modelInfo), modelInfo);
   }
 }
 CsgModelJob.task = (modelInfo) => new Sequential(modelInfo.environment, new Model(modelInfo), new Union(modelInfo));
 
 class CsgJoinJob extends CsgModelInfoJob {
-  constructor(assemblyOs, explosionFactor) {
-    const modelInfo = ModelInfo.object(assemblyOs);
+  constructor(assemblyOs, explosionFactor, props) {
+    const modelInfo = ModelInfo.object(assemblyOs, props);
     modelInfo.explosionFactor(explosionFactor);
     super(Join(modelInfo), modelInfo);
   }
@@ -135,19 +134,20 @@ class CsgPartsJob extends CsgModelInfoJob {
   }
 }
 
-class CsgCabinetBoxOnlyJob extends CsgModelJob {
+class CsgCabinetBoxOnlyJob extends CsgJoinJob {
   constructor(cabinet) {
-    super([cabinet], {partsOnly: false, noJoints: true});
+    super(cabinet.userDefinedParts(), null, {partsOnly: true});
     this.cabinet = () => cabinet;
   }
 }
 
-class CsgSimpleCabinet extends CsgModelJob {
+class CsgSimpleCabinet extends CsgJoinJob {
   constructor(cabinet) {
     const allAssemblies = cabinet.allAssemblies();
+    const boxParts = cabinet.userDefinedParts();
     const fronts = allAssemblies.filter(a => a.part() && a.partCode().match(/^(d|df|D|ff|Dr|Dl)$/));
     const pulls = allAssemblies.filter(a => a.part() && a.partCode().match(/^(pu)$/));
-    super([cabinet].concat(fronts).concat(pulls), {partsOnly: false, noJoints: true});
+    super(boxParts.concat(fronts).concat(pulls), null,  {partsOnly: true});
     this.cabinet = () => cabinet;
   }
 }
@@ -200,19 +200,16 @@ class CsgBoxOnlyCabinets extends CsgCabinets {
 class CsgAssembliesTo2DJob extends CsgModelInfoJob {
   constructor(assemblyOs, props) {
     props ||= {};
-    props.modelAttribute ||= 'model';
     const modelInfo = ModelInfo.object(assemblyOs, props);
-    const task = AssembliesTo2D(modelInfo, props.modelAttribute === 'joined', props.unioned);
+    const task = AssembliesTo2D(modelInfo, true, props.unioned);
     super(task, modelInfo);
   }
 }
 
 class CsgCabinetTo2DJob extends CsgAssembliesTo2DJob {
-  constructor(cabinetOs, props) {
+  constructor(cabinet, props) {
     props ||= {};
-    if (props.partsOnly === undefined) props.partsOnly = false;
-    if (props.noJoints === undefined) props.noJoints = true;
-    super(cabinetOs, props);
+    super(cabinet.userDefinedParts(), props);
   }
 }
 
@@ -250,11 +247,14 @@ class CsgRoomJob extends TaskJob {
         for (let index = 0; index < jobs.length; index++) {
           const model = jobs[index].modelInfo().unioned().clone();
           const cabinet = jobs[index].cabinet();
-          const buildCenter = cabinet.buildCenter();
+          const rotation = cabinet.position().rotation();
+          const buildCenter = cabinet.buildCenter(true);
           const center = new Vertex3D(cabinet.position().center());
+          const layoutCenterVect = new Vertex3D((center.minus(buildCenter)));
           const modelCenter = model.center();
-          model.rotate(cabinet.position().rotation());
-          model.center(center);
+          model.translate({x: -buildCenter.x, y: -buildCenter.y, z: -buildCenter.z})
+          model.rotate(rotation);
+          model.translate(center);
 
           if (model) csg.polygons.concatInPlace(model.polygons);
         }

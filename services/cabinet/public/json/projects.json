@@ -3,25 +3,28 @@
       "name": "First Project",
       "file": "basement-wall",
       "description": "Storage Utility(UT) Cabinets For Basement",
-      "designTime": "tbd",
+      "designTime": "10 minutes",
       "buildTime": "22hrs",
       "finishedWith": "Roller And Paint Brush",
       "date": "Apr 03 2024",
       "finishTime": "~20hrs",
+      "instillationTime": "5hrs",
       "notes": [
         "Frameless Storage Cabinets that attempted to minimize material Costs"
       ],
       "photos": [],
       "videos": [],
       "issues": [
-        {"solved": false, "text": "Male Joint Algorithm Needs Re-written to an automated format"},
-        {"solved": false, "text": "Material Sqft estimates are not accurate"},
+        {"solved": true, "text": "Male Joint Algorithm Needs Re-written to an automated format"},
+        {"solved": true, "text": "Material Sqft estimates are not accurate"},
         {"solved": false, "text": "Tooling instructions not user friendly: <ul><li>Group Identical Parts</li><li>Simplify saw instructions and make consistant</li></ul>"},
-        {"solved": false, "text": "Documentation doesnt work in main application"},
+        {"solved": true, "text": "Documentation doesnt work in main application"},
         {"solved": false, "text": "Layout auto position on walls/corner malfunctioning"},
-        {"solved": false, "text": "Shelve drilling should be indicated within instructions"},
-        {"solved": false, "text": "Center of objects does not appear to be completely accurate between 2D and 3D models"},
-        {"solved": false, "text": "Framed Doors needs to be implemented, they would further reduce matirial costs"}
+        {"solved": true, "text": "Shelve drilling should be indicated within instructions"},
+        {"solved": true, "text": "Center of objects does not appear to be completely accurate between 2D and 3D models"},
+        {"solved": false, "text": "Framed Doors needs to be implemented, they would further reduce matirial costs"},
+        {"solved": false, "text": "Auto ToeKick needs to apply sides when nessisary"},
+        {"solved": false, "text": "Divider width adjustments need to be implemented"}
       ]
   }
 ]

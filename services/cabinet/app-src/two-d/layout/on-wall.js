@@ -6,7 +6,7 @@ const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line
 class OnWall extends Lookup {
   constructor(wall, fromPreviousWall, fromFloor, height, width) {
     super();
-    Object.getSet(this, {width, height, fromFloor, fromPreviousWall}, 'wallId');
+    Object.getSet(this, {width, height, fromFloor, fromPreviousWall}, 'wallId', 'id');
     let start = new Vertex2d();
     let end = new Vertex2d();
     this.wallId = () => wall.id();

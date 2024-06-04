@@ -308,7 +308,7 @@ class Assembly extends KeyValue {
 
     this.getDependencyList = () => Object.values(namedDependencies).concat(this.joints);
 
-    this.getAllDependencies = (assem, noJoints) => {
+    this.getAllDependencies = (assem) => {
       assem ||= this;
       const root = this.getRoot();
       if (root !== this) return root.getDependencies(assem);
@@ -317,16 +317,16 @@ class Assembly extends KeyValue {
       let allJoints = [];
       // if (assem) allJoints.concatInPlace(assem.joints);
       assemList.forEach((a) => a.getDependencyList && allJoints.concatInPlace(a.getDependencyList()));
-      return noJoints ? allJoints.filter(d => !(d instanceof Joint)) : allJoints;
+      return allJoints;
     };
 
-    this.dependencyMap = (noJoints) => {
+    this.dependencyMap = () => {
       const assems = this.allAssemblies();
       const allJs = this.getAllDependencies();
       const jMap = {female: {}, male: {}};
       for (let ji = 0; ji < allJs.length; ji++) {
         const joint = allJs[ji];
-        if (!joint.apply() || (noJoints && joint instanceof Joint)) continue;
+        if (!joint.apply()) continue;
 
         const jid = joint.id();
         for (let ai = 0; ai < assems.length; ai++) {
@@ -388,6 +388,7 @@ class Assembly extends KeyValue {
     this.addDependencies = function () {
       for (let i = 0; i < arguments.length; i += 1) {
         const joint = arguments[i];
+        if (joint.evaluator) joint.evaluator(this.eval);
         if (joint instanceof Dependency) {
           const locId = joint.locationId();
           const pc = this.locationCode();
@@ -436,34 +437,6 @@ class Assembly extends KeyValue {
     this.thickness = (value) => position.setDemension('z', value);
     this.toString = () => `${this.id()} - ${this.partName()}`;
 
-    let buildCenter;
-    this.buildCenter = (reevaluate) => {
-      if (reevaluate === true) {
-        let minX = Number.MAX_SAFE_INTEGER;
-        let minY = Number.MAX_SAFE_INTEGER;
-        let minZ = Number.MAX_SAFE_INTEGER;
-        let maxX = Number.MIN_SAFE_INTEGER;
-        let maxY = Number.MIN_SAFE_INTEGER;
-        let maxZ = Number.MIN_SAFE_INTEGER;
-        const parts = instance.getParts();
-        for (let index = 0; index < parts.length; index++) {
-          const limits = parts[index].position().limits();
-          minX = Math.min(minX, limits['-x']);
-          minY = Math.min(minY, limits['-y']);
-          minZ = Math.min(minZ, limits['-z']);
-          maxX = Math.max(maxX, limits.x);
-          maxY = Math.max(maxY, limits.y);
-          maxZ = Math.max(maxZ, limits.z);
-        }
-        buildCenter = new Vertex3D({
-          x: (maxX+minX)/2,
-          y: (maxY+minY)/2,
-          z: (maxZ+minZ)/2,
-        });
-      }
-      return buildCenter || new Vertex3D();
-    }
-
     const clear = (attr) => {
       if (this[attr] instanceof Function && this[attr].clearCache instanceof Function)
       this[attr].clearCache();
@@ -494,7 +467,6 @@ class Assembly extends KeyValue {
       jointList = joints.male.concat(joints.female);
       this.children().forEach(c => c.trigger.change());
     });
-    this.on.change(() => instance.buildCenter(true));
     // defaultPartCode();
   }
 }

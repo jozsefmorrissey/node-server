@@ -102,10 +102,11 @@ class Position {
     this.limits = (targetStr, relitiveToCenter) => {
       let center = this.center();
 
+      let d = new Vertex3D(this.demension()).rotate(this.rotation());
       if (targetStr !== undefined) {
         const match = targetStr.match(/^(\+|-|)([xyz])$/)
         const attr = match[2];
-        const d = this.demension(attr)/2;
+        const d = d[attr]/2;
         const pos = `+${attr}`;
         const neg = `-${attr}`;
         const limits = {};
@@ -115,7 +116,6 @@ class Position {
         if (match[1] === '-') return limits[neg];
         return  limits;
       }
-      const d = this.demension();
       return  {
         x: center.x + d.x / 2,
         '-x': center.x - d.x / 2,

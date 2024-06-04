@@ -1214,7 +1214,7 @@ function setGettersAndSetters(obj, options) {
       const initVal = options.values[attr];
       if(initVal instanceof Function) obj[attr] = initVal;
       else if (options.immutable) obj[attr] = () => initVal;
-      else {
+      else if (!(obj[attr] instanceof Function)) {
         obj[attr] = (value) => {
           if (value === undefined) {
             const noDefaults = (typeof obj.defaultGetterValue) !== 'function';

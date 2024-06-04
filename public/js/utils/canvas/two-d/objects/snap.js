@@ -498,6 +498,7 @@ class Snap2d extends Lookup {
             const tm = targetMidpoint;
             const radDiff = targetMidpoint.forwardRadians() - otherMidpoint.forwardRadians();
             const parrelle = findClosestNeighbor(om, radDiff, tm, ol, c);
+            const antiRadDiff = radDiff + Math.PI;
             const antiParrelle = findClosestNeighbor(om, radDiff + Math.PI, tm, ol, c);
             const furthestCenter =
             parrelle.centerDist > antiParrelle.centerDist ? parrelle : antiParrelle;
@@ -691,7 +692,7 @@ class Snap2d extends Lookup {
       } else {
         snapList = instance.snapLocations.backCenter();
       }
-      if (snapList) {
+      if (!alps.FIXED_ANGLE && snapList) {
         let midpoint = midpointOffset ? closestOtherLoc.neighbor(midpointOffset) : closestOtherLoc;
         const snapInfo = closestSnap(midpoint, closestOtherLoc, snapList, center);
         snapMove(snapInfo);

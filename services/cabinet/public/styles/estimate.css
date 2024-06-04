@@ -762,3 +762,8 @@ table.no-borders, table.no-borders td, table.no-borders th, table.no-borders tr,
   width: 31.5vw;
   height: 8.9vh;
 }
+
+.project-image-cnt img {
+  max-width: 300px;
+  max-height: 200px;
+}

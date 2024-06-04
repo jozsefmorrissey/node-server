@@ -90,15 +90,15 @@ function init(body){
         du.on.match('change', '.open-orientation-radio,.open-division-input', updateDivisions);
         orderDisplay = new OrderDisplay('#order-cnt');
         Global.displays.order(orderDisplay);
-        setTimeout(TwoDLayout.init, 1000);
-        setTimeout(ThreeDMainModel.init, 1000);
+        TwoDLayout.init();
+        ThreeDMainModel.init();
     }
   } else if (urlSuffix === 'order') {
     require('./displays/canvas');
     const viewDisplayManager = new DisplayManager('display-cnt', 'main-display-menu');
     require('./displays/single-order');
-    setTimeout(TwoDLayout.init, 1000);
-    setTimeout(ThreeDMainModel.init, 1000);
+    TwoDLayout.init();
+    ThreeDMainModel.init();
   }
 }
 

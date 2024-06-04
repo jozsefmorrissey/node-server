@@ -48,7 +48,8 @@ to.SectionProperties = {
 
 to.Cabinet = {
   Simple: {
-    model: (mdto, environment) => {
+    model: (mdto, env) => new CSG(),
+    joined: (mdto, environment) => {
       const childs = mdto.children.map(c => c()).filter(c => c instanceof Object);
       const parts = childs.filter(c => c.part || c.id.match(/^Divider/));
       const cutters = childs.filter(c => c.id.match(/^Cutter/));
@@ -65,16 +66,16 @@ to.Cabinet = {
           csg = csg.union(model);
         }
       }
-      for (let index = 0; index < cutters.length; index++) {
-        const id = cutters[index].id;
-        let model = environment.modelInfo.model[id];
-        if (model) {
-          if (!(model instanceof CSG)) {
-            environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
-          }
-          csg = csg.subtract(model);
-        }
-      }
+      // for (let index = 0; index < cutters.length; index++) {
+      //   const id = cutters[index].id;
+      //   let model = environment.modelInfo.model[id];
+      //   if (model) {
+      //     if (!(model instanceof CSG)) {
+      //       environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
+      //     }
+      //     csg = csg.subtract(model);
+      //   }
+      // }
       return csg;
     }
   }
@@ -303,12 +304,12 @@ to.Panel = {
   },
   Front: {
     biPolygon: (rMdto, environment) => Divider.instance(rMdto, environment).Full(),
-    joined: (rMdto, env) =>
+    extended: (rMdto, env) =>
       Divider.instance(rMdto, env).Front(rMdto, env)
   },
   Back: {
     biPolygon: (rMdto, environment) => Divider.instance(rMdto, environment).Full(),
-    joined: (rMdto, env) => Divider.instance(rMdto, env).Back(rMdto, env)
+    extended: (rMdto, env) => Divider.instance(rMdto, env).Back(rMdto, env)
   }
 },
 
@@ -320,7 +321,7 @@ to.Shelve = {
       const divider = parent.divider().divider();
       const biPoly = Divider.instance(divider, environment).Full().copy();
       const shelveCount = parent.shelves.length;
-      const index = Number.parseInt(rMdto.partCode.replace(/.*?([0-9]{1,})/, '$1'));
+      const index = Number.parseInt(rMdto.partCode.replace(/.*?([0-9]{1,})$/, '$1'));
       const dividerNorms = divider.position.current.normals;
       rMdto.position.current.normals = dividerNorms;
       biPoly.translate(new Vector3D(0,sectionUtils.innerLength*index/(shelveCount+1),0));

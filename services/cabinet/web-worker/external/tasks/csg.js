@@ -113,8 +113,8 @@ class CsgAssembliesTo2DTask extends CsgTask {
 
 const AssembliesTo2D = (modelInfo, joined, unioned) => {
   const tasks = [new CsgModelTask(modelInfo)];
-  if (joined) tasks.push(new CsgJoinTask(modelInfo))
-  if (unioned) tasks.push(new CsgUnionTask(modelInfo));
+  tasks.push(new CsgJoinTask(modelInfo))
+  tasks.push(new CsgUnionTask(modelInfo));
   tasks.push(new CsgAssembliesTo2DTask(modelInfo));
   return new Sequential(modelInfo.environment, ...tasks);
 };

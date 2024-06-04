@@ -13,6 +13,7 @@ const DividerSection = require('./partition/divider.js');
 const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
 const Dado = require('../../../joint/joints/dado.js');
+const ShelveJoint = require('../../../joint/joints/shelve.js');
 const Dependency = require('../../../dependency.js');
 const CustomEvent = require('../../../../../../../public/js/utils/custom-event.js')
 const PropertyConfig = require('../../../../config/property/config.js');
@@ -67,7 +68,7 @@ class SectionProperties extends KeyValue {
     const coordinates = {inner: [v(),v(10,0,0),v(10,10,0),v(0,10,0)], outer: [v(),v(20,0,0),v(20,20,0),v(0,20,0)]};
     const temporaryInitialVals = {parent, _TEMPORARY: true};
     Object.getSet(this, temporaryInitialVals, 'parentAssembly');
-    Object.getSet(this, {divideRight: false, config, index}, 'divider', 'cover');
+    Object.getSet(this, {divideRight: false, config, index}, 'divider', 'cover', 'name');
     this.normal = () => this.outerPoly().normal()
     this.outerPoly = () => new Polygon3D(coordinates.outer);
     this.innerPoly = () => new Polygon3D(coordinates.inner);
@@ -113,12 +114,12 @@ class SectionProperties extends KeyValue {
 
     this.divideRight = () => this.parentAssembly() && this.parentAssembly().sectionCount
       && this.parentAssembly().sectionCount() !== index;
-    this.partCode = () => 'S';
+    this.partCode = () => 'S' + index;
     this.partName = () => undefined;
 
     this.locationCode = () => {
       const parent = this.parentAssembly();
-      const pc = 'S' + index;
+      const pc = this.partCode();
       if (parent && parent.locationCode) return `${parent.locationCode()}_${pc}`;
       return pc;
     };
@@ -192,19 +193,6 @@ class SectionProperties extends KeyValue {
       if (instance.sections.length === 0) {
         instance.sections.push(new SectionProperties(instance.childConfig(), 1));
       }
-    }
-
-    const shelves = [];
-    this.shelves = () => {
-      const shelveCount = this.value('shelves') || 0;
-      const newShelveCount = shelveCount - shelves.length
-      for (let index = 0; index < newShelveCount; index++) {
-        const shelve = new Shelve(`:sh${shelves.length + 1}`, 'Shelve');
-        shelve.parentAssembly(this);
-        // shelve.addDependencies(new Joint(this.divider().divider(), shelve));
-        shelves.push(shelve);
-      }
-      return shelves.slice(0, shelveCount);
     }
 
     this.init = init;
@@ -606,6 +594,29 @@ class SectionProperties extends KeyValue {
     const neigborJoint = new Dado(divider.divider().isPanel, isNeigbor, null, 'NEIGHBOR_JOINT');
     neigborJoint.maleOffset(.9525);
     divider.addDependencies(neigborJoint);
+
+
+    function shelveNiegbor(assem) {
+      if (assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section|Shelve)/)) return false;
+      if (assem.locationCode().startsWith('c_S1')) return false;
+      if (assem.locationCode().match(/^c_[^_]*$/))
+        return true;
+      return isMatch(assem, 'left') || isMatch(assem, 'right');
+    }
+    const shelves = [];
+    this.shelves = () => {
+      const shelveCount = this.value('shelves') || 0;
+      const newShelveCount = shelveCount - shelves.length
+      for (let index = 0; index < newShelveCount; index++) {
+        const shelve = new Shelve(`:sh${shelves.length + 1}`, 'Shelve');
+        shelve.parentAssembly(this);
+        const shelveJoint = new ShelveJoint(shelve, shelveNiegbor);
+        shelve.addDependencies(shelveJoint);
+        shelves.push(shelve);
+        shelve.getJointList();
+      }
+      return shelves.slice(0, shelveCount);
+    }
 
 
     function referenceFront(reference, cabinet) {

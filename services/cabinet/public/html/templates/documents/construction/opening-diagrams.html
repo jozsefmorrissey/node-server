@@ -14,8 +14,10 @@
                 <td>
                   {{disp.measurement(section.innerWidth())}} X
                   {{disp.measurement(section.innerLength())}}
+                  <br>
+                  {{section.value('shelves') > 0 ? "Adj Shelves: " + section.value('shelves') : ''}}
                 </td>
-                {{($index % 2) === 0 ? '<td>&nbsp&nbsp&nbsp</td' : ''}}
+                {{($index % 2) === 0 ? '<td>&nbsp&nbsp&nbsp</td>' : ''}}
               </no-tag:t>
             </tr:t>
           </tbody>

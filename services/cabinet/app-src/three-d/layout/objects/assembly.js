@@ -25,22 +25,17 @@ class Assembly3D extends Object3D {
       return new Vertex3D(position.center());
     }
 
-    const buildOnChange = (func) => (...args) => {
-      const curr = func();
-      if (args.length === 0) return curr;
-      const newVal = func(...args);
-      if (newVal !== curr) Canvas.build(assembly);
-      return newVal;
-    }
-    this.height = buildOnChange(assembly.length);
-    this.width = buildOnChange(assembly.width);
-    this.thickness = buildOnChange(assembly.thickness);
-    this.name = assembly.name;
+    this.height = assembly.length;
+    this.width = assembly.width;
+    this.thickness = assembly.thickness;
+    this.name = (value) =>
+      '' + (assembly.name(value) || assembly.groupIndex());
     // this.snap2d.top = () => topSnap;
     this.shouldSave = () => false;
 
     this.rotation = (rotation) => {
-      if (rotation) assembly.position().setRotation(rotation);
+      if (rotation)
+        assembly.position().setRotation(rotation);
       return assembly.position().rotation();
     }
 
@@ -74,7 +69,7 @@ class Assembly3D extends Object3D {
     layout.applyCount ||= 0;
     layout.polys ||= [];
     function applyTopOutline(modelInfo) {
-      const twoDInfo = modelInfo.threeView(assembly.id());
+      const twoDInfo = modelInfo.unioned2D();
       if (!twoDInfo) return;
       const initialize = topSnap === undefined;
       const poly = configurePoly(twoDInfo.parimeter.top, twoDInfo);
@@ -84,9 +79,7 @@ class Assembly3D extends Object3D {
         instance.snap2d.top = () => topSnap;
         layout.applyCount++;
       } else {
-        if (topSnap.object().vertices().length === poly.vertices().length) {
-          topSnap.polyCopy(poly);
-        }
+        topSnap.polyCopy(poly);
       }
     }
 
@@ -95,7 +88,7 @@ class Assembly3D extends Object3D {
     }
 
     function updateOutline() {
-      new Jobs.CSG.Cabinet.To2D([assembly]).then(applyTopOutline, error).queue();
+      new Jobs.CSG.Cabinet.To2D(assembly).then(applyTopOutline, error).queue();
     }
 
     assembly.on.change(updateOutline);

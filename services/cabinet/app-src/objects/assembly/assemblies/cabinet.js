@@ -94,6 +94,37 @@ class Cabinet extends Assembly {
       }
       return subs;
     }
+    const nonUserDefinedPartReg = /^c(_(S[0-9]{1,}|AUTOTK|COC)(_|$)|$)/;
+    this.userDefinedParts = () => this.allAssemblies().filter(a => !a.locationCode().match(nonUserDefinedPartReg));
+
+    let buildCenter;
+    this.buildCenter = (reevaluate) => {
+      if (reevaluate === true) {
+        let minX = Number.MAX_SAFE_INTEGER;
+        let minY = Number.MAX_SAFE_INTEGER;
+        let minZ = Number.MAX_SAFE_INTEGER;
+        let maxX = Number.MIN_SAFE_INTEGER;
+        let maxY = Number.MIN_SAFE_INTEGER;
+        let maxZ = Number.MIN_SAFE_INTEGER;
+        const parts = this.userDefinedParts();
+        for (let index = 0; index < parts.length; index++) {
+          const limits = parts[index].position().limits();
+          minX = Math.min(minX, limits.x, limits['-x']);
+          minY = Math.min(minY, limits.y, limits['-y']);
+          minZ = Math.min(minZ, limits.z, limits['-z']);
+          maxX = Math.max(maxX, limits.x, limits['-x']);
+          maxY = Math.max(maxY, limits.y, limits['-y']);
+          maxZ = Math.max(maxZ, limits.z, limits['-z']);
+        }
+        buildCenter = new Vertex3D({
+          x: (maxX+minX)/2,
+          y: (maxY+minY)/2,
+          z: (maxZ+minZ)/2,
+        });
+      }
+      return buildCenter || new Vertex3D();
+    }
+    this.on.change(() => instance.buildCenter(true));
 
     const parentAllAssems = this.allAssemblies;
     this.allAssemblies = () =>
@@ -131,7 +162,7 @@ class Cabinet extends Assembly {
       this.addDependencies(new Dependency(assembly, this));
       const simplePart = assembly.constructor.name.match(/Frame|Panel/);
       if (simplePart) {
-        this.addDependencies(new Joint(/.*S1:.*[^a-z^A-Z]dv:.*/, assembly, null, assembly.id()));
+        this.addDependencies(new Joint(/.*S[0-9]{1,}:.*[^a-z^A-Z]dv:.*/, assembly, null, assembly.id()));
       }
     }
 
@@ -140,7 +171,7 @@ class Cabinet extends Assembly {
       const group = this.group();
       const gIndex = group.objects.equalIndexOf(this);
       if (gIndex === -1) return 1;
-      return gIndex;
+      return gIndex + 1;
     }
 
     const parentHash = this.hash;
@@ -244,6 +275,7 @@ Cabinet.build = (type, group, config) => {
 
   config.openings.forEach((config, i) => {
     const sectionProperties = new SectionProperties(config, i + 1);
+    sectionProperties.name(config.name);
     const cabOpenCoords = new CabinetOpeningCorrdinates(cabinet, sectionProperties);
     cabinet.openings.push(cabOpenCoords);
     cabinet.addSubAssembly(sectionProperties);
@@ -259,6 +291,7 @@ const addSectionProps = (sectionProperties, assembly) => () => {
   const openingCoords = new CabinetOpeningCorrdinates(assembly, sectionProperties);
   assembly.openings.push(openingCoords);
   openingCoords.update();
+
   assembly.addSubAssembly(sectionProperties);
 }
 

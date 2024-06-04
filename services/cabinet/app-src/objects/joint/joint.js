@@ -20,14 +20,18 @@ class Joint extends Dependency {
       clone.femaleOffset(this.femaleOffset());
       clone.priority(this.priority());
       clone.fullLength(this.fullLength());
+      clone.evaluator(this.evaluator());
       return clone;
     }
 
-    this.updatePosition = () => {};
 
-    this.dependsSelector = this.dependsSelector;
-    this.dependentSelector = this.dependentSelector;
-
+    let _evaluator;
+    this.evaluator = (evaluator) => evaluator ? (_evaluator = evaluator) : _evaluator;
+    this.eval = {};
+    this.eval.maleOffset = () =>
+      _evaluator ? _evaluator(this.maleOffset()) : this.maleOffset();
+    this.eval.femaleOffset = () =>
+      _evaluator ? _evaluator(this.femaleOffset()) : this.femaleOffset();
     this.isMale = this.dependsOn;
     this.isFemale = this.isDependent;
   }
