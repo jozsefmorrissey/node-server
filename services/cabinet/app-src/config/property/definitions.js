@@ -41,7 +41,7 @@ defs.lw = new Property('lw', 'Distance from Front to Back on the Left', {value: 
 defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value: 24, notMetric: IMPERIAL_US});
 
 //   Panel
-defs.pt34 = new Property('pt34', 'Panel Width ~3/4', {value: .75, notMetric: IMPERIAL_US});
+defs.pt34 = new Property('pt34', 'Panel Width ~3/4', {value: 1.5, notMetric: IMPERIAL_US});
 defs.pt12 = new Property('pt12', 'Panel Width ~1/2', {value: .5, notMetric: IMPERIAL_US});
 defs.pt14 = new Property('pt14', 'Panel Width ~1/4', {value: .25, notMetric: IMPERIAL_US});
 

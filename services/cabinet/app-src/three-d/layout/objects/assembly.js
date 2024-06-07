@@ -90,7 +90,6 @@ class Assembly3D extends Object3D {
     function updateOutline() {
       new Jobs.CSG.Cabinet.To2D(assembly).then(applyTopOutline, error).queue();
     }
-
     assembly.on.change(updateOutline);
   }
 }

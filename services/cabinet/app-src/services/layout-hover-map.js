@@ -8,7 +8,8 @@ class LayoutHoverMap extends HoverMap2d {
     const instance = this;
     let layoutHoverEnabled = true;
 
-    this.layoutHover = (hover) => {
+    this.layoutHover = () => {
+      let hover = layout.activeObjects().length === 0;
       if (hover !== undefined && layoutHoverEnabled !== hover) {
         layoutHoverEnabled = hover;
         construct();

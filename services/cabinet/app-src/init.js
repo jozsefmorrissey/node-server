@@ -31,16 +31,12 @@ const Order = require('./objects/order.js');
 
 const staticOrder = du.param.get('staticOrder');
 if (staticOrder) {
-  Global.order(Order.fromJson(require(`../public/json/orders/${staticOrder}.json`)));
+  Global.order.static(staticOrder);
 }
 
 let orderDisplay;
 goDownTheRabbitHole = false;
 
-// Run Tests
-if (EPNTS.getEnv() === 'local') {
-  require('../test/run');
-}
 
 function updateDivisions (target) {
   const name = target.getAttribute('name');
@@ -69,6 +65,11 @@ const pageId = {template: 'template-manager', cost: 'cost-manager', home: 'app',
                 pattern: 'pattern-manager', property: 'property-manager-cnt'
               }[urlSuffix] || 'app';
 function init(body){
+  // Run Tests
+  if (EPNTS.getEnv() === 'local') {
+    require('../test/run');
+  }
+
   if (body) Properties.load(body);
 
   if (urlSuffix && urlSuffix !== 'order') {
@@ -103,6 +104,7 @@ function init(body){
 }
 
 if (urlSuffix === 'template') Request.get(EPNTS.config.get(), init, console.error);
+else if (staticOrder) Global.order.on.load(init);
 else init();
 
 const popUp = new PopUp({resize: false, noBackdrop: true});

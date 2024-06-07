@@ -222,7 +222,7 @@ du.on.match('click', '.add-vertex-btn-2d', (elem) => {
   panZ.once();
 });
 
-du.on.match('enter', '.measurement-mod', (elem) => {
+du.on.match('enter:focusout', '.measurement-mod', (elem) => {
   const value = eval(elem.value);
   getPopUpAttrs(elem).obj.modify(value);
   panZ.once();

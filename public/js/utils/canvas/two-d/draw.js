@@ -235,7 +235,8 @@ class Draw2d {
       ctx.beginPath();
       ctx.fillStyle = props.fillColor || "white";
       ctx.strokeStyle = props.fillColor || 'white';
-      ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
+      // ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
+      ctx.rect(textLength * -3, -4, textLength * 6, 8);
       ctx.fill();
       ctx.stroke();
 

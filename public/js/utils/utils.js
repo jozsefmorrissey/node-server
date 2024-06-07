@@ -1134,9 +1134,6 @@ function setFromJson(obj, options) {
     cxtr.fromJson = staticFromJson(cxtr);
   const parentFromJson = obj.fromJson;
   obj.fromJson = (json) => {
-    if (options.attrs.indexOf('rooms') !== -1) {
-      console.log('rooms');
-    }
     for (let index = 0; index < options.attrs.length; index += 1) {
       const attr = options.attrs[index];
       if (attr !== immutableAttr) {
@@ -1148,14 +1145,8 @@ function setFromJson(obj, options) {
           }
         }
         else {
-          if (attr === 'rooms') {
-            console.log('rooms');
-          }
           obj[attr] = Object.fromJson(json[attr]);
         }
-      }
-      if (json._TYPE === 'Order') {
-        console.log('foundzzzyss')
       }
     };
     if ((typeof parentFromJson) === 'function') parentFromJson(json);

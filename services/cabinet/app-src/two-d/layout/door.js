@@ -2,13 +2,15 @@
 const OnWall = require('on-wall');
 
 class Door2D extends OnWall {
-  constructor() {
-    super(...arguments);
-    this.width(this.width() || 91.44);
-    this.height(this.height() || 198.12);
-    this.fromPreviousWall(this.fromPreviousWall() || 150);
-    this.fromFloor(this.fromFloor() || 0);
+  constructor(json) {
+    json ||= {};
+    json.width ||= 91.44;
+    json.height ||= 198.12;
+    json.fromPreviousWall ||= 150;
+    json.fromFloor ||= 0;
+    super(json);
     let hinge = 0;
+    const parentWidth = this.width;
     Object.getSet(this, 'hinge');
     this.toString = () => `${this.id()}:${this.endpoints2D().toString()}:${hinge}`;
     this.remove = () => this.wall().removeDoor(this);

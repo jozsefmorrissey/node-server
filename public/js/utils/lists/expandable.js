@@ -307,7 +307,7 @@ du.on.match('click', '.expand-header', (target, event) => {
   if (list && !event.target.tagName.match(/INPUT|SELECT/)) {
     if (isActive) {
       du.class.remove(target, 'active');
-      const body = du.find.down('.expand-body', du.find.up('.expandable-list', target));
+      const body = Expandable.getBodyCnt(target);
       body.style.display = 'none';
       list.activeKey(null);
       target.parentElement.querySelector('.expandable-item-rm-btn').style.display = 'none';

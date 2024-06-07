@@ -4,6 +4,8 @@ const Vertex3D = require('../../three-d/objects/vertex.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const SnapSquare = require('../../../../../public/js/utils/canvas/two-d/objects/snap/square.js');
 const BiPolygon = require('../objects/bi-polygon');
+const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
+let Jobs;
 // const SimpleModel = require('../../objects/simple/simple.js');
 
 class Bridge2dTo3D {
@@ -112,16 +114,41 @@ class Object3D extends Lookup {
   constructor(layout) {
     // super(undefined, undefined, true);
     super();
+    const instance = this;
+    CustomEvent.all(this, 'change');
     this.layout = () => layout;
     this.snap2d = {};
     this.bridge = {};
     let center = new Vertex3D();
-    Object.getSet(this, {center,
-                          height: 34*2.54,
-                          width: 32*2.54,
-                          thickness: 24*2.54,
+    let height = 34*2.54;
+    let width = 32*2.54;
+    let thickness = 24*2.54;
+    this.height = (value) => {
+      if (value && value !== height) {
+        height = value;
+        this.trigger.change(this);
+      }
+      return height;
+    }
+    this.width = (value) => {
+      if (value && value !== width) {
+        width = value;
+        this.trigger.change(this);
+      }
+      return width;
+    }
+    this.thickness = (value) => {
+      if (value && value !== thickness) {
+        thickness = value;
+        this.trigger.change(this);
+      }
+      return thickness;
+    }
+
+    Object.getSet(this, {center, height, width, thickness,
                           rotation: {x: 0, y: 0, z:0},
                           name: ``});
+
     this.center = (cent) => {
       if (cent) {
         center = new Vertex3D(cent);
@@ -145,6 +172,17 @@ const objectClasses = [];
 
 Object3D.register = (clazz) => {
   objectClasses.push(clazz);
+}
+
+Object3D.fromJson = (json) => {
+  const obj = new (Object.class.get(json._TYPE))(json.layout);
+  obj.center(json.center);
+  obj.height(json.height);
+  obj.name(json.name);
+  obj.rotation(json.rotation);
+  obj.thickness(json.thickness);
+  obj.width(json.width);
+  return obj;
 }
 
 

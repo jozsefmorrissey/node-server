@@ -104,7 +104,8 @@ class SnapPolygon extends Snap2d {
 
     this.getTextInfo = () => {
       const lfl = this.longestFaceLine();
-      const dist = instance.height() / 4;
+      const height = this.height();
+      const dist = height / (height < 35 ? 1 : (height < 70 ? 2 : 3));
       const radians = lfl ? lfl.radians() : 0;
       const textLine = lfl ? lfl.perpendicular(dist/2) : 0;
       return {

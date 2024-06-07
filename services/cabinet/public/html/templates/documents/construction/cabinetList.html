@@ -1,0 +1,19 @@
+<table>
+  <tr>
+    <th>Index</th>
+    <th>Name</th>
+    <th>Demensions</th>
+    <th colspan="2">Show(L|R)</th>
+    <th>Shelves</th>
+    <th>Notes</th>
+  </tr>
+  <tr:t repeat='cabInfo in cabinetInfos'>
+    <td>{{cabInfo.cabinet.groupIndex()}}</td>
+    <td>{{cabInfo.cabinet.name()}}</td>
+    <td>{{Utils.display.demensions(cabInfo.cabinet.position().demension())}}</td>
+    <td>UNK</td>
+    <td>UNK</td>
+    <td>{{Utils.count.shelves(cabInfo.cabinet)}}</td>
+    <td>Notes</td>
+  </tr:t>
+</table>

@@ -295,9 +295,9 @@ const addSectionProps = (sectionProperties, assembly) => () => {
   assembly.addSubAssembly(sectionProperties);
 }
 
-Cabinet.fromJson = (assemblyJson, group) => {
+Cabinet.fromJson = (assemblyJson) => {
   const trigger = Function.event('constructed', assemblyJson, (o) => o._TYPE);
-  group ||= new Group();
+  const group = assemblyJson.group || new Group();
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
   const assembly = new Cabinet(partCode, partName, assemblyJson.config);

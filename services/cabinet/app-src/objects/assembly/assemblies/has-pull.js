@@ -15,11 +15,18 @@ class HasPull extends Assembly {
       pulls.push(handle);
       this.addSubAssembly(pulls[pulls.length - 1]);
     }
-    this.pulls = () => pulls;
+    this.pulls = () => pulls.map(p => p);
     this.setPulls = (locations) => {
       pulls.deleteAll();
       this.subassemblies.deleteAll();
       locations.forEach((location) => this.addPull(location));
+    }
+    this.removePull = (pull) => {
+      const newPulls = this.pulls();
+      newPulls.remove(pull);
+      pulls.deleteAll();
+      this.subassemblies.deleteAll();
+      newPulls.forEach(p => this.addPull(p));
     }
   }
 }

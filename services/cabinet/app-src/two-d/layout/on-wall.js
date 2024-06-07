@@ -4,9 +4,16 @@ const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/ve
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 
 class OnWall extends Lookup {
-  constructor(wall, fromPreviousWall, fromFloor, height, width) {
+  constructor(json) {
     super();
-    Object.getSet(this, {width, height, fromFloor, fromPreviousWall}, 'wallId', 'id');
+    json ||= {};
+    let wall = json.wall;
+    Object.getSet(this, {
+        width: json.width,
+        height: json.height,
+        fromFloor: json.fromFloor,
+        fromPreviousWall: json.fromPreviousWall
+      }, 'wallId', 'id');
     let start = new Vertex2d();
     let end = new Vertex2d();
     this.wallId = () => wall.id();
@@ -27,6 +34,7 @@ class OnWall extends Lookup {
 
       return { start, end, toString: () => `${start.toString()} => ${end.toString()}`};
     }
+    let fromPreviousWall = this.fromPreviousWall();
     this.fromPreviousWall = (value) => {
       value = Number.parseFloat(value);
       if (!Number.isNaN(value)) fromPreviousWall = value;
@@ -78,8 +86,7 @@ class OnWall extends Lookup {
 OnWall.sort = (ow1, ow2) => ow1.fromPreviousWall() - ow2.fromPreviousWall();
 OnWall.fromJson = (json) => {
   const cxtr = Lookup.decode(json.id).constructor;
-  const instance = new cxtr(null, json.fromPreviousWall, json.fromFloor, json.height, json.width);
-  instance.id(json.id);
+  const instance = new cxtr(json);
   return instance;
 }
 

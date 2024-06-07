@@ -36,7 +36,7 @@ const applyExtraObjAndDisplay = (info, csg) => {
 }
 
 function renderRoom() {
-  new Jobs.CSG.Room.Simple(Global.room()).then((csg) => {
+  new Jobs.CSG.Room.Complex(Global.room()).then((csg) => {
     applyExtraObjAndDisplay(Global.room(), csg);
   }).queue();
 }
@@ -44,13 +44,14 @@ function renderRoom() {
 // TODO: rename this is actually render cabinet or simple objects
 function  renderCabinet() {
   const target = Global.target();
+  console.log(target.getAssembly('S1').toDrawString2D())
   if (target) {
     if (target.constructor.name === 'Cabinet') {
       new Jobs.CSG.Cabinet.Complex(target).then((modelInfo, job) => {
         applyExtraObjAndDisplay(target, modelInfo.unioned());
       }).queue();
     } else {
-      new Jobs.CSG.Simple([target]).then((csgs, job) => {
+      new Jobs.CSG.Simple.Model([target]).then((csgs, job) => {
         applyExtraObjAndDisplay(target, CSG.fromPolygons(csgs[0].polygons));
       }).queue();
     }

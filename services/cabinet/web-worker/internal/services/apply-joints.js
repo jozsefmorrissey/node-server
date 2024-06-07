@@ -15,6 +15,7 @@ function determineMales(assem, env) {
   const joints = env.jointMap.female[assem.id] || [];
   const males = [];
   joints.forEach(jId => {
+    if (jId.startsWith('Auto')) return;
     const joint = env.byId[jId];
     males.concatInPlace(env.jointMap[jId].male);
   });
@@ -223,7 +224,6 @@ function Apply(payload, environment, taskId, intersections) {
     let model = env.modelInfo.extended[id];
     if (model && assem.part && assem.included) {
       model = CSG.fromPolygons(model.polygons, true);
-      const joints = env.jointMap.female[id] || [];
       removeJointMaterial(map, assem, env, model, intersections);
     } else if (map.joined[id] === undefined) {
       map.joined[id] = model;

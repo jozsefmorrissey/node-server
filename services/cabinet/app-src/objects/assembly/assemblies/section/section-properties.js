@@ -423,7 +423,7 @@ class SectionProperties extends KeyValue {
         if (dividerCount < currDividerCount) {
           const diff = currDividerCount - dividerCount;
           this.sections.splice(dividerCount + 1);
-          this.pattern().setStr(this.pattern().str.substring(0, dividerCount));
+          if (dividerCount > 2)his.pattern().setStr(this.pattern().str.substring(0, dividerCount));
           if (!dontUpdateCoords) setSectionCoordinates(true);
           return true;
         } else {
@@ -522,36 +522,36 @@ class SectionProperties extends KeyValue {
     }
 
     this.dividerOffsetInfo = () => {
-    let startOffset = 0;
-    let endOffset = 0;
+      let startOffset = 0;
+      let endOffset = 0;
 
-    const coords = this.coordinates();
-    const outer = coords.outer;
-    const inner = coords.inner;
-    if (this.vertical()) {
-       startOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[2]));
-       endOffset = perpendicularDistance(outer[2], new Line3D(inner[2], inner[3]));
-     } else {
-       startOffset = perpendicularDistance(outer[0], new Line3D(inner[0], inner[3]));
-       endOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[0]));
-     }
-     const info = [{offset: startOffset}];
-     info.startOffset = startOffset;
-     info.endOffset = endOffset;
+      const coords = this.coordinates();
+      const outer = coords.outer;
+      const inner = coords.inner;
+      if (this.vertical()) {
+         startOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[2]));
+         endOffset = perpendicularDistance(outer[2], new Line3D(inner[2], inner[3]));
+       } else {
+         startOffset = perpendicularDistance(outer[0], new Line3D(inner[0], inner[3]));
+         endOffset = perpendicularDistance(outer[3], new Line3D(inner[3], inner[0]));
+       }
+       const info = [{offset: startOffset}];
+       info.startOffset = startOffset;
+       info.endOffset = endOffset;
 
-    let offset = this.isVertical() ? this.outerLength() : this.outerWidth();
-    for (let index = 0; index < this.sections.length; index += 1) {
-      if (index < this.sections.length - 1) {
-        const section = this.sections[index];
-        const divider = section.divider().divider();
-        const offset = divider.maxWidth();
-        info[index + 1] = {offset, divider};
-      } else {
-        info[index + 1] = {offset: endOffset};
+      let offset = this.isVertical() ? this.outerLength() : this.outerWidth();
+      for (let index = 0; index < this.sections.length; index += 1) {
+        if (index < this.sections.length - 1) {
+          const section = this.sections[index];
+          const divider = section.divider().divider();
+          const offset = divider.maxWidth();
+          info[index + 1] = {offset, divider};
+        } else {
+          info[index + 1] = {offset: endOffset};
+        }
       }
+      return info;
     }
-    return info;
-  }
 
     let dividerJoint;
     this.dividerJoint = (joint) => {
@@ -598,10 +598,12 @@ class SectionProperties extends KeyValue {
 
     function shelveNiegbor(assem) {
       if (assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section|Shelve)/)) return false;
+      if (isMatch(assem, 'left') || isMatch(assem, 'right')) return true;
+      if (assem instanceof Divider) return false;
       if (assem.locationCode().startsWith('c_S1')) return false;
       if (assem.locationCode().match(/^c_[^_]*$/))
         return true;
-      return isMatch(assem, 'left') || isMatch(assem, 'right');
+      return false;
     }
     const shelves = [];
     this.shelves = () => {
@@ -677,6 +679,15 @@ class SectionProperties extends KeyValue {
       let str = `//  ${this.userFriendlyId()}:${this.locationCode()}\n${outerStr}\n${innerStr}`;
       if (notRecursive !== true)
         this.sections.forEach(c => {try {str += c.toDrawString() + '\n\n'} catch (e) {}});
+      return str;
+    }
+    this.toDrawString2D = (notRecursive) => {
+      const color = String.nextColor();
+      const innerStr = this.coordinates().inner.map(v => v.viewFromVector(this.normal()).to2D('x', 'y')).join('\n');
+      const outerStr = this.coordinates().outer.map(v => v.viewFromVector(this.normal()).to2D('x', 'y')).join('\n');
+      let str = `//  ${this.userFriendlyId()}:${this.locationCode()}\n${outerStr}\n${innerStr}`;
+      if (notRecursive !== true)
+        this.sections.forEach(c => {try {str += c.toDrawString2D() + '\n\n'} catch (e) {}});
       return str;
     }
 

@@ -65,8 +65,12 @@ class TaskJob extends Job {
     super();
     task.on.change((data) => this.trigger.change(data, this));
     this.task = () => task;
+    this.result = task.result;
     task.on.finished((_result) => {
-      if (this.result) _result = this.result();
+      if (this.result) {
+        const resultDefined = this.result();
+        if (resultDefined) _result = resultDefined;
+      }
       this.finished(true, _result)
     });
 
@@ -234,8 +238,8 @@ class CsgTo2DJob extends Jobs {
 }
 
 class CsgRoomJob extends TaskJob {
-  constructor(room) {
-    const {task, tasks, jobs} = CsgRoomJob.tasksAndJobs(room);
+  constructor(room, complex) {
+    const {task, tasks, jobs} = CsgRoomJob.tasksAndJobs(room, complex);
     super(task);
     this.room = () => room;
     this.jobs = () => jobs;
@@ -245,16 +249,22 @@ class CsgRoomJob extends TaskJob {
         const start = new Date().getTime();
         let csg = new CSG();
         for (let index = 0; index < jobs.length; index++) {
-          const model = jobs[index].modelInfo().unioned().clone();
-          const cabinet = jobs[index].cabinet();
-          const rotation = cabinet.position().rotation();
-          const buildCenter = cabinet.buildCenter(true);
-          const center = new Vertex3D(cabinet.position().center());
-          const layoutCenterVect = new Vertex3D((center.minus(buildCenter)));
-          const modelCenter = model.center();
-          model.translate({x: -buildCenter.x, y: -buildCenter.y, z: -buildCenter.z})
-          model.rotate(rotation);
-          model.translate(center);
+          const job = jobs[index];
+          let model;
+          if (job.modelInfo) {
+            model = jobs[index].modelInfo().unioned().clone();
+            const cabinet = jobs[index].cabinet();
+            const rotation = cabinet.position().rotation();
+            const buildCenter = cabinet.buildCenter(true);
+            const center = new Vertex3D(cabinet.position().center());
+            const layoutCenterVect = new Vertex3D((center.minus(buildCenter)));
+            const modelCenter = model.center();
+            model.translate({x: -buildCenter.x, y: -buildCenter.y, z: -buildCenter.z})
+            model.rotate(rotation);
+            model.translate(center);
+          } else {
+            model = job.result();
+          }
 
           if (model) csg.polygons.concatInPlace(model.polygons);
         }
@@ -267,7 +277,7 @@ class CsgRoomJob extends TaskJob {
     }
   }
 }
-CsgRoomJob.tasksAndJobs = (room) => {
+CsgRoomJob.tasksAndJobs = (room, complex) => {
   const tasks = [];
   const jobs = [];
   for (let i = 0; i < room.groups.length; i++) {
@@ -275,7 +285,7 @@ CsgRoomJob.tasksAndJobs = (room) => {
     for (let j = 0; j < group.objects.length; j++) {
       const obj = group.objects[j];
       const job = obj instanceof Cabinet ?
-          new CsgSimpleCabinet(obj) : new CsgModelJob(obj);
+          (complex ? new CsgComplexCabinet(obj) : new CsgSimpleCabinet(obj)) : new SimpleModelJob([obj]);
       jobs.push(job);
       tasks.push(job.task());
     }
@@ -283,6 +293,8 @@ CsgRoomJob.tasksAndJobs = (room) => {
   const task = new Parrelle(...tasks);
   return {tasks, jobs, task};
 }
+class CsgSimpleRoomJob extends CsgRoomJob {constructor(room) {super(room, false)}};
+class CsgComplexRoomJob extends CsgRoomJob {constructor(room) {super(room, true)}};
 
 CsgRoomJob.task = (room) => CsgRoomJob.tasksAndJobs(room).task;
 
@@ -402,7 +414,8 @@ module.exports = {
       BoxOnly: CsgBoxOnlyCabinets
     },
     Room: {
-      Simple: CsgRoomJob
+      Simple: CsgSimpleRoomJob,
+      Complex: CsgComplexRoomJob
     }
   },
   Documentation: {

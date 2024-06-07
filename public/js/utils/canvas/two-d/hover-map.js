@@ -143,7 +143,7 @@ class HoverMap2d {
           const distance = hoverObj.hovering(vertex);
           if (distance || distance === 0) {
             const target = hoverObj.target();
-            if (hoveringObj === null || distance < hoveringObj.distance) {
+            if (hoveringObj === null || distance < hoveringObj.distance * .5) {
               hoveringObj = {target, distance};
             }
           }

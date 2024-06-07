@@ -221,8 +221,8 @@ to.Cutter = {
   Opening: {
     biPolygon: (rMdto, environment) => {
       const outerPoly = rMdto.parentAssembly().coordinates.outer.object();
-      const corner2corner = outerPoly.vertex(0).distance(outerPoly.vertex(2));
-      const biPoly = BiPolygon.fromPolygon(outerPoly, corner2corner/-2*10000, 0, {x:0, y:1000});
+      const big = 10000000000;
+      const biPoly = BiPolygon.fromPolygon(outerPoly, -big, 0, {x:big, y:big});
       return biPoly;
     }
   },
@@ -318,7 +318,7 @@ to.Shelve = {
     biPolygon: (rMdto, environment) => {
       const parent = rMdto.parentAssembly();
       const sectionUtils = SectionPropertiesUtil.instance(parent);
-      const divider = parent.divider().divider();
+      const divider = parent.bottom();
       const biPoly = Divider.instance(divider, environment).Full().copy();
       const shelveCount = parent.shelves.length;
       const index = Number.parseInt(rMdto.partCode.replace(/.*?([0-9]{1,})$/, '$1'));

@@ -15,16 +15,28 @@ const sizeInputHtmlFunc = (hasPulls) => (index) => {
   return new MeasurementInput({value, unit, units, name: label, label}).html();
 }
 
-const render = (hasPulls, prefix) => {
+const render = (hasPulls, prefix, open) => {
   const sizeInputHtml = sizeInputHtmlFunc(hasPulls);
-  return template.render({hasPulls, sizeInputHtml, prefix});
+  return template.render({hasPulls, sizeInputHtml, prefix, open});
 };
+
+const getPrefix = (target) => du.find.closest('.pulls-mod-cnt', target).getAttribute('prefix');
 
 du.on.match('click', '.pulls-mod-cnt .add-pull', (elem) => {
   const id = du.find.up.attribute('has-pulls-id', elem);
   const hasPulls = Lookup.get(id);
   hasPulls.addPull(Handle.location.CENTER);
-  du.find.up('.pulls-mod-cnt', elem).outerHTML = render(hasPulls);
+  const prefix = getPrefix(elem);
+  du.find.up('.pulls-mod-cnt', elem).outerHTML = render(hasPulls, prefix, true);
+});
+
+du.on.match('click', '.pulls-mod-cnt .remove-btn', (elem) => {
+  const id = du.find.up.attribute('has-pulls-id', elem);
+  const hasPulls = Lookup.get(id);
+  const index = du.find.up('[index]', elem).getAttribute('index');
+  hasPulls.removePull(hasPulls.pulls()[index]);
+  const prefix = getPrefix(elem);
+  du.find.up('.pulls-mod-cnt', elem).outerHTML = render(hasPulls, prefix, true);
 });
 
 du.on.match('change', '.pulls-mod-cnt [name="location"]', (elem) => {

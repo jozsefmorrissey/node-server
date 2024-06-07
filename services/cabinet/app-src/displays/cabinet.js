@@ -110,11 +110,6 @@ class CabinetDisplay {
       input.value = displayValue(cabinet[attr]());
     }
 
-    function removeFromLayout(elem, cabinet) {
-      group.room().layout().removeByPayload(cabinet);
-      TwoDLayout.panZoom.once();
-    }
-
     function linkLayout(cabinet, obj3D) {
       const snap = obj3D.snap.top();
       if (snap.width() !== cabinet.width()) {
@@ -136,7 +131,9 @@ class CabinetDisplay {
         return cabinet;
       } else {
         values = values.OtherNode;
-        const sm = SimpleModel.get(values.simpleType);
+        const layout = group.room().layout()
+        const sm = SimpleModel.get(values.simpleType, layout);
+        sm.bridge.top().center(layout.center())
         Global.target(sm);
         Canvas.render();
         return sm;
@@ -153,7 +150,7 @@ class CabinetDisplay {
       listElemLable: 'Object'
     };
     const expandList = new ExpandableList(expListProps);
-    expandList.on.after.removal(removeFromLayout);
+    expandList.on.after.removal(() => TwoDLayout.panZoom.once());
     this.refresh = () => expandList.refresh();
 
     this.html = expandList.html;
@@ -174,17 +171,17 @@ class CabinetDisplay {
     //   ThreeDMain.update(cabKey.cabinet);
     // }
 
-    const attrUpdate = (path, value) => {
+    function attrUpdate(path, value) {
       const cabKey = cabinetKey(path);
       const decimal = new Measurement(value, true).decimal();
       if (!Number.isNaN(decimal)) {
         if (cabKey.cabinet[cabKey.key]() !== decimal) {
-          cabKey.cabinet[cabKey.key](decimal);
+          cabKey.cabinet[cabKey.key].lastCall(decimal);
           const parentCnt = du.find(parentSelector);
           // ExpandableList.refresh(du.find.down('.expandable-list', parentCnt), true);
         }
       } if (path.match('[0-9]{1,}\.name')) {
-        cabKey.cabinet[cabKey.key](value);
+        cabKey.cabinet[cabKey.key].lastCall(value);
         TwoDLayout.panZoom.once();
       }
     }
@@ -214,7 +211,7 @@ class CabinetDisplay {
     // CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
     // bind(`.cabinet-input`, valueUpdate,
     //               {validation: Measurement.validation('(0,)')});
-    bind(`[display-id="${displayId}"].cabinet-id-input`, attrUpdate);
+    bind(`[display-id="${displayId}"].cabinet-id-input`, (...args) => attrUpdate(...args));
     du.on.match('click', '.save-cabinet-btn', save);
     du.on.match('focusout', '.modifiable-value-input', updateValue);
 

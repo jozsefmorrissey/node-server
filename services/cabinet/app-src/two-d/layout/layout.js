@@ -401,32 +401,31 @@ class Layout2D extends Lookup {
     // }
 
     function filterCompare(list) {
-      list = list.map((o) => o.payload());
       return list.filter((o) => o);
     }
 
     this.fromJson = (json) => {
       const origWalls = this.walls();
       const vertMap = {};
-      const newWalls = json.walls.map(wall => Wall2D.fromJson(wall, this), vertMap);
+      const newWalls = json.walls.map(wall => Wall2D.fromJson(wall, this, vertMap));
       const wallCompare = Array.diff(origWalls, newWalls, true);
 
-      const origObjects = this.objects();
-      const newObjects = Object.fromJson(json.objects);
-      const objCompare = Array.diff(origObjects, newObjects, true);
+      // const origObjects = this.objects();
+      // const newObjects = Object.fromJson(json.objects);
+      // const objCompare = Array.diff(origObjects, newObjects, true);
 
-      if (objCompare || wallCompare) {
-        const detail = {objects: {added: [], removed: []}, walls: {added: [], removed: []}};
-        if (objCompare) {
-          detail.objects.added = filterCompare(objCompare.added);
-          detail.objects.removed = filterCompare(objCompare.removed);
-        }
-        if (wallCompare) {
-          detail.walls.added = wallCompare.added;
-          detail.walls.removed = wallCompare.removed;
-        }
-        stateChangeEvent.trigger(undefined, detail);
-      }
+      // if (objCompare || wallCompare) {
+      //   const detail = {objects: {added: [], removed: []}, walls: {added: [], removed: []}};
+      //   if (objCompare) {
+      //     detail.objects.added = filterCompare(objCompare.added);
+      //     detail.objects.removed = filterCompare(objCompare.removed);
+      //   }
+      //   if (wallCompare) {
+      //     detail.walls.added = wallCompare.added;
+      //     detail.walls.removed = wallCompare.removed;
+      //   }
+      //   stateChangeEvent.trigger(undefined, detail);
+      // }
     }
 
     function inRange(min1, max1, min2, max2) {
@@ -468,11 +467,11 @@ class Layout2D extends Lookup {
       if (Number.isFinite(index)) savedIndex = index + 1;
       const levels = this.levels();
       const modIndex = Math.mod(savedIndex, levels.length + 2) - 1;
-      if (modIndex === -1) return [];
-      if (modIndex === levels.length) return this.objects();
+      if (modIndex === levels.length) return [];
+      if (modIndex === -1) return this.objects();
       return levels[modIndex];
     }
-    this.activeObjects = () => this.level() || this.objects();
+    this.activeObjects = () => this.level();
 
     if (!initialized) this.push({x:0, y:0}, {x:ww, y:0}, {x:ww,y:ww}, {x:0,y:ww});
     // if (!initialized) this.push({x:, y:1}, {x:ww+1, y:0}, {x:ww + 1,y:ww + 1}, {x:1,y:ww});

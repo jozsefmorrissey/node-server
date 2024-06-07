@@ -251,7 +251,8 @@ class RequireJS {
         const absoluteDir = MapScript.simplifyPath(path).replace(/(.*\/).*/, '$1');
         const modulee = {exports: {}};
         this.load = () => {
-          if (loadPath.indexOf(path) !== -1) throw Error(`Circular Reference: \n\t\t${loadPath.join('\n\t\t')}`);
+          if (loadPath.indexOf(path) !== -1)
+            throw Error(`Circular Reference: ${path}\n\t\t${loadPath.join('\n\t\t')}`);
           loadPath.push(path);
           func(requireFunc(absoluteDir, path), modulee.exports, modulee);
           loadPath.splice(loadPath.indexOf(path), 1);

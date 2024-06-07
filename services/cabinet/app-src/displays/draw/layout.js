@@ -107,7 +107,12 @@ class DrawLayout extends Draw {
     const hblank = blank/2;
     function drawMeasurementValue(line, midpoint, measurement) {
       if (line === undefined) return;
-      if (draw.canvas().simple) return;
+      if (draw.canvas().simple) {
+        const hover = hovering();
+        if (!hover || hover.constructor.name !== 'Corner2d') return;
+        const wall = measurement.line();
+        if (wall[0] !== hover && wall[1] !== hover) return;
+      }
       const ctx = draw.ctx();
       midpoint = line.midpoint();
 
@@ -239,13 +244,17 @@ class DrawLayout extends Draw {
 
     function drawAngle(vertex) {
       if (draw.canvas().simple) return;
-      const text = Math.round(vertex.angle() * 10) / 10;
-      const bisector = vertex.bisector(30);
-      const sv = bisector.startVertex();
-      const ev = bisector.endVertex();
-      const point = sv.distance(vertex) < ev.distance(vertex) ? ev : sv;
-      const radians = bisector.perpendicular().radians();
-      draw.text(text, point, {radians, size: 5});
+      const angle = vertex.angle();
+      const text = Math.round(angle * 10) / 10;
+      let bisector = vertex.bisector(30);
+      if (angle > 180) {
+        bisector = Line2d.startAndTheta(bisector.startVertex(), bisector.radians() - Math.PI, 30);
+      }
+      if (bisector) {
+        const point = bisector.endVertex();
+        const radians = bisector.perpendicular().radians();
+        draw.text(text, point, {radians, size: 5});
+      }
     }
 
     function vertexColor(vertex) {

@@ -2,6 +2,7 @@ const Order = require('../objects/order.js');
 const Room = require('../objects/room.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+const Request = require('../../../../public/js/utils/request.js');
 
 class Displays {
   constructor() {
@@ -17,6 +18,7 @@ class Global {
         writable: false
     });
 
+    const orderLoadedEvent = new CustomEvent('orderLoaded');
     const orderChangeEvent = new CustomEvent('orderChanged');
     const roomChangeEvent = new CustomEvent('roomChanged');
     const cabinetChangeEvent = new CustomEvent('cabinetChanged');
@@ -51,6 +53,16 @@ class Global {
       }
       return ORDER;
     }
+
+    this.order.static = (name) => {
+      Request.get(`/cabinet/json/orders/${name}.json`,
+      (json) =>
+        this.order(Order.fromJson(json)) && orderLoadedEvent.trigger(this.order()),
+      (error) => console.error(error));
+    }
+    this.order.on = {};
+    this.order.on.load = orderLoadedEvent.on;
+
     this.room = (room) => {
       if (!room && ROOM === undefined) {
         const rooms = this.order().rooms;

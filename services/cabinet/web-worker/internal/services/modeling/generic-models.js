@@ -7,11 +7,12 @@ const to = {};
 to.SimpleModel = (simpleModelDto) => {
   const center = simpleModelDto.center.object();
   const height = simpleModelDto.height;
-  const depth = simpleModelDto.thickness;
+  const thickness = simpleModelDto.thickness;
   const width = simpleModelDto.width;
   const biPoly = BiPolygon.fromVectorObject(width, height, thickness, center);
   return biPoly.model();
 }
+to.Box = to.SimpleModel;
 
 to.ShowerBase = (simpleModelDto) => {
   const curbHeight = 2*2.54;

@@ -1,12 +1,13 @@
-<div class='pulls-mod-cnt' has-pulls-id='{{hasPulls.id()}}'>
+<div class='pulls-mod-cnt' has-pulls-id='{{hasPulls.id()}}' prefix={{prefix}}>
   <div class='inline-flex chev-dropdown-toggle'>
     {{prefix}} Pulls
-    <i class='down gg-chevron-down hidden' ></i>
-    <i class='right gg-chevron-right'></i>
+    <i class='down gg-chevron-down  {{open ? '' : 'hidden'}}'></i>
+    <i class='right gg-chevron-right  {{!open ? '' : 'hidden'}}'></i>
   </div>
-  <div class='tab chev-dropdown' hidden>
+  <div class='tab chev-dropdown' {{open ? '' : 'hidden'}}>
     <div:t repeat='pull in hasPulls.pulls()' index='{{$index}}'>
       {{$index + 1}})
+      <button class='remove-btn'>X</button>
       {{sizeInputHtml($index)}}
       <label>Location</label>
       <select name='location'>

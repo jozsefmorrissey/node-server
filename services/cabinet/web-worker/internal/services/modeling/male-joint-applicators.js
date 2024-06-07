@@ -29,16 +29,25 @@ function cropPoly (poly, vector) {
   BiPolygon.fromPolygon(poly, 0, big, {x: big, y: big});
 }
 
-const cutterFurthestZPoly = (femalePolyInfo) => () => {
+const cutterFurthestZPoly = (femalePolyInfo, vertex) => () => {
   const femalePolyObj = femalePolyInfo();
   if (femalePolyObj === null) return;
-  return BiPolygon.fromPolygon(femalePolyObj.z[1], 0, big, {x: big, y: big}).model();
+  const index = vertex ? furthestIndex(femalePolyObj, vertex) :  0;
+  const multiplier = vertex ? 1 : -1;
+  return BiPolygon.fromPolygon(femalePolyObj.z[index], 0, multiplier * big, {x: big, y: big}).model();
 }
 
-const cutterClosestZPoly = (femalePolyInfo) => () => {
+const closestIndex = (femalePolyObj, vertex) =>
+  femalePolyObj.z[0].distance(vertex) < femalePolyObj.z[1].distance(vertex) ? 0 : 1;
+const furthestIndex = (femalePolyObj, vertex) =>
+  femalePolyObj.z[0].distance(vertex) < femalePolyObj.z[1].distance(vertex) ? 1 : 0;
+
+const cutterClosestZPoly = (femalePolyInfo, vertex) => () => {
   const femalePolyObj = femalePolyInfo();
   if (femalePolyObj === null) return;
-  return BiPolygon.fromPolygon(femalePolyObj.z[0], 0, -big, {x: big, y: big}).model();
+  const index = vertex ? closestIndex(femalePolyObj, vertex) :  0;
+  const multiplier = vertex ? -1 : 1;
+  return BiPolygon.fromPolygon(femalePolyObj.z[index], 0, multiplier*big, {x: big, y: big}).model();
 }
 
 const offsetZpolyCutter = (femalePolyInfo, index, dist1, dist2) => () => {
@@ -104,11 +113,13 @@ apply.ShelveJoint = (assem, joint, femalePolyInfo, frontBackSet) => {
   }
 
   extendFBSetToPoly(femalePolyObj.z[1], frontBackSet);
-  const cookie = [cutterFurthestZPoly(femalePolyInfo)];
+  const center = assem.parentAssembly().coordinates.inner.object().center();
+  const cookie = [cutterFurthestZPoly(femalePolyInfo, center)];
   const offset = joint.eval.maleOffset;
   const offAbs = Math.abs(offset);
   const width = femalePolyInfo().z[0].distance(femalePolyInfo().z[1]) * (offset > 0 ? 1 : -1);
-  const jointCutters = [offsetPolyCutter(femalePolyInfo, 0, offset + width, -offset, offAbs, offAbs)];
+  const polyIndex = closestIndex(femalePolyObj, center);
+  const jointCutters = [offsetPolyCutter(femalePolyInfo, polyIndex, offset + width, -offset, offAbs, offAbs)];
   //console.log('//female\n' + femalePolyObj.z.map(p => p.toDrawString('red')).join('\n') + '\n\n//male\n' + frontBackSet.map(p => p.toDrawString()).join('\n') + '\n\n//Far side cutter\n' + cookie[0]().toDrawString('green') + '\n//Joint cutter\n' + jointCutters[0]().toDrawString('yellow'));
   return {joint: jointCutters, cookie};
 }

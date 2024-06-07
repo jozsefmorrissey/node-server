@@ -56,6 +56,7 @@ du.on.match('change', '.feature-radio', (target) => {
 
 displays = {};
 SectionDisplay.render = (scope) => {
+  if (scope.opening === undefined) return '';
   const uId = scope.opening.id();
   if (displays[uId] === undefined) displays[uId] = new SectionDisplay(scope.opening);
   return displays[uId].render(scope);
@@ -109,7 +110,7 @@ OpenSectionDisplay.getList = (root) => {
   const getBody = (opening) => {
     const list = OpenSectionDisplay.getList(root);
     const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
-    const assemblies = opening.getSubassemblies();
+    const assemblies = opening === undefined ? [] : opening.getSubassemblies();
     return SectionDisplay.render({assemblies, getFeatureDisplay, opening, list});
   }
   const findElement = (selector, target) => du.find.down(selector, du.find.up('.expandable-list', target));
@@ -169,7 +170,7 @@ OpenSectionDisplay.refresh = (opening, rapid, onlyIfPending) => {
 
         const type = opening.isVertical() === true ? 'pill' : 'sidebar';
         OpenSectionDisplay.updateDividers(opening);
-        OpenSectionDisplay.getList(opening).refresh(type);
+        if (opening.sectionCount() > 1) OpenSectionDisplay.getList(opening).refresh(type);
         const dividerSelector = `[opening-id='${opening.id()}'].division-count-input`;
         // listCnt.querySelector(dividerSelector).focus();
       }

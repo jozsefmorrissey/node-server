@@ -3,7 +3,7 @@
   <span:t repeat='property in UNITS'>
     <label>{{property.name()}}</label>
     <input class='transparent' type='radio' name='UNIT2'
-          prop-radio-update='{{property.id()}}' value="{{property.name()}}"
+          value="{{property.name()}}"
           {{property.value() === true ? 'checked' : ''}}  is-raw>
   </span:t>
   <br>

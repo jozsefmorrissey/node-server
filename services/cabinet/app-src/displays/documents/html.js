@@ -16,6 +16,7 @@ const orderTemplate = new $t('documents/construction');
 const roomTemplate = new $t('documents/construction/room');
 const groupTemplate = new $t('documents/construction/group');
 const cabinetTemplate = new $t('documents/construction/cabinet');
+const cabinetListTemplate = new $t('documents/construction/cabinetList');
 const panelCutListTemplate = new $t('documents/construction/panel-cut-list');
 const partTemplate = new $t('documents/construction/part');
 const openingDiagramsTemplate = new $t('documents/construction/opening-diagrams');
@@ -25,10 +26,20 @@ const aerialsTemplate = new $t('documents/construction/aerials');
 
 const NO_CABINETS_EXIST_HTML = '<h2>Must define atleast one cabinet</h2>';
 
+function forEachCabinetInfo(orderInfo, func) {
+  orderInfo.rooms.forEach(r => r.groups.forEach(g => g.cabinets.forEach(func)));
+}
+
+function getCabinetInfos(orderInfo) {
+  const list = [];
+  forEachCabinetInfo(orderInfo, cInfo => list.push(cInfo));
+  return list;
+}
+
 function allPartsOfType (orderInfo, type) {
   const parts = [];
   const isReg = type instanceof RegExp;
-  orderInfo.rooms.forEach(r => r.groups.forEach(g => g.cabinets.forEach(c => {
+  forEachCabinetInfo(orderInfo, c => {
     const keys = Object.keys(c.parts);
     for (let index = 0; index < keys.length; index++) {
       const key = keys[index];
@@ -38,7 +49,7 @@ function allPartsOfType (orderInfo, type) {
         }));
       }
     }
-  })));
+  });
   return parts;
 }
 
@@ -96,22 +107,29 @@ DocumentationHtml.print.container = (innerHTML) => {
 `;
 }
 
+DocumentationHtml.cabinetList = (orderInfo) => {
+  const cabinetInfos = getCabinetInfos(orderInfo);
+  return cabinetListTemplate.render({cabinetInfos, Utils});
+}
+
 const area = (dem) => dem.x * dem.y * dem.z;
 const sorter = (pi1, pi2) => area(pi2.demensions) - area(pi1.demensions);
 DocumentationHtml.parts = (partInfo) => {
+  if (!partInfo) return '';
   const parts = Object.values(partInfo);
   parts.sort(sorter);
-  let html = '';
-  parts.forEach(pi => {
+  let html = '<div class="cabinet-part-doc-cnt">';
+  parts.forEach((pi, index) => {
     if (pi.toolingInfo && !Object.keys(pi.toolingInfo).length) return;
     pi.DocumentationDisplay = DocumentationHtml;
     pi.viewContainer = viewContainer;
     pi.disp = Utils.display;
+    pi.index = index;
     pi.views ||= buildViews(pi);
     pi.toolingHtml ||= new Tooling(pi).html;
     html += partTemplate.render(pi);
   });
-  return html;
+  return html + '</div>';
 }
 
 const partsFunction = (partType) => (info) => {
@@ -152,7 +170,7 @@ DocumentationHtml.aerials = (order) => {
 
 DocumentationHtml.parts.order = (orderInfo, partType) => {
   const order = orderInfo.order;
-  let html = `<div order-hash='${order.hash()}'>`;
+  let html = `<div class='order-part-doc-cnt' order-hash='${order.hash()}'>`;
   orderInfo.rooms.forEach(roomInfo => html += DocumentationHtml.parts.room(roomInfo, partType));
   return html + '</div>';
 }
@@ -168,6 +186,7 @@ DocumentationHtml.parts.cutList = (orderInfo, partType) => {
   let pageIndex = -1;
   const disp = Utils.display;
   orderInfo.rooms.forEach(r => r.groups.forEach(g => g.cabinets.forEach(c => {
+    if (!c.parts[partType]) return;
     Object.values(c.parts[partType]).forEach(p => p.parts.forEach((part) => {
       const targetIndex = Math.floor((currentIndex % 30)/3);
       if (currentIndex % 30 === 0) pages[++pageIndex] = new Array(10).fill(null).map(() => ['','','']);
@@ -192,6 +211,14 @@ DocumentationHtml.doorList = (orderInfo) => {
 
 DocumentationHtml.drawerFrontList = (orderInfo) => {
   return listToTemplate(orderInfo, 'DrawerFront', doorListTemplate);
+}
+
+DocumentationHtml.drawerBoxList = (orderInfo) => {
+  return listToTemplate(orderInfo, 'DrawerBox', doorListTemplate);
+}
+
+DocumentationHtml.shelveList = (orderInfo) => {
+  return listToTemplate(orderInfo, 'Shelve', doorListTemplate);
 }
 
 DocumentationHtml.materials = (orderInfo) => {
@@ -293,7 +320,7 @@ const scaledMidpoint = (l, center, coeficient) => {
   }
 }
 
-const textProps = {size: '10px', radians: Math.PI};
+const textProps = {size: '12px', radians: Math.PI};
 function buildCanvas(info, rightOleft) {
   if (info.model === undefined) return;
   const side = rightOleft ? 'Right' : 'Left';
@@ -309,7 +336,7 @@ function buildCanvas(info, rightOleft) {
   model.center(newCenter);
   const draw = new Draw2d(canvas);
   const lines = Polygon3D.lines2d(Polygon3D.merge(Polygon3D.fromCSG(model)), 'x', 'y');
-  draw(lines, null, .3);
+  draw(lines, null, .5);
   const sideLabelCenter = {x: canvas.width - 5, y: canvas.height - 10, z:0};
   const sideLabel = rightOleft ? 'Right | Up' : 'Left | Down';
   draw.text(sideLabel, sideLabelCenter, textProps);

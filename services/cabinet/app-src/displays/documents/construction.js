@@ -70,12 +70,24 @@ const ShelveCutList = (containerOselector, order) => {
   return orderJob(order, containerOselector, DocHtml.shelves.cutList);
 }
 
+const CabinetList = (containerOselector, order) => {
+  return orderJob(order, containerOselector, DocHtml.cabinetList);
+}
+
 const DoorList = (containerOselector, order) => {
   return orderJob(order, containerOselector, DocHtml.doorList);
 }
 
 const DrawerFrontList = (containerOselector, order) => {
   return orderJob(order, containerOselector, DocHtml.drawerFrontList);
+}
+
+const DrawerBoxList = (containerOselector, order) => {
+  return orderJob(order, containerOselector, DocHtml.drawerBoxList);
+}
+
+const ShelveList = (containerOselector, order) => {
+  return orderJob(order, containerOselector, DocHtml.shelveList);
 }
 
 const Materials = (containerOselector, order) => {
@@ -100,20 +112,16 @@ const BuildDiagram = (containerOselector, order) => {
 }
 
 const Elevation = () => 'coming soon';
-const Summary = () => 'coming soon';
-
-const everythingSections = {PanelCutList, ShelveCutList, Summary, Aerial, Elevation,
-                      PanelComplexCutList, ShelveComplexCutList, BuildDiagram, Materials, DoorList, DrawerFrontList};
 const everythingTemplate = new $t('documents/construction/everything');
-const Everything = (containerOselector, order) => {
+const MultiSection = (sectionsObj) => (containerOselector, order) => {
   const htmlFunc = () => {
     const id = String.random();
-    const sections = Object.keys(everythingSections);
+    const sections = Object.keys(sectionsObj);
     setTimeout(() => {
       for (let index = 0; index < sections.length; index++) {
         const section = sections[index];
         const selector = `#everything-cnt-${id} .everything-${section.toKebab()}-cnt`;
-        everythingSections[section](selector, order);
+        summarySections[section](selector, order);
       }
     });
     return everythingTemplate.render({sections, id});
@@ -121,8 +129,19 @@ const Everything = (containerOselector, order) => {
   return orderJob(order, containerOselector, htmlFunc);
 }
 
+const summarySections = {CabinetList, Aerial, Elevation,
+        BuildDiagram, Materials,
+        DoorList, DrawerFrontList, DrawerBoxList, ShelveList};
+const Summary = MultiSection(summarySections);
+
+const everythingSections = {PanelCutList, ShelveCutList, Aerial, Elevation,
+        PanelComplexCutList, ShelveComplexCutList, BuildDiagram,
+        Materials, DoorList, DrawerFrontList, DrawerBoxList, ShelveList};
+const Everything = MultiSection(everythingSections);
+
+
 module.exports = {
   PanelComplexCutList, ShelveComplexCutList, PanelCutList, ShelveCutList,
-  BuildDiagram, DoorList,
-  DrawerFrontList, Materials, Aerial, Everything
+  CabinetList, BuildDiagram, DoorList, DrawerBoxList,
+  DrawerFrontList, Materials, Aerial, Summary, Everything
 };

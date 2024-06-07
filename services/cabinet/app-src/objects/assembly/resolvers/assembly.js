@@ -33,11 +33,11 @@ class AssemblyResolver extends Resolver {
 
     const demensionValue = (expr) => {
       if (expr === 'length' || expr === 'height' || expr === 'h' || expr === 'l')
-        return infoObj(expr, assembly.config().demension.y,  assembly.length());
+        return infoObj(expr, assembly.config().demension.y,  assembly.eval(assembly.config().demension.y));
       else if (expr === 'w' || expr === 'width')
-        return infoObj(expr, assembly.config().demension.x, assembly.width());
+        return infoObj(expr, assembly.config().demension.x, assembly.eval(assembly.config().demension.x));
       else if (expr === 'depth' || expr === 'thickness' || expr === 'd' || expr === 't')
-        return infoObj(expr, assembly.config().demension.z, assembly.thickness());
+        return infoObj(expr, assembly.config().demension.z, assembly.eval(assembly.config().demension.z));
     }
 
     const posValue = (expr) => {
@@ -78,7 +78,6 @@ class AssemblyResolver extends Resolver {
     const returnsIfValid = (info) => info && info.valid() ? info : null;
 
     this.resolve.information = (expr) => {
-      // return 1;
       let info;
       info = demensionValue(expr);
       info ||= returnsIfValid(info) || posValue(expr);

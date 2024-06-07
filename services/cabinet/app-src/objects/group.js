@@ -66,11 +66,11 @@ Group.DEFAULT = new Group();
 Group.fromJson = (json) => {
   const group = new Group(json.room, json.name, json.id);
   group.propertyConfig = PropertyConfig.fromJson(json.propertyConfig);
-  json.objects.forEach((objJson) => {
-    const jsonClazz = Object.class.get(json.objects[0]._TYPE);
+  json.objects.forEach((objJson, index) => {
+    const jsonClazz = Object.class.get(json.objects[index]._TYPE);
+    objJson.group = group;
     const obj = jsonClazz.fromJson(objJson, group);
     group.objects.push(obj);
-    obj.group(group);
   });
   return group;
 }

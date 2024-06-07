@@ -3,14 +3,20 @@ const {Task, Sequential} = require('./basic');
 const STATUS = require('./status');
 
 class CsgSimpleTask extends Task {
-  constructor(objects) {
+  constructor(objectOobjects) {
+    const isArray = Array.isArray(objectOobjects);
+    const objects = isArray ? objectOobjects : [objectOobjects];
     super();
     let _result;
     this.result = () => _result;
     this.process = () => 'simple';
     this.payload = () => ({objects});
     this.on.message((result) => {
-      _result = result;
+      if (result instanceof Error) return this.status(STATUS.FAILED, result);
+      _result = [];
+      Object.keys(result).forEach(key => _result[key] = CSG.fromPolygons(result[key].polygons, true));
+      if (isArray) _result = Object.values(_result)[0];
+      else _result = result;
       this.status(STATUS.SUCCESS, _result);
     });
   }

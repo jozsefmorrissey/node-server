@@ -58,7 +58,9 @@ class Room extends Lookup {
           const obj = group.objects[oi];
           if (selectorFunc(group, index, obj)) {
             if (obj3dMap[obj.id()] === undefined) {
-              obj3dMap[obj.id()] = Object3D.new(obj, this.layout());
+              if(obj instanceof Object3D) obj3dMap[obj.id()] = obj;
+              else obj3dMap[obj.id()] = Object3D.new(obj, this.layout());
+
             }
             objs.push(obj3dMap[obj.id()]);
           }

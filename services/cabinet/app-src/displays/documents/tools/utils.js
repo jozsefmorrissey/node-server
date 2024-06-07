@@ -60,6 +60,19 @@ Utils.display.materialUnits = (partList, thickness) => {
   return thickness;
 }
 
+const forEach = (part, selector, func) => {
+  const assems = part.getSubassemblies();
+  assems.forEach(a =>
+    (a.partCode().match(selector) || a.locationCode().match(selector)) && func(a));
+}
+
+Utils.count = {};
+Utils.count.shelves = (cabinet) => {
+  let count = 0;
+  forEach(cabinet, /^S[0-9]{1,}:sh[0-9]{1,}$/, () => count++)
+  return count;
+}
+
 Utils.display.materialArea = (partList) => {
   if (partList[0][0].constructor.MATERIAL_UNIT == 'Qty')
     return partList.map(list => list.length).sum();
