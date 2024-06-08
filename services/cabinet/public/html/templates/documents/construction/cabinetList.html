@@ -1,5 +1,5 @@
-<table>
-  <tr>
+<table class='last-col-full'>
+  <tr class='btm-border-barely-visible'>
     <th>Index</th>
     <th>Name</th>
     <th>Demensions</th>
@@ -7,13 +7,13 @@
     <th>Shelves</th>
     <th>Notes</th>
   </tr>
-  <tr:t repeat='cabInfo in cabinetInfos'>
+  <tr:t repeat='cabInfo in cabinetInfos' class='btm-border-barely-visible'>
     <td>{{cabInfo.cabinet.groupIndex()}}</td>
     <td>{{cabInfo.cabinet.name()}}</td>
     <td>{{Utils.display.demensions(cabInfo.cabinet.position().demension())}}</td>
     <td>UNK</td>
     <td>UNK</td>
     <td>{{Utils.count.shelves(cabInfo.cabinet)}}</td>
-    <td>Notes</td>
+    <td></td>
   </tr:t>
 </table>

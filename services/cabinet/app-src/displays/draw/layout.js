@@ -332,6 +332,7 @@ class DrawLayout extends Draw {
     const defaultScale = .8;
     // TODO: maybe I am stupid but i cant get thiss center method to work for any scale....
     function centerAndScaleAppropriatly(layout, scale) {
+      layout ||= getLayout();
       scale ||= defaultScale
       const ctx = draw.ctx();
       ctx.save();
@@ -341,12 +342,13 @@ class DrawLayout extends Draw {
       const scaledHeight = (canvas.height * scale);
       const xScale = scaledWidth / layoutDems.x;
       const yScale = scaledHeight / layoutDems.y;
+      const minScale = xScale < yScale ? xScale : yScale;
 
-      ctx.scale(xScale, yScale);
+      ctx.scale(minScale, minScale);
 
       const center = layout.center();
-      const transX = canvas.width/2 - center.x()*xScale;
-      const transY = canvas.height/2 - center.y()*yScale;
+      const transX = (canvas.width/minScale)/2 - center.x();
+      const transY = (canvas.height/minScale)/2 - center.y();
       ctx.translate(transX, transY);
 
     }

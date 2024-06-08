@@ -108,13 +108,14 @@ const onTestComplete = (parts, ts) => (result, job) => {
 // });
 
 Test.add('Construction.Order', async (ts) => {
-  const order = testOrder();
-  const title = 'Documentation Doc';
-  HtmlTest.register(title, () => 'Loading...');
-  const cnt = HtmlTest.container(title);
-  DocDisplay.selected(DocDisplay.TITLES.EVERYTHING.title)
-  cnt.innerHTML = DocDisplay.html();
-
+  setTimeout(() => {
+    const order = testOrder();
+    const title = 'Documentation Doc';
+    HtmlTest.register(title, () => 'Loading...');
+    DocDisplay.selected(DocDisplay.TITLES.AERIAL.title);
+    const cnt = HtmlTest.container(title);
+    cnt.innerHTML = DocDisplay.html();
+  }, 8000)
 });
 
 module.exports = {testOrder};

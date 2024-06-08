@@ -1,7 +1,7 @@
-<div class='small-margin'>
+<div class='small-margin last-col-full '>
     <table>
       <tbody>
-        <tr>
+        <tr class='btm-border-barely-visible'>
           <th>Qt</th>
           <th>Width</th>
           <th>Height</th>
@@ -10,7 +10,8 @@
           <th>Location</th>
           <th>Notes</th>
         </tr>
-        <tr:t repeat='doorObj in partListMap[type]' {{!partListMap[type] ? 'hidden' : ''}}>
+        <tr:t repeat='doorObj in partListMap[type]' {{!partListMap[type] ? 'hidden' : ''}}
+               class='btm-border-barely-visible'>
           <td>{{doorObj.length}}</td>
           <td>{{disp.measurement(doorObj.info.demensions.x)}}</td>
           <td>{{disp.measurement(doorObj.info.demensions.y)}}</td>

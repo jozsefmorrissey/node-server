@@ -229,14 +229,14 @@ class Draw2d {
       ctx.save();
       ctx.lineWidth = 0;
       const textLength = text.length;
-      ctx.translate(point.x(), point.y());
+      const textOffset = new Vertex2d(textLength * 5, -6);
       let radians = props.radians || 0;
-      ctx.rotate(props.radians);
+      textOffset.rotate(radians)
+      ctx.translate(point.x()-textOffset.x()/2, point.y());
       ctx.beginPath();
-      ctx.fillStyle = props.fillColor || "white";
-      ctx.strokeStyle = props.fillColor || 'white';
-      // ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
-      ctx.rect(textLength * -3, -4, textLength * 6, 8);
+      ctx.fillStyle = props.fillColor || "green";
+      ctx.strokeStyle = props.fillColor || 'green';
+      ctx.rect(0, 0, textOffset.x(), textOffset.y());
       ctx.fill();
       ctx.stroke();
 
@@ -245,10 +245,11 @@ class Draw2d {
       ctx.lineWidth = .2;
       ctx.strokeStyle = props.color || 'black';
       ctx.fillStyle =  props.color || 'black';
-      if (props.mirrorX && props.mirrorY) ctx.scale(-1, -1);
-      else if (props.mirrorX) ctx.scale(1, -1);
-      else if (props.mirrorY) ctx.scale(-1, 1);
-      ctx.fillText(text, props.x || 0, (props.y || 0), props.maxWidth);
+      // if (props.mirrorX && props.mirrorY) ctx.scale(-1, -1);
+      // else if (props.mirrorX) ctx.scale(1, -1);
+      // else if (props.mirrorY) ctx.scale(-1, 1);
+      ctx.rotate(props.radians);
+      ctx.fillText(text, 0, 0, props.maxWidth);
       ctx.stroke()
       ctx.restore();
     }

@@ -51,7 +51,7 @@ const Aerial = (containerOselector, order) => {
   const html = DocHtml.aerials(order);
   if (containerOselector) {
     const container = containerOselector instanceof HTMLElement ? containerOselector : du.find(containerOselector);
-    container.innerHTML = html;
+    if (container) container.innerHTML = html;
   }
   return html;
 }
@@ -129,9 +129,9 @@ const MultiSection = (sectionsObj) => (containerOselector, order) => {
   return orderJob(order, containerOselector, htmlFunc);
 }
 
-const summarySections = {CabinetList, Aerial, Elevation,
-        BuildDiagram, Materials,
-        DoorList, DrawerFrontList, DrawerBoxList, ShelveList};
+const summarySections = {Aerial, Elevation,
+        CabinetList, DoorList, DrawerFrontList, DrawerBoxList, ShelveList,
+        Materials, BuildDiagram};
 const Summary = MultiSection(summarySections);
 
 const everythingSections = {PanelCutList, ShelveCutList, Aerial, Elevation,

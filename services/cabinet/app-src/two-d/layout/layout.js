@@ -82,7 +82,11 @@ class Layout2D extends Lookup {
       return sort;
     }
 
-    this.demensions = () => Vertex2d.minMax(this.vertices()).diff.point();
+    this.demensions = () => {
+      const wallDems = Vertex2d.minMax(this.vertices()).diff;
+      const infoOffset = 40*2.54;
+      return {x: wallDems.x() + infoOffset, y: wallDems.y() + infoOffset};
+    }
     this.wallIndex = (wallOrIndex) => {
       if (wallOrIndex instanceof Wall2D) {
         for (let index = 0; index < walls.length; index += 1) {

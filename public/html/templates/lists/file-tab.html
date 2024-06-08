@@ -5,7 +5,7 @@
       {{title}}
     </li:t>
   </ul>
-  <div class='content-cnt'>
+  <div class='content-cnt padding-left-right'>
     <div:t repeat='title in list()' {{selected.is(title) ? 'class="selected"' : 'empty-contents'}}
           title='{{title}}' {{selected.is(title) ? '' : 'hidden'}}>
           {{title === selected() ? html(title) : ''}}

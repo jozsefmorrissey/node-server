@@ -15,6 +15,12 @@
   .part-top-margin {
     padding-top: 10pt;
   }
+  .break-after {
+    page-break-after: always;
+  }
+  .page {
+    break-after: page;
+  }
 }
 
 @page {
@@ -22,17 +28,31 @@
     margin: 20mm 0 10mm 0;
 }
 
-.page {
-  break-after: page;
-}
-
 .build-diagram-measurement-cnt {
   padding-right: 5pt;
+}
+
+.padding-left-right {
+  padding: 0 10pt;
+}
+
+table td {
+  white-space: nowrap;
 }
 
 .project-cnt {
   margin: 10pt;
 }
+
+.btm-border-barely-visible {
+  border-width: 1px;
+  border-color: #00000045;
+  border-bottom-style: solid;
+}
+
+.last-col-full { width: 100%; }
+.last-col-full td { width: 1px; }
+.last-col-full td:last-child { width: 100%;}
 
 /**
   <input id="{{id}}" type='checkbox' hidden>
@@ -435,10 +455,8 @@ canvas {
 }
 
 #order-cnt {
-  position: absolute;
   z-index: 10;
-  left: 1vw;
-  top: 5%;
+  padding: 30pt 0;
 }
 
 .upside-down {

@@ -161,6 +161,7 @@ DocumentationHtml.aerials = (order) => {
       canvas.height = pageWidth;
       canvas.width = pageWidth;
       const draw = new DrawLayout(canvas, room.layout);
+      draw.centerAndScaleAppropriatly()
       draw();
       // const panZ = new PanZoom(canvas, () => draw());
     });
