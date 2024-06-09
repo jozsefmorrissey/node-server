@@ -12,6 +12,7 @@ class DrawerSection extends Assembly {
     const instance = this;
     const sectionProps = () => instance.parentAssembly();
     this.part = () => false;
+    this.normals({DETERMINE_FROM_PARENT: true});
 
     this.front = () => front;
     this.pull = (i) => front.pull(i);
@@ -19,7 +20,9 @@ class DrawerSection extends Assembly {
 
     if (!front) front = new DrawerFront('df', 'Solid');
     this.addSubAssembly(front);
+    front.normals({DETERMINE_FROM_PARENT: true});
     if (!box) box = new DrawerBox('db', 'Section');
+    box.normals({DETERMINE_FROM_PARENT: true});
     this.addSubAssembly(box);
   }
 }

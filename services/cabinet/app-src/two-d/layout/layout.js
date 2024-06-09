@@ -32,7 +32,7 @@ function withinTolerance(point, map) {
 
 const ww = 500;
 class Layout2D extends Lookup {
-  constructor(objects) {
+  constructor(objects, staticOffset) {
     super();
     this.setObjects = (objs) => objects = objs;
     this.objects = () => (objects instanceof Function ? objects() : objects) || [];

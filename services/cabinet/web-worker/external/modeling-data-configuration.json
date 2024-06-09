@@ -7,7 +7,7 @@
   "SectionProperties": ["id", "back.id", "top.id", "bottom.id", "left.id", "right.id", "rotation", "coordinates.inner",
       "divideRight", "pattern.str", "verticalDivisions", "dividerCount", "sectionCount",
       "coordinates.outer", "dividerJoint", "isVertical", "divider.id", "sections>id",
-      "partCode", "locationCode", "parentAssembly.id", "shelves"],
+      "partCode", "locationCode", "parentAssembly.id", "shelves", "normals"],
   "DivideSection": [],
   "DrawerSection": [],
   "PanelSection": [],

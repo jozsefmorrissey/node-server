@@ -160,7 +160,7 @@ DocumentationHtml.aerials = (order) => {
       const pageWidth = du.convertCssUnit('210mm');
       canvas.height = pageWidth;
       canvas.width = pageWidth;
-      const draw = new DrawLayout(canvas, room.layout);
+      const draw = new DrawLayout(canvas, room.layout, true);
       draw.centerAndScaleAppropriatly()
       draw();
       // const panZ = new PanZoom(canvas, () => draw());

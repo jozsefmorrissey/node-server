@@ -130,7 +130,8 @@ class SectionPropertiesUtil {
       backOffset *= -1;
       const offsetObj = {x: offset, y: offset};
       biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj);
-      coverInfo = {biPolygon, frontOffset, backOffset};
+      const normals = spDto.normals;
+      coverInfo = {biPolygon, frontOffset, backOffset, normals};
       return coverInfo;
     }
 

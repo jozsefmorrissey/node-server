@@ -68,6 +68,12 @@ const handleModel = (rMdto, environment, simple) => {
   const rotated =  rMdto.location.rotate;
   const line = rotated ? front.line(-1) : front.line(0);
   const normal = biPoly.normal();
+  const normals = {
+    z: normal,
+    y: line.vector().unit()
+  }
+  normals.x = normals.z.crossProduct(normals.y).unit();
+  rMdto.position.current.normals = normals;
   if (simple)
     return SimpleModels.Pull.Simple(baseC, line, normal, rMdto.projection, rMdto.centerToCenter);
   else

@@ -69,7 +69,16 @@ class SectionProperties extends KeyValue {
     const temporaryInitialVals = {parent, _TEMPORARY: true};
     Object.getSet(this, temporaryInitialVals, 'parentAssembly');
     Object.getSet(this, {divideRight: false, config, index}, 'divider', 'cover', 'name');
-    this.normal = () => this.outerPoly().normal()
+    this.normal = () => this.outerPoly().normal();
+    this.normals = () => {
+      const outer = this.coordinates().outer;
+      const normals = {
+        z: this.normal(),
+        y: new Line3D(outer[1],outer[2]).vector().unit(),
+      }
+      normals.x = normals.z.crossProduct(normals.y).unit();
+      return normals;
+    }
     this.outerPoly = () => new Polygon3D(coordinates.outer);
     this.innerPoly = () => new Polygon3D(coordinates.inner);
 

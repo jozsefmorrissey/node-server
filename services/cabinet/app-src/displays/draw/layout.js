@@ -10,9 +10,10 @@ const Layout2D = require('../../two-d/layout/layout.js');
 
 
 class DrawLayout extends Draw {
-  constructor(canvasOselector, getLayout) {
+  constructor(canvasOselector, getLayout, staticOffset) {
     super(canvasOselector);
     const parent = this;
+    this.staticOffset = staticOffset;
 
     function filter (object) {
       switch (object.constructor.name) {
@@ -115,27 +116,9 @@ class DrawLayout extends Draw {
       }
       const ctx = draw.ctx();
       midpoint = line.midpoint();
-
-      ctx.save();
-      ctx.lineWidth = 0;
-      const length = measurement.display();
-      const textLength = length.length;
-      ctx.translate(midpoint.x(), midpoint.y());
-      ctx.rotate(line.radians());
-      ctx.beginPath();
-      ctx.fillStyle = hoverId() === measurement.toString() ? 'green' : "white";
-      ctx.strokeStyle = 'white';
-      ctx.rect(textLength * -3, -8, textLength * 6, 16);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = 'black';
-      ctx.fillStyle =  'black';
-      ctx.fillText(length, 0, 0);
-      ctx.stroke()
-      ctx.restore();
+      const radians = line.radians();
+      const fillColor = hoverId() === measurement.toString() ? 'green' : "white";
+      draw.text(measurement.display(), midpoint, {fillColor, radians})
     }
 
     const measurementLineMap = {};

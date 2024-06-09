@@ -229,27 +229,24 @@ class Draw2d {
       ctx.save();
       ctx.lineWidth = 0;
       const textLength = text.length;
-      const textOffset = new Vertex2d(textLength * 5, -6);
+      const textOffset = new Vertex2d(textLength * 6, 6);
       let radians = props.radians || 0;
-      textOffset.rotate(radians)
-      ctx.translate(point.x()-textOffset.x()/2, point.y());
+
+      ctx.translate(point.x(), point.y());
       ctx.beginPath();
-      ctx.fillStyle = props.fillColor || "green";
-      ctx.strokeStyle = props.fillColor || 'green';
-      ctx.rect(0, 0, textOffset.x(), textOffset.y());
+      ctx.fillStyle = props.fillColor || "white";
+      ctx.strokeStyle = props.fillColor || 'white';
+      ctx.rotate(props.radians);
+      ctx.rect(-textOffset.x()/2, 0, textOffset.x(), 2*textOffset.y());
       ctx.fill();
       ctx.stroke();
-
-      ctx.beginPath();
-      ctx.font = `${props.size || '3px'} ${props.font || 'Arial'}`;
+      ctx.font = `${props.size || '12px'} ${props.font || 'Arial'}`;
       ctx.lineWidth = .2;
       ctx.strokeStyle = props.color || 'black';
       ctx.fillStyle =  props.color || 'black';
-      // if (props.mirrorX && props.mirrorY) ctx.scale(-1, -1);
-      // else if (props.mirrorX) ctx.scale(1, -1);
-      // else if (props.mirrorY) ctx.scale(-1, 1);
-      ctx.rotate(props.radians);
-      ctx.fillText(text, 0, 0, props.maxWidth);
+      // Cant figure out why satic drawings require this but panz drawings do not.
+      if (draw.staticOffset) ctx.fillText(text, -textOffset.x()/2, 1.5*textOffset.y(), props.maxWidth);
+      else ctx.fillText(text, 0, textOffset.y(), props.maxWidth);
       ctx.stroke()
       ctx.restore();
     }
@@ -260,28 +257,31 @@ class Draw2d {
       if (measurement === undefined) return;
       const ctx = draw.ctx();
       const midpoint = line.midpoint();
+      const radian = line.radians();
 
-      ctx.save();
-      ctx.lineWidth = 0;
-      const length = measurement.display();
-      const textLength = length.length;
-      ctx.translate(midpoint.x(), midpoint.y());
-      ctx.rotate(line.radians());
-      ctx.beginPath();
-      ctx.fillStyle = "white";
-      ctx.strokeStyle = 'white';
-      ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
-      ctx.fill();
-      ctx.stroke();
+      draw.text(measurement.display(), midpoint, {fillColor, radians})
 
-      ctx.beginPath();
-      ctx.font = '3px Arial';//(Math.abs((Math.log(Math.floor(line.length() * 10)))) || .1) + "px Arial";
-      ctx.lineWidth = .2;
-      ctx.strokeStyle = 'black';
-      ctx.fillStyle =  'black';
-      ctx.fillText(length, 0, 0);
-      ctx.stroke()
-      ctx.restore();
+      // ctx.save();
+      // ctx.lineWidth = 0;
+      // const length = measurement.display();
+      // const textLength = length.length;
+      // ctx.translate(midpoint.x(), midpoint.y());
+      // ctx.rotate(line.radians());
+      // ctx.beginPath();
+      // ctx.fillStyle = "white";
+      // ctx.strokeStyle = 'white';
+      // ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
+      // ctx.fill();
+      // ctx.stroke();
+      //
+      // ctx.beginPath();
+      // ctx.font = '3px Arial';//(Math.abs((Math.log(Math.floor(line.length() * 10)))) || .1) + "px Arial";
+      // ctx.lineWidth = .2;
+      // ctx.strokeStyle = 'black';
+      // ctx.fillStyle =  'black';
+      // ctx.fillText(length, 0, 0);
+      // ctx.stroke()
+      // ctx.restore();
     }
 
     draw.measurement = (measurement, color, textWidth) => {

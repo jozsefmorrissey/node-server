@@ -107,7 +107,7 @@ class SnapPolygon extends Snap2d {
       const height = this.height();
       const dist = height / (height < 35 ? 1 : (height < 70 ? 2 : 3));
       const radians = lfl ? lfl.radians() : 0;
-      const textLine = lfl ? lfl.perpendicular(dist/2) : 0;
+      const textLine = lfl ? lfl.perpendicular(dist/4) : 0;
       return {
         text: instance.parent().name() || '?????',
         center: textLine ? textLine.endVertex() : new Vertex2d(),

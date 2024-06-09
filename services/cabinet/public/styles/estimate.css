@@ -25,7 +25,7 @@
 
 @page {
     size: auto;
-    margin: 20mm 0 10mm 0;
+    /* margin: 20mm 0 10mm 0; */
 }
 
 .build-diagram-measurement-cnt {
@@ -666,7 +666,7 @@ table.no-borders, table.no-borders td, table.no-borders th, table.no-borders tr,
 }
 
 .build-diagram-cnt {
-  width: 210mm;
+  /* width: 210mm; */
   flex-wrap: wrap;
 
   margin: auto;

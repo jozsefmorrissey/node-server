@@ -106,15 +106,13 @@ to.DividerSection = {
 
 to.DrawerFront = {
   Solid: {
-    biPolygon: (rMdto, environment) =>
-      SectionPropertiesUtil.instance(rMdto, environment).coverInfo().biPolygon
+    biPolygon: Utils.stdCoverObject
   }
 }
 
 to.Door = {
   Section: {
-    biPolygon: (rMdto, environment) =>
-      SectionPropertiesUtil.instance(rMdto, environment).coverInfo().biPolygon
+    biPolygon: Utils.stdCoverObject
   },
   Left: {biPolygon: DoorUtil.Left},
   Right: {biPolygon: DoorUtil.Right}
@@ -122,29 +120,25 @@ to.Door = {
 
 to.DualDoorSection = {
   DualDoorSection: {
-    biPolygon: (rMdto, environment) =>
-      SectionPropertiesUtil.instance(rMdto, environment).coverInfo().biPolygon
+    biPolygon: Utils.stdCoverObject
   }
 }
 
 to.DoorSection = {
   DoorSection: {
-    biPolygon: (rMdto, environment) =>
-      SectionPropertiesUtil.instance(rMdto, environment).coverInfo().biPolygon
+    biPolygon: Utils.stdCoverObject
   }
 }
 
 to.DrawerSection = {
   DrawerSection: {
-    biPolygon: (rMdto, environment) =>
-      SectionPropertiesUtil.instance(rMdto, environment).coverInfo().biPolygon
+    biPolygon: Utils.stdCoverObject
   }
 }
 
 to.FalseFrontSection = {
   FalseFrontSection: {
-    biPolygon: (rMdto, environment) =>
-      SectionPropertiesUtil.instance(rMdto, environment).coverInfo().biPolygon
+    biPolygon: Utils.stdCoverObject
   }
 }
 

@@ -241,6 +241,7 @@
               },
               "partCode": "c",
               "partName": "Simple",
+              "name": "target",
               "locationCode": "c",
               "subassemblies": {
                 "R": {

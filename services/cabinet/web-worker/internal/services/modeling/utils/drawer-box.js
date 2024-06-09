@@ -5,7 +5,7 @@ const SectionPropertiesUtil = require('./section-properties');
 function getDrawerDepth(depth) {
   const adjustedDepth = (depth/2.54) - 1;
   if (adjustedDepth < 3) return 0;
-  return Math.floor((adjustedDepth/3) * 3) * 2.54;
+  return Math.floor((adjustedDepth/3)) * 3 * 2.54;
 }
 
 module.exports = (assembly, environment) => {
@@ -22,5 +22,6 @@ module.exports = (assembly, environment) => {
   const bottomOffset = props.dbbos;
   innerPoly.offset(sideOffset/2, sideOffset/2, topOffset, bottomOffset);
   innerPoly.translate(offsetVect);
+  assembly.position.current.normals = coverInfo.normals;
   return SimpleModels.DrawerBox(innerPoly, normal, depth, propConfig.DrawerBox);
 }

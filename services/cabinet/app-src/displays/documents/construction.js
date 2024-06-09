@@ -131,7 +131,7 @@ const MultiSection = (sectionsObj) => (containerOselector, order) => {
 
 const summarySections = {Aerial, Elevation,
         CabinetList, DoorList, DrawerFrontList, DrawerBoxList, ShelveList,
-        Materials, BuildDiagram};
+        Materials};
 const Summary = MultiSection(summarySections);
 
 const everythingSections = {PanelCutList, ShelveCutList, Aerial, Elevation,
