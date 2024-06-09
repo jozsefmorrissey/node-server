@@ -111,8 +111,13 @@ function applyCutters(assem, cutters, env, group) {
       env.jointMap.female[assem.id] ||= [];
       env.jointMap.female[assem.id].push(jointId);
       env.modelInfo.intersection[id] ||= {};
-      env.modelInfo.intersection[id][cutterId] = model.intersect(cutter);
-      model = model.subtract(cutter);
+      try {
+        env.modelInfo.intersection[id][cutterId] = model.intersect(cutter);
+        model = model.subtract(cutter);
+      } catch (e) {
+        console.error('Need to find the root cause of this issue');
+        console.error(e);
+      }
     }
   }
   env.modelInfo.extended[id] = model;
