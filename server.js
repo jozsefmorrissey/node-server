@@ -181,7 +181,7 @@ try {
       }
       console.log(`Started ${id} - build command '${buildCmd}'`);
       try {
-        shell.exec(buildCmd, {async: true});
+        if (!global.noBuild) shell.exec(buildCmd, {async: true});
       } catch (e) {}
       require(project).endpoints(app, loc, ip);
     }
