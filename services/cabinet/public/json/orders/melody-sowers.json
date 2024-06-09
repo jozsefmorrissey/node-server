@@ -93,8 +93,8 @@
                 "height": 198.12,
                 "fromFloor": 0,
                 "fromPreviousWall": 30.48,
-                "wallId": "Wall2D_02fysic",
-                "id": "Door2D_ddlxsxs",
+                "wallId": "Wall2D_8q2mxix",
+                "id": "Door2D_9pf8uar",
                 "hinge": 3
               }
             ]
@@ -241,12 +241,14 @@
               },
               "partCode": "c",
               "partName": "Simple",
-              "name": "target",
               "locationCode": "c",
               "subassemblies": {
                 "R": {
                   "value": {
-                    "values": {}
+                    "values": {
+                      "dpt": "3.81+2.54",
+                      "dft": "3.81+2.54"
+                    }
                   },
                   "_TYPE": "Divider",
                   "sliceAtOpening": true,
@@ -257,7 +259,7 @@
                     "demension": {
                       "x": "maxSide",
                       "y": "c.h",
-                      "z": "pt34"
+                      "z": "pt34+2.54"
                     },
                     "center": {
                       "x": "c.w - R.t/2",
@@ -996,13 +998,13 @@
                                   }
                                 },
                                 "partCode": "pu",
-                                "partName": "Section.Pull.TOP_RIGHT",
+                                "partName": "Section.Pull.TOP_LEFT",
                                 "locationCode": "c_S1_S2_DS_D:pu1",
                                 "subassemblies": {},
                                 "joints": [],
                                 "location": {
                                   "rotate": true,
-                                  "position": "TOP_RIGHT"
+                                  "position": "TOP_LEFT"
                                 },
                                 "centerToCenter": 9.6
                               }
@@ -1110,6 +1112,7 @@
                 "x": {},
                 "z": {}
               },
+              "name": "Angled",
               "currentPosition": {
                 "center": {
                   "x": 480.2301766419674,
@@ -1617,45 +1620,7 @@
                             "partCode": "ff",
                             "partName": "Solid",
                             "locationCode": "c_S1_S1_ff_ff",
-                            "subassemblies": {
-                              "pu": {
-                                "value": {
-                                  "values": {}
-                                },
-                                "_TYPE": "Handle",
-                                "sliceAtOpening": false,
-                                "part": true,
-                                "included": true,
-                                "includeJoints": true,
-                                "config": {
-                                  "demension": {
-                                    "x": "0",
-                                    "y": "0",
-                                    "z": "0"
-                                  },
-                                  "center": {
-                                    "x": "0",
-                                    "y": "0",
-                                    "z": "0"
-                                  },
-                                  "rotation": {
-                                    "x": "0",
-                                    "y": "0",
-                                    "z": "0"
-                                  }
-                                },
-                                "partCode": "pu",
-                                "partName": "Solid.Pull.CENTER",
-                                "locationCode": "c_S1_S1_ff_ff:pu1",
-                                "subassemblies": {},
-                                "joints": [],
-                                "location": {
-                                  "multiple": true,
-                                  "position": "CENTER"
-                                },
-                                "centerToCenter": 9.6
-                              }
-                            },
+                            "subassemblies": {},
                             "joints": []
                           }
                         },
@@ -3083,6 +3048,7 @@
                 "x": {},
                 "z": {}
               },
+              "name": "Sink Base",
               "currentPosition": {
                 "center": {
                   "x": 429.43017664196736,
@@ -4127,7 +4093,7 @@
                 "x": {},
                 "z": {}
               },
-              "name": "mirror",
+              "name": "Mirror",
               "currentPosition": {
                 "center": {
                   "x": 451.4301766419673,
