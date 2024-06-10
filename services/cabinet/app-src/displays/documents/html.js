@@ -23,6 +23,7 @@ const openingDiagramsTemplate = new $t('documents/construction/opening-diagrams'
 const doorListTemplate = new $t('documents/construction/door-list');
 const materialsTemplate = new $t('documents/construction/materials');
 const aerialsTemplate = new $t('documents/construction/aerials');
+const orderInfoTemplate = new $t('documents/construction/order-information');
 
 const NO_CABINETS_EXIST_HTML = '<h2>Must define atleast one cabinet</h2>';
 
@@ -53,7 +54,7 @@ function allPartsOfType (orderInfo, type) {
   return parts;
 }
 
-function listToTemplate(orderInfo, type, template) {
+function listToTemplate(orderInfo, type, template, width, height, thickness) {
   const parts = allPartsOfType(orderInfo, type);
   const map = {};
   const disp = Utils.display;
@@ -70,7 +71,7 @@ function listToTemplate(orderInfo, type, template) {
 
   const partListMap = {};
   Object.keys(map).forEach(key => partListMap[key] = Object.values(map[key]));
-  return template.render({partListMap, disp, type});
+  return template.render({partListMap, disp, type, width, height, thickness});
 }
 
 function materialListToTemplate(orderInfo, type, template) {
@@ -151,6 +152,10 @@ DocumentationHtml.panels.main = (orderInfo) => {
   return orderTemplate.render(orderInfo);
 }
 
+DocumentationHtml.orderInfo = (order) => {
+  return orderInfoTemplate.render({order, Utils});
+}
+
 DocumentationHtml.aerials = (order) => {
   setTimeout(() => {
     Object.values(order.rooms).forEach(room => {
@@ -207,19 +212,19 @@ DocumentationHtml.parts.cutList = (orderInfo, partType) => {
 }
 
 DocumentationHtml.doorList = (orderInfo) => {
-  return listToTemplate(orderInfo, 'Door', doorListTemplate);
+  return listToTemplate(orderInfo, 'Door', doorListTemplate, 'Width', 'Height', 'Thickness');
 }
 
 DocumentationHtml.drawerFrontList = (orderInfo) => {
-  return listToTemplate(orderInfo, 'DrawerFront', doorListTemplate);
+  return listToTemplate(orderInfo, 'DrawerFront', doorListTemplate, 'Width', 'Height', 'Thickness');
 }
 
 DocumentationHtml.drawerBoxList = (orderInfo) => {
-  return listToTemplate(orderInfo, 'DrawerBox', doorListTemplate);
+  return listToTemplate(orderInfo, 'DrawerBox', doorListTemplate, 'Width', 'Height', 'Depth');
 }
 
 DocumentationHtml.shelveList = (orderInfo) => {
-  return listToTemplate(orderInfo, 'Shelve', doorListTemplate);
+  return listToTemplate(orderInfo, 'Shelve', doorListTemplate, 'Width', 'Depth', 'Thickness');
 }
 
 DocumentationHtml.materials = (orderInfo) => {

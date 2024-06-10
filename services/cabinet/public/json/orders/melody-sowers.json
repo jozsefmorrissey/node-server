@@ -1,7 +1,10 @@
 {
   "_TYPE": "Order",
-  "name": "Order 2024 (day: 5)",
+  "name": "Melody Sowers",
   "id": "d2g8nefkql4mvwxrowvx7u3gpv37dw9c",
+  "date": {
+    "initial": "Jun 09 2024"
+  },
   "rooms": {
     "kitchen": {
       "_TYPE": "Room",
@@ -93,8 +96,8 @@
                 "height": 198.12,
                 "fromFloor": 0,
                 "fromPreviousWall": 30.48,
-                "wallId": "Wall2D_8q2mxix",
-                "id": "Door2D_9pf8uar",
+                "wallId": "Wall2D_rfz0iz7",
+                "id": "Door2D_nxgwxy1",
                 "hinge": 3
               }
             ]
@@ -325,7 +328,7 @@
                     "demension": {
                       "x": "c.w - L.t - R.t",
                       "y": "c.h - B.t -T.t",
-                      "z": "pt34"
+                      "z": "pt14"
                     },
                     "center": {
                       "x": "L.t + BACK.w/2",
@@ -1136,6 +1139,7 @@
                 }
               },
               "autoToeKick": true,
+              "notes": "Right Rail is 2 1/2",
               "id": "Cabinet_8tep23r"
             },
             {
@@ -1149,6 +1153,9 @@
                     "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
+                  },
+                  "showLeft": {
+                    "type": "Flush"
                   }
                 }
               },
@@ -3072,6 +3079,7 @@
                 }
               },
               "autoToeKick": true,
+              "notes": "",
               "id": "Cabinet_i29w1u2"
             },
             {
@@ -3083,6 +3091,16 @@
                     "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
+                  },
+                  "style": "Inset",
+                  "Inset": {
+                    "is": 0.238125
+                  },
+                  "showLeft": {
+                    "type": "Yes"
+                  },
+                  "showRight": {
+                    "type": "Yes"
                   }
                 }
               },
@@ -3094,7 +3112,7 @@
               "config": {
                 "demension": {
                   "x": 99.06,
-                  "y": 81.28,
+                  "y": 90.17,
                   "z": 12.7
                 },
                 "center": {
@@ -3191,7 +3209,7 @@
                     "demension": {
                       "x": "c.w - L.t - R.t",
                       "y": "c.h - B.t -T.t",
-                      "z": "pt34"
+                      "z": "pt14"
                     },
                     "center": {
                       "x": "L.t + BACK.w/2",
@@ -3250,7 +3268,10 @@
                 },
                 "T": {
                   "value": {
-                    "values": {}
+                    "values": {
+                      "dft": "10.16",
+                      "dpt": "10.162"
+                    }
                   },
                   "_TYPE": "Divider",
                   "sliceAtOpening": true,
@@ -3261,7 +3282,7 @@
                     "demension": {
                       "x": "c.w - L.t - R.t",
                       "y": "c.t ",
-                      "z": "pt34"
+                      "z": "10.16"
                     },
                     "center": {
                       "x": "L.t + T.w / 2",
@@ -4102,7 +4123,7 @@
                 },
                 "demension": {
                   "x": 99.06,
-                  "y": 81.28,
+                  "y": 90.17,
                   "z": 12.7
                 },
                 "rotation": {
@@ -4116,6 +4137,7 @@
                   "z": {}
                 }
               },
+              "notes": "Tri fold mirror\n3 Lights on top centered above each mirror",
               "id": "Cabinet_kd8m9jr"
             },
             {
@@ -4127,6 +4149,12 @@
                     "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
+                  },
+                  "showLeft": {
+                    "type": "Yes"
+                  },
+                  "showRight": {
+                    "type": "Yes"
                   }
                 }
               },
@@ -4138,7 +4166,7 @@
               "config": {
                 "demension": {
                   "x": 71.12,
-                  "y": 76.2,
+                  "y": 91.44,
                   "z": 20.32
                 },
                 "center": {
@@ -5163,7 +5191,7 @@
                 },
                 "demension": {
                   "x": 71.12,
-                  "y": 76.2,
+                  "y": 91.44,
                   "z": 20.32
                 },
                 "rotation": {
@@ -5685,5 +5713,6 @@
         }
       ]
     }
-  }
+  },
+  "notes": "Quarter Sawn Oak\nDrawer Fronts and Doors should be similar to their kitchen solid drawers & panel doors\nKnobs on doors pulls on drawers\nBack Splash on counter top"
 }

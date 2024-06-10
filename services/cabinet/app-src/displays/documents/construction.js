@@ -45,9 +45,18 @@ const orderJob = (order, containerOselector, htmlFunc) => {
   return job;
 }
 
+const OrderInformation = (containerOselector, order) => {
+  order ||= Global.order();
+  const html = DocHtml.orderInfo(order);
+  if (containerOselector) {
+    const container = containerOselector instanceof HTMLElement ? containerOselector : du.find(containerOselector);
+    if (container) container.innerHTML = html;
+  }
+  return html;
+}
+
 const Aerial = (containerOselector, order) => {
   order ||= Global.order();
-  const canvasId = `aerial-canvas-cnt`;
   const html = DocHtml.aerials(order);
   if (containerOselector) {
     const container = containerOselector instanceof HTMLElement ? containerOselector : du.find(containerOselector);
@@ -129,7 +138,7 @@ const MultiSection = (sectionsObj) => (containerOselector, order) => {
   return orderJob(order, containerOselector, htmlFunc);
 }
 
-const summarySections = {Aerial, Elevation,
+const summarySections = {Aerial, Elevation, OrderInformation,
         CabinetList, DoorList, DrawerFrontList, DrawerBoxList, ShelveList,
         Materials};
 const Summary = MultiSection(summarySections);

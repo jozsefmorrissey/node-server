@@ -279,6 +279,7 @@ class SectionProperties extends KeyValue {
         const section = this.sections[Math.ceil((index - 1)/2)];
         let offset = 0;
         const divider = section.divider().divider();
+        const dividerWidth = divider.type() === 'none' ? 0 : divider.maxWidth();
         if (isReveal) {
           if (index % 2 === 0) {
             if (index === 0) info._TOTAL -= reveal;
@@ -286,17 +287,17 @@ class SectionProperties extends KeyValue {
           }
           if (index === 0) info.push({overlay: startOffset - reveal / 2});
           if (index === this.sections.length - 1) info.push({overlay: endOffset - reveal / 2});
-          else info.push({overlay: (divider.maxWidth() - reveal)/2});
+          else info.push({overlay: (dividerWidth - reveal)/2});
         }  else if (isInset) {
           if (index % 2 === 0) {
             if (index === this.sections.length * 2 - 2) info._TOTAL -= insetValue * 2;
-            else info._TOTAL -= (divider.maxWidth() + insetValue * 2);
+            else info._TOTAL -= (dividerWidth + insetValue * 2);
           }
           info.push({overlay: -insetValue});
         } else {
           if (index % 2 === 0) {
             if (index === this.sections.length * 2 - 2) info._TOTAL += overlay * 2;
-            else info._TOTAL += overlay * 2 - divider.maxWidth();
+            else info._TOTAL += overlay * 2 - dividerWidth;
           }
           info.push({overlay: overlay});
         }
@@ -553,7 +554,7 @@ class SectionProperties extends KeyValue {
         if (index < this.sections.length - 1) {
           const section = this.sections[index];
           const divider = section.divider().divider();
-          const offset = divider.maxWidth();
+          const offset = divider.type() === 'none' ? 0 : divider.maxWidth();
           info[index + 1] = {offset, divider};
         } else {
           info[index + 1] = {offset: endOffset};

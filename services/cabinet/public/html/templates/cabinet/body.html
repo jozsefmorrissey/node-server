@@ -4,7 +4,10 @@
       <div class='align-right'>
         <label>Show</label>
         <select class="show-select" name='type' side='Left'>
-          <option:t repeat='showType in showTypes'>{{showType.name}}</option:t>
+          <option:t repeat='showType in showTypes'
+              {{cabinet.value('showLeft.type') === showType.name ? 'selected' : ''}}>
+            {{showType.name}}
+          </option:t>
         </select>
         <br>
         <label>End Style</label>
@@ -18,7 +21,10 @@
     <div class='absolute-top-right show-cnt'>
       <div class='align-left'>
         <select class="show-select" name='type' side='Right'>
-          <option:t repeat='showType in showTypes'>{{showType.name}}</option:t>
+          <option:t repeat='showType in showTypes'
+              {{cabinet.value('showRight.type') === showType.name ? 'selected' : ''}}>
+            {{showType.name}}
+          </option:t>
         </select>
         <label>Show</label>
         <br>

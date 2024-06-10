@@ -1,19 +1,24 @@
-<table class='last-col-full'>
-  <tr class='btm-border-barely-visible'>
-    <th>Index</th>
-    <th>Name</th>
-    <th>Demensions</th>
-    <th colspan="2">Show(L|R)</th>
-    <th>Shelves</th>
-    <th>Notes</th>
-  </tr>
-  <tr:t repeat='cabInfo in cabinetInfos' class='btm-border-barely-visible'>
-    <td>{{cabInfo.cabinet.groupIndex()}}</td>
-    <td>{{cabInfo.cabinet.name()}}</td>
-    <td>{{Utils.display.demensions(cabInfo.cabinet.position().demension())}}</td>
-    <td>UNK</td>
-    <td>UNK</td>
-    <td>{{Utils.count.shelves(cabInfo.cabinet)}}</td>
-    <td></td>
-  </tr:t>
-</table>
+<div class='small-margin'>
+  <table class='last-col-full'>
+    <tr class='btm-border-barely-visible'>
+      <th>Index</th>
+      <th>Name</th>
+      <th>Demensions</th>
+      <th colspan="2">Show(L|R)</th>
+      <th colspan="2">End Style(L|R)</th>
+      <th>Shelves</th>
+      <th>Notes</th>
+    </tr>
+    <tr:t repeat='cabInfo in cabinetInfos' class='btm-border-barely-visible'>
+      <td>{{cabInfo.cabinet.groupIndex()}}</td>
+      <td>{{cabInfo.cabinet.name()}}</td>
+      <td>{{Utils.display.demensions(cabInfo.cabinet.position().demension())}}</td>
+      <td>{{cabInfo.cabinet.value('showLeft.type')}}</td>
+      <td>{{cabInfo.cabinet.value('showRight.type')}}</td>
+      <td>{{cabInfo.cabinet.value('showLeft.endStyle')}}</td>
+      <td>{{cabInfo.cabinet.value('showRight.endStyle')}}</td>
+      <td>{{Utils.count.shelves(cabInfo.cabinet)}}</td>
+      <td class='align-left'>{{Utils.textToHtml(cabInfo.cabinet.notes())}}</td>
+    </tr:t>
+  </table>
+</div>

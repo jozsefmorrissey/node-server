@@ -59,10 +59,10 @@ class DividerUtil {
     const getCutter = (key, builder) => () => (cutters[key] !== undefined || builder()) && cutters[key];
     this.Frame = buildFramePoly;
     this.Frame.Cutter = getCutter('fr', this.Frame);
-    this.Back = (assem, env) => buildPanelPoly(DividerUtil.positions.BACK, assem, env);
-    this.Front = (assem, env) => buildPanelPoly(DividerUtil.positions.FRONT, assem, env);
-    this.Right = (assem, env) => buildPanelPoly(DividerUtil.positions.RIGHT, assem, env);
-    this.Left = (assem, env) => buildPanelPoly(DividerUtil.positions.LEFT, assem, env);
+    this.Back = (assem, env) => cropExtendedFrom(DividerUtil.positions.BACK, assem.width || divider.partialWidth, assem, env);
+    this.Front = (assem, env) => cropExtendedFrom(DividerUtil.positions.FRONT, assem.width || divider.partialWidth, assem, env);
+    this.Right = (assem, env) => cropExtendedFrom(DividerUtil.positions.RIGHT, assem.width || divider.partialWidth, assem, env);
+    this.Left = (assem, env) => cropExtendedFrom(DividerUtil.positions.LEFT, assem.width || divider.partialWidth, assem, env);
 
     let type = divider.type;
     let cutter;
@@ -101,7 +101,7 @@ class DividerUtil {
       return orientNorms;
     }
 
-    function buildPanelPoly(position, assem, env) {
+    function cropExtendedFrom(position, distance, assem, env) {
       const csg = env.modelInfo.extended[assem.id];
       const norms = Utils.normals(assem, env);
       const edges = csg.polygons.filter(p => !norms.z.parrelle(new Vector3D(p.plane.normal)));

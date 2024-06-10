@@ -101,6 +101,10 @@ class Measurement {
       if (numerator === 0) {
         return '';
       }
+      if (denominator === 32) {
+        if ((numerator - 1) === 0) return  ` ${reduce((numerator + 1)/2, denominator/2)}sh`;
+        return ` ${reduce((numerator - 1)/2, denominator/2)}st`;
+      }
       return ` ${numerator}/${denominator}`;
     }
 
@@ -135,6 +139,7 @@ class Measurement {
       const obj = fractionEquivalent(standardDecimal, accuracy);
       if (obj.integer === 0 && obj.numerator === 0) return '0';
       const integer = obj.integer !== 0 ? obj.integer : '';
+
       return `${integer}${reduce(obj.numerator, obj.denominator)}`;
     }
     this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));

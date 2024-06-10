@@ -106,13 +106,13 @@ to.DividerSection = {
 
 to.DrawerFront = {
   Solid: {
-    biPolygon: Utils.stdCoverObject
+    biPolygon: SectionPropertiesUtil.stdCoverObject
   }
 }
 
 to.Door = {
   Section: {
-    biPolygon: Utils.stdCoverObject
+    biPolygon: SectionPropertiesUtil.stdCoverObject
   },
   Left: {biPolygon: DoorUtil.Left},
   Right: {biPolygon: DoorUtil.Right}
@@ -120,25 +120,25 @@ to.Door = {
 
 to.DualDoorSection = {
   DualDoorSection: {
-    biPolygon: Utils.stdCoverObject
+    biPolygon: SectionPropertiesUtil.stdCoverObject
   }
 }
 
 to.DoorSection = {
   DoorSection: {
-    biPolygon: Utils.stdCoverObject
+    biPolygon: SectionPropertiesUtil.stdCoverObject
   }
 }
 
 to.DrawerSection = {
   DrawerSection: {
-    biPolygon: Utils.stdCoverObject
+    biPolygon: SectionPropertiesUtil.stdCoverObject
   }
 }
 
 to.FalseFrontSection = {
   FalseFrontSection: {
-    biPolygon: Utils.stdCoverObject
+    biPolygon: SectionPropertiesUtil.stdCoverObject
   }
 }
 
@@ -320,6 +320,13 @@ to.Shelve = {
       rMdto.position.current.normals = dividerNorms;
       biPoly.translate(new Vector3D(0,sectionUtils.innerLength*index/(shelveCount+1),0));
       return biPoly;
+    },
+    extended: (rMdto, env) => {
+      const parent = rMdto.parentAssembly();
+      const sectionUtils = SectionPropertiesUtil.instance(parent);
+      const csg = env.modelInfo.extended[rMdto.id];
+      const cutter = BiPolygon.fromPolygon(sectionUtils.outerPoly, 0, 13*2.54/16).model();
+      return csg.subtract(cutter);
     }
   }
 }

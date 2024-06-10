@@ -12,10 +12,7 @@ class Show {
 Show.types = {};
 Show.listTypes = () => Object.values(Show.types);
 new Show('None');
-new Show('Flat');
-new Show('Inset Panel');
+new Show('Yes');
+new Show('Flush');
+new Show('Panel');
 module.exports = Show
-
-
-
-

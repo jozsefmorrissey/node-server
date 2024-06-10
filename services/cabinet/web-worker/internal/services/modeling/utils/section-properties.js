@@ -5,6 +5,7 @@ const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
 const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
 
 const CabinetUtil = require('cabinet');
+const Utils = require('utils');
 
 const defaultDepth = 4*2.54;
 
@@ -108,20 +109,21 @@ class SectionPropertiesUtil {
       let biPolygon, backOffset, frontOffset, offset, coords;
       const doorThickness = 3 * 2.54/4;
       const bumperThickness = 3 * 2.54 / 16;
-      if (spDto.isInset) {
+      const style = Utils.property('style', spDto, env);
+      if (style === 'Inset') {
         coords = spDto.coordinates.inner;
-        offset = env.propertyConfig.Inset.is * -2;
+        offset = Utils.property('Inset.is', spDto, env) * -2;
         const projection = 3 * 2.54/64;
         frontOffset = projection;
         backOffset = projection - doorThickness;
-      } else if (spDto.isReveal) {
+      } else if (style === 'Reveal') {
         coords = spDto.coordinates.outer;
-        offset = -env.propertyConfig.Reveal.r;
+        offset = -Utils.property('Reveal.r', spDto, env);
         frontOffset = (doorThickness + bumperThickness);
         backOffset = bumperThickness;
       } else {
         coords = spDto.coordinates.inner;
-        offset = env.propertyConfig.Overlay.ov * 2;
+        offset = Utils.property('Overlay.ov', spDto, env) * 2;
         frontOffset = (doorThickness + bumperThickness);
         backOffset = bumperThickness;
       }
@@ -204,6 +206,12 @@ SectionPropertiesUtil.instance = (rMdto, environment) => {
     built[secProps.id].rootHash = rootHash;
   }
   return built[secProps.id];
+}
+
+SectionPropertiesUtil.stdCoverObject = (rMdto, environment) => {
+  const info = SectionPropertiesUtil.instance(rMdto, environment).coverInfo();
+  rMdto.position.current.normals = info.normals;
+  return info.biPolygon;
 }
 
 module.exports = SectionPropertiesUtil;

@@ -22,6 +22,7 @@ const VoidDisplay = require('./advanced/subassemblies/void.js');
 const ObjectInputTree = require('../input/object-input-tree');
 const SimpleModel = require('../objects/simple/simple.js');
 const CabinetAdvanced = require('./advanced/cabinet');
+const CabinetNotes = require('./information/cabinet-notes');
 
 // function getHtmlElemCabinet (elem) {
 //   const cabinetId = du.find.up('[cabinet-id]', elem).getAttribute('cabinet-id');
@@ -46,8 +47,9 @@ const advancedMenu = () => {
 
 const voidDisplay = new VoidDisplay(Global.cabinet);
 const fileTabDisp = new FileTabDisplay();
-fileTabDisp.register('Advanced', advancedMenu);
 fileTabDisp.register('Layout', openingHtml);
+fileTabDisp.register('Notes', CabinetNotes);
+fileTabDisp.register('Parts', advancedMenu);
 fileTabDisp.register('Voids', voidDisplay.html, (contentCnt) => {
   const voidCnt = du.find.down('[void-disp-hash]');
   return (voidCnt && voidCnt.getAttribute('void-disp-hash') === voidDisplay.hash() + '') === true
@@ -217,8 +219,10 @@ class CabinetDisplay {
 
     du.on.match('change', '.show-select', (elem) => {
       const side = elem.getAttribute('side');
-      const type = du.find.closest('.show-select[name="type"]', elem).value;
-      const endStyle = du.find.closest('.show-select[name="endStyle"]', elem).value;
+      let type = du.find.closest('.show-select[name="type"]', elem).value;
+      let endStyle = du.find.closest('.show-select[name="endStyle"]', elem).value;
+      type = type === 'None' ? undefined : type;
+      endStyle = endStyle === 'No' ? undefined : endStyle;
       Global.cabinet().value('show' + side, {type, endStyle});
       Global.cabinet().hash();
 

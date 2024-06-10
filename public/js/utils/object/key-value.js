@@ -75,17 +75,17 @@ class KeyValue extends Lookup {
         const customVal = runCustomFunctions(key, value)
         if(customVal !== undefined) return customVal;
 
+        const currVal = Object.pathValue(this.value.values, key);
         if (value !== undefined) {
-          if (value !== this.value.values[key]) {
-            this.value.values[key] = value;
+          if (value !== currVal) {
+            Object.pathValue(this.value.values, key, value);
             changeEvent.trigger();
           }
         } else {
-          const instVal = this.value.values[key];
-          if (instVal !== undefined && instVal !== null) {
-            const evaluator = this.value.evaluators[(typeof instVal)];
-            if (!raw && evaluator) return evaluator(instVal);
-            return instVal;
+          if (currVal !== undefined && currVal !== null) {
+            const evaluator = this.value.evaluators[(typeof currVal)];
+            if (!raw && evaluator) return evaluator(currVal);
+            return currVal;
           }
         }
       } catch (e) {

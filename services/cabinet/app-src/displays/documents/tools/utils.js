@@ -1,6 +1,7 @@
 
 const Measurement = require('../../../../../../public/js/utils/measurement.js');
 const Vector3D = require('../../../three-d/objects/vector.js');
+const $t = require('../../../../../../public/js/utils/$t.js');
 
 const Utils = {};
 Utils.display = {};
@@ -84,6 +85,11 @@ Utils.display.materialArea = (partList) => {
     area += qty * Measurement.area([list.info.demensions]);
   }
   return Measurement.display.area(area);
+}
+
+Utils.textToHtml = (text) => {
+  const clean = $t.clean(text);
+  return clean.replace(/\n/g, '<br>');
 }
 
 module.exports = Utils;

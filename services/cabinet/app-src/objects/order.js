@@ -11,8 +11,9 @@ class Order {
     const initialVals = {
       name: name || ++Order.count,
       id: id || String.random(32),
+      date: {intitial: new Date()}
     }
-    Object.getSet(this, initialVals, 'rooms');
+    Object.getSet(this, initialVals, 'rooms', 'notes');
     Object.getSet(this, {_TEMPORARY: true, name, versionId});
     // TODO: I think making rooms and array would make things simpler... athough it will be a chore to convert everything.
     this.rooms = {};
@@ -32,6 +33,8 @@ class Order {
 
 Order.fromJson = (json) => {
   const order = new Order(json.name, json.versionId, json.id);
+  order.date(json.date);
+  order.notes(json.notes);
   const rooms = Object.values(json.rooms);
   for(let index = 0; index < rooms.length; index++) {
     const roomJson = rooms[index];

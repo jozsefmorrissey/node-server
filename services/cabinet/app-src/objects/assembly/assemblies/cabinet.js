@@ -32,7 +32,8 @@ class Cabinet extends Assembly {
     super(partCode, 'Simple', config);
     new CabinetResolver(this);
     // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
-    Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick', 'dividerJoint');
+    Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick',
+                    'dividerJoint', 'notes');
 
     // TODO: this is stupid id needs to be added to toJson however getter/setter should not change...
     const idFunc = this.id;
@@ -304,6 +305,7 @@ Cabinet.fromJson = (assemblyJson) => {
   assembly.name(assemblyJson.name);
   assembly.group(group);
   assembly.id(assemblyJson.id);
+  assembly.notes(assemblyJson.notes);
   assembly.value.all(Object.fromJson(assemblyJson.value.values));
   Object.values(assemblyJson.subassemblies).forEach((json) => {
     const clazz = Assembly.class(json._TYPE);

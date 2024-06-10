@@ -2,7 +2,6 @@
 const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
 const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
 const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
-const SectionPropertiesUtil = require('./section-properties');
 
 function toBiPolygon(assem, env) {
   const current = assem.position.current;
@@ -29,12 +28,22 @@ function normals(part, env) {
   return norms;
 }
 
-function stdCoverObject(rMdto, environment) {
-  const info = SectionPropertiesUtil.instance(rMdto, environment).coverInfo();
-  rMdto.position.current.normals = info.normals;
-  return info.biPolygon;
+function property(path, assem, env) {
+  let target = assem;
+  while(target) {
+    if (target.values) {
+      const value = Object.pathValue(target.values, path);
+      if (value !== undefined) return value;
+    }
+    target = target.parentAssembly && target.parentAssembly();
+  }
+  const cxtr = assem.id.replace(/(.*?)_/, '$1');
+  let value;
+  if (env.propertyConfig[cxtr])
+    value = Object.pathValue(env.propertyConfig[cxtr], path)
+  return value || Object.pathValue(env.propertyConfig, path);
 }
 
 module.exports = {
-  toBiPolygon, normals, stdCoverObject
+  toBiPolygon, normals, property
 }
