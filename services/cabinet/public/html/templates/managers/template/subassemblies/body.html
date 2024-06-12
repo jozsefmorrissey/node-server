@@ -1,5 +1,5 @@
 <div template-attr='subassembles'>
-  <div>
+  <div class='center'>
     <label>All</label>
     <input class='template-include' type='radio' name='is-{{obj.id}}' value='All'
           {{obj.include === 'All' ? 'checked' : ''}}>
@@ -19,49 +19,63 @@
     {{dividerTypeSelect && dividerTypeSelect.html()}}
   </div>
   <div>
-    {{referenceSelect.html()}}
-    <select name='type' hidden>
-      <option>All</option>
-      <option>Center</option>
-      <option>Demension</option>
-      <option>Rotation</option>
-    </select>
-    <select name='axis' hidden>
-      <option>All</option>
-      <option>X</option>
-      <option>Y</option>
-      <option>Z</option>
-    </select>
-    <button class='template-reference-update-btn' hidden>Change</button>
-  </div>
-  <div class='sub-demensions-cnt inline-flex'>
-    {{demensionXyzSelect.html()}}
-    <input class='template-input' attr='subassemblies' name='demensions' value='{{getEqn(demensionXyzSelect, obj.demensions)}}'>
-    <input disabled class='measurement-input' name='value'>
-    <input type="checkbox" name="convert" checked>
-  </div>
-  <br>
-  <div class='sub-center-cnt inline-flex'>
-    {{centerXyzSelect.html()}}
-    <input class='template-input' attr='subassemblies' name='center' value='{{getEqn(centerXyzSelect, obj.center)}}'>
-    <input disabled class='measurement-input' name='value'>
-    <input type="checkbox" name="convert" checked>
-  </div>
-  <br>
-  <div class='sub-center-cnt inline-flex'>
-    {{rotationXyzSelect.html()}}
-    <input class='template-input' attr='subassemblies' name='rotation' value='{{getEqn(rotationXyzSelect, obj.rotation)}}'>
-    <input disabled class='measurement-input' name='value'>
-  </div>
-  <br>
-  <div class='subassem-normal-cnt'>
-    <label>Normals:</label>
-    <label>Automatic</label>
-    <input type='radio' name='normalStyle-{{obj.id}}' value='auto' {{!obj.normalInfo || obj.normalInfo.style !== 'manual' ? 'checked' : ''}}>
-    <label>Manual</label>
-    <input type='radio' name='normalStyle-{{obj.id}}' value='manual' {{obj.normalInfo && obj.normalInfo.style === 'manual' ? 'checked' : ''}}>
-    <div class='manual-vector-cnt tab' {{obj.normalInfo && obj.normalInfo.style === 'manual' ? '' : 'hidden'}}>
-      <div:t $t-id='managers/template/subassemblies/object/normals'></div:t>
+    <div class='center'>
+      <label><b>Position:</b></label>
+      <label>Box</label>
+      <input type='radio' name='positionMethod-{{obj.id}}' value='box'
+            {{obj.positionMethod !== 'poly' ? 'checked' : ''}}>
+      <label>Poly</label>
+      <input type='radio' name='positionMethod-{{obj.id}}' value='poly'
+            {{obj.positionMethod === 'poly' ? 'checked' : ''}}>
+    </div>
+    <div class='poly-input-cnt' {{obj.positionMethod !== 'poly' ? 'hidden' : ''}}>
+      {{polyHtml}}
+    </div>
+    <div class='box-input-cnt' {{obj.positionMethod === 'poly' ? 'hidden' : ''}}>
+      {{referenceSelect.html()}}
+      <select name='type' hidden>
+        <option>All</option>
+        <option>Center</option>
+        <option>Demension</option>
+        <option>Rotation</option>
+      </select>
+      <select name='axis' hidden>
+        <option>All</option>
+        <option>X</option>
+        <option>Y</option>
+        <option>Z</option>
+      </select>
+      <button class='template-reference-update-btn' hidden>Change</button>
+      <br>
+      <div class='sub-demensions-cnt inline-flex'>
+        {{demensionXyzSelect.html()}}
+        <input class='template-input xyz' attr='subassemblies' name='demensions' value='{{getEqn(demensionXyzSelect, obj.demensions)}}'>
+        <input disabled class='measurement-input' name='value'>
+        <input type="checkbox" name="convert" checked>
+      </div>
+      <br>
+      <div class='sub-center-cnt inline-flex'>
+        {{centerXyzSelect.html()}}
+        <input class='template-input xyz' attr='subassemblies' name='center' value='{{getEqn(centerXyzSelect, obj.center)}}'>
+        <input disabled class='measurement-input' name='value'>
+        <input type="checkbox" name="convert" checked>
+      </div>
+      <br>
+      <div class='sub-center-cnt inline-flex'>
+        {{rotationXyzSelect.html()}}
+        <input class='template-input xyz' attr='subassemblies' name='rotation' value='{{getEqn(rotationXyzSelect, obj.rotation)}}'>
+        <input disabled class='measurement-input' name='value'>
+      </div>
+    <br>
+    <div class='subassem-normal-cnt center'>
+      <label><b>Normals:</b></label>
+      <label>Automatic</label>
+      <input type='radio' name='normalStyle-{{obj.id}}' value='auto' {{!obj.normalInfo || obj.normalInfo.style !== 'manual' ? 'checked' : ''}}>
+      <label>Manual</label>
+      <input type='radio' name='normalStyle-{{obj.id}}' value='manual' {{obj.normalInfo && obj.normalInfo.style === 'manual' ? 'checked' : ''}}>
+      <div class='manual-vector-cnt tab' {{obj.normalInfo && obj.normalInfo.style === 'manual' ? '' : 'hidden'}}>
+        <div:t $t-id='managers/template/subassemblies/object/normals'></div:t>
+      </div>
     </div>
   </div>
   <div>

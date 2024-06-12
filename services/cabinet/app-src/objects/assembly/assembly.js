@@ -7,8 +7,10 @@ const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
 const Joint = require('../joint/joint');
 const Dependency = require('../dependency');
+const Group = require('../group');
 const AssemblyResolver = require('./resolvers/assembly');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
+const assemblyBuildConfig = require('../../../public/json/cabinets.json');
 // const ToModel = require('../../../web-worker/services/to-model.js');
 
 FunctionCache.on('hash', 250);
@@ -60,7 +62,7 @@ class Assembly extends KeyValue {
     }
 
     const subAssems = this.subassemblies;
-    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'normals');
+    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'name',  'normals');
     Object.defineProperty(this, "subassemblies", {
       writable: false,
       enumerable: false,
@@ -109,6 +111,9 @@ class Assembly extends KeyValue {
     this.eval = (eqn) => sme.eval(eqn, this);
     this.evalObject = (obj) => sme.evalObject(obj, this);
 
+    const nonUserDefinedPartReg = /^c(_(S[0-9]{1,}|AUTOTK|COC)(_|$)|$)/;
+    this.userDefinedParts = () => this.allAssemblies().filter(a => !a.locationCode().match(nonUserDefinedPartReg));
+
     const changeEvent = new CustomEvent('change');
     this.on.change = changeEvent.on;
     this.trigger.change = changeEvent.trigger;
@@ -133,6 +138,21 @@ class Assembly extends KeyValue {
 
     const keyValHash = this.hash;
     this.hash = hash;
+
+    let name;
+    this.name = (value) => {
+      const group = this.group();
+      if (value) {
+        const list = group && group.objects ? group.objects : [];
+        name =  list.map(g => g.name()).uniqueStringValue(value);
+      }
+      return name;
+    }
+
+    this.userIdentifier = () => {
+      const groupPrefix = this.group().room().groups.length > 1 ? `${this.group().name()}:` : '';
+      return `${groupPrefix}${this.name() || this.userFriendlyId()}`;
+    }
 
     this.group = (g) => {
       const root = instance.getRoot()
@@ -198,8 +218,17 @@ class Assembly extends KeyValue {
       } while (unidentified && unidentified.length > 0);
       return idMap;
     }
+
+    this.groupIndex = () => {
+      const group = this.group();
+      const gIndex = group.objects.equalIndexOf(this);
+      if (gIndex === -1) return 1;
+      return gIndex + 1;
+    }
+
     this.userFriendlyIdMap = new FunctionCache(buildUserFriendlyIdMap, this, 'alwaysOn');
     this.userFriendlyId = (id) => {
+      if (id === undefined) `${this.partCode()}${this.groupIndex() + 1}`;
       id ||= this.id();
       if (this.parentAssembly() !== undefined) return this.getRoot().userFriendlyIdMap()[id];
       return this.userFriendlyIdMap()[id];
@@ -538,6 +567,52 @@ Assembly.fromJson = (assemblyJson) => {
   return assembly;
 }
 
+Assembly.build = (type, group, config) => {
+  group ||= new Group();
+  const assembly = new Assembly('c', type);
+  assembly.group(group);
+  config ||= assemblyBuildConfig[type];
+  assembly.length(config.height);
+  assembly.width(config.width);
+  assembly.thickness(config.thickness);
+  config.values.forEach((value) => assembly.value(value.key, value.eqn));
+  assembly.value('dividerJoint', Object.fromJson(config.dividerJoint));
+
+  config.subassemblies.forEach((subAssemConfig) => {
+    const type = subAssemConfig.type;
+    const name = subAssemConfig.name;
+    const posConfig = {
+      demension: subAssemConfig.demensions.join(':'),
+      center: subAssemConfig.center.join(':'),
+      rotation: subAssemConfig.rotation.join(':')
+    }
+    const subAssem = Assembly.new(type, subAssemConfig.code, name, posConfig);
+    // TODO: This should use Object.fromJson so more complex objects can easily save/load values.
+    if (subAssem.jointSetIndex) {
+      subAssem.jointSetIndex(subAssemConfig.jointSetIndex);
+      subAssem.includedSides(subAssemConfig.includedSides);
+    }
+    if (subAssemConfig.normalInfo && subAssemConfig.normalInfo.style === 'manual') {
+      subAssemConfig.normalInfo.normals.calc = subAssemConfig.normalInfo.calc;
+      subAssem.normals(true, subAssemConfig.normalInfo.normals);
+    }
+    subAssem.partCode(subAssemConfig.code);
+    assembly.addSubAssembly(subAssem);
+    assembly.trigger.change();
+  });
+
+  config.joints.forEach((jointConfig) => {
+    const male = assembly.getAssembly(jointConfig.dependsSelector);
+    if (male === undefined) console.warn(`No male found for joint: ${jointConfig}`);
+    else male.addDependencies(Object.fromJson(jointConfig));
+  });
+
+  config.subassemblies.filter(sac => sac.dividerType).forEach((sac) =>
+      assembly.subassemblies[sac.code].type(sac.dividerType));
+  return assembly;
+}
+
+
 Assembly.classes = Object.class.object;
 Assembly.new = function (id) {
   const clazz = Object.class.get(id);
@@ -552,15 +627,6 @@ Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc)
 Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
 Assembly.lists = {};
 Assembly.idCounters = {};
-
-Assembly.partCode = (assembly) => {
-  const cabinet = assembly.getAssembly('c');
-  if (cabinet) {
-    const name = assembly.constructor.name;
-    cabinet.partIndex = cabinet.partIndex || 0;
-    return `${assembly.constructor.abbriviation}`;
-  }
-}
 
 Assembly.joinable = true;
 Assembly.MATERIAL_UNIT = 'SQFT';

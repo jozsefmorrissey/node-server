@@ -1,0 +1,6 @@
+<div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
+  <div class='expand-header'>{{container.name}}</div>
+  <div hidden class="{{container.class}}">
+    {{container.html && container.html(template)}}
+  </div>
+</div>

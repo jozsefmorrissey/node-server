@@ -44,15 +44,18 @@ function renderRoom() {
 // TODO: rename this is actually render cabinet or simple objects
 function  renderCabinet() {
   const target = Global.target();
-  console.log(target.getAssembly('S1').toDrawString2D())
   if (target) {
     if (target.constructor.name === 'Cabinet') {
       new Jobs.CSG.Cabinet.Complex(target).then((modelInfo, job) => {
         applyExtraObjAndDisplay(target, modelInfo.unioned());
       }).queue();
+    } else if (target.constructor.name === 'Assembly') {
+      new Jobs.CSG.Cabinet.Complex(target).then((modelInfo, job) => {
+        applyExtraObjAndDisplay(target, modelInfo.unioned());
+      }).queue();
     } else {
       new Jobs.CSG.Simple.Model([target]).then((csgs, job) => {
-        applyExtraObjAndDisplay(target, CSG.fromPolygons(csgs[0].polygons));
+        ThreeDModel.display(CSG.fromPolygons(csgs[0].polygons));
       }).queue();
     }
   }
@@ -75,7 +78,7 @@ set.locationCode = (lc) => resetAll() & (locationCode = lc);
 set.parts = (parts) => resetAll() & (_parts = parts);
 function  renderParts() {
   const cabinet = Global.cabinet() || Global.target();
-  if (!cabinet || cabinet.constructor.name !== 'Cabinet') return;
+  if (!cabinet) return;
   let parts;
   if (locationPrefix) parts = cabinet.getParts().filter(lcPrefixFilter);
   else if (ufidPrefix) parts = cabinet.getParts().filter(pcPrefixFilter);

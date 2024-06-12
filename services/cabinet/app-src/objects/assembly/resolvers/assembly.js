@@ -79,6 +79,7 @@ class AssemblyResolver extends Resolver {
 
     this.resolve.information = (expr) => {
       let info;
+      if (expr.match(/^(W|H|T|D)$/)) expr = `${assembly.getRoot().partCode()}.${expr.toLowerCase()}`;
       info = demensionValue(expr);
       info ||= returnsIfValid(info) || posValue(expr);
       info ||= returnsIfValid(info) || partCodePositionValue(expr);

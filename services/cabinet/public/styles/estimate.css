@@ -171,6 +171,10 @@ table.no-border-cells td {text-align: center; vertical-align: middle;}
   margin: 3pt;
 }
 
+.smaller {
+  font-size: smaller;
+}
+
 .orient-arrows [dir]:hover {
   background-color: lime;
   border-radius: 10px;

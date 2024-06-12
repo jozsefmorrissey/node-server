@@ -89,7 +89,7 @@ class Global {
       return CABINET;
     }
     this.cabinet = (cabinet) => {
-      if (cabinet && cabinet instanceof Cabinet) {
+      if (cabinet && cabinet !== CABINET && cabinet instanceof Cabinet) {
         const details = {from: CABINET, to: cabinet};
         CABINET = cabinet;
         cabinetChangeEvent.trigger(details);
@@ -98,7 +98,8 @@ class Global {
       return CABINET;
     }
     this.target = (object) => {
-      if (object) {
+      if (object && object !== TARGET) {
+        if (object instanceof Cabinet) this.cabinet(object);
         const details = {from: TARGET, to: object};
         TARGET = object;
         targetChangeEvent.trigger(details);

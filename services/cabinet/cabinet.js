@@ -1,4 +1,5 @@
 
+require('../../public/js/utils/utils')
 const fs = require('fs');
 const shell = require('shelljs');
 const $t = require('../../public/js/utils/$t');
@@ -36,20 +37,16 @@ function addImageUrls() {
       project.images = [];
       for (let imdex = 0; imdex < imageLocs.length; imdex++) {
         const url = `/cabinet/images/projects/First Project/${imageLocs[imdex]}`;
-        console.log(url);
         project.images.push({url});
       }
     }
   } catch (e) {console.error(e)}
 }
 addImageUrls();
-console.log(JSON.stringify(projects, null, 2))
 
 function orderElem(req, res) {
   return {order: 'poopy cock'};
 }
-
-const indexHtml = fs.readFileSync('./services/cabinet/public/html/estimate.html');
 
 const indexTemplate = new $t('index');
 const orderTemplate = new $t('order');
@@ -66,6 +63,7 @@ function servePage(pageId, scope) {
     if (!scope) scope = {};
     scope = (typeof scope) === 'function' ? scope(req, res) : scope;
     scope.pageId = pageId;
+    scope.title = pageId.toSentance();
     res.setHeader('Content-Type', 'text/html');
     res.send(template.render(scope));
   }

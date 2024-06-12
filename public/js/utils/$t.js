@@ -462,7 +462,7 @@ class $t {
 				let templateName = match[0].replace(/.*\$t-id=('|")(.*?)(\1).*/, '$2');
         templateName = exprToStr(templateName);
 				template = templateName !== tagContents ? templateName : template;
-				let resolvedScope = ExprDef.parse(expression, match[7] || "scope");
+				let resolvedScope = ExprDef.parse(expression, match[7].trim() || "scope");
 				string = string.replace(match[0], `{{ new $t(${templateName}).render(${resolvedScope}, undefined, get)}}`);
 			}
 			return string;

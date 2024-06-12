@@ -1,4 +1,527 @@
 {
+  "hood-first": {
+  "_TYPE": "AssemblyTemplate",
+  "type": "hood-first",
+  "values": [
+    {
+      "id": "y3gyma3",
+      "key": "topWidth",
+      "eqn": "12*2.54"
+    },
+    {
+      "id": "z697lw8",
+      "key": "topCrownHeight",
+      "eqn": "6*2.54"
+    },
+    {
+      "id": "1m7xo52",
+      "key": "topHeight",
+      "eqn": "24*2.54"
+    },
+    {
+      "id": "n0hdv8l",
+      "key": "bottomHeight",
+      "eqn": "H-topHeight - mf.t"
+    },
+    {
+      "id": "uv2y2qa",
+      "key": "middleCrownWidth",
+      "eqn": "3*2.54"
+    },
+    {
+      "id": "h5k9cix",
+      "key": "topDepth",
+      "eqn": "12*2.54"
+    }
+  ],
+  "subassemblies": [
+    {
+      "type": "Panel",
+      "center": [
+        "w/2",
+        "h/2",
+        "T - t/2"
+      ],
+      "demensions": [
+        "W ",
+        "bottomHeight",
+        "pwt34"
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "include": "All",
+      "id": "5as72zm",
+      "name": "bottomFront",
+      "code": "bf",
+      "polyConfig": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ],
+      "positionMethod": "box"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "w/2 - middleCrownWidth",
+        "bottomHeight + t/2",
+        "D + h/2 - bf.t"
+      ],
+      "demensions": [
+        "W+middleCrownWidth*2",
+        "middleCrownWidth+bf.t",
+        "pwt34"
+      ],
+      "rotation": [
+        "90",
+        0,
+        0
+      ],
+      "include": "All",
+      "id": "ur1n6oh",
+      "name": "middleFront",
+      "code": "mf",
+      "polyConfig": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ]
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "t/2",
+        "h/2",
+        "w/2"
+      ],
+      "demensions": [
+        "D-bf.t",
+        "bottomHeight",
+        "pwt34"
+      ],
+      "rotation": [
+        0,
+        "90",
+        0
+      ],
+      "include": "All",
+      "id": "zsqjrjj",
+      "name": "bottomLeft",
+      "code": "bl",
+      "polyConfig": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ]
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W-t/2",
+        "h/2",
+        "w/2"
+      ],
+      "demensions": [
+        "D-bf.t",
+        "bottomHeight",
+        "pwt34"
+      ],
+      "rotation": [
+        "0",
+        "90",
+        0
+      ],
+      "include": "All",
+      "id": "hynmh7k",
+      "name": "bottomRight",
+      "code": "br",
+      "polyConfig": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ]
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "-t/2 - bl.t",
+        "bottomHeight + t/2",
+        "h/2"
+      ],
+      "demensions": [
+        "middleCrownWidth+bl.t",
+        "D-bf.t",
+        "pwt34"
+      ],
+      "rotation": [
+        "90",
+        0,
+        0
+      ],
+      "include": "All",
+      "id": "iuw1194",
+      "name": "middleLeft",
+      "code": "ml",
+      "polyConfig": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ]
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W + h/2 - br.t ",
+        "bottomHeight+t/2",
+        "w/2"
+      ],
+      "demensions": [
+        "D-bf.t",
+        "middleCrownWidth+br.t",
+        "pwt34"
+      ],
+      "rotation": [
+        "90",
+        "90",
+        0
+      ],
+      "include": "All",
+      "id": "4odpswi",
+      "name": "middleRight",
+      "code": "mr",
+      "polyConfig": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ]
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "bl.t + w/2",
+        "h/2",
+        "t/2"
+      ],
+      "demensions": [
+        "W - ml.t - mr.t",
+        "bottomHeight+ml.t",
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        "0"
+      ],
+      "include": "All",
+      "id": "4vdo0lg",
+      "name": "backBottom",
+      "code": "bb",
+      "polyConfig": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ]
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W/2",
+        "H - h/2",
+        "topDepth - t/2"
+      ],
+      "demensions": [
+        "topWidth",
+        "topCrownHeight",
+        "pwt34"
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "include": "All",
+      "id": "0h6g02n",
+      "name": "topFront",
+      "code": "tf",
+      "polyConfig": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ]
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W/2 - tf.w/2 + t/2",
+        "H - h/2",
+        "w/2"
+      ],
+      "demensions": [
+        "topDepth - tf.t",
+        "topCrownHeight",
+        "pwt34"
+      ],
+      "rotation": [
+        0,
+        "90",
+        0
+      ],
+      "include": "All",
+      "id": "80wcc39",
+      "name": "topLeft",
+      "code": "tl",
+      "polyConfig": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ]
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W/2 + tf.w/2 - t/2",
+        "H - h/2",
+        "w/2"
+      ],
+      "demensions": [
+        "topDepth-tf.t",
+        "topCrownHeight",
+        "pwt34"
+      ],
+      "rotation": [
+        0,
+        "90",
+        0
+      ],
+      "include": "All",
+      "id": "ztysex7",
+      "name": "topRight",
+      "code": "tr",
+      "polyConfig": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ]
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W/2",
+        "H-h/2",
+        "t/2"
+      ],
+      "demensions": [
+        "tf.w - tl.t - tr.t",
+        "topCrownHeight",
+        "pwt12"
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "include": "All",
+      "id": "0daanwv",
+      "name": "topBack",
+      "code": "tb",
+      "polyConfig": [
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          3,
+          3
+        ]
+      ]
+    },
+    {
+      "type": "Panel",
+      "center": [
+        0,
+        0,
+        0
+      ],
+      "demensions": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "include": "All",
+      "id": "qi2qztd",
+      "polyConfig": [
+        [
+          "0",
+          "bottomHeight + mf.t",
+          "D"
+        ],
+        [
+          "W/2 - topWidth/2",
+          "H-topCrownHeight",
+          "topDepth"
+        ],
+        [
+          "D/2 + topWidth/2",
+          "H-topCrownHeight",
+          "topDepth"
+        ],
+        [
+          "W",
+          "bottomHeight + mf.t",
+          "D"
+        ]
+      ],
+      "name": "middleFrontPanel",
+      "code": "mfp",
+      "positionMethod": "poly",
+      "polyConfig.0": [],
+      "polyConfig.1": [],
+      "polyConfig.2": [],
+      "polyConfig.3": []
+    }
+  ],
+  "joints": [],
+  "shape": "square",
+  "width": 45.72,
+  "height": 86.36,
+  "thickness": "18*2.54",
+  "_FORCE_FROM_JSON": true
+},
   "base": {
     "_TYPE": "CabinetTemplate",
     "ID_ATTRIBUTE": "id",

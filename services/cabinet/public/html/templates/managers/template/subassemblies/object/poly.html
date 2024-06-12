@@ -1,0 +1,10 @@
+<div class='poly-input-cnt'>
+  <div:t repeat='point in subAssem.polyConfig' index='{{$index}}'>
+    {{getXyzSelect('').html()}}
+    <input class='template-input xyz' attr='subassemblies' name='polyConfig.{{$index}}' value='{{point[0]}}'>
+    <input disabled class='measurement-input' name='value'>
+    <input type="checkbox" name="convert" checked>
+    <button class="remove-btn smaller" key="0">X</button>
+  </div:t>
+  <button class='add-poly-point'>Add</button>
+</div>

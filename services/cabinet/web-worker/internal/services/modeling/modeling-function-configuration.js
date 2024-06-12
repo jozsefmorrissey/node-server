@@ -46,6 +46,28 @@ to.SectionProperties = {
   }
 }
 
+to.Assembly = {
+  Assembly: {
+    model: (mdto, env) => new CSG(),
+    joined: (mdto, environment) => {
+      const childs = mdto.children.map(c => c()).filter(c => c instanceof Object);
+      const parts = childs.filter(c => c.part || c.id.match(/^Divider/));
+      let csg = new CSG();
+      for (let index = 0; index < parts.length; index++) {
+        const id = parts[index].id;
+        let model = environment.modelInfo.model[id];
+        if (model) {
+          if (!(model instanceof CSG)) {
+            environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
+          }
+          csg = csg.union(model);
+        }
+      }
+      return csg;
+    }
+  }
+}
+
 to.Cabinet = {
   Simple: {
     model: (mdto, env) => new CSG(),
@@ -53,7 +75,7 @@ to.Cabinet = {
       const childs = mdto.children.map(c => c()).filter(c => c instanceof Object);
       const parts = childs.filter(c => c.part || c.id.match(/^Divider/));
       const cutters = childs.filter(c => c.id.match(/^Cutter/));
-      const cutter = mdto.openings[0].cutter;
+      const cutter = mdto.openings[0] && mdto.openings[0].cutter;
       if (cutter) cutters.push(cutter());
       let csg = new CSG();
       for (let index = 0; index < parts.length; index++) {

@@ -6,6 +6,7 @@ const Select = require('../../../../public/js/utils/input/styles/select.js');
 const Input = require('../../../../public/js/utils/input/input.js');
 const Inputs = require('../input/inputs.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
+const Assembly = require('../objects/assembly/assembly.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const Request = require('../../../../public/js/utils/request.js');
 const EPNTS = require('../../generated/EPNTS.js');
@@ -25,16 +26,18 @@ class CabinetConfig {
                   cabinets[type] : cabinetKeys[type][id]) !== undefined;
 
     this.get = (group, type, layout, name) => {
-      let cabinet = Cabinet.build(type, group);
-      if (layout && CabinetLayouts.map[layout]) CabinetLayouts.map[layout].build(cabinet);
+      const assem = cabinets[type]._TYPE === 'CabinetTemplate' ?
+                    Cabinet.build(type, group) : Assembly.build(type, group);
+      assem.part(false);
+      if (layout && CabinetLayouts.map[layout]) CabinetLayouts.map[layout].build(assem);
       const layout2d = group.room().layout();
       if (layout2d) {
         const layoutCenter = layout2d.center();
-        cabinet.position().setCenter('x', layoutCenter.x());
-        cabinet.position().setCenter('z', layoutCenter.y());
+        assem.position().setCenter('x', layoutCenter.x());
+        assem.position().setCenter('z', layoutCenter.y());
       }
-      cabinet.name(name);
-      return cabinet;
+      assem.name(name);
+      return assem;
     };
 
     const allCabinetKeys = Object.keys(cabinets);

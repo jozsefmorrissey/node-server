@@ -10,6 +10,7 @@ const DecisionInputTree = require('../../../../../public/js/utils/input/decision
 const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 const Inputs = require('../../input/inputs.js');
 const CabinetTemplate = require('../../config/cabinet-template.js');
+const AssemblyTemplate = require('../../config/assembly-template.js');
 const ExpandableList = require('../../../../../public/js/utils/lists/expandable-list.js');
 const $t = require('../../../../../public/js/utils/$t.js');
 const du = require('../../../../../public/js/utils/dom-utils.js');
@@ -35,7 +36,7 @@ const Global = require('../../services/global.js');
 const approximate = require('../../../../../public/js/utils/approximate').new(10);
 const PanZoom = require('../../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 const Divider = require('../../objects/assembly/assemblies/divider.js');
-
+const ExtraObjects = require('../draw/extra-objects');
 const Line3D = require('../../three-d/objects/line.js');
 const Vector3D = require('../../three-d/objects/vector.js');
 
@@ -168,7 +169,8 @@ function applyTestConfiguration() {
 }
 
 const setShow = (template, templateBody, attr) => {
-  const cabinet = Global.cabinet();
+  if (template[attr] === undefined) return;
+  const cabinet = Global.target();
   if (cabinet) {
     const display = du.find.closest(`[name="${attr}Value"]`, templateBody);
     const value = template[attr]();
@@ -190,15 +192,17 @@ function getDemPosElems (template) {
 
 function getCabinet(elem) {
   const templateBody = du.find('.template-body');
-  const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
+  const template = AssemblyTemplate.get(templateBody.getAttribute('template-id'), templateBody);
   getDemPosElems(template);
-  const cabinet = template.getCabinet();
-  Global.cabinet(cabinet);
+  const cabinet = template.get();
+  Global.target(cabinet);
   getDemPosElems(template, cabinet);
   cabinet.propertyConfig().set(sectionState.style);
 
-  if (sectionState.testDividers) applyTestConfiguration();
-  else applyDividers();
+  if (template instanceof CabinetTemplate) {
+    if (sectionState.testDividers) applyTestConfiguration();
+    else applyDividers();
+  }
   // console.log(cabinet.toDrawString());
   // setTimeout(() => getOpeningSketch().draw());
   return cabinet;
@@ -218,14 +222,6 @@ const centerDisplay = (t) => {
   const z = t.getCabinet().eval(t.z());
   return `(${toDisplay(x)},${toDisplay(y)},${toDisplay(z)})`;
 }
-
-const containerClasses = {
-  values: `template-values`,
-  subassemblies: `template-subassemblies`,
-  joints: `template-joints`,
-  dividerJoint: `template-divider-joint`,
-  openings: `template-openings`
-};
 
 function resetHeaderErrors() {
   const containers = du.find.all('.cabinet-template-input-cnt');
@@ -290,7 +286,8 @@ function openingsCodeCheck (template, inputs) {
 }
 
 function validateEquations(template, valueInput, eqnInput, valueIndex, eqnMap) {
-  const cabinet = Global.cabinet();
+  const cabinet = Global.target();
+  const part = cabinet.getAssembly(ExpandableList.get(valueInput).code);
   let errorString = '';
   let errorCount = 0;
   let eqnKeys = Object.keys(eqnMap);
@@ -298,7 +295,7 @@ function validateEquations(template, valueInput, eqnInput, valueIndex, eqnMap) {
     const key = eqnKeys[index];
     const eqn = eqnMap[key];
     if (index === valueIndex) {
-      const value = template.evalEqn(eqn, cabinet);
+      const value = template.evalEqn(eqn, part);
       if (Number.isNaN(value)) {
         errorString += `${key},`;
         errorCount++;
@@ -342,12 +339,12 @@ const valueEqnCheck = (template) => (eqnInput) => {
 }
 
 const xyzEqnCheck = (template) => (xyzInput) => {
-  const cabinet = Global.cabinet();
+  const cabinet = Global.target();
   const valueInput = du.find.closest('[name="value"]', xyzInput);
   const index = Number.parseInt(du.find.closest('select', xyzInput).value);
   const subAssem = ExpandableList.get(xyzInput);
   const part = cabinet.getAssembly(subAssem.code);
-  const eqns = subAssem[xyzInput.name];
+  const eqns = subAssem.pathValue(xyzInput.name);
   const eqnMap = {x: eqns[0], y: eqns[1], z: eqns[2]};
   validateEquations(template, valueInput, xyzInput, index, eqnMap);
 }
@@ -394,7 +391,7 @@ function onOpeningTypeChange(elem) {
     const isLocation = elem.value === 'location';
     const isSlice = elem.value === 'slice';
     const defaultFunc = isLocation ? 'defaultLocationOpening' : 'defaultPartCodeOpening';
-    const def = CabinetTemplate[defaultFunc]();
+    const def = AssemblyTemplate[defaultFunc]();
     Object.merge(opening, def, true);
     opening._Type = isLocation ? 'location' : (isSlice ? 'slice' : undefined);
     if (opening._Type === 'location' && opening.coordinates === undefined)
@@ -410,61 +407,27 @@ function onOpeningTypeChange(elem) {
 
 du.on.match('change', '.opening-type-selector', onOpeningTypeChange);
 
-const csgVertex = (center, radius, color) => {
-  radius ||= .5;
-  const vertex = CSG.sphere({center, radius});
-  vertex.setColor(...String.color.RGB[color]);
-  return vertex;
-}
-
 du.on.match('click', "[name='autoToeKick']", (elem) => {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-  const template = CabinetTemplate.get(templateId);
+  const template = AssemblyTemplate.get(templateId);
   template.autoToeKick(elem.checked);
 });
 
+du.on.match('click', '[type="radio"][value="box"],[type="radio"][value="poly"]', (elem) => {
+  const polyCnt = du.find.closest('.poly-input-cnt', elem);
+  const boxCnt = du.find.closest('.box-input-cnt', elem);
+  const isPoly = elem.value === 'poly';
+  ExpandableList.get(elem).positionMethod = elem.value;
+  polyCnt.hidden = !isPoly;
+  boxCnt.hidden = isPoly;
+});
 
-let openingVerticies = [];
-let partAxis = [];
-let extraObjs = () => partAxis.concat(openingVerticies);
-Canvas.extraCsgObjects(extraObjs, () => true);
 function updateOpeningPoints(template) {
-  openingVerticies = [];
-  const openings = Global.cabinet().openings;
-  for (let index = 0; index < openings.length; index++) {
-    const opening = openings[index];
-    const size = modifyingOpening === index + '' ? 1 : .25;
-    const state = sectionState;
-    const i = state.index;
-    const vertexColor = (io, i) => !modifyingOpening ? 'black' :
-                    ((io !== state.innerOouter) ? 'black' :
-                    (i === state.index ? 'green' : 'white'));
-
-    const vertexSize = (io) => modifyingOpening && io === state.innerOouter ? size*2 : size;
-
-    const coords = opening.update();
-    openingVerticies.push(csgVertex(coords.inner[0], vertexSize('true'), vertexColor('true', 0)));
-    openingVerticies.push(csgVertex(coords.inner[1], vertexSize('true'), vertexColor('true', 1)));
-    openingVerticies.push(csgVertex(coords.inner[2], vertexSize('true'), vertexColor('true', 2)));
-    openingVerticies.push(csgVertex(coords.inner[3], vertexSize('true'), vertexColor('true', 3)));
-
-    openingVerticies.push(csgVertex(coords.outer[0], vertexSize('false'), vertexColor('false', 0)));
-    openingVerticies.push(csgVertex(coords.outer[1], vertexSize('false'), vertexColor('false', 1)));
-    openingVerticies.push(csgVertex(coords.outer[2], vertexSize('false'), vertexColor('false', 2)));
-    openingVerticies.push(csgVertex(coords.outer[3], vertexSize('false'), vertexColor('false', 3)));
-  }
+  if (!(template instanceof CabinetTemplate)) return;
+  ExtraObjects.addOpeningPoints(template, sectionState, modifyingOpening);
 }
 
-function updateNormalLines(obj) {
-  const assem = getCabinet().getAssembly(obj.code);
-  let vectors = assem.position().normals(true).map(v => v.toArray());
-  const center = assem.position().center();
-  const origin = [center.x, center.y, center.z];
-  const dems = assem.position().demension();
-  const size = Math.max(dems.x, dems.y, dems.z) * .6;
-  const axis = new CSG.Axis(size, origin, vectors, .25);
-  partAxis = [axis];
-}
+
 
 function updatePartAxis(elem, details) {
   const target = details.targetHeader;
@@ -472,10 +435,10 @@ function updatePartAxis(elem, details) {
     const activeSubElem = du.find.down('.expand-header.active', details.targetBody);
     if (activeSubElem) {
       const activeObj = ExpandableList.get(activeSubElem);
-      if (activeObj) return updateNormalLines(activeObj);
+      if (activeObj) return ExtraObjects.addNormalLines(activeObj);
     }
   }
-  partAxis = [];
+  ExtraObjects.removeNormalLines();
 }
 
 
@@ -483,7 +446,7 @@ function validateOpenTemplate (elem) {
   const templateBody = du.find('.template-body');
   if (!templateBody || du.is.hidden(templateBody)) return;
   resetHeaderErrors();
-  const template = CabinetTemplate.get(templateBody.getAttribute('template-id'), templateBody);
+  const template = AssemblyTemplate.get(templateBody.getAttribute('template-id'), templateBody);
 
   const valueNameInputs = du.find.downAll('input[attr="values"][name="name"]', templateBody);
   valueNameInputs.forEach(variableNameCheck);
@@ -492,7 +455,7 @@ function validateOpenTemplate (elem) {
   const subCodeInputs = du.find.downAll('input[attr="subassemblies"][name="code"]', templateBody);
   subCodeInputs.forEach(variableNameCheck);
   const calcRadio = du.find.down('.calc-vect-radio', templateBody);
-  validateVectors(calcRadio);
+  if (calcRadio) validateVectors(calcRadio);
 
   const pcc = partCodeCheck(template);
   const jointMaleInputs = du.find.downAll('input[attr="joints"][name="dependsSelector"]', templateBody);
@@ -501,7 +464,7 @@ function validateOpenTemplate (elem) {
   jointFemaleInputs.forEach(pcc);
 
   const openingCodeInputs = du.find.downAll('input[attr="openings"][name="partCode"]', templateBody);
-  openingsCodeCheck(template, openingCodeInputs);
+  if (openingCodeInputs.length) openingsCodeCheck(template, openingCodeInputs);
 
   try {
     getCabinet.clearCache()(templateBody);
@@ -510,12 +473,8 @@ function validateOpenTemplate (elem) {
     depthInputs.forEach(valueEqnCheck(template));
     const valueEqnInputs = du.find.downAll('input[attr="values"][name="eqn"]', templateBody);
     valueEqnInputs.forEach(valueEqnCheck(template));
-    const subDemInputs = du.find.downAll('input[attr="subassemblies"][name="demensions"]', templateBody);
+    const subDemInputs = du.find.downAll('input.xyz[attr="subassemblies"][name]', templateBody);
     subDemInputs.forEach(xyzEqnCheck(template));
-    const subCenterInputs = du.find.downAll('input[attr="subassemblies"][name="center"]', templateBody);
-    subCenterInputs.forEach(xyzEqnCheck(template));
-    const subRotInputs = du.find.downAll('input[attr="subassemblies"][name="rotation"]', templateBody);
-    subRotInputs.forEach(xyzEqnCheck(template));
     updateOpeningPoints(template);
   } catch (e) {
     console.log(e);
@@ -536,32 +495,6 @@ function getEqn(select, values) {
 
 const depthValidation = (measurment) =>
         measurment.decimal() > 0;
-
-function getJointInputTree(func, joint, dividerJoint) {
-  joint.type ||= 'Butt';
-  const selectType = new Select({
-    name: 'type',
-    list: Object.keys(Joint.types),
-    class: 'template-select',
-    value: joint.type
-  });
-
-  const depthInput = new Input({
-    label: 'Depth',
-    name: 'maleOffset',
-    value: joint.maleOffset
-  });
-
-  const dadoInputs = dividerJoint ? [depthInput] : [depthInput];
-
-  const dit = new DecisionInputTree('Type', {inputArray: [selectType]}, {noSubmission: true});
-  const type = dit.root();
-  type.then('dado', {inputArray: dadoInputs});
-  const cond = DecisionInputTree.getCondition('type', 'Dado');
-  type.conditions.add(cond, 'dado');
-  dit.onChange(func);
-  return dit;
-}
 
 let lastDepth;
 const jointOnChange = (vals, dit) => {
@@ -615,6 +548,14 @@ function getJoint(obj) {
   return {obj, jointInput: getJointInputTree(jointOnChange, obj)};
 }
 
+const polyTemplate = new $t('managers/template/subassemblies/object/poly');
+function polyHtml(subAssem) {
+  if (subAssem.polyConfig === undefined) {
+    subAssem.polyConfig = [[1,1,1], [2,2,2], [3,3,3]]
+  }
+  return polyTemplate.render({subAssem, getXyzSelect});
+}
+
 function getSubassembly(obj) {
   const partCodes = [''].concat(Object.keys(getCabinet().subassemblies));
   const templateName = `managers/template/subassemblies/object/${obj.type.toKebab()}`;
@@ -639,6 +580,7 @@ function getSubassembly(obj) {
     });
   }
   return {typeInput:  getTypeInput(obj),
+          polyHtml: polyHtml(obj),
           centerXyzSelect: getXyzSelect('Center'),
           demensionXyzSelect: getWhdSelect('Demension'),
           rotationXyzSelect: getXyzSelect('Rotation'),
@@ -734,6 +676,54 @@ const getObjects = {
     })
 }
 
+const dividerJointChange = (template) => (vals) => {
+  template.dividerJoint(vals);
+}
+const dividerJointInput = (template) =>
+  getJointInputTree(dividerJointChange(template), template.dividerJoint(), true).html();
+function getJointInputTree(func, joint, dividerJoint) {
+  joint.type ||= 'Butt';
+  const selectType = new Select({
+    name: 'type',
+    list: Object.keys(Joint.types),
+    class: 'template-select',
+    value: joint.type
+  });
+
+  const depthInput = new Input({
+    label: 'Depth',
+    name: 'maleOffset',
+    value: joint.maleOffset
+  });
+
+  const dadoInputs = dividerJoint ? [depthInput] : [depthInput];
+
+  const dit = new DecisionInputTree('Type', {inputArray: [selectType]}, {noSubmission: true});
+  const type = dit.root();
+  type.then('dado', {inputArray: dadoInputs});
+  const cond = DecisionInputTree.getCondition('type', 'Dado');
+  type.conditions.add(cond, 'dado');
+  dit.onChange(func);
+  return dit;
+}
+
+const containers = {
+  values: {class: `template-values`, name: 'Values'},
+  subassemblies: {class: `template-subassemblies`, name: 'Subassemblies'},
+  joints: {class: `template-joints`, name: 'Joints'},
+  dividerJoint: {class:`template-divider-joint`, name: 'Divider Joint', html: (template) => dividerJointInput(template)},
+  openings: {class: `template-openings`, name: 'Openings'}
+};
+
+const cabinetContainers = Object.values(containers);
+const assemblyContainers = [containers.values, containers.subassemblies, containers.joints];
+
+const applicableContainers = (template) => {
+  if (template.constructor.cxtrType === 'Cabinet') return cabinetContainers;
+  return assemblyContainers;
+}
+
+
 function updateTemplateDisplay() {
   const managerElems = du.find.all('[template-manager]');
   for (let index = 0; index < managerElems.length; index += 1) {
@@ -747,12 +737,13 @@ function updateOpeningVertices(elem) {
   const idElem = du.find.down('.active [opening-index]', elem.parentElement);
   modifyingOpening = idElem ? idElem.getAttribute('opening-index') : null;
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-  const template = CabinetTemplate.get(templateId);
+  const template = AssemblyTemplate.get(templateId);
   updateOpeningPoints(template);
 };
 
 function addExpandable(template, type) {
-  const containerClass = containerClasses[type];
+  if (!template[type]) return;
+  const containerClass = containers[type].class;
   let parentSelector = `[template-id='${template.id()}']>.${containerClass}`;
   TemplateManager.headTemplate[type] ||= new $t(`managers/template/${type.toKebab()}/head`);
   TemplateManager.bodyTemplate[type] = TemplateManager.bodyTemplate[type] === undefined ?
@@ -772,7 +763,7 @@ function addExpandable(template, type) {
   const expandList = new ExpandableList(expListProps);
   if (type === 'openings') expandList.on.after.render((details) => updateOpeningVertices(details.header));
   expandList.on.after.removal(updateTemplateDisplay);
-  if (type === 'subassemblies') expandList.on.after.switch((details, list) => updateNormalLines(list.active()));
+  if (type === 'subassemblies') expandList.on.after.switch((details, list) => ExtraObjects.addNormalLines(list.active()));
   return expandList;
 }
 
@@ -783,12 +774,7 @@ class TemplateManager extends Lookup {
     this.parentId = () => parentId;
     let currentTemplate;
     const parentSelector = `#${parentId}`;
-    const dividerJointChange = (template) => (vals) => {
-      template.dividerJoint(vals);
-    }
     const templateShapeInput = (template) => TemplateManager.templateShapeInput(template.shape());
-    const dividerJointInput = (template) =>
-      getJointInputTree(dividerJointChange(template), template.dividerJoint(), true);
 
     const containerSelector = (template, containerClass) => `[template-id="${template.id()}"]>.${containerClass}`;
 
@@ -809,10 +795,13 @@ class TemplateManager extends Lookup {
       setTimeout(() => {
         validateOpenTemplate(du.id(parentId));
       }, 1000);
-      return TemplateManager.bodyTemplate.render({template, TemplateManager: this,
-        containerClasses, centerDisplay, toDisplay,
-        dividerJointInput: dividerJointInput(template),
-        templateShapeInput: templateShapeInput(template)});
+      const scope = {template, TemplateManager: this,
+        containers: applicableContainers(template), centerDisplay, toDisplay,
+        templateShapeInput: templateShapeInput(template)};
+      if (template instanceof CabinetTemplate) {
+        scope.dividerJointInput = dividerJointInput(template);
+      }
+      return TemplateManager.bodyTemplate.render(scope);
       }
 
     this.sectionState = sectionState;
@@ -824,7 +813,7 @@ class TemplateManager extends Lookup {
         list.push(addExpandable(template, 'values'));
         list.push(addExpandable(template, 'subassemblies'));
         list.push(addExpandable(template, 'joints'));
-        list.push(addExpandable(template, 'openings', true));
+        if (template instanceof CabinetTemplate) list.push(addExpandable(template, 'openings', true));
       };
     }
 
@@ -881,15 +870,15 @@ class TemplateManager extends Lookup {
     this.updateExpandables = updateExpandables;
 
     const getObject = (values) => {
-      const cabTemp = new CabinetTemplate(values.name);
-      initTemplate(cabTemp)();
-      Canvas.render(getCabinet());
-      return cabTemp;
+      const template = AssemblyTemplate.new(`${values.type}Template`, values.name);
+      initTemplate(template)();
+      // Canvas.render(getCabinet());
+      return template;
     }
 
     this.active = () => expandList.active();
     const expListProps = {
-      list: CabinetTemplate.defaultList(),
+      list: AssemblyTemplate.defaultList(),
       inputTree: TemplateManager.inputTree(),
       parentSelector, getHeader, getBody, getObject,
       listElemLable: 'Template',
@@ -897,7 +886,6 @@ class TemplateManager extends Lookup {
     };
     let expandList;
     Global.displays.main().onSwitch((changeInfo) => {
-      console.log('booyacacha', changeInfo);
       if (changeInfo.to.id === 'template-manager') {
         expandList = new ExpandableList(expListProps);
       }
@@ -1023,7 +1011,7 @@ function setVectorValues(elem) {
   } else {
     cnt.hidden = true;
   }
-  updateNormalLines(obj);
+  ExtraObjects.addNormalLines(obj);
 }
 
 du.on.match('containerfocusout', ".normal-vector-input-cnt[index='0']", setVectorValues);
@@ -1042,8 +1030,11 @@ function sliceDepthUpdate(elem) {
 du.on.match('focusout:enter', '[name="leftDepth"]', sliceDepthUpdate);
 du.on.match('focusout:enter', '[name="rightDepth"]', sliceDepthUpdate);
 
+const RadioInput = require('../../../../../public/js/utils/input/styles/radio.js');
 TemplateManager.inputTree = () => {
-  const dit = new DecisionInputTree('Template Name', {inputArray: [Inputs('name')]});
+  const list = AssemblyTemplate.cxtrTypes();
+  const radio = new RadioInput({name: 'type', list, value: 'Cabinet'});
+  const dit = new DecisionInputTree('Template Name', {inputArray: [Inputs('name'), radio]});
   return dit;
 }
 
@@ -1080,11 +1071,12 @@ function updateSubassembliesTemplate(elem, template) {
   const subAssem = ExpandableList.get(elem);
   subAssem.name = nameInput.value;
   if (elem.name === 'name') return;
-  if (elem.name === 'center' || elem.name === 'demensions' || elem.name === 'rotation') {
+  if (du.class.has(elem, 'xyz')) {
     const index = du.find.closest('[name="xyz"]', elem).value;
     const eqn = elem.value;
     if (subAssem[elem.name] === undefined) subAssem[elem.name] = [];
-    subAssem[elem.name][index] = eqn;
+    subAssem.pathValue(elem.name)[index] = eqn;
+    if (du.find.up('.poly-input-cnt', elem)) ExtraObjects.addNormalLines(subAssem);
   } else if (elem.name !== 'name') {
     let value = elem.type === 'checkbox' ? elem.checked : elem.value;
     Object.pathValue(subAssem, elem.name, value);
@@ -1100,7 +1092,7 @@ function switchEqn(elem) {
     const eqnInput = du.find.closest('input', elem);
     const index = elem.value;
     if (subAssem[eqnInput.name] === undefined) subAssem[eqnInput.name] = [];
-    const value = subAssem[eqnInput.name][index];
+    const value = subAssem.pathValue(eqnInput.name)[index];
     eqnInput.value = value === undefined ? '' : value;
   }
 }
@@ -1115,7 +1107,7 @@ function updateOpeningsTemplate(elem, template) {
 
 function updateViewShape(elem) {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-  const template = CabinetTemplate.get(templateId);
+  const template = AssemblyTemplate.get(templateId);
   template.shape(elem.value);
 }
 
@@ -1146,7 +1138,7 @@ function updateTemplate(elem, template) {
 }
 
 function updateInclude(elem) {
-  const subAssem = ExpandableList.get(elem);;
+  const subAssem = ExpandableList.get(elem);
   subAssem.include = elem.value;
   console.log(subAssem);
 }
@@ -1159,10 +1151,35 @@ du.on.match('change', '[name="openingLocation"]', updateOpeningPartCode);
 du.on.match('change', '.template-input[name="dependsSelector"],.template-input[name="dependentSelector"]', updateJointPartCode);
 du.on.match('click', '.copy-template', (elem) => {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-  const template = CabinetTemplate.get(templateId);
+  const template = AssemblyTemplate.get(templateId);
   let jsonStr = JSON.stringify(template.toJson(), null, 2);
   jsonStr = jsonStr.replace(/.*"id":.*($|,)/g, '');
   du.copy(jsonStr);
+});
+
+du.on.match('click', '.add-poly-point', (elem) => {
+  const subAssem = ExpandableList.get(elem);
+  subAssem.polyConfig.push([0,0,0]);
+  const cnt = du.find.up('.poly-input-cnt', elem).parentElement;
+  cnt.innerHTML = polyHtml(subAssem);
+
+  const templateId = du.find.up('[template-id]', cnt).getAttribute('template-id');
+  const template = AssemblyTemplate.get(templateId);
+  const elems = du.find.downAll('input.xyz[attr="subassemblies"][name]', cnt);
+  elems.forEach(e => xyzEqnCheck(template)(e));
+});
+
+du.on.match('click', '.poly-input-cnt .remove-btn', (elem) => {
+  const subAssem = ExpandableList.get(elem);
+  const index = du.find.up('[index]', elem).getAttribute('index');
+  subAssem.polyConfig.splice(index, 1);
+  const cnt = du.find.up('.poly-input-cnt', elem).parentElement;
+
+  const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
+  const template = AssemblyTemplate.get(templateId);
+  cnt.innerHTML = polyHtml(subAssem);
+  const elems = du.find.downAll('input.xyz[attr="subassemblies"][name]', cnt);
+  elems.forEach(e => xyzEqnCheck(template)(e));
 });
 
 du.on.match('click', '.paste-template', (elem) => {
@@ -1170,15 +1187,15 @@ du.on.match('click', '.paste-template', (elem) => {
   .then(text => {
     try {
       const obj = Object.fromJson(JSON.parse(text));
-      if (!(obj instanceof CabinetTemplate)) throw new Error(`Json is of type ${obj.constructor.name}`);
+      if (!(obj instanceof AssemblyTemplate)) throw new Error(`Json is of type ${obj.constructor.name}`);
       const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-      const template = CabinetTemplate.get(templateId);
+      const template = AssemblyTemplate.get(templateId);
       template.fromJson(obj.toJson());
       const templateManagerId = du.find.up('[template-manager]', elem).getAttribute('template-manager');
       const templateManager =TemplateManager.get(templateManagerId);
       templateManager.update();
     } catch (e) {
-      alert('clipboard does not contain a valid CabinetTemplate');
+      alert('clipboard does not contain a valid AssemblyTemplate');
     }
   })
   .catch(err => {
@@ -1188,7 +1205,7 @@ du.on.match('click', '.paste-template', (elem) => {
 
 du.on.match('change', '.template-input', function (elem) {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
-  template = CabinetTemplate.get(templateId);
+  template = AssemblyTemplate.get(templateId);
   updateTemplate(elem, template);
 });
 

@@ -20,7 +20,6 @@ initFolders() {
 configureGlobals() {
   if [ ! -f "$propFile" ]
   then
-    echo wtf
     _help
     exit
   fi

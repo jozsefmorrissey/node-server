@@ -32,7 +32,7 @@ class Cabinet extends Assembly {
     super(partCode, 'Simple', config);
     new CabinetResolver(this);
     // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
-    Object.getSet(this, 'propertyId', 'name', 'currentPosition', 'autoToeKick',
+    Object.getSet(this, 'propertyId','currentPosition', 'autoToeKick',
                     'dividerJoint', 'notes');
 
     // TODO: this is stupid id needs to be added to toJson however getter/setter should not change...
@@ -53,29 +53,7 @@ class Cabinet extends Assembly {
 
     this.faceNormals = () => this.openings.map(o => o.sectionProperties().normal())
 
-    let name;
-    this.name = (value) => {
-      const group = this.group();
-      if (value) {
-        const list = group && group.objects ? group.objects : [];
-        name =  list.map(g => g.name()).uniqueStringValue(value);
-      }
-      return name;
-    }
-
-
     const parentUserFriendlyId = this.userFriendlyId;
-    this.userFriendlyId = (id) => id === undefined ? `c${this.groupIndex() + 1}` : parentUserFriendlyId(id);
-    this.userIdentifier = () => {
-      const groupPrefix = this.group().room().groups.length > 1 ? `${this.group().name()}:` : '';
-      return `${groupPrefix}${this.name() || this.userFriendlyId()}`;
-    }
-    const panels = 0;
-    const framePieces = 0;
-    const addFramePiece = (piece) => framePieces.push(piece);
-    const framePieceCount = () => pieces.length;
-    const addPanel = (panel) => panels.push(panel);
-    const panelCount = () => panels.length;
 
     const parentGetSubAssems = this.getSubassemblies;
     let toeKick;
@@ -95,8 +73,6 @@ class Cabinet extends Assembly {
       }
       return subs;
     }
-    const nonUserDefinedPartReg = /^c(_(S[0-9]{1,}|AUTOTK|COC)(_|$)|$)/;
-    this.userDefinedParts = () => this.allAssemblies().filter(a => !a.locationCode().match(nonUserDefinedPartReg));
 
     let buildCenter;
     this.buildCenter = (reevaluate) => {
@@ -167,13 +143,6 @@ class Cabinet extends Assembly {
       }
     }
 
-
-    this.groupIndex = () => {
-      const group = this.group();
-      const gIndex = group.objects.equalIndexOf(this);
-      if (gIndex === -1) return 1;
-      return gIndex + 1;
-    }
 
     const parentHash = this.hash;
     this.hash = () => {
