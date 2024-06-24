@@ -4,34 +4,34 @@
   "type": "hood-first",
   "values": [
     {
-      "id": "y3gyma3",
       "key": "topWidth",
-      "eqn": "12*2.54"
+      "eqn": "24*2.54",
+      "id": "i3m5c3c"
     },
     {
-      "id": "z697lw8",
       "key": "topCrownHeight",
-      "eqn": "6*2.54"
+      "eqn": "6*2.54",
+      "id": "0v7a5xp"
     },
     {
-      "id": "1m7xo52",
       "key": "topHeight",
-      "eqn": "24*2.54"
+      "eqn": "30*2.54",
+      "id": "pzrrai5"
     },
     {
-      "id": "n0hdv8l",
       "key": "bottomHeight",
-      "eqn": "H-topHeight - mf.t"
+      "eqn": "H-topHeight - mf.t",
+      "id": "y2rj98z"
     },
     {
-      "id": "uv2y2qa",
       "key": "middleCrownWidth",
-      "eqn": "3*2.54"
+      "eqn": "3*2.54",
+      "id": "7ewzuw5"
     },
     {
-      "id": "h5k9cix",
       "key": "topDepth",
-      "eqn": "12*2.54"
+      "eqn": "12*2.54",
+      "id": "u7kt5mp"
     }
   ],
   "subassemblies": [
@@ -48,32 +48,83 @@
         "pwt34"
       ],
       "rotation": [
-        0,
+        "0",
         0,
         0
       ],
       "include": "All",
-      "id": "5as72zm",
       "name": "bottomFront",
       "code": "bf",
-      "polyConfig": [
-        [
-          1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2
-        ],
-        [
-          3,
-          3,
-          3
+      "positionMethod": "box",
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
         ]
-      ],
-      "positionMethod": "box"
+      },
+      "normalInfo": {
+        "normals": [
+          [
+            "1",
+            "0",
+            "0"
+          ],
+          [
+            "0",
+            "1",
+            "1"
+          ],
+          [
+            "0",
+            "0",
+            "1"
+          ]
+        ],
+        "calc": 2,
+        "style": "rotation",
+        "valid": true,
+        "lines": [
+          [
+            {
+              "x": "0",
+              "y": "1",
+              "z": "0"
+            },
+            {
+              "x": "0",
+              "y": "2",
+              "z": "0"
+            }
+          ],
+          [
+            {
+              "x": "1",
+              "y": "0",
+              "z": "1"
+            },
+            {
+              "x": "3",
+              "y": "0",
+              "z": "3"
+            }
+          ]
+        ]
+      },
+      "id": "fewo8io"
     },
     {
       "type": "Panel",
@@ -93,26 +144,29 @@
         0
       ],
       "include": "All",
-      "id": "ur1n6oh",
       "name": "middleFront",
       "code": "mf",
-      "polyConfig": [
-        [
-          1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2
-        ],
-        [
-          3,
-          3,
-          3
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
         ]
-      ]
+      },
+      "id": "hcvj79u"
     },
     {
       "type": "Panel",
@@ -132,26 +186,29 @@
         0
       ],
       "include": "All",
-      "id": "zsqjrjj",
       "name": "bottomLeft",
       "code": "bl",
-      "polyConfig": [
-        [
-          1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2
-        ],
-        [
-          3,
-          3,
-          3
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
         ]
-      ]
+      },
+      "id": "5ptgs16"
     },
     {
       "type": "Panel",
@@ -171,31 +228,34 @@
         0
       ],
       "include": "All",
-      "id": "hynmh7k",
       "name": "bottomRight",
       "code": "br",
-      "polyConfig": [
-        [
-          1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2
-        ],
-        [
-          3,
-          3,
-          3
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
         ]
-      ]
+      },
+      "id": "x3vj5m7"
     },
     {
       "type": "Panel",
       "center": [
-        "-t/2 - bl.t",
+        "-w/2 + bl.t",
         "bottomHeight + t/2",
         "h/2"
       ],
@@ -210,26 +270,29 @@
         0
       ],
       "include": "All",
-      "id": "iuw1194",
       "name": "middleLeft",
       "code": "ml",
-      "polyConfig": [
-        [
-          1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2
-        ],
-        [
-          3,
-          3,
-          3
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
         ]
-      ]
+      },
+      "id": "bulhwnl"
     },
     {
       "type": "Panel",
@@ -249,26 +312,29 @@
         0
       ],
       "include": "All",
-      "id": "4odpswi",
       "name": "middleRight",
       "code": "mr",
-      "polyConfig": [
-        [
-          1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2
-        ],
-        [
-          3,
-          3,
-          3
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
         ]
-      ]
+      },
+      "id": "parf3fd"
     },
     {
       "type": "Panel",
@@ -288,26 +354,29 @@
         "0"
       ],
       "include": "All",
-      "id": "4vdo0lg",
       "name": "backBottom",
       "code": "bb",
-      "polyConfig": [
-        [
-          1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2
-        ],
-        [
-          3,
-          3,
-          3
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
         ]
-      ]
+      },
+      "id": "s3ffqgd"
     },
     {
       "type": "Panel",
@@ -327,31 +396,34 @@
         0
       ],
       "include": "All",
-      "id": "0h6g02n",
       "name": "topFront",
       "code": "tf",
-      "polyConfig": [
-        [
-          1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2
-        ],
-        [
-          3,
-          3,
-          3
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
         ]
-      ]
+      },
+      "id": "spq7qpm"
     },
     {
       "type": "Panel",
       "center": [
-        "W/2 - tf.w/2 + t/2",
+        "W/2 - topWidth/2 + t/2",
         "H - h/2",
         "w/2"
       ],
@@ -366,26 +438,29 @@
         0
       ],
       "include": "All",
-      "id": "80wcc39",
       "name": "topLeft",
       "code": "tl",
-      "polyConfig": [
-        [
-          1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2
-        ],
-        [
-          3,
-          3,
-          3
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
         ]
-      ]
+      },
+      "id": "6ugjvch"
     },
     {
       "type": "Panel",
@@ -405,26 +480,29 @@
         0
       ],
       "include": "All",
-      "id": "ztysex7",
       "name": "topRight",
       "code": "tr",
-      "polyConfig": [
-        [
-          1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2
-        ],
-        [
-          3,
-          3,
-          3
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
         ]
-      ]
+      },
+      "id": "g2ey9is"
     },
     {
       "type": "Panel",
@@ -444,26 +522,29 @@
         0
       ],
       "include": "All",
-      "id": "0daanwv",
       "name": "topBack",
       "code": "tb",
-      "polyConfig": [
-        [
-          1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2
-        ],
-        [
-          3,
-          3,
-          3
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
         ]
-      ]
+      },
+      "id": "hb91qkm"
     },
     {
       "type": "Panel",
@@ -483,42 +564,515 @@
         0
       ],
       "include": "All",
-      "id": "qi2qztd",
-      "polyConfig": [
-        [
-          "0",
-          "bottomHeight + mf.t",
-          "D"
-        ],
-        [
-          "W/2 - topWidth/2",
-          "H-topCrownHeight",
-          "topDepth"
-        ],
-        [
-          "D/2 + topWidth/2",
-          "H-topCrownHeight",
-          "topDepth"
-        ],
-        [
-          "W",
-          "bottomHeight + mf.t",
-          "D"
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            "0",
+            "bottomHeight + mf.t",
+            "D"
+          ],
+          [
+            "W/2 - topWidth/2",
+            "H-topCrownHeight",
+            "topDepth"
+          ],
+          [
+            "W/2 + topWidth/2",
+            "H-topCrownHeight",
+            "topDepth"
+          ],
+          [
+            "W",
+            "bottomHeight + mf.t",
+            "D"
+          ]
         ]
-      ],
+      },
       "name": "middleFrontPanel",
       "code": "mfp",
       "positionMethod": "poly",
-      "polyConfig.0": [],
-      "polyConfig.1": [],
-      "polyConfig.2": [],
-      "polyConfig.3": []
+      "polyConfig.points.1": [],
+      "polyConfig.points.2": [],
+      "normalInfo": {
+        "normals": [
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            1
+          ]
+        ],
+        "calc": 2,
+        "style": "line",
+        "valid": true,
+        "lines": [
+          [
+            {
+              "x": "0",
+              "y": "0",
+              "z": "0"
+            },
+            {
+              "x": "1",
+              "y": "0",
+              "z": "0"
+            }
+          ],
+          [
+            {
+              "x": "W/2",
+              "y": "bottomHeight + mf.t",
+              "z": "D"
+            },
+            {
+              "x": "W/2",
+              "y": "H-tf.h",
+              "z": "topDepth"
+            }
+          ]
+        ]
+      },
+      "polyConfig.points.0": [],
+      "id": "a20qpc9"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        0,
+        0,
+        0
+      ],
+      "demensions": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "include": "All",
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            "W",
+            "bottomHeight + mf.t",
+            "D"
+          ],
+          [
+            "W/2 + tf.w/2",
+            "H - tf.h",
+            "topDepth"
+          ],
+          [
+            "W/2 + tf.w/2",
+            "H - tr.h",
+            "0"
+          ],
+          [
+            "W",
+            "bottomHeight+mr.t",
+            0
+          ]
+        ]
+      },
+      "name": "middleRightPanel",
+      "code": "mrp",
+      "positionMethod": "poly",
+      "polyConfig.points.0": [],
+      "polyConfig.points.1": [],
+      "polyConfig.points.2": [],
+      "polyConfig.points.3": [],
+      "normalInfo": {
+        "normals": [
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            1
+          ]
+        ],
+        "calc": 2,
+        "style": "line",
+        "valid": true,
+        "lines": [
+          [
+            {
+              "x": "0",
+              "y": "0",
+              "z": "0"
+            },
+            {
+              "x": "0",
+              "y": "0",
+              "z": "1"
+            }
+          ],
+          [
+            {
+              "x": "W",
+              "y": "bottomHeight + mr.t",
+              "z": "0"
+            },
+            {
+              "x": "W/2 + topWidth/2",
+              "y": "H-topCrownHeight",
+              "z": "0"
+            }
+          ]
+        ]
+      },
+      "id": "h8pz1pq"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        0,
+        0,
+        0
+      ],
+      "demensions": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "include": "All",
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            "0",
+            "bottomHeight + bl.t",
+            "0"
+          ],
+          [
+            "W/2 - tf.w/2",
+            "H - tl.h",
+            "0"
+          ],
+          [
+            "W/2 - tf.w/2",
+            "H - tl.h",
+            "topDepth"
+          ],
+          [
+            0,
+            "bottomHeight + mf.t",
+            "D"
+          ]
+        ]
+      },
+      "name": "middleLeftPanel",
+      "code": "mlp",
+      "positionMethod": "poly",
+      "polyConfig.points.0": [],
+      "polyConfig.points.1": [],
+      "polyConfig.points.2": [],
+      "polyConfig.points.3": [],
+      "normalInfo": {
+        "normals": [
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            1
+          ]
+        ],
+        "calc": 2,
+        "style": "line",
+        "valid": true,
+        "lines": [
+          [
+            {
+              "x": "0",
+              "y": "0",
+              "z": "1"
+            },
+            {
+              "x": "0",
+              "y": "0",
+              "z": "0"
+            }
+          ],
+          [
+            {
+              "x": "0",
+              "y": "bottomHeight + ml.t",
+              "z": "0"
+            },
+            {
+              "x": "W/2-topWidth/2",
+              "y": "H-topCrownHeight",
+              "z": "0"
+            }
+          ]
+        ]
+      },
+      "id": "xi46bv5"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W/2",
+        "H - tb.h/2 - topHeight/2",
+        "t/2"
+      ],
+      "demensions": [
+        "topWidth - tl.t -tr.t",
+        "topHeight - topCrownHeight",
+        "pwt12"
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "include": "All",
+      "polyConfig": {
+        "thickness": "pwt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "name": "middleBack",
+      "code": "mb",
+      "id": "f8fekhi"
     }
   ],
-  "joints": [],
+  "joints": [
+    {
+      "_TYPE": "Butt",
+      "dependsSelector": "mfp",
+      "dependentSelector": "tf",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Butt",
+      "dependsSelector": "mlp",
+      "dependentSelector": "tl",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Butt",
+      "dependsSelector": "mrp",
+      "dependentSelector": "tr",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Miter",
+      "dependsSelector": "mfp",
+      "dependentSelector": "mlp",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Dado",
+      "dependsSelector": "mb",
+      "dependentSelector": "mlp",
+      "maleOffset": "3*2.54/8",
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Dado",
+      "dependsSelector": "mb",
+      "dependentSelector": "mrp",
+      "maleOffset": "3*2.54/8",
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Miter",
+      "dependsSelector": "mfp",
+      "dependentSelector": "mrp",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Butt",
+      "dependsSelector": "mrp",
+      "dependentSelector": "mr",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Butt",
+      "dependsSelector": "mlp",
+      "dependentSelector": "ml",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Butt",
+      "dependsSelector": "mfp",
+      "dependentSelector": "mf",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Miter",
+      "dependsSelector": "ml",
+      "dependentSelector": "mf",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Miter",
+      "dependsSelector": "mr",
+      "dependentSelector": "mf",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Miter",
+      "dependsSelector": "bl",
+      "dependentSelector": "bf",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Miter",
+      "dependsSelector": "br",
+      "dependentSelector": "bf",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Dado",
+      "dependsSelector": "bb",
+      "dependentSelector": "br",
+      "maleOffset": "3*2.54/8",
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Dado",
+      "dependsSelector": "bb",
+      "dependentSelector": "bl",
+      "maleOffset": "3*2.54/8",
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Dado",
+      "dependsSelector": "tb",
+      "dependentSelector": "tl",
+      "maleOffset": "3*2.54/8",
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Dado",
+      "dependsSelector": "tb",
+      "dependentSelector": "tr",
+      "maleOffset": "3*2.54/8",
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Miter",
+      "dependsSelector": "tl",
+      "dependentSelector": "tf",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    },
+    {
+      "_TYPE": "Miter",
+      "dependsSelector": "tr",
+      "dependentSelector": "tf",
+      "maleOffset": 0,
+      "femaleOffset": 0,
+      "fullLength": false,
+      "priority": 0
+    }
+  ],
   "shape": "square",
-  "width": 45.72,
-  "height": 86.36,
+  "width": "36*2.54",
+  "height": "48*2.54",
   "thickness": "18*2.54",
   "_FORCE_FROM_JSON": true
 },

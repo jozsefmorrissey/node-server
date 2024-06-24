@@ -145,7 +145,8 @@ class Vector3D {
 
     this.positiveUnit = () => {
       if (this.positive()) return this.unit();
-      if (!this.inverse().positive()) throw new Error('if this happens algorythums will fail 11/07/2023');
+      if (!this.inverse().positive())
+        throw new Error('if this happens algorythums will fail 11/07/2023');
       return this.inverse().unit();
     }
 

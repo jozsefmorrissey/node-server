@@ -2,6 +2,7 @@
 const Test = require('../../../../public/js/utils/test/test').Test;
 const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 const Line3D = require('../../app-src/three-d/objects/line.js');
+const Plane = require('../../app-src/three-d/objects/plane');
 
 const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]].reverse())
 const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);
@@ -115,4 +116,54 @@ Test.add('Line3D combineOrder',(ts) => {
     ts.assertEquals(null, order);
 
     ts.success();
+});
+
+
+Test.add('Polygon3D distance',(ts) => {
+  const back = new Polygon3D([[0,45.7,45.7],[15.2,106.7,30.5],[15.2,106.7,0],[0,45.7,0]]);
+  const front = new Polygon3D([[1.8,45.3,0],[17.2,106.7,0],[17.2,106.7,30.4],[1.8,45.3,45.7]]);
+  const polys = [
+    new Polygon3D([[1.9,43.8,0],[-7.6,43.8,0],[-7.6,45.7,0],[1.9,45.7,0]]),
+    new Polygon3D([[1.9,43.8,43.8],[1.9,43.8,0],[1.9,45.7,0],[1.9,45.7,43.8]]),
+    new Polygon3D([[1.9,45.7,43.8],[-7.6,45.7,43.8],[-7.6,43.8,43.8],[1.9,43.8,43.8]]),
+    new Polygon3D([[-7.6,45.7,43.8],[-7.6,45.7,0],[-7.6,43.8,0],[-7.6,43.8,43.8]]),
+    new Polygon3D([[-7.6,45.7,43.8],[1.9,45.7,43.8],[1.9,45.7,0],[-7.6,45.7,0]]),
+    new Polygon3D([[-7.6,43.8,0],[1.9,43.8,0],[1.9,43.8,43.8],[-7.6,43.8,43.8]])
+  ];
+  const noZ = new Polygon3D([[0,0,0],[100,0,0],[100,100,0]]);
+  const noY = new Polygon3D([[0,0,0],[0,0,100],[100,0,100]]);
+  const noX = new Polygon3D([[0,0,0],[0,100,0],[0,100,100]]);
+  const allPolys = polys.concat([front,back,noZ,noY,noX]);
+
+  const plane1 = new Plane({a: -2, b:3, c:4, d:-1});
+  const plane2 = new Plane({a: 2, b:-1, c:-3, d:2});
+  plane1.intersection(plane2);
+
+  let str = ''
+  const pairs = [];
+  const start = new Date().getTime();
+  let count = 0;
+  for (let i = 0; i < allPolys.length; i++) {
+    const p1 = allPolys[i];
+    let planeInterStr = `//${i}\n` + p1.toDrawString('red') + '\n';
+    let planeConnStr = `//${i}\n` + p1.toDrawString('red') + '\n';
+    for (let j = i + 1; j < allPolys.length; j++) {
+      // console.log(i,':',j);
+      count++;
+      const p2 = allPolys[j];
+      const intersection = p1.toPlane().intersection(p2.toPlane());
+      const connection = p1.connect(p2);
+      const color = String.nextColor();
+      planeInterStr += '\n' + p2.toDrawString(color) + '\n' +
+                  ((intersection || '') && intersection.toDrawString(color));
+      planeConnStr += '\n' + p2.toDrawString('blue') + '\n' +
+                  ((connection || '') && connection.toDrawString('green'));
+      p1.toPlane().intersection(p2.toPlane());
+    }
+    str += planeConnStr + '\n';
+  }
+  // console.log(str);
+  const time = (new Date().getTime() - start);
+
+  ts.success(`Finding ${count} connections took: ${time}ms avg: ${Math.roundTo(time/count, .1)}ms`);
 });

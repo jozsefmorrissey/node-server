@@ -23,6 +23,7 @@ function extraCsgObjects(objects, shouldApply) {
 }
 
 const applyExtraObjAndDisplay = (info, csg) => {
+  csg ||= new CSG();
   for (let index = 0; index < extraCsgObjsObj.length; index++) {
     let ecoObj = extraCsgObjsObj[index];
     if (ecoObj.shouldApply(info)) {

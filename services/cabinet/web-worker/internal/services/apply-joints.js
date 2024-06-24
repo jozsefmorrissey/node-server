@@ -85,7 +85,7 @@ function applyMaleJointApplicator(joint, frontBackSet, assem, env, modelCenter) 
   if (femalePolyInfos === null) return;
   const cutters = {cookie: [], joint: []};
   for (let index = 0; index < femalePolyInfos.length; index ++) {
-    const cutObj = maleJointApplicator(assem, joint, femalePolyInfos[index], frontBackSet);
+    const cutObj = maleJointApplicator(assem, joint, femalePolyInfos[index], frontBackSet, env);
     if (cutObj) {
       cutters.cookie.concatInPlace(cutObj.cookie);
       cutters.joint.concatInPlace(cutObj.joint);

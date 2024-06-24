@@ -1,6 +1,6 @@
 
 const Global = require('../../services/global');
-
+const Vertex3D = require('../../three-d/objects/vertex.js');
 let partAxis = [];
 let extraObjs = () =>
   partAxis.concat(openingVerticies);
@@ -42,18 +42,20 @@ function addOpeningPoints(template, state, big) {
 function addNormalLines(obj) {
   partAxis = [];
   const assem = Global.target().getAssembly(obj.code);
-  if (obj.positionMethod === 'poly') {
-    config = assem.evalObject(obj.polyConfig);
+  const isPoly = obj.positionMethod === 'poly';
+  let config;
+  if (isPoly) {
+    config = assem.evalObject(obj.polyConfig.points);
     config.forEach(arr => partAxis.push(csgVertex(arr, .4, 'black')));
-  } else {
-    let vectors = assem.position().normals(true).map(v => v.toArray());
-    const center = assem.position().center();
-    const origin = [center.x, center.y, center.z];
-    const dems = assem.position().demension();
-    const size = Math.max(dems.x, dems.y, dems.z) * .6;
-    const axis = new CSG.Axis(size, origin, vectors, .25);
-    partAxis = [axis];
   }
+  let vectors = assem.position().normals(true).map(v => v.toArray());
+  const center = isPoly ? Vertex3D.center(config) :
+                          assem.position().center();
+  const origin = [center.x, center.y, center.z];
+  const dems = assem.position().demension();
+  const size = Math.max(dems.x, dems.y, dems.z) * .6;
+  const axis = new CSG.Axis(size, origin, vectors, .25);
+  partAxis = [axis];
 }
 const removeNormalLines = () => partAxis = [];
 

@@ -48,8 +48,6 @@ function setTo2D (payload, env, taskId) {
   const modelMap = env.modelInfo.joined;
   for (let index = 0; index < assems.length; index++) {
     const key = assems[index];
-    let norms = env.byId[key].position.current.normals;
-    norms = [norms.x.object(),norms.y.object(),norms.z.object()];
     if (!(modelMap[key] instanceof CSG) && modelMap[key].polygons) {
       modelMap[key] = CSG.fromPolygons(modelMap[key].polygons, true);
     }

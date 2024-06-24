@@ -76,7 +76,7 @@ class CabinetDisplay {
     const showTypes = Show.listTypes();
     const display = (value) => new Measurement(value).display();
     const getBody = (cabinet, $index) => {
-      Global.cabinet(cabinet);
+      Global.target(cabinet);
       if (expandList.activeKey() === $index) Canvas.render();
       if (cabinet instanceof SimpleModel) {
         return CabinetDisplay.simpleBodyTemplate.render({});
@@ -215,7 +215,7 @@ class CabinetDisplay {
     //               {validation: Measurement.validation('(0,)')});
     bind(`[display-id="${displayId}"].cabinet-id-input`, (...args) => attrUpdate(...args));
     du.on.match('click', '.save-cabinet-btn', save);
-    du.on.match('focusout', '.modifiable-value-input', updateValue);
+    du.on.match('keydown', '.modifiable-value-input', updateValue);
 
     du.on.match('change', '.show-select', (elem) => {
       const side = elem.getAttribute('side');

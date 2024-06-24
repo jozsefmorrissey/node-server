@@ -4,6 +4,11 @@ const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
 const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
 
 function toBiPolygon(assem, env) {
+  if (Array.isArray(assem.position.current.points)) {
+    const poly = new Polygon3D(assem.position.current.points);
+    const biPoly = BiPolygon.fromPolygon(poly, 0, assem.position.current.thickness);
+    return biPoly;
+  }
   const current = assem.position.current;
   const dems = current.demension;
   if (Math.min(dems.x, dems.y, dems.z) > .001) return BiPolygon.fromPositionObject(current);
@@ -13,6 +18,7 @@ function toBiPolygon(assem, env) {
 const vectObj = (obj) => new Vector3D(obj);
 function normals(part, env) {
   let norms = part.position.current.normals;
+  if (norms === undefined) return {x: Vector3D.i, y: Vector3D.j, z: Vector3D.k}
   if (part.id.startsWith('PanelVoidIndex')) {
     norms = Polygon3D.normals(Polygon3D.fromCSG(env.modelInfo.model[part.id].polygons, true));
   } else if (norms.DETERMINE_FROM_MODEL) {

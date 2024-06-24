@@ -182,12 +182,16 @@ Vertex3D.uniqueFilter = () => {
 
 Vertex3D.center = (...vertices) => {
   if (Array.isArray(vertices[0])) vertices = vertices[0];
-  return new Vertex3D(Math.mean(vertices, ['x', 'y', 'z']));
+  const xyzMean = new Vertex3D(Math.mean(vertices, ['x', 'y', 'z']));
+  if (!Number.isNaN(xyzMean.x + xyzMean.y + xyzMean.z)) return xyzMean;
+  return new Vertex3D(Math.mean(vertices, [0,1,2]));
 }
 
 Vertex3D.midrange = (...vertices) => {
   if (Array.isArray(vertices[0])) vertices = vertices[0];
-  return new Vertex3D(Math.midrange(vertices, ['x', 'y', 'z']));
+  const xyzMidrange = new Vertex3D(Math.midrange(vertices, ['x', 'y', 'z']));
+  if (!Number.isNaN(xyzMidrange.x + xyzMidrange.y + xyzMidrange.z)) return xyzMidrange;
+  return new Vertex3D(Math.midrange(vertices, [0,1,2]));
 }
 
 Vertex3D.to2D = (vertices, x, y) => {

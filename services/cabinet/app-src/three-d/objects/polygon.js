@@ -122,7 +122,25 @@ class Polygon3D {
     }
     this.normal = calcNormal;
 
-    this.connect = {};
+
+    this.connect = (other) => {
+      if (other instanceof Line3D) return this.connect.line(other);
+      if (other instanceof Vertex3D) return this.connect.vertex(other);
+      let intLine = this.toPlane().intersection(other.toPlane());
+      if (intLine instanceof Plane) intLine = new Line3D(this.center(), other.center());
+      let connector;
+      if (intLine === null) {
+        connector = this.connect(other.connect(this.connect(other.center())[0])[0]);
+      } else {
+        const onOther1 = other.connect(intLine[0])[0];
+        const onOther2 = other.connect(intLine[1])[0];
+        const thisConn1 = this.connect(onOther1);
+        const thisConn2 = this.connect(onOther2);
+        const closest = (thisConn1.length() < thisConn2.length() ? thisConn1 : thisConn2)[0];
+        connector = this.connect(other.connect(closest)[0])
+      }
+      return connector;
+    };
     this.connect.vertex = (vert) => {
       const line = Line3D.fromVector(this.normal(), vert);
       const planeInter = this.toPlane().intersection.line(line);
@@ -133,6 +151,15 @@ class Polygon3D {
         connectionLines.push(l.connect(vert, true)));
       connectionLines.sortByAttr('length');
       return connectionLines[0];
+    }
+    this.connect.line = (line) => {
+      const planeConn = this.toPlane().intersection.line(line);
+      const interceptConn = this.connect.vertex(line.connect.vertex(planeConn, true)[0]);
+      const startConn = this.connect.vertex(line[0]);
+      const endConn = this.connect.vertex(line[1]);
+      const possible = [interceptConn, startConn, endConn];
+      const closest = possible.min(l => l.length())[1];
+      return this.connect.vertex(closest);
     }
 
     this.valid = () => {
@@ -228,7 +255,7 @@ class Polygon3D {
 
     const identifyConcaveLocations = () =>
       forEachVertex(info => info.line.after.length() + info.line.before.length() >
-          info.vertex.before.distance(info.connection[1]) + info.vertex.after.distance(info.connection[1]) &&
+          info.vertex.before.distance(info.connection[1]) + info.vertex.after.distance(info.connection[1]) + .000001 &&
           !(new Line3D(info.connection[0], info.vertex.before).vector().sameDirection(new Line3D(info.connection[0], info.vertex.after).vector())) &&
           !instance.isWithin2d(info.connection[0]));
       const identifyCrissCrossLocations = () =>
@@ -278,32 +305,52 @@ class Polygon3D {
       });
       return this;
     }
+    this.irregular.is = () =>
+      this.irregular.concave.locations().length > 0 ||
+      this.irregular.crissCross.locations().length > 0 ||
+      this.irregular.parrelle.locations().length > 0;
 
 
     /**
-      This could be a better function if i could detect when polygon becomes irregular
+                                   1
+                    <-----  ---------------  ------>
+                            |             |
+                      0     |             |  2
+                            |             |
+                    <-----  --------------   ------>
+                                  3
 
-              [(-109.932038,61.595,-207.536051), (45.72,61.595,0))
-              [(45.72,61.595,0), (127,61.595,-60.96))
-              [(127,61.595,-60.96), (45.72,61.595,-59.072133))
-              [(45.72,61.595,-59.072133), (-109.932038,61.595,-207.536051))
     **/
+    // Arbitrary value could be used in the future to allow variance in auto joining algorithum.
+    const INT_DIST_TOL = 3*2.54;
     function extendByLines(polyOplane) {
       const plane = polyOplane instanceof Polygon3D ? polyOplane.toPlane() : polyOplane;
       const len = lines.length;
       for (let index = 0; index < len; index++) {
         const before = lines[(index + len - 1) % len];
-        const line = lines[index];
         const after = lines[(index + 1) % len];
-        const intersection = plane.intersection.line(line);
-        if (intersection && !within(line.connect.vertex(intersection, true).length(), 0)) {
-          const closerIndex = line[0].distance(intersection) < line[1].distance(intersection) ? 0 : 1;
-          line[closerIndex].positionAt(intersection);
+        const b4int = plane.intersection.line(before);
+        const aftint = plane.intersection.line(after);
+        if (b4int instanceof Vertex3D && aftint instanceof Vertex3D) {
+          const newSide = new Line3D(b4int, aftint);
+          const intDist = polyOplane.distance(b4int) + polyOplane.distance(aftint);
+          if (intDist < INT_DIST_TOL) {
+            const b4Index = before[0].distance(b4int) < before[1].distance(b4int) ? 0 : 1;
+            const aftIndex = after[0].distance(aftint) < after[1].distance(aftint) ? 0 : 1;
+            if (b4Index !== aftIndex) {
+              before[b4Index].positionAt(b4int);
+              after[aftIndex].positionAt(aftint);
+            }
+          }
         }
       }
-      instance.irregular.parrelle.fill();
-      instance.irregular.crissCross.fill();
-      instance.irregular.concave.fill();
+      if (instance.irregular.is()) {
+        console.warn('Polygons should be regular: it should be determined if this function is causing the irregularity');
+        /* The following functions will fix irregularities */
+        // instance.irregular.parrelle.fill();
+        // instance.irregular.crissCross.fill();
+        // instance.irregular.concave.fill();
+      }
 
       return instance;
     }
@@ -313,23 +360,37 @@ class Polygon3D {
       return extendByLines(polyOplane);
     }
 
+    this.normals = () => Polygon3D.normals(this);
+
+    const resizeVertex = (vert, center, norms, width, height) => {
+      const radial = new Line3D(center, vert);
+      const radialUnit = radial.vector().unit();
+      const dotW = norms.x.dot(radialUnit);
+      const dotH = norms.y.dot(radialUnit);
+      const hVect = norms.y.scale(dotH*height/2);
+      const wVect = norms.x.scale(dotW*width/2);
+      const transVect = wVect.add(hVect);
+      vert.translate(transVect);
+    }
+
     this.resize = (width, height, doNotModify) => {
       if (doNotModify) return this.copy().resize(width, height);
-      lines[0].length(width);
-      lines[2].length(width);
-
-      lines[1].length(height);
-      lines[3].length(height);
+      console.warn.subtle('This is really a scaleing function should rewrite');
+      const norms = this.normals();
+      const center = this.center();
+      const verts = this.vertices();
+      lines.forEach(l =>
+          resizeVertex(l[0], center, norms, width, height));
       return this;
     }
 
     this.scale = (width, height, doNotModify) => {
-      if (doNotModify) return this.copy().scale(width, height);
-      lines[0].length(lines[0].length()*width);
-      lines[2].length(lines[2].length()*width);
-
-      lines[1].length(lines[1].length()*height);
-      lines[3].length(lines[3].length()*height);
+      if (doNotModify) return this.copy().resize(width, height);
+      const norms = this.normals();
+      const center = this.center();
+      const verts = this.vertices();
+      lines.forEach(l =>
+          resizeVertex(l[0], center, norms, width, height));
       return this;
     }
 
@@ -648,44 +709,7 @@ class Polygon3D {
       return dist1 <  dist2 ? dist1 : dist2;
     }
 
-    // TODO: doesnt work very well.
-    this.distance = (other) => {
-      if (other instanceof Vertex3D) return this.connect.vertex(other).length();
-      let overlaps = false;
-      let normal = other.normal();
-      let thisView = this.viewFromVector(normal);
-      let otherView = other.viewFromVector(normal);
-      let thisVVerts = otherView.vertices();
-      let otherVVerts = other.vertices();
-      for (let index = 0; !overlaps && index < thisVVerts.length; index++) {
-        overlaps = otherView.isWithin2d(thisVVerts[index], false);
-      }
-      normal = this.normal();
-      thisView = this.viewFromVector(normal);
-      otherView = other.viewFromVector(normal);
-      thisVVerts = otherView.vertices();
-      otherVVerts = other.vertices();
-      for (let index = 0; !overlaps && index < otherVVerts.length; index++) {
-        overlaps = thisView.isWithin2d(otherVVerts[index], false);
-      }
-      if (overlaps) {
-        const center = this.center();
-        const line = new Line3D(center.clone(), center.clone().translate(normal));
-        const intersection = other.toPlane().intersection.line(line);
-        return new Line3D(center, intersection).length();
-      } else {
-        const thisVerts = this.vertices();
-        const otherVerts = other.vertices();
-        let minDistance = Number.MAX_SAFE_INTEGER;
-        for (let index = 0; index < thisVerts.length; index++) {
-          for (let odex = 0; odex < otherVerts.length; odex++) {
-             const dist = thisVerts[index].distance(otherVerts[odex]);
-             if (dist < minDistance) minDistance = dist;
-          }
-        }
-        return minDistance;
-      }
-    }
+    this.distance = (other) => this.connect(other).length();
 
     let printMerge = (poly, otherPoly, target, curr, combineInfo) =>{
       let str = '';
@@ -783,6 +807,10 @@ class Polygon3D {
     }
 
     this.isWithin2d = (vertex, exclusive) => {
+      if (vertex instanceof Line3D) return this.isWithin2d(vertex[0]) && this.isWithin2d(vertex[1]);
+      const withinLines = this.lines().map(l => l.within(vertex)).find(v => v===true);
+      if (!exclusive && (withinLines || !this.valid())) return withinLines;
+      if (exclusive && withinLines) return false;
       const zAligned = this.alignZpolyNorms();
       vertex = vertex.copy();
       vertex.rotate(this.coDirectionalRotations(), this.center());
@@ -822,16 +850,18 @@ class Polygon3D {
       if (!(otherIsParrelle || this.parrelle(other)) || !this.withinPlane(other)) return false;
       const verts = this.vertices();
       const otherVerts = other.vertices();
-      const info = {within: [], outside: []};
+      const info = {within: [], outside: [], onParrimeter: []};
       const isWithin = () => info.within.length > 0 || info.isWithin;
       for (let index = 0; (returnInfo || !isWithin()) && index < otherVerts.length; index++) {
-          if (this.isWithin2d(otherVerts[index], true)) {
-            info.isWithin = true;
-            info.within.push(otherVerts[index]);
+          if (this.isWithin2d(otherVerts[index])) {
+            if (this.isWithin2d(otherVerts[index], true)) {
+              info.isWithin = true;
+              info.within.push(otherVerts[index]);
+            } else info.onParrimeter.push(otherVerts[index]);
           } else info.outside.push(otherVerts[index]);
       }
       for (let index = 0; !isWithin() && index < verts.length; index++) {
-          if (other.isWithin2d(verts[index], true)) {
+          if (other.isWithin2d(verts[index]), true) {
             info.isWithin = true;
           }
       }
@@ -843,16 +873,50 @@ class Polygon3D {
       return within ? (returnInfo ? info : true) : false;
     }
 
-    this.intersection = {};
-    this.intersection.line = (line, exclusive) => {
-      const planeIntersection = this.toPlane().intersection.line(line);
-      if (!planeIntersection) return null;
-      const ortho = this.viewFromVector(line.vector());
-      const interView = planeIntersection.viewFromVector(line.vector());
-      if (!(interView instanceof Vertex3D)) {
-        console.warn('interview was being treated as a line not sure why so i canged it to a vertex...');
+    this.intersection = (other) => {
+      console.warn('Use at your own RISH! \n\tI couldent even spell risk the code is probably trash');
+      let planeInt = this.toPlane().intersection(other.toPlane());
+      if (planeInt === null) return null;
+      if (planeInt instanceof Plane) {
+        const overlapInfo = this.overlaps(other, true);
+        if (overlapInfo) {
+          const within = overlapInfo.onParrimeter.concat(overlapInfo.within);
+          if (within.length > 1) {
+            planeInt = new Line3D(within[0], within[1]);
+          } else return null;
+        } else {
+          const center = Vertex3D.center(this.vertices().concat(other.vertices()));
+          planeInt = new Line3D(center, center);
+        }
       }
-      if (ortho.isWithin2d(interView, exclusive)) return planeIntersection;
+      const vector = planeInt.vector().unit().scale(1000000);
+      const tp1 = this.intersection.line(Line3D.startAndVector(planeInt[0], vector));
+      const tp2 = this.intersection.line(Line3D.startAndVector(planeInt[0], vector.inverse()));
+      const to1 = other.intersection.line(Line3D.startAndVector(planeInt[0], vector));
+      const to2 = other.intersection.line(Line3D.startAndVector(planeInt[0], vector.inverse()));
+      const withinBoth = [];
+      if (tp1 && other.isWithin(tp1)) withinBoth.push(tp1);
+      if (tp2 && other.isWithin(tp2)) withinBoth.push(tp2);
+      if (to1 && this.isWithin(to1)) withinBoth.push(to1);
+      if (to2 && this.isWithin(to2)) withinBoth.push(to2);
+      if (withinBoth.length === 0) return null;
+      if (withinBoth.length === 1) return withinBoth[0];
+      const longest = Line3D.longest(...withinBoth);
+      if (goDownTheRabbitHole) this.intersection(other);
+      return longest;
+    };
+    this.intersection.line = (line, exclusive) => {
+      const planeInt = this.toPlane().intersection.line(line);
+      if (!planeInt) return null;
+      const ortho = this.viewFromVector(this.normal());
+      const interView = planeInt.viewFromVector(this.normal());
+      if (planeInt instanceof Line3D) {
+        const vector = planeInt.vector().unit();
+        const p1 = this.connect.line(Line3D.startAndVector(planeInt[0], vector));
+        const p2 = this.connect.line(Line3D.startAndVector(planeInt[1], vector));
+        return new Line3D(p1[0], p2[0]);
+      }
+      if (ortho.isWithin2d(interView, exclusive)) return planeInt;
       return null;
     }
 

@@ -6,7 +6,9 @@ const Matrix = require('./matrix.js');
 const FixedValue = require('./fixed-value');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 const tol = .00000001;
-const withinTol = new (require('../../../../../public/js/utils/tolerance.js'))(tol).within;
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const withinTol = new Tolerance(tol).within;
+const withinHundreth = new Tolerance(.01).within;
 
 const zero = (val) => {
   if (withinTol(val, 0)) return 0
@@ -176,20 +178,52 @@ class Line3D {
       throw new Error(`Trying to connect unkownObject '${other.constructor.name}'`);
     };
 
+    const connect = (line1, line2, l1TrueSegmentFalseDirectional, l2TrueSegmentFalseDirectional) => {
+      const l1State = tsfdState(l1TrueSegmentFalseDirectional);
+      const l2State = tsfdState(l1TrueSegmentFalseDirectional);
+      let intersection = line1.intersection(line2);
+      if (intersection && l1State === CONN_STATES.FULL && l2State === CONN_STATES.FULL)
+        return new Line3D(intersection, intersection);
+      if (!intersection) intersection = line1.intersection.overlap(line2, true);
+      if (!intersection) intersection = Vertex3D.center(line1[0], line1[1], line2[0], line2[1]);
+      let conn = line1.connect.vertex(intersection, l1TrueSegmentFalseDirectional);
+      let prevDist = conn.length();
+      conn = line2.connect(conn[0], l2TrueSegmentFalseDirectional);
+      conn = line1.connect(conn[0], l1TrueSegmentFalseDirectional);
+      for (let index = 0; !withinTol(prevDist, conn.length()) && index < 5; index++) {
+        prevDist = conn.length();
+        conn = line2.connect.vertex(conn[0], l2TrueSegmentFalseDirectional);
+        conn = line1.connect.vertex(conn[0], l1TrueSegmentFalseDirectional);
+        if (index === 4)
+          throw new Error('Why is connection continueing to change length???');
+      }
+      return conn;
+    }
+
     this.connect.line = (other) =>
-      Line3D.intersectingLine(this, other);
+      // Line3D.intersectingLine(this, other);
+      connect(this, other);
+
 
     this.connect.line.segment = (other, both) =>
-      Line3D.intersectingLine(this, other, false, true, true, both, both);
+      // Line3D.intersectingLine(this, other, false, true, true, both, both);
+      connect(this, other, true, both === true ? true : null);
 
     this.connect.line.directional = (other, both) =>
-      Line3D.intersectingLine(this, other, false, true, false, both, false);
+      // Line3D.intersectingLine(this, other, false, true, false, both, false);
+      connect(this, other, false, both === true ? false : null);
 
-    this.connect.vertex = (vertex, segment) => {
+
+    this.connect.vertex = (vertex, trueSegmentFalseDirectional) => {
+      const state = tsfdState(trueSegmentFalseDirectional);
+      const tsfd = trueSegmentFalseDirectional;
       const perp = this.perpendicular(vertex);
-      if (!segment) return perp;
+      const fullLine = tsfd !== true && tsfd !== false;
+      if (state === CONN_STATES.FULL) return perp;
       const vertOnLine = perp[0];
-      if (this.within(vertOnLine) === true) return perp;
+      const within = this.within(vertOnLine);
+      if (within === true) return perp;
+      if (within === 'AFTER' && state === CONN_STATES.DIR) return perp;
       const closest = vertOnLine.distance(this[0]) < vertOnLine.distance(this[1]) ? this[0] : this[1];
       perp.startVertex = closest;
       return perp;
@@ -203,10 +237,69 @@ class Line3D {
       return this.connect.line.segment(other, true).length();
     }
     this.intersection = (other) => {
-      const connector = this.connect.line(other);
+      const connector = Line3D.connect(this, other);
       if (connector && withinTol(connector.length(), 0)) return connector.startVertex;
       return null;
     }
+
+    const halfAtValues = (l1, l2, attr, int, xAttr, yAttr) => {
+      if(!Number.isNaN(int[attr])) return;
+      const pInfo1 = l1[xAttr](int[xAttr]) || l1[yAttr](int[yAttr]);
+      const pInfo2 = l2[xAttr](int[xAttr]) || l2[yAttr](int[yAttr]);
+      if(pInfo1 === null || pInfo2 === null) return;
+      const v1 = pInfo1.vertex[attr];
+      const v2 = pInfo2.vertex[attr];
+      int[attr] = (v1 + v2) / 2;
+    }
+    const twoDintValues = (l1, l2, int, xAttr, yAttr) => {
+      if (Number.isFinite(int[xAttr] + int[yAttr])) return;
+      const l12d = l1.to2D(xAttr, yAttr);
+      const l22d = l2.to2D(xAttr, yAttr);
+      let int2d = l12d.findIntersection(l22d);
+      if (int2d) {
+        if (int2d === Number.POSITIVE_INFINITY) {
+          int2d = l1.midpoint().to2D(xAttr, yAttr);
+        }
+        int[xAttr] = int2d.x();
+        int[yAttr] = int2d.y();
+      }
+    }
+
+    this.intersection.overlap = (other, trueClosestFalseFurthest) => {
+      const tcff = trueClosestFalseFurthest;
+      const ints = [
+        this.intersection.overlap.xy(other),
+        this.intersection.overlap.yz(other),
+        this.intersection.overlap.xz(other)
+      ].filter(Vertex3D.uniqueFilter());
+      if (ints.length === 0) return null;
+      if (tcff !== true && tcff !== false) return ints;
+      const test = (c, d) => tcff === true ? c.dist < d : c.dist > d;
+      let targetInfo;
+      for (let index = 0; index < ints.length; index++) {
+        const int = ints[index];
+        const dist = this.distance(int) + other.distance(int);
+        if (!targetInfo || test(targetInfo, dist)) {
+          if (targetInfo && withinHundreth(dist, targetInfo.dist))
+            console.warn('I thought this was extremely unlikely, you may want to look into why multple intersections are the nearly identical disances without being the same point');
+          targetInfo = {dist, int};
+        }
+      }
+      return targetInfo.int;
+    }
+
+    const overlapIntersection  = (l1, attr, xAttr, yAttr) => (l2) => {
+      const int = new Vertex3D(NaN, NaN, NaN);
+      twoDintValues(l1, l2, int, xAttr, yAttr);
+      if ([int.x, int.y, int.z].filter(v => Number.isNaN(v)).length > 1) {
+        twoDintValues(l1, l2, int, xAttr, yAttr);
+      }
+      halfAtValues(l1, l2, attr, int, xAttr, yAttr);
+      return int.finite() ? int : null;
+    }
+    this.intersection.overlap.xy = overlapIntersection(this, 'z', 'x', 'y');
+    this.intersection.overlap.yz = overlapIntersection(this, 'x', 'y', 'z');
+    this.intersection.overlap.xz = overlapIntersection(this, 'y', 'x', 'z');
 
     this.x = (x) => {
       const vec = this.vector().unit();
@@ -293,9 +386,10 @@ class Line3D {
     // Ensures returnLine startVertex is closer to trendSetter endVertex.
     // Get In Line
     this.acquiescent = (trendSetter) => {
-      if (!(trendSetter instanceof Line2d)) return this;
-      const shouldReverse = trendSetter.endVertex.distance(this.endVertex) <
-                            trendSetter.endVertex.distance(this.startVertex);
+      if (!(trendSetter instanceof Line3D)) return this;
+      const endDist = trendSetter.endVertex.distance(this.endVertex);
+      const startDist = trendSetter.endVertex.distance(this.startVertex);
+      const shouldReverse = endDist > startDist;
       if (shouldReverse) return this.negitive();
       return this.clone();
     }
@@ -357,14 +451,18 @@ class Line3D {
   }
 }
 
-Line3D.vertices = (lines, true4startfalse4end) => {
+Line3D.vertices = (linesOverts, true4startfalse4end) => {
   const verts = [];
   const includeBoth = true4startfalse4end !== true && true4startfalse4end !== false;
   const includeStart = includeBoth || true4startfalse4end === true;
   const includeEnd = includeBoth || true4startfalse4end === false;
-  for (let index = 0; index < lines.length; index += 1) {
-    if (includeStart) verts.push(lines[index].startVertex.copy());
-    if (includeEnd) verts.push(lines[index].endVertex.copy());
+  for (let index = 0; index < linesOverts.length; index += 1) {
+    if (linesOverts[index] instanceof Line3D) {
+      if (includeStart) verts.push(linesOverts[index][0].copy());
+      if (includeEnd) verts.push(linesOverts[index][1].copy());
+    } else {
+      verts.push(linesOverts[index]);
+    }
   }
   return verts;
 }
@@ -751,11 +849,18 @@ Line3D.shortest = (startVertexOLines, ...endVerts) => {
   return shortest;
 }
 
-Line3D.longest = (startVertex, ...endVerts) => {
-  let longest = new Line(startVertex, endVerts[0]);
-  for (let index = 1; index < endVerts.length; index++) {
-    const curr = new Line(startVertex, endVerts[index]);
-    if (curr.length() > longest.length()) longest = curr;
+Line3D.longest = (mixAndMatch, ...vertsOlines) => {
+  let lines = vertsOlines;
+  if (mixAndMatch !== true && mixAndMatch !== false) lines.push(mixAndMatch);
+  if (mixAndMatch === true) {
+    const verts = Line3D.vertices(lines);
+    lines = [];
+    verts.forEach((v,i) => verts.forEach((v2, j) => i !== j && lines.push(new Line3D(v, v2))));
+  }
+  let longest;
+  for (let i = 1; i < lines.length; i++) {
+    const curr = lines[index];
+    if (!longest || curr.length() > longest.length()) longest = curr;
   }
   return longest;
 }
@@ -782,17 +887,9 @@ function parrellePointLine(line1, line2) {
       if (dist < closest.dist) closest = {dist, vert1, vert2};
     }
   }
-  const perp1 = Line3D.fromVector(vect1, new Vertex3D(vect1.scale(-.5).add(closest.vert2.vector())))
-  const perp2 = Line3D.fromVector(vect2, new Vertex3D(vect2.scale(-.5).add(closest.vert1.vector())))
-  const perpConn1 = Line3D.intersectingLine(perp1, line1, false, true, true, line1.startVertex.clamp, line1.endVertex.clamp);
-  const perpConn2 = Line3D.intersectingLine(perp2, line2, false, true, true, line2.startVertex.clamp, line2.endVertex.clamp);
-  let shortestConnection = perpConn1.length() < perpConn2.length() ? perpConn1 : perpConn2;
-  if (!perpConn1.finite() && !perpConn2.finite())
-    throw new Error('Sorry I guess you have to deal with this issue: Matrix that is created does not have a single solution');
-  if (perpConn1.finite() && !perpConn2.finite()) shortestConnection = perpConn1;
-  if (perpConn2.finite() && !perpConn1.finite()) shortestConnection = perpConn2;
-  if (shortestConnection instanceof PolyLine3D) shortestConnection = shortestConnection.centerLine();
-  return shortestConnection;
+  let conn = line1.connect(closest.vert2, true);
+  conn = line2.connect(conn[0], true);
+  return conn;
 }
 
 // Stole from https://stackoverflow.com/a/28701387
@@ -813,6 +910,8 @@ Line3D.intersectingLine = (line1, line2, clampAll, clampA0, clampA1, clampB0, cl
 
   const a0 = line1.startVertex; const a1 = line1.endVertex;
   const b0 = line2.startVertex; const b1 = line2.endVertex;
+  const a0eq = a0.equals(b0) || a0.equals(b1);
+  const b0eq = b0.equals(a0) || b0.equals(a1);
     //Given two lines defined by numpy.array pairs (a0,a1,b0,b1)
     //Return distance, the two closest points, and their average
 
@@ -888,30 +987,86 @@ Line3D.intersectingLine = (line1, line2, clampAll, clampA0, clampA1, clampB0, cl
     var pA = _A.scale(t0).add(a0);
     var pB = _B.scale(t1).add(b0);
 
-    const plane = new Plane(line1.startVertex, line1.endVertex, line2.startVertex);
-    if (plane.valid() && !plane.within(line2.endVertex)) {
-      return parrellePointLine(line1, line2);
-    }
+    // const plane = new Plane(line1.startVertex, line1.endVertex, line2.startVertex);
+    // if (plane.valid() && !plane.within(line2.endVertex)) {
+    //   return parrellePointLine(line1, line2);
+    // }
 
     //Clamp results to line segments if needed
+    console.log([line1, line2, new Vertex3D(pA), new Vertex3D(pB), a0, a1, b0, b1].map(v => v.toDrawString ? v.toDrawString() : v.toString()).join('\n'));
     if(clampA0 || clampA1 || clampB0 || clampB1){
         if (clampA0 && line1.within(pA) === 'BEFORE') {
           pA = a0;
-          const perpEnd = line2.perpendicular(pA).startVertex;
+          const perpEnd = line2.connect(pA).startVertex;
           pB = Line3D.shortest(pA, perpEnd, b0, b1).endVertex;
         } else if(clampA1 && line1.within(pA) === 'AFTER') {
           pA = a1;
-          const perpEnd = line2.perpendicular(pA).startVertex;
+          const perpEnd = line2.connect(pA).startVertex;
           pB = Line3D.shortest(pA, perpEnd, b0, b1).endVertex;
-        }
-
-        if(clampB0 && line2.within(pB) === 'BEFORE') {
+        } else if(clampB0 && line2.within(pB) === 'BEFORE') {
           pB = b0;
+          const perpEnd = line2.connect(pB).startVertex;
+          pA = Line3D.shortest(pB, perpEnd, a0, a1).endVertex;
         } else if(clampB1 && line2.within(pB) === 'AFTER') {
           pB = b1;
+          const perpEnd = line2.connect(pB).startVertex;
+          pA = Line3D.shortest(pB, perpEnd, a0, a1).endVertex;
         }
+    }
+
+    if (line1.intersection(line2) === null) {
 
     }
 
     return new Line3D(pA, pB);
+}
+
+const CONN_STATES = {FULL: 0, DIR: 1, SEG: 2}
+const tsfdState = (tsfd) => tsfd === false ? CONN_STATES.DIR : (tsfd === true ? CONN_STATES.SEG : CONN_STATES.FULL);
+
+const EPSILON = 1e-5;
+Line3D.connect = (line1, line2) => {
+  if (line1.isParrelle(line2)) return line2.connect.vertex(line1.midpoint());
+  const p1 = line1[0]; const p2 = line1[1];
+  const p3 = line2[0]; const p4 = line2[1];
+
+  const p13 = new Vertex3D(); const p43 = new Vertex3D(); const p21 = new Vertex3D();
+  p13.x = p1.x - p3.x;
+  p13.y = p1.y - p3.y;
+  p13.z = p1.z - p3.z;
+  p43.x = p4.x - p3.x;
+  p43.y = p4.y - p3.y;
+  p43.z = p4.z - p3.z;
+  if (Math.abs(p43.x) < EPSILON && Math.abs(p43.y) < EPSILON && Math.abs(p43.z) < EPSILON)
+    return null;
+  p21.x = p2.x - p1.x;
+  p21.y = p2.y - p1.y;
+  p21.z = p2.z - p1.z;
+  if (Math.abs(p21.x) < EPSILON && Math.abs(p21.y) < EPSILON && Math.abs(p21.z) < EPSILON)
+    return null;
+
+  const d1343 = p13.x * p43.x + p13.y * p43.y + p13.z * p43.z;
+  const d4321 = p43.x * p21.x + p43.y * p21.y + p43.z * p21.z;
+  const d1321 = p13.x * p21.x + p13.y * p21.y + p13.z * p21.z;
+  const d4343 = p43.x * p43.x + p43.y * p43.y + p43.z * p43.z;
+  const d2121 = p21.x * p21.x + p21.y * p21.y + p21.z * p21.z;
+
+  const denom = d2121 * d4343 - d4321 * d4321;
+  if (Math.abs(denom) < EPSILON)
+    return null;
+  const numer = d1343 * d4321 - d1321 * d4343;
+
+  const mua = numer / denom;
+  const mub = (d1343 + d4321 * mua) / d4343;
+
+  const pa = new Vertex3D();
+  const pb = new Vertex3D();
+  pa.x = p1.x + mua * p21.x;
+  pa.y = p1.y + mua * p21.y;
+  pa.z = p1.z + mua * p21.z;
+  pb.x = p3.x + mub * p43.x;
+  pb.y = p3.y + mub * p43.y;
+  pb.z = p3.z + mub * p43.z;
+
+  return new Line3D(pa, pb);
 }

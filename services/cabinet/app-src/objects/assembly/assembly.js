@@ -292,10 +292,16 @@ class Assembly extends KeyValue {
     }
 
     let normObj;
-    const ensureVector = (cno, attr) => cno[attr] instanceof Vector3D ? cno[attr] :
-                            cno[attr] = new Vector3D(this.eval(cno[attr][0]), this.eval(cno[attr][1]), this.eval(cno[attr][2])).unit();
+    const ensureVector = (cno, attr) => cno[attr].length === 2 ?
+                            cno[attr] = new Line3D(this.evalObject(cno[attr][0]), this.evalObject(cno[attr][1])).vector().unit() :
+                            (cno[attr] instanceof Vector3D ? cno[attr] :
+                            cno[attr] = new Vector3D(this.eval(cno[attr][0]), this.eval(cno[attr][1]), this.eval(cno[attr][2])).unit());
 
+    let lastNormHash;
     this.normals = (array, normalObj) => {
+      const currHash = Object.hash(normalObj);
+      if (lastNormHash !== currHash)
+      lastNormHash = currHash;
       if (normalObj instanceof Object) {
         if (!Array.isArray(normalObj)) normObj = normalObj;
         else normObj = {x: normalObj[0], y: normalObj[1], z: normalObj[2]};
@@ -452,6 +458,15 @@ class Assembly extends KeyValue {
       });
     }
 
+    this.modifiableValues = () => {
+      const valueObj = this.value.values;
+      const keys = Object.keys(valueObj);
+      return keys.filter(key => {
+        const value = valueObj[key];
+        return value.match instanceof Function && !value.match(/[a-zA-Z]/);
+      }).map(str => ({key: str, value: this.eval(valueObj[str])}));
+    }
+
     this.isSubPart = (assem) =>
       assem.locationCode().startsWith(`${this.locationCode()}:`)
 
@@ -557,9 +572,14 @@ Assembly.fromJson = (assemblyJson) => {
   const assembly = new (clazz)(partCode, partName, assemblyJson.config);
   assembly.id(assemblyJson.id);
   assembly.value.all(assemblyJson.value.values);
-  assembly.parentAssembly(assemblyJson.parent)
+  if (assemblyJson.parent) assembly.parentAssembly(assemblyJson.parent);
+  else {
+    assembly.group(new Group());
+    assembly.part(false);
+  }
   Object.values(assemblyJson.subassemblies).forEach((json) => {
     json.constructed = assembly.json;
+    json.parent = assembly;
     assembly.addSubAssembly(Object.fromJson(json));
   });
   const joints = Object.fromJson(assemblyJson.joints);
@@ -567,9 +587,9 @@ Assembly.fromJson = (assemblyJson) => {
   return assembly;
 }
 
-Assembly.build = (type, group, config) => {
+Assembly.build = (type, group, config, assembly) => {
   group ||= new Group();
-  const assembly = new Assembly('c', type);
+  assembly ||= new Assembly('c', type);
   assembly.group(group);
   config ||= assemblyBuildConfig[type];
   assembly.length(config.height);
@@ -581,7 +601,8 @@ Assembly.build = (type, group, config) => {
   config.subassemblies.forEach((subAssemConfig) => {
     const type = subAssemConfig.type;
     const name = subAssemConfig.name;
-    const posConfig = {
+
+    const posConfig = subAssemConfig.positionMethod === 'poly' ? subAssemConfig.polyConfig : {
       demension: subAssemConfig.demensions.join(':'),
       center: subAssemConfig.center.join(':'),
       rotation: subAssemConfig.rotation.join(':')
@@ -592,9 +613,15 @@ Assembly.build = (type, group, config) => {
       subAssem.jointSetIndex(subAssemConfig.jointSetIndex);
       subAssem.includedSides(subAssemConfig.includedSides);
     }
-    if (subAssemConfig.normalInfo && subAssemConfig.normalInfo.style === 'manual') {
+    if (subAssemConfig.normalInfo && subAssemConfig.normalInfo.style !== 'rotation') {
       subAssemConfig.normalInfo.normals.calc = subAssemConfig.normalInfo.calc;
-      subAssem.normals(true, subAssemConfig.normalInfo.normals);
+      let normalsObj;
+      if (subAssemConfig.normalInfo.style === 'line') normalsObj = subAssemConfig.normalInfo.lines;
+      if (subAssemConfig.normalInfo.style === 'vector') normalsObj = subAssemConfig.normalInfo.normals;
+      if (normalsObj) {
+        normalsObj.calc = subAssemConfig.normalInfo.calc;
+        subAssem.normals(true,  normalsObj);
+      }
     }
     subAssem.partCode(subAssemConfig.code);
     assembly.addSubAssembly(subAssem);
@@ -607,8 +634,6 @@ Assembly.build = (type, group, config) => {
     else male.addDependencies(Object.fromJson(jointConfig));
   });
 
-  config.subassemblies.filter(sac => sac.dividerType).forEach((sac) =>
-      assembly.subassemblies[sac.code].type(sac.dividerType));
   return assembly;
 }
 

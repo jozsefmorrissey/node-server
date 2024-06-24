@@ -4,14 +4,10 @@
 const Joint = require('../joint.js');
 
 class Miter extends Joint {
-  constructor(joinStr) {
-    super(joinStr);
+  constructor(dependsSelector, dependentSelector, condition, locationId, priority) {
+    super(dependsSelector, dependentSelector, condition, locationId, priority);
   }
 }
 
 Joint.register(Miter);
 module.exports = Miter
-
-
-
-

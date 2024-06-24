@@ -80,14 +80,12 @@ class PolyLine3D extends Line3D {
         if (sortedClamps[0].minus(centerLine.midpoint()).dot(line1.vector()) >= 0) infinityNegitive = true;
         else infinityPlus = true;
       }
-
-      super(centerLine.startVertex, centerLine.endVertex);
     } else if (interInfo.length === 1){
       startLine = centerLine = endLine = new Line3D(interInfo[0].start, interInfo[0].end);
     } else {
       startLine = centerLine = endLine = new Line3D([0,0,0],[0,0,0]);
-      super(centerLine.startVertex, centerLine.endVertex);
     }
+    super(centerLine.startVertex, centerLine.endVertex);
 
     this.startLine = () => startLine.clone();
     this.endLine = () => endLine.clone();

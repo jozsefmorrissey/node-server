@@ -118,15 +118,6 @@ class Cabinet extends Assembly {
       return Vertex3D.center(...centers);
     }
 
-    this.modifiableValues = () => {
-      const valueObj = this.value.values;
-      const keys = Object.keys(valueObj);
-      return keys.filter(key => {
-        const value = valueObj[key];
-        return value.match instanceof Function && !value.match(/[a-zA-Z]/);
-      }).map(str => ({key: str, value: this.eval(valueObj[str])}));
-    }
-
     let modificationState = 0;
     this.modificationState = () =>
       modificationState;
@@ -202,46 +193,10 @@ class Cabinet extends Assembly {
 }
 
 Cabinet.build = (type, group, config) => {
-  group ||= new Group();
-  const cabinet = new Cabinet('c', type);
-  cabinet.group(group);
+  const cabinet = Assembly.build(type, group, config, new Cabinet('c', type));
   config ||= cabinetBuildConfig[type];
-  cabinet.autoToeKick(config.autoToeKick);
-  cabinet.length(config.height);
-  cabinet.width(config.width);
-  cabinet.thickness(config.thickness);
-  cabinet.position().setCenter('y', config.fromFloor);
-  config.values.forEach((value) => cabinet.value(value.key, value.eqn));
   cabinet.value('dividerJoint', Object.fromJson(config.dividerJoint));
 
-  config.subassemblies.forEach((subAssemConfig) => {
-    const type = subAssemConfig.type;
-    const name = subAssemConfig.name;
-    const posConfig = {
-      demension: subAssemConfig.demensions.join(':'),
-      center: subAssemConfig.center.join(':'),
-      rotation: subAssemConfig.rotation.join(':')
-    }
-    const subAssem = Assembly.new(type, subAssemConfig.code, name, posConfig);
-    // TODO: This should use Object.fromJson so more complex objects can easily save/load values.
-    if (subAssem.jointSetIndex) {
-      subAssem.jointSetIndex(subAssemConfig.jointSetIndex);
-      subAssem.includedSides(subAssemConfig.includedSides);
-    }
-    if (subAssemConfig.normalInfo && subAssemConfig.normalInfo.style === 'manual') {
-      subAssemConfig.normalInfo.normals.calc = subAssemConfig.normalInfo.calc;
-      subAssem.normals(true, subAssemConfig.normalInfo.normals);
-    }
-    subAssem.partCode(subAssemConfig.code);
-    cabinet.addSubAssembly(subAssem);
-    cabinet.trigger.change();
-  });
-
-  config.joints.forEach((jointConfig) => {
-    const male = cabinet.getAssembly(jointConfig.dependsSelector);
-    if (male === undefined) console.warn(`No male found for joint: ${jointConfig}`);
-    else male.addDependencies(Object.fromJson(jointConfig));
-  });
 
   config.openings.forEach((config, i) => {
     const sectionProperties = new SectionProperties(config, i + 1);

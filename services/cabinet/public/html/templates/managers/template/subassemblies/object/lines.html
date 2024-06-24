@@ -1,0 +1,49 @@
+<table class='{{!obj.normalInfo || obj.normalInfo.valid ? '' : 'error'}}'>
+  <tr>
+    <th></th>
+    <th:t colspan='3' repeat="char in ['start(x|y|z)', 'end(x|y|z)']">{{char}}</th:t>
+    <th>Calculated</th>
+    <th>Value</th>
+  </tr>
+  <tr:t index="{{$index}}" repeat="label in ['Cross Grain', 'With Grain', 'End Grain']"
+          class='tab normal-vector-input-cnt {{!obj.normalInfo || obj.normalInfo.normals[$index] ? '' : 'error'}}'>
+    <td><label>{{label}}</label></td>
+    <td>
+      <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.{{$index}}.0.x"
+              {{obj.normalInfo && obj.normalInfo.calc === $index ? 'disabled' : ''}}
+              value="{{obj.pathValue("normalInfo.lines." + $index + ".0.x")}}">
+    </td>
+    <td>
+      <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.{{$index}}.0.y"
+              {{obj.normalInfo && obj.normalInfo.calc === $index ? 'disabled' : ''}}
+              value="{{obj.pathValue("normalInfo.lines." + $index + ".0.y")}}">
+    </td>
+    <td>
+      <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.{{$index}}.0.z"
+              {{obj.normalInfo && obj.normalInfo.calc === $index ? 'disabled' : ''}}
+              value="{{obj.pathValue("normalInfo.lines." + $index + ".0.z")}}">
+    </td>
+    <td>
+      <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.{{$index}}.1.x"
+              {{obj.normalInfo && obj.normalInfo.calc === $index ? 'disabled' : ''}}
+              value="{{obj.pathValue("normalInfo.lines." + $index + ".1.x")}}">
+    </td>
+    <td>
+      <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.{{$index}}.1.y"
+              {{obj.normalInfo && obj.normalInfo.calc === $index ? 'disabled' : ''}}
+              value="{{obj.pathValue("normalInfo.lines." + $index + ".1.y")}}">
+    </td>
+    <td>
+      <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.{{$index}}.1.z"
+              {{obj.normalInfo && obj.normalInfo.calc === $index ? 'disabled' : ''}}
+              value="{{obj.pathValue("normalInfo.lines." + $index + ".1.z")}}">
+    </td>
+    <td>
+      <input type='radio' name='calculated-{{obj.id}}' class='calc-vect-radio'
+        {{obj.pathValue('normalInfo.calc') === $index ? 'checked' : ''}}>
+    </td>
+    <td>
+      <input name='display' type='text' disabled value='{{normalToString(obj, $index)}}'>
+    </td>
+  </tr:t>
+</table>

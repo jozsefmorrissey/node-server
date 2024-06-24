@@ -1,7 +1,12 @@
 <div class='poly-input-cnt'>
-  <div:t repeat='point in subAssem.polyConfig' index='{{$index}}'>
+  <label>Thickness</label>
+  <input class='template-input measurement-display' attr='subassemblies' name='polyConfig.thickness' value='{{subAssem.polyConfig.thickness}}'>
+  <input disabled class='measurement-input' name='value'>
+  <br>
+  <label>Points</label>
+  <div:t repeat='point in subAssem.polyConfig.points' index='{{$index}}'>
     {{getXyzSelect('').html()}}
-    <input class='template-input xyz' attr='subassemblies' name='polyConfig.{{$index}}' value='{{point[0]}}'>
+    <input class='template-input xyz' attr='subassemblies' name='polyConfig.points.{{$index}}' value='{{point[0]}}'>
     <input disabled class='measurement-input' name='value'>
     <input type="checkbox" name="convert" checked>
     <button class="remove-btn smaller" key="0">X</button>

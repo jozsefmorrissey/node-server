@@ -190,22 +190,28 @@ function getDemPosElems (template) {
   setShow(template, templateBody, 'fromFloor')
 }
 
+let assem;
+let lastAssemHash;
 function getCabinet(elem) {
   const templateBody = du.find('.template-body');
   const template = AssemblyTemplate.get(templateBody.getAttribute('template-id'), templateBody);
+  const currHash = Object.hash(template.toJson()) + Object.hash(sectionState);
+  if (currHash === lastAssemHash) return assem;
+  console.log('building')
   getDemPosElems(template);
-  const cabinet = template.get();
-  Global.target(cabinet);
-  getDemPosElems(template, cabinet);
-  cabinet.propertyConfig().set(sectionState.style);
+  assem = template.get();
+  Global.target(assem);
+  getDemPosElems(template, assem);
+  assem.propertyConfig().set(sectionState.style);
 
   if (template instanceof CabinetTemplate) {
     if (sectionState.testDividers) applyTestConfiguration();
     else applyDividers();
   }
-  // console.log(cabinet.toDrawString());
+  // console.log(assem.toDrawString());
   // setTimeout(() => getOpeningSketch().draw());
-  return cabinet;
+  lastAssemHash = currHash;
+  return assem;
 }
 
 getCabinet = new FunctionCache(getCabinet, null, 'alwaysOn', 1);
@@ -498,14 +504,17 @@ const depthValidation = (measurment) =>
 
 let lastDepth;
 const jointOnChange = (vals, dit) => {
-  const selectId = dit.payload().inputArray[0].id();
-  const joint = ExpandableList.get(du.id(selectId));
-  joint.type = vals.type;
-  lastDepth = vals.maleOffset || lastDepth;
-  joint.maleOffset = lastDepth || undefined;
-  const depthInput = dit.children()[0].payload().inputArray[0];
-  // depthInput.updateDisplay();
-  console.log(vals);
+  const indexElem = du.find.up('[key]', document.activeElement);
+  if (indexElem) {
+    const index = indexElem.getAttribute('key');
+    const template = ExpandableList.get(du.find.up('[template-id]', indexElem));
+    const joints = template.joints();
+    const oldJoint = joints[index];
+    const dependentSel = oldJoint.dependentSelector();
+    const dependsSel = oldJoint.dependsSelector();
+    joints[index] = Object.class.new(vals.type, dependsSel, dependentSel);
+    joints[index].maleOffset(vals.depth && vals.depth.maleOffset);
+  }
 }
 
 function getTypeInput(obj) {
@@ -551,7 +560,7 @@ function getJoint(obj) {
 const polyTemplate = new $t('managers/template/subassemblies/object/poly');
 function polyHtml(subAssem) {
   if (subAssem.polyConfig === undefined) {
-    subAssem.polyConfig = [[1,1,1], [2,2,2], [3,3,3]]
+    subAssem.polyConfig = {thickness: 'pwt34', points: [[1,1,1], [2,2,2], [3,3,3]]}
   }
   return polyTemplate.render({subAssem, getXyzSelect});
 }
@@ -673,7 +682,11 @@ const getObjects = {
       demensions: [1,1,1],
       rotation: [0,0,0],
       include: 'All'
-    })
+    }),
+    joints: (values) => {
+      const joint = Object.class.new(values.type || 'Butt');
+      return joint;
+    }
 }
 
 const dividerJointChange = (template) => (vals) => {
@@ -687,22 +700,22 @@ function getJointInputTree(func, joint, dividerJoint) {
     name: 'type',
     list: Object.keys(Joint.types),
     class: 'template-select',
-    value: joint.type
+    value: joint.constructor.name
   });
 
-  const depthInput = new Input({
+  let depthInput = new Input({
     label: 'Depth',
     name: 'maleOffset',
     value: joint.maleOffset
   });
 
-  const dadoInputs = dividerJoint ? [depthInput] : [depthInput];
+  depthInput = dividerJoint ? [depthInput] : [depthInput];
 
   const dit = new DecisionInputTree('Type', {inputArray: [selectType]}, {noSubmission: true});
   const type = dit.root();
-  type.then('dado', {inputArray: dadoInputs});
+  type.then('depth', {inputArray: depthInput});
   const cond = DecisionInputTree.getCondition('type', 'Dado');
-  type.conditions.add(cond, 'dado');
+  type.conditions.add(cond, 'depth');
   dit.onChange(func);
   return dit;
 }
@@ -917,7 +930,7 @@ radioDisplay.on.after.switch((elem, detail) => updateOpeningVertices(detail.targ
 radioDisplay.on.after.switch(updatePartAxis);
 
 const normalTemplate = new $t('managers/template/subassemblies/object/normals');
-du.on.match('change', '.subassem-normal-cnt>[type="radio"]', setVectorValues);
+const lineTemplate = new $t('managers/template/subassemblies/object/lines');
 
 function calcIndexUpdate(elem) {
   const row = du.find.up('tr', elem);
@@ -976,11 +989,11 @@ const validatePerpendicular = (vects, calc) => valPerInd(vects, calc, 0) &&
 
 function validateVectors(elem) {
   const obj = ExpandableList.get(elem);
-  if (obj.normalInfo === undefined || obj.normalInfo.style !== 'manual') return true;
+  if (obj.normalInfo === undefined || obj.normalInfo.style === 'rotation') return true;
   obj.normalInfo.valid = true;
   const cabinet = getCabinet();
 
-  const table = du.find.closest('.manual-vector-cnt table', elem);
+  const table = du.find.closest('.vector-normal-cnt table', elem);
   const rows = du.find.downAll('.normal-vector-input-cnt', table);
   const vectors = rows.map(validateAndReturnVectors(obj, cabinet));
 
@@ -993,30 +1006,38 @@ function validateVectors(elem) {
   else return normals.valid = true;
 }
 
+const r = (l, i, a) => Math.roundTo(l[i][a], .1);
+const lineStr = (l) => `[(${r(l,0,'x')},${r(l,0,'y')},${r(l,0,'z')})),(${r(l,1,'x')},${r(l,1,'y')},${r(l,1,'z')})]`;
 function setVectorValues(elem) {
   const style = du.find.closest('.subassem-normal-cnt>[type="radio"]:checked', elem).value;
   const obj = ExpandableList.get(elem);
   if (obj.normalInfo === undefined) {
-    if (style !== 'manual') return;
-    du.find.closest('.manual-vector-cnt table', elem).innerHTML = normalTemplate.render({obj, normalToString});
+    du.find.closest('.vector-normal-cnt table', elem).innerHTML = normalTemplate.render({obj, normalToString});
     obj.normalInfo = {normals: [[1,0,0], [0,1,0], [0,0,1]], calc: 2};
   }
   const styleChanged = obj.normalInfo.style !== style;
   obj.normalInfo.style = style;
   const vectorConfig = validateVectors(elem);
-  const cnt = du.find.closest('.manual-vector-cnt', elem);
-  if(style === 'manual') {
-    if (styleChanged) cnt.innerHTML = normalTemplate.render({obj, normalToString});
-    cnt.hidden = false;
+  const rotCnt = du.find.closest('.rotation-normal-cnt', elem);
+  const vectCnt = du.find.closest('.vector-normal-cnt', elem);
+  const lineCnt = du.find.closest('.line-normal-cnt', elem);
+  const assem =   getCabinet();
+  if(style === 'vector') {
+    if (styleChanged) vectCnt.innerHTML = normalTemplate.render({obj, normalToString});
+    rotCnt.hidden = lineCnt.hidden = !(vectCnt.hidden = false);
+  } else if(style === 'line') {
+    if (styleChanged) lineCnt.innerHTML = lineTemplate.render({obj, normalToString});
+    rotCnt.hidden = lineCnt.hidden = !(vectCnt.hidden = true);
+    const inputs = du.find.downAll('.line-normal-cnt [name="display"]', elem.parentElement);
+    const lineInfo = assem.evalObject(obj.normalInfo.lines);
+    if (lineInfo.calc !== 0) inputs[0].value = lineStr(lineInfo[0] || []);
+    if (lineInfo.calc !== 1) inputs[1].value = lineStr(lineInfo[1] || []);
+    if (lineInfo.calc !== 2) inputs[2].value = lineStr(lineInfo[2] || []);
   } else {
-    cnt.hidden = true;
+    rotCnt.hidden = !(lineCnt.hidden = vectCnt.hidden = true);
   }
   ExtraObjects.addNormalLines(obj);
 }
-
-du.on.match('containerfocusout', ".normal-vector-input-cnt[index='0']", setVectorValues);
-du.on.match('containerfocusout', ".normal-vector-input-cnt[index='1']", setVectorValues);
-du.on.match('containerfocusout', ".normal-vector-input-cnt[index='2']", setVectorValues);
 
 du.on.match('focusout:enter', '[name="opening-coordinate-value"]', (elem) => {
   sectionState.value(elem.value || undefined);
@@ -1076,10 +1097,15 @@ function updateSubassembliesTemplate(elem, template) {
     const eqn = elem.value;
     if (subAssem[elem.name] === undefined) subAssem[elem.name] = [];
     subAssem.pathValue(elem.name)[index] = eqn;
-    if (du.find.up('.poly-input-cnt', elem)) ExtraObjects.addNormalLines(subAssem);
+    getCabinet();
+    ExtraObjects.addNormalLines(subAssem);
   } else if (elem.name !== 'name') {
     let value = elem.type === 'checkbox' ? elem.checked : elem.value;
     Object.pathValue(subAssem, elem.name, value);
+    if (elem.nextElementSibling && elem.nextElementSibling.matches('.measurement-input')) {
+      const disp = new Measurement(template.evalEqn(elem.value)).display();
+      elem.nextElementSibling.value = disp;
+    }
   }
 }
 
@@ -1114,7 +1140,7 @@ function updateViewShape(elem) {
 function updateJointPartCode(elem) {
   const attr = elem.name;
   const listElem = ExpandableList.get(elem);
-  listElem[attr] = elem.value;
+  listElem[attr](elem.value);
 }
 
 function updateOpeningPartCode(elem) {
@@ -1159,7 +1185,7 @@ du.on.match('click', '.copy-template', (elem) => {
 
 du.on.match('click', '.add-poly-point', (elem) => {
   const subAssem = ExpandableList.get(elem);
-  subAssem.polyConfig.push([0,0,0]);
+  subAssem.polyConfig.points.push([0,0,0]);
   const cnt = du.find.up('.poly-input-cnt', elem).parentElement;
   cnt.innerHTML = polyHtml(subAssem);
 
@@ -1172,7 +1198,7 @@ du.on.match('click', '.add-poly-point', (elem) => {
 du.on.match('click', '.poly-input-cnt .remove-btn', (elem) => {
   const subAssem = ExpandableList.get(elem);
   const index = du.find.up('[index]', elem).getAttribute('index');
-  subAssem.polyConfig.splice(index, 1);
+  subAssem.polyConfig.points.splice(index, 1);
   const cnt = du.find.up('.poly-input-cnt', elem).parentElement;
 
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
@@ -1203,12 +1229,14 @@ du.on.match('click', '.paste-template', (elem) => {
   });
 });
 
-du.on.match('change', '.template-input', function (elem) {
+du.on.match('keydown', '.template-input', function (elem) {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
   template = AssemblyTemplate.get(templateId);
   updateTemplate(elem, template);
 });
 
-du.on.match('change', 'input,select',   () => setTimeout(validateOpenTemplate, 0));
+du.on.match('change', 'input,select',  (elem) => validateOpenTemplate.lastCall(elem));
+du.on.match('keydown', ".normal-vector-input-cnt[index]", setVectorValues);
+du.on.match('change', '.subassem-normal-cnt>[type="radio"]', setVectorValues);
 
 module.exports = TemplateManager

@@ -23,11 +23,16 @@ class Position {
     let demCoords = {};
     let centerCoords = {};
     let rotCoords = {};
-    this.configuration = () => ({
-      demension: demCoords.copy(),
-      center: centerCoords.copy(),
-      rotation: rotCoords.copy()
-    });
+    this.configuration = () => {
+      if (config && config.points) {
+        return config;
+      }
+      return {
+        demension: demCoords.copy(),
+        center: centerCoords.copy(),
+        rotation: rotCoords.copy()
+      }
+    };
 
     this.hash = () => Object.hash(this.configuration());
 
@@ -79,15 +84,18 @@ class Position {
     this.demension = demension;
 
     this.current = () => {
+      if (config && config.points) {
+        const current = assembly.evalObject(config);
+        current.normals = this.normals();
+        current.center = Vertex3D.center(current.points).translate(current.normals.z.scale(current.thickness/-2));
+        return current;
+      }
       const position = {
         center: this.center(),
         demension: this.demension(),
         rotation: this.rotation(),
         normals: this.normals()
       };
-      // assembly.getDependencies().male.forEach((joint) =>
-      //   joint.updatePosition && joint.updatePosition(position, assembly)
-      // );
       return position;
     }
 

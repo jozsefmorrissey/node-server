@@ -284,24 +284,12 @@ class BiPolygon {
 // TODO: fromPolygon(poly, 0, -.6) causing csg modeling issues
 BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   distance2 ||= 0;
-  // if (distance2 > distance1) {
-  //   const temp = distance1;
-  //   distance2 = distance1;
-  //   distance1 = temp;
-  // }
   const verts = polygon.copy().vertices();
   // if (verts.length < 4) return undefined;
   if (verts.length < 3) return undefined;
-  const verts1 = JSON.clone(verts);
-  if (offset) {
-    Line3D.adjustVertices(verts1[0], verts1[1], offset.x);
-    Line3D.adjustVertices(verts1[2], verts1[3], offset.x);
-    Line3D.adjustVertices(verts1[1], verts1[2], offset.y);
-    Line3D.adjustVertices(verts1[3], verts1[0], offset.y);
-  }
-  const verts2 = JSON.clone(verts1);
-  const poly1 = (new Polygon3D(verts1)).parrelleAt(distance1);
-  const poly2 = (new Polygon3D(verts2)).parrelleAt(distance2);
+  const resized = offset ? polygon.resize(offset.x, offset.y, true) : polygon;
+  const poly1 = resized.parrelleAt(distance1);
+  const poly2 = resized.parrelleAt(distance2);
   let poly = new BiPolygon(poly1, poly2);
   return poly;
 }

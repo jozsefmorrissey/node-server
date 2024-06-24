@@ -37,9 +37,6 @@ class Dependency extends Lookup {
       return clone;
     }
 
-    this.dependsSelector = () => dependsSelector;
-    this.dependentSelector = () => dependentSelector;
-
     this.dependsOn = (assem) => isMatch(this.dependsSelector(), assem);
     this.isDependent = (assem) => isMatch(this.dependentSelector(), assem);
 

@@ -61,21 +61,27 @@
         <input type="checkbox" name="convert" checked>
       </div>
       <br>
+  </div>
+  <div class='subassem-normal-cnt center'>
+    <label><b>Normals:</b></label>
+    <label>Rotation</label>
+    <input type='radio' name='normalStyle-{{obj.id}}' value='rotation' {{!obj.normalInfo || obj.normalInfo.style !== 'rotation' ? 'checked' : ''}}>
+    <label>Vector</label>
+    <input type='radio' name='normalStyle-{{obj.id}}' value='vector' {{obj.normalInfo && obj.normalInfo.style === 'vector' ? 'checked' : ''}}>
+    <label>Line</label>
+    <input type='radio' name='normalStyle-{{obj.id}}' value='line' {{obj.normalInfo && obj.normalInfo.style === 'line' ? 'checked' : ''}}>
+    <div class='rotation-normal-cnt tab' {{!obj.normalInfo || obj.normalInfo.style === 'rotation' ? '' : 'hidden'}}>
       <div class='sub-center-cnt inline-flex'>
         {{rotationXyzSelect.html()}}
         <input class='template-input xyz' attr='subassemblies' name='rotation' value='{{getEqn(rotationXyzSelect, obj.rotation)}}'>
         <input disabled class='measurement-input' name='value'>
       </div>
-    <br>
-    <div class='subassem-normal-cnt center'>
-      <label><b>Normals:</b></label>
-      <label>Automatic</label>
-      <input type='radio' name='normalStyle-{{obj.id}}' value='auto' {{!obj.normalInfo || obj.normalInfo.style !== 'manual' ? 'checked' : ''}}>
-      <label>Manual</label>
-      <input type='radio' name='normalStyle-{{obj.id}}' value='manual' {{obj.normalInfo && obj.normalInfo.style === 'manual' ? 'checked' : ''}}>
-      <div class='manual-vector-cnt tab' {{obj.normalInfo && obj.normalInfo.style === 'manual' ? '' : 'hidden'}}>
-        <div:t $t-id='managers/template/subassemblies/object/normals'></div:t>
-      </div>
+    </div>
+    <div class='vector-normal-cnt tab' {{obj.normalInfo && obj.normalInfo.style === 'vector' ? '' : 'hidden'}}>
+      <div:t $t-id='managers/template/subassemblies/object/normals'></div:t>
+    </div>
+    <div class='line-normal-cnt tab' {{obj.normalInfo && obj.normalInfo.style === 'line' ? '' : 'hidden'}}>
+      <div:t $t-id='managers/template/subassemblies/object/lines'></div:t>
     </div>
   </div>
   <div>
