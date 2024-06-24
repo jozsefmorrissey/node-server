@@ -504,6 +504,9 @@ CSG.Line = function (options) {
   options ||= {};
   const start = options.start || [0,0,0];
   const end = options.end || [0,0,0];
+  if (new CSG.Vector(start).equals(new CSG.Vector(end))) {
+    return new CSG.Point(options.start, null, options.color);
+  }
   const radius = options.radius || .2;
   let model = new CSG.cylinder({start, end, radius});
   model = vecotrOvertexModel(end, start, model, options);
@@ -845,6 +848,12 @@ CSG.Vector.prototype = {
     );
   },
 
+  equals: function(other) {
+    return withinEPSILON(this.x, other.x) &&
+            withinEPSILON(this.y, other.y) &&
+            withinEPSILON(this.z, other.z);
+  },
+
   toString: function(percision) {
     const vertPer = vertexPercision(percision, this.x, this.y, this.z);
     return `(${vertPer.x},${vertPer.y},${vertPer.z})`
@@ -950,6 +959,7 @@ CSG.Plane = function(normal, w) {
 // `CSG.Plane.EPSILON` is the tolerance used by `splitPolygon()` to decide if a
 // point is on the plane.
 CSG.Plane.EPSILON = 1e-5;//1e-3;
+const withinEPSILON = (v1,v2) => Math.abs(v1-v2) < CSG.Plane.EPSILON;
 
 CSG.Plane.fromPoints = function(a, b, c) {
   if (Array.isArray(a)) (c = a[2]) & (b = a[1]) & (a = a[0]);

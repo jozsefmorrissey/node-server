@@ -474,6 +474,9 @@ function runMatches(withinId, eventType, selectStr, target, event) {
   if (eventSelectors && eventSelectors[selectStr] !== undefined) {
     eventSelectors[selectStr].forEach((func) => {
       try {
+        if (eventType === 'click') {
+          console.log('clllliciiiick')
+        }
         func(target, event)
       } catch (e) {
         console.error(e);

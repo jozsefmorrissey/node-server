@@ -328,7 +328,7 @@ const Test = {
     if (reported[ts.name()]) throw new Error(`Test: '${ts.name()}' is double reporting.\n\t\tonly one call should be made to fail || success`);
     if (ts.failed() || !ts.succeed()) TestStatus.failCount++;
     else TestStatus.successCount++;
-    setTimeout(Test.printResults, 1000);
+    Test.printResults();
     ts.cleanUp();
     reported[ts.name()] = ts;
     //runCollectiveCleanup(); ... implement

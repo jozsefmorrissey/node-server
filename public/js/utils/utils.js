@@ -1021,7 +1021,7 @@ function sortByAttrs(attrs, reverse) {
       const val1 = Object.pathValue(obj1, attr);
       const val2 = Object.pathValue(obj2, attr);
       if (index === attrs.length && val2 === val1) {
-        return 0;
+        continue;
       }
       if (val2 !== val1) {
         if (reverse) {
@@ -1030,6 +1030,7 @@ function sortByAttrs(attrs, reverse) {
         return val1 > val2 ? 1 : -1;
       }
     }
+    return 0;
   }
   return sort;
 }
@@ -1388,7 +1389,7 @@ String.color.RGB = colorRGBs;
 
 const numberReg = /^[0-9]{1,}$/;
 Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
-  const attrs = path.split('.');
+  const attrs = (path + '').split('.');
   const lastAttr = attrs[attrs.length - 1];
   let target = this;
   let parent;

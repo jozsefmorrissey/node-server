@@ -124,8 +124,37 @@ const lines = [
   new Line3D([1,0,0],[2,0,0]),
   new Line3D([2,1,0],[2,-1,0]),
   new Line3D([3,3,0],[3,6,0]),
-  new Line3D([4,4.5,0],[5,4.5,0])
+  new Line3D([4,4.5,0],[5,4.5,0]),
+  new Line3D([4.5,2,6],[4.5,8,6])
 ];
+
+Test.add('Line3D.connect', (ts) => {
+  const moreLines = [];
+  const verts = Line3D.vertices(lines).filter(Vertex3D.uniqueFilter());
+  for (let i = 0; i < verts.length; i++) {
+    const v1 = verts[i];
+    for (let j = i+1; j < verts.length; j++) {
+      moreLines.push(new Line3D(v1, verts[j]));
+    }
+  }
+  const dstrs = [];
+  for (let i = 0; i < moreLines.length; i++) {
+    const l1 = moreLines[i];
+    for (let j = i+1; j < moreLines.length; j++) {
+      const l2 = moreLines[j];
+      const conn = Line3D.connect(l1, l2);
+      dstrs.push(`// (${i},${j})`);
+      if(conn)dstrs.push('green' + (conn.isPoint() ? conn[0].toString() : conn.toDrawString()));
+      else
+        ts.fail('All lines should be connectable')
+      dstrs.concatInPlace([l1.toDrawString('red'), l2.toDrawString('blue')]);
+      dstrs.push('\n');
+      // console.log(i, j);
+    }
+  }
+  // console.log(dstrs.join('\n'));
+  ts.success();
+});
 
 
 const intPoint = [-1 -2/3, -2/3, 0];
@@ -163,10 +192,10 @@ lines[3].connections = {
 const centerLine4S = new Line3D([2,1,0],[2,-1,0]);
 const centerLine4E = new Line3D([3,3,0],[3,6,0]);
 lines[4].connections = {
-  connection: new PolyLine(centerLine4S, centerLine4E),
-  segment: new PolyLine(centerLine4S, centerLine4E, false, true, true),
+  connection: new Line3D([2,0,0], [3,0,0]),
+  segment: new Line3D([2,0,0], [3,0,0]),
   segmentBoth: new Line3D([2,1,0],[3,3,0]),
-  directional: new PolyLine(centerLine4S, centerLine4E, false, true, false, false, false),
+  directional: new Line3D([2,0,0], [3,0,0]),
   directionalBoth: new Line3D([2,1,0],[3,3,0])
 };
 
@@ -178,6 +207,17 @@ lines[5].connections = {
   segmentBoth:  new Line3D(vert5S, vert5E),
   directional:  new Line3D(vert5S, vert5S),
   directionalBoth:  new Line3D(vert5S, vert5E)
+};
+
+const vert6S = new Vertex3D(4.5, 4.5,6);
+const vert6E = new Vertex3D(4.5,4.5,0);
+const line6 = new Line3D([4.5, 4.5,6],[4.5,4.5,0]);
+lines[6].connections = {
+  connection: line6,
+  segment: line6,
+  segmentBoth: line6,
+  directional: line6,
+  directionalBoth: line6
 };
 
 
@@ -255,8 +295,6 @@ Test.add('Line3D: connect (line)', (ts) => {
   Line3D.vectorSort(xLines, new Vector3D(1,0,0), new Vector3D(0, 100, 0));
 
 
-  // console.log(lines.map(l => l.toDrawString(l.color)).join('\n'));
-  //example
   var line1 = new Line3D([-1,0,0], [-1,0,1]);
   var line2 = new Line3D([0,0,0], [0,0,1]);
   let answer = shuffleCheck(line1, line2, null, ts);
@@ -271,6 +309,7 @@ Test.add('Line3D: connect (line)', (ts) => {
   line1 = new Line3D([27.83, 31.74, -26.60], [13.43, 21.77, 46.81]);
   line2 = new Line3D([77.54, 7.53, 6.22], [26.99, 12.39, 11.18]);
   answer = shuffleCheck(line1, line2, null, ts);
+  answer = shuffleCheck(line2, line1, null, ts);
   lineSets.push({line1, line2, answer, color: String.nextColor()});
 
   line1 = new Line3D([27.83,31.74,-26.6], [20.63,26.755,10.105]);
@@ -377,36 +416,3 @@ Test.add('Line3D: bestPole/averageLine', (ts) => {
 
   ts.success();
 });
-
-
-
-
-
-
-// Test.add('Line3D: bestFit', (ts) => {
-//  //  const a = new Matrix([[1,2,3],
-//  //                        [4,5,6]]);
-//  // const b = new Matrix([[1,2],
-//  //                       [3,4],
-//  //                       [5,6]]);
-//  //  console.log(a.multiply(b));
-//
-//
-//   const verts = generateVerts();
-//   const center = Vertex3D.center(...verts);
-//   const A = new Matrix(verts.map(v => [v.x,v.y,v.z]));
-//   const AA = A.transpose().multiply(A);
-//   const point = new Matrix([[center.x], [center.y], [center.z]]);
-//   // const a = AA.inverse().multiply(point);
-//   const re = a.transpose().rowEchelon(true);
-//   const rre = re.remove(null, 0).remove(null, 0).remove(null, 0).rowEchelon(true);
-//   console.log(rre.toString());
-//   const vector = new Vector3D(rre[0][3], rre[1][3], rre[2][3]);
-//   const start = vector.inverse().add(center);
-//   const end = vector.add(center);
-//   const line = new Line3D(start, end);
-//
-//   console.log(line.toDrawString())
-//   console.log(verts.join('\n'));
-//   ts.success();
-// });

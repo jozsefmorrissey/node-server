@@ -55,9 +55,9 @@ class ThreeView {
     this.parimeter = () => {
       if (!parimeter) {
         parimeter = {};
-        parimeter.front = new Parimeters(this.front(), true).largest();
-        parimeter.right = new Parimeters(this.right(), true).largest();
-        parimeter.top = new Parimeters(this.top(), true).largest();
+        parimeter.front = new Parimeters(this.front(), true).largest() || [];
+        parimeter.right = new Parimeters(this.right(), true).largest() || [];
+        parimeter.top = new Parimeters(this.top(), true).largest() || [];
         parimeter.front.ensureClockWise();
         parimeter.right.ensureClockWise();
         parimeter.top.ensureClockWise();

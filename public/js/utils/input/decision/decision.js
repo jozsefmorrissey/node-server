@@ -43,7 +43,7 @@ class DecisionInput extends DecisionTree.Node {
     }
 
     const onChange = [];
-    const changeEvent = new CustomEvent('change');
+    const changeEvent = new CustomEvent('changeDit');
 
     const trigger = () => {
       changeEvent.trigger(this.values());
@@ -92,7 +92,7 @@ class DecisionInput extends DecisionTree.Node {
       this.stateConfig().setValue('inputArray', inArr);
       trigger();
     }
-    this.values = (values, doNotRecurse) => {
+    this.values = (values, goUp) => {
       if (!this.reachable()) return {};
       values ||= {};
       if (values._NODE === undefined) values._NODE = this;
@@ -103,7 +103,8 @@ class DecisionInput extends DecisionTree.Node {
           values[input.name()] = input.value();
         }
       }
-      if (!doNotRecurse && !this.isRoot()) this.parent().values(values);
+      if (goUp !== true) this.leaves().forEach(c => c.values(values, true));
+      if (goUp === true && !this.isRoot()) this.parent().values(values, true);
       return values;
     };
 
@@ -320,7 +321,7 @@ class DecisionInputTree extends DecisionTree {
     this.onComplete = completeEvent.on;
     this.onSubmit = submitEvent.on;
     this.hideButton = props.noSubmission;
-    this.onChange = (func) => this.root().onChange(func);
+    this.onChange = changeEvent.on;
 
     let completionPending = false;
     this.completed = () => {
@@ -465,7 +466,7 @@ function updateAllChildren(dicnt) {
 }
 
 // TODO remove nested function, soft not used.... clean this please
-DecisionInputTree.update = (soft) => (target, event) => setTimeout(() => updateInput(target));
+DecisionInputTree.update = (soft) => (target, event) => updateInput.lastCall(target);
 DecisionInputTree.update.children = updateAllChildren;
 
 DecisionInputTree.Node = DecisionInput;
@@ -513,7 +514,7 @@ class NodeCondition {
   constructor(attribute, value, type) {
     this.toJson = () => ({_TYPE: 'NodeCondition'});
     this.resolveValue = (node, attribute) => {
-      const values = node.values();
+      const values = node.values(undefined, true);
       if (attribute === undefined) return values;
       return Object.pathValue(values, attribute);
     }

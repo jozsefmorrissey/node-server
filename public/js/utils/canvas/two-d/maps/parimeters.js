@@ -92,7 +92,7 @@ class Parimeters2d {
 
 
     this.polygons = () => polys.map(p => p.copy());
-    this.largest = () => polys[polys.length - 1].copy();
+    this.largest = () => polys[polys.length - 1] && polys[polys.length - 1].copy();
     const findIndexFunc = (visited) => l => l[0].equals(visited) || l[1].equals(visited);
     const parimeterFinished = (parimeter) => {
       const madeItFullCircle = parimeter[0][0].equals(parimeter[parimeter.length - 1][1]);
