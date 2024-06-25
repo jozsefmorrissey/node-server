@@ -125,20 +125,20 @@ class CabinetDisplay {
     }
 
     const getObject = (values) => {
-      if (values.objectType === 'Cabinet') {
-        values = values.CabinetNode;
-        const cabinet = CabinetConfig.get(group, values.type, values.layout, values.name);
-        Global.target(cabinet);
-        Canvas.render();
-        return cabinet;
-      } else {
-        values = values.OtherNode;
+      const nodeName = `${values.objectType}Node`;
+      values = values[nodeName];
+      if (values.objectType === 'Other') {
         const layout = group.room().layout()
         const sm = SimpleModel.get(values.simpleType, layout);
         sm.bridge.top().center(layout.center())
         Global.target(sm);
         Canvas.render();
         return sm;
+      } else {
+        const cabinet = CabinetConfig.get(group, values.type, values.layout, values.name);
+        Global.target(cabinet);
+        Canvas.render();
+        return cabinet;
       }
     };
     this.active = () => expandList.active();

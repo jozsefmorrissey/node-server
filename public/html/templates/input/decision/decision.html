@@ -1,9 +1,9 @@
 
-<div class='decision-input-cnt card{{inputArray().length === 0 ? ' empty' : ''}}' node-id='{{id()}}'
+<div class='decision-input-cnt card{{empty() ? ' empty' : ''}}' node-id='{{id()}}'
       recursion="disabled">
   <span id='{{id()}}'>
     <div class='payload-cnt'>{{payloadHtml()}}</div>
-    {{inputArray().length === 0 ? '<br><br>' : ''}}
+    {{empty() ? '<br><br>' : ''}}
     <div:t repeat='input in inputArray()'
         class='decision-input-array-cnt pad {{class}}' index='{{$index}}'>
       {{input.html()}}

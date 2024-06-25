@@ -28,11 +28,13 @@ const err = (...args) => {
 
 const render = (containerOselector, htmlFunc) => (result) => {
   const container = containerOselector instanceof HTMLElement ? containerOselector : du.find(containerOselector);
-  container.innerHTML = 'Building Document...';
-  setTimeout(() => {
-    const html = htmlFunc(result);
-    if ((typeof html) === 'string') container.innerHTML = html;
-  });
+  if (container) {
+    container.innerHTML = 'Building Document...';
+    setTimeout(() => {
+      const html = htmlFunc(result);
+      if ((typeof html) === 'string') container.innerHTML = html;
+    });
+  }
 }
 
 const orderJob = (order, containerOselector, htmlFunc) => {
@@ -112,7 +114,7 @@ const BuildDiagram = (containerOselector, order) => {
   const reqId = String.random();
   // TODO: cabinet information should seperate box/shelve/cover models
   //        then this call will be no longer nessisary
-  const job = new Jobs.CSG.Cabinets.BoxOnly(cabinets);
+  const job = new Jobs.CSG.Assemblies.BoxOnly(cabinets);
   job.on.change(() => DocHtml.sketchLayout(cabinets, containerOselector, reqId));
   const renderFunc = (result) => DocHtml.openingDiagram(result, reqId);
   job.then(render(containerOselector, renderFunc), err)

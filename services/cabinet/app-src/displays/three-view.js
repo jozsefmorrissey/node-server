@@ -83,7 +83,7 @@ class ThreeView extends Lookup {
         const hash = cabinet.hash();
         if (lastHash !== hash) {
           lastHash = hash;
-          new Jobs.CSG.Cabinet.To2D(cabinet).then(setThreeView(cabinet)).queue();
+          new Jobs.CSG.Assembly.To2D(cabinet).then(setThreeView(cabinet)).queue();
         }
       }
     }

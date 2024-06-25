@@ -47,11 +47,11 @@ function  renderCabinet() {
   const target = Global.target();
   if (target) {
     if (target.constructor.name === 'Cabinet') {
-      new Jobs.CSG.Cabinet.Complex(target).then((modelInfo, job) => {
+      new Jobs.CSG.Assembly.Complex(target).then((modelInfo, job) => {
         applyExtraObjAndDisplay(target, modelInfo.unioned());
       }).queue();
     } else if (target.constructor.name === 'Assembly') {
-      new Jobs.CSG.Cabinet.Complex(target).then((modelInfo, job) => {
+      new Jobs.CSG.Assembly.Complex(target).then((modelInfo, job) => {
         applyExtraObjAndDisplay(target, modelInfo.unioned());
       }).queue();
     } else {

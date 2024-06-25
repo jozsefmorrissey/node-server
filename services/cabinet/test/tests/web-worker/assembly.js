@@ -46,14 +46,14 @@ Test.add('Jobs.CSG.Assembly.Join base:layout(test)', async (ts, allAssemblies) =
   new Jobs.CSG.Assembly.Join(parts).then(onComplete(ts, parts), onFail(ts)).queue();
 }, async () => get());
 
-Test.add('Jobs.CSG.Cabinet.Simple dcb', async (ts, cabinet) => {
-  new Jobs.CSG.Cabinet.Simple(cabinet)
+Test.add('Jobs.CSG.Assembly.Simple dcb', async (ts, cabinet) => {
+  new Jobs.CSG.Assembly.Simple(cabinet)
         .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
 }, async () => get("", 'diagonal-corner-base'));
 
-Test.add('Jobs.CSG.Cabinet.Simple base:layout(test)', async (ts, allAssemblies) => {
+Test.add('Jobs.CSG.Assembly.Simple base:layout(test)', async (ts, allAssemblies) => {
   const cabinet = allAssemblies[0].getRoot();
-  new Jobs.CSG.Cabinet.Simple(cabinet)
+  new Jobs.CSG.Assembly.Simple(cabinet)
         .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
 }, async () => get());
 
@@ -84,9 +84,9 @@ Test.add('Jobs.CSG.Assembly.Model diagonal-corner-base:test-cabinet', async (ts,
   new Jobs.CSG.Assembly.Model(parts).then(onComplete(ts, parts), onFail).queue();
 }, async () => get(true, 'diagonal-corner-base'));
 
-Test.add('Jobs.CSG.Cabinet.Simple diagonal-corner-base:layout(3dsb3d)', async (ts, allAssemblies) => {
+Test.add('Jobs.CSG.Assembly.Simple diagonal-corner-base:layout(3dsb3d)', async (ts, allAssemblies) => {
   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
-  new Jobs.CSG.Cabinet.Complex(cabinet)
+  new Jobs.CSG.Assembly.Complex(cabinet)
         .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
 }, async () => get("3dsb3d", 'diagonal-corner-base'));
 
@@ -103,9 +103,9 @@ const on2DComplete = (objects, ts) => (result, job) => {
   ts.success();
 }
 
-Test.add('Jobs.CSG.Cabinet.To2D', async (ts, cabinet) => {
+Test.add('Jobs.CSG.Assembly.To2D', async (ts, cabinet) => {
   const gap = 25;
 
-  new Jobs.CSG.Cabinet.To2D(cabinet, {gap})
+  new Jobs.CSG.Assembly.To2D(cabinet, {gap})
           .then(on2DComplete(cabinet, ts), onFail(ts)).queue();
 }, async () => get('', 'diagonal-corner-base'));

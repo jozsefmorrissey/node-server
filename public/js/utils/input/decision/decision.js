@@ -209,9 +209,9 @@ class DecisionInput extends DecisionTree.Node {
         const child = children[index];
         html += child.html();
       }
-      return html + (children.length > 0 ? '<br><br>' : '');
+      return html;
     }
-    this.empty = () => this.inputArray().length === 0;
+    this.empty = () => this.inputArray().filter(i => !i.hidden()).length === 0;
     this.tag = () => this.tree().block() ? 'div' : 'span';
     this.html = () => DecisionInput.template.render(this);
 

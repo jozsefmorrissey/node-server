@@ -138,14 +138,14 @@ class CsgPartsJob extends CsgModelInfoJob {
   }
 }
 
-class CsgCabinetBoxOnlyJob extends CsgJoinJob {
+class CsgAssemblyBoxOnlyJob extends CsgJoinJob {
   constructor(cabinet) {
     super(cabinet.userDefinedParts(), null, {partsOnly: true});
     this.cabinet = () => cabinet;
   }
 }
 
-class CsgSimpleCabinet extends CsgJoinJob {
+class CsgSimpleAssembly extends CsgJoinJob {
   constructor(cabinet) {
     const allAssemblies = cabinet.allAssemblies();
     const boxParts = cabinet.userDefinedParts();
@@ -156,7 +156,7 @@ class CsgSimpleCabinet extends CsgJoinJob {
   }
 }
 
-class CsgComplexCabinet extends CsgJoinJob {
+class CsgComplexAssembly extends CsgJoinJob {
   constructor(cabinet) {
     const allAssemblies = cabinet.allAssemblies();
     super(allAssemblies);
@@ -166,12 +166,12 @@ class CsgComplexCabinet extends CsgJoinJob {
 
 const cabinetJobGetter = (type) => {
   switch (type) {
-    case 'box': return c => new CsgCabinetBoxOnlyJob(c);
-    case 'simple': return c => new CsgSimpleCabinet(c);
-    case 'complex': return c => new CsgComplexCabinet(c);
+    case 'box': return c => new CsgAssemblyBoxOnlyJob(c);
+    case 'simple': return c => new CsgSimpleAssembly(c);
+    case 'complex': return c => new CsgComplexAssembly(c);
   }
 }
-class CsgCabinets extends TaskJob {
+class CsgAssemblies extends TaskJob {
   constructor(cabinets, type) {
     const jobs = cabinets.map(cabinetJobGetter(type));
     const tasks = jobs.map(j => j.task());
@@ -188,15 +188,15 @@ class CsgCabinets extends TaskJob {
   }
 }
 
-class CsgComplexCabinets extends CsgCabinets {
+class CsgComplexAssemblies extends CsgAssemblies {
   constructor(cabinets) { super(cabinets, 'complex');}
 }
 
-class CsgSimpleCabinets extends CsgCabinets {
+class CsgSimpleAssemblies extends CsgAssemblies {
   constructor(cabinets) { super(cabinets, 'simple');}
 }
 
-class CsgBoxOnlyCabinets extends CsgCabinets {
+class CsgBoxOnlyAssemblies extends CsgAssemblies {
   constructor(cabinets) { super(cabinets, 'box');}
 }
 
@@ -207,13 +207,6 @@ class CsgAssembliesTo2DJob extends CsgModelInfoJob {
     const modelInfo = ModelInfo.object(assemblyOs, props);
     const task = AssembliesTo2D(modelInfo, true, props.unioned);
     super(task, modelInfo);
-  }
-}
-
-class CsgCabinetTo2DJob extends CsgAssembliesTo2DJob {
-  constructor(cabinet, props) {
-    props ||= {};
-    super(cabinet.userDefinedParts(), props);
   }
 }
 
@@ -284,8 +277,8 @@ CsgRoomJob.tasksAndJobs = (room, complex) => {
     const group = room.groups[i];
     for (let j = 0; j < group.objects.length; j++) {
       const obj = group.objects[j];
-      const job = obj instanceof Cabinet ?
-          (complex ? new CsgComplexCabinet(obj) : new CsgSimpleCabinet(obj)) : new SimpleModelJob([obj]);
+      const job = obj instanceof  Assembly ?
+          (complex ? new CsgComplexAssembly(obj) : new CsgSimpleAssembly(obj)) : new SimpleModelJob([obj]);
       jobs.push(job);
       tasks.push(job.task());
     }
@@ -300,7 +293,7 @@ CsgRoomJob.task = (room) => CsgRoomJob.tasksAndJobs(room).task;
 
 class PartsDocumentationJob extends TaskJob {
   constructor(assemblyOs, props) {
-    const allParts = assemblyOs instanceof Cabinet;
+    const allParts = assemblyOs instanceof Assembly;
     let _result;
     let completeTriggered = false;
     if (allParts) assemblyOs = assemblyOs.getParts();
@@ -328,7 +321,7 @@ class PartsDocumentationJob extends TaskJob {
   }
 }
 
-class CabinetDocumentationJob extends PartsDocumentationJob {
+class AssemblyDocumentationJob extends PartsDocumentationJob {
   constructor(cabinet) {
     super(cabinet);
   }
@@ -339,8 +332,8 @@ class GroupDocumentationJob extends TaskJob {
     const tasks = [];
     const _result = {group, cabinets: []};
     group.objects.forEach((cabinet, i) => {
-      if (!(cabinet instanceof Cabinet)) return;
-      const task = new CabinetDocumentationJob(cabinet).task();
+      if (!(cabinet instanceof Assembly)) return;
+      const task = new AssemblyDocumentationJob(cabinet).task();
       task.on.success(parts =>
           _result.cabinets[i] = {cabinet, parts});
       tasks.push(task);
@@ -357,7 +350,7 @@ class RoomDocumentationJob extends TaskJob {
     const tasks = [];
     const _result = {room, groups: []};
     room.groups.forEach((group, i) => {
-      if (!group.objects.filter(o => o instanceof Cabinet).length) return;
+      if (!group.objects.filter(o => o instanceof Assembly).length) return;
       const task = new GroupDocumentationJob(group).task();
       tasks.push(task);
       task.on.success(result =>
@@ -396,22 +389,19 @@ module.exports = {
       Model: CsgModelJob,
       Intersection: CsgIntersectionJob,
       Join: CsgJoinJob,
-      To2D: CsgAssembliesTo2DJob,
+      Simple: CsgSimpleAssembly,
+      Complex: CsgComplexAssembly,
+      To2D: CsgAssembliesTo2DJob
     },
     To2D: CsgTo2DJob,
     Simple: {
       Model: SimpleModelJob,
       To2D: SimpleTo2DJob
     },
-    Cabinet: {
-      Simple: CsgSimpleCabinet,
-      Complex: CsgComplexCabinet,
-      To2D: CsgCabinetTo2DJob
-    },
-    Cabinets: {
-      Simple: CsgSimpleCabinets,
-      Complex: CsgComplexCabinets,
-      BoxOnly: CsgBoxOnlyCabinets
+    Assemblies: {
+      Simple: CsgSimpleAssemblies,
+      Complex: CsgComplexAssemblies,
+      BoxOnly: CsgBoxOnlyAssemblies
     },
     Room: {
       Simple: CsgSimpleRoomJob,

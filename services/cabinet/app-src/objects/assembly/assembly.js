@@ -300,14 +300,15 @@ class Assembly extends KeyValue {
     let lastNormHash;
     this.normals = (array, normalObj) => {
       const currHash = Object.hash(normalObj);
-      if (lastNormHash !== currHash)
-      lastNormHash = currHash;
-      if (normalObj instanceof Object) {
+      const settingNorms = lastNormHash !== currHash && normalObj instanceof Object;
+      if (settingNorms) {
+        lastNormHash = currHash;
         if (!Array.isArray(normalObj)) normObj = normalObj;
         else normObj = {x: normalObj[0], y: normalObj[1], z: normalObj[2]};
         normObj.calc = normalObj.calc;
-        return;
+        return normObj;
       }
+      if (array !== true && array !== false) return normObj;
       if (normObj === undefined) return;
       if (normObj.DETERMINE_FROM_MODEL) return normObj;
       if (!normObj.x && !normObj.y && !normObj.z) return undefined;
@@ -571,6 +572,7 @@ Assembly.fromJson = (assemblyJson) => {
   const clazz = Object.class.get(assemblyJson._TYPE);
   const assembly = new (clazz)(partCode, partName, assemblyJson.config);
   assembly.id(assemblyJson.id);
+  assembly.normals(null, assemblyJson.normals);
   assembly.value.all(assemblyJson.value.values);
   if (assemblyJson.parent) assembly.parentAssembly(assemblyJson.parent);
   else {

@@ -86,7 +86,7 @@ class Position {
     this.current = () => {
       if (config && config.points) {
         const current = assembly.evalObject(config);
-        current.normals = this.normals();
+        current.normals = this.normals(false);
         current.center = Vertex3D.center(current.points).translate(current.normals.z.scale(current.thickness/-2));
         return current;
       }

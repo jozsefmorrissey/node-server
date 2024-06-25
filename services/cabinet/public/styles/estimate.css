@@ -54,6 +54,10 @@ table td {
 .last-col-full td { width: 1px; }
 .last-col-full td:last-child { width: 100%;}
 
+.decision-input-cnt.card.empty {
+    display: none;
+}
+
 /**
   <input id="{{id}}" type='checkbox' hidden>
   <label for='{{id}}'</label>

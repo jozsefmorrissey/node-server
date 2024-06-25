@@ -1,7 +1,7 @@
 {
-  "hood-first": {
+  "HOOD-first": {
   "_TYPE": "AssemblyTemplate",
-  "type": "hood-first",
+  "type": "HOOD-first",
   "values": [
     {
       "key": "topWidth",
