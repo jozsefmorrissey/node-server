@@ -2,7 +2,8 @@
 const du = require('../../../public/js/utils/dom-utils');
 const Viewer = require('../../../public/js/utils/3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../../public/js/utils/3d-modeling/viewer.js').addViewer;
-const OrientationArrows = require('../../../public/js/utils/display/orientation-arrows.js')
+const OrientationArrows = require('../../../public/js/utils/display/orientation-arrows.js');
+const SlideShow = require('./slide-show');
 
 let lineDisplayType;
 
@@ -17,6 +18,17 @@ const setLineDisplayType = () => {
 
 setLineDisplayType();
 du.on.match('change', checkedLineDispSelector, setLineDisplayType);
+
+du.on.match('change:keyup', '#axis-controls-3d input', (elem) => {
+  const radInput = du.find.closest('[name="radius"]', elem);
+  const radLenCnt = du.find.closest('.rad-len-cnt', elem);
+  if (elem.name === 'include') axis.include = elem.checked;
+  else if (elem.name === 'length') axis.length = Number.parseInt(elem.value) || 1;
+  else if (elem.name === 'radius') axis.radius(elem.value);
+  if (!axis.radius.len) radInput.value = axis.radius();
+  du.trigger('refresh', du.find('textarea'));
+  radLenCnt.hidden = !axis.include;
+});
 
 let lastViewId;
 function centerOnObj(x,y,z, viewId) {
@@ -57,14 +69,13 @@ function getViewer (model) {
   return viewer;
 }
 
-let includeAxis = false;
+let axis = {include: true, length: 100,
+    radius: (r) => r !== undefined ? (axis.radius.len = r) : axis.radius.len || (axis.length / 100)};
 const points = [[0,1,0], [0,2,0],[1,3,0],[2,3,0],[3,2,0],[3,1,0],[2,0,0],[1,0,0]];
-// const model = CSG.sphere({r:6});
-let model = includeAxis ? CSG.Axis() : new CSG();
-// model = model.union(new CSG.cone({start: [100,100,0], end: [110,110,0]}));
-// model = model.union(new CSG.Line({start: [10,10,0], end: [50,50,0]}));
-// model = model.union(new CSG.Line({start: new CSG.Vector([0,10,10]), end: [0,50,50]}));
-// model = model.union(CSG.Polygon.Enclosed(points));
+let model;
+const getModel = () => axis.include ? CSG.Axis(axis.length, axis.radius()) : new CSG();
+const initModel = () => model = getModel();
+initModel();
 viewer = getViewer(model);
 
 const colorRegStr = '([a-z]*\\s*)';
@@ -125,6 +136,31 @@ planeReg.model = (match) => {
   return plane;
 };
 
+function buildModel(lines) {
+  const model = getModel();
+  for (let index = 0; index < lines.length; index++) {
+    let found = false;
+    try {
+      for (let rdex = 0; !found && rdex < regExps.length; rdex++) {
+        const line = lines[index];
+        const reg = regExps[rdex];
+        const match = line.match(reg);
+        if (match) {
+          found = true;
+          let currModel = reg.model(match);
+          if (currModel) {
+            model.polygons.concatInPlace(currModel.polygons);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`Trouble parsing line: '${lines[index]}'`)
+    }
+  }
+  return model;
+}
+
+
 
 const regExps = [planeReg, polyReg, lineReg, pointReg];
 
@@ -135,36 +171,17 @@ function parse(lines, sc) {
   callId = ++call;
   setTimeout(() => {
     if (callId === call) {
-      let model = includeAxis ? CSG.Axis() : new CSG();
-      for (let index = 0; index < lines.length; index++) {
-        let found = false;
-        try {
-          for (let rdex = 0; !found && rdex < regExps.length; rdex++) {
-            const line = lines[index];
-            const reg = regExps[rdex];
-            const match = line.match(reg);
-            if (match) {
-              found = true;
-              let currModel = reg.model(match);
-              if (currModel) {
-                model.polygons.concatInPlace(currModel.polygons);
-              }
-            }
-          }
-        } catch (e) {
-          console.warn(`Trouble parsing line: '${lines[index]}'`)
-        }
-      }
-
+      model = buildModel(lines);
       viewer.mesh = model.toMesh();
       viewer.gl.ondraw();
     }
   }, 800);
 }
 
-const display = () => {
-  getViewer(model);
-  viewer.mesh = model.toMesh();
+const display = (m) => {
+  m ||= model;
+  getViewer(m);
+  viewer.mesh = m.toMesh();
   viewer.gl.ondraw();
 }
 
@@ -177,8 +194,9 @@ module.exports = {
     if (active) display();
     return active
   },
+  slideShow: new SlideShow(buildModel, display),
   parse,
-  initialValue: '// Point\nred(5,4,3)\n\n' +
-'// Line\ngreen[(10,20,30),(60,70,80)]\nblue[(20,30,40),(80,70,60))\n((10,10,10),(40,40,40)]//Black\nyellow((60,10,20),(20,10,60))\n\n' +
-'//Polygon\npurple[(5,5,0),(0,10,0),(5,15,0),green(15,15,0),(20,10,0),(15,5,0)]\n\n'
+  initialValue: '// 1 Point\nred(5,4,3)\n\n' +
+'// 3 Line\ngreen[(10,20,30),(60,70,80)]\nblue[(20,30,40),(80,70,60))\n((10,10,10),(40,40,40)]//Black\nyellow((60,10,20),(20,10,60))\n\n' +
+'//2Polygon\npurple[(5,5,0),(0,10,0),(5,15,0),green(15,15,0),(20,10,0),(15,5,0)]\n\n'
 }

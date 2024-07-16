@@ -17,6 +17,10 @@ const zero = (val) => {
 
 class Line3D {
   constructor(startVertex, endVertex) {
+    if (endVertex === undefined && startVertex instanceof Vector3D) {
+      endVertex = startVertex;
+      startVertex = new Vertex3D();
+    }
     if (startVertex === undefined || endVertex === undefined) throw new Error('Lines must have a start and an end point');
     this.startVertex = new Vertex3D(startVertex);
     this.endVertex = new Vertex3D(endVertex);
@@ -31,7 +35,20 @@ class Line3D {
     });
     const instance = this;
 
-    this.clone = () => new Line3D(this.startVertex.clone(), this.endVertex.clone());
+    this.clone = () => {
+      const clone = new Line3D(this.startVertex.clone(), this.endVertex.clone());
+      clone[0].DIRECTIONAL = this[0].DIRECTIONAL;
+      clone[1].DIRECTIONAL = this[1].DIRECTIONAL;
+      return clone;
+    }
+
+    this.isLine = () => this[0].DIRECTIONAL === true && this[1].DIRECTIONAL === true;
+    this.isSegment = () => this[0].DIRECTIONAL !== true && this[1].DIRECTIONAL !== true;
+    this.isDirectional = () => this.isDirectional.anti() ^ this.isDirectional.co();
+    this.isDirectional.co = () => this[0].DIRECTIONAL !== true && this[1].DIRECTIONAL === true;
+    this.isDirectional.anti = () => this[1].DIRECTIONAL !== true && this[0].DIRECTIONAL === true;
+    this.directional = (before, after) => (this[0].DIRECTIONAL = before ? true : false) &
+                        (this[1].DIRECTIONAL = after ? true : false) & undefined;
 
     this.invert = (condition) => {
       if (condition === undefined || condition) {
@@ -100,10 +117,19 @@ class Line3D {
     }
 
     this.toString = (accuracy) => {
-      return `${this[0].toString(accuracy)} => ${this[1].toString(accuracy)}`;
+      return this.toDrawString(null, accuracy);
     }
     this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
-    this.toDrawString = (color) => `${color || ''}[${this.startVertex.toAccurateString()}, ${this.endVertex.toAccurateString()})`;
+    this.toDrawString = (color, accuracy) => {
+      let brackets
+      if (this.isLine()) brackets = ['(', ')'];
+      else if (this.isSegment()) brackets = ['[', ']'];
+      else if (this.isDirectional.anti()) brackets = ['(', ']'];
+      else brackets = ['[', ')'];
+      color ||= '';
+      const valueStr = `${this.startVertex.toString(accuracy)}, ${this.endVertex.toString(accuracy)}`;
+      return color + brackets[0] + valueStr + brackets[1];
+    }
 
     this.midpoint = () => new Vertex3D(
       (this.endVertex.x +this.startVertex.x) / 2,
@@ -333,8 +359,8 @@ class Line3D {
       vertex = new Vertex3D(vertex);
       const onLine = this.x(vertex.x) || this.y(vertex.y) || this.z(vertex.z);
       if (!onLine || !onLine.vertex.equals(vertex)) return false;
-      if (onLine.t < 0) return 'BEFORE';
-      if (this.startVertex.distance(onLine.vertex) + tol > this.length()) return 'AFTER';
+      if (onLine.t < -tol) return 'BEFORE';
+      if (this.startVertex.distance(onLine.vertex) > this.length() + tol) return 'AFTER';
       return true;
     }
 
@@ -500,6 +526,24 @@ Line3D.to2D = (lines, x, y) => {
   return lines2d;
 }
 
+Line3D.thetaBetween = (line1, line2, viewFrom, acute) => {
+  const x = line1.vector().unit();
+  const z = viewFrom;
+  const y = z.crossProduct(x);
+  const rotz = Line3D.coDirectionalRotations([x,y,z]);
+  const clone1 = line1.clone();
+  const clone2 = line2.clone();
+  const origin = new Vertex3D();
+  rotz.forEach(rot => {
+    clone1.rotate(rot, origin);
+    clone2.rotate(rot, origin);
+  });
+
+  const l12d = clone1.to2D();
+  const l22d = clone2.to2D();
+  return acute === true ? l12d.acute(l22d) : (acute === false ? l12d.obtuse(l22d) : l12d.thetaBetween(l22d));
+}
+
 Line3D.fromVector = (vector, startVertex, rotation) => {
   const sv = new Vertex3D(startVertex);
   const ev = sv.translate(vector, true)
@@ -588,7 +632,7 @@ function get2dLines(ortho1, ortho2, pivot) {
   if (pivot === 'y')
     return Line3D.to2D([ortho1, ortho2], 'z', 'x');
   if (pivot === 'z')
-    return Line3D.to2D([ortho1, ortho2], 'y', 'x');
+    return Line3D.to2D([ortho1, ortho2], 'x', 'y');
 }
 
 const pivotVectors = {x: new Vector3D(1,0,0), y: new Vector3D(0,1,0), z: new Vector3D(0,0,1)};
@@ -609,10 +653,10 @@ function determineRotation(unitLine, target, pivot, reverse) {
 
 const revPivots = ['z', 'y', 'x'];
 const pivots = ['x', 'y', 'z'];
-const checkForEquality = (align, alignTo) => {
+const checkAllAreParrelle = (align, alignTo) => {
   let equal = true;
   for (let index = 0; index < align.length; index++) {
-    if (!align[index].equals(alignTo[index])) equal = false;
+    if (!align[index].isParrelle(alignTo[index])) equal = false;
   }
   return equal;
 }
@@ -621,6 +665,9 @@ function determinRotations(align, alignTo, reverse) {
   const rotations = [];
   let cycles = 0;
   let keepGoing = true;
+  let lastRotation;
+  const center = new Vertex3D();//.center(Line3D.vertices(align));
+  let axisCannotBeEqual;
   while (keepGoing && cycles++ < 7) {
     for (let aIndex = 0; aIndex < align.length; aIndex++) {
       const unitLine = align[aIndex];
@@ -629,16 +676,20 @@ function determinRotations(align, alignTo, reverse) {
       for (let index = 0; index < pivots.length; index++) {
         const pivot = (reverse ? revPivots : pivots)[index];
         const rotation = determineRotation(unitLine, targetLine, pivot, reverse);
-        if (rotation) {
-          align = align.map(l => reverse ? l.reverseRotate(rotation) : l.rotate(rotation));
+        axisCannotBeEqual = Object.equals(lastRotation, rotation);
+        if (rotation && !axisCannotBeEqual) {
+          align = align.map(l => reverse ? l.reverseRotate(rotation, center) : l.rotate(rotation, center));
           rotations.push(rotation);
+          lastRotation = rotation;
         }
       }
       keepGoing = rotations.length !== rotationLength;
     }
   }
 
-  // if (!checkForEquality(align, alignTo))
+  if (axisCannotBeEqual)
+    console.warn('Axis cannot be equal: try to create conditions where they can');
+  // if (!checkAllAreParrelle(align, alignTo))
   //   throw new Error("This shouldn't happen");
 
   return rotations.length > 0 ? rotations : null;

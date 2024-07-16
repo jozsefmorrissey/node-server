@@ -129,19 +129,19 @@
     {
       "type": "Panel",
       "center": [
-        "w/2 - middleCrownWidth",
+        "h/2 - middleCrownWidth",
         "bottomHeight + t/2",
-        "D + h/2 - bf.t"
+        "D + w/2 - bf.t"
       ],
       "demensions": [
-        "W+middleCrownWidth*2",
         "middleCrownWidth+bf.t",
+        "W+middleCrownWidth*2",
         "pwt34"
       ],
       "rotation": [
+        "270",
         "90",
-        0,
-        0
+        "0"
       ],
       "include": "All",
       "name": "middleFront",
@@ -181,7 +181,7 @@
         "pwt34"
       ],
       "rotation": [
-        0,
+        "0",
         "90",
         0
       ],
@@ -297,19 +297,19 @@
     {
       "type": "Panel",
       "center": [
-        "W + h/2 - br.t ",
+        "W + w/2 - br.t ",
         "bottomHeight+t/2",
-        "w/2"
+        "h/2"
       ],
       "demensions": [
-        "D-bf.t",
         "middleCrownWidth+br.t",
+        "D-bf.t",
         "pwt34"
       ],
       "rotation": [
         "90",
-        "90",
-        0
+        "0",
+        "0"
       ],
       "include": "All",
       "name": "middleRight",
@@ -349,7 +349,7 @@
         1
       ],
       "rotation": [
-        0,
+        "0",
         0,
         "0"
       ],
@@ -382,18 +382,18 @@
       "type": "Panel",
       "center": [
         "W/2",
-        "H - h/2",
+        "H - w/2",
         "topDepth - t/2"
       ],
       "demensions": [
-        "topWidth",
         "topCrownHeight",
+        "topWidth",
         "pwt34"
       ],
       "rotation": [
+        "0",
         0,
-        0,
-        0
+        "90"
       ],
       "include": "All",
       "name": "topFront",
@@ -424,18 +424,18 @@
       "type": "Panel",
       "center": [
         "W/2 - topWidth/2 + t/2",
-        "H - h/2",
-        "w/2"
+        "H - w/2",
+        "h/2"
       ],
       "demensions": [
-        "topDepth - tf.t",
         "topCrownHeight",
+        "topDepth - tf.t",
         "pwt34"
       ],
       "rotation": [
-        0,
         "90",
-        0
+        "180",
+        "270"
       ],
       "include": "All",
       "name": "topLeft",
@@ -465,19 +465,19 @@
     {
       "type": "Panel",
       "center": [
-        "W/2 + tf.w/2 - t/2",
-        "H - h/2",
-        "w/2"
+        "W/2 + topWidth/2 - t/2",
+        "H - w/2",
+        "h/2"
       ],
       "demensions": [
-        "topDepth-tf.t",
         "topCrownHeight",
+        "topDepth-tf.t",
         "pwt34"
       ],
       "rotation": [
-        0,
         "90",
-        0
+        "0",
+        "90"
       ],
       "include": "All",
       "name": "topRight",
@@ -508,18 +508,18 @@
       "type": "Panel",
       "center": [
         "W/2",
-        "H-h/2",
+        "H-w/2",
         "t/2"
       ],
       "demensions": [
-        "tf.w - tl.t - tr.t",
         "topCrownHeight",
+        "topWidth - tl.t - tr.t",
         "pwt12"
       ],
       "rotation": [
         0,
         0,
-        0
+        "90"
       ],
       "include": "All",
       "name": "topBack",
@@ -597,19 +597,19 @@
       "normalInfo": {
         "normals": [
           [
-            1,
-            0,
-            0
+            "1",
+            "0",
+            "0"
           ],
           [
-            0,
-            1,
-            0
+            "0",
+            "1",
+            "0"
           ],
           [
-            0,
-            0,
-            1
+            "0",
+            "0",
+            "1"
           ]
         ],
         "calc": 2,
@@ -636,7 +636,7 @@
             },
             {
               "x": "W/2",
-              "y": "H-tf.h",
+              "y": "H-topCrownHeight",
               "z": "topDepth"
             }
           ]
@@ -672,13 +672,13 @@
             "D"
           ],
           [
-            "W/2 + tf.w/2",
-            "H - tf.h",
+            "W/2 + topWidth/2",
+            "H - topCrownHeight",
             "topDepth"
           ],
           [
-            "W/2 + tf.w/2",
-            "H - tr.h",
+            "W/2 + topWidth/2",
+            "H - topCrownHeight",
             "0"
           ],
           [
@@ -698,19 +698,19 @@
       "normalInfo": {
         "normals": [
           [
-            1,
-            0,
-            0
+            "1",
+            "0",
+            "0"
           ],
           [
-            0,
-            1,
-            0
+            "0",
+            "1",
+            "0"
           ],
           [
-            0,
-            0,
-            1
+            "0",
+            "0",
+            "1"
           ]
         ],
         "calc": 2,
@@ -772,13 +772,13 @@
             "0"
           ],
           [
-            "W/2 - tf.w/2",
-            "H - tl.h",
+            "W/2 - topWidth/2",
+            "H - topCrownHeight",
             "0"
           ],
           [
-            "W/2 - tf.w/2",
-            "H - tl.h",
+            "W/2 - topWidth/2",
+            "H - topCrownHeight",
             "topDepth"
           ],
           [
@@ -798,19 +798,19 @@
       "normalInfo": {
         "normals": [
           [
-            1,
-            0,
-            0
+            "1",
+            "0",
+            "0"
           ],
           [
-            0,
-            1,
-            0
+            "0",
+            "1",
+            "0"
           ],
           [
-            0,
-            0,
-            1
+            "0",
+            "0",
+            "1"
           ]
         ],
         "calc": 2,
@@ -849,7 +849,7 @@
       "type": "Panel",
       "center": [
         "W/2",
-        "H - tb.h/2 - topHeight/2",
+        "H - tb.w/2 - topHeight/2",
         "t/2"
       ],
       "demensions": [
@@ -858,7 +858,7 @@
         "pwt12"
       ],
       "rotation": [
-        0,
+        "0",
         0,
         0
       ],

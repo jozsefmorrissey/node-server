@@ -155,7 +155,7 @@ class ModelInformation {
 
     this.needsModeled = () => buildModels;//.filter(id => modelInfo.model[id] === undefined);
     this.needsJoined = () => joinModels;//.filter(id => modelInfo.joined[id] === undefined);
-    this.needsIntersected = () => targets.filter(id => byId[id].part());// && modelInfo.intersection[id] === undefined);
+    this.needsIntersected = () => joinModels.filter(id => byId[id].part());// && modelInfo.intersection[id] === undefined);
     this.needsUnioned = () => unionedCsg ? [] :
                             (props.partsOnly === false ? targets : includedParts);
     this.needs2dConverted = () => props.unioned ? unioned2D ? [] : [{}]:

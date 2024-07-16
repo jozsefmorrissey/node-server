@@ -37,11 +37,11 @@ function removeJointMaterial(map, assem, env, model, intersections) {
       }
       malesModel = malesModel.union(mm);
     }
-    // else console.warn(`I dont think you should see this id: '${mid}' does not have a joinedModel`);
+    else
+      console.warn(`I dont think you should see this id: '${env.byId[mid].locationCode}' does not have a joinedModel`);
   });
   try {
-    if (map.joined[id] === undefined)
-      map.joined[id] = model.subtract(malesModel);
+    map.joined[id] = model.subtract(malesModel);
   } catch (e) {
     console.warn(e);
   }
@@ -226,7 +226,7 @@ function Apply(payload, environment, taskId, intersections) {
   for (let index = 0; index < assemblyIds.length; index++) {
     const id = assemblyIds[index];
     const assem = environment.byId[id];
-    let model = env.modelInfo.extended[id];
+    let model = env.modelInfo.joined[id] || env.modelInfo.extended[id];
     if (model && assem.part && assem.included) {
       model = CSG.fromPolygons(model.polygons, true);
       removeJointMaterial(map, assem, env, model, intersections);

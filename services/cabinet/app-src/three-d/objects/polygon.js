@@ -58,9 +58,9 @@ class Polygon3D {
         for (let j = 0; j < vertices.length; j++) {
           if (i != j) {
             const line = new Line3D(vertices[i].clone(), vertices[j].clone()).positiveVectorLine();
-            const detStr = line.toDetailString();
-            if (!line.isPoint() && lineMap[detStr] === undefined) {
-              lineMap[detStr] = line;
+            const str = line.toString();
+            if (!line.isPoint() && lineMap[str] === undefined) {
+              lineMap[str] = line;
             }
           }
         }
@@ -345,6 +345,8 @@ class Polygon3D {
         }
       }
       if (instance.irregular.is()) {
+        instance.irregular.crissCross.locations();
+        instance.irregular.is();
         console.warn('Polygons should be regular: it should be determined if this function is causing the irregularity');
         /* The following functions will fix irregularities */
         // instance.irregular.parrelle.fill();
@@ -861,7 +863,7 @@ class Polygon3D {
           } else info.outside.push(otherVerts[index]);
       }
       for (let index = 0; !isWithin() && index < verts.length; index++) {
-          if (other.isWithin2d(verts[index]), true) {
+          if (other.isWithin2d(verts[index], true)) {
             info.isWithin = true;
           }
       }
@@ -933,29 +935,19 @@ class Polygon3D {
       const colorString = (typeof color) === 'string' ? color : 'blue';
       let str = '';
       for (let index = 0; index < lines.length; index++) {
-        str += `,${lines[index].startVertex.toString()}`;
+        str += `,${lines[index].startVertex.toString(.001)}`;
       }
       if (includeNormal !== true) return `${colorString}[${str.substring(1)}]`;
       const start = this.center();
       const end = new Vertex3D(this.normal().scale(10).add(start));
-      const normalStr = `[${start},${end})`;
+      const normalStr = `[${start.toString(.001)},${end.toString(.001)})`;
 
-      const vertexStr = this.vertices().map((v,i) => `\t${vertexColor(i)}${v.toString()}`).join('\n');
+      const vertexStr = this.vertices().map((v,i) => `\t${vertexColor(i)}${v.toString(.001)}`).join('\n');
 
       return `${colorString}[${str.substring(1)}]\n${colorString}${normalStr}\n${vertexStr}`;
 
     }
 
-
-    this.toDetailString = () => {
-      let startStr = '';
-      let endStr = '';
-      for (let index = 0; index < lines.length; index++) {
-        startStr += ` => ${lines[index].startVertex.toAccurateString()}`;
-        endStr += ` => ${lines[Math.mod(index - 1, lines.length)].endVertex.toAccurateString()}`;
-      }
-      return `Start Vertices: ${startStr.substring(4)}\nEnd   Vertices: ${endStr.substring(4)}`;
-    }
     this.addVertices(initialVertices);
   }
 }
@@ -1131,6 +1123,16 @@ Polygon3D.from2D = (polygon2d) => {
   return new Polygon3D(initialVertices);
 }
 
+
+Polygon3D.radialSort2D = (polys, viewFrom, counter, center, degreesOstartpoint) => {
+  center ||= Vertex3D.center(polys.map(p => p.center()));
+  degreesOstartpoint ||= 0;
+  centers = [];
+  polys.forEach(p => centers.push(p.center()) & (centers[centers.length - 1].poly = p));
+  Vertex3D.radialSort2D(centers, viewFrom, counter, center, degreesOstartpoint);
+  return polys.copy(centers.map(c => c.poly));
+}
+
 const randValue = () => Math.random() > .5 ? Math.random() * 200000 - 100000 : 0;
 for (let index = 0; index < 10000; index++) {
   const vector = new Vector3D(randValue(), randValue(), randValue());
@@ -1189,7 +1191,9 @@ function normalsGivenAPolygon(polygon) {
 
 // This only really makes since for a four sided polygon that has atleast one set of parrelle sides.
 Polygon3D.normals = (polygonOs) => {
-  if (Array.isArray(polygonOs)) return normalsGivinPolygons(polygonOs);
+  if (Array.isArray(polygonOs))
+    if (polygonOs.length > 1) return normalsGivinPolygons(polygonOs);
+    else polygonOs = polygonOs[0];
   return normalsGivenAPolygon(polygonOs);
 }
 
@@ -1199,16 +1203,23 @@ const addVector = (normals, axis, attr, centerLine) => {
   if (scalar != 0) {
     const axesVector = normals[attr].scale(scalar);
     const axes = Line3D.fromVector(axesVector);
+    axes.centerOn(centerLine.midpoint());
     axis[attr].push(axes);
     return true;
   }
   return false;
 }
 
+const centerXYZon = (xyz, center) => (attr) =>
+  xyz[attr].centerOn(center) || centerXYZon(xyz, center);
+
 Polygon3D.axis = (polygons, normals) => {
+  normals ||= Polygon3D.normals(polygons);
   const axis = {x: [], y: [], z: []};
+  const verts = []
   for (let i = 0; i < polygons.length; i++) {
     let poly = polygons[i];
+    verts.concatInPlace(poly.vertices());
     const lines = poly.web();
     for (let j = 0; j < lines.length; j++) {
       const line = lines[j];
@@ -1218,12 +1229,18 @@ Polygon3D.axis = (polygons, normals) => {
     }
   }
   axis.x.sortByAttr('length');axis.y.sortByAttr('length');axis.z.sortByAttr('length');
-  const org = Vertex3D.origin;
-  const min = {x: axis.x[0] || org, y: axis.y[0] || org, z: axis.z[0] || org}
-  const max = {x: axis.x[axis.x.length - 1], y: axis.y[axis.y.length - 1], z: axis.z[axis.z.length - 1]}
-  axis.x = Line3D.averageLine(axis.x, org);
-  axis.y = Line3D.averageLine(axis.y, org);
-  axis.z = Line3D.averageLine(axis.z, org);
+  const org = () => new Line3D(new Vertex3D(), new Vertex3D());
+  const min = {x: axis.x[0] || org(), y: axis.y[0] || org(), z: axis.z[0] || org()}
+  const max = {x: axis.x[axis.x.length - 1] || org(),
+                y: axis.y[axis.y.length - 1] || org(),
+                z: axis.z[axis.z.length - 1] || org()}
+  axis.x = Line3D.averageLine(axis.x, org());
+  axis.y = Line3D.averageLine(axis.y, org());
+  axis.z = Line3D.averageLine(axis.z, org());
+  const center = Math.midrange(verts, ['x', 'y', 'z']);
+  centerXYZon(axis, center)('x')('y')('z');
+  centerXYZon(min, center)('x')('y')('z');
+  centerXYZon(max, center)('x')('y')('z');
   axis.min = min;
   axis.max = max;
   return axis;

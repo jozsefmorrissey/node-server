@@ -146,34 +146,6 @@ class Position {
       return array ? [normObj.x, normObj.y, normObj.z] : normObj;
     }
 
-    // this.normalizingRotations = () => {
-    //   let normals;
-    //   if (assembly.normals.DETERMINE_FROM_MODEL) {
-    //     throw new Error('Needs to be in ww');
-    //     const model = assembly.toModel();
-    //     const normObj = Polygon3D.normals(Polygon3D.fromCSG(model));
-    //     normals = [normObj.x, normObj.y, normObj.z];
-    //   } else {
-    //     normals = assembly.normals(true);
-    //   }
-    //   if (normals) {
-    //     // TODO: reverse rotate does not work fix.
-    //     //revRotation = Line3D.coDirectionalRotations(normals, null, true);
-    //     return Line3D.coDirectionalRotations(normals);
-    //   }else {
-    //     // rotation = this.rotation();
-    //     // model.reverseRotate(rotation);
-    //     return Line3D.coDirectionalRotations(this.normals(true));
-    //   }
-    // }
-
-    this.normalModel = (left) => {
-      throw new Error('Needs to be in ww');
-      const model = assembly.toModel();
-      const rotz = this.normalizingRotations();
-      return model.normalize(rotz, left).poly;
-    }
-
     this.set = (obj, type, value, getter) => {
       if ((typeof type) !== 'string') {
         this.set(obj, 'x', type.x, getter);

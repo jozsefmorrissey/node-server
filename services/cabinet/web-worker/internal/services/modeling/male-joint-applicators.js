@@ -109,6 +109,10 @@ apply.Butt = (assem, joint, femalePolyInfo, frontBackSet, env) => {
     return;
   }
 
+  if (joint.descriptor === 'Butt:mfp->mf') {
+    console.log('here')
+  }
+
 
   const allSides = femalePolyObj.sides.concat(femalePolyObj.z);
   const center = new Vertex3D(env.modelInfo.model[assem.id].center());
@@ -120,8 +124,8 @@ apply.Butt = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   const mateWith = possibleTargets[0].p;
 
   extendFBSetToPoly(mateWith, frontBackSet);
-  cookieCutter = () => BiPolygon.fromPolygon(mateWith, 0, -big, {x: big, y: big}).model()
-  cookie = [cookieCutter];
+  // jointCutter = () => BiPolygon.fromPolygon(mateWith, 0, -big, {x: big, y: big}).model()
+  cookie = [];
   jointCutters = [];
 
   // console.log('//target\n' + mateWith.toDrawString('green', true) +

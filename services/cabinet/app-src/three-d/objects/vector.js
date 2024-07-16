@@ -30,9 +30,6 @@ class Vector3D {
         i = i.i;
       }
     }
-    i = isZero(i) ? 0 : i;
-    j = isZero(j) ? 0 : j;
-    k = isZero(k) ? 0 : k;
     this.i = () => i;
     this.j = () => j;
     this.k = () => k;
@@ -52,7 +49,7 @@ class Vector3D {
     }
     this.sameDirection = (otherVect) => {
       // console.warn('Changed this function with out looking into the consequences');
-      return this.dot(otherVect) >= 0;
+      return this.dot(otherVect) >= tol;
       // return approximate.sameSign(otherVect.i(), this.i()) &&
       //         approximate.sameSign(otherVect.j(), this.j()) &&
       //         approximate.sameSign(otherVect.k(), this.k());
@@ -81,7 +78,7 @@ class Vector3D {
       return `${color}[(0,0,0),(${i},${j},${k}))`;
     }
 
-    const scalarStr = (val) => val >= 0 ? '+' : '-';
+    const scalarStr = (val) => val >= tol ? '+' : '-';
     this.sectorScalar = () => {
       const scaleStr = `${scalarStr(i)}${scalarStr(j)}${scalarStr(k)}`;
       switch (scaleStr) {
@@ -96,11 +93,19 @@ class Vector3D {
       }
     }
 
+    this.clone = () => new Vector3D(i,j,k);
+
     this.getPerpendicular = () => new Vector3D(
       Math.copysign(k, i),
       Math.copysign(k,j),
       -Math.copysign(i,k) - Math.copysign(j,k)
     );
+
+    this.rotate = (rotations, center) => {
+      const point = {x: i, y: j, z: k};
+      CSG.rotatePointAroundCenter(rotations, point);
+      i = point.x; j = point.y; k = point.z;
+    }
 
     this.crossProduct = (other) => {
       const i = this.j() * other.k() - this.k() * other.j();
@@ -140,7 +145,7 @@ class Vector3D {
     }
 
     this.positive = () =>
-      i > 0 || (isZero(i) && j > 0) || (isZeros(i,j) && k > 0) ||
+      i > tol || (isZero(i) && j > tol) || (isZeros(i,j) && k > tol) ||
       isZeros(i, j, k);
 
     this.positiveUnit = () => {

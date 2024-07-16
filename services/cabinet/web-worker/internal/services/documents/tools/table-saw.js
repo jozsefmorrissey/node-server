@@ -34,7 +34,7 @@ class TableSawDocumentation {
     let makeCut = false;
 
     function cutInfoDirectionalCutLine(yAxis, rightOleft) {
-      const edges = instance.partInfo.fenceEdges(rightOleft, true);
+      const edges = instance.partInfo.fenceEdges(rightOleft);
       const cut = yAxis.to2D('x', 'y');
       let foundStart = false; let foundEnd = false; let intersections = [];
       for (let index = 0; index < edges.length; index++) {
@@ -66,20 +66,11 @@ class TableSawDocumentation {
     }
 
     function defaultDirectionalCutLine(yAxis, rightOleft, edges) {
-      const setNormalized = cut.set().map(p => cut.normalize(rightOleft, p));
-      const blockingPolys = setNormalized.filter(p => !within(0, yAxis.vector().unit().dot(p.normal())));
-      if (blockingPolys.length > 1)
+      if (!yAxis.isSegment())
         throw new Error('This Should Not Happen');
-      if (blockingPolys[0] === undefined) return null;
-      const intersectingLine = Line3D.fromVector(blockingPolys[0].normal(), yAxis.midpoint());
-      const intersection = blockingPolys[0].toPlane().intersection.line(intersectingLine);
-      const line3D = new Line3D(intersection, yAxis.midpoint());
-      let line2d = instance.partInfo.to2D(null, line3D);
-      let intersections = edges.map(e => line2d.findDirectionalIntersection(e))
-                               .filter(v => v instanceof Vertex2d);
-      intersections.sort(Vertex2d.sortByCenter(yAxis.midpoint()));
-      line2d.endVertex(intersections[intersections.length - 1]);
-      return line2d.negitive();
+      if (yAxis.isLine()) return null;
+      const dirLine3D = yAxis.isDirectional.co() ? yAxis : yAxis.negitive();
+      return instance.partInfo.to2D(null,  dirLine3D);
     }
 
     function directionalCutLine(yAxis, rightOleft, edges) {
@@ -92,6 +83,9 @@ class TableSawDocumentation {
       if (parrelleSets.length === 0) throw HAND_SAW_ERROR;
       const parrelleEdges = parrelleSets.filter(s => s[0].isParrelle(y2d))[0];
       if (yCutL === null) {
+        if (parrelleEdges === undefined)
+          throw new Error('wtf');
+        if (parrelleEdges[1] === undefined) return parrelleEdges[0];
         return parrelleEdges[0].distance(y2d) < parrelleEdges[1].distance(y2d) ?
               parrelleEdges[0] : parrelleEdges[1];
       }
@@ -115,10 +109,9 @@ class TableSawDocumentation {
     function outsideOfBlade(rightOleft, y2d) {
       let outsideOfBlade = instance.width === 0;
       if (outsideOfBlade) {
-        const model = cut.intersectModel();
         //TODO: make .to2D('x', 'y') default args;
         const normCenter = cut.axis(rightOleft).y.midpoint().to2D('x', 'y');
-        const jointCenter = cut.intersectCenter(rightOleft).to2D('x', 'y');
+        const jointCenter = cut.center(rightOleft).to2D('x', 'y');
         outsideOfBlade = instance.fenceEdge.distance(jointCenter, false) <
                             instance.fenceEdge.distance(normCenter, false);
       }
@@ -238,8 +231,6 @@ class TableSawDocumentation {
       if (angle > 45) determinePositionGreaterThan45(angle);
       else if (angle !== 0) determinePositionNon0To45(angle);
       else determinePosition0deg();
-      if (makeCut)
-      instance.partInfo.cutMade(cut);
     }
     build();
   }

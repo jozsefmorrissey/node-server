@@ -4,9 +4,16 @@
     <meta charset="utf-8">
     <script type="text/javascript" src='/canvas-buddy/js/index.js'></script>
     <link rel="stylesheet" href="/styles/expandable-list.css">
+    <link rel="stylesheet" href="/styles/icons.css">
     <link rel="stylesheet" href="/canvas-buddy/styles/index.css">
     <style>
       .inline-flex{ display: inline-flex}
+      .player-controls td {
+        padding: 0 10pt;
+      }
+      .fill-available {
+        width: -webkit-fill-available;
+      }
       canvas {background-color: whitesmoke;}
     </style>
     <title>canvas-buddy</title>
@@ -22,6 +29,21 @@
             <input type='radio' name='parcer' value='3D' checked>
             <input type='number' name='scale' placeholder="Scale">
           </div>
+          <div class="inline-flex center fill-available">
+            <table class='player-controls center'>
+              <tbody>
+                <tr>
+                  <td><i class="gg-play previous"></i></td>
+                  <td><i class="gg-play rewind"></i></td>
+                  <td><i class="gg-play button o"></i></td>
+                  <td hidden><i class="gg-play pause o"></i></td>
+                  <td><i class="gg-play fast-forward"></i></td>
+                  <td><i class="gg-play next"></i></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <br>
           <textarea rows='40' cols='50' wrap='off'></textarea>
         </div>
         <div>
@@ -38,9 +60,9 @@
           <br>
           <label>Line Display:</label>
           <div class='tab' id='display-radios-2d'>
-            <lable>Line Only</lable>
+            <label>Line Only</label>
             <input type='radio' name='line-disp-type-2d' value='LINE_ONLY' checked>
-            <lable>Vector</lable>
+            <label>Vector</label>
             <input type='radio' name='line-disp-type-2d' value='VECTOR'>
           </div>
 
@@ -50,16 +72,30 @@
         <div id='three-d-display'>
           <div class='orientation-controls'></div>
           <div>
-            <lable>Line Display:</lable>
-            <div class='tab' id='display-radios-3d'>
-              <lable>Vector</lable>
-              <input type='radio' name='line-disp-type' value='VECTOR' checked>
-              <lable>Points</lable>
-              <input type='radio' name='line-disp-type' value='POINTS'>
-              <lable>Line Only</lable>
-              <input type='radio' name='line-disp-type' value='LINE_ONLY'>
+            <label>Line Display:</label>
+            <div class='tab'>
+              <div  id='axis-controls-3d'>
+                <label>Axis</label>
+                <input type='checkbox' checked name='include'>
+                <span class='rad-len-cnt'>
+                  <label>Length</label>
+                  <input type='number' value='100' name='length'>
+                  <label>Radius</label>
+                  <input type='number' value='1' name='radius'>
+                </span>
+              </div>
+              <div id='display-radios-3d'>
+                <label>Vector</label>
+                <input type='radio' name='line-disp-type' value='VECTOR' checked>
+                <label>Points</label>
+                <input type='radio' name='line-disp-type' value='POINTS'>
+                <label>Line Only</label>
+                <input type='radio' name='line-disp-type' value='LINE_ONLY'>
+              </div>
             </div>
           </div>
+        </div>
+        <div id='snap-shot-comment-cnt'>
         </div>
       </div>
     </div>

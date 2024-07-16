@@ -1229,13 +1229,13 @@ du.on.match('click', '.paste-template', (elem) => {
   });
 });
 
-du.on.match('keydown', '.template-input', function (elem) {
+du.on.match('keydown,change', '.template-input', function (elem) {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
   template = AssemblyTemplate.get(templateId);
   updateTemplate(elem, template);
 });
 
-du.on.match('change', 'input,select',  (elem) => validateOpenTemplate.lastCall(elem));
+du.on.match('enter', '*',  (elem) => validateOpenTemplate.lastCall(elem));
 du.on.match('keydown', ".normal-vector-input-cnt[index]", setVectorValues);
 du.on.match('change', '.subassem-normal-cnt>[type="radio"]', setVectorValues);
 

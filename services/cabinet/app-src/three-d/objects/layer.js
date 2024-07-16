@@ -13,6 +13,11 @@ class Layer {
   constructor(polygonOs) {
     let list = polygonOs instanceof Polygon3D ? [polygonOs] : polygonOs;
     this.polygons = () => list.map(p => p.copy());
+    this.vertices = () => {
+      const verts = [];
+      list.forEach(p => verts.concatInPlace(p.vertices()));
+      return verts;
+    }
     list = this.polygons();
     const primary = list[0];
 
@@ -128,12 +133,6 @@ class Layer {
       return str;
     }
 
-    this.toDetailString = () => {
-      let str = '';
-      list.forEach(p => str += `${p.toDetailString()}\n`);
-      return str;
-    }
-
     const testIntercept = (a, b, attr, within) =>
         (Number.isNaN(a[attr]) && Number.isNaN(b[attr])) || within(a[attr], b[attr]);
     this.sameLayer = (other) => {
@@ -144,7 +143,7 @@ class Layer {
               testIntercept(thisIntercepts, otherIntercepts, 'z', within);
     }
 
-    this.hash = () => this.toDetailString().hash();
+    this.hash = () => this.toDrawString().hash();
 
     this.merge = (other) => {
       const normalsEquivalent = this.normal().positiveUnit().equals(other.normal().positiveUnit());

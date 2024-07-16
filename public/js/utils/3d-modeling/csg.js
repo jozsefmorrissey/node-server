@@ -482,6 +482,7 @@ CSG.cube = function(options) {
 };
 
 CSG.Point = function (center, radius, color) {
+  radius ||= .5
   const sphere = new CSG.sphere({radius, center});
   sphere.setColor(color);
   return sphere;
@@ -492,11 +493,12 @@ function vecotrOvertexModel(start, end, model, options) {
   let color = end.color || options.color;
   if (CSG.Line.DISPLAY_TYPES.VECTOR === options.lineDisplayType &&
           end instanceof CSG.Vector) {
-    const unit = end.minus(new CSG.Vector(start)).unit().times(6);
+    const maxLen = end.distance(new CSG.Vector(start)) / 2;
+    const unit = end.minus(new CSG.Vector(start)).unit().times(maxLen > 6 ? 6 : maxLen);
     start = end.minus(unit);
-    return new CSG.cone({start, end, model, color, radius: 5});
+    return new CSG.cone({start, end, model, color});
   } else {
-    return new CSG.Point(end, 1, color).union(model);
+    return new CSG.Point(end, null, color).union(model);
   }
 }
 
@@ -505,7 +507,7 @@ CSG.Line = function (options) {
   const start = options.start || [0,0,0];
   const end = options.end || [0,0,0];
   if (new CSG.Vector(start).equals(new CSG.Vector(end))) {
-    return new CSG.Point(options.start, null, options.color);
+    return new CSG.Point(options.start, .3, options.color);
   }
   const radius = options.radius || .2;
   let model = new CSG.cylinder({start, end, radius});
@@ -693,7 +695,7 @@ CSG.cone = function (options) {
   const end = new CSG.Vector(options.end || start.add([0,length,0]));
   length = end.minus(start).length();
   const point = new CSG.sphere({radius: 1, center: end});
-  const radius = options.radius || 5;
+  const radius = options.radius || 1;
   const slices = options.slices || 16;
   let cylinder = new CSG.cylinder({start, end, radius, slices});
   let cone = cylinder.clone();
@@ -709,7 +711,8 @@ CSG.cone = function (options) {
   plane.setColor(options.color);
   plane.translate(perpVector);
   plane.translate(cutterCenter.negated());
-  plane.ArbitraryRotate(5, widthVector.unit());
+  const degrees = Math.toDegrees(Math.atan(radius/(2*length)));
+  plane.ArbitraryRotate(degrees, widthVector.unit());
   plane.translate(cutterCenter);
 
   for (let index = 0; index < slices; index++) {
@@ -751,12 +754,12 @@ function axis(vector, origin, color, size, radius) {
   return ax;
 }
 
-CSG.Axis =  function (size, origin, vectors, radius) {
+CSG.Axis =  function (size, radius, origin, vectors) {
   size ||= 100;
   origin ||= [0,0,0];
   vectors ||= [[1,0,0], [0,1,0], [0,0,1]];
   radius ||= size/100;
-  const center = CSG.sphere({center: origin, radius: size/500})
+  const center = CSG.sphere({center: origin, radius: radius*1.5})
   const xAxis = axis(vectors[0], origin, [255,0,0], size, radius);
   const yAxis = axis(vectors[1], origin, [0,128,0], size, radius);
   const zAxis = axis(vectors[2], origin, [0,0,255], size, radius);
@@ -1116,7 +1119,7 @@ CSG.Polygon.Enclosed = function (verts, width, color) {
   }
 
   let model = new CSG.fromPolygons(polys);
-  verts.forEach(v => v.color && (model = model.union(new CSG.Point(v, 1, v.color))));
+  verts.forEach(v => v.color && (model = model.union(new CSG.Point(v, null, v.color))));
   model.setColor(color);
   return model;//model.union(vect);
 }

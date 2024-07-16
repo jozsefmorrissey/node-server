@@ -416,11 +416,18 @@ class Plane extends Array {
       return true;
     }
 
-    this.toDrawString = (color, radius, points) => {
+    this.toDrawString = (color, includeNormal, radius, points) => {
       color ||= '';
       const verts = Array.from(this.findPoints(points || 10, radius));
       const arr = verts.map(v => `${color}${v.toString()}`);
-      return `${color}[${arr.join(',')}]`;
+      if (!includeNormal) return `${color}[${arr.join(',')}]`;
+
+      const start = Vertex3D.center(verts);
+      const end = new Vertex3D(this.normal().scale(10).add(start));
+      const normalStr = `[${start},${end})`;
+
+      return `${color}${normalStr}\n${color}[${arr.join(',')}]`;
+
     }
   }
 }

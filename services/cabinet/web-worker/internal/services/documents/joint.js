@@ -15,7 +15,8 @@ class JointInfo {
       if (!(model instanceof CSG)) {
         let maleModel = new CSG();
         const env = partInfo.environment();
-        const maleIds = env.jointMap[joint.id].male || [];
+        const jointRel = env.jointMap[joint.id];
+        const maleIds = (jointRel && jointRel.male) || [];
         const maleModels = maleIds.map(id => ensureCsg(env.modelInfo.joined[id]));
         maleModels.forEach(mm => maleModel = maleModel.union(mm));
         model = partInfo.noJointModel().clone().intersect(maleModel);
@@ -46,15 +47,16 @@ class JointInfo {
 
     this.demensions = () => this.model().demensions();
 
-    this.cutInfo = (layersCovered) => {
+    this.cutInfo = () => {
       if (this.cuts && this.cuts.length > 0) return this.cuts;
       const info = [];
       const noJointModel = this.partInfo().noJointModel();
       const env = partInfo.environment();
-      const males = env.jointMap[joint.id].male;
+      const jointRel = env.jointMap[joint.id];
+      const males = (jointRel && jointRel.male) || [];
       males.forEach(maleId => {
         try {
-          const cut =  CutInfo.get(maleId, this, env, layersCovered);
+          const cut =  CutInfo.get(maleId, this, env);
           if (cut) info.push(cut);
         } catch (e) {
           console.error(e);

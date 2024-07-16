@@ -53,8 +53,8 @@ function addNormalLines(obj) {
                           assem.position().center();
   const origin = [center.x, center.y, center.z];
   const dems = assem.position().demension();
-  const size = Math.max(dems.x, dems.y, dems.z) * .6;
-  const axis = new CSG.Axis(size, origin, vectors, .25);
+  const size = Math.max(dems.x, dems.y, dems.z);
+  const axis = new CSG.Axis(size, .25, origin, vectors);
   partAxis = [axis];
 }
 const removeNormalLines = () => partAxis = [];

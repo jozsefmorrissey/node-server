@@ -222,6 +222,7 @@ class Line2d {
 
     // Always returns left side of intersection path
     this.thetaBetween = (other) => {
+      // return Math.mod(Math.abs(this.radians() + 2*Math.PI - other.radians()) + 2*Math.PI, 2*Math.PI);
       if (!(other instanceof Line2d)) throw new Error('Cannot calculate thetaBetween if arg1 is not an instanceof Line2d');
       let theta;
       let theta1 = this.radians();
@@ -245,6 +246,10 @@ class Line2d {
     this.acute = (other) => {
       const rads = Math.mod(Math.abs(this.radians() + 2*Math.PI - other.radians()) + 2*Math.PI, 2*Math.PI);
       return rads < Math.PI ? rads : 2*Math.PI - rads;
+    }
+
+    this.obtuse = (other) => {
+      return 2*Math.PI - this.acute(other);
     }
 
     this.clockwise = (center) => {
@@ -547,11 +552,11 @@ class Line2d {
       const otherRads = other.radians();
       let diff = Math.difference(rads, otherRads);
       diff = Math.mod(diff + Math.PI, Math.PI * 2) - Math.PI;
-      if (diff > Math.PI / 2 ) {
+      if (diff > Math.PI ) {
         return Math.PI * 2 - diff;
       }
-      if (diff < Math.PI/-2 ) {
-        return Math.PI * 2 + diff;
+      if (diff < -Math.PI ) {
+        return Math.PI * -2 + diff;
       }
       return diff;
     }
@@ -769,36 +774,6 @@ const distanceObj = (line, trendLine) => ({
   deltaRad: trendLine.radianDifference(line.radians())
 });
 
-Line2d.radialSorter = (center) => {
-  return (line1, line2) => {
-    line1.invert(!line1.clockwise(center));
-    line2.invert(!line2.clockwise(center));
-    const mp1 = line1.midpoint();
-    const mp2 = line2.midpoint();
-    const mp1isCenter = mp1.equals(center);
-    const mp2isCenter = mp2.equals(center);
-    if (mp1isCenter && !mp2isCenter) {
-      const direction = line1.isLeft(mp2) ? 1 : -1;
-      return direction * mp1.distance(mp2);
-    }
-    if (mp2isCenter && !mp1isCenter) {
-      const direction = line2.isLeft(mp1) ? -1 : 1;
-      return direction * mp2.distance(mp1);
-    }
-    const radial1 = new Line2d(center, mp1);
-    const radial2 = new Line2d(center, mp2);
-    const radianDiff = radial2.radians() - radial1.radians();
-    if (!Math.modTolerance(radianDiff, 0, 2*Math.PI, .00001)) return radianDiff;
-    const radians = radial1.radians();
-    return mp2.distance(center) - mp1.distance(center)
-  }
-}
-
-Line2d.radialSort = (lines, center) => {
-  center ||= Vertex2d.center(Line2d.vertices(lines));
-  lines.sort(Line2d.radialSorter(center));
-}
-
 Line2d.vertices = (lines) => {
   const verts = {};
   for (let index = 0; index < lines.length; index += 1) {
@@ -1006,6 +981,16 @@ Line2d.fromString = (str) => {
   return lines;
 }
 
+Line2d.fromJson = (json) => {
+  const svJson = json[0] || json.startVertex;
+  const sv = new Vertex2d(svJson.point || svJson);
+  const evJson = json[1] || json.endVertex;
+  const ev = new Vertex2d(evJson.point || evJson);
+  const line = new Line2d(sv, ev);
+  line.label = json.label;
+  return line;
+}
+
 Line2d.mirror = (lines) => {
   return Vertex2d.mirror(Line2d.vertices(lines));
 }
@@ -1054,19 +1039,30 @@ Line2d.centerOn = (lines, center) => {
   return offset;
 }
 
-Line2d.sorter = (center, degreesOstartpoint) => (l1, l2) => {
+Line2d.radialSorter = (center, ccw, degreesOstartpoint) => {
   let degrees = degreesOstartpoint;
   if (degrees instanceof Vertex2d) degrees = new Line2d(center.clone(), degreesOstartpoint).degrees();
-  polarize(l1, center);
-  polarize(l2, center);
-  let line1 = new Line2d(center.clone(), l1.midpoint());
-  let line2 = new Line2d(center.clone(), l2.midpoint());
-  if (degrees) {
-    const rads = -Math.toRadians(degrees);
-    line1.rotate(rads, center);
-    line2.rotate(rads, center);
+  if (!Number.isFinite(degrees)) degrees = 0;
+  const rads = -Math.toRadians(degrees);
+  return (l1, l2) => {
+    const isL1 = l1 instanceof Line2d;
+    const isL2 = l2 instanceof Line2d;
+    if (isL1) polarize(l1, center);
+    if (isL2) polarize(l2, center);
+    let line1 = new Line2d(center.clone(), isL1 ? l1.midpoint() : l1);
+    let line2 = new Line2d(center.clone(), isL2 ? l2.midpoint() : l2);
+    if (degrees) {
+      line1.rotate(rads, center);
+      line2.rotate(rads, center);
+    }
+    return !ccw ? line1.degrees() - line2.degrees() : line2.degrees() - line1.degrees();
   }
-  return line2.degrees() - line1.degrees();
+}
+
+Line2d.radialSort = (linesOverts, ccw, center, degreesOstartpoint) => {
+  center ||= Line2d.center(linesOverts);
+  const sorter = Line2d.radialSorter(center, ccw, degreesOstartpoint);
+  linesOverts.sort(sorter);
 }
 
 Line2d.between = (lineOvert1, lineOvert2) => {

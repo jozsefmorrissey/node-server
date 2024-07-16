@@ -13,7 +13,7 @@ class HandSawDocumentation {
     this.type = HandSawDocumentation.type;
 
     const rightOleft = cut.primarySide() === 'Left' ? false : true;
-    const edges = cut.jointInfo().partInfo().edges(rightOleft, true);
+    const edges = cut.jointInfo().partInfo().edges(rightOleft);
     const center = cut.jointInfo().partInfo().edges(rightOleft).center;
     const axis = cut.axis(rightOleft);
     const y2d = axis.y.to2D('x', 'y');

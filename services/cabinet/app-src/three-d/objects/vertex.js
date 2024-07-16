@@ -2,8 +2,7 @@
 const Matrix = require('./matrix');
 const Vector3D = require('./vector');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex');
-const approximate = require('../../../../../public/js/utils/approximate.js');
-const approx10 = approximate.new(10);
+const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
 const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
@@ -119,11 +118,11 @@ class Vertex3D {
       if (otherOx instanceof Object) return this.equals(otherOx.x, otherOx.y, otherOx.z, toleranceOy);
       return tol.within(this, new Vertex3D(otherOx, toleranceOy, z));
     }
+    const round = (acc) => (val) => Math.roundTo(val, acc);
     this.toString = (accuracy) => {
-      const approx = accuracy ? approximate.new(1/accuracy) : approx10;
-      return `(${approx(this.x)},${approx(this.y)},${approx(this.z)})`;
+      const rnd = round(accuracy || .0000000000001);
+      return `(${rnd(this.x)},${rnd(this.y)},${rnd(this.z)})`;
     }
-    this.toAccurateString = () => `(${approximate(this.x)},${approximate(this.y)},${approximate(this.z)})`;
   }
 }
 
@@ -195,11 +194,25 @@ Vertex3D.midrange = (...vertices) => {
 }
 
 Vertex3D.to2D = (vertices, x, y) => {
+  x ||= 'x';
+  y ||= 'y';
   const verts2D = [];
   for (let index = 0; index < vertices.length; index++) {
     verts2D.push(new Vertex2d(vertices[index][x], vertices[index][y]));
   }
   return verts2D;
+}
+
+Vertex3D.radialSort2D = (verts, viewFrom, ccw, center, degreesOstartpoint) => {
+  const verts2D = [];
+  if (!(viewFrom instanceof Vector3D)) throw new Error('viewFrom must be defined as a vector');
+  if (degreesOstartpoint instanceof Vertex3D)
+    degreesOstartpoint = degreesOstartpoint.viewFromVector(viewFrom).to2D('x', 'y');
+  center ||= Vertex3D.center(verts);
+  center = center.viewFromVector(viewFrom).to2D();
+  verts.forEach(v => verts2D.push(v.viewFromVector(viewFrom).to2D('x', 'y')) & (verts2D[verts2D.length - 1].V3D = v));
+  Line2d.radialSort(verts2D, ccw, center, degreesOstartpoint);
+  return verts.copy(verts2D.map(v => v.V3D));
 }
 
 Vertex3D.viewFromVector = (vertices, vector, filter) => {

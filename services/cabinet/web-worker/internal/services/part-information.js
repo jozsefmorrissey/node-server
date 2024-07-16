@@ -24,7 +24,7 @@ function buildPartInfo(payload, env, taskId) {
       fenceEdges.right = partInfo.fenceEdges(true);
       fenceEdges.left = partInfo.fenceEdges(false);
       demensions = partInfo.demensions();
-      // toolingInfo = partInfo.toolingInformation();
+      toolingInfo = partInfo.toolingInformation();
     } catch (e) {
       console.error(e);
       partInfo.model(false)

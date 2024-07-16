@@ -62,7 +62,7 @@ class Assembly extends KeyValue {
     }
 
     const subAssems = this.subassemblies;
-    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'name',  'normals');
+    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'name',  'normals', 'notes');
     Object.defineProperty(this, "subassemblies", {
       writable: false,
       enumerable: false,
@@ -390,6 +390,16 @@ class Assembly extends KeyValue {
       return jMap;
     }
 
+    this.dependencyMap.readable = () => {
+      const dm = this.dependencyMap();
+      const obj = {female: {}, male: {}};
+      const get = Cutter.get;
+      Object.keys(dm.female).forEach(k => obj.female[get(k).locationCode()] = dm.female[k].map(k => get(k).descriptor()));
+      Object.keys(dm.male).forEach(k => obj.male[get(k).locationCode()] = dm.male[k].map(k => get(k).descriptor()));
+      Object.keys(dm).filter(k => !k.match(/^(male|female)$/)).forEach(k => obj[get(k).descriptor()] = {male: dm[k].male.map(id => get(id).locationCode()), female: dm[k].female.map(id => get(id).locationCode())})
+      return obj;
+    }
+
 
     let jointList;
     this.getJointList = () => {
@@ -573,6 +583,7 @@ Assembly.fromJson = (assemblyJson) => {
   const assembly = new (clazz)(partCode, partName, assemblyJson.config);
   assembly.id(assemblyJson.id);
   assembly.normals(null, assemblyJson.normals);
+  assembly.notes(assemblyJson.notes);
   assembly.value.all(assemblyJson.value.values);
   if (assemblyJson.parent) assembly.parentAssembly(assemblyJson.parent);
   else {

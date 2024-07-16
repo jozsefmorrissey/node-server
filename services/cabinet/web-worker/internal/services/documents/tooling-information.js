@@ -21,9 +21,8 @@ tools[UnknownTool.type] = UnknownTool;
 
 const bestTool = (cut) => {
   try {
-    if (cut.documented() === false)
-    cut.jointInfo().partInfo().cutMade(cut);
-    else return  new (tools[cut.toolType] || tools['unknown'])(cut);
+    if (cut.documented() !== false)
+      return  new (tools[cut.toolType] || tools['unknown'])(cut);
   } catch (e) {
       if (tools[e.message]) {
         cut.toolType = e.message;

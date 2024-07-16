@@ -128,7 +128,6 @@ const AssembliesTo2D = (modelInfo, joined, unioned) => {
 module.exports = {
   Intersection: (modelInfo, envDefined) => new Sequential(envDefined ? null : modelInfo.environment,
                                         new CsgModelTask(modelInfo),
-                                        new CsgJoinTask(modelInfo),
                                         new CsgIntersectionTask(modelInfo),
                                         new CsgUnionTask(modelInfo)),
   Join: (modelInfo, envDefined) => new Sequential(envDefined ? null : modelInfo.environment,

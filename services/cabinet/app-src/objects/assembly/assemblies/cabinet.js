@@ -33,7 +33,7 @@ class Cabinet extends Assembly {
     new CabinetResolver(this);
     // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
     Object.getSet(this, 'propertyId','currentPosition', 'autoToeKick',
-                    'dividerJoint', 'notes');
+                    'dividerJoint');
 
     // TODO: this is stupid id needs to be added to toJson however getter/setter should not change...
     const idFunc = this.id;
