@@ -79,6 +79,11 @@ function parse(elem, event) {
 }
 
 du.on.match('change', '[name="parcer"]', (elem, event) => {
+  const slideShow = getActive().slideShow;
+  if (slideShow) {
+    slideShow.pause();
+    updatePlayControls();
+  }
   parcer = elem.value;
   twoDDisplay.hidden = is3D();
   threeDDisplay.hidden = !is3D();
@@ -100,11 +105,13 @@ const updateInfoText = (slideShow) => {
   du.id('snap-shot-comment-cnt').innerHTML = slideText.join('<br/>');
 }
 
-const updatePlayControls = (elem) => {
-  getActive().slideShow.on.show(updateInfoText);
-  const playing = getActive().slideShow.playing();
+const updatePlayControls = () => {
+  const slideShow = getActive().slideShow;
+  slideShow.on.show(updateInfoText);
+  const playing = slideShow.playing();
   du.find.closest('.pause').parentElement.hidden = !playing;
   du.find.closest('.button').parentElement.hidden = playing;
+  if (!slideShow.playing()) du.id('snap-shot-comment-cnt').innerHTML = '';
 }
 
 du.on.match('keyup:refresh', 'textarea,[name="scale"]', parse);
@@ -141,4 +148,5 @@ du.on.match('click', '.player-controls .gg-play.rewind', () => {
 });
 
 console.log(parcer);
-getActive().parse(input.value = text(), 1)
+input.value = text();
+parse();
