@@ -300,8 +300,8 @@ class Snap2d extends Lookup {
     //   const p = pp.object().copy();
     //   const op = otherSnapLoc.parent();
     //   const o = op.object().copy();
-    //   p.translate(pp.center().x(), pp.center().y());
-    //   o.translate(op.center().x(), op.center().y());
+    //   p.translate(pp.center().x, pp.center().y);
+    //   o.translate(op.center().x, op.center().y);
     //   console.log(p.toDrawString(), '\n', o.toDrawString());
     // }
 
@@ -310,8 +310,8 @@ class Snap2d extends Lookup {
       const minAttr = `min${axis.toUpperCase()}`;
       if (closestVertex[axis]() === furthestVertex[axis]()) {
         const perpLine = wall.perpendicular(10, null, true);
-        const externalVertex = !layout.within(perpLine.startVertex()) ?
-                perpLine.endVertex() : perpLine.startVertex();
+        const externalVertex = !layout.within(perpLine[0]) ?
+                perpLine[1] : perpLine[0];
         if (externalVertex[axis]() < closestVertex[axis]()) position[maxAttr] = closestVertex[axis]();
         else position[minAttr] = closestVertex[axis]();
       } else if (closestVertex[axis]() < furthestVertex[axis]()) position[minAttr] = closestVertex[axis]();
@@ -576,7 +576,7 @@ class Snap2d extends Lookup {
       for (let index = 1; index < lines.length + 1; index++) {
         const line1 = lines[index === 0 ? lines.length - 1 : index - 1];
         const line2 = lines[index === lines.length ? 0 : index];
-        const vertex = line1.startVertex();
+        const vertex = line1[0];
         const rads = line1.radians.sub(line2);
         if (instance.withinTol(Math.abs(rads), Math.abs(cornerRads))) {
           const snapLoc = instance.snapLocations.at(vertex);
@@ -596,14 +596,14 @@ class Snap2d extends Lookup {
       const list = [line1, line2];
       const intersection = line1.findIntersection(line2);
 
-      const startDist1 = line1.startVertex().distance(intersection);
-      const endDist1 = line1.endVertex().distance(intersection);
-      const endVert1 = startDist1 > endDist1 ? line1.startVertex() : line1.endVertex();
+      const startDist1 = line1[0].distance(intersection);
+      const endDist1 = line1[1].distance(intersection);
+      const endVert1 = startDist1 > endDist1 ? line1[0] : line1[1];
       line1 = new Line2d(intersection, endVert1.copy());
 
-      const startDist2 = line2.startVertex().distance(intersection);
-      const endDist2 = line2.endVertex().distance(intersection);
-      const endVert2 = startDist2 > endDist2 ? line2.startVertex() : line2.endVertex();
+      const startDist2 = line2[0].distance(intersection);
+      const endDist2 = line2[1].distance(intersection);
+      const endVert2 = startDist2 > endDist2 ? line2[0] : line2[1];
       line2 = new Line2d(intersection, endVert2.copy());
       list.push(line1);list.push(line2);
 

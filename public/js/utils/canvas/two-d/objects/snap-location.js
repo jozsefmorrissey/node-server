@@ -211,14 +211,14 @@ function fromToPoint(snapLoc, xDiffFunc, yDiffFunc) {
       rads += position.theta === undefined ? snapLoc.parent().radians() : position.theta;
       const newPoint = position.center;
       return new Vertex2d({
-        x: newPoint.x() - direction * (hypeLen * Math.cos(rads)),
-        y: newPoint.y() - direction * (hypeLen * Math.sin(rads))
+        x: newPoint.x - direction * (hypeLen * Math.cos(rads)),
+        y: newPoint.y - direction * (hypeLen * Math.sin(rads))
       });
     } else {
       rads += snapLoc.parent().radians();
       vertex.point({
-        x: center.x() + direction * (hypeLen * Math.cos(rads)),
-        y: center.y() + direction * (hypeLen * Math.sin(rads))
+        x: center.x + direction * (hypeLen * Math.cos(rads)),
+        y: center.y + direction * (hypeLen * Math.sin(rads))
       });
       return vertex;
     }

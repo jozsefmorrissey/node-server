@@ -51,7 +51,7 @@ class Assembly3D extends Object3D {
           const searchLine = Line3D.startAndVector(instance.center().copy(), n.scale(dist));
           const veiwFromVect = Line3D.viewFromVector([searchLine], new Vector3D(twoDInfo.normals.top).inverse())[0];
           const searchLine2d = veiwFromVect.to2D(twoDInfo.axis.top[0], twoDInfo.axis.top[1]);
-          searchLine2d.translate(new Line2d(searchLine2d.startVertex().copy(), topCenter.copy()));
+          searchLine2d.translate(new Line2d(searchLine2d[0].copy(), topCenter.copy()));
           return searchLine2d;
         });
         const faceIndecies = normalLines.map((normalLine) => {

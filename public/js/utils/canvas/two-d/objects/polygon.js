@@ -12,7 +12,7 @@ class Polygon2d {
       const fullList = [];
       for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];
-        fullList.push(line.startVertex());
+        fullList.push(line[0]);
       }
       return fullList;
     }
@@ -36,8 +36,8 @@ class Polygon2d {
         const line = lines[index];
         const startVert = index === lines.length - 1 ? verts[0] : verts[index + 1];
         const endVert = verts[index];
-        line.startVertex(startVert);
-        line.endVertex(endVert);
+        line[0] = startVert;
+        line[1] = endVert;
       }
       lines = lines.reverse();
       faceIndecies.forEach((index, i) => {
@@ -81,9 +81,9 @@ class Polygon2d {
           if (line.withinSegmentBounds(vertex)) {
             found = true;
             if (i > 0) {
-              list.push(instance.neighbors(line.endVertex(), i - 1)[0]);
+              list.push(instance.neighbors(line[1], i - 1)[0]);
             } else if (i < 0) {
-              list.push(instance.neighbors(line.startVertex(), i + 1)[0]);
+              list.push(instance.neighbors(line[0], i + 1)[0]);
             } else {
               list.push(vertex);
             }
@@ -120,14 +120,14 @@ class Polygon2d {
         const rotatedPoly = instance.rotate(moveTo.theta, vertex, true);
         const rotatedCenter = rotatedPoly.center();
         const offset = rotatedCenter.differance(vertex);
-        return moveTo.center.translate(offset.x(), offset.y(), true);
+        return moveTo.center.translate(offset.x, offset.y, true);
       }
       const offset = center.differance(vertex);
-      return moveTo.center.translate(offset.x(), offset.y(), true);
+      return moveTo.center.translate(offset.x, offset.y, true);
     }
 
     function vertexFunction(midpoint) {
-      const getVertex = midpoint ? (line) => line.midpoint() : (line) => line.startVertex().copy();
+      const getVertex = midpoint ? (line) => line.midpoint() : (line) => line[0].copy();
       return (index, moveTo) => {
         const vertex = getVertex(lines[Math.mod(index, lines.length)]);
         if (moveTo === undefined) return vertex;
@@ -208,12 +208,12 @@ class Polygon2d {
       if (lines.length === 0) return {};
       map = {};
       let lastEnd;
-      if (!lines[0].startVertex().equals(lines[lines.length - 1].endVertex()))
+      if (!lines[0][0].equals(lines[lines.length - 1][1]))
         throw new Error('Broken Polygon');
       for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];
-        if (lastEnd && !line.startVertex().equals(lastEnd)) throw new Error('Broken Polygon');
-        lastEnd = line.endVertex();
+        if (lastEnd && !line[0].equals(lastEnd)) throw new Error('Broken Polygon');
+        lastEnd = line[1];
         map[line.toString()] = line;
       }
       return map;
@@ -266,16 +266,16 @@ class Polygon2d {
         const index =  (!reverse ? steps : (doubleLen - steps - 1)) % lines.length;
         const curr = lines[index];
         if (subSection.length === 0) {
-          if (startVertex.equals(!reverse ? curr.startVertex() : curr.endVertex())) {
+          if (startVertex.equals(!reverse ? curr[0] : curr[1])) {
             subSection.push(!reverse ? curr : curr.negitive());
-            if (endVertex.equals(reverse ? curr.startVertex() : curr.endVertex())) {
+            if (endVertex.equals(reverse ? curr[0] : curr[1])) {
               completed = true;
               break;
             }
           }
         } else {
           subSection.push(!reverse ? curr : curr.negitive());
-          if (endVertex.equals(reverse ? curr.startVertex() : curr.endVertex())) {
+          if (endVertex.equals(reverse ? curr[0] : curr[1])) {
             completed = true;
             break;
           }
@@ -286,7 +286,7 @@ class Polygon2d {
 
     this.translate = (xDiff, yDiff) => {
       for (let index = 0; index < lines.length; index++) {
-        lines[index].startVertex().translate(xDiff, yDiff);
+        lines[index][0].translate(xDiff, yDiff);
       }
     }
 
@@ -295,14 +295,14 @@ class Polygon2d {
     //   if (!translateTo) return;
     //   const curr = Vertex2d.center(...allVertices());
     //   const diff = translateTo.differance(curr);
-    //   instance.translate(diff.x(), diff.y());
+    //   instance.translate(diff.x, diff.y);
     // }
 
     this.center = (center) => {
       if (center) {
         const curr = Vertex2d.center(...allVertices());
         const diff = center.differance(curr);
-        instance.translate(diff.x(), diff.y());
+        instance.translate(diff.x, diff.y);
       }
       return Vertex2d.center(...this.vertices());
     }
@@ -311,7 +311,7 @@ class Polygon2d {
       if (doNotModify) return this.copy().rotate(theta, pivot);
       pivot ||= this.center();
       for (let index = 0; index < lines.length; index++) {
-        lines[index].startVertex().rotate(theta, pivot);
+        lines[index][0].rotate(theta, pivot);
       }
       return this;
     }
@@ -321,7 +321,7 @@ class Polygon2d {
         newCenter = new Vertex2d(newCenter);
         const center = this.center();
         const diff = newCenter.copy().differance(center);
-        this.translate(diff.x(), diff.y());
+        this.translate(diff.x, diff.y);
       }
     }
 
@@ -336,15 +336,15 @@ class Polygon2d {
           if (lines.length === 0) {
             lines.push(new Line2d(targetVertex, targetVertex));
           } else {
-            this.endLine().endVertex(targetVertex);
-            const endVertex = verts[index] || this.startLine().startVertex();
+            this.endLine()[1] = targetVertex;
+            const endVertex = verts[index] || this.startLine()[0];
             const line = new Line2d(targetVertex, endVertex);
             lines.push(line);
           }
         }
       }
       if (verts.length > 0 && lines.length > 0) {
-        if (endLine) endLine.endVertex(verts[0]);
+        if (endLine) endLine[1] = verts[0];
       }
       // this.removeLoops();
       this.lineMap(true);
@@ -354,14 +354,14 @@ class Polygon2d {
     this.addBest = (lineList) => {
       if (lineList.length > 100) throw new Error('This algorythum is slow: you should either find a way to speed it up or use a different method');
       const lastLine = lines[lines.length - 2];
-      const endVert = lastLine.endVertex();
+      const endVert = lastLine[1];
       lineList.sort(Line2d.endpointDistanceSort(endVert));
       const nextLine = lineList[0].acquiescent(lastLine);
-      const connectLine = new Line2d(endVert, nextLine.startVertex());
+      const connectLine = new Line2d(endVert, nextLine[0]);
       endVert.translate(connectLine.run()/2, connectLine.rise()/2);
       lines.splice(lines.length - 1, 1);
-      const newLastLine = new Line2d(endVert, nextLine.endVertex());
-      const newConnectLine = new Line2d(nextLine.endVertex(), lines[0].startVertex());
+      const newLastLine = new Line2d(endVert, nextLine[1]);
+      const newConnectLine = new Line2d(nextLine[1], lines[0][0]);
       lines.push(newLastLine);
       if (!newConnectLine.isPoint()) lines.push(newConnectLine);
       lineList.splice(0,1);
@@ -383,10 +383,10 @@ class Polygon2d {
       let total = 0;
       let verts = this.vertices();
       for (var i = 0, l = verts.length; i < l; i++) {
-        var addX = verts[i].x();
-        var addY = verts[i == verts.length - 1 ? 0 : i + 1].y();
-        var subX = verts[i == verts.length - 1 ? 0 : i + 1].x();
-        var subY = verts[i].y();
+        var addX = verts[i].x;
+        var addY = verts[i == verts.length - 1 ? 0 : i + 1].y;
+        var subX = verts[i == verts.length - 1 ? 0 : i + 1].x;
+        var subY = verts[i].y;
 
         total += (addX * addY * 0.5);
         total -= (subX * subY * 0.5);
@@ -399,7 +399,7 @@ class Polygon2d {
       let sum = 0;
       for (let index = 0; index < lines.length; index++) {
         const l = lines[index];
-        sum += (l.endVertex().x() - l.startVertex().x()) * (l.endVertex().y() + l.startVertex().y());
+        sum += (l[1].x - l[0].x) * (l[1].y + l[0].y);
       }
       return sum <= 0;
     }
@@ -441,7 +441,7 @@ class Polygon2d {
         const otherVertex = verts[index];
         if (!lines[index]) this.addVertex(otherVertex.point());
         else {
-          let vertex = lines[index].startVertex();
+          let vertex = lines[index][0];
           vertex.point(otherVertex.point());
         }
       }
@@ -458,13 +458,13 @@ Polygon2d.centerOn = (newCenter, polys) => {
   const diff = newCenter.copy().differance(center);
   for (let index = 0; index < polys.length; index++) {
     const poly = polys[index];
-    poly.translate(diff.x(), diff.y());
+    poly.translate(diff.x, diff.y);
   }
 }
 
 Polygon2d.build = (lines) => {
-  const start = lines[0].startVertex().copy();
-  const end = lines[0].endVertex().copy();
+  const start = lines[0][0].copy();
+  const end = lines[0][1].copy();
   lines.splice(0, 1);
   const poly = new Polygon2d([start, end]);
   while (lines.length > 0) {
@@ -477,15 +477,15 @@ Polygon2d.fromLines = (lines) => {
   if (lines === undefined || lines.length === 0) return null;
   let lastLine = lines[0];
   // Line2d.radialSort(lines);
-  const verts = [lastLine.startVertex()];
+  const verts = [lastLine[0]];
   for (let index = 1; index < lines.length; index++) {
     let line = lines[index].acquiescent(lastLine);
-    if (!line.startVertex().equals(verts[verts.length - 1])) {
-      verts.push(line.startVertex());
+    if (!line[0].equals(verts[verts.length - 1])) {
+      verts.push(line[0]);
     }
-    if (!line.endVertex().equals(verts[verts.length - 1])) {
-      if (index !== lines.length - 1 || !line.endVertex().equals(verts[0]))
-        verts.push(line.endVertex());
+    if (!line[1].equals(verts[verts.length - 1])) {
+      if (index !== lines.length - 1 || !line[1].equals(verts[0]))
+        verts.push(line[1]);
     }
     lastLine = line;
   }
@@ -500,10 +500,10 @@ Polygon2d.minMax = (...polys) => {
     const verts = polys[index].vertices();
     for (let vIndex = 0; vIndex < verts.length; vIndex++) {
       const vert = verts[vIndex];
-      if (max.x() < vert.x()) max.x(vert.x());
-      if (max.y() < vert.y()) max.y(vert.y());
-      if (min.x() > vert.x()) min.x(vert.x());
-      if (min.y() > vert.y()) min.y(vert.y());
+      if (max.x < vert.x) max.x = vert.x;
+      if (max.y < vert.y) max.y = vert.y;
+      if (min.x > vert.x) min.x = vert.x;
+      if (min.y > vert.y) min.y = vert.y;
     }
   }
   return {min, max};
@@ -544,8 +544,8 @@ Polygon2d.fromString = (str) => {
 }
 
 Polygon2d.passesThrough = (line, lines, inclusive) => {
-  if (Polygon2d.isWithin(line.startVertex(), lines, !inclusive)) return true;
-  if (Polygon2d.isWithin(line.endVertex(), lines, !inclusive)) return true;
+  if (Polygon2d.isWithin(line[0], lines, !inclusive)) return true;
+  if (Polygon2d.isWithin(line[1], lines, !inclusive)) return true;
   const intersections = [];
   let onSide = false;
   lines.forEach((side) => {

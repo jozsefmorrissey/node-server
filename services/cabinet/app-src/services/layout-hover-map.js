@@ -44,7 +44,7 @@ class LayoutHoverMap extends HoverMap2d {
         const addOnWallFunc = drawMap ? addOnWallLine : addOnWall;
         wall.windows().forEach(addOnWallFunc);
         wall.doors().forEach(addOnWallFunc);
-        instance.add(wall.startVertex(), 20, null, LAYOUT_HM_GROUP);
+        instance.add(wall[0], 20, null, LAYOUT_HM_GROUP);
         instance.add(wall, 10, null, LAYOUT_HM_GROUP);
         const measurement = new LineMeasurement2d(wall, layout.center(), null, layout.reconsileLength(wall));
         wall.measurment = measurement;

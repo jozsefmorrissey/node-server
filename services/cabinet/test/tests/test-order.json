@@ -12,7 +12,7 @@
         "walls": [
           {
             "_TYPE": "Wall2D",
-            "startVertex": {
+            "0": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 389.41080890472216,
@@ -21,7 +21,7 @@
               "id": "Corner2d_6w6b9qh",
               "ID_ATTRIBUTE": "id"
             },
-            "endVertex": {
+            "1": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 511.3308089047221,
@@ -38,7 +38,7 @@
           },
           {
             "_TYPE": "Wall2D",
-            "startVertex": {
+            "0": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 511.3308089047221,
@@ -47,7 +47,7 @@
               "id": "Corner2d_scp411f",
               "ID_ATTRIBUTE": "id"
             },
-            "endVertex": {
+            "1": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 511.3308089047221,
@@ -64,7 +64,7 @@
           },
           {
             "_TYPE": "Wall2D",
-            "startVertex": {
+            "0": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 511.3308089047221,
@@ -73,7 +73,7 @@
               "id": "Corner2d_oimz622",
               "ID_ATTRIBUTE": "id"
             },
-            "endVertex": {
+            "1": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 389.4108089047221,
@@ -90,7 +90,7 @@
           },
           {
             "_TYPE": "Wall2D",
-            "startVertex": {
+            "0": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 389.4108089047221,
@@ -99,7 +99,7 @@
               "id": "Corner2d_5vhusuv",
               "ID_ATTRIBUTE": "id"
             },
-            "endVertex": {
+            "1": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 389.41080890472216,

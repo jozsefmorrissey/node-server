@@ -336,8 +336,8 @@ class Plane extends Array {
 
     const epsilon = 1e-6;
     function lineIntersection(line, segment, directional) {
-      const vect0 = line.startVertex.vector();
-      const vect1 = line.endVertex.vector();
+      const vect0 = line[0].vector();
+      const vect1 = line[1].vector();
       const planePoint = instance.points()[0];
       const planeNormal = instance.normal();
       let u = vect1.minus(vect0);
@@ -353,8 +353,8 @@ class Plane extends Array {
           return null;
         }
         if (directional) {
-          const endDist = line.endVertex.distance(intersection);
-          const startDist = line.startVertex.distance(intersection);
+          const endDist = line[1].distance(intersection);
+          const startDist = line[0].distance(intersection);
           if (endDist > line.length() && endDist > startDist) return null;
         }
         return intersection;
@@ -475,8 +475,8 @@ Plane.makePlane1MeetPlane2 = function (plane1, plane2, rotation) {
   const newPlaneRotated = keep1.concat(intersections).concat(keep2);
   for (let index = 0; index < newPlaneRotated.length; index++) {
     newPlaneRotated[index] = {
-      x: newPlaneRotated[index].x(),
-      y: newPlaneRotated[index].y(),
+      x: newPlaneRotated[index].x,
+      y: newPlaneRotated[index].y,
       z: zValue
     }
   }

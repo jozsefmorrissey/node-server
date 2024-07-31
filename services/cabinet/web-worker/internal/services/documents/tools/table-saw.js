@@ -39,8 +39,8 @@ class TableSawDocumentation {
       let foundStart = false; let foundEnd = false; let intersections = [];
       for (let index = 0; index < edges.length; index++) {
         const edge = edges[index];
-        foundStart ||= edge.isOn(cut.startVertex());
-        foundEnd ||= edge.isOn(cut.endVertex());
+        foundStart ||= edge.isOn(cut[0]);
+        foundEnd ||= edge.isOn(cut[1]);
         if(!foundStart || !foundEnd) {
           const int = edge.findSegmentIntersection(cut, true);
           if (int && !int.equals(cut[0]) && !int.equals(cut[1])) intersections.push(int);

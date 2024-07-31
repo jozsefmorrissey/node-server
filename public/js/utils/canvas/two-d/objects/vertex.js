@@ -24,31 +24,29 @@ class Vertex2d {
 
     this.translate = (xOffset, yOffset, doNotModify) => {
       const vertex = doNotModify ? this.copy() : this;
-      vertex.point().x += xOffset;
-      vertex.point().y += yOffset;
+      vertex.x += xOffset;
+      vertex.y += yOffset;
       return vertex;
     }
 
     this.rotate = (radians, pivot, doNotModify) => {
       // const radians = Math.mod(radians, Math.PI);
       const vertex = doNotModify ? this.copy() : this;
-      const point = vertex.point();
       pivot ||= new Vertex2d(0,0);
       const s = Math.sin(radians);
       const c = Math.cos(radians);
-      point.x -= pivot.x();
-      point.y -= pivot.y();
-      const newX = point.x * c - point.y * s;
-      const newY = point.x * s + point.y * c;
-      point.x = newX + pivot.x();
-      point.y = newY + pivot.y();
+      vertex.x -= pivot.x;
+      vertex.y -= pivot.y;
+      const newX = vertex.x * c - vertex.y * s;
+      const newY = vertex.x * s + vertex.y * c;
+      vertex.x = newX + pivot.x;
+      vertex.y = newY + pivot.y;
       return vertex;
     }
     this.point = (newPoint) => {
-      newPoint = newPoint instanceof Vertex2d ? newPoint.point() : newPoint;
-      if (newPoint) this.x(newPoint.x);
-      if (newPoint) this.y(newPoint.y);
-      return point;
+      if (newPoint) this.x = newPoint.x;
+      if (newPoint) this.y = newPoint.y;
+      return {x: this.x, y: this.y};
     }
 
     this.modificationFunction = (func) => {
@@ -62,17 +60,10 @@ class Vertex2d {
     this.equals = (other, tol) => {
       if (!(other instanceof Vertex2d)) return false;
       const wi = tol ? Tolerance.within(tol) : within;
-      return wi(other.x(), this.x()) && wi(other.y(), this.y());
+      return wi(other.x, this.x) && wi(other.y, this.y);
     }
-    this.x = (val) => {
-      if ((typeof val) === 'number') point.x = val;
-      return this.point().x;
-    }
-    this.y = (val) => {
-      if ((typeof val) === 'number') this.point().y = val;
-      return this.point().y;
-    }
-    this.clone = () => new Vertex2d(this.point().x, this.point().y);
+
+    this.clone = () => new Vertex2d(this.x, this.y);
 
     const dummyFunc = () => true;
     this.forEach = (func, backward) => {
@@ -88,42 +79,42 @@ class Vertex2d {
 
     this.distance = (vertex) => {
       vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
-      const xDiff = vertex.x() - this.x();
-      const yDiff = vertex.y() - this.y();
+      const xDiff = vertex.x - this.x;
+      const yDiff = vertex.y - this.y;
       return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
     }
 
     const barelyRound = (value) => Math.round(value * 10000000000000) / 10000000000000;
-    this.toString = () => `(${barelyRound(this.x())}, ${barelyRound(this.y())})`;
-    this.approxToString = () => `(${approximate10(this.x())}, ${approximate10(this.y())})`;
+    this.toString = () => `(${barelyRound(this.x)}, ${barelyRound(this.y)})`;
+    this.approxToString = () => `(${approximate10(this.x)}, ${approximate10(this.y)})`;
     const parentToJson = this.toJson;
 
     this.offset = (x, y) => {
       if (x instanceof Vertex2d) {
-        y = x.y();
-        x = x.x();
+        y = x.y;
+        x = x.x;
       }
-      const copy = this.toJson().point;
+      const copy = this.clone();
       if (y !== undefined) copy.y += y;
       if (x !== undefined) copy.x += x;
-      return new Vertex2d(copy);
+      return copy;
     }
 
     this.scale = (scale, doNotModify) => {
       if (doNotModify === true) return this.clone().scale(scale);
-      this.x(this.x() * scale);
-      this.y(this.y() * scale);
+      this.x = this.x * scale;
+      this.y = this.y * scale;
       return this;
     }
 
-    this.copy = () => new Vertex2d([this.x(), this.y()]);
+    this.copy = () => new Vertex2d([this.x, this.y]);
 
     this.differance = (x, y) => {
       if (x instanceof Vertex2d) {
-        y = x.y();
-        x = x.x();
+        y = x.y;
+        x = x.x;
       }
-      return new Vertex2d({x: this.x() - x, y: this.y() - y});
+      return new Vertex2d({x: this.x - x, y: this.y - y});
     }
 
     this.point(point);
@@ -140,19 +131,19 @@ Vertex2d.minMax = (...vertices) => {
   const min = new Vertex2d(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
   for (let index = 0; index < vertices.length; index += 1) {
     const vert = vertices[index];
-    if (max.x() < vert.x()) max.x(vert.x());
-    if (max.y() < vert.y()) max.y(vert.y());
-    if (min.x() > vert.x()) min.x(vert.x());
-    if (min.y() > vert.y()) min.y(vert.y());
+    if (max.x < vert.x) max.x = vert.x;
+    if (max.y < vert.y) max.y = vert.y;
+    if (min.x > vert.x) min.x = vert.x;
+    if (min.y > vert.y) min.y = vert.y;
   }
-  return {min, max, diff: new Vertex2d(max.x() - min.x(), max.y() - min.y())};
+  return {min, max, diff: new Vertex2d(max.x - min.x, max.y - min.y)};
 }
 
 Vertex2d.center = (...vertices) => {
   if (Array.isArray(vertices[0])) vertices = vertices[0];
   const minMax = Vertex2d.minMax(...vertices);
-  const centerX = minMax.min.x() + (minMax.max.x() - minMax.min.x())/2;
-  const centerY = minMax.min.y() + (minMax.max.y() - minMax.min.y())/2;
+  const centerX = minMax.min.x + (minMax.max.x - minMax.min.x)/2;
+  const centerY = minMax.min.y + (minMax.max.y - minMax.min.y)/2;
   return new Vertex2d(centerX, centerY);
 }
 
@@ -163,10 +154,10 @@ Vertex2d.weightedCenter = (...vertices) => {
   let y = 0;
   let count = 0;
   vertices.forEach((vertex) => {
-    if (Number.isFinite(vertex.x() + vertex.y())) {
+    if (Number.isFinite(vertex.x + vertex.y)) {
       count++;
-      x += vertex.x();
-      y += vertex.y();
+      x += vertex.x;
+      y += vertex.y;
     }
   });
   return new Vertex2d({x: x/count, y: y/count});
@@ -175,7 +166,7 @@ Vertex2d.weightedCenter = (...vertices) => {
 // Vertex2d.center = Vertex2d.weightedCenter;
 
 Vertex2d.sort = (a, b) =>
-    a.x() === b.x() ? (a.y() === b.y() ? 0 : (a.y() > b.y() ? -1 : 1)) : (a.x() > b.x() ? -1 : 1);
+    a.x === b.x ? (a.y === b.y ? 0 : (a.y > b.y ? -1 : 1)) : (a.x > b.x ? -1 : 1);
 
 const ignoreVerySmall = (v) => Math.abs(v) < .000001 ? 0 : v;
 Vertex2d.sortByMax = (verts) => {
@@ -209,15 +200,15 @@ Vertex2d.centerOn = (newCenter, vertices) => {
   const diff = newCenter.copy().differance(center);
   for (let index = 0; index < vertices.length; index++) {
     const vert = vertices[index];
-    vert.translate(diff.x(), diff.y());
+    vert.translate(diff.x, diff.y);
   }
 }
 
 Vertex2d.scale = (scaleX, scaleY, vertices) => {
   for (let index = 0; index < vertices.length; index++) {
     const vert = vertices[index];
-    vert.x(vert.x() * 1);
-    vert.y(vert.y() * -1);
+    vert.x = vert.x * 1;
+    vert.y = vert.y * -1;
   }
 }
 

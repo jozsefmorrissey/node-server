@@ -10,14 +10,14 @@
         "walls": [
           {
             "_TYPE": "Wall2D",
-            "startVertex": {
+            "0": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 0,
                 "y": 0
               }
             },
-            "endVertex": {
+            "1": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 500,
@@ -30,14 +30,14 @@
           },
           {
             "_TYPE": "Wall2D",
-            "startVertex": {
+            "0": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 500,
                 "y": 0
               }
             },
-            "endVertex": {
+            "1": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 500,
@@ -50,14 +50,14 @@
           },
           {
             "_TYPE": "Wall2D",
-            "startVertex": {
+            "0": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 500,
                 "y": 500
               }
             },
-            "endVertex": {
+            "1": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 0,
@@ -70,14 +70,14 @@
           },
           {
             "_TYPE": "Wall2D",
-            "startVertex": {
+            "0": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 0,
                 "y": 500
               }
             },
-            "endVertex": {
+            "1": {
               "_TYPE": "Corner2d",
               "point": {
                 "x": 0,

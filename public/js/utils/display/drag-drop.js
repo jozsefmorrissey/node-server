@@ -95,8 +95,8 @@ class DragDropResize {
       if (elem instanceof HTMLElement) {
         rect = elem.getBoundingClientRect();
       } else if (elem.x !== undefined && elem.y !== undefined) {
-        const x = (typeof elem.x === 'function') ? elem.x() : elem.x;
-        const y = (typeof elem.y === 'function') ? elem.y() : elem.y;
+        const x = elem.x;
+        const y = elem.y;
         return {
           top: y,
           bottom: y,

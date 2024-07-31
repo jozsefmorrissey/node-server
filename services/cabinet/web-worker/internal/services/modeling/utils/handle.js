@@ -15,22 +15,22 @@ function baseCenter(rMdto, environment, parentBiPoly) {
 
   switch (rMdto.location.position) {
     case "BOTTOM_RIGHT":
-      center = top.endVertex;
+      center = top[1];
       center.translate(top.vector().unit().scale(-edgeOffset));
       center.translate(right.vector().unit().scale(toCenter));
       break;
     case "BOTTOM_LEFT":
-      center = top.startVertex;
+      center = top[0];
       center.translate(top.vector().unit().scale(edgeOffset));
       center.translate(left.vector().unit().scale(-toCenter));
       break;
     case "TOP_RIGHT":
-      center = bottom.startVertex;
+      center = bottom[0];
       center.translate(bottom.vector().unit().scale(edgeOffset));
       center.translate(right.vector().unit().scale(-toCenter));
       break;
     case "TOP_LEFT":
-      center = bottom.endVertex;
+      center = bottom[1];
       center.translate(bottom.vector().unit().scale(-edgeOffset));
       center.translate(left.vector().unit().scale(toCenter));
       break;

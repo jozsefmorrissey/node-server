@@ -178,7 +178,7 @@ function pull(length, height) {
 
 function getVectorObj(line, normal) {
   const midNormOffset = line.midpoint().translate(normal);
-  const lineNormPoly = new Polygon3D([line.startVertex.copy(), line.endVertex.copy(), midNormOffset]);
+  const lineNormPoly = new Polygon3D([line[0].copy(), line[1].copy(), midNormOffset]);
   return {
     z: normal,
     x: line.vector().unit(),

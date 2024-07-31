@@ -190,7 +190,7 @@ du.on.match('click', '.remove-btn-2d', remove, popUp.container());
 
 du.on.match('click', '.add-door-btn-2d', (elem) => {
   const attrs = getPopUpAttrs(elem);
-  const distance = attrs.obj.startVertex().distance(attrs.point);
+  const distance = attrs.obj[0].distance(attrs.point);
   attrs.obj.addDoor(distance);
   panZ.once();
 });
@@ -203,7 +203,7 @@ du.on.match('click', '.hinge-btn', (elem) => {
 
 du.on.match('click', '.add-window-btn-2d', (elem) => {
   const attrs = getPopUpAttrs(elem);
-  const distance = attrs.obj.startVertex().distance(attrs.point);
+  const distance = attrs.obj[0].distance(attrs.point);
   attrs.obj.addWindow(distance);
   panZ.once();
 });

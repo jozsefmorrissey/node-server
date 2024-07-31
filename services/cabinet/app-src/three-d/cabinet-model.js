@@ -101,9 +101,9 @@ class CabinetModel {
         const threeView = this.threeView();
 
         const frontMinMax = Vertex2d.minMax(Line2d.vertices(threeView.front()));
-        const height = frontMinMax.diff.y();
-        const width = frontMinMax.diff.x();
-        const depth = Vertex2d.minMax(Line2d.vertices(threeView.right())).diff.x();
+        const height = frontMinMax.diff.y;
+        const width = frontMinMax.diff.x;
+        const depth = Vertex2d.minMax(Line2d.vertices(threeView.right())).diff.x;
 
         silhouette = {};
         silhouette.front = silhouetteFrom2d(threeView.parimeter().front(), depth);
@@ -187,7 +187,7 @@ class CabinetModel {
         const searchLine = Line3D.startAndVector(instance.center().copy(), n.scale(dist));
         const veiwFromVect = Line3D.viewFromVector([searchLine], threeView.normals.top())[0];
         const searchLine2d = veiwFromVect.to2D(threeView.axis().top[0], threeView.axis().top[1]);
-        searchLine2d.translate(new Line2d(searchLine2d.startVertex().copy(), topCenter.copy()));
+        searchLine2d.translate(new Line2d(searchLine2d[0].copy(), topCenter.copy()));
         // TODO: I should fix the root cause that requires the x coord to be mirrored;
         searchLine2d.mirrorX();
         // searchLine2d.mirrorY();

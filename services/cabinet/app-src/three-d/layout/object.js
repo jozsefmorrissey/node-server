@@ -18,8 +18,8 @@ class Bridge2dTo3D {
                   (obj.thickness instanceof Function) ? 'thickness' : 'depth');
     function setXYZ(x, y, z) {
       if (x instanceof Vertex2d) {
-        y = x.y();
-        x = x.x();
+        y = x.y;
+        x = x.x;
       }
       if (x instanceof Vertex3D) {
         y = x.y;
@@ -61,7 +61,7 @@ class Bridge2dTo3D {
       if (Number.isFinite(distance)) {
         setXYZ(undefined, undefined, distance + this.depth()/2);
       }
-      return this.z() - this.depth()/2;
+      return this.z - this.depth()/2;
     }
     this.fromCeiling = (distance) => {
       const fromFloor = this.fromFloor();

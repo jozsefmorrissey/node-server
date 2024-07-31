@@ -253,14 +253,14 @@ Cabinet.abbriviation = 'c';
 function getIntersectPoint(line, centerLine, right, dist, gap, noneAdjacent) {
   if (noneAdjacent) {
     if (right)
-      return centerLine.endVertex();
-    return centerLine.startVertex();
+      return centerLine[1];
+    return centerLine[0];
   }
   const parr = line.parrelle(dist);
   if (line.isParrelle(centerLine)) {
     if (right)
-      return parr.trimmed(gap/2).startVertex();
-    return parr.trimmed(gap/-2).endVertex();
+      return parr.trimmed(gap/2)[0];
+    return parr.trimmed(gap/-2)[1];
   }
   return centerLine.findIntersection(parr);
 }
@@ -279,8 +279,8 @@ function doorIntersect(llp, lcp, rcp, rrp, ld, cd, rd, gap, padOffset) {
 
   const centerFrontTrimmed = new Line2d(cxlp, cxrp).trimmed(gap, true);
   const centerBackTrimmed = centerFrontTrimmed.parrelle(-1 * cd);
-  const tsp = centerFrontTrimmed.startVertex();
-  const tep = centerFrontTrimmed.endVertex();
+  const tsp = centerFrontTrimmed[0];
+  const tep = centerFrontTrimmed[1];
   const clrs = CL.closestPointOnLine(tsp);
   const crrs = CL.closestPointOnLine(tep);
 
@@ -290,7 +290,7 @@ function doorIntersect(llp, lcp, rcp, rrp, ld, cd, rd, gap, padOffset) {
   const info = {center: {left: {}, right: {}}, left: {}, right: {}};
 
 
-  info.center.center = Vertex2d.center(tsp, tep, centerBackTrimmed.startVertex(), centerBackTrimmed.endVertex());
+  info.center.center = Vertex2d.center(tsp, tep, centerBackTrimmed[0], centerBackTrimmed[1]);
   info.center.length = centerFrontTrimmed.length();
   info.center.left.reveal = clrs.distance(lcp) * (CL.isOn(clrs) ? 1 : -1);
   info.center.right.reveal = crrs.distance(rcp) * (CL.isOn(crrs) ? 1 : -1);

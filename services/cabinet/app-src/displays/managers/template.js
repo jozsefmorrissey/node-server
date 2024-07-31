@@ -223,9 +223,9 @@ const toDisplay = (value, notMetric) =>  {
 }
 
 const centerDisplay = (t) => {
-  const x = t.getCabinet().eval(t.x());
-  const y = t.getCabinet().eval(t.y());
-  const z = t.getCabinet().eval(t.z());
+  const x = t.getCabinet().eval(t.x);
+  const y = t.getCabinet().eval(t.y);
+  const z = t.getCabinet().eval(t.z);
   return `(${toDisplay(x)},${toDisplay(y)},${toDisplay(z)})`;
 }
 
@@ -857,10 +857,10 @@ class TemplateManager extends Lookup {
           try {
             frontView = model.frontView();
             const center = Vertex2d.center(Line2d.vertices(frontView));
-            panz.centerOn(center.x(), center.y());
+            panz.centerOn(center.x, center.y);
             topSnap = model.topviewSnap();
             const centerT = Vertex2d.center(Line2d.vertices(topSnap));
-            panzT.centerOn(centerT.x(), centerT.y());
+            panzT.centerOn(centerT.x, centerT.y);
             renderTop();
             renderFront();
           } catch (e) {

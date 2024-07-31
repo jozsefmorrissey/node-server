@@ -18,13 +18,13 @@ class Line2d {
     const measureTo = [];
     const instance = this;
 
-    this.startVertex = (newVertex) => {
+    function svFunc(newVertex) {
       if (newVertex instanceof Vertex2d) {
         startVertex = newVertex;
       }
       return startVertex;
     }
-    this.endVertex = (newVertex) => {
+    function evFunc(newVertex) {
       if (newVertex instanceof Vertex2d) {
         endVertex = newVertex;
       }
@@ -32,50 +32,50 @@ class Line2d {
     }
 
     Object.defineProperty(this, '0', {
-      get: this.startVertex,
-      set: this.startVertex
+      get: svFunc,
+      set: svFunc
     });
     Object.defineProperty(this, '1', {
-      get: this.endVertex,
-      set: this.endVertex
+      get: evFunc,
+      set: evFunc
     });
 
     this.mirrorPoints = (points) => {
       for (let index = 0; index < points.length; index++) {
         const point = points[index];
         const perpLine = this.perpendicular(1000, point);
-        const closestPoint = this.closestPointOnLine(perpLine.endVertex());
+        const closestPoint = this.closestPointOnLine(perpLine[1]);
         const intersectLine = new Line2d(point, closestPoint);
         const dist = intersectLine.length() * 2;
         const rads = intersectLine.radians();
-        const mirrored = Line2d.startAndTheta(point, rads, dist).endVertex();
+        const mirrored = Line2d.startAndTheta(point, rads, dist)[1];
         point.point(mirrored.point());
       }
     }
 
     this.mirrorX = (points) => {
-      const endVertex = this.startVertex().translate(0, 10, true);
-      const mirror = new Line2d(this.startVertex(), endVertex);
-      mirror.mirrorPoints([this.startVertex(), this.endVertex()]);
+      const ev = this[0].translate(0, 10, true);
+      const mirror = new Line2d(this[0], ev);
+      mirror.mirrorPoints([this[0], this[1]]);
     }
     this.mirrorY = (points) => {
-      const endVertex = this.startVertex().translate(10, 0, true);
-      const mirror = new Line2d(this.startVertex(), endVertex);
-      mirror.mirrorPoints([this.startVertex(), this.endVertex()]);
+      const ev = this[0].translate(10, 0, true);
+      const mirror = new Line2d(this[0], ev);
+      mirror.mirrorPoints([this[0], this[1]]);
     }
 
-    this.rise = () => endVertex.y() - startVertex.y();
-    this.run = () =>  endVertex.x() - startVertex.x();
+    this.rise = () => this[1].y - this[0].y;
+    this.run = () =>  this[1].x - this[0].x;
 
     function changeLength(value) {
-      const circle = new Circle2d(value, instance.startVertex());
+      const circle = new Circle2d(value, instance[0]);
       const points = circle.intersections(instance);
-      const dist0 = instance.endVertex().distance(points[0]);
-      const dist1 = instance.endVertex().distance(points[1]);
+      const dist0 = instance[1].distance(points[0]);
+      const dist1 = instance[1].distance(points[1]);
       if (dist1 < dist0) {
-        instance.endVertex().point(points[1]);
+        instance[1].point(points[1]);
       } else {
-        instance.endVertex(points[0]);
+        instance[1] = points[0];
       }
     }
 
@@ -84,10 +84,10 @@ class Line2d {
 
     this.withinDirectionalBounds = (point, limit) => {
       point = new Vertex2d(point);
-      const withinLimit = limit === undefined || (limit > point.y() && limit > point.x());
+      const withinLimit = limit === undefined || (limit > point.y && limit > point.x);
       if (withinLimit && this.withinSegmentBounds(point)) return true;
-      const offsetPoint = Line2d.startAndTheta(point, this.radians(), .0000001).endVertex();
-      if (this.startVertex().distance(point) > this.startVertex().distance(offsetPoint)) return false;
+      const offsetPoint = Line2d.startAndTheta(point, this.radians(), .0000001)[1];
+      if (this[0].distance(point) > this[0].distance(offsetPoint)) return false;
       return withinLimit;
     }
 
@@ -98,34 +98,34 @@ class Line2d {
         const l = pointOline
         const slopeEqual = withinTol(this.slope(), l.slope());
         const c = l.midpoint();
-        const xBounded = c.x() < this.maxX() + tol && c.x() > this.minX() - tol;
-        const yBounded = c.y() < this.maxY() + tol && c.y() > this.minY() - tol;
+        const xBounded = c.x < this.maxX() + tol && c.x > this.minX() - tol;
+        const yBounded = c.y < this.maxY() + tol && c.y > this.minY() - tol;
         if (slopeEqual && xBounded && yBounded) {
           isWithin = true;
           path = 0
         } else {
           path = 1;
-          isWithin = this.withinSegmentBounds(l.startVertex()) || this.withinSegmentBounds(l.endVertex()) ||
-                l.withinSegmentBounds(this.startVertex()) || l.withinSegmentBounds(this.endVertex());
+          isWithin = this.withinSegmentBounds(l[0]) || this.withinSegmentBounds(l[1]) ||
+                l.withinSegmentBounds(this[0]) || l.withinSegmentBounds(this[1]);
         }
       } else {
         path = 2;
         let point = new Vertex2d(pointOline);
-        isWithin = this.minX() - tol < point.x() && this.minY() - tol < point.y() &&
-          this.maxX() + tol > point.x() && this.maxY() + tol > point.y();
+        isWithin = this.minX() - tol < point.x && this.minY() - tol < point.y &&
+          this.maxX() + tol > point.x && this.maxY() + tol > point.y;
       }
       return isWithin;
     }
 
 
     function reconsileLength (newLength) {
-      const moveVertex = instance.endVertex();
+      const moveVertex = instance[1];
       const nextLine = moveVertex.nextLine()
       if (nextLine === undefined) changeLength(newLength);
 
-      const vertex1 = nextLine.endVertex();
+      const vertex1 = nextLine[1];
       const circle1 = new Circle2d(nextLine.length(), vertex1);
-      const vertex2 = instance.startVertex();
+      const vertex2 = instance[0];
       const circle2 = new Circle2d(newLength, vertex2);
       const intersections = circle1.intersections(circle2);
 
@@ -142,34 +142,34 @@ class Line2d {
 
     this.translate = (line, doNotModify) => {
       const target = doNotModify ? this.clone() : this;
-      const xOffset = line.endVertex().x() - line.startVertex().x();
-      const yOffset = line.endVertex().y() - line.startVertex().y();
-      target.startVertex().translate(xOffset, yOffset);
-      target.endVertex().translate(xOffset, yOffset);
+      const xOffset = line[1].x - line[0].x;
+      const yOffset = line[1].y - line[0].y;
+      target[0].translate(xOffset, yOffset);
+      target[1].translate(xOffset, yOffset);
       return target;
     }
 
     this.length = (value) => {
       value = Number.parseFloat(value);
       if (!Number.isNaN(value) && value !== 0) {
-        const sv = this.startVertex();
-        const x = value * Math.cos(this.radians()) + sv.x();
-        const y = value * Math.sin(this.radians()) + sv.y();
-        this.endVertex().point({x,y});
+        const sv = this[0];
+        const x = value * Math.cos(this.radians()) + sv.x;
+        const y = value * Math.sin(this.radians()) + sv.y;
+        this[1].point({x,y});
       }
-      const a = this.endVertex().x() - this.startVertex().x();
-      const b = this.endVertex().y() - this.startVertex().y();
+      const a = this[1].x - this[0].x;
+      const b = this[1].y - this[0].y;
       return Math.sqrt(a*a + b*b);
     }
 
     function getSlope(v1, v2) {
-      return Line2d.getSlope(v1.x(), v1.y(), v2.x(), v2.y());
+      return Line2d.getSlope(v1.x, v1.y, v2.x, v2.y);
     }
 
     function getB(x, y, slope) {
       if (slope === 0) return y;
       else if (Math.abs(slope) === Infinity) {
-        if (instance.startVertex().x() === 0) return 0;
+        if (instance[0].x === 0) return 0;
         else return Infinity;
       }
       else return y - slope * x;
@@ -183,8 +183,8 @@ class Line2d {
     function getX(y, slope, b) {return  (y - b)/slope}
 
     this.midpoint = () => {
-      const x = (this.endVertex().x() + this.startVertex().x())/2;
-      const y = (this.endVertex().y() + this.startVertex().y())/2;
+      const x = (this[1].x + this[0].x)/2;
+      const y = (this[1].y + this[0].y)/2;
       return new Vertex2d({x,y});
     }
 
@@ -195,24 +195,24 @@ class Line2d {
       const negAcquiesed = other.acquiescent(this).negitive();
       const radians = (this.radians() + negAcquiesed.radians()) / 2;
       const bisector = Line2d.startAndTheta(intersection, radians, dist);
-      const bev = bisector.endVertex();
-      const startDist = this.startVertex().distance(intersection);
-      const endDist = this.endVertex().distance(intersection);
-      const furthestVertId = startDist > endDist ? 'startVertex' : 'endVertex';
+      const bev = bisector[1];
+      const startDist = this[0].distance(intersection);
+      const endDist = this[1].distance(intersection);
+      const furthestVertId = startDist > endDist ? '0' : '1';
 
       const negBisector = Line2d.startAndTheta(intersection, radians + Math.PI, dist);
-      const dist1 = bisector.endVertex().distance(this[furthestVertId]()) +
-                    bisector.endVertex().distance(negAcquiesed[furthestVertId]());
-      const dist2 = negBisector.endVertex().distance(this[furthestVertId]()) +
-                    negBisector.endVertex().distance(negAcquiesed[furthestVertId]());
+      const dist1 = bisector[1].distance(this[furthestVertId]()) +
+                    bisector[1].distance(negAcquiesed[furthestVertId]());
+      const dist2 = negBisector[1].distance(this[furthestVertId]()) +
+                    negBisector[1].distance(negAcquiesed[furthestVertId]());
       return dist1 < dist2 ? bisector : negBisector;
     }
 
     this.closestEnds = (other) => {
-      const tsv = this.startVertex();
-      const osv = other.startVertex();
-      const tev = this.endVertex();
-      const oev = other.endVertex();
+      const tsv = this[0];
+      const osv = other[0];
+      const tev = this[1];
+      const oev = other[1];
 
       const ss = tsv.distance(osv);
       const se = tsv.distance(oev);
@@ -232,11 +232,11 @@ class Line2d {
       let theta;
       let theta1 = this.radians();
       let closestEnds = this.closestEnds(other);
-      if (closestEnds.indexOf(this.startVertex()) !== -1) {
+      if (closestEnds.indexOf(this[0]) !== -1) {
         theta1 += Math.PI;
       }
       let theta2 = other.radians();
-      if (closestEnds.indexOf(other.startVertex()) !== -1) {
+      if (closestEnds.indexOf(other[0]) !== -1) {
         theta2 += Math.PI;
       }
 
@@ -253,25 +253,25 @@ class Line2d {
 
     this.clockwise = (center) => {
       center ||= new Vertex2d(0,0);
-      const radial1 = new Line2d(center, this.startVertex());
-      const radial2 = new Line2d(center, this.endVertex());
+      const radial1 = new Line2d(center, this[0]);
+      const radial2 = new Line2d(center, this[1]);
       return withinTol(radial1.acute(radial2), radial2.thetaBetween(radial1));
     }
 
-    this.yIntercept = () => getB(this.startVertex().x(), this.startVertex().y(), this.slope());
-    this.slope = () => getSlope(this.startVertex(), this.endVertex());
+    this.yIntercept = () => getB(this[0].x, this[0].y, this.slope());
+    this.slope = () => getSlope(this[0], this[1]);
     this.y = (x) => {
-      if (x === undefined) x = this.startVertex().x();
+      if (x === undefined) x = this[0].x;
       const slope = this.slope();
       if (slope === Infinity) return Infinity;
-      if (slope === 0) return this.startVertex().y();
+      if (slope === 0) return this[0].y;
       return  (this.slope()*x + this.yIntercept());
     }
 
     this.x = (y) => {
-      if (y === undefined) y = this.startVertex().y();
+      if (y === undefined) y = this[0].y;
       const slope = this.slope();
-      if (slope === Infinity) return this.startVertex().x();
+      if (slope === Infinity) return this[0].x;
       if (slope === 0) {
         return Infinity;
       }
@@ -291,8 +291,8 @@ class Line2d {
         return liesOn;
       }
       const vertex = vertexOvertices;
-      const y = this.y(vertex.x());
-      return (withinTol(y, vertex.y()) || Math.abs(y) === Infinity) && this.withinSegmentBounds(vertex);
+      const y = this.y(vertex.x);
+      return (withinTol(y, vertex.y) || Math.abs(y) === Infinity) && this.withinSegmentBounds(vertex);
     }
 
     this.measureTo = (verts) => {
@@ -303,8 +303,8 @@ class Line2d {
       return measureTo;
     }
 
-    this.maxDem = () => this.y() > this.x() ? this.y() : this.x();
-    this.minDem = () => this.y() < this.x() ? this.y() : this.x();
+    this.maxDem = () => this.y > this.x ? this.y : this.x;
+    this.minDem = () => this.y < this.x ? this.y : this.x;
 
     this.closestPointOnLine = (vertex, segment) => {
       vertex = (vertex instanceof Vertex2d) ? vertex : new Vertex2d(vertex);
@@ -313,11 +313,11 @@ class Line2d {
       const slope = this.slope();
       let x, y;
       if (!Number.isFinite(slope)) {
-        x = this.startVertex().x();
-        y = vertex.y();
+        x = this[0].x;
+        y = vertex.y;
       } else if (!Number.isFinite(perpSlope)) {
-        x = vertex.x();
-        y = this.startVertex().y();
+        x = vertex.x;
+        y = this[0].y;
       } else {
         x = newX(slope, perpSlope, this.yIntercept(), perpLine.yIntercept());
         y = this.y(x);
@@ -328,13 +328,13 @@ class Line2d {
     }
 
     this.closestVertex = (vertex) => {
-      const sv = this.startVertex()
-      const ev = this.endVertex()
+      const sv = this[0]
+      const ev = this[1]
       return sv.distance(vertex) < ev.distance(vertex) ? sv : ev;
     }
     this.furthestVertex = (vertex) => {
-      const sv = this.startVertex()
-      const ev = this.endVertex()
+      const sv = this[0]
+      const ev = this[1]
       return sv.distance(vertex) > ev.distance(vertex) ? sv : ev;
     }
 
@@ -342,8 +342,8 @@ class Line2d {
     function rightLeftInfo(vertex) {
       const closestPoint = instance.closestPointOnLine(vertex);
       const perp = instance.perpendicular(vertex.distance(closestPoint)/2, closestPoint, true);
-      const distStart = vertex.distance(perp.startVertex());
-      const distEnd = vertex.distance(perp.endVertex());
+      const distStart = vertex.distance(perp[0]);
+      const distEnd = vertex.distance(perp[1]);
       return {distStart, distEnd, inconclusive: Math.abs(distStart - distEnd) < leftRightTol};
     }
     function isRight(info) {
@@ -359,8 +359,8 @@ class Line2d {
         const info = rightLeftInfo(vertOline);
         return info.inconclusive ? 'on' : (isRight(info) ? 'right' : 'left');
       } else if (vertOline instanceof Line2d) {
-        const startDir = this.direction(vertOline.startVertex());
-        const endDir = this.direction(vertOline.endVertex());
+        const startDir = this.direction(vertOline[0]);
+        const endDir = this.direction(vertOline[1]);
         if (startDir === 'on' || endDir === 'on' || startDir !== endDir) return 'across';
         return startDir;
       }
@@ -376,8 +376,8 @@ class Line2d {
         distance = Math.abs(distance);
         const left = Line2d.startAndTheta(mp, rotated.negitive().radians(), distance/2);
         const right = Line2d.startAndTheta(mp, rotated.radians(), distance/2);
-        // return new Line2d(right.endVertex(), left.endVertex());
-        return new Line2d(left.endVertex(), right.endVertex());
+        // return new Line2d(right[1], left[1]);
+        return new Line2d(left[1], right[1]);
         // return right.combine(left);
       }
       return Line2d.startAndTheta(mp, rotated.radians(), distance);
@@ -391,8 +391,8 @@ class Line2d {
 
     this.rotate = (radians, pivot) => {
       pivot ||= this.midpoint();
-      this.startVertex().rotate(radians, pivot);
-      this.endVertex().rotate(radians, pivot);
+      this[0].rotate(radians, pivot);
+      this[1].rotate(radians, pivot);
       return this;
     }
 
@@ -410,29 +410,29 @@ class Line2d {
       }
 
       if (this.vertical() && line.vertical()) {
-        if (this.startVertex().x() === line.startVertex().x()) return Infinity;
+        if (this[0].x === line[0].x) return Infinity;
         return false;
       }
 
       if (withinTol(line.radians(), this.radians()) &&
               withinTol(line.yIntercept(), this.yIntercept())) {
         return Infinity;
-        // return Vertex2d.center(line.startVertex(), this.startVertex(), line.endVertex(), this.endVertex());
+        // return Vertex2d.center(line[0], this[0], line[1], this[1]);
       }
       const slope = this.slope();
       const lineSlope = line.slope();
       let x, y;
       if (!Number.isFinite(slope)) {
-        x = this.startVertex().x();
+        x = this[0].x;
         y = line.y(x);
       } else if (!Number.isFinite(lineSlope)) {
-        x = line.startVertex().x();
+        x = line[0].x;
         y = this.y(x);
       } else if (slope === 0) {
-        y = this.startVertex().y();
+        y = this[0].y;
         x = line.x(y);
       } else if (lineSlope === 0) {
-        y = line.startVertex().y();
+        y = line[0].y;
         x = this.x(y);
       } else {
         x = newX(slope, lineSlope, this.yIntercept(), line.yIntercept());
@@ -458,16 +458,16 @@ class Line2d {
       if (!intersection) return false;
       if (intersection === Infinity) {
         if (this.withinSegmentBounds(line)) {
-          if (this.isPoint()) return this.startVertex();
-          if (line.isPoint()) return line.startVertex();
+          if (this.isPoint()) return this[0];
+          if (line.isPoint()) return line[0];
           const acqui = line.alignRadially(this);
-          const startEqual = acqui.startVertex().equals(this.startVertex);
-          const endEqual = acqui.endVertex().equals(this.startVertex);
+          const startEqual = acqui[0].equals(this[0]);
+          const endEqual = acqui[1].equals(this[0]);
           if ((startEqual && endEqual) || !(startEqual && endEqual)) return Infinity;
-          const acquiEndIsOn = this.isOn(acqui.endVertex()) || acqui.isOn(this.endVertex());
-          if (startEqual) return acquiEndIsOn ? Infinity : this.startVertex();
-          const acquiStartIsOn = this.isOn(acqui.startVertex()) || acqui.isOn(this.startVertex());
-          if (endEqual) return acquiStartIsOn ? Infinity : this.endVertex();
+          const acquiEndIsOn = this.isOn(acqui[1]) || acqui.isOn(this[1]);
+          if (startEqual) return acquiEndIsOn ? Infinity : this[0];
+          const acquiStartIsOn = this.isOn(acqui[0]) || acqui.isOn(this[0]);
+          if (endEqual) return acquiStartIsOn ? Infinity : this[1];
           throw new Error('This shouldnt happen 12/03/23');
         }
         return false;
@@ -486,41 +486,41 @@ class Line2d {
       if (other instanceof Vertex2d) {
         const point =  this.closestPointOnLine(other, segment);
         if (point) return point.distance(other);
-        const dist1 = startVertex.distance(other);
-        const dist2 = endVertex.distance(other);
+        const dist1 = this[0].distance(other);
+        const dist2 = this[1].distance(other);
         return dist1 > dist2 ? dist2 : dist1;
       }
       if (other instanceof Line2d) {
         if (this.findSegmentIntersection(other, true)) return 0;
-        const dist1 = this.distance(other.startVertex(), segment);
-        const dist2 = this.distance(other.endVertex(), segment);
-        const dist3 = other.distance(this.startVertex(), segment);
-        const dist4 = other.distance(this.endVertex(), segment);
+        const dist1 = this.distance(other[0], segment);
+        const dist2 = this.distance(other[1], segment);
+        const dist3 = other.distance(this[0], segment);
+        const dist4 = other.distance(this[1], segment);
         return Math.min(...[dist1,dist2,dist3,dist4].filter((d) => Number.isFinite(d)));
       }
     }
 
-    this.minX = () => this.startVertex().x() < this.endVertex().x() ?
-                        this.startVertex().x() : this.endVertex().x();
-    this.minY = () => this.startVertex().y() < this.endVertex().y() ?
-                        this.startVertex().y() : this.endVertex().y();
-    this.maxX = () => this.startVertex().x() > this.endVertex().x() ?
-                        this.startVertex().x() : this.endVertex().x();
-    this.maxY = () => this.startVertex().y() > this.endVertex().y() ?
-                        this.startVertex().y() : this.endVertex().y();
+    this.minX = () => this[0].x < this[1].x ?
+                        this[0].x : this[1].x;
+    this.minY = () => this[0].y < this[1].y ?
+                        this[0].y : this[1].y;
+    this.maxX = () => this[0].x > this[1].x ?
+                        this[0].x : this[1].x;
+    this.maxY = () => this[0].y > this[1].y ?
+                        this[0].y : this[1].y;
     this.withinLineBounds = (vertex) => {
       if (this.slope() > consideredInfinity)
-        return vertex.x() > this.startVertex().x() - tol && vertex.x() < this.startVertex().x() + tol;
+        return vertex.x > this[0].x - tol && vertex.x < this[0].x + tol;
       if (this.slope() === 0)
-        return vertex.y() > this.startVertex().y() - tol && vertex.y() < this.startVertex().y() + tol;
+        return vertex.y > this[0].y - tol && vertex.y < this[0].y + tol;
       return true;
     }
     this.angle = () => {
       return Math.toDegrees(this.radians());
     }
     this.radians = () => {
-      const deltaX = this.endVertex().x() - this.startVertex().x();
-      const deltaY = this.endVertex().y() - this.startVertex().y();
+      const deltaX = this[1].x - this[0].x;
+      const deltaY = this[1].y - this[0].y;
       return Math.atan2(deltaY, deltaX);
     }
 
@@ -549,8 +549,8 @@ class Line2d {
       length ||= this.length();
       midpoint ||= this.midpoint();
       const perpLine = this.perpendicular(distance * 2, midpoint, true);
-      let targetPoint = perpLine.startVertex();
-      if (distance < 0) targetPoint = perpLine.endVertex();
+      let targetPoint = perpLine[0];
+      if (distance < 0) targetPoint = perpLine[1];
       const radians = this.radians();
       const halfLine1 = Line2d.startAndTheta(targetPoint, radians, length/2);
       const halfLine2 = Line2d.startAndTheta(targetPoint, radians, length/-2);
@@ -565,7 +565,7 @@ class Line2d {
     this.equals = (other) => {
       if (!(other instanceof Line2d)) return false;
       if (other === this) return true;
-      return this.startVertex().equals(other.startVertex()) && this.endVertex().equals(other.endVertex());
+      return this[0].equals(other[0]) && this[1].equals(other[1]);
     }
 
     this.equivalent = (other) => this.equals(other) || this.equals(other.negitive());
@@ -574,15 +574,15 @@ class Line2d {
     this.isPoint = () => withinPointTol(this.length(), 0);
     this.clean = (other) => {
       if (!(other instanceof Line2d)) return;
-      if (other.startVertex().equals(other.endVertex())) return this;
-      if (this.startVertex().equals(this.endVertex())) return other;
+      if (other[0].equals(other[1])) return this;
+      if (this[0].equals(this[1])) return other;
       if (this.toString() === other.toString() || this.toString() === other.toNegitiveString()) return this;
       if (this.isPoint()) return other;
       if (other.isPoint()) return this;
     }
 
     this.copy = () => {
-      const l = new Line2d(this.startVertex().copy(), this.endVertex().copy());
+      const l = new Line2d(this[0].copy(), this[1].copy());
       l.label = this.label;
       return l;
     }
@@ -593,13 +593,13 @@ class Line2d {
       if (clean) return clean;
       if (!withinTol(this.slope(), other.slope())) return;
       const otherNeg = other.negitive();
-      const outputWithinTol = withinTol(this.y(other.x()), other.y(other.x())) &&
-                    withinTol(this.x(other.y()), other.x(other.y()));
+      const outputWithinTol = withinTol(this.y(other.x), other.y(other.x)) &&
+                    withinTol(this.x(other.y), other.x(other.y));
       if (!outputWithinTol) return;
-      const v1 = this.startVertex();
-      const v2 = this.endVertex();
-      const ov1 = other.startVertex();
-      const ov2 = other.endVertex();
+      const v1 = this[0];
+      const v2 = this[1];
+      const ov1 = other[0];
+      const ov2 = other[1];
       if (notSegment !== true && !this.withinSegmentBounds(other)) {
         return;
       }
@@ -609,9 +609,9 @@ class Line2d {
       return withinTol(this.radians(), combined.radians()) ? combined : combined.negitive();
     }
 
-    this.isEndpoint = (vertex) => this.startVertex().equals(vertex) || this.endVertex().equals(vertex);
+    this.isEndpoint = (vertex) => this[0].equals(vertex) || this[1].equals(vertex);
     this.sortVerticies = (vertices) =>
-      vertices.sort((v1,v2) => this.startVertex().distance(v1) - this.startVertex().distance(v2))
+      vertices.sort((v1,v2) => this[0].distance(v1) - this[0].distance(v2))
 
     this.slice = (lines) => {
       if (this.isPoint()) return null;
@@ -630,7 +630,7 @@ class Line2d {
       this.sortVerticies(list);
       if (list.length === 0) return null;
       const fractured = [];
-      let prevVert = this.startVertex().copy();
+      let prevVert = this[0].copy();
       for (let index = 0; index < list.length; index++) {
         const currVert = list[index];
         const line = new Line2d(prevVert, currVert);
@@ -639,7 +639,7 @@ class Line2d {
           prevVert = currVert;
         }
       }
-      const lastLine = new Line2d(prevVert, this.endVertex().copy());
+      const lastLine = new Line2d(prevVert, this[1].copy());
       if (!lastLine.isPoint()) fractured.push(lastLine);
       return fractured;
     }
@@ -677,11 +677,9 @@ class Line2d {
         xOffsetBack = halfLen * Math.cos(backRads);
         yOffsetBack = halfLen * Math.sin(backRads);
       }
-      const sv = this.startVertex();
-      const ev = this.endVertex();
-      const startVertex = {x: midPoint.x() - xOffsetBack, y: midPoint.y() - yOffsetBack};
-      const endVertex = {x: midPoint.x() - xOffsetFront, y: midPoint.y() - yOffsetFront};
-      const line = new Line2d(startVertex, endVertex);
+      const sv = {x: midPoint.x - xOffsetBack, y: midPoint.y - yOffsetBack};
+      const ev = {x: midPoint.x - xOffsetFront, y: midPoint.y - yOffsetFront};
+      const line = new Line2d(sv, ev);
       return withinTol(line.radians(), this.radians()) ? line : line.negitive();
     }
 
@@ -693,22 +691,22 @@ class Line2d {
       const rads = diffLine.radians();
       const xDiff = Math.cos(rads)*diffLine.length();
       const yDiff = Math.sin(rads)*diffLine.length();
-      const sv = this.startVertex();
-      const newStart = {x: sv.x() + xDiff, y: sv.y() + yDiff};
-      const ev = this.endVertex();
-      const newEnd = {x: ev.x() + xDiff, y: ev.y() + yDiff};
-      this.startVertex().point().x = newStart.x;
-      this.startVertex().point().y = newStart.y;
-      this.endVertex().point().x = newEnd.x;
-      this.endVertex().point().y = newEnd.y;
+      const sv = this[0];
+      const newStart = {x: sv.x + xDiff, y: sv.y + yDiff};
+      const ev = this[1];
+      const newEnd = {x: ev.x + xDiff, y: ev.y + yDiff};
+      this[0].x = newStart.x;
+      this[0].y = newStart.y;
+      this[1].x = newEnd.x;
+      this[1].y = newEnd.y;
     };
 
     // Ensures returnLine startVertex is closer to trendSetter endVertex.
     // Get In Line
     this.acquiescent = (trendSetter) => {
       if (!(trendSetter instanceof Line2d)) return this;
-      const shouldReverse = trendSetter.endVertex().distance(this.endVertex()) <
-                            trendSetter.endVertex().distance(this.startVertex());
+      const shouldReverse = trendSetter[1].distance(this[1]) <
+                            trendSetter[1].distance(this[0]);
                             return shouldReverse ? this.negitive() : this.clone();
     }
 
@@ -729,13 +727,13 @@ class Line2d {
 
     this.clone = this.copy;
 
-    this.negitive = () => new Line2d(this.endVertex(), this.startVertex());
-    this.toString = () => `[${this.startVertex().toString()} , ${this.endVertex().toString()}]`;
+    this.negitive = () => new Line2d(this[1], this[0]);
+    this.toString = () => `[${this[0].toString()} , ${this[1].toString()}]`;
     this.toInfoString = () => `slope: ${this.slope()}\n` +
                         `angle: ${this.angle()}\n` +
                         `segment: ${this.toString()}`;
-    this.toNegitiveString = () => `[${this.endVertex().toString()}, ${this.startVertex().toString()}]`;
-    this.approxToString = () => `[${this.startVertex().approxToString()}, ${this.endVertex().approxToString()}]`;
+    this.toNegitiveString = () => `[${this[1].toString()}, ${this[0].toString()}]`;
+    this.approxToString = () => `[${this[0].approxToString()}, ${this[1].approxToString()}]`;
   }
 }
 
@@ -744,16 +742,16 @@ Line2d.startAndTheta = (startVertex, theta, dist) => {
   dist ||= 100;
   startVertex = new Vertex2d(startVertex);
   const end = {
-    x: startVertex.x() + dist * Math.cos(theta),
-    y: startVertex.y() +dist*Math.sin(theta)
+    x: startVertex.x + dist * Math.cos(theta),
+    y: startVertex.y +dist*Math.sin(theta)
   };
   return new Line2d(startVertex.point(), end);
 }
 Line2d.instance = (startV, endV, group) => {
   const line = Lookup.instance(Line2d.name);
   line.lookupGroup(group);
-  line.startVertex(new Vertex2d(startV)).lookupGroup(group);
-  line.endVertex(new Vertex2d(endV)).lookupGroup(group);
+  (line[0] = new Vertex2d(startV)).lookupGroup(group);
+  (line[1] = new Vertex2d(endV)).lookupGroup(group);
   return line;
 }
 
@@ -785,8 +783,8 @@ Line2d.vertices = (lines) => {
   const verts = {};
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
-    const sv = line.startVertex();
-    const ev = line.endVertex();
+    const sv = line[0];
+    const ev = line[1];
     verts[sv.id()] = sv;
     verts[ev.id()] = ev;
   }
@@ -902,12 +900,12 @@ Line2d.toleranceMap = (tol, startEndBoth, lines) => {
   const tolAttrs = {};
   const both = startEndBoth !== true && startEndBoth !== false;
   if (both || startEndBoth === true) {
-    tolAttrs['startVertex.x'] = tol;
-    tolAttrs['startVertex.y'] = tol;
+    tolAttrs['0.x'] = tol;
+    tolAttrs['0.y'] = tol;
   }
   if (both || startEndBoth === false) {
-    tolAttrs['endVertex.x'] = tol;
-    tolAttrs['endVertex.y'] = tol;
+    tolAttrs['1.x'] = tol;
+    tolAttrs['1.y'] = tol;
   }
   const map = new ToleranceMap(tolAttrs);
   for (let index = 0; index < lines.length; index++) {
@@ -931,7 +929,7 @@ Line2d.toDrawString = (lines, ...colors) => {
   let str = '';
   lines.forEach((l,i) => {
     color = colors[i%colors.length] || '';
-    str += `${color}[${l.startVertex().toString()},${l.endVertex().toString()}],`;
+    str += `${color}[${l[0].toString()},${l[1].toString()}],`;
   });
   return str.substr(0, str.length - 1);
 }
@@ -940,7 +938,7 @@ Line2d.toApproxDrawString = (lines, ...colors) => {
   let str = '';
   lines.forEach((l,i) => {
     color = colors[i%colors.length] || '';
-    str += `${color}[${l.startVertex().approxToString()},${l.endVertex().approxToString()}],`;
+    str += `${color}[${l[0].approxToString()},${l[1].approxToString()}],`;
   });
   return str.substr(0, str.length - 1);
 }
@@ -948,7 +946,7 @@ Line2d.toApproxDrawString = (lines, ...colors) => {
 Line2d.toString = (lines) => {
   let str = '';
   for (let index = 0; index < lines.length; index++) {
-    str += `[${lines[index].startVertex().toString()}, ${lines[index].endVertex().toString()}],`;
+    str += `[${lines[index][0].toString()}, ${lines[index][1].toString()}],`;
   }
   return str.substring(0, str.length - 1);
 }
@@ -988,7 +986,7 @@ Line2d.fromString = (str) => {
   return lines;
 }
 
-Object.class.register(Line2d, 'endVertex', 'startVertex', 'label');
+Object.class.register(Line2d, '1', '0', 'label');
 
 Line2d.fromJson = (json) => {
   const svJson = json[0] || json.startVertex;
@@ -1005,10 +1003,10 @@ Line2d.mirror = (lines) => {
 }
 
 Line2d.endpointDistanceSort = (target) => (l1,l2) => {
-  const ds1 = target.distance(l1.startVertex());
-  const ds2 = target.distance(l2.startVertex());
-  const de1 = target.distance(l1.endVertex());
-  const de2 = target.distance(l2.endVertex());
+  const ds1 = target.distance(l1[0]);
+  const ds2 = target.distance(l2[0]);
+  const de1 = target.distance(l1[1]);
+  const de2 = target.distance(l2[1]);
   return (ds1 < de1 ? ds1 : de1) - (ds2 < de2 ? ds2 : de2);
 }
 
@@ -1048,7 +1046,7 @@ Line2d.translate = (lines, offset) => {
 Line2d.centerOn = (lines, center) => {
   center = new Vertex2d(center);
   const currCenter = Vertex2d.center(Line2d.vertices(lines));
-  const offset = {x: center.x() - currCenter.x(), y: center.y() - currCenter.y()};
+  const offset = {x: center.x - currCenter.x, y: center.y - currCenter.y};
   Line2d.translate(lines, offset);
   return offset;
 }

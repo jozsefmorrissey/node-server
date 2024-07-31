@@ -99,24 +99,24 @@ class Draw2d {
 
     let rMultiplier = 1;
     function identifyVertices(line) {
-      vertLocTolMap.add(line.startVertex());
-      vertLocTolMap.add(line.endVertex());
-      const svHits = vertLocTolMap.matches(line.startVertex()).length;
-      const evHits = vertLocTolMap.matches(line.endVertex()).length;
+      vertLocTolMap.add(line[0]);
+      vertLocTolMap.add(line[1]);
+      const svHits = vertLocTolMap.matches(line[0]).length;
+      const evHits = vertLocTolMap.matches(line[1]).length;
       const svRadius = Math.pow(.5,  1 + ((svHits - 1) * .75));
       const evRadius = Math.pow(.5,  1 + ((evHits - 1) * .75));
 
-      const vertId = 13*(line.startVertex().x() + line.endVertex().x() + 13*(line.startVertex().y() + line.endVertex().y()));
+      const vertId = 13*(line$1 + line[1].x + 13*(line[0].y + line[1].y));
       const ccolor = colors[Math.floor(line.length() + vertId) % colors.length];
 
-      draw.circle(new Circle2d(svRadius * rMultiplier, line.startVertex()), null, ccolor, .01);
-      draw.circle(new Circle2d(evRadius * rMultiplier, line.endVertex()), null, ccolor, .01);
+      draw.circle(new Circle2d(svRadius * rMultiplier, line[0]), null, ccolor, .01);
+      draw.circle(new Circle2d(evRadius * rMultiplier, line[1]), null, ccolor, .01);
     }
 
     const midpointFlag = (point, radians) => {
-      CTX().moveTo(point.x(), point.y());
-      const ev = Line2d.startAndTheta(point, radians, 15).endVertex();
-      CTX().lineTo(ev.x(), ev.y());
+      CTX().moveTo(point.x, point.y);
+      const ev = Line2d.startAndTheta(point, radians, 15)[1];
+      CTX().lineTo(ev.x, ev.y);
     }
 
     draw.object = (obj, color, width) => {
@@ -148,8 +148,8 @@ class Draw2d {
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
       const sv = line[0]; const ev = line[1];
-      ctx.moveTo(sv.x(), sv.y());
-      ctx.lineTo(ev.x(), ev.y());
+      ctx.moveTo(sv.x, sv.y);
+      ctx.lineTo(ev.x, ev.y);
       ctx.stroke();
       // identifyVertices(line);
 
@@ -205,7 +205,7 @@ class Draw2d {
       // if ((typeof poly.getTextInfo) === 'function') {
       //   ctx.save();
       //   const info = poly.getTextInfo();
-      //   ctx.translate(info.center.x(), info.center.y());
+      //   ctx.translate(info.center.x, info.center.y);
       //   ctx.rotate(info.radians);
       //   ctx.beginPath();
       //   ctx.lineWidth = 4;
@@ -261,7 +261,7 @@ class Draw2d {
       ctx.fillStyle = color;
 
       const center = square.center();
-      ctx.translate(center.x(), center.y());
+      ctx.translate(center.x, center.y);
       ctx.rotate(square.radians());
       ctx.rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
       ctx.stroke();
@@ -286,7 +286,7 @@ class Draw2d {
       ctx.lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
       ctx.strokeStyle = lineColor || 'black';
       ctx.fillStyle = fillColor || 'white';
-      ctx.arc(center.x(), center.y(), circle.radius(),0, 2*Math.PI);
+      ctx.arc(center.x, center.y, circle.radius(),0, 2*Math.PI);
       ctx.stroke();
       ctx.fill();
     }
@@ -333,7 +333,7 @@ class Draw2d {
       ctx.lineWidth = .2;
       const textSize = measureText(text);
       point = getLocationPoint(textSize, point, props);
-      ctx.translate(point.x(), point.y());
+      ctx.translate(point.x, point.y);
       ctx.rotate(props.radians);
       if (props.fillColor) {
         ctx.fillStyle = props.fillColor || "white";
@@ -364,7 +364,7 @@ class Draw2d {
       // ctx.lineWidth = 0;
       // const length = measurement.display();
       // const textLength = length.length;
-      // ctx.translate(midpoint.x(), midpoint.y());
+      // ctx.translate(midpoint.x, midpoint.y);
       // ctx.rotate(line.radians());
       // ctx.beginPath();
       // ctx.fillStyle = "white";

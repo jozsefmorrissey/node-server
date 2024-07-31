@@ -18,8 +18,8 @@ Test.add('Cabinet: doorIntersect',(ts) => {
   let rrp = undefined;
   dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
   ts.assertEquals(dx.center.length, 9.8125);
-  ts.assertEquals(dx.center.center.x(), .5, null, 1000);
-  ts.assertEquals(dx.center.center.y(), 15 - 1/32, null, 1000);
+  ts.assertEquals(dx.center.center.x, .5, null, 1000);
+  ts.assertEquals(dx.center.center.y, 15 - 1/32, null, 1000);
   ts.assertEquals(dx.left.theta, undefined);
   ts.assertEquals(dx.right.theta, undefined);
   ts.assertEquals(dx.center.left.reveal, 1/16);
@@ -33,8 +33,8 @@ Test.add('Cabinet: doorIntersect',(ts) => {
   rrp = {x:0,y:0};
   dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
   ts.assertEquals(dx.center.length, 9.8125);
-  ts.assertEquals(dx.center.center.x(), -.5, null, 1000);
-  ts.assertEquals(dx.center.center.y(), 15 - 1/32, null, 1000);
+  ts.assertEquals(dx.center.center.x, -.5, null, 1000);
+  ts.assertEquals(dx.center.center.y, 15 - 1/32, null, 1000);
   ts.assertEquals(dx.left.theta, undefined);
   ts.assertEquals(dx.right.theta, undefined);
   ts.assertEquals(dx.center.left.reveal, 1/8);
@@ -48,8 +48,8 @@ Test.add('Cabinet: doorIntersect',(ts) => {
   rrp = {x:30,y:0};
   dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
   ts.assertEquals(dx.center.length, 9.875);
-  ts.assertEquals(dx.center.center.x(), 15, null, 1000);
-  ts.assertEquals(dx.center.center.y(), -.5, null, 1000);
+  ts.assertEquals(dx.center.center.x, 15, null, 1000);
+  ts.assertEquals(dx.center.center.y, -.5, null, 1000);
   ts.assertEquals(dx.center.left.reveal, 1/16);
   ts.assertEquals(dx.center.right.reveal, 1/16);
   ts.assertEquals(dx.left.theta, undefined);
@@ -64,8 +64,8 @@ Test.add('Cabinet: doorIntersect',(ts) => {
   rrp = {x:0,y:0};
   dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, 1/8);
   ts.assertEquals(dx.center.length, 9.875);
-  ts.assertEquals(dx.center.center.x(), 15, null, 1000);
-  ts.assertEquals(dx.center.center.y(), .5, null, 1000);
+  ts.assertEquals(dx.center.center.x, 15, null, 1000);
+  ts.assertEquals(dx.center.center.y, .5, null, 1000);
   ts.assertEquals(dx.center.left.reveal, 1/16);
   ts.assertEquals(dx.center.right.reveal, 1/16);
   ts.assertEquals(dx.left.theta, undefined);
@@ -94,8 +94,8 @@ Test.add('Cabinet: doorIntersect',(ts) => {
   rrp = {x:10,y:0};
   dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 3/4, 3/4, 3/4, .125, 1/4);
   ts.assertEquals(dx.center.length, 7.75);
-  ts.assertEquals(dx.center.center.x(), 5, null, 1000);
-  ts.assertEquals(dx.center.center.y(), 9.375, null, 1000);
+  ts.assertEquals(dx.center.center.x, 5, null, 1000);
+  ts.assertEquals(dx.center.center.y, 9.375, null, 1000);
   ts.assertEquals(dx.center.left.reveal, 1.125);
   ts.assertEquals(dx.center.right.reveal, 1.125);
   ts.assertEquals(dx.left.theta, undefined);

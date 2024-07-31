@@ -33,8 +33,8 @@ class CabinetConfig {
       const layout2d = group.room().layout();
       if (layout2d) {
         const layoutCenter = layout2d.center();
-        assem.position().setCenter('x', layoutCenter.x());
-        assem.position().setCenter('z', layoutCenter.y());
+        assem.position().setCenter('x', layoutCenter.x);
+        assem.position().setCenter('z', layoutCenter.y);
       }
       assem.name(name);
       return assem;

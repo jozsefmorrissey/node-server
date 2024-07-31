@@ -21,23 +21,15 @@ class Line3D {
       endVertex = startVertex;
       startVertex = new Vertex3D();
     }
-    this.startVertex = new Vertex3D(startVertex);
-    this.endVertex = new Vertex3D(endVertex);
-    this.startVertex.DIRECTIONAL = startVertex && startVertex.DIRECTIONAL;
-    this.endVertex.DIRECTIONAL = endVertex && endVertex.DIRECTIONAL;
-    Object.defineProperty(this, '0', {
-      get: () => this.startVertex,
-      set: (val) => this.startVertex = val
-    });
-    Object.defineProperty(this, '1', {
-      get: () => this.endVertex,
-      set: (val) => this.endVertex = val
-    });
+    this[0] = new Vertex3D(startVertex);
+    this[1] = new Vertex3D(endVertex);
+    this[0].DIRECTIONAL = startVertex && startVertex.DIRECTIONAL;
+    this[1].DIRECTIONAL = endVertex && endVertex.DIRECTIONAL;
     const instance = this;
     this[1].DIRECTIONAL = true;
 
     this.clone = () => {
-      const clone = new Line3D(this.startVertex.clone(), this.endVertex.clone());
+      const clone = new Line3D(this[0].clone(), this[1].clone());
       clone[0].DIRECTIONAL = this[0].DIRECTIONAL;
       clone[1].DIRECTIONAL = this[1].DIRECTIONAL;
       return clone;
@@ -53,13 +45,13 @@ class Line3D {
 
     this.invert = (condition) => {
       if (condition === undefined || condition) {
-        const temp = [this.startVertex.x, this.startVertex.y, this.startVertex.z];
-        this.startVertex.x = this.endVertex.x;
-        this.startVertex.y = this.endVertex.y;
-        this.startVertex.z = this.endVertex.z;
-        this.endVertex.x = temp[0];
-        this.endVertex.y = temp[1];
-        this.endVertex.z = temp[2];
+        const temp = [this[0].x, this[0].y, this[0].z];
+        this[0].x = this[1].x;
+        this[0].y = this[1].y;
+        this[0].z = this[1].z;
+        this[1].x = temp[0];
+        this[1].y = temp[1];
+        this[1].z = temp[2];
       }
     }
 
@@ -85,20 +77,20 @@ class Line3D {
                                     this.equals(other.negitive(), tolerance);
 
     this.vector = () => {
-      let i = this.endVertex.x - this.startVertex.x;
-      let j = this.endVertex.y - this.startVertex.y;
-      let k = this.endVertex.z - this.startVertex.z;
+      let i = this[1].x - this[0].x;
+      let j = this[1].y - this[0].y;
+      let k = this[1].z - this[0].z;
       return new Vector3D(i,j,k);
     };
 
     this.translate = (vector) => {
-      this.startVertex.translate(vector);
-      this.endVertex.translate(vector);
+      this[0].translate(vector);
+      this[1].translate(vector);
     }
 
-    this.finite = (limit) => this.startVertex.finite(limit) && this.endVertex.finite(limit);
+    this.finite = (limit) => this[0].finite(limit) && this[1].finite(limit);
 
-    this.isPoint = () => this.startVertex.equals(this.endVertex);
+    this.isPoint = () => this[0].equals(this[1]);
 
     // this.on = (vertex, tolerance) => {
     //   tolerance ||= .01;
@@ -108,17 +100,17 @@ class Line3D {
       let offset = ((index + 1) % 3);
       let coord = String.fromCharCode(offset + 120);
       let coef = String.fromCharCode(offset + 97);
-      if (withinTol(instance.endVertex[coord], instance.startVertex[coord]))
-        obj[coef] = new FixedValue(instance.startVertex[coord]);
+      if (withinTol(instance[1][coord], instance[0][coord]))
+        obj[coef] = new FixedValue(instance[0][coord]);
       else
-        obj[coef] = (instance.endVertex[coord] - instance.startVertex[coord]) / t;
+        obj[coef] = (instance[1][coord] - instance[0][coord]) / t;
     }
 
     this.equation = () => {
       const returnValue = {};
       for (let i = 0; i < 3; i++) {
         let coord = String.fromCharCode(i + 120);
-        let t = this.endVertex[coord] - this.startVertex[coord];
+        let t = this[1][coord] - this[0][coord];
         if (t !== 0) {
           setCoef(i, returnValue, t);
           setCoef(i + 1, returnValue, t);
@@ -133,7 +125,7 @@ class Line3D {
     this.toString = (accuracy) => {
       return this.toDrawString(null, accuracy);
     }
-    this.toNegitiveString = () => `${new String(this.endVertex)} => ${new String(this.startVertex)}`;
+    this.toNegitiveString = () => `${new String(this[1])} => ${new String(this[0])}`;
     this.toDrawString = (color, accuracy) => {
       let brackets
       if (this.isLine()) brackets = ['(', ')'];
@@ -141,14 +133,14 @@ class Line3D {
       else if (this.isDirectional.anti()) brackets = ['(', ']'];
       else brackets = ['[', ')'];
       color ||= '';
-      const valueStr = `${this.startVertex.toString(accuracy)}, ${this.endVertex.toString(accuracy)}`;
+      const valueStr = `${this[0].toString(accuracy)}, ${this[1].toString(accuracy)}`;
       return color + brackets[0] + valueStr + brackets[1];
     }
 
     this.midpoint = () => new Vertex3D(
-      (this.endVertex.x +this.startVertex.x) / 2,
-      (this.endVertex.y +this.startVertex.y) / 2,
-      (this.endVertex.z +this.startVertex.z) / 2
+      (this[1].x +this[0].x) / 2,
+      (this[1].y +this[0].y) / 2,
+      (this[1].z +this[0].z) / 2
     );
 
     this.centerOn = (newMidpoint) =>
@@ -161,50 +153,50 @@ class Line3D {
         const unitVec = this.vector().unit();
         if (fromStartVertex !== undefined) {
           if (fromStartVertex === true) {
-            instance.endVertex.positionAt(instance.startVertex.translate(unitVec.scale(length), true));
+            instance[1].positionAt(instance[0].translate(unitVec.scale(length), true));
           } else {
-            instance.startVertex.positionAt(instance.endVertex.translate(unitVec.scale(length), true));
+            instance[0].positionAt(instance[1].translate(unitVec.scale(length), true));
           }
         } else {
           const halfLenMag = length/2;
           const halfDistVec = unitVec.scale(halfLenMag);
           const mp = instance.midpoint();
-          instance.startVertex.positionAt(mp);
-          instance.startVertex.translate(halfDistVec.inverse());
-          instance.endVertex.positionAt(mp);
-          instance.endVertex.translate(halfDistVec);
+          instance[0].positionAt(mp);
+          instance[0].translate(halfDistVec.inverse());
+          instance[1].positionAt(mp);
+          instance[1].translate(halfDistVec);
         }
       }
       return instance.vector().magnitude();
     }
     this.length = resize;
 
-    this.fromStart = (distance) => this.startVertex.translate(this.vector().unit().scale(distance), true);
-    this.fromEnd = (distance) => this.endVertex.translate(this.vector().unit().scale(distance), true);
+    this.fromStart = (distance) => this[0].translate(this.vector().unit().scale(distance), true);
+    this.fromEnd = (distance) => this[1].translate(this.vector().unit().scale(distance), true);
 
     this.adjustLength = (change, fromStartVertex) => {
       if ((typeof change) !== 'number' || change === 0) return;
       const unitVec = this.vector().unit();
       if (fromStartVertex !== undefined) {
         if (fromStartVertex === true) {
-          this.startVertex.translate(unitVec.scale(change));
+          this[0].translate(unitVec.scale(change));
         } else {
-          this.endVertex.translate(unitVec.scale(change));
+          this[1].translate(unitVec.scale(change));
         }
       } else {
         const halfChangeMag = change/2;
         const halfDistVec = unitVec.scale(halfChangeMag);
-       this.startVertex.translate(halfDistVec.inverse());
-       this.endVertex.translate(halfDistVec);
+       this[0].translate(halfDistVec.inverse());
+       this[1].translate(halfDistVec);
       }
     }
 
     this.polarize = (vertex) => {
       vertex ||= {x:0, y:0, z:0}
-      if (this.startVertex.distance(vertex) > this.endVertex.distance(vertex)) {
-        const temp = this.startVertex;
-        this.startVertex = this.endVertex;
-        this.endVertex = temp;
+      if (this[0].distance(vertex) > this[1].distance(vertex)) {
+        const temp = this[0];
+        this[0] = this[1];
+        this[1] = temp;
       }
       return this;
     }
@@ -265,7 +257,7 @@ class Line3D {
       if (within === true) return perp;
       if (within === 'AFTER' && state === CONN_STATES.DIR) return perp;
       const closest = vertOnLine.distance(this[0]) < vertOnLine.distance(this[1]) ? this[0] : this[1];
-      perp.startVertex = closest;
+      perp[0] = closest;
       return perp;
     }
 
@@ -278,7 +270,7 @@ class Line3D {
     }
     this.intersection = (other) => {
       const connector = Line3D.connect(this, other);
-      if (connector && withinTol(connector.length(), 0)) return connector.startVertex;
+      if (connector && withinTol(connector.length(), 0)) return connector[0];
       return null;
     }
 
@@ -300,8 +292,8 @@ class Line3D {
         if (int2d === Number.POSITIVE_INFINITY) {
           int2d = l1.midpoint().to2D(xAttr, yAttr);
         }
-        int[xAttr] = int2d.x();
-        int[yAttr] = int2d.y();
+        int[xAttr] = int2d.x;
+        int[yAttr] = int2d.y;
       }
     }
 
@@ -343,28 +335,28 @@ class Line3D {
 
     this.x = (x) => {
       const vec = this.vector().unit();
-      const t = (x - this.startVertex.x)/vec.i();
-      x = this.startVertex.x + vec.i()*t;
-      const y = this.startVertex.y + vec.j()*t;
-      const z = this.startVertex.z + vec.k()*t;
+      const t = (x - this[0].x)/vec.i();
+      x = this[0].x + vec.i()*t;
+      const y = this[0].y + vec.j()*t;
+      const z = this[0].z + vec.k()*t;
       const vertex = new Vertex3D(x,y,z);
       return vertex.finite() ? {vertex, t} : null;
     }
     this.y = (y) => {
       const vec = this.vector().unit();
-      const t = (y - this.startVertex.y)/vec.j();
-      const x = this.startVertex.x + vec.i()*t;
-      y = this.startVertex.y + vec.j()*t;
-      const z = this.startVertex.z + vec.k()*t;
+      const t = (y - this[0].y)/vec.j();
+      const x = this[0].x + vec.i()*t;
+      y = this[0].y + vec.j()*t;
+      const z = this[0].z + vec.k()*t;
       const vertex = new Vertex3D(x,y,z);
       return vertex.finite() ? {vertex, t} : null;
     }
     this.z = (z) => {
       const vec = this.vector().unit();
-      const t = (z - this.startVertex.z)/vec.k();
-      const x = this.startVertex.x + vec.i()*t;
-      const y = this.startVertex.y + vec.j()*t;
-      z = this.startVertex.z + vec.k()*t;
+      const t = (z - this[0].z)/vec.k();
+      const x = this[0].x + vec.i()*t;
+      const y = this[0].y + vec.j()*t;
+      z = this[0].z + vec.k()*t;
       const vertex = new Vertex3D(x,y,z);
       return vertex.finite() ? {vertex, t} : null;
     }
@@ -376,27 +368,27 @@ class Line3D {
 
     this.within = (vertex) => {
       vertex = new Vertex3D(vertex);
-      const onLine = this.x(vertex.x) || this.y(vertex.y) || this.z(vertex.z);
+      const onLine = (this.x(vertex.x) || this.y(vertex.y) || this.z(vertex.z));
       if (!onLine || !onLine.vertex.equals(vertex)) return false;
       if (onLine.t < -tol) return 'BEFORE';
-      if (this.startVertex.distance(onLine.vertex) > this.length() + tol) return 'AFTER';
+      if (this[0].distance(onLine.vertex) > this.length() + tol) return 'AFTER';
       return true;
     }
 
     this.intersection.segment = (other, both) => {
       const connector = this.connect.line.segment(other, both);
-      if (connector && withinTol(connector.length(), 0)) return connector.startVertex;
+      if (connector && withinTol(connector.length(), 0)) return connector[0];
       return null;
     }
 
     this.intersection.directional = (other, both) => {
       const connector = this.connect.line.directional(other, both);
-      if (connector && withinTol(connector.length(), 0)) return connector.startVertex;
+      if (connector && withinTol(connector.length(), 0)) return connector[0];
       return null;
     }
 
     this.pointAtDistance = (distance) => {
-      const point =this.startVertex.copy();
+      const point =this[0].copy();
       const unitVec = this.vector().unit();
       point.translate(unitVec.scale(distance));
       return point;
@@ -411,15 +403,15 @@ class Line3D {
 
     this.rotate = (rotation, center) => {
       center ||= this.midpoint();
-     this.startVertex.rotate(rotation, center);
-     this.endVertex.rotate(rotation, center);
+     this[0].rotate(rotation, center);
+     this[1].rotate(rotation, center);
      return this;
     }
 
     this.reverseRotate = (rotation, center) => {
       center ||= this.midpoint();
-     this.startVertex.reverseRotate(rotation, center);
-     this.endVertex.reverseRotate(rotation, center);
+     this[0].reverseRotate(rotation, center);
+     this[1].reverseRotate(rotation, center);
      return this;
     }
 
@@ -432,8 +424,8 @@ class Line3D {
     // Get In Line
     this.acquiescent = (trendSetter) => {
       if (!(trendSetter instanceof Line3D)) return this;
-      const endDist = trendSetter.endVertex.distance(this.endVertex);
-      const startDist = trendSetter.endVertex.distance(this.startVertex);
+      const endDist = trendSetter[1].distance(this[1]);
+      const startDist = trendSetter[1].distance(this[0]);
       const shouldReverse = endDist > startDist;
       if (shouldReverse) return this.negitive();
       return this.clone();
@@ -448,13 +440,13 @@ class Line3D {
 
     this.acquies = (trendSetter) => {
       const acLine = this.acquiescent(trendSetter);
-      const temp = [this.startVertex.x, this.startVertex.y, this.startVertex.z];
-      this.startVertex.x = acLine.endVertex.x;
-      this.startVertex.y = acLine.endVertex.y;
-      this.startVertex.z = acLine.endVertex.z;
-      this.endVertex.x = temp[0];
-      this.endVertex.y = temp[1];
-      this.endVertex.z = temp[2];
+      const temp = [this[0].x, this[0].y, this[0].z];
+      this[0].x = acLine[1].x;
+      this[0].y = acLine[1].y;
+      this[0].z = acLine[1].z;
+      this[1].x = temp[0];
+      this[1].y = temp[1];
+      this[1].z = temp[2];
     }
 
     /**
@@ -466,8 +458,8 @@ class Line3D {
     **/
     this.perpendicular = (vertex) => {
       if (vertex) {
-        const A = this.startVertex.vector();
-        const C = this.endVertex.vector();
+        const A = this[0].vector();
+        const C = this[1].vector();
         const B = vertex.vector();
         const C_A = C.minus(A);
         const t = B.minus(A).dot(C_A)/C_A.dot(C_A);
@@ -515,7 +507,7 @@ Line3D.vertices = (linesOverts, true4startfalse4end) => {
 Line3D.vertices1 = (lines) => {
   const verts = [];
   for (let index = 0; index < lines.length; index += 1) {
-    verts.push(lines[index].endVertex.copy());
+    verts.push(lines[index][1].copy());
   }
   return verts;
 }
@@ -538,8 +530,8 @@ Line3D.startAndVector = (startVertex, offsetVector) => {
 Line3D.to2D = (lines, x, y) => {
   const lines2d = [];
   for (let index = 0; index < lines.length; index++) {
-    const startV = lines[index].startVertex.to2D(x, y);
-    const endV = lines[index].endVertex.to2D(x, y);
+    const startV = lines[index][0].to2D(x, y);
+    const endV = lines[index][1].to2D(x, y);
     lines2d.push(new Line2d(startV, endV));
   }
   return lines2d;
@@ -578,8 +570,8 @@ Line3D.fromVector = (vector, startVertex, rotation) => {
 Line3D.viewFromVector = (lines, vector) => {
   const orthoLines = [];
   for (let p = 0; p < lines.length; p++) {
-    const startVert = lines[p].startVertex;
-    const endVert = lines[p].endVertex;
+    const startVert = lines[p][0];
+    const endVert = lines[p][1];
     const orthoVerts = Vertex3D.viewFromVector([startVert, endVert], vector);
     orthoLines.push(new Line3D(orthoVerts[0], orthoVerts[1]));
   }
@@ -619,8 +611,8 @@ Line3D.endpointClosestTo = (vertex, list) => {
   let closest;
   for (let index = 0; index < list.length; index++) {
     const line = list[index];
-    const sdist = list[index].endVertex.distance(vertex);
-    const edist = list[index].startVertex.distance(vertex);
+    const sdist = list[index][1].distance(vertex);
+    const edist = list[index][0].distance(vertex);
     const dist = sdist < edist ? sdist : edist;
     if (!closest || closest.dist > dist) closest = {line, dist};
   }
@@ -635,8 +627,8 @@ Line3D.sharedEndpoint = (...lines) => {
     let existsInAll = true;
     for (let lIndex = 0; existsInAll && lIndex > lines.length; lIndex++) {
       const line = lines[lIndex];
-      const startEq = line.startVertex.equals(vertex);
-      const endEq = line.endVertex.equals(vertex);
+      const startEq = line[0].equals(vertex);
+      const endEq = line[1].equals(vertex);
       existsInAll = startEq || endEq;
     }
     if (existsInAll) return vertex;
@@ -685,7 +677,7 @@ const checkAllAreParrelle = (align, alignTo) => {
 }
 
 const c = ['red', 'green', 'blue']
-const alignToString = (align, unitLine, targetLine) => [unitLine ? unitLine.endVertex.toString() : '', align.map((l,i) => l.toDrawString(c[i])).join('\n'),targetLine ? targetLine.toString() : ''].filter(l=>l).join('\n');
+const alignToString = (align, unitLine, targetLine) => [unitLine ? unitLine[1].toString() : '', align.map((l,i) => l.toDrawString(c[i])).join('\n'),targetLine ? targetLine.toString() : ''].filter(l=>l).join('\n');
 const rotStr = (rot) => rot ? `(${rot.x||''},${rot.y||''},${rot.z||''})` : '';
 const rotationInfo = (aIndex, index, rot) => `// ${aIndex}${index} ${rotStr(rot)}`;
 const snapShotStr = (aIndex, index, rot, align, unitLine, targetLine) =>
@@ -777,14 +769,14 @@ Line3D.combineOrder = (line1, line2) => {
     unitVec2 = line2.vector().unit();
     if (!unitVec1.equals(unitVec2)) return null;
   }
-  const verts = [line1.startVertex, line1.endVertex,line2.startVertex, line2.endVertex];
+  const verts = [line1[0], line1[1],line2[0], line2[1]];
   verts.sort(Vertex3D.sortByCenter(Vertex3D.center(...verts)));
   verts.sort(Vertex3D.sortByCenter(verts[verts.length - 1]));
   let longest = new Line3D(verts[0], verts[verts.length - 1]);
   const shorterBy = line1.length() + line2.length() - longest.length();
   if (zero(shorterBy) < 0) return null;
   if (!unitVec1.equals(longest.vector().unit())) longest = longest.negitive();
-  verts.sort(Vertex3D.sortByCenter(longest.startVertex));
+  verts.sort(Vertex3D.sortByCenter(longest[0]));
   let first = new Line3D(verts[0], verts[1]);
   let second = new Line3D(verts[0], verts[2]);
   if (!((unitVec1.equals(first.vector().unit()) || first.isPoint()) &&
@@ -800,8 +792,8 @@ Line3D.combine = (lines) => {
       const lineJ = lines[j];
       const combineOrder = lineI.combineOrder(lineJ);
       if (combineOrder) {
-        lineI.startVertex.positionAt(combineOrder[0]);
-        lineI.endVertex.positionAt(combineOrder[combineOrder.length - 1]);
+        lineI[0].positionAt(combineOrder[0]);
+        lineI[1].positionAt(combineOrder[combineOrder.length - 1]);
         lines.splice(j, 1);
         j--;
       }
@@ -819,8 +811,8 @@ Line3D.bestPole = (lines, tolerance) => {
   const center = Vertex3D.center(...Line3D.vertices(lines));
   let maxDist = 0;
   for (let ldex = 0; ldex < lines.length; ldex ++) {
-    const sDist = lines[ldex].startVertex.distance(center);
-    const eDist = lines[ldex].endVertex.distance(center);
+    const sDist = lines[ldex][0].distance(center);
+    const eDist = lines[ldex][1].distance(center);
     if (sDist > maxDist) maxDist = sDist;
     if (eDist > maxDist) maxDist = eDist;
   }
@@ -853,12 +845,12 @@ Line3D.averageLine = (lines, pole) => {
   pole ||= Line3D.bestPole(lines);
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index].clone().polarize(pole);
-    startPoint.x += line.startVertex.x / lines.length;
-    startPoint.y += line.startVertex.y / lines.length;
-    startPoint.z += line.startVertex.z / lines.length;
-    endPoint.x += line.endVertex.x / lines.length;
-    endPoint.y += line.endVertex.y / lines.length;
-    endPoint.z += line.endVertex.z / lines.length;
+    startPoint.x += line[0].x / lines.length;
+    startPoint.y += line[0].y / lines.length;
+    startPoint.z += line[0].z / lines.length;
+    endPoint.x += line[1].x / lines.length;
+    endPoint.y += line[1].y / lines.length;
+    endPoint.z += line[1].z / lines.length;
   }
   return new Line3D(startPoint, endPoint);
 }
@@ -972,7 +964,7 @@ Line3D.longest = (mixAndMatch, ...vertsOlines) => {
 }
 
 Line3D.from2D = (lines2d) =>
-  lines2d.map(l => new Line3D([l[0].x(), l[0].y(), 0], [l[1].x(), l[1].y(), 0]));
+  lines2d.map(l => new Line3D([l[0].x, l[0].y, 0], [l[1].x, l[1].y, 0]));
 
 module.exports = Line3D;
 
@@ -987,8 +979,8 @@ function parrellePointLine(line1, line2) {
   let closest = {dist: Number.MAX_SAFE_INTEGER};
   for (let i = 0; i < 2; i++) {
     for (let j = 0; j < 2; j++) {
-      const vert1 = i === 0 ? line1.startVertex : line1.endVertex;
-      const vert2 = j === 0 ? line2.startVertex : line2.endVertex;
+      const vert1 = i === 0 ? line1[0] : line1[1];
+      const vert2 = j === 0 ? line2[0] : line2[1];
       const dist = vert1.distance(vert2);
       if (dist < closest.dist) closest = {dist, vert1, vert2};
     }
@@ -1014,8 +1006,8 @@ Line3D.intersectingLine = (line1, line2, clampAll, clampA0, clampA1, clampB0, cl
     clampB1 = temp;
   }
 
-  const a0 = line1.startVertex; const a1 = line1.endVertex;
-  const b0 = line2.startVertex; const b1 = line2.endVertex;
+  const a0 = line1[0]; const a1 = line1[1];
+  const b0 = line2[0]; const b1 = line2[1];
   const a0eq = a0.equals(b0) || a0.equals(b1);
   const b0eq = b0.equals(a0) || b0.equals(a1);
     //Given two lines defined by numpy.array pairs (a0,a1,b0,b1)
@@ -1093,8 +1085,8 @@ Line3D.intersectingLine = (line1, line2, clampAll, clampA0, clampA1, clampB0, cl
     var pA = _A.scale(t0).add(a0);
     var pB = _B.scale(t1).add(b0);
 
-    // const plane = new Plane(line1.startVertex, line1.endVertex, line2.startVertex);
-    // if (plane.valid() && !plane.within(line2.endVertex)) {
+    // const plane = new Plane(line1[0], line1[1], line2[0]);
+    // if (plane.valid() && !plane.within(line2[1])) {
     //   return parrellePointLine(line1, line2);
     // }
 
@@ -1103,20 +1095,20 @@ Line3D.intersectingLine = (line1, line2, clampAll, clampA0, clampA1, clampB0, cl
     if(clampA0 || clampA1 || clampB0 || clampB1){
         if (clampA0 && line1.within(pA) === 'BEFORE') {
           pA = a0;
-          const perpEnd = line2.connect(pA).startVertex;
-          pB = Line3D.shortest(pA, perpEnd, b0, b1).endVertex;
+          const perpEnd = line2.connect(pA)[0];
+          pB = Line3D.shortest(pA, perpEnd, b0, b1)[1];
         } else if(clampA1 && line1.within(pA) === 'AFTER') {
           pA = a1;
-          const perpEnd = line2.connect(pA).startVertex;
-          pB = Line3D.shortest(pA, perpEnd, b0, b1).endVertex;
+          const perpEnd = line2.connect(pA)[0];
+          pB = Line3D.shortest(pA, perpEnd, b0, b1)[1];
         } else if(clampB0 && line2.within(pB) === 'BEFORE') {
           pB = b0;
-          const perpEnd = line2.connect(pB).startVertex;
-          pA = Line3D.shortest(pB, perpEnd, a0, a1).endVertex;
+          const perpEnd = line2.connect(pB)[0];
+          pA = Line3D.shortest(pB, perpEnd, a0, a1)[1];
         } else if(clampB1 && line2.within(pB) === 'AFTER') {
           pB = b1;
-          const perpEnd = line2.connect(pB).startVertex;
-          pA = Line3D.shortest(pB, perpEnd, a0, a1).endVertex;
+          const perpEnd = line2.connect(pB)[0];
+          pA = Line3D.shortest(pB, perpEnd, a0, a1)[1];
         }
     }
 

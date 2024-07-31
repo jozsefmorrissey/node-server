@@ -59,12 +59,12 @@ class LineMeasurement2d {
       l = l || layer || 1;
       const termDist = (l + 1) * offset;
       const measureDist = l * offset;
-      const startLine = line.perpendicular(termDist * 2, line.startVertex(), true);
-      const endLine = line.perpendicular(termDist * 2, line.endVertex(), true);
-      const startCircle = new Circle2d(measureDist, line.startVertex());
-      const endCircle = new Circle2d(measureDist, line.endVertex());
-      const startTerminationCircle = new Circle2d(termDist - 2.5, line.startVertex());
-      const endTerminationCircle = new Circle2d(termDist - 2.5, line.endVertex());
+      const startLine = line.perpendicular(termDist * 2, line[0], true);
+      const endLine = line.perpendicular(termDist * 2, line[1], true);
+      const startCircle = new Circle2d(measureDist, line[0]);
+      const endCircle = new Circle2d(measureDist, line[1]);
+      const startTerminationCircle = new Circle2d(termDist - 2.5, line[0]);
+      const endTerminationCircle = new Circle2d(termDist - 2.5, line[1]);
       const startVertices = startCircle.intersections(startLine);
       const endVertices = endCircle.intersections(endLine);
       let l1, l2;
@@ -74,12 +74,12 @@ class LineMeasurement2d {
         let startTerminationLine, endTerminationLine, measurementLine;
 
         l1 = new Line2d(startVertices[1], endVertices[1]);
-        l1.startLine = new Line2d(line.startVertex(), startTerminationVertices[1]);
-        l1.endLine = new Line2d(line.endVertex(), endTerminationVertices[1]);
+        l1.startLine = new Line2d(line[0], startTerminationVertices[1]);
+        l1.endLine = new Line2d(line[1], endTerminationVertices[1]);
 
         l2 = new Line2d(startVertices[0], endVertices[0]);
-        l2.startLine = new Line2d(line.startVertex(), startTerminationVertices[0]);
-        l2.endLine = new Line2d(line.endVertex(), endTerminationVertices[0]);
+        l2.startLine = new Line2d(line[0], startTerminationVertices[0]);
+        l2.endLine = new Line2d(line[1], endTerminationVertices[0]);
         const furtherLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center);
         const closerLine = (point) => LineMeasurement2d.furtherLine(l1, l2, point || center, true);
         const obj = {furtherLine, closerLine, takenLocations};

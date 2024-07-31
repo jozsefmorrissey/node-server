@@ -54,7 +54,7 @@ class OpeningSketch {
                                 new Line3D(outer[1], outer[2]).midpoint() :
                                 new Line3D(outer[2], outer[3]).midpoint();
         const dividerCenter = divideCenter3D.viewFromVector(normal).to2D('x', 'y');
-        dividerCenter.point().x -= 5;
+        dividerCenter.x -= 5;
         const center = dividerCenter.translate(offset.x, offset.y, true).point();
         const text = dp.userFriendlyId().replace(/^dv/, '');
         sketch.text(text, center, idProps);
@@ -113,8 +113,8 @@ class OpeningSketch {
         const allLines = innerLines.concat(outerLines);
 
         const minMax = Vertex2d.minMax(Line2d.vertices(cabinetOutlines));
-        const scaleY = (sketch.canvas().height * .95) / (minMax.max.y() - minMax.min.y());
-        const scaleX = (sketch.canvas().width * .95) / (minMax.max.x() - minMax.min.x());
+        const scaleY = (sketch.canvas().height * .95) / (minMax.max.y - minMax.min.y);
+        const scaleX = (sketch.canvas().width * .95) / (minMax.max.x - minMax.min.x);
         const minScale = Math.min(scaleX, scaleY);
         sketch.ctx().scale(minScale, minScale);
 

@@ -16,7 +16,7 @@ class Parimeters2d {
         this.clone = (line) => {
           const clone = new PartialParimeter2d();
           clone.lineMap = this.lineMap.clone([line]),
-          clone.vertexMap = this.vertexMap.clone([line.startVertex()]),
+          clone.vertexMap = this.vertexMap.clone([line[0]]),
           clone.parimeter = this.parimeter.map(l => l.copy()).concat(line)
           return clone;
         }

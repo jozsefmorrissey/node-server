@@ -13,8 +13,8 @@ function modifyVertex(vertex) {
 class Wall2D extends Line2d {
   constructor(startVertex, endVertex, height, windows, doors) {
     super(startVertex, endVertex);
-    this.startVertex().modificationFunction(modifyVertex(this.startVertex()));
-    this.endVertex().modificationFunction(modifyVertex(this.endVertex()));
+    this[0].modificationFunction(modifyVertex(this[0]));
+    this[1].modificationFunction(modifyVertex(this[1]));
     Lookup.convert(this);
     windows = windows || [];
     windows.forEach((win) => win.setWall(this));
@@ -30,7 +30,7 @@ class Wall2D extends Line2d {
     this.doors = () => doors;
     this.addDoor = (fromPreviousWall) => doors.push(new Door2D({wall: this, fromPreviousWall}));
     this.vertices = () => {
-      const verts = [this.startVertex()];
+      const verts = [this[0]];
       const doorsAndWindows = doors.concat(windows);
       doorsAndWindows.sort(OnWall.sort);
       doorsAndWindows.forEach((onWall) => {
@@ -38,15 +38,15 @@ class Wall2D extends Line2d {
         verts.push(endpoints.start);
         verts.push(endpoints.end);
       });
-      verts.push(this.endVertex());
+      verts.push(this[1]);
       return verts;
     }
 
     this.remove = () => {
-        const prevWall = this.startVertex().prevLine();
-        const nextLine = this.endVertex().nextLine();
-        const startVertex = this.startVertex();
-        nextLine.startVertex(startVertex);
+        const prevWall = this[0].prevLine();
+        const nextLine = this[1].nextLine();
+        const startVertex = this[0];
+        nextLine[0] = startVertex;
         startVertex.nextLine(nextLine);
     }
 
@@ -64,15 +64,15 @@ class Wall2D extends Line2d {
   }
 }
 
-Object.class.register(Wall2D, 'endVertex', 'startVertex', 'label', 'widows', 'doors', 'height');
+Object.class.register(Wall2D, 'label', 'widows', 'doors', 'height');
 
 Wall2D.fromJson = (json, layout, vertexMap) => {
   vertexMap ||= {};
-  json.startVertex.layout = layout;
-  const newSv = Corner2d.fromJson(json.startVertex);
+  json[0].layout = layout;
+  const newSv = Corner2d.fromJson(json[0]);
   const svStr = newSv.toString();
-  json.endVertex.layout = layout;
-  const newEv = Corner2d.fromJson(json.endVertex);
+  json[1].layout = layout;
+  const newEv = Corner2d.fromJson(json[1]);
   const evStr = newEv.toString();
   if (vertexMap[svStr] === undefined) vertexMap[svStr] = newSv;
   if (vertexMap[evStr] === undefined) vertexMap[evStr] = newEv;

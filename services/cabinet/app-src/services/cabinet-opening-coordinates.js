@@ -107,8 +107,8 @@ class CabinetOpeningCorrdinates extends KeyValue {
       const bottomVector = outerPoly.lines()[2].vector().unit();
       const topVector = outerPoly.lines()[0].vector().unit().inverse();
 
-      const outerTop = Line3D.fromVector(topVector.scale(len), topOutStart).endVertex;
-      const outerBot = Line3D.fromVector(bottomVector.scale(len), botOutStart).endVertex;
+      const outerTop = Line3D.fromVector(topVector.scale(len), topOutStart)[1];
+      const outerBot = Line3D.fromVector(bottomVector.scale(len), botOutStart)[1];
 
       const topInStart = limitPlanes.top.in.intersection.line(backInLine);
       const botInStart = limitPlanes.bottom.in.intersection.line(backInLine);

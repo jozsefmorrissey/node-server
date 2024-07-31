@@ -85,7 +85,7 @@ class Layout2D extends Lookup {
     this.demensions = () => {
       const wallDems = Vertex2d.minMax(this.vertices()).diff;
       const infoOffset = 40*2.54;
-      return {x: wallDems.x() + infoOffset, y: wallDems.y() + infoOffset};
+      return {x: wallDems.x + infoOffset, y: wallDems.y + infoOffset};
     }
     this.wallIndex = (wallOrIndex) => {
       if (wallOrIndex instanceof Wall2D) {
@@ -102,7 +102,7 @@ class Layout2D extends Lookup {
     this.cornerIndex = (cornerOrIndex) => {
       if (cornerOrIndex instanceof Corner2d) {
         for (let index = 0; index < walls.length; index += 1) {
-          if (walls[index].startVertex() === cornerOrIndex) return index;
+          if (walls[index][0] === cornerOrIndex) return index;
         }
         return -1;
       } else {
@@ -129,13 +129,13 @@ class Layout2D extends Lookup {
 
     function reconsileLength (wall) {
       return (newLength) => {
-        const moveVertex = wall.endVertex();
+        const moveVertex = wall[1];
         const nextLine = instance.nextWall(wall);
         if (nextLine === undefined) wall.length(newLength);
 
-        const vertex1 = nextLine.endVertex();
+        const vertex1 = nextLine[1];
         const circle1 = new Circle2d(nextLine.length(), vertex1);
-        const vertex2 = wall.startVertex();
+        const vertex2 = wall[0];
         const circle2 = new Circle2d(newLength, vertex2);
         const intersections = circle1.intersections(circle2);
 
@@ -179,8 +179,8 @@ class Layout2D extends Lookup {
       return json;
     }
 
-    this.isFreeCorner = (corner) => corner === this.walls()[0].startVertex();
-    this.straightenUp = () => this.walls()[0].startVertex().straightenUp();
+    this.isFreeCorner = (corner) => corner === this.walls()[0][0];
+    this.straightenUp = () => this.walls()[0][0].straightenUp();
 
     let ceilingHeight = new Property('ceilh', 'Heigth from the floor to the ceiling', {value: 96, notMetric: IMPERIAL_US});
     this.ceilingHeight = (height) => {
@@ -241,7 +241,7 @@ class Layout2D extends Lookup {
       }
       for (let index = 1; index < points.length; index += 1) {
         const endLine = this.endLine();
-        const startV = endLine.endVertex();
+        const startV = endLine[1];
         const endV = points[(index + 1) % points.length];
         const currWall = new Wall2D(startV, endV);
         walls.push(currWall);
@@ -287,10 +287,10 @@ class Layout2D extends Lookup {
     this.idMap = () => {
       const idMap = {};
       const walls = this.walls();
-      idMap[walls[0].startVertex().id()] = walls[0].startVertex();
+      idMap[walls[0][0].id()] = walls[0][0];
       walls.forEach((wall) => {
         idMap[wall.id()] = wall;
-        const endV = wall.endVertex();
+        const endV = wall[1];
         idMap[endV.id()] = endV;
         wall.windows().forEach((window) => idMap[window.id()] = window);
         wall.windows().forEach((window) => idMap[window.id()] = window);
@@ -306,8 +306,8 @@ class Layout2D extends Lookup {
       for (index = 0; index < walls.length; index += 1) {
         const currWall = walls[index];
         if (currWall === wall) {
-          const nextWallSv = walls[this.wallIndex(index + 1)].startVertex();
-          walls[this.wallIndex(index - 1)].endVertex(nextWallSv);
+          const nextWallSv = walls[this.wallIndex(index + 1)][0];
+          walls[this.wallIndex(index - 1)][1] = nextWallSv;
           walls.splice(index, 1);
           return currWall;
         }
@@ -322,8 +322,8 @@ class Layout2D extends Lookup {
         wall = walls[walls.length - 1];
         wallIndex = this.wallIndex(wall);
       }
-      let newWall = new Wall2D(vertex, wall.endVertex());
-      wall.endVertex(vertex);
+      let newWall = new Wall2D(vertex, wall[1]);
+      wall[1] = vertex;
 
       const tail = [newWall].concat(walls.slice(wallIndex + 1));
       walls = walls.slice(0, wallIndex + 1).concat(tail);
@@ -334,12 +334,12 @@ class Layout2D extends Lookup {
       const walls = this.walls();
       for (index = 0; index < walls.length; index += 1) {
         const wall = walls[index];
-        if (wall.startVertex() === vertex) {
-          walls[this.wallIndex(index - 1)].endVertex(walls[this.wallIndex(index + 1)].startVertex());
+        if (wall[0] === vertex) {
+          walls[this.wallIndex(index - 1)][1] = walls[this.wallIndex(index + 1)];
           return walls.splice(index, 1);
         }
-        if (wall.endVertex() === vertex) {
-          walls[this.wallIndex(index + 1)].startVertex(walls[this.wallIndex(index - 1)].endVertex());
+        if (wall[1] === vertex) {
+          walls[this.wallIndex(index + 1)][0] = walls[this.wallIndex(index - 1)];
           return walls.splice(index, 1);
         }
       }
@@ -366,7 +366,7 @@ class Layout2D extends Lookup {
       const fullList = [];
       for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];
-        fullList.push(line.startVertex());
+        fullList.push(line[0]);
       }
       if (target) {
         const vertices = [];
@@ -389,7 +389,7 @@ class Layout2D extends Lookup {
       for (let index = 0; index < walls.length; index += 1) {
         const wall = walls[index];
         const prevWall = this.prevWall(wall);
-        if (wall.startVertex() !== prevWall.endVertex()) return false;
+        if (wall[0] !== prevWall[1]) return false;
       }
       return true;
     }

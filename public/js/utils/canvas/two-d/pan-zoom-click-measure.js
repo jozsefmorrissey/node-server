@@ -27,8 +27,8 @@ class PanZoomClickMeasure extends PanZoomClick {
 
     const addLine = (objs, line) => {
       objs[line.toString()] = new HoverObject2d(line, lineTol);
-      objs[line.startVertex().toString()] = new HoverObject2d(line.startVertex(), vertTol);
-      objs[line.endVertex().toString()] = new HoverObject2d(line.endVertex(), vertTol);
+      objs[line[0].toString()] = new HoverObject2d(line[0], vertTol);
+      objs[line[1].toString()] = new HoverObject2d(line[1], vertTol);
     }
 
 

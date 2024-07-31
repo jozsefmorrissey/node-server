@@ -134,7 +134,7 @@ class EscapeMap {
         const dirObj = closest[dir];
         if (dirObj.line) {
           const dirState = getState(dirObj.line);
-          let dirOfEndpoint = dirObj.line.direction(dirObj.runner.startVertex());
+          let dirOfEndpoint = dirObj.line.direction(dirObj.runner[0]);
           let escapeBretheran = dirOfEndpoint === 'right' ? dirState.escape.right.group() : dirState.escape.left.group();
           obj.escape[dir].connected(escapeBretheran);
           dirState.escape.updateReference();
@@ -157,10 +157,10 @@ class EscapeMap {
 
       const toDrawString = (key) => () => {
         const state = escapeObj.states[key];
-        const sRight = state.closest.startVertex.right;
-        const sLeft = state.closest.startVertex.left;
-        const eRight = state.closest.endVertex.right;
-        const eLeft = state.closest.endVertex.left;
+        const sRight = state.closest[0].right;
+        const sLeft = state.closest[0].left;
+        const eRight = state.closest[1].right;
+        const eLeft = state.closest[1].left;
         Line2d.toDrawString([state.line,sRight, eRight,sLeft,eLeft],
                               'green', 'red', 'red', 'blue', 'blue');
       }
@@ -186,19 +186,19 @@ class EscapeMap {
         const intersection = line1.findDirectionalIntersection(line2);
         return intersection instanceof Vertex2d &&
                   (target.equals(intersection, .1) ||
-                   intersection.distance(line2.startVertex()) >
-                   target.distance(line2.startVertex()));
+                   intersection.distance(line2[0]) >
+                   target.distance(line2[0]));
       }
 
       function runners(line, targetFuncName, startPointFuncName, radians) {
         const state = getState(line);
         const vertex = line[targetFuncName]();
         const perp = line.perpendicular(perpDist, line[startPointFuncName](), true);
-        const originToEndDist = line.midpoint().distance(line.startVertex());
-        const rightOrigin = perp.startVertex();
+        const originToEndDist = line.midpoint().distance(line[0]);
+        const rightOrigin = perp[0];
         const right = Line2d.startAndTheta(rightOrigin, radians, 1000000000);
         const rightPerp = line.perpendicular(-10000000);
-        const leftOrigin = perp.endVertex();
+        const leftOrigin = perp[1];
         const left = Line2d.startAndTheta(leftOrigin, radians, 100000000);
         const leftPerp = line.perpendicular(10000000);
         const center = Line2d.startAndTheta(line[startPointFuncName](), radians, 100000000);
@@ -217,7 +217,7 @@ class EscapeMap {
             if (other.withinSegmentBounds(leftIntersection)) {
               if (isClosest(leftOrigin, closest.left.intersection, leftIntersection, originToEndDist)) {
                 escapedLeft = false;
-                const escapeLine = new Line2d(left.startVertex(), leftIntersection);
+                const escapeLine = new Line2d(left[0], leftIntersection);
                 closest.left = {intersection: leftIntersection, line: other, escapeLine, runner: left};
               }
             }
@@ -225,7 +225,7 @@ class EscapeMap {
             if (other.withinSegmentBounds(rightIntersection)) {
               if (isClosest(rightOrigin, closest.right.intersection, rightIntersection, originToEndDist)) {
                 escapedRight = false;
-                const escapeLine = new Line2d(right.startVertex(), rightIntersection);
+                const escapeLine = new Line2d(right[0], rightIntersection);
                 closest.right = {intersection: rightIntersection, line: other, escapeLine, runner: right};
               }
             }
@@ -250,8 +250,8 @@ class EscapeMap {
         for (let index = 0; index < lines.length; index++) {
           const line = lines[index];
           initEscape(line, index);
-          runners(line, 'startVertex', 'endVertex', line.radians() - Math.PI);
-          runners(line, 'endVertex', 'startVertex', line.radians());
+          runners(line, '0', '1', line.radians() - Math.PI);
+          runners(line, '1', '0', line.radians());
         }
       }
 

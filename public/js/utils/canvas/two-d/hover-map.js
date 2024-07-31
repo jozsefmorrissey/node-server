@@ -30,23 +30,23 @@ class HoverObject2d {
     function lineHovered(targetLine, hoverVertex, scaleTolerance) {
       const tol = getTolerence(scaleTolerance);
       const hv = hoverVertex;
-      const sv = targetLine.startVertex();
-      const ev = targetLine.endVertex();
+      const sv = targetLine[0];
+      const ev = targetLine[1];
       let toleranceAcceptible = false;
       if (targetLine.isVertical()) {
-        toleranceAcceptible = Math.abs(sv.x() - hv.x()) < tol &&
-              ((sv.y() > hv.y() && ev.y() < hv.y()) ||
-              (sv.y() < hv.y() && ev.y() > hv.y()));
+        toleranceAcceptible = Math.abs(sv.x - hv.x) < tol &&
+              ((sv.y > hv.y && ev.y < hv.y) ||
+              (sv.y < hv.y && ev.y > hv.y));
       } else if (targetLine.isHorizontal()) {
-        toleranceAcceptible = Math.abs(sv.y() - hv.y()) < tol &&
-              ((sv.x() > hv.x() && ev.x() < hv.x()) ||
-              (sv.x() < hv.x() && ev.x() > hv.x()));
-      } else if (Math.abs(sv.y() - ev.y()) < Math.abs(sv.x() - ev.x())) {
-        const yValue = targetLine.y(hv.x());
-        toleranceAcceptible = yValue + tol > hv.y() && yValue - tol < hv.y();
+        toleranceAcceptible = Math.abs(sv.y - hv.y) < tol &&
+              ((sv.x > hv.x && ev.x < hv.x) ||
+              (sv.x < hv.x && ev.x > hv.x));
+      } else if (Math.abs(sv.y - ev.y) < Math.abs(sv.x - ev.x)) {
+        const yValue = targetLine.y(hv.x);
+        toleranceAcceptible = yValue + tol > hv.y && yValue - tol < hv.y;
       } else {
-        const xValue = targetLine.x(hv.y());
-        toleranceAcceptible = xValue + tol > hv.x() && xValue - tol < hv.x();
+        const xValue = targetLine.x(hv.y);
+        toleranceAcceptible = xValue + tol > hv.x && xValue - tol < hv.x;
       }
 
       if (toleranceAcceptible) {

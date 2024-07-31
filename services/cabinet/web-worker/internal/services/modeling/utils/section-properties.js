@@ -49,14 +49,14 @@ class SectionPropertiesUtil {
       const mi = Polygon3D.mostInformation([innerPoly]);
       const vector = innerPoly.normal().inverse();
       const verts = [];
-      innerPoly.lines().forEach(l => verts.push(l.startVertex) | verts.push(l.midpoint()));
+      innerPoly.lines().forEach(l => verts.push(l[0]) | verts.push(l.midpoint()));
       const lines = verts.map(v => Line3D.fromVector(vector, v));
       let closest;
       for (let index = 0; index < polyList.length; index++) {
         const biPoly = polyList[index];
         for (let lIndex = 0; lIndex < lines.length; lIndex++) {
           const line = lines[lIndex];
-          const plane = biPoly.closerPlane(line.startVertex);
+          const plane = biPoly.closerPlane(line[0]);
           const intersection = plane.intersection.line(line);
           if (intersection) {
             const poly = new Polygon3D(plane);
@@ -64,7 +64,7 @@ class SectionPropertiesUtil {
             if (withinPoly) {
               poly.isWithin2d(intersection);
               innerPoly.isWithin2d(intersection, false)
-              const dist = intersection.distance(line.startVertex);
+              const dist = intersection.distance(line[0]);
               if (dist > 0 && (closest === undefined || closest.dist > dist)) {
                 closest = {dist, line};
               }

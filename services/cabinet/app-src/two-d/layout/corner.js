@@ -36,13 +36,13 @@ class Corner2d extends Vertex2d {
 
         const prev = this.prevWall();
         const newPrev = Line2d.startAndTheta(this, prev.negitive().radians() - offset);
-        const prevStartVert = newPrev.findIntersection(prev.startVertex().prevWall());
-        prev.startVertex().point(prevStartVert);
+        const prevStartVert = newPrev.findIntersection(prev[0].prevWall());
+        prev[0].point(prevStartVert);
 
         const next = this.nextWall();
         const newNext = Line2d.startAndTheta(this, next.radians() + offset);
-        const nextEndVert = newNext.findIntersection(next.endVertex().nextWall());
-        next.endVertex().point(nextEndVert);
+        const nextEndVert = newNext.findIntersection(next[1].nextWall());
+        next[1].point(nextEndVert);
         angleLock = true;
       }
       return Math.round(currDeg * 100) / 100;
@@ -90,12 +90,12 @@ class Corner2d extends Vertex2d {
           const length = currLength === undefined ? prevWall.length() : currLength;
           const newAngle = determineAngle(prevWall, currAngle);
           const rads = Math.toRadians(newAngle);
-          const newLine = Line2d.startAndTheta(prevWall.startVertex(), rads, length);
-          const newEndPoint = newLine.endVertex();
+          const newLine = Line2d.startAndTheta(prevWall[0], rads, length);
+          const newEndPoint = newLine[1];
           const before = corner.angle();
           currAngle = corner.nextWall().angle();
           currLength = corner.nextWall().length();
-          prevWall.endVertex().point(newEndPoint);
+          prevWall[1].point(newEndPoint);
         } else if (corner.isFree()) {
           freeCount++;
         }

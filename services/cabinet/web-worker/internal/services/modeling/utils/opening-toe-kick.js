@@ -54,23 +54,23 @@ class OpeningToeKickUtil {
 
       let newStart = innerPoly.toPlane().intersection.line(longBottom);
 
-      longBottom.startVertex = newStart;
+      longBottom[0] = newStart;
       const shortBottom = longBottom.clone();
 
       const targetFront = Line3D.fromVector(innerFront.vector().unit().scale(height), newStart);
       shortBottom.length(depth1, true);
       const shortVector = shortBottom.vector();
-      const shortTop = Line3D.fromVector(shortVector, targetFront.endVertex);
+      const shortTop = Line3D.fromVector(shortVector, targetFront[1]);
 
       if (depth2) {
         longBottom.length(depth2, true);
         const longVector = longBottom.vector();
-        const longTop = Line3D.fromVector(longVector, targetFront.endVertex);
-        return [shortTop.endVertex, longTop.endVertex,
-              longBottom.endVertex, shortBottom.endVertex];
+        const longTop = Line3D.fromVector(longVector, targetFront[1]);
+        return [shortTop[1], longTop[1],
+              longBottom[1], shortBottom[1]];
       }
-      return [targetFront.endVertex, shortTop.endVertex,
-              shortBottom.endVertex, newStart];
+      return [targetFront[1], shortTop[1],
+              shortBottom[1], newStart];
     }
 
     function buildOffset(right, left, openingCenter, coords, innerPoly, height, depth1, depth2, xyOffset) {
@@ -86,7 +86,7 @@ class OpeningToeKickUtil {
       const rightStart = bottomPlane.intersection.line(rightLine);
       const leftTkLine = Line3D.fromVector(leftLine.vector().unit().scale(height), leftStart);
       const rightTkLine = Line3D.fromVector(rightLine.vector().unit().scale(height), rightStart);
-      const tkSpacePoly = new Polygon3D([leftTkLine.endVertex, rightTkLine.endVertex, rightTkLine.startVertex, leftTkLine.startVertex]);
+      const tkSpacePoly = new Polygon3D([leftTkLine[1], rightTkLine[1], rightTkLine[0], leftTkLine[0]]);
       return BiPolygon.fromPolygon(tkSpacePoly, depth1, depth2, xyOffset);
     }
 

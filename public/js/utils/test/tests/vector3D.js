@@ -382,7 +382,7 @@ function testVector(vector, ts) {
     const randLen = Math.random() * 10 + 10;
     const line = Line3D.fromVector(vector.scale(randLen), verts[index]);
     const bestPole = Line3D.bestPole([line]);
-    ts.assertTrue(bestPole.equals(line.startVertex));
+    ts.assertTrue(bestPole.equals(line[0]));
     lines.push(line);
   }
   let vectorPole = vector.inverse();
@@ -395,7 +395,7 @@ function testVector(vector, ts) {
   avgLine = Line3D.averageLine(randomLines);
   const color = String.color.next();
   avgLines.push([randomLines[0].toDrawString(color), randomLines[1].toDrawString(color), avgLine.toDrawString(color)].join('\n'));
-  ts.assertTrue(avgLine.startVertex.equals(origin));
+  ts.assertTrue(avgLine[0].equals(origin));
 
   randomLines = generateLines(20, origin.clone());
   avgLine = Line3D.averageLine(randomLines, vectorPole);

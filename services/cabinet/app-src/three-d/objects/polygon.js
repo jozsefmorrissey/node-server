@@ -42,7 +42,7 @@ class Polygon3D {
 
       for (let index = 0; index < lines.length; index++) {
         const line = lines[index];
-        const sv = line.startVertex.copy();
+        const sv = line[0].copy();
         const mp = line.midpoint().copy();
         place(sv, noZeros, oneZero, twoZeros, origin);
         place(mp, noZeros, oneZero, twoZeros, origin);
@@ -95,7 +95,7 @@ class Polygon3D {
     this.rotate = (rotations, center) => {
       center ||= this.center();
       for(let index = 0; index < lines.length; index++) {
-        lines[index].startVertex.rotate(rotations, center);
+        lines[index][0].rotate(rotations, center);
       }
     }
 
@@ -196,7 +196,7 @@ class Polygon3D {
     this.translate = (vector) => {
       const verts = [];
       for (let index = 0; index < lines.length; index++) {
-        verts.push(lines[index].startVertex.translate(vector, true));
+        verts.push(lines[index][0].translate(vector, true));
       }
       return new Polygon3D(verts);
     }
@@ -297,11 +297,11 @@ class Polygon3D {
     this.irregular.crissCross.fill = (doNotModify) => {
       if (doNotModify) return this.copy().this.irregular.crissCross.fill();
       identifyCrissCrossLocations().forEach(info => {
-        const temp = info.line.before.endVertex;
-        info.line.before.endVertex = info.line.after.startVertex;
-        info.line.after.startVertex = temp;
-        info.line.target.startVertex = info.line.before.endVertex;
-        info.line.target.endVertex = temp;
+        const temp = info.line.before[1];
+        info.line.before[1] = info.line.after[0];
+        info.line.after[0] = temp;
+        info.line.target[0] = info.line.before[1];
+        info.line.target[1] = temp;
       });
       return this;
     }
@@ -420,19 +420,19 @@ class Polygon3D {
       const vertices = [];
       for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];
-        vertices.push(line.startVertex);
+        vertices.push(line[0]);
       }
 
       return JSON.clone(vertices);
     }
 
-    this.vertex = (index) => lines[Math.mod(index, lines.length)].startVertex.copy();
+    this.vertex = (index) => lines[Math.mod(index, lines.length)][0].copy();
 
     this.isClockwise = () => {
       let sum = 0;
       for (let index = 0; index < lines.length; index += 1) {
-        const point1 = lines[index].startVertex;
-        const point2 = lines[index].startVertex;
+        const point1 = lines[index][0];
+        const point2 = lines[index][0];
         sum += (point2.x - point1.x)*(point2.y + point1.y)*(point2.z - point1.z);
       }
       return sum > 0;
@@ -447,12 +447,12 @@ class Polygon3D {
     this.lineMap = (force) => {
       if (!force && map !== undefined) return map;
       if (lines.length === 0) return {};
-      // map = new ToleranceMap({'startVertex.x': tol, 'startVertex.y': tol, 'startVertex.z': tol,
-      //                         'endVertex.x': tol, 'endVertex.y': tol, 'endVertex.z': tol});
+      // map = new ToleranceMap({'0.x': tol, '0.y': tol, '0.z': tol,
+      //                         '1.x': tol, '1.y': tol, '1.z': tol});
       map = new ToleranceMap({'vector.unit.i': tol, 'vector.unit.j': tol, 'vector.unit.k': tol});
 
       let lastEnd;
-      if (!lines[0].startVertex.equals(lines[lines.length - 1].endVertex)) throw new Error('Broken Polygon');
+      if (!lines[0][0].equals(lines[lines.length - 1][1])) throw new Error('Broken Polygon');
       for (let index = 0; index < lines.length; index++) {
         lines[index]._POLY_INDEX = index;
         map.add(lines[index]);
@@ -537,7 +537,7 @@ class Polygon3D {
     this.center = () => {
       const verts = [];
       for (let index = 0; index < lines.length; index++) {
-        verts.push(lines[index].startVertex);
+        verts.push(lines[index][0]);
       }
       return Vertex3D.center(verts);
     }
@@ -548,10 +548,10 @@ class Polygon3D {
       const endLine = this.endLine();
       for (let index = 0; index < list.length + 1; index += 1) {
         if (index < list.length) verts[index] = new Vertex3D(list[index]);
-        if (index === 0 && endLine) endLine.endVertex = verts[0];
+        if (index === 0 && endLine) endLine[1] = verts[0];
         else if (index > 0) {
           const startVertex = verts[index - 1];
-          const endVertex = verts[index] || this.startLine().startVertex;
+          const endVertex = verts[index] || this.startLine()[0];
           const line = new Line3D(startVertex, endVertex);
           lines.push(line);
           const prevLine = lines[lines.length - 2];
@@ -572,7 +572,7 @@ class Polygon3D {
         }
       }
       if (verts.length > 0 && lines.length > 0) {
-        if (endLine) endline.endVertex = verts[0];
+        if (endLine) endline[1] = verts[0];
       }
       this.lineMap(true);
       // this.removeLoops();
@@ -706,11 +706,11 @@ class Polygon3D {
               lines.splice(index % lines.length, 1);
               index = index < 3 ? 0 : index - 3;
             } else {
-              lines[afterIndex] = new Line3D(line.startVertex.clone(), after.endVertex.clone());
+              lines[afterIndex] = new Line3D(line[0].clone(), after[1].clone());
               lines.splice(index--, 1);
             }
           } else if (unitVec.equals(afterVec)) {
-            lines[afterIndex] = new Line3D(line.startVertex.clone(), after.endVertex.clone());
+            lines[afterIndex] = new Line3D(line[0].clone(), after[1].clone());
             lines.splice(index--, 1);
           }
         }
@@ -719,8 +719,8 @@ class Polygon3D {
     }
 
     const minVertDist = (tar, line) => {
-      const dist1 = tar.startVertex.distance(line.startVertex);
-      const dist2 = tar.startVertex.distance(line.endVertex);
+      const dist1 = tar[0].distance(line[0]);
+      const dist2 = tar[0].distance(line[1]);
       return dist1 <  dist2 ? dist1 : dist2;
     }
 
@@ -770,19 +770,19 @@ class Polygon3D {
                 if (minVertDist(target, line1) !== 0)
                   throw new Error("10/30/2023 This Shouldn't consider removing if it has not been a problem");
               }
-              let thisLines = this.getLines(target.startVertex, target.endVertex);
+              let thisLines = this.getLines(target[0], target[1]);
               if (!line1.isPoint()) {
-                if (!line1.startVertex.equals(thisLines[thisLines.length - 1].endVertex)) line1 = line1.negitive();
+                if (!line1[0].equals(thisLines[thisLines.length - 1][1])) line1 = line1.negitive();
                 thisLines.push(line1);
               }
               if (!line2.isPoint()) {
-                if (!line2.endVertex.equals(thisLines[0].startVertex)) line2 = line2.negitive();
+                if (!line2[1].equals(thisLines[0][0])) line2 = line2.negitive();
                 thisLines = [line2].concat(thisLines);
               }
-              let otherLines = other.getLines(curr.startVertex, curr.endVertex);
-              if (otherLines[0].startVertex.equals(thisLines[0].startVertex)) otherLines = Line3D.reverse(otherLines);
-              const startCheck = thisLines[0].startVertex.equals(otherLines[otherLines.length - 1].endVertex);
-              const middleCheck = thisLines[thisLines.length - 1].endVertex.equals(otherLines[0].startVertex);
+              let otherLines = other.getLines(curr[0], curr[1]);
+              if (otherLines[0][0].equals(thisLines[0][0])) otherLines = Line3D.reverse(otherLines);
+              const startCheck = thisLines[0][0].equals(otherLines[otherLines.length - 1][1]);
+              const middleCheck = thisLines[thisLines.length - 1][1].equals(otherLines[0][0]);
               vertices = Line3D.vertices(cleanLines(otherLines.concat(thisLines)), false);
               merged = new Polygon3D(removeBackTractedVertices(vertices));
               merged.normal();
@@ -938,7 +938,7 @@ class Polygon3D {
     this.toString = () => {
       let str = '[';
       for (let index = 0; index < lines.length; index++) {
-        str += ` => ${lines[index].startVertex.toString()}`;
+        str += ` => ${lines[index][0].toString()}`;
       }
       return `${str.substring(4)} normal: ${this.normal()}`;
     }
@@ -948,7 +948,7 @@ class Polygon3D {
       const colorString = (typeof color) === 'string' ? color : 'blue';
       let str = '';
       for (let index = 0; index < lines.length; index++) {
-        str += `,${lines[index].startVertex.toString(.001)}`;
+        str += `,${lines[index][0].toString(.001)}`;
       }
       if (includeNormal !== true) return `${colorString}[${str.substring(1)}]`;
       const start = this.center();
@@ -1098,17 +1098,17 @@ Polygon3D.fromVectorObject =
 Polygon3D.fromLines = (lines) => {
   lines = lines.map(l => l.clone());
   const center = Vertex3D.center(...Line3D.vertices(lines));
-  const radialLine = new Line3D(center, lines[0].startVertex);
-  const normalVector = radialLine.vector().crossProduct(new Line3D(center, lines[0].endVertex).vector());
+  const radialLine = new Line3D(center, lines[0][0]);
+  const normalVector = radialLine.vector().crossProduct(new Line3D(center, lines[0][1]).vector());
   Line3D.radialSort(lines, center, normalVector);
   const verts = [];
   for (let index = 0; index < lines.length; index += 1) {
     const nextLine = lines[index];
     const targetLine = lines[Math.mod(index - 1, lines.length)];
-    if (!nextLine.startVertex.equals(targetLine.endVertex)) {
-      verts.push(targetLine.endVertex);
+    if (!nextLine[0].equals(targetLine[1])) {
+      verts.push(targetLine[1]);
     }
-    verts.push(nextLine.startVertex);
+    verts.push(nextLine[0]);
   }
   return new Polygon3D(verts);
 }
@@ -1118,7 +1118,7 @@ Polygon3D.from2D = (polygon2d) => {
   const initialVertices = [];
   for (let index = 0; index < verts.length; index++) {
     const vert = verts[index];
-    initialVertices.push(new Vertex3D(vert.x(), vert.y(), 0));
+    initialVertices.push(new Vertex3D(vert.x, vert.y, 0));
   }
   return new Polygon3D(initialVertices);
 }
@@ -1268,9 +1268,9 @@ Polygon3D.fromIntersections = (intersected, intersectors) => {
       for (let vIndex = 2; vIndex < verts.length; vIndex++) {
         const vert = verts[vIndex];
         const line1 = biggest.clone();
-        line1.startVertex = vert;
+        line1[0] = vert;
         const line2 = biggest.clone();
-        line2.endVertex = vert;
+        line2[1] = vert;
         if (line1.length() > biggest.length()) biggest = line1;
         if (line2.length() > biggest.length()) biggest = line2;
       }
@@ -1282,24 +1282,24 @@ Polygon3D.fromIntersections = (intersected, intersectors) => {
     const i = index % lines.length;
     let line = lines[i];
     if (index === 1) {
-      const ssd = prevLine.startVertex.distance(line.startVertex);
-      const sed = prevLine.startVertex.distance(line.endVertex);
-      const esd = prevLine.endVertex.distance(line.startVertex);
-      const eed = prevLine.endVertex.distance(line.endVertex);
+      const ssd = prevLine[0].distance(line[0]);
+      const sed = prevLine[0].distance(line[1]);
+      const esd = prevLine[1].distance(line[0]);
+      const eed = prevLine[1].distance(line[1]);
       const minS = ssd < sed ? ssd : sed;
       const minE = esd < eed ? esd : eed;
       if (minS < minE) prevLine = lines[0] = prevLine.negitive();
     }
-    const endVertCloser = prevLine.endVertex.distance(line.endVertex) <
-                          prevLine.endVertex.distance(line.startVertex);
+    const endVertCloser = prevLine[1].distance(line[1]) <
+                          prevLine[1].distance(line[0]);
     if (endVertCloser) line = lines[i] = line.negitive();
-    const connected = prevLine.endVertex.equals(line.startVertex);
+    const connected = prevLine[1].equals(line[0]);
     if (!connected) {
-      const newL = new Line3D(prevLine.endVertex, line.startVertex);
+      const newL = new Line3D(prevLine[1], line[0]);
       lines = lines.splice(0, i).concat([newL]).concat(lines);
     }
   }
-  return new Polygon3D(lines.map(l => l.startVertex));
+  return new Polygon3D(lines.map(l => l[0]));
 }
 
 Object.class.register(Polygon3D);

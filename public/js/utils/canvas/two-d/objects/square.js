@@ -20,7 +20,7 @@ class Square2d {
       return radians;
     };
     this.startPoint = () => {
-      startPoint.point({x: this.center().x() - width / 2, y: this.center().y() - height / 2});
+      startPoint.point({x: this.center().x - width / 2, y: this.center().y - height / 2});
       return startPoint;
     }
     this.angle = (value) => {
@@ -29,12 +29,12 @@ class Square2d {
     }
 
     this.x = (val) => {
-      if (val !== undefined) this.center().x(val);
-      return this.center().x();
+      if (val !== undefined) this.center().x = val;
+      return this.center().x;
     }
     this.y = (val) => {
-      if (val !== undefined) this.center().y(val);
-      return this.center().y();
+      if (val !== undefined) this.center().y = val;
+      return this.center().y;
     }
     this.minDem = () => this.width() > this.height() ? this.width() : this.height();
     this.maxDem = () => this.width() > this.height() ? this.width() : this.height();

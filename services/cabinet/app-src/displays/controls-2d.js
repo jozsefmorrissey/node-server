@@ -28,8 +28,8 @@ class Controls2d extends Lookup {
       const verts = getLayout().vertices();
       for (let index = 0; index < verts.length; index++) {
         const vert = verts[index];
-        const inView = vert.x() > left && vert.x() < right &&
-                        vert.y() > bottom && vert.y() < top;
+        const inView = vert.x > left && vert.x < right &&
+                        vert.y > bottom && vert.y < top;
         if (inView) return true;
       }
       return false;
@@ -77,7 +77,7 @@ class Controls2d extends Lookup {
         layout.straightenUp();
         panZ.once();
       } else {
-        panZ.centerOn(layout.center().x(), layout.center().y());
+        panZ.centerOn(layout.center().x, layout.center().y);
         centerWithin = true;
       }
     });

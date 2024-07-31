@@ -20,11 +20,11 @@ class PolyLine3D extends Line3D {
     line2 = line2.clone();
     clampAll ||= false;
     clampA0 ||= clampAll; clampA1 ||= clampAll; clampB0 ||= clampAll; clampB1 ||= clampAll;
-    line1.startVertex.clamp = clampA0;
-    line1.endVertex.clamp = clampA1;
-    line2.startVertex.clamp = clampB0;
-    line2.endVertex.clamp = clampB1;
-    let sortedClamps = [line1.startVertex, line1.endVertex, line2.startVertex, line2.endVertex];
+    line1[0].clamp = clampA0;
+    line1[1].clamp = clampA1;
+    line2[0].clamp = clampB0;
+    line2[1].clamp = clampB1;
+    let sortedClamps = [line1[0], line1[1], line2[0], line2[1]];
     Vertex3D.vectorSort(sortedClamps, line1.vector().unit(), Vertex3D.center(...sortedClamps));
     if (!line1.isParrelle(line2)) {
       if (line1.isPoint()) return line2.connect.vertex(line1[0], true);
@@ -46,23 +46,23 @@ class PolyLine3D extends Line3D {
       }
     }
     const unitVec = line1.vector().unit();
-    const plane1 = Plane.fromPointNormal(line1.startVertex, unitVec);
+    const plane1 = Plane.fromPointNormal(line1[0], unitVec);
     plane1.clamp = clampA0;
     plane1.initialVert = line1.midp;
-    const plane2 = Plane.fromPointNormal(line1.endVertex, unitVec);
+    const plane2 = Plane.fromPointNormal(line1[1], unitVec);
     plane2.clamp = clampA1;
-    plane2.initialVert = line1.endVertex;
-    const plane3 = Plane.fromPointNormal(line2.startVertex, unitVec);
+    plane2.initialVert = line1[1];
+    const plane3 = Plane.fromPointNormal(line2[0], unitVec);
     plane3.clamp = clampB0;
-    plane3.initialVert = line2.startVertex;
-    const plane4 = Plane.fromPointNormal(line2.endVertex, unitVec);
+    plane3.initialVert = line2[0];
+    const plane4 = Plane.fromPointNormal(line2[1], unitVec);
     plane4.clamp = clampB1;
-    plane4.initialVert = line2.endVertex;
-    intersectionInfo(line2, plane1, line1.startVertex, clampB0, clampB1);
-    intersectionInfo(line2, plane2, line1.endVertex, clampB0, clampB1);
-    intersectionInfo(line1, plane3, line2.startVertex, clampA0, clampA1);
-    intersectionInfo(line1, plane4, line2.endVertex, clampA0, clampA1);
-    const center = Vertex3D.center(line1.startVertex, line1.endVertex, line2.startVertex, line2.endVertex);
+    plane4.initialVert = line2[1];
+    intersectionInfo(line2, plane1, line1[0], clampB0, clampB1);
+    intersectionInfo(line2, plane2, line1[1], clampB0, clampB1);
+    intersectionInfo(line1, plane3, line2[0], clampA0, clampA1);
+    intersectionInfo(line1, plane4, line2[1], clampA0, clampA1);
+    const center = Vertex3D.center(line1[0], line1[1], line2[0], line2[1]);
     interInfo.sort(infoVectorSort(sortedClamps[0], line1.vector().unit()));
     let infinityPlus = false;
     let infinityNegitive = false;
@@ -85,7 +85,7 @@ class PolyLine3D extends Line3D {
     } else {
       startLine = centerLine = endLine = new Line3D([0,0,0],[0,0,0]);
     }
-    super(centerLine.startVertex, centerLine.endVertex);
+    super(centerLine[0], centerLine[1]);
 
     this.startLine = () => startLine.clone();
     this.endLine = () => endLine.clone();
@@ -93,7 +93,7 @@ class PolyLine3D extends Line3D {
 
     function span(isInfinite) {
       if (isInfinite) return Infinity;
-      const dist = startLine.startVertex.distance(endLine.startVertex);
+      const dist = startLine[0].distance(endLine[0]);
       return dist;
     }
     this.span = () => span(infinityPlus || infinityNegitive);
@@ -101,7 +101,7 @@ class PolyLine3D extends Line3D {
     this.span.negitive = () => span(infinityNegitive);
 
     function spanLine(scale, startVertex) {
-      const vector = new Line3D(startLine.startVertex, endLine.startVertex).vector().scale(scale);
+      const vector = new Line3D(startLine[0], endLine[0]).vector().scale(scale);
       const perpEnd = startVertex.clone().translate(vector);
       return new Line3D(startVertex, perpEnd);
     }
@@ -132,8 +132,8 @@ class PolyLine3D extends Line3D {
     }
 
     const perpendicularDrawString = (negitive) => {
-      const endVertex = negitive ? endLine.startVertex : startLine.startVertex;
-      const vector = new Line3D(centerLine.startVertex, endVertex).vector().scale(.5);
+      const endVertex = negitive ? endLine[0] : startLine[0];
+      const vector = new Line3D(centerLine[0], endVertex).vector().scale(.5);
       const perpStart = centerLine.midpoint();
       const perpEnd = perpStart.clone().translate(vector);
       return new Line3D(perpStart, perpEnd).toDrawString();

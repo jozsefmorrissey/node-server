@@ -525,7 +525,7 @@ class SectionProperties extends KeyValue {
       if (instance.sectionCount() !== 0) {
         const plane = Plane.fromPointNormal(point, line.vector());
         const intersection = plane.intersection.line(line);
-        const distance = line.startVertex.distance(intersection);
+        const distance = line[0].distance(intersection);
         return distance;
       }
       return 0;

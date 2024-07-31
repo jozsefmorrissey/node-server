@@ -9,15 +9,15 @@ class Circle2d {
     const instance = this;
     // Stole the root code from: https://stackoverflow.com/a/37225895
     function lineIntersects (line, bounded) {
-      const p1 = line.startVertex();
-      const p2 = line.endVertex();
+      const p1 = line[0];
+      const p2 = line[1];
         var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
         v1 = {};
         v2 = {};
-        v1.x = p2.x() - p1.x();
-        v1.y = p2.y() - p1.y();
-        v2.x = p1.x() - instance.center().x();
-        v2.y = p1.y() - instance.center().y();
+        v1.x = p2.x - p1.x;
+        v1.y = p2.y - p1.y;
+        v2.x = p1.x - instance.center().x;
+        v2.y = p1.y - instance.center().y;
         b = (v1.x * v2.x + v1.y * v2.y);
         c = 2 * (v1.x * v1.x + v1.y * v1.y);
         b *= -2;
@@ -31,13 +31,13 @@ class Circle2d {
         retP2 = {}
         ret = []; // return array
         if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
-            retP1.x = p1.x() + v1.x * u1;
-            retP1.y = p1.y() + v1.y * u1;
+            retP1.x = p1.x + v1.x * u1;
+            retP1.y = p1.y + v1.y * u1;
             ret[0] = retP1;
         }
         if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
-            retP2.x = p1.x() + v1.x * u2;
-            retP2.y = p1.y() + v1.y * u2;
+            retP2.x = p1.x + v1.x * u2;
+            retP2.y = p1.y + v1.y * u2;
             ret[ret.length] = retP2;
         }
         return ret;
@@ -59,12 +59,12 @@ class Circle2d {
 
 // Ripped off from: https://stackoverflow.com/a/12221389
 Circle2d.intersectionOfTwo = (circle0, circle1) => {
-    const x0 = circle0.center().x();
-    const y0 = circle0.center().y();
+    const x0 = circle0.center().x;
+    const y0 = circle0.center().y;
     const r0 = circle0.radius();
 
-    const x1 = circle1.center().x();
-    const y1 = circle1.center().y();
+    const x1 = circle1.center().x;
+    const y1 = circle1.center().y;
     const r1 = circle1.radius();
     var a, dx, dy, d, h, rx, ry;
     var x2, y2;

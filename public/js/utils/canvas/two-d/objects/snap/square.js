@@ -14,8 +14,8 @@ function vertex(parent, xMagnitude, yMagnitude) {
   const hypeLen = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
   let rads = Math.atan(yDiff/xDiff);
   vertex.point({
-    x: vertex.x() + direction * (hypeLen * Math.cos(rads)),
-    y: vertex.y() + direction * (hypeLen * Math.sin(rads))
+    x: vertex.x + direction * (hypeLen * Math.cos(rads)),
+    y: vertex.y + direction * (hypeLen * Math.sin(rads))
   });
   return vertex;
 }

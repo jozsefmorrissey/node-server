@@ -63,30 +63,30 @@ class DrawLayout extends Draw {
       draw.beginPath();
       const wall = window.wall();
       color ||= hovering() === window ? 'green' : 'black';
-      const wallStartPoint = wall.startVertex().point();
+      const wallStartPoint = wall[0].point();
       const points = window.endpoints2D(wallStartPoint);
       const lookupKey = window.toString();
       const ctx = CTX();
-      ctx.moveTo(points.start.x(), points.start.y());
+      ctx.moveTo(points.start.x, points.start.y);
       ctx.lineWidth = 8;
       ctx.strokeStyle = color;
-      ctx.lineTo(points.end.x(), points.end.y());
+      ctx.lineTo(points.end.x, points.end.y);
       ctx.stroke();
     }
 
     function doorDrawingFunc(door) {
       const ctx = CTX();
-      const startpointLeft = door.startVertex();
-      const startpointRight = door.endVertex();
+      const startpointLeft = door[0];
+      const startpointRight = door[1];
       ctx.beginPath();
       ctx.strokeStyle = hovering() === door ? 'green' : 'black';
       const hinge = door.hinge();
 
       if (hinge === 4) {
-        ctx.moveTo(startpointLeft.x(), startpointLeft.y());
+        ctx.moveTo(startpointLeft.x, startpointLeft.y);
         ctx.lineWidth = 8;
         ctx.strokeStyle = hovering() === door ? 'green' : 'white';
-        ctx.lineTo(startpointRight.x(), startpointRight.y());
+        ctx.lineTo(startpointRight.x, startpointRight.y);
         ctx.stroke();
       } else {
         const offset = Math.PI * hinge / 2;
@@ -94,13 +94,13 @@ class DrawLayout extends Draw {
         const endAngle = initialAngle + (Math.PI / 2);
 
         if (hinge === 0 || hinge === 3) {
-          ctx.moveTo(startpointRight.x(), startpointRight.y());
-          ctx.arc(startpointRight.x(), startpointRight.y(), door.width(), initialAngle, endAngle, false);
-          ctx.lineTo(startpointRight.x(), startpointRight.y());
+          ctx.moveTo(startpointRight.x, startpointRight.y);
+          ctx.arc(startpointRight.x, startpointRight.y, door.width(), initialAngle, endAngle, false);
+          ctx.lineTo(startpointRight.x, startpointRight.y);
         } else {
-          ctx.moveTo(startpointLeft.x(), startpointLeft.y());
-          ctx.arc(startpointLeft.x(), startpointLeft.y(), door.width(), endAngle, initialAngle, true);
-          ctx.lineTo(startpointLeft.x(), startpointLeft.y());
+          ctx.moveTo(startpointLeft.x, startpointLeft.y);
+          ctx.arc(startpointLeft.x, startpointLeft.y, door.width(), endAngle, initialAngle, true);
+          ctx.lineTo(startpointLeft.x, startpointLeft.y);
         }
 
         ctx.fillStyle = 'white';
@@ -179,7 +179,7 @@ class DrawLayout extends Draw {
         draw.beginPath();
         const isWithin = getLayout().within(lines.furtherLine().midpoint());
         const line = isWithin ? lines.closerLine() : lines.furtherLine();
-        const midpoint = Vertex2d.center(line.startLine.endVertex(), line.endLine.endVertex());
+        const midpoint = Vertex2d.center(line.startLine[1], line.endLine[1]);
         if (isHov) {
           draw.line(line.startLine, measurementColor, measurementLineWidth);
           draw.line(line.endLine, measurementColor, measurementLineWidth);
@@ -200,8 +200,8 @@ class DrawLayout extends Draw {
         const points = item.endpoints2D();
         const measureLine1 = item.prevLine.measurement;
         const measureLine2 = item.nextLine.measurement;
-        drawMeasurement(measureLine1, level, wall.startVertex())
-        drawMeasurement(measureLine2, level, wall.startVertex())
+        drawMeasurement(measureLine1, level, wall[0])
+        drawMeasurement(measureLine2, level, wall[0])
         level += 4;
       }
       return level;
@@ -212,11 +212,11 @@ class DrawLayout extends Draw {
     }
 
     draw.wall = (wall, color, width) => {
-      if (wall.endVertex().isFree()) color = 'red';
+      if (wall[1].isFree()) color = 'red';
       if (isHovering(wall)) color = 'green';
       draw.line(wall, color, 4);
-      const startpoint = wall.startVertex().point();
-      const endpoint = wall.endVertex().point();
+      const startpoint = wall[0].point();
+      const endpoint = wall[1].point();
 
       wall.doors().forEach((door) => draw.door(door));
       wall.windows().forEach((window) => draw.window(window));
@@ -230,7 +230,7 @@ class DrawLayout extends Draw {
       }
       const measurement = wall.measurment;
       measurement.layer(level);
-      drawMeasurement(measurement, null, wall.startVertex());
+      drawMeasurement(measurement, null, wall[0]);
 
       return endpoint;
     }
@@ -241,10 +241,10 @@ class DrawLayout extends Draw {
       const text = Math.round(angle * 10) / 10;
       let bisector = vertex.bisector(30);
       if (angle > 180) {
-        bisector = Line2d.startAndTheta(bisector.startVertex(), bisector.radians() - Math.PI, 30);
+        bisector = Line2d.startAndTheta(bisector[0], bisector.radians() - Math.PI, 30);
       }
       if (bisector) {
-        const point = bisector.endVertex();
+        const point = bisector[1];
         const radians = bisector.perpendicular().radians();
         draw.text(text, point, {radians, size: 5});
       }
@@ -253,8 +253,8 @@ class DrawLayout extends Draw {
     function vertexColor(vertex) {
       const hoverin = hovering();
       if (hoverin && hoverin.constructor.name === 'Wall2D') {
-          if (hoverin.startVertex().toString() === vertex.toString()) return 'blue';
-          if (hoverin.endVertex().toString() === vertex.toString()) return 'yellow';
+          if (hoverin[0].toString() === vertex.toString()) return 'blue';
+          if (hoverin[1].toString() === vertex.toString()) return 'yellow';
       }
       return isHovering(vertex) ? 'green' : 'white';
     }
@@ -340,8 +340,8 @@ class DrawLayout extends Draw {
       ctx.scale(minScale, minScale);
 
       const center = layout.center();
-      const transX = (canvas.width/minScale)/2 - center.x();
-      const transY = (canvas.height/minScale)/2 - center.y();
+      const transX = (canvas.width/minScale)/2 - center.x;
+      const transY = (canvas.height/minScale)/2 - center.y;
       ctx.translate(transX, transY);
 
     }
@@ -363,7 +363,7 @@ class DrawLayout extends Draw {
       const walls = layout.walls();
       let wl = walls.length;
       walls.forEach((wall, index) => draw.wall(wall));
-      walls.forEach(wall => drawVertex(wall.startVertex()));
+      walls.forEach(wall => drawVertex(wall[0]));
       drawMeasurementValues();
 
       let objects = layout.level();
