@@ -2,6 +2,8 @@
 const DTO = require('./data-transfer-object.js');
 const TASK_STATUS = require('./tasks/status');
 const {Parrelle} = require('./tasks/basic.js');
+const RDTO = require('../shared/reconnect-transfer-object.js');
+
 
 const maxWorkers = 20;
 class WebWorkerDeligator {
@@ -25,7 +27,8 @@ class WebWorkerDeligator {
           else if (!task.finished()) task.status(TASK_STATUS.FAILED);
           exicute();
         } else {
-          task.trigger.message(data && data.result);
+          const result = RDTO(data && data.result);
+          task.trigger.message(result);
           if (task.status() === TASK_STATUS.SUCCESS) {
             exicute();
           }

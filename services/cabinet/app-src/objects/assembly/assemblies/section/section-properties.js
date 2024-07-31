@@ -683,7 +683,7 @@ class SectionProperties extends KeyValue {
     this.on.parentSet(p => this.getAssembly('c') && this.isRoot() && cabinetBoxDados());
 
     this.toDrawString = (notRecursive) => {
-      const color = String.nextColor();
+      const color = String.color.next();
       const innerStr = this.coordinates().inner.map(v => color + v.toString()).join('\n');
       const outerStr = this.coordinates().outer.map(v => color + v.toString()).join('\n');
       let str = `//  ${this.userFriendlyId()}:${this.locationCode()}\n${outerStr}\n${innerStr}`;
@@ -692,7 +692,7 @@ class SectionProperties extends KeyValue {
       return str;
     }
     this.toDrawString2D = (notRecursive) => {
-      const color = String.nextColor();
+      const color = String.color.next();
       const innerStr = this.coordinates().inner.map(v => v.viewFromVector(this.normal()).to2D('x', 'y')).join('\n');
       const outerStr = this.coordinates().outer.map(v => v.viewFromVector(this.normal()).to2D('x', 'y')).join('\n');
       let str = `//  ${this.userFriendlyId()}:${this.locationCode()}\n${outerStr}\n${innerStr}`;
@@ -742,6 +742,23 @@ SectionProperties.new = function (constructorId) {
   return section;
 }
 
+SectionProperties.toDrawString = (sp) => {
+  const inner = sp.coordinates().inner;
+  let coords = inner.map(v => v.to2D('x','y').toString()).join(',');
+  const color = String.color.next();
+  let str = `${color}[${coords},${inner[0].to2D('x','y').toString()}]\n`;
+  for (let index = 0; index < sp.sections.length; index++)  {
+    str += SectionProperties.toDrawString(sp.sections[index]);
+  }
+  return str;
+}
+
+const sections = [];
+SectionProperties.addSection = (clazz) => sections.push(clazz);
+SectionProperties.list = () => [].concat(sections);
+
+Object.class.register(SectionProperties);
+
 SectionProperties.fromJson = (json) => {
   const sections = [];
   const pattern = Pattern.fromJson(json.pattern);
@@ -756,21 +773,4 @@ SectionProperties.fromJson = (json) => {
   });
   return sp;
 }
-
-SectionProperties.toDrawString = (sp) => {
-  const inner = sp.coordinates().inner;
-  let coords = inner.map(v => v.to2D('x','y').toString()).join(',');
-  const color = String.nextColor();
-  let str = `${color}[${coords},${inner[0].to2D('x','y').toString()}]\n`;
-  for (let index = 0; index < sp.sections.length; index++)  {
-    str += SectionProperties.toDrawString(sp.sections[index]);
-  }
-  return str;
-}
-
-const sections = [];
-SectionProperties.addSection = (clazz) => sections.push(clazz);
-SectionProperties.list = () => [].concat(sections);
-
-Object.class.register(SectionProperties);
 module.exports = SectionProperties;

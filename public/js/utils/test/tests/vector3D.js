@@ -222,7 +222,7 @@ lines[6].connections = {
 
 
 
-lines.forEach(l => l.color = String.nextColor());
+lines.forEach(l => l.color = String.color.next());
 
 const compareConnections = (conn, answer, ts) => {
   ts.assertTrue(conn.equals(answer));
@@ -234,7 +234,7 @@ const compareConnections = (conn, answer, ts) => {
 }
 
 function checkConnections(line1, line2, connection, segment, segmentBoth, directional, directionalBoth, ts) {
-  let color = String.nextColor()
+  let color = String.color.next()
   let conn = line1.connect.line(line2);
   let answer = connection;
   compareConnections(conn, answer, ts);
@@ -298,23 +298,23 @@ Test.add('Line3D: connect (line)', (ts) => {
   var line1 = new Line3D([-1,0,0], [-1,0,1]);
   var line2 = new Line3D([0,0,0], [0,0,1]);
   let answer = shuffleCheck(line1, line2, null, ts);
-  lineSets.push({line1, line2, answer, color: String.nextColor()});
+  lineSets.push({line1, line2, answer, color: String.color.next()});
 
   line1 = new Line3D([-1,-1,-1], [-10,-10,-10]);
   line2 = new Line3D([1,-1,-1], [10,10,10]);
   answer = new Line3D([-1,-1,-1], [1,-1,-1]);
   shuffleCheck(line1, line2, answer, ts);
-  lineSets.push({line1, line2, answer, color: String.nextColor()});
+  lineSets.push({line1, line2, answer, color: String.color.next()});
 
   line1 = new Line3D([27.83, 31.74, -26.60], [13.43, 21.77, 46.81]);
   line2 = new Line3D([77.54, 7.53, 6.22], [26.99, 12.39, 11.18]);
   answer = shuffleCheck(line1, line2, null, ts);
   answer = shuffleCheck(line2, line1, null, ts);
-  lineSets.push({line1, line2, answer, color: String.nextColor()});
+  lineSets.push({line1, line2, answer, color: String.color.next()});
 
   line1 = new Line3D([27.83,31.74,-26.6], [20.63,26.755,10.105]);
   answer = shuffleCheck(line1, line2, null, ts);
-  lineSets.push({line1, line2, answer, color: String.nextColor()});
+  lineSets.push({line1, line2, answer, color: String.color.next()});
 
   for (let i = 0; i < lines.length - 1; i++) {
     const target = lines[i];
@@ -393,7 +393,7 @@ function testVector(vector, ts) {
 
   let randomLines = generateLines(2, origin.clone());
   avgLine = Line3D.averageLine(randomLines);
-  const color = String.nextColor();
+  const color = String.color.next();
   avgLines.push([randomLines[0].toDrawString(color), randomLines[1].toDrawString(color), avgLine.toDrawString(color)].join('\n'));
   ts.assertTrue(avgLine.startVertex.equals(origin));
 

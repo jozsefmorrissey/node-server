@@ -156,7 +156,7 @@ class Assembly extends KeyValue {
 
     this.group = (g) => {
       const root = instance.getRoot()
-      if (root !== this) return root.group();
+      if (root !== this && root.group) return root.group();
       if (g) group = g;
       return group;
     }
@@ -509,7 +509,7 @@ class Assembly extends KeyValue {
         const norms = this.position().normals(true).map((v,i) => normalStr(v, i, c));
         const normStr = `//${norms[0]}\n//${norms[1]}\n//${norms[2]}\n`
         const modStr = model.toString().trim()
-                        .replace(/(^|\n)/g, `$1${String.nextColor(...normColors)}`);
+                        .replace(/(^|\n)/g, `$1${String.color.next(...normColors)}`);
         str += `${normStr}${modStr}`;
       }
       if (notRecursive !== true)

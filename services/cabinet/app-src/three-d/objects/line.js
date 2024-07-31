@@ -21,10 +21,10 @@ class Line3D {
       endVertex = startVertex;
       startVertex = new Vertex3D();
     }
-    if (startVertex === undefined || endVertex === undefined) throw new Error('Lines must have a start and an end point');
     this.startVertex = new Vertex3D(startVertex);
     this.endVertex = new Vertex3D(endVertex);
-
+    this.startVertex.DIRECTIONAL = startVertex && startVertex.DIRECTIONAL;
+    this.endVertex.DIRECTIONAL = endVertex && endVertex.DIRECTIONAL;
     Object.defineProperty(this, '0', {
       get: () => this.startVertex,
       set: (val) => this.startVertex = val
@@ -34,6 +34,7 @@ class Line3D {
       set: (val) => this.endVertex = val
     });
     const instance = this;
+    this[1].DIRECTIONAL = true;
 
     this.clone = () => {
       const clone = new Line3D(this.startVertex.clone(), this.endVertex.clone());
@@ -47,8 +48,8 @@ class Line3D {
     this.isDirectional = () => this.isDirectional.anti() ^ this.isDirectional.co();
     this.isDirectional.co = () => this[0].DIRECTIONAL !== true && this[1].DIRECTIONAL === true;
     this.isDirectional.anti = () => this[1].DIRECTIONAL !== true && this[0].DIRECTIONAL === true;
-    this.directional = (before, after) => (this[0].DIRECTIONAL = before ? true : false) &
-                        (this[1].DIRECTIONAL = after ? true : false) & undefined;
+    this.directional = (before, after) => (((this[0].DIRECTIONAL = before ? true : false) &
+                        (this[1].DIRECTIONAL = after ? true : false)) && this ) || this;
 
     this.invert = (condition) => {
       if (condition === undefined || condition) {
@@ -62,14 +63,27 @@ class Line3D {
       }
     }
 
-    this.negitive = () => new Line3D(this.endVertex, this.startVertex);
+    this.negitive = () => new Line3D(this[1].clone(), this[0].clone()).directional(this[1].DIRECTIONAL, this[0].DIRECTIONAL);
     this.equals = (other, tolerance) => {
-      if (this.startVertex && this.endVertex && other instanceof Line3D) {
-        return this.startVertex.equals(other.startVertex, tolerance) && this.endVertex.equals(other.endVertex, tolerance) ||
-            this.startVertex.equals(other.endVertex, tolerance) && this.endVertex.equals(other.startVertex, tolerance);
-      }
-      return false;
+      if (!this[0] || !this[1] || !(other instanceof Line3D)) return false
+      return this[0].equals(other[0], tolerance) && this[1].equals(other[1], tolerance);
     }
+    this.equals.directional = (other, tolerance) => {
+      if (!this[0] || !this[1] || !(other instanceof Line3D)) return false
+      if (!this.vector().parrelle(other.vector(),tolerance)) return false;
+      if (!this.vector().sameDirection(other.vector())) other = other.negitive();
+      if (!this.sharesPoint(other)) return false;
+      const startEq = this[0].equals(other[0], tolerance);;
+      const endEq = this[1].equals(other[1], tolerance);
+      const startDirEq = this[0].DIRECTIONAL === other[0].DIRECTIONAL;
+      const endDirEq = this[1].DIRECTIONAL === other[1].DIRECTIONAL;
+
+      return (startDirEq && (this[0].DIRECTIONAL === true || startEq)) &&
+              (endDirEq  && (this[1].DIRECTIONAL === true || endEq));
+    }
+    this.equivalent = (other, tolerance) => this.equals(other, tolerance) ||
+                                    this.equals(other.negitive(), tolerance);
+
     this.vector = () => {
       let i = this.endVertex.x - this.startVertex.x;
       let j = this.endVertex.y - this.startVertex.y;
@@ -355,6 +369,11 @@ class Line3D {
       return vertex.finite() ? {vertex, t} : null;
     }
 
+    this.sharesPoint = (lineOvert) => {
+      const vertex = lineOvert instanceof Line3D ? lineOvert[0] : lineOvert;
+      return (this.x(vertex.x) || this.y(vertex.y) || this.z(vertex.z)) !== null;
+    }
+
     this.within = (vertex) => {
       vertex = new Vertex3D(vertex);
       const onLine = this.x(vertex.x) || this.y(vertex.y) || this.z(vertex.z);
@@ -526,13 +545,17 @@ Line3D.to2D = (lines, x, y) => {
   return lines2d;
 }
 
-Line3D.thetaBetween = (line1, line2, viewFrom, acute) => {
-  const x = line1.vector().unit();
-  const z = viewFrom;
-  const y = z.crossProduct(x);
-  const rotz = Line3D.coDirectionalRotations([x,y,z]);
-  const clone1 = line1.clone();
-  const clone2 = line2.clone();
+Line3D.thetaBetween = (line, relToLine, viewFrom, acute) => {
+  if (viewFrom instanceof Vector3D) {
+    const x = line.vector().unit();
+    const z = viewFrom;
+    const y = z.crossProduct(x);
+    viewFrom = [x,y,z];
+  }
+  console.log(viewFrom.map(v => v.toString(.1)).join('\n'));
+  const rotz = Line3D.coDirectionalRotations(viewFrom);
+  const clone1 = line.clone();
+  const clone2 = relToLine.clone();
   const origin = new Vertex3D();
   rotz.forEach(rot => {
     clone1.rotate(rot, origin);
@@ -541,7 +564,7 @@ Line3D.thetaBetween = (line1, line2, viewFrom, acute) => {
 
   const l12d = clone1.to2D();
   const l22d = clone2.to2D();
-  return acute === true ? l12d.acute(l22d) : (acute === false ? l12d.obtuse(l22d) : l12d.thetaBetween(l22d));
+  return acute === true ? l12d.acute(l22d) : (acute === false ? l12d.obtuse(l22d) : l12d.radians.sub(l22d));
 }
 
 Line3D.fromVector = (vector, startVertex, rotation) => {
@@ -628,7 +651,7 @@ const unitLine = (vectOline) => {
 
 function get2dLines(ortho1, ortho2, pivot) {
   if (pivot === 'x')
-    return Line3D.to2D([ortho1, ortho2], 'z', 'y');
+    return Line3D.to2D([ortho1, ortho2], 'y', 'z');
   if (pivot === 'y')
     return Line3D.to2D([ortho1, ortho2], 'z', 'x');
   if (pivot === 'z')
@@ -642,7 +665,7 @@ function determineRotation(unitLine, target, pivot, reverse) {
   const orthoTar = Line3D.viewFromVector([target], pivotVec)[0];
   const twoDlines = get2dLines(orthoLine, orthoTar, pivot);
   if (!twoDlines[0].isPoint() && !twoDlines[1].isPoint()) {
-    const degrees = Math.toDegrees(twoDlines[0].radianDifference(twoDlines[1]));
+    const degrees = Math.toDegrees(twoDlines[0].radians.sub(twoDlines[1]));
     if (degrees !== 0 && degrees !== 360) {
       const rotation = {};
       rotation[pivot] = reverse ? degrees : -degrees;
@@ -660,6 +683,13 @@ const checkAllAreParrelle = (align, alignTo) => {
   }
   return equal;
 }
+
+const c = ['red', 'green', 'blue']
+const alignToString = (align, unitLine, targetLine) => [unitLine ? unitLine.endVertex.toString() : '', align.map((l,i) => l.toDrawString(c[i])).join('\n'),targetLine ? targetLine.toString() : ''].filter(l=>l).join('\n');
+const rotStr = (rot) => rot ? `(${rot.x||''},${rot.y||''},${rot.z||''})` : '';
+const rotationInfo = (aIndex, index, rot) => `// ${aIndex}${index} ${rotStr(rot)}`;
+const snapShotStr = (aIndex, index, rot, align, unitLine, targetLine) =>
+`${rotationInfo(aIndex, index, rot)}\n\n${alignToString(align, unitLine, targetLine)}\n`
 function determinRotations(align, alignTo, reverse) {
   align = align.map(l => l.clone());
   const rotations = [];
@@ -668,6 +698,7 @@ function determinRotations(align, alignTo, reverse) {
   let lastRotation;
   const center = new Vertex3D();//.center(Line3D.vertices(align));
   let axisCannotBeEqual;
+  let icl = {incorrect: [], correct: [], snapShots: []}
   while (keepGoing && cycles++ < 7) {
     for (let aIndex = 0; aIndex < align.length; aIndex++) {
       const unitLine = align[aIndex];
@@ -678,7 +709,14 @@ function determinRotations(align, alignTo, reverse) {
         const rotation = determineRotation(unitLine, targetLine, pivot, reverse);
         axisCannotBeEqual = Object.equals(lastRotation, rotation);
         if (rotation && !axisCannotBeEqual) {
+          icl.snapShots.push(snapShotStr(aIndex, index, rotation, align, unitLine, targetLine));
           align = align.map(l => reverse ? l.reverseRotate(rotation, center) : l.rotate(rotation, center));
+          const newRot = determineRotation(unitLine, targetLine, pivot, reverse);
+          if (newRot) {
+            icl.incorrect.push({rotation});
+          } else {
+            icl.correct.push(rotation);
+          }
           rotations.push(rotation);
           lastRotation = rotation;
         }
@@ -686,11 +724,19 @@ function determinRotations(align, alignTo, reverse) {
       keepGoing = rotations.length !== rotationLength;
     }
   }
+  icl.snapShots.push(snapShotStr(align.length, pivots.length, null, align));
+  if (icl.incorrect.length > 0) {
+    console.log(icl.snapShots.join('\n\n\n'))
+    console.log();
+  }
 
   if (axisCannotBeEqual)
     console.warn('Axis cannot be equal: try to create conditions where they can');
   // if (!checkAllAreParrelle(align, alignTo))
   //   throw new Error("This shouldn't happen");
+  if (rotations.length > 4) {
+    console.warn('Resolving rotations seams confused...');
+  }
 
   return rotations.length > 0 ? rotations : null;
 }
@@ -863,6 +909,15 @@ Line3D.radialSorter = (center, vector) => {
 
 Line3D.radialSort = (lines, center, vector) => {
   lines.sort(Line3D.radialSorter(center, vector));
+}
+
+Line3D.radialSort2D = (lines, viewFrom, ccw, center, degreesOstartpoint) => {
+  center ||= Vertex3D.center(lines.map(l => l.center()));
+  degreesOstartpoint ||= 0;
+  centers = [];
+  lines.forEach(l => centers.push(p.center()) & (centers[centers.length - 1].line = l));
+  Vertex3D.radialSort2D(centers, viewFrom, ccw, center, degreesOstartpoint);
+  return lines.copy(centers.map(c => c.line));
 }
 
 Line3D.distanceSort = (target, segment) => (l1,l2) => {
@@ -1120,4 +1175,10 @@ Line3D.connect = (line1, line2) => {
   pb.z = p3.z + mub * p43.z;
 
   return new Line3D(pa, pb);
+}
+
+Object.class.register(Line3D, '0', '1', '0.DIRECTIONAL', '1.DIRECTIONAL');
+Line3D.fromJson = (json) => {
+  return new Line3D(json[0], json[1])
+          .directional(json[0].DIRECTIONAL, json[1].DIRECTIONAL);
 }

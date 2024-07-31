@@ -50,21 +50,15 @@
 
 CSG = function() {
   this.polygons = [];
-  this.toString = (percision) => {
+  this.toString = (percision, includeColor) => {
     percision ||= .001;
     let str = '';
-    for (let index = 0; index < this.polygons.length; index++) {
-      const verts = this.polygons[index].vertices;
-      str += '['
-      for (let v = 0; v < verts.length; v++) {
-        str += `${verts[v].toString(percision)},`;
-      }
-      str = `${str.substring(0, str.length - 1)}]\n`;
-    }
+    this.polygons.forEach(p => str += p.toString(percision, includeColor));
     return str;
   }
-  this.toDrawString = (color, percision) =>
-    this.toString(percision).replace(/(^|\[)/g, `${color || 'blue'}$1`);
+  this.toDrawString = (color, percision) => color ?
+      this.toString(percision).replace(/(^|\n)\[/g, `$1${color}[`) :
+      this.toString(percision, true).replace(/(^|\n)\[/g, `$1${'blue'}[`);
   this.vertices = () => {
     const verts = [];
     this.polygons.forEach(p => p.vertices.forEach(v => verts.push(v)));
@@ -112,6 +106,16 @@ const colors = {
   silver: [192, 192, 192],
   purple: [128, 0, 128]
 }
+colors.list = () => Object.keys(colors).filter(k => Array.isArray(colors[k]));
+
+colors.codeMap = {}
+colors.list().forEach(k => colors.codeMap[colors[k].join(',')] = k);
+colors.name = (shared) => {
+  if (!Array.isArray(shared)) return '';
+  const strKey = shared.map(v => Math.round(v * 255)).join(',');
+  return colors.codeMap[strKey] || strKey;
+}
+
 
 // Construct a CSG solid from a list of `CSG.Polygon` instances.
 CSG.fromPolygons = function(polygons, deepCopy) {
@@ -140,6 +144,98 @@ CSG.fromPolygons = function(polygons, deepCopy) {
   csg.polygons = polygons;
   return csg;
 };
+
+CSG.fromPolygon = (poly, offset) => {
+  const front = poly.clone();
+  const back = poly.clone();
+  const offsetVect = poly.vertices[0].normal.times(offset);
+  back.translate(offsetVect);
+  const center = new CSG.Vector(front.center().pos).plus(new CSG.Vector(back.center().pos)).dividedBy(2);
+  const len = poly.vertices.length;
+  const fverts = front.vertices.map(v => new CSG.Vector(v.pos));
+  const bverts = back.vertices.map(v => new CSG.Vector(v.pos));
+  const sides = [];
+  for (let index = 0; index < len; index++) {
+    const vi1 = index%len;
+    const vi2 = (index + 1)%len;
+    const pts = [fverts[vi1], fverts[vi2], bverts[vi2], bverts[vi1]];
+    let norm = pts[1].minus(pts[0]).cross(pts[1].minus(pts[2])).unit();
+    const vertices = pts.map(p => new CSG.Vertex(p, norm));
+    const poly = new CSG.Polygon(vertices);
+    poly.alignNormal(center);
+    sides.push(poly);
+  }
+  if (offset < 0) {
+    back.vertices.forEach(v => v.normal = v.normal.times(-1));
+    back.vertices.reverse();
+    back.plane.normal = back.plane.normal.times(-1);
+  } else {
+    front.vertices.forEach(v => v.normal = v.normal.times(-1));
+    front.vertices.reverse();
+    front.plane.normal = front.plane.normal.times(-1);
+  }
+  front.alignNormal(center);
+  back.alignNormal(center);
+  console.log([front, back].concat(sides).map((p, i) => `// ${i} ${p.plane.normal.unit()}\n${p.toString()}`).join('\n'))
+  const csg = CSG.fromPolygons([front, back].concat(sides));
+  return csg;
+}
+
+function sliceConfig(x, y, width, dems, center) {
+  if (!Array.isArray(dems)) dems = [dems.x, dems.y, dems.z];
+  const notIncluded = [x,y].indexOf('z') === -1 ? 2 : ([x,y].indexOf('y')) === -1 ? 1 : 0;
+  const length = dems[notIncluded];
+  const demensions = dems.map(v => v);
+  demensions[notIncluded] = width;
+  const startOffset = [0, 0, 0];
+  startOffset[notIncluded] = (length / -2) + (width / 2);
+  center = center.translate(startOffset);
+  center = [center.pos.x, center.pos.y, center.pos.z];
+  let step = [0, 0, 0];
+  step[notIncluded] = width;
+  step = new CSG.Vector(step);
+  const steps = Math.ceil(length/width);
+  return {demensions, center, step, steps, width, index: 0};
+}
+
+CSG.fromString = function (string) {
+  const numRegStr = '([0-9]*\\.[0-9]{1,}|[0-9]{1,})'
+  const vertRegStr = `\\(${numRegStr},${numRegStr},${numRegStr}\\)`;
+  const polyRegStr = `([a-zA-z0-9, ]*)\\[(${vertRegStr}(,|)){3,}\\]`;
+  const polyRegG = new RegExp(polyRegStr, 'g');
+  const polyReg = new RegExp(polyRegStr);
+  const vertRegG = new RegExp(vertRegStr, 'g');
+  const vertReg = new RegExp(vertRegStr);
+  const numRegG = new RegExp(numRegStr, 'g');
+  const numReg = new RegExp(numRegStr);
+
+  const pf = Number.parseFloat;
+  const polyStrs = string.match(polyRegG);
+  if (polyStrs === null) return null;
+  const polys = [];
+  for (let i = 0; i < polyStrs.length; i++) {
+    const vertStrs = polyStrs[i].match(vertRegG);
+    let color = polyStrs[i].match(polyReg)[1];
+    let colorMatch = color.match(numRegG);
+    if (colorMatch && colorMatch.length === 3) color = colorMatch.map(s => pf(s));
+    const verts = [];
+    for (let j = 0; vertStrs && j < vertStrs.length; j++) {
+      const match = vertStrs[j].match(vertReg);
+      const vertex = {x: pf(match[1]), y: pf(match[2]), z: pf(match[3])};
+      verts.push(vertex);
+    }
+    const a = new CSG.Vector(verts[0]);
+    const b = new CSG.Vector(verts[1]);
+    const c = new CSG.Vector(verts[2]);
+    const norm = a.minus(b).cross(b.minus(c));
+    const vertices = verts.map(v => new CSG.Vertex(v, norm));
+    const poly = new CSG.Polygon(vertices);
+    if (color) poly.setColor(color);
+    polys.push(poly);
+  }
+
+  return CSG.fromPolygons(polys);
+}
 
 const vertexPercision = (percision, x, y, z) => ({
   x: percision ? Math.roundTo(x, percision) : x,
@@ -288,6 +384,27 @@ CSG.prototype = {
     return CSG.fromPolygons(a.allPolygons());
   },
 
+  slice: function (width, x, y, map) {
+    width ||= .01;
+    if ((!x && y) || (x && !y)) throw new Error('If you define x you must define y and vice versa')
+    if (!x && !y) (x = 'x') & (y = 'z');
+    const dems = this.demensions();
+    const center = new CSG.Vertex(this.center());
+    const config = sliceConfig(x,y, width, dems, center);
+    config.slice = new CSG.cube(config);
+    config.slices = [];
+    const runFunc = map instanceof Function;
+    for (;config.index < config.steps; config.index++) {
+        const int = config.slice.intersect(this);
+        int.polygons = int.polygons.filter(p => config.step.dot(p.plane.normal) === config.width);
+        if (runFunc) config.slices.push(map(int, config));
+        else config.slices.push(int);
+        config.slice.translate(config.step);
+    }
+    console.log(config.slices.map((s, i) => `//${i}\n${s.toDrawString()}\n${this.toDrawString('green')}`).join('\n\n'))
+    return config.slices;
+  },
+
   // Return a new CSG solid with solid and empty space switched. This solid is
   // not modified.
   inverse: function() {
@@ -370,11 +487,8 @@ CSG.prototype = {
   },
 
   translate: function (offset) {
-    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-      vertex.pos.x += offset.x;
-      vertex.pos.y += offset.y;
-      vertex.pos.z += offset.z;
-    }));
+    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+    this.polygons.forEach((poly) => poly.translate(offset));
   },
 
   center: function (newCenter) {
@@ -875,7 +989,7 @@ CSG.Vector.prototype = {
 
 CSG.Vertex = function(pos, normal) {
   this.pos = new CSG.Vector(pos);
-  this.normal = new CSG.Vector(normal);
+  this.normal = new CSG.Vector(normal || {x:1,y:0,z:0});
   this.toString = (percision) => {
     const verPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
     return `(${verPer.x},${verPer.y},${verPer.z})`;
@@ -923,6 +1037,7 @@ CSG.Vertex.prototype = {
     const vertPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
     return `(${vertPer.x},${vertPer.y},${vertPer.z})`
   },
+  translate: function (offset) {return translate(this, offset)},
 
   // Invert all orientation-specific data (e.g. vertex normal). Called when the
   // orientation of a polygon is flipped.
@@ -1059,6 +1174,54 @@ CSG.Polygon.prototype = {
   clone: function() {
     var vertices = this.vertices.map(function(v) { return v.clone(); });
     return new CSG.Polygon(vertices, this.shared);
+  },
+
+  lines: function () {
+    const verts = this.vertices;
+    return verts.map((v,i) => [v.pos, verts[(i+1)%verts.length].pos]);
+  },
+
+  alignNormal: function (objectCenter) {
+    const center = new CSG.Vector(this.center().pos);
+    const dir = center.minus(objectCenter).unit();
+    const norm = this.plane.normal;
+    if (norm.dot(dir) < 0) {
+      this.plane.normal = norm.times(-1);
+      this.vertices.forEach(v => v.normal = v.normal.times(-1));
+      console.log('realigned');
+    }
+  },
+
+  toString: function (percision, includeColor) {
+    percision ||= .001;
+    const verts = this.vertices;
+    const shared = this.shared;
+    let color = includeColor ? colors.name(shared) : '';
+    let str = `${color}[`;
+    for (let v = 0; v < verts.length; v++) {
+      str += `${verts[v].toString(percision)},`;
+    }
+    str = `${str.substring(0, str.length - 1)}]\n`;
+    return str;
+  },
+
+  center: function () {
+    const mr = Math.midrange(this.vertices, ['pos.x','pos.y','pos.z']);
+    return new CSG.Vertex({x: mr['pos.x'], y: mr['pos.y'], z: mr['pos.z']});
+  },
+
+  translate: function (offset) {
+    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+    this.forEachVertex((vertex) => {
+      vertex.pos.x += offset.x;
+      vertex.pos.y += offset.y;
+      vertex.pos.z += offset.z;
+    });
+  },
+
+  color: function () {
+    const name = colors.name(this.shared);
+    return name.indexOf(',') === -1 ? name : this.shared.map(v => Math.round(v*255));
   },
 
   scale: function(center, coeficient) {
@@ -1284,6 +1447,7 @@ function transRotate (point, offset, rotation) {
 }
 
 function translate (point, offset) {
+  if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
   if (point instanceof CSG.Vertex) {
     const newPos = point.clone();
     newPos.pos.x += offset.x;

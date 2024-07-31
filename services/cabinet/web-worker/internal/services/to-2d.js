@@ -10,7 +10,7 @@ const Line3D = require('../../../app-src/three-d/objects/line.js')
 const dataTransferConfig = require('../math-data-transfer-config.json');
 const DTO = require('../../shared/data-transfer-object')(dataTransferConfig);
 const MFC = require('./modeling/modeling-function-configuration.js');
-const RDTO = require('./modeling/reconnect-transfer-object');
+const RDTO = require('../../shared/reconnect-transfer-object');
 
 const ThreeView = require('../../../../../public/js/utils/canvas/two-d/objects/three-view');
 

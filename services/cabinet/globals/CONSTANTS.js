@@ -9,11 +9,9 @@ const PULL_TYPE = {
 };
 
 const debug = {
-  showFlags: false,
   showNormals: false
 }
 
-Draw2d.debug.showFlags = debug.showFlags;
 Draw2d.debug.showNormals = debug.showNormals;
 
 exports.VIEWER = {height: 600, width: 600}

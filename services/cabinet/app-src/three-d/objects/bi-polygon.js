@@ -266,6 +266,11 @@ class BiPolygon {
       return this.toPolygons().map(p => p.toDrawString(p.equals(this.front()) ? 'red' : color, includeNormals)).join('\n\n');
     }
 
+    this.equals = (other) => {
+      if (!(other instanceof BiPolygon)) return false;
+      return this.front().equals(other.front()) && this.back().equals(other.back());
+    }
+
 
     this.toString = () => {
       let face1Str = '';
@@ -325,5 +330,14 @@ BiPolygon.fromPositionObject = (position) => {
   const vecObj = position.normals;
   return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj);
 }
+
+Object.class.register(BiPolygon);
+BiPolygon.toJson = (bipoly) => {
+  return {_TYPE: BiPolygon.name, front: Polygon3D.toJson(bipoly.front()),
+                                  back: Polygon3D.toJson(bipoly.back())};
+}
+BiPolygon.fromJson = (json) =>
+  new BiPolygon(Polygon3D.fromJson(json.front), Polygon3D.fromJson(json.back));
+
 
 module.exports = BiPolygon;

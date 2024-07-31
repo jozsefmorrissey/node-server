@@ -78,30 +78,42 @@ const initModel = () => model = getModel();
 initModel();
 viewer = getViewer(model);
 
-const colorRegStr = '([a-z]*\\s*)';
+const intRegStr = '\\s*([0-9]{1,})\\s*'
 const numberRegStr = '\\s*((-|)[0-9]{1,}(|\\.[0-9]*)|(-|)(|\\.[0-9]*))\\s*';
-const pointRegStr = `\\s*${colorRegStr}\\(${numberRegStr},${numberRegStr},${numberRegStr}\\)\\s*`;
-const lineRegStr = `${colorRegStr}((\\[|\\()(${pointRegStr}),(${pointRegStr}))((\\]|\\)))`;
-const polyRegStr = `${colorRegStr}\\[((${pointRegStr},){2,}${pointRegStr})\\]`;
-const planeRegStr = `${colorRegStr}\\(((${pointRegStr},){2,}${pointRegStr})\\)`;
+const colorRegStr = `(^[a-z]*\\s*$)|(^${intRegStr},${intRegStr},${intRegStr}$)`;
+const prefixRegStr = '([a-zA-Z]*\\s*|[ 0-9.,]{5,}\\s*|\\s*)';
+const pointRegStr = `\\s*${prefixRegStr}\\(${numberRegStr},${numberRegStr},${numberRegStr}\\)\\s*`;
+const lineRegStr = `${prefixRegStr}((\\[|\\()(${pointRegStr}),(${pointRegStr}))((\\]|\\)))`;
+const polyRegStr = `${prefixRegStr}\\[((${pointRegStr},){2,}${pointRegStr})\\]`;
+const planeRegStr = `${prefixRegStr}\\(((${pointRegStr},){2,}${pointRegStr})\\)`;
 
+let colorReg = new RegExp(colorRegStr);
 let pointReg = new RegExp(pointRegStr);
 let pointsReg = new RegExp(pointRegStr, 'g');
 let lineReg = new RegExp(lineRegStr);
 let polyReg = new RegExp(polyRegStr);
 let planeReg = new RegExp(planeRegStr);
 
+const pf = Number.parseFloat;
+const getColor = (str) => {
+  if (!str) return undefined;
+  const match = str.match(colorReg);
+  if (match === null) return undefined;
+  if (match[1]) return match[1];
+  return [pf(match[3]), pf(match[4]), pf(match[5])];
+}
+
 pointReg.Array = (string) => {
   let match = string.match(pointReg);
   let arr = [num(match[2]), num(match[7]), num(match[12])];
-  arr.color = (match[1].trim());
+  arr.color = getColor(match[1].trim());
   return arr;
 }
 
 pointReg.vector = (string) => {
   let match = string.match(pointReg);
   const vector = new CSG.Vector(num(match[2]), num(match[7]), num(match[12]));
-  vector.color = match[1].trim();
+  vector.color = getColor(match[1].trim());
   return vector;
 }
 
@@ -111,25 +123,25 @@ pointReg.model = (match) => new CSG.Point({
     x: num(match[2]),
     y: num(match[7]),
     z: num(match[12])
-  }, null, match[1].trim());
+  }, null, getColor(match[1].trim()));
 
 lineReg.model = (match) => {
   return new CSG.Line({
     start: match[3] === '[' ? pointReg.Array(match[4]) : pointReg.vector(match[4]),
     end: match[38] === ']' ? pointReg.Array(match[21]) : pointReg.vector(match[21]),
-    color: match[1].trim(),
+    color: getColor(match[1].trim()),
     lineDisplayType,
   })
 };
 
 polyReg.model = (match) => {
-  const color = match[1].trim();
+  const color = getColor(match[1].trim());;
   const verts = match[2].match(pointsReg).map(str => pointReg.Array(str));
   return new CSG.Polygon.Enclosed(verts, null, color);
 };
 
 planeReg.model = (match) => {
-  const color = match[1].trim();
+  const color = getColor(match[1].trim());;
   const verts = match[2].match(pointsReg).map(str => pointReg.Array(str));
   const plane = new CSG.Plane.fromPoints(verts);
   plane.setColor(color);

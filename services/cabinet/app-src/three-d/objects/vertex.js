@@ -205,12 +205,13 @@ Vertex3D.to2D = (vertices, x, y) => {
 
 Vertex3D.radialSort2D = (verts, viewFrom, ccw, center, degreesOstartpoint) => {
   const verts2D = [];
-  if (!(viewFrom instanceof Vector3D)) throw new Error('viewFrom must be defined as a vector');
   if (degreesOstartpoint instanceof Vertex3D)
     degreesOstartpoint = degreesOstartpoint.viewFromVector(viewFrom).to2D('x', 'y');
   center ||= Vertex3D.center(verts);
-  center = center.viewFromVector(viewFrom).to2D();
-  verts.forEach(v => verts2D.push(v.viewFromVector(viewFrom).to2D('x', 'y')) & (verts2D[verts2D.length - 1].V3D = v));
+  const mi = Vertex3D.mostInformation(verts);
+  viewFrom ||= mi.viewFrom;
+  center = center.viewFromVector(viewFrom).to2D(mi.x,mi.y);
+  verts.forEach(v => verts2D.push(v.viewFromVector(viewFrom).to2D(mi.x, mi.y)) & (verts2D[verts2D.length - 1].V3D = v));
   Line2d.radialSort(verts2D, ccw, center, degreesOstartpoint);
   return verts.copy(verts2D.map(v => v.V3D));
 }
@@ -286,6 +287,26 @@ Vertex3D.informationSorter = (v1, v2) => {
             (Math.abs(v1.x) + Math.abs(v1.y) + Math.abs(v1.z));
 }
 
+
+Vertex3D.mostInformation = (vertices) => {
+  const diff = {x: 0, y:0, z: 0};
+  const center = Vertex3D.center(vertices);
+  const c = Vector3D.cardinal();
+  for(let index = 0; index < vertices.length; index++) {
+    const v = vertices[index];
+    diff.x += Math.abs(v.x - center.x);
+    diff.y += Math.abs(v.y - center.y);
+    diff.z += Math.abs(v.z - center.z);
+  }
+  const li = diff.x < diff.y ?
+        (diff.x < diff.z ? c.i :
+        (diff.z < diff.y ? c.k : c.j)) :
+        (diff.y < diff.z ? c.j : c.k);
+  const mi = li === c.k ? ['x', 'y'] : (li === c.j ? ['x', 'z'] : ['y', 'z'])
+  mi.viewFrom = li;
+  return mi;
+}
+
 class SimpleVertex3D {
   constructor(x, y, z) {
     if (x instanceof Vertex3D) return x;
@@ -314,5 +335,5 @@ class SimpleVertex3D {
 }
 
 Vertex3D.Simple = SimpleVertex3D;
-
+Object.class.register(Vertex3D, 'x', 'y', 'z');
 module.exports = Vertex3D;

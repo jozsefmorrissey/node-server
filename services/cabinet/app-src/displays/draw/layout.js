@@ -13,7 +13,16 @@ class DrawLayout extends Draw {
   constructor(canvasOselector, getLayout, staticOffset) {
     super(canvasOselector);
     const parent = this;
+    let ctx;
     this.staticOffset = staticOffset;
+
+    let canvas = canvasOselector;
+    function CANVAS() {
+      if (typeof canvas === 'string') canvas = du.find(canvasOselector);
+      ctx = canvas.getContext('2d');
+      return canvas;
+    }
+    const CTX = () => ctx ? ctx : (ctx = CANVAS().getContext('2d'));
 
     function filter (object) {
       switch (object.constructor.name) {
@@ -57,7 +66,7 @@ class DrawLayout extends Draw {
       const wallStartPoint = wall.startVertex().point();
       const points = window.endpoints2D(wallStartPoint);
       const lookupKey = window.toString();
-      const ctx = draw.ctx();
+      const ctx = CTX();
       ctx.moveTo(points.start.x(), points.start.y());
       ctx.lineWidth = 8;
       ctx.strokeStyle = color;
@@ -66,7 +75,7 @@ class DrawLayout extends Draw {
     }
 
     function doorDrawingFunc(door) {
-      const ctx = draw.ctx();
+      const ctx = CTX();
       const startpointLeft = door.startVertex();
       const startpointRight = door.endVertex();
       ctx.beginPath();
@@ -104,17 +113,18 @@ class DrawLayout extends Draw {
       doorDrawingFunc(door);
     }
 
+    draw.isSimple = () => CANVAS().simple;
+
     const blank = 40;
     const hblank = blank/2;
     function drawMeasurementValue(line, midpoint, measurement) {
       if (line === undefined) return;
-      if (draw.canvas().simple) {
+      if (CANVAS().simple) {
         const hover = hovering();
         if (!hover || hover.constructor.name !== 'Corner2d') return;
         const wall = measurement.line();
         if (wall[0] !== hover && wall[1] !== hover) return;
       }
-      const ctx = draw.ctx();
       midpoint = line.midpoint();
       const radians = line.radians();
       const fillColor = hoverId() === measurement.toString() ? 'green' : "white";
@@ -226,7 +236,7 @@ class DrawLayout extends Draw {
     }
 
     function drawAngle(vertex) {
-      if (draw.canvas().simple) return;
+      if (CANVAS().simple) return;
       const angle = vertex.angle();
       const text = Math.round(angle * 10) / 10;
       let bisector = vertex.bisector(30);
@@ -272,7 +282,7 @@ class DrawLayout extends Draw {
         const hovered = hoverin === obj.snap2d.top();
         const color =  hovered ? 'green' : defaultColor;
         draw(obj.snap2d.top(), color, 3);
-        if (draw.canvas().simple) return;
+        if (CANVAS().simple) return;
         if (!dontDrawSnapLocs) {
           obj.snap2d.top().snapLocations().forEach((snapLoc, i) => {
             const beingHovered = hoverId() === snapLoc.toString();
@@ -317,9 +327,9 @@ class DrawLayout extends Draw {
     function centerAndScaleAppropriatly(layout, scale) {
       layout ||= getLayout();
       scale ||= defaultScale
-      const ctx = draw.ctx();
+      const ctx = CTX();
       ctx.save();
-      const canvas = draw.canvas();
+      const canvas = CANVAS();
       const layoutDems = layout.demensions();
       const scaledWidth = (canvas.width * scale);
       const scaledHeight = (canvas.height * scale);
@@ -361,7 +371,7 @@ class DrawLayout extends Draw {
       drawObjects(allObjects, '#85858ebd', true);
       drawObjects(objects);
 
-      draw.ctx().restore();
+      CTX().restore();
     }
 
     return draw;

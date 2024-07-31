@@ -298,21 +298,15 @@ Function.safeStdLibAddition(Object, 'hash',
 function processValue(value) {
   let retVal;
   if ((typeof value) === 'object' && value !== null) {
-    if ((typeof value.toJson) === 'function') {
+    if (value.toJson) {
       retVal = value.toJson();
-    } else if ((typeof value.toJSON) === 'function') {
+    } else if (value.toJSON) {
       retVal = value.toJSON();
+    } else if (value.constructor.toJson) {
+      retVal = value.constructor.toJson(value);
     } else if (Array.isArray(value)){
       const arr = [];
-      value.forEach((val) => {
-        if (val && (typeof val.toJson) === 'function') {
-          arr.push(val.toJson());
-        } else if (val && (typeof val.toJSON) === 'function') {
-          arr.push(val.toJSON());
-        } else {
-          arr.push(val);
-        }
-      });
+      value.forEach((val) => arr.push(processValue(val)));
       retVal = arr;
     } else {
       const keys = Object.keys(value);
@@ -605,7 +599,22 @@ const forceFromJsonAttr = '_FORCE_FROM_JSON';
 
 const clazz = {};
 clazz.object = () => JSON.clone(classLookup);
-clazz.register = (clazz) => classLookup[clazz.name] = clazz;
+clazz.register = (clazz, ...attrs) => {
+  const cxtrName = clazz.name;
+  classLookup[cxtrName] = clazz;
+  if (attrMap[cxtrName] === undefined) attrMap[cxtrName] = [];
+  attrs.forEach((attr) => attrMap[cxtrName][attr] = true);
+  clazz.toJson = (obj) => {
+    const json = {_TYPE: cxtrName};
+    Object.keys(attrMap[cxtrName]).forEach(k => json.pathValue(k, processValue(obj.pathValue(k))));
+    return json;
+  }
+  clazz.fromJson = (json) => {
+    const obj = Object.class.new(json._TYPE);
+    Object.keys(attrMap[cxtrName]).forEach(k => obj.pathValue(k, Object.fromJson((json[k]))));
+    return obj;
+  }
+}
 clazz.get = (nameOobject) => (typeof nameOobject) === 'string' ? classLookup[nameOobject] : nameOobject.constructor;
 clazz.new = (nameOobject, ...args) => (typeof nameOobject) === 'string' ? new classLookup[nameOobject](...args) : new nameOobject.constructor(...args);
 clazz.filter = (filterFunc) => {
@@ -1065,10 +1074,7 @@ Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
           const classObj = new (classLookup[classname])(value);
           for (let index = 0; index < attrs.length; index += 1) {
             const attr = attrs[index];
-            if ((typeof classObj[attr]) === 'function')
-            classObj[attr](interpretValue(value[attr]));
-            else
-            classObj[attr] = interpretValue(value[attr]);
+            classObj.pathValue(attr, interpretValue(value[attr]));
           };
           return classObj;
         }
@@ -1104,8 +1110,8 @@ function setToJson(obj, options) {
           const inclusiveAndValid = restrictions && !exclusive && members.indexOf(attr) !== -1;
           const exclusiveAndValid = restrictions && exclusive && members.indexOf(attr) === -1;
           if (attr !== immutableAttr && (!restrictions || inclusiveAndValid || exclusiveAndValid)) {
-            const value = (typeof obj[attr]) === 'function' ? obj[attr]() : obj[attr];
-            json[attr] = processValue(value);
+            const value = obj.pathValue(attr);
+            json.pathValue(attr, processValue(value));
           }
         }
         return json;
@@ -1345,7 +1351,8 @@ function intervalFunction() {
   }
   const lastTime = lastTimeStamps[caller];
   const thisTime = new Date().getTime();
-  if (lastTime === undefined || lastTime + interval < thisTime) this(...arguments);
+  if (lastTime === undefined || lastTime + interval < thisTime)
+    this(...arguments);
   lastTimeStamps[caller] = thisTime;
 }
 Function.safeStdLibAddition(Function, 'subtle',   intervalFunction);
@@ -1379,13 +1386,20 @@ const colorRGBs = {indianred: [205, 92, 92],gray: [128, 128, 128],fuchsia: [255,
   silver: [192, 192, 192],purple: [128, 0, 128]
 }
 
+Function.safeStdLibAddition(String, 'color', () => colors[colorIndex % colors.length], true);
+String.color.RGB = colorRGBs;
 let colorIndex = 0;
-Function.safeStdLibAddition(String, 'nextColor', (...exclude) => {
+Function.safeStdLibAddition(String.color, 'next', (...exclude) => {
   const filteredColors = colors.filter(c => exclude.indexOf(c) === -1)
   return filteredColors[colorIndex++ % filteredColors.length];
 }, true);
-Function.safeStdLibAddition(String, 'color', () => colors[index % colors.length], true);
-String.color.RGB = colorRGBs;
+let distinctColorIndex = -1;
+const distinct = ['red', 'yellow', 'blue', 'green', 'purple', 'black']
+Function.safeStdLibAddition(String.color, 'distinct', () => {
+  distinctColorIndex++;
+  colorIndex = colors.findIndex((c) => c === distinct[distinctColorIndex % distinct.length]);
+  return colors[colorIndex];
+}, true);
 
 const numberReg = /^[0-9]{1,}$/;
 Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {

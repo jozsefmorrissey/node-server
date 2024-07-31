@@ -1,7 +1,7 @@
 
 const MFC = require('./modeling/modeling-function-configuration.js');
 const DTO = require('../../shared/data-transfer-object')();
-const RDTO = require('./modeling/reconnect-transfer-object');
+const RDTO = require('../../shared/reconnect-transfer-object');
 
 function BuildModels(payload, taskId) {
   payload = RDTO(payload);

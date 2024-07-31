@@ -8,6 +8,7 @@ const Panel = require('../objects/assembly/assemblies/panel.js');
 const Butt = require('../objects/joint/joints/butt.js');
 const Dependency = require('../objects/dependency.js');
 const KeyValue = require('../../../../public/js/utils/object/key-value.js');
+const SectionProperties = require('../objects/assembly/assemblies/section/section-properties.js');
 
 class InvalidOpeningConfig extends Error {};
 class InvalidSliceConfig extends InvalidOpeningConfig {};
@@ -21,7 +22,8 @@ class CabinetOpeningCorrdinates extends KeyValue {
     let normal = null;
     const instance = this;
     let cutter;
-    Object.getSet(this, 'parentAssembly', 'partCode', 'locationCode');
+    Object.getSet(this, {_TEMPORARY: true}, 'parentAssembly');
+    Object.getSet(this, {config}, 'parentAssembly.id', 'partCode', 'locationCode');
     this.parentAssembly(cabinet);
     this.partCode('COC');
     this.locationCode('c_COC');
@@ -199,6 +201,10 @@ class CabinetOpeningCorrdinates extends KeyValue {
       return coords;
     }
   }
+}
+
+CabinetOpeningCorrdinates.fromJson = (json) => {
+  return json;
 }
 
 module.exports = CabinetOpeningCorrdinates;

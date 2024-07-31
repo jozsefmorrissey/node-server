@@ -6,6 +6,7 @@ class Task {
     let _status;
     let _error = null;
     CustomEvent.all(this, 'finished', 'success', 'failed', 'message', 'exicute', 'pending', 'initiate', 'change');
+    Object.getSet(this, 'id');
     this.id = String.random();
     this.process = () => this.constructor.name.replace(/(^.*?)Task$/, '$1').toLowerCase();
     this.finished = () => _status === STATUS.SUCCESS || _status === STATUS.FAILED;

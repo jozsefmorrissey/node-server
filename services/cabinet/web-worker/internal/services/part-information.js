@@ -1,6 +1,8 @@
 
 const PartInfo = require('./documents/part');
 const dataTransferConfig = require('../math-data-transfer-config.json');
+const Layer = require('../../../app-src/three-d/objects/layer.js');
+const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
 const DTO = require('../../shared/data-transfer-object')(dataTransferConfig);
 
 function buildPartInfo(payload, env, taskId) {
@@ -13,23 +15,26 @@ function buildPartInfo(payload, env, taskId) {
       continue;
     }
     const category = part.category;
-    let partInfo, toolingInfo, demensions, partIds, model, faceEdges;
+    let partInfo, toolingInfo, demensions, partIds, model, faceEdges, cuts, normals;
     try {
       partInfo = new PartInfo(part, env);
       partIds = partInfo.parts().map(p => p.id);
-      model = {};
-      model.right = partInfo.model(true);
-      model.left = partInfo.model(false);
+      cuts = partInfo.cuts.map(c=>c.toJson());
+      model = partInfo.model(true);
+      model['-z'] = partInfo.layers(true);
+      model.z = partInfo.layers(false);
+      normals = partInfo.normals();
       fenceEdges = {};
-      fenceEdges.right = partInfo.fenceEdges(true);
-      fenceEdges.left = partInfo.fenceEdges(false);
+      fenceEdges['-z'] = partInfo.edges2D(true);
+      fenceEdges.z = partInfo.edges2D(false);
       demensions = partInfo.demensions();
-      toolingInfo = partInfo.toolingInformation();
+      // toolingInfo = partInfo.toolingInformation();
     } catch (e) {
       console.error(e);
       partInfo.model(false)
     }
-    const result = DTO({partId: part.id, partIds, demensions, model, fenceEdges, toolingInfo, category});
+    const result = DTO({partId: part.id, partIds, demensions, model, fenceEdges,
+      toolingInfo, category, cuts, normals});
     postMessage({id: taskId, result});
   }
 }

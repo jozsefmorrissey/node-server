@@ -19,7 +19,7 @@ function isDefined(...values) {
 class Plane extends Array {
   constructor(...points) {
     super();
-    // points = points.map(p => new Vertex3D(p).clone())
+    points = points.map(p => new Vertex3D(p).clone())
     let equation, normal, intercepts, axis;
     const instance = this;
     let equationDriven = false;
@@ -304,6 +304,7 @@ class Plane extends Array {
 
     this.angle = {}
     this.angle.line = (line) => {
+      if (this.normal().parrelle(line.vector())) return 90;
       const intersection = this.intersection.line(line);
       const startConn = this.connect.vertex(line[0]);
       const endConn = this.connect.vertex(line[1]);
@@ -432,9 +433,9 @@ class Plane extends Array {
   }
 }
 
-Plane.xy = new Plane([[0,0,0], [10,0,0], [10,10,0]]);
-Plane.yz = new Plane([[0,0,0], [0,10,0], [0,10,10]]);
-Plane.xz = new Plane([[0,0,0], [10,0,0], [10,0,10]]);
+Plane.xy = new Plane([0,0,0], [10,0,0], [10,10,0]);
+Plane.yz = new Plane([0,0,0], [0,10,0], [0,10,10]);
+Plane.xz = new Plane([0,0,0], [10,0,0], [10,0,10]);
 
 Plane.makePlane1MeetPlane2 = function (plane1, plane2, rotation) {
   const centerP1 = Vertex3D.center.apply(null, plane1);
@@ -540,6 +541,13 @@ Plane.fromPointNormal = (point, normal) => {
   const point3 = get(107,563);
   return new Plane(point1, point2, point3);
 }
+
+Object.class.register(Plane);
+Plane.toJson = (plane) => {
+  return {verts: Array.from(plane).map(v => Vertex3D.toJson(v)), _TYPE: Plane.name};
+}
+Plane.fromJson = (json) =>
+  new Plane(...json.verts.map(j => Vertex3D.fromJson(j)));
 
 
 

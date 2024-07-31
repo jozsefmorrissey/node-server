@@ -18,7 +18,7 @@ const HAND_SAW_ERROR = new Error('hand-saw');
                      +z
                       |
      y+   0   --------o-------   y-  tableTop: xy-plane
-         -|- |__Table | Saw___|      fence: y-axis (right hand side of table)
+         -|- |__Table | Saw___|      fence: y-axis (nz hand side of table)
          / \  /      -z      \
 **/
 class TableSawDocumentation {
@@ -33,8 +33,8 @@ class TableSawDocumentation {
     const instance = this;
     let makeCut = false;
 
-    function cutInfoDirectionalCutLine(yAxis, rightOleft) {
-      const edges = instance.partInfo.fenceEdges(rightOleft);
+    function cutInfoDirectionalCutLine(yAxis, zOnz) {
+      const edges = instance.partInfo.fenceEdges(zOnz);
       const cut = yAxis.to2D('x', 'y');
       let foundStart = false; let foundEnd = false; let intersections = [];
       for (let index = 0; index < edges.length; index++) {
@@ -65,7 +65,7 @@ class TableSawDocumentation {
       throw HAND_SAW_ERROR;
     }
 
-    function defaultDirectionalCutLine(yAxis, rightOleft, edges) {
+    function defaultDirectionalCutLine(yAxis, zOnz, edges) {
       if (!yAxis.isSegment())
         throw new Error('This Should Not Happen');
       if (yAxis.isLine()) return null;
@@ -73,12 +73,12 @@ class TableSawDocumentation {
       return instance.partInfo.to2D(null,  dirLine3D);
     }
 
-    function directionalCutLine(yAxis, rightOleft, edges) {
-      if (cut.constructor === CutInfo) return cutInfoDirectionalCutLine(yAxis, rightOleft);
-      else return defaultDirectionalCutLine(yAxis, rightOleft, edges);
+    function directionalCutLine(yAxis, zOnz, edges) {
+      if (cut.constructor === CutInfo) return cutInfoDirectionalCutLine(yAxis, zOnz);
+      else return defaultDirectionalCutLine(yAxis, zOnz, edges);
     }
 
-    function fenceEdge0deg(y2d, edges, yCutL, rightOleft) {
+    function fenceEdge0deg(y2d, edges, yCutL, zOnz) {
       const parrelleSets = Line2d.parrelleSets(edges);
       if (parrelleSets.length === 0) throw HAND_SAW_ERROR;
       const parrelleEdges = parrelleSets.filter(s => s[0].isParrelle(y2d))[0];
@@ -90,7 +90,7 @@ class TableSawDocumentation {
               parrelleEdges[0] : parrelleEdges[1];
       }
 
-      const possibleFenceEdges = parrelleEdges.filter(fe => !within(yCutL.radianDifference(fe), 0));
+      const possibleFenceEdges = parrelleEdges.filter(fe => !within(yCutL.radians.difference(fe), 0));
 
       const y2dExt = Line2d.startAndTheta(y2d.midpoint(), y2d.radians(), 1000)
           .combine(Line2d.startAndTheta(y2d.midpoint(), y2d.negitive().radians(), 1000));
@@ -106,12 +106,12 @@ class TableSawDocumentation {
       return possibleFenceEdges[0];
     }
 
-    function outsideOfBlade(rightOleft, y2d) {
+    function outsideOfBlade(zOnz, y2d) {
       let outsideOfBlade = instance.width === 0;
       if (outsideOfBlade) {
         //TODO: make .to2D('x', 'y') default args;
-        const normCenter = cut.axis(rightOleft).y.midpoint().to2D('x', 'y');
-        const jointCenter = cut.center(rightOleft).to2D('x', 'y');
+        const normCenter = cut.axis(zOnz).y.midpoint().to2D('x', 'y');
+        const jointCenter = cut.center(zOnz).to2D('x', 'y');
         outsideOfBlade = instance.fenceEdge.distance(jointCenter, false) <
                             instance.fenceEdge.distance(normCenter, false);
       }
@@ -120,37 +120,37 @@ class TableSawDocumentation {
 
     function determinePosition0deg(upside, secondCall) {
       instance.upSide = upside || cut.secondarySide();
-      if (instance.upSide === 'Both') instance.upSide = 'Right';
-      const rightOleft = instance.upSide === 'Left' ? true : false;
-      instance.rightOleft = rightOleft;
-      const axis = cut.axis(rightOleft);
+      if (instance.upSide === 'Both') instance.upSide = 'nz';
+      const zOnz = instance.upSide === 'z' ? true : false;
+      instance.zOnz = zOnz;
+      const axis = cut.axis(zOnz);
       const y2d = axis.y.to2D('x', 'y');
-      const edges = instance.partInfo.fenceEdges(rightOleft);
-      let yCutL = directionalCutLine(axis.y, rightOleft, edges);
-      instance.fenceEdge = fenceEdge0deg(y2d, edges, yCutL, rightOleft);
+      const edges = instance.partInfo.fenceEdges(zOnz);
+      let yCutL = directionalCutLine(axis.y, zOnz, edges);
+      instance.fenceEdge = fenceEdge0deg(y2d, edges, yCutL, zOnz);
       instance.length = yCutL ? yCutL.length() : null;
       instance.width = axis.x.length();
       instance.depth = cut.constructor === CutInfo ? null : axis.z.length();
       instance.fenceDistance = instance.fenceEdge.distance(y2d, false) - instance.width/2;
-      instance.outsideOfBlade = outsideOfBlade(rightOleft, y2d);
+      instance.outsideOfBlade = outsideOfBlade(zOnz, y2d);
       // if (Math.round(instance.fenceDistance*10000)/10000 === 19.75*2.54) {
       //   console.log(instance.toDrawString());
       // }
       if (instance.outsideOfBlade) {
         if (!secondCall)
-          determinePosition0deg(instance.upSide === 'Left' ? 'Right' : 'Left', true);
+          determinePosition0deg(instance.upSide === 'z' ? 'nz' : 'z', true);
         else
           throw new Error('this shouldnt happen');
       }
     }
 
-    function determineFenceEdgeNonO(rightOleft) {
-      const axis = cut.axis(rightOleft);
-      const fencePlanes = instance.partInfo.fencePlanes(rightOleft);
+    function determineFenceEdgeNonO(zOnz) {
+      const axis = cut.axis(zOnz);
+      const fencePlanes = instance.partInfo.fencePlanes(zOnz);
 
       // console.log(fencePlanes.map(p => p.toDrawString()).join('\n\n'));
 
-      const model = instance.partInfo.model(rightOleft);
+      const model = instance.partInfo.model(zOnz);
       const modelCenter = new Vertex3D(model.center());
       const halfZ = axis.z.vector().unit().scale(axis.z.length()/2);
       let topY = axis.y.clone();
@@ -168,16 +168,16 @@ class TableSawDocumentation {
                                   o.p.connect.line(topY).length());
       const edges = fencePlanes.LINES;
       const edge = edges[applicablePlanes[0].i];
-      const yCutLine = directionalCutLine(axis.y, rightOleft, edges);
+      const yCutLine = directionalCutLine(axis.y, zOnz, edges);
       const edge2d = edge.to2D('x', 'y');
       edge2d.label = edge.label;
       const topFenceDist = applicablePlanes[0].p.connect.line(topY).length();
       const bottomFenceDist = applicablePlanes[0].p.connect.line(bottomY).length();
       const distance = Math.min(topFenceDist, bottomFenceDist);
 
-      const valid = yCutLine === null || within(yCutLine.radianDifference(edge2d), 0);
+      const valid = yCutLine === null || within(yCutLine.radians.difference(edge2d), 0);
       return {
-        rightOleft, edge, edges, yCutLine, axis, edge2d, distance, valid,
+        zOnz, edge, edges, yCutLine, axis, edge2d, distance, valid,
         planes: fencePlanes
       };
     }
@@ -188,14 +188,14 @@ class TableSawDocumentation {
       const fenceInfo = !fiR.valid ? fiL : (!fiL.valid ? fiR : (fiL.distance > fiR.distance) ? fiL : fiR);
 
       instance.valid = fenceInfo.valid;
-      instance.upSide = fenceInfo.rightOleft ? 'Left' : 'Right';
+      instance.upSide = fenceInfo.zOnz ? 'z' : 'nz';
       instance.length = fenceInfo.yCutLine ? fenceInfo.yCutLine.length() : null;
       instance.width = fenceInfo.axis.x.length();
       instance.depth = cut.constructor === CutInfo ? null : fenceInfo.axis.z.length();
       instance.fenceEdge = fenceInfo.edge2d;
       const y2d = fenceInfo.axis.y.to2D('x', 'y');
       instance.fenceDistance = fenceInfo.distance;
-      instance.outsideOfBlade = outsideOfBlade(fenceInfo.rightOleft, y2d);
+      instance.outsideOfBlade = outsideOfBlade(fenceInfo.zOnz, y2d);
     }
 
     function determinePositionGreaterThan45(angle) {
@@ -210,7 +210,7 @@ class TableSawDocumentation {
       }
       instance.length = closer.yCutLine ? closer.yCutLine.length() : null;
       instance.valid = closer.distance === 0;
-      instance.fenceEdge = {label: closer.rightOleft ? 'Right' : 'Left'};
+      instance.fenceEdge = {label: closer.zOnz ? 'nz' : 'z'};
       instance.width = closer.axis.x.length();
       instance.depth = cut.constructor === CutInfo ? null : fenceInfo.axis.z.length();
       instance.upSide = further.edge2d.label;
@@ -219,11 +219,11 @@ class TableSawDocumentation {
       instance.outsideOfBlade = false;
     }
 
-    this.toDrawString = (rightOleft) => {
-      rightOleft ||= instance.rightOleft || false;
-      return instance.partInfo.fenceEdges(rightOleft) + '\ngreen' +
+    this.toDrawString = (zOnz) => {
+      zOnz ||= instance.zOnz || false;
+      return instance.partInfo.fenceEdges(zOnz) + '\ngreen' +
               instance.fenceEdge.toString() + '\nred' +
-              cut.axis(rightOleft).y.to2D('x', 'y');
+              cut.axis(zOnz).y.to2D('x', 'y');
     }
 
     function build(callAgaine) {

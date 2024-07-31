@@ -416,3 +416,36 @@ left: 9px
 .gg-play.next::before {
    left: -14px
 }
+
+.gg-shape-triangle.no-right::before {border-top: none;}
+.gg-shape-triangle.no-left::before {border-left: none;}
+.gg-shape-triangle.no-bottom {border-bottom: none;}
+
+.gg-shape-triangle {
+position: relative;
+transform: scale(var(--ggs,1));
+width: 22px;
+height: 17px;
+border-left: 3px solid transparent;
+border-bottom: 3px solid
+}
+
+.gg-shape-triangle,
+.gg-shape-triangle::before {
+display: block;
+box-sizing: border-box;
+border-right: 3px solid transparent
+}
+
+.gg-shape-triangle::before {
+content: "";
+position: absolute;
+width: 20px;
+height: 20px;
+border-left: 3px solid;
+border-top: 3px solid;
+border-bottom: 3px solid transparent;
+transform: rotate(45deg) skew(10deg,10deg);
+left: -2px;
+bottom: -13px
+}

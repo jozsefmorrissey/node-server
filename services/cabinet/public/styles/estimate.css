@@ -809,3 +809,13 @@ table.no-borders, table.no-borders td, table.no-borders th, table.no-borders tr,
 .cabinet-part-doc-cnt {
     margin: 10pt 10pt;
 }
+
+th.edge-ref {
+  position: relative;
+  min-width: 130pt;
+}
+th.edge-ref>div {
+  font-size: xx-small;
+  position: absolute;
+  top: 0;
+}

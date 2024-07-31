@@ -4,8 +4,19 @@ const Cabinet = require('../../../app-src/objects/assembly/assemblies/cabinet.js
 const Room = require('../../../app-src/objects/room');
 const CabinetLayouts = require('../../../app-src/config/cabinet-layouts.js');
 const Jobs = require('../../../web-worker/external/jobs');
+
+const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
+
+const Vector3D = require('../../../app-src/three-d/objects/vector.js');
+const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
+const Line3D = require('../../../app-src/three-d/objects/line.js');
+const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
+const Plane = require('../../../app-src/three-d/objects/plane.js');
+const BiPolygon = require('../../../app-src/three-d/objects/bi-polygon.js');
+
 const DTO = require('../../../web-worker/external/data-transfer-object.js');
-const RTO = require('../../../web-worker/internal/services/modeling/reconnect-transfer-object');
+const RTO = require('../../../web-worker/shared/reconnect-transfer-object');
 
 function get(layout, type, cabinetOnly) {
   const cabinet = Cabinet.build(type || 'base');
@@ -15,9 +26,29 @@ function get(layout, type, cabinetOnly) {
   return cabinetOnly ? cabinet : cabinet.allAssemblies();
 }
 
+Test.add('DTO & RTO: math objects', (ts) => {
+  const objs = [new Vertex2d([1,1]),
+                new Line2d([0,0], [1,1]),
+                new Vector3D([1,1,1]),
+                new Vertex3D([1,1,1]),
+                new Line3D([0,0,0], [1,1,1]),
+                new Polygon3D([[0,0,0], [0,1,0], [1,1,0], [1,0,0]]),
+                new Plane([0,0,0], [0,1,0], [1,1,0], [1,0,0]),
+                new BiPolygon(new Polygon3D([[0,0,0], [0,1,0], [1,1,0], [1,0,0]]),
+                                        new Polygon3D([[0,0,2], [0,1,2], [1,1,2], [1,0,2]]))];
+  objs.forEach(obj => {
+    const dto = DTO(obj);
+    const rto = RTO(dto);
+    ts.assertEquals(obj.constructor, rto.constructor);
+    ts.assertTrue(rto.equals(obj));
+  });
+  ts.success();
+});
+
 Test.add('DTO & RTO', (ts) => {
   const all = get();
   const dtos = DTO(all);
+  Object.fromJson(dtos[141]);
   const reconnected = RTO(dtos);
 
   ts.assertEquals(reconnected.length + dtos.length, all.length *2, 'Incorrect Number of objects returned by conversion');

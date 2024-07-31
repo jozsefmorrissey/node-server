@@ -21,6 +21,7 @@ class CutInfo {
     let instance = this;
     this.maleId = () => maleId;
     this.jointInfo = () => jointInfo;
+    this.partInfo = () => jointInfo.partInfo();
     this.maleModel = () => ensureCsg(env.modelInfo.joined[maleId]);
     let documented = true;
     this.documented = (isDocumented) => {
@@ -32,23 +33,24 @@ class CutInfo {
     this.normalize = jointInfo.partInfo().normalize;
     this.primarySide = () => {
       const zPos = jointInfo.partInfo().normals().z;
-      const leftPolys = this.normals().z.equals(zPos);
-      if (leftPolys.length && !rightPolys.length) return 'Left';
+      const zPolys = this.normals().z.equals(zPos);
+      const nzPolys = this.normals().z.equals(zPos.inverse());
+      if (zPolys.length && !nzPolys.length) return 'z';
 
-      const rightPolys = this.normals().z.equals(zPos.inverse());
-      if (rightPolys.length && !leftPolys.length) return 'Right';
-      return 'Both';
+      if (nzPolys.length && !zPolys.length) return 'nz';
+      const tilt = this.tilt();
+      return tilt === 0 ? 'Both' : (tilt > 0 ? 'nz' : 'z');
     };
     this.secondarySide = () => {
       const ps = this.primarySide();
-      if (ps === 'Right') return 'Left';
-      if (ps === 'Left') return 'Right';
+      if (ps === 'nz') return 'z';
+      if (ps === 'z') return 'nz';
       return 'Both';
     }
     this.toolType = 'table-saw';
     this.center = () => axis.y.midpoint();
-    const printInfo = (rightOleft) => {
-        const edges = jointInfo.partInfo().edges(rightOleft);
+    const printInfo = (zOnz) => {
+        const edges = jointInfo.partInfo().edges(zOnz);
         let str = Line2d.toDrawString(edges) + '\n\n';
         str += Polygon3D.toDrawString2d(Polygon3D.fromCSG(jointInfo.model()), 'red') + '\n\n';
         console.log(str);
@@ -72,11 +74,68 @@ class CutInfo {
       }
     }
 
-    this.angle = (rightOleft) => {
-      if (rightOleft !== true && rightOleft !== false) rightOleft = true;
-      let zAxis = this.normalize(rightOleft, this.axis().z);
-      const angle = Plane.xy.angle.line(zAxis);
-      return Number.isNaN(angle) ? 0 : 90 - angle;
+    this.tilt = (zOnz) => {
+      if (zOnz !== true && zOnz !== false) zOnz = true;
+      let zAxis = this.normalize(zOnz, this.axis().z);
+      let angle = Math.roundTo(Plane.xy.angle.line(zAxis), .000001);
+      if (Number.isNaN(angle)) {
+        Math.roundTo(Plane.xy.angle.line(zAxis), .000001) + 360;
+        throw new Error('This Shouldnt Ever F****** Happen!');
+      }
+      while (angle >= 90) angle -= 90;
+      if (angle === 0) return 0;
+      const center = this.partInfo().center(true).to2D();
+      const zA2D = zAxis.to2D();
+      const positive = zA2D[0].distance(center) < zA2D[1].distance(center);
+      return positive ? angle : -angle;
+    }
+
+    this.fenceEdges = (zOnz, line) => {
+      zOnz ||= true;
+      line ||= this.axis(zOnz).y.to2D();
+      const fenceEdges = this.partInfo().edges2D(zOnz);
+      return fenceEdges.filter(e => line.isParrelle(e));
+    }
+
+    function hasFenceEdges(axis, fenceEdges) {
+      const nz = fenceEdges.map(e => ({label: e.label, distance: e.distance(axis.z[1])}));
+      if (axis.z.isPoint()) return {nz};
+      const z = fenceEdges.map(e => ({label: e.label, distance: e.distance(axis.z[0])}));
+      return [nz, z];
+    }
+
+    function noFenceEdges(axis) {
+      const edges = instance.partInfo().edges2D(true).filter(l => !l.isParrelle(axis.y));
+      let right = axis.y.clone().translate(axis.z.scale(.5, true), true);
+      if (axis.z.isPoint()) return {right};
+      let left = axis.y.translate(axis.z.negitive().scale(.5, true), true);
+      const rightInts = edges.map(e => e.findIntersection(right)).sort(Line2d.distanceSort(right)).reverse();
+      const leftInts = edges.map(e => e.findIntersection(left)).sort(Line2d.distanceSort(left)).reverse();
+      return [new Line2d(rightInts[0], rightInts[1]), new Line2d(leftInts[0], leftInts[1])];
+    }
+
+    this.locationRef = () => {
+      const info = {};
+      const edges2D = this.partInfo().edges2D(true);
+      const axis = this.axis(true);
+      axis.x = axis.x.to2D();
+      axis.y = axis.y.to2D();
+      axis.z = axis.z.to2D();
+      const fenceEdges = this.fenceEdges();
+      if (fenceEdges.length > 1) {
+        return hasFenceEdges(axis, fenceEdges);
+      }
+      return noFenceEdges(axis);
+    }
+
+    this.toJson = () => {
+      const axis = {z: this.axis(false)};
+      axis['-z'] = this.axis(true);
+      return {
+        cutId: '???', axis,
+        tilt: this.tilt(true),
+        locationRef: this.locationRef()
+      }
     }
 
     const normals = {
@@ -85,11 +144,22 @@ class CutInfo {
       z: axis.z.vector().unit()
     }
     this.normals = () => normals;
-    this.axis = (rightOleft) => ({
-      x: this.normalize(rightOleft, axis.x),
-      y: this.normalize(rightOleft, axis.y),
-      z: this.normalize(rightOleft, axis.z)
+    this.axis = (zOnz) => ({
+      x: this.normalize(zOnz, axis.x),
+      y: this.normalize(zOnz, axis.y),
+      z: this.normalize(zOnz, axis.z)
     });
+    this.axis.poly = (x,y) => {
+      const a1 = axis[x]; const a1mp = a1.midpoint();
+      const a2 = axis[y]; const a2mp = a2.midpoint();
+      const l1 = a2.clone(); l1.centerOn(a1[0]);
+      const l2 = a2.clone(); l2.centerOn(a1[1]);
+      const l3 = a1.clone(); l3.centerOn(a2[0]);
+      const l4 = a1.clone(); l4.centerOn(a2[1]);
+      const verts = Line3D.vertices([l1, l2, l3, l4]).unique(v => v.toString(.00001));
+      Vertex3D.radialSort2D(verts);
+      return new Polygon3D(verts);
+    }
     this.axis.toString = () => [axis.x, axis.y, axis.z].map(l => l.toString(.0001)).join('\n');
     this.hash = () => this.axis.toString().hash();
 

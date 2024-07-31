@@ -77,16 +77,6 @@ Test.add('Plane: findPoints',(ts) => {
   ts.success();
 });
 
-Test.add('Vector: crossProduct',(ts) => {
-  const vect1 = new Vector3D(3,1,4);
-  const vect2 = new Vector3D(3,2,6);
-  const crossP = vect1.crossProduct(vect2);
-  ts.assertEquals(crossP.i(), -2/7);
-  ts.assertEquals(crossP.j(), -6/7);
-  ts.assertEquals(crossP.k(), 3/7);
-  ts.success();
-});
-
 Test.add('Plane: normal',(ts) => {
   const p1 = {x: 1, y: 2, z: 4};
   const p2 = {x: 4, y: 2, z: 4};
@@ -273,6 +263,68 @@ Test.add('Plane: fromPointNormal', (ts) => {
   normal = plane.normal();
   plane = Plane.fromPointNormal(points[0], normal);
   confirmNormalAndPoints(plane, normal, points, ts);
+
+  ts.success();
+});
+
+Test.add('Vector: crossProduct',(ts) => {
+  const vect1 = new Vector3D(3,1,4);
+  const vect2 = new Vector3D(3,2,6);
+  const crossP = vect1.crossProduct(vect2);
+  ts.assertEquals(crossP.i(), -2/7);
+  ts.assertEquals(crossP.j(), -6/7);
+  ts.assertEquals(crossP.k(), 3/7);
+  ts.success();
+});
+
+Test.add('Line3D: equality',(ts) => {
+  const ls = {};
+  ls["01"] = new Line3D([0,0,0], [0,1,0]).directional(false, false);
+  ls["D1"] = ls["01"].clone().directional(true, false);
+  ls["0D"] = ls["01"].clone().directional(false, true);
+  ls["DD"] = ls["01"].clone().directional(true, true);
+
+  ls["10"] = ls["01"].negitive();
+  ls["D0"] = ls["01"].negitive().directional(true, false);
+  ls["1D"] = ls["01"].negitive().directional(false, true);
+  ls["-DD"] = ls["DD"].negitive();
+
+  const eqConfig = {
+    equal: [['01', 'D1', '0D', 'DD'], ['10', 'D0', '1D', '-DD']],
+    equivalent: [['01', 'D1', '0D', 'DD', '10', 'D0', '1D', '-DD']],
+    directional: [['01', '10'], ['D1', '1D'], ['0D', 'D0'], ['DD', '-DD']]
+  }
+  const sameSet = (list, k1, k2) => list.findIndex(s => s.indexOf(k1) !== -1) ===
+                  list.findIndex(s => s.indexOf(k2) !== -1);
+
+  let drawStr = '';
+  Object.keys(ls).forEach((k, i) => drawStr += `// ${i} ${k}: (${ls[k][0].DIRECTIONAL},${ls[k][1].DIRECTIONAL})\n${ls[k].toDrawString()}\n`);
+  console.log(drawStr);
+
+  const keys = Object.keys(ls);
+  for (let i = 0; i < keys.length; i++) {
+    const k1 = keys[i];
+    const l1 = ls[k1];
+    for (let j = 0; j < keys.length; j++) {
+      const k2 = keys[j];
+      const l2 = ls[k2].clone();
+      const isEq = sameSet(eqConfig.equal, k1, k2);
+      ts.assertEquals(l1.equals(l2), isEq);
+      const isEqv = sameSet(eqConfig.equivalent, k1, k2);
+      ts.assertEquals(l1.equivalent(l2), isEqv);
+      const isDir = sameSet(eqConfig.directional, k1, k2);
+      ts.assertEquals(l1.equals.directional(l2), isDir);
+      if (isDir) {
+        if (l2[0].DIRECTIONAL && l2[1].DIRECTIONAL)
+          l2.centerOn(l1.midpoint().translate(l1.vector().unit().scale((Math.random() * 100) - 50)));
+        else if (l2[0].DIRECTIONAL)
+          l2[0].translate(l1.vector().scale((Math.random() * -1) + .5));
+        else if (l2[1].DIRECTIONAL)
+          l2[1].translate(l1.vector().scale((Math.random() * 1) - .5));
+        ts.assertEquals(l1.equals.directional(l2), isDir);
+      }
+    }
+  }
 
   ts.success();
 });

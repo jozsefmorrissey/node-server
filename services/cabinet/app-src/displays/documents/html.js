@@ -1,6 +1,7 @@
 const $t = require('../../../../../public/js/utils/$t.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Vector3D = require('../../three-d/objects/vector.js');
 const Polygon3D = require('../../three-d/objects/polygon.js');
 const du = require('../../../../../public/js/utils/dom-utils');
 const Utils = require('./tools/utils.js');
@@ -11,6 +12,7 @@ const DecisionInputTree = require('../../../../../public/js/utils/input/decision
 const OpeningSketch = require('../opening-sketch.js');
 const DrawLayout = require('../draw/layout.js');
 const PanZoom = require('../../../../../public/js/utils/canvas/two-d/pan-zoom.js');
+const Measurement = require('../../../../../public/js/utils/measurement.js');
 
 const orderTemplate = new $t('documents/construction');
 const roomTemplate = new $t('documents/construction/room');
@@ -19,6 +21,7 @@ const cabinetTemplate = new $t('documents/construction/cabinet');
 const cabinetListTemplate = new $t('documents/construction/cabinetList');
 const panelCutListTemplate = new $t('documents/construction/panel-cut-list');
 const partTemplate = new $t('documents/construction/part');
+const cutsTemplate = new $t('documents/cuts/cuts');
 const openingDiagramsTemplate = new $t('documents/construction/opening-diagrams');
 const doorListTemplate = new $t('documents/construction/door-list');
 const materialsTemplate = new $t('documents/construction/materials');
@@ -121,13 +124,14 @@ DocumentationHtml.parts = (partInfo) => {
   parts.sort(sorter);
   let html = '<div class="cabinet-part-doc-cnt">';
   parts.forEach((pi, index) => {
-    if (pi.toolingInfo && !Object.keys(pi.toolingInfo).length) return;
+    if (!pi.cuts || pi.cuts.length === 0) return;
     pi.DocumentationDisplay = DocumentationHtml;
     pi.viewContainer = viewContainer;
     pi.disp = Utils.display;
     pi.index = index;
     pi.views ||= buildViews(pi);
-    pi.toolingHtml ||= new Tooling(pi).html;
+    // pi.toolingHtml ||= new Tooling(pi).html;
+    pi.toolingHtml ||= () => cutsTemplate.render(pi);
     html += partTemplate.render(pi);
   });
   return html + '</div>';
@@ -138,7 +142,7 @@ const partsFunction = (partType) => (info) => {
   else if (info.group) return DocumentationHtml.parts.group(info, partType);
   else if (info.room) return DocumentationHtml.parts.room(info, partType);
   else if (info.order) return DocumentationHtml.parts.order(info, partType);
-  else return DocumentationHtml.parts.part(info, partType);
+  else return DocumentationHtml.parts(info.parts[partType]);
 };
 
 DocumentationHtml.panels = partsFunction('Panel');
@@ -312,53 +316,50 @@ DocumentationHtml.parts.cabinet = (cabinetInfo, partType) => {
 module.exports = DocumentationHtml;
 
 
-const scaledMidpoint = (l, center, coeficient) => {
-  const midpoint = l.midpoint();
-  let centerOffset = Line2d.startAndTheta(midpoint, new Line2d(center, midpoint).radians(), 7.5/coeficient)[1];
+const directionVectors = [Vector3D.i, Vector3D.j, Vector3D.k,
+  Vector3D.i.inverse(), Vector3D.j.inverse(), Vector3D.k.inverse()]
+const directionLabels = ['Right', 'Top', 'Back', 'Left', 'Bottom', 'Front'];
+const vectorLabel = (vector) =>
+  directionLabels[directionVectors.minIndex(v => v.dot(vector))];
 
-  // TODO: make offset perpendicular to line...
-  // const perp = l.clone().translate(transLine).perpendicular(15/coeficient);
-  // centerOffset = perp[0].distance(center) > perp[1].distance(center) ? perp[0] : perp[1];
-  // console.log(l.clone().translate(transLine) + '\nblue' + new Vertex2d(center) + '\n' + perp + '\nred' + centerOffset);
-  return {
-    x: ((centerOffset.x() - center.x + 1.25/coeficient)*coeficient) + center.x,
-    y: ((centerOffset.y() - center.y - 2/coeficient)*coeficient) + center.y
-  }
-}
-
-const textProps = {size: '12px', radians: Math.PI};
-function buildCanvas(info, rightOleft) {
+function buildCanvas(info, zOnz) {
   if (info.model === undefined) return;
-  const side = rightOleft ? 'Right' : 'Left';
-  const model = CSG.fromPolygons(info.model[side.toLowerCase()].polygons, true);
+  const side = zOnz ? 'z' : '-z';
+  const model = CSG.fromPolygons(info.model.polygons, true);
+  const layers = info.model[side];
+  const center = model.center();
 
   const canvas = du.create.element('canvas', {class: 'upside-down part-canvas'});
-  const newCenter = {x: canvas.width / 2, y: canvas.height/2, z:0};
   const dems = model.demensions();
-  const coefY = ((canvas.height*.6) / dems.y);
-  const coefX = ((canvas.width*.6) / dems.x);
-  const coeficient = coefX > coefY ? coefY : coefX;
-  model.scale(coeficient);
-  model.center(newCenter);
   const draw = new Draw2d(canvas);
-  const lines = Polygon3D.lines2d(Polygon3D.merge(Polygon3D.fromCSG(model)), 'x', 'y');
-  draw(lines, null, .5);
-  const sideLabelCenter = {x: canvas.width - 5, y: canvas.height - 10, z:0};
-  const sideLabel = rightOleft ? 'Right | Up' : 'Left | Down';
-  draw.text(sideLabel, sideLabelCenter, textProps);
-  const infoEdges = info.fenceEdges[side.toLowerCase()];
-  const edges = infoEdges.map(l => new Line2d(l[0], l[1]));
-  const transLine = new Line2d(Vertex2d.center(Line2d.vertices(edges)), newCenter);
-  edges.forEach((l, i) =>
-    draw.text(infoEdges[i].label, scaledMidpoint(l.clone().translate(transLine), newCenter, coeficient), textProps));
-  return canvas;
+  draw.staticOffset = true;
+  draw.position(center, {x: dems.x * 1.5, y: dems.y * 1.5});
+  const corners = draw.corners();
+  draw(layers);
+  const sideLabelCenter = {x: corners[2].x, y: corners[2].y, z:0};
+  const sideLabel = vectorLabel(zOnz ? info.normals.z : info.normals.z.inverse());
+  const size = `${.1*Math.max(dems.x, dems.y)}px`;
+  draw.text(sideLabel, sideLabelCenter, {size, radians: Math.PI, location: 'BottomRight'});
+  const infoEdges = info.fenceEdges[side];
+  const edges = infoEdges.map(l => l.copy());
+  const transLine = new Line2d(Vertex2d.center(Line2d.vertices(edges)), center);
+  edges.forEach((l, i) => {
+    const textProps = {size, radians: l.radians()-Math.PI, location: 'Top'};
+    const label = l.label;
+    const text = `${label}`;
+    draw.text(text, l.midpoint(), textProps);
+  });
+  return {canvas, label: sideLabel};
 }
 
 function buildViews(info) {
-  if (!info.toolingInfo || Object.keys(info.toolingInfo).length === 0) return;
+  if (!info.cuts || info.cuts.length === 0) return;
+  const view1 = buildCanvas(info, true);
+  const view2 = buildCanvas(info, false);
+  const view1left = view1.label.match(/^(Left|Front|Top)$/) !== null;
   return views = {
-    right: buildCanvas(info, true),
-    left: buildCanvas(info, false)
+    right: view1left ? view2.canvas : view1.canvas,
+    left: view1left ? view1.canvas : view2.canvas
   }
 }
 

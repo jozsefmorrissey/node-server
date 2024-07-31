@@ -20,7 +20,11 @@ class Vector3D {
   constructor(i, j, k) {
     if (i instanceof Vector3D) return i;
     if (i instanceof Object) {
-      if (i.x !== undefined) {
+      if (Array.isArray(i)) {
+        k = i[2];
+        j = i[1];
+        i = i[0];
+      } else if (i.x !== undefined) {
         k = i.z;
         j = i.y;
         i = i.x;
@@ -73,9 +77,13 @@ class Vector3D {
       return Vector3D.tolerance.within(equivVect, this);
     }
 
-    this.toDrawString = (color) => {
+    this.toDrawString = (color, percision, center, scale) => {
       color ||= '';
-      return `${color}[(0,0,0),(${i},${j},${k}))`;
+      scale ||= 1;
+      const s = new Vector3D(center || [0,0,0]);
+      const e = new Vector3D(s.i()+i*scale, s.j()+j*scale, s.k()+k*scale);
+      const mrt = (v) => Math.roundTo(v, percision);
+      return `${color}[(${mrt(s.i())},${mrt(s.j())},${mrt(s.k())}),(${mrt(e.i())},${mrt(e.j())},${mrt(e.k())}))`;
     }
 
     const scalarStr = (val) => val >= tol ? '+' : '-';
@@ -121,9 +129,9 @@ class Vector3D {
       return v.scale(multiplier);
     }
 
-    this.radians = (v) => {
-      return Math.acos(this.unit().dot(v.unit()));
-    }
+    this.point = () => ({x: i, y: j, z:k});
+
+    this.radians = (v) => Math.acos(this.unit().dot(v.unit()));
     this.angle = (v) => Math.toDegrees(this.radians(v));
 
     this.hash = () => {
@@ -162,7 +170,8 @@ class Vector3D {
 
     this.equals = (vector, tol) => !tol ? Vector3D.tolerance.within(vector, this) :
                   new Tolerance({i: tol, j: tol, k: tol}).within(new Vector3D(vector), this);
-    this.toString = () => `<${i},  ${j},  ${k}>`;
+    this.toString = (percision) => !percision ? `<${i},  ${j},  ${k}>` :
+      `<${Math.roundTo(i, percision)},  ${Math.roundTo(j, percision)},  ${Math.roundTo(k, percision)}>`;
   }
 }
 
@@ -194,5 +203,10 @@ Vector3D.mostInLine = (vectors, target) => {
 Vector3D.i = new Vector3D(1,0,0);
 Vector3D.j = new Vector3D(0,1,0);
 Vector3D.k = new Vector3D(0,0,1);
+Vector3D.cardinal = (array) => array ? [Vector3D.i, Vector3D.j, Vector3D.k] :
+                    {i: Vector3D.i, j: Vector3D.j, k: Vector3D.k};
+
+Object.class.register(Vector3D, 'i', 'j', 'k');
+Vector3D.fromJson = json => new Vector3D(json);
 
 module.exports = Vector3D;

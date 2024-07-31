@@ -8,11 +8,15 @@ const withinTol = Tolerance.within(tol);
 
 class Line2d {
   constructor(startVertex, endVertex) {
+    if (startVertex instanceof Line2d) return startVertex;
+    if (Array.isArray(startVertex)) {
+      endVertex = startVertex[1];
+      startVertex = startVertex[0];
+    }
     startVertex = new Vertex2d(startVertex);
     endVertex = new Vertex2d(endVertex);
     const measureTo = [];
     const instance = this;
-    Object.getSet(this, {startVertex, endVertex});
 
     this.startVertex = (newVertex) => {
       if (newVertex instanceof Vertex2d) {
@@ -136,12 +140,13 @@ class Line2d {
       }
     }
 
-    this.translate = (line) => {
+    this.translate = (line, doNotModify) => {
+      const target = doNotModify ? this.clone() : this;
       const xOffset = line.endVertex().x() - line.startVertex().x();
       const yOffset = line.endVertex().y() - line.startVertex().y();
-      this.startVertex().translate(xOffset, yOffset);
-      this.endVertex().translate(xOffset, yOffset);
-      return this;
+      target.startVertex().translate(xOffset, yOffset);
+      target.endVertex().translate(xOffset, yOffset);
+      return target;
     }
 
     this.length = (value) => {
@@ -243,14 +248,8 @@ class Line2d {
       return theta % (2 * Math.PI)
     }
 
-    this.acute = (other) => {
-      const rads = Math.mod(Math.abs(this.radians() + 2*Math.PI - other.radians()) + 2*Math.PI, 2*Math.PI);
-      return rads < Math.PI ? rads : 2*Math.PI - rads;
-    }
-
-    this.obtuse = (other) => {
-      return 2*Math.PI - this.acute(other);
-    }
+    this.acute = (other) => this.radians.difference(other);
+    this.obtuse = (other) => 2*Math.PI - this.acute(other);
 
     this.clockwise = (center) => {
       center ||= new Vertex2d(0,0);
@@ -524,6 +523,22 @@ class Line2d {
       const deltaY = this.endVertex().y() - this.startVertex().y();
       return Math.atan2(deltaY, deltaX);
     }
+
+    const radianAddSub = (multiplier) => (otherOrads) => {
+      const otherRads = otherOrads instanceof Line2d ? otherOrads.radians() : otherOrads;
+      return Math.mod(Math.abs(this.radians() + 2*Math.PI + multiplier*otherRads) + 2*Math.PI, 2*Math.PI);
+    }
+    this.radians.add = radianAddSub(1);
+    this.radians.sub = radianAddSub(-1);
+    this.radians.abs = (otherOrads) => Math.abs(this.radians.add(otherOrads));
+    this.radians.difference = (otherOrads) => {
+      const rads = this.radians();
+      const otherRads = otherOrads instanceof Line2d ? otherOrads.radians() : otherOrads;
+      let diff = Math.difference(rads, otherRads);
+      diff = Math.mod(diff + Math.PI, Math.PI * 2) - Math.PI;
+      return diff;
+    }
+
     this.radians.positive = () => Math.mod(this.radians(), Math.PI, tol);
     this.degrees = () => Math.toDegrees(this.radians());
 
@@ -547,28 +562,13 @@ class Line2d {
       return Math.modTolerance(this.radians(), other.radians(), Math.PI, tol);
     }
 
-    this.radianDifference = (other) => {
-      const rads = this.radians();
-      const otherRads = other.radians();
-      let diff = Math.difference(rads, otherRads);
-      diff = Math.mod(diff + Math.PI, Math.PI * 2) - Math.PI;
-      if (diff > Math.PI ) {
-        return Math.PI * 2 - diff;
-      }
-      if (diff < -Math.PI ) {
-        return Math.PI * -2 + diff;
-      }
-      return diff;
-    }
-
     this.equals = (other) => {
       if (!(other instanceof Line2d)) return false;
       if (other === this) return true;
-      const forwardEq = this.startVertex().equals(other.startVertex()) && this.endVertex().equals(other.endVertex());
-      const backwardEq = this.startVertex().equals(other.endVertex()) && this.endVertex().equals(other.startVertex());
-      return forwardEq || backwardEq;
+      return this.startVertex().equals(other.startVertex()) && this.endVertex().equals(other.endVertex());
     }
 
+    this.equivalent = (other) => this.equals(other) || this.equals(other.negitive());
 
     const withinPointTol = Tolerance.within(.001);
     this.isPoint = () => withinPointTol(this.length(), 0);
@@ -581,7 +581,11 @@ class Line2d {
       if (other.isPoint()) return this;
     }
 
-    this.copy = () => new Line2d(this.startVertex().copy(), this.endVertex().copy());
+    this.copy = () => {
+      const l = new Line2d(this.startVertex().copy(), this.endVertex().copy());
+      l.label = this.label;
+      return l;
+    }
 
     this.combine = (other, tolerance, notSegment) => {
       if (!(other instanceof Line2d)) return;
@@ -611,7 +615,7 @@ class Line2d {
 
     this.slice = (lines) => {
       if (this.isPoint()) return null;
-      lines = lines.filter(l => !withinTol(this.radianDifference(l), 0));
+      lines = lines.filter(l => !withinTol(this.radians.difference(l), 0));
       const intersections = {};
       for (let index = 0; index < lines.length; index++) {
         if (!this.isParrelle(lines[index])) {
@@ -710,17 +714,20 @@ class Line2d {
 
     this.alignRadially = (trendSetter) => {
       if (!(trendSetter instanceof Line2d)) return this;
-      const shouldReverse = this.radianDifference(trendSetter) > Math.PI;
+      const shouldReverse = this.radians.abs(trendSetter) > Math.PI;
       return shouldReverse ? this.negitive() : this.clone();
     }
 
     this.invert = (condition) => {
       if (condition === undefined || condition) {
-        const temp = this.startVertex().point();
-        this.startVertex().point(this.endVertex().point());
-        this.endVertex().point(temp);
+        const sv = this[0].clone();
+        const ev = this[1].clone();
+        this[0].point(ev.point());
+        this[1].point(sv.point());
       }
     }
+
+    this.clone = this.copy;
 
     this.negitive = () => new Line2d(this.endVertex(), this.startVertex());
     this.toString = () => `[${this.startVertex().toString()} , ${this.endVertex().toString()}]`;
@@ -771,7 +778,7 @@ Line2d.trendLine = (...points) => {
 const distanceObj = (line, trendLine) => ({
   line: line.acquiescent(trendLine),
   distance: line.distance(vertex),
-  deltaRad: trendLine.radianDifference(line.radians())
+  deltaRad: trendLine.radians.difference(line)
 });
 
 Line2d.vertices = (lines) => {
@@ -981,6 +988,8 @@ Line2d.fromString = (str) => {
   return lines;
 }
 
+Object.class.register(Line2d, 'endVertex', 'startVertex', 'label');
+
 Line2d.fromJson = (json) => {
   const svJson = json[0] || json.startVertex;
   const sv = new Vertex2d(svJson.point || svJson);
@@ -1017,11 +1026,16 @@ const perpInterSectDist = (line, vertex, other, perpendicular) => {
   return {intersection, dist, vertex, line, other};
 }
 
-function polarize(line, center) {
-  const sl = new Line2d(center,line.startVertex());
-  const el = new Line2d(center,line.startVertex());
-  if (Math.mod(sl.radians() - el.radians(), Math.PI/2) > 0) line.invert();
+function polarize(line, center, ccw) {
+  ccw ||= false;
+  const sl = new Line2d(center,line[0]);
+  const el = new Line2d(center, line[1]);
+  const invert = (invert) => invert === ccw && line.invert();
+  if (el.degrees() > 270 && sl.degrees() >= 0 && sl.degrees() < 90) invert(false);
+  else if (sl.degrees() > 270 && el.degrees() >= 0 && el.degrees() < 90) invert(true);
+  else invert(sl.degrees() - el.degrees() < 0);
 }
+
 
 Line2d.translate = (lines, offset) => {
   for (let index = 0; index < lines.length; index++) {
@@ -1047,8 +1061,8 @@ Line2d.radialSorter = (center, ccw, degreesOstartpoint) => {
   return (l1, l2) => {
     const isL1 = l1 instanceof Line2d;
     const isL2 = l2 instanceof Line2d;
-    if (isL1) polarize(l1, center);
-    if (isL2) polarize(l2, center);
+    if (isL1) polarize(l1, center, ccw);
+    if (isL2) polarize(l2, center, ccw);
     let line1 = new Line2d(center.clone(), isL1 ? l1.midpoint() : l1);
     let line2 = new Line2d(center.clone(), isL2 ? l2.midpoint() : l2);
     if (degrees) {

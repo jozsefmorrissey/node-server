@@ -41,7 +41,7 @@ function parseSnapShots(lines) {
     } else {
       const commentMatch = line.match(commentReg);
       if (commentMatch)snapShots[snapIndex].comments.push(commentMatch[1]);
-      snapShots[snapIndex].push(line);
+      else snapShots[snapIndex].push(line);
     }
   }
   snapShots = snapShots.filter(ss => ss.length !== 0);
@@ -56,13 +56,14 @@ const zeroReg = /(-|)[0-9](|\.[0-9]{1,})e-[1-9][0-9]*/g;
 const negInfinityReg = /\-[0-9](|\.[0-9]{1,})e\+[1-9][0-9]*/g;
 const infinityReg = /[0-9](|\.[0-9]{1,})e\+[1-9][0-9]*/g;
 function clean(text) {
-  const lines = text.split('\n');
-  parseSnapShots(lines);
-  return lines.map(l => l.replace(commentReg, '')
-                      .replace(zeroReg, 0)
+  let lines = text.split('\n');
+  lines = lines.map(l => l.replace(zeroReg, 0)
                       .replace(negInfinityReg, Math.floor(Number.MIN_SAFE_INTEGER/10000000000))
                       .replace(infinityReg, Number.MAX_SAFE_INTEGER))
                       .filter(l => l);
+
+  parseSnapShots(lines);
+  return lines.map(l => l.replace(commentReg, ''));
 }
 
 let lastHash;
@@ -74,6 +75,7 @@ function parse(elem, event) {
   if (lastHash !== thisHash || (sc !== scale)) {
     lastHash = thisHash;
     scale = sc;
+    du.id('snap-shot-comment-cnt').innerHTML = '';
     getActive().parse(clean(text()), scale);
   }
 }
@@ -101,8 +103,10 @@ input.addEventListener('keyup', (elem) => {
 
 const updateInfoText = (slideShow) => {
   const slide = slideShow.slide(null, true);
-  const slideText = slide.comments;
-  du.id('snap-shot-comment-cnt').innerHTML = slideText.join('<br/>');
+  if (slide) {
+    const slideText = slide.comments;
+    du.id('snap-shot-comment-cnt').innerHTML = slideText.join('<br/>');
+  }
 }
 
 const updatePlayControls = () => {
@@ -111,7 +115,6 @@ const updatePlayControls = () => {
   const playing = slideShow.playing();
   du.find.closest('.pause').parentElement.hidden = !playing;
   du.find.closest('.button').parentElement.hidden = playing;
-  if (!slideShow.playing()) du.id('snap-shot-comment-cnt').innerHTML = '';
 }
 
 du.on.match('keyup:refresh', 'textarea,[name="scale"]', parse);

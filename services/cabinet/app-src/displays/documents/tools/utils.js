@@ -7,9 +7,19 @@ const Utils = {};
 Utils.display = {};
 Utils.display.measurement = (val) => new Measurement(Math.abs(val)).display();
 const disp = Utils.display.measurement;
+const ms = (val) => val ? disp(val) : '';
 Utils.display.vertex3D = (vert) => `(${disp(vert.x)}, ${disp(vert.y)})`;//` X ${disp(vert.z)}`;
 Utils.display.vertex2d = (vert) => `(${disp(vert.x())}, ${disp(vert.y())})`;
 Utils.display.demensions = (dems) => `${disp(dems.x)} X ${disp(dems.y)} X ${disp(dems.z)}`;
+Utils.display.line2d = (l) => `(${disp(l[0].x())},${disp(l[0].y())}),(${disp(l[1].x())},${disp(l[1].y())})`;
+Utils.display.roundTo = (val, percision) => Math.roundTo(val, percision || .1);
+Utils.display.axis = {
+  x: (axis) => ms(axis.z.x.length()),
+  y: (axis) => axis.z.z.isLine() ? '' : disp(axis.z.z.length()),
+  z: (axis) => axis.z.y.isLine() ? '' : disp(axis.z.y.length()),
+}
+
+
 Utils.display.degrees = (degrees) => `${Math.round(degrees * 10) / 10}`;
 Utils.display.partIdPrefix = (part) => {
   const cabinet = part.getAssembly('c');

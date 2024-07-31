@@ -70,7 +70,7 @@ du.on.match('click', '.model-state', (target, event) => {
     let label = target.children[0]
     let type = label.getAttribute('type');
     let value = label.getAttribute('part-code');
-    const cabinet = Global.cabinet();
+    const cabinet = Global.target();
     let targetSelected = label.hasAttribute('target') || target.hasAttribute('target');
 
     if (groupingType === 'location') Canvas.set.locationPrefix(prefix);
@@ -133,13 +133,13 @@ du.on.match('click', '.prefix-switch', (target, event) => {
 });
 
 du.on.match('change', '.location-code-checkbox', (target) => {
-  const cabinet = Global.cabinet();
+  const cabinet = Global.target();
   const attr = target.getAttribute('part-code');
   Canvas.render();
 });
 
 function updateController() {
-  const cabinet = Global.cabinet();
+  const cabinet = Global.target();
   if (cabinet === undefined) return;
   const controller = du.id('model-controller');
   const grouping = groupParts(cabinet);
@@ -167,7 +167,7 @@ Canvas.on.switch((id) => {
 
 
 function update(part, force) {
-  if (part) part = Global.cabinet();
+  if (part) part = Global.target();
   if (part) {
     new Jobs.CSG.Assembly.Join(part).then(Canvas.render, console.error).queue();
     updateController();

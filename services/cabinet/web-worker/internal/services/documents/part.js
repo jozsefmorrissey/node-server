@@ -19,6 +19,7 @@ const Parimeters2d = require('../../../../../../public/js/utils/canvas/two-d/map
 
 class PartInfo {
   constructor(part, env) {
+    const instance = this;
     let parts = [part];
     this.part = () => part;
     this.parts = () => parts.map(p => p);
@@ -45,10 +46,10 @@ class PartInfo {
       const normals = this.normals();
       const zPos = normals.z;
       const zNeg = zPos.inverse();
-      const leftOnlyCuts = this.cuts.filter(sideFilter(zPos));
-      const rightOnlyCuts = this.cuts.filter(sideFilter(zNeg));
-      if (leftOnlyCuts.length === rightOnlyCuts.length) return 'Both';
-      return leftOnlyCuts.length < rightOnlyCuts.length ? 'Left' : 'Right';
+      const zOnlyCuts = this.cuts.filter(sideFilter(zPos));
+      const nzOnlyCuts = this.cuts.filter(sideFilter(zNeg));
+      if (zOnlyCuts.length === nzOnlyCuts.length) return 'Both';
+      return zOnlyCuts.length < nzOnlyCuts.length ? 'z' : 'nz';
     };
 
     const normRotz = Line3D.coDirectionalRotations(this.normals(true));
@@ -59,14 +60,19 @@ class PartInfo {
     } catch (e) {
       console.log('here');
     }
-    const normInfoRight = noJointModel.normalize(normRotz, true, false);
-    const normInfoLeft = noJointModel.normalize(normRotz, false, false);
+    const normInfoNZ = noJointModel.normalize(normRotz, true, false);
+    const normInfoZ = noJointModel.normalize(normRotz, false, false);
 
-    this.normalize = (rightOleft, model) => {
+    this.normalize = (zOnz, model) => {
       if (model === undefined) return;
+      if (Array.isArray(model)) return model.map(e => {
+        const normed = this.normalize(zOnz, e);
+        normed.label = e.label;
+        return normed;
+      });
       let normalizeInfo;
-      if (rightOleft === true) normalizeInfo = normInfoRight;
-      else if (rightOleft === false) normalizeInfo = normInfoLeft;
+      if (zOnz === true) normalizeInfo = normInfoNZ;
+      else if (zOnz === false) normalizeInfo = normInfoZ;
       else return model;
       if (model.clone) {
         model = model.clone();
@@ -80,16 +86,16 @@ class PartInfo {
       return model;
     };
 
-    this.model = (rightOleft, joints) => {
+    this.model = (zOnz, joints) => {
       let model = this.noJointModel();
       let maleModels;
       if (joints === undefined && cutInfo) {
-          const side = rightOleft ? 'Right' : 'Left';
+          const side = zOnz ? 'nz' : 'z';
           const cuts = cutInfo.filter(c => c.primarySide() === side || c.primarySide() === 'Both');
           maleModels = cuts.map(c => c.maleModel());
       } else {
         if (joints === undefined) {
-          const jointInfo = this.jointInfo(rightOleft);
+          const jointInfo = this.jointInfo(zOnz);
           joints = jointInfo.map(ji => ji.joint());
         }
         const males = [];
@@ -98,18 +104,24 @@ class PartInfo {
       }
 
       maleModels.forEach(csg => model = model.subtract(csg));
-      return this.normalize(rightOleft, model);
+      return this.normalize(zOnz, model);
     };
 
-    this.polygons = (rightOleft, joints) => {
-      let model = this.model(rightOleft, joints);
+    this.layers = (zOnz) => {
+      const layers = Layer.fromCSG(this.model(zOnz));
+      layers.sort((a,b) => a.center().z - b.center().z);
+      return layers;
+    }
+
+    this.polygons = (zOnz, joints) => {
+      let model = this.model(zOnz, joints);
 
       const polys = Polygon3D.merge(Polygon3D.fromCSG(model));
       return polys;
     };
 
-    this.noJointModel = (rightOleft) => {
-      return this.normalize(rightOleft, noJointModel);
+    this.noJointModel = (zOnz) => {
+      return this.normalize(zOnz, noJointModel);
     };
     this.joinedModel = (id) => {
       let model = env.modelInfo.joined[id || this.part().id];
@@ -118,18 +130,18 @@ class PartInfo {
     }
 
     let currentModel = this.noJointModel();
-    this.currentModel = (rightOleft) => {
-      return this.normalize(rightOleft, currentModel);
+    this.currentModel = (zOnz) => {
+      return this.normalize(zOnz, currentModel);
     };
 
-    const rightFilter = (type) => ji => ji.primarySide() === 'Both' || (ji.primarySide() === 'Left' && (type === undefined || type === ji.type()));
-    const leftFilter = (type) => ji => ji.primarySide() === 'Both' || (ji.primarySide() === 'Right' && (type === undefined || type === ji.type()));
+    const nzFilter = (type) => ji => ji.primarySide() === 'Both' || (ji.primarySide() === 'z' && (type === undefined || type === ji.type()));
+    const zFilter = (type) => ji => ji.primarySide() === 'Both' || (ji.primarySide() === 'nz' && (type === undefined || type === ji.type()));
     const jointMap = {};
-    this.jointInfo = (rightOleft, type) => {
+    this.jointInfo = (zOnz, type) => {
       const femaleMap = env.jointMap.female[part.id];
       if(femaleMap === undefined) return [];
-      let filter = rightOleft === true ? rightFilter(type) :
-                   (rightOleft === false ? leftFilter(type) : null);
+      let filter = zOnz === true ? nzFilter(type) :
+                   (zOnz === false ? zFilter(type) : null);
       const joints = femaleMap.map(jid => env.byId[jid]);
       let jointInfos = joints.map(j => {
         const hash = Object.hash(j);
@@ -155,12 +167,17 @@ class PartInfo {
 
     let toolingInformation;
     this.toolingInformation = () => {
+      const edgePolys = this.edges3D();
+      const cutPolys = this.cutInfo.map(c => c.axis.poly('y', 'z'));
       if (toolingInformation === undefined) toolingInformation = new ToolingInfo(this.cutInfo);
       return toolingInformation;
     }
 
-    this.to2D = (rightOleft, csgOpolyOlineOvertex) => {
-      const normalized = this.normalize(rightOleft, csgOpolyOlineOvertex);
+    const center = new Vertex3D(this.noJointModel().center());
+    this.center = (zOnz) => this.normalize(zOnz, center);
+
+    this.to2D = (zOnz, csgOpolyOlineOvertex) => {
+      const normalized = this.normalize(zOnz, csgOpolyOlineOvertex);
       if(csgOpolyOlineOvertex instanceof Vertex3D || csgOpolyOlineOvertex instanceof Line3D ||
           csgOpolyOlineOvertex instanceof Layer) {
         return normalized.to2D('x', 'y');
@@ -169,34 +186,35 @@ class PartInfo {
     }
 
 
-    const furthestVertexFromOrign = (rightOleft) => {
+    const furthestVertexFromOrign = (zOnz) => {
       const polys = Polygon3D.fromCSG(this.noJointModel());
       const verts = [];
       polys.forEach(p => verts.concatInPlace(p.vertices()));
       verts.sort(Vertex3D.sortByCenter(Vertex3D.origin));
-      const vert2d = this.normalize(rightOleft, verts[verts.length - 1]).to2D('x', 'y');
+      const vert2d = this.normalize(zOnz, verts[verts.length - 1]).to2D('x', 'y');
       return vert2d;
     }
 
-    this.demensionEdges = (rightOleft) => {
-      const model = this.model(rightOleft);
+    this.demensionEdges = (zOnz) => {
+      const model = this.model(zOnz);
       const center = new Vertex3D(model.center()).to2D('x', 'y');
       const dems = model.demensions();
       return Polygon2d.fromDemensions(dems, center).lines();
     }
 
-    this.edges = (rightOleft) => {
+    this.edges = (zOnz) => {
       if (part.partCode === 'mfp') {
         console.log('here');
-        this.parrimeterInfo();
+        this.parrimeterInfo(true);
+        this.parrimeterInfo(false);
       }
       let applicableEdges;
-      applicableEdges = Layer.to2D(this.noJointModel(rightOleft), 'x', 'y');
+      applicableEdges = Layer.to2D(this.noJointModel(zOnz), 'x', 'y');
       let index = 'A'.charCodeAt(0);
       const center = Line2d.center(applicableEdges);
       applicableEdges = new Parimeters2d(applicableEdges).largest().lines();
-      Line2d.radialSort(applicableEdges, true, center, furthestVertexFromOrign(rightOleft));
-      if (rightOleft) {
+      Line2d.radialSort(applicableEdges, true, center, furthestVertexFromOrign(zOnz));
+      if (zOnz) {
         // applicableEdges = applicableEdges.slice(1,).concat(applicableEdges[0]);
         applicableEdges.reverse();
       }
@@ -205,8 +223,8 @@ class PartInfo {
       return applicableEdges;
     }
 
-    this.fenceEdges = (rightOleft) => {
-      let edges = this.edges(rightOleft);
+    this.fenceEdges = (zOnz) => {
+      let edges = this.edges(zOnz);
       let center;
       center = Line2d.center(edges);
 
@@ -222,16 +240,38 @@ class PartInfo {
     }
 
     const edgePolys = {};
-    this.edgePolys = (rightOleft) => {
+    this.edgePolys = (zOnz) => {
       const model = this.noJointModel();
       const zNorm = this.normals().z;
-      const polys = Polygon3D.fromCSG(model)
-                      .filter(p => Math.abs(p.normal().dot(zNorm)) < .999);
+      const allPolys = Polygon3D.fromCSG(model);
+      const polys = []
+      const frontBack = []
+      for (let index = 0; index < allPolys.length; index++) {
+        const poly = allPolys[index];
+        if (Math.abs(poly.normal().dot(zNorm)) < .999) polys.push(poly);
+        else if (poly.normal().dot(zNorm) > .999) frontBack[0] = poly;
+        else if (poly.normal().dot(zNorm) < -.999) frontBack[1] = poly;
+        else throw new Error('This should never happen');
+      }
       Polygon3D.radialSort2D(polys, zNorm);
-      const normalized = polys.map(p => this.normalize(rightOleft, p));
+
+      const normalized = polys.map(p => this.normalize(zOnz, p));
+      normalized.frontBack = frontBack.map(p => this.normalize(zOnz, p));
       let index = 'A'.charCodeAt(0);
       normalized.forEach(p => p.label = String.fromCharCode(index++));
       return normalized;
+    }
+    this.edgePolys.toDrawString = (faces, polys) => {
+      polys ||= this.edgePolys();
+      const c = noJointModel.center();
+      const norms = this.normals();
+      const normStrs = [norms.x.toDrawString('red', .1, c, 20),
+                        norms.y.toDrawString('green', .1, c, 20),
+                        norms.z.toDrawString('blue', .1, c, 20)];
+      let edgeStrs = polys.map(p => p.toDrawString(String.color.distinct()));
+      if (!faces) return edgeStrs.concat(normStrs).join('\n');
+      let faceStrs = [polys.frontBack[0].toDrawString('blue'), polys.frontBack[1].toDrawString('black')];
+      return faceStrs.concat(edgeStrs).concat(normStrs).join('\n');
     }
 
     const sortByNorm = (norm) => (l1, l2) => {
@@ -244,8 +284,8 @@ class PartInfo {
     }
 
     const dotLessThan = (val, target) => (l) => Math.abs(l.vector().unit().dot(target)) < val;
-    function groupInlinePoly(poly, zNorm) {
-      zNorm ||= this.normalize(rightOleft, this.normals().z);
+    function groupInlinePoly(poly) {
+      const zNorm = instance.normals().z;
       const dotLess = dotLessThan(.5, zNorm);
       const lines = poly.lines();
       if (lines.length !== 4) console.warn('This algorithum expects 4 sided polygons');
@@ -259,33 +299,35 @@ class PartInfo {
       return {inline, perp, label: poly.label};
     }
 
-    this.edges3D = (rightOleft) => {
-      const polys = this.edgePolys(rightOleft);
-      const center = this.normalize(rightOleft, new Vertex3D(noJointModel.center()));
+    this.edges3D = (zOnz) => {
+      const polys = this.edgePolys();
+      const center = new Vertex3D(noJointModel.center());
       const distSorter = Line3D.distanceSort(center, true);
       const edges = [];
-      const zNorm = this.normalize(rightOleft, this.normals().z);
       polys.forEach(poly => {
-        const perp = groupInlinePoly(poly, zNorm).perp;
+        const perp = groupInlinePoly(poly).perp;
         const furthestEdge = perp.sort(distSorter)[1];
         edges.push(furthestEdge);
         furthestEdge.label = poly.label;
       });
-      return edges;
+      return zOnz !== true && zOnz !== false ? edges :
+        this.normalize(zOnz, edges);
     }
 
-    this.edges2D = (rightOleft) => {
+    this.edges2D = (zOnz) => {
       const edges = [];
-      this.edges3D(rightOleft).forEach(line => {
+      if ((typeof zOnz) !== 'boolean') zOnz = true;
+      this.edges3D(zOnz).forEach(line => {
         const l2d = line.to2D('x', 'y');
         l2d.label = line.label;
         edges.push(l2d);
       });
+      Line2d.radialSort(edges, true)
       return edges;
     }
 
-    this.fencePlanes = (rightOleft) => {
-      const edges = this.edges3D(rightOleft);
+    this.fencePlanes = (zOnz) => {
+      const edges = this.edges3D(zOnz);
       const planes = [];
       const zNorm = this.normals().z;
       edges.forEach(line => {
@@ -297,43 +339,6 @@ class PartInfo {
       return planes
     }
 
-    this.parrimeterInfo = () => {
-      const polys = this.edgePolys(true);
-      const edges = this.edges2D();
-      const info = {edges: {}, corners: {}};
-      const zNorm = this.normalize(true, this.normals().z);
-      let lastGrouped = groupInlinePoly(polys[polys.length - 1], zNorm);
-      for (let index = 0; index < polys.length; index++) {
-        const poly = polys[index];
-        const norms = poly.normals();
-        const currGrouped = groupInlinePoly(poly, zNorm);
-        const planeLine = currGrouped.perp[0].connect(currGrouped.perp[1].midpoint());
-        const planeUnit = planeLine.vector().unit();
-        let edgeRadViewVect = planeUnit.inverse().crossProduct(zNorm);
-        //let edgeRadViewVect = Math.abs(norms.x.dot(zNorm)) < Math.abs(norms.y.dot(zNorm)) ? norms.x : norms.y;
-        let radians = Line3D.thetaBetween(new Line3D(planeUnit), new Line3D(zNorm), edgeRadViewVect, true);
-        const length = edges[index].length();
-        info.edges[poly.label] = {radians, length, label: poly.label};
-
-        const cornerRadViewVect = currGrouped.perp[0].vector().unit().crossProduct(lastGrouped.perp[0].vector().unit());
-        const cornerId = `${lastGrouped.label}${poly.label}`;
-        const point = currGrouped.perp[0].intersection(lastGrouped.perp[0]);
-        radians = Line3D.thetaBetween(currGrouped.perp[0], lastGrouped.perp[0], cornerRadViewVect, true);
-        info.corners[cornerId] = {point, radians, label: cornerId};
-
-        lastGrouped = currGrouped;
-      }
-      return info;
-    }
-
-    this.parrimeterInfo.toDrawString = () => {
-      const {edges, corners} = this.parrimeterInfo();
-      const cornerStr = Object.values(corners).map(i => `// ${i.label}@${Math.roundTo(Math.toDegrees(i.radians), .1)}deg\n${i.point.toString(.001)}`).join('\n');
-      const polys = this.edgePolys(true);
-      const polyStr = polys.map(p => `// ${p.label}:${Math.roundTo(edges[p.label].length/2.54, .01)}@${Math.roundTo(Math.toDegrees(edges[p.label].radians), .1)}deg\n${p.toDrawString()}`).join('\n');
-      return `${cornerStr}\n\n${polyStr}`;
-    }
-
     if (this.cuts && this.cuts.length > 0) return this.cuts;
     const jointInfo = this.jointInfo();
     const cutInfo = [];
@@ -341,7 +346,7 @@ class PartInfo {
       console.log('her');
     }
     jointInfo.forEach(ji => cutInfo.concatInPlace(ji.cutInfo()));
-// console.log(cutInfo.map(c => `//${c.jointInfo().joint().descriptor}\n${Polygon3D.toDrawString(c.set(), String.nextColor())}`).join('\n\n'));
+// console.log(cutInfo.map(c => `//${c.jointInfo().joint().descriptor}\n${Polygon3D.toDrawString(c.set(), String.color.next())}`).join('\n\n'));
     // CutInfo.clean(cutInfo);
     const edgeJoint = new JointInfo({descriptor: 'edge'}, this);
     cutInfo.concatInPlace(CutInfo.fromEdges(this.polygons(), this.normals(), edgeJoint));

@@ -10,7 +10,7 @@ const To2D = require("./services/to-2d");
 const PartInfo = require("./services/part-information");
 const dataTransferConfig = require('./math-data-transfer-config.json');
 const DTO = require('../shared/data-transfer-object')(dataTransferConfig);
-const RDTO = require('./services/modeling/reconnect-transfer-object');
+const RDTO = require('../shared/reconnect-transfer-object');
 goDownTheRabbitHole = false;
 
 

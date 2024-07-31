@@ -8,143 +8,156 @@ const Vertex2d = require('../../../public/js/utils/canvas/two-d/objects/vertex.j
 const Line2d = require('../../../public/js/utils/canvas/two-d/objects/line.js');
 const HoverMap = require('../../../public/js/utils/canvas/two-d/hover-map.js');
 const PopUp = require('../../../public/js/utils/display/pop-up');
+const SlideShow = require('./slide-show');
 
 function reportError(msg) {
   console.error(msg);
 }
 
-let lines = [];
-let verts;
-let hoverMap = new HoverMap();
-const popUp = new PopUp({resize: false});
-let active = false;
+class Context {
+  constructor(lines, draw, scale) {
+    let verts = [];
+    let hoverMap = new HoverMap();
+    const popUp = new PopUp({resize: false});
+    let active = false;
 
-function addVertex(x, y) {
-  const vert = new Vertex2d(x,y);
-  hoverMap.add(vert);
-  verts.push(vert);
-  return vert;
-}
+    this.hoverMap = () => hoverMap;
 
-function polyAddFunc() {
-  let points = [];
-  return (x,y) => {
-    points.push(addVertex(x,y));
-    verts.push(points[points.length - 1]);
-    if (points.length > 1) {
-      const line = new Line2d(points[points.length - 2], points[points.length - 1]);
-      const lineOnly = du.find('input[name="line-disp-type-2d"][value="LINE_ONLY"]').checked;
-      line.indicateDirection = !lineOnly;
-      const mp = line.midpoint();
-      addVertex(mp.x(), mp.y());
-      hoverMap.add(line);
+    function addVertex(x, y) {
+      const vert = new Vertex2d(x,y);
+      hoverMap.add(vert);
+      verts.push(vert);
+      return vert;
     }
-  }
-}
-// (circle, lineColor, fillColor, lineWidth)
-function drawObject(obj) {
-  const target = obj.target();
-  if (target instanceof Vertex2d) {
-    draw.circle(new Circle2d(1, target), color(target), 0, color(target));
-  } else {
-    draw.line(target, color(target),  .5);
-  }
-}
+
+    function polyAddFunc() {
+      let points = [];
+      return (x,y) => {
+        points.push(addVertex(x,y));
+        verts.push(points[points.length - 1]);
+        if (points.length > 1) {
+          const line = new Line2d(points[points.length - 2], points[points.length - 1]);
+          const lineOnly = du.find('input[name="line-disp-type-2d"][value="LINE_ONLY"]').checked;
+          line.indicateDirection = !lineOnly;
+          const mp = line.midpoint();
+          addVertex(mp.x(), mp.y());
+          hoverMap.add(line);
+        }
+      }
+    }
+    // (circle, lineColor, fillColor, lineWidth)
+    function drawObject(obj) {
+      const target = obj.target();
+      if (target instanceof Vertex2d) {
+        draw.circle(new Circle2d(1, target), color(target), 0, color(target));
+      } else {
+        draw.line(target, color(target),  .5);
+      }
+    }
 
 
-let colors = {};
-function color(lineOvert, color) {
-  const key = lineOvert.toString();
-  if (color) {
-    colors[key] = color;
-  }
-  return colors[key];
-}
+    let colors = {};
+    function color(lineOvert, color) {
+      const key = lineOvert.toString();
+      if (color) {
+        colors[key] = color;
+      }
+      return colors[key];
+    }
 
-const parseFloat = (str) => Number.parseFloat(str) * scale;
-function vertColorReplace(garb, c, vertStr) {
-  const match = vertStr.match(pointReg)
-  const x = parseFloat(match[2]);
-  const y = parseFloat(match[5]);
-  color(new Vertex2d(x,y), c);
-  return vertStr;
-}
+    const parseFloat = (str) => Number.parseFloat(str) * scale;
+    function vertColorReplace(garb, c, vertStr) {
+      const match = vertStr.match(pointReg)
+      const x = parseFloat(match[2]);
+      const y = parseFloat(match[5]);
+      color(new Vertex2d(x,y), c);
+      return vertStr;
+    }
 
-function pathColorReplace(garb, c, pathStr) {
-  const pointStrs = pathStr.match(pointsReg);
-  const points = [];
-  pointStrs.forEach((pointStr) => {
-    const match = pointStr.match(pointReg)
-    const x = parseFloat(match[2]);
-    const y = parseFloat(match[5]);
-    points.push(new Vertex2d(x,y));
-    if (points.length > 1) color(new Line2d(points[points.length - 2], points[points.length - 1]), c);
-  });
-  return pathStr;
-}
-
-
-const pathColorReg = /([a-zA-Z]{1,})(\[.*?\])/g;
-const vertColorReg = /([a-zA-Z]{1,})(\(.*?\))/g;
-function parseColors(line) {
-  line = line.replace(pathColorReg, pathColorReplace) || line;
-  line = line.replace(vertColorReg, vertColorReplace) || line;
-  return line;
-}
-
-const splitReg = /(\],\[|\],\(|\),\[)/;
-const pointsReg = /\(\s*(((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,}))\s*,\s*((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,})))\s*\)/g;
-const pointReg = /\(\s*(((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,}))\s*,\s*((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,})))\s*\)/;
-
-
-
-function splitLocationData(str) {
-  str = parseColors(str);
-  const breakdown = str.split(splitReg);
-  for (let index = 0; index < breakdown.length; index+=2) {
-    const start = index === 0 ? '' : breakdown[index-1].substr(breakdown[index-1].length - 1, 1);
-    const end = index === breakdown.length - 1 ? '' : breakdown[index+1].substr(0,1);
-    const piece = start + breakdown[index] + end;
-    const illustrateFunc = piece.charAt(0) === '[' ?  polyAddFunc() : addVertex;
-    const pointStrs = piece.match(pointsReg);
-    if (pointStrs === null) reportError(`trouble parsing section ${piece}`);
-    else {
-      pointStrs.forEach(pointStr => {
+    function pathColorReplace(garb, c, pathStr) {
+      const pointStrs = pathStr.match(pointsReg);
+      const points = [];
+      pointStrs.forEach((pointStr) => {
         const match = pointStr.match(pointReg)
         const x = parseFloat(match[2]);
         const y = parseFloat(match[5]);
-        illustrateFunc(x,y);
+        points.push(new Vertex2d(x,y));
+        if (points.length > 1) color(new Line2d(points[points.length - 2], points[points.length - 1]), c);
       });
+      return pathStr;
     }
-  }
-}
 
-function drawFunc() {
-  verts = [];
-  hoverMap.objects().forEach(obj => drawObject(obj));
+
+    const pathColorReg = /([a-zA-Z]{1,})(\[.*?\])/g;
+    const vertColorReg = /([a-zA-Z]{1,})(\(.*?\))/g;
+    function parseColors(line) {
+      line = line.replace(pathColorReg, pathColorReplace) || line;
+      line = line.replace(vertColorReg, vertColorReplace) || line;
+      return line;
+    }
+
+    const splitReg = /(\],\[|\],\(|\),\[)/;
+      const pointsReg = /\(\s*(((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,}))\s*,\s*((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,})))\s*\)/g;
+      const pointReg = /\(\s*(((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,}))\s*,\s*((-|)([0-9]{1,}\.[0-9]{1,}|[0-9]{1,}|\.[0-9]{1,})))\s*\)/;
+
+
+
+      function splitLocationData(str) {
+        str = parseColors(str);
+        const breakdown = str.split(splitReg);
+        for (let index = 0; index < breakdown.length; index+=2) {
+          const start = index === 0 ? '' : breakdown[index-1].substr(breakdown[index-1].length - 1, 1);
+          const end = index === breakdown.length - 1 ? '' : breakdown[index+1].substr(0,1);
+          const piece = start + breakdown[index] + end;
+          const illustrateFunc = piece.charAt(0) === '[' ?  polyAddFunc() : addVertex;
+          const pointStrs = piece.match(pointsReg);
+          if (pointStrs === null) reportError(`trouble parsing section ${piece}`);
+          else {
+            pointStrs.forEach(pointStr => {
+              const match = pointStr.match(pointReg)
+              const x = parseFloat(match[2]);
+              const y = parseFloat(match[5]);
+              illustrateFunc(x,y);
+            });
+          }
+        }
+      }
+
+      this.draw = () => {
+        verts = [];
+        hoverMap.objects().forEach(obj => drawObject(obj));
+      }
+
+      lines.forEach((line) =>  {
+        line = line.trim();
+        if (line) splitLocationData(line);
+      });
+  }
 }
 // [(1,.1),(2.2,88888.2),(.000003,3)],[(4445654.345,4),(-5,-5)],(6,7),[(4,4),(5,5)]
 const canvas = du.find('#two-d-display>canvas');
 const height = du.convertCssUnit('100vh');
+let scale, context;
 canvas.height = height;
 canvas.width = height;
 draw = new Draw2D(canvas, true);
 
-panZ = new panZoom(canvas, drawFunc, () => hoverMap);
+panZ = new panZoom(canvas, () => context && context.draw(), () => context && context.hoverMap());
 panZ.disable.move()
 draw.circle(new Circle2d(2, new Vertex2d(10,10)), null, 'green');
 
-let scale;
+function buildModel(lines) {
+  return new Context(lines, draw, scale);
+}
+
 function parse(newLines, sc) {
   scale = sc;
-  lines = newLines;
-  panZ.once();
-  hoverMap.clear();
-  colors = {};
-  lines.forEach((line) =>  {
-    line = line.trim();
-    if (line) splitLocationData(line);
-  })
+  context = new Context(newLines, draw, scale);
+  display(context);
+}
+
+function display(context) {
+  context.draw();
 }
 
 du.on.match('change', 'input[name="line-disp-type-2d"]', () => parse(lines, scale));
@@ -176,6 +189,7 @@ module.exports = {
     return active
   },
   parse,
+  slideShow: new SlideShow(buildModel, display),
   initialValue: '//Points\npurple(-5,-5)' +
     '\n\n// Paths\nred[(1,.1),(2.2,88.2),blue(.000003,3)],pink[(54.35,4),(-5,-5)],[(4,4),(5,5)]' +
     '\n\n// Combination\nyellow[(1,.1),(2.2,88.2),(.000003,3)],green[(54.35,4),(-5,-5)][(4,4),(5,5)]'

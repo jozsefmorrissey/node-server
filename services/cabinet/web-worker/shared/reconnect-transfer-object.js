@@ -1,11 +1,14 @@
 
 const idReg = /[A-Z][A-Za-z0-9]{1,}_[a-z0-9]{7}/;
 
-const Vector3D = require('../../../../app-src/three-d/objects/vector.js');
-const Vertex3D = require('../../../../app-src/three-d/objects/vertex.js');
-const Line3D = require('../../../../app-src/three-d/objects/line.js');
-const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
-const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
+const Vector3D = require('../../app-src/three-d/objects/vector.js');
+const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
+const Line3D = require('../../app-src/three-d/objects/line.js');
+const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
+const BiPolygon = require('../../app-src/three-d/objects/bi-polygon.js');
+
+const fromJsonMap = {};
+const fromJsonCxtrReg = /((.{1,})(3|2)(d|D))|BiPolygon|Plane|Layer$/
 
 const isPrimitive = (val) => !(val instanceof Object) && !(val instanceof Function);
 
@@ -29,6 +32,8 @@ const isFunc = (filter) => filter instanceof Function ? filter :
 class ReconnectedMDTO{constructor(){}};
 function reconnected(obj, idMap) {
   if (isPrimitive(obj)) return obj;
+  if (obj._TYPE && obj._TYPE.match(fromJsonCxtrReg))
+    return Object.fromJson(obj);
   const root = (rMdto) => () => rMdto.linkListFind('parentAssembly', (a) => a.parentAssembly === undefined);
   const up = (rMdto) => (filter) => {
     return reconnectDtos(rMdto.linkListFind('parentAssembly', isFunc(filter)), idMap);

@@ -12,10 +12,10 @@ class HandSawDocumentation {
   constructor(cut) {
     this.type = HandSawDocumentation.type;
 
-    const rightOleft = cut.primarySide() === 'Left' ? false : true;
-    const edges = cut.jointInfo().partInfo().edges(rightOleft);
-    const center = cut.jointInfo().partInfo().edges(rightOleft).center;
-    const axis = cut.axis(rightOleft);
+    const zOnz = cut.primarySide() === 'z' ? false : true;
+    const edges = cut.jointInfo().partInfo().edges(zOnz);
+    const center = cut.jointInfo().partInfo().edges(zOnz).center;
+    const axis = cut.axis(zOnz);
     const y2d = axis.y.to2D('x', 'y');
     const verticies = Line2d.vertices(edges);
     const endPoints = edges.map(l => l.findSegmentIntersection(y2d, true)).filter(v => v instanceof Vertex2d);
@@ -30,7 +30,7 @@ class HandSawDocumentation {
 
     // console.log(cut.jointInfo().partInfo().model().toString().replace(/(^|\[)/g, 'blue$1'));
     // console.log(edges.map(l => l.toString()).join('\n') + '\n\nred' + y2d.toString());
-    // console.log(cut.jointInfo().partInfo().edges(rightOleft).map(l => l.toString()).join('\n') + '\n\nred' + y2d.toString());
+    // console.log(cut.jointInfo().partInfo().edges(zOnz).map(l => l.toString()).join('\n') + '\n\nred' + y2d.toString());
 
     this.relitiveLocations = [];
     for (let index = 0; index < endPoints.length; index++) {

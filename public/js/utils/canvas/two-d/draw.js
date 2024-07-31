@@ -2,81 +2,93 @@
 const Circle2d = require('./objects/circle');
 const Line2d = require('./objects/line');
 const Vertex2d = require('./objects/vertex');
+const Polygon2d = require('./objects/polygon');
+const Parimeters2d = require('./maps/parimeters');
+const Vector3D = require('../../../../../services/cabinet/app-src/three-d/objects/vector.js');
+const Layer = require('../../../../../services/cabinet/app-src/three-d/objects/layer.js');
 const ToleranceMap = require('../../tolerance-map.js');
 const du = require('../../dom-utils.js');
+
 const tol = .1;
 let vertLocTolMap;
 
 class Draw2d {
   constructor(canvasOselector) {
-    let takenLocations;
-    let coloredLocations;
+    let ctx, takenLocations, coloredLocations;
 
-    function canvas() {
-      if (typeof canvasOid === 'string') return du.find(canvasOselector);
-      return canvasOselector;
+    let canvas = canvasOselector;
+    function CANVAS() {
+      if (typeof canvasOselector === 'string') canvas = du.find(canvasOselector);
+      return canvas;
     }
 
-    const ctx = () => canvas().getContext('2d');
+    const CTX = () => ctx ? ctx : (ctx = canvas.getContext('2d'));
 
     function draw(object, color, width) {
       if (object === undefined) return;
-      if (Array.isArray(object)) {
-        takenLocations = [];
-        vertLocTolMap = new ToleranceMap({x: tol, y: tol});
-        for (let index = 0; index < object.length; index += 1)
-          draw(object[index], color, width);
-        return;
-      }
-
-      if (object instanceof Vertex2d) draw.vertex(object, color, width);
-      else if (object instanceof Line2d) draw.line(object, color, width);
-      else if (object instanceof Circle2d) draw.circle(object, color, width);
-      else {
-        let constructorId = object.constructor.name;
-        if (constructorId !== 'SnapLocation2d')
-          constructorId = constructorId.replace(/^(Snap).*$/, '$1');
-
-        switch (constructorId) {
-          case 'Plane2d':
-          draw.plane(object, color, width);
-          break;
-          case 'Polygon2d':
-          draw.polygon(object, color, width);
-          break;
-          case 'Square2d':
-          draw.square(object, color, width);
-          break;
-          case 'LineMeasurement2d':
-          draw.measurement(object, color, width);
-          break;
-          case 'Snap':
-          draw.snap(object, color, width);
-          break;
-          case 'SnapLocation2d':
-          draw.snapLocation(object, color, width);
-          break;
-          default:
-          console.error(`Cannot Draw '${object.constructor.name}'`);
-        }
-      }
+      if (object instanceof CSG) return draw.csg(object, color, width);
+      const func = cxtrFuncMap[object.constructor.name] ||
+                      cxtrFuncMap[object.constructor.name.replace(/^(Snap).*$/, '$1')];
+      if (func) func(object, color, width);
+      else console.error(`Cannot Draw '${object.constructor.name}'`);
     }
 
-    let scale = 1;
+    draw.toDataURL = () => CANVAS().toDataURL();
+
+    let scale = {x: 1, y: 1};
     draw.scale = (x, y) => {
-      ctx().scale(x, y);
+      CTX().scale(1/scale.x, 1/scale.y);
+      CTX().scale(x,y);
+      scale = {x, y};
+    }
+    draw.width = () => canvas.width/scale.x;
+    draw.height = () => canvas.height/scale.y;
+
+    const topLeft = {x: 0, y: 0};
+    draw.topLeft = () => ({x: topLeft.x/scale.x, y: topLeft.y/scale.y});
+    draw.center = (center) => {
+      CANVAS();
+      const tl = draw.topLeft();
+      const x = (2*tl.x + draw.width())/2;
+      const y = (2*tl.y + draw.height())/2;
+      const currentCenter = {x,y};
+      if (!center) return currentCenter;
+      const trans = {x: currentCenter.x - center.x,
+                      y: currentCenter.y - center.y};
+      draw.translate(trans.x, trans.y);
+      return draw.center();
     }
 
-    draw.canvas = canvas;
-    draw.ctx = ctx;
-    draw.beginPath = () => ctx().beginPath();
-    draw.moveTo = () => ctx().moveTo();
+    draw.position = (center, demensions) => {
+      const scale = Math.min(draw.width()/demensions.x, draw.height()/demensions.y)*.98;
+      draw.scale(scale, scale);
+      draw.center(center);
+    }
+
+    draw.translate = (x, y) => {
+      CTX().translate(x,y);
+      topLeft.x -= x*scale.x; topLeft.y -= y*scale.y;
+    }
+
+    draw.corners = () => {
+      const tl = draw.topLeft();
+      const minX = tl.x;
+      const minY = tl.y;
+      const maxX = tl.x + draw.width();
+      const maxY = tl.y + draw.height();
+      return [{x: minX, y: minY}, {x: minX, y: maxY},
+              {x: maxX, y: maxY}, {x: maxX, y: minY}]
+    }
+
+    draw.beginPath = () => CTX().beginPath();
+    draw.moveTo = (...args) => CTX().moveTo(...args);
 
     draw.clear = () => {
-      ctx().save();
-      ctx().setTransform(1, 0, 0, 1, 0, 0);
-      ctx().clearRect(0, 0, canvas().width, canvas().height);
-      ctx().restore();
+      const ctx = CTX();
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, CANVAS().width, CANVAS().height);
+      ctx.restore();
     }
     const colors = [
       'indianred', 'gray', 'fuchsia', 'lime', 'black', 'lightsalmon', 'red',
@@ -102,13 +114,23 @@ class Draw2d {
     }
 
     const midpointFlag = (point, radians) => {
-      ctx().moveTo(point.x(), point.y());
+      CTX().moveTo(point.x(), point.y());
       const ev = Line2d.startAndTheta(point, radians, 15).endVertex();
-      ctx().lineTo(ev.x(), ev.y());
+      CTX().lineTo(ev.x(), ev.y());
     }
-    function midpointFlags(line) {
-      midpointFlag(line.midpoint(), Math.toRadians(line.degrees() - 135));
-      midpointFlag(line.midpoint(), Math.toRadians(line.degrees() + 135));
+
+    draw.object = (obj, color, width) => {
+      draw.vertex(obj, color, width);
+    }
+    draw.array = (obj, color, width) => {
+      if (obj.length === 0) return;
+      if (obj[0].x !== undefined)
+        return obj.length === 2 ? draw.line(obj, color, width) : draw.polygon(obj, color, width);
+
+      takenLocations = [];
+      vertLocTolMap = new ToleranceMap({x: tol, y: tol});
+      for (let index = 0; index < obj.length; index += 1)
+        draw(obj[index], color, width);
     }
 
     draw.vertex = (vertex, color, width) => {
@@ -116,23 +138,26 @@ class Draw2d {
     }
 
     draw.line = (line, color, width, indicateDirection) => {
+      line = new Line2d(line);
       if (line === undefined) return;
       if (indicateDirection === undefined) indicateDirection = line.indicateDirection;
       color = color ||  'black';
       width = width || 10;
-      ctx().beginPath();
-      ctx().strokeStyle = color;
-      ctx().lineWidth = width;
-      ctx().moveTo(line.startVertex().x(), line.startVertex().y());
-      ctx().lineTo(line.endVertex().x(), line.endVertex().y());
-      if (Draw2d.debug.showFlags) midpointFlags(line);
-      ctx().stroke();
+      const ctx = CTX();
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      const sv = line[0]; const ev = line[1];
+      ctx.moveTo(sv.x(), sv.y());
+      ctx.lineTo(ev.x(), ev.y());
+      ctx.stroke();
       // identifyVertices(line);
 
       if (indicateDirection) {
         const chevLine = line.copy();
         chevLine.length(width * 5);
-        draw.chevron(line.midpoint(), chevLine, color, width/2);
+        const midPoint = Math.midrange([sv, ev], ['x', 'y'])
+        draw.chevron(midPoint, chevLine, color, width/2);
       }
     }
 
@@ -140,91 +165,162 @@ class Draw2d {
     // line is the direction the chevron points allong with length of legs
     // angle is the angle between legs
     draw.chevron = (point, line, color, width, angle) => {
+      line = new Line2d(line[0], line[1]);
       color = color ||  'black';
       width = width || 10;
       let rads = Number.isFinite(angle) ? Math.toRadians(angle)/2 : 2.5;
       const leg1 = line.copy();
       leg1.rotate(rads);
-      leg1.translate(new Line2d(leg1.startVertex(), point));
+      leg1.translate(new Line2d(leg1[0], point));
       const leg2 = line.copy();
       leg2.rotate(-rads);
-      leg2.translate(new Line2d(leg2.startVertex(), point));
+      leg2.translate(new Line2d(leg2[0], point));
       draw.line(leg1, color, width);
       draw.line(leg2, color, width);
     }
 
-    draw.plane = (plane, color, width) => {
-      if (plane === undefined) return;
-      color = color ||  'black';
-      width = width || .1;
-      plane.getLines().forEach((line) => draw.line(line, color, width));
-    }
-
-    draw.polygon = (poly, color, width) => {
+    draw.polygon = (poly, color, width, fillColor) => {
       if (poly === undefined) return;
       color = color ||  'black';
       width = width || 1;
-      poly.center();
-      poly.lines().forEach((line) => draw.line(line, color, width));
+      let lines;
+      if (Array.isArray(poly)) lines = poly.map((v,i) => [v, poly[(i+1)%poly.length]])
+      else lines = poly.lines();
+      const ctx = CTX();
+      // lines.forEach((line) => draw.line(line, color, width));
+      // ctx.rect(10, 10, 150, 100);
+      // lines.reverse();
+      let region = new Path2D();
+      const verts = [new Vertex2d(lines[0][0].x, lines[0][0].y)];
+      region.moveTo(lines[0][0].x, lines[0][0].y);
+      lines.slice(0).forEach(l => region.lineTo(l[1].x, l[1].y));
+      lines.slice(0).forEach(l => verts.push(new Vertex2d(l[1].x, l[1].y)));
+      region.closePath();
+      ctx.lineWidth = width;
+      ctx.stroke(region);
+      if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill(region, 'evenodd');
+      }
       // if ((typeof poly.getTextInfo) === 'function') {
-      //   ctx().save();
+      //   ctx.save();
       //   const info = poly.getTextInfo();
-      //   ctx().translate(info.center.x(), info.center.y());
-      //   ctx().rotate(info.radians);
-      //   ctx().beginPath();
-      //   ctx().lineWidth = 4;
-      //   ctx().strokeStyle = color;
-      //   ctx().fillStyle =  color;
+      //   ctx.translate(info.center.x(), info.center.y());
+      //   ctx.rotate(info.radians);
+      //   ctx.beginPath();
+      //   ctx.lineWidth = 4;
+      //   ctx.strokeStyle = color;
+      //   ctx.fillStyle =  color;
       //   const text = info.limit === undefined ? info.text : (info.text || '').substring(0, info.limit);
-      //   ctx().fillText(text, info.x, info.y, info.maxWidth);
-      //   ctx().stroke()
-      //   ctx().restore();
+      //   ctx.fillText(text, info.x, info.y, info.maxWidth);
+      //   ctx.stroke()
+      //   ctx.restore();
       // }
     }
 
+    draw.layer = (layer, color, width, fillColor) => {
+      if (Math.roundTo(layer.normal().dot(Vector3D.k), .00001) === 0) return;
+      let objs;
+      const polys = layer.polygons();
+      if (layer.polygons().length === 1) objs = polys;
+      else {
+        const lines = layer.to2D();
+        objs = new Parimeters2d(lines, false).polygons();
+      }
+      objs.forEach(p => draw.polygon(p, null, 1, 'white'));
+    }
+
+    draw.csg = (csg, color, width, fillColor) => {
+      const layers = Layer.fromCSG(csg);
+      layers.sort((a,b) => a.center().z - b.center().z);
+      for (let index = 0; index < layers.length; index++) {
+        const layer = layers[index];
+        if (Math.roundTo(layer.normal().dot(Vector3D.k), .00001) !== 0) {
+          let objs;
+          const polys = layer.polygons();
+          if (layer.polygons().length === 1) objs = polys;
+          else {
+            const lines = layer.to2D();
+            objs = new Parimeters2d(lines, false).polygons();
+          }
+          objs.forEach(p => draw.polygon(p, null, .1, 'white'));
+        }
+      }
+      // const slices = csg.slice(.03, 'x', 'y');
+      // const ctx = CTX();
+      // slices.forEach(slice =>
+      //   slice.polygons.forEach(p => draw.polygon(p, null, .1, 'white')));
+    }
+
     draw.square = (square, color, text) => {
-      ctx().save();
-      ctx().beginPath();
-      ctx().lineWidth = 2;
-      ctx().strokeStyle = 'black';
-      ctx().fillStyle = color;
+      const ctx = CTX();
+      ctx.save();
+      ctx.beginPath();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'black';
+      ctx.fillStyle = color;
 
       const center = square.center();
-      ctx().translate(center.x(), center.y());
-      ctx().rotate(square.radians());
-      ctx().rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
-      ctx().stroke();
-      ctx().fill();
+      ctx.translate(center.x(), center.y());
+      ctx.rotate(square.radians());
+      ctx.rect(square.offsetX(true), square.offsetY(true), square.width(), square.height());
+      ctx.stroke();
+      ctx.fill();
 
-      if (!draw.canvas().simple && text) {
-        ctx().beginPath();
-        ctx().lineWidth = 4;
-        ctx().strokeStyle = 'black';
-        ctx().fillStyle =  'black';
-        ctx().fillText(text, 0, square.height() / 4, square.width());
-        ctx().stroke()
+      if (!CANVAS().simple && text) {
+        ctx.beginPath();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'black';
+        ctx.fillStyle =  'black';
+        ctx.fillText(text, 0, square.height() / 4, square.width());
+        ctx.stroke()
       }
 
-      ctx().restore();
+      ctx.restore();
     }
 
     draw.circle = (circle, lineColor, lineWidth, fillColor) => {
       const center = circle.center();
-      ctx().beginPath();
-      ctx().lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
-      ctx().strokeStyle = lineColor || 'black';
-      ctx().fillStyle = fillColor || 'white';
-      ctx().arc(center.x(), center.y(), circle.radius(),0, 2*Math.PI);
-      ctx().stroke();
-      ctx().fill();
+      const ctx = CTX();
+      ctx.beginPath();
+      ctx.lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
+      ctx.strokeStyle = lineColor || 'black';
+      ctx.fillStyle = fillColor || 'white';
+      ctx.arc(center.x(), center.y(), circle.radius(),0, 2*Math.PI);
+      ctx.stroke();
+      ctx.fill();
+    }
+
+    function measureText(text) {
+      const mt = CTX().measureText(text);
+      return {
+        width: mt.width,
+        height: mt.actualBoundingBoxAscent + mt.actualBoundingBoxDescent,
+        outerWidth: mt.actualBoundingBoxLeft + mt.actualBoundingBoxRight,
+        outerHeight: mt.fontBoundingBoxAscent + mt.fontBoundingBoxDescent
+      }
+    }
+    draw.measureText = measureText;
+
+    function getLocationPoint(textSize, point, props) {
+      point = new Vertex2d(point).clone();
+      if ((typeof props.location) === 'string') {
+        const loc = props.location.toLowerCase();
+        const xOffsetLine = new Line2d([[0,0], [textSize.outerWidth/2, 0]]).rotate(props.radians);
+        const yOffsetLine = new Line2d([[0,0], [0,textSize.outerHeight/2]]).rotate(props.radians);
+        if (loc.indexOf('right') !== -1) point.translate(xOffsetLine.run(), xOffsetLine.rise());
+        else if (loc.indexOf('left') !== -1) point.translate(-xOffsetLine.run(), -xOffsetLine.rise());
+        if (loc.indexOf('top') !== -1) point.translate(-yOffsetLine.run(), -yOffsetLine.rise());
+        else if (loc.indexOf('bottom') !== -1) point.translate(yOffsetLine.run(), yOffsetLine.rise());
+      };
+      return point;
     }
 
     draw.text = (text, point, props) => {
-      if (text === undefined || draw.canvas().simple) return;
+      if (text === undefined || CANVAS().simple) return;
       props ||= {};
-      point = new Vertex2d(point);
       text = '' + text;
-      const ctx = draw.ctx();
+      const ctx = CTX();
 
       ctx.save();
       ctx.lineWidth = 0;
@@ -232,21 +328,24 @@ class Draw2d {
       const textOffset = new Vertex2d(textLength * 6, 6);
       let radians = props.radians || 0;
 
-      ctx.translate(point.x(), point.y());
       ctx.beginPath();
-      ctx.fillStyle = props.fillColor || "white";
-      ctx.strokeStyle = props.fillColor || 'white';
-      ctx.rotate(props.radians);
-      ctx.rect(-textOffset.x()/2, 0, textOffset.x(), 2*textOffset.y());
-      ctx.fill();
-      ctx.stroke();
       ctx.font = `${props.size || '12px'} ${props.font || 'Arial'}`;
       ctx.lineWidth = .2;
+      const textSize = measureText(text);
+      point = getLocationPoint(textSize, point, props);
+      ctx.translate(point.x(), point.y());
+      ctx.rotate(props.radians);
+      if (props.fillColor) {
+        ctx.fillStyle = props.fillColor || "white";
+        ctx.strokeStyle = props.fillColor || 'white';
+        const box = {x: textSize.outerWidth, y: textSize.outerHeight*1.1};
+        ctx.fillRect(box.x/-2, box.y/-2, box.x, box.y);
+      }
       ctx.strokeStyle = props.color || 'black';
       ctx.fillStyle =  props.color || 'black';
-      // Cant figure out why satic drawings require this but panz drawings do not.
-      if (draw.staticOffset) ctx.fillText(text, -textOffset.x()/2, 1.5*textOffset.y(), props.maxWidth);
-      else ctx.fillText(text, 0, textOffset.y(), props.maxWidth);
+      // TODO: Cant figure out why satic drawings require this but panz drawings do not.
+      if (draw.staticOffset) ctx.fillText(text, textSize.width/-2, textSize.height/2, props.maxWidth);
+      else ctx.fillText(text, 0, 0, props.maxWidth);
       ctx.stroke()
       ctx.restore();
     }
@@ -255,11 +354,11 @@ class Draw2d {
     const hblank = blank/2;
     function drawMeasurementLabel(line, measurement) {
       if (measurement === undefined) return;
-      const ctx = draw.ctx();
+      const ctx = CTX();
       const midpoint = line.midpoint();
-      const radian = line.radians();
+      const radians = line.radians();
 
-      draw.text(measurement.display(), midpoint, {fillColor, radians})
+      draw.text(measurement.display(), midpoint, {radians})
 
       // ctx.save();
       // ctx.lineWidth = 0;
@@ -325,7 +424,13 @@ class Draw2d {
       const textInfo = snap.getTextInfo();
       textInfo.color = color || textInfo.color;
       draw.text(textInfo.text.substring(0,10), textInfo.center, textInfo);
-      if (Draw2d.debug.showNormals || draw.canvas().simple) draw(snap.object().normals());
+      if (Draw2d.debug.showNormals || CANVAS().simple) draw(snap.object().normals());
+    }
+
+    const cxtrFuncMap = { Object: draw.object, Array: draw.array,
+      Vertex2d: draw.vertex, Line2d: draw.line, Circle2d: draw.circle, Corner: draw.vertex,
+      Polygon2d: draw.polygon, Square2d: draw.square, LineMeasurement2d: draw.measurement,
+      Snap: draw.snap, SnapLocation2d: draw.snapLocation, Layer: draw.layer
     }
 
     return draw;

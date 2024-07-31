@@ -48,8 +48,8 @@ class Snap2d extends Lookup {
         const radians = parent.radians();
         const snapAnchor = constraint.snapLoc;
         const originalPosition = snapAnchor && snapAnchor.center();
-        const radianDifference = newValue - radians;
-        this.parent().rotate(radianDifference);
+        const radianDiff = newValue - radians;
+        this.parent().rotate(radianDiff);
         if (snapAnchor) this.parent.center(snapAnchor.at({center: originalPosition}));
       }
       return parent.radians();
@@ -241,7 +241,7 @@ class Snap2d extends Lookup {
         backs.push(line);
         const prevLine = new Line2d(corners[0], corners[1]);
         const nextLine = new Line2d(corners[2], corners[3]);
-        const lessThan10Deg = Math.mod(prevLine.radianDifference(nextLine), Math.PI) < .17;
+        const lessThan10Deg = Math.mod(prevLine.radians.sub(nextLine), Math.PI) < .17;
         if (backCenters.length < 2 && !lessThan10Deg) {
           backs.push(prevLine);
           backs.push(nextLine);
@@ -577,9 +577,7 @@ class Snap2d extends Lookup {
         const line1 = lines[index === 0 ? lines.length - 1 : index - 1];
         const line2 = lines[index === lines.length ? 0 : index];
         const vertex = line1.startVertex();
-        // TODO: I dont know how this can work... its always positive...
-        const rads = line1.radianDifference(line2);
-        //(2*Math.PI + line1.radians() - line2.radians()) % (2*Math.PI);
+        const rads = line1.radians.sub(line2);
         if (instance.withinTol(Math.abs(rads), Math.abs(cornerRads))) {
           const snapLoc = instance.snapLocations.at(vertex);
           const newCenter = snapLoc.at({center: closest.layout.corner})
@@ -623,12 +621,12 @@ class Snap2d extends Lookup {
           const cornerLines = orientCornerLines(backs[index], backs[jIndex], true);
           const line1 =  cornerLines.line1;
           const line2 = cornerLines.line2;
-          const rads = line1.radianDifference(line2);
+          const rads = line1.radians.sub(line2);
           if (instance.withinTol(Math.abs(rads), Math.abs(cornerRads))) {
             const intersection = cornerLines.intersection;
 
-            const radDiff2 = line2.radianDifference(prevWall);
-            const radDiff1 = line1.radianDifference(nextWall);
+            const radDiff2 = line2.radians.sub(prevWall);
+            const radDiff1 = line1.radians.sub(nextWall);
             let theta = -1 * (line1.radians() - nextWall.radians());
             if (!Math.modTolerance(radDiff1, radDiff2, 2*Math.PI, instance.tolerance())) {
               theta = -1*(line1.radians() - prevWall.radians());

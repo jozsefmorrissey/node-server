@@ -148,10 +148,11 @@ class ThreeView extends Lookup {
     }
 
     function init() {
-      draw = new Draw2D(du.id('three-view'));
+      const canvas = du.id('three-view');
+      draw = new Draw2D(canvas);
 
       hovermap = new HoverMap2d();
-      panz = new PanZoomClickMeasure(draw.canvas(), drawView, () => hovermap);
+      panz = new PanZoomClickMeasure(canvas, drawView, () => hovermap);
       // panz.disable.move();
       panz.vertexTolerance(1.6);
       panz.lineTolerance(.8);
@@ -199,6 +200,7 @@ class ThreeView extends Lookup {
     du.on.match('click', `#${this.id()} .ruler`, rulerClick);
     du.on.match('click', `#${this.id()} [name='side']`, (e) => this.side(e.value));
 
+    // console.warn('class is disabled');
     setTimeout(init, 1000);
   }
 }

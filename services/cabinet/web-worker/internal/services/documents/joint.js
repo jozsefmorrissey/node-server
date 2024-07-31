@@ -9,7 +9,7 @@ class JointInfo {
     this.joint = () => joint;
 
     let jointModel;
-    this.model = (rightOleft, model) => {
+    this.model = (zOnz, model) => {
       if (model instanceof CSG) jointModel = model;
       if (jointModel) model = jointModel;
       if (!(model instanceof CSG)) {
@@ -21,7 +21,7 @@ class JointInfo {
         maleModels.forEach(mm => maleModel = maleModel.union(mm));
         model = partInfo.noJointModel().clone().intersect(maleModel);
       }
-      return partInfo.normalize(rightOleft, model);
+      return partInfo.normalize(zOnz, model);
     };
 
     const sideFilter = (vect) => c => c.set().filter(p => vect.equals(p.normal())).length > 0;
@@ -30,10 +30,10 @@ class JointInfo {
       const zPos = normals.z;
       const zNeg = zPos.inverse();
       try {
-        const leftOnlyCuts = this.cuts.filter(sideFilter(zPos));
-        const rightOnlyCuts = this.cuts.filter(sideFilter(zNeg));
-        if (leftOnlyCuts.length === 0 && rightOnlyCuts.length === 0) return 'Both';
-        return leftOnlyCuts.length < rightOnlyCuts.length ? 'Left' : 'Right';
+        const zOnlyCuts = this.cuts.filter(sideFilter(zPos));
+        const nzOnlyCuts = this.cuts.filter(sideFilter(zNeg));
+        if (zOnlyCuts.length === 0 && nzOnlyCuts.length === 0) return 'Both';
+        return zOnlyCuts.length < nzOnlyCuts.length ? 'z' : 'nz';
       } catch (e) {
         console.log(e);
       }

@@ -48,7 +48,7 @@ class Corner2d extends Vertex2d {
       return Math.round(currDeg * 100) / 100;
     }
 
-    this.radians = () => Math.toRadians(this.angle());//this.nextWall().radianDifference(this.prevWall());
+    this.radians = () => Math.toRadians(this.angle());
 
     const angleDist = (angle1, angle2) => {
       angle1 = angle1 % 360;

@@ -469,6 +469,19 @@ class Polygon3D {
       if (verts.length !== otherVerts.length) return false;
       let otherIndex = undefined;
       let direction;
+      for (let i = 0; i < verts.length; i++) {
+        if(!verts[i].equals(otherVerts[i])) return false;
+      }
+      return true;
+    }
+
+    this.equivalent = (other) => {
+      if (!(other instanceof Polygon3D)) return false;
+      const verts = this.vertices();
+      const otherVerts = other.vertices();
+      if (verts.length !== otherVerts.length) return false;
+      let otherIndex = undefined;
+      let direction;
       for (let index = 0; index < verts.length * 2; index += 1) {
         const vIndex = index % verts.length;
         if (otherIndex === undefined) {
@@ -930,7 +943,7 @@ class Polygon3D {
       return `${str.substring(4)} normal: ${this.normal()}`;
     }
 
-    const vertexColor = (i) => i===0?'red':(i===1?'blue':(i===2?'green':i===3?'black':(String.nextColor())));
+    const vertexColor = (i) => i===0?'red':(i===1?'blue':(i===2?'green':i===3?'black':(String.color.next())));
     this.toDrawString = (color, includeNormal) => {
       const colorString = (typeof color) === 'string' ? color : 'blue';
       let str = '';
@@ -991,22 +1004,9 @@ const yzPoly = new Polygon3D([[6,0,1],[10,0,27],[2,0,11]]);
 const xzPoly = new Polygon3D([[0,11,13],[0,12,23],[0,22,3]]);
 
 Polygon3D.mostInformation = (polygons) => {
-  const diff = {x: 0, y:0, z: 0};
-  for (let pIndex = 0; pIndex < polygons.length; pIndex++) {
-    const poly = polygons[pIndex];
-    const verts = poly.vertices();
-    const center = poly.center();
-    for(let index = 0; index < verts.length; index++) {
-      const v = verts[index];
-      diff.x += Math.abs(v.x - center.x);
-      diff.y += Math.abs(v.y - center.y);
-      diff.z += Math.abs(v.z - center.z);
-    }
-  }
-  return diff.x < diff.y ?
-        (diff.x < diff.z ? ['y', 'z'] :
-        (diff.z < diff.y ? ['x', 'y'] : ['x', 'z'])) :
-        (diff.y < diff.z ? ['x', 'z'] : ['x', 'y']);
+  const verts = [];
+  polygons.forEach(p => verts.concatInPlace(p.vertices()));
+  return Vertex3D.mostInformation(verts);
 }
 
 Polygon3D.lines2d = (polygons, x, y) => {
@@ -1124,12 +1124,12 @@ Polygon3D.from2D = (polygon2d) => {
 }
 
 
-Polygon3D.radialSort2D = (polys, viewFrom, counter, center, degreesOstartpoint) => {
+Polygon3D.radialSort2D = (polys, viewFrom, ccw, center, degreesOstartpoint) => {
   center ||= Vertex3D.center(polys.map(p => p.center()));
   degreesOstartpoint ||= 0;
   centers = [];
   polys.forEach(p => centers.push(p.center()) & (centers[centers.length - 1].poly = p));
-  Vertex3D.radialSort2D(centers, viewFrom, counter, center, degreesOstartpoint);
+  Vertex3D.radialSort2D(centers, viewFrom, ccw, center, degreesOstartpoint);
   return polys.copy(centers.map(c => c.poly));
 }
 
@@ -1302,4 +1302,9 @@ Polygon3D.fromIntersections = (intersected, intersectors) => {
   return new Polygon3D(lines.map(l => l.startVertex));
 }
 
+Object.class.register(Polygon3D);
+Polygon3D.toJson = (poly) => {
+  return {verts: poly.vertices(), _TYPE: Polygon3D.name};
+}
+Polygon3D.fromJson = (json) => new Polygon3D(json.verts.map(j => Vertex3D.fromJson(j)));
 module.exports = Polygon3D;

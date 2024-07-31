@@ -484,7 +484,8 @@ class $t {
 					obj[elemName] = get(index);
 					resp += new $t(template).render(obj, undefined, get);
 				} else {
-					resp += new $t(template).render(get(index), undefined, get);
+          const parentScope = getter({$index: index}, get);
+					resp += new $t(template).render(get(index), undefined, parentScope);
 				}
 			}
 			return `${resp}`;

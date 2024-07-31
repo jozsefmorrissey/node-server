@@ -31,9 +31,14 @@ class Parimeters2d {
     const allVertices = Line2d.vertices(lines);
     const verticesEliminated = {};
 
+    let reversed = false;
     const priority = (center) => (a, b) => {
-      const reverse = deadEndCount % 20 > 10;
-      if (reverse) return b.distance(center) - a.distance(center);
+      const reverse = deadEndCount > 10;
+      if (reverse) {
+        if (deadEndCount > 20) throw new Error('Parrimeter cannot be found: lines are probably inline');
+        reversed = true;
+        return b.distance(center) - a.distance(center);
+      }
       return a.distance(center) - b.distance(center);
     }
 
@@ -45,7 +50,7 @@ class Parimeters2d {
         const parimeterStr = '//Parimeter Lines\n' + Line2d.toDrawString(pdObj.parimeter, 'yellow');
         const lastLine = pdObj.parimeter[pdObj.parimeter.length - 1];
         const lastLineNeg = lastLine.negitive();
-        let matches = pdObj.lineMap.matches(lastLineNeg).filter(l => !l.equals(lastLine));
+        let matches = pdObj.lineMap.matches(lastLineNeg).filter(l => !l.equivalent(lastLine));
         matches.sort(priority(center));
 
         const matchesStr = '//Match Lines\n' + Line2d.toDrawString(matches, 'blue');
@@ -99,7 +104,8 @@ class Parimeters2d {
       if (madeItFullCircle) {
         const poly = Polygon2d.fromLines(parimeter);
         poly.combine();
-        deadEndCount++;
+        if (deadEndCount > 2) throw new Error('Parrimeter cannot be found: lines are probably inline');
+        if (poly.vertices().length === 0) deadEndCount++;
         return poly;
       }
       return null;
@@ -112,7 +118,8 @@ class Parimeters2d {
       while (!finished) {
         const lastLine = pdObj.parimeter[pdObj.parimeter.length - 1];
         const lastLineNeg = lastLine.negitive();
-        let matches = pdObj.lineMap.matches(lastLineNeg).filter(l => !l.equals(lastLine));
+        let matches = pdObj.lineMap.matches(lastLineNeg).filter(l => !l.equivalent(lastLine));
+        if (matches.length === 0) throw new Error('No parrimeter exists: lines not connected');
         matches.sort(Parimeters2d.rightLeftSort(lastLine.degrees(), rightOleft));
         pdObj.parimeter.push(matches[0]);
         finished = parimeterFinished(pdObj.parimeter);

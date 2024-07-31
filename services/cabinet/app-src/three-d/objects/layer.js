@@ -106,10 +106,7 @@ class Layer {
       const lines = [];
       const groups = tolmap.group().forEach(s => s.length === 1 && lines.push(s[0]));
       Line3D.combine(lines);
-      Line3D.combine(lines);
-      const vertTolMap = new ToleranceMap({'x': t, 'y': t, 'z': t});
-      lines.forEach(l => vertTolMap.add(l[0]) & vertTolMap.add(l[1]));
-      return lines.filter(l => vertTolMap.matches(l[0]).length === 2 && vertTolMap.matches(l[1]).length === 2);
+      return lines;
     }
 
     this.to2D = (x, y) => {
@@ -198,5 +195,11 @@ Layer.parrelleSets = (polygons, tolerance) => {
   const groups = tolmap.group().sortByAttr('length').reverse();
   return groups;
 }
+
+Object.class.register(Layer, 'polygons')
+Layer.fromJson = (json) => {
+  return new Layer(Object.fromJson(json.polygons));
+}
+
 
 module.exports = Layer;

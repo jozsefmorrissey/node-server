@@ -23,9 +23,9 @@ class Wall2D extends Line2d {
     const wall = this;
 
     height = height || 243.84;
-    Object.getSet(this, {height, windows, doors});
     // this.copy = () => new Wall2D(this.length(), this.radians());
     this.windows = () => windows;
+    this.height = () => height;
     this.addWindow = (fromPreviousWall) => windows.push(new Window2D({wall: this, fromPreviousWall}));
     this.doors = () => doors;
     this.addDoor = (fromPreviousWall) => doors.push(new Door2D({wall: this, fromPreviousWall}));
@@ -52,9 +52,20 @@ class Wall2D extends Line2d {
 
     this.removeDoor = (door) => doors.splice(doors.indexOf(door), 1);
     this.removeWindow = (window) => windows.splice(windows.indexOf(window), 1);
-    this.hash = () => JSON.stringify(this.toJson()).hash();
+    this.hash = () => JSON.stringify(Wall2D.toJson(this)).hash();
+    this.clone = () => {
+      const sv = this[0].clone();
+      const ev = this[1].clone();
+      const height = this.height();
+      const windows = this.windows().map(w => w.clone());
+      const doors = this.doors().map(d => d.clone());
+      return new Wall2D(sv, ev, height, windows, doors);
+    }
   }
 }
+
+Object.class.register(Wall2D, 'endVertex', 'startVertex', 'label', 'widows', 'doors', 'height');
+
 Wall2D.fromJson = (json, layout, vertexMap) => {
   vertexMap ||= {};
   json.startVertex.layout = layout;

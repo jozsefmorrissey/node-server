@@ -1,5 +1,7 @@
 
-const mathClassReg = /^.*(2|3)(d|D)$/
+const toJsonCxtrReg = /((.{1,})(3|2)(d|D))|BiPolygon|Plane|Layer$/;
+const useToJson = (obj) => obj && obj.constructor.name.match(toJsonCxtrReg);
+
 
 const isPrimitive = (val) => (!(val instanceof Object) && !(val instanceof Function)) ||
                               val instanceof Error;
@@ -31,10 +33,16 @@ const evaluateAttributes = (to) => (object, attributes, dto) => {
 
 const excludeKeys = ['events', 'trigger', 'on'];
 const nonFuntionalAttrs = (object, dto, to) => {
+  const toJson = useToJson(object);
+  if (toJson && object.toJson) object = object.toJson();
+  else if (toJson && object.constructor.toJson) object = object.constructor.toJson(object);
   const keys = Object.keys(object);
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
     if ((typeof object[key]) !== 'function' && excludeKeys.indexOf(key) === -1) {
+      if (object[key] && key === 'tasks') {
+        console.log('here');
+      }
       const value =  to(object[key]);
       dto.pathValue(key, value);
     }
@@ -52,13 +60,17 @@ class DataTransferObject{constructor(){}};
 function toDto (functionValueConfiguration, objectPreProcessor) {
   functionValueConfiguration ||= {};
   const to = function toDto (objectOval) {
+    if (objectOval && objectOval.constructor.name === 'Assembly') {
+      console.log(objectOval);
+    }
     if (objectOval === null || objectOval === undefined) return objectOval;
     if (objectOval instanceof Function) return;
     if (isPrimitive(objectOval)) return objectOval;
     if (useToString(objectOval)) return objectOval.toString();
     // if (objectOval.constructor.name.match(mathClassReg)) return objectOval.toDrawString();
-    if (Array.isArray(objectOval)) return objectOval.map(oov =>  to(oov)).filter(o => o !== undefined);
+    if (objectOval.constructor.name === 'Array') return objectOval.map(oov =>  to(oov)).filter(o => o !== undefined);
     let dto = new DataTransferObject();
+
     nonFuntionalAttrs(objectOval, dto, to);
     if (objectPreProcessor) {
       const ppValue = objectPreProcessor(objectOval, dto, to);

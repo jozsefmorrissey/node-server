@@ -15,7 +15,6 @@ class Vertex2d {
     let id = String.random();
     this.id = () => id;
     point = point || {x:0,y:0};
-    Object.getSet(this, {point});
     this.layer = point.layer;
     const instance = this;
     this.move = (center) => {
@@ -73,6 +72,7 @@ class Vertex2d {
       if ((typeof val) === 'number') this.point().y = val;
       return this.point().y;
     }
+    this.clone = () => new Vertex2d(this.point().x, this.point().y);
 
     const dummyFunc = () => true;
     this.forEach = (func, backward) => {
@@ -232,6 +232,6 @@ Vertex2d.toleranceMap = (tolerance, vertices) => {
 }
 
 Vertex2d.reusable = true;
-new Vertex2d();
+Object.class.register(Vertex2d, 'point');
 
 module.exports = Vertex2d;
