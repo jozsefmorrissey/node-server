@@ -1094,15 +1094,15 @@ Line2d.between = (lineOvert1, lineOvert2) => {
 
   if (isLine1 && isLine2) {
     const list = [
-      perpInterSectDist(lov1, lov1.startVertex(), lov2),
-      perpInterSectDist(lov1, lov1.endVertex(), lov2),
-      perpInterSectDist(lov2, lov2.startVertex(), lov1),
-      perpInterSectDist(lov2, lov2.endVertex(), lov1),
+      perpInterSectDist(lov1, lov1[0], lov2),
+      perpInterSectDist(lov1, lov1[1], lov2),
+      perpInterSectDist(lov2, lov2[0], lov1),
+      perpInterSectDist(lov2, lov2[1], lov1),
 
-      perpInterSectDist(lov1, lov1.startVertex(), lov2, true),
-      perpInterSectDist(lov1, lov1.endVertex(), lov2, true),
-      perpInterSectDist(lov2, lov2.startVertex(), lov1, true),
-      perpInterSectDist(lov2, lov2.endVertex(), lov1, true)
+      perpInterSectDist(lov1, lov1[0], lov2, true),
+      perpInterSectDist(lov1, lov1[1], lov2, true),
+      perpInterSectDist(lov2, lov2[0], lov1, true),
+      perpInterSectDist(lov2, lov2[1], lov1, true)
     ];
     const best = list.sortByAttr('dist').filter(obj => obj.dist !== null)[0];
     if (best) return new Line2d(best.vertex, best.intersection);

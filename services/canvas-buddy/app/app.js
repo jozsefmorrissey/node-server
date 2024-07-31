@@ -27,7 +27,6 @@ let snapShotsDetected = false;
 const snapShotCommentReg = /\/\/[ \t]*(([0-9]{1,}).*)/;
 function parseSnapShots(lines) {
   snapShotControls.hidden = true;
-  if (!is3D()) return;
   let snapShots = [[]];
   snapShots[0].comments = [];
   let snapIndex = 0;
@@ -47,7 +46,7 @@ function parseSnapShots(lines) {
   snapShots = snapShots.filter(ss => ss.length !== 0);
   if (snapShots.length > 1) {
     snapShotControls.hidden = false;
-    ThreeD.slideShow.slides(snapShots);
+    getActive().slideShow.slides(snapShots);
   };
 }
 

@@ -142,7 +142,13 @@ canvas.height = height;
 canvas.width = height;
 draw = new Draw2D(canvas, true);
 
-panZ = new panZoom(canvas, () => context && context.draw(), () => context && context.hoverMap());
+function display(contx) {
+  if (contx instanceof Context) context = contx;
+  draw.clear();
+  context && context.draw();
+}
+
+panZ = new panZoom(canvas, display, () => context && context.hoverMap());
 panZ.disable.move()
 draw.circle(new Circle2d(2, new Vertex2d(10,10)), null, 'green');
 
@@ -154,10 +160,6 @@ function parse(newLines, sc) {
   scale = sc;
   context = new Context(newLines, draw, scale);
   display(context);
-}
-
-function display(context) {
-  context.draw();
 }
 
 du.on.match('change', 'input[name="line-disp-type-2d"]', () => parse(lines, scale));
