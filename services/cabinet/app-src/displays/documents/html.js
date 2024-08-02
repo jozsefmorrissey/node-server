@@ -316,40 +316,39 @@ DocumentationHtml.parts.cabinet = (cabinetInfo, partType) => {
 module.exports = DocumentationHtml;
 
 
-const directionVectors = [Vector3D.i, Vector3D.j, Vector3D.k,
-  Vector3D.i.inverse(), Vector3D.j.inverse(), Vector3D.k.inverse()]
-const directionLabels = ['Right', 'Top', 'Back', 'Left', 'Bottom', 'Front'];
-const vectorLabel = (vector) =>
-  directionLabels[directionVectors.minIndex(v => v.dot(vector))];
-
 function buildCanvas(info, zOnz) {
   if (info.model === undefined) return;
   const side = zOnz ? 'z' : '-z';
   const model = CSG.fromPolygons(info.model.polygons, true);
   const layers = info.model[side];
   const center = model.center();
-
-  const canvas = du.create.element('canvas', {class: 'upside-down part-canvas'});
+  const canvas = du.create.element('canvas', {class: 'mirror-x part-canvas'});
   const dems = model.demensions();
   const draw = new Draw2d(canvas);
   draw.staticOffset = true;
   draw.position(center, {x: dems.x * 1.5, y: dems.y * 1.5});
-  const corners = draw.corners();
-  draw(layers);
-  const sideLabelCenter = {x: corners[2].x, y: corners[2].y, z:0};
-  const sideLabel = vectorLabel(zOnz ? info.normals.z : info.normals.z.inverse());
   const size = `${.1*Math.max(dems.x, dems.y)}px`;
-  draw.text(sideLabel, sideLabelCenter, {size, radians: Math.PI, location: 'BottomRight'});
+
+  const corners = draw.corners();
+  const sideLabel = Vector3D.sector(zOnz ? info.normals.z : info.normals.z.inverse());
+  const leftOright = sideLabel.match(/^(Left|Front|Top)$/) !== null;
+  const sideLabelCenter = {x: corners[1].x, y: corners[1].y, z:0};
+
+  const origin = new Vertex2d(0, 0);
+  draw(origin);
+  draw.text('(0,0)', origin, {size, radians: Math.PI, location: 'BottomRight', mirror: 'y'});
+
+  draw(layers);
+  draw.text(sideLabel, sideLabelCenter, {size, radians: Math.PI, location: 'BottomLeft', mirror: 'y'});
   const infoEdges = info.fenceEdges[side];
   const edges = infoEdges.map(l => l.copy());
-  const transLine = new Line2d(Vertex2d.center(Line2d.vertices(edges)), center);
   edges.forEach((l, i) => {
-    const textProps = {size, radians: l.radians()-Math.PI, location: 'Top'};
+    const textProps = {size, radians: l.radians()-Math.PI, location: 'Top', mirror: 'y'};
     const label = l.label;
     const text = `${label}`;
     draw.text(text, l.midpoint(), textProps);
   });
-  return {canvas, label: sideLabel};
+  return {canvas, label: sideLabel, leftOright};
 }
 
 function buildViews(info) {
@@ -358,8 +357,8 @@ function buildViews(info) {
   const view2 = buildCanvas(info, false);
   const view1left = view1.label.match(/^(Left|Front|Top)$/) !== null;
   return views = {
-    right: view1left ? view2.canvas : view1.canvas,
-    left: view1left ? view1.canvas : view2.canvas
+    right: view1.leftOright ? view2.canvas : view1.canvas,
+    left: view1.leftOright ? view1.canvas : view2.canvas
   }
 }
 

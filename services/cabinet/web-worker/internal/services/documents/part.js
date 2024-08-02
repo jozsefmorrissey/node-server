@@ -71,8 +71,8 @@ class PartInfo {
         return normed;
       });
       let normalizeInfo;
-      if (zOnz === true) normalizeInfo = normInfoNZ;
-      else if (zOnz === false) normalizeInfo = normInfoZ;
+      if (zOnz === true) normalizeInfo = normInfoZ;
+      else if (zOnz === false) normalizeInfo = normInfoNZ;
       else return model;
       if (model.clone) {
         model = model.clone();
@@ -87,25 +87,19 @@ class PartInfo {
     };
 
     this.model = (zOnz, joints) => {
-      let model = this.noJointModel();
-      let maleModels;
-      if (joints === undefined && cutInfo) {
-          const side = zOnz ? 'nz' : 'z';
-          const cuts = cutInfo.filter(c => c.primarySide() === side || c.primarySide() === 'Both');
-          maleModels = cuts.map(c => c.maleModel());
-      } else {
-        if (joints === undefined) {
-          const jointInfo = this.jointInfo(zOnz);
-          joints = jointInfo.map(ji => ji.joint());
-        }
-        const males = [];
-        joints.forEach(j => males.concatInPlace(env.jointMap[j.id].male));
-        maleModels = males.map(maleId => this.joinedModel(maleId));
-      }
-
-      maleModels.forEach(csg => model = model.subtract(csg));
+      let model = this.joinedModel();
+      if (joints !== undefined)
+        console.warn('joints is no longer a valid argument');
       return this.normalize(zOnz, model);
     };
+
+    this.zOnz = (zOnz) => {
+      const sector = Vector3D.sector(this.normals().z);
+      const tf = sector.match(/Left|Top|Front/) ? true : false;
+      if (zOnz === true) return tf ? 'z' : '-z';
+      console.log(part.locationCode, sector, tf);
+      return tf;
+    }
 
     this.layers = (zOnz) => {
       const layers = Layer.fromCSG(this.model(zOnz));
@@ -316,7 +310,7 @@ class PartInfo {
 
     this.edges2D = (zOnz) => {
       const edges = [];
-      if ((typeof zOnz) !== 'boolean') zOnz = true;
+      if ((typeof zOnz) !== 'boolean') zOnz = this.zOnz();
       this.edges3D(zOnz).forEach(line => {
         const l2d = line.to2D('x', 'y');
         l2d.label = line.label;
@@ -342,7 +336,7 @@ class PartInfo {
     if (this.cuts && this.cuts.length > 0) return this.cuts;
     const jointInfo = this.jointInfo();
     const cutInfo = [];
-    if (part.locationCode.match(/sh/)) {
+    if (part.locationCode.match(/c_bf/)) {
       console.log('her');
     }
     jointInfo.forEach(ji => cutInfo.concatInPlace(ji.cutInfo()));
@@ -350,7 +344,7 @@ class PartInfo {
     // CutInfo.clean(cutInfo);
     const edgeJoint = new JointInfo({descriptor: 'edge'}, this);
     cutInfo.concatInPlace(CutInfo.fromEdges(this.polygons(), this.normals(), edgeJoint));
-    this.cuts = cutInfo;
+    this.cuts = CutInfo.clean(cutInfo);
     console.log(this.joinedModel().toDrawString('red'), '\n\n', CutInfo.toDrawString(this.cuts))
     this.cutInfo = cutInfo;
   }

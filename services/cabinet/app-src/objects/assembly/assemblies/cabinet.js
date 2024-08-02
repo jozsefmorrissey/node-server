@@ -74,35 +74,6 @@ class Cabinet extends Assembly {
       return subs;
     }
 
-    let buildCenter;
-    this.buildCenter = (reevaluate) => {
-      if (reevaluate === true) {
-        let minX = Number.MAX_SAFE_INTEGER;
-        let minY = Number.MAX_SAFE_INTEGER;
-        let minZ = Number.MAX_SAFE_INTEGER;
-        let maxX = Number.MIN_SAFE_INTEGER;
-        let maxY = Number.MIN_SAFE_INTEGER;
-        let maxZ = Number.MIN_SAFE_INTEGER;
-        const parts = this.userDefinedParts();
-        for (let index = 0; index < parts.length; index++) {
-          const limits = parts[index].position().limits();
-          minX = Math.min(minX, limits.x, limits['-x']);
-          minY = Math.min(minY, limits.y, limits['-y']);
-          minZ = Math.min(minZ, limits.z, limits['-z']);
-          maxX = Math.max(maxX, limits.x, limits['-x']);
-          maxY = Math.max(maxY, limits.y, limits['-y']);
-          maxZ = Math.max(maxZ, limits.z, limits['-z']);
-        }
-        buildCenter = new Vertex3D({
-          x: (maxX+minX)/2,
-          y: (maxY+minY)/2,
-          z: (maxZ+minZ)/2,
-        });
-      }
-      return buildCenter || new Vertex3D();
-    }
-    this.on.change(() => instance.buildCenter(true));
-
     const parentAllAssems = this.allAssemblies;
     this.allAssemblies = () =>
       parentAllAssems().concat(this.openings);

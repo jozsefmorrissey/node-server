@@ -55,6 +55,9 @@ function limitLine(axis, plane, failOnNoLen, failNonEndpointIntersection) {
 function determineAxis(set, normals) {
   try {
     let axis = Polygon3D.axis(set, normals).max;
+    if (axis.z.length < .75 * 2.53) {
+      console.log('got depth');
+    }
     Polygon3D.axis(set, normals);
     // const center = this.intersectModel().center();
     // Object.values(axis).forEach(l => l.centerOn(center));

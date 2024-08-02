@@ -206,6 +206,18 @@ Vector3D.k = new Vector3D(0,0,1);
 Vector3D.cardinal = (array) => array ? [Vector3D.i, Vector3D.j, Vector3D.k] :
                     {i: Vector3D.i, j: Vector3D.j, k: Vector3D.k};
 
+const sectorVectors = [Vector3D.i, Vector3D.j, Vector3D.k,
+  Vector3D.i.inverse(), Vector3D.j.inverse(), Vector3D.k.inverse()]
+const sectorLabels = ['Left', 'Top', 'Front', 'Right', 'Bottom', 'Back'];
+const sectorMap =
+Vector3D.sector = (vector, sectorMap) => {
+  sectorMap ||= {Right: Vector3D.i, Top: Vector3D.j, Front: Vector3D.k,
+    Left: Vector3D.i.inverse(), Bottom: Vector3D.j.inverse(), Back: Vector3D.k.inverse()};
+  const keys = Object.keys(sectorMap);
+  return keys[keys.maxIndex(k => sectorMap[k].dot(vector))];
+  // sectorVectors[directionVectors.minIndex(v => v.dot(vector))];
+}
+
 Object.class.register(Vector3D, 'i', 'j', 'k');
 Vector3D.fromJson = json => new Vector3D(json);
 

@@ -1,4 +1,306 @@
 {
+  "shelve-floating": {
+    "_TYPE": "AssemblyTemplate",
+    "type": "shelve-floating",
+    "values": [],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w/2",
+          "c.h - (t.t/2)",
+          "(c.d-f.t)/2"
+        ],
+        "demensions": [
+          "c.w",
+          "c.t-f.t",
+          "pwt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "Top",
+        "code": "t",
+        "id": "jcwp5fi"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "t.c.x",
+          "t/2",
+          "t.c.z"
+        ],
+        "demensions": [
+          "t.d.x",
+          "t.d.y",
+          "t.d.z"
+        ],
+        "rotation": [
+          "t.r.x",
+          "t.r.y",
+          "t.r.z"
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "bottom",
+        "code": "b",
+        "polyConfig.points.0": [],
+        "polyConfig.points.1": [],
+        "polyConfig.points.2": [],
+        "id": "v394op2"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "t/2",
+          "c.h/2",
+          "(c.t-f.t)/2"
+        ],
+        "demensions": [
+          "c.d-f.t",
+          "c.h - t.t - b.t",
+          "pwt34"
+        ],
+        "rotation": [
+          "0",
+          "90",
+          0
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "left",
+        "code": "l",
+        "id": "94tqh6c"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - t/2",
+          "l.c.y",
+          "l.c.z"
+        ],
+        "demensions": [
+          "l.d.x",
+          "l.d.y",
+          "l.d.z"
+        ],
+        "rotation": [
+          "l.r.x",
+          "l.r.y",
+          "l.r.z"
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "right",
+        "code": "r",
+        "polyConfig.points.0": [],
+        "polyConfig.points.1": [],
+        "polyConfig.points.2": [],
+        "id": "nwamme5"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w/2",
+          "c.h/2",
+          "c.t-t/2"
+        ],
+        "demensions": [
+          "c.w",
+          "c.h",
+          "pwt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "front",
+        "code": "f",
+        "id": "83yi0ys"
+      }
+    ],
+    "joints": [
+      {
+        "_TYPE": "Miter",
+        "dependsSelector": "t",
+        "dependentSelector": "f",
+        "maleOffset": 0,
+        "femaleOffset": 0,
+        "fullLength": false,
+        "priority": 0
+      },
+      {
+        "_TYPE": "Miter",
+        "dependsSelector": "b",
+        "dependentSelector": "f",
+        "maleOffset": 0,
+        "femaleOffset": 0,
+        "fullLength": false,
+        "priority": 0
+      },
+      {
+        "_TYPE": "Miter",
+        "dependsSelector": "l",
+        "dependentSelector": "f",
+        "maleOffset": 0,
+        "femaleOffset": 0,
+        "fullLength": false,
+        "priority": 0
+      },
+      {
+        "_TYPE": "Miter",
+        "dependsSelector": "r",
+        "dependentSelector": "f",
+        "maleOffset": 0,
+        "femaleOffset": 0,
+        "fullLength": false,
+        "priority": 0
+      },
+      {
+        "_TYPE": "Miter",
+        "dependsSelector": "l",
+        "dependentSelector": "t",
+        "maleOffset": 0,
+        "femaleOffset": 0,
+        "fullLength": false,
+        "priority": 0
+      },
+      {
+        "_TYPE": "Miter",
+        "dependsSelector": "l",
+        "dependentSelector": "b",
+        "maleOffset": 0,
+        "femaleOffset": 0,
+        "fullLength": false,
+        "priority": 0
+      },
+      {
+        "_TYPE": "Miter",
+        "dependsSelector": "r",
+        "dependentSelector": "t",
+        "maleOffset": 0,
+        "femaleOffset": 0,
+        "fullLength": false,
+        "priority": 0
+      },
+      {
+        "_TYPE": "Miter",
+        "dependsSelector": "r",
+        "dependentSelector": "b",
+        "maleOffset": 0,
+        "femaleOffset": 0,
+        "fullLength": false,
+        "priority": 0
+      }
+    ],
+    "shape": "square",
+    "width": "24*2.54",
+    "height": "3*2.54",
+    "thickness": "12*2.54",
+    "_FORCE_FROM_JSON": true
+  },
   "HOOD-first": {
   "_TYPE": "AssemblyTemplate",
   "type": "HOOD-first",

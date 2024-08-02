@@ -15,12 +15,14 @@ Utils.display.line2d = (l) => `(${disp(l[0].x)},${disp(l[0].y)}),(${disp(l[1].x)
 Utils.display.roundTo = (val, percision) => Math.roundTo(val, percision || .1);
 Utils.display.axis = {
   x: (axis) => ms(axis.z.x.length()),
-  y: (axis) => axis.z.z.isLine() ? '' : disp(axis.z.z.length()),
-  z: (axis) => axis.z.y.isLine() ? '' : disp(axis.z.y.length()),
+  y: (axis) => axis.z.y.isLine() ? '' : disp(axis.z.y.length()),
+  z: (axis) => axis.z.z.isLine() ? '' : disp(axis.z.z.length()),
 }
 
 
 Utils.display.degrees = (degrees) => `${Math.round(degrees * 10) / 10}`;
+Utils.display.group = (part) => part.getAssembly('c').group().room().name();
+Utils.display.cabinet = (part) => part.getAssembly('c').userIdentifier();
 Utils.display.partIdPrefix = (part) => {
   const cabinet = part.getAssembly('c');
   const room = cabinet.group().room().name();
@@ -29,10 +31,10 @@ Utils.display.partIdPrefix = (part) => {
 }
 
 Utils.display.partIds = (parts) => {
-  let partStr;
-  if (parts.length === 1) partStr = parts[0].userFriendlyId();
-  else partStr = `[${parts.map(p => p.userFriendlyId()).join(',')}]`;
-  return `${Utils.display.partIdPrefix(parts[0])}:${partStr}`;
+  let partStr = parts[0].partName() || parts[0].userFriendlyId();
+  if (parts.length !== 1)
+    partStr += `[${parts.map(p => p.userFriendlyId()).join(',')}]`;
+  return `${partStr} ${Utils.display.cabinet(parts[0])} ${Utils.display.group(parts[0])}`;
 }
 Utils.display.roots = (parts) => {
   const map = {};

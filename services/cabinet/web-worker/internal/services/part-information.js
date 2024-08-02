@@ -21,12 +21,12 @@ function buildPartInfo(payload, env, taskId) {
       partIds = partInfo.parts().map(p => p.id);
       cuts = partInfo.cuts.map(c=>c.toJson());
       model = partInfo.model(true);
-      model['-z'] = partInfo.layers(true);
-      model.z = partInfo.layers(false);
+      model.z = partInfo.layers(true);
+      model['-z'] = partInfo.layers(false);
       normals = partInfo.normals();
       fenceEdges = {};
-      fenceEdges['-z'] = partInfo.edges2D(true);
-      fenceEdges.z = partInfo.edges2D(false);
+      fenceEdges['-z'] = partInfo.edges2D(false);
+      fenceEdges.z = partInfo.edges2D(true);
       demensions = partInfo.demensions();
       // toolingInfo = partInfo.toolingInformation();
     } catch (e) {

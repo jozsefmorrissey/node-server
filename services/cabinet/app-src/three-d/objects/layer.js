@@ -6,7 +6,7 @@ const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
-const tol = .0001;
+const tol = .001;
 const within = Tolerance.within(tol);
 
 class Layer {

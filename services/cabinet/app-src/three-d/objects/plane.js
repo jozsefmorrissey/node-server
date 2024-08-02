@@ -159,6 +159,7 @@ class Plane extends Array {
 
 
     const infinity = 1000000000;
+    const isZero = (val) => withinTol(val, 0);
     const nanIt = (val) => val > infinity || val < -infinity ? NaN : val;
     this.axisIntercepts = () => {
       if (intercepts) return intercepts;
@@ -167,20 +168,20 @@ class Plane extends Array {
       if (normal.equals(Vector3D.i)) {
         intercepts = {
           x: points[0].x,
-          y: points[0].x === 0 ? Infinity : NaN,
-          z: points[0].x === 0 ? Infinity : NaN
+          y: isZero(points[0].x) ? Infinity : NaN,
+          z: isZero(points[0].x) ? Infinity : NaN
         }
       } else if (normal.equals(Vector3D.j)) {
         intercepts = {
           y: points[0].y,
-          x: points[0].y === 0 ? Infinity : NaN,
-          z: points[0].y === 0 ? Infinity : NaN
+          x: isZero(points[0].y) ? Infinity : NaN,
+          z: isZero(points[0].y) ? Infinity : NaN
         }
       } else if (normal.equals(Vector3D.k)) {
         intercepts = {
           z: points[0].z,
-          x: points[0].z === 0 ? Infinity : NaN,
-          y: points[0].z === 0 ? Infinity : NaN
+          x: isZero(points[0].z) ? Infinity : NaN,
+          y: isZero(points[0].z) ? Infinity : NaN
         }
       } else {
         const eqn = this.equation();
@@ -363,7 +364,6 @@ class Plane extends Array {
       return instance.within(line) ? line : null;
     }
 
-    const isZero = (m, i, j) => withinTol(m[i][j], 0);
     this.intersection = (other) => {
       if(this.equivalent(other)) return this;
       if (other instanceof Line3D) return this.intersection.line(other);

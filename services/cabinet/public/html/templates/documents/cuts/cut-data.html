@@ -2,7 +2,7 @@
   <td>{{cut.Id}}</td>
   <td>{{disp.axis.x(cut.axis)}}</td>
   <td>{{disp.axis.z(cut.axis)}}</td>
-  <td>{{disp.roundTo(cut.tilt)}}</td>
+  <td>{{disp.roundTo(cut.tilt) || ''}}</td>
   <td>
     <span:t repeat='er in cut.locationRef'>
       <div:t class='tab' $t-id='documents/cuts/cut-{{er[0].label ? "edge" : "point"}}-ref'>er</div:t>
