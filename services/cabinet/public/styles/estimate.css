@@ -186,8 +186,8 @@ table.no-border-cells td {text-align: center; vertical-align: middle;}
   cursor: pointer;
 }
 
-input[name='dependsSelector'],
-input[name='dependentSelector'],
+input[name='selector-depends'],
+input[name='selector-dependent'],
 input[name='partCode'],
 input[name='code'] {
   width: 75pt;

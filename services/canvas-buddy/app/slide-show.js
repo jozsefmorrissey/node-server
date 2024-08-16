@@ -7,7 +7,7 @@ class SlideShow {
     let speed = 2000;
     let slideIndex = -1;
     let _slides;
-    this.length = () => slideDataList.length;
+    this.length = () => slideDataList ? slideDataList.length : 0;
     const len = this.length;
     this.playing = () => playerId !== null;
     CustomEvent.all(this, 'show', 'play', 'pause')

@@ -40,7 +40,7 @@ class Context {
           const lineOnly = du.find('input[name="line-disp-type-2d"][value="LINE_ONLY"]').checked;
           line.indicateDirection = !lineOnly;
           const mp = line.midpoint();
-          addVertex(mp.x(), mp.y());
+          addVertex(mp.x, mp.y);
           hoverMap.add(line);
         }
       }
@@ -174,7 +174,7 @@ const centerOnVertices = () => {
     const x = (minMax.x.max - minMax.x.min)/2;
     const y = (minMax.y.max - minMax.y.min)/-2;
     const center = new Vertex2d(x, y);
-    panZ.centerOn(center.x(), center.y());
+    panZ.centerOn(center.x, center.y);
   };
 
 du.on.match('click', '#two-d-display [type="checkbox"]', (elem) => {

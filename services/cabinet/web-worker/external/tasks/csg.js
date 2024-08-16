@@ -11,26 +11,20 @@ class CsgSimpleTask extends Task {
     this.result = () => _result;
     this.process = () => 'simple';
     this.payload = () => ({objects});
-    this.on.message((result) => {
-      if (result instanceof Error) return this.status(STATUS.FAILED, result);
-      _result = [];
-      Object.keys(result).forEach(key => _result[key] = CSG.fromPolygons(result[key].polygons, true));
-      if (isArray) _result = Object.values(_result)[0];
-      else _result = result;
-      this.status(STATUS.SUCCESS, _result);
-    });
   }
 }
 
 class CsgSimpleTo2DTask extends Task {
-  constructor(objects) {
+  constructor(objectOs) {
+    const isArray = Array.isArray(objectOs);
+    const objects = isArray ? objectOs : [objectOs];
     super();
     let _result;
     this.result = () => _result;
     this.process = () => 'simpleto2d';
     this.payload = () => ({objects});
     this.on.message((result) => {
-      _result = result;
+      _result = isArray ? result : result[objects[0].id];
       this.status(STATUS.SUCCESS, _result);
     });
   }
@@ -52,12 +46,15 @@ class CsgTask extends Task {
       if (assemblies.length === 0) this.status(STATUS.SUCCESS);
       return {assemblies, explosionFactor: this.explosionFactor()};
     };
+    let _result;
+    this.result = () => _result;
     this.modelInfo = () => modelInfo;
     this.on.message((result) => {
       if (initialModelCount === undefined) initialModelCount = this.remainingModels().length;
-      if (result) {
-        this.processResult(result);
+      if (result  && this.processResult) {
+        result = this.processResult(result) || result;
       }
+      if (result) _result = result;
       this.payload();
       return modelInfo;
     });
@@ -104,7 +101,7 @@ class CsgUnionTask  extends CsgTask {
     super(modelInfo);
     this.remainingModels = modelInfo.needsUnioned;
     this.progress = () => this.status() === 'success' ? 100 : 0;
-    this.processResult = modelInfo.unioned;
+    this.processResult = (result) => modelInfo.unioned(result);
   }
 }
 
@@ -112,17 +109,22 @@ class CsgAssembliesTo2DTask extends CsgTask {
   constructor(modelInfo) {
     super(modelInfo);
     this.remainingModels = modelInfo.needs2dConverted;
+
     this.processResult = (result) => {
-      if (result.map)  modelInfo.threeViewMap(result.map);
-      else modelInfo.unioned2D(result);
+      if (result.map)  {
+        modelInfo.threeViewMap(result.map);
+        Object.keys(result.map).map(id => result[id] = modelInfo.threeView(id));
+        delete result.map;
+      }
+      return result;
     };
   }
 }
 
-const AssembliesTo2D = (modelInfo, joined, unioned) => {
+const AssembliesTo2D = (modelInfo, union) => {
   const tasks = [new CsgModelTask(modelInfo)];
-  tasks.push(new CsgJoinTask(modelInfo))
-  // tasks.push(new CsgUnionTask(modelInfo));
+  tasks.push(new CsgJoinTask(modelInfo));
+  if (union) tasks.push(new CsgUnionTask(modelInfo));
   tasks.push(new CsgAssembliesTo2DTask(modelInfo));
   return new Sequential(modelInfo.environment, ...tasks);
 };

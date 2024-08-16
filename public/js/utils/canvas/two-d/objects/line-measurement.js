@@ -4,7 +4,6 @@ const Vertex2d = require('vertex');
 const Line2d = require('line');
 const Lookup = require('../../../object/lookup');
 const Measurement = require('../../../measurement.js');
-const approximate = require('../../../approximate.js');
 const ToleranceMap = require('../../../tolerance-map.js');
 
 class LineMeasurement2d {
@@ -44,7 +43,7 @@ class LineMeasurement2d {
         const cEndL = further.endLine
         const offsetLine = cStartL.copy();
         offsetLine.length(buffer);
-        const length = approximate(further.length());
+        const length = Math.roundTo(further.length(), .001);
         do {
           const point = modifyMeasurment(offsetLine, further, buffer, obj.takenLocations);
           if (point) {
@@ -137,7 +136,7 @@ LineMeasurement2d.measurements = (lines) => {
   lines.sort(lengthSortFunc(center));
   // lines.sort(lengthSortFunc(center));
   const measurements = [];
-  const lengthMap = new ToleranceMap({length: .00001});
+  const lengthMap = new ToleranceMap({'length()': .00001});
   for (let tIndex = 0; tIndex < lines.length; tIndex += 1) {
     const tarVerts = lines[tIndex].isOn(verts);
     if (tarVerts.length > 2) {
@@ -158,7 +157,7 @@ LineMeasurement2d.measurements = (lines) => {
 
 
   const lengths = Object.keys(lengthMap.map());
-  const slopeMap = new ToleranceMap({length: .00001, slope: .1});
+  const slopeMap = new ToleranceMap({'length()': .00001, 'slope()': .1});
   for (index = 0; index < lengths.length; index += 1) {
     let lines = lengthMap.map()[lengths[index]];
     //TODO: possibly restrict the measurements that display....
@@ -176,7 +175,7 @@ LineMeasurement2d.measurements = (lines) => {
   }
 
   for (let index = 0; index < measurements.length; index++)
-    if (approximate.abs(measurements[index].length()) !== 0)
+    if (!measurements[index].line().isPoint())
       measurements[index] = new LineMeasurement2d(measurements[index], center, measurementLevel(measurements[index]));
     else
       measurements.splice(index--, 1);

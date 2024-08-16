@@ -193,6 +193,8 @@ class Snap2d extends Lookup {
     const backCenterReg = /^back([0-9]{1,}|)center$/;
     const centerReg = /^[a-z]{1,}([0-9]{1,}|)center$/;
     this.snapLocations = getSnapLocations;
+    this.snapLocations.deleteAll = () =>
+      snapLocations.deleteAll();
     this.snapLocations.notPaired = () => getSnapLocations((loc) => loc.pairedWith() === null);
     this.snapLocations.paired = () => getSnapLocations((loc) => loc.pairedWith() !== null);
     this.snapLocations.wallPairable = () => getSnapLocations((loc) => loc.location().match(backReg));

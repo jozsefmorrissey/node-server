@@ -33,7 +33,6 @@ const FaceSketch = require('../face-sketch');
 const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 const Canvas = require('../canvas');
 const Global = require('../../services/global.js');
-const approximate = require('../../../../../public/js/utils/approximate').new(10);
 const PanZoom = require('../../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 const Divider = require('../../objects/assembly/assemblies/divider.js');
 const ExtraObjects = require('../draw/extra-objects');
@@ -202,7 +201,7 @@ function getCabinet(elem) {
   assem = template.get();
   Global.target(assem);
   getDemPosElems(template, assem);
-  assem.propertyConfig().set(sectionState.style);
+  assem.propertyConfig('style', sectionState.style);
 
   if (template instanceof CabinetTemplate) {
     if (sectionState.testDividers) applyTestConfiguration();
@@ -449,6 +448,7 @@ function updatePartAxis(elem, details) {
 
 
 function validateOpenTemplate (elem) {
+  const start = new Date().getTime();
   const templateBody = du.find('.template-body');
   if (!templateBody || du.is.hidden(templateBody)) return;
   resetHeaderErrors();
@@ -464,9 +464,9 @@ function validateOpenTemplate (elem) {
   if (calcRadio) validateVectors(calcRadio);
 
   const pcc = partCodeCheck(template);
-  const jointMaleInputs = du.find.downAll('input[attr="joints"][name="dependsSelector"]', templateBody);
+  const jointMaleInputs = du.find.downAll('input[attr="joints"][name="selector-depends"]', templateBody);
   jointMaleInputs.forEach(pcc);
-  const jointFemaleInputs = du.find.downAll('input[attr="joints"][name="dependentSelector"]', templateBody);
+  const jointFemaleInputs = du.find.downAll('input[attr="joints"][name="selector-dependent"]', templateBody);
   jointFemaleInputs.forEach(pcc);
 
   const openingCodeInputs = du.find.downAll('input[attr="openings"][name="partCode"]', templateBody);
@@ -482,6 +482,7 @@ function validateOpenTemplate (elem) {
     const subDemInputs = du.find.downAll('input.xyz[attr="subassemblies"][name]', templateBody);
     subDemInputs.forEach(xyzEqnCheck(template));
     updateOpeningPoints(template);
+    console.log((new Date().getTime() - start) /1000)
   } catch (e) {
     console.log(e);
   }
@@ -510,9 +511,9 @@ const jointOnChange = (vals, dit) => {
     const template = ExpandableList.get(du.find.up('[template-id]', indexElem));
     const joints = template.joints();
     const oldJoint = joints[index];
-    const dependentSel = oldJoint.dependentSelector();
-    const dependsSel = oldJoint.dependsSelector();
-    joints[index] = Object.class.new(vals.type, dependsSel, dependentSel);
+    const dependentSel = oldJoint.selector.dependent();
+    const dependsSel = oldJoint.selector.depends();
+    joints[index] = Object.class.new(vals._TYPE, dependsSel, dependentSel);
     joints[index].maleOffset(vals.depth && vals.depth.maleOffset);
   }
 }
@@ -690,14 +691,14 @@ const getObjects = {
 }
 
 const dividerJointChange = (template) => (vals) => {
-  template.dividerJoint(vals);
+  template.dividerJoint({_TYPE: vals._TYPE, maleOffset: vals.depth});
 }
 const dividerJointInput = (template) =>
   getJointInputTree(dividerJointChange(template), template.dividerJoint(), true).html();
 function getJointInputTree(func, joint, dividerJoint) {
   joint.type ||= 'Butt';
   const selectType = new Select({
-    name: 'type',
+    name: '_TYPE',
     list: Object.keys(Joint.types),
     class: 'template-select',
     value: joint.constructor.name
@@ -714,7 +715,7 @@ function getJointInputTree(func, joint, dividerJoint) {
   const dit = new DecisionInputTree('Type', {inputArray: [selectType]}, {noSubmission: true});
   const type = dit.root();
   type.then('depth', {inputArray: depthInput});
-  const cond = DecisionInputTree.getCondition('type', 'Dado');
+  const cond = DecisionInputTree.getCondition('_TYPE', 'Dado');
   type.conditions.add(cond, 'depth');
   dit.onChange(func);
   return dit;
@@ -805,9 +806,6 @@ class TemplateManager extends Lookup {
         updateExpandables(template);
         getCabinet()
       }, 100);
-      setTimeout(() => {
-        validateOpenTemplate(du.id(parentId));
-      }, 1000);
       const scope = {template, TemplateManager: this,
         containers: applicableContainers(template), centerDisplay, toDisplay,
         templateShapeInput: templateShapeInput(template)};
@@ -940,7 +938,7 @@ function calcIndexUpdate(elem) {
   allInputs.forEach(i => i.disabled = false);
   targetInputs.forEach(i => i.disabled = true);
   ExpandableList.get(elem).normalInfo.calc = Number.parseInt(row.getAttribute('index'));
-  validateVectors(elem);
+  validateVectors.lastCall(5000, elem);
 }
 du.on.match('change', '.calc-vect-radio', calcIndexUpdate);
 
@@ -1010,7 +1008,7 @@ const r = (l, i, a) => Math.roundTo(l[i][a], .1);
 const lineStr = (l) => `[(${r(l,0,'x')},${r(l,0,'y')},${r(l,0,'z')})),(${r(l,1,'x')},${r(l,1,'y')},${r(l,1,'z')})]`;
 function setVectorValues(elem) {
   const style = du.find.closest('.subassem-normal-cnt>[type="radio"]:checked', elem).value;
-  const obj = ExpandableList.get(elem);
+  const obj = ExpandableList.get(du.find.closest('input', elem));
   if (obj.normalInfo === undefined) {
     du.find.closest('.vector-normal-cnt table', elem).innerHTML = normalTemplate.render({obj, normalToString});
     obj.normalInfo = {normals: [[1,0,0], [0,1,0], [0,0,1]], calc: 2};
@@ -1085,6 +1083,14 @@ function updateValuesTemplate(elem, template) {
   return true
 }
 
+function dividerValueCheck(elem, subAssem) {
+  if (elem.name !== 'type' || elem.value !== 'Divider') return;
+  if (subAssem.demensions[2] === 'dfw') return;
+  if (confirm('Divider objects usually have "dfw" as the depth.\n    Would you like to conform this object?')) {
+    subAssem.demensions[2] = 'dfw';
+  }
+}
+
 function updateSubassembliesTemplate(elem, template) {
   const nameInput = du.find.closest('[name="name"]', elem);
   const type = du.find.closest('[name="type"]', elem).value;
@@ -1101,6 +1107,7 @@ function updateSubassembliesTemplate(elem, template) {
     ExtraObjects.addNormalLines(subAssem);
   } else if (elem.name !== 'name') {
     let value = elem.type === 'checkbox' ? elem.checked : elem.value;
+    dividerValueCheck(elem, subAssem);
     Object.pathValue(subAssem, elem.name, value);
     if (elem.nextElementSibling && elem.nextElementSibling.matches('.measurement-input')) {
       const disp = new Measurement(template.evalEqn(elem.value)).display();
@@ -1138,9 +1145,9 @@ function updateViewShape(elem) {
 }
 
 function updateJointPartCode(elem) {
-  const attr = elem.name;
+  const attr = elem.name.replace('-', '.');
   const listElem = ExpandableList.get(elem);
-  listElem[attr](elem.value);
+  listElem.pathValue(attr, elem.value);
 }
 
 function updateOpeningPartCode(elem) {
@@ -1174,12 +1181,12 @@ du.on.match('change', '.opening-part-code-input', updateOpeningsTemplate);
 du.on.match('change', '.template-shape-input', updateViewShape);
 du.on.match('change', '[name="xyz"]', switchEqn);
 du.on.match('change', '[name="openingLocation"]', updateOpeningPartCode);
-du.on.match('change', '.template-input[name="dependsSelector"],.template-input[name="dependentSelector"]', updateJointPartCode);
+du.on.match('change', '.template-input[name="selector-depends"],.template-input[name="selector-dependent"]', updateJointPartCode);
 du.on.match('click', '.copy-template', (elem) => {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
   const template = AssemblyTemplate.get(templateId);
   let jsonStr = JSON.stringify(template.toJson(), null, 2);
-  jsonStr = jsonStr.replace(/.*"id":.*($|,)/g, '');
+  jsonStr = jsonStr.replace(/\s*"id":.*?(,|\n)/g, '');
   du.copy(jsonStr);
 });
 
@@ -1229,14 +1236,14 @@ du.on.match('click', '.paste-template', (elem) => {
   });
 });
 
-du.on.match('keydown,change', '.template-input', function (elem) {
+du.on.match('keydown:change', '.template-input', function (elem) {
   const templateId = du.find.up('[template-id]', elem).getAttribute('template-id');
   template = AssemblyTemplate.get(templateId);
   updateTemplate(elem, template);
 });
 
 du.on.match('enter', '*',  (elem) => validateOpenTemplate.lastCall(elem));
-du.on.match('keydown', ".normal-vector-input-cnt[index]", setVectorValues);
+du.on.match('focusout', ".vector-normal-cnt", setVectorValues);
 du.on.match('change', '.subassem-normal-cnt>[type="radio"]', setVectorValues);
 
 module.exports = TemplateManager

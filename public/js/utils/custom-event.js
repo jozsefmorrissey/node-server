@@ -42,7 +42,7 @@ class CustomEvent {
 
     this.trigger = function (element, detail) {
       lastArgs = [element, detail];
-      element = element ? element : domAccessible ? window : detail;
+      element = element !== undefined ? element : domAccessible ? window : detail;
       runFuncs(element, detail);
       event.detail = detail;
       if (domAccessible) {

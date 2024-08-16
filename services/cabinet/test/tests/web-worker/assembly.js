@@ -25,10 +25,9 @@ function ensureRendered(assems, modelInfo, ts, msg) {
   }
 }
 
-const onComplete = (ts, parts, intersections) => (modelInfo, job) => {
-  const csg = modelInfo.unioned();
-  const target = parts.find(p => p.partCode() === 'B:full');
-  ts.assertTrue(csg instanceof Object && csg.polygons.length > 0);
+const onComplete = (ts, parts, intersections) => (csg, job) => {
+  ts.assertTrue(csg instanceof CSG && csg.polygons.length > 0);
+  console.log(csg.toDrawString());
   ts.success();
 }
 
@@ -91,14 +90,8 @@ Test.add('Jobs.CSG.Assembly.Simple diagonal-corner-base:layout(3dsb3d)', async (
 }, async () => get("3dsb3d", 'diagonal-corner-base'));
 
 const on2DComplete = (objects, ts) => (result, job) => {
-  const modelInfo = result.constructor.name === 'ModelInformation' ? result : null;
   for (let index = 0; index < objects.length; index++) {
-    const obj = objects[index];
-    if (!modelInfo) {
-      ts.assertTrue(result[obj.id()] !== undefined);
-    } else {
-      ts.assertTrue(modelInfo.threeView(obj.id()) !== undefined);
-    }
+    ts.assertTrue(result[objects[index].id()] !== undefined);
   }
   ts.success();
 }

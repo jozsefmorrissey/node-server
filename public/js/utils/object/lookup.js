@@ -186,7 +186,7 @@ Lookup.release = (groupOlist) => {
   }
 }
 
-Lookup.fromJson = (json) => {
+Lookup.fromJson = (json, obj) => {
   const attr = json[Lookup.ID_ATTRIBUTE];
   if (attr) {
     const obj = Lookup.get(json[attr]);
@@ -195,7 +195,7 @@ Lookup.fromJson = (json) => {
 
   const type = json._TYPE;
   if (type && type === 'Lookup') return new Lookup(json);
-  const obj = Object.fromJson(json);
+  obj ||= Object.fromJson(json);
   if (obj instanceof Lookup) return obj;
   if (attr) {
     Lookup.convert(obj, obj[attr], attr);

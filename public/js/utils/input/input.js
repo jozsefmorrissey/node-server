@@ -222,7 +222,7 @@ class Input extends Lookup {
 
 function runValidate(elem, event) {
   const input = Lookup.get(elem.id);
-  if (input) input.validate(elem, true);
+  if (input && input.value() !== elem.value) input.validate(elem, true);
 }
 
 du.on.match(`click`, `input,select,textarea`, runValidate);

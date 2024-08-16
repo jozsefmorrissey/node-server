@@ -43,11 +43,20 @@ function property(path, assem, env) {
     }
     target = target.parentAssembly && target.parentAssembly();
   }
-  const cxtr = assem.id.replace(/(.*?)_/, '$1');
-  let value;
-  if (env.propertyConfig[cxtr])
-    value = Object.pathValue(env.propertyConfig[cxtr], path)
-  return value || Object.pathValue(env.propertyConfig, path);
+  let value = Object.pathValue(env.propertyConfig, path)
+  return value;
+}
+
+property.set = (assem, env, ...setNameOpropName) => {
+    const set = {};
+    setNameOpropName.forEach(sOp => {
+      const target = property(sOp, assem, env);
+      if (!Array.isArray(target)) set[sOp] = target;
+      else {
+        target.forEach(p => set[p] = property(p, assem, env));
+      }
+    });
+    return set;
 }
 
 module.exports = {

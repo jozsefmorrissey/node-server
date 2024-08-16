@@ -134,13 +134,13 @@ class DivideSection extends SpaceSection {
         if (section instanceof DividerSection) {
           const maxWidth = section.maxWidth();
           let halfReveal;
-          if (this.propertyConfig().isReveal()) {
-            halfReveal = this.propertyConfig().reveal().r.value() / 2;
-          } else if (this.propertyConfig().isInset()) {
-            const insetValue = this.propertyConfig('Inset').is.value();
+          if (this.propertyConfig('isReveal')) {
+            halfReveal = this.propertyConfig('r') / 2;
+          } else if (this.propertyConfig('isInset')) {
+            const insetValue = this.propertyConfig('is');
             halfReveal = (maxWidth + insetValue * 2) / 2;
           } else {
-            halfReveal = (maxWidth - this.propertyConfig().overlay() * 2)/2;
+            halfReveal = (maxWidth - this.propertyConfig('ov') * 2)/2;
           }
           offset += index < limitIndex ? halfReveal*2 : halfReveal;
         }
@@ -154,14 +154,14 @@ class DivideSection extends SpaceSection {
       for (let index = 0; index < limitIndex; index += 1) {
         const section = this.sections[index];
         if (section instanceof DividerSection) {
-          if (this.propertyConfig().isReveal()) {
-            offset += this.propertyConfig().reveal().r.value();
-          }  else if (this.propertyConfig().isInset()) {
-            const insetValue = this.propertyConfig('Inset').is.value();
+          if (this.propertyConfig('isReveal')) {
+            offset += this.propertyConfig('r');
+          }  else if (this.propertyConfig('isInset')) {
+            const insetValue = this.propertyConfig('is');
             offset += section.maxWidth() + insetValue * 2;
           } else {
             offset += section.maxWidth();
-            offset -= this.propertyConfig().overlay() * 2;
+            offset -= this.propertyConfig('ov') * 2;
           }
         }
       }

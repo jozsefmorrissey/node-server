@@ -88,8 +88,9 @@ apply.Dado = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   }
   const femaleThickness = femalePolyObj.z[0].distance(femalePolyObj.z[1]);
   let cookie, jointCutters;
-  extendFBSetToPoly(femalePolyObj.z[1], frontBackSet);
   const center = new Vertex3D(env.modelInfo.model[assem.id].center());
+
+  extendFBSetToPoly(femalePolyObj.z[furthestIndex(femalePolyObj, center)], frontBackSet);
   if (femaleThickness - joint.eval.maleOffset - 2.54/4 < -.01) {
     cookie = [cutterClosestZPoly(femalePolyInfo, center)];
     jointCutters = [];
@@ -104,18 +105,14 @@ apply.Dado = (assem, joint, femalePolyInfo, frontBackSet, env) => {
 
 apply.Butt = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   const femalePolyObj = femalePolyInfo();
+  const center = new Vertex3D(env.modelInfo.model[assem.id].center());
+  extendFBSetToPoly(femalePolyObj.z[furthestIndex(femalePolyObj, center)], frontBackSet);
   if (femalePolyObj === null) return;
   if (!sideIntersectsPoly(assem, femalePolyObj, frontBackSet)) {
     return;
   }
 
-  if (joint.descriptor === 'Butt:mfp->mf') {
-    console.log('here')
-  }
-
-
   const allSides = femalePolyObj.sides.concat(femalePolyObj.z);
-  const center = new Vertex3D(env.modelInfo.model[assem.id].center());
   const distList = allSides.map(p => ({p, dist: Math.roundTo(p.distance(frontBackSet[0]) + p.distance(frontBackSet[1]), .0001),
                                       centerDist: Math.roundTo(p.center().distance(center), .0001)}))
                               .sortByAttr('centerDist');
@@ -124,15 +121,14 @@ apply.Butt = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   const mateWith = possibleTargets[0].p;
 
   extendFBSetToPoly(mateWith, frontBackSet);
-  // jointCutter = () => BiPolygon.fromPolygon(mateWith, 0, -big, {x: big, y: big}).model()
-  cookie = [];
-  jointCutters = [];
+  cookie = [cutterFurthestZPoly(femalePolyInfo, center, 0)];
+  jointCutters = [cutterClosestZPoly(femalePolyInfo, center, 0)];
 
   // console.log('//target\n' + mateWith.toDrawString('green', true) +
   //             '\n\n//male\n' + frontBackSet.map(p => p.toDrawString()).join('\n') +
   //             '\n\n//female\n' + femalePolyObj.z.map(p => p.toDrawString('red')).join('\n') +
   //             '\n\n//sides\n' + femalePolyObj.sides.map(p => p.toDrawString('red')).join('\n') +
-  //             '\n\n//Cookie\n' + cookieCutter().toDrawString('green'));
+  //             '\n\n//Cookie\n' + cookie[0]().toDrawString('green'));
 
   return {joint: jointCutters, cookie};
 }

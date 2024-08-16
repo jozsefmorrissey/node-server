@@ -14,7 +14,7 @@ function isMatch(partCodeOlocationCodeOassemblyOregexOfunc, assem) {
 const matchFilter = (pclcarf, filter) => {
   const runFilter = filter instanceof Function;
   return (a) => {
-    return a.constructor.joinable && a.includeJoints() && isMatch(pclcarf, a) && (!runFilter || filter(a));
+    return isMatch(pclcarf, a) && (!runFilter || filter(a));
   }
 }
 
@@ -23,27 +23,28 @@ class Dependency extends Lookup {
   constructor(dependsSelector, dependentSelector, condition, locationId) {
     super();
     if (this.constructor.name === 'Dependency') locationId ||= this.id();
-    const initialVals = {
-      dependsSelector, dependentSelector, locationId
-    }
-    Object.getSet(this, initialVals);
+    this.locationId = (val) => val === undefined ? locationId : (locationId = val);
+    this.selector = {};
+    this.selector.depends = (val) => val === undefined ? dependsSelector : (dependsSelector = val);
+    this.selector.dependent = (val) => val === undefined ? dependentSelector : (dependentSelector = val);
 
     this.apply = () => (typeof condition === 'function') ? condition(this) : true;
-    this.clone = (dependsSelector, dependentSelector, cond, locId) => {
-      const mpc = dependsSelector || this.dependsSelector();
-      const fpc = dependentSelector || this.dependentSelector();
-      locId ||= locationId;
-      const clone = Object.class.new(this, mpc, fpc, cond || condition, locId);
-      return clone;
+
+    this.clone = (...args) => {
+      if (args.length > 0)
+        throw new Error('clone with args has been relocated to Joint.sibling');
+      return this.constructor.clone(this);
     }
 
-    this.dependsOn = (assem) => isMatch(this.dependsSelector(), assem);
-    this.isDependent = (assem) => isMatch(this.dependentSelector(), assem);
+    this.dependsOn = (assem) => isMatch(this.selector.depends(), assem, 'male');
+    this.isDependent = (assem) => isMatch(this.selector.dependent(), assem, 'female');
 
     this.descriptor = () => locationId ? `${this.constructor.name}(${locationId})` :
-        `${this.constructor.name}:${this.dependsSelector()}->${this.dependentSelector()}`;
+        `${this.constructor.name}:${this.selector.depends()}->${this.selector.dependent()}`;
     this.toString = this.descriptor;
   }
 }
+
+Object.class.register(Dependency, 'selector.depends', 'selector.dependent', 'locationId');
 
 module.exports = Dependency;

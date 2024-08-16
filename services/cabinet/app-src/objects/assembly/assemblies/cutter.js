@@ -9,7 +9,7 @@ const Dependency = require('../../dependency');
 class Cutter extends Assembly {
   constructor(partCode, partName, config) {
     super(partCode, partName, config);
-    this.part(false);
+    this.sliceAtOpening(false);
   }
 }
 Cutter.abbriviation = 'cut';

@@ -104,10 +104,36 @@ function withinBounds(attr, attributeMap, tolerance, absoluteValue, modulus) {
   return func;
 }
 
+const compoundReg = /^(.*)\(([^)]{1,}?)\)(.*)$/
+function resolveAttrs(map) {
+  const finalMap = {};
+  const attrs = Object.keys(map);
+  const compoundAttrs = attrs.filter(attr => attr.match(compoundReg))
+  if (compoundAttrs.length === 0) return map;
+  while(compoundAttrs.length > 0) {
+    const ca = compoundAttrs[compoundAttrs.length - 1];
+    let match = ca.match(compoundReg);
+    if (match === null) {
+      finalMap[ca] = map[ca];
+      compoundAttrs.pop();
+    } else {
+      compoundAttrs.pop();
+      const split = match[2].split(',');
+      split.forEach(v => {
+        const attr = match[1] + v + match[3];
+        map[attr] = map[ca];
+        compoundAttrs.push(attr);
+      });
+    }
+  }
+  return finalMap;
+}
+
 class Tolerance {
   constructor(attributeMap, absoluteValue, modulus) {
     let tolerance = (typeof attributeMap) === 'number' ? attributeMap : DEFAULT_TOLERANCE;
     attributeMap ||= {};
+    attributeMap = resolveAttrs(attributeMap);
     let within, bounds;
     const attrs = Object.keys(attributeMap);
     const singleValue = attrs.length === 0;

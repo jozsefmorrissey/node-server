@@ -37,6 +37,7 @@ const applyExtraObjAndDisplay = (info, csg) => {
 }
 
 function renderRoom() {
+  console.log(JSON.stringify(Global.order().toJson(), null, 2))
   new Jobs.CSG.Room.Complex(Global.room()).then((csg) => {
     applyExtraObjAndDisplay(Global.room(), csg);
   }).queue();
@@ -47,12 +48,12 @@ function  renderCabinet() {
   const target = Global.target();
   if (target) {
     if (target.constructor.name === 'Cabinet') {
-      new Jobs.CSG.Assembly.Complex(target).then((modelInfo, job) => {
-        applyExtraObjAndDisplay(target, modelInfo.unioned());
+      new Jobs.CSG.Assembly.Complex(target).then((csg, job) => {
+        applyExtraObjAndDisplay(target, csg);
       }).queue();
     } else if (target.constructor.name === 'Assembly') {
-      new Jobs.CSG.Assembly.Complex(target).then((modelInfo, job) => {
-        applyExtraObjAndDisplay(target, modelInfo.unioned());
+      new Jobs.CSG.Assembly.Complex(target).then((csg, job) => {
+        applyExtraObjAndDisplay(target, csg);
       }).queue();
     } else {
       new Jobs.CSG.Simple.Model([target]).then((csgs, job) => {
@@ -71,8 +72,8 @@ const set = {};
 let locationPrefix, locationCode, _parts, ufidPrefix;
 let openTabId;
 const resetAll = () => locationCode = _parts = locationPrefix = ufidPrefix = undefined;
-const lcPrefixFilter = p => p.locationCode().match(`^${locationPrefix}(_|:|$)`);
-const pcPrefixFilter = p => p.userFriendlyId().match(`^${ufidPrefix}(_|:|$)`);
+const lcPrefixFilter = p => p.locationCode().match(`^${locationPrefix}`);
+const pcPrefixFilter = p => p.userFriendlyId().match(`^${ufidPrefix}`);
 set.locationPrefix = (lp) => resetAll() & (locationPrefix = lp);
 set.ufidPrefix = (pc) => resetAll() & (ufidPrefix = pc);
 set.locationCode = (lc) => resetAll() & (locationCode = lc);

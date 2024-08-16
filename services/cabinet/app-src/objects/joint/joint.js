@@ -7,31 +7,27 @@ class Joint extends Dependency {
   constructor(dependsSelector, dependentSelector, condition, locationId, priority) {
     super(dependsSelector, dependentSelector, condition, locationId, priority);
     priority ||= 0;
-    const initialVals = {
-      maleOffset: 0, femaleOffset: 0,
-      fullLength: false, priority,
-    }
+    let maleOffset, fullLength;
+
+    this.maleOffset = (val) => val === undefined ? maleOffset : (maleOffset = val);
+    this.fullLength = (val) => val === undefined ? fullLength : (fullLength = val);
+    this.priority = (val) => val === undefined ? priority : (priority = val);
     const parentClone = this.clone;
 
-    Object.getSet(this, initialVals);
-    this.clone = (dependsSelector, dependentSelector, cond, locId) => {
-      const clone = parentClone(dependsSelector, dependentSelector, cond, locId);
-      clone.maleOffset(this.maleOffset());
-      clone.femaleOffset(this.femaleOffset());
-      clone.priority(this.priority());
-      clone.fullLength(this.fullLength());
+    this.sibling = (dependsSelector, dependentSelector, cond, locId) => {
+      const clone = this.constructor.clone();
+      clone.selector.depends(dependsSelector);
+      clone.selector.dependent(dependentSelector);
+      clone.condition(cond || this.condition());
       clone.evaluator(this.evaluator());
       return clone;
     }
-
 
     let _evaluator;
     this.evaluator = (evaluator) => evaluator ? (_evaluator = evaluator) : _evaluator;
     this.eval = {};
     this.eval.maleOffset = () =>
       _evaluator ? _evaluator(this.maleOffset()) : this.maleOffset();
-    this.eval.femaleOffset = () =>
-      _evaluator ? _evaluator(this.femaleOffset()) : this.femaleOffset();
     this.isMale = this.dependsOn;
     this.isFemale = this.isDependent;
   }
@@ -51,13 +47,7 @@ Joint.new = function (id, json) {
   return new Joint.classes[id]().fromJson(json);
 }
 
-Joint.fromJson = (json) => {
-  const joint = new (Object.class.get(json._TYPE))(json.dependsSelector, json.dependentSelector);
-  joint.id(json.id);
-  joint.maleOffset(json.maleOffset);
-  joint.femaleOffset(json.femaleOffset);
-  return joint;
-}
+Object.class.register(Joint, 'maleOffset', 'fullLength', 'priority');
 
 
 

@@ -3,7 +3,6 @@ const Matrix = require('../../app-src/three-d/objects/matrix.js');
 const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
 const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
-const approximate = require('../../../../public/js/utils/approximate.js');
 
 const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
 const GL = require('../../../../public/js/utils/3d-modeling/lightgl.js');
@@ -192,12 +191,10 @@ Test.add('Matrix: identity',(ts) => {
     [9,3],
   ]);
   let inverse = matrix.inverse();
-  let result = matrix.multiply(inverse)
-  result.approximate();
+  let result = matrix.multiply(inverse).approximate();
   ts.assertTrue(result.equals(identity2));
 
-  result = inverse.multiply(matrix);
-  result.approximate();
+  result = inverse.multiply(matrix).approximate();
   ts.assertTrue(result.equals(identity2));
 
 
@@ -207,12 +204,10 @@ Test.add('Matrix: identity',(ts) => {
     [7,2,9]
   ]);
   inverse = matrix.inverse();
-  result = matrix.multiply(inverse)
-  result.approximate();
+  result = matrix.multiply(inverse).approximate();
   ts.assertTrue(result.equals(identity3));
 
-  result = inverse.multiply(matrix);
-  result.approximate();
+  result = inverse.multiply(matrix).approximate();
   ts.assertTrue(result.equals(identity3));
 
   ts.success();
@@ -352,9 +347,9 @@ function testRotation(ts, center, rotation) {
   let modelCenter = cube.polygons[0].vertices[0].pos;
 
   let calculatedCenter = CSG.rotate(center, rotation);
-  ts.assertTrue(approximate.eq(modelCenter.x, calculatedCenter.x), `${modelCenter.x} !~= ${calculatedCenter.x}`);
-  ts.assertTrue(approximate.eq(modelCenter.y, calculatedCenter.y), `${modelCenter.y} !~= ${calculatedCenter.y}`);
-  ts.assertTrue(approximate.eq(modelCenter.z, calculatedCenter.z), `${modelCenter.z} !~= ${calculatedCenter.z}`);
+  ts.assertTolerance(modelCenter.x, calculatedCenter.x, .001, `${modelCenter.x} !~= ${calculatedCenter.x}`);
+  ts.assertTolerance(modelCenter.y, calculatedCenter.y, .001, `${modelCenter.y} !~= ${calculatedCenter.y}`);
+  ts.assertTolerance(modelCenter.z, calculatedCenter.z, .001, `${modelCenter.z} !~= ${calculatedCenter.z}`);
 }
 
 function comparePoints(ts, p1, p2) {

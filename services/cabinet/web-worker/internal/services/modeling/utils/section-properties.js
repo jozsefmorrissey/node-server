@@ -104,26 +104,27 @@ class SectionPropertiesUtil {
     }
 
     let coverInfo;
-    this.coverInfo = () => {
-      if (coverInfo) return coverInfo;
+    this.coverInfo = (rMdto) => {
+      if (!rMdto && coverInfo) return coverInfo;
+      rMdto ||= spDto;
       let biPolygon, backOffset, frontOffset, offset, coords;
       const doorThickness = 3 * 2.54/4;
       const bumperThickness = 3 * 2.54 / 16;
-      const style = Utils.property('style', spDto, env);
+      const style = Utils.property('style', rMdto, env);
       if (style === 'Inset') {
         coords = spDto.coordinates.inner;
-        offset = Utils.property('Inset.is', spDto, env) * -2;
+        offset = Utils.property('is', rMdto, env) * -2;
         const projection = 3 * 2.54/64;
         frontOffset = projection;
         backOffset = projection - doorThickness;
       } else if (style === 'Reveal') {
         coords = spDto.coordinates.outer;
-        offset = -Utils.property('Reveal.r', spDto, env);
+        offset = -Utils.property('r', rMdto, env);
         frontOffset = (doorThickness + bumperThickness);
         backOffset = bumperThickness;
       } else {
         coords = spDto.coordinates.inner;
-        offset = Utils.property('Overlay.ov', spDto, env) * 2;
+        offset = Utils.property('ov', rMdto, env) * 2;
         frontOffset = (doorThickness + bumperThickness);
         backOffset = bumperThickness;
       }
@@ -133,8 +134,8 @@ class SectionPropertiesUtil {
       const offsetObj = {x: offset, y: offset};
       biPolygon = BiPolygon.fromPolygon(new Polygon3D(coords), frontOffset, backOffset, offsetObj);
       const normals = spDto.normals;
-      coverInfo = {biPolygon, frontOffset, backOffset, normals};
-      return coverInfo;
+      if (!rMdto) return (coverInfo = {biPolygon, frontOffset, backOffset, normals});
+      return {biPolygon, frontOffset, backOffset, normals};
     }
 
     this.normal = () => this.coverInfo().biPolygon.normal();
@@ -187,7 +188,7 @@ class SectionPropertiesUtil {
         const point3 = point2.translate(depthVector, true);
         const point4 = point1.translate(depthVector, true);
         const points = [point1, point2, point3, point4];
-        const offset = spDto.divider().divider().panelThickness / 2;
+        const offset = spDto.divider().divider().thickness / 2;
         dvInfo = BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset);
       }
       return dvInfo;
@@ -209,7 +210,7 @@ SectionPropertiesUtil.instance = (rMdto, environment) => {
 }
 
 SectionPropertiesUtil.stdCoverObject = (rMdto, environment) => {
-  const info = SectionPropertiesUtil.instance(rMdto, environment).coverInfo();
+  const info = SectionPropertiesUtil.instance(rMdto, environment).coverInfo(rMdto);
   rMdto.position.current.normals = info.normals;
   return info.biPolygon;
 }

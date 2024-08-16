@@ -30,16 +30,21 @@ class Property {
 
     this.measurementId = () => value instanceof Measurement ? value.id() : undefined;
 
+    let valueIsFunc = false;
+    let clone = false;
     if ((typeof props) !== 'object' ||  props === null) {
       this.value(props);
-      props = {};
-    }
-    this.properties(props || {});
-
-    const existingProp = Property.list[code];
-    let clone = false;
-    if (this.properties().value !== undefined) {
-      this.value(this.properties().value, this.properties().notMetric);
+      this.properties((props = {}));
+    } else {
+      this.properties(props);
+      const existingProp = Property.list[code];
+      if (props.value !== undefined) {
+        if (props.value instanceof Function) {
+          valueIsFunc = true;
+          this.value = props.value;
+        }
+        else this.value(props.value, props.notMetric);
+      }
     }
 
     // if (existingProp) {
@@ -73,11 +78,15 @@ class Property {
     this.clone = (val) => {
       const cProps = this.properties();
       cProps.clone = true;
-      cProps.value = val === undefined ? this.value() : val;
+      cProps.value = val !== undefined ? val : (valueIsFunc ? this.value : this.value());
       cProps.description = this.description();
       delete cProps.notMetric;
       return new Property(this.code(), this.name(), cProps);
     }
+
+    const parentToJson = this.toJson;
+    this.toJson = () => valueIsFunc ? `Function:${this.code()}` : parentToJson();
+
     if(!clone) Property.list[code] = this;
     else if (!this.properties().copy && Property.list[code]) Property.list[code].addChild(this);
   }

@@ -26,6 +26,7 @@ class SectionPropertiesResolver extends Resolver {
       return sectionProps.parentAssembly().resolve.information(expr);
     }
 
+    this.resolve.inherited = this.resolve.information;
 
     this.resolve.brokenDown = (inOut, func, dir) => {
       const expr = `OP.${inOut}.${func}.${dir}`;

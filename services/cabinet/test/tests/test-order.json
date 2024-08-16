@@ -142,7 +142,6 @@
                     "id": "Dado_gnpkluo",
                     "ID_ATTRIBUTE": "id",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -209,7 +208,6 @@
                       "id": "Butt_3menx1n",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -218,7 +216,6 @@
                       "id": "Butt_e4fj926",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -227,7 +224,6 @@
                       "id": "Butt_1k86a4r",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -236,7 +232,6 @@
                       "id": "Butt_oqv6jz0",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -280,7 +275,6 @@
                       "id": "Butt_i7mqevj",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -289,7 +283,6 @@
                       "id": "Butt_3vv9mrj",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -298,7 +291,6 @@
                       "id": "Butt_0awvgy8",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -307,7 +299,6 @@
                       "id": "Butt_9hhzg83",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -418,7 +409,6 @@
                       "id": "Dado_gyciozj",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "L.t / 2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -462,7 +452,6 @@
                       "id": "Butt_amznhoh",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -505,7 +494,6 @@
                       "id": "Dado_zum04xa",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "pbr.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -549,7 +537,6 @@
                       "id": "Butt_l8d9bmj",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -592,7 +579,6 @@
                       "id": "Dado_s4xin6a",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "L.t / 2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -601,7 +587,6 @@
                       "id": "Dado_x5t9mjl",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "R.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -610,7 +595,6 @@
                       "id": "Dado_7i4b9c8",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "pbr.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -619,7 +603,6 @@
                       "id": "Dado_clwo70w",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "pbl.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -663,7 +646,6 @@
                       "id": "Dado_hhkvhxe",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "L.t / 2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -672,7 +654,6 @@
                       "id": "Dado_5jijr4g",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "R.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -681,7 +662,6 @@
                       "id": "Dado_nrl17yh",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "pbr.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -690,7 +670,6 @@
                       "id": "Dado_xovy6sh",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "pbl.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1477,7 +1456,6 @@
                     "id": "Dado_yl8gjou",
                     "ID_ATTRIBUTE": "id",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -1612,7 +1590,6 @@
                       "id": "Dado_0nqdog6",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1621,7 +1598,6 @@
                       "id": "Dado_5g60dgn",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1665,7 +1641,6 @@
                       "id": "Dado_lmfabnc",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1674,7 +1649,6 @@
                       "id": "Dado_rg9bnxj",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1718,7 +1692,6 @@
                       "id": "Dado_2dn8hjz",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1727,7 +1700,6 @@
                       "id": "Dado_4yt8s3y",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2470,7 +2442,6 @@
                     "id": "Dado_lonbn5m",
                     "ID_ATTRIBUTE": "id",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -2605,7 +2576,6 @@
                       "id": "Dado_t9t3xoh",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2614,7 +2584,6 @@
                       "id": "Dado_pmcq6xa",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2658,7 +2627,6 @@
                       "id": "Dado_adp1n1b",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2667,7 +2635,6 @@
                       "id": "Dado_3z4f33o",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2711,7 +2678,6 @@
                       "id": "Dado_qyt48hc",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2720,7 +2686,6 @@
                       "id": "Dado_klzkm70",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -5424,7 +5389,6 @@
                     "id": "Dado_0varmtm",
                     "ID_ATTRIBUTE": "id",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -5559,7 +5523,6 @@
                       "id": "Dado_gru2jp7",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "T.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -5568,7 +5531,6 @@
                       "id": "Dado_mnr0bhr",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "R.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -5577,7 +5539,6 @@
                       "id": "Dado_oywr8rc",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "B.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -5586,7 +5547,6 @@
                       "id": "Dado_z301jpf",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "L.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -6638,7 +6598,6 @@
                     "id": "Dado_gdw4n0n",
                     "ID_ATTRIBUTE": "id",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -6705,7 +6664,6 @@
                       "id": "Butt_rrrvlka",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6714,7 +6672,6 @@
                       "id": "Butt_mxongdy",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6723,7 +6680,6 @@
                       "id": "Butt_lacrzof",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -6767,7 +6723,6 @@
                       "id": "Butt_o12ft41",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6776,7 +6731,6 @@
                       "id": "Butt_5gb1914",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6785,7 +6739,6 @@
                       "id": "Butt_kvt4rd5",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6794,7 +6747,6 @@
                       "id": "Butt_ck00hh3",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -6837,7 +6789,6 @@
                       "id": "Butt_4f2mzfg",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6846,7 +6797,6 @@
                       "id": "Butt_a1jnc8c",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -6889,7 +6839,6 @@
                       "id": "Butt_wvmuy8j",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -6898,7 +6847,6 @@
                       "id": "Butt_nh5enb1",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -7009,7 +6957,6 @@
                       "id": "Dado_8ku5snk",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -7018,7 +6965,6 @@
                       "id": "Dado_q9xrudl",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -7062,7 +7008,6 @@
                       "id": "Dado_em5htw0",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -7071,7 +7016,6 @@
                       "id": "Dado_jxlcjsz",
                       "ID_ATTRIBUTE": "id",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -7543,7 +7487,7 @@
               },
               {
                 "_TYPE": "Property",
-                "code": "rvdd",
+                "code": "ddg",
                 "name": "Reveal Dual Door",
                 "value": 0.1588,
                 "properties": {

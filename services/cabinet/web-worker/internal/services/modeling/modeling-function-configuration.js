@@ -70,34 +70,26 @@ to.Assembly = {
 
 to.Cabinet = {
   Simple: {
-    model: (mdto, env) => new CSG(),
+    model: (mdto, environment) => {
+      const childs = mdto.children.map(c => c()).filter(c => c instanceof Object);
+      const parts = childs.filter(c => c.part || (c.id.match(/^Divider/) && (c.part = true)));
+      let csg = new CSG();
+      return csg;
+    },
     joined: (mdto, environment) => {
       const childs = mdto.children.map(c => c()).filter(c => c instanceof Object);
       const parts = childs.filter(c => c.part || c.id.match(/^Divider/));
-      const cutters = childs.filter(c => c.id.match(/^Cutter/));
-      const cutter = mdto.openings[0] && mdto.openings[0].cutter;
-      if (cutter) cutters.push(cutter());
       let csg = new CSG();
       for (let index = 0; index < parts.length; index++) {
         const id = parts[index].id;
-        let model = environment.modelInfo.model[id];
+        let model = environment.getModel(id, 'joined');
         if (model) {
           if (!(model instanceof CSG)) {
-            environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
+            model = CSG.fromPolygons(model, true);
           }
           csg = csg.union(model);
         }
       }
-      // for (let index = 0; index < cutters.length; index++) {
-      //   const id = cutters[index].id;
-      //   let model = environment.modelInfo.model[id];
-      //   if (model) {
-      //     if (!(model instanceof CSG)) {
-      //       environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
-      //     }
-      //     csg = csg.subtract(model);
-      //   }
-      // }
       return csg;
     }
   }
@@ -220,7 +212,7 @@ to.Cutter = {
     model: (rMdto, environment) => {
       const left = rMdto.find('L');
       const model = Divider.instance(left, environment).biPolygon.model();
-      const tkh = environment.propertyConfig.Cabinet.tkh;
+      const tkh = Utils.property('tkh', rMdto, environment);;
       model.translate({x:0, y:tkh, z:0});
       return model;
     }
@@ -229,7 +221,7 @@ to.Cutter = {
     model: (rMdto, environment) => {
       const right = rMdto.find('R');
       const model = Divider.instance(right, environment).biPolygon.model();
-      const tkh = environment.propertyConfig.Cabinet.tkh;
+      const tkh = Utils.property('tkh', rMdto, environment);;
       model.translate({x:0, y:tkh, z:0});
       return model;
     }
@@ -315,17 +307,20 @@ to.Panel = {
   },
   Full: {
     biPolygon: (rMdto, environment) => {
-      return Divider.instance(rMdto, environment).Full()
+      return Divider.instance(rMdto, environment).Full(rMdto)
     }
   },
   Front: {
-    biPolygon: (rMdto, environment) => Divider.instance(rMdto, environment).Full(),
-    extended: (rMdto, env) =>
+    biPolygon: (rMdto, environment) =>
+      Divider.instance(rMdto, environment).Full(rMdto),
+    cut: (rMdto, env) =>
       Divider.instance(rMdto, env).Front(rMdto, env)
   },
   Back: {
-    biPolygon: (rMdto, environment) => Divider.instance(rMdto, environment).Full(),
-    extended: (rMdto, env) => Divider.instance(rMdto, env).Back(rMdto, env)
+    biPolygon: (rMdto, environment) =>
+      Divider.instance(rMdto, environment).Full(rMdto),
+    cut: (rMdto, env) =>
+      Divider.instance(rMdto, env).Back(rMdto, env)
   }
 },
 

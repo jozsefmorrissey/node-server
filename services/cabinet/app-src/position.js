@@ -94,7 +94,7 @@ class Position {
         center: this.center(),
         demension: this.demension(),
         rotation: this.rotation(),
-        normals: this.normals()
+        normals: this.normals(false)
       };
       return position;
     }

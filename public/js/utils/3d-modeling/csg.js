@@ -52,9 +52,10 @@ CSG = function() {
   this.polygons = [];
   this.toString = (percision, includeColor) => {
     percision ||= .001;
-    let str = '';
-    this.polygons.forEach(p => str += p.toString(percision, includeColor));
-    return str;
+    let strs = [];
+    this.polygons.forEach(p => strs.push(p.toString(percision, includeColor)));
+    strs.sort();
+    return strs.join('\n');
   }
   this.toDrawString = (color, percision) => color ?
       this.toString(percision).replace(/(^|\n)\[/g, `$1${color}[`) :
@@ -1201,7 +1202,7 @@ CSG.Polygon.prototype = {
     for (let v = 0; v < verts.length; v++) {
       str += `${verts[v].toString(percision)},`;
     }
-    str = `${str.substring(0, str.length - 1)}]\n`;
+    str = `${str.substring(0, str.length - 1)}]`;
     return str;
   },
 

@@ -86,6 +86,11 @@ class SequentialTask extends Task {
     this.completed = () => tasks.map((v,i) => completed[i] === true && v).filter(a => a);
     this.failed = () => tasks.map((v,i) => completed[i] === false && v).filter(a => a);
     this.error = () => tasks.map(t => t.error()).filter(e => e)[0];
+    this.result = () => {
+      const lastTask = tasks[tasks.length - 1];
+      if (lastTask.result) return lastTask.result();
+      return null;
+    }
 
     tasks.forEach((t, i) => t.on.change(() => {
       this.trigger.change(t, this);

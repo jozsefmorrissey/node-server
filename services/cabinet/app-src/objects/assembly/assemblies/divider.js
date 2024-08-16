@@ -8,19 +8,18 @@ const Cutter = require('./cutter.js');
 const Panel = require('./panel');
 const Frame = require('./frame');
 const Joint = require('../../joint/joint.js');
+const JointSettings = require('../../joint/settings');
 const Dependency = require('../../dependency.js');
 
+const configStrReg = /^(.*?):(.*?):(.*?)$/;
 class Divider extends Assembly {
   constructor(partCode, partName, config) {
     partCode ||= 'dv';
-    let z;
-    // if (config && config.demension.z) {
-    //   z = config.demension.z;
-    //   config.demension.z = 'dft';
-    // }
     super(partCode, partName, config);
     const instance = this;
     const pToJson = this.toJson;
+    this.jointSettings = new JointSettings(false,true,true,true);
+
 
     Object.getSet(this, 'type');
 
@@ -30,10 +29,8 @@ class Divider extends Assembly {
     pFull.normals(false, {DETERMINE_FROM_PARENT: true});
     pFront.normals(false, {DETERMINE_FROM_PARENT: true});
     pBack.normals(false, {DETERMINE_FROM_PARENT: true});
-    const frame = new Frame(':fr', 'Frame');
+    const frame = new Frame('fr', 'Frame');
     frame.parentAssembly(this);
-    const frameCutter = new Cutter('cfr', 'FrameRail');
-    frameCutter.parentAssembly(this);
 
 
 
@@ -53,19 +50,25 @@ class Divider extends Assembly {
 
     const partCheck = (index) => (assem) => parts[index].locationCode() === assem.locationCode();
 
-    this.part = () => false;
-    this.thickness = () => this.resolve('dft');
+    this.thickness = () => this.hasFrame() ? this.frameWidth() : this.panelThickness();
     this.partialWidth = () => this.resolve('dpw');
 
     this.frameThickness = (rawOthickness) => {
       if (Boolean.is(rawOthickness)) return this.resolve('dft', rawOthickness);
       if (rawOthickness !== undefined) {
-        const evaluated = this.resolve(rawOthickness);
-        const pt = this.panelThickness();
-        if (pt >= evaluated) this.value('dpt', rawOthickness);
         this.value('dft', rawOthickness);
       }
       return this.resolve('dft');
+    }
+    this.frameWidth = (rawOthickness) => {
+      if (Boolean.is(rawOthickness)) return this.resolve('dfw', rawOthickness);
+      if (rawOthickness !== undefined) {
+        const evaluated = this.resolve(rawOthickness);
+        const pt = this.panelThickness();
+        if (pt >= evaluated) this.value('dpt', rawOthickness);
+        this.value('dfw', rawOthickness);
+      }
+      return this.resolve('dfw');
     }
     this.panelThickness = (rawOthickness) => {
       if (Boolean.is(rawOthickness)) return this.resolve('dpt', rawOthickness);
@@ -92,14 +95,13 @@ class Divider extends Assembly {
 
     const thicknessWarrentsFrame = (thickness) =>
       thickness && thickness > this.panelThickness() + 0.3175;
-    this.hasFrame = () => thicknessWarrentsFrame(this.thickness());
-    this.maxWidth = (raw) => this.frameThickness(raw);
+    this.hasFrame = () => !this.propertyConfig('fls');
 
     function activeParts() {
       if (!instance.included()) {
         return [];
       }
-      const active = instance.hasFrame() ? [frame, frameCutter] : [];
+      const active = instance.hasFrame() ? [frame] : [];
       switch (type) {
         case 'front': return parts.slice(1,3).concat(active);
         case 'back': return parts.slice(3,5).concat(active);
@@ -118,7 +120,6 @@ class Divider extends Assembly {
       }
       return children.concat(decendents);
     }
-    instance.includeJoints(false);
 
     let type = Divider.Types[0];
     let cutter;
@@ -130,12 +131,7 @@ class Divider extends Assembly {
 
     const parentHash = this.hash;
     this.hash = () => parentHash() +
-        `${type}:${this.maxWidth()}:${this.panelThickness()}`.hash();
-
-    const frontPanelReg = `^${this.locationCode()}:f(|ull)$`;
-    const frameCutterDep = new Joint(frameCutter, frontPanelReg, this.hasFrame, 'frameCutter');
-    const panelDep = new Joint(frontPanelReg, frame, this.hasFrame, 'panelCutter');
-    frame.addDependencies(frameCutterDep, panelDep);
+        `${type}:${this.thickness()}`.hash();
   }
 }
 

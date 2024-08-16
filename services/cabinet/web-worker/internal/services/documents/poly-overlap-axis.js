@@ -114,12 +114,12 @@ function alignZpolyNorms(zPolys, overlapingLayers, zPolyFilter) {
 
 function existsInBothSets(set1, set2) {
   const tol = .001;
-  const tolMap = new ToleranceMap({'normal.positiveUnit.i': tol,
-                        'normal.positiveUnit.j': tol,
-                        'normal.positiveUnit.k': tol,
-                        'toPlane.axisIntercepts.x': tol,
-                        'toPlane.axisIntercepts.y': tol,
-                        'toPlane.axisIntercepts.z': tol});
+  const tolMap = new ToleranceMap({'normal().positiveUnit().i()': tol,
+                        'normal().positiveUnit().j()': tol,
+                        'normal().positiveUnit().k()': tol,
+                        'toPlane().axisIntercepts().x': tol,
+                        'toPlane().axisIntercepts().y': tol,
+                        'toPlane().axisIntercepts().z': tol});
   tolMap.addAll(set2);
   const existsInBoth = [];
   for (let index = 0; index < set1.length; index++) {

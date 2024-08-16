@@ -10,35 +10,6 @@ const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
 
 
 
-Test.add('Plane: makePlane1MeetPlane2',(ts) => {
-
-  let plane1 = [{x: 0, y: 0, z: 0}, {x: 0, y: 3, z: 0}, {x: 2, y: 3, z: 0}, {x: 2, y: 0, z: 0}];
-  let plane2 = [{x: 4, y: 3, z: -1}, {x: 4, y: 0, z: -1}, {x: 4, y: 3, z: 1}, {x: 4, y: 0, z: 1}];
-  let answer = new Plane({x: 0, y: 0, z: 0}, {x: 0, y: 3, z: 0}, {x: 4, y: 3, z: 0}, {x: 4, y: 0, z: 0});
-  let rotation = {x: 0, y: 0, z: 0};
-  let result = Plane.makePlane1MeetPlane2(JSON.copy(plane1), plane2, rotation);
-  ts.assertTrue(answer.equals(result));
-
-  rotation = {x: 0, y: 90, z: 0};
-  let center = Vertex3D.center.apply(null, plane1);
-  let plane3 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane1), center);
-  let plane4 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane2), center);
-  result = Plane.makePlane1MeetPlane2(JSON.copy(plane3), plane4, rotation);
-  let reverted = CSG.rotatePointsAroundCenter(rotation, JSON.copy(result), center, true);
-  ts.assertTrue(answer.equals(reverted));
-
-  rotation = {x: 111, y: 62, z: 212};
-  center = Vertex3D.center.apply(null, plane1);
-  plane3 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane1), center);
-  plane4 = CSG.rotatePointsAroundCenter(rotation, JSON.copy(plane2), center);
-  result = Plane.makePlane1MeetPlane2(JSON.copy(plane3), plane4, rotation);
-  reverted = CSG.rotatePointsAroundCenter(rotation, JSON.copy(result), center, true);
-  ts.assertTrue(answer.equals(reverted));
-
-  ts.success();
-});
-
-
 Test.add('Plane: equation',(ts) => {
   const p1 = {x: 1, y: -2, z: 1};
   const p2 = {x: 4, y: -2, z: -2};

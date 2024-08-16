@@ -13,8 +13,20 @@ const DTO = require('../shared/data-transfer-object')(dataTransferConfig);
 const RDTO = require('../shared/reconnect-transfer-object');
 goDownTheRabbitHole = false;
 
+const order = ['model', 'extended', 'cut', 'joined']
+const getModel = (env) => (assemOid, type) => {
+  const id = (typeof assemOid) === 'string' ? assemOid : assemOid.id;
+  let index = order.indexOf(type);
+  while (index > -1)  {
+    const model = env.modelInfo[order[index]] && env.modelInfo[order[index]][id];
+    if (model) return model;
+    index--;
+  }
+  console.warn('No model found');
+}
 
 function handleTask(task, env) {
+  if (env) env.getModel = getModel(env);
   const process = task.process;
   const payload = task.payload;
   const taskId = task.id;

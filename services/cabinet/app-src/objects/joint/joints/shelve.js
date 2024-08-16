@@ -8,5 +8,6 @@ class ShelveJoint extends Joint {
   }
 }
 
+Object.class.register(ShelveJoint);
 Joint.register(ShelveJoint);
 module.exports = ShelveJoint;

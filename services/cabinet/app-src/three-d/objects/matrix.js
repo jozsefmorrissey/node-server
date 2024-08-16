@@ -1,5 +1,4 @@
 
-const Approximate = require('../../../../../public/js/utils/approximate.js');
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const FixedValue = require('./fixed-value');
 const within = Tolerance.within(.0001);
@@ -290,13 +289,14 @@ class Matrix extends Array {
       }
     }
 
-    this.approximate = (accuracy) => {
-      const approximate = Approximate.new(accuracy);
+    this.approximate = (percision) => {
+      const copy = this.copy();
       for (let i = 0; i < rows; i++) {
         for (let j = 0; j < columns; j++) {
-          this[i][j] = approximate(this[i][j]);
+          copy[i][j] = Math.roundTo(this[i][j], percision);
         }
       }
+      return copy;
     }
 
     this.transpose = () => {
@@ -366,9 +366,9 @@ class Matrix extends Array {
       return inverse;
     }
 
-    this.toString = (formatFunc) => {
+    this.toString = (percision) => {
       const maxLen = {before: 1, after: 0};
-      formatFunc ||= (val) => val;
+      const formatFunc = (val) => Math.roundTo(val, percision);
       const format = (val) => {
         val = `${formatFunc(val)}`;
         const decimalIndex = val.indexOf('.');
@@ -407,11 +407,6 @@ class Matrix extends Array {
         str += '|\n'
       }
       return str.substring(0, str.length - 1);
-    }
-
-    this.approxToString = (accuracy) => {
-      const approximate = Approximate.new(accuracy);
-      return this.toString((val) => approximate(val));
     }
 
     this.equals = (other) => {

@@ -5,7 +5,7 @@ const Polygon3D = require('../three-d/objects/polygon.js');
 const BiPolygon = require('../three-d/objects/bi-polygon.js');
 const Cutter = require('../objects/assembly/assemblies/cutter.js');
 const Panel = require('../objects/assembly/assemblies/panel.js');
-const Butt = require('../objects/joint/joints/butt.js');
+const Cut = require('../objects/joint/joints/cut.js');
 const Dependency = require('../objects/dependency.js');
 const KeyValue = require('../../../../public/js/utils/object/key-value.js');
 const SectionProperties = require('../objects/assembly/assemblies/section/section-properties.js');
@@ -22,11 +22,11 @@ class CabinetOpeningCorrdinates extends KeyValue {
     let normal = null;
     const instance = this;
     let cutter;
-    Object.getSet(this, {_TEMPORARY: true}, 'parentAssembly');
-    Object.getSet(this, {config}, 'parentAssembly.id', 'partCode', 'locationCode');
-    this.parentAssembly(cabinet);
-    this.partCode('COC');
-    this.locationCode('c_COC');
+    this.config = () => config;
+    this.partCode = () => 'COC';
+    this.included = () => false;
+    this.locationCode = () => cabinet.locationCode() + '_COC';
+    this.parentAssembly = () => cabinet;
     this.part = () => false;
     this.partName = () => 'CabinetOpeningCorrdinates';
     sectionProperties.back();
@@ -48,6 +48,8 @@ class CabinetOpeningCorrdinates extends KeyValue {
     this.cutter = () => cutter;
     this.coordinates = sectionProperties.coordinates;
     this.children = () => subassemblies;
+
+    cabinet.addDependencies(new Dependency(/^BACK$/,/^dv$/, null, 'BACK=>dv'));
 
     const origGetSub = sectionProperties.getSubassemblies;
     sectionProperties.getSubassemblies = (childrenOnly) => {
@@ -182,7 +184,9 @@ class CabinetOpeningCorrdinates extends KeyValue {
             coords = manualCoordinates(config.coordinates); break;
           case 'slice':
             cutter = new Cutter('aoc', 'Opening');
-            cutter.addDependencies(new Butt(cutter, a => a.sliceAtOpening && a.sliceAtOpening()))
+            cutter.allModels(true);
+            cutter.addDependencies(new Cut(cutter, a =>
+              a.sliceAtOpening && a.sliceAtOpening()))
             cabinet.addDependencies(new Dependency(cutter, cabinet));
             cutter.parentAssembly(this);
             subassemblies = [cutter];
@@ -203,6 +207,7 @@ class CabinetOpeningCorrdinates extends KeyValue {
   }
 }
 
+Object.class.register(CabinetOpeningCorrdinates, 'config', 'parentAssembly.id', 'partCode', 'locationCode');
 CabinetOpeningCorrdinates.fromJson = (json) => {
   return json;
 }

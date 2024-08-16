@@ -9,5 +9,6 @@ class Butt extends Joint {
   }
 }
 
+Object.class.register(Butt);
 Joint.register(Butt);
 module.exports = Butt

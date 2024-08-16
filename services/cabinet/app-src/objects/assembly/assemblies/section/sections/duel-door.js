@@ -15,7 +15,7 @@ class DualDoorSection extends Assembly {
     this.part = () => false;
     this.left = () => leftDoor;
     this.right = () => rightDoor;
-    this.gap = () => 2.54 / 16;
+    this.gap = () => this.resolve('ddg');
 
     if (!leftDoor) {
       leftDoor = new Door('Dl', 'Left');

@@ -8,6 +8,7 @@ const CabinetDisplay = require('./cabinet.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
 const Input = require('../../../../public/js/utils/input/input.js');
+const Inputs = require('../input/inputs.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
@@ -17,52 +18,60 @@ const Global = require('../services/global.js');
 
 const currentStyleState = {};
 
-function disableButton(values) {
-  const tree = values._NODE.tree();
-  const nId = tree.id();
-  const currState = currentStyleState[nId];
-  const button = du.find(`button[tree-id='${nId}']`);
-  if (button) {
-    button.hidden = Object.equals(currState, values);
-    const headers = du.find.downAll('.group-header', du.find.up('.group-cnt', button));
-    headers.forEach((header) => {
-      header.hidden = currState.style !== header.getAttribute("cab-style");
-      if (!header.hidden) du.find.down('.group-key', header).innerText = currState.subStyle;
-    });
-  }
-}
-
 class GroupDisplay extends Lookup {
   constructor() {
     super();
+
+    let _active;
+    this.active = (active) => {
+      if (active) _active = active;
+      return _active;
+    }
     function setCurrentStyleState(values) {
       values = values || dit.values();
       const nId = dit.constructor.decode(dit.root().id()).id;
       currentStyleState[nId] = values;
-      // disableButton(values, dit);
       return values;
     }
+
+    function setFrameProps(values) {
+      const frameWidthNode = values._NODE.getByName('frameWidth');
+      _active.resolve('fls', !frameWidthNode);
+      if (frameWidthNode) {
+        const frameWidth = frameWidthNode.inputArray()[0].value();
+        _active.propertyConfig.display('dft', frameWidth);
+      }
+    }
+    function setStyleProps(values) {
+      const style = values.style;
+      const styleKeys = {};
+      Properties.groups()[style].forEach(p => styleKeys[p.code()] = true);
+      Object.keys(values).forEach(k => {
+        if (styleKeys[k] !== undefined) _active.propertyConfig.display(k, values[k], true);
+      });
+    }
+    function updateDescriptor() {
+      const elem = du.find(`[group-id='${_active.id()}'] .group-descriptor`);
+      const style = _active.propertyConfig.value('style');
+      const template = GroupDisplay.descriptorTemplates[style];
+      elem.innerHTML = template.render({group: _active});
+    }
     function onCabinetStyleSubmit(values) {
-      setCurrentStyleState(values);
-      _active.propertyConfig.set(values.style, values.subStyle);
+      const style = values.style;
+      _active.propertyConfig('style', style);
+      setFrameProps(values);
+      setStyleProps(values[style]);
+      console.log(updateDescriptor());
       ThreeDMain.update();
     }
 
-    let initialized = false;
-    function initializeDitButton() {
-      // if (initialized) disableButton(dit.values(), dit);
-      // else {
-      //   disableButton(setCurrentStyleState(), dit);
-      //   initialized = true;
-      // }
-    }
-    const dit = GroupDisplay.DecisionInputTree(onCabinetStyleSubmit, () => this.active().propertyConfig);
-    function styleSelector() {
+    function styleSelector(group) {
+      const dit = GroupDisplay.DecisionInputTree(onCabinetStyleSubmit, group);
       return dit.html();
     }
-    function propertyHtml() {return GroupDisplay.propertyMenuTemplate.render({styleSelector})};
+    function propertyHtml(group) {return GroupDisplay.propertyMenuTemplate.render({styleSelector, group})};
     this.bodyHtml = (group) =>  {
-      setTimeout(initializeDitButton, 200);
+      // setTimeout(initializeDitButton, 200);
       return GroupDisplay.bodyTemplate.render({group, groupDisplay: this, propertyHtml});
     }
     this.html = (group) => {
@@ -82,18 +91,12 @@ class GroupDisplay extends Lookup {
         this.cabinetDisplay(group).active();
 
     this.cabinetHtml = (group) =>  this.cabinetDisplay(group) ? this.cabinetDisplay(group).html() : '';
-
-    let _active;
-    this.active = (active) => {
-      if (active) _active = active;
-      return _active;
-    }
   }
 }
 
-GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
+GroupDisplay.DecisionInputTree = (onSubmit, group) => {
   const propertyConfig = new PropertyConfig();
-  const styles = propertyConfig.cabinetStyles();
+  const styles = Properties.cabinetStyles();
   const cabinetStyles = new Select({
     name: 'style',
     list: styles,
@@ -103,34 +106,52 @@ GroupDisplay.DecisionInputTree = (onSubmit, propertyConfigInst) => {
   });
 
   const hasFrame = new Select({
-      name: 'FrameStyle',
+      name: 'frameStyle',
       inline: true,
-      list: ['Frameless', 'Framed', 'Frame Only'],
-      value: 'Frameless'
+      index: group.resolve('fls') ? 0 : 1,
+      list: ['Frameless', 'Framed'],
     });
 
   const payload = {inputArray: [hasFrame, cabinetStyles]};
   const props = {buttonText: 'Change'};
   const dit = new DecisionInputTree('cabinetStyle', payload, props);
-  // dit.onChange(disableButton);
   dit.onSubmit(onSubmit);
-  const root = dit.root();
-
-  styles.forEach((styleName) => {
-    const properties = Properties.groupList(styleName);
-    const selectObj = Object.keys(properties);
-    if (selectObj.length > 1) {
-      const select = new Select({
-        name: 'subStyle',
-        inline: true,
-        list: selectObj,
-        // value: propertyConfigInst.cabinetStyleName()
-      });
-      root.then(styleName, {inputArray: [select]});
-      const cond = DecisionInputTree.getCondition('style', styleName);
-      root.conditions.add(cond, styleName);
+  dit.onChange((values) => {
+    const ovNode = values._NODE.getByName('Overlay');
+    if (ovNode) {
+      const frameWidthNode = values._NODE.getByName('frameWidth');
+      const frameless = group.resolve('fls', !frameWidthNode);
+      const ovVal = group.propertyConfig('ov').value(frameless);
+      ovNode.inputArray()[0].setValue(ovVal, false);
     }
   });
+  const root = dit.root();
+
+
+  const overlay = group.propertyConfig('ov').display();
+  const overlayInput = Inputs('width', {label: 'Overlay', name: 'ov', value: overlay});
+  root.then('Overlay', {inputArray: [overlayInput]});
+  let cond = DecisionInputTree.getCondition('style', 'Overlay');
+  root.conditions.add(cond, 'Overlay');
+
+  const inset = group.propertyConfig('is').display();
+  const insetInput = Inputs('width', {label: 'Inset', name: 'is', value: inset});
+  root.then('Inset', {inputArray: [insetInput]});
+  cond = DecisionInputTree.getCondition('style', 'Inset');
+  root.conditions.add(cond, 'Inset');
+
+  const revealProps = Properties.groups()['Reveal'];
+  const inputArray = revealProps.map(p =>
+      Inputs('width', {label: p.name().replace('Reveal ', ''), name: p.code(), value: p.display()}))
+  root.then('Reveal', {inputArray});
+  cond = DecisionInputTree.getCondition('style', 'Reveal');
+  root.conditions.add(cond, 'Reveal');
+
+  const frameWidth = group.propertyConfig('dfw').display();
+  const fwInput = Inputs('width', {label: 'Frame Width', name: 'frameWidth', value: frameWidth});
+  root.then('frameWidth', {inputArray: [fwInput]});
+  cond = DecisionInputTree.getCondition('frameStyle', 'Framed');
+  root.conditions.add(cond, 'frameWidth');
 
   return dit;
 }
@@ -165,5 +186,10 @@ du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);
 
 GroupDisplay.headTemplate = new $t('group/head');
 GroupDisplay.bodyTemplate = new $t('group/body');
+GroupDisplay.descriptorTemplates = {
+  Overlay: new $t('group/descriptors/overlay'),
+  Inset: new $t('group/descriptors/inset'),
+  Reveal: new $t('group/descriptors/reveal')
+}
 GroupDisplay.propertyMenuTemplate = new $t('properties/property-menu');
 module.exports = GroupDisplay

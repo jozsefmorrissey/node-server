@@ -72,7 +72,7 @@ class CabinetModel {
           const cxtr = assem.constructor.name;
           if (cxtr !== 'SectionProperties' && !cxtr.match(/(Cutter|Void)/)) {
             if (ToModel(assem))
-              csg = csg.union(ToModel(assems[index], simpleJoints(assems[index])));
+              csg = csg.union(ToModel(assems[index]));
           }
         }
         const polys = Polygon3D.fromCSG(csg.polygons);
@@ -126,16 +126,6 @@ class CabinetModel {
       return model;
     }
 
-    const simpleJoints = (assem) => {
-      // TODO: this is a hacky way of simplifying... fix
-      const joints = assem.getDependencies().female;
-      joints.jointFilter = (assem) =>
-        assem.constructor.name.match(/Cutter/) &&
-        (assem.parentAssembly().parentAssembly() === undefined ||
-        assem.partCode() === 'aoc');
-      return joints;
-    }
-
     // todo(pibe2): delegate to webworker
     this.boxModel = () => {
       let csg = new CSG();
@@ -145,7 +135,7 @@ class CabinetModel {
         const cxtr = assem.constructor.name;
         if (cxtr !== 'SectionProperties' && !cxtr.match(/(Cutter|Void)/)) {
           if (assem.canBeModled)
-            csg = csg.union(ToModel(assems[index], simpleJoints(assems[index])));
+            csg = csg.union(ToModel(assems[index]));
           else throw new Error('canBeModled is an attribute that should be added to assemblies');
         }
       }

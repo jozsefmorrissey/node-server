@@ -9,5 +9,6 @@ class Rabbet extends Joint {
   }
 }
 
+Object.class.register(Rabbet);
 Joint.register(Rabbet);
 module.exports = Rabbet

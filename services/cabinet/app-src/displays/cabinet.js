@@ -223,8 +223,9 @@ class CabinetDisplay {
       let endStyle = du.find.closest('.show-select[name="endStyle"]', elem).value;
       type = type === 'None' ? undefined : type;
       endStyle = endStyle === 'No' ? undefined : endStyle;
-      Global.cabinet().value('show' + side, {type, endStyle});
+      Global.cabinet().value('show.' + side, {type, endStyle});
       Global.cabinet().hash();
+      console.log(Global.cabinet().value('show'))
 
       console.log(Global.cabinet().hash());
     });

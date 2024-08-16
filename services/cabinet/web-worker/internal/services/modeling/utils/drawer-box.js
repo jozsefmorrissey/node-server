@@ -1,6 +1,7 @@
 
 const SimpleModels = require('../generic-models');
 const SectionPropertiesUtil = require('./section-properties');
+const Utils = require('./utils');
 
 function getDrawerDepth(depth) {
   const adjustedDepth = (depth/2.54) - 1;
@@ -11,7 +12,7 @@ function getDrawerDepth(depth) {
 module.exports = (assembly, environment) => {
   const sectionUtils = SectionPropertiesUtil.instance(assembly, environment);
   const propConfig = environment.propertyConfig;
-  const props = propConfig.Guides;
+  const props = Utils.property.set(assembly, environment, 'Guides');
   const innerPoly = sectionUtils.innerPoly.copy();
   const coverInfo = sectionUtils.coverInfo().copy();
   const depth = getDrawerDepth(sectionUtils.drawerDepth());
@@ -23,5 +24,6 @@ module.exports = (assembly, environment) => {
   innerPoly.offset(sideOffset/2, sideOffset/2, topOffset, bottomOffset);
   innerPoly.translate(offsetVect);
   assembly.position.current.normals = coverInfo.normals;
-  return SimpleModels.DrawerBox(innerPoly, normal, depth, propConfig.DrawerBox);
+  const dbProps = Utils.property.set(assembly, environment, 'DrawerBox');
+  return SimpleModels.DrawerBox(innerPoly, normal, depth, dbProps);
 }

@@ -48,7 +48,6 @@ const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-wo
 const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         .add('../../public/js/utils/utils.js')
         .add('../../public/js/utils/tolerance.js')
-        .add('../../public/js/utils/approximate.js')
         .add('../../public/js/utils/tolerance-map.js')
         .add('../../public/js/utils/3d-modeling/csg.js')
         .add('../../public/js/utils/canvas/two-d/objects/')

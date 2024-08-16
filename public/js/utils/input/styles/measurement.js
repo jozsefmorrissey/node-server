@@ -10,9 +10,9 @@ const Lookup = require('../../object/lookup.js');
 
 class MeasurementInput extends Input {
   constructor(props) {
-    let _unit = props.unit;
+    let _unit = props.unit === undefined ? true : _unit;
     let units = props.units;
-    let value = new Measurement(props.value, _unit || true);
+    let value = new Measurement(props.value, _unit);
     props.value = () => value;
     super(props);
 
@@ -32,22 +32,35 @@ class MeasurementInput extends Input {
 
     props.errorMsg = 'Invalid Mathematical Expression';
     this.value = () => {
-      return value.display(null, _unit);
+      return value.display();
     }
     const parentSetVal = this.setValue;
-    this.setValue = (val) => {
+    this.setValue = (val, unit) => {
+      if (unit === undefined) unit = _unit;
       let newVal = this.valid(val) ? ((val instanceof Measurement) ?
-                        val : new Measurement(val, _unit)) : value;
+                        val.decimal() : new Measurement(val, unit)).decimal() : value;
       if (props.polarity) {
         if (props.polarity === 'positive') {
-          if (newVal.decimal() < 0) newVal = new Measurement(0, _unit);
+          if (newVal.decimal() < 0) newVal = 0;
         } else if (props.polarity === 'negitive') {
-          if (newVal.decimal() > 0) newVal = new Measurement(0, _unit);
+          if (newVal.decimal() > 0) newVal = 0;
         }
       }
-      const updated = newVal !== value;
-      value = newVal;
+      const updated = newVal !== value.decimal();
+      if (!Number.isNaN(newVal)) {
+        value = new Measurement(newVal, false);
+        value.unit(_unit);
+      }
       return updated;
+    }
+
+    this.validate = (target, eventTriggered) => {
+      target = target || getElem(instance.id());
+      if (target) {
+        if (this.setValue(target[this.targetAttr()])) {
+          this.indicateValidity(true);
+        } else this.indicateValidity(false);
+      }
     }
   }
 }
@@ -58,12 +71,12 @@ MeasurementInput.html = (instance) => () => MeasurementInput.template.render(ins
 function convert(elem) {
   const container = du.find.up('[input-id]', elem);
   const unitElem = du.find.down('[type="radio"]:checked', container);
-  const unit = unitElem && unitElem.value;
+  let unit = unitElem && unitElem.value;
   const input = du.find.closest('.measurement-input', elem);
   input.setAttribute('unit', unit);
   let measInput = MeasurementInput.get(input.id);
-  measInput.unit(elem.value);
-  input.value = measInput.measurement().display(null, elem.value);
+  unit = measInput.unit(unit);
+  input.value = measInput.measurement().display(null, unit);
   // setValue(elem);
   console.log('change');
 }

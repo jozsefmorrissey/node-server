@@ -228,8 +228,8 @@ class SectionProperties extends KeyValue {
     }
     this.children = () => this.getSubassemblies(true);
 
-    this.propertyConfig = () => this.getCabinet() ?
-          this.getCabinet().propertyConfig() : new PropertyConfig();
+    this.propertyConfig = (...args) => this.getCabinet() ?
+          this.getCabinet().propertyConfig(...args) : new PropertyConfig(...args);
 
     this.getAssembly = (locationCode, callingAssem) => {
       if (callingAssem === this) return undefined;
@@ -262,24 +262,24 @@ class SectionProperties extends KeyValue {
 
     this.coverage = (startOffset, endOffset) => {
       const info = [];
-      const propConfig = this.propertyConfig();
-      const isReveal = propConfig.isReveal();
-      const isInset = propConfig.isInset();
+      const propConfig = this.propertyConfig;
+      const isReveal = propConfig('isReveal');
+      const isInset = propConfig('isInset');
       const vertical = instance.vertical();
       info._TOTAL = isReveal ?
               (!vertical ? instance.outerLength() : instance.outerWidth()) :
               (!vertical ? instance.innerLength() : instance.innerWidth());
 
       let overlay, reveal, insetValue;
-      if (isReveal) reveal = propConfig.reveal().r.value();
-      else if (propConfig.isInset()) insetValue = propConfig('Inset').is.value();
-      else overlay = propConfig.overlay();
+      if (isReveal) reveal = propConfig('r');
+      else if (propConfig('isInset')) insetValue = propConfig('is');
+      else overlay = propConfig('ov');
 
       for (let index = 0; index < this.sections.length * 2; index += 1) {
         const section = this.sections[Math.ceil((index - 1)/2)];
         let offset = 0;
         const divider = section.divider().divider();
-        const dividerWidth = divider.type() === 'none' ? 0 : divider.maxWidth();
+        const dividerWidth = divider.type() === 'none' ? 0 : divider.thickness();
         if (isReveal) {
           if (index % 2 === 0) {
             if (index === 0) info._TOTAL -= reveal;
@@ -554,7 +554,7 @@ class SectionProperties extends KeyValue {
         if (index < this.sections.length - 1) {
           const section = this.sections[index];
           const divider = section.divider().divider();
-          const offset = divider.type() === 'none' ? 0 : divider.maxWidth();
+          const offset = divider.type() === 'none' ? 0 : divider.thickness();
           info[index + 1] = {offset, divider};
         } else {
           info[index + 1] = {offset: endOffset};
@@ -573,7 +573,7 @@ class SectionProperties extends KeyValue {
     this.setSection = (constructorIdOobject) => {
       if (constructorIdOobject === null) this.cover(null);
       else {
-        let section = SectionProperties.new(constructorIdOobject);
+        let section = SectionProperties.section(constructorIdOobject);
         this.cover(section);
         if (section) {
           section.parentAssembly(this);
@@ -602,7 +602,7 @@ class SectionProperties extends KeyValue {
       }
     }
     const neigborJoint = new Dado(divider.divider().isPanel, isNeigbor, null, 'NEIGHBOR_JOINT');
-    neigborJoint.maleOffset(.9525);
+    neigborJoint.maleOffset(0.635);
     divider.addDependencies(neigborJoint);
 
 
@@ -704,8 +704,6 @@ class SectionProperties extends KeyValue {
   }
 }
 
-SectionProperties.joinable = false;
-
 const list = [];
 const byId = {};
 const tolerance = .04
@@ -737,7 +735,7 @@ SectionProperties.updateLinks = (sectionProp) => {
   }
 }
 
-SectionProperties.new = function (constructorId) {
+SectionProperties.section = function (constructorId) {
   const section = Assembly.new.apply(null, arguments);
   return section;
 }

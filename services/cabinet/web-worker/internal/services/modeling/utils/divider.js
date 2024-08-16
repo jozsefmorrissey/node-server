@@ -3,6 +3,7 @@
 
 const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
 const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
+const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
 const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
 const Line3D = require('../../../../../app-src/three-d/objects/line.js');
 const SectionPropertiesUtil = require('section-properties');
@@ -30,6 +31,7 @@ class DividerUtil {
   constructor(divider, dividerPart, env) {
     const instance = this;
 
+    const framed = !Utils.property('fls', divider, env);
     const sectionProps = divider.find(/_S[0-9]{1,}$/);
     const sectionUtils = SectionPropertiesUtil.instance(sectionProps, env);
     if (!divider.locationCode.match(/_S/)) {
@@ -39,8 +41,27 @@ class DividerUtil {
       this.biPolygon = sectionUtils.dividerInfo();
     }
 
+    const fromInner = (dist) => divider.position.current.demension.z - divider.panelThickness - dist;
+
     let full;
-    this.Full = () => {
+    function scribeRevealOffset(assem) {
+      let offset = 0;
+      switch (assem.partCode.replace(/^(.*?):.*$/, '$1')) {
+        case 'T': offset = Utils.property('tid', assem, env); break;
+        case 'B': offset = fromInner(Utils.property('rvibr', assem, env)); break;
+        case 'R': offset = Utils.property('dsc', assem, env); break;
+        case 'L': offset = Utils.property('dsc', assem, env); break;
+      }
+      const cabCenter = CabinetUtil.instance(assem).partCenter();
+      const toCentVect = new Line3D(full.center(), cabCenter).vector();
+      const norms = Utils.normals(assem, env);
+      const unitVect = norms.z.sameDirection(toCentVect) ? norms.z : norms.z.inverse();
+      const poly = full.copy();
+      poly.translate(unitVect.scale(offset));
+      return poly;
+    }
+
+    this.Full = (assem) => {
       if (!full) {
         const ic = sectionUtils.innerCenter;
         const dividerPoly = instance.biPolygon.copy();
@@ -53,12 +74,13 @@ class DividerUtil {
 
         full = biPoly;
       }
+      if (assem && framed)
+          return scribeRevealOffset(assem);
       return full;
     }
 
     const getCutter = (key, builder) => () => (cutters[key] !== undefined || builder()) && cutters[key];
     this.Frame = buildFramePoly;
-    this.Frame.Cutter = getCutter('fr', this.Frame);
     this.Back = (assem, env) => cropExtendedFrom(DividerUtil.positions.BACK, assem.width || divider.partialWidth, assem, env);
     this.Front = (assem, env) => cropExtendedFrom(DividerUtil.positions.FRONT, assem.width || divider.partialWidth, assem, env);
     this.Right = (assem, env) => cropExtendedFrom(DividerUtil.positions.RIGHT, assem.width || divider.partialWidth, assem, env);
@@ -68,7 +90,6 @@ class DividerUtil {
     let cutter;
 
     const panels = {};
-    const cutters = {};
 
     function buildFramePoly() {
       const biPoly = instance.biPolygon.copy();
@@ -80,8 +101,13 @@ class DividerUtil {
       const frameThickness = divider.frameThickness;
       const framePoly = BiPolygon.fromPolygon(frontPoly, 0, -frameThickness);
       const back = framePoly.back();
-      cutters['fr'] = back.translate(back.normal().scale(frameThickness/2));
       return framePoly;
+    }
+
+    const normRelitiveToCenter = (center, assem) => {
+      const direction = new Line3D(center, assem.position.current.center.object()).vector();
+      const z = Utils.normals(assem).z;
+      return direction.dot(z) > 0 ? z : z.inverse();
     }
 
     let front, back, left, right, up, down;
@@ -92,17 +118,16 @@ class DividerUtil {
       const norms = sectionUtils.biPolygon.normals();
       const cabCenter = cabUtil.partCenter();
       const orientNorms = {front: norms.z, back: norms.z.inverse(), right: norms.x, left: norms.x.inverse(), up: norms.y, down: norms.y.inverse()};
-      if (back = divider.find('BACK'))
-        orientNorms.back = new Line3D(cabCenter, back.position.current.center.object()).vector().unit();
-      if (left = divider.find('L'))
-        orientNorms.left = new Line3D(cabCenter, left.position.current.center.object()).vector().unit();
-      if (right = divider.find('R'))
-        orientNorms.right = new Line3D(cabCenter, right.position.current.center.object()).vector().unit();
+      if (back = divider.find('BACK')) orientNorms.back = normRelitiveToCenter(cabCenter, back);
+      if (left = divider.find('L')) orientNorms.left = normRelitiveToCenter(cabCenter, left);
+      if (right = divider.find('R')) orientNorms.right = normRelitiveToCenter(cabCenter, right);
+      if (up = divider.find('T')) orientNorms.up = normRelitiveToCenter(cabCenter, up);
+      if (down = divider.find('B')) orientNorms.down = normRelitiveToCenter(cabCenter, down);
       return orientNorms;
     }
 
     function cropExtendedFrom(position, distance, assem, env) {
-      const csg = env.modelInfo.extended[assem.id];
+      const csg = env.getModel(assem, 'cut');
       const norms = Utils.normals(assem, env);
       const edges = csg.polygons.filter(p => !norms.z.parrelle(new Vector3D(p.plane.normal)));
       const edgePolys = Polygon3D.fromCSG(edges);
@@ -112,22 +137,27 @@ class DividerUtil {
       const orientNorms = openingOrientationNormals();
       switch (position) {
         case DividerUtil.positions.FRONT: centerOffsetVector = orientNorms.front; break;
-        case DividerUtil.positions.BACK: centerOffsetVector = orientNorms.back; break;
+        case DividerUtil.positions.BACK:
+          centerOffsetVector = orientNorms.back; break;
         case DividerUtil.positions.LEFT: centerOffsetVector = orientNorms.left; break;
         case DividerUtil.positions.RIGHT: centerOffsetVector = orientNorms.right; break;
       }
-      const closerTo = cabUtil.partCenter().translate(centerOffsetVector.scale(100), true)
-      const polyDistMap = edgePolys.map((poly, index) => ({dist: poly.distance(closerTo), index, poly}));
+      const cabCenter = cabUtil.partCenter();
+      const closerTo = cabCenter.translate(centerOffsetVector.scale(100), true);
+      const connections = edgePolys.map(e => new Line3D(closerTo, e.center()).viewFromVector(norms.z));
+      const mi = Vertex3D.mostInformation(connections.map(l => l[1]));
+      const polyDistMap = edgePolys.map((poly, index) => ({
+        dist: connections[index].to2D(mi[0], mi[1]).length(),
+        connect: connections[index],
+        twoD: connections[index].to2D(mi[0], mi[1]),
+        index, poly}));
+
       const minDist = polyDistMap.min(p => p.dist).dist + .01;
       const closestPolys = polyDistMap.filter(p => p.dist < minDist);
       const cutterPoly = closestPolys[0].poly;
-      const isFrontBack = position === DividerUtil.positions.FRONT ||
-                          position === DividerUtil.positions.BACK;
-      let vectorObj = {y: norms.z, x: norms.y};
-      if (!isFrontBack) vectorObj.x = norms.x;
-      const multiplier = !cutterPoly.normal().sameDirection(centerOffsetVector) ? 1 : -1;
+      const multiplier = 1;//cutterPoly.normal().sameDirection(centerOffsetVector) ? 1 : -1;
       const width = assem.width || divider.partialWidth;
-      const cutterBiPoly = BiPolygon.fromPolygon(cutterPoly, multiplier*width,  multiplier*BIG, {x: BIG, y: BIG});
+      const cutterBiPoly = BiPolygon.fromPolygon(cutterPoly, -BIG, -width, {x: BIG, y: BIG});
 
       return csg.subtract(cutterBiPoly.model());
     }

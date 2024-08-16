@@ -5,7 +5,6 @@ const Line3D = require('line');
 const Matrix = require('matrix');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
-const approximate = require('../../../../../public/js/utils/approximate.js').new(1000000);
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const withinTol = new Tolerance(.00001).within;
 
@@ -217,7 +216,7 @@ class Plane extends Array {
 
     this.equationEqualToZ = () => {
       const eqn = this.equation();
-      const a = approximate;
+      const a = v => Math.roundTo(v, .0001);
       return `(${a(eqn.a)}x + ${a(eqn.b)}y + ${a(eqn.d)}) / ${a(eqn.c)}`;
     }
 
@@ -278,8 +277,7 @@ class Plane extends Array {
 
     this.parrelle = {};
     this.parrelle.axis = (axis) => {
-      const pts = this.points();
-      return approximate.eq(pts[0][axis], pts[1][axis], pts[2][axis]);
+      console.warn('I dont think this is used but method was outdated so removed on 14 Aug 2024');
     }
     this.parrelle.line = (line) => {
       const within = new Tolerance(line.length() / 100000).within;
@@ -403,7 +401,7 @@ class Plane extends Array {
     this.connect.line = (line) => {
       const startOnPlane = this.connect.vertex(line[0])[0];
       const endOnPlane = this.connect.vertex(line[1])[0];
-      return line.connect.line.segment(new Line3D(startOnPlane, endOnPlane), true);
+      return new Line3D(startOnPlane, endOnPlane).connect.line.segment(line, true);
     }
 
     this.equals = (other) => {
@@ -436,54 +434,6 @@ class Plane extends Array {
 Plane.xy = new Plane([0,0,0], [10,0,0], [10,10,0]);
 Plane.yz = new Plane([0,0,0], [0,10,0], [0,10,10]);
 Plane.xz = new Plane([0,0,0], [10,0,0], [10,0,10]);
-
-Plane.makePlane1MeetPlane2 = function (plane1, plane2, rotation) {
-  const centerP1 = Vertex3D.center.apply(null, plane1);
-  const rotated1 = new Plane(JSON.copy(plane1));
-  const rotated2 = new Plane(JSON.copy(plane2));
-  rotated1.reverseRotate(rotation, centerP1);
-  rotated2.reverseRotate(rotation, centerP1);
-  const center1 = Vertex3D.center.apply(null, rotated1);
-  for (let index = 1; index < rotated1.length; index++)
-    if (approximate.neq(rotated1[0].z, rotated1[index].z)) throw new Error('Invalid planeRotation: Rotation reversed should make all z coordinates equal to each other');
-  const zValue = rotated1[0].z;
-  const keep1 = [];
-  const keep2 = [];
-  const intersections = [];
-  const plane2Line2d = new Line2d(rotated2[0], rotated2[1]).combine(new Line2d(rotated2[2], rotated2[3]));
-  const p2l2Midpoint = plane2Line2d.midpoint();
-  const len = rotated1.length;
-  let keep = keep1;
-  for (let index = 0; index < rotated1.length; index++) {
-    rotated1[index] = new Vertex2d(rotated1[index]);
-    const nextIndex = (index + 1) % len;
-    const prevIndex = Math.mod(index - 1, len);
-    const positiveLine = new Line2d(rotated1[nextIndex], rotated1[index]);
-    const negativeLine = new Line2d(rotated1[prevIndex], rotated1[index]);
-    const intersection1 = positiveLine.findDirectionalIntersection(plane2Line2d, 1000);
-    const intersection2 = negativeLine.findDirectionalIntersection(plane2Line2d, 1000);
-    if (intersections.length > 0) keep = keep2;
-    if (!intersection1 && !intersection2) keep.push(rotated1[index]);
-    else if (!intersection1) intersections.push(intersection2);
-    else if (!intersection2) intersections.push(intersection1);
-    else {
-      const dist1 = p2l2Midpoint.distance(intersection1);
-      const dist2 = p2l2Midpoint.distance(intersection2);
-      intersections.push(dist1 > dist2 ? intersection1 : intersection2);
-    }
-  }
-  const newPlaneRotated = keep1.concat(intersections).concat(keep2);
-  for (let index = 0; index < newPlaneRotated.length; index++) {
-    newPlaneRotated[index] = {
-      x: newPlaneRotated[index].x,
-      y: newPlaneRotated[index].y,
-      z: zValue
-    }
-  }
-
-  CSG.rotatePointsAroundCenter(rotation, newPlaneRotated, centerP1);
-  return new Plane(...newPlaneRotated);
-}
 
 Plane.bisector = (p1, p2) => {
   const eq1 = p1.equation();

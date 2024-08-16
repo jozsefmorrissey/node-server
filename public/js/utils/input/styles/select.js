@@ -15,9 +15,12 @@ class Select extends Input {
     const isArray = Array.isArray(props.list);
     let value;
     if (isArray) {
-      value = props.index && props.list[props.index] ?
-      props.list[props.index] : props.list[0];
-      value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+      if (props.index) {
+        value = props.index && props.list[props.index] ?
+                      props.list[props.index] : props.list[0];
+      } else {
+        value = props.list.indexOf(props.value) === -1 ? props.list[0] : props.value;
+      }
     } else {
       const key = Object.keys(props.list)[0];
       value = props.value || key;

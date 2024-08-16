@@ -27,8 +27,13 @@ class SnapPolygon extends Snap2d {
     }
 
     this.polyCopy = (other) => {
+      if (other) {
+        this.snapLocations.deleteAll();
+        build();
+      }
       polygon.copy(other);
       lastTheta = undefined;
+
     }
 
     let rotated;

@@ -87,6 +87,7 @@ class WebWorkerDeligator {
         }
         registerTask(worker)(task);
         task.initiated = new Date().getTime();
+        console.log('task Registered');
       }
     }
 

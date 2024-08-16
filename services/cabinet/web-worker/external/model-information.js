@@ -5,6 +5,7 @@ const MFC = require('../internal/services/modeling/modeling-function-configurati
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 const Cutter = require('../../app-src/objects/assembly/assemblies/cutter.js');
+const Assembly = require('../../app-src/objects/assembly/assembly');
 
 // TODO: move sorting/filtering functions to worker-bundle
 const sortUnderScoreCount = (a, b) => {
@@ -61,15 +62,19 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
   if (assembly.parentAssembly()) obj.dependencies.push(assembly.parentAssembly().id());
   obj.joints.forEach(jId => obj.dependencies.concatInPlace(jointMap[jId].male));
   obj.complexity = () => {
-    if (assembly.includeJoints === undefined || assembly instanceof Cutter) return 1;
+    if (!(assembly instanceof Assembly) || assembly.jointSettings.false() || assembly instanceof Cutter) return 1;
     if (dependencyCount === obj.dependencies.length) return complexity;
-    if (assembly.includeJoints() === false && MFC.usesDefault(assembly.id())) return 1;
+    // TODO: probably need to qualify this with joint config somehow
+    if (MFC.usesDefault(assembly.id())) return 1;
     complexity = 1;
     for (let index = 0; index < obj.dependencies.length; index++) {
       const id = obj.dependencies[index];
-      if (complexityObj[id] === undefined) jointCompexityObject(id, complexityObj, jointMap, byId);
-      complexity += complexityObj[id].complexity();
-      if (Number.isNaN(complexity)) return NaN;
+      if (id === assembly.id()) console.warn('Assembly is dependent on itself. Something probably needs cleaned up');
+      else {
+        if (complexityObj[id] === undefined) jointCompexityObject(id, complexityObj, jointMap, byId);
+        complexity += complexityObj[id].complexity();
+        if (Number.isNaN(complexity)) return NaN;
+      }
     }
     dependencyCount = obj.dependencies.length;
     return complexity;
@@ -94,77 +99,43 @@ const sorter = (assemblies, jointMap, byId) => {
 
 
 
-const dataConverters = {
-  threeView: (data) => {
-    if (data.front[0] instanceof Line2d) return data;
-    data.front = data.front.map(d => new Line2d(d[0], d[1]));
-    data.right = data.right.map(d => new Line2d(d[0], d[1]));
-    data.top = data.top.map(d => new Line2d(d[0], d[1]));
-    data.threeView = data.threeView.map(d => new Line2d(d[0], d[1]));
-    data.parimeter.threeView = data.parimeter.threeView.map(d => new Line2d(d[0], d[1]));
-    data.parimeter.front = new Polygon2d(data.parimeter.front.vertices);
-    data.parimeter.right = new Polygon2d(data.parimeter.right.vertices);
-    data.parimeter.top = new Polygon2d(data.parimeter.top.vertices);
-    return data;
-  }
-}
-
-const modelInfoObject = () => ({threeView: {}, model: {}, joined: {}, intersection: {}, biPolygonArray: {}, extended: {}});
+const modelInfoObject = () => ({threeView: {}, model: {}, joined: {}, intersection: {}, biPolygonArray: {}, extended: {}, cut: {}});
 
 class ModelInformation {
-  constructor(targetOs, props) {
+  constructor(assemblies, props) {
     props ||= {};
     const instance = this;
-    let targets = targetOs;
-    if (!Array.isArray(targets)) targets = [targetOs];
-    targets = targets.map(a => a);
-    const assemblies = targets[0].allAssemblies();
-    if (props.allRelatedParts === true) targets = assemblies.filter(a => a.part());
+    if (!Array.isArray(assemblies))
+      throw new Error('Has not yet conformed to the assemblies being a list of all assemblies to be modeled');
     const modelInfo = props.modelInfo || modelInfoObject();
-    const jointMap = assemblies[0].dependencyMap();
+    let allAssemblies = assemblies[0].allAssemblies();
+    const jointMap = assemblies[0].dependencyMap(assemblies);
+    const allJointMap = assemblies[0].dependencyMap(allAssemblies);
     const byId = {};
-    const propertyConfig = assemblies[0].group().propertyConfig();
-    assemblies.forEach(a => byId[a.id()] = a);
-    let buildModels;
-    if (targets) buildModels = targets;
-    const root = targets[0].getRoot();
-    if (buildModels.indexOf(root) === -1) buildModels.push(root);
-    else buildModels = assemblies.filter(a => a.part());
+    const root = assemblies[0].getRoot();
+    const propertyConfig = root.group().propertyConfig().values(root.resolve);
 
-    let joinModels = sorter(buildModels, jointMap, byId);
-    buildModels = Object.values(joinModels).map(ac => ac.assembly);
-    buildModels = sortAssemMtdos(buildModels);
+    allAssemblies.forEach(a => byId[a.id()] = a);
+    jointMap.JOINTS.forEach(j => byId[j.id()] = j);
+    assemblies = sortAssemMtdos(assemblies);
+    assemblies = assemblies.map(a => a.id());
 
-    buildModels = buildModels.map(a => a.id());
-    const includedParts = targets.filter(a => a.part() && a.included()).map(a => a.id());
-    targets = targets.map(a => a.id());
     const complexityMap = {};
-    joinModels.forEach(jmo => complexityMap[jmo.assembly.id()] = jmo.complexity());
-    joinModels.forEach(jmo => (jmo.id = jmo.assembly.id()) && delete jmo.assembly &&
-                                                              delete jmo.partCode &&
-                                                              delete jmo.complexity);
-    let requiresReference = {};
-    Object.keys(byId).forEach(id => requiresReference[id] = byId[id]);
+    allAssemblies = sorter(allAssemblies, allJointMap, byId);
+    allAssemblies.forEach(amo => complexityMap[amo.assembly.id()] = amo.complexity());
+    allAssemblies = allAssemblies.filter(amo => amo.assembly.part() && amo.assembly.included())
+                                  .map(amo => amo.assembly.id());
 
-    // buildModels.forEach(id => requiresReference[id] = byId[id]);
-    // targets.forEach(id => requiresReference[id] = byId[id]);
-    // joinModels.forEach(jmo => requiresReference[jmo.id] = byId[jmo.id]);
-    joinModels = joinModels.map(jmo => jmo.id);
-    const dependencies = assemblies[0].getAllDependencies();
-    dependencies.forEach(j => requiresReference[j.id()] = j);
-
-    this.needsModeled = () => buildModels;//.filter(id => modelInfo.model[id] === undefined);
-    this.needsJoined = () => joinModels;//.filter(id => modelInfo.joined[id] === undefined);
-    this.needsIntersected = () => joinModels.filter(id => byId[id].part());// && modelInfo.intersection[id] === undefined);
-    this.needsUnioned = () => unionedCsg ? [] :
-                            (props.partsOnly === false ? targets : includedParts);
-    this.needs2dConverted = () => props.unioned ? unioned2D ? [] : [{}]:
-          targets.filter(id => !id.startsWith('Cutter'));// && modelInfo.threeView[id] === undefined);
+    this.needsModeled = () => props.needsModeled || allAssemblies;
+    this.needsJoined = () => props.needsJoined || assemblies;
+    this.needsIntersected = () => props.needsIntersected || assemblies;
+    this.needsUnioned = () => props.needsUnioned || assemblies;
+    this.needs2dConverted = () => props.needs2dConverted || assemblies;
 
     const environmentObject = () => {
       const environment = DTO(props) || {};
-      environment.byId = requiresReference;
-      environment.modelInfo = modelInfoObject();//modelInfo;
+      environment.byId = byId;
+      environment.modelInfo = modelInfoObject();
       environment.propertyConfig = propertyConfig;
       environment.jointMap = jointMap;
       environment.explosionFactor = this.explosionFactor();
@@ -183,7 +154,6 @@ class ModelInformation {
           id = id + '';
           let obj = modelInfo[attr][id];
           if (!obj) return obj;
-          if (dataConverters[attr]) modelInfo[attr][id] = dataConverters[attr](obj);
           if (obj.polygons && !(obj instanceof CSG))
             modelInfo[attr][id] = CSG.fromPolygons(obj.polygons, true);
           return modelInfo[attr][id];
@@ -201,13 +171,13 @@ class ModelInformation {
     addTrackingFunctions('threeView', 'model', 'joined', 'intersection', 'biPolygonArray')
     this.allInfo = () => modelInfo;
 
-    this.assemblies = () => assemblies;
+    this.assemblies = () => props.assemblies || assemblies;
     this.assembly = (id) => assemMap[id];
 
     let unionedCsg;
     this.unioned = (data) => {
       if (data) unionedCsg = CSG.fromPolygons(data.polygons, true);
-      else return unionedCsg;
+      return unionedCsg;
     }
 
     let partInformation;
@@ -218,7 +188,7 @@ class ModelInformation {
 
     let unioned2D
     this.unioned2D = (data) => {
-      if (data) unioned2D = dataConverters.threeView(data);
+      if (data) unioned2D = data;
       else return unioned2D;
     }
 
@@ -254,6 +224,9 @@ function related(target) {
 
 function object(targetOs, props) {
   if (!Array.isArray(targetOs)) targetOs = [targetOs];
+  if (!targetOs[0]) {
+    console.log('here');
+  }
   const root = targetOs[0].getRoot();
   props ||= {};
   props.modelInfo = related(root);

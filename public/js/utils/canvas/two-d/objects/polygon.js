@@ -135,6 +135,23 @@ class Polygon2d {
       }
     }
 
+    this.generalizeShape = (minLineLength) => {
+      minLineLength ||= 1;
+      const removed = [];
+      for (let index = 0; index < lines.length; index++) {
+        const line = lines[index];
+        if (line.length() < minLineLength) {
+          const before = lines[(index-1)%lines.length];
+          const after = lines[(index+1)%lines.length];
+          if (after.length() > before.length()) before[1] = after[0];
+          else after[0] = before[1];
+          removed.push(index);
+          lines.splice(index--, 1);
+        }
+      }
+      faceIndecies = faceIndecies.map(i => i - removed.count(v => v < i));
+    }
+
     this.relativeToExternalVertex = (vertex, moveTo) => positionRelitiveToVertex(vertex, moveTo, true);
     this.vertex = vertexFunction();
     this.midpoint = vertexFunction(true);
@@ -253,8 +270,12 @@ class Polygon2d {
       return lineMap[line.toString()] || lineMap[line.toNegitiveString()];
     }
 
-    this.toDrawString = () => {
-      return Line2d.toDrawString(instance.lines()) + '\n' + Line2d.toDrawString(instance.normals(), 'red');
+    this.toDrawString = (color) => {
+      color ||= '';
+      const verts = instance.vertices();
+      const vertStr = verts.map(v => color + v.toString()).join(',');
+      const normStr = Line2d.toDrawString(instance.normals(), 'red');
+      return `[${vertStr}]\n${normStr}`;
     }
 
     this.getLines = (startVertex, endVertex, reverse) => {
@@ -597,6 +618,12 @@ Polygon2d.isWithin = (vertex, lines, exclusive, intersectionsCheck) => {
   if (exclusive && onLine) return false;
   return isWithin;
 }
+
+Object.class.register(Polygon2d);
+Polygon2d.toJson = (poly) => {
+  return {verts: poly.vertices(), _TYPE: Polygon2d.name};
+}
+Polygon2d.fromJson = (json) => new Polygon2d(json.verts.map(j => Vertex2d.fromJson(j)));
 
 
 Polygon2d.fromDemensions = (dems, center) => {

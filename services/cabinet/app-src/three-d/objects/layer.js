@@ -152,12 +152,12 @@ class Layer {
 
 Layer.fromCSG = (csg) => {
   const polys = Polygon3D.fromCSG(csg);
-  const tolmap = new ToleranceMap({'normal.positiveUnit.i': tol,
-                        'normal.positiveUnit.j': tol,
-                        'normal.positiveUnit.k': tol,
-                        'toPlane.axisIntercepts.x': tol,
-                        'toPlane.axisIntercepts.y': tol,
-                        'toPlane.axisIntercepts.z': tol});
+  const tolmap = new ToleranceMap({'normal().positiveUnit().i()': tol,
+                        'normal().positiveUnit().j()': tol,
+                        'normal().positiveUnit().k()': tol,
+                        'toPlane().axisIntercepts().x': tol,
+                        'toPlane().axisIntercepts().y': tol,
+                        'toPlane().axisIntercepts().z': tol});
   tolmap.addAll(polys);
   const layers = [];
   const groups = tolmap.group();
@@ -188,9 +188,9 @@ Layer.toWireDrawString = (layers) => {
 }
 
 Layer.parrelleSets = (polygons, tolerance) => {
-  const tolmap = new ToleranceMap({'normal.positiveUnit.i': tolerance,
-                                  'normal.positiveUnit.j': tolerance,
-                                  'normal.positiveUnit.k': tolerance});
+  const tolmap = new ToleranceMap({'normal().positiveUnit().i()': tolerance,
+                                  'normal().positiveUnit().j()': tolerance,
+                                  'normal().positiveUnit().k()': tolerance});
   tolmap.addAll(polygons);
   const groups = tolmap.group().sortByAttr('length').reverse();
   return groups;

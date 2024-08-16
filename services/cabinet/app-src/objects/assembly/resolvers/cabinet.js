@@ -22,6 +22,8 @@ class CabinetResolver extends Resolver {
       if (parsed) return this.resolve.brokenDown(parsed.index, parsed.inOut, parsed.func, parsed.dir);
       else return parentResolver(expr);
     }
+    this.resolve.inherited = this.resolve.information;
+
 
     this.resolve.brokenDown = (index, inOut, func, dir) => {
       const expr = `OP${index}.${inOut}.${func}.${dir}`;

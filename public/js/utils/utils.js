@@ -428,6 +428,16 @@ Function.safeStdLibAddition(RegExp, 'lessThan', integerCompareReg(true, false), 
 Function.safeStdLibAddition(RegExp, 'greaterThan',  integerCompareReg(false, false), true);
 Function.safeStdLibAddition(RegExp, 'lessThanEqual',  integerCompareReg(true, true), true);
 Function.safeStdLibAddition(RegExp, 'greaterThanEqual',  integerCompareReg(false, true), true);
+Function.safeStdLibAddition(RegExp, 'toObject',  function (str) {
+  const match = str.match(this);
+  if (match === null) return null;
+  const returnVal = {};
+  for (let index = 1; index < arguments.length; index += 1) {
+    const attr = arguments[index];
+    if (attr) returnVal[attr] = match[index];
+  }
+  return returnVal;
+}, false);
 
 
 const test = (testUpTo, funcName, test) => {
@@ -461,6 +471,58 @@ Function.safeStdLibAddition(String, 'number',  function (str) {
       .split('').reverse().join('')
 }, true);
 
+Function.safeStdLibAddition(DataView, 'toByteString',  function () {
+  let bytes = [];
+  for (let index = 0; index < this.byteLength; index++) {
+    bytes.push(this.getUint8(index));
+  }
+  return `[${bytes.join(',')}]`;
+});
+
+function formatNumber(number, biteLen, func, bigEndian) {
+  const buffer = new ArrayBuffer(biteLen);
+  const view = new DataView(buffer);
+
+  view[func](0, number, !bigEndian);
+
+  return buffer;
+}
+
+Function.safeStdLibAddition(Number, 'float32',  {}, true);
+Function.safeStdLibAddition(Number, 'float64',  {}, true);
+Function.safeStdLibAddition(Number, 'int32',  {}, true);
+Function.safeStdLibAddition(Number, 'bigInt64',  {}, true);
+Function.safeStdLibAddition(Number.float32, 'littleEndian',  function (float) {
+  return formatNumber(float, 4, 'setFloat32');
+}, true);
+
+Function.safeStdLibAddition(Number.float32, 'bigEndian',  function (float) {
+  return formatNumber(float, 4, 'setFloat32', true);
+}, true);
+
+Function.safeStdLibAddition(Number.float64, 'littleEndian',  function (float) {
+  return formatNumber(float, 8, 'setFloat64');
+}, true);
+
+Function.safeStdLibAddition(Number.float64, 'bigEndian',  function (float) {
+  return formatNumber(float, 8, 'setFloat64', true);
+}, true);
+
+Function.safeStdLibAddition(Number.int32, 'littleEndian',  function (float, U) {
+  return formatNumber(float, 4, U !== false ? 'setInt32' : 'setUInt32');
+}, true);
+
+Function.safeStdLibAddition(Number.int32, 'bigEndian',  function (float, U) {
+  return formatNumber(float, 4, U !== false ? 'setInt32' : 'setUInt32', true);
+}, true);
+
+Function.safeStdLibAddition(Number.bigInt64, 'littleEndian',  function (float, U) {
+  return formatNumber(float, 8, U !== false ? 'setBigInt64' : 'setBigUint64', true);
+}, true);
+
+Function.safeStdLibAddition(Number.bigInt64, 'bigEndian',  function (float, U) {
+  return formatNumber(float, 8, U !== false ? 'setBigInt64' : 'setBigUint64', true);
+}, true);
 
 Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
   mox = Math.abs(mod);
@@ -598,20 +660,33 @@ const doNotOverwriteAttr = '_DO_NOT_OVERWRITE';
 const forceFromJsonAttr = '_FORCE_FROM_JSON';
 
 const clazz = {};
+const universalCloneFunction = (obj) => obj.constructor.fromJson(obj.constructor.toJson());
 clazz.object = () => JSON.clone(classLookup);
 clazz.register = (clazz, ...attrs) => {
   const cxtrName = clazz.name;
   classLookup[cxtrName] = clazz;
   if (attrMap[cxtrName] === undefined) attrMap[cxtrName] = [];
   attrs.forEach((attr) => attrMap[cxtrName][attr] = true);
+  const parentToJson = clazz.toJson;
   clazz.toJson = (obj) => {
-    const json = {_TYPE: cxtrName};
+    const json = parentToJson ? parentToJson(obj) : {};
+    json._TYPE = cxtrName;
     Object.keys(attrMap[cxtrName]).forEach(k => json.pathValue(k, processValue(obj.pathValue(k))));
     return json;
   }
-  clazz.fromJson = (json) => {
-    const obj = Object.class.new(json._TYPE);
-    Object.keys(attrMap[cxtrName]).forEach(k => obj.pathValue(k, Object.fromJson((json[k]))));
+  const parentFromJson = clazz.fromJson;
+  clazz.fromJson = (json, obj) => {
+    if (!obj) obj = clazz.new();
+    if (parentFromJson) parentFromJson(json, obj);
+    Object.keys(attrMap[cxtrName]).forEach(k => obj.pathValue(k, Object.fromJson((json.pathValue(k)))));
+    return obj;
+  }
+  clazz.new = (...args) => new clazz(...args);
+  const parentClone = clazz.clone;
+  clazz.clone = (obj, clone) => {
+    if (!clone) clone = clazz.new();
+    if (parentClone) parentClone(obj, clone);
+    Object.keys(attrMap[cxtrName]).forEach(k => clone.pathValue(k, obj.pathValue(k)));
     return obj;
   }
 }
@@ -1210,10 +1285,11 @@ function setGettersAndSetters(obj, options) {
     const attr = options.attrs[index];
     if (attr !== immutableAttr) {
       const initVal = options.values[attr];
-      if(initVal instanceof Function) obj[attr] = initVal;
+      if(initVal instanceof Function)
+        obj[attr] = initVal;
       else if (options.immutable) obj[attr] = () => initVal;
       else if (!(obj[attr] instanceof Function)) {
-        obj[attr] = (value) => {
+        obj.pathValue(attr, (value) => {
           if (value === undefined) {
             const noDefaults = (typeof obj.defaultGetterValue) !== 'function';
             if (options.values[attr] !== undefined || noDefaults)
@@ -1221,7 +1297,7 @@ function setGettersAndSetters(obj, options) {
             return obj.defaultGetterValue(attr);
           }
           return options.values[attr] = value;
-        }
+        });
       }
     }
   }
@@ -1402,30 +1478,32 @@ Function.safeStdLibAddition(String.color, 'distinct', () => {
 }, true);
 
 const numberReg = /^[0-9]{1,}$/;
+const funcReg = /^(.*?)(\(\)|)$/;
 Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
   const attrs = (path + '').split('.');
-  const lastAttr = attrs[attrs.length - 1];
-  let target = this;
-  let parent;
+  let value = this;
+  let parent, attr, target;
   let created = false;
   for (let index = 0; index < attrs.length; index += 1) {
-    let attr = attrs[index];
+    const match = attrs[index].match(funcReg);
+    attr = match[1];
+    parent = value;
+    const isFunc = value[attr] instanceof Function && match[2] === '()';
+
     const nextIsIndex = new String(attrs[index + 1]).match(numberReg);
-    if (target[attr] === undefined) {
+    if (value[attr] === undefined) {
       if (create) {
         created = true;
-        target[attr] = nextIsIndex ? [] : {};
+        value[attr] = nextIsIndex ? [] : {};
       } else {
         return;
       }
     }
-    let nextIsFunction = target[attr] && (typeof target[attr][attrs[index+1]]) === 'function';
-    parent = target;
-    target = (typeof target[attr]) === 'function' && !nextIsFunction  ?
-                target[attr]() : target[attr];
-    if (target === undefined || target === null) return target;
+    target = value[attr];
+    value = isFunc ? target() : target;
+    if (value === undefined || value === null) return value;
   }
-  return {parent, target, attr: lastAttr, created}
+  return {parent, value, target, attr, created}
 });
 
 Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
@@ -1436,10 +1514,8 @@ Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
   const attr = pathInfo.attr;
   if ((typeof parent[attr]) === 'function') {
     return parent[attr](value);
-  } else if (valueDefined) {
-    parent[attr] = value;
   }
-  return parent[attr];
+  return valueDefined ? (parent[attr] = value) : parent[attr];
 }, true);
 
 Function.safeStdLibAddition(Object, 'pathValue', function (path, value) {

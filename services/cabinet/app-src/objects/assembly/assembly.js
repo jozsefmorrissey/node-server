@@ -9,8 +9,10 @@ const Joint = require('../joint/joint');
 const Dependency = require('../dependency');
 const Group = require('../group');
 const AssemblyResolver = require('./resolvers/assembly');
+const ModelingCollections = require('modeling-collections');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
 const assemblyBuildConfig = require('../../../public/json/cabinets.json');
+const JointSettings = require('../joint/settings');
 // const ToModel = require('../../../web-worker/services/to-model.js');
 
 FunctionCache.on('hash', 250);
@@ -53,16 +55,17 @@ class Assembly extends KeyValue {
     const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
     const initialVals = {
       sliceAtOpening: true,
+      outline: false,
       part: true,
+      allModels: false,
       included: true,
-      includeJoints: true,
       config, partCode: pCode, partName,
       locationCode: lCode,
       propertyId: undefined,
     }
 
     const subAssems = this.subassemblies;
-    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'name',  'normals', 'notes');
+    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'name',  'normals', 'notes', 'jointSettings');
     Object.defineProperty(this, "subassemblies", {
       writable: false,
       enumerable: false,
@@ -70,13 +73,17 @@ class Assembly extends KeyValue {
       value: subAssems
     });
     Object.getSet(this, temporaryInitialVals);
+    this.jointSettings = new JointSettings();
     this.path = () => `${this.constructor.name}.${partName}`.toDot();
 
     const parentIncluded = this.included;
 
     this.included = (value) => {
         value = parentIncluded(value);
-        if ((typeof value) === 'string') return  group.propertyConfig(value);
+        if ((typeof value) === 'string') {
+          console.warn('what is this')
+          return  group.propertyConfig(value);
+        }
         switch (value) {
           case true: return true;
           case false: return false;
@@ -91,11 +98,6 @@ class Assembly extends KeyValue {
       return json;
     }
 
-    const parentIncludeJoints = this.includeJoints;
-    this.includeJoints = (trueOfalse) => parentIncludeJoints(trueOfalse) && this.included();
-
-
-
     const sme = new StringMathEvaluator({Math, maxHeight}, (expr) => this.resolve(expr));
     this.sme = () => sme;
 
@@ -106,12 +108,12 @@ class Assembly extends KeyValue {
       const evaled = sme.eval(value, this);
       return Number.isNaN(evaled) ? value : evaled;
     }
-    this.value.defaultFunction = (key) => this.propertyConfig(this.constructor.name, key);
+    // this.value.defaultFunction = (key) => this.propertyConfig(this.constructor.name, key);
 
     this.eval = (eqn) => sme.eval(eqn, this);
     this.evalObject = (obj) => sme.evalObject(obj, this);
 
-    const nonUserDefinedPartReg = /^c(_(S[0-9]{1,}|AUTOTK|COC)(_|$)|$)/;
+    const nonUserDefinedPartReg = /^c(_(S[0-9]{1,}|AUTOTK|COC|CabinetOpeningCorrdinates)(_|$)|$)/;
     this.userDefinedParts = () => this.allAssemblies().filter(a => !a.locationCode().match(nonUserDefinedPartReg));
 
     const changeEvent = new CustomEvent('change');
@@ -130,7 +132,7 @@ class Assembly extends KeyValue {
       }
       if (hashVal !== lastHash) {
         lastHash = hashVal;
-        changeEvent.trigger(instance);
+        changeEvent.trigger.lastCall(20, instance);
         return hash();
       }
       return hashVal;
@@ -161,11 +163,11 @@ class Assembly extends KeyValue {
       return group;
     }
     this.layout = () => this.group().room().layout();
-    this.propertyConfig = (one, two, three) => {
+    this.propertyConfig = (...args) => {
       const group = this.getRoot().group();
-      if (!one && !two && !three) return group.propertyConfig;
+      if (args.length === 0) return group.propertyConfig;
       if (group === undefined) return;
-      const groupVal = group.resolve(one, two, three);
+      const groupVal = group.resolve(...args);
       if (groupVal !== undefined) return groupVal;
     }
 
@@ -306,7 +308,7 @@ class Assembly extends KeyValue {
       return buildCenter || new Vertex3D();
     }
     this.on.change(() => instance.buildCenter(true));
-    
+
 
     this.getAssembly = new FunctionCache(getAssembly, this, 'alwaysOn');
     let position = new Position(this, sme, config);
@@ -386,17 +388,22 @@ class Assembly extends KeyValue {
       return allJoints;
     };
 
-    this.dependencyMap = () => {
-      const assems = this.allAssemblies();
-      const allJs = this.getAllDependencies();
-      const jMap = {female: {}, male: {}};
+    this.dependencyMap = (assems) => {
+      assems ||= this.allAssemblies();
+      const allJs = this.getRoot().getAllDependencies();
+      const jMap = {female: {}, male: {}, JOINTS: [], DEPENDENCIES: []};
       for (let ji = 0; ji < allJs.length; ji++) {
         const joint = allJs[ji];
+        jMap[joint instanceof Joint ? 'JOINTS' : 'DEPENDENCIES'].push(joint);
         if (!joint.apply()) continue;
 
         const jid = joint.id();
         for (let ai = 0; ai < assems.length; ai++) {
           const assem = assems[ai];
+          if (!(assem instanceof Assembly)) continue;
+          if ((assem.partCode() === 'T' || assem.partCode() === 'R') && joint.descriptor() === 'Dado:T->R') {
+            console.log('her')
+          }
           const aid = assem.id();
           if (jMap[jid] === undefined) jMap[jid] = {male: [], female: []};
           if (joint.dependsOn(assem)) {
@@ -404,13 +411,12 @@ class Assembly extends KeyValue {
             jMap.male[aid].push(jid);
           }
 
-          if (!(assem instanceof Assembly) || (assem.included() &&
-                (!(joint instanceof Joint) || assem.includeJoints()))) {
+          if (assem.included()) {
             if (joint.dependsOn(assem)) {
               jMap[jid].male.push(aid);
             }
             if (joint.isDependent(assem)) {
-              if (!jMap.female[aid]) jMap.female[aid] = [];
+              jMap.female[aid] ||= [];
               jMap.female[aid].push(jid);
               jMap[jid].female.push(aid);
             }
@@ -493,11 +499,12 @@ class Assembly extends KeyValue {
       return assemblies;
     }
 
-    this.getParts = () => {
-      return this.getSubassemblies().filter((a) => {
-        return a.part() && a.included()
-      });
-    }
+    this.getParts = (simple) => this.getSubassemblies().filter((a) => a.part() && a.included());
+
+    const userDefinedReg = /^[^_^:]{1,}?_([^_^:]*$|AUTOTK_OpenTK:)/;
+    this.modelingCollections = new ModelingCollections(this);
+
+    this.composite = (composite) => this.children().length > 0;
 
     this.modifiableValues = () => {
       const valueObj = this.value.values;
@@ -613,6 +620,7 @@ Assembly.fromJson = (assemblyJson) => {
   const assembly = new (clazz)(partCode, partName, assemblyJson.config);
   assembly.id(assemblyJson.id);
   assembly.normals(null, assemblyJson.normals);
+  assembly.outline( assemblyJson.outline);
   assembly.notes(assemblyJson.notes);
   assembly.value.all(assemblyJson.value.values);
   if (assemblyJson.parent) assembly.parentAssembly(assemblyJson.parent);
@@ -651,6 +659,7 @@ Assembly.build = (type, group, config, assembly) => {
       rotation: subAssemConfig.rotation.join(':')
     }
     const subAssem = Assembly.new(type, subAssemConfig.code, name, posConfig);
+    subAssem.outline(true);
     // TODO: This should use Object.fromJson so more complex objects can easily save/load values.
     if (subAssem.jointSetIndex) {
       subAssem.jointSetIndex(subAssemConfig.jointSetIndex);
@@ -668,13 +677,15 @@ Assembly.build = (type, group, config, assembly) => {
     }
     subAssem.partCode(subAssemConfig.code);
     assembly.addSubAssembly(subAssem);
-    assembly.trigger.change();
   });
 
+  const regReg = /^\/.*^\//;
   config.joints.forEach((jointConfig) => {
-    const male = assembly.getAssembly(jointConfig.dependsSelector);
+    jointConfig = jointConfig.copy();
+    const male = assembly.getAssembly(jointConfig.selector.depends);
     if (male === undefined) console.warn(`No male found for joint: ${jointConfig}`);
-    else male.addDependencies(Object.fromJson(jointConfig));
+    male.addDependencies(Object.fromJson(jointConfig));
+    assembly.trigger.change();
   });
 
   return assembly;
@@ -696,7 +707,6 @@ Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
 Assembly.lists = {};
 Assembly.idCounters = {};
 
-Assembly.joinable = true;
 Assembly.MATERIAL_UNIT = 'SQFT';
 
 // PartCode reg matches starting from the end aswell as at each simicolon
@@ -719,4 +729,5 @@ Assembly.MATERIAL_UNIT = 'SQFT';
 
 Assembly.partCodeReg = (partCode) => new RegExp(`(.{1,}?_|^)${partCode}(|:.*)$`);
 
+ModelingCollections.Assembly = Assembly;
 module.exports = Assembly

@@ -81,7 +81,7 @@ function parse(elem, event) {
 
 du.on.match('change', '[name="parcer"]', (elem, event) => {
   const slideShow = getActive().slideShow;
-  if (slideShow) {
+  if (slideShow && slideShow.length()) {
     slideShow.pause();
     updatePlayControls();
   }

@@ -1,5 +1,5 @@
 
-const toJsonCxtrReg = /((.{1,})(3|2)(d|D))|BiPolygon|Plane|Layer$/;
+const toJsonCxtrReg = /((.{1,})(3|2)(d|D))|BiPolygon|Plane|Layer|JointSettings$/;
 const useToJson = (obj) => obj && obj.constructor.name.match(toJsonCxtrReg);
 
 
@@ -40,9 +40,6 @@ const nonFuntionalAttrs = (object, dto, to) => {
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
     if ((typeof object[key]) !== 'function' && excludeKeys.indexOf(key) === -1) {
-      if (object[key] && key === 'tasks') {
-        console.log('here');
-      }
       const value =  to(object[key]);
       dto.pathValue(key, value);
     }

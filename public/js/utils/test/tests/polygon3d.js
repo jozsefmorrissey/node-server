@@ -90,6 +90,25 @@ Test.add('Polygon3D: fromIntersections(outOfIntersectedBounds)',async (ts) => {
   ts.success();
 });
 
+const poly = new Polygon3D([{x:1,y:1,z:0},{x:1,y:-1,z:0},{x:-1,y:-1,z:0},{x:-1,y:1,z:0}]);
+function testResize(w, h, ts) {
+  const answer = new Polygon3D([{x:w/2,y:h/2,z:0},{x:w/2,y:-h/2,z:0},{x:-w/2,y:-h/2,z:0},{x:-w/2,y:h/2,z:0}]);
+  resize = poly.resize(w,h,true);
+  ts.assertTrue(resize.equals(answer));
+  ts.assertTrue(Object.equals(resize.demensions(), {x:w, y:h, z:0}));
+  resize.normals.swap();
+  ts.assertTrue(Object.equals(resize.demensions(), {x:h, y:w, z:0}));
+  resize.rotate({x:45});
+  ts.assertTrue(Object.equals(resize.demensions(), {x:h, y:w, z:0}));
+}
+
+Test.add('Polygon3D: resize',async (ts) => {
+  testResize(2,2, ts);
+  testResize(4,4, ts);
+  testResize(11,17, ts);
+  ts.success();
+});
+
 
 const vses = () => [
   new Vertex3D(),

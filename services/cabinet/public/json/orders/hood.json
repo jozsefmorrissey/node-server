@@ -238,7 +238,6 @@
                       "dependsSelector": "bl",
                       "dependentSelector": "bf",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -281,7 +280,6 @@
                       "dependsSelector": "br",
                       "dependentSelector": "bf",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -324,7 +322,6 @@
                       "dependsSelector": "ml",
                       "dependentSelector": "mf",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -367,7 +364,6 @@
                       "dependsSelector": "mr",
                       "dependentSelector": "mf",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -410,7 +406,6 @@
                       "dependsSelector": "bb",
                       "dependentSelector": "br",
                       "maleOffset": "3*2.54/8",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -419,7 +414,6 @@
                       "dependsSelector": "bb",
                       "dependentSelector": "bl",
                       "maleOffset": "3*2.54/8",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -495,7 +489,6 @@
                       "dependsSelector": "tl",
                       "dependentSelector": "tf",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -538,7 +531,6 @@
                       "dependsSelector": "tr",
                       "dependentSelector": "tf",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -581,7 +573,6 @@
                       "dependsSelector": "tb",
                       "dependentSelector": "tl",
                       "maleOffset": "3*2.54/8",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -590,7 +581,6 @@
                       "dependsSelector": "tb",
                       "dependentSelector": "tr",
                       "maleOffset": "3*2.54/8",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -641,7 +631,6 @@
                       "dependsSelector": "mfp",
                       "dependentSelector": "tf",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -650,7 +639,6 @@
                       "dependsSelector": "mfp",
                       "dependentSelector": "mlp",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -659,7 +647,6 @@
                       "dependsSelector": "mfp",
                       "dependentSelector": "mrp",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -668,7 +655,6 @@
                       "dependsSelector": "mfp",
                       "dependentSelector": "mf",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -746,7 +732,6 @@
                       "dependsSelector": "mrp",
                       "dependentSelector": "tr",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -755,7 +740,6 @@
                       "dependsSelector": "mrp",
                       "dependentSelector": "mr",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -833,7 +817,6 @@
                       "dependsSelector": "mlp",
                       "dependentSelector": "tl",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -842,7 +825,6 @@
                       "dependsSelector": "mlp",
                       "dependentSelector": "ml",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -912,7 +894,6 @@
                       "dependsSelector": "mb",
                       "dependentSelector": "mlp",
                       "maleOffset": "3*2.54/8",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -921,7 +902,6 @@
                       "dependsSelector": "mb",
                       "dependentSelector": "mrp",
                       "maleOffset": "3*2.54/8",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1036,7 +1016,7 @@
               },
               {
                 "_TYPE": "Property",
-                "code": "rvdd",
+                "code": "ddg",
                 "name": "Reveal Dual Door",
                 "value": 0.1588,
                 "properties": {

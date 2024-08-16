@@ -4,7 +4,6 @@ const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
 const CabinetLayouts = require('../../app-src/config/cabinet-layouts.js');
 const Layer = require('../../app-src/three-d/objects/layer.js');
 const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
-const approximate = require('../../../../public/js/utils/approximate.js').new(100);
 
 
 Test.add('Cabinet: doorIntersect',(ts) => {
@@ -112,8 +111,8 @@ Test.add('Cabinet: doorIntersect',(ts) => {
   ts.assertEquals(dx.center.length, 11.75);
   ts.assertEquals(dx.center.left.reveal, -.875);
   ts.assertEquals(dx.center.right.reveal, -.875);
-  ts.assertEquals(approximate(Math.toDegrees(dx.left.theta)), 45);
-  ts.assertEquals(approximate(Math.toDegrees(dx.right.theta)), 45);
+  ts.assertTolerance(Math.toDegrees(dx.left.theta), 45, .001);
+  ts.assertTolerance(Math.toDegrees(dx.right.theta), 45, .001);
   ts.assertEquals(dx.left.reveal, -1);
   ts.assertEquals(dx.right.reveal, -1);
 
@@ -125,7 +124,7 @@ Test.add('Cabinet: doorIntersect',(ts) => {
 
   dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 1, .125);
   ts.assertEquals(dx.left.theta, undefined);
-  ts.assertEquals(approximate(Math.toDegrees(dx.right.theta)), 22.5);
+  ts.assertTolerance(Math.toDegrees(dx.right.theta), 22.5, .001);
 
   // Wall right
   llp = {x:0,y:0};
@@ -135,7 +134,7 @@ Test.add('Cabinet: doorIntersect',(ts) => {
 
   dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 1, 1, 0, .125);
   ts.assertEquals(dx.center.left.theta, undefined);
-  ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 45);
+  ts.assertTolerance(Math.toDegrees(dx.center.right.theta), 45, .001);
 
   // Wall left
   llp = {x:0,y:0};
@@ -143,16 +142,16 @@ Test.add('Cabinet: doorIntersect',(ts) => {
   rcp = {x:9,y:25};
   rrp = {x:30,y:20};
 
-  // dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 0, 1, 1, .125);
-  // ts.assertEquals(approximate(Math.toDegrees(dx.center.right.theta)), 17.57);
-  // ts.assertEquals(approximate(Math.toDegrees(dx.center.left.theta)), 59.04);
+  dx = Cabinet.doorIntersect(llp, lcp, rcp, rrp, 0, 1, 1, .125);
+  ts.assertTolerance(Math.toDegrees(dx.center.right.theta), 17.57, .001);
+  ts.assertTolerance(Math.toDegrees(dx.center.left.theta), 59.04, .001);
 
   ts.success();
 });
 
 let run = false;
 const cleanJson = (json) => Object.filter(json, (c, key) =>
-  key && key.match(/(id|dependsSelector|dependentSelector)/), false).complement;
+  key && key.match(/(id|selector)/), false).complement;
 Test.add('Cabinet: to/from Json',(ts) => {
   const cabinet = Cabinet.build('base');
   cabinet.toJson();

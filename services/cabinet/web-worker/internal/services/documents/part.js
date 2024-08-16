@@ -53,12 +53,12 @@ class PartInfo {
     };
 
     const normRotz = Line3D.coDirectionalRotations(this.normals(true));
-    let noJointModel = env.modelInfo.extended[part.id] || env.modelInfo.model[part.id];
+    let noJointModel = env.getModel(part, 'cut');
     let poly;
     try {
       if (!(noJointModel instanceof CSG)) noJointModel = CSG.fromPolygons(noJointModel.polygons, true);
     } catch (e) {
-      console.log('here');
+      console.log('here njm');
     }
     const normInfoNZ = noJointModel.normalize(normRotz, true, false);
     const normInfoZ = noJointModel.normalize(normRotz, false, false);
@@ -118,7 +118,7 @@ class PartInfo {
       return this.normalize(zOnz, noJointModel);
     };
     this.joinedModel = (id) => {
-      let model = env.modelInfo.joined[id || this.part().id];
+      let model = env.getModel(id || this.part().id, 'joined');
       if (!(model instanceof CSG)) model = CSG.fromPolygons(model.polygons, true);
       return model;
     }
@@ -198,7 +198,6 @@ class PartInfo {
 
     this.edges = (zOnz) => {
       if (part.partCode === 'mfp') {
-        console.log('here');
         this.parrimeterInfo(true);
         this.parrimeterInfo(false);
       }
@@ -336,9 +335,6 @@ class PartInfo {
     if (this.cuts && this.cuts.length > 0) return this.cuts;
     const jointInfo = this.jointInfo();
     const cutInfo = [];
-    if (part.locationCode.match(/c_bf/)) {
-      console.log('her');
-    }
     jointInfo.forEach(ji => cutInfo.concatInPlace(ji.cutInfo()));
 // console.log(cutInfo.map(c => `//${c.jointInfo().joint().descriptor}\n${Polygon3D.toDrawString(c.set(), String.color.next())}`).join('\n\n'));
     // CutInfo.clean(cutInfo);

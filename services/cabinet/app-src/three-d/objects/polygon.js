@@ -97,6 +97,7 @@ class Polygon3D {
       for(let index = 0; index < lines.length; index++) {
         lines[index][0].rotate(rotations, center);
       }
+      if (xNorm) xNorm.rotate(rotations);
     }
 
     function calcNormal(otherPoints) {
@@ -311,6 +312,20 @@ class Polygon3D {
       this.irregular.parrelle.locations().length > 0;
 
 
+    // conformation definition:
+    //     correspondence especially to a model or plan
+    function validConformation(center, b4int, aftint, line, plane) {
+      const newSide = new Line3D(b4int, aftint);
+      const centSide = newSide.connect(center);
+      const centLine = line.connect(center);
+      const diff = centSide.length() - centLine.length();
+      const planeLine = plane.connect.line(line);
+      const sameDir = planeLine.vector().sameDirection(centLine.vector());
+      const validExpansion = sameDir && diff > 0;
+      const validContraction = !sameDir && diff > 0;
+      return validExpansion || validContraction;
+    }
+
     /**
                                    1
                     <-----  ---------------  ------>
@@ -321,20 +336,18 @@ class Polygon3D {
                                   3
 
     **/
-    // Arbitrary value could be used in the future to allow variance in auto joining algorithum.
-    const INT_DIST_TOL = 3*2.54;
-    function extendByLines(polyOplane) {
-      const plane = polyOplane instanceof Polygon3D ? polyOplane.toPlane() : polyOplane;
-      const len = lines.length;
-      for (let index = 0; index < len; index++) {
+    const polySorter = (poly) => (a,b) => poly.distance(a.line.midpoint()) - poly.distance(b.line.midpoint());
+    function extendByLines(plane, liMap) {
+      const len = liMap.length;
+      const center = instance.center();
+      for (let i = 0; i < len; i++) {
+        const index = liMap[i].index;
         const before = lines[(index + len - 1) % len];
         const after = lines[(index + 1) % len];
         const b4int = plane.intersection.line(before);
         const aftint = plane.intersection.line(after);
         if (b4int instanceof Vertex3D && aftint instanceof Vertex3D) {
-          const newSide = new Line3D(b4int, aftint);
-          const intDist = polyOplane.distance(b4int) + polyOplane.distance(aftint);
-          if (intDist < INT_DIST_TOL) {
+          if (validConformation(center, b4int, aftint, lines[index], plane)) {
             const b4Index = before[0].distance(b4int) < before[1].distance(b4int) ? 0 : 1;
             const aftIndex = after[0].distance(aftint) < after[1].distance(aftint) ? 0 : 1;
             if (b4Index !== aftIndex) {
@@ -357,12 +370,51 @@ class Polygon3D {
       return instance;
     }
 
-    this.extendTo = (polyOplane, doNotModify) => {
-      if (doNotModify) return this.copy().extendTo(polyOplane);
-      return extendByLines(polyOplane);
+    const extendCorner = (polyOplane, liMap) => {
+      const lm1 = liMap[0];
+      const lm2 = liMap[1]
+      const v1 = polyOplane.intersection.line(liMap[0].line);
+      const v2 = polyOplane.intersection.line(liMap[1].line);
+      if (v1.equals(v2)) return;
+      if (lm1.line.distance(v1, false) > lm2.line.distance(v1, false)) {
+        lines[lm1.index][1] = v2;
+        lines[lm2.index][0] = v1;
+        lines.splice(lm2.index, 0, new Line3D(v2, v1));
+      } else {
+        lines[lm1.index][1] = v1;
+        lines[lm2.index][0] = v2;
+        lines.splice(lm2.index, 0, new Line3D(v1, v2));
+      }
+      return instance;
     }
 
-    this.normals = () => Polygon3D.normals(this);
+    this.extendTo = (polyOplane, doNotModify) => {
+      if (doNotModify) return this.copy().extendTo(polyOplane);
+      const plane = polyOplane instanceof Polygon3D ? polyOplane.toPlane() : polyOplane;
+      const liMap = lines.map((line, index) => ({line, index, dist: polyOplane.distance(line.midpoint())}));
+      liMap.sortByAttrs(['dist', 'index']);
+      const min = liMap[0].dist;
+      const minCount = liMap.filter(li => within(li.dist, min)).length;
+      if (minCount === 1) return extendByLines(plane, liMap);
+      if (Math.difference(liMap[0].index, liMap[1].index) === 1) return extendCorner(polyOplane, liMap);
+      throw new Error('Need to program the case where multiple non adjacent lines are the same distance from poly/plane');
+    }
+
+    let xNorm;
+    this.normals = (x,y) => {
+      if (x || y) {
+        if (x && y) throw new Error('Polygon3D normals can only be defined for either x or y not both');
+        const z = this.normal();
+        if (!z.perpendicular(x || y)) throw new Error('Polygon3D x or y normals must be perpendicular to the calculated z normal');
+        if (x) xNorm = x;
+        else xNorm = z.crossProduct(y);
+      }
+      if (xNorm === undefined) return Polygon3D.normals(this);
+      const z = this.normal();
+      return {x: xNorm, y: z.crossProduct(xNorm), z};
+    }
+    this.normals.swap = () => this.normals(this.normals().y);
+    this.demensions = () => Polygon3D.demensions(this);
 
     const resizeVertex = (vert, center, norms, width, height) => {
       const radial = new Line3D(center, vert);
@@ -377,13 +429,25 @@ class Polygon3D {
 
     this.resize = (width, height, doNotModify) => {
       if (doNotModify) return this.copy().resize(width, height);
-      console.warn.subtle('This is really a scaleing function should rewrite');
+      const dems = this.demensions();
+      const scale = {x: width/dems.x, y: height/dems.y}
       const norms = this.normals();
       const center = this.center();
       const verts = this.vertices();
-      lines.forEach(l =>
-          resizeVertex(l[0], center, norms, width, height));
+      lines.forEach(line => {
+        const centerVect = new Line3D(center, line[0]).vector();
+        const xVect = norms.x.scale(centerVect.dot(norms.x)*scale.x);
+        const yVect = norms.y.scale(centerVect.dot(norms.y)*scale.y);
+        line[0].positionAt(center.translate(xVect.add(yVect), true));
+      });
+      // lines.forEach(l =>
+      //     resizeVertex(l[0], center, norms, width, height));
       return this;
+    }
+
+    this.offset = (x,y, doNotModify) => {
+      const dems = this.demensions();
+      return this.resize(dems.x + x, dems.y + y, doNotModify);
     }
 
     this.scale = (width, height, doNotModify) => {
@@ -447,9 +511,7 @@ class Polygon3D {
     this.lineMap = (force) => {
       if (!force && map !== undefined) return map;
       if (lines.length === 0) return {};
-      // map = new ToleranceMap({'0.x': tol, '0.y': tol, '0.z': tol,
-      //                         '1.x': tol, '1.y': tol, '1.z': tol});
-      map = new ToleranceMap({'vector.unit.i': tol, 'vector.unit.j': tol, 'vector.unit.k': tol});
+      map = new ToleranceMap({'vector().unit().i()': tol, 'vector().unit().j()': tol, 'vector().unit().k()': tol});
 
       let lastEnd;
       if (!lines[0][0].equals(lines[lines.length - 1][1])) throw new Error('Broken Polygon');
@@ -460,7 +522,11 @@ class Polygon3D {
       return map;
     }
 
-    this.copy = () => new Polygon3D(Line3D.vertices(lines, true));
+    this.copy = () => {
+      const poly = new Polygon3D(Line3D.vertices(lines, true).map(v => v.clone()));
+      if (xNorm) poly.normals(xNorm);
+      return poly;
+    }
 
     this.equals = (other) => {
       if (!(other instanceof Polygon3D)) return false;
@@ -968,12 +1034,12 @@ class Polygon3D {
 Polygon3D.merge = (polygons) => {
   if (polygons instanceof CSG) polygons = Polygon3D.fromCSG(polygons);
   const tol = '+.001';
-  const tolMap = new ToleranceMap({'normal.positiveUnit.i': tol,
-                        'normal.positiveUnit.j': tol,
-                        'normal.positiveUnit.k': tol,
-                        'toPlane.axisIntercepts.x': tol,
-                        'toPlane.axisIntercepts.y': tol,
-                        'toPlane.axisIntercepts.z': tol});
+  const tolMap = new ToleranceMap({'normal().positiveUnit().i()': tol,
+                        'normal().positiveUnit().j()': tol,
+                        'normal().positiveUnit().k()': tol,
+                        'toPlane().axisIntercepts().x': tol,
+                        'toPlane().axisIntercepts().y': tol,
+                        'toPlane().axisIntercepts().z': tol});
   tolMap.addAll(polygons);
 
   polygons.deleteAll();
@@ -1009,20 +1075,11 @@ Polygon3D.mostInformation = (polygons) => {
   return Vertex3D.mostInformation(verts);
 }
 
-Polygon3D.lines2d = (polygons, x, y) => {
-  if (polygons instanceof Polygon3D) polygons = [polygons];
-  if (polygons instanceof CSG) polygons = Polygon3D.fromCSG(polygons);
-  // Polygon3D.merge(polygons);
-  let lines = [];
-  polygons.map(p => p.to2D(x, y)).forEach(p => lines.concatInPlace(p.lines()));
-  return Line2d.consolidate(lines);
-}
-
 Polygon3D.toDrawString2d = (polygons, x, y,...colors) => {
   Polygon3D.merge(polygons)
   let drawString = '';
   for (let index = 0; index < polygons.length; index++) {
-    const lines = Polygon3D.lines2d([polygons[index]], x, y);
+    const lines = Polygon3D.toTwoD([polygons[index]], x, y);
     drawString += Line2d.toDrawString(lines, colors[index % colors.length]) + '\n\n';
   }
   return drawString;
@@ -1039,9 +1096,9 @@ Polygon3D.toTwoD = (polygons, vector, axis) => {
 }
 
 Polygon3D.parrelleSets = (polygons, tolerance) => {
-  const tolmap = new ToleranceMap({'normal.positiveUnit.i': tolerance,
-                                  'normal.positiveUnit.j': tolerance,
-                                  'normal.positiveUnit.k': tolerance});
+  const tolmap = new ToleranceMap({'normal().positiveUnit().i()': tolerance,
+                                  'normal().positiveUnit().j()': tolerance,
+                                  'normal().positiveUnit().k()': tolerance});
   tolmap.addAll(polygons);
   const groups = tolmap.group().sortByAttr('length').reverse();
   return groups;
@@ -1160,9 +1217,31 @@ Polygon3D.toDrawString = (polygons, ...colors) => {
   return str;
 }
 
+
+const appliableVector = (line, excludeVect) => {
+  let vect = line.vector();
+  if (excludeVect) {
+    const remove = excludeVect.scale(vect.dot(excludeVect));
+    vect = vect.minus(remove);
+  }
+  return vect.scale(line.length()*line.length()).acquiescent();
+}
+const lineNormals = (polys) => {
+  const lines = [];
+  polys.forEach(p => lines.concatInPlace(p.lines()));
+  let yVector = new Vector3D(0,0,0);
+  lines.forEach(l => yVector = yVector.add(appliableVector(l)));
+  let xVector = new Vector3D(0,0,0);
+  lines.forEach(l => xVector = xVector.add(appliableVector(l, yVector.unit())));
+  const z = xVector.unit().crossProduct(yVector.unit());
+  console.warn('experimental normal calculations')
+  return {x: xVector.unit(), y: yVector.unit(), z};
+}
+
 const centerSort = (center) => (p1, p2) => p2.distance(center) - p1.distance(center);
 function normalsGivinPolygons(polygons) {
-  const sets = Polygon3D.parrelleSets(polygons);
+  const sets = Polygon3D.parrelleSets(polygons).filter(s => s.length > 1);
+  if (sets.length === 0) return lineNormals(polygons);
   const positionObjs = [];
   for (let index = 0; index < sets.length; index++) {
     const set = sets[index];
@@ -1195,6 +1274,29 @@ Polygon3D.normals = (polygonOs) => {
     if (polygonOs.length > 1) return normalsGivinPolygons(polygonOs);
     else polygonOs = polygonOs[0];
   return normalsGivenAPolygon(polygonOs);
+}
+
+Polygon3D.demensions = (polygonOs, norms) => {
+  const isArray = Array.isArray(polygonOs);
+  norms = isArray ? Polygon3D.normals(polygonOs) : polygonOs.normals();
+  const polys = isArray ? polygonOs : [polygonOs];
+  const verts = [];
+  polys.forEach(p => p.vertices().forEach(v => verts.push(v)));
+  const center = Math.midrange(verts, ['x', 'y', 'z']);
+  const vertDems = verts.map(v => {
+    const centerVect = new Line3D(center, v).vector();
+    return {
+      x: centerVect.dot(norms.x),
+      y: centerVect.dot(norms.y),
+      z: centerVect.dot(norms.z)
+    }
+  });
+  const minMax = Math.minMax(vertDems, ['x', 'y', 'z']);
+  return {
+    x: minMax.x.max - minMax.x.min,
+    y: minMax.y.max - minMax.y.min,
+    z: minMax.z.max - minMax.z.min
+  }
 }
 
 const addVector = (normals, axis, attr, centerLine) => {

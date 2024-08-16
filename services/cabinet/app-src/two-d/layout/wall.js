@@ -64,7 +64,7 @@ class Wall2D extends Line2d {
   }
 }
 
-Object.class.register(Wall2D, 'label', 'widows', 'doors', 'height');
+Object.class.register(Wall2D, 'label', 'widows', 'doors', 'height', '0', '1');
 
 Wall2D.fromJson = (json, layout, vertexMap) => {
   vertexMap ||= {};

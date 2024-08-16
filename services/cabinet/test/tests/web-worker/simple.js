@@ -32,14 +32,8 @@ Test.add('Jobs.CSG.Simple', async (ts) => {
 });
 
 const on2DComplete = (objects, ts) => (result) => {
-  const modelInfo = result.constructor.name === 'ModelInformation' ? result : null;
   for (let index = 0; index < objects.length; index++) {
-    const obj = objects[index];
-    if (!modelInfo) {
-      ts.assertTrue(result[obj.id()] !== undefined);
-    } else {
-      ts.assertTrue(modelInfo.threeView(obj.id()) !== undefined);
-    }
+    ts.assertTrue(result[objects[index].id()] !== undefined);
   }
   ts.success();
 }

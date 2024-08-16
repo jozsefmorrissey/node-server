@@ -3,7 +3,7 @@
     <div class='absolute-top-left show-cnt'>
       <div class='align-right'>
         <label>Show</label>
-        <select class="show-select" name='type' side='Left'>
+        <select class="show-select" name='type' side='left'>
           <option:t repeat='showType in showTypes'
               {{cabinet.value('showLeft.type') === showType.name ? 'selected' : ''}}>
             {{showType.name}}
@@ -11,7 +11,7 @@
         </select>
         <br>
         <label>End Style</label>
-        <select class="show-select" name='endStyle' side='Left'>
+        <select class="show-select" name='endStyle' side='left'>
           <option>No</option>
           <option>Yes</option>
         </select>
@@ -20,7 +20,7 @@
     <div class='cab-tab-cnt'>{{fileTabDisp.html()}}</div>
     <div class='absolute-top-right show-cnt'>
       <div class='align-left'>
-        <select class="show-select" name='type' side='Right'>
+        <select class="show-select" name='type' side='right'>
           <option:t repeat='showType in showTypes'
               {{cabinet.value('showRight.type') === showType.name ? 'selected' : ''}}>
             {{showType.name}}
@@ -28,7 +28,7 @@
         </select>
         <label>Show</label>
         <br>
-        <select class="show-select" name='endStyle' side='Right'>
+        <select class="show-select" name='endStyle' side='right'>
           <option>No</option>
           <option>Yes</option>
         </select>

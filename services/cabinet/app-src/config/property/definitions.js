@@ -2,10 +2,31 @@ const Property = require('../property');
 const Measurement = require('../../../../../public/js/utils/measurement.js');
 const IMPERIAL_US = Measurement.units()[1];
 
+const ov = (trueOfalse) => (Boolean.is(trueOfalse) ? trueOfalse : defs.fls.value()) ?
+                            defs.ovfls.value() : defs.ovfrd.value()
+
 const defs = {};
 
+//   Cabinet
+defs.style = new Property('style', 'Cabinet Style', {value: 'Overlay'});
+defs.fls = new Property('fls', 'Frameless', {value: true});
+defs.dsc = new Property('dsc', 'Default Scribe', {value: 1/4, notMetric: IMPERIAL_US});
+defs.tid = new Property('tid', 'Top Inset Depth', {value: 1/2, notMetric: IMPERIAL_US});
+defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US});
+defs.ddg = new Property('ddg', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US});
+defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US});
+defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US});
+defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US});
+defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US});
+defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US});
+defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US});
+defs.showRight = new Property('showRight', 'Show Right', {value: {type: 'None', endStyle: 'No'}});
+defs.ddd = new Property('ddd', 'Default Dado Depth', {value: .25, notMetric: IMPERIAL_US});
+
 //   Overlay
-defs.ov = new Property('ov', 'Overlay', {value: 1/4, notMetric: IMPERIAL_US});
+defs.ovfls = new Property('ovfls', 'Overlay Frameless', {value: 11/32, notMetric: IMPERIAL_US});
+defs.ovfrd = new Property('ovfrd', 'Overlay Framed', {value: 1/2, notMetric: IMPERIAL_US});
+defs.ov = new Property('ov', 'Overlay', {value: ov});
 
 //   Reveal
 defs.r = new Property('r', 'Reveal', {value: 1/8, notMetric: IMPERIAL_US});
@@ -16,20 +37,6 @@ defs.rvb = new Property('rvb', 'Reveal Bottom', {value: 0, notMetric: IMPERIAL_U
 
 //   Inset
 defs.is = new Property('is', 'Spacing', {value: 3/32, notMetric: IMPERIAL_US});
-
-//   Cabinet
-defs.dsc = new Property('dsc', 'Default Scribe', {value: 1/8, notMetric: IMPERIAL_US});
-defs.rvibr = new Property('rvibr', 'Reveal Inside Bottom Rail', {value: 1/8, notMetric: IMPERIAL_US});
-defs.rvdd = new Property('rvdd', 'Reveal Dual Door', {value: 1/16, notMetric: IMPERIAL_US});
-defs.tkbw = new Property('tkbw', 'Toe Kick Backer Width', {value: 1/2, notMetric: IMPERIAL_US});
-defs.tkd = new Property('tkd', 'Toe Kick Depth', {value: 4, notMetric: IMPERIAL_US});
-defs.tkh = new Property('tkh', 'Toe Kick Height', {value: 4, notMetric: IMPERIAL_US});
-defs.pbt = new Property('pbt', 'Panel Back Thickness', {value: 1/2, notMetric: IMPERIAL_US});
-defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMPERIAL_US});
-defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US});
-defs.bid = new Property('bid', 'Bottom Inset Depth', {value: 0, notMetric: IMPERIAL_US});
-defs.tid = new Property('tid', 'Top Inset Depth', {value: 0, notMetric: IMPERIAL_US});
-defs.showRight = new Property('showRight', 'Show Right', {value: {type: 'None', endStyle: 'No'}});
 
 // Cabinet.AngledBackCorner
 defs.rbo = new Property('bo', 'Back Offset From Corner', {value: 24, notMetric: IMPERIAL_US});
@@ -60,14 +67,12 @@ defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null});
 defs.dbst = new Property('dbst', 'Side Thickness', {value: 5/8, notMetric: IMPERIAL_US});
 defs.dbbt = new Property('dbbt', 'Box Bottom Thickness', {value: 1/4, notMetric: IMPERIAL_US});
 defs.dbid = new Property('dbid', 'Bottom Inset Depth', {value: 1/2, notMetric: IMPERIAL_US});
-defs.dbn = new Property('dbn', 'Bottom Notched', {value: true, notMetric: IMPERIAL_US});
+defs.dbn = new Property('dbn', 'Bottom Notched', {value: true});
 
 //   DrawerFront
 defs.mfdfd = new Property('mfdfd', 'Minimum Framed Drawer Front Height', {value: 6, notMetric: IMPERIAL_US})
 
 //   Frame
-defs.fw = new Property('fw', 'Frame Rail Width', {value: 1.5, notMetric: IMPERIAL_US});
-defs.ft = new Property('ft', 'Frame Rail Thickness', {value: .75, notMetric: IMPERIAL_US});
 
 //   Handle
 defs.c2c = new Property('c2c', 'Center To Center', null);
@@ -83,6 +88,7 @@ defs.minol = new Property('minol', 'Minimum Door Overlay', null)
 
 // Divider
 defs.dpt = new Property('dpt', 'Divider Panel Thickness', {value: 'pt34'});
+defs.dfw = new Property('dfw', 'Divider Frame Width', {value: 1.5, notMetric: IMPERIAL_US});
 defs.dft = new Property('dft', 'Divider Frame Thickness', {value: .75, notMetric: IMPERIAL_US});
 defs.dpw = new Property('dpw', 'Divider Partial Width', {value: 4, notMetric: IMPERIAL_US});
 defs.sc = new Property('sc', 'Scribe', {value: 'dsc'});

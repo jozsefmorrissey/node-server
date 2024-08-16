@@ -25,7 +25,7 @@ class CabinetTemplate extends AssemblyTemplate {
       cabinet.width(width || this.width());
       cabinet.thickness(thickness || this.thickness());
 
-      cabinet.propertyConfig(pc instanceof PropertyConfig ? pc : new PropertyConfig());
+      if (pc instanceof PropertyConfig) cabinet.group().propertyConfig = pc;
       return cabinet;
     }
     this.get = get;

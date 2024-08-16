@@ -9,6 +9,7 @@ const tol = .00000001;
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const withinTol = new Tolerance(tol).within;
 const withinHundreth = new Tolerance(.01).within;
+const withinThousandth = new Tolerance(.001).within;
 
 const zero = (val) => {
   if (withinTol(val, 0)) return 0
@@ -211,6 +212,12 @@ class Line3D {
     };
 
     const connect = (line1, line2, l1TrueSegmentFalseDirectional, l2TrueSegmentFalseDirectional) => {
+      if (line1.isPoint() && line2.isPoint())
+        return new Line3D(line1[0], line2[0]);
+      else if (line1.isPoint())
+        return new Line3D(line1[0], line2.connect(line1[0])[0]);
+      else if (line2.isPoint())
+        return new Line3D(line1.connect(line2[0])[0], line2[0]);
       const l1State = tsfdState(l1TrueSegmentFalseDirectional);
       const l2State = tsfdState(l1TrueSegmentFalseDirectional);
       let intersection = line1.intersection(line2);
@@ -222,7 +229,7 @@ class Line3D {
       let prevDist = conn.length();
       conn = line2.connect(conn[0], l2TrueSegmentFalseDirectional);
       conn = line1.connect(conn[0], l1TrueSegmentFalseDirectional);
-      for (let index = 0; !withinTol(prevDist, conn.length()) && index < 5; index++) {
+      for (let index = 0; !withinThousandth(prevDist, conn.length()) && index < 5; index++) {
         prevDist = conn.length();
         conn = line2.connect.vertex(conn[0], l2TrueSegmentFalseDirectional);
         conn = line1.connect.vertex(conn[0], l1TrueSegmentFalseDirectional);
@@ -232,18 +239,9 @@ class Line3D {
       return conn;
     }
 
-    this.connect.line = (other) =>
-      // Line3D.intersectingLine(this, other);
-      connect(this, other);
-
-
-    this.connect.line.segment = (other, both) =>
-      // Line3D.intersectingLine(this, other, false, true, true, both, both);
-      connect(this, other, true, both === true ? true : null);
-
-    this.connect.line.directional = (other, both) =>
-      // Line3D.intersectingLine(this, other, false, true, false, both, false);
-      connect(this, other, false, both === true ? false : null);
+    this.connect.line = (other) => connect(this, other);
+    this.connect.line.segment = (other, both) =>connect(this, other, true, both === true ? true : null);
+    this.connect.line.directional = (other, both) => connect(this, other, false, both === true ? false : null);
 
 
     this.connect.vertex = (vertex, trueSegmentFalseDirectional) => {
@@ -312,7 +310,7 @@ class Line3D {
         const int = ints[index];
         const dist = this.distance(int) + other.distance(int);
         if (!targetInfo || test(targetInfo, dist)) {
-          if (targetInfo && withinHundreth(dist, targetInfo.dist))
+          if (targetInfo && withinHundreth(dist, targetInfo.dist) && !this.isParrelle(other))
             console.warn('I thought this was extremely unlikely, you may want to look into why multple intersections are the nearly identical disances without being the same point');
           targetInfo = {dist, int};
         }
@@ -804,9 +802,9 @@ Line3D.combine = (lines) => {
 
 Line3D.bestPole = (lines, tolerance) => {
   tolerance ||= tol;
-  const tolmap = new ToleranceMap({'vector.positiveUnit.i': tolerance,
-                                  'vector.positiveUnit.j': tolerance,
-                                  'vector.positiveUnit.k': tolerance});
+  const tolmap = new ToleranceMap({'vector().positiveUnit().i()': tolerance,
+                                  'vector().positiveUnit().j()': tolerance,
+                                  'vector().positiveUnit().k()': tolerance});
   tolmap.addAll(lines);
   const center = Vertex3D.center(...Line3D.vertices(lines));
   let maxDist = 0;
@@ -920,9 +918,9 @@ Line3D.distanceSort = (target, segment) => (l1,l2) => {
 
 Line3D.parrelleSets = (lines, tolerance) => {
   tolerance ||= tol;
-  const tolmap = new ToleranceMap({'vector.positiveUnit.i': tolerance,
-                                  'vector.positiveUnit.j': tolerance,
-                                  'vector.positiveUnit.k': tolerance});
+  const tolmap = new ToleranceMap({'vector().positiveUnit().i()': tolerance,
+                                  'vector().positiveUnit().j()': tolerance,
+                                  'vector().positiveUnit().k()': tolerance});
   tolmap.addAll(lines);
   const groups = tolmap.group().sortByAttr('0.length', true);
   groups.forEach(set => set.sortByAttr('length', true));

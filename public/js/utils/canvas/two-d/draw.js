@@ -317,7 +317,7 @@ class Draw2d {
     }
 
     draw.text = (text, point, props) => {
-      if (text === undefined || CANVAS().simple) return;
+      if (text === undefined) return;
       props ||= {};
       text = '' + text;
       const ctx = CTX();
@@ -344,6 +344,12 @@ class Draw2d {
       ctx.strokeStyle = props.color || 'black';
       ctx.fillStyle =  props.color || 'black';
       // TODO: Cant figure out why satic drawings require this but panz drawings do not.
+      const mirrorX = props.mirror && (props.mirror.x || props.mirror === 'x');
+      const mirrorY = props.mirror && (props.mirror.y || props.mirror === 'y');
+      if (mirrorX && mirrorY) ctx.scale(-1,-1);
+      else if (mirrorX) ctx.scale(1, -1);
+      else if (mirrorY) ctx.scale(-1, 1);
+
       if (draw.staticOffset) ctx.fillText(text, textSize.width/-2, textSize.height/2, props.maxWidth);
       else ctx.fillText(text, 0, 0, props.maxWidth);
       ctx.stroke()

@@ -5,11 +5,13 @@ const Line3D = require('../../../../../app-src/three-d/objects/line');
 const Polygon3D = require('../../../../../app-src/three-d/objects/polygon');
 const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon');
 const CabinetUtil = require('./cabinet');
+const Utils = require('./utils');
+
 
 const so = 3*2.54;
 
 class OpeningToeKickUtil {
-  constructor(openTk, modelInfo) {
+  constructor(openTk, env) {
     let toeKick;
     let vOid;
     let offsetToeKickPoly;
@@ -43,7 +45,7 @@ class OpeningToeKickUtil {
 
 
     function corners(side, openingCenter, targetCorner, innerPoly, height, depth1, depth2) {
-      const sideBiPolyArr = modelInfo.modelInfo.biPolygonArray[side.id];
+      const sideBiPolyArr = env.modelInfo.biPolygonArray[side.id];
       const biPoly = new BiPolygon(sideBiPolyArr[0], sideBiPolyArr[1]);
       const poly = biPoly.furthestOrder(openingCenter)[1];
       let front = Line3D.centerClosestTo(openingCenter, poly.lines()).polarize(targetCorner);
@@ -86,8 +88,12 @@ class OpeningToeKickUtil {
       const rightStart = bottomPlane.intersection.line(rightLine);
       const leftTkLine = Line3D.fromVector(leftLine.vector().unit().scale(height), leftStart);
       const rightTkLine = Line3D.fromVector(rightLine.vector().unit().scale(height), rightStart);
-      const tkSpacePoly = new Polygon3D([leftTkLine[1], rightTkLine[1], rightTkLine[0], leftTkLine[0]]);
-      return BiPolygon.fromPolygon(tkSpacePoly, depth1, depth2, xyOffset);
+      let tkSpacePoly = new Polygon3D([leftTkLine[1], rightTkLine[1], rightTkLine[0], leftTkLine[0]]);
+      if (leftTkLine.vector().perpendicular(tkSpacePoly.normals().y))
+        tkSpacePoly.normals.swap();
+      if (xyOffset) tkSpacePoly = tkSpacePoly.offset(xyOffset.x, xyOffset.y, true);
+      const dems = tkSpacePoly.demensions();
+      return BiPolygon.fromPolygon(tkSpacePoly, depth1, depth2);
     }
 
     function buildToeKick(tkBiPoly, tkSpacePoly) {
@@ -104,7 +110,7 @@ class OpeningToeKickUtil {
       }
 
       const faces = tkBiPoly.closestOrder(tkSpacePoly.center());
-      const cabinetUtil = new CabinetUtil(cabinet, modelInfo);
+      const cabinetUtil = new CabinetUtil(cabinet, env);
       const topInner = cabinetUtil.planeIntersection(faces[0].lines()[0]);
       const bottomInner = cabinetUtil.planeIntersection(faces[0].lines()[2]);
       const topOuter = cabinetUtil.planeIntersection(faces[1].lines()[0]);
@@ -197,20 +203,18 @@ class OpeningToeKickUtil {
       const innerPoly = opening.coordinates.inner.object();
       const center = innerPoly.center();
 
-      const propConfig = modelInfo.propertyConfig;
-      const tkh = propConfig.Cabinet.tkh;//cabinet.value('tkh');
-      const sdepth = propConfig.Cabinet.tkd;//cabinet.value('tkd');
       const cabinet = openTk.find('c');
+      const tkh = Utils.property('tkh', cabinet, env);
+      const sdepth = Utils.property('tkd', cabinet, env);
       const dem = cabinet.position.current.demension;
       const xyOffset = {x: dem.x + dem.z + dem.y, y: 0};
       vOid = buildOffset(right, left, center, coords, innerPoly, tkh, sdepth, -10000, xyOffset);
       children.vOid = vOid;
 
       const tkd1 = sdepth;
-      const tkd2 = tkd1 + propConfig.Cabinet.tkbw;
+      const tkd2 = tkd1 + Utils.property('tkbw', cabinet, env);
       const bottomThickness = cabinet.find.down('B').position.current.demension.z;
-      const tkah = tkh + bottomThickness/2;
-      offsetToeKickPoly = buildOffset(right, left, center, coords, innerPoly, tkah, tkd1, tkd2);
+      offsetToeKickPoly = buildOffset(right, left, center, coords, innerPoly, tkh, tkd1, tkd2);
 
       return buildToeKick(offsetToeKickPoly, vOid);
     }
@@ -219,10 +223,10 @@ class OpeningToeKickUtil {
 }
 
 const built = {};
-OpeningToeKickUtil.instance = (openTk, modelInfo) => {
+OpeningToeKickUtil.instance = (openTk, env) => {
   const rootHash = openTk.find.root().hash;
   if (built[openTk.id] === undefined || built[openTk.id].rootHash !== rootHash) {
-    built[openTk.id] = new OpeningToeKickUtil(openTk, modelInfo);
+    built[openTk.id] = new OpeningToeKickUtil(openTk, env);
     built[openTk.id].rootHash = rootHash;
   }
   return built[openTk.id];

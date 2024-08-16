@@ -12,7 +12,6 @@ const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/obje
 const PanZoomClickMeasure = require('../../../../public/js/utils/canvas/two-d/pan-zoom-click-measure.js');
 const Global = require('../services/global.js');
 const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
-const CabinetModel = require('../three-d/cabinet-model.js');
 const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
 const HoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map.js');
 const construction = require('./documents/construction.js');

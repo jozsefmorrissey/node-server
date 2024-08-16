@@ -126,10 +126,7 @@ class CutInfo {
                       .sort(Line2d.distanceSort(z, true));
       const info = [new Line2d(zInts[0], zInts[1]), new Line2d(nzInts[0], nzInts[1])];
       if (!zOnz) info.reverse();
-      console.log(instance.partInfo().model(zOnz) + '\n\n' + instance.toDrawString(null, zOnz));
-      if (instance.partInfo().parts()[0].locationCode.match(/c_m(l|r)p/)) {
-        console.log('her');
-      }
+      // console.log(instance.partInfo().model(zOnz) + '\n\n' + instance.toDrawString(null, zOnz));
       if (vertMag(info[0][0]) > vertMag(info[0][1])) info[0] = info[0].negitive();
       if (axis.z.isPoint()) info.splice(1,1);
       else {
@@ -391,7 +388,8 @@ function unDocumentExtranious(cuts) {
 
 const tol = .001;
 CutInfo.clean = (cuts) => {
-  const tolMap = new ToleranceMap({'axis.(x,y,z).(0,1).(x,y,z)': tol});
+  const tolMap = new ToleranceMap({'axis().(x,y,z).(0,1).(x,y,z)': tol});
+  console.warn('not sure tolerance map works...')
   tolMap.addAll(cuts);
   return tolMap.group().map(g => g[0]);
 }

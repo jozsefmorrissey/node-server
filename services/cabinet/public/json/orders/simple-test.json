@@ -104,7 +104,6 @@
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -238,7 +237,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "R",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -247,7 +245,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "L",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -290,7 +287,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -299,7 +295,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -342,7 +337,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -351,7 +345,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -491,7 +484,6 @@
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -559,7 +551,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "B",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -568,7 +559,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "pbl",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -577,7 +567,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "pbr",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -586,7 +575,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "T",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -629,7 +617,6 @@
                       "dependsSelector": "cb",
                       "dependentSelector": "T",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -638,7 +625,6 @@
                       "dependsSelector": "cb",
                       "dependentSelector": "B",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -647,7 +633,6 @@
                       "dependsSelector": "cb",
                       "dependentSelector": "pbl",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -656,7 +641,6 @@
                       "dependsSelector": "cb",
                       "dependentSelector": "pbr",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -764,7 +748,6 @@
                       "dependsSelector": "pbl",
                       "dependentSelector": "L",
                       "maleOffset": "L.t / 2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -807,7 +790,6 @@
                       "dependsSelector": "cpbl",
                       "dependentSelector": "BACK",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -849,7 +831,6 @@
                       "dependsSelector": "pbr",
                       "dependentSelector": "R",
                       "maleOffset": "pbr.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -892,7 +873,6 @@
                       "dependsSelector": "cpbr",
                       "dependentSelector": "BACK",
                       "maleOffset": 0,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -934,7 +914,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "L",
                       "maleOffset": "L.t / 2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -943,7 +922,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "R",
                       "maleOffset": "R.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -952,7 +930,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "pbr",
                       "maleOffset": "pbr.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -961,7 +938,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "pbl",
                       "maleOffset": "pbl.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1010,7 +986,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "L",
                       "maleOffset": "L.t / 2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1019,7 +994,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "R",
                       "maleOffset": "R.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1028,7 +1002,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "pbr",
                       "maleOffset": "pbr.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1037,7 +1010,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "pbl",
                       "maleOffset": "pbl.t/2",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1270,7 +1242,7 @@
               },
               {
                 "_TYPE": "Property",
-                "code": "rvdd",
+                "code": "ddg",
                 "name": "Reveal Dual Door",
                 "value": 0.1588,
                 "properties": {

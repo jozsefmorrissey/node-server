@@ -2,6 +2,7 @@
 
 
 const Assembly = require('../../assembly.js');
+const JointSettings = require('../../../joint/settings');
 const CSG = require('../../../../../../../public/js/utils/3d-modeling/csg.js');
 /*
     a,b,c
@@ -18,6 +19,7 @@ class Handle extends Assembly {
     this.partName = () =>
       `${this.parentAssembly().partName()}.Pull.${this.location().position}`;
     this.partCode = () => partCode;
+    this.jointSettings = new JointSettings(false,false,false,false);
     this.locationCode = () => {
       const parent = this.parentAssembly();
       const parentStr = parent ? `${parent.locationCode()}:` : '';
@@ -52,8 +54,6 @@ Handle.location.BOTTOM = {multiple: true, position: 'BOTTOM'};
 Handle.location.RIGHT = {multiple: true, rotate: true, position: 'RIGHT'};
 Handle.location.LEFT = {multiple: true, rotate: true, position: 'LEFT'};
 Handle.location.CENTER = {multiple: true, position: 'CENTER'};
-
-Handle.joinable = false;
 
 Handle.abbriviation = 'hn';
 

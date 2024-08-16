@@ -1,5 +1,4 @@
 
-const approximate10 = require('../../../approximate.js').new(10);
 const ToleranceMap = require('../../../tolerance-map.js');
 const Tolerance = require('../../../tolerance.js');
 const tol = .01;
@@ -84,9 +83,8 @@ class Vertex2d {
       return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
     }
 
-    const barelyRound = (value) => Math.round(value * 10000000000000) / 10000000000000;
-    this.toString = () => `(${barelyRound(this.x)}, ${barelyRound(this.y)})`;
-    this.approxToString = () => `(${approximate10(this.x)}, ${approximate10(this.y)})`;
+
+    this.toString = (percision) => `${Math.roundTo(this.x, percision)}, ${Math.roundTo(this.y, percision)})`;
     const parentToJson = this.toJson;
 
     this.offset = (x, y) => {

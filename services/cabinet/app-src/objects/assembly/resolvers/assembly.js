@@ -31,13 +31,15 @@ class AssemblyResolver extends Resolver {
       }
     }
 
+    // assembly.config().demension.x
+    let v;
     const demensionValue = (expr) => {
       if (expr === 'length' || expr === 'height' || expr === 'h' || expr === 'l')
-        return infoObj(expr, assembly.config().demension.y,  assembly.eval(assembly.config().demension.y));
+        return infoObj(expr, assembly.config().demension.y, assembly.length());
       else if (expr === 'w' || expr === 'width')
-        return infoObj(expr, assembly.config().demension.x, assembly.eval(assembly.config().demension.x));
+        return infoObj(expr, assembly.config().demension.x, assembly.width());
       else if (expr === 'depth' || expr === 'thickness' || expr === 'd' || expr === 't')
-        return infoObj(expr, assembly.config().demension.z, assembly.eval(assembly.config().demension.z));
+        return infoObj(expr, assembly.config().demension.z, assembly.thickness());
     }
 
     const posValue = (expr) => {
@@ -55,15 +57,15 @@ class AssemblyResolver extends Resolver {
       }
     }
 
-    const keyValueValue = (expr) => {
-      let assemVal = assembly.value(expr);
+    const keyValueValue = (expr, assem) => {
+      let assemVal = (assem || assembly).value(expr);
       if (Number.isFinite(assemVal))
         return infoObj(expr, assemVal, assemVal);
     }
 
     const groupValue = (expr) => {
       const group = assembly.group();
-      const value = group.resolve(assembly, expr);
+      const value = group.resolve(expr);
       if (value === undefined) return undefined;
       const evaluation = assembly.eval(value);
       return infoObj(expr, value, evaluation);
@@ -72,8 +74,16 @@ class AssemblyResolver extends Resolver {
     let goDownTheRabbitHole = false;
     const positionReg = /^(n|c|r|d|normal|center|rotation|demension)\.(x|y|z)(\.(i|j|k)|)$/;
 
-    const parentResolveInfo = (expr) => assembly.parentAssembly() ?
-          assembly.parentAssembly().resolve.information(expr) : undefined;
+    const parentResolveInfo = (expr) => {
+      let curr = assembly.parentAssembly();
+      while (curr) {
+        let info = keyValueValue(expr, curr);
+        if (info && info.valid()) return info;
+        info = curr.resolve.inherited(expr);
+        if (info && info.valid()) return info;
+        curr = curr.parentAssembly();
+      }
+    }
 
     const returnsIfValid = (info) => info && info.valid() ? info : null;
 
@@ -85,11 +95,9 @@ class AssemblyResolver extends Resolver {
       info ||= returnsIfValid(info) || partCodePositionValue(expr);
       info ||= returnsIfValid(info) || keyValueValue(expr);
       if (info && info.valid()) return info;
-      const parentAssembly = assembly.parentAssembly();
       let parentInfo = parentResolveInfo(expr);
-      if (parentInfo && parentInfo.valid()) return parentInfo;
+      if (parentInfo) return parentInfo;
       const groupInfo = groupValue(expr);
-      if (!parentAssembly) return groupInfo;
       return groupInfo && groupInfo.valid() ? groupInfo : undefined;
     }
   }

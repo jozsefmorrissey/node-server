@@ -140,8 +140,8 @@ class ThreeDModel {
       let targetPart = instance.object().getAssembly(targetPartCode);
       let joints = targetPart.getDependencies();
       joints = joints.male.concat(joints.female);
-      const otherCodes = joints.map(j => j.dependsSelector() !== targetPartCode ?
-            j.dependsSelector() : j.dependentSelector());
+      const otherCodes = joints.map(j => j.selector.depends() !== targetPartCode ?
+            j.selector.depends() : j.selector.dependent());
       return otherCodes.indexOf(part.partCode()) !== -1;
     }
 
@@ -212,10 +212,6 @@ class ThreeDModel {
 
     function buildObject(options) {
       if (instance.object() === undefined)return;
-      // todo: for debugging; uncomment
-      // if (lastHash === instance.object().hash()) {
-      //   return CabinetModel.get(instance.object());
-      // }
       options ||= {};
       const cId = cacheId();
 
@@ -421,66 +417,66 @@ ThreeDModel.renderNow = async (parts, options) => {
     ThreeDModel.get(parts).render(options);
   }
 }
-
-class GroupThreeDModel extends ThreeDModel{
-  constructor(parts) {
-    super(parts);
-    let lastModel;
-    this.lastModel = () => lastModel;
-    this.buildObject = async () => {
-      let combined = new CSG();
-      const origin = {x:0,y:0,z:0};
-      for (let index = 0; index < parts.length; index++) {
-        const part = parts[index];
-        const model = await ThreeDModel.get(part).buildObject();
-        const complexModel = model.complexModel();
-        // const orig = complexModel.clone();
-        const simpleModel = model.boxModel();
-        const sv = new Vertex3D(simpleModel.center());
-        const cv = new Vertex3D(complexModel.center());
-        const offsetVector = new Vertex3D(cv.minus(sv));
-        complexModel.center(origin);
-        const rotation = part.position().rotation();
-        rotation.y *= -1;// I think this is because the Y axis is inverted...
-        complexModel.rotate(rotation);
-        complexModel.center(part.position().center());
-        complexModel.translate(offsetVector.rotate(rotation));
-
-        combined = combined.union(complexModel);//.union(simpleModel).union(orig);
-      }
-      return combined;
-    }
-
-
-    // todo(pibe2): main 3
-    this.render = async (options) => {
-      lastModel = await this.buildObject();
-      ThreeDModel.lastActive = this;
-      if (options.extraObjects) {
-        try {
-          for (let index = 0; index < options.extraObjects.length; index++) {
-            const obj = options.extraObjects[index];
-            const model = obj instanceof CSG ? obj : ToModel(obj);
-            lastModel = lastModel.union(model);
-          }
-        } catch (e) {
-          console.warn(e);
-        }
-      }
-      if (lastModel.polygons && lastModel.polygons.length > 0) {
-        const origin = {x:0,y:0,z:0};
-        lastModel.center(origin);
-        ThreeDModel.display(lastModel);
-      }
-    }
-  }
-}
-
-const lastModelUpdateEvent = new CustomEvent('lastModelUpdate');
-ThreeDModel.onLastModelUpdate = (func) => lastModelUpdateEvent.on(func);
-
-const renderObjectUpdateEvent = new CustomEvent('renderObjectUpdate');
-ThreeDModel.onRenderObjectUpdate = (func) => renderObjectUpdateEvent.on(func);
+//
+// class GroupThreeDModel extends ThreeDModel{
+//   constructor(parts) {
+//     super(parts);
+//     let lastModel;
+//     this.lastModel = () => lastModel;
+//     this.buildObject = async () => {
+//       let combined = new CSG();
+//       const origin = {x:0,y:0,z:0};
+//       for (let index = 0; index < parts.length; index++) {
+//         const part = parts[index];
+//         const model = await ThreeDModel.get(part).buildObject();
+//         const complexModel = model.complexModel();
+//         // const orig = complexModel.clone();
+//         const simpleModel = model.boxModel();
+//         const sv = new Vertex3D(simpleModel.center());
+//         const cv = new Vertex3D(complexModel.center());
+//         const offsetVector = new Vertex3D(cv.minus(sv));
+//         complexModel.center(origin);
+//         const rotation = part.position().rotation();
+//         rotation.y *= -1;// I think this is because the Y axis is inverted...
+//         complexModel.rotate(rotation);
+//         complexModel.center(part.position().center());
+//         complexModel.translate(offsetVector.rotate(rotation));
+//
+//         combined = combined.union(complexModel);//.union(simpleModel).union(orig);
+//       }
+//       return combined;
+//     }
+//
+//
+//     // todo(pibe2): main 3
+//     this.render = async (options) => {
+//       lastModel = await this.buildObject();
+//       ThreeDModel.lastActive = this;
+//       if (options.extraObjects) {
+//         try {
+//           for (let index = 0; index < options.extraObjects.length; index++) {
+//             const obj = options.extraObjects[index];
+//             const model = obj instanceof CSG ? obj : ToModel(obj);
+//             lastModel = lastModel.union(model);
+//           }
+//         } catch (e) {
+//           console.warn(e);
+//         }
+//       }
+//       if (lastModel.polygons && lastModel.polygons.length > 0) {
+//         const origin = {x:0,y:0,z:0};
+//         lastModel.center(origin);
+//         ThreeDModel.display(lastModel);
+//       }
+//     }
+//   }
+// }
+//
+// const lastModelUpdateEvent = new CustomEvent('lastModelUpdate');
+// ThreeDModel.onLastModelUpdate = (func) => lastModelUpdateEvent.on(func);
+//
+// const renderObjectUpdateEvent = new CustomEvent('renderObjectUpdate');
+// ThreeDModel.onRenderObjectUpdate = (func) => renderObjectUpdateEvent.on(func);
 
 
 module.exports = ThreeDModel

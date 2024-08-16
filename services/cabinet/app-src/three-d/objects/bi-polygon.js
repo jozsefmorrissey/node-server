@@ -292,7 +292,7 @@ BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   const verts = polygon.copy().vertices();
   // if (verts.length < 4) return undefined;
   if (verts.length < 3) return undefined;
-  const resized = offset ? polygon.resize(offset.x, offset.y, true) : polygon;
+  const resized = offset ? polygon.offset(offset.x, offset.y, true) : polygon;
   const poly1 = resized.parrelleAt(distance1);
   const poly2 = resized.parrelleAt(distance2);
   let poly = new BiPolygon(poly1, poly2);

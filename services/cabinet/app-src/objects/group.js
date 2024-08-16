@@ -29,20 +29,20 @@ class Group extends Lookup {
 
     this.hash = () => name.hash() + this.objects.map(o => o.hash ? o.hash() : 0).sum();
 
-    this.resolve = (one, two, three) => {
-      const lower = two ? two.toLowerCase() : null;
+    this.resolve = (code, value, notMetric) => {
+      const lower = code ? code.toLowerCase() : null;
       const funcName = propertyFunctionMap[lower];
-      if (one) {
+      if (code) {
         if (room) {
           const layout = room.layout();
           if (layout && lower) {
             const func = layout[funcName];
-            if (func instanceof Function) return func(three);
+            if (func instanceof Function) return func(value, notMetric);
           }
-          return this.propertyConfig(one, two, three);
+          return this.propertyConfig.value(code, value, notMetric);
         } else {
-          if (one) {
-            return propertyFunctionDefaults[funcName] || this.propertyConfig(one, two, three);;
+          if (code) {
+            return propertyFunctionDefaults[funcName] || this.propertyConfig.value(code, value, notMetric);
           }
         }
       }

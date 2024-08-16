@@ -76,7 +76,7 @@ class KeyValue extends Lookup {
         if(customVal !== undefined) return customVal;
 
         const currVal = Object.pathValue(this.value.values, key);
-        if (value !== undefined) {
+        if (value !== undefined && value !== key) {
           if (value !== currVal) {
             Object.pathValue(this.value.values, key, value);
             changeEvent.trigger();

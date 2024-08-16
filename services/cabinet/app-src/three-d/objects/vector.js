@@ -1,5 +1,4 @@
 
-const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
@@ -52,11 +51,7 @@ class Vector3D {
       return new Vector3D(coef*this.i(), coef*this.j(), coef*this.k());
     }
     this.sameDirection = (otherVect) => {
-      // console.warn('Changed this function with out looking into the consequences');
       return this.dot(otherVect) >= tol;
-      // return approximate.sameSign(otherVect.i(), this.i()) &&
-      //         approximate.sameSign(otherVect.j(), this.j()) &&
-      //         approximate.sameSign(otherVect.k(), this.k());
     }
     this.divide = (vector) => {
       if (!(vector instanceof Vector3D)) vector = new Vector3D(vector, vector, vector);
@@ -66,8 +61,8 @@ class Vector3D {
                   [Math.roundTo(this.i(), percision), Math.roundTo(this.j(), percision), Math.roundTo(this.k(), percision)];
     this.dot = (vector) =>
       this.i() * vector.i() + this.j() * vector.j() + this.k() * vector.k();
-    this.perpendicular = (vector) =>
-      isZero(this.dot(vector));
+    this.perpendicular = (vector, tol) => !tol ? isZero(this.dot(vector)) :
+      Tolerance.within(tol)(this.dot(vector), 0);
     this.parrelle = (vector) => {
       let coef = isZero(this.i()) ? 0 : this.i() / vector.i();
       if (isZero(coef)) coef = isZero(this.j()) ? 0 : this.j() / vector.j();
@@ -164,6 +159,7 @@ class Vector3D {
     }
 
     this.acquiescent = (other) => {
+      if (other === undefined) return this.positive() ? this : this.inverse();
       if (this.positive() !== other.positive()) return this.inverse();
       return this;
     }
@@ -179,9 +175,9 @@ const tol = .0001;
 Vector3D.tolerance = new Tolerance({i: tol, j: tol, k: tol});
 Vector3D.ToleranceMap = (parrelle, tolerance) => {
   tolerance ||= tol;
-  if (parrelle) return new ToleranceMap({'positiveUnit.i': tolerance,
-                                          'positiveUnit.j': tolerance,
-                                          'positiveUnit.k': tolerance});
+  if (parrelle) return new ToleranceMap({'positiveUnit().i()': tolerance,
+                                          'positiveUnit().j()': tolerance,
+                                          'positiveUnit().k()': tolerance});
   return new ToleranceMap({i: tolerance,
                             j: tolerance,
                             k: tolerance});

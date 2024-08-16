@@ -4,6 +4,8 @@
 const Assembly = require('../assembly.js');
 const cabinetBuildConfig = require('../../../../public/json/cabinets.json');
 const Joint = require('../../joint/joint.js');
+const JointSettings = require('../../joint/settings.js');
+const Dado = require('../../joint/joints/dado.js');
 const Dependency = require('../../dependency');
 const CabinetOpeningCorrdinates = require('../../../services/cabinet-opening-coordinates.js');
 const SectionProperties = require('./section/section-properties.js');
@@ -41,9 +43,12 @@ class Cabinet extends Assembly {
     Object.getSet(this, {id});
     this.id = idFunc;
 
+    const isPanel = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider' && a.constructor.name !== 'Frame';
+    const isFrame = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider' && a.constructor.name === 'Frame';
+    this.addDependencies(new Dado(isPanel, isFrame));
     const instance = this;
     let toeKickHeight = 4;
-    this.includeJoints(false);
+    this.jointSettings = new JointSettings(false,false,false,false);
     this.part = () => false;
     this.currentPosition = () => this.position().current();
     this.display = false;
@@ -56,10 +61,16 @@ class Cabinet extends Assembly {
     const parentUserFriendlyId = this.userFriendlyId;
 
     const parentGetSubAssems = this.getSubassemblies;
-    let toeKick;
+    let toeKick, autoToeKick;
+    this.autoToeKick = (tf) => {
+      if (tf === true) {
+        if (toeKick === undefined) toeKick = new AutoToekick(this);
+        autoToeKick = true;
+      } else if (tf === false) autoToeKick = false;
+      return autoToeKick;
+    }
     const getToeKick = () => {
       if (!this.autoToeKick()) return undefined;
-      if (toeKick === undefined) toeKick = new AutoToekick(this);
       return toeKick;
     }
 
@@ -180,6 +191,7 @@ Cabinet.build = (type, group, config) => {
   config.subassemblies.filter(sac => sac.dividerType).forEach((sac) =>
       cabinet.subassemblies[sac.code].type(sac.dividerType));
   cabinet.updateOpenings(true);
+  cabinet.autoToeKick(config.autoToeKick);
   return cabinet;
 }
 

@@ -21,25 +21,18 @@ class StringMathEvaluator {
     globalScope = globalScope || {};
     const instance = this;
     let splitter = '.';
+    let inf;
 
     function resolve (path, currObj, globalCheck) {
       if (path === '') return currObj;
       try {
-        const resolved = !globalCheck && resolver && resolver(path, currObj);
-        if (Number.isFinite(resolved)) return resolved;
+        let resolved = (inf = currObj.pathInfo(path)) && inf.target;
+        resolved ||= (inf = globalScope.pathInfo(path)) && inf.target;
+        resolved ||= resolver && resolver(path, currObj);
+        return resolved;
       } catch (e) {
         console.error('FIX!!! my former self believed this is an avoidable issue');
         console.error(e);
-      }
-      try {
-        if ((typeof path) === 'string') path = path.split(splitter);
-        for (let index = 0; index < path.length; index += 1) {
-          currObj = currObj[path[index]];
-        }
-        if (currObj === undefined && !globalCheck) throw Error('try global');
-        return currObj;
-      }  catch (e) {
-        if (!globalCheck) return resolve(path, globalScope, true);
       }
     }
 
@@ -206,7 +199,7 @@ class StringMathEvaluator {
     const isolateVar = isolateValueReg(StringMathEvaluator.varReg, resolve);
 
     function evaluate(expr, scope, percision) {
-      if (Number.isFinite(expr))
+      if (expr === undefined || Number.isFinite(expr))
         return expr;
       expr = new String(expr);
       expr = addUnexpressedMultiplicationSigns(expr);
@@ -271,7 +264,7 @@ StringMathEvaluator.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s
 const mixNumberRegStr = "([0-9]{1,})\\s{1,}(([0-9]{1,})\\/([0-9]{1,}))";
 StringMathEvaluator.mixedNumberReg = new RegExp(`^${mixNumberRegStr}$`);
 StringMathEvaluator.multiMixedNumberReg = new RegExp(mixNumberRegStr, 'g');///([0-9]{1,})\s{1,}([0-9]{1,}\/[0-9]{1,})/g;
-StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})$/;
+StringMathEvaluator.fractionOrMixedNumberReg = /(^([0-9]{1,})\s|^){1,}([0-9]{1,}\/[0-9]{1,})(st|sh)$/;
 StringMathEvaluator.footInchReg = /\s*([0-9]{1,})\s*'\s*([0-9\/ ]{1,})\s*"\s*/g;
 StringMathEvaluator.footReg = /\s*([0-9]{1,})\s*'\s*/g;
 StringMathEvaluator.inchReg = /\s*([0-9]{1,})\s*"\s*/g;

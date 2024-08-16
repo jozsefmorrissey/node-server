@@ -14,7 +14,7 @@
         "demensions": [
           "c.w",
           "c.t-f.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "90",
@@ -23,7 +23,7 @@
         ],
         "include": "All",
         "polyConfig": {
-          "thickness": "pwt34",
+          "thickness": "pt34",
           "points": [
             [
               1,
@@ -65,7 +65,7 @@
         ],
         "include": "All",
         "polyConfig": {
-          "thickness": "pwt34",
+          "thickness": "pt34",
           "points": [
             [
               1,
@@ -101,7 +101,7 @@
         "demensions": [
           "c.d-f.t",
           "c.h - t.t - b.t",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           "0",
@@ -110,7 +110,7 @@
         ],
         "include": "All",
         "polyConfig": {
-          "thickness": "pwt34",
+          "thickness": "pt34",
           "points": [
             [
               1,
@@ -152,7 +152,7 @@
         ],
         "include": "All",
         "polyConfig": {
-          "thickness": "pwt34",
+          "thickness": "pt34",
           "points": [
             [
               1,
@@ -188,7 +188,7 @@
         "demensions": [
           "c.w",
           "c.h",
-          "pwt34"
+          "pt34"
         ],
         "rotation": [
           0,
@@ -197,7 +197,7 @@
         ],
         "include": "All",
         "polyConfig": {
-          "thickness": "pwt34",
+          "thickness": "pt34",
           "points": [
             [
               1,
@@ -224,75 +224,59 @@
     "joints": [
       {
         "_TYPE": "Miter",
-        "dependsSelector": "t",
-        "dependentSelector": "f",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "t",
+        "dependent": "f"
+      },
       },
       {
         "_TYPE": "Miter",
-        "dependsSelector": "b",
-        "dependentSelector": "f",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "b",
+        "dependent": "f"
+      },
       },
       {
         "_TYPE": "Miter",
-        "dependsSelector": "l",
-        "dependentSelector": "f",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "l",
+        "dependent": "f"
+      },
       },
       {
         "_TYPE": "Miter",
-        "dependsSelector": "r",
-        "dependentSelector": "f",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "r",
+        "dependent": "f"
+      },
       },
       {
         "_TYPE": "Miter",
-        "dependsSelector": "l",
-        "dependentSelector": "t",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "l",
+        "dependent": "t"
+      },
       },
       {
         "_TYPE": "Miter",
-        "dependsSelector": "l",
-        "dependentSelector": "b",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "l",
+        "dependent": "b"
+      },
       },
       {
         "_TYPE": "Miter",
-        "dependsSelector": "r",
-        "dependentSelector": "t",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "r",
+        "dependent": "t"
+      },
       },
       {
         "_TYPE": "Miter",
-        "dependsSelector": "r",
-        "dependentSelector": "b",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "r",
+        "dependent": "b"
+      },
       }
     ],
     "shape": "square",
@@ -347,7 +331,7 @@
       "demensions": [
         "W ",
         "bottomHeight",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         "0",
@@ -359,7 +343,7 @@
       "code": "bf",
       "positionMethod": "box",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -438,7 +422,7 @@
       "demensions": [
         "middleCrownWidth+bf.t",
         "W+middleCrownWidth*2",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         "270",
@@ -449,7 +433,7 @@
       "name": "middleFront",
       "code": "mf",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -480,7 +464,7 @@
       "demensions": [
         "D-bf.t",
         "bottomHeight",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         "0",
@@ -491,7 +475,7 @@
       "name": "bottomLeft",
       "code": "bl",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -522,7 +506,7 @@
       "demensions": [
         "D-bf.t",
         "bottomHeight",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         "0",
@@ -533,7 +517,7 @@
       "name": "bottomRight",
       "code": "br",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -564,7 +548,7 @@
       "demensions": [
         "middleCrownWidth+bl.t",
         "D-bf.t",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         "90",
@@ -575,7 +559,7 @@
       "name": "middleLeft",
       "code": "ml",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -606,7 +590,7 @@
       "demensions": [
         "middleCrownWidth+br.t",
         "D-bf.t",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         "90",
@@ -617,7 +601,7 @@
       "name": "middleRight",
       "code": "mr",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -659,7 +643,7 @@
       "name": "backBottom",
       "code": "bb",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -690,7 +674,7 @@
       "demensions": [
         "topCrownHeight",
         "topWidth",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         "0",
@@ -701,7 +685,7 @@
       "name": "topFront",
       "code": "tf",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -732,7 +716,7 @@
       "demensions": [
         "topCrownHeight",
         "topDepth - tf.t",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         "90",
@@ -743,7 +727,7 @@
       "name": "topLeft",
       "code": "tl",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -774,7 +758,7 @@
       "demensions": [
         "topCrownHeight",
         "topDepth-tf.t",
-        "pwt34"
+        "pt34"
       ],
       "rotation": [
         "90",
@@ -785,7 +769,7 @@
       "name": "topRight",
       "code": "tr",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -816,7 +800,7 @@
       "demensions": [
         "topCrownHeight",
         "topWidth - tl.t - tr.t",
-        "pwt12"
+        "pt12"
       ],
       "rotation": [
         0,
@@ -827,7 +811,7 @@
       "name": "topBack",
       "code": "tb",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -867,7 +851,7 @@
       ],
       "include": "All",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             "0",
@@ -966,7 +950,7 @@
       ],
       "include": "All",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             "W",
@@ -1066,7 +1050,7 @@
       ],
       "include": "All",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             "0",
@@ -1157,7 +1141,7 @@
       "demensions": [
         "topWidth - tl.t -tr.t",
         "topHeight - topCrownHeight",
-        "pwt12"
+        "pt12"
       ],
       "rotation": [
         "0",
@@ -1166,7 +1150,7 @@
       ],
       "include": "All",
       "polyConfig": {
-        "thickness": "pwt34",
+        "thickness": "pt34",
         "points": [
           [
             1,
@@ -1193,183 +1177,143 @@
   "joints": [
     {
       "_TYPE": "Butt",
-      "dependsSelector": "mfp",
-      "dependentSelector": "tf",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "mfp",
+        "dependent": "tf"
+      },
     },
     {
       "_TYPE": "Butt",
-      "dependsSelector": "mlp",
-      "dependentSelector": "tl",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "mlp",
+        "dependent": "tl"
+      },
     },
     {
       "_TYPE": "Butt",
-      "dependsSelector": "mrp",
-      "dependentSelector": "tr",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "mrp",
+        "dependent": "tr"
+      },
     },
     {
       "_TYPE": "Miter",
-      "dependsSelector": "mfp",
-      "dependentSelector": "mlp",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "mfp",
+        "dependent": "mlp"
+      },
     },
     {
       "_TYPE": "Dado",
-      "dependsSelector": "mb",
-      "dependentSelector": "mlp",
-      "maleOffset": "3*2.54/8",
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "mb",
+        "dependent": "mlp"
+      },
     },
     {
       "_TYPE": "Dado",
-      "dependsSelector": "mb",
-      "dependentSelector": "mrp",
-      "maleOffset": "3*2.54/8",
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "mb",
+        "dependent": "mrp"
+      },
     },
     {
       "_TYPE": "Miter",
-      "dependsSelector": "mfp",
-      "dependentSelector": "mrp",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "mfp",
+        "dependent": "mrp"
+      },
     },
     {
       "_TYPE": "Butt",
-      "dependsSelector": "mrp",
-      "dependentSelector": "mr",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "mrp",
+        "dependent": "mr"
+      },
     },
     {
       "_TYPE": "Butt",
-      "dependsSelector": "mlp",
-      "dependentSelector": "ml",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "mlp",
+        "dependent": "ml"
+      },
     },
     {
       "_TYPE": "Butt",
-      "dependsSelector": "mfp",
-      "dependentSelector": "mf",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "mfp",
+        "dependent": "mf"
+      },
     },
     {
       "_TYPE": "Miter",
-      "dependsSelector": "ml",
-      "dependentSelector": "mf",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "ml",
+        "dependent": "mf"
+      },
     },
     {
       "_TYPE": "Miter",
-      "dependsSelector": "mr",
-      "dependentSelector": "mf",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "mr",
+        "dependent": "mf"
+      },
     },
     {
       "_TYPE": "Miter",
-      "dependsSelector": "bl",
-      "dependentSelector": "bf",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "bl",
+        "dependent": "bf"
+      },
     },
     {
       "_TYPE": "Miter",
-      "dependsSelector": "br",
-      "dependentSelector": "bf",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "br",
+        "dependent": "bf"
+      },
     },
     {
       "_TYPE": "Dado",
-      "dependsSelector": "bb",
-      "dependentSelector": "br",
-      "maleOffset": "3*2.54/8",
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "bb",
+        "dependent": "br"
+      },
     },
     {
       "_TYPE": "Dado",
-      "dependsSelector": "bb",
-      "dependentSelector": "bl",
-      "maleOffset": "3*2.54/8",
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "bb",
+        "dependent": "bl"
+      },
     },
     {
       "_TYPE": "Dado",
-      "dependsSelector": "tb",
-      "dependentSelector": "tl",
-      "maleOffset": "3*2.54/8",
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "tb",
+        "dependent": "tl"
+      },
     },
     {
       "_TYPE": "Dado",
-      "dependsSelector": "tb",
-      "dependentSelector": "tr",
-      "maleOffset": "3*2.54/8",
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "tb",
+        "dependent": "tr"
+      },
     },
     {
       "_TYPE": "Miter",
-      "dependsSelector": "tl",
-      "dependentSelector": "tf",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "tl",
+        "dependent": "tf"
+      },
     },
     {
       "_TYPE": "Miter",
-      "dependsSelector": "tr",
-      "dependentSelector": "tf",
-      "maleOffset": 0,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "tr",
+        "dependent": "tf"
+      },
     }
   ],
   "shape": "square",
@@ -1380,18 +1324,15 @@
 },
   "base": {
     "_TYPE": "CabinetTemplate",
-    "ID_ATTRIBUTE": "id",
     "type": "base",
     "values": [
       {
         "key": "innerWidth",
-        "eqn": "c.w - pt34 * 2",
-        "id": "itqsm1j"
+        "eqn": "c.w - pt34 * 2"
       },
       {
         "key": "innerWidthCenter",
-        "eqn": "innerWidth + pt34",
-        "id": "pwaarfr"
+        "eqn": "innerWidth + pt34"
       }
     ],
     "subassemblies": [
@@ -1407,14 +1348,33 @@
         "demensions": [
           "c.t",
           "c.l",
-          "pt34"
+          "t"
         ],
         "rotation": [
           0,
           90,
           0
         ],
-        "id": "mcf6dft"
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
       },
       {
         "name": "left",
@@ -1428,14 +1388,33 @@
         "demensions": [
           "c.t",
           "c.l",
-          "pt34"
+          "t"
         ],
         "rotation": [
           0,
           90,
           0
         ],
-        "id": "r1xpfd9"
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
       },
       {
         "name": "back",
@@ -1449,14 +1428,33 @@
         "demensions": [
           "innerWidth",
           "c.l - tkh",
-          "pt34"
+          "pt14"
         ],
         "rotation": [
           0,
           0,
           "0"
         ],
-        "id": "0hvikg4"
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
       },
       {
         "name": "bottom",
@@ -1470,14 +1468,33 @@
         "demensions": [
           "c.t - BACK.t",
           "innerWidth",
-          "pt34"
+          "t"
         ],
         "rotation": [
           90,
           90,
           0
         ],
-        "id": "vho2lw6"
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
       },
       {
         "name": "top",
@@ -1485,77 +1502,94 @@
         "code": "T",
         "center": [
           "c.w / 2",
-          "c.h - pt34/2",
+          "c.h - t/2",
           "(w / -2)"
         ],
         "demensions": [
           "(c.t - BACK.t)",
           "innerWidth",
-          "pt34"
+          "t"
         ],
         "rotation": [
           90,
           90,
           0
         ],
-        "dividerType": "frontAndBack"
+        "dividerType": "frontAndBack",
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
       }
     ],
     "joints": [
       {
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "R"
+        "selector": {
+          "depends": "T",
+          "dependent": "R"
+        }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "L"
+        "selector": {
+          "depends": "T",
+          "dependent": "L"
+        }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "0.9525",
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "R",
-                "fullLength": true
+        "selector": {
+          "depends": "BACK",
+          "dependent": "R"
+        }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "0.9525",
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "L",
-                "fullLength": true
+        "selector": {
+          "depends": "BACK",
+          "dependent": "L"
+        }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "R"
+        "selector": {
+          "depends": "B",
+          "dependent": "R"
+        }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "L"
+        "selector": {
+          "depends": "B",
+          "dependent": "L"
+        }
       }
     ],
-    "dividerJoint": {
-      "_TYPE": "Dado",
-      "maleOffset": 0.635,
-      "femaleOffset": 0
-    },
     "shape": "square",
     "width": 45.72,
     "height": "baseh",
     "thickness": "based",
+    "_FORCE_FROM_JSON": true,
+    "dividerJoint": {
+      "_TYPE": "Dado"
+    },
     "fromFloor": 0,
     "openings": [
       {
@@ -1563,12 +1597,10 @@
         "bottom": "B",
         "left": "L",
         "right": "R",
-        "back": "BACK",
-        "id": "dle5hwy"
+        "back": "BACK"
       }
     ],
-    "autoToeKick": true,
-    "_FORCE_FROM_JSON": true
+    "autoToeKick": true
   },
   "blind-corner-ut": {
   "_TYPE": "CabinetTemplate",
@@ -1761,110 +1793,86 @@
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "T",
-      "dependentSelector": "L",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "T",
-      "dependentSelector": "R",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "BACK",
-      "dependentSelector": "L",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "BACK",
-      "dependentSelector": "R",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "tkb",
-      "dependentSelector": "L",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "tkb",
+        "dependent": "L"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "tkb",
-      "dependentSelector": "R",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "tkb",
+        "dependent": "R"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "B",
-      "dependentSelector": "L",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "B",
-      "dependentSelector": "R",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "tkb",
-      "dependentSelector": "B",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "tkb",
+        "dependent": "B"
+      },
     }
   ],
   "dividerJoint": {
-    "_TYPE": "Dado",
-
-    "ID_ATTRIBUTE": "id",
-    "maleOffset": 0.635,
-    "femaleOffset": 0,
-    "fullLength": false,
-    "priority": 0
+    "_TYPE": "Dado"
   },
   "shape": "square",
   "width": 121.92,
@@ -1988,499 +1996,513 @@
   "_FORCE_FROM_JSON": true
 },
   "diagonal-corner-base": {
-    "_TYPE": "CabinetTemplate",
-    "type": "diagonal-corner-base",
-    "values": [
-      {
-        "key": "bo",
-        "eqn": "4*2.54",
-        "id": "99xq3hg"
-      },
-      {
-        "key": "fwr",
-        "eqn": "c.t - rw",
-        "id": "gkrrotj"
-      },
-      {
-        "key": "fwl",
-        "eqn": "c.w - lw",
-        "id": "y4udshk"
-      },
-      {
-        "key": "lw",
-        "eqn": "60.96",
-        "id": "jews0zy"
-      },
-      {
-        "key": "rw",
-        "eqn": "30.48",
-        "id": "357t6g4"
-      },
-      {
-        "key": "pbw",
-        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
-        "id": "jdaq9zn"
-      },
-      {
-        "key": "backhype",
-        "eqn": "Math.sqrt(bo*bo/2)",
-        "id": "19oc8o3"
-      },
-      {
-        "key": "backRightScribe",
-        "eqn": "0",
-        "id": "e89kz6d"
-      },
-      {
-        "key": "backLeftScribe",
-        "eqn": "0",
-        "id": "4h49pcg"
-      }
-    ],
-    "subassemblies": [
-      {
-        "type": "Panel",
-        "center": [
-          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
-          "c.h/2",
-          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
-        ],
-        "demensions": [
-          "pbw",
-          "c.h",
-          "pt14"
-        ],
-        "rotation": [
-          0,
-          "135",
-          0
-        ],
-        "name": "back",
-        "code": "BACK",
-        "id": "cl3zaet"
-      },
-      {
-        "type": "Cutter",
-        "center": [
-          "c.w",
-          "c.h/2",
-          "-c.t"
-        ],
-        "demensions": [
-          "bo*2",
-          "c.h",
-          "backhype*2 - BACK.t/2"
-        ],
-        "rotation": [
-          0,
-          "135",
-          0
-        ],
-        "name": "back",
-        "code": "cb",
-        "id": "fhyq6qr"
-      },
-      {
-        "type": "Divider",
-        "center": [
-          "c.w - R.w/2 + backRightScribe",
-          "c.h / 2",
-          "R.t/-2"
-        ],
-        "demensions": [
-          "rw + 4 + backRightScribe",
-          "c.h",
-          "pt34"
-        ],
-        "rotation": [
-          0,
-          "0",
-          0
-        ],
-        "name": "right",
-        "code": "R",
-        "id": "s6u4kxx"
-      },
-      {
-        "type": "Divider",
-        "center": [
-          "L.t/2",
-          "c.h/2",
-          "-c.t + L.w/2 - backLeftScribe"
-        ],
-        "demensions": [
-          "lw + 4 + backLeftScribe",
-          "c.h",
-          "pt34"
-        ],
-        "rotation": [
-          0,
-          "90",
-          0
-        ],
-        "name": "left",
-        "code": "L",
-        "id": "dx2a1ey"
-      },
-      {
-        "type": "Panel",
-        "center": [
-          "pbl.w / 2 + R.t ",
-          "c.h/2",
-          "-(c.t - t / 2)"
-        ],
-        "demensions": [
-          "c.w - bo",
-          "c.h",
-          "pt34"
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "name": "backLeft",
-        "code": "pbl",
-        "id": "4z3y8g7"
-      },
-      {
-        "type": "Cutter",
-        "center": [
-          "pbr.c.x + cpbl.t",
-          "pbr.c.y",
-          "pbr.c.z"
-        ],
-        "demensions": [
-          "pbr.d.x",
-          "pbr.d.y",
-          "pbr.d.z"
-        ],
-        "rotation": [
-          "pbr.r.x",
-          "pbr.r.y",
-          "pbr.r.z"
-        ],
-        "name": "backLeft",
-        "code": "cpbl",
-        "id": "ztdyiq0"
-      },
-      {
-        "type": "Panel",
-        "center": [
-          "c.w - pbl.t/2",
-          "c.h/2",
-          "-(pbr.w/2 + L.t)"
-        ],
-        "demensions": [
-          "c.t - bo",
-          "c.h",
-          "pt34"
-        ],
-        "rotation": [
-          0,
-          "90",
-          0
-        ],
-        "name": "backRight",
-        "code": "pbr",
-        "id": "7dm2j9o"
-      },
-      {
-        "type": "Cutter",
-        "center": [
-          "pbl.c.x",
-          "pbl.c.y",
-          "pbl.c.z - cpbr.t"
-        ],
-        "demensions": [
-          "pbl.d.x",
-          "pbl.d.y",
-          "pbl.d.z"
-        ],
-        "rotation": [
-          "pbl.r.x",
-          "pbl.r.y",
-          "pbl.r.z"
-        ],
-        "name": "backRight",
-        "code": "cpbr",
-        "id": "exo6w8h"
-      },
-      {
-        "type": "Divider",
-        "center": [
-          "c.w / 2",
-          "c.h - tid - T.t / 2",
-          "c.t / -2"
-        ],
-        "demensions": [
-          "c.w - pbl.t - R.t",
-          "c.t - pbr.t - L.t",
-          "pt34"
-        ],
-        "rotation": [
-          "90",
-          "0",
-          0
-        ],
-        "name": "top",
-        "code": "T",
-        "dividerType": "frontAndBack",
-
-        "normalInfo": {
-          "style": "manual",
-          "calc": 1,
-          "normals": [
-            [
-              "OP.n.i",
-              "OP.n.j",
-              "OP.n.k"
-            ],
-            [
-              "0",
-              "1",
-              "0"
-            ],
-            [
-              "0",
-              "1",
-              "0"
-            ]
-          ]
-        }
-      },
-      {
-        "type": "Divider",
-        "center": [
-          "c.w / 2",
-          "tkh + B.t / 2",
-          "c.t / -2"
-        ],
-        "demensions": [
-          "c.w - pbl.t - R.t",
-          "c.t - pbr.t - L.t",
-          "pt34"
-        ],
-        "rotation": [
-          "90",
-          "0",
-          0
-        ],
-        "name": "bottom",
-        "code": "B",
-        "id": "cod71ee"
-      }
-    ],
-    "joints": [
-      {
-        "_TYPE": "Butt",
-        "dependsSelector": "BACK",
-        "dependentSelector": "B",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Butt",
-        "dependsSelector": "BACK",
-        "dependentSelector": "pbl",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Butt",
-        "dependsSelector": "BACK",
-        "dependentSelector": "pbr",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "B",
-        "dependentSelector": "L",
-        "maleOffset": "L.t / 2",
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "B",
-        "dependentSelector": "R",
-        "maleOffset": "R.t/2",
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "B",
-        "dependentSelector": "pbr",
-        "maleOffset": "pbr.t/2",
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "B",
-        "dependentSelector": "pbl",
-        "maleOffset": "pbl.t/2",
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "T",
-        "dependentSelector": "L",
-        "maleOffset": "L.t / 2",
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "T",
-        "dependentSelector": "R",
-        "maleOffset": "R.t/2",
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "T",
-        "dependentSelector": "pbr",
-        "maleOffset": "pbr.t/2",
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "T",
-        "dependentSelector": "pbl",
-        "maleOffset": "pbl.t/2",
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "pbr",
-        "dependentSelector": "R",
-        "maleOffset": "pbr.t/2",
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "pbl",
-        "dependentSelector": "L",
-        "maleOffset": "L.t / 2",
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Butt",
-        "dependsSelector": "BACK",
-        "dependentSelector": "T",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "T",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "B",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "pbl",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "pbr",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Butt",
-        "dependsSelector": "cpbl",
-        "dependentSelector": "BACK",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
-      },
-      {
-        "_TYPE": "Butt",
-        "dependsSelector": "cpbr",
-        "dependentSelector": "BACK",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "fullLength": false,
-        "priority": 0
-      }
-    ],
-    "dividerJoint": {
-      "_TYPE": "Dado",
-      "maleOffset": 0.635,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+  "_TYPE": "CabinetTemplate",
+  "type": "diagonal-corner-base",
+  "values": [
+    {
+      "key": "bo",
+      "eqn": "4*2.54",
+      "id": "99xq3hg"
     },
-    "shape": "corner",
-    "width": "based*1.5",
-    "height": "baseh",
-    "thickness": "based*1.5",
-    "fromFloor": 0,
-    "openings": [
-      {
-        "_Type": "slice",
-        "top": "T",
-        "bottom": "B",
-        "left": "L",
-        "right": "R",
-        "back": "BACK",
-        "leftDepth": "lw",
-        "rightDepth": "rw",
-        "id": "mig3pf1"
-      }
-    ],
-    "autoToeKick": true,
-    "_FORCE_FROM_JSON": true
+    {
+      "key": "fwr",
+      "eqn": "c.t - rw",
+      "id": "gkrrotj"
+    },
+    {
+      "key": "fwl",
+      "eqn": "c.w - lw",
+      "id": "y4udshk"
+    },
+    {
+      "key": "lw",
+      "eqn": "76.2",
+      "id": "jews0zy"
+    },
+    {
+      "key": "rw",
+      "eqn": "30.48",
+      "id": "357t6g4"
+    },
+    {
+      "key": "pbw",
+      "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
+      "id": "jdaq9zn"
+    },
+    {
+      "key": "backhype",
+      "eqn": "Math.sqrt(bo*bo/2)",
+      "id": "19oc8o3"
+    },
+    {
+      "key": "backRightScribe",
+      "eqn": "0",
+      "id": "e89kz6d"
+    },
+    {
+      "key": "backLeftScribe",
+      "eqn": "0",
+      "id": "4h49pcg"
+    }
+  ],
+  "subassemblies": [
+    {
+      "type": "Panel",
+      "center": [
+        "c.w - (bo)/2 * Math.sin(Math.PI12)",
+        "c.h/2",
+        "-(c.t - (bo)/2 * Math.sin(Math.PI12))"
+      ],
+      "demensions": [
+        "pbw",
+        "c.h",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        "135",
+        0
+      ],
+      "name": "back",
+      "code": "BACK",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "h44nkay"
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "c.w - R.w/2 + backRightScribe",
+        "c.h / 2",
+        "R.t/-2"
+      ],
+      "demensions": [
+        "rw + 4 + backRightScribe",
+        "c.h",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        "0",
+        0
+      ],
+      "name": "right",
+      "code": "R",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "d9mic9z"
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "L.t/2",
+        "c.h/2",
+        "-c.t + L.w/2 - backLeftScribe"
+      ],
+      "demensions": [
+        "lw + 4 + backLeftScribe",
+        "c.h",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        "90",
+        0
+      ],
+      "name": "left",
+      "code": "L",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "ze375g5"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "pbl.w / 2 + R.t ",
+        "c.h/2",
+        "-(c.t - t / 2)"
+      ],
+      "demensions": [
+        "c.w - bo",
+        "c.h",
+        "pt14"
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "name": "backLeft",
+      "code": "pbl",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "g0mg8su"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "c.w - pbl.t/2",
+        "c.h/2",
+        "-(pbr.w/2 + L.t)"
+      ],
+      "demensions": [
+        "c.t - bo",
+        "c.h",
+        "pt14"
+      ],
+      "rotation": [
+        0,
+        "90",
+        0
+      ],
+      "name": "backRight",
+      "code": "pbr",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "cpj4iy8"
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "c.w / 2",
+        "c.h - T.t / 2",
+        "c.t / -2"
+      ],
+      "demensions": [
+        "c.w - pbl.t - R.t",
+        "c.t - pbr.t - L.t",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        "0",
+        0
+      ],
+      "name": "top",
+      "code": "T",
+      "dividerType": "frontAndBack",
+      "normalInfo": {
+        "style": "vector",
+        "calc": 1,
+        "normals": [
+          [
+            "OP.n.i",
+            "OP.n.j",
+            "OP.n.k"
+          ],
+          [
+            "0",
+            "1",
+            "0"
+          ],
+          [
+            "0",
+            "-1",
+            "0"
+          ]
+        ],
+        "valid": true
+      },
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "bo2rrx0"
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "c.w / 2",
+        "tkh + B.t / 2",
+        "c.t / -2"
+      ],
+      "demensions": [
+        "c.w - pbl.t - R.t",
+        "c.t - pbr.t - L.t",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        "0",
+        0
+      ],
+      "name": "bottom",
+      "code": "B",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "normalInfo": {
+        "normals": [
+          [
+            "OP.n.i",
+            "OP.n.j",
+            "OP.n.k"
+          ],
+          [
+            "0",
+            "1",
+            "0"
+          ],
+          [
+            "0",
+            "1",
+            "0"
+          ]
+        ],
+        "calc": 1,
+        "style": "vector",
+        "valid": true
+      },
+      "id": "be419fk"
+    }
+  ],
+  "joints": [
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "B",
+        "dependent": "BACK"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "pbl"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "pbr"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "pbr"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "pbl"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "T",
+        "dependent": "pbr"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "T",
+        "dependent": "pbl"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "pbr",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "pbl",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "T",
+        "dependent": "BACK"
+      },
+    }
+  ],
+  "shape": "corner",
+  "width": "based*1.5",
+  "height": "baseh",
+  "thickness": "based*1.5",
+  "_FORCE_FROM_JSON": true,
+  "dividerJoint": {
+    "_TYPE": "Dado"
   },
+  "fromFloor": 0,
+  "openings": [
+    {
+      "_Type": "slice",
+      "top": "T",
+      "bottom": "B",
+      "left": "L",
+      "right": "R",
+      "back": "BACK",
+      "leftDepth": "lw",
+      "rightDepth": "rw",
+      "id": "mig3pf1"
+    }
+  ],
+  "autoToeKick": true
+},
   "diagonal-corner-wall": {
     "_TYPE": "CabinetTemplate",
     "ID_ATTRIBUTE": "id",
@@ -2694,7 +2716,7 @@
         "type": "Divider",
         "center": [
           "c.w / 2",
-          "c.h - tid - T.t / 2",
+          "c.h - T.t / 2",
           "c.t / -2"
         ],
         "demensions": [
@@ -2736,149 +2758,147 @@
     "joints": [
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "B"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "pbl"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "pbl"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "pbr"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "pbr"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "L.t / 2",
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "R.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "pbr.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "pbr"
+        "selector": {
+        "depends": "B",
+        "dependent": "pbr"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "pbl.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "pbl"
+        "selector": {
+        "depends": "B",
+        "dependent": "pbl"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "L.t / 2",
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "R.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "pbr.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "pbr"
+        "selector": {
+        "depends": "T",
+        "dependent": "pbr"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "pbl.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "pbl"
+        "selector": {
+        "depends": "T",
+        "dependent": "pbl"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "pbr.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "pbr",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "pbr",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "L.t / 2",
-        "femaleOffset": 0,
-        "dependsSelector": "pbl",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "pbl",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "T"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cb",
-        "dependentSelector": "T"
+        "selector": {
+        "depends": "cb",
+        "dependent": "T"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cb",
-        "dependentSelector": "B"
+        "selector": {
+        "depends": "cb",
+        "dependent": "B"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cb",
-        "dependentSelector": "pbl"
+        "selector": {
+        "depends": "cb",
+        "dependent": "pbl"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cb",
-        "dependentSelector": "pbr"
+        "selector": {
+        "depends": "cb",
+        "dependent": "pbr"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cpbl",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "BACK"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cpbr",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
       }
     ],
     "dividerJoint": {
       "_TYPE": "Dado",
-      "maleOffset": 0.635,
-      "femaleOffset": 0
     },
     "shape": "corner",
     "width": "walld*2",
@@ -2898,7 +2918,7 @@
         "id": "bnwtye8"
       }
     ],
-    "autoToeKick": false,
+    "autoToeKick": true,
     "_FORCE_FROM_JSON": true
   },
   "diagonal-corner-ut": {
@@ -3114,7 +3134,7 @@
         "type": "Divider",
         "center": [
           "c.w / 2",
-          "c.h - tid - T.t / 2",
+          "c.h - T.t / 2",
           "c.t / -2"
         ],
         "demensions": [
@@ -3156,149 +3176,147 @@
     "joints": [
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "B"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "pbl"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "pbl"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "pbr"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "pbr"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "L.t / 2",
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "R.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "pbr.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "pbr"
+        "selector": {
+        "depends": "B",
+        "dependent": "pbr"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "pbl.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "B",
-        "dependentSelector": "pbl"
+        "selector": {
+        "depends": "B",
+        "dependent": "pbl"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "L.t / 2",
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "R.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "pbr.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "pbr"
+        "selector": {
+        "depends": "T",
+        "dependent": "pbr"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "pbl.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "T",
-        "dependentSelector": "pbl"
+        "selector": {
+        "depends": "T",
+        "dependent": "pbl"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "pbr.t/2",
-        "femaleOffset": 0,
-        "dependsSelector": "pbr",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "pbr",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Dado",
-        "maleOffset": "L.t / 2",
-        "femaleOffset": 0,
-        "dependsSelector": "pbl",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "pbl",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "BACK",
-        "dependentSelector": "T"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cb",
-        "dependentSelector": "T"
+        "selector": {
+        "depends": "cb",
+        "dependent": "T"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cb",
-        "dependentSelector": "B"
+        "selector": {
+        "depends": "cb",
+        "dependent": "B"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cb",
-        "dependentSelector": "pbl"
+        "selector": {
+        "depends": "cb",
+        "dependent": "pbl"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cb",
-        "dependentSelector": "pbr"
+        "selector": {
+        "depends": "cb",
+        "dependent": "pbr"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cpbl",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "BACK"
+      }
       },
       {
         "_TYPE": "Butt",
-        "maleOffset": 0,
-        "femaleOffset": 0,
-        "dependsSelector": "cpbr",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
       }
     ],
     "dividerJoint": {
       "_TYPE": "Dado",
-      "maleOffset": 0.635,
-      "femaleOffset": 0
     },
     "shape": "corner",
     "width": "based*1.5",
@@ -3343,13 +3361,8 @@
       "id": "h9aynib"
     },
     {
-      "key": "topInsetDepth",
-      "eqn": "tid",
-      "id": "vlr8eh7"
-    },
-    {
       "key": "innerHeight",
-      "eqn": "c.h - topInsetDepth - tkh - B.t",
+      "eqn": "c.h - tkh - B.t",
       "id": "nh67ruu"
     }
   ],
@@ -3444,7 +3457,7 @@
       "code": "T",
       "center": [
         "c.w / 2 ",
-        "c.h - pt34/2 - topInsetDepth",
+        "c.h - pt34/2",
         "w / -2 "
       ],
       "demensions": [
@@ -3458,27 +3471,6 @@
         0
       ],
       "id": "qpfhto6"
-    },
-    {
-      "type": "Panel",
-      "center": [
-        "L.t + innerWidth/2",
-        "c.h - topInsetDepth/2",
-        "tf.t/-2"
-      ],
-      "demensions": [
-        "topInsetDepth",
-        "innerWidth",
-        "pt34"
-      ],
-      "rotation": [
-        0,
-        "0",
-        "90"
-      ],
-      "name": "topFiller",
-      "code": "tf",
-      "id": "9m0ili8"
     }
   ],
   "joints": [
@@ -3486,88 +3478,68 @@
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "T",
-      "dependentSelector": "L",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "T",
-      "dependentSelector": "R",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "BACK",
-      "dependentSelector": "L",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "BACK",
-      "dependentSelector": "R",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "B",
-      "dependentSelector": "L",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "B",
-      "dependentSelector": "R",
-      "maleOffset": 0.9525,
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
     },
     {
       "_TYPE": "Dado",
 
       "ID_ATTRIBUTE": "id",
-      "dependsSelector": "BACK",
-      "dependentSelector": "T",
-      "maleOffset": "T.t/2",
-      "femaleOffset": 0,
-            "fullLength": false,
-      "priority": 0
+      "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      },
     }
   ],
   "dividerJoint": {
-    "_TYPE": "Dado",
-
-    "ID_ATTRIBUTE": "id",
-    "maleOffset": 0.635,
-    "femaleOffset": 0,
-    "fullLength": false,
-    "priority": 0
+    "_TYPE": "Dado"
   },
   "shape": "square",
   "width": 60.96,
@@ -3588,159 +3560,414 @@
   "_FORCE_FROM_JSON": true
 },
   "wall": {
-    "_TYPE": "CabinetTemplate",
-    "ID_ATTRIBUTE": "id",
-    "type": "wall",
-    "values": [],
-    "subassemblies": [
-      {
-        "type": "Divider",
-        "center": [
-          "c.w - R.t/2",
-          "c.h / 2",
-          "R.w / -2"
-        ],
-        "demensions": [
-          "c.t",
-          "c.h",
-          "pt34"
-        ],
-        "rotation": [
-          0,
-          "90",
-          0
-        ],
-        "name": "right",
-        "code": "R"
-      },
-      {
-        "type": "Divider",
-        "center": [
-          "L.t/2",
-          "c.h/2",
-          "L.w/-2"
-        ],
-        "demensions": [
-          "c.t",
-          "c.h",
-          "pt34"
-        ],
-        "rotation": [
-          0,
-          "90",
-          0
-        ],
-        "name": "left",
-        "code": "L"
-      },
-      {
-        "type": "Panel",
-        "center": [
-          "L.t + BACK.w/2",
-          "BACK.h/2 + B.t",
-          "-(c.t - BACK.t /2)"
-        ],
-        "demensions": [
-          "c.w - L.t - R.t",
-          "c.h - B.t -T.t",
-          "pt34"
-        ],
-        "rotation": [
-          0,
-          0,
-          0
-        ],
-        "name": "back",
-        "code": "BACK"
-      },
-      {
-        "type": "Divider",
-        "center": [
-          "L.t + T.w / 2",
-          "c.h - tid - T.t/2",
-          "T.l/-2 "
-        ],
-        "demensions": [
-          "c.w - L.t - R.t",
-          "c.t ",
-          "pt34"
-        ],
-        "rotation": [
-          "90",
-          "0",
-          0
-        ],
-        "name": "top",
-        "code": "T"
-      },
-      {
-        "type": "Divider",
-        "center": [
-          "B.w /2 + L.t",
-          "bid + B.t/2",
-          "B.h / -2"
-        ],
-        "demensions": [
-          "c.w - L.t - R.t",
-          "c.t",
-          "pt34"
-        ],
-        "rotation": [
-          "90",
-          "0",
-          0
-        ],
-        "name": "bottom",
-        "code": "B"
+  "_TYPE": "CabinetTemplate",
+  "type": "wall",
+  "values": [],
+  "subassemblies": [
+    {
+      "type": "Divider",
+      "center": [
+        "c.w - R.t/2",
+        "c.h / 2",
+        "R.w / -2"
+      ],
+      "demensions": [
+        "c.t",
+        "c.h",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        "90",
+        0
+      ],
+      "name": "right",
+      "code": "R",
+
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
       }
-    ],
-    "joints": [
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "T",
-        "maleOffset": "T.t/2"
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "R",
-        "maleOffset": "R.t/2",
-                "fullLength": true
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "B",
-        "maleOffset": "B.t/2"
-      },
-      {
-        "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "L",
-        "maleOffset": "L.t/2",
-                "fullLength": true
-      }
-    ],
-    "dividerJoint": {
-      "_TYPE": "Dado",
-      "maleOffset": 0.635
     },
-    "shape": "square",
-    "width": 45.72,
-    "height": "wallh",
-    "thickness": "walld",
-    "fromFloor": "walle",
-    "openings": [
-      {
-        "top": "T",
-        "bottom": "B",
-        "left": "L",
-        "right": "R",
-        "back": "BACK"
+    {
+      "type": "Divider",
+      "center": [
+        "L.t/2",
+        "c.h/2",
+        "L.w/-2"
+      ],
+      "demensions": [
+        "c.t",
+        "c.h",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        "90",
+        0
+      ],
+      "name": "left",
+      "code": "L",
+
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
       }
-    ]
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "L.t + BACK.w/2",
+        "BACK.h/2 + B.t",
+        "-(c.t - BACK.t /2)"
+      ],
+      "demensions": [
+        "c.w - L.t - R.t",
+        "c.h - B.t -T.t",
+        "pt14"
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "name": "back",
+      "code": "BACK",
+
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "L.t + T.w / 2",
+        "c.h - T.t/2",
+        "T.l/-2 "
+      ],
+      "demensions": [
+        "c.w - L.t - R.t",
+        "c.t ",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        "0",
+        0
+      ],
+      "name": "top",
+      "code": "T",
+
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "B.w /2 + L.t",
+        "bid + B.t/2",
+        "B.h / -2"
+      ],
+      "demensions": [
+        "c.w - L.t - R.t",
+        "c.t",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        "0",
+        0
+      ],
+      "name": "bottom",
+      "code": "B",
+
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      }
+    }
+  ],
+  "joints": [
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      }
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      }
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      }
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      }
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
+      "maleOffset": ""
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
+      "maleOffset": ""
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
+      "maleOffset": ""
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
+      "maleOffset": ""
+    }
+  ],
+  "shape": "square",
+  "width": 45.72,
+  "height": "wallh",
+  "thickness": "walld",
+  "_FORCE_FROM_JSON": true,
+  "dividerJoint": {
+    "_TYPE": "Dado",
+    "maleOffset": {
+      "_NODE": {
+        "_TYPE": "DecisionInputTree",
+        "stateConfigs": {
+          "Type": {
+            "_TYPE": "StateConfig",
+            "name": "Type",
+            "payload": {
+              "inputArray": [
+                {
+                  "_TYPE": "Select",
+                  "name": "_TYPE",
+                  "list": [
+                    "Butt",
+                    "Dado",
+                    "Miter",
+                    "Rabbet"
+                  ],
+                  "class": "template-select",
+                  "value": "Dado",
+                  "hidden": false,
+                  "optional": false,
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                }
+              ]
+            },
+            "treeName": "Function",
+            "conditions": [
+              {
+                "_TYPE": "CaseInsensitiveCondition",
+                "group": "depth",
+                "attribute": "_TYPE",
+                "value": "Dado",
+                "deligator": {
+                  "_TYPE": "NodeCondition"
+                }
+              }
+            ]
+          },
+          "depth": {
+            "_TYPE": "StateConfig",
+            "name": "depth",
+            "payload": {
+              "inputArray": [
+                {
+                  "_TYPE": "Input",
+                  "label": "Depth",
+                  "name": "maleOffset",
+                  "hidden": false,
+                  "list": [],
+                  "optional": false,
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                }
+              ]
+            },
+            "treeName": "Function",
+            "conditions": []
+          }
+        },
+        "name": "Type",
+        "referenceNodes": false,
+        "root": {
+          "name": "Type",
+          "payload": {
+            "inputArray": [
+              {
+                "_TYPE": "Select",
+                "name": "_TYPE",
+                "list": [
+                  "Butt",
+                  "Dado",
+                  "Miter",
+                  "Rabbet"
+                ],
+                "class": "template-select",
+                "value": "Dado",
+                "hidden": false,
+                "optional": false,
+                "targetAttr": "value",
+                "errorMsg": "Error"
+              }
+            ],
+            "PAYLOAD_ID": "fhelb43"
+          },
+          "children": {
+            "depth": {
+              "name": "depth",
+              "payload": {
+                "inputArray": [
+                  {
+                    "_TYPE": "Input",
+                    "label": "Depth",
+                    "name": "maleOffset",
+                    "hidden": false,
+                    "list": [],
+                    "optional": false,
+                    "targetAttr": "value",
+                    "errorMsg": "Error",
+                    "value": ""
+                  }
+                ],
+                "PAYLOAD_ID": "s3wnzc3"
+              },
+              "children": {},
+              "metadata": {}
+            }
+          },
+          "metadata": {}
+        }
+      },
+      "maleOffset": "",
+      "_TYPE": "Dado"
+    }
   },
+  "fromFloor": "walle",
+  "openings": [
+    {
+      "top": "T",
+      "bottom": "B",
+      "left": "L",
+      "right": "R",
+      "back": "BACK",
+      "id": "0mguavs"
+    }
+  ],
+  "autoToeKick": false
+},
   "blind-corner-base": {
     "_TYPE": "CabinetTemplate",
     "ID_ATTRIBUTE": "id",
@@ -3946,121 +4173,94 @@
       {
         "_TYPE": "Dado",
         "ID_ATTRIBUTE": "id",
-        "dependsSelector": "T",
-        "dependentSelector": "L",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
       },
       {
         "_TYPE": "Dado",
         "ID_ATTRIBUTE": "id",
-        "dependsSelector": "T",
-        "dependentSelector": "R",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
       },
       {
         "_TYPE": "Dado",
         "ID_ATTRIBUTE": "id",
-        "dependsSelector": "pt2",
-        "dependentSelector": "L",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "pt2",
+        "dependent": "L"
+      },
       },
       {
         "_TYPE": "Dado",
         "ID_ATTRIBUTE": "id",
-        "dependsSelector": "pt2",
-        "dependentSelector": "R",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "pt2",
+        "dependent": "R"
+      },
       },
       {
         "_TYPE": "Dado",
         "ID_ATTRIBUTE": "id",
-        "dependsSelector": "BACK",
-        "dependentSelector": "L",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
       },
       {
         "_TYPE": "Dado",
         "ID_ATTRIBUTE": "id",
-        "dependsSelector": "BACK",
-        "dependentSelector": "R",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
       },
       {
         "_TYPE": "Dado",
         "ID_ATTRIBUTE": "id",
-        "dependsSelector": "tkb",
-        "dependentSelector": "L",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "tkb",
+        "dependent": "L"
+      },
       },
       {
         "_TYPE": "Dado",
         "ID_ATTRIBUTE": "id",
-        "dependsSelector": "tkb",
-        "dependentSelector": "R",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "tkb",
+        "dependent": "R"
+      },
       },
       {
         "_TYPE": "Dado",
         "ID_ATTRIBUTE": "id",
-        "dependsSelector": "B",
-        "dependentSelector": "L",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
       },
       {
         "_TYPE": "Dado",
         "ID_ATTRIBUTE": "id",
-        "dependsSelector": "B",
-        "dependentSelector": "R",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
       },
       {
         "_TYPE": "Dado",
         "ID_ATTRIBUTE": "id",
-        "dependsSelector": "tkb",
-        "dependentSelector": "B",
-        "maleOffset": 0.9525,
-        "femaleOffset": 0,
-                "fullLength": false,
-        "priority": 0
+        "selector": {
+        "depends": "tkb",
+        "dependent": "B"
+      },
       }
     ],
     "dividerJoint": {
-      "_TYPE": "Dado",
-      "ID_ATTRIBUTE": "id",
-      "maleOffset": 0.635,
-      "femaleOffset": 0,
-      "fullLength": false,
-      "priority": 0
+      "_TYPE": "Dado"
     },
     "shape": "square",
     "width": 121.92,
@@ -4367,77 +4567,85 @@
     ],
     "joints": [
       {
-        "dependsSelector": "T",
-        "dependentSelector": "L",
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
-        "dependsSelector": "T",
-        "dependentSelector": "R",
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
-        "dependsSelector": "pt2",
-        "dependentSelector": "L",
+        "selector": {
+        "depends": "pt2",
+        "dependent": "L"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
-        "dependsSelector": "pt2",
-        "dependentSelector": "R",
+        "selector": {
+        "depends": "pt2",
+        "dependent": "R"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
-        "dependsSelector": "BACK",
-        "dependentSelector": "L",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-                "fullLength": true
       },
       {
-        "dependsSelector": "BACK",
-        "dependentSelector": "R",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525,
-                "fullLength": true
       },
       {
-        "dependsSelector": "tkb",
-        "dependentSelector": "L",
+        "selector": {
+        "depends": "tkb",
+        "dependent": "L"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
-        "dependsSelector": "tkb",
-        "dependentSelector": "R",
+        "selector": {
+        "depends": "tkb",
+        "dependent": "R"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
-        "dependsSelector": "B",
-        "dependentSelector": "L",
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
-        "dependsSelector": "B",
-        "dependentSelector": "R",
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
-        "dependsSelector": "tkb",
-        "dependentSelector": "B",
+        "selector": {
+        "depends": "tkb",
+        "dependent": "B"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       }
     ],
     "dividerJoint": {
       "_TYPE": "Dado",
-      "maleOffset": 0.635
     },
     "shape": "square",
     "width": 60.96,
@@ -4735,88 +4943,113 @@
     ],
     "joints": [
       {
-        "dependsSelector": "T",
-        "dependentSelector": "R",
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
         "_TYPE": "Dado",
-        "maleOffset": "0.9525"
       },
       {
-        "dependsSelector": "T",
-        "dependentSelector": "L",
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
         "_TYPE": "Dado",
-        "maleOffset": "0.9525"
       },
       {
-        "dependsSelector": "B",
-        "dependentSelector": "R",
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
-        "dependsSelector": "B",
-        "dependentSelector": "L",
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "BACK",
-        "dependentSelector": "T"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      }
       },
       {
-        "dependsSelector": "BACK",
-        "dependentSelector": "B",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      },
         "_TYPE": "Butt"
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbr",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "BACK",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbl",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbr",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbl",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "BACK"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "cb",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "cb",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "T"
+        "selector": {
+        "depends": "cb",
+        "dependent": "T"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "B"
+        "selector": {
+        "depends": "cb",
+        "dependent": "B"
+      }
       }
     ],
     "dividerJoint": {
       "_TYPE": "Dado",
-      "maleOffset": 0.635
     },
     "shape": "square",
     "width": "based",
@@ -5010,7 +5243,7 @@
         "code": "T",
         "center": [
           "T.w / 2",
-          "c.h - tid - pt34/2",
+          "c.h - pt34/2",
           "T.h /-2"
         ],
         "demensions": [
@@ -5027,88 +5260,113 @@
     ],
     "joints": [
       {
-        "dependsSelector": "T",
-        "dependentSelector": "R",
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
         "_TYPE": "Dado",
-        "maleOffset": "0.9525"
       },
       {
-        "dependsSelector": "T",
-        "dependentSelector": "L",
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
         "_TYPE": "Dado",
-        "maleOffset": "0.9525"
       },
       {
-        "dependsSelector": "B",
-        "dependentSelector": "R",
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
-        "dependsSelector": "B",
-        "dependentSelector": "L",
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "BACK",
-        "dependentSelector": "T"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      }
       },
       {
-        "dependsSelector": "BACK",
-        "dependentSelector": "B",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      },
         "_TYPE": "Butt"
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbr",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "BACK",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbl",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbr",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbl",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "BACK"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "cb",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "cb",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "T"
+        "selector": {
+        "depends": "cb",
+        "dependent": "T"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "B"
+        "selector": {
+        "depends": "cb",
+        "dependent": "B"
+      }
       }
     ],
     "dividerJoint": {
       "_TYPE": "Dado",
-      "maleOffset": 0.635
     },
     "shape": "square",
     "width": "based",
@@ -5319,88 +5577,113 @@
     ],
     "joints": [
       {
-        "dependsSelector": "T",
-        "dependentSelector": "R",
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
         "_TYPE": "Dado",
-        "maleOffset": "0.9525"
       },
       {
-        "dependsSelector": "T",
-        "dependentSelector": "L",
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
         "_TYPE": "Dado",
-        "maleOffset": "0.9525"
       },
       {
-        "dependsSelector": "B",
-        "dependentSelector": "R",
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
-        "dependsSelector": "B",
-        "dependentSelector": "L",
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
         "_TYPE": "Dado",
-        "maleOffset": 0.9525
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "BACK",
-        "dependentSelector": "T"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      }
       },
       {
-        "dependsSelector": "BACK",
-        "dependentSelector": "B",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      },
         "_TYPE": "Butt"
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbr",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "BACK",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbl",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbr",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cpbl",
-        "dependentSelector": "BACK"
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "BACK"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "R"
+        "selector": {
+        "depends": "cb",
+        "dependent": "R"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "L"
+        "selector": {
+        "depends": "cb",
+        "dependent": "L"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "T"
+        "selector": {
+        "depends": "cb",
+        "dependent": "T"
+      }
       },
       {
         "_TYPE": "Butt",
-        "dependsSelector": "cb",
-        "dependentSelector": "B"
+        "selector": {
+        "depends": "cb",
+        "dependent": "B"
+      }
       }
     ],
     "dividerJoint": {
       "_TYPE": "Dado",
-      "maleOffset": 0.635
     },
     "shape": "square",
     "width": "based",
@@ -5506,7 +5789,7 @@
         "type": "Divider",
         "center": [
           "L.t + T.w / 2",
-          "c.h - tid - T.t/2",
+          "c.h - T.t/2",
           "T.l/-2 "
         ],
         "demensions": [
@@ -5547,34 +5830,35 @@
     "joints": [
       {
         "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "T",
-        "maleOffset": "T.t/2"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      },
       },
       {
         "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "R",
-        "maleOffset": "R.t/2",
-                "fullLength": true
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
       },
       {
         "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "B",
-        "maleOffset": "B.t/2"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      },
       },
       {
         "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "L",
-        "maleOffset": "L.t/2",
-                "fullLength": true
+        "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
       }
     ],
     "dividerJoint": {
       "_TYPE": "Dado",
-      "maleOffset": 0.635
     },
     "shape": "square",
     "width": 45.72,
@@ -5719,34 +6003,35 @@
     "joints": [
       {
         "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "T",
-        "maleOffset": "T.t/2"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      },
       },
       {
         "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "R",
-        "maleOffset": "R.t/2",
-                "fullLength": true
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
       },
       {
         "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "B",
-        "maleOffset": "B.t/2"
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      },
       },
       {
         "_TYPE": "Dado",
-        "dependsSelector": "BACK",
-        "dependentSelector": "L",
-        "maleOffset": "L.t/2",
-                "fullLength": true
+        "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
       }
     ],
     "dividerJoint": {
       "_TYPE": "Dado",
-      "maleOffset": 0.635
     },
     "shape": "square",
     "width": 45.72,

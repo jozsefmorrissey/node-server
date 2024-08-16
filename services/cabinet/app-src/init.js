@@ -71,7 +71,7 @@ function init(body){
     require('../test/run');
   }
 
-  if (body) Properties.load(body);
+  // if (body) Properties.load(body);
 
   if (urlSuffix && urlSuffix !== 'order') {
       require('./cost/init-costs.js');

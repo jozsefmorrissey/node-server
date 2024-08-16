@@ -16,6 +16,8 @@ Test.add('CSG: fromString',(ts) => {
   csg.polygons.forEach((p, i) => ts.assertTrue(Object.equals(p.color(), colors[i])));
   ts.assertEquals(csg.toString(null, true), poly1)
 
+  const fail = CSG.fromString('blue[(-94.615,10.16,-10.16),(140.335,10.16,-10.16),(140.335,0,-10.16),(-94.615,0,-10.16)]\nblue[(-94.615,0,10000),(140.335,0,10000),(140.335,10.16,10000),(-94.615,10.16,10000)]\nblue[(140.335,10.16,-10.16),(-94.615,10.16,-10.16),(-94.615,10.16,10000),(140.335,10.16,10000)]\nblue[(140.335,0,-10.16),(140.335,10.16,-10.16),(140.335,10.16,10000),(140.335,0,10000)]\nblue[(140.335,0,10000),(-94.615,0,10000),(-94.615,0,-10.16),(140.335,0,-10.16)]\nblue[(-94.615,0,10000),(-94.615,10.16,10000),(-94.615,10.16,-10.16),(-94.615,0,-10.16)]\n');
+  ts.assertTrue(fail instanceof CSG);
   ts.success();
 });
 
@@ -47,7 +49,6 @@ function frontView(intersection, config) {
     const sqSlice = squareSlice(intersection, config.step, 1, -config.width);
     return sqSlice.union(intersection);
   }
-  console.log('here');
   const backOne = config.slices[config.slices.length - 1];
   const squared =  squareSlice(backOne.clone(), config.step, 0, 2*config.width);
   squared.translate(config.step.times(-1));

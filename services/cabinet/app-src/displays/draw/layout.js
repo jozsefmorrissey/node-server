@@ -121,9 +121,8 @@ class DrawLayout extends Draw {
       if (line === undefined) return;
       if (CANVAS().simple) {
         const hover = hovering();
-        if (!hover || hover.constructor.name !== 'Corner2d') return;
-        const wall = measurement.line();
-        if (wall[0] !== hover && wall[1] !== hover) return;
+        if (!hover || (hover.constructor.name !== 'Corner2d' && hover.constructor.name !== 'Wall2D'))
+          return;
       }
       midpoint = line.midpoint();
       const radians = line.radians();

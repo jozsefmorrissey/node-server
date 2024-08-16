@@ -201,10 +201,10 @@ class Line2d {
       const furthestVertId = startDist > endDist ? '0' : '1';
 
       const negBisector = Line2d.startAndTheta(intersection, radians + Math.PI, dist);
-      const dist1 = bisector[1].distance(this[furthestVertId]()) +
-                    bisector[1].distance(negAcquiesed[furthestVertId]());
-      const dist2 = negBisector[1].distance(this[furthestVertId]()) +
-                    negBisector[1].distance(negAcquiesed[furthestVertId]());
+      const dist1 = bisector[1].distance(this[furthestVertId]) +
+                    bisector[1].distance(negAcquiesed[furthestVertId]);
+      const dist2 = negBisector[1].distance(this[furthestVertId]) +
+                    negBisector[1].distance(negAcquiesed[furthestVertId]);
       return dist1 < dist2 ? bisector : negBisector;
     }
 
@@ -593,8 +593,8 @@ class Line2d {
       if (clean) return clean;
       if (!withinTol(this.slope(), other.slope())) return;
       const otherNeg = other.negitive();
-      const outputWithinTol = withinTol(this.y(other.x), other.y(other.x)) &&
-                    withinTol(this.x(other.y), other.x(other.y));
+      const outputWithinTol = withinTol(this.y(other.x()), other.y(other.x())) &&
+	                    withinTol(this.x(other.y()), other.x(other.y()));
       if (!outputWithinTol) return;
       const v1 = this[0];
       const v2 = this[1];
@@ -728,12 +728,11 @@ class Line2d {
     this.clone = this.copy;
 
     this.negitive = () => new Line2d(this[1], this[0]);
-    this.toString = () => `[${this[0].toString()} , ${this[1].toString()}]`;
+    this.toString = (percision) => `[${this[0].toString(percision)} , ${this[1].toString(percision)}]`;
     this.toInfoString = () => `slope: ${this.slope()}\n` +
                         `angle: ${this.angle()}\n` +
                         `segment: ${this.toString()}`;
     this.toNegitiveString = () => `[${this[1].toString()}, ${this[0].toString()}]`;
-    this.approxToString = () => `[${this[0].approxToString()}, ${this[1].approxToString()}]`;
   }
 }
 
@@ -797,7 +796,7 @@ Line2d.rotate = (lines, radians, pivot) => lines.forEach(l => l.rotate(radians, 
 
 Line2d.consolidate = (lines, tolerance, notSegment) => {
   tolerance ||= tol;
-  const tolMap = new ToleranceMap({'slope': `+${tolerance}`, 'yIntercept': tolerance});
+  const tolMap = new ToleranceMap({'slope()': `+.001`, 'yIntercept()': tolerance});
   const lineMap = {};
   for (let index = 0; index < lines.length; index += 1) {
     if (!lines[index].isPoint()) {
@@ -934,15 +933,6 @@ Line2d.toDrawString = (lines, ...colors) => {
   return str.substr(0, str.length - 1);
 }
 
-Line2d.toApproxDrawString = (lines, ...colors) => {
-  let str = '';
-  lines.forEach((l,i) => {
-    color = colors[i%colors.length] || '';
-    str += `${color}[${l[0].approxToString()},${l[1].approxToString()}],`;
-  });
-  return str.substr(0, str.length - 1);
-}
-
 Line2d.toString = (lines) => {
   let str = '';
   for (let index = 0; index < lines.length; index++) {
@@ -970,7 +960,7 @@ function sectionFromString(str, lines) {
 
 Line2d.parrelleSets = (lines, tolerance) => {
   tolerance ||= tol;
-  const tolmap = new ToleranceMap({'radians.positive': `${tolerance}`});
+  const tolmap = new ToleranceMap({'radians().positive()': `${tolerance}`});
   tolmap.addAll(lines);
   const groups = tolmap.group().sortByAttr('length').reverse();
   return groups;
@@ -1011,9 +1001,10 @@ Line2d.endpointDistanceSort = (target) => (l1,l2) => {
 }
 
 Line2d.distanceSort = (target, segment) => (l1,l2) => {
-  const ds1 = l1.distance(target, segment);
-  const ds2 = l2.distance(target, segment);
-  return ds1 - ds2;
+  if (target instanceof Line2d) {
+    return target.distance(l1, segment) - target.distance(l2, segment);
+  }
+  return l1.distance(target, segment) - l2.distance(target, segment);
 }
 
 

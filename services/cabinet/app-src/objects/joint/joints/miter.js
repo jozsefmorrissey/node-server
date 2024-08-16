@@ -9,5 +9,6 @@ class Miter extends Joint {
   }
 }
 
+Object.class.register(Miter);
 Joint.register(Miter);
 module.exports = Miter

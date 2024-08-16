@@ -264,7 +264,6 @@
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -398,7 +397,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "R",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -407,7 +405,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "L",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -450,7 +447,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -459,7 +455,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -502,7 +497,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -511,7 +505,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -644,7 +637,6 @@
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -778,7 +770,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "R",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -787,7 +778,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "L",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -830,7 +820,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -839,7 +828,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -882,7 +870,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -891,7 +878,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1024,7 +1010,6 @@
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -1158,7 +1143,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "R",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1167,7 +1151,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "L",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1210,7 +1193,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1219,7 +1201,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1262,7 +1243,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1271,7 +1251,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1404,7 +1383,6 @@
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -1538,7 +1516,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "R",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1547,7 +1524,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "L",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1590,7 +1566,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1599,7 +1574,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1642,7 +1616,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1651,7 +1624,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1784,7 +1756,6 @@
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -1918,7 +1889,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "R",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1927,7 +1897,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "L",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -1970,7 +1939,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -1979,7 +1947,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2022,7 +1989,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2031,7 +1997,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2164,7 +2129,6 @@
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -2298,7 +2262,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "R",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2307,7 +2270,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "L",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2350,7 +2312,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2359,7 +2320,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2402,7 +2362,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2411,7 +2370,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2544,7 +2502,6 @@
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -2678,7 +2635,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "R",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2687,7 +2643,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "L",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2730,7 +2685,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2739,7 +2693,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2782,7 +2735,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -2791,7 +2743,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -2924,7 +2875,6 @@
                   "dividerJoint": {
                     "_TYPE": "Dado",
                     "maleOffset": 0.635,
-                    "femaleOffset": 0,
                     "fullLength": false,
                     "priority": 0
                   }
@@ -3058,7 +3008,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "R",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -3067,7 +3016,6 @@
                       "dependsSelector": "BACK",
                       "dependentSelector": "L",
                       "maleOffset": "0.9525",
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -3110,7 +3058,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -3119,7 +3066,6 @@
                       "dependsSelector": "B",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -3162,7 +3108,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "R",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     },
@@ -3171,7 +3116,6 @@
                       "dependsSelector": "T",
                       "dependentSelector": "L",
                       "maleOffset": 0.9525,
-                      "femaleOffset": 0,
                       "fullLength": false,
                       "priority": 0
                     }
@@ -3401,7 +3345,7 @@
               },
               {
                 "_TYPE": "Property",
-                "code": "rvdd",
+                "code": "ddg",
                 "name": "Reveal Dual Door",
                 "value": 0.1588,
                 "properties": {
@@ -3916,7 +3860,7 @@
               },
               {
                 "_TYPE": "Property",
-                "code": "rvdd",
+                "code": "ddg",
                 "name": "Reveal Dual Door",
                 "value": 0.1588,
                 "properties": {

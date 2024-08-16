@@ -17,7 +17,7 @@ Test.add('Array: scale',(ts) => {
   ts.success();
 });
 
-Test.add('Array: add',(ts) => {
+Test.add('Array: add', (ts) => {
   const original = [1,2,3,4];
   const arr = Array.from(original);
   const valScale = arr.add(3, true);
@@ -30,5 +30,30 @@ Test.add('Array: add',(ts) => {
   ts.assertTrue(!original.equals(arr));
   ts.assertTrue(arr.equals([10,7,6,6]));
 
+  ts.success();
+});
+
+Test.add('Object.pathValue', (ts) => {
+  const eightNine = {eight: {nine: 9}};
+  const testObj = {
+    one: () => ({two: 2, three: () => eightNine}),
+    four: [4, {five: 5, six: {seven: 7}}, () => 10]
+  };
+  let value = testObj.pathValue('four.1.six.seven');
+  ts.assertEquals(value, 7);
+  value = testObj.pathValue('one().three().eight.nine')
+  ts.assertEquals(value, 9);
+  value = testObj.pathValue('four.2()');
+  ts.assertEquals(value, 10);
+
+  ts.assertEquals(testObj.pathValue('four.five', 10), 10);
+  ts.assertEquals(testObj.pathValue('four.five'), 10);
+  ts.assertEquals(testObj.pathValue('one().three().eight.nine', 18), 18);
+  ts.assertEquals(testObj.pathValue('one().three().eight.nine'), 18);
+
+  ts.assertEquals(testObj.pathValue('one().three().eight.eleven.twelve.13.14.fifteen', 15), 15);
+  ts.assertEquals(testObj.pathValue('one().three().eight.eleven.twelve.13.14.fifteen'), 15);
+  ts.assertTrue(Array.isArray(testObj.pathValue('one().three().eight.eleven.twelve')));
+  ts.assertTrue(Array.isArray(testObj.pathValue('one().three().eight.eleven.twelve.13')));
   ts.success();
 });

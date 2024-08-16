@@ -1,5 +1,4 @@
 
-const approximate = require('../../../../../public/js/utils/approximate.js').new(1);
 const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 const StateHistory = require('../../../../../public/js/utils/services/state-history');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
@@ -159,7 +158,7 @@ class Layout2D extends Lookup {
       json.id = this.id();
       json.objects = Array.toJson(objs);
       this.walls().forEach((wall) => {
-        json.walls.push(wall.toJson());
+        json.walls.push(Wall2D.toJson(wall));
       });
       // json.walls.sort(sortById);
       json.objects.sort(sortById);

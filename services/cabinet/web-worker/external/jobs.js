@@ -18,6 +18,7 @@ class Job {
     this.finished = (is, result) => {
       if (result instanceof Error) _error = result;
       if (!finished && is === true) {
+        result = this.result(result);
         finished = true;
         _error === undefined ? this.trigger.success(result || this, this) :
                                 this.trigger.failed(_error, this);
@@ -45,11 +46,12 @@ class Jobs extends Job {
     super();
     this.jobs = () => jobs;
     this.allJobsFinished = () => (jobs.find(j => !j.finished()) === undefined);
-
+    this.result = () => jobs[jobs.length - 1].result();
+    this.results = () => jobs.map(j => j.results());
 
     this.queue = () => {
-      const onSuccess = (result) =>
-          (onJobSuccess instanceof Function && onJobSuccess(result, this)) &
+      const onSuccess = (result, job) =>
+          (onJobSuccess instanceof Function && onJobSuccess(result, job)) &
           (!this.finished() && this.allJobsFinished() && this.finished(true));
       onJobFailure ||= (error) => this.error(error);
       for (let index = 0; index < jobs.length; index++) {
@@ -89,18 +91,11 @@ class SimpleModelJob extends TaskJob {
   }
 }
 
-class SimpleTo2DJob extends TaskJob {
-  constructor(simpleObjs) {
-    const task = SimpleTo2D(simpleObjs);
-    super(task);
-  }
-}
-
 class CsgModelInfoJob extends TaskJob {
   constructor(task, modelInfo) {
     super(task);
     this.modelInfo = () => modelInfo;
-    this.result = () => modelInfo;
+    this.result = () => task.result ? task.result() : modelInfo;
   }
 }
 
@@ -148,7 +143,7 @@ class CsgAssemblyBoxOnlyJob extends CsgJoinJob {
 class CsgSimpleAssembly extends CsgJoinJob {
   constructor(cabinet) {
     const allAssemblies = cabinet.allAssemblies();
-    const boxParts = cabinet.userDefinedParts();
+    const boxParts = cabinet.modelingCollections.simple();
     const fronts = allAssemblies.filter(a => a.part() && a.partCode().match(/^(d|df|D|ff|Dr|Dl)$/));
     const pulls = allAssemblies.filter(a => a.part() && a.partCode().match(/^(pu)$/));
     super(boxParts.concat(fronts).concat(pulls), null,  {partsOnly: true});
@@ -158,8 +153,8 @@ class CsgSimpleAssembly extends CsgJoinJob {
 
 class CsgComplexAssembly extends CsgJoinJob {
   constructor(cabinet) {
-    const allAssemblies = cabinet.allAssemblies();
-    super(allAssemblies);
+    const assemblies = cabinet.modelingCollections();
+    super(assemblies);
     this.cabinet = () => cabinet;
   }
 }
@@ -203,10 +198,49 @@ class CsgBoxOnlyAssemblies extends CsgAssemblies {
 
 class CsgAssembliesTo2DJob extends CsgModelInfoJob {
   constructor(assemblyOs, props) {
+    const isArray = Array.isArray(assemblyOs);
+    const assemblies = isArray ? assemblyOs : [assemblyOs];
     props ||= {};
     const modelInfo = ModelInfo.object(assemblyOs, props);
-    const task = AssembliesTo2D(modelInfo, true, props.unioned);
+    const task = AssembliesTo2D(modelInfo);
+    const _result = {};
+    const taskResult = task.result;
+    task.result = () =>  {
+      if (isArray) return taskResult();
+      else return taskResult()[assemblies[0].id()];
+    };
     super(task, modelInfo);
+  }
+}
+
+class CsgAssemblyTo2DJob extends CsgModelInfoJob {
+  constructor(assembly, props) {
+    const needs2dConverted = [assembly.id()];
+    const parts = assembly.getRoot().getParts();
+    const modelInfo = ModelInfo.object(parts , props);
+    const task = AssembliesTo2D(modelInfo);
+    super(task, modelInfo);
+  }
+}
+
+class CsgOutlineTo2DJob extends Jobs {
+  constructor(assemblyOs, props) {
+    const isArray = Array.isArray(assemblyOs);
+    const assemblies = isArray ? assemblyOs : [assemblyOs];
+    const jobs = assemblies.map(a => {
+      props ||= {needs2dConverted: [a.id()]};
+      const modelInfo = ModelInfo.object(a.modelingCollections.outline(), props);
+      return new TaskJob(AssembliesTo2D(modelInfo, true));
+    });
+    const _result = {};
+    super(jobs);
+  }
+}
+
+class SimpleTo2DJob extends TaskJob {
+  constructor(simpleObjs) {
+    const task = SimpleTo2D(simpleObjs);
+    super(task);
   }
 }
 
@@ -219,11 +253,8 @@ class CsgTo2DJob extends Jobs {
     const simpleJob = new SimpleTo2DJob(split.simpleModels, props);
     const jobs = [assembliesJob, simpleJob];
     const _result = {};
-    const onSuccess = (result) =>  {
-      const isModelInfo = result.threeView instanceof Function;
-      let map = isModelInfo ? {} : result;
-      if (isModelInfo) split.assemblies.forEach(a => map[a.id()] = result.threeView(a.id()));
-      _result.merge(map);
+    const onSuccess = (result, job) =>  {
+      _result.merge(result);
       if (this.allJobsFinished()) this.finished(true, _result);
     }
     super(jobs, onSuccess);
@@ -382,7 +413,7 @@ class OrderDocumentationJob extends TaskJob {
     super(task);
   }
 }
-
+CsgAssembliesTo2DJob.Outline = CsgOutlineTo2DJob;
 module.exports = {
   CSG: {
     Assembly: {
@@ -401,7 +432,8 @@ module.exports = {
     Assemblies: {
       Simple: CsgSimpleAssemblies,
       Complex: CsgComplexAssemblies,
-      BoxOnly: CsgBoxOnlyAssemblies
+      BoxOnly: CsgBoxOnlyAssemblies,
+      To2D: CsgAssembliesTo2DJob
     },
     Room: {
       Simple: CsgSimpleRoomJob,

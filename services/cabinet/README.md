@@ -70,9 +70,14 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 - locationCode() - location identifier
 - userFriendlyId() - Cabinet specific unique indexed identifier (for display purposes)
 #### Modeling Flags
-- part() - model (when included) will exist in within reality
-- included() - given current configuration part exists in reality
-- includeJoints() - whether jointMatches are applied
+- part() - only parts will be modeled.
+- included() - part is is included in model
+- allModels() - to be included in all ModelingCollections
+- composite() - children.length > 0
+- jointSettings.male() - whether or not part should be used to remove joint material
+- jointSettings.female() - weather or not to remove applicable male joint material
+- jointSettings.extend() - weather or not to extend part to applicable female parts
+- jointSettings.extendTo() - weather applicable male parts will be extended to part
 #### Subassemblies
 - subassemblies - list of subassmblies that must be saved
 - getSubassemblies() - all decendents
@@ -95,7 +100,6 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 - convert builder.js to utilize modular $t and Expression scripts.
 - "inch" does not add implicit multiplication stringMathEval
 - hover help/error text
-- Clean and seperate Object.(getSet|get|set);
 - figure out three-view hidden lines
 - ensure if new property is added existing configs updated with default value
 - StringMathEvaluator: Math.atan(3/4)* (180/Math.PI) works but Math.atan(3/4)*(180/Math.PI) does not
