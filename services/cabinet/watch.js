@@ -44,7 +44,7 @@ if (global.ENV === 'local') {
 
 
 const wwDumpLoc = './public/js/web-worker-bundle';
-const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/internal/init.js', projectDir: '../../'});
+const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/internal/init.js', projectDir: '.'});
 const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         .add('../../public/js/utils/utils.js')
         .add('../../public/js/utils/tolerance.js')
@@ -55,3 +55,10 @@ const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         .add('./app-src/three-d/objects/')
         .add('./web-worker/shared/')
         .add('./web-worker/internal/')
+
+
+const stlDumpLoc = './public/js/STL';
+const stlBundler = new JsBundler(stlDumpLoc, [], {main: './public/js/utils/test/tests/STL.js', projectDir: '../../'});
+const stlWatcher = new Builder(stlBundler.change, stlBundler.write, !global.build)
+        .add('../../public/js/utils/3d-modeling/')
+        .add('../../public/js/utils/test/tests/STL.js');

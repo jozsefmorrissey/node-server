@@ -2016,12 +2016,12 @@
     },
     {
       "key": "lw",
-      "eqn": "76.2",
+      "eqn": "25.4",
       "id": "jews0zy"
     },
     {
       "key": "rw",
-      "eqn": "30.48",
+      "eqn": "3*2.54",
       "id": "357t6g4"
     },
     {
@@ -2480,7 +2480,7 @@
     }
   ],
   "shape": "corner",
-  "width": "based*1.5",
+  "width": "based",
   "height": "baseh",
   "thickness": "based*1.5",
   "_FORCE_FROM_JSON": true,
