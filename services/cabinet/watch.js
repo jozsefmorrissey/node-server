@@ -61,4 +61,5 @@ const stlDumpLoc = './public/js/STL';
 const stlBundler = new JsBundler(stlDumpLoc, [], {main: './public/js/utils/test/tests/STL.js', projectDir: '../../'});
 const stlWatcher = new Builder(stlBundler.change, stlBundler.write, !global.build)
         .add('../../public/js/utils/3d-modeling/')
-        .add('../../public/js/utils/test/tests/STL.js');
+        .add('../../public/js/utils/test/tests/STL.js')
+        .add('../../public/js/utils/utils.js')
