@@ -45,7 +45,7 @@ class Cabinet extends Assembly {
 
     const isPanel = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider' && a.constructor.name !== 'Frame';
     const isFrame = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider' && a.constructor.name === 'Frame';
-    this.addDependencies(new Dado(isPanel, isFrame));
+    this.addDependencies(new Dado(isPanel, isFrame, null, 'FramePanel'));
     const instance = this;
     let toeKickHeight = 4;
     this.jointSettings = new JointSettings(false,false,false,false);
@@ -103,7 +103,7 @@ class Cabinet extends Assembly {
     let modificationState = 0;
     this.modificationState = () =>
       modificationState;
-    this.value.onChange(() => modificationState++);
+    this.value.on.change(() => modificationState++);
 
 
     const pAddSubAssem = this.addSubAssembly;

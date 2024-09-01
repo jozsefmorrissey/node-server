@@ -33,13 +33,12 @@ class KeyValue extends Lookup {
     const parentAttr = properties.parentAttribute;
     const instance = this;
     const customFuncs = [];
-    const parentSetEvent = new CustomEvent('parent-set');
-
+    CustomEvent.all(this, 'change','parentSet');
 
     if (childAttr) {
       if (properties.object) this[childAttr] = new Notifiction(false);
       else this[childAttr] = new NotifictionArray(false);
-      this[childAttr].onAfterChange(updateParent(this, parentSetEvent));
+      this[childAttr].on.afterChange(updateParent(this, this.events.parentSet));
       this.getRoot = () => {
         let curr = this;
         while(curr.parentAssembly() !== undefined) {
@@ -63,10 +62,6 @@ class KeyValue extends Lookup {
       return json;
     }
 
-    this.on ||= {};
-    this.on.parentSet = parentSetEvent.on;
-    this.trigger ||= {};
-    this.trigger.parentSet = parentSetEvent.trigger;
     // TODO: change (key, value, raw) -> ..., (key, rawOvalue)
     this.value = (key, value, raw) => {
       try {
@@ -79,7 +74,7 @@ class KeyValue extends Lookup {
         if (value !== undefined && value !== key) {
           if (value !== currVal) {
             Object.pathValue(this.value.values, key, value);
-            changeEvent.trigger();
+            this.trigger.change();
           }
         } else {
           if (currVal !== undefined && currVal !== null) {
@@ -94,6 +89,7 @@ class KeyValue extends Lookup {
         return NaN;
       }
     }
+    this.value.on = {change: this.on.change}
     this.value.all = (valueObj) => {
       Object.merge(this.value.values, valueObj);
     }
@@ -109,8 +105,6 @@ class KeyValue extends Lookup {
       return hash;
     }
 
-    let changeEvent = new CustomEvent('change');
-    this.value.onChange = changeEvent.on;
 
     this.value.values = {};
     this.value.evaluators = properties.evaluators || {};

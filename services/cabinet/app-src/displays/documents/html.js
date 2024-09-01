@@ -452,7 +452,7 @@ function buildTargetInputSelector(orderInfo) {
       groupBranch.conditions.add(cond, groupName);
     }
   }
-  inputTree.onSubmit(targetSelected(orderInfo));
+  inputTree.on.submit(targetSelected(orderInfo));
   return inputTree;
 }
 

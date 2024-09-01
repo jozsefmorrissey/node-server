@@ -15,16 +15,19 @@ class Joint extends Dependency {
     const parentClone = this.clone;
 
     this.sibling = (dependsSelector, dependentSelector, cond, locId) => {
-      const clone = this.constructor.clone();
+      const clone = this.constructor.clone(this);
       clone.selector.depends(dependsSelector);
       clone.selector.dependent(dependentSelector);
-      clone.condition(cond || this.condition());
+      clone.condition = cond || this.condition;
+      clone.maleOffset(this.maleOffset());
       clone.evaluator(this.evaluator());
+      clone.locationId(locId || this.locationId());
       return clone;
     }
 
     let _evaluator;
-    this.evaluator = (evaluator) => evaluator ? (_evaluator = evaluator) : _evaluator;
+    this.evaluator = (evaluator) =>
+      evaluator ? (_evaluator = evaluator) : _evaluator;
     this.eval = {};
     this.eval.maleOffset = () =>
       _evaluator ? _evaluator(this.maleOffset()) : this.maleOffset();
@@ -47,7 +50,7 @@ Joint.new = function (id, json) {
   return new Joint.classes[id]().fromJson(json);
 }
 
-Object.class.register(Joint, 'maleOffset', 'fullLength', 'priority');
+Object.class.register(Joint, 'maleOffset', 'fullLength', 'priority', 'evaluator');
 
 
 

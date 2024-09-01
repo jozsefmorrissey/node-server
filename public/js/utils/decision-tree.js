@@ -208,13 +208,12 @@ class DecisionNode extends Lookup {
     }
 
     const onChange = [];
-    const changeEvent = new CustomEvent('change');
+    const changeEvent = new CustomEvent('change', 'change.value', 'change.structure');
 
     const trigger = () => {
       changeEvent.trigger(this.values());
       this.tree().changed();
     }
-    this.onChange = (func) => changeEvent.on(func);
     let changePending = 0;
     const delay = 100;
     this.changed = () => {

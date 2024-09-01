@@ -10,7 +10,6 @@ const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const within = Tolerance.within(.0000001);
 
 const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
-let lastMi;
 const NormalMagnitudeIsZero = 'InvalidPolygon: normal vector magnitude === 0';
 
 const place = (vert, no, one, two, three) => {
@@ -45,7 +44,7 @@ class Polygon3D {
         const sv = line[0].copy();
         const mp = line.midpoint().copy();
         place(sv, noZeros, oneZero, twoZeros, origin);
-        place(mp, noZeros, oneZero, twoZeros, origin);
+        // place(mp, noZeros, oneZero, twoZeros, origin);
       }
       return noZeros.concat(oneZero).concat(twoZeros).concat(origin);
     }
@@ -80,15 +79,20 @@ class Polygon3D {
       let index = 2;
       const point1 = points[0];
       const point2 = points[1];
+      const inlinePoints = [];
       let point3;
       while (parrelle && index < points.length) {
         point3 = points[index]
         let vector1 = point1.minus(point2);
         let vector2 = point3.minus(point2);
         parrelle = vector1.parrelle(vector2);
+        if (parrelle) inlinePoints.push(point3)
         index++;
       }
-      return new Plane(point1, point2, point3);
+      const pts = [point1, point2, point3]
+                              .concat(inlinePoints)
+                              .concat(points.slice(index));
+      return new Plane(...pts);
     }
     this.toPlane = getPlane;
 
@@ -311,12 +315,13 @@ class Polygon3D {
       this.irregular.crissCross.locations().length > 0 ||
       this.irregular.parrelle.locations().length > 0;
 
-
     // conformation definition:
     //     correspondence especially to a model or plan
-    function validConformation(center, b4int, aftint, line, plane) {
+    function validConformation(center, b4int, aftint, line, plane, directions) {
       const newSide = new Line3D(b4int, aftint);
       const centSide = newSide.connect(center);
+      if (directions && !directions.expandable(centSide.negitive())) return false;
+      if (!line.vector().unit().equals(newSide.vector().unit())) return true;
       const centLine = line.connect(center);
       const diff = centSide.length() - centLine.length();
       const planeLine = plane.connect.line(line);
@@ -347,7 +352,7 @@ class Polygon3D {
         const b4int = plane.intersection.line(before);
         const aftint = plane.intersection.line(after);
         if (b4int instanceof Vertex3D && aftint instanceof Vertex3D) {
-          if (validConformation(center, b4int, aftint, lines[index], plane)) {
+          if (validConformation(center, b4int, aftint, lines[index], plane, liMap.directions)) {
             const b4Index = before[0].distance(b4int) < before[1].distance(b4int) ? 0 : 1;
             const aftIndex = after[0].distance(aftint) < after[1].distance(aftint) ? 0 : 1;
             if (b4Index !== aftIndex) {
@@ -388,16 +393,21 @@ class Polygon3D {
       return instance;
     }
 
-    this.extendTo = (polyOplane, doNotModify) => {
-      if (doNotModify) return this.copy().extendTo(polyOplane);
+    const MSI = Number.MAX_SAFE_INTEGER;
+    this.extendTo = (polyOplane, doNotModify, directions, exclude) => {
+      if (exclude && exclude.length === lines.length)
+        throw new Error('Need to program the case where all lines excluded');
+      if (doNotModify) return this.copy().extendTo(polyOplane, false, directions, exclude);
       const plane = polyOplane instanceof Polygon3D ? polyOplane.toPlane() : polyOplane;
-      const liMap = lines.map((line, index) => ({line, index, dist: polyOplane.distance(line.midpoint())}));
+      const liMap = lines.map((line, index) => ({line, index,
+        dist: exclude && exclude.indexOf(index) ? MSI : polyOplane.distance(line.midpoint())}));
+      liMap.directions = directions;
       liMap.sortByAttrs(['dist', 'index']);
       const min = liMap[0].dist;
       const minCount = liMap.filter(li => within(li.dist, min)).length;
       if (minCount === 1) return extendByLines(plane, liMap);
       if (Math.difference(liMap[0].index, liMap[1].index) === 1) return extendCorner(polyOplane, liMap);
-      throw new Error('Need to program the case where multiple non adjacent lines are the same distance from poly/plane');
+      return this.extendTo(polyOplane, doNotModify, directions, [liMap[0].index, liMap[1].index]);
     }
 
     let xNorm;
@@ -870,10 +880,6 @@ class Polygon3D {
         const mi = this.mostInformation();
         x ||= mi[0];
         y ||= mi[1];
-        if (lastMi && (mi[0] !== lastMi[0] || mi[1] !== lastMi[1])) {
-          console.info.subtle('change in mi');
-        }
-        lastMi = mi;
       }
       return new Polygon2D(Vertex3D.to2D(this.vertices(),  x, y));
     }
@@ -1125,7 +1131,7 @@ Polygon3D.fromCSG = (polys) => {
       let polygon = new Polygon3D(verts);
       if (!polygon.normal().sameDirection(new Vector3D(csgPoly.plane.normal))) {
         polygon = polygon.reverse();
-        console.warn.subtle(5000, 'never tested should work...');
+        console.warn.subtle('never tested should work...');
       }
       poly3Ds.push(polygon);
     } catch (e) {
@@ -1136,6 +1142,27 @@ Polygon3D.fromCSG = (polys) => {
   // Polygon3D.merge(poly3Ds);
   return poly3Ds;
 }
+
+Polygon3D.fromMagintudeObject =
+    (magnitudeObj, center) => {
+  center ||= new Vertex(0,0,0);
+  const wV = magnitudeObj.x;
+  const hV = magnitudeObj.y;
+  const hVi = hV.inverse();
+  const wVi = wV.inverse();
+  const vector1 = center.translate(hV, true).translate(wVi);
+  const vector2 = center.translate(hV, true).translate(wV);
+  const vector3 = center.translate(hVi, true).translate(wV);
+  const vector4 = center.translate(hVi, true).translate(wVi);
+  return new Polygon3D([vector1, vector2, vector3, vector4]);
+}
+
+// Polygon3D.fromVectorObject =
+//     (width, height, center, vectorObj) => {
+//   vectorObj ||= {x: new Vector3D(1,0,0), y: new Vector3D(0,1,0)}
+//   const magnitudeObj = {x: vectorObj.x.scale(height/2), y: vectorObj.y.scale(width/2)};
+//   return Polygon3D.fromMagintudeObject(magnitudeObj, center);
+// }
 
 Polygon3D.fromVectorObject =
     (width, height, center, vectorObj) => {
@@ -1150,6 +1177,17 @@ Polygon3D.fromVectorObject =
   const vector3 = center.translate(hV.scale(-hh), true).translate(wV.scale(hw));
   const vector4 = center.translate(hV.scale(-hh), true).translate(wV.scale(-hw));
   return new Polygon3D([vector1, vector2, vector3, vector4]);
+}
+
+Polygon3D.fromCenterNormal = (center, normal, radius, points) => {
+  const plane = Plane.fromPointNormal(center, normal);
+  const pts = plane.findPoints(points || 4, radius, center);
+  let poly = new Polygon3D(pts);
+  // TODO: plane.findPoints should be returning points in the correct order
+  //        for normal calculation... I tried its probably a deeper issue with polygon.
+  //        still verify findPoints is behaving appropriatly first.
+  if (!poly.normal().sameDirection(normal)) poly = poly.reverse();
+  return poly;
 }
 
 Polygon3D.fromLines = (lines) => {
@@ -1348,6 +1386,126 @@ Polygon3D.axis = (polygons, normals) => {
   return axis;
 }
 
+function terminateAtPlane(line, plane) {
+
+}
+
+function resizeLine (line, intersections, center, planeBarriers, nonExistantEdgeLength) {
+  const vector = line.vector().unit();
+  const nearest = line.connect(center)[0];
+  if (intersections && intersections.length > 1) {
+    intersections = intersections.filter(i => i);
+    Vertex3D.vectorSort(intersections, vector, nearest);
+    line[0] = intersections[0]; line[1] = intersections[intersections.length - 1];
+  }
+  if (!planeBarriers || planeBarriers.length === 0) return;
+  for (let index = 0; index < planeBarriers.length; index++) {
+    const barrier = planeBarriers[index];
+    const intersection = barrier.intersection.line.segment(line);
+    if (intersection && !(intersection instanceof Line3D)) {
+      const centInt = new Line3D(nearest, intersection).vector();
+      if (vector.sameDirection(centInt)) line[1] = intersection;
+      else line[0] = intersection;
+    }
+  }
+}
+
+function intersectionMap (lines) {
+  const map = {};
+  lines.forEach(l => (l.id = String.random()) && (map[l.id] = []));
+  map.all = [];
+  for (let i = 0; i < lines.length; i++) {
+    for (let j = i+1; j < lines.length; j++) {
+      const intersection = lines[i].intersection(lines[j]);
+      if (intersection) {
+        map[lines[i].id].push(intersection);
+        map[lines[j].id].push(intersection);
+        map.all.push(intersection);
+      }
+    }
+  }
+  return map;
+}
+
+Polygon3D.midRange = (...polys) => {
+  const verts = [];
+  polys.forEach(p => verts.concatInPlace(p.vertices()));
+  return Vertex3D.midrange(...verts);
+}
+
+Polygon3D.encloseLines = (lines, normal, planeBarriers, nonExistantEdgeLength) => {
+  if (lines.length < 2 && !normal) throw new Error('I need help here function requires atleast 2 lines or 1 line and a normal');
+  nonExistantEdgeLength ||= 1000000;
+  const center = Vertex3D.midrange(planeBarriers.map(p => p.points()).concatElements());
+  if (lines.length === 1) {
+    const vect = lines[0].vector().unit().crossProduct(normal);
+    const p1 = lines[0].midpoint().translate(vect.scale(nonExistantEdgeLength/-2));
+    const p2 = lines[0].midpoint().translate(vect.scale(nonExistantEdgeLength/2));
+    const p = p1.distance(center) < p2.distance(center) ? p1 : p2;
+    lines.concatInPlace([new Line3D(lines[0][1], p),new Line3D(p,lines[0][0])]);
+  }
+  normal ||= lines[0].crossProduct[lines[1]];
+  lines = lines.map(l => l.clone());
+  Line3D.radialSort2D(lines, normal, null, center);
+  const intMap = intersectionMap(lines);
+  const notConnected = true;
+  const newLines = [];
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    const aftIndex = (index + 1) % lines.length;
+    const after = lines[aftIndex];
+    resizeLine(line, intMap[line.id], center, planeBarriers, nonExistantEdgeLength);
+    resizeLine(after, intMap[after.id], center, planeBarriers, nonExistantEdgeLength);
+    if (!after[0].equals(line[1])) {
+      newLines.push({index: index+1, line: new Line3D(line[1], after[0])});
+    }
+  }
+  newLines.reverse().forEach(nl => lines.splice(nl.index, 0, nl.line))
+  return lines;
+}
+
+Polygon3D.fromPlanes = (polysOplanes, center, nonExistantEdgeLength) => {
+  const planes = polysOplanes.map(p => p instanceof Polygon3D ? p.toPlane() : p);
+  if (planes.length === 1) {
+    return [new Polygon3D(planes[0].findPoints(4, -1))];
+  }
+  const intInfo = Plane.intersections(...planes);
+  if (!center) {
+    const verts = [];
+    intInfo.forEach(info => info.lines.forEach(l => verts.concatInPlace([l[0], l[1]])));
+    Vertex3D.center(...verts);
+  }
+  const polys = [];
+  for (let index = 0; index < intInfo.length; index++) {
+    const lines = intInfo[index].lines;
+    // const planes = intInfo[index].planes;
+    const norm = polysOplanes[index].normal();
+    const enclosed = Polygon3D.encloseLines(lines, norm, planes, nonExistantEdgeLength);
+    const poly = new Polygon3D(enclosed.map(l => l[0]));
+    polys.push(poly);
+  }
+  polys.forEach((p, i) => {
+    const polyCenter = p.center();
+    const normalTranslation = polyCenter.translate(p.normal(), true);
+    if (normalTranslation.distance(center) < polyCenter.distance(center))
+      polys[i] = p.reverse();
+  });
+  return polys;
+}
+
+Polygon3D.toCSG = (polygons) => {
+  const csg = new CSG();
+  polygons.forEach(p => {
+    const vertices = [];
+    const normal = p.normal();
+    const normObj = {x: normal.i(), y: normal.j(), z: normal.k()};
+    p.vertices().forEach(v => vertices.push(new CSG.Vertex(v, normObj)))
+    csg.polygons.push(new CSG.Polygon(vertices));
+  });
+  return csg;
+}
+
+// TODO: This could be simpler using Plane.intersections...
 Polygon3D.fromIntersections = (intersected, intersectors) => {
   let lines = [];
   const plane = intersected.toPlane();
@@ -1403,6 +1561,49 @@ Polygon3D.fromIntersections = (intersected, intersectors) => {
   }
   return new Polygon3D(lines.map(l => l[0]));
 }
+
+class Polygon3DExpandDirections {
+  constructor() {
+    let fixed = false;
+    let fixedVectors;
+    let expand = true;
+    let expandVectors;
+
+    this.vectors = (vectorObj) => {
+      if (vectorObj) {
+        fixedVectors = vectorObj.fixed;
+        expandVectors = vectorObj.expand;
+      }
+      return {
+        fixed: fixedVectors,
+        expand: expandVectors
+      };
+    }
+
+    this.fixed = (trueOfalse) => Boolean.is(trueOfalse) ? (fixed = trueOfalse) : fixed;
+    this.fixed.vectors = () => this.vectors().fixed;
+    this.fixed.defined = () => this.fixed.vectors() && this.fixed.vectors().length > 0;
+    this.fixed.is = (vector) => this.fixed.defined() &&
+        this.fixed.vectors().findIndex(v => v.unit().dot(vector) > .5) !== -1;
+
+    this.expand = (trueOfalse) => Boolean.is(trueOfalse) ? (expand = trueOfalse) : expand;
+    this.expand.vectors = () => this.vectors().expand;
+    this.expand.defined = () => this.expand.vectors() && this.expand.vectors().length > 0;
+    this.expand.is = (vector) => this.expand.defined() &&
+        this.expand.vectors().findIndex(v => v.unit().dot(vector) > .5) !== -1;
+
+    this.expandable = (lineOvector) => {
+      if (fixed || !expand) return false;
+      const vector = lineOvector instanceof Line3D ? lineOvector.vector().unit() : lineOvector;
+      if (!this.expand.defined() && !this.fixed.defined()) return !fixed && expand;
+      if (!this.expand.defined()) return !this.fixed.is(vector);
+      if (!this.fixed.defined()) return this.expand.is(vector);
+      return !this.fixed.is(vector) && this.expand.is(vector);
+    }
+  }
+}
+Object.class.register(Polygon3DExpandDirections, 'fixed', 'vectors');
+Polygon3D.Directions = Polygon3DExpandDirections;
 
 Object.class.register(Polygon3D);
 Polygon3D.toJson = (poly) => {

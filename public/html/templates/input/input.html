@@ -3,6 +3,7 @@
   <label>{{label()}}</label>
   <input class='{{class()}}' list='input-list-{{id()}}' id='{{id()}}'
       placeholder='{{placeholder()}}' type='{{type()}}' name='{{name()}}'
+      {{disabled() ? 'disabled' : ''}}
       {{attrString()}} {{checked()}}>
   <datalist id="input-list-{{id()}}">
     <option:t value="{{item}}" repeat='item in list()'></option:t>

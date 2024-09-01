@@ -44,7 +44,7 @@ if (global.ENV === 'local') {
 
 
 const wwDumpLoc = './public/js/web-worker-bundle';
-const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/internal/init.js', projectDir: '.'});
+const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/internal/init.js', projectDir: '../../'});
 const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         .add('../../public/js/utils/utils.js')
         .add('../../public/js/utils/tolerance.js')

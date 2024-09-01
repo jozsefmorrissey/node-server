@@ -18,23 +18,9 @@ class Global {
         writable: false
     });
 
-    const orderLoadedEvent = new CustomEvent('orderLoaded');
-    const orderChangeEvent = new CustomEvent('orderChanged');
-    const roomChangeEvent = new CustomEvent('roomChanged');
-    const cabinetChangeEvent = new CustomEvent('cabinetChanged');
-    const groupChangeEvent = new CustomEvent('groupChanged');
-    const targetChangeEvent = new CustomEvent('targetChanged');
 
-    Object.defineProperty(this, 'onChange', {
-        value: {
-          order: orderChangeEvent.on,
-          room: roomChangeEvent.on,
-          cabinet: cabinetChangeEvent.on,
-          target: targetChangeEvent.on,
-          group: groupChangeEvent.on
-        },
-        writable: false
-    });
+    CustomEvent.all(this, 'load.order','change.order','change.room','change.cabinet',
+                    'change.group','change.target');
 
     let ORDER, ROOM, GROUP, CABINET, TARGET;
     this.order = (order) => {
@@ -47,7 +33,7 @@ class Global {
       if (order && order instanceof Order && order !== ORDER) {
         const details = {from: ORDER, to: order};
         ORDER = order;
-        orderChangeEvent.trigger(details);
+        this.trigger.change.order(details);
         ROOM = undefined; GROUP = undefined; CABINET = undefined;
         this.room();
       }
@@ -57,11 +43,9 @@ class Global {
     this.order.static = (name) => {
       Request.get(`/cabinet/json/orders/${name}.json`,
       (json) =>
-        this.order(Order.fromJson(json)) && orderLoadedEvent.trigger(this.order()),
+        this.order(Order.fromJson(json)) && this.trigger.load.order(this.order()),
       (error) => console.error(error));
     }
-    this.order.on = {};
-    this.order.on.load = orderLoadedEvent.on;
 
     this.room = (room) => {
       if (!room && ROOM === undefined) {
@@ -73,7 +57,7 @@ class Global {
         const details = {from: ROOM, to: room};
         ROOM = room;
         GROUP = undefined; CABINET = undefined;
-        roomChangeEvent.trigger(details);
+        this.trigger.change.room(details);
       }
       return ROOM;
     }
@@ -84,7 +68,7 @@ class Global {
         const details = {from: GROUP, to: group};
         GROUP = group;
         CABINET = undefined;
-        groupChangeEvent.trigger(details);
+        this.trigger.change.group(details);
       }
       return CABINET;
     }
@@ -92,7 +76,7 @@ class Global {
       if (cabinet && cabinet !== CABINET && cabinet instanceof Cabinet) {
         const details = {from: CABINET, to: cabinet};
         CABINET = cabinet;
-        cabinetChangeEvent.trigger(details);
+        this.trigger.change.cabinet(details);
         this.target(cabinet);
       }
       return CABINET;
@@ -102,7 +86,7 @@ class Global {
         if (object instanceof Cabinet) this.cabinet(object);
         const details = {from: TARGET, to: object};
         TARGET = object;
-        targetChangeEvent.trigger(details);
+        this.trigger.change.target(details);
       }
       return TARGET;
     }

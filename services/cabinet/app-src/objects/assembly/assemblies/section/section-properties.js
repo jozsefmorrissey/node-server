@@ -90,7 +90,6 @@ class SectionProperties extends KeyValue {
       }
     }
     this.index = () => index;
-    pattern ||= new Pattern('z');
 
     const changeEvent = new CustomEvent('change');
     this.on.change = changeEvent.on;
@@ -100,7 +99,7 @@ class SectionProperties extends KeyValue {
     let running = false;
     this.hash = () => {
       const cover = this.cover();
-      let hash = pattern.hash();
+      let hash = this.pattern().hash();
       hash += keyValHash();
       hash += JSON.stringify(coordinates).hash();
       for (let index = 0; index < this.subassemblies.length; index++) {
@@ -433,7 +432,7 @@ class SectionProperties extends KeyValue {
         if (dividerCount < currDividerCount) {
           const diff = currDividerCount - dividerCount;
           this.sections.splice(dividerCount + 1);
-          if (dividerCount > 2)his.pattern().setStr(this.pattern().str.substring(0, dividerCount));
+          if (dividerCount > 2)this.pattern().setStr(this.pattern().str.substring(0, dividerCount));
           if (!dontUpdateCoords) setSectionCoordinates(true);
           return true;
         } else {
@@ -457,9 +456,12 @@ class SectionProperties extends KeyValue {
     this.setPattern = (patternObj) => {
       if (patternObj instanceof Pattern) {
         pattern = patternObj;
-        this.pattern().onChange(this.reevaluate);
+        pattern.getter((char) =>
+          this.resolve('pattern_a'));
+        pattern.on.change(this.reevaluate);
       }
     }
+    this.setPattern(pattern || new Pattern('z'));
 
     this.pattern = (patternStr) => {
       if ((typeof patternStr) === 'string') {
@@ -471,7 +473,7 @@ class SectionProperties extends KeyValue {
       } else {
         if (!pattern) {
           const patStr = new Array(this.sectionCount()).fill('z').join('');
-          pattern = pattern.setStr(patStr);
+          pattern.setStr(patStr);
         }
       }
       return pattern;
@@ -585,7 +587,7 @@ class SectionProperties extends KeyValue {
     this.divider(divider);
     divider.divider().included = this.divideRight;
     divider.parentAssembly(this);
-    this.pattern().onChange(this.reevaluate);
+    this.pattern().on.change(this.reevaluate);
 
     const isMatch = (assem, dir) => {
       let target = instance[dir]();
@@ -700,7 +702,6 @@ class SectionProperties extends KeyValue {
         this.sections.forEach(c => {try {str += c.toDrawString2D() + '\n\n'} catch (e) {}});
       return str;
     }
-
   }
 }
 

@@ -8,6 +8,9 @@ class Dado extends Joint {
     this.eval.maleOffset = () => {
       const mo = this.maleOffset();
       const evaluator = this.evaluator();
+      if (this.locationId() === 'CapJoint') {
+        console.log('here');
+      }
       return evaluator ? evaluator(mo || 'ddd') : mo || 'ddd';
     }
   }

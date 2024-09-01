@@ -59,7 +59,7 @@ class AssemblyResolver extends Resolver {
 
     const keyValueValue = (expr, assem) => {
       let assemVal = (assem || assembly).value(expr);
-      if (Number.isFinite(assemVal))
+      if (assemVal !== undefined)
         return infoObj(expr, assemVal, assemVal);
     }
 

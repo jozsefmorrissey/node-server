@@ -1,31 +1,33 @@
 
 
 Request = {
-    onStateChange: function (success, failure, id) {
-      return function () {
-        if (this.readyState === 4) {
-          if (this.status == 200) {
-            try {
-              resp = JSON.parse(this.responseText);
-            } catch (e){
-              resp = this.responseText;
-            }
-            if (success) {
-              success(resp, this);
-            }
-          } else if (failure) {
-            const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
-            if (errorMsgMatch) {
-              this.errorMsg = errorMsgMatch[1].trim();
-            }
-            const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
-            if (errorCodeMatch) {
-              this.errorCode = errorCodeMatch[1];
+    on: {
+      stateChange: function (success, failure, id) {
+        return function () {
+          if (this.readyState === 4) {
+            if (this.status == 200) {
+              try {
+                resp = JSON.parse(this.responseText);
+              } catch (e){
+                resp = this.responseText;
+              }
+              if (success) {
+                success(resp, this);
+              }
+            } else if (failure) {
+              const errorMsgMatch = this.responseText.match(Request.errorMsgReg);
+              if (errorMsgMatch) {
+                this.errorMsg = errorMsgMatch[1].trim();
+              }
+              const errorCodeMatch = this.responseText.match(Request.errorCodeReg);
+              if (errorCodeMatch) {
+                this.errorCode = errorCodeMatch[1];
 
+              }
+              failure(this);
             }
-            failure(this);
+            var resp = this.responseText;
           }
-          var resp = this.responseText;
         }
       }
     },
@@ -42,7 +44,7 @@ Request = {
       xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
       Request.setGlobalHeaders(xhr);
       if (success === undefined && failure === undefined) return xhr;
-      xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+      xhr.onreadystatechange =  Request.on.stateChange(success, failure, id);
       xhr.send();
       return xhr;
     },
@@ -55,7 +57,7 @@ Request = {
         xhr.setRequestHeader('Content-Type', 'application/json');
         Request.setGlobalHeaders(xhr);
         if (success === undefined && failure === undefined) return xhr;
-        xhr.onreadystatechange =  Request.onStateChange(success, failure, id);
+        xhr.onreadystatechange =  Request.on.stateChange(success, failure, id);
         xhr.send(JSON.stringify(body));
         return xhr;
       }

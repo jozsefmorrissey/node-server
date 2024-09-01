@@ -20,9 +20,9 @@ const apply = (joint) => {
   if (func) return func;
 }
 
-function extendFBSetToPoly(poly, frontBackSet) {
-  frontBackSet[0].extendTo(poly);
-  frontBackSet[1].extendTo(poly);
+function extendFBSetToPoly(poly, frontBackSet, jointSettings, center) {
+  frontBackSet[0].extendTo(poly, false, jointSettings.directions);
+  frontBackSet[1].extendTo(poly, false, jointSettings.directions);
 }
 
 const big = 1000;//Number.MAX_SAFE_INTEGER/1000000;
@@ -90,7 +90,7 @@ apply.Dado = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   let cookie, jointCutters;
   const center = new Vertex3D(env.modelInfo.model[assem.id].center());
 
-  extendFBSetToPoly(femalePolyObj.z[furthestIndex(femalePolyObj, center)], frontBackSet);
+  extendFBSetToPoly(femalePolyObj.z[furthestIndex(femalePolyObj, center)], frontBackSet, assem.jointSettings);
   if (femaleThickness - joint.eval.maleOffset - 2.54/4 < -.01) {
     cookie = [cutterClosestZPoly(femalePolyInfo, center)];
     jointCutters = [];
@@ -106,7 +106,7 @@ apply.Dado = (assem, joint, femalePolyInfo, frontBackSet, env) => {
 apply.Butt = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   const femalePolyObj = femalePolyInfo();
   const center = new Vertex3D(env.modelInfo.model[assem.id].center());
-  extendFBSetToPoly(femalePolyObj.z[furthestIndex(femalePolyObj, center)], frontBackSet);
+  extendFBSetToPoly(femalePolyObj.z[furthestIndex(femalePolyObj, center)], frontBackSet, assem.jointSettings);
   if (femalePolyObj === null) return;
   if (!sideIntersectsPoly(assem, femalePolyObj, frontBackSet)) {
     return;
@@ -120,7 +120,7 @@ apply.Butt = (assem, joint, femalePolyInfo, frontBackSet, env) => {
 
   const mateWith = possibleTargets[0].p;
 
-  extendFBSetToPoly(mateWith, frontBackSet);
+  extendFBSetToPoly(mateWith, frontBackSet, assem.jointSettings);
   cookie = [cutterFurthestZPoly(femalePolyInfo, center, 0)];
   jointCutters = [cutterClosestZPoly(femalePolyInfo, center, 0)];
 
@@ -167,7 +167,7 @@ apply.Miter = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   const dist = cpCenter.distance(mCenter) < cpTransCenter.distance(mCenter) ? big : -big;
   const biPoly = BiPolygon.fromPolygon(cutterPoly, 0, dist, {x: big, y: big});
 
-  extendFBSetToPoly(f.furthest, frontBackSet);
+  extendFBSetToPoly(f.furthest, frontBackSet, assem.jointSettings);
 
 
   jointCutter = () => biPoly.model()
@@ -189,7 +189,7 @@ apply.ShelveJoint = (assem, joint, femalePolyInfo, frontBackSet) => {
     return;
   }
 
-  extendFBSetToPoly(femalePolyObj.z[1], frontBackSet);
+  extendFBSetToPoly(femalePolyObj.z[1], frontBackSet, assem.jointSettings);
   const center = assem.parentAssembly().coordinates.inner.object().center();
   const cookie = [cutterFurthestZPoly(femalePolyInfo, center)];
   const offset = joint.eval.maleOffset;

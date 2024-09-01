@@ -16,7 +16,7 @@
   "DoorSection": [],
   "Frame": [],
   "Panel": [],
-  "PanelVoidIndex": ["index"],
+  "PanelVoidIndex": ["index", "vectors", "width"],
   "PanelToeKickBacker": [],
   "Void": ["includedSides", "jointSetIndex"],
   "Screw": [],

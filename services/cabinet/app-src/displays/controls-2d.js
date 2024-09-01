@@ -47,7 +47,7 @@ class Controls2d extends Lookup {
       elem.innerHTML = Controls2d.template.render(instance);
     }
 
-    panZ.onTranslate((hmm) => {
+    panZ.on.translate((hmm) => {
       moveCount++;
       updateHtml();
     });

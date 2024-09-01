@@ -11,6 +11,11 @@ class CsgSimpleTask extends Task {
     this.result = () => _result;
     this.process = () => 'simple';
     this.payload = () => ({objects});
+    this.on.message((result) => {
+      _result = isArray ? result.map(o => CSG.fromPolygons(o.polygons)) :
+          CSG.fromPolygons(result[0].polygons, true);
+      this.status(STATUS.SUCCESS, _result);
+    });
   }
 }
 

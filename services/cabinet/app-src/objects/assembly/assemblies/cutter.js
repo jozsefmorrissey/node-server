@@ -10,6 +10,10 @@ class Cutter extends Assembly {
   constructor(partCode, partName, config) {
     super(partCode, partName, config);
     this.sliceAtOpening(false);
+    this.jointSettings.noDependencies(true)
+    this.jointSettings.female(false)
+    this.jointSettings.extend(false)
+    this.jointSettings.extendTo(false)
   }
 }
 Cutter.abbriviation = 'cut';

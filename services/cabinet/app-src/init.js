@@ -105,7 +105,7 @@ function init(body){
 }
 
 if (urlSuffix === 'template') Request.get(EPNTS.config.get(), init, console.error);
-else if (staticOrder) Global.order.on.load(init);
+else if (staticOrder) Global.on.load.order(init);
 else init();
 
 const popUp = new PopUp({resize: false, noBackdrop: true});

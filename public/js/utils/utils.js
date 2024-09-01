@@ -143,30 +143,6 @@ Function.safeStdLibAddition(Function, 'event', (eventName, object, recursiveFilt
   return eventFunc.trigger;
 }, true);
 
-Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, key) {
-  if (!modify) complement = JSON.copy(complement);
-  if (func(complement, key)) return {filtered: complement};
-
-  if (!(complement instanceof Object)) return {complement};
-  let filtered = Array.isArray(complement) ? [] : {};
-  const keys = Object.keys(complement);
-  let setOne = false;
-  for (let index = 0; index < keys.length; index++) {
-    const key = keys[index];
-    const seperated = Object.filter(complement[key], func, true, key);
-    if (seperated.filtered !== undefined) filtered[key] = seperated.filtered;
-    setOne = true;
-    if (seperated.complement === undefined) delete complement[key];
-    else complement[key] = seperated.complement;
-  }
-  if (Object.keys(filtered).length === 0) filtered = undefined;
-  return {complement, filtered};
-}, true);
-
-Function.safeStdLibAddition(Object, 'filter', function(func) {
-  return Object.filter(this, func, true).filtered;
-});
-
 // Stole this from: https://stackoverflow.com/a/71115598
 // was useful in finding a data leak
 function roughSizeOfObject(object) {
@@ -246,54 +222,6 @@ Function.safeStdLibAddition(JSON, 'copy',   function  (obj) {
   if (!(obj instanceof Object)) return obj;
   return JSON.parse(JSON.stringify(obj));
 }, true);
-
-Function.safeStdLibAddition(Object, 'copy', function(arr) {
-  if (Array.isArray(arr)) throw new Error('point to merge...');
-  const root = Array.isArray(this) ? [] : {};
-  const keys = Object.keys(this);
-  for (let index = 0; index < keys.length; index++) {
-    const key = keys[index];
-    const value = this[key];
-    if (!(value instanceof Object)) root[key] = value;
-    else root[key] = value.copy();
-  }
-  return root;
-});
-
-
-
-
-Function.safeStdLibAddition(Object, 'foreach', function(obj, func, filter, pathPrefix) {
-  if (!pathPrefix) pathPrefix = '';
-  if((typeof filter) !== 'function' || filter(obj, pathPrefix)) func(obj, pathPrefix);
-  const keys = Object.keys(obj);
-  for (let index = 0; index < keys.length; index++) {
-    const key = keys[index];
-    const path = pathPrefix === '' ? key : `${pathPrefix}.${key}`;
-    const value = obj[key];
-    if (value instanceof Object) {
-      Object.foreach(value, func, filter, path);
-    }
-  }
-}, true);
-
-Function.safeStdLibAddition(Object, 'foreach', function(func, filter) {
-  Object.foreach(this, func, filter);
-});
-Function.safeStdLibAddition(Object, 'map',   function (obj, func) {
-  if ((typeof func) !== 'function') return console.warn('Object.map requires a function argument');
-  const keys = Object.keys(obj);
-  const map = {};
-  for (let index = 0; index < keys.length; index++) {
-    const key = keys[index];
-    const value = obj[key];
-    map[key] = func(value, key);
-  }
-  return map;
-}, true);
-
-Function.safeStdLibAddition(Object, 'hash',
-  (obj) => JSON.stringify(obj === undefined ? 'undefined' : obj).hash(), true);
 
 function processValue(value) {
   let retVal;
@@ -428,6 +356,10 @@ Function.safeStdLibAddition(RegExp, 'lessThan', integerCompareReg(true, false), 
 Function.safeStdLibAddition(RegExp, 'greaterThan',  integerCompareReg(false, false), true);
 Function.safeStdLibAddition(RegExp, 'lessThanEqual',  integerCompareReg(true, true), true);
 Function.safeStdLibAddition(RegExp, 'greaterThanEqual',  integerCompareReg(false, true), true);
+const evenReg = '[0-9]*[02468](?![0-9])';
+Function.safeStdLibAddition(RegExp, 'even', (asString) => asString ? evenReg : new RegExp(`${evenReg}`));
+const oddReg = '[0-9]*[13579](?![0-9])';
+Function.safeStdLibAddition(RegExp, 'odd', (asString) => asString ? oddReg : new RegExp(`${oddReg}`));
 Function.safeStdLibAddition(RegExp, 'toObject',  function (str) {
   const match = str.match(this);
   if (match === null) return null;
@@ -687,7 +619,7 @@ clazz.register = (clazz, ...attrs) => {
     if (!clone) clone = clazz.new();
     if (parentClone) parentClone(obj, clone);
     Object.keys(attrMap[cxtrName]).forEach(k => clone.pathValue(k, obj.pathValue(k)));
-    return obj;
+    return clone;
   }
 }
 clazz.get = (nameOobject) => (typeof nameOobject) === 'string' ? classLookup[nameOobject] : nameOobject.constructor;
@@ -1296,6 +1228,9 @@ function setGettersAndSetters(obj, options) {
               return options.values[attr];
             return obj.defaultGetterValue(attr);
           }
+          if (attr === 'capMale' && value) {
+            console.log('here')
+          }
           return options.values[attr] = value;
         });
       }
@@ -1401,38 +1336,72 @@ Function.safeStdLibAddition(Array, 'idObject',   function  (idAttr) {
 
 const lastCallDelay = 1000;
 const lastCallers = {};
-function lastCall(delayOptional, ...args) {
-  const caller = lastCall.caller;
+function lastCall(callerId, delayOptional, ...args) {
   let delay = delayOptional;
-  if (!Number.isFinite(delay) || delay > 60000) delay = lastCallDelay;
-  else args = [delayOptional].concat(args)
+  if (arguments.length === 1) {
+    delay = lastCallDelay;
+    args = [callerId];
+  } else {
+    if (!Number.isFinite(delay) || delay > 60000) {
+      delay = delay;
+      args = [delayOptional].concat(args);
+    }
+  }
   const id = String.random();
-  lastCallers[caller] = id;
+  lastCallers[callerId] = id;
   setTimeout(() => {
-    if (id === lastCallers[caller]) {
-      this(...arguments);
+    if (id === lastCallers[callerId]) {
+      this(...args);
     }
   }, delay);
 }
 
 const defaultInterval = 1000;
 const lastTimeStamps = {};
-function intervalFunction() {
-  const caller = intervalFunction.caller;
-  let interval = arguments[0];
-  if (!Number.isFinite(interval) || interval > 60000) interval = defaultInterval;
-  else {
-    arguments = Array.from(arguments)
-    arguments.splice(0,1);
+function intervalFunction(callerId, intervalOptional, ...args) {
+  let interval = intervalOptional;
+  if (arguments.length === 1) {
+    interval = defaultInterval;
+    args = [callerId];
+  } else {
+    if (!Number.isFinite(interval) || interval > 60000) {
+      interval = defaultInterval;
+      args = [intervalOptional].concat(args);
+    }
   }
-  const lastTime = lastTimeStamps[caller];
+  const lastTime = lastTimeStamps[callerId];
   const thisTime = new Date().getTime();
   if (lastTime === undefined || lastTime + interval < thisTime)
-    this(...arguments);
-  lastTimeStamps[caller] = thisTime;
+    this(...args);
+  lastTimeStamps[callerId] = thisTime;
 }
+
 Function.safeStdLibAddition(Function, 'subtle',   intervalFunction);
 Function.safeStdLibAddition(Function, 'lastCall',   lastCall);
+
+Function.safeStdLibAddition(String, 'foreach', function (func) {
+  const arr = [];
+  for (let index = 0; index < this.length; index++) {
+    func(this[index], index);
+  }
+});
+
+Function.safeStdLibAddition(String, 'map', function (func) {
+  const arr = [];
+  for (let index = 0; index < this.length; index++) {
+    arr[index] = func(this[index]);
+  }
+  return arr;
+});
+
+Function.safeStdLibAddition(String, 'filter', function (func) {
+  const arr = [];
+  for (let index = 0; index < this.length; index++) {
+    if (func(this[index])) arr[index] = this[index];
+  }
+  return arr;
+});
+
 
 Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
   if (isRegex !== true) {
@@ -1501,7 +1470,7 @@ Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
     }
     target = value[attr];
     value = isFunc ? target() : target;
-    if (value === undefined || value === null) return value;
+    if (value === undefined) return value;
   }
   return {parent, value, target, attr, created}
 });
@@ -1510,6 +1479,8 @@ Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
   const valueDefined = value !== undefined;
   const pathInfo = obj.pathInfo(path, valueDefined);
   if (!valueDefined && !pathInfo) return pathInfo;
+  if (!pathInfo)
+    obj.pathInfo(path, valueDefined);
   const parent = pathInfo.parent;
   const attr = pathInfo.attr;
   if ((typeof parent[attr]) === 'function') {
@@ -1520,6 +1491,16 @@ Function.safeStdLibAddition(Object, 'pathValue', function (obj, path, value) {
 
 Function.safeStdLibAddition(Object, 'pathValue', function (path, value) {
   return Object.pathValue(this, path, value);
+});
+
+Function.safeStdLibAddition(Object, 'passiveProperty', function (path, value) {
+  const pathInfo = this.pathInfo(path, true);
+  Object.defineProperty(pathInfo.parent, pathInfo.attr, {
+      writable: true,
+      enumerable: false,
+      configurable: true,
+      value
+  });
 });
 
 Function.safeStdLibAddition(Object, 'undefinedKey', function (key, joinStr, requireIndex) {
@@ -1541,12 +1522,43 @@ Function.safeStdLibAddition(Object, 'deletePath', function (path) {
 });
 
 Function.safeStdLibAddition(Array, 'empty', function (func) {
-  let empty = true;
   for (let index = 0; index < this.length; index += 1) {
     if (this[index] !== undefined) return false;
   }
   return true;
 });
+
+Function.safeStdLibAddition(Array, 'relitiveIndex', function (funcOval, index) {
+  if (!Number.isFinite(index)) index = 0;
+  const isFunc = funcOval instanceof Function;
+  for (let i = 0; i < this.length; i += 1) {
+    const isTarget = isFunc ? funcOval(this[i], i) : funcOval === this[i];
+    if (isTarget) {
+      const negitive = i <= index ? i - index : -index + (i - this.length);
+      const positive = i >= index ? i - index : this.length - index + i;
+      if (-negitive < positive) return negitive;
+      else return positive;
+    }
+  }
+});
+
+Function.safeStdLibAddition(Array, 'concatElements', function () {
+  const elements = this.map(o => o);
+  this.deleteAll();
+  elements.forEach(e => Array.isArray(e) && this.concatInPlace(e));
+  return this;
+});
+
+Function.safeStdLibAddition(Array, 'fill', function (length, funcOval) {
+  const arr = new Array().fill(length);
+  const isFunc = funcOval instanceof Function;
+  for (let index = 0; index < length; index += 1) {
+    const value = isFunc ? funcOval(index, arr) : funcOval;
+    if (value !== undefined) arr[index] = value;
+  }
+  return arr;
+}, true);
+
 
 /////////////////////////////////// Matrix Equations //////////////////////////
 
@@ -1685,3 +1697,73 @@ Function.safeStdLibAddition(Math, 'mean', function (items, targetAttrs) {
   }
   return meanObject;
 }, true);
+
+Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, key) {
+  if (!modify) complement = JSON.copy(complement);
+  if (func(complement, key)) return {filtered: complement};
+
+  if (!(complement instanceof Object)) return {complement};
+  let filtered = Array.isArray(complement) ? [] : {};
+  const keys = Object.keys(complement);
+  let setOne = false;
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const seperated = Object.filter(complement[key], func, true, key);
+    if (seperated.filtered !== undefined) filtered[key] = seperated.filtered;
+    setOne = true;
+    if (seperated.complement === undefined) delete complement[key];
+    else complement[key] = seperated.complement;
+  }
+  if (Object.keys(filtered).length === 0) filtered = undefined;
+  return {complement, filtered};
+}, true);
+
+Function.safeStdLibAddition(Object, 'filter', function(func) {
+  return Object.filter(this, func, true).filtered;
+});
+
+Function.safeStdLibAddition(Object, 'copy', function(arr) {
+  if (Array.isArray(arr)) throw new Error('point to merge...');
+  const root = Array.isArray(this) ? [] : {};
+  const keys = Object.keys(this);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const value = this[key];
+    if (!(value instanceof Object)) root[key] = value;
+    else root[key] = value.copy();
+  }
+  return root;
+});
+
+
+Function.safeStdLibAddition(Object, 'foreach', function(obj, func, filter, pathPrefix) {
+  if (!pathPrefix) pathPrefix = '';
+  if((typeof filter) !== 'function' || filter(obj, pathPrefix)) func(obj, pathPrefix);
+  const keys = Object.keys(obj);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const path = pathPrefix === '' ? key : `${pathPrefix}.${key}`;
+    const value = obj[key];
+    if (value instanceof Object) {
+      Object.foreach(value, func, filter, path);
+    }
+  }
+}, true);
+
+Function.safeStdLibAddition(Object, 'foreach', function(func, filter) {
+  Object.foreach(this, func, filter);
+});
+Function.safeStdLibAddition(Object, 'map',   function (obj, func) {
+  if ((typeof func) !== 'function') return console.warn('Object.map requires a function argument');
+  const keys = Object.keys(obj);
+  const map = {};
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index];
+    const value = obj[key];
+    map[key] = func(value, key);
+  }
+  return map;
+}, true);
+
+Function.safeStdLibAddition(Object, 'hash',
+  (obj) => JSON.stringify(obj === undefined ? 'undefined' : obj).hash(), true);

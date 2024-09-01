@@ -2737,7 +2737,7 @@
         "type": "Divider",
         "center": [
           "c.w / 2",
-          "bid + B.t / 2",
+          "B.t / 2",
           "c.t / -2"
         ],
         "demensions": [
@@ -3732,7 +3732,7 @@
       "type": "Divider",
       "center": [
         "B.w /2 + L.t",
-        "bid + B.t/2",
+        "B.t/2",
         "B.h / -2"
       ],
       "demensions": [
@@ -5070,31 +5070,25 @@
     ],
     "autoToeKick": true
   },
-  "triangle-corner-wall": {
+  "triangle-corner-wall":{
     "_TYPE": "CabinetTemplate",
-    "ID_ATTRIBUTE": "id",
     "type": "triangle-corner-wall",
     "values": [
       {
         "key": "bo",
-        "eqn": "4*2.54"
-      },
+        "eqn": "4*2.54",    },
       {
         "key": "pbw",
-        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)"
-      },
+        "eqn": "Math.sqrt((bo-BACK.t*1.5)*(bo-BACK.t*1.5)*2)",    },
       {
         "key": "innerWidth",
-        "eqn": "c.w - R.t"
-      },
+        "eqn": "c.w - R.t",    },
       {
         "key": "innerDepth",
-        "eqn": "c.t - L.t"
-      },
+        "eqn": "c.t - L.t",    },
       {
         "key": "backhype",
-        "eqn": "Math.sqrt(bo*bo/2)"
-      }
+        "eqn": "Math.sqrt(bo*bo/2)",    }
     ],
     "subassemblies": [
       {
@@ -5115,67 +5109,27 @@
           0
         ],
         "name": "back",
-        "code": "BACK"
-      },
-      {
-        "type": "Cutter",
-        "center": [
-          "c.w",
-          "c.h/2",
-          "-c.t"
-        ],
-        "demensions": [
-          "bo*2",
-          "c.h",
-          "backhype*2 - BACK.t/2"
-        ],
-        "rotation": [
-          0,
-          "135",
-          0
-        ],
-        "name": "back",
-        "code": "cb"
-      },
-      {
-        "type": "Cutter",
-        "center": [
-          "R.c.x + R.t",
-          "R.c.y",
-          "R.c.z - cpbr.t"
-        ],
-        "demensions": [
-          "R.d.x",
-          "R.d.y",
-          "R.d.z"
-        ],
-        "rotation": [
-          "R.r.x",
-          "R.r.y",
-          "R.r.z"
-        ],
-        "name": "backRight",
-        "code": "cpbr"
-      },
-      {
-        "type": "Cutter",
-        "center": [
-          "L.c.x + cpbl.t",
-          "L.c.y",
-          "L.c.z - L.t"
-        ],
-        "demensions": [
-          "L.d.x",
-          "L.d.y",
-          "L.d.z"
-        ],
-        "rotation": [
-          "L.r.x",
-          "L.r.y",
-          "L.r.z"
-        ],
-        "name": "backLeft",
-        "code": "cpbl"
+        "code": "BACK",
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
       },
       {
         "name": "right",
@@ -5195,7 +5149,27 @@
           0,
           90,
           0
-        ]
+        ],
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
       },
       {
         "name": "left",
@@ -5215,7 +5189,27 @@
           0,
           "0",
           0
-        ]
+        ],
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
       },
       {
         "name": "bottom",
@@ -5223,7 +5217,7 @@
         "code": "B",
         "center": [
           "B.w / 2",
-          "bid + (t/2)",
+          "t/2",
           "B.h / -2"
         ],
         "demensions": [
@@ -5235,7 +5229,27 @@
           "90",
           "0",
           0
-        ]
+        ],
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
       },
       {
         "name": "top",
@@ -5255,123 +5269,103 @@
           90,
           "0",
           0
-        ]
+        ],
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
       }
     ],
     "joints": [
       {
-        "selector": {
-        "depends": "T",
-        "dependent": "R"
-      },
         "_TYPE": "Dado",
+        "selector": {
+          "depends": "T",
+          "dependent": "R"
+        },
+        "priority": 0
       },
       {
-        "selector": {
-        "depends": "T",
-        "dependent": "L"
-      },
         "_TYPE": "Dado",
+        "selector": {
+          "depends": "T",
+          "dependent": "L"
+        },
+        "priority": 0
       },
       {
-        "selector": {
-        "depends": "B",
-        "dependent": "R"
-      },
         "_TYPE": "Dado",
+        "selector": {
+          "depends": "B",
+          "dependent": "R"
+        },
+        "priority": 0
       },
       {
-        "selector": {
-        "depends": "B",
-        "dependent": "L"
-      },
         "_TYPE": "Dado",
+        "selector": {
+          "depends": "B",
+          "dependent": "L"
+        },
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
         "selector": {
-        "depends": "BACK",
-        "dependent": "T"
-      }
-      },
-      {
-        "selector": {
-        "depends": "BACK",
-        "dependent": "B"
-      },
-        "_TYPE": "Butt"
+          "depends": "T",
+          "dependent": "BACK"
+        },
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
         "selector": {
-        "depends": "cpbr",
-        "dependent": "BACK"
-      }
+          "depends": "B",
+          "dependent": "BACK"
+        },
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
         "selector": {
-        "depends": "BACK",
-        "dependent": "R"
-      }
+          "depends": "R",
+          "dependent": "BACK"
+        },
+        "priority": 0
       },
       {
         "_TYPE": "Butt",
         "selector": {
-        "depends": "cpbl",
-        "dependent": "L"
-      }
-      },
-      {
-        "_TYPE": "Butt",
-        "selector": {
-        "depends": "cpbr",
-        "dependent": "BACK"
-      }
-      },
-      {
-        "_TYPE": "Butt",
-        "selector": {
-        "depends": "cpbl",
-        "dependent": "BACK"
-      }
-      },
-      {
-        "_TYPE": "Butt",
-        "selector": {
-        "depends": "cb",
-        "dependent": "R"
-      }
-      },
-      {
-        "_TYPE": "Butt",
-        "selector": {
-        "depends": "cb",
-        "dependent": "L"
-      }
-      },
-      {
-        "_TYPE": "Butt",
-        "selector": {
-        "depends": "cb",
-        "dependent": "T"
-      }
-      },
-      {
-        "_TYPE": "Butt",
-        "selector": {
-        "depends": "cb",
-        "dependent": "B"
-      }
+          "depends": "L",
+          "dependent": "BACK"
+        },
+        "priority": 0
       }
     ],
-    "dividerJoint": {
-      "_TYPE": "Dado",
-    },
     "shape": "square",
     "width": "based",
     "height": "baseh",
     "thickness": "based",
+    "_FORCE_FROM_JSON": true,
+    "dividerJoint": {
+      "_TYPE": "Butt"
+    },
     "fromFloor": 0,
     "openings": [
       {
@@ -5382,8 +5376,7 @@
         "back": "BACK",
         "_Type": "slice",
         "leftDepth": "c.w",
-        "rightDepth": "c.t"
-      }
+        "rightDepth": "c.t",    }
     ],
     "autoToeKick": false
   },
@@ -5810,7 +5803,7 @@
         "type": "Divider",
         "center": [
           "B.w /2 + L.t",
-          "bid + B.t/2",
+          "B.t/2",
           "B.h / -2"
         ],
         "demensions": [

@@ -144,7 +144,7 @@ du.on.match('change', '.divider-type-selector', (elem) => {
 
 OpenSectionDisplay.updateDividers = (opening) => {
   const focusInfo = du.focusInfo();
-  const selector = `[opening-id="${opening.id()}"].opening-cnt > .divider-controls`;
+  const selector = `[opening-id="${opening.id()}"].opening-cnt > .divider-controls > div`;
   const dividerControlsCnt = document.querySelector(selector);
   dividerControlsCnt.innerHTML = OpenSectionDisplay.dividerHtml(opening);
   du.focus(focusInfo);
@@ -184,44 +184,69 @@ OpenSectionDisplay.patternContainerSelector = (opening) =>
 OpenSectionDisplay.lastInputValues = {};
 OpenSectionDisplay.patterInputHtml = (opening) => {
   const pattern = opening.pattern();
-  const patCntSelector = OpenSectionDisplay.patternContainerSelector(opening);
-
-  let inputHtml = '';
   const unique = pattern.unique();
+  if (unique.length === 1) return '';
+  const patCntSelector = OpenSectionDisplay.patternContainerSelector(opening);
+  let inputHtml = '';
+  let isDisconnected = false;
   for (let index = 0; index < unique.length; index += 1) {
     const id = unique[index];
     let fill = opening.dividerLayout().fill;
+    const dis = pattern.elements[id].disconnected() ? ' disconnected' : '';
+    isDisconnected ||= !!dis;
     const measInput = Inputs('pattern', {
       label: id,
       placeholder: id,
+      class: `pattern-input${dis}`,
+      disabled: pattern.isRatio(),
       name: id,
-      value: fill[index]
+      value: fill[id]
     });
-    measInput.on('enter', (value, target) => {
+    measInput.on('enter:change', (value, target) => {
       opening.pattern().value(target.name, Measurement.decimal(target.value));
       fill = opening.dividerLayout().fill;
       const patternCnt = document.querySelector(patCntSelector);
       const inputs = patternCnt.querySelectorAll('input');
-      fill.forEach((value, index) => {
-        if (inputs[index] !== target)
-          inputs[index].value = value;
+      let isDisconnected = false;
+      inputs.forEach((elem, i) => {
+        if (i !== inputs.length - 1) {
+          const disconnected = pattern.elements[elem.name].disconnected();
+          isDisconnected ||= disconnected;
+          du.class.oft(elem, 'disconnected', disconnected);
+        }
+        if (elem !== target)
+          elem.value = fill[elem.name];
       });
-
+      du.class.oft(du.find.closest('.disconnected-cnt', target), 'hidden', !isDisconnected);
     });
     inputHtml += measInput.html();
-    measInput.on('change', (value, target) => {
-      const dec = new Measurement(value, true).decimal();
-      if (!Number.isNaN(dec)) {
-        const oldValue = opening.pattern().value(target.name);
-        opening.pattern().value(target.name, dec);
-      }
-    })
   }
+  inputHtml += `<div class='disconnected-cnt${isDisconnected ? '' : ' hidden'}'>
+<div class='globe-cnt'><i class='gg-globe'></i></div>
+<button class='remove-btn'>X</button>
+</div`;
   return inputHtml;
 };
 
+du.on.match('click', '.divider-controls .remove-btn', (elem) => {
+  const opening = OpenSectionDisplay.getOpening(elem);
+  opening.pattern().values.reset();
+  OpenSectionDisplay.updateDividers(opening);
+});
+
+du.on.match('click', '.divider-controls .globe-cnt', (elem) => {
+  const opening = OpenSectionDisplay.getOpening(elem);
+  const pattern = opening.pattern();
+  const values = pattern.values();
+  const group = opening.getRoot().group();
+  Object.keys(values).forEach(k => group.propertyConfig(`pattern_${k}`, values[k]));
+  opening.pattern().values.reset();
+  OpenSectionDisplay.updateDividers(opening);
+});
+
 OpenSectionDisplay.getOpening = (target) => {
-  const openId = target.getAttribute('opening-id');
+  const openElem = du.find.up('[opening-id]', target);
+  const openId = openElem.getAttribute('opening-id');
   return OpenSectionDisplay.sections[openId];
 }
 
@@ -254,10 +279,9 @@ function expiditeRefresh(target) {
 }
 
 OpenSectionDisplay.onOrientation = (target) => {
-  const openId = target.getAttribute('open-id');
-  const value = target.value;
-  const opening = OpenSectionDisplay.sections[openId];
-  opening.vertical(value === 'vertical');
+  const opening = OpenSectionDisplay.getOpening(target);
+  const isVertical = target.getAttribute('orientation') === 'vertical';
+  opening.vertical(isVertical);
   opening.reevaluate();
   OpenSectionDisplay.refresh(opening);
 };
@@ -281,6 +305,6 @@ OpenSectionDisplay.onSectionChange = (target) => {
 
 du.on.match('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
 du.on.match('change', '.division-pattern-input', expiditeRefresh);
-du.on.match('click', '.open-orientation-radio', OpenSectionDisplay.onOrientation);
+du.on.match('click', '.div-orien-btn', OpenSectionDisplay.onOrientation);
 du.on.match('change', '.section-selection', OpenSectionDisplay.onSectionChange)
 module.exports = OpenSectionDisplay

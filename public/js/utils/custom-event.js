@@ -74,16 +74,22 @@ class CustomEvent {
   }
 }
 
-CustomEvent.all = (obj, ...eventNames) => {
-  if (obj.on === undefined) obj.on = {};
-  if (obj.trigger === undefined) obj.trigger = {};
-  if (obj.events === undefined) obj.events = {};
+CustomEvent.all = (obj, eventObject, ...eventNames) => {
+  if (eventObject instanceof Object) {
+    eventNames.concatInPlace(Object.keys(eventObject));
+  } else {
+    eventNames.push(eventObject);
+    eventObject = {};
+  }
+  if (obj.on === undefined) obj.passiveProperty('on', {});
+  if (obj.trigger === undefined) obj.passiveProperty('trigger', {});
+  if (obj.events === undefined) obj.passiveProperty('events', {});
   for (let index = 0; index < eventNames.length; index++) {
     const name = eventNames[index];
-    const e = new CustomEvent(name);
-    obj.events.pathValue(name, e);
-    obj.on.pathValue(name, e.on);
-    obj.trigger.pathValue(name, (...args) => e.trigger.apply(e, args));
+    const e = eventObject[name] || new CustomEvent(name);
+    obj.events.passiveProperty(name, e);
+    obj.on.passiveProperty(name, e.on);
+    obj.trigger.passiveProperty(name, (...args) => e.trigger.apply(e, args));
   }
 }
 

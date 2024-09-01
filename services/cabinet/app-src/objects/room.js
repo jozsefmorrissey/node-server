@@ -73,7 +73,6 @@ class Room extends Lookup {
       name: name || `Room ${Room.count++}`,
       layout: layout || new Layout2D(this.layoutObjects)
     }
-    // initialVals.layout.onStateChange(onLayoutChange);
     Object.getSet(this, initialVals, 'groups');
     this.groups = [new Group(this)];
     this.addGroup = (name) => {

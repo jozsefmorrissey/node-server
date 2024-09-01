@@ -17,7 +17,7 @@ class FaceSketch {
       console.log(model);
     }
 
-    ThreeDModel.onRenderObjectUpdate(draw);
+    ThreeDModel.on.renderObjectUpdate(draw);
   }
 }
 

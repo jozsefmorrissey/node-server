@@ -7,7 +7,7 @@ class ModelingCollections {
       return assem.getSubassemblies().filter((a) => {
         if (!(a instanceof Assembly && a.included() && a.part())) return false;
         if (a.locationCode().match(userDefinedReg)) return !a.composite();
-        return a.outline() === false;
+        return (a.outline() || a.composite()) === false;
       });
     };
     this.physical.outline = () => {

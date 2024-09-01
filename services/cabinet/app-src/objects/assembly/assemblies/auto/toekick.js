@@ -43,12 +43,11 @@ class OpeningToeKick extends Assembly {
     this.rightCornerCutter = () => rightCornerCutter;
 
     const joint = (part, fullLength) => (otherPartCode, condition) => {
-      const joint = new Cut(part.locationCode(), otherPartCode, condition);
+      const joint = new Cut(part, otherPartCode, condition);
       joint.fullLength(fullLength);
       part.addDependencies(joint);
     }
-    joint(toeKickPanel)(/^R:/);
-    joint(toeKickPanel)(/^L:/);
+
     joint(leftCornerCutter)(toeKickPanel.locationCode());
     joint(rightCornerCutter)(toeKickPanel.locationCode());
     const cutter = new Cutter(':tkc', `ToeKick`);

@@ -7390,7 +7390,18 @@ class STL {
 	  endfacet`).join('\n')}
 	endsolid ${header}`
 	    }
+	    this.url = () => {
+	      return URL.createObjectURL(this.binary.file());
+	    }
 	  }
+	}
+	
+	STL.fromCSG = (csg) => {
+	  const stl = new STL();
+	  const scaled = csg.clone();
+	  scaled.scale(10);
+	  scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
+	  return stl;
 	}
 	
 	module.exports = STL;
@@ -7771,6 +7782,65 @@ const STL = require('../../3d-modeling/STL.js');
 	
 	document.body.append(link);
 	
+	let height = 1.5*2.54;
+	let width = 1 * 2.54;
+	let wheelScrewCenterZ = (5/16) * -2.54;
+	let glassThickness = (1/4) * 2.54;
+	let glassScrewCenter = [0, .5*2.54, glassThickness - .1];
+	let gsc = glassScrewCenter;
+	let flapThickness = (1/16) * 2.54;
+	let screwThickness = .5;
+	let smallBackThickness = .3
+	let sbt = smallBackThickness;
+	let supportCylRad = (13/32) * 2.54/2;
+	let scr = supportCylRad;
+	const cylinder = new CSG.cylinder({start: [0,0,0], end: [0,height,0], radius: width/2});
+	const glassCutter = new CSG.cube({radius: [width/2, height/2, glassThickness/2], center: [0,(height/2) - flapThickness, glassThickness/2]});
+	const wheelScrewCyl = new CSG.cylinder({radius: screwThickness/2 + .01, start: [0,0,wheelScrewCenterZ], end: [0,height,wheelScrewCenterZ]});
+	const topScrewResess = new CSG.cylinder({radius: .8/2 + .1, start: [0,height - (7/32)*2.54/2, wheelScrewCenterZ], end: [0,height, wheelScrewCenterZ]});
+	const bottomScrewResess = new CSG.cylinder({radius: .8/2 + .01, start: [0,(7/32)*2.54/2, wheelScrewCenterZ], end: [0,0, wheelScrewCenterZ]});
+	const backScrewCyl = new CSG.cylinder({radius: 1.2/2 - .01, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
+	const backScrewHole = new CSG.cylinder({radius: .4/2 + .01, start: [0,gsc[1], gsc[2] + .1], end: [0,gsc[1], 100]});
+	const backScrewResess = new CSG.cylinder({radius: .8/2, start: [0,gsc[1], width/2], end: [0,gsc[1], width/2 - (1/8) * 2.54]});
+	const backScrewWell = new CSG.cylinder({radius: .2/2, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
+	const wheelCavity = new CSG.cube({radius: [100, ((15/16)*2.54)/2 - .01, width/2 - sbt], center: [0, height/2, width/-2 + sbt/2]})
+	const supportCylR = new CSG.cylinder({radius: scr, start: [width/2-scr, .635, 0], end: [width/2-scr, 2.54 + .635, 0]}).subtract(glassCutter);
+	const supportCylL = new CSG.cylinder({radius: scr, start: [width/-2+scr, .635, 0], end: [width/-2+scr, 2.54 + .635, 0]}).subtract(glassCutter);
+	const plierSlot = new CSG.cube({radius: [(3/16)*2.54/2, (7/32)*2.54/2, 5], center: [0,height,-5]});
+	const backAngle = new CSG.cube({radius: [1.5*2.54/2, 1.5*2.54/2, .5/2], center: [0,0,0]});
+	backAngle.rotate({x:-45});
+	backAngle.translate([0,height,(width)/2.54+.1]);
+	const model = cylinder.subtract(glassCutter)
+	                      .subtract(wheelScrewCyl)
+	                      .subtract(topScrewResess)
+	                      .subtract(bottomScrewResess)
+	                      .subtract(backScrewHole)
+	                      .subtract(backScrewResess)
+	                      .union(backScrewCyl)
+	                      .subtract(backScrewWell)
+	                      .subtract(wheelCavity)
+	                      .union(supportCylR)
+	                      .union(supportCylL)
+	                      .subtract(backAngle)
+	                      .subtract(plierSlot)
+	
+	// model.rotate({x:180});
+	// model.translate({x: 0, y: model.demensions().y, z: 0});
+	
+	
+	
+	const stl2 = STL.fromCSG(model);
+	console.log(stl2.url());
+	console.log(model.toDrawString());
+	
+	
+	const link2 = document.createElement('a');
+	link2.innerText = 'Shower Wheel Thingy!';
+	link2.href = URL.createObjectURL(stl2.binary.file());
+	link2.download = 'shower-wheel-thingy.stl'; // Set the desired filename
+	
+	document.body.append(link2);
+	
 });
 
 
@@ -7921,30 +7991,6 @@ function (require, exports, module) {
 	  return eventFunc.trigger;
 	}, true);
 	
-	Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, key) {
-	  if (!modify) complement = JSON.copy(complement);
-	  if (func(complement, key)) return {filtered: complement};
-	
-	  if (!(complement instanceof Object)) return {complement};
-	  let filtered = Array.isArray(complement) ? [] : {};
-	  const keys = Object.keys(complement);
-	  let setOne = false;
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const seperated = Object.filter(complement[key], func, true, key);
-	    if (seperated.filtered !== undefined) filtered[key] = seperated.filtered;
-	    setOne = true;
-	    if (seperated.complement === undefined) delete complement[key];
-	    else complement[key] = seperated.complement;
-	  }
-	  if (Object.keys(filtered).length === 0) filtered = undefined;
-	  return {complement, filtered};
-	}, true);
-	
-	Function.safeStdLibAddition(Object, 'filter', function(func) {
-	  return Object.filter(this, func, true).filtered;
-	});
-	
 	// Stole this from: https://stackoverflow.com/a/71115598
 	// was useful in finding a data leak
 	function roughSizeOfObject(object) {
@@ -8024,54 +8070,6 @@ function (require, exports, module) {
 	  if (!(obj instanceof Object)) return obj;
 	  return JSON.parse(JSON.stringify(obj));
 	}, true);
-	
-	Function.safeStdLibAddition(Object, 'copy', function(arr) {
-	  if (Array.isArray(arr)) throw new Error('point to merge...');
-	  const root = Array.isArray(this) ? [] : {};
-	  const keys = Object.keys(this);
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const value = this[key];
-	    if (!(value instanceof Object)) root[key] = value;
-	    else root[key] = value.copy();
-	  }
-	  return root;
-	});
-	
-	
-	
-	
-	Function.safeStdLibAddition(Object, 'foreach', function(obj, func, filter, pathPrefix) {
-	  if (!pathPrefix) pathPrefix = '';
-	  if((typeof filter) !== 'function' || filter(obj, pathPrefix)) func(obj, pathPrefix);
-	  const keys = Object.keys(obj);
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const path = pathPrefix === '' ? key : `${pathPrefix}.${key}`;
-	    const value = obj[key];
-	    if (value instanceof Object) {
-	      Object.foreach(value, func, filter, path);
-	    }
-	  }
-	}, true);
-	
-	Function.safeStdLibAddition(Object, 'foreach', function(func, filter) {
-	  Object.foreach(this, func, filter);
-	});
-	Function.safeStdLibAddition(Object, 'map',   function (obj, func) {
-	  if ((typeof func) !== 'function') return console.warn('Object.map requires a function argument');
-	  const keys = Object.keys(obj);
-	  const map = {};
-	  for (let index = 0; index < keys.length; index++) {
-	    const key = keys[index];
-	    const value = obj[key];
-	    map[key] = func(value, key);
-	  }
-	  return map;
-	}, true);
-	
-	Function.safeStdLibAddition(Object, 'hash',
-	  (obj) => JSON.stringify(obj === undefined ? 'undefined' : obj).hash(), true);
 	
 	function processValue(value) {
 	  let retVal;
@@ -8206,6 +8204,10 @@ function (require, exports, module) {
 	Function.safeStdLibAddition(RegExp, 'greaterThan',  integerCompareReg(false, false), true);
 	Function.safeStdLibAddition(RegExp, 'lessThanEqual',  integerCompareReg(true, true), true);
 	Function.safeStdLibAddition(RegExp, 'greaterThanEqual',  integerCompareReg(false, true), true);
+	const evenReg = '[0-9]*[02468](?![0-9])';
+	Function.safeStdLibAddition(RegExp, 'even', (asString) => asString ? evenReg : new RegExp(`${evenReg}`));
+	const oddReg = '[0-9]*[13579](?![0-9])';
+	Function.safeStdLibAddition(RegExp, 'odd', (asString) => asString ? oddReg : new RegExp(`${oddReg}`));
 	Function.safeStdLibAddition(RegExp, 'toObject',  function (str) {
 	  const match = str.match(this);
 	  if (match === null) return null;
@@ -8465,7 +8467,7 @@ function (require, exports, module) {
 	    if (!clone) clone = clazz.new();
 	    if (parentClone) parentClone(obj, clone);
 	    Object.keys(attrMap[cxtrName]).forEach(k => clone.pathValue(k, obj.pathValue(k)));
-	    return obj;
+	    return clone;
 	  }
 	}
 	clazz.get = (nameOobject) => (typeof nameOobject) === 'string' ? classLookup[nameOobject] : nameOobject.constructor;
@@ -9074,6 +9076,9 @@ function (require, exports, module) {
 	              return options.values[attr];
 	            return obj.defaultGetterValue(attr);
 	          }
+	          if (attr === 'capMale' && value) {
+	            console.log('here')
+	          }
 	          return options.values[attr] = value;
 	        });
 	      }
@@ -9179,38 +9184,72 @@ function (require, exports, module) {
 	
 	const lastCallDelay = 1000;
 	const lastCallers = {};
-	function lastCall(delayOptional, ...args) {
-	  const caller = lastCall.caller;
+	function lastCall(callerId, delayOptional, ...args) {
 	  let delay = delayOptional;
-	  if (!Number.isFinite(delay) || delay > 60000) delay = lastCallDelay;
-	  else args = [delayOptional].concat(args)
+	  if (arguments.length === 1) {
+	    delay = lastCallDelay;
+	    args = [callerId];
+	  } else {
+	    if (!Number.isFinite(delay) || delay > 60000) {
+	      delay = delay;
+	      args = [delayOptional].concat(args);
+	    }
+	  }
 	  const id = String.random();
-	  lastCallers[caller] = id;
+	  lastCallers[callerId] = id;
 	  setTimeout(() => {
-	    if (id === lastCallers[caller]) {
-	      this(...arguments);
+	    if (id === lastCallers[callerId]) {
+	      this(...args);
 	    }
 	  }, delay);
 	}
 	
 	const defaultInterval = 1000;
 	const lastTimeStamps = {};
-	function intervalFunction() {
-	  const caller = intervalFunction.caller;
-	  let interval = arguments[0];
-	  if (!Number.isFinite(interval) || interval > 60000) interval = defaultInterval;
-	  else {
-	    arguments = Array.from(arguments)
-	    arguments.splice(0,1);
+	function intervalFunction(callerId, intervalOptional, ...args) {
+	  let interval = intervalOptional;
+	  if (arguments.length === 1) {
+	    interval = defaultInterval;
+	    args = [callerId];
+	  } else {
+	    if (!Number.isFinite(interval) || interval > 60000) {
+	      interval = defaultInterval;
+	      args = [intervalOptional].concat(args);
+	    }
 	  }
-	  const lastTime = lastTimeStamps[caller];
+	  const lastTime = lastTimeStamps[callerId];
 	  const thisTime = new Date().getTime();
 	  if (lastTime === undefined || lastTime + interval < thisTime)
-	    this(...arguments);
-	  lastTimeStamps[caller] = thisTime;
+	    this(...args);
+	  lastTimeStamps[callerId] = thisTime;
 	}
+	
 	Function.safeStdLibAddition(Function, 'subtle',   intervalFunction);
 	Function.safeStdLibAddition(Function, 'lastCall',   lastCall);
+	
+	Function.safeStdLibAddition(String, 'foreach', function (func) {
+	  const arr = [];
+	  for (let index = 0; index < this.length; index++) {
+	    func(this[index], index);
+	  }
+	});
+	
+	Function.safeStdLibAddition(String, 'map', function (func) {
+	  const arr = [];
+	  for (let index = 0; index < this.length; index++) {
+	    arr[index] = func(this[index]);
+	  }
+	  return arr;
+	});
+	
+	Function.safeStdLibAddition(String, 'filter', function (func) {
+	  const arr = [];
+	  for (let index = 0; index < this.length; index++) {
+	    if (func(this[index])) arr[index] = this[index];
+	  }
+	  return arr;
+	});
+	
 	
 	Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isRegex) {
 	  if (isRegex !== true) {
@@ -9279,7 +9318,7 @@ function (require, exports, module) {
 	    }
 	    target = value[attr];
 	    value = isFunc ? target() : target;
-	    if (value === undefined || value === null) return value;
+	    if (value === undefined) return value;
 	  }
 	  return {parent, value, target, attr, created}
 	});
@@ -9288,6 +9327,8 @@ function (require, exports, module) {
 	  const valueDefined = value !== undefined;
 	  const pathInfo = obj.pathInfo(path, valueDefined);
 	  if (!valueDefined && !pathInfo) return pathInfo;
+	  if (!pathInfo)
+	    obj.pathInfo(path, valueDefined);
 	  const parent = pathInfo.parent;
 	  const attr = pathInfo.attr;
 	  if ((typeof parent[attr]) === 'function') {
@@ -9298,6 +9339,16 @@ function (require, exports, module) {
 	
 	Function.safeStdLibAddition(Object, 'pathValue', function (path, value) {
 	  return Object.pathValue(this, path, value);
+	});
+	
+	Function.safeStdLibAddition(Object, 'passiveProperty', function (path, value) {
+	  const pathInfo = this.pathInfo(path, true);
+	  Object.defineProperty(pathInfo.parent, pathInfo.attr, {
+	      writable: true,
+	      enumerable: false,
+	      configurable: true,
+	      value
+	  });
 	});
 	
 	Function.safeStdLibAddition(Object, 'undefinedKey', function (key, joinStr, requireIndex) {
@@ -9319,12 +9370,43 @@ function (require, exports, module) {
 	});
 	
 	Function.safeStdLibAddition(Array, 'empty', function (func) {
-	  let empty = true;
 	  for (let index = 0; index < this.length; index += 1) {
 	    if (this[index] !== undefined) return false;
 	  }
 	  return true;
 	});
+	
+	Function.safeStdLibAddition(Array, 'relitiveIndex', function (funcOval, index) {
+	  if (!Number.isFinite(index)) index = 0;
+	  const isFunc = funcOval instanceof Function;
+	  for (let i = 0; i < this.length; i += 1) {
+	    const isTarget = isFunc ? funcOval(this[i], i) : funcOval === this[i];
+	    if (isTarget) {
+	      const negitive = i <= index ? i - index : -index + (i - this.length);
+	      const positive = i >= index ? i - index : this.length - index + i;
+	      if (-negitive < positive) return negitive;
+	      else return positive;
+	    }
+	  }
+	});
+	
+	Function.safeStdLibAddition(Array, 'concatElements', function () {
+	  const elements = this.map(o => o);
+	  this.deleteAll();
+	  elements.forEach(e => Array.isArray(e) && this.concatInPlace(e));
+	  return this;
+	});
+	
+	Function.safeStdLibAddition(Array, 'fill', function (length, funcOval) {
+	  const arr = new Array().fill(length);
+	  const isFunc = funcOval instanceof Function;
+	  for (let index = 0; index < length; index += 1) {
+	    const value = isFunc ? funcOval(index, arr) : funcOval;
+	    if (value !== undefined) arr[index] = value;
+	  }
+	  return arr;
+	}, true);
+	
 	
 	/////////////////////////////////// Matrix Equations //////////////////////////
 	
@@ -9463,6 +9545,76 @@ function (require, exports, module) {
 	  }
 	  return meanObject;
 	}, true);
+	
+	Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, key) {
+	  if (!modify) complement = JSON.copy(complement);
+	  if (func(complement, key)) return {filtered: complement};
+	
+	  if (!(complement instanceof Object)) return {complement};
+	  let filtered = Array.isArray(complement) ? [] : {};
+	  const keys = Object.keys(complement);
+	  let setOne = false;
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const seperated = Object.filter(complement[key], func, true, key);
+	    if (seperated.filtered !== undefined) filtered[key] = seperated.filtered;
+	    setOne = true;
+	    if (seperated.complement === undefined) delete complement[key];
+	    else complement[key] = seperated.complement;
+	  }
+	  if (Object.keys(filtered).length === 0) filtered = undefined;
+	  return {complement, filtered};
+	}, true);
+	
+	Function.safeStdLibAddition(Object, 'filter', function(func) {
+	  return Object.filter(this, func, true).filtered;
+	});
+	
+	Function.safeStdLibAddition(Object, 'copy', function(arr) {
+	  if (Array.isArray(arr)) throw new Error('point to merge...');
+	  const root = Array.isArray(this) ? [] : {};
+	  const keys = Object.keys(this);
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const value = this[key];
+	    if (!(value instanceof Object)) root[key] = value;
+	    else root[key] = value.copy();
+	  }
+	  return root;
+	});
+	
+	
+	Function.safeStdLibAddition(Object, 'foreach', function(obj, func, filter, pathPrefix) {
+	  if (!pathPrefix) pathPrefix = '';
+	  if((typeof filter) !== 'function' || filter(obj, pathPrefix)) func(obj, pathPrefix);
+	  const keys = Object.keys(obj);
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const path = pathPrefix === '' ? key : `${pathPrefix}.${key}`;
+	    const value = obj[key];
+	    if (value instanceof Object) {
+	      Object.foreach(value, func, filter, path);
+	    }
+	  }
+	}, true);
+	
+	Function.safeStdLibAddition(Object, 'foreach', function(func, filter) {
+	  Object.foreach(this, func, filter);
+	});
+	Function.safeStdLibAddition(Object, 'map',   function (obj, func) {
+	  if ((typeof func) !== 'function') return console.warn('Object.map requires a function argument');
+	  const keys = Object.keys(obj);
+	  const map = {};
+	  for (let index = 0; index < keys.length; index++) {
+	    const key = keys[index];
+	    const value = obj[key];
+	    map[key] = func(value, key);
+	  }
+	  return map;
+	}, true);
+	
+	Function.safeStdLibAddition(Object, 'hash',
+	  (obj) => JSON.stringify(obj === undefined ? 'undefined' : obj).hash(), true);
 	
 });
 

@@ -1,7 +1,8 @@
 <div class='fit input-cnt measurement-input-cnt'{{hidden() ? ' hidden' : ''}} input-id='{{id()}}'>
   <label>{{label()}}</label>
   <input class='measurement-input {{class()}}' id='{{id()}}' value='{{value() ? value() : ""}}'
-      placeholder='{{placeholder()}}' type='{{type()}}' name='{{name()}}' unit='{{unit()}}'>
+      placeholder='{{placeholder()}}' type='{{type()}}' name='{{name()}}' unit='{{unit()}}'
+      {{disabled() ? 'disabled' : ''}}>
   <span:t repeat='unit in units()'>
     <label>{{unit}}</label><input type='radio' name='{{id()}}-unit' value='{{unit}}' {{$index === 0 ? 'checked' : ''}}>
   </span:t>

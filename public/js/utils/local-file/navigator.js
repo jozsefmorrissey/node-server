@@ -202,7 +202,7 @@ function createMethods() {
         await dir.removeEntry(handler.name);
       }
     } catch (e) {
-      console.log.subtle(e);
+      console.log.subtle(e.message, e);
     }
   };
 

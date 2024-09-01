@@ -1,6 +1,9 @@
 
 const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
 const Line3D = require('../../../../../app-src/three-d/objects/line.js');
+const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
+const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
+const Plane = require('../../../../../app-src/three-d/objects/plane.js');
 
 class VoidUtil {
   constructor(voidDto, env) {
@@ -49,49 +52,38 @@ class VoidUtil {
       return toBiPoly(index);
     }
 
+    const innerPolys = [];
+    const outerPolys = [];
     const biPolys = [];
-    const toBiPoly = (index) => {
-      if (biPolys[index]) return biPolys[index];
-      const startIndex = voidDto.jointSetIndex;
+    const toBiPoly = (panel, env) => {
       const biPoly = instance.biPolygon;
-      let polys = biPoly.toPolygons();
-      polys.swap(3,4);
-      const spliceIndex = Math.mod(startIndex + index, 6);
-      const offsetSet = offsetSets[voidDto.jointSetIndex];
-      const offset = index < 2 ? offsetSet.first : (index < 4 ? offsetSet.second : offsetSet.third);
-      let pt = panelThickness;
       const center = biPoly.center();
-      const centerVect = new Line3D(center.copy(), polys[index].center()).vector();
+      const vectors = panel.vectors;
+      const dems =   voidDto.position.current.demension;
+      const outterFaceCenter = center.translate(vectors.z, true);
+      const width = vectors.x
+      const outerPoly = Polygon3D.fromMagintudeObject(vectors, outterFaceCenter);
+      const innerOffsetVector = vectors.z.unit().inverse().scale(panel.width);
+      const innerPoly = outerPoly.translate(innerOffsetVector).reverse();
+      outerPolys[panel.index] = outerPoly;
+      innerPolys[panel.index] = innerPoly;
 
-      if (!centerVect.sameDirection(polys[index].normal())) pt *= -1;
-
-      return BiPolygon.fromPolygon(polys[index], pt, 0, offset);
+      return new BiPolygon(outerPoly, innerPoly);
     }
 
     let abyssBiPoly;
-    function abyssBiPolygon() {
-      if (abyssBiPoly) return abyssBiPoly;
-      const biPoly = instance.biPolygon.copy();
-      const polys = biPoly.toPolygons();
-      polys.swap(3,4);
-      const center = biPoly.center();
-      const polyVects = polys.map(p => new Line3D(center.copy(), p.center()).vector().unit());
-      for (let index = 0; index < polys.length; index++) {
-        const poly = polys[index].copy();
-        if (voidDto.includedSides[index] !== true) {
-          const vector = polyVects[index];
-          biPoly.extend(vector.scale(2000));
-        }
-      }
-
-      abyssBiPoly = biPoly;
-      return abyssBiPoly;
+    function abyssModel() {
+      const defined = innerPolys.filter(p=>p);
+      const center = Polygon3D.midRange(...defined);
+      const polys = Polygon3D.fromPlanes(defined, center, 1000000000);
+      const model = Polygon3D.toCSG(polys);
+      return model;
     }
 
     const current = voidDto.position.current;
     this.biPolygon = BiPolygon.fromPositionObject(current);
 
-    this.abyss = {biPolygon: abyssBiPolygon};
+    this.abyss = {model: abyssModel};
   }
 }
 

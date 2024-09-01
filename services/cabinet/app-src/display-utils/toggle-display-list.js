@@ -8,7 +8,8 @@ const ToggleDisplayList = {};
 ToggleDisplayList.class = 'toggle-display-list';
 ToggleDisplayList.funcs = {};
 
-ToggleDisplayList.onShow = (displayId, func) => {
+ToggleDisplayList.on = {};
+ToggleDisplayList.on.show = (displayId, func) => {
   if ((typeof func) === 'function') {
     if (ToggleDisplayList.funcs[displayId] === undefined) {
       ToggleDisplayList.funcs[displayId] = [];

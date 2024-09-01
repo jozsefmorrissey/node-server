@@ -97,15 +97,6 @@ class CabinetDisplay {
       return {type: 'You must select a defined type.'};
     }
 
-    // async function update3Dmodel(target) {
-    //   const cabinet = Global.cabinet();
-    //   target.value = new Measurement(target.value, true).display();
-    //   await ThreeDModel.build(cabinet);
-    //   Canvas.render();
-    // }
-    //
-    // du.on.match('enter', '.cabinet-cnt .expandable-list-body', update3Dmodel);
-
     function updateCabValue(cabinet, attr) {
       const inputCnt = du.find(`[cabinet-id='${cabinet.id()}']`);
       const input = du.find.down(`[name='${attr}']`, inputCnt);
@@ -178,7 +169,7 @@ class CabinetDisplay {
       const decimal = new Measurement(value, true).decimal();
       if (!Number.isNaN(decimal)) {
         if (cabKey.cabinet[cabKey.key]() !== decimal) {
-          cabKey.cabinet[cabKey.key].lastCall(decimal);
+          cabKey.cabinet[cabKey.key](decimal);
           const parentCnt = du.find(parentSelector);
           // ExpandableList.refresh(du.find.down('.expandable-list', parentCnt), true);
         }
@@ -209,10 +200,6 @@ class CabinetDisplay {
       cabinet.value(key, value);
     }
 
-    // WTFs
-    // CabinetConfig.onUpdate(() => props.inputOptions = CabinetConfig.list());
-    // bind(`.cabinet-input`, valueUpdate,
-    //               {validation: Measurement.validation('(0,)')});
     bind(`[display-id="${displayId}"].cabinet-id-input`, (...args) => attrUpdate(...args));
     du.on.match('click', '.save-cabinet-btn', save);
     du.on.match('keydown', '.modifiable-value-input', updateValue);

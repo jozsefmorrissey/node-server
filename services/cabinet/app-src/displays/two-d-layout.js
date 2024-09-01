@@ -432,7 +432,7 @@ function openPopup(event, stdEvent) {
   popUp.open(html, {x: event.screenX, y: event.screenY});
 }
 
-popUp.onClose((elem, event) => {
+popUp.on.close((elem, event) => {
   setTimeout(() => popupOpen = false, 200);
   const attrs = getPopUpAttrs(du.find.closest('[type-2d]',popUp.container()));
   lastDown = new Date().getTime();
@@ -463,8 +463,8 @@ function init() {
   draw = new DrawLayout(canvas, getLayout);
   panZ = new PanZoomClickMeasure(canvas, () => draw(), getHoverMap);
 
-  panZ.onMousedown(onMousedown);
-  panZ.onMouseup(onMouseup);
+  panZ.on.mousedown(onMousedown);
+  panZ.on.mouseup(onMouseup);
   controls2d = new Controls2d('#two-d-model .orientation-controls', getLayout, panZ);
   // draw(canvas);
   TwoDLayout.panZoom = panZ;

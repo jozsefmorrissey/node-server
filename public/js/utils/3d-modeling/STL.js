@@ -82,7 +82,18 @@ ${triangles.map(t =>
   endfacet`).join('\n')}
 endsolid ${header}`
     }
+    this.url = () => {
+      return URL.createObjectURL(this.binary.file());
+    }
   }
+}
+
+STL.fromCSG = (csg) => {
+  const stl = new STL();
+  const scaled = csg.clone();
+  scaled.scale(10);
+  scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
+  return stl;
 }
 
 module.exports = STL;

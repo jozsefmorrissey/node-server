@@ -198,7 +198,7 @@ class Polygon2d {
 
     this.faceIndecies = (indicies) => {
       if (indicies) {
-        if (indicies.length > 1) console.warn.subtle(500, 'vertex sorting has not been tested for multple faces');
+        if (indicies.length > 1) console.warn.subtle('vertex sorting has not been tested for multple faces');
         faceIndecies.copy(indicies);
       }
       return faceIndecies;

@@ -51,7 +51,7 @@ class PopUp {
     }
     this.on = on;
 
-    this.onClose = popupCnt.onClose;
+    this.on.close = popupCnt.on.close;
 
     function updateContent(html) {
       popupCnt.updateContent(html);

@@ -33,18 +33,7 @@ class OrderSaveManager {
       return initialVersionId;
     }
 
-    const loadingEvent = new CustomEvent('loading');
-    const loadedEvent = new CustomEvent('loaded');
-    const savingEvent = new CustomEvent('saving');
-    const savedEvent = new CustomEvent('saved');
-    const fileSystemChangeEvent = new CustomEvent('fileSystemChange');
-    const versionChangeEvent = new CustomEvent('versionChange');
-    this.onLoading = loadingEvent.on;
-    this.onLoaded = loadedEvent.on;
-    this.onSaving = savingEvent.on;
-    this.onSaved = savedEvent.on;
-    this.onFileSystemChange = fileSystemChangeEvent.on;
-    this.onVersionChange = versionChangeEvent.on;
+    CustomEvent.all(this, 'loading', 'loaded', 'saving', 'saved', 'fileSystemChange', 'versionChange');
 
     const pathReg = /^.*\/([^/]{1,})\/([^/]{1,})(\/|)$/;
     const activeOrderName = () => autoSaver && autoSaver.directoryName();
@@ -115,9 +104,9 @@ class OrderSaveManager {
       if (argsDefined) autoS = (await getAutoSaver(orderName, versionId));
       if (autoS) {
         counter++;
-        savingEvent.trigger(null, this);
+        this.trigger.saving(null, this);
         await autoS.save();
-        savedEvent.trigger(null, this);
+        this.trigger.saved(null, this);
       }
     }
 
@@ -137,16 +126,16 @@ class OrderSaveManager {
       versionId = activeVersion.name();
       if (autoSavers[askey]) return autoSavers[askey];
       autoSavers[askey] = new AutoSave(contentFunc, activeOrderDir, versionId, autoSaveOn);
-      autoSavers[askey].onSaving(savingEvent.trigger)
-      autoSavers[askey].onSaved(savedEvent.trigger)
-      await autoSavers[askey].onInit();
+      autoSavers[askey].on.saving(this.trigger.saving);
+      autoSavers[askey].on.saved(this.trigger.saved);
+      await autoSavers[askey].on.init();
       return autoSavers[askey];
     }
 
     this.switch = async function (orderName, versionId) {
       autoSaver = await getAutoSaver(orderName, versionId);
       const contents = await autoSaver.read();
-      versionChangeEvent.trigger(null, {orderName, versionId, contents});
+      this.trigger.versionChange(null, {orderName, versionId, contents});
       return contents;
     }
 
@@ -186,7 +175,7 @@ class OrderSaveManager {
       await Navigator.init();
       const navH = Navigator.helper();
       ordersDir = await navH.getDirectory('orders', true);
-      loadingEvent.trigger(null, instance);
+      this.trigger.loading(null, instance);
       await ordersDir.foreach(async (orderHandler) => {
         const versions = Object.values(await orderHandler.ls('', (helper) => helper.isDirectory()))
                             .map((h) => h.name());
@@ -194,8 +183,8 @@ class OrderSaveManager {
       });
       await instance.switch(initialOrderName, initialVersionId);
       const text = await autoSaver.read();
-      loadedEvent.trigger(null, instance);
-      fileSystemChangeEvent.trigger(null, instance);
+      this.trigger.loaded(null, instance);
+      this.trigger.fileSystemChange(null, instance);
       initialized = true;
     }
     this.init = init;

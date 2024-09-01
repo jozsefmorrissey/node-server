@@ -22,6 +22,7 @@ class FalseFrontSection extends Assembly {
 }
 
 FalseFrontSection.fromJson = (json) => {
+  json.subassemblies.ff.parent = true;
   const front = Object.fromJson(json.subassemblies.ff);
   return new FalseFrontSection(front);
 }

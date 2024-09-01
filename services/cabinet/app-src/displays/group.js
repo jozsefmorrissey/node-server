@@ -115,8 +115,8 @@ GroupDisplay.DecisionInputTree = (onSubmit, group) => {
   const payload = {inputArray: [hasFrame, cabinetStyles]};
   const props = {buttonText: 'Change'};
   const dit = new DecisionInputTree('cabinetStyle', payload, props);
-  dit.onSubmit(onSubmit);
-  dit.onChange((values) => {
+  dit.on.submit(onSubmit);
+  dit.on.change((values) => {
     const ovNode = values._NODE.getByName('Overlay');
     if (ovNode) {
       const frameWidthNode = values._NODE.getByName('frameWidth');

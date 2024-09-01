@@ -12,6 +12,7 @@ class DrawerFront extends HasPull {
     this.addPull(Handle.location.CENTER);
 
     this.inElivation = true;
+    this.composite = () => false;
 
     this.front = () => {
       const biPoly = this.biPolygon();

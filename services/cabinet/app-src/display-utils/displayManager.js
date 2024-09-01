@@ -39,7 +39,7 @@ class DisplayManager {
             if (elem.getAttribute('display-id') === id) {
               du.class.add(elem, 'active');
               const target = du.id(id);
-              switchEvent.trigger({from: lastActivated, to: target});
+              instance.trigger.switch({from: lastActivated, to: target});
               lastActivated = target;
             } else {
               du.class.remove(elem, 'active');
@@ -49,8 +49,7 @@ class DisplayManager {
       }
     }
 
-    const switchEvent = new CustomEvent('switch');
-    this.onSwitch = switchEvent.on;
+    CustomEvent.all(this, 'switch');
 
     function open(id) {
       if (!lastActivated || id !== lastActivated.id);
@@ -96,7 +95,7 @@ class DisplayManager {
     if (listId) {
       du.id(listId).innerHTML = DisplayManager.template.render({switchCntId, switchId, list: this.list()});
     }
-    this.onSwitch(console.log);
+    this.on.switch(console.log);
   }
 }
 

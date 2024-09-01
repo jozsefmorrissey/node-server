@@ -53,7 +53,7 @@ class Group extends Lookup {
       this.objects.forEach((obj) => json.objects.push(obj.toJson()));
       json.name = this.name();
       json.id = this.id();
-      json.propertyConfig = this.propertyConfig.toJson();
+      json.propertyConfig = this.propertyConfig().toJson();
       return json;
     }
     this.name(name);
@@ -69,6 +69,7 @@ Group.fromJson = (json) => {
   json.objects.forEach((objJson, index) => {
     const jsonClazz = Object.class.get(json.objects[index]._TYPE);
     objJson.group = group;
+    objJson.layout = group.room().layout();
     const obj = jsonClazz.fromJson(objJson, group);
     group.objects.push(obj);
   });

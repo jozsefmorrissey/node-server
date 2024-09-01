@@ -4,17 +4,12 @@
       opening-id='{{opening.id()}}' value='{{opening.pattern().str.length < 2 ? '' : opening.pattern().str}}'>
 
   <span class="open-orientation-radio-cnt">
-
-    <label for='open-orientation-horiz-{{opening.id()}}'>Horizontal:</label>
-    <input type='radio' name='orientation-{{opening.id()}}' value='horizontal'
-        open-id='{{opening.id()}}' id='open-orientation-horiz-{{opening.id()}}'
-        class='open-orientation-radio' {{opening.value('vertical') ? '' : 'checked'}}>
-
-    <label for='open-orientation-vert-{{opening.id()}}'>Vertical:</label>
-    <input type='radio' name='orientation-{{opening.id()}}' value='vertical'
-        open-id='{{opening.id()}}' id='open-orientation-vert-{{opening.id()}}'
-        class='open-orientation-radio' {{opening.value('vertical') ? 'checked' : ''}}>
-
+    <div class='div-orien-btn {{opening.value('vertical') ? '' : 'pressed'}}' orientation='horizontal'>
+      <i class='gg-horizontal'></i>
+    </div>
+    <div class='div-orien-btn {{!opening.value('vertical') ? '' : 'pressed'}}' orientation='vertical'>
+      <i class='gg-vertical'></i>
+    </div>
   </span>
   <div{{opening.divideRight() ? '': ' hidden'}}>
     {{dividerTypeSelect.html()}}

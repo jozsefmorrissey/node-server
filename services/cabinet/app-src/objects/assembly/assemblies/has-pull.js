@@ -15,6 +15,7 @@ class HasPull extends Assembly {
       pulls.push(handle);
       this.addSubAssembly(pulls[pulls.length - 1]);
     }
+    this.composite = () => false;
     this.pulls = () => pulls.map(p => p);
     this.setPulls = (locations) => {
       pulls.deleteAll();

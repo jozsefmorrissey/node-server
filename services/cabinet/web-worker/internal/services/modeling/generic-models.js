@@ -21,7 +21,7 @@ to.ShowerBase = (simpleModelDto) => {
   const height = simpleModelDto.height;
   const depth = simpleModelDto.thickness;
   const width = simpleModelDto.width;
-  const base = BiPolygon.fromVectorObject(width, height-curbHeight, depth, objCenter);
+  const base = BiPolygon.fromVectorObject(width, height, depth, objCenter);
   const curbCenter = new Vertex3D({
     x: objCenter.x,
     y: objCenter.y + height/2,

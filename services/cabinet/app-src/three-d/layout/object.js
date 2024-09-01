@@ -61,7 +61,7 @@ class Bridge2dTo3D {
       if (Number.isFinite(distance)) {
         setXYZ(undefined, undefined, distance + this.depth()/2);
       }
-      return this.z - this.depth()/2;
+      return this.z() - this.depth()/2;
     }
     this.fromCeiling = (distance) => {
       const fromFloor = this.fromFloor();

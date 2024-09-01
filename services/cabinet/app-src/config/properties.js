@@ -30,7 +30,7 @@ add('Reveal', Defs.r,Defs.rvt,Defs.rvb,Defs.rvr,Defs.rvl);
 add('Inset', Defs.is);
 add('Cabinet', Defs.style,Defs.fls,Defs.tid,Defs.dsc,Defs.rvibr,Defs.ddg,Defs.tkbw,Defs.tkd,
                 Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,Defs.ddd);
-add('Panel', Defs.pt14,Defs.pt12,Defs.pt34);
+add('Panel', Defs.pt14,Defs.pt12,Defs.pt34,Defs.pt18,Defs.vpt);
 add('Guides', Defs.dbtos,Defs.dbsos,Defs.dbbos);
 add('DoorAndFront', Defs.daffrw,Defs.dafip)
 // add('Door', [];
@@ -48,15 +48,22 @@ class Properties {
   constructor(config) {
     config ||= Properties.copyConfig(allProps);
     Object.keys(config).filter(k => config[k] === 'Function' && (config[k] = allProps[k]))
-    config._TYPE = 'Properties';
     const excludeKeys = ['_ID', '_NAME', '_GROUP', 'properties'];
     function assemProperties(code, value, notMetric) {
-      if (value) config[code].value(value, notMetric);
-      return config[code];
+      const prop = config[code];
+      if (value !== undefined) {
+        if (prop) prop.value(value, notMetric);
+        else return config[code] = new Property(code, null, {value, notMetric});
+      }
+      return prop;
     }
 
 
-    assemProperties.toJson = () => Object.toJson(config);
+    assemProperties.toJson = () => {
+      const json = Object.toJson(config);
+      json._TYPE = 'Properties';
+      return json;
+    }
     assemProperties.config = () => Object.fromJson(Object.toJson(config));
     assemProperties.keys = () => Object.keys(allProps);
     assemProperties.clone = () => new Properties(this.config());
@@ -84,14 +91,21 @@ class Properties {
     return assemProperties;
   }
 }
+Object.class.register(Properties);
 
 Properties.copyConfig = (config) => {
-  config ||= Object.fromJson(Object.toJson(config));
+  config ||= Object.fromJson(Object.toJson(allProps));
   Object.keys(config).filter(k => config[k] === 'Function' && (config[k] = allProps[k]));
   return config;
 }
-Properties.fromJson = (json) => new Properties(json);
 const funcReg = /^Function:(.{1,})$/;
+Properties.fromJson = (json) => {
+  const propObj = Object.merge({}, json);
+  delete propObj._TYPE;
+  Object.keys(json).filter(k => (typeof json[k]) === 'string' && json[k].match(funcReg) ?
+          (propObj[k] = allProps[k]) : propObj[k] = Object.fromJson(json[k]));
+  return new Properties(propObj);
+}
 Properties.groups = () => {
   const groups = Object.fromJson(Object.toJson(assemProps));
   Object.keys(groups).forEach(k => groups[k].forEach((p,i) => {
@@ -159,7 +173,7 @@ Properties.default = (code) => {
   try {
     return allProps[code].value();
   } catch (e) {
-    if (!code.match(/Overlay|Inset|Reveal/))
+    if (code.length < 10 && !code.match(/Overlay|Inset|Reveal|pattern/))
       console.warn(`code '${code}' is not defined`);
   }
 }

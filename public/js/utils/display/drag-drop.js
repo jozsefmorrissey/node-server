@@ -270,8 +270,6 @@ class DragDropResize {
     }
     this.setCss = setCss;
 
-    this.onClose = (func) => closeFuncs.push(func);
-
     function updateContent(html) {
       du.innerHTML(html, getPopupElems().content);
       return instance;
@@ -446,6 +444,7 @@ class DragDropResize {
       getPopupElems().content.addEventListener(eventName, func);
     }
     this.on = on;
+    this.on.close = (func) => closeFuncs.push(func);
 
     const cancelFade = du.fade.out(getPopupElems().cnt, 10, instance.close);
     getPopupElems().cnt.addEventListener('mouseover', cancelFade);

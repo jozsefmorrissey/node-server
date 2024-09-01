@@ -265,10 +265,10 @@ function infoText(text) {
   }
 }
 
-saveMan.onSaving(infoText('Saving...'));
-saveMan.onSaved(infoText(''));
+saveMan.on.saving(infoText('Saving...'));
+saveMan.on.saved(infoText(''));
 
-saveMan.onFileSystemChange(updateOrderInput);
-saveMan.onLoaded(resetOrderAndVersion);
-saveMan.onVersionChange(onVersionChange);
-saveMan.onVersionChange(switchOrder);
+saveMan.on.fileSystemChange(updateOrderInput);
+saveMan.on.loaded(resetOrderAndVersion);
+saveMan.on.versionChange(onVersionChange);
+saveMan.on.versionChange(switchOrder);

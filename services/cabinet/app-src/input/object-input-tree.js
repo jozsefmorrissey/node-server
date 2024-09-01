@@ -139,7 +139,7 @@ module.exports = () => {
   inputTree.root().conditions.add(otherCond, 'OtherNode');
 
   // inputTree.block(true);
-  inputTree.onSubmit((values) => {
+  inputTree.on.submit((values) => {
     const objType = values.objectType;
     const nodeName = `${objType}Node`;
     let type = objConcat(values[nodeName], 'type')[0];

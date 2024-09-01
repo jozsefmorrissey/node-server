@@ -69,6 +69,7 @@ class Measurement {
     let decimal = 0;
     let nan = value === null || value === undefined;
     this.isNaN = () => nan;
+    this.equals = (other) => (other instanceof Measurement) && other.decimal() === this.decimal();
 
     const parseFraction = (str) => {
       const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator', 'stOsh');
@@ -109,10 +110,14 @@ class Measurement {
       if (denominator === 32) {
         const bigger = reduce((numerator + 1)/2, denominator/2, true);
         const smaller = reduce((numerator - 1)/2, denominator/2, true);
+        if (!bigger) ' sh';
         if (bigger.denominator < smaller.denominator) return  ` ${bigger.string}sh`;
-        return ` ${smaller.string}st`;
+        return !smaller ? ' st' : ` ${smaller.string}st`;
       }
       const string = ` ${numerator}/${denominator}`
+      if (string.match(/undefined/)) {
+        console.log('here');
+      }
       return info ? {numerator, denominator, string} : string;
     }
 

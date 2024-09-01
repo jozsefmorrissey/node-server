@@ -105,7 +105,7 @@ class Expandable {
     this.hasInputTree = () =>
 	      this.inputTree() && this.inputTree().constructor.name === 'DecisionInputTree';
     if (this.hasInputTree())
-      props.inputTree.onSubmit(this.add);
+      props.inputTree.on.submit(this.add);
     props.hasInputTree = this.hasInputTree;
 
     this.isSelfClosing = () => props.selfCloseTab;
@@ -264,7 +264,7 @@ Expandable.getHeaderCnt = (target) => {
 Expandable.bySelector = (parentSelector) => {
   const lists = Expandable.lists;
   const expandKeys = Object.keys(lists);
-  if (expandKeys.length > 1000) console.warn.subtle(1000, 'Its time to start freeing expandable list data');
+  if (expandKeys.length > 1000) console.warn.subtle('Its time to start freeing expandable list data');
   for (let i = 0; i < expandKeys.length; i++) {
     const key = expandKeys[i];
     if (lists[key].parentSelector() === parentSelector) return lists[key];

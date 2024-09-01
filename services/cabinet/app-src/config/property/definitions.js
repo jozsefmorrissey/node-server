@@ -51,6 +51,8 @@ defs.rw = new Property('rw', 'Distance from Front to Back on the Right', {value:
 defs.pt34 = new Property('pt34', 'Panel Width ~3/4', {value: .75, notMetric: IMPERIAL_US});
 defs.pt12 = new Property('pt12', 'Panel Width ~1/2', {value: .5, notMetric: IMPERIAL_US});
 defs.pt14 = new Property('pt14', 'Panel Width ~1/4', {value: .25, notMetric: IMPERIAL_US});
+defs.pt18 = new Property('pt18', 'Panel Width ~1/8', {value: .125, notMetric: IMPERIAL_US});
+defs.vpt = new Property('vpt', 'Void Panel Thickness', {value: .75, notMetric: IMPERIAL_US});
 
 //   Guides
 defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', .5*2.54);

@@ -28,6 +28,8 @@ class DrawerSection extends Assembly {
 }
 
 DrawerSection.fromJson = (json) => {
+  json.subassemblies.df.parent = true;
+  json.subassemblies.db.parent = true;
   const drawerFront = Object.fromJson(json.subassemblies.df);
   const drawerBox = Object.fromJson(json.subassemblies.db);
   return new DrawerSection(drawerFront, drawerBox);

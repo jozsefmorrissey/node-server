@@ -135,7 +135,8 @@ class TestStatus {
     this.time = () => ((end || new Date().getTime()) - start) / 1000;
 
     let cleanUp;
-    this.onCleanUp = (func) => cleanUp = func;
+    this.on = {}
+    this.on.cleanUp = (func) => cleanUp = func;
     this.cleanUp = () => (typeof cleanUp) === 'function' && cleanUp(this);
 
     function printError(msg, stackOffset) {

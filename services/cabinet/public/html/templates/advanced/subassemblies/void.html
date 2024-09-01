@@ -1,48 +1,83 @@
-<div class='void-display-cnt' void-id='{{id()}}' cabinet-id='{{cabinetId()}}' void-disp-hash='{{hash()}}'>
-  <select class='void-part-code-select'>
-    <option:t repeat='partCode in partCodes()' {{partCode === 'c_BACK' ? 'selected' : ''}}>
-      {{partCode}}
-    </option:t>
-  </select>
-  <label>Horizontal</label>
-  <input type='radio' name='orientation' value='horizontal' checked>
-  <label>Vertical</label>
-  <input type='radio' name='orientation' value='vertical'>
-  <label>Size</label>
-  <input type='text' name='width' class='dem' value='5'>
-  <label>X</label>
-  <input type='text' name='height' class='dem' value='5'>
-  <button class='add-void-btn'>Add</button>
-  <div class='void-cnt'>
-    <div:t class='card margin' repeat='void in voids()' index='{{$index}}' target-id='{{void.id()}}'>
-      <button class='assembly remove-btn'>X</button>
-      <h3 class='inline-flex'>{{void.partCode()}}</h3>
-      <input type="text" class='void-dem' name="width" value="{{displayWidth(void)}}">
-      X
-      <input type="text" class='void-dem' name="length" value="{{displayLength(void)}}">
-      <br>
-      <h3 class='inline-flex chev-dropdown-toggle'>
-        Advanced
-        <i class='down gg-chevron-down hidden' ></i>
-        <i class='right gg-chevron-right'></i>
+<div class='void-display-cnt inline-flex' void-id='{{id()}}' cabinet-id='{{cabinetId()}}' void-disp-hash='{{hash()}}'>
+  <div class='void-join-direction-toggle'{{voids().length > 1 ? '' : ' hidden'}}>
+    <div>
+      <h3>
+        <span{{cabinet().value('acsendingVoidJoin') ? '' : ' hidden'}}>
+          <i class='left gg-chevron-left'></i>
+        </span>
+        Join
+        <span{{!cabinet().value('acsendingVoidJoin') ? '' : ' hidden'}}>
+          <i class='right gg-chevron-right'></i>
+        </span>
       </h3>
-      <div class='tab chev-dropdown' hidden>
-        <label>Joint Set:</label>
-        <select class='set-selector'>
-          <option:t repeat='i in 0..6' {{void.jointSetIndex() === i ? 'selected' : ''}}>
-            {{i}}
-          </option:t>
-        </select>
+    </div>
+  </div>
+  <div>
+    <select class='void-part-code-select'>
+      <option:t repeat='partCode in partCodes()' {{partCode === 'c_BACK' ? 'selected' : ''}}>
+        {{partCode}}
+      </option:t>
+    </select>
+    <label>Horizontal</label>
+    <input type='radio' name='orientation' value='horizontal' checked>
+    <label>Vertical</label>
+    <input type='radio' name='orientation' value='vertical'>
+    <label>Size</label>
+    <input type='text' name='width' class='dem' value='5'>
+    <label>X</label>
+    <input type='text' name='height' class='dem' value='5'>
+    <button class='add-void-btn'>Add</button>
+    <div class='void-cnt'>
+      <div:t class='card margin' repeat='void in voids()' index='{{$index}}' target-id='{{void.id()}}'>
+        <button class='assembly remove-btn'>X</button>
+        <h3 class='inline-flex chev-dropdown-toggle'>
+          {{void.partCode()}}
+          <i class='down gg-chevron-down hidden' ></i>
+          <i class='right gg-chevron-right'></i>
+        </h3>
+        <input type="text" class='void-dem' name="width" value="{{displayWidth(void)}}">
+        X
+        <input type="text" class='void-dem' name="length" value="{{displayLength(void)}}">
         <br>
-        <div class='input-set'>
-          <label>Include sides</label>
-          <span:t  repeat='i in 0..6'>
-            <label>{{i}}</label>
-            <input type='checkbox' name='includedSides.{{i}}' {{void.included(i) ? 'checked' : ''}}>
-          </span:t>
+        <div class='tab chev-dropdown' hidden>
+          <div>
+            <h3 class='inline-flex chev-dropdown-toggle'>
+              Joint Config
+              <i class='down gg-chevron-down hidden' ></i>
+              <i class='right gg-chevron-right'></i>
+            </h3>
+            <div class='tab chev-dropdown joint-config' hidden>
+              <label>Cap Set</label>
+              <input type='number' min='0' max='2' step='1' value='{{void.capSet()}}'/>
+              <br/>
+              <label>Cap Male</label>
+              <input type='checkbox' {{void.capMale() ? 'checked' : ''}}/>
+              <br/>
+              <label>Male Set</label>
+              <input type='number' min='0' max='1' step='1' value='{{void.maleSet()}}'/>
+              <br/>
+              <label>Joint</label>
+              <select class='joint-selector'>
+                <option>Body</option>
+                <option>Cap</option>
+                <option>Non Void</option>
+                <option>Void Panel</option>
+              </select>
+              <div class='joint-input-cnt tab'>
+                {{joint(void, 'body').html()}}
+              </div>
+            </div>
+          </div>
+          <div class='input-set'>
+            <label>Include sides</label>
+            <span:t  repeat='i in 0..6'>
+              <label>{{void.label(i)}}</label>
+              <input type='checkbox' name='{{void.label(i)}}' {{void.include(void.label(i)) ? 'checked' : ''}}>
+            </span:t>
+          </div>
+          {{assemblyConfig(void).html()}}
         </div>
-        {{assemblyConfig(void).html()}}
-      </div>
-    </div:t>
+      </div:t>
+    </div>
   </div>
 </div>

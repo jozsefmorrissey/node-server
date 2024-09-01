@@ -1,5 +1,6 @@
 
 const OnWall = require('on-wall');
+const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 
 class Door2D extends OnWall {
   constructor(json) {
@@ -15,7 +16,8 @@ class Door2D extends OnWall {
     this.toString = () => `${this.id()}:${this.endpoints2D().toString()}:${hinge}`;
     this.remove = () => this.wall().removeDoor(this);
     this.hinge = (val) => val === undefined ? hinge :
-      hinge = ((typeof val) === 'number' ? val : hinge + 1) % 5;
+      hinge = ((typeof val) === 'number' ? val : hinge + 1) % 7;
+    this.line = () => new Line2d(this[0], this[1]);
   }
 }
 

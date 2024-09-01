@@ -5,7 +5,8 @@ const Material = require('../cost/types/material.js');
 const Company = require('../objects/company.js');
 const Input = require('../../../../public/js/utils/input/input.js');
 const Labor = require('../cost/types/labor.js');
-
+const Joint = require('../objects/joint/joint.js');
+const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 
 const defined = {};
 function add (name, input) {
@@ -15,7 +16,8 @@ function add (name, input) {
   defined[name] = input;
 }
 
-module.exports = (name, properties) => defined[name].clone(properties);
+module.exports = (name, properties) => defined[name] instanceof Function ?
+        defined[name](properties) : defined[name].clone(properties);
 
 
 add('length', new MeasurementInput({
@@ -239,3 +241,28 @@ add('whd', new Select({
   list: {'0': 'W', '1': 'H', '2':'D'},
   inline: true
 }));
+
+add('joint', (props) => {
+  const joint = props.joint ||= {constructor: {name:  'Butt'}};
+  const selectType = new Select({
+    name: '_TYPE',
+    list: Object.keys(Joint.types),
+    class: 'type',
+    value: joint.constructor.name
+  });
+
+  let depthInput = new Input({
+    label: 'Depth',
+    name: 'maleOffset',
+    value: joint.maleOffset
+  });
+
+  const dit = new DecisionInputTree('Type', {inputArray: [selectType]}, {noSubmission: true});
+  const type = dit.root();
+  type.then('depth', {inputArray: [depthInput]});
+  const cond = DecisionInputTree.getCondition('_TYPE', 'Dado');
+  type.conditions.add(cond, 'depth');
+  dit.on.change(props.onChange);
+  dit.on.change(props.onComplete);
+  return dit;
+});

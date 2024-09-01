@@ -119,7 +119,8 @@ class Parimeters2d {
         const lastLine = pdObj.parimeter[pdObj.parimeter.length - 1];
         const lastLineNeg = lastLine.negitive();
         let matches = pdObj.lineMap.matches(lastLineNeg).filter(l => !l.equivalent(lastLine));
-        if (matches.length === 0) throw new Error('No parrimeter exists: lines not connected');
+        if (matches.length === 0)
+          throw new Error('No parrimeter exists: lines not connected');
         matches.sort(Parimeters2d.rightLeftSort(lastLine.degrees(), rightOleft));
         pdObj.parimeter.push(matches[0]);
         finished = parimeterFinished(pdObj.parimeter);

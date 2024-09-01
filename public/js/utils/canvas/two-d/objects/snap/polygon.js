@@ -49,7 +49,7 @@ class SnapPolygon extends Snap2d {
       return rotated;
     }
 
-    const midpointMap = new ToleranceMap({x: .1, y:.1});
+    let midpointMap;
     const vertexFunc = (index) => (position) => instance.object().vertex(index, position);
     const midpointFunc = (index) => (position) => instance.object().midpoint(index, position);
     function addLine(index, name, targetName) {
@@ -92,6 +92,7 @@ class SnapPolygon extends Snap2d {
     }
 
     function build() {
+      midpointMap = new ToleranceMap({x: .1, y:.1});
       const faces = instance.object().faces();
       const lines = instance.object().lines();
       let prevPrevIsFace = faces.equalIndexOf(lines[lines.length -2]) !== -1;

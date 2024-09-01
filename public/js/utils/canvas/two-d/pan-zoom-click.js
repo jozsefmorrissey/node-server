@@ -4,7 +4,6 @@ const HoverMap2d = require('hover-map');
 
 const Vertex2d = require('./objects/vertex');
 
-
 class PanZoomClick extends PanZoom {
   constructor(canvas, draw, getHoverMap) {
     super(canvas, draw);
@@ -12,20 +11,12 @@ class PanZoomClick extends PanZoom {
 
     this.hoverMap = getHoverMap;
 
-    const clickEvent = new CustomEvent('click');
-    const dragEvent = new CustomEvent('dragging');
-    const hoverEvent = new CustomEvent('hover');
-    const hoverOutEvent = new CustomEvent('hoverOut');
+    CustomEvent.all(this, 'click', 'drag', 'hover', 'hoverOut');
     let active = true;
     let moveActive = true;
     let eventsEnabled = true;
     let clickHolding = false;
 
-    this.on = {};
-    this.on.click = clickEvent.on;
-    this.on.hover = hoverEvent.on;
-    this.on.hoverOut = hoverOutEvent.on;
-    this.on.drag = dragEvent.on;
     this.disable = () => active = false;
     this.enable = () => active = true;
     this.disable.move = () => moveActive = false;
@@ -54,13 +45,13 @@ class PanZoomClick extends PanZoom {
 
     let clickHoldCount = 0;
     let dragging = false;
-    this.onMove((event) => {
+    this.on.move((event) => {
       dragging = false;
       if (!active || !moveActive) return;
       const vertex = new Vertex2d(event.imageX, y(event));
       if (clickHolding && eventsEnabled) {
         if (++clickHoldCount > 30) {
-          dragEvent.trigger(clickHolding, event);
+          this.trigger.drag(clickHolding, event);
           dragging = true;
           clickHolding.move && clickHolding.move(vertex);
         }
@@ -70,12 +61,12 @@ class PanZoomClick extends PanZoom {
       const hovered = instance.hovered();
       if (hovering !== hovered) {
         if (eventsEnabled && hovered) {
-          hoverOutEvent.trigger(hovered);
+          this.trigger.hoverOut(hovered);
         }
         hoverStack = [hovering].concat(hoverStack);
         hoverStack.splice(stackLimit);
         if (eventsEnabled && hovering) {
-          eventsEnabled && hoverEvent.trigger(hovering);
+          eventsEnabled && this.trigger.hover(hovering);
         }
       }
     });
@@ -83,15 +74,15 @@ class PanZoomClick extends PanZoom {
     const parentCanvasSimple = this.canvasSimple;
     this.canvasSimple = () => dragging || parentCanvasSimple();
 
-    this.onClick((event) => {
+    this.on.click((event) => {
       if (!active) return;
       const vertex = new Vertex2d(event.imageX, y(event));
       const hovering = this.hoverMap().hovering(vertex);
       clickStack = [hovering].concat(clickStack);
       clickStack.splice(stackLimit);
-      clickEvent.trigger(hovering);
+      this.trigger.click(hovering);
     });
-    this.onMouseup((event) => {
+    this.on.mouseup((event) => {
       if (!active) return;
       const vertex = new Vertex2d(event.imageX, y(event));
       const hovering = this.hoverMap().hovering(vertex);
@@ -99,7 +90,7 @@ class PanZoomClick extends PanZoom {
       clickHoldCount = 0;
       return hovering !== null;
     });
-    this.onMousedown((event) => {
+    this.on.mousedown((event) => {
       const vertex = new Vertex2d(event.imageX, y(event));
       const hovering = this.hoverMap().hovering(vertex);
       clickHolding = hovering;

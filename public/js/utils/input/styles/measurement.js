@@ -10,7 +10,7 @@ const Lookup = require('../../object/lookup.js');
 
 class MeasurementInput extends Input {
   constructor(props) {
-    let _unit = props.unit === undefined ? true : _unit;
+    let _unit = props.unit === undefined ? true : props.unit;
     let units = props.units;
     let value = new Measurement(props.value, _unit);
     props.value = () => value;
@@ -38,12 +38,12 @@ class MeasurementInput extends Input {
     this.setValue = (val, unit) => {
       if (unit === undefined) unit = _unit;
       let newVal = this.valid(val) ? ((val instanceof Measurement) ?
-                        val.decimal() : new Measurement(val, unit)).decimal() : value;
+                        val.decimal() : new Measurement(val, unit).decimal()) : value.decimal();
       if (props.polarity) {
         if (props.polarity === 'positive') {
-          if (newVal.decimal() < 0) newVal = 0;
+          if (newVal < 0) newVal = 0;
         } else if (props.polarity === 'negitive') {
-          if (newVal.decimal() > 0) newVal = 0;
+          if (newVal > 0) newVal = 0;
         }
       }
       const updated = newVal !== value.decimal();

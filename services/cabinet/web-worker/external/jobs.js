@@ -309,7 +309,7 @@ CsgRoomJob.tasksAndJobs = (room, complex) => {
     for (let j = 0; j < group.objects.length; j++) {
       const obj = group.objects[j];
       const job = obj instanceof  Assembly ?
-          (complex ? new CsgComplexAssembly(obj) : new CsgSimpleAssembly(obj)) : new SimpleModelJob([obj]);
+          (complex ? new CsgComplexAssembly(obj) : new CsgSimpleAssembly(obj)) : new SimpleModelJob(obj);
       jobs.push(job);
       tasks.push(job.task());
     }

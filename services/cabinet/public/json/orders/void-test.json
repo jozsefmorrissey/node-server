@@ -1,0 +1,1165 @@
+{
+  "_TYPE": "Order",
+  "name": "Order 2024 (day: 23)",
+  "id": "os0w7zfs1jxeewfx40vksinj092kb1tn",
+  "date": {
+    "intitial": "2024-08-23T13:45:09.398Z"
+  },
+  "rooms": {
+    "kitchen": {
+      "_TYPE": "Room",
+      "name": "kitchen",
+      "layout": {
+        "walls": [
+          {
+            "0": {
+              "_TYPE": "Vertex2d",
+              "point": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            "1": {
+              "_TYPE": "Vertex2d",
+              "point": {
+                "x": 500,
+                "y": 0
+              }
+            },
+            "_TYPE": "Wall2D",
+            "doors": [],
+            "height": 243.84
+          },
+          {
+            "0": {
+              "_TYPE": "Vertex2d",
+              "point": {
+                "x": 500,
+                "y": 0
+              }
+            },
+            "1": {
+              "_TYPE": "Vertex2d",
+              "point": {
+                "x": 500,
+                "y": 500
+              }
+            },
+            "_TYPE": "Wall2D",
+            "doors": [],
+            "height": 243.84
+          },
+          {
+            "0": {
+              "_TYPE": "Vertex2d",
+              "point": {
+                "x": 500,
+                "y": 500
+              }
+            },
+            "1": {
+              "_TYPE": "Vertex2d",
+              "point": {
+                "x": 0,
+                "y": 500
+              }
+            },
+            "_TYPE": "Wall2D",
+            "doors": [],
+            "height": 243.84
+          },
+          {
+            "0": {
+              "_TYPE": "Vertex2d",
+              "point": {
+                "x": 0,
+                "y": 500
+              }
+            },
+            "1": {
+              "_TYPE": "Vertex2d",
+              "point": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            "_TYPE": "Wall2D",
+            "doors": [],
+            "height": 243.84
+          }
+        ],
+        "objects": [],
+        "snapLocations": [],
+        "_TYPE": "Layout2D"
+      },
+      "groups": [
+        {
+          "objects": [
+            {
+              "value": {
+                "values": {
+                  "innerWidth": "c.w - pt34 * 2",
+                  "innerWidthCenter": "innerWidth + pt34",
+                  "dividerJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  }
+                }
+              },
+              "_TYPE": "Cabinet",
+              "sliceAtOpening": true,
+              "outline": false,
+              "part": false,
+              "allModels": false,
+              "included": true,
+              "config": {
+                "demension": {
+                  "x": 45.72,
+                  "y": "baseh",
+                  "z": "based"
+                },
+                "center": {
+                  "x": 250,
+                  "y": "0",
+                  "z": 250
+                },
+                "rotation": {
+                  "x": "0",
+                  "y": "0",
+                  "z": "0"
+                }
+              },
+              "partCode": "c",
+              "partName": "Simple",
+              "locationCode": "c",
+              "subassemblies": {
+                "R": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Divider",
+                  "sliceAtOpening": true,
+                  "outline": true,
+                  "part": true,
+                  "allModels": false,
+                  "included": true,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "t"
+                    },
+                    "center": {
+                      "x": "c.w - (R.t / 2)",
+                      "y": "R.l / 2",
+                      "z": "(w / -2)"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "R",
+                  "partName": "right",
+                  "locationCode": "c_R",
+                  "subassemblies": {},
+                  "joints": [],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": false,
+                    "female": true,
+                    "extend": true,
+                    "extendTo": true,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    }
+                  },
+                  "type": "full"
+                },
+                "L": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Divider",
+                  "sliceAtOpening": true,
+                  "outline": true,
+                  "part": true,
+                  "allModels": false,
+                  "included": true,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "t"
+                    },
+                    "center": {
+                      "x": "(L.t / 2)",
+                      "y": "L.l / 2",
+                      "z": " (w/-2)"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "L",
+                  "partName": "left",
+                  "locationCode": "c_L",
+                  "subassemblies": {},
+                  "joints": [],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": false,
+                    "female": true,
+                    "extend": true,
+                    "extendTo": true,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    }
+                  },
+                  "type": "full"
+                },
+                "BACK": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Panel",
+                  "sliceAtOpening": true,
+                  "outline": true,
+                  "part": true,
+                  "allModels": false,
+                  "included": true,
+                  "config": {
+                    "demension": {
+                      "x": "innerWidth",
+                      "y": "c.l - tkh",
+                      "z": "pt14"
+                    },
+                    "center": {
+                      "x": " w / 2 + R.t",
+                      "y": "(BACK.h / 2) + tkh",
+                      "z": " -1*(c.t - (t / 2))"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "0",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "BACK",
+                  "partName": "back",
+                  "locationCode": "c_BACK",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "BACK",
+                        "dependent": "R"
+                      },
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "BACK",
+                        "dependent": "L"
+                      },
+                      "priority": 0
+                    }
+                  ],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": true,
+                    "female": true,
+                    "extend": true,
+                    "extendTo": true,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    }
+                  },
+                  "hasFrame": false
+                },
+                "B": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Divider",
+                  "sliceAtOpening": true,
+                  "outline": true,
+                  "part": true,
+                  "allModels": false,
+                  "included": true,
+                  "config": {
+                    "demension": {
+                      "x": "c.t - BACK.t",
+                      "y": "innerWidth",
+                      "z": "t"
+                    },
+                    "center": {
+                      "x": "c.w / 2",
+                      "y": "tkh + (t/2)",
+                      "z": "w / -2"
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "B",
+                  "partName": "bottom",
+                  "locationCode": "c_B",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "B",
+                        "dependent": "R"
+                      },
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "B",
+                        "dependent": "L"
+                      },
+                      "priority": 0
+                    }
+                  ],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": false,
+                    "female": true,
+                    "extend": true,
+                    "extendTo": true,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    }
+                  },
+                  "type": "full"
+                },
+                "T": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Divider",
+                  "sliceAtOpening": true,
+                  "outline": true,
+                  "part": true,
+                  "allModels": false,
+                  "included": true,
+                  "config": {
+                    "demension": {
+                      "x": "(c.t - BACK.t)",
+                      "y": "innerWidth",
+                      "z": "t"
+                    },
+                    "center": {
+                      "x": "c.w / 2",
+                      "y": "c.h - t/2",
+                      "z": "(w / -2)"
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "T",
+                  "partName": "top",
+                  "locationCode": "c_T",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "T",
+                        "dependent": "R"
+                      },
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "T",
+                        "dependent": "L"
+                      },
+                      "priority": 0
+                    }
+                  ],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": false,
+                    "female": true,
+                    "extend": true,
+                    "extendTo": true,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    }
+                  },
+                  "type": "frontAndBack"
+                },
+                "void-2": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Void",
+                  "sliceAtOpening": false,
+                  "outline": false,
+                  "part": true,
+                  "allModels": false,
+                  "config": {
+                    "demension": {
+                      "x": 12.7,
+                      "y": 12.7,
+                      "z": "c_BACK.d.x"
+                    },
+                    "center": {
+                      "x": "c.w/2",
+                      "y": "tkh+h/2",
+                      "z": "-c.d+w/2"
+                    },
+                    "rotation": {
+                      "x": "c_BACK.r.x",
+                      "y": "c_BACK.r.y + 90",
+                      "z": "c_BACK.r.z"
+                    }
+                  },
+                  "partCode": "void-2",
+                  "partName": "void-c_BACK-12.7x12.7",
+                  "locationCode": "c_void-2",
+                  "subassemblies": {},
+                  "joints": [],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": true,
+                    "female": false,
+                    "extend": false,
+                    "extendTo": false,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    }
+                  },
+                  "includedSides": [
+                    false,
+                    false,
+                    true,
+                    false,
+                    false,
+                    true
+                  ],
+                  "capSet": 0,
+                  "maleSet": 0,
+                  "capMale": false,
+                  "bodyJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  },
+                  "capJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  },
+                  "otherJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  }
+                },
+                "S1": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "SectionProperties",
+                  "config": {
+                    "top": "T",
+                    "bottom": "B",
+                    "left": "L",
+                    "right": "R",
+                    "back": "BACK"
+                  },
+                  "index": 1,
+                  "divider": {
+                    "value": {
+                      "values": {}
+                    },
+                    "_TYPE": "DividerSection",
+                    "sliceAtOpening": true,
+                    "outline": false,
+                    "part": false,
+                    "allModels": false,
+                    "included": false,
+                    "config": {
+                      "demension": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "center": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      },
+                      "rotation": {
+                        "x": "0",
+                        "y": "0",
+                        "z": "0"
+                      }
+                    },
+                    "partCode": "dv",
+                    "partName": "",
+                    "locationCode": "c_S1_dv",
+                    "subassemblies": {
+                      "dv": {
+                        "value": {
+                          "values": {}
+                        },
+                        "_TYPE": "Divider",
+                        "sliceAtOpening": true,
+                        "outline": false,
+                        "part": true,
+                        "allModels": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "Section",
+                        "locationCode": "c_S1_dv_dv",
+                        "subassemblies": {},
+                        "joints": [],
+                        "jointSettings": {
+                          "_TYPE": "JointSettings",
+                          "male": true,
+                          "female": true,
+                          "extend": true,
+                          "extendTo": true,
+                          "directions": {
+                            "_TYPE": "Polygon3DExpandDirections",
+                            "fixed": false,
+                            "vectors": {}
+                          }
+                        },
+                        "type": "full"
+                      }
+                    },
+                    "joints": [],
+                    "jointSettings": {
+                      "_TYPE": "JointSettings",
+                      "male": true,
+                      "female": true,
+                      "extend": true,
+                      "extendTo": true,
+                      "directions": {
+                        "_TYPE": "Polygon3DExpandDirections",
+                        "fixed": false,
+                        "vectors": {}
+                      }
+                    }
+                  },
+                  "pattern": {
+                    "str": "z",
+                    "values": {},
+                    "props": {}
+                  },
+                  "subassemblies": []
+                },
+                "void-1": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Void",
+                  "sliceAtOpening": false,
+                  "outline": false,
+                  "part": true,
+                  "allModels": false,
+                  "config": {
+                    "demension": {
+                      "x": 12.7,
+                      "y": 12.7,
+                      "z": "c_BACK.d.y - 3*2.54/2"
+                    },
+                    "center": {
+                      "x": "c_BACK.c.x",
+                      "y": "c_BACK.c.y",
+                      "z": "c_BACK.c.z+ d.x/2 + c_BACK.d.z/2"
+                    },
+                    "rotation": {
+                      "x": "c_BACK.r.x + 90",
+                      "y": "c_BACK.r.y",
+                      "z": "c_BACK.r.z"
+                    }
+                  },
+                  "partCode": "void-1",
+                  "partName": "void-c_BACK-12.7x12.7",
+                  "locationCode": "c_void-1",
+                  "subassemblies": {},
+                  "joints": [],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": true,
+                    "female": false,
+                    "extend": false,
+                    "extendTo": false,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    }
+                  },
+                  "includedSides": [
+                    false,
+                    false,
+                    true,
+                    true,
+                    false,
+                    true
+                  ],
+                  "capSet": 0,
+                  "maleSet": 0,
+                  "capMale": true,
+                  "bodyJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  },
+                  "capJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  },
+                  "otherJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  }
+                }
+              },
+              "joints": [],
+              "normals": {
+                "y": {
+                  "_TYPE": "Vector3D",
+                  "i": 0,
+                  "j": 1,
+                  "k": 0
+                },
+                "x": {
+                  "_TYPE": "Vector3D",
+                  "i": 0,
+                  "j": 0,
+                  "k": -1
+                },
+                "z": {
+                  "_TYPE": "Vector3D",
+                  "i": 1,
+                  "j": 0,
+                  "k": 0
+                }
+              },
+              "jointSettings": {
+                "_TYPE": "JointSettings",
+                "male": false,
+                "female": false,
+                "extend": false,
+                "extendTo": false,
+                "directions": {
+                  "_TYPE": "Polygon3DExpandDirections",
+                  "fixed": false,
+                  "vectors": {}
+                }
+              },
+              "currentPosition": {
+                "center": {
+                  "x": 250,
+                  "y": 0,
+                  "z": 250
+                },
+                "demension": {
+                  "x": 45.72,
+                  "y": 86.36,
+                  "z": 60.96
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "normals": {
+                  "y": {
+                    "_TYPE": "Vector3D",
+                    "i": 0,
+                    "j": 1,
+                    "k": 0
+                  },
+                  "x": {
+                    "_TYPE": "Vector3D",
+                    "i": 0,
+                    "j": 0,
+                    "k": -1
+                  },
+                  "z": {
+                    "_TYPE": "Vector3D",
+                    "i": 1,
+                    "j": 0,
+                    "k": 0
+                  }
+                }
+              },
+              "autoToeKick": true,
+              "id": "Cabinet_ptqgvo1"
+            }
+          ],
+          "_TYPE": "Group",
+          "name": "Group ",
+          "id": "Group_2iv6qez",
+          "propertyConfig": {
+            "ov": "Function:ov",
+            "ovfrd": {
+              "_TYPE": "Property",
+              "code": "ovfrd",
+              "name": "Overlay Framed",
+              "value": 1.27,
+              "properties": {
+                "value": 0.5,
+                "notMetric": "inch"
+              }
+            },
+            "ovfls": {
+              "_TYPE": "Property",
+              "code": "ovfls",
+              "name": "Overlay Frameless",
+              "value": 0.8731,
+              "properties": {
+                "value": 0.34375,
+                "notMetric": "inch"
+              }
+            },
+            "r": {
+              "_TYPE": "Property",
+              "code": "r",
+              "name": "Reveal",
+              "value": 0.3175,
+              "properties": {
+                "value": 0.125,
+                "notMetric": "inch"
+              }
+            },
+            "rvt": {
+              "_TYPE": "Property",
+              "code": "rvt",
+              "name": "Reveal Top",
+              "value": 1.27,
+              "properties": {
+                "value": 0.5,
+                "notMetric": "inch"
+              }
+            },
+            "rvb": {
+              "_TYPE": "Property",
+              "code": "rvb",
+              "name": "Reveal Bottom",
+              "value": 0,
+              "properties": {
+                "value": 0,
+                "notMetric": "inch"
+              }
+            },
+            "rvr": {
+              "_TYPE": "Property",
+              "code": "rvr",
+              "name": "Reveal Right",
+              "value": 0.3175,
+              "properties": {
+                "value": 0.125,
+                "notMetric": "inch"
+              }
+            },
+            "rvl": {
+              "_TYPE": "Property",
+              "code": "rvl",
+              "name": "Reveal Left",
+              "value": 0.3175,
+              "properties": {
+                "value": 0.125,
+                "notMetric": "inch"
+              }
+            },
+            "is": {
+              "_TYPE": "Property",
+              "code": "is",
+              "name": "Spacing",
+              "value": 0.2381,
+              "properties": {
+                "value": 0.09375,
+                "notMetric": "inch"
+              }
+            },
+            "style": {
+              "_TYPE": "Property",
+              "code": "style",
+              "name": "Cabinet Style",
+              "value": "Overlay",
+              "properties": {
+                "value": "Overlay"
+              }
+            },
+            "fls": {
+              "_TYPE": "Property",
+              "code": "fls",
+              "name": "Frameless",
+              "value": true,
+              "properties": {
+                "value": true
+              }
+            },
+            "tid": {
+              "_TYPE": "Property",
+              "code": "tid",
+              "name": "Top Inset Depth",
+              "value": 1.27,
+              "properties": {
+                "value": 0.5,
+                "notMetric": "inch"
+              }
+            },
+            "dsc": {
+              "_TYPE": "Property",
+              "code": "dsc",
+              "name": "Default Scribe",
+              "value": 0.635,
+              "properties": {
+                "value": 0.25,
+                "notMetric": "inch"
+              }
+            },
+            "rvibr": {
+              "_TYPE": "Property",
+              "code": "rvibr",
+              "name": "Reveal Inside Bottom Rail",
+              "value": 0.3175,
+              "properties": {
+                "value": 0.125,
+                "notMetric": "inch"
+              }
+            },
+            "ddg": {
+              "_TYPE": "Property",
+              "code": "ddg",
+              "name": "Reveal Dual Door",
+              "value": 0.1588,
+              "properties": {
+                "value": 0.0625,
+                "notMetric": "inch"
+              }
+            },
+            "tkbw": {
+              "_TYPE": "Property",
+              "code": "tkbw",
+              "name": "Toe Kick Backer Width",
+              "value": 1.27,
+              "properties": {
+                "value": 0.5,
+                "notMetric": "inch"
+              }
+            },
+            "tkd": {
+              "_TYPE": "Property",
+              "code": "tkd",
+              "name": "Toe Kick Depth",
+              "value": 10.16,
+              "properties": {
+                "value": 4,
+                "notMetric": "inch"
+              }
+            },
+            "tkh": {
+              "_TYPE": "Property",
+              "code": "tkh",
+              "name": "Toe Kick Height",
+              "value": 10.16,
+              "properties": {
+                "value": 4,
+                "notMetric": "inch"
+              }
+            },
+            "pbt": {
+              "_TYPE": "Property",
+              "code": "pbt",
+              "name": "Panel Back Thickness",
+              "value": 1.27,
+              "properties": {
+                "value": 0.5,
+                "notMetric": "inch"
+              }
+            },
+            "iph": {
+              "_TYPE": "Property",
+              "code": "iph",
+              "name": "Ideal Handle Height",
+              "value": 106.68,
+              "properties": {
+                "value": 42,
+                "notMetric": "inch"
+              }
+            },
+            "brr": {
+              "_TYPE": "Property",
+              "code": "brr",
+              "name": "Bottom Rail Reveal",
+              "value": 0.3175,
+              "properties": {
+                "value": 0.125,
+                "notMetric": "inch"
+              }
+            },
+            "ddd": {
+              "_TYPE": "Property",
+              "code": "ddd",
+              "name": "Default Dado Depth",
+              "value": 0.635,
+              "properties": {
+                "value": 0.25,
+                "notMetric": "inch"
+              }
+            },
+            "pt14": {
+              "_TYPE": "Property",
+              "code": "pt14",
+              "name": "Panel Width ~1/4",
+              "value": 0.635,
+              "properties": {
+                "value": 0.25,
+                "notMetric": "inch"
+              }
+            },
+            "pt12": {
+              "_TYPE": "Property",
+              "code": "pt12",
+              "name": "Panel Width ~1/2",
+              "value": 1.27,
+              "properties": {
+                "value": 0.5,
+                "notMetric": "inch"
+              }
+            },
+            "pt34": {
+              "_TYPE": "Property",
+              "code": "pt34",
+              "name": "Panel Width ~3/4",
+              "value": 1.905,
+              "properties": {
+                "value": 0.75,
+                "notMetric": "inch"
+              }
+            },
+            "dbtos": {
+              "_TYPE": "Property",
+              "code": "dbtos",
+              "name": "Drawer Box Top Offset",
+              "value": 1.27,
+              "properties": {}
+            },
+            "dbsos": {
+              "_TYPE": "Property",
+              "code": "dbsos",
+              "name": "Drawer Box Side Offest",
+              "value": 0.9525,
+              "properties": {}
+            },
+            "dbbos": {
+              "_TYPE": "Property",
+              "code": "dbbos",
+              "name": "Drawer Box Bottom Offset",
+              "value": 1.27,
+              "properties": {}
+            },
+            "daffrw": {
+              "_TYPE": "Property",
+              "code": "daffrw",
+              "name": "Door and front frame rail width",
+              "value": 6.0325,
+              "properties": {
+                "value": "2 3/8",
+                "notMetric": "inch"
+              }
+            },
+            "dafip": {
+              "_TYPE": "Property",
+              "code": "dafip",
+              "name": "Door and front inset panel",
+              "value": null,
+              "properties": {
+                "value": null
+              }
+            },
+            "dbst": {
+              "_TYPE": "Property",
+              "code": "dbst",
+              "name": "Side Thickness",
+              "value": 1.5875,
+              "properties": {
+                "value": 0.625,
+                "notMetric": "inch"
+              }
+            },
+            "dbbt": {
+              "_TYPE": "Property",
+              "code": "dbbt",
+              "name": "Box Bottom Thickness",
+              "value": 0.635,
+              "properties": {
+                "value": 0.25,
+                "notMetric": "inch"
+              }
+            },
+            "dbid": {
+              "_TYPE": "Property",
+              "code": "dbid",
+              "name": "Bottom Inset Depth",
+              "value": 1.27,
+              "properties": {
+                "value": 0.5,
+                "notMetric": "inch"
+              }
+            },
+            "dbn": {
+              "_TYPE": "Property",
+              "code": "dbn",
+              "name": "Bottom Notched",
+              "value": true,
+              "properties": {
+                "value": true
+              }
+            },
+            "mfdfd": {
+              "_TYPE": "Property",
+              "code": "mfdfd",
+              "name": "Minimum Framed Drawer Front Height",
+              "value": 15.24,
+              "properties": {
+                "value": 6,
+                "notMetric": "inch"
+              }
+            },
+            "c2c": {
+              "_TYPE": "Property",
+              "code": "c2c",
+              "name": "Center To Center",
+              "value": null,
+              "properties": {}
+            },
+            "proj": {
+              "_TYPE": "Property",
+              "code": "proj",
+              "name": "Projection",
+              "value": null,
+              "properties": {}
+            },
+            "maxtab": {
+              "_TYPE": "Property",
+              "code": "maxtab",
+              "name": "Max Spacing from bore to edge of door",
+              "value": null,
+              "properties": {}
+            },
+            "mintab": {
+              "_TYPE": "Property",
+              "code": "mintab",
+              "name": "Minimum Spacing from bore to edge of door",
+              "value": null,
+              "properties": {}
+            },
+            "maxol": {
+              "_TYPE": "Property",
+              "code": "maxol",
+              "name": "Max Door Overlay",
+              "value": null,
+              "properties": {}
+            },
+            "minol": {
+              "_TYPE": "Property",
+              "code": "minol",
+              "name": "Minimum Door Overlay",
+              "value": null,
+              "properties": {}
+            },
+            "dpt": {
+              "_TYPE": "Property",
+              "code": "dpt",
+              "name": "Divider Panel Thickness",
+              "value": "pt34",
+              "properties": {
+                "value": "pt34"
+              }
+            },
+            "dft": {
+              "_TYPE": "Property",
+              "code": "dft",
+              "name": "Divider Frame Thickness",
+              "value": 1.905,
+              "properties": {
+                "value": 0.75,
+                "notMetric": "inch"
+              }
+            },
+            "dfw": {
+              "_TYPE": "Property",
+              "code": "dfw",
+              "name": "Divider Frame Width",
+              "value": 3.81,
+              "properties": {
+                "value": 1.5,
+                "notMetric": "inch"
+              }
+            },
+            "dpw": {
+              "_TYPE": "Property",
+              "code": "dpw",
+              "name": "Divider Partial Width",
+              "value": 10.16,
+              "properties": {
+                "value": 4,
+                "notMetric": "inch"
+              }
+            },
+            "sc": {
+              "_TYPE": "Property",
+              "code": "sc",
+              "name": "Scribe",
+              "value": "dsc",
+              "properties": {
+                "value": "dsc"
+              }
+            },
+            "_TYPE": "Properties"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -43,6 +43,8 @@ class DualDoorSection extends Assembly {
 }
 
 DualDoorSection.fromJson = (json) => {
+  json.subassemblies.Dl.parent = true;
+  json.subassemblies.Dr.parent = true;
   const doorLeft = Object.fromJson(json.subassemblies.Dl);
   const doorRight = Object.fromJson(json.subassemblies.Dr);
   return new DualDoorSection(doorLeft, doorRight);

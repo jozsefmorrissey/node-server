@@ -2,7 +2,8 @@
 
 const Navigator = require('../../local-file/navigator.js');
 
-Navigator.onInit(async () => {
+Navigator.on = {};
+Navigator.on.init(async () => {
   return;
   if (confirm('AutoSave tests: \nWARNING! Will create garbage information on your computer.') === false) return;
   const AutoSave = require('../../local-file/auto-save.js');
@@ -104,7 +105,7 @@ Navigator.onInit(async () => {
    "/TEST/build/one/two/three.js"
   ];
   Test.add('Navigator: build',async (ts) => {
-    ts.onCleanUp(await cleanUpFunc('./build'));
+    ts.on.cleanUp(await cleanUpFunc('./build'));
 
     const build = await testHelper.getDirectory('build', true);
     const nine = await build.getDirectory('./four/five/nine', true);
@@ -120,7 +121,7 @@ Navigator.onInit(async () => {
   });
 
   Test.add('Navigator: write/read', async (ts) => {
-    ts.onCleanUp(await cleanUpFunc('read-write'));
+    ts.on.cleanUp(await cleanUpFunc('read-write'));
 
     const filePath = 'read-write/four/five/ten/twelve/thirteen.sh';
     const data = 'echo THIRTEEN.SH';
@@ -131,7 +132,7 @@ Navigator.onInit(async () => {
   });
 
   Test.add('Navigator: remove', async (ts) => {
-    ts.onCleanUp(await cleanUpFunc('remove'));
+    ts.on.cleanUp(await cleanUpFunc('remove'));
 
     await testHelper.getFile('remove/one/two/three/four/five/six.txt', true);
     await testHelper.getFile('remove/one/two/seven/nine/eight.txt', true);
@@ -196,7 +197,7 @@ Navigator.onInit(async () => {
                 ],
     }
 
-    ts.onCleanUp(await cleanUpFunc('move'));
+    ts.on.cleanUp(await cleanUpFunc('move'));
 
     const move = await testHelper.getDirectory('move', true);
     let six = await move.getFile('one/two/three/four/five/six.txt', true);
@@ -227,7 +228,7 @@ Navigator.onInit(async () => {
   // Sorry test is messy.... I left comments because of that fact
   Test.add('AutoSave: all inclusive',async (ts) => {
     throw new Error('cabJson is no longer valid depend(s|ent)Selectors are no longer used');
-    ts.onCleanUp(await cleanUpFunc('./auto-save'));
+    ts.on.cleanUp(await cleanUpFunc('./auto-save'));
 
     const data = {one: 'two', three: false, four: null,
                   six: [1,2,3,4,5,6,7,8,9,10],
@@ -237,7 +238,7 @@ Navigator.onInit(async () => {
     helper.getFile('help.txt', true);
     const list = await helper.find(null);
     let autoSave = new AutoSave(() => data, helper, 'simple');
-    await autoSave.onInit();
+    await autoSave.on.init();
     autoSave.maxLen(5);
     let readObj = await autoSave.read();
     ts.assertEquals(Object.keys(readObj).length, 0);
@@ -250,7 +251,7 @@ Navigator.onInit(async () => {
     const maxSaves = 8;
     autoSave.timeInterval(saveInterval);
     let saveCount = 0;
-    autoSave.onSaved(() => saveCount++);
+    autoSave.on.saved(() => saveCount++);
     autoSave.on_off_toggle(true);
     const time = new Date().getTime();
 
@@ -295,7 +296,7 @@ Navigator.onInit(async () => {
   });
 
   Test.add('AutoSaveInterface: all inclusive',async (ts) => {
-    ts.onCleanUp(await cleanUpFunc('./auto-save-interface'));
+    ts.on.cleanUp(await cleanUpFunc('./auto-save-interface'));
 
     const helper = await testHelper.getDirectory('auto-save-interface', true);
     const data = {
@@ -312,7 +313,7 @@ Navigator.onInit(async () => {
     savers.three = autoSaveInt.get('three', dataFunc);
 
     const counts = {one: 0, two: 0, three: 0};
-    const onCount = (name) => savers[name].onSaved(() => savers[name].isOn() && counts[name]++);
+    const onCount = (name) => savers[name].on.saved(() => savers[name].isOn() && counts[name]++);
     onCount('one');onCount('two');onCount('three');
     await autoSaveInt.read('one');await autoSaveInt.read('two');await autoSaveInt.read('three');
     autoSaveInt.oft(true);

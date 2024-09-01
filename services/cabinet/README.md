@@ -15,7 +15,7 @@
 
 ### watch.js
 &nbsp;&nbsp;Simple watch bundler that builds your html and js files on change.
--- kill all watchers
+-- kill all watchers - If the watcher starts malfunctioning most likely there are zombies a foot
   <pre>kill -9 $(ps -aef | grep "watch.js" | awk '{print $2}')</pre>
 
 ### public/js/utils/utils.js

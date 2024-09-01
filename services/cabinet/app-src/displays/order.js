@@ -29,7 +29,7 @@ class OrderDisplay {
 
     function initOrder(order, index) {
       roomDisplays[order.id()] = new RoomDisplay('#room-pills', order);
-      ToggleDisplayList.onShow(`information-display-${order.id()}`, setInfo(order, index));
+      ToggleDisplayList.on.show(`information-display-${order.id()}`, setInfo(order, index));
       // expandList.on.after.render(setInfo(order, index));
       return order;
     }

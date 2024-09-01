@@ -11,14 +11,6 @@ function isMatch(partCodeOlocationCodeOassemblyOregexOfunc, assem) {
   return assem === pclcarf;
 }
 
-const matchFilter = (pclcarf, filter) => {
-  const runFilter = filter instanceof Function;
-  return (a) => {
-    return isMatch(pclcarf, a) && (!runFilter || filter(a));
-  }
-}
-
-
 class Dependency extends Lookup {
   constructor(dependsSelector, dependentSelector, condition, locationId) {
     super();
@@ -27,8 +19,9 @@ class Dependency extends Lookup {
     this.selector = {};
     this.selector.depends = (val) => val === undefined ? dependsSelector : (dependsSelector = val);
     this.selector.dependent = (val) => val === undefined ? dependentSelector : (dependentSelector = val);
+    this.condition = condition;
 
-    this.apply = () => (typeof condition === 'function') ? condition(this) : true;
+    this.apply = () => (typeof this.condition === 'function') ? this.condition(this) : true;
 
     this.clone = (...args) => {
       if (args.length > 0)
@@ -36,8 +29,12 @@ class Dependency extends Lookup {
       return this.constructor.clone(this);
     }
 
-    this.dependsOn = (assem) => isMatch(this.selector.depends(), assem, 'male');
-    this.isDependent = (assem) => isMatch(this.selector.dependent(), assem, 'female');
+    this.dependsOn = (assem) => (this.constructor.name === 'Dependency' ||
+                                assem.jointSettings.male(assem)) &&
+                                assem.match(this.selector.depends());
+    this.isDependent = (assem) => (this.constructor.name === 'Dependency' ||
+                                  assem.jointSettings.female(assem)) &&
+                                  assem.match(this.selector.dependent());
 
     this.descriptor = () => locationId ? `${this.constructor.name}(${locationId})` :
         `${this.constructor.name}:${this.selector.depends()}->${this.selector.dependent()}`;
@@ -46,5 +43,14 @@ class Dependency extends Lookup {
 }
 
 Object.class.register(Dependency, 'selector.depends', 'selector.dependent', 'locationId');
+
+Dependency.clone = (obj, clone) => {
+  clone ||= new Dependency();
+  clone.selector.depends(obj.selector.depends());
+  clone.selector.dependent(obj.selector.dependent());
+  clone.locationId(obj.locationId());
+  clone.condition = obj.condition;
+  return clone;
+}
 
 module.exports = Dependency;

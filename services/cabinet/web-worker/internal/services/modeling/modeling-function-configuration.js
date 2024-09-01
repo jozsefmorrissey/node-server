@@ -259,15 +259,15 @@ to.Cutter = {
     }
   },
   Abyss: {
-    biPolygon: (rMdto, environment) =>
-      VoidUtil.instance(rMdto, environment).abyss.biPolygon()
+    model: (rMdto, environment) =>
+      VoidUtil.instance(rMdto, environment).abyss.model()
   }
 }
 
 to.PanelVoidIndex = {
   PanelVoidIndex: {
     biPolygon: (rMdto, environment) =>
-      VoidUtil.instance(rMdto, environment).panel(rMdto.index)
+      VoidUtil.instance(rMdto, environment).panel(rMdto, environment)
   },
 }
 
@@ -328,7 +328,7 @@ to.Shelve = {
   Shelve: {
     biPolygon: (rMdto, environment) => {
       const parent = rMdto.parentAssembly();
-      const sectionUtils = SectionPropertiesUtil.instance(parent);
+      const sectionUtils = SectionPropertiesUtil.instance(parent, environment);
       const divider = parent.bottom();
       const biPoly = Divider.instance(divider, environment).Full().copy();
       const shelveCount = parent.shelves.length;
@@ -340,7 +340,7 @@ to.Shelve = {
     },
     extended: (rMdto, env) => {
       const parent = rMdto.parentAssembly();
-      const sectionUtils = SectionPropertiesUtil.instance(parent);
+      const sectionUtils = SectionPropertiesUtil.instance(parent, env);
       const csg = env.modelInfo.extended[rMdto.id];
       const cutter = BiPolygon.fromPolygon(sectionUtils.outerPoly, 0, 13*2.54/16).model();
       return csg.subtract(cutter);

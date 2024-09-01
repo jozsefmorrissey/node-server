@@ -81,15 +81,12 @@ class PropertyConfig {
 PropertyConfig.lastStyle = 'Overlay';
 
 PropertyConfig.fromJson = (json) => {
-  const propConfig = {style: json.style};
+  const propConfig = new PropertyConfig(Properties.fromJson(json));
   const keys = Object.keys(json).filter((key) => key.match(/^[A-Z]/));
   keys.forEach((key) => {
-    const propKeys = Object.keys(json[key]);
-    propConfig[key] = {};
-    propKeys.forEach((propKey) =>
-                propConfig[key][json[key][propKey].code] = Object.fromJson(json[key][propKey]));
+    propConfig(key, Object.fromJson(json[key]));
   });
-  return new PropertyConfig(propConfig);
+  return propConfig;
 }
 
 module.exports = PropertyConfig;

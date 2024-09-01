@@ -107,7 +107,7 @@ class Vector3D {
     this.rotate = (rotations, center) => {
       const point = {x: i, y: j, z: k};
       CSG.rotatePointAroundCenter(rotations, point);
-      i = point.x; j = point.y; k = point.z;
+      return new Vector3D(point);
     }
 
     this.crossProduct = (other) => {

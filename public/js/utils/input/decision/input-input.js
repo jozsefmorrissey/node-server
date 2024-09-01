@@ -150,14 +150,6 @@ class InputInput extends DecisionInputTree {
 
     this.clone = () => new InputInput(props);
     this.empty = () => this.values().name === '';
-    // tree.onSubmit(addInput);
-    // tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
-    // tree.empty = () => {
-    //   let empty = true;
-    //   tree.root().forEach((node) =>
-    //     node.payload().inputArray.forEach(input => empty &&= input.empty()));
-    //   return empty;
-    // }
 
     this.setValue(props.input);
   }

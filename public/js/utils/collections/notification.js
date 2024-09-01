@@ -47,18 +47,6 @@ class Notifiction {
         configurable: false,
         value: () => recursive === true
     });
-    Object.defineProperty(proxy, "onAfterChange", {
-        writable: false,
-        enumerable: false,
-        configurable: false,
-        value: afterChangeEvent.on
-    });
-    Object.defineProperty(proxy, "onBeforeChange", {
-        writable: false,
-        enumerable: false,
-        configurable: false,
-        value: beforeChangeEvent.on
-    });
     Object.defineProperty(proxy, "deleteAll", {
         writable: false,
         enumerable: false,
@@ -70,6 +58,7 @@ class Notifiction {
           }
         }
     });
+    CustomEvent.all(proxy, {beforeChange: beforeChangeEvent, afterChange: afterChangeEvent});
 
     return proxy;
   }
@@ -82,8 +71,6 @@ class NotifictionArray extends Notifiction {
 }
 
 const notifyArr = new Notifiction();
-// notifyArr.onAfterChange(console.log);
-// notifyArr.onBeforeChange(console.error);
 notifyArr[4] = 'poop';
 notifyArr.pickls = 5;
 notifyArr[4] = 'y diapers';

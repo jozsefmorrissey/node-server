@@ -1,5 +1,6 @@
 
 const Test = require('../test.js').Test;
+const STL = require('../../3d-modeling/STL.js');
 
 Test.add('Array: scale',(ts) => {
   const original = [1,2,3,4];
@@ -55,5 +56,16 @@ Test.add('Object.pathValue', (ts) => {
   ts.assertEquals(testObj.pathValue('one().three().eight.eleven.twelve.13.14.fifteen'), 15);
   ts.assertTrue(Array.isArray(testObj.pathValue('one().three().eight.eleven.twelve')));
   ts.assertTrue(Array.isArray(testObj.pathValue('one().three().eight.eleven.twelve.13')));
+  ts.success();
+});
+
+Test.add('Utils: Array.relitiveIndex',(ts) => {
+  let a = [0,1,2,3,4,5,6,7,8,9]
+  ts.assertEquals(a.relitiveIndex(5, 5), 0);
+  ts.assertEquals(a.relitiveIndex(6, 5), 1);
+  ts.assertEquals(a.relitiveIndex(4, 5), -1);
+  ts.assertEquals(a.relitiveIndex(9, 5), 4);
+  ts.assertEquals(a.relitiveIndex(1, 5), -4);
+  ts.assertEquals(a.relitiveIndex(0, 5), 5);
   ts.success();
 });

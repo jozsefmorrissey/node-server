@@ -42,14 +42,13 @@ class DecisionInput extends DecisionTree.Node {
       return json;
     }
 
-    const onChange = [];
-    const changeEvent = new CustomEvent('changeDit');
+    CustomEvent.all(this, 'change');
 
-    const trigger = () => {
-      changeEvent.trigger(this.values());
-      this.tree().changed();
+    const trigger = (value, elem) => {
+      const values = this.values();
+      instance.trigger.change(values, elem);
+      this.tree().changed(values, elem);
     }
-    this.onChange = (func) => changeEvent.on(func);
 
     for (let index = 0; index < payload.inputArray; index++) {
       inArr[index].on('change', trigger);
@@ -117,7 +116,7 @@ class DecisionInput extends DecisionTree.Node {
       this.forEachChild((child) => complete &= child.isComplete());
       return complete == 1;
     }
-    this.onComplete = this.tree().onComplete;
+    this.on.complete = (...args) => this.tree().on.complete(...args);
     function updateInputArray (boolean) {
       const inputArray = payload.inputArray;
       const sc = instance.stateConfig();
@@ -127,7 +126,7 @@ class DecisionInput extends DecisionTree.Node {
         const input = stateInputArray[index];
         if (inputArray.length - 1 < index) {
           const clone = input.clone();
-          if (clone.onChange) clone.onChange(trigger);
+          if (clone.on.change) clone.on.change(trigger);
           else if (clone.on) clone.on('change', trigger);
           // clone.setValue('');
           inputArray.push(clone);
@@ -255,6 +254,7 @@ class DecisionInputTree extends DecisionTree {
     props.inputArray ||= [];
     super(rootName, payload, props);
     Object.getSet(this, 'payloadHandler');
+    CustomEvent.all(this, 'complete', 'submit', 'change');
 
     this.payloadHtml = (payload) => {
       const handler = this.payloadHandler();
@@ -305,9 +305,6 @@ class DecisionInputTree extends DecisionTree {
       return this.root().isComplete();
     }
 
-    const completeEvent = new CustomEvent('complete');
-    const submitEvent = new CustomEvent('submit');
-    const changeEvent = new CustomEvent('change');
     this.html = (node, editDisplay) => {
       node = node || this.root();
       const header = props.header;
@@ -318,10 +315,7 @@ class DecisionInputTree extends DecisionTree {
       }
       return inputHtml;
     };
-    this.onComplete = completeEvent.on;
-    this.onSubmit = submitEvent.on;
     this.hideButton = props.noSubmission;
-    this.onChange = changeEvent.on;
 
     let completionPending = false;
     this.completed = () => {
@@ -331,7 +325,7 @@ class DecisionInputTree extends DecisionTree {
         completionPending = true;
         setTimeout(() => {
           const values = this.values();
-          completeEvent.trigger(values, this);
+          this.trigger.complete(values, this);
           completionPending = false;
         }, delay);
       }
@@ -347,7 +341,7 @@ class DecisionInputTree extends DecisionTree {
         setTimeout(() => {
           const values = this.values();
           if (!this.isComplete()) return submissionPending = false;
-          submitEvent.trigger(values, elem);
+          this.trigger.submit(values, elem);
           submissionPending = false;
         }, delay);
       }
@@ -356,12 +350,13 @@ class DecisionInputTree extends DecisionTree {
 
     let changePending = 0;
     const delay = props.noSubmission || 0;
-    this.changed = () => {
+    this.changed = (values, elem) => {
       let changeId = ++changePending;
       setTimeout(() => {
         if (changeId === changePending) {
-          const values = this.values();
-          changeEvent.trigger(values)
+          values ||= this.values();
+          const rootElem = du.find.up('.decision-input-tree', elem);
+          this.trigger.change(values, rootElem);
         }
       }, delay);
     }
@@ -466,7 +461,7 @@ function updateAllChildren(dicnt) {
 }
 
 // TODO remove nested function, soft not used.... clean this please
-DecisionInputTree.update = (soft) => (target, event) => updateInput.lastCall(target);
+DecisionInputTree.update = (soft) => (target, event) => updateInput(target);
 DecisionInputTree.update.children = updateAllChildren;
 
 DecisionInputTree.Node = DecisionInput;

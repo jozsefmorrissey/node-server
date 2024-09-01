@@ -62,10 +62,10 @@ const jointCompexityObject = (id, complexityObj, jointMap, byId) => {
   if (assembly.parentAssembly()) obj.dependencies.push(assembly.parentAssembly().id());
   obj.joints.forEach(jId => obj.dependencies.concatInPlace(jointMap[jId].male));
   obj.complexity = () => {
-    if (!(assembly instanceof Assembly) || assembly.jointSettings.false() || assembly instanceof Cutter) return 1;
+    if (!(assembly instanceof Assembly) || assembly.jointSettings.noDependencies()) return 1;
+    if (MFC.usesDefault(assembly.id(), assembly.partName())) return 1;
     if (dependencyCount === obj.dependencies.length) return complexity;
     // TODO: probably need to qualify this with joint config somehow
-    if (MFC.usesDefault(assembly.id())) return 1;
     complexity = 1;
     for (let index = 0; index < obj.dependencies.length; index++) {
       const id = obj.dependencies[index];
@@ -224,12 +224,8 @@ function related(target) {
 
 function object(targetOs, props) {
   if (!Array.isArray(targetOs)) targetOs = [targetOs];
-  if (!targetOs[0]) {
-    console.log('here');
-  }
   const root = targetOs[0].getRoot();
   props ||= {};
-  props.modelInfo = related(root);
   const itterator = new ModelInformation(targetOs, props);
   return itterator;
 }

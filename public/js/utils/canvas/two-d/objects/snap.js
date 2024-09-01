@@ -56,7 +56,8 @@ class Snap2d extends Lookup {
     };
 
     const changeFuncs = [];
-    this.onChange = (func) => {
+    this.on = {};
+    this.on.change = (func) => {
       if ((typeof func) === 'function') {
         changeFuncs.push(func);
       }
@@ -722,7 +723,7 @@ class Snap2d extends Lookup {
     this.clearIdentifiedConstraints = clearIdentifiedConstraints;
 
     this.move = (center) => {
-      clearIdentifiedConstraints.subtle(2000);
+      clearIdentifiedConstraints.subtle('clearIdentifiedConstraints');
       let constraint = this.constraint();
       if (constraint.wall) {
         const snapCenter = constraint.wall.closestPointOnLine(center, true) ||

@@ -83,10 +83,15 @@ class Assembly3D extends Object3D {
       console.error(error);
     }
 
-    function updateOutline() {
-      new Jobs.CSG.Assembly.To2D.Outline(assembly).then(applyTopOutline, error).queue();
+    function updateOutline(force) {
+      if (force || assembly.hash()) {
+        new Jobs.CSG.Assembly.To2D.Outline(assembly).then(applyTopOutline, error).queue();
+      }
     }
-    assembly.on.change(() => assembly.hash() & updateOutline.lastCall(50));
+    function outlineNeedsUpdated (force) {
+      updateOutline.lastCall(instance.id(), 50, force);
+    }
+    assembly.on.change(outlineNeedsUpdated);
   }
 }
 

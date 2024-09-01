@@ -63,20 +63,6 @@ Test.add('Jobs.CSG.Assembly.Model base:layout(c)', async (ts, allAssemblies) => 
   .then(onComplete(ts, parts), onFail(ts)).queue();
 }, async () => get());
 
-Test.add('Jobs.CSG.Assembly.Join base-R:full', async (ts, allAssemblies) => {
-  const panel = allAssemblies.filter(a => a.partCode() === 'R:full')[0];
-  const parts = [panel];
-  new Jobs.CSG.Assembly.Join(parts).then(onComplete(ts, parts), onFail(ts)).queue();
-}, async () => get());
-
-Test.add('Jobs.CSG.Assembly.Intersection base:R:full&L:full', async (ts, allAssemblies) => {
-  const panelR = allAssemblies.filter(a => a.partCode() === 'R:full')[0];
-  const panelL = allAssemblies.filter(a => a.partCode() === 'L:full')[0];
-
-  const parts = [panelR, panelL];
-  new Jobs.CSG.Assembly.Intersection(parts).then(onComplete(ts, parts, true), onFail(ts)).queue();
-}, async () => get());
-
 Test.add('Jobs.CSG.Assembly.Model diagonal-corner-base:test-cabinet', async (ts, allAssemblies) => {
   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
   const parts = cabinet.getParts();

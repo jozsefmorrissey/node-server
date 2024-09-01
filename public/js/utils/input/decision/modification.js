@@ -261,9 +261,9 @@ function conditionalInputTree(node, props) {
   addTypeNode('number', [numberType], 'Number')
   addTypeNode('list', [listType], 'List')
 
-  tree.onChange(updateGroupList);
+  tree.on.change(updateGroupList);
 
-  tree.onSubmit(props.onSubmit);
+  tree.on.submit(props.onSubmit);
 
   return tree;
 }
@@ -285,7 +285,7 @@ const thenInput = (node) => {
 
   const props = {inputArray: andHandlerInput(node, [group])};
   const tree = new DecisionInputTree('Node', props);
-  tree.onSubmit((values, elem) => {
+  tree.on.submit((values, elem) => {
     const name = values.group;
     const newNode = node.then(name, values.payload);
     const treeCnt = du.find(`[tree-id='${node.tree().id()}']`);
@@ -431,7 +431,7 @@ function addObjectKeys(node, object, targetNode, conditions, path) {
 function objectConditionTree(values, node, input, props) {
   const tree = new DecisionInputTree(props.treeName, props);
   addObjectKeys(tree.root(), values, node);
-  tree.onSubmit((values) => createCondition(values, node, input));
+  tree.on.submit((values) => createCondition(values, node, input));
   return tree;
 }
 
@@ -488,7 +488,7 @@ ModDecisionTree.inputTree = function (node, noSubmission) {
 
 
 
-  tree.onSubmit(addInput);
+  tree.on.submit(addInput);
   tree.clone = () => DecisionInputTree.inputTree(node, noSubmission);
   tree.empty = () => {
     let empty = true;

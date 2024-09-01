@@ -56,8 +56,8 @@ function  renderCabinet() {
         applyExtraObjAndDisplay(target, csg);
       }).queue();
     } else {
-      new Jobs.CSG.Simple.Model([target]).then((csgs, job) => {
-        ThreeDModel.display(CSG.fromPolygons(csgs[0].polygons));
+      new Jobs.CSG.Simple.Model(target).then((csg, job) => {
+        ThreeDModel.display(csg);
       }).queue();
     }
   }
@@ -88,10 +88,10 @@ function  renderParts() {
   else if (_parts) parts = _parts;
   if (!parts || parts.length === 0) {
     resetAll();
-    parts = cabinet.getParts();
+    parts = cabinet.modelingCollections();
   }
-  new Jobs.CSG.Assembly.Join(parts, Canvas.explosionFactor()).then((modelInfo, job) => {
-    applyExtraObjAndDisplay(parts, modelInfo.unioned());
+  new Jobs.CSG.Assembly.Join(parts, Canvas.explosionFactor()).then((csg, job) => {
+    applyExtraObjAndDisplay(parts, csg);
   }).queue();
 }
 
@@ -150,21 +150,16 @@ const switchTo = (id) => {
   render();
 };
 
-modelDisplayManager.onSwitch(details => switchTo(details.to.id));
-
-const build = async (cabinet) => {
-  await ThreeDModel.build(cabinet || Global.cabinet());
-  render();
-}
+modelDisplayManager.on.switch(details => switchTo(details.to.id));
 
 du.on.match('enter', '*', () => {
-  render.lastCall();
+  render.lastCall('Render!');
 });
 
 setTimeout(() => modelDisplayManager.open(openTabId), 20);
 
 Canvas = {
-  render, build, hide, set, extraCsgObjects,
+  render, hide, set, extraCsgObjects,
   on: {switch: switchEvent.on}
 };
 module.exports = Canvas;

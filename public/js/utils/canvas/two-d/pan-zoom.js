@@ -28,12 +28,14 @@ class PanZoom {
       requestAnimationFrame(() => update(++nextUpdateId, true))
     };
 
-    this.onMove = this.on('move');
-    this.onTranslate = this.on('translated');
-    this.onZoom = this.on('zoom');
-    this.onClick = this.on('mousedown');
-    this.onMousedown = this.on('mousedown');
-    this.onMouseup = this.on('mouseup');
+    this.on = {
+      move: this.on('move'),
+      translate: this.on('translated'),
+      zoom: this.on('zoom'),
+      click: this.on('mousedown'),
+      mousedown: this.on('mousedown'),
+      mouseup: this.on('mouseup')
+    }
 
     function eventObject(eventName, event) {
       let x  =  mouse.rx;

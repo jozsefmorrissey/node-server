@@ -392,8 +392,20 @@ du.find.closest = function(selector, node) {
           found = maybe && maybe.distance < found.distance ? maybe : found;
         }
       }
-      if (visited.indexOf(currNode.parentNode) === -1) {
-        const maybe = recurse(currNode.parentNode, distance + 1);
+      const sibIndex = du.find.siblings.index(currNode);
+      const parent = currNode.parentNode;
+      for (let index = 0; index < parent.children.length; index += 1) {
+        const child = parent.children[index];
+        if (visited.indexOf(child) === -1) {
+          const dist = distance + Math.abs(sibIndex - index);
+          if (child.matches(selector)) {
+            maybe = {node:child, distance: dist};
+            found = maybe && maybe.distance < found.distance ? maybe : found;
+          }
+        }
+      }
+      if (visited.indexOf(parent) === -1) {
+        const maybe = recurse(parent, distance + sibIndex + 1);
         found = maybe && maybe.distance < found.distance ? maybe : found;
       }
       return found;
@@ -438,9 +450,17 @@ du.find.siblings = (selector, elem) => {
   const siblings = [];
   let currP = elem;
   let currN = elem;
-  while(currP = currP.previousElementSibling) siblings.push(currP);
-  while(currN = currN.nextElementSibling) siblings.push(currN);
+  while(currP = currP.previousElementSibling) currP.matches(selector) && siblings.push(currP);
+  siblings.reverse();
+  while(currN = currN.nextElementSibling) currN.matches(selector) && siblings.push(currN);
   return siblings;
+}
+
+du.find.siblings.index = (elem) => {
+  let index = 0;
+  let curr = elem;
+  while(curr = curr.previousElementSibling) index++;
+  return index;
 }
 
 du.find.relations = (selector, elem) => {
@@ -568,6 +588,16 @@ du.class.toggle = function(target, clazz) {
   if (du.class.has(target, clazz)) du.class.remove(target, clazz);
   else du.class.add(target, clazz);
 }
+
+
+du.class.oft = function(target, clazz, true_false_undefined) {
+  if (!(target instanceof HTMLElement)) return;
+  if (true_false_undefined === true) return du.class.add(target, clazz);
+  if (true_false_undefined === false) return du.class.remove(target, clazz);
+  if (true_false_undefined === undefined) return du.class.toggle(target, clazz);
+  return du.has(target, clazz);
+}
+
 let lastKeyId;
 let keyPressId = 0;
 function onKeycombo(event, func, args) {

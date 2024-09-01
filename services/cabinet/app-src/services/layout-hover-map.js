@@ -63,7 +63,7 @@ class LayoutHoverMap extends HoverMap2d {
     this.update = () => construct();
 
     construct();
-    layout.onChange(construct);
+    layout.on.change(construct);
   }
 }
 

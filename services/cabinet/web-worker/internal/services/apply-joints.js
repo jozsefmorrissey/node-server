@@ -70,7 +70,9 @@ function removeJointMaterial(map, assem, env, model, intersections) {
       malesModel = malesModel.union(mm);
   });
   try {
-    env.modelInfo.joined[id] = model.subtract(malesModel);
+    if (model.polygons.length > 0) {
+      env.modelInfo.joined[id] = model.subtract(malesModel);
+    }
   } catch (e) {
     console.warn(e);
   }
@@ -139,8 +141,10 @@ function applyCutters(assem, cutters, env, group) {
       env.jointMap.female[assem.id].push(jointId);
       env.modelInfo.intersection[id] ||= {};
       try {
-        env.modelInfo.intersection[id][cutterId] = model.intersect(cutter);
-        model = model.subtract(cutter);
+        if (model.polygons.length > 0) {
+          env.modelInfo.intersection[id][cutterId] = model.intersect(cutter);
+          model = model.subtract(cutter);
+        }
       } catch (e) {
         console.error('Need to find the root cause of this issue');
         console.error(e);
@@ -150,7 +154,6 @@ function applyCutters(assem, cutters, env, group) {
   return model;
 }
 
-// TODO: model extension is messing up for base corner diagonal
 function buildExtendedModel(assem, joints, env) {
   const id = assem.id;
   let model = env.getModel(id, 'extended');
@@ -168,7 +171,6 @@ function buildExtendedModel(assem, joints, env) {
   }
 
   try {
-    const cropPoly = new BiPolygon(front.resize(big, big, true), back.resize(big, big, true));
     const cutters = {cookie: [], joint: []};
     const modelCenter = new Vertex3D(env.getModel(id, 'model').center());
     for (let ji = 0; ji < joints.length; ji++) {

@@ -31,6 +31,7 @@ function BuildModels(payload, environment, taskId) {
         environment.modelInfo.model[assembly.id] = model;
         environment.modelInfo.biPolygonArray[assembly.id] = biPolygonArray
       } catch (e) {
+        console.error(e);
         if (callAgain) BuildModels(payload, environment, taskId);
         return new Error(`Failed to Create Model For:\n\t${assembly.locationCode}`)
       }

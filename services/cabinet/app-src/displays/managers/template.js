@@ -695,30 +695,8 @@ const dividerJointChange = (template) => (vals) => {
 }
 const dividerJointInput = (template) =>
   getJointInputTree(dividerJointChange(template), template.dividerJoint(), true).html();
-function getJointInputTree(func, joint, dividerJoint) {
-  joint.type ||= 'Butt';
-  const selectType = new Select({
-    name: '_TYPE',
-    list: Object.keys(Joint.types),
-    class: 'template-select',
-    value: joint.constructor.name
-  });
-
-  let depthInput = new Input({
-    label: 'Depth',
-    name: 'maleOffset',
-    value: joint.maleOffset
-  });
-
-  depthInput = dividerJoint ? [depthInput] : [depthInput];
-
-  const dit = new DecisionInputTree('Type', {inputArray: [selectType]}, {noSubmission: true});
-  const type = dit.root();
-  type.then('depth', {inputArray: depthInput});
-  const cond = DecisionInputTree.getCondition('_TYPE', 'Dado');
-  type.conditions.add(cond, 'depth');
-  dit.onChange(func);
-  return dit;
+function getJointInputTree(onChange, joint) {
+  return Inputs('joint', {onChange, joint});
 }
 
 const containers = {
@@ -867,7 +845,8 @@ class TemplateManager extends Lookup {
         }
       }
 
-      ThreeDModel.onRenderObjectUpdate(updateShapeSketches);
+      // ThreeDModel.on.renderObjectUpdate(updateShapeSketches);
+      console.warn('sketch-update needs fixed');
       Canvas.render();
     }
 
@@ -896,7 +875,7 @@ class TemplateManager extends Lookup {
       type: 'sidebar'
     };
     let expandList;
-    Global.displays.main().onSwitch((changeInfo) => {
+    Global.displays.main().on.switch((changeInfo) => {
       if (changeInfo.to.id === 'template-manager') {
         expandList = new ExpandableList(expListProps);
       }
@@ -938,7 +917,7 @@ function calcIndexUpdate(elem) {
   allInputs.forEach(i => i.disabled = false);
   targetInputs.forEach(i => i.disabled = true);
   ExpandableList.get(elem).normalInfo.calc = Number.parseInt(row.getAttribute('index'));
-  validateVectors.lastCall(5000, elem);
+  // validateVectors.lastCall(5000, elem);
 }
 du.on.match('change', '.calc-vect-radio', calcIndexUpdate);
 
@@ -1242,7 +1221,7 @@ du.on.match('keydown:change', '.template-input', function (elem) {
   updateTemplate(elem, template);
 });
 
-du.on.match('enter', '*',  (elem) => validateOpenTemplate.lastCall(elem));
+du.on.match('enter', '*',  (elem) => validateOpenTemplate.lastCall('validateOpenTemplate', elem));
 du.on.match('focusout', ".vector-normal-cnt", setVectorValues);
 du.on.match('change', '.subassem-normal-cnt>[type="radio"]', setVectorValues);
 

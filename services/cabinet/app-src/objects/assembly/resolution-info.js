@@ -18,7 +18,7 @@ class ResolutionInformation {
       }
       return evaluation;
     }
-    this.valid = () => Number.isFinite(this.evaluation());
+    this.valid = () => value !== undefined;
   }
 }
 

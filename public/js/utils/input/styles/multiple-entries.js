@@ -68,7 +68,7 @@ class MultipleEntries extends Input {
         if (props.list[index].on) {
           props.list[index].on('change', this.validation);
         } else {
-          props.list[index].onChange(this.validation);
+          props.list[index].on.change(this.validation);
         }
       }
       return props.list[index];

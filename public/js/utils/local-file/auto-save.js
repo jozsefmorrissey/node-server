@@ -19,35 +19,28 @@ class AutoSave {
     this.name = () => name;
     this.directoryName = () => rootDirectoryHelper.name();
     this.rootDirectoryHelper = () => rootDirectoryHelper;
-    this.onInit = async (func) => {
+    CustomEvent.all(this, 'saved', 'saving', 'read', 'reading')
+    this.on.init = async (func) => {
       if (promise) await promise;
       if ((typeof func) === 'function') func();
     }
     this.directory = async () => rootDirectoryHelper.getDirectory(name, true);
 
     const instance = this;
-    const savedEvent = new CustomEvent('saved');
-    const savingEvent = new CustomEvent('saving');
-    const readEvent = new CustomEvent('read');
-    const readingEvent = new CustomEvent('reading');
     let maxLen = 10000;
     let readerWriter = new JsonReaderWriter();
 
     this.isOn = () => autoSaveOn === true;
-    this.onSaved = savedEvent.on;
-    this.onSaving = savingEvent.on;
-    this.onRead = readEvent.on;
-    this.onReading = readingEvent.on;
     this.maxLen = (val) => readerWriter.maxLen(val);
 
     this.save = async function () {
-      await this.onInit();
+      await this.on.init();
       if (!hasRead) throw new Error('Must attempt to read file before saving');
       const data = contentFunc(this.name(), this);
       if (readerWriter.changesMade(data, await this.directory())) {
-        savingEvent.trigger();
+        this.trigger.saving();
         if (await readerWriter.write(data, await this.directory())) {
-          savedEvent.trigger();
+          this.trigger.saved();
           return true;
         }
       }
@@ -56,7 +49,7 @@ class AutoSave {
 
     let hasRead = false;
     async function read() {
-      await this.onInit();
+      await this.on.init();
       const data = await readerWriter.read(await this.directory());
       hasRead = true;
 

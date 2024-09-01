@@ -8,13 +8,13 @@ POP_UP.history = [];
 function PopUp() {
   function onOpen(id, func) {
     if ((typeof func) === 'function' || (typeof func === 'string')) {
-      POP_UP.byId[id].onOpen.push(func);
+      POP_UP.byId[id].on.open.push(func);
     }
   }
 
   function onClose(id, func) {
     if ((typeof func) === 'function' || (typeof func === 'string')) {
-      POP_UP.byId[id].onClose.push(func);
+      POP_UP.byId[id].on.close.push(func);
     }
   }
 
@@ -43,8 +43,8 @@ function PopUp() {
         removeFromHistory(id);
       }
       const haze = POP_UP.byId[id].haze;
-      if ((POP_UP.byId[id].onClose) === 'function') {
-        POP_UP.byId[id].onClose(id);
+      if ((POP_UP.byId[id].on.close) === 'function') {
+        POP_UP.byId[id].on.close(id);
       }
       haze.style.display = 'none';
       POP_UP.byId[id].open = 0;
@@ -56,7 +56,7 @@ function PopUp() {
 
   function open(id) {
     closeAll(true);
-    runFuncs(id, POP_UP.byId[id].onOpen);
+    runFuncs(id, POP_UP.byId[id].on.open);
     document.querySelector('#' + id + '-haze').style.display = 'block';
     POP_UP.byId[id].open = new Date().getTime();
   }
@@ -92,9 +92,9 @@ function PopUp() {
     }
 
     document.body.append(haze);
-    POP_UP.byId[id] = { haze, onOpen: [], onClose: [] };
-    onOpen && POP_UP.byId[id].onOpen.push(onOpen);
-    onClose && POP_UP.byId[id].onClose.push(onClose);
+    POP_UP.byId[id] = { haze, on.{open: [], close: []}};
+    onOpen && POP_UP.byId[id].on.open.push(onOpen);
+    onClose && POP_UP.byId[id].on.close.push(onClose);
     return haze;
   }
 
@@ -107,7 +107,7 @@ function PopUp() {
 
     for (let index = 0; index < POP_UP.pending.length; index += 1) {
       const pu = POP_UP.pending[index];
-      buildPopUp(pu.id, pu.onOpen, pu.onClose);
+      buildPopUp(pu.id, pu.on.open, pu.on.close);
     }
   }
 
@@ -149,8 +149,10 @@ function PopUp() {
   POP_UP.create = create;
   POP_UP.open = open;
   POP_UP.close = close;
-  POP_UP.onOpen = onOpen;
-  POP_UP.onClose = onClose;
+  POP_UP.on = {
+    open: onOpen,
+    close: onClose
+  };
   POP_UP.closeAll = closeAll;
   window.addEventListener('load', onLoad);
 

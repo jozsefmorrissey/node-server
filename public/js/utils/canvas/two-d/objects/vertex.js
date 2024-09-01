@@ -84,7 +84,7 @@ class Vertex2d {
     }
 
 
-    this.toString = (percision) => `${Math.roundTo(this.x, percision)}, ${Math.roundTo(this.y, percision)})`;
+    this.toString = (percision) => `(${Math.roundTo(this.x, percision)}, ${Math.roundTo(this.y, percision)})`;
     const parentToJson = this.toJson;
 
     this.offset = (x, y) => {

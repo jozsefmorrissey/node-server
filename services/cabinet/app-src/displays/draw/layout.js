@@ -74,33 +74,39 @@ class DrawLayout extends Draw {
       ctx.stroke();
     }
 
+    function linearDoor(ctx, sp, ep, door, pocket) {
+      ctx.moveTo(sp.x, sp.y);
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = hovering() === door ? 'green' : 'white';
+      ctx.lineTo(ep.x, ep.y);
+      ctx.stroke();
+      if (pocket) draw.line(new Line2d(sp, ep), null, 1, true);
+    }
+
     function doorDrawingFunc(door) {
       const ctx = CTX();
-      const startpointLeft = door[0];
-      const startpointRight = door[1];
       ctx.beginPath();
       ctx.strokeStyle = hovering() === door ? 'green' : 'black';
       const hinge = door.hinge();
 
-      if (hinge === 4) {
-        ctx.moveTo(startpointLeft.x, startpointLeft.y);
-        ctx.lineWidth = 8;
-        ctx.strokeStyle = hovering() === door ? 'green' : 'white';
-        ctx.lineTo(startpointRight.x, startpointRight.y);
-        ctx.stroke();
-      } else {
+
+
+      if (hinge === 4) linearDoor(ctx, door[0], door[1], door);
+      else if (hinge === 5) linearDoor(ctx, door[0], door[1], door, true);
+      else if (hinge === 6) linearDoor(ctx, door[1], door[0], door, true);
+      else {
         const offset = Math.PI * hinge / 2;
         const initialAngle = (door.wall().radians() + offset) % (2 * Math.PI);
         const endAngle = initialAngle + (Math.PI / 2);
 
         if (hinge === 0 || hinge === 3) {
-          ctx.moveTo(startpointRight.x, startpointRight.y);
-          ctx.arc(startpointRight.x, startpointRight.y, door.width(), initialAngle, endAngle, false);
-          ctx.lineTo(startpointRight.x, startpointRight.y);
+          ctx.moveTo(door[1].x, door[1].y);
+          ctx.arc(door[1].x, door[1].y, door.width(), initialAngle, endAngle, false);
+          ctx.lineTo(door[1].x, door[1].y);
         } else {
-          ctx.moveTo(startpointLeft.x, startpointLeft.y);
-          ctx.arc(startpointLeft.x, startpointLeft.y, door.width(), endAngle, initialAngle, true);
-          ctx.lineTo(startpointLeft.x, startpointLeft.y);
+          ctx.moveTo(door[0].x, door[0].y);
+          ctx.arc(door[0].x, door[0].y, door.width(), endAngle, initialAngle, true);
+          ctx.lineTo(door[0].x, door[0].y);
         }
 
         ctx.fillStyle = 'white';

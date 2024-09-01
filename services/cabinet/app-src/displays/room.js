@@ -67,8 +67,6 @@ class RoomDisplay extends Lookup {
       du.find(parentSelector).setAttribute('order-id', this.order().id());
       getExpandList();
     }
-    // this.setHtml();
-    // Global.onChange.room(this.setHtml);
 
     this.html = () =>
       getExpandList().html();

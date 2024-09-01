@@ -132,7 +132,7 @@ class Assembly extends KeyValue {
       }
       if (hashVal !== lastHash) {
         lastHash = hashVal;
-        changeEvent.trigger.lastCall(20, instance);
+        changeEvent.trigger.lastCall(instance.id() + 'Hash', 20, instance);
         return hash();
       }
       return hashVal;
@@ -311,6 +311,28 @@ class Assembly extends KeyValue {
 
 
     this.getAssembly = new FunctionCache(getAssembly, this, 'alwaysOn');
+    this.getAssemblies = (partCodeOlocationCodeOassemblyOregexOfunc) => {
+      const assemblies = this.allAssemblies();
+      const matches = [];
+      for (let index = 0; index < assemblies.length; index++) {
+        const assem = assemblies[index];
+        if (assem.match && assem.match(partCodeOlocationCodeOassemblyOregexOfunc))
+          matches.push(assem);
+      }
+      matches.sortByAttr('partCode');
+      return matches;
+    }
+
+    this.match = (partCodeOlocationCodeOassemblyOregexOfunc) => {
+      let pclcarf = partCodeOlocationCodeOassemblyOregexOfunc;
+      if (pclcarf instanceof Function) return pclcarf(this) === true;
+      if ((typeof pclcarf) === 'string') pclcarf = new RegExp(`^${pclcarf}(:.*|)$`);
+      if (pclcarf instanceof RegExp) {
+        return null !== (this.partCode().match(pclcarf) || this.locationCode().match(pclcarf));
+      }
+      return this === pclcarf;
+    }
+
     let position = new Position(this, sme, config);
     this.config = position.configuration;
 
@@ -388,6 +410,7 @@ class Assembly extends KeyValue {
       return allJoints;
     };
 
+    this.undefinedPartCode = (partCode, requireIndex) => this.subassemblies.undefinedKey(partCode, '-', requireIndex);
     this.dependencyMap = (assems) => {
       assems ||= this.allAssemblies();
       const allJs = this.getRoot().getAllDependencies();
@@ -398,12 +421,12 @@ class Assembly extends KeyValue {
         if (!joint.apply()) continue;
 
         const jid = joint.id();
+        if (joint.locationId() === 'voidJoint') {
+          console.log('her');
+        }
         for (let ai = 0; ai < assems.length; ai++) {
           const assem = assems[ai];
           if (!(assem instanceof Assembly)) continue;
-          if ((assem.partCode() === 'T' || assem.partCode() === 'R') && joint.descriptor() === 'Dado:T->R') {
-            console.log('her')
-          }
           const aid = assem.id();
           if (jMap[jid] === undefined) jMap[jid] = {male: [], female: []};
           if (joint.dependsOn(assem)) {
@@ -464,6 +487,7 @@ class Assembly extends KeyValue {
     this.addSubAssembly = (assembly) => {
       assembly.parentAssembly(this);
       this.subassemblies[assembly.partCode()] = assembly;
+      this.addDependencies(new Dependency(this, assembly, null, 'parent'));
     }
 
     const namedDependencies = {};
@@ -473,7 +497,6 @@ class Assembly extends KeyValue {
         if (joint.evaluator) joint.evaluator(this.eval);
         if (joint instanceof Dependency) {
           const locId = joint.locationId();
-          const pc = this.locationCode();
           if (locId) namedDependencies[locId] = joint.clone();
           else this.joints.push(joint.clone());
         }

@@ -103,8 +103,8 @@ class Divider extends Assembly {
       }
       const active = instance.hasFrame() ? [frame] : [];
       switch (type) {
-        case 'front': return parts.slice(1,3).concat(active);
-        case 'back': return parts.slice(3,5).concat(active);
+        case 'front': return parts.slice(1,2).concat(active);
+        case 'back': return parts.slice(2,3).concat(active);
         case 'frontAndBack': return parts.slice(1).concat(active);
         case 'none': return active;
         default: return parts.slice(0,1).concat(active);

@@ -169,8 +169,13 @@ Vertex3D.direction = (vertList1, vertList2, tolerance, axisOnly) => {
   }
 }
 
-Vertex3D.uniqueFilter = () => {
-  const map = new ToleranceMap({x: tol, y: tol, z: tol});
+Vertex3D.ToleranceMap = (tolerance) => {
+  tolerance ||= tol;
+  return new ToleranceMap({x: tolerance, y: tolerance, z: tolerance});
+}
+
+Vertex3D.uniqueFilter = (tolerance) => {
+  const map = Vertex3D.ToleranceMap(tolerance);
   return (vert) => {
     if (!(vert instanceof Vertex3D)) return false;
     if (map.matches(vert).length > 0) return false;
@@ -210,8 +215,8 @@ Vertex3D.radialSort2D = (verts, viewFrom, ccw, center, degreesOstartpoint) => {
   center ||= Vertex3D.center(verts);
   const mi = Vertex3D.mostInformation(verts);
   viewFrom ||= mi.viewFrom;
-  center = center.viewFromVector(viewFrom).to2D(mi.x,mi.y);
-  verts.forEach(v => verts2D.push(v.viewFromVector(viewFrom).to2D(mi.x, mi.y)) & (verts2D[verts2D.length - 1].V3D = v));
+  center = center.viewFromVector(viewFrom).to2D(mi[0],mi[1]);
+  verts.forEach(v => verts2D.push(v.viewFromVector(viewFrom).to2D(mi[0], mi[1])) & (verts2D[verts2D.length - 1].V3D = v));
   Line2d.radialSort(verts2D, ccw, center, degreesOstartpoint);
   return verts.copy(verts2D.map(v => v.V3D));
 }
@@ -267,7 +272,7 @@ Vertex3D.vectorSorter = (vector, center) => {
       if (dotDiff !== 0) return dotDiff;
       if (vect1.equals(vect2)) return 0;
     }
-    return vect1.positive() ? -1 : 1;
+    return vect1.sameDirection(vector) ? 1 : -1;
   }
   return sorter;
 }
@@ -307,33 +312,33 @@ Vertex3D.mostInformation = (vertices) => {
   return mi;
 }
 
-class SimpleVertex3D {
-  constructor(x, y, z) {
-    if (x instanceof Vertex3D) return x;
-    if (x instanceof Vector3D) {
-      this.x = x.i();
-      this.y = x.j();
-      this.z = x.k();
-    } else if (x === undefined) {
-      this.x = 0;
-      this.y = 0;
-      this.z = 0;
-    } else if (arguments.length == 3) {
-      this.x = x;
-      this.y = y;
-      this.z = z;
-    } else if ('x' in x) {
-      this.x = x.x;
-      this.y = x.y;
-      this.z = x.z;
-    } else {
-      this.x = x[0];
-      this.y = x[1];
-      this.z = x[2];
-    }
-  }
+Vertex3D.fromLimits = (limits) => {
+  const x = limits.x; const xn = limits['-x'];
+  const y = limits.y; const yn = limits['-y'];
+  const z = limits.z; const zn = limits['-z'];
+  return [
+    new Vertex3D(x,y,z),new Vertex3D(xn,y,z),
+    new Vertex3D(x,yn,z),new Vertex3D(x,y,zn),
+    new Vertex3D(xn,yn,z),new Vertex3D(x,yn,zn),
+    new Vertex3D(xn,y,zn),new Vertex3D(xn,yn,zn),
+  ]
 }
 
-Vertex3D.Simple = SimpleVertex3D;
+Vertex3D.magnitudeVector = (unitVector, vertices, center) => {
+  center ||= Vertex3D.center(vertices);
+  let magnitude = new Vector3D(0,0,0);
+  vertices.forEach(v => {
+    const dirVector = new Vector3D(v.minus(center));
+    const positive = unitVector.dot(dirVector);
+    if (positive > 0) {
+      const vector = unitVector.scale(positive);
+      if (vector.magnitude() > magnitude.magnitude()) {
+        magnitude = vector;
+      }
+    }
+  });
+  return magnitude;
+}
+
 Object.class.register(Vertex3D, 'x', 'y', 'z');
 module.exports = Vertex3D;

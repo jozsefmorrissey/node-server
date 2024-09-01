@@ -14,6 +14,7 @@ function isDefined(...values) {
   }
   return true;
 }
+const infinity = 1000000000;
 
 class Plane extends Array {
   constructor(...points) {
@@ -40,7 +41,9 @@ class Plane extends Array {
       return -1;
     }
 
-    this.points = () => this.length > 2 ? this : generateEquationPoints(3);
+    this.points = () => this.length > 2 ? Array.from(this) : generateEquationPoints(3);
+
+    this.center = () => Vertex3D.center(this.points());
 
     this.equivalent = (other) => {
       if (!(other instanceof Plane)) return false;
@@ -157,7 +160,6 @@ class Plane extends Array {
     this.z.concrete = (x, y) => concreat('z', x, y);
 
 
-    const infinity = 1000000000;
     const isZero = (val) => withinTol(val, 0);
     const nanIt = (val) => val > infinity || val < -infinity ? NaN : val;
     this.axisIntercepts = () => {
@@ -245,9 +247,10 @@ class Plane extends Array {
       return pts;
     }
 
-    function generateAxisPoints(count, radius) {
+    function generateAxisPoints(count, radius, center) {
       radius ||= 100;
-      const point = instance.point();
+      if(radius < 0) radius = infinity/2;
+      const point = center || instance.center();
       const normals = instance.normals();
       let vects = [axis.y, axis.x, axis.y.inverse(), axis.x.inverse()];
       while (vects.length < count) {
@@ -259,11 +262,12 @@ class Plane extends Array {
 
 
       const points = vects.map(v => point.translate(v.scale(radius), true));
+      Vertex3D.radialSort2D(points, normals.z, true);
       return points;
     }
 
-    this.findPoints = (count, radius) => {
-      return generateAxisPoints(count, radius);
+    this.findPoints = (count, radius, center) => {
+      return generateAxisPoints(count, radius, center);
     }
 
     this.within = (vertex) => {
@@ -363,27 +367,21 @@ class Plane extends Array {
     }
 
     this.intersection = (other) => {
-      if(this.equivalent(other)) return this;
+      if(this.equals(other)) return this;
       if (other instanceof Line3D) return this.intersection.line(other);
+      if (this.normal().parrelle(other.normal())) return null;
       let pointInfo;
-      const points = Array.from(other.findPoints(4));
+      const points = Array.from(other.findPoints(3));
       const lines = points.map((p,i) => new Line3D(points[0], points[i]));
       for (let index = 1; index < lines.length; index++) {
-        if (Number.isNaN(this.connect.line(lines[index])[0].x)) {
-          console.log('booboo')
-        }
         const connection = this.connect.line(lines[index]);
-        if (connection) {
-          const dist = connection.length();
-          const point = connection[1];
-          if (!pointInfo || dist < pointInfo.dist)
-            pointInfo = {point, dist};
+        if (connection && !pointInfo || pointInfo.dist < connection.length()) {
+          pointInfo = {point: connection[0], dist: connection.length()};
         }
       }
       if (!pointInfo) return null;
-      const point = pointInfo.point;
       const vector = this.normal().crossProduct(other.normal()).unit();
-      const line = point instanceof Line3D ? point : Line3D.startAndVector(point, vector);
+      const line = Line3D.startAndVector(pointInfo.point, vector);
       line.adjustLength(1000);
       return line;
     };
@@ -404,15 +402,19 @@ class Plane extends Array {
       return new Line3D(startOnPlane, endOnPlane).connect.line.segment(line, true);
     }
 
+    let testV;
+    const notOisInfinity = (v1,v2) => (Math.abs(v1) > infinity && Math.abs(v2) > infinity) ||
+                                      (Math.abs(v1) < infinity && Math.abs(v2) < infinity);
+    const testVert = (v, x, y, z) => (testV = this[x](v[y], v[z])) &&
+                                  notOisInfinity(v[x], testV[x]);
     this.equals = (other) => {
       if (!Array.isArray(other) || this.length !== other.length) return false;
-      const startIndex = this.indexOf(other[0]);
-      if (startIndex === -1) return false;
-      for (let index = startIndex; index < this.length + startIndex; index++) {
-        const i = Math.mod(index, this.length);
-        if (!this[i].equals(other[i])) return false;
-      }
-      return true;
+      const overt = other[0];
+      const tvert = this.x(overt.y, overt.x);
+      const withinPlane = testVert('x', 'y', 'z') &&
+                          testVert('y', 'x', 'z') &&
+                          testVert('z', 'x', 'y');
+      return withinPlane;
     }
 
     this.toDrawString = (color, includeNormal, radius, points) => {
@@ -490,6 +492,26 @@ Plane.fromPointNormal = (point, normal) => {
   const point2 = get(127,43);
   const point3 = get(107,563);
   return new Plane(point1, point2, point3);
+}
+
+Plane.intersections = (...planes) => {
+  const info = a = Array.fill(planes.length, () => ({lines: [], planes: []}));
+  for (let i = 0; i < planes.length; i++) {
+    for (let j = i + 1; j < planes.length; j++) {
+      const line = planes[i].intersection(planes[j]);
+      if (line) {
+        if (line instanceof Line3D) {
+          const nearest = line.connect(planes[i].center())[0];
+          line.centerOn(nearest);
+          line.length(infinity);
+          info[i].lines.push(line) & info[j].lines.push(line);
+          info[i].planes.push(planes[j]) & info[j].planes.push(planes[i]);
+        } else
+          console.warn('this is not a line', line);
+      }
+    }
+  }
+  return info;
 }
 
 Object.class.register(Plane);

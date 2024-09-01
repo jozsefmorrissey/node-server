@@ -39,14 +39,7 @@ class Layout2D extends Lookup {
     const vertexMap = {};
     // Array.isArray(wallJson) && wallJson.forEach((wallJson) => walls.push(Wall2D.fromJson(wallJson, this, vertexMap)));
     let history;
-    const addEvent = new CustomEvent('add');
-    const removeEvent = new CustomEvent('remove');
-    const stateChangeEvent = new CustomEvent('stateChange');
-    const changeEvent = new CustomEvent('change');
-    this.onAdd = addEvent.on;
-    this.onChange = changeEvent.on;
-    this.onRemove = removeEvent.on;
-    this.onStateChange = stateChangeEvent.on;
+    CustomEvent.all(this, 'add', 'remove', 'stateChange', 'change');
 
     Object.getSet(this, {walls, _FORCE_FROM_JSON: true});
     const initialized = walls.length > 0;
@@ -66,7 +59,7 @@ class Layout2D extends Lookup {
       for(let index = 0; index < objects.length; index++) {
         hash *= objects[index].hash();
       }
-      if (lastHash !== hash) changeEvent.trigger(this);
+      if (lastHash !== hash) this.trigger.change(this);
       lastHash = hash;
       return hash;
     }
@@ -247,42 +240,6 @@ class Layout2D extends Lookup {
       }
     }
 
-    // this.addObject = (id, payload, name) => {
-    //   const obj = Object3D.new(payload, this);
-    //   obj.id(id);
-    //   if (obj.center().equals(0,0,0)) {
-    //     const center = Vertex2d.center.apply(null, this.vertices())
-    //     obj.bridge.top().center(center);
-    //     obj.bridge.top().fromFloor(0);
-    //   }
-    //   this.objects().push(obj);
-    //   // history.newState();
-    //   addEvent.trigger(undefined, payload);
-    //   return obj;
-    // }
-
-    // this.removeObject = (obj) => {
-    //   for (index = 0; index < this.objects().length; index += 1) {
-    //     if (this.objects()[index] === obj) {
-    //       const obj = this.objects().splice(index, 1);
-    //       removeEvent.trigger(undefined, obj.payload());
-    //       return obj;
-    //     }
-    //   }
-    //   return null;
-    // }
-
-    // this.removeByPayload = (payload) => {
-    //   for (index = 0; index < this.objects().length; index += 1) {
-    //     if (this.objects()[index].assembly() === payload) {
-    //       const obj = this.objects().splice(index, 1);
-    //       removeEvent.trigger(undefined, payload);
-    //       return obj;
-    //     }
-    //   }
-    //   return null;
-    // }
-
     this.idMap = () => {
       const idMap = {};
       const walls = this.walls();
@@ -412,23 +369,6 @@ class Layout2D extends Lookup {
       const vertMap = {};
       const newWalls = json.walls.map(wall => Wall2D.fromJson(wall, this, vertMap));
       const wallCompare = Array.diff(origWalls, newWalls, true);
-
-      // const origObjects = this.objects();
-      // const newObjects = Object.fromJson(json.objects);
-      // const objCompare = Array.diff(origObjects, newObjects, true);
-
-      // if (objCompare || wallCompare) {
-      //   const detail = {objects: {added: [], removed: []}, walls: {added: [], removed: []}};
-      //   if (objCompare) {
-      //     detail.objects.added = filterCompare(objCompare.added);
-      //     detail.objects.removed = filterCompare(objCompare.removed);
-      //   }
-      //   if (wallCompare) {
-      //     detail.walls.added = wallCompare.added;
-      //     detail.walls.removed = wallCompare.removed;
-      //   }
-      //   stateChangeEvent.trigger(undefined, detail);
-      // }
     }
 
     function inRange(min1, max1, min2, max2) {
@@ -493,39 +433,6 @@ class Layout2D extends Lookup {
                                 .concat([Line2d.toDrawString(this.walls())]).join('\n');
   }
 }
-
-// Needs to be internal!!!!
-// Layout2D.fromJson = (json) => {
-//   throw new Error('do something else')
-//   const walls = [];
-//   const layout = new Layout2D(json.walls);
-//   layout.id(json.id);
-//
-//   const objects = [];
-//   json.objects.forEach((o) => {
-//     const center = Vertex2d.fromJson(o.center);
-//     let obj = Object3D.get(o.id);
-//     if (obj === undefined) {
-//       obj = new Object3D(layout);
-//       obj.fromJson(o);
-//     } else obj.fromJson(o);
-//     objects.push(obj);
-//   });
-//   layout.objects(objects);
-//   json.snapLocations.forEach((snapLocJson) => {
-//     const view = snapLocJson.view;
-//     const obj1 = Lookup.get(snapLocJson[0].objectId);
-//     const obj2 = Lookup.get(snapLocJson[1].objectId);
-//     const snapLoc1 = obj1[view]().position[snapLocJson[0].location]();
-//     const snapLoc2 = obj2[view]().position[snapLocJson[1].location]();
-//     snapLoc2.pairWith(snapLoc1);
-//   });
-//
-//   return layout;
-// }
-
-const layoutStateChangeEvent = new CustomEvent('layoutStateChange');
-Layout2D.onStateChange = layoutStateChangeEvent.on;
 
 new Layout2D();
 module.exports = Layout2D;

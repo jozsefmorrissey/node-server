@@ -31,6 +31,9 @@ class Input extends Lookup {
     super(id);
     props.hidden = props.hide || false;
     props.list = props.list || [];
+    if (props.optional === false) {
+      console.log('her');
+    }
     props.optional = props.optional === undefined ? false : props.optional;
     Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'placeholder',
                             'class', 'list', 'value', 'inline');
@@ -154,6 +157,7 @@ class Input extends Lookup {
       this.validate();
       return valid;
     }
+    this.disabled = () => !!props.disabled;
 
     this.editHtml = () => this.constructor.editHtml(this);
     this.validation = function(val) {
