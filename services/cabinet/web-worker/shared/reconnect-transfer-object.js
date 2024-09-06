@@ -83,7 +83,8 @@ function reconnectDtos(dtos, idMap) {
   if ((typeof dtos) === 'string') dtos = idMap[dtos];
   if (!dtos) return dtos;
   if (dtos instanceof ReconnectedMDTO) return dtos;
-  return reconnected(dtos, idMap || {});
+  idMap ||= {};
+  return reconnected(dtos, idMap);
 }
 
 module.exports = reconnectDtos;

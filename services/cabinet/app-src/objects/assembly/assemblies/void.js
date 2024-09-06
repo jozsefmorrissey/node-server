@@ -68,6 +68,7 @@ class Void extends Cutter {
 
     const included = (index) => () => this.includedSides()[index];
     const vectorDirections = (index) => () => {
+      if (!this.parentAssembly() || !this.parentAssembly().parentAssembly()) return [];
       const panel = panels[index];
       if (!panel.included()) return;
       const included = panels.filter(p => p.included() && p !== panel);
@@ -85,6 +86,7 @@ class Void extends Cutter {
                     (p.jointSettings.directions.vectors = vectorDirections(i)));
 
     const controlableAbyss = new Cutter(`:abs`, `Abyss`);
+    controlableAbyss.jointSettings.noDependencies(false);
     this.addSubAssembly(controlableAbyss);
     const allPanelsReg = new RegExp(`^${this.locationCode()}:(?!abs).*`);
     const nonVoidReg = new RegExp(/^((?!void).)*$/);
@@ -151,6 +153,10 @@ Void.fromJson = (json) => {
   voId.capMale(json.capMale);
   voId.maleSet(json.maleSet);
   voId.includedSides(json.includedSides);
+  voId.bodyJoint(Object.fromJson(json.bodyJoint));
+  voId.capJoint(Object.fromJson(json.capJoint));
+  voId.voidPanelJoint(Object.fromJson(json.voidPanelJoint));
+  voId.nonVoidJoint(Object.fromJson(json.nonVoidJoint));
   return voId;
 }
 
@@ -164,6 +170,7 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
       switch (refPartCode) {
         case 'c_BACK':
           o.r.x = ' + 90';
+          o.c.z = ' + w/2'
           o.d.z = `${refPartCode}.d.y - 3*2.54/2`;
           includedSides = [false, false, true, true, false, true];
           capSet = 0; capMale = true; maleSet = 0;
@@ -194,6 +201,7 @@ Void.referenceConfig = (type, refPartCode, width, height) => {
         case 'c_BACK':
           o.r.y = ' + 90';
           o.c.y = ` - ${refPartCode}.d.y/2 + d.y/2 + 3*2.54/4`;
+          o.c.z = ' + w/2'
           o.d.z = `${refPartCode}.d.x - 3*2.54/4`;
           includedSides = [false, false, true, false, false, true];
           capSet = 0; capMale = true; maleSet = 0;

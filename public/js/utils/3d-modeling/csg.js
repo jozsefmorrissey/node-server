@@ -60,10 +60,10 @@ CSG = function() {
   this.toDrawString = (color, percision) => color ?
       this.toString(percision).replace(/(^|\n)\[/g, `$1${color}[`) :
       this.toString(percision, true).replace(/(^|\n)\[/g, `$1${'blue'}[`);
-  this.vertices = () => {
+  this.vertices = (percision) => {
     const verts = [];
     this.polygons.forEach(p => p.vertices.forEach(v => verts.push(v)));
-    return verts;
+    return verts.unique(o => o.toString(percision || .0001));
   }
   //TODO: USE TOLERANCE MAP FOR 2N RUNTIME!!!;
   this.sharesVertex = function (other) {
@@ -435,6 +435,11 @@ CSG.prototype = {
     const y = ((endpoints.y + endpoints['-y']) / 2);
     const z = ((endpoints.z + endpoints['-z']) / 2);
     return {x,y,z};
+  },
+  mean: function () {
+    const vertices = this.vertices();
+    const mean = Math.mean(vertices, ['pos.x', 'pos.y', 'pos.z']);
+    return mean.pos;
   },
 
   demensions: function () {

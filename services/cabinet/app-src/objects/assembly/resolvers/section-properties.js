@@ -5,7 +5,7 @@ const openingReg = /^OP.((i|o|inner|outer)\.|)(c|n|d|center|normal|demension)\.(
 class SectionPropertiesResolver extends Resolver {
   constructor(sectionProps) {
     super(sectionProps);
-    const parentResolveInfo = (expr) => sectionProps.parentAssembly().resolve.information(expr);
+    const parentResolveInfo = (exp, raw) => sectionProps.parentAssembly().resolve.information(expr, raw);
 
     this.resolve.parse = (expr) => {
       const match = expr.match(openingReg);
@@ -17,13 +17,13 @@ class SectionPropertiesResolver extends Resolver {
       return value !== undefined ? value : undefined;
     }
 
-    this.resolve.information = (expr) => {
-      const parsed = this.resolve.parse(expr);
+    this.resolve.information = (expr, raw) => {
+      const parsed = this.resolve.parse(expr, raw);
       if (parsed) return parsed;
       if (sectionProps.parentAssembly() === undefined) {
         console.warn('This should not happen');
       }
-      return sectionProps.parentAssembly().resolve.information(expr);
+      return sectionProps.parentAssembly().resolve.information(expr, raw);
     }
 
     this.resolve.inherited = this.resolve.information;

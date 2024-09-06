@@ -3,7 +3,7 @@ const Color = require('./modeling/utils/color');
 
 const cutterReg = /^Cutter/;
 function unionAll(payload, environment) {
-  const assemIds = payload.assemblies;
+  const assemIds = payload.assemblies.concat(environment.generated);
   let csg = new CSG();
   for (let index = 0; index < assemIds.length; index++) {
     const id = assemIds[index];
@@ -15,6 +15,9 @@ function unionAll(payload, environment) {
         csg = csg.union(model);
       }
     }
+  }
+  for (let index = 0; index < environment.generated.length; index++) {
+    csg = csg.union(environment.getModel(environment.generated[index], 'joined'));
   }
   environment.unioned = csg.polygons.length > 0 ? csg : null;
   return environment.unioned;

@@ -12,6 +12,7 @@ const CSG = require('../../../../../../../public/js/utils/3d-modeling/csg.js');
 const DividerSection = require('./partition/divider.js');
 const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
+const Cut = require('../../../joint/joints/cut.js');
 const Dado = require('../../../joint/joints/dado.js');
 const ShelveJoint = require('../../../joint/joints/shelve.js');
 const Dependency = require('../../../dependency.js');
@@ -594,6 +595,10 @@ class SectionProperties extends KeyValue {
       if (target instanceof DividerSection) target = target.divider();
       return target.isPanel(assem);
     }
+    function isBorder(assem) {
+      return isMatch(assem, 'top') || isMatch(assem, 'bottom') ||
+             isMatch(assem, 'left') || isMatch(assem, 'right');
+    }
     function isNeigbor(assem) {
       if (instance.divideRight()) {
         if (instance.parentAssembly().isVertical()) {
@@ -643,31 +648,17 @@ class SectionProperties extends KeyValue {
     }
 
 
-    function addCookieCutterReg(locCodes, offsetRatio, ingulf, targetPartCode) {
-      if (locCodes.length === 0) return;
-      const locationReg = new RegExp(`^(${locCodes.join('|')})$`);
-      const cutter = new Cutter.RegExp(locationReg, offsetRatio, ingulf);
-      if (targetPartCode)cutter.partCode = () => 'csh';
-      sectionCutters.push(cutter);
-      cutter.parentAssembly(instance);
-      targetPartCode ||= '.*dv.*(|:[a-z]{1,})';
-      const dvReg = new RegExp(`^${instance.locationCode()}_${targetPartCode}$`);
-      const loc = `Cookie_${cutter.id()}`;
-      cutter.addDependencies(new Joint(cutter.locationCode(), dvReg, null, loc, 10));
-
-    }
-
     const boxJoint = (selector, index) => {
       const bj = new Dado(/^dv:[^_]{1,}$/, new RegExp(`^${selector}$`), null, `boxJoint${index}`);
       bj.maleOffset(.9525);
       return bj;
     }
 
-
     function cabinetBoxDados() {
       const cabinet = instance.getCabinet();
       const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section)/));
-      const joints = [];
+      const joints = [new Dado(null, isBorder, null,  'PanelSection-Joint'),
+                      new Cut(null, (a) => a.part(), null,  'PanelSection-Cut')];
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
         if (assem instanceof Divider) {

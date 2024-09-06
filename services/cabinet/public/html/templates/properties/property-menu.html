@@ -1,3 +1,11 @@
 
-<div class='cabinet-style-selector-cnt'>{{styleSelector(group)}}</div>
-Property Menu
+<div class='inline-flex chev-dropdown-toggle'>
+  Property Menu
+  <i class='down gg-chevron-down hidden' ></i>
+  <i class='right gg-chevron-right'></i>
+</div>
+<div class='tab chev-dropdown' hidden>
+  <div class='cabinet-style-selector-cnt'>{{styleSelector(group)}}</div>
+  <input class='measurement-input' name='crownHeight' decimal='{{group.resolve('crh')}}'>
+</div>
+<br/><br/>

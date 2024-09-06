@@ -1093,7 +1093,8 @@ Line2d.between = (lineOvert1, lineOvert2) => {
       perpInterSectDist(lov2, lov2[0], lov1, true),
       perpInterSectDist(lov2, lov2[1], lov1, true)
     ];
-    const best = list.sortByAttr('dist').filter(obj => obj.dist !== null)[0];
+    const best = list.filter(o => Number.isFinite(o.dist))
+                      .sortByAttr('dist').filter(obj => obj.dist !== null)[0];
     if (best) return new Line2d(best.vertex, best.intersection);
 
     const intersection = lov1.findSegmentIntersection(lov2, true);

@@ -8,7 +8,9 @@ const Cutter = require('./cutter.js');
 const Panel = require('./panel');
 const Frame = require('./frame');
 const Joint = require('../../joint/joint.js');
-const JointSettings = require('../../joint/settings');
+const Dado = require('../../joint/joints/dado.js');
+const Cut = require('../../joint/joints/cut.js');
+const JointSettings = require('../../../../web-worker/shared/settings.js');
 const Dependency = require('../../dependency.js');
 
 const configStrReg = /^(.*?):(.*?):(.*?)$/;
@@ -18,7 +20,7 @@ class Divider extends Assembly {
     super(partCode, partName, config);
     const instance = this;
     const pToJson = this.toJson;
-    this.jointSettings = new JointSettings(false,true,true,true);
+    // this.jointSettings = new JointSettings(true,true,true,true);
 
 
     Object.getSet(this, 'type');
@@ -32,7 +34,12 @@ class Divider extends Assembly {
     const frame = new Frame('fr', 'Frame');
     frame.parentAssembly(this);
 
-
+    const isFrontPanel = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider' && a.match(/:(full|f)/);
+    const isFrame = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider' && a.constructor.name === 'Frame';
+    const isFrontPanelWFrame = (a) => isFrontPanel(a) && a.parentAssembly().hasFrame();
+    const isFrontPanelWOFrame = (a) => isFrontPanel(a) && !a.parentAssembly().hasFrame();
+    this.addDependencies(new Dado(isFrontPanelWFrame, isFrame, null, 'FramePanelJoint'));
+    this.addDependencies(new Cut(isFrontPanelWOFrame, isFrame, null, 'FramePanelCut'));
 
     const parts = [pFull, pFront, pBack];
     this.possibleParts = () => parts.concat(frame);
@@ -58,7 +65,7 @@ class Divider extends Assembly {
       if (rawOthickness !== undefined) {
         this.value('dft', rawOthickness);
       }
-      return this.resolve('dft');
+      return this.eval('dft');
     }
     this.frameWidth = (rawOthickness) => {
       if (Boolean.is(rawOthickness)) return this.resolve('dfw', rawOthickness);
@@ -68,17 +75,22 @@ class Divider extends Assembly {
         if (pt >= evaluated) this.value('dpt', rawOthickness);
         this.value('dfw', rawOthickness);
       }
-      return this.resolve('dfw');
+      const crownTarget = this.match('^c_T');
+      if (crownTarget) {
+        const hasChrown = this.group().hasChrown(this.getRoot());
+        return this.resolve('crh');
+      }
+      return this.eval('dfw');
     }
     this.panelThickness = (rawOthickness) => {
       if (Boolean.is(rawOthickness)) return this.resolve('dpt', rawOthickness);
       if (rawOthickness !== undefined) {
-        const evaluated = this.resolve(rawOthickness);
+        const evaluated = this.eval(rawOthickness);
         const ft = this.frameThickness();
         if (ft < evaluated) this.value('dpt', rawOthickness);
         this.value('dpt', rawOthickness);
       }
-      return this.resolve('dpt', rawOthickness);
+      return this.eval('dpt', rawOthickness);
     }
     this.scribe = (rawOscribe) => {
       if (Boolean.is(rawOscribe)) return this.resolve('sc', rawOscribe);
@@ -95,7 +107,19 @@ class Divider extends Assembly {
 
     const thicknessWarrentsFrame = (thickness) =>
       thickness && thickness > this.panelThickness() + 0.3175;
-    this.hasFrame = () => !this.propertyConfig('fls');
+
+
+
+    this.hasFrame = () => {
+      const frameless = this.resolve('fls', true);
+      if (!frameless) return true;
+      const crownTarget = this.match('^c_T');
+      if (crownTarget) {
+        const hasChrown = this.group().hasChrown(this.getRoot());
+        return hasChrown;
+      }
+      return false;
+    }
 
     function activeParts() {
       if (!instance.included()) {

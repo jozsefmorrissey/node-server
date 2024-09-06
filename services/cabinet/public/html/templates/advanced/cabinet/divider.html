@@ -6,7 +6,12 @@
   <input type="text" name="panelThickness" value="{{divider.panelThickness(undefined, true)}}">
   <input disabled class='dem' type="text" name="panelThickness" value="{{Measurement.display(divider.panelThickness())}}">
   <br>
-  <label>Frame Width</label>
-  <input type="text" name="maxWidth" value="{{divider.maxWidth()}}">
-  <input disabled class='dem' type="text" name="maxWidth" value="{{Measurement.display(divider.maxWidth())}}">
+  <label>Has Frame</label>
+  <input type="checkbox" name="has-frame"{{divider.hasFrame() ? ' checked' : ''}}>
+  <br>
+  <div class='frame-width-cnt'{{divider.hasFrame() ? '' : ' hidden'}}>
+    <label>Frame Width</label>
+    <input type="text" name="frameWidth" value="{{divider.frameWidth()}}">
+    <input disabled class='dem' type="text" name="frameWidth" value="{{Measurement.display(divider.frameWidth())}}">
+  </div>
 </div>

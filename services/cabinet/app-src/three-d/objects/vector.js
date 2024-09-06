@@ -196,6 +196,56 @@ Vector3D.mostInLine = (vectors, target) => {
   return closest.vector;
 }
 
+class SectorMap {
+  constructor(normals, divideItterations) {
+    if (!Number.isFinite(divideItterations)) divideItterations = 0;
+    if (divideItterations > 1) throw new Error('algorythum needs to be improved for this to be feasible')
+    const instance = this;
+    normals ||= {x: Vector3D.i, y: Vector3D.j, z: Vector3D.k};
+    if (normals.x) {
+      this.Right = normals.x;
+      this.Left = normals.x.inverse();
+    }
+    if (normals.y) {
+      this.Top = normals.y;
+      this.Bottom = normals.y.inverse();
+    }
+    if (normals.z) {
+      this.Front = normals.z;
+      this.Back = normals.z.inverse();
+    }
+
+    const vectorKey = (keys) => keys.sort().join(' ').toPascal();
+    const addSector = (...keys) => {
+      const key = vectorKey(keys);
+      let vector = new Vector3D(0,0,0);
+      keys.forEach(key => vector = vector.add(instance[key]));
+      instance[key] = vector.unit();
+    }
+
+    function divide() {
+      const keys = Object.keys(instance);
+      for (let i = 0; i < keys.length; i++) {
+        const vi = instance[keys[i]];
+        for (let j = i + 1; j < keys.length; j++) {
+          const vj = instance[keys[j]];
+          for (let k = j + 1; k < keys.length; k++) {
+            const vk = instance[keys[k]];
+            if (!vi.parrelle(vk)) addSector(keys[i], keys[k]);
+            if (!vi.parrelle(vj)) addSector(keys[i], keys[j]);
+            if (!vi.parrelle(vk) && !vi.parrelle(vj) && !vj.parrelle(vk)) addSector(keys[i],keys[j],keys[k]);
+          }
+        }
+      }
+    }
+
+    for (let index = 0; index < divideItterations; index++) divide();
+    this.passiveProperty('toString', () =>
+      Object.keys(this).map((k,i) => `//${i} ${k}\n${this[k].toDrawString()}`).join('\n'));
+  }
+}
+Vector3D.SectorMap = SectorMap;
+
 Vector3D.i = new Vector3D(1,0,0);
 Vector3D.j = new Vector3D(0,1,0);
 Vector3D.k = new Vector3D(0,0,1);
@@ -204,15 +254,15 @@ Vector3D.cardinal = (array) => array ? [Vector3D.i, Vector3D.j, Vector3D.k] :
 
 const sectorVectors = [Vector3D.i, Vector3D.j, Vector3D.k,
   Vector3D.i.inverse(), Vector3D.j.inverse(), Vector3D.k.inverse()]
-const sectorLabels = ['Left', 'Top', 'Front', 'Right', 'Bottom', 'Back'];
-const sectorMap =
+const sectorMap = new SectorMap();
 Vector3D.sector = (vector, sectorMap) => {
-  sectorMap ||= {Right: Vector3D.i, Top: Vector3D.j, Front: Vector3D.k,
-    Left: Vector3D.i.inverse(), Bottom: Vector3D.j.inverse(), Back: Vector3D.k.inverse()};
   const keys = Object.keys(sectorMap);
   return keys[keys.maxIndex(k => sectorMap[k].dot(vector))];
   // sectorVectors[directionVectors.minIndex(v => v.dot(vector))];
 }
+
+
+
 
 Object.class.register(Vector3D, 'i', 'j', 'k');
 Vector3D.fromJson = json => new Vector3D(json);

@@ -64,14 +64,14 @@ class CabinetOpeningCorrdinates extends KeyValue {
       const top = instance.top();
       const bottom = instance.bottom();
 
-      const topMax = top.position().centerAdjust('y', '+z');
-      const topMin = top.position().centerAdjust('y', '-z');
-      const leftMax = left.position().centerAdjust('x', '+z');
-      const leftMin = left.position().centerAdjust('x', '-z');
-      const rightMin = right.position().centerAdjust('x', '-z');
-      const rightMax = right.position().centerAdjust('x', '+z');
-      const bottomMin = bottom.position().centerAdjust('y', '-z');
-      const bottomMax = bottom.position().centerAdjust('y', '+z');
+      const topMax = top.position().centerAdjust('y', '+z', top.thickness()/2);
+      const topMin = top.position().centerAdjust('y', '-z', top.thickness()/2);
+      const leftMax = left.position().centerAdjust('x', '+z', left.thickness()/2);
+      const leftMin = left.position().centerAdjust('x', '-z', left.thickness()/2);
+      const rightMin = right.position().centerAdjust('x', '-z', right.thickness()/2);
+      const rightMax = right.position().centerAdjust('x', '+z', right.thickness()/2);
+      const bottomMin = bottom.position().centerAdjust('y', '-z', bottom.thickness()/2);
+      const bottomMax = bottom.position().centerAdjust('y', '+z', bottom.thickness()/2);
 
       return {
         inner: [
@@ -185,8 +185,6 @@ class CabinetOpeningCorrdinates extends KeyValue {
           case 'slice':
             cutter = new Cutter('aoc', 'Opening');
             cutter.allModels(true);
-            cutter.addDependencies(new Cut(cutter, a =>
-              a.sliceAtOpening && a.sliceAtOpening()))
             cabinet.addDependencies(new Dependency(cutter, cabinet));
             cutter.parentAssembly(this);
             subassemblies = [cutter];

@@ -158,7 +158,7 @@ class Measurement {
     this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
 
     this.display = (accuracy, dispUnit) => {
-      switch (dispUnit || unit) {
+      switch (dispUnit || this.unit()) {
         case units[0]: return new String(Math.floor(this.decimal(.1)*10)/10);
         case units[1]: return this.standardUS(accuracy);
         case units[2]: return Math.floor(this.decimal(.001)*100)/10;
@@ -190,7 +190,7 @@ class Measurement {
       return NaN;
     }
 
-    this.unit = (unit) => unit !== undefined ? (notMetric = unit) : notMetric;
+    this.unit = (unit) => unit !== undefined ? (notMetric = unit) : notMetric || unit;
 
     if ((typeof value) === 'number') {
       decimal = standardize(value, notMetric);

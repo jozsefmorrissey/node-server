@@ -2,7 +2,7 @@
 
 
 const Assembly = require('../../assembly.js');
-const JointSettings = require('../../../joint/settings');
+const JointSettings = require('../../../../../web-worker/shared/settings.js');
 const CSG = require('../../../../../../../public/js/utils/3d-modeling/csg.js');
 
 /*
@@ -15,7 +15,7 @@ class Handle extends Assembly {
     let instance;
     location ||= Handle.location.CENTER;
     super('p', 'Handle');
-    this.sliceAtOpening(false);
+    this.jointSettings.sliceAtOpening(false);
     Object.getSet(this, {location, centerToCenter: 9.6});
     this.partName = () =>
       `${this.parentAssembly().partName()}.Pull.${this.location().position}`;
@@ -61,6 +61,8 @@ Handle.abbriviation = 'hn';
 Handle.fromJson = (json) => {
   const obj = Assembly.fromJson(json);
   obj.location(Handle.location[json.location.position]);
+  // TODO: incase i dont fix this. this value is being reset at some point during the toJson proccess i think...
+  obj.jointSettings.sliceAtOpening(false);
   return obj;
 }
 

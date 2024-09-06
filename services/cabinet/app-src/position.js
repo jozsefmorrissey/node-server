@@ -101,10 +101,11 @@ class Position {
 
     this.toBiPolygon = () => BiPolygon.fromPositionObject(this.current());
 
-    this.centerAdjust = (center, direction) => {
+    this.centerAdjust = (center, direction, offset) => {
       const magnitude = direction[0] === '-' ? -1 : 1;
       const axis = direction.replace(/\+|-/, '');
-      return this.center(center) + (magnitude * this.demension(axis) / 2);
+      offset ||= this.demension(axis) / 2;
+      return this.center(center) + (magnitude * offset);
     }
 
     this.limits = (targetStr, relitiveToCenter) => {

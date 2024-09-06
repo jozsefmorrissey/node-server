@@ -270,7 +270,6 @@
                 }
               },
               "_TYPE": "Cabinet",
-              "sliceAtOpening": true,
               "part": false,
               "included": true,
               "includeJoints": false,
@@ -300,7 +299,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -333,7 +331,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -366,7 +363,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -416,7 +412,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -466,7 +461,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -530,7 +524,6 @@
                       "values": {}
                     },
                     "_TYPE": "DividerSection",
-                    "sliceAtOpening": true,
                     "part": false,
                     "included": false,
                     "includeJoints": false,
@@ -560,7 +553,6 @@
                           "values": {}
                         },
                         "_TYPE": "Divider",
-                        "sliceAtOpening": true,
                         "part": false,
                         "includeJoints": false,
                         "config": {
@@ -643,7 +635,6 @@
                 }
               },
               "_TYPE": "Cabinet",
-              "sliceAtOpening": true,
               "part": false,
               "included": true,
               "includeJoints": false,
@@ -673,7 +664,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -706,7 +696,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -739,7 +728,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -789,7 +777,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -839,7 +826,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -903,7 +889,6 @@
                       "values": {}
                     },
                     "_TYPE": "DividerSection",
-                    "sliceAtOpening": true,
                     "part": false,
                     "included": false,
                     "includeJoints": false,
@@ -933,7 +918,6 @@
                           "values": {}
                         },
                         "_TYPE": "Divider",
-                        "sliceAtOpening": true,
                         "part": false,
                         "includeJoints": false,
                         "config": {
@@ -1016,7 +1000,6 @@
                 }
               },
               "_TYPE": "Cabinet",
-              "sliceAtOpening": true,
               "part": false,
               "included": true,
               "includeJoints": false,
@@ -1046,7 +1029,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -1079,7 +1061,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -1112,7 +1093,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -1162,7 +1142,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -1212,7 +1191,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -1276,7 +1254,6 @@
                       "values": {}
                     },
                     "_TYPE": "DividerSection",
-                    "sliceAtOpening": true,
                     "part": false,
                     "included": false,
                     "includeJoints": false,
@@ -1306,7 +1283,6 @@
                           "values": {}
                         },
                         "_TYPE": "Divider",
-                        "sliceAtOpening": true,
                         "part": false,
                         "includeJoints": false,
                         "config": {
@@ -1389,7 +1365,6 @@
                 }
               },
               "_TYPE": "Cabinet",
-              "sliceAtOpening": true,
               "part": false,
               "included": true,
               "includeJoints": false,
@@ -1419,7 +1394,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -1452,7 +1426,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -1485,7 +1458,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -1535,7 +1507,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -1585,7 +1556,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -1649,7 +1619,6 @@
                       "values": {}
                     },
                     "_TYPE": "DividerSection",
-                    "sliceAtOpening": true,
                     "part": false,
                     "included": false,
                     "includeJoints": false,
@@ -1679,7 +1648,6 @@
                           "values": {}
                         },
                         "_TYPE": "Divider",
-                        "sliceAtOpening": true,
                         "part": false,
                         "includeJoints": false,
                         "config": {
@@ -1762,7 +1730,6 @@
                 }
               },
               "_TYPE": "Cabinet",
-              "sliceAtOpening": true,
               "part": false,
               "included": true,
               "includeJoints": false,
@@ -1792,7 +1759,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -1825,7 +1791,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -1858,7 +1823,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -1908,7 +1872,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -1958,7 +1921,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -2022,7 +1984,6 @@
                       "values": {}
                     },
                     "_TYPE": "DividerSection",
-                    "sliceAtOpening": true,
                     "part": false,
                     "included": false,
                     "includeJoints": false,
@@ -2052,7 +2013,6 @@
                           "values": {}
                         },
                         "_TYPE": "Divider",
-                        "sliceAtOpening": true,
                         "part": false,
                         "includeJoints": false,
                         "config": {
@@ -2135,7 +2095,6 @@
                 }
               },
               "_TYPE": "Cabinet",
-              "sliceAtOpening": true,
               "part": false,
               "included": true,
               "includeJoints": false,
@@ -2165,7 +2124,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -2198,7 +2156,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -2231,7 +2188,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -2281,7 +2237,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -2331,7 +2286,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -2395,7 +2349,6 @@
                       "values": {}
                     },
                     "_TYPE": "DividerSection",
-                    "sliceAtOpening": true,
                     "part": false,
                     "included": false,
                     "includeJoints": false,
@@ -2425,7 +2378,6 @@
                           "values": {}
                         },
                         "_TYPE": "Divider",
-                        "sliceAtOpening": true,
                         "part": false,
                         "includeJoints": false,
                         "config": {
@@ -2508,7 +2460,6 @@
                 }
               },
               "_TYPE": "Cabinet",
-              "sliceAtOpening": true,
               "part": false,
               "included": true,
               "includeJoints": false,
@@ -2538,7 +2489,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -2571,7 +2521,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -2604,7 +2553,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -2654,7 +2602,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -2704,7 +2651,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -2768,7 +2714,6 @@
                       "values": {}
                     },
                     "_TYPE": "DividerSection",
-                    "sliceAtOpening": true,
                     "part": false,
                     "included": false,
                     "includeJoints": false,
@@ -2798,7 +2743,6 @@
                           "values": {}
                         },
                         "_TYPE": "Divider",
-                        "sliceAtOpening": true,
                         "part": false,
                         "includeJoints": false,
                         "config": {
@@ -2881,7 +2825,6 @@
                 }
               },
               "_TYPE": "Cabinet",
-              "sliceAtOpening": true,
               "part": false,
               "included": true,
               "includeJoints": false,
@@ -2911,7 +2854,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -2944,7 +2886,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -2977,7 +2918,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -3027,7 +2967,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -3077,7 +3016,6 @@
                     "values": {}
                   },
                   "_TYPE": "Divider",
-                  "sliceAtOpening": true,
                   "part": false,
                   "included": true,
                   "includeJoints": false,
@@ -3141,7 +3079,6 @@
                       "values": {}
                     },
                     "_TYPE": "DividerSection",
-                    "sliceAtOpening": true,
                     "part": false,
                     "included": false,
                     "includeJoints": false,
@@ -3171,7 +3108,6 @@
                           "values": {}
                         },
                         "_TYPE": "Divider",
-                        "sliceAtOpening": true,
                         "part": false,
                         "includeJoints": false,
                         "config": {

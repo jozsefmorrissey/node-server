@@ -6,7 +6,7 @@ class HasPull extends Assembly {
     super(partCode, partName);
     let pullCount = 0;
     const pulls = [];
-    this.sliceAtOpening(false);
+    this.jointSettings.sliceAtOpening(false);
     this.pull = (index) => pulls[index || 0];
     this.addPull = (location) => {
       let handle = location;

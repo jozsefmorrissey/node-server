@@ -111,6 +111,7 @@ class Context {
           const piece = start + breakdown[index] + end;
           const illustrateFunc = piece.charAt(0) === '[' ?  polyAddFunc() : addVertex;
           const pointStrs = piece.match(pointsReg);
+          if(pointStrs.length > 2) pointStrs.push(pointStrs[0])
           if (pointStrs === null) reportError(`trouble parsing section ${piece}`);
           else {
             pointStrs.forEach(pointStr => {

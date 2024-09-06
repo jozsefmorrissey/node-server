@@ -111,7 +111,6 @@
                 }
               },
               "_TYPE": "Assembly",
-              "sliceAtOpening": true,
               "part": false,
               "included": true,
               "includeJoints": true,
@@ -141,7 +140,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -174,7 +172,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -207,7 +204,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -249,7 +245,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -291,7 +286,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -333,7 +327,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -375,7 +368,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -425,7 +417,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -458,7 +449,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -500,7 +490,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -542,7 +531,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -592,7 +580,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -693,7 +680,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -778,7 +764,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,
@@ -863,7 +848,6 @@
                     "values": {}
                   },
                   "_TYPE": "Panel",
-                  "sliceAtOpening": true,
                   "part": true,
                   "included": true,
                   "includeJoints": true,

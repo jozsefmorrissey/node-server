@@ -17,15 +17,15 @@ class CabinetResolver extends Resolver {
       return {index, inOut, func, dir};
     }
 
-    this.resolve.information = (expr) => {
-      const parsed = this.resolve.parse(expr);
-      if (parsed) return this.resolve.brokenDown(parsed.index, parsed.inOut, parsed.func, parsed.dir);
-      else return parentResolver(expr);
+    this.resolve.information = (expr, raw) => {
+      const parsed = this.resolve.parse(expr, raw);
+      if (parsed) return this.resolve.brokenDown(parsed.index, parsed.inOut, parsed.func, parsed.dir, raw);
+      else return parentResolver(expr, raw);
     }
     this.resolve.inherited = this.resolve.information;
 
 
-    this.resolve.brokenDown = (index, inOut, func, dir) => {
+    this.resolve.brokenDown = (index, inOut, func, dir, raw) => {
       const expr = `OP${index}.${inOut}.${func}.${dir}`;
 
       const opening = cabinet.openings[index - 1];
@@ -34,7 +34,7 @@ class CabinetResolver extends Resolver {
         secPropsInfo.object(cabinet);
         return secPropsInfo;
       }
-      return parentResolver(expr);
+      return parentResolver(expr, raw);
     }
   }
 }

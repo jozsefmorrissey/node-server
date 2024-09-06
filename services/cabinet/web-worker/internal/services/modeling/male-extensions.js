@@ -50,7 +50,7 @@ function getExtendedModel(assem, joints, env) {
 
 function applyMaleJointExtensions(payload, environment) {
   const jointCutters = [];
-    const assemblyIds = payload.assemblies;
+    const assemblyIds = ppayload.assemblies.concat(environment.generated);
     let env = environment;
     let proccessedIndex = 0;
     for (let index = 0; index < assemblyIds.length; index++) {

@@ -2,6 +2,9 @@
 const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
 const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
 const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
+const RDTO = require('../../../../shared/reconnect-transfer-object.js');
+const JointSettings = require('../../../../shared/settings.js');
+
 
 function toBiPolygon(assem, env) {
   if (Array.isArray(assem.position.current.points)) {
@@ -10,8 +13,11 @@ function toBiPolygon(assem, env) {
     return biPoly;
   }
   const current = assem.position.current;
+  if (assem.width) current.demension.x = assem.width;
+  if (assem.height) current.demension.y = assem.height;
+  if (assem.thickness) current.demension.z = assem.thickness;
   const dems = current.demension;
-  if (Math.min(dems.x, dems.y, dems.z) > .001) return BiPolygon.fromPositionObject(current);
+    if (Math.min(dems.x, dems.y, dems.z) > .001) return BiPolygon.fromPositionObject(current);
   return null;
 }
 
@@ -59,6 +65,17 @@ property.set = (assem, env, ...setNameOpropName) => {
     return set;
 }
 
+const generated = (assem, env, model, idPrefix) => {
+  assem.id ||= `${idPrefix || 'Generated'}_${String.random()}`;
+  assem.locationCode ||= `${idPrefix || 'Generated'}_${String.random(4)}`;
+  assem.parentAssembly ||= {id: Object.values(env.byId).find(a => a.find).find.root().id};
+  assem.partCode ||= `${idPrefix || 'Generated'}_${String.random(4)}`;
+  env.modelInfo.model[assem.id] = model;
+  env.generated.push(assem.id);
+  assem.jointSettings = new JointSettings().toJson();
+  return RDTO(assem, env.byId);
+}
+
 module.exports = {
-  toBiPolygon, normals, property
+  toBiPolygon, normals, property, generated
 }

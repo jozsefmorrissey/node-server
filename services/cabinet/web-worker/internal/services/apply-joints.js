@@ -200,6 +200,9 @@ function runMfcFunc(stage, assem, env) {
 }
 
 function applyCuts(assem, env) {
+  if (assem.id.match(/^Shelve/)) {
+    console.log('here');
+  }
   const femaleJoints = env.jointMap.female[assem.id];
   if (!femaleJoints) return;
   const cutIds = femaleJoints.filter(id => id.match(/^Cut_/));
@@ -216,7 +219,7 @@ function applyCuts(assem, env) {
 const notExtendedJointReg = /^(Dependency|Cut)_/;
 function applyMaleJointExtensions(payload, environment) {
   const jointCutters = {};
-    const assemblyIds = payload.assemblies;
+    const assemblyIds = payload.assemblies.concat(environment.generated);
     let env = environment;
     let proccessedIndex = 0;
     for (let index = 0; index < assemblyIds.length; index++) {
@@ -240,6 +243,7 @@ function applyMaleJointExtensions(payload, environment) {
     Object.values(jointCutters).forEach(obj => {
       if (obj.assem.jointSettings.male) {
         applyCuts(obj.assem, env);
+        sliceAtOpening(assemblyIds, env, 'extended');
         runMfcFunc('cut', obj.assem, env);
         env.modelInfo.joined[obj.assem.id] = applyCutters(obj.assem, obj.cutters, env, 'Joint');
       }
@@ -264,11 +268,28 @@ function exploadedTranslation(assemblyIds, env) {
   }
 }
 
+function sliceAtOpening (ids, env, modelType) {
+  const aoc = Object.values(env.byId).find(j => j.partCode === 'aoc');
+  for (let index = 0; index < ids.length; index++) {
+    const assem = env.byId[ids[index]];
+    if (aoc && assem.jointSettings.sliceAtOpening) {
+      const model = env.getModel(assem.id, modelType);
+      if (model && model.polygons.length)
+        try {
+            env.modelInfo[modelType][assem.id] = model.subtract(env.modelInfo.model[aoc.id]);
+        } catch (e) {
+          console.log(e);
+        }
+    }
+  }
+}
+
 function Apply(payload, environment, taskId, intersections) {
   let env = environment;
   let start = new Date().getTime();
+  const assemblyIds = payload.assemblies.concat(environment.generated);
+  sliceAtOpening(assemblyIds, env, 'model');
   applyMaleJointExtensions(payload, environment);
-  const assemblyIds = payload.assemblies;
   let map = {intersection: env.modelInfo.intersection, joined: env.modelInfo.joined};
   let proccessedIndex = 0;
   for (let index = 0; index < assemblyIds.length; index++) {
@@ -283,9 +304,9 @@ function Apply(payload, environment, taskId, intersections) {
     }
   }
   for (let index = 0; index < assemblyIds.length; index++) {
-    runMfcFunc('joined', environment.byId[assemblyIds[index]], env);
+    const assem = env.byId[assemblyIds[index]];
+    runMfcFunc('joined', assem, env);
   }
-  console.log('Join Time: ' + (new Date().getTime() - start)/1000);
   exploadedTranslation(assemblyIds, env);
 }
 

@@ -91,16 +91,14 @@ class DividerUtil {
 
     const panels = {};
 
-    function buildFramePoly() {
-      const biPoly = instance.biPolygon.copy();
-      const cabUtil = CabinetUtil.instance(divider);
-      const cab = cabUtil.cabinet();
-      const norms = sectionUtils.biPolygon.normals();
+    function buildFramePoly(frame) {
+      const bottomFrontLine = sectionUtils.innerPoly.lines()[0];
+      const bottomBackLine = bottomFrontLine.clone();
+      bottomBackLine.translate(sectionUtils.normal().scale(-divider.frameThickness));
+      const bottomPoly = new Polygon3D([bottomFrontLine[0], bottomFrontLine[1], bottomBackLine[1], bottomBackLine[0]]);
+      const framePoly = BiPolygon.fromPolygon(bottomPoly, 0, divider.frameWidth);
+      frame.position.current.normals.z = sectionUtils.normal();
 
-      const frontPoly = biPoly.closestPoly(sectionUtils.innerCenter);
-      const frameThickness = divider.frameThickness;
-      const framePoly = BiPolygon.fromPolygon(frontPoly, 0, -frameThickness);
-      const back = framePoly.back();
       return framePoly;
     }
 
@@ -130,7 +128,7 @@ class DividerUtil {
       const csg = env.getModel(assem, 'cut');
       const norms = Utils.normals(assem, env);
       const edges = csg.polygons.filter(p => !norms.z.parrelle(new Vector3D(p.plane.normal)));
-      const edgePolys = Polygon3D.fromCSG(edges);
+      const edgePolys = Polygon3D.merge(Polygon3D.fromCSG(edges));
 
       let centerOffsetVector;
       const cabUtil = CabinetUtil.instance(divider);

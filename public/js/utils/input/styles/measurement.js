@@ -8,6 +8,10 @@ const du = require('../../dom-utils');
 const Measurement = require('../../measurement');
 const Lookup = require('../../object/lookup.js');
 
+/** Supported html "directive"
+  <input class='measurement-input' name='crownHeight'
+            decimal='4.3' units='inch,cm,mm'>
+**/
 class MeasurementInput extends Input {
   constructor(props) {
     let _unit = props.unit === undefined ? true : props.unit;
@@ -81,27 +85,42 @@ function convert(elem) {
   console.log('change');
 }
 
-function setValue(elem) {
-    let input = MeasurementInput.get(elem.id);
-    if (elem.getAttribute('unit') !== input.unit()) convert(elem);
-    const container = du.find.up('[input-id]', elem);
-    if (input === undefined) {
-      input = new MeasurementInput({value: elem.value});
-      elem.id = input.id();
-    } else {
-      input.setValue(elem.value, true);
-    }
+function initialize(elem) {
+  const decimal = elem.getAttribute('decimal');
+  const name = elem.getAttribute('name');
+  const label = elem.getAttribute('label') || (name && name.toSentance());
+  let units = elem.getAttribute('units');
+  if (units) units = units.split(',');
+  else units = [];
+  let input = new MeasurementInput({id: elem.id, label, name, units});
+  input.setValue(decimal, false);
+  elem.outerHTML = input.html();
+}
 
-    const id = elem.parentElement.getAttribute('lookup-id');
-    const name = elem.name;
-    if (name && id && Lookup && Lookup.get(id)) {
-      const target = Lookup.get(id);
-      input.setValue(target.pathValue(name, input.measurement().decimal()), true);
-    }
-    elem.value = input.value();
+function setValue(elem) {
+  let input = MeasurementInput.get(elem.id);
+  if (elem.getAttribute('unit') !== input.unit()) convert(elem);
+  const container = du.find.up('[input-id]', elem);
+  if (input === undefined) {
+    input = new MeasurementInput({value: elem.value});
+    elem.id = input.id();
+  } else {
+    input.setValue(elem.value, elem.getAttribute('unit') || true);
+  }
+
+  const id = du.find.up.attribute('lookup-id', elem);
+  const name = elem.name;
+  if (name && id && Lookup && Lookup.get(id)) {
+    const target = Lookup.get(id);
+    const decimal = input.measurement().decimal();
+    target.pathValue(name, decimal)
+    input.setValue(decimal, false);
+  }
+  elem.value = input.value();
 }
 
 du.on.match('click', '.measurement-input-cnt [type="radio"]', convert);
 du.on.match('change,focusout', '.measurement-input', setValue);
+du.on.match('create', '.measurement-input[decimal]', initialize);
 
 module.exports = MeasurementInput;

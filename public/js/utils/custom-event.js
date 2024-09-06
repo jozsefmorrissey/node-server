@@ -88,7 +88,8 @@ CustomEvent.all = (obj, eventObject, ...eventNames) => {
     const name = eventNames[index];
     const e = eventObject[name] || new CustomEvent(name);
     obj.events.passiveProperty(name, e);
-    obj.on.passiveProperty(name, e.on);
+    if (obj.on[name] === undefined) obj.on.passiveProperty(name, e.on);
+    else obj.on[name](e.trigger);
     obj.trigger.passiveProperty(name, (...args) => e.trigger.apply(e, args));
   }
 }

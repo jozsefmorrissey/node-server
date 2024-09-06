@@ -4,7 +4,7 @@
 const Assembly = require('../assembly.js');
 const cabinetBuildConfig = require('../../../../public/json/cabinets.json');
 const Joint = require('../../joint/joint.js');
-const JointSettings = require('../../joint/settings.js');
+const JointSettings = require('../../../../web-worker/shared/settings.js');
 const Dado = require('../../joint/joints/dado.js');
 const Dependency = require('../../dependency');
 const CabinetOpeningCorrdinates = require('../../../services/cabinet-opening-coordinates.js');
@@ -43,9 +43,6 @@ class Cabinet extends Assembly {
     Object.getSet(this, {id});
     this.id = idFunc;
 
-    const isPanel = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider' && a.constructor.name !== 'Frame';
-    const isFrame = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider' && a.constructor.name === 'Frame';
-    this.addDependencies(new Dado(isPanel, isFrame, null, 'FramePanel'));
     const instance = this;
     let toeKickHeight = 4;
     this.jointSettings = new JointSettings(false,false,false,false);

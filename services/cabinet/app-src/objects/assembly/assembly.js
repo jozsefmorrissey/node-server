@@ -12,7 +12,7 @@ const AssemblyResolver = require('./resolvers/assembly');
 const ModelingCollections = require('modeling-collections');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
 const assemblyBuildConfig = require('../../../public/json/cabinets.json');
-const JointSettings = require('../joint/settings');
+const JointSettings = require('../../../web-worker/shared/settings.js');
 // const ToModel = require('../../../web-worker/services/to-model.js');
 
 FunctionCache.on('hash', 250);
@@ -54,7 +54,6 @@ class Assembly extends KeyValue {
     let group;
     const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
     const initialVals = {
-      sliceAtOpening: true,
       outline: false,
       part: true,
       allModels: false,
@@ -421,9 +420,6 @@ class Assembly extends KeyValue {
         if (!joint.apply()) continue;
 
         const jid = joint.id();
-        if (joint.locationId() === 'voidJoint') {
-          console.log('her');
-        }
         for (let ai = 0; ai < assems.length; ai++) {
           const assem = assems[ai];
           if (!(assem instanceof Assembly)) continue;

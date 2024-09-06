@@ -6,7 +6,7 @@ class Resolver {
     const parentResolver = this.resolve;
     this.resolve = (expr, raw) => {
       if ((typeof expr) !== 'string') return expr;
-      const info = this.resolve.information(expr);
+      const info = this.resolve.information(expr, raw);
       if (!info && parentResolver) info = parentResolver.information();
       return info && info.valid && info.valid() ?
                 (raw === true ? info.value() : info.evaluation()) : NaN;

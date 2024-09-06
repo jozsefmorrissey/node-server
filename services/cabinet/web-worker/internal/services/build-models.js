@@ -7,7 +7,7 @@ const PART_CODES_THAT_CANNOT_BE_BUILT = ["AUTOTK", "OpenTK", "COC"]
 const reportMod = 20;
 let callAgain = false;
 function BuildModels(payload, environment, taskId) {
-  const assemblies = payload.assemblies;
+  const assemblies = payload.assemblies.concat(environment.generated);
   let byId = environment ? environment.byId : {};
   for (let index = 0; index < assemblies.length; index++) {
     let assembly = byId[assemblies[index]];

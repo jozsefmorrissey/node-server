@@ -43,12 +43,12 @@ function simpleTo2D (payload) {
 To2D.simple = simpleTo2D;
 
 function setTo2D (payload, env, taskId) {
-  const assems = payload.assemblies;
+  const assems = payload.assemblies.concat(env.generated);
   let twoDObjs = {};
   const modelMap = env.modelInfo.joined;
   for (let index = 0; index < assems.length; index++) {
     const key = assems[index];
-    if (!(modelMap[key] instanceof CSG) && modelMap[key].polygons) {
+    if (!(modelMap[key] instanceof CSG) && modelMap[key] && modelMap[key].polygons) {
       modelMap[key] = CSG.fromPolygons(modelMap[key].polygons, true);
     }
     twoDObjs[key] = To2D(modelMap[key], undefined, env.gap);

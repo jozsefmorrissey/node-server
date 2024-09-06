@@ -29,7 +29,16 @@ class Group extends Lookup {
 
     this.hash = () => name.hash() + this.objects.map(o => o.hash ? o.hash() : 0).sum();
 
-    this.resolve = (code, value, notMetric) => {
+    this.crownHeight = (value) => {
+      this.propertyConfig.value('crh',  value);
+    }
+
+    this.hasChrown = (cabinet) => {
+      const highEnough = (5*12*2.54) < cabinet.length()/2 + cabinet.position().center().y;
+      return highEnough;
+    }
+
+    this.resolve = (code, value, notMetric, raw) => {
       const lower = code ? code.toLowerCase() : null;
       const funcName = propertyFunctionMap[lower];
       if (code) {

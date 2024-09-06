@@ -1,8 +1,10 @@
 
 const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
+const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
 const Line3D = require('../../../../../app-src/three-d/objects/line.js');
 const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
 const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
+const SpatialMap = require('../../../../../app-src/three-d/objects/maps/spatial-map.js');
 
 const CabinetUtil = require('cabinet');
 const Utils = require('utils');
@@ -12,7 +14,9 @@ const defaultDepth = 4*2.54;
 class SectionPropertiesUtil {
   constructor(spDto, env) {
     const instance = this;
+
     let innerDepth;
+    this.isRoot = spDto.parentAssembly().find.up(a => a.id.startsWith('SectionProperties')) === undefined;
     let coordinates = spDto.coordinates;
     this.innerDepth = () => {
       if (innerDepth) return innerDepth;
@@ -194,8 +198,93 @@ class SectionPropertiesUtil {
       return dvInfo;
     }
 
+    this.leafSpatialMap = () => {
+      const spatialMap = new SpatialMap(3*2.54);
+      const leafSections = env.find(/^SectionProperties_/).filter(sp => sp.sections.length < 1)
+          .map(sp => SectionPropertiesUtil.instance(sp, env));
+      leafSections.forEach(section => {
+        const norms = section.outerPoly.normals();
+        delete norms.z;
+        spatialMap.add(section.outerPoly, new Vector3D.SectorMap(norms, 1), section);
+      });
+      return spatialMap;
+    }
+
     this.biPolygon = BiPolygon.fromPolygon(this.innerPoly, 0, this.innerDepth());
   }
+}
+
+const expandDirections = ['Right', 'Left', 'Top', 'Bottom'];
+function expandToNeigbors(poly, spatialMap) {
+  const spatialNode = spatialMap.nodes().find(n => n.object().equals(poly));
+  for (let index = 0; index < expandDirections.length; index++) {
+    const neighbor = spatialNode[expandDirections[index]]()[0];
+    if (neighbor) {
+      const nPoly = neighbor.payload().innerPoly;
+      const dirVect = spatialNode.sectorMap()[expandDirections[index]];
+      const sides = BiPolygon.fromPolygon(nPoly, 0, panelSectionThickness).sides();
+      const targetSide = sides.find(p => p.normal().equals(dirVect.inverse()));
+      poly.extendTo(targetSide);
+    }
+  }
+}
+
+
+const panelSectionThickness = .75 * 2.54;
+function panelSectionInformation(sectionUtil, env) {
+  const panelSections = Object.values(env.byId).filter(a => a.id.startsWith('PanelSection'));
+  if (panelSections.length === 0) return;
+  const spatialMap = sectionUtil.leafSpatialMap();
+  const models = [];
+  for (let index = 0; index < panelSections.length; index++) {
+    const spu = SectionPropertiesUtil.instance(panelSections[index], env);
+    const poly = spu.outerPoly.copy();
+    expandToNeigbors(poly, spatialMap);
+    const width = panelSectionThickness;
+    const model = BiPolygon.fromPolygon(poly, 0, width).model();
+    models.push(model);
+  }
+  return models;
+}
+
+function combineModels(models) {
+  let found;
+  let tol = .0001;
+  do {
+    found = false;
+    for (let i = 0; i < models.length; i++) {
+      let modelI = models[i];
+      for (let j = i + 1; j > i && j < models.length; j++) {
+        const modelJ = models[j];
+        const demsi = modelI.demensions();
+        const demsj = modelJ.demensions();
+        const addedDems = {x: demsi.x + demsj.x, y: demsi.y + demsj.y, z: demsi.z + demsj.z};
+        const combined = modelI.union(modelJ);
+        const combinedDems = combined.demensions();
+        if (addedDems.x + tol > combinedDems.x && addedDems.y + tol > combinedDems.y &&
+                addedDems.z + tol > combinedDems.z) {
+          modelI = models[i] = combined;
+          models.splice(j--, 1);
+          found = true;
+        }
+      }
+    }
+  } while (found);
+}
+
+const prefix = 'PanelSectionPanel';
+function buildPanels(sectionUtil, env) {
+  if (env.pathValue(`building-${prefix}`)) return;
+  env.pathValue(`building-${prefix}`, true);
+  const models = panelSectionInformation(sectionUtil, env);
+  if (!models) return;
+  combineModels(models);
+  if (models.length > 1) console.warn('Not tested for multiple panel Sections');
+  models.forEach(m => {
+    const rdto = Utils.generated({catigory: 'Panel'}, env, m, prefix);
+    const joints = env.find(/^PanelSection-/, 'locationId');
+    joints.forEach(j => env.jointMap[j.id].male.push(rdto.id))
+  });
 }
 
 const built = {};
@@ -206,6 +295,7 @@ SectionPropertiesUtil.instance = (rMdto, environment) => {
     built[secProps.id] = new SectionPropertiesUtil(secProps, environment);
     built[secProps.id].rootHash = rootHash;
   }
+  if (built[secProps.id].isRoot) buildPanels(built[secProps.id], environment);
   return built[secProps.id];
 }
 

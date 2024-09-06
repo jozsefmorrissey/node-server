@@ -31,9 +31,6 @@ class Input extends Lookup {
     super(id);
     props.hidden = props.hide || false;
     props.list = props.list || [];
-    if (props.optional === false) {
-      console.log('her');
-    }
     props.optional = props.optional === undefined ? false : props.optional;
     Object.getSet(this, props, 'hidden', 'type', 'label', 'name', 'placeholder',
                             'class', 'list', 'value', 'inline');

@@ -263,7 +263,7 @@ class Polygon3D {
           info.vertex.before.distance(info.connection[1]) + info.vertex.after.distance(info.connection[1]) + .000001 &&
           !(new Line3D(info.connection[0], info.vertex.before).vector().sameDirection(new Line3D(info.connection[0], info.vertex.after).vector())) &&
           !instance.isWithin2d(info.connection[0]));
-      const identifyCrissCrossLocations = () =>
+      const identifyCrissCrossLocations = () => instance.lines.length < 4 ? [] :
         forEachVertex(info => info.line.before.intersection.segment(info.line.after, true));
       const identifyParrelleLocations = () =>
         forEachVertex(info => info.line.after.isParrelle(info.line.target));
@@ -321,14 +321,10 @@ class Polygon3D {
       const newSide = new Line3D(b4int, aftint);
       const centSide = newSide.connect(center);
       if (directions && !directions.expandable(centSide.negitive())) return false;
-      if (!line.vector().unit().equals(newSide.vector().unit())) return true;
       const centLine = line.connect(center);
       const diff = centSide.length() - centLine.length();
-      const planeLine = plane.connect.line(line);
-      const sameDir = planeLine.vector().sameDirection(centLine.vector());
-      const validExpansion = sameDir && diff > 0;
-      const validContraction = !sameDir && diff > 0;
-      return validExpansion || validContraction;
+      const sameDir = centSide.vector().sameDirection(centLine.vector());
+      return (sameDir && diff <= 0) || (!sameDir && diff >= 0);
     }
 
     /**
@@ -341,26 +337,30 @@ class Polygon3D {
                                   3
 
     **/
+    const updateLines = (lines, index, index2, int1, int2) => {
+      if (int1 === null || int2 === null) {
+        console.log('wtf')
+      }
+      const i1 = lines[index][0].distance(int1) < lines[index][1].distance(int1) ? 0 : 1;
+      const i2 = lines[index2][0].distance(int2) < lines[index2][1].distance(int2) ? 0 : 1;
+      if (i1 === i2)
+        throw new Error('I dont think this should happen...');
+      lines[index][i1].positionAt(int1);
+      lines[index2][i2].positionAt(int2);
+    }
+
     const polySorter = (poly) => (a,b) => poly.distance(a.line.midpoint()) - poly.distance(b.line.midpoint());
-    function extendByLines(plane, liMap) {
-      const len = liMap.length;
-      const center = instance.center();
-      for (let i = 0; i < len; i++) {
-        const index = liMap[i].index;
-        const before = lines[(index + len - 1) % len];
-        const after = lines[(index + 1) % len];
-        const b4int = plane.intersection.line(before);
-        const aftint = plane.intersection.line(after);
-        if (b4int instanceof Vertex3D && aftint instanceof Vertex3D) {
-          if (validConformation(center, b4int, aftint, lines[index], plane, liMap.directions)) {
-            const b4Index = before[0].distance(b4int) < before[1].distance(b4int) ? 0 : 1;
-            const aftIndex = after[0].distance(aftint) < after[1].distance(aftint) ? 0 : 1;
-            if (b4Index !== aftIndex) {
-              before[b4Index].positionAt(b4int);
-              after[aftIndex].positionAt(aftint);
-            }
-          }
-        }
+    function extendByLines(plane, index) {
+      const iplus2 = Math.mod(index - 2, lines.length);
+      const iminus2 = Math.mod(index + 2, lines.length);
+      const index2 = Math.abs(lines[iplus2].vector().unit().dot(plane.normal())) >
+                    Math.abs(lines[iminus2].vector().unit().dot(plane.normal())) ? iplus2 : iminus2;
+      const int1 = plane.intersection.line(lines[index]);
+      const int2 = plane.intersection.line(lines[index2]);
+      const linesCopy = lines.map(l => l.clone());
+      updateLines(linesCopy, index, index2, int1, int2);
+      if (linesCopy.sum(l => l.length()) > lines.sum(l => l.length())) {
+        updateLines(lines, index, index2, int1, int2);
       }
       if (instance.irregular.is()) {
         instance.irregular.crissCross.locations();
@@ -375,39 +375,44 @@ class Polygon3D {
       return instance;
     }
 
-    const extendCorner = (polyOplane, liMap) => {
-      const lm1 = liMap[0];
-      const lm2 = liMap[1]
-      const v1 = polyOplane.intersection.line(liMap[0].line);
-      const v2 = polyOplane.intersection.line(liMap[1].line);
-      if (v1.equals(v2)) return;
-      if (lm1.line.distance(v1, false) > lm2.line.distance(v1, false)) {
-        lines[lm1.index][1] = v2;
-        lines[lm2.index][0] = v1;
-        lines.splice(lm2.index, 0, new Line3D(v2, v1));
-      } else {
-        lines[lm1.index][1] = v1;
-        lines[lm2.index][0] = v2;
-        lines.splice(lm2.index, 0, new Line3D(v1, v2));
-      }
-      return instance;
+    const validCornerExpansion = (line1, v1, line2, v2, directions) => {
+      const nl1 = new Line3D(line1[0], v1);
+      const nl2 = new Line3D(line2[1], v2);
+      if (nl1.length() > line1.length() && !directions.expandable(nl1)) return false;
+      if (nl2.length() > line2.length() && !directions.expandable(nl2)) return false;
+      return true;
+    }
+
+    // const extendCorner = (plane, line, index) => {
+    //   const intersection = plane.intersection.line(line);
+    //   lines[index][0].positionAt(intersection);
+    //   return instance;
+    // }
+
+    const linePerpObject = (normal) => (line, index) => ({line, index,
+        dot: line.vector().unit().dot(normal)});
+    const vertPerpObject = (normal, center) => (vertex, index) => {
+      const line = new Line3D(center, vertex);
+      return ({vertex, index, line,
+        dot: line.vector().unit().dot(normal)});
+    }
+    const mostPerpendicularTo = (polyOplane, center) => {
+      const vertAndLineMap = lines.map(linePerpObject(polyOplane.normal()))
+          .concat(instance.vertices().map(vertPerpObject(polyOplane.normal(), center)));
+      vertAndLineMap.sortByAttr('dot', true);
+      return vertAndLineMap[0];
     }
 
     const MSI = Number.MAX_SAFE_INTEGER;
-    this.extendTo = (polyOplane, doNotModify, directions, exclude) => {
-      if (exclude && exclude.length === lines.length)
-        throw new Error('Need to program the case where all lines excluded');
-      if (doNotModify) return this.copy().extendTo(polyOplane, false, directions, exclude);
+    this.extendTo = (polyOplane, doNotModify, directions) => {
+      if (instance.normal().parrelle(polyOplane.normal())) return this;
+      if (doNotModify) return this.copy().extendTo(polyOplane, false, directions);
       const plane = polyOplane instanceof Polygon3D ? polyOplane.toPlane() : polyOplane;
-      const liMap = lines.map((line, index) => ({line, index,
-        dist: exclude && exclude.indexOf(index) ? MSI : polyOplane.distance(line.midpoint())}));
-      liMap.directions = directions;
-      liMap.sortByAttrs(['dist', 'index']);
-      const min = liMap[0].dist;
-      const minCount = liMap.filter(li => within(li.dist, min)).length;
-      if (minCount === 1) return extendByLines(plane, liMap);
-      if (Math.difference(liMap[0].index, liMap[1].index) === 1) return extendCorner(polyOplane, liMap);
-      return this.extendTo(polyOplane, doNotModify, directions, [liMap[0].index, liMap[1].index]);
+      const center = (directions && directions.center) || this.center();
+      const mostPerp = mostPerpendicularTo(polyOplane, center);
+      if (mostPerp.vertex) return this;//extendCorner(plane, mostPerp.line, mostPerp.index);
+      else extendByLines(plane, mostPerp.index);
+      return this;
     }
 
     let xNorm;
@@ -419,7 +424,16 @@ class Polygon3D {
         if (x) xNorm = x;
         else xNorm = z.crossProduct(y);
       }
-      if (xNorm === undefined) return Polygon3D.normals(this);
+      if (xNorm === undefined) {
+        const norms = Polygon3D.normals(this);
+        const xDoti = norms.x.dot(Vector3D.i);
+        const xDotj = norms.x.dot(Vector3D.j);
+        const yDotj = norms.y.dot(Vector3D.j);
+        if (xDoti < 0) norms.x = norms.x.inverse();
+        if (yDotj < 0) norms.y = norms.y.inverse();
+        if (Math.abs(xDotj) > Math.abs(yDotj)) norms.swap('x', 'y');
+        return norms;
+      }
       const z = this.normal();
       return {x: xNorm, y: z.crossProduct(xNorm), z};
     }
@@ -438,9 +452,28 @@ class Polygon3D {
     }
 
     this.resize = (width, height, doNotModify) => {
-      if (doNotModify) return this.copy().resize(width, height);
       const dems = this.demensions();
-      const scale = {x: width/dems.x, y: height/dems.y}
+      if (dems.x + width < 0 || dems.y + height < 0) return this.scale(0,0,doNotModify);
+      const scale = {
+        x: width >= 0 ? width/dems.x : (dems.x + width)/dems.x,
+        y: height >= 0 ? height/dems.y : (dems.y + height)/dems.y
+      }
+      return this.scale(scale.x, scale.y, doNotModify);
+    }
+
+    this.offset = (x,y, doNotModify) => {
+      const dems = this.demensions();
+      return this.resize(dems.x + x, dems.y + y, doNotModify);
+    }
+
+    this.scale = (widthOwidthAndHeight, height, doNotModify) => {
+      if (widthOwidthAndHeight !== 0 && height === 0) console.warn('You cant and probably shouldnt be setting height to 0\n\tYou can set widthAndHeight to 0\n\tBut....\n\tYour probably doing somthihng hacky')
+      if (doNotModify) return this.copy().scale(widthOwidthAndHeight, height);
+      height ||= widthOwidthAndHeight;
+      const scale = {
+        x: widthOwidthAndHeight,
+        y: height
+      }
       const norms = this.normals();
       const center = this.center();
       const verts = this.vertices();
@@ -450,23 +483,6 @@ class Polygon3D {
         const yVect = norms.y.scale(centerVect.dot(norms.y)*scale.y);
         line[0].positionAt(center.translate(xVect.add(yVect), true));
       });
-      // lines.forEach(l =>
-      //     resizeVertex(l[0], center, norms, width, height));
-      return this;
-    }
-
-    this.offset = (x,y, doNotModify) => {
-      const dems = this.demensions();
-      return this.resize(dems.x + x, dems.y + y, doNotModify);
-    }
-
-    this.scale = (width, height, doNotModify) => {
-      if (doNotModify) return this.copy().resize(width, height);
-      const norms = this.normals();
-      const center = this.center();
-      const verts = this.vertices();
-      lines.forEach(l =>
-          resizeVertex(l[0], center, norms, width, height));
       return this;
     }
 

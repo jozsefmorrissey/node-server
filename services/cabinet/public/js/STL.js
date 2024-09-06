@@ -407,10 +407,10 @@ function (require, exports, module) {
 	  this.toDrawString = (color, percision) => color ?
 	      this.toString(percision).replace(/(^|\n)\[/g, `$1${color}[`) :
 	      this.toString(percision, true).replace(/(^|\n)\[/g, `$1${'blue'}[`);
-	  this.vertices = () => {
+	  this.vertices = (percision) => {
 	    const verts = [];
 	    this.polygons.forEach(p => p.vertices.forEach(v => verts.push(v)));
-	    return verts;
+	    return verts.unique(o => o.toString(percision || .0001));
 	  }
 	  //TODO: USE TOLERANCE MAP FOR 2N RUNTIME!!!;
 	  this.sharesVertex = function (other) {
@@ -782,6 +782,11 @@ function (require, exports, module) {
 	    const y = ((endpoints.y + endpoints['-y']) / 2);
 	    const z = ((endpoints.z + endpoints['-z']) / 2);
 	    return {x,y,z};
+	  },
+	  mean: function () {
+	    const vertices = this.vertices();
+	    const mean = Math.mean(vertices, ['pos.x', 'pos.y', 'pos.z']);
+	    return mean.pos;
 	  },
 	
 	  demensions: function () {
@@ -5123,6 +5128,111 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./public/js/utils/3d-modeling/STL.js',
+function (require, exports, module) {
+	
+class STL {
+	  constructor(header) {
+	    let _header = header;
+	    const triangles = [];
+	    const throwXYZError = () => {throw new Error('Invalid XYZ object all must be finite numbers')};
+	    const validateXYZ = (...objs) => {
+	      for (let index = 0; index < objs.length; index++) {
+	        const obj = objs[index];
+	        if (!Number.isFinite(obj.x)) throwXYZError();
+	        if (!Number.isFinite(obj.y)) throwXYZError();
+	        if (!Number.isFinite(obj.z)) throwXYZError();
+	      }
+	      return true;
+	    }
+	    const copyXYZ = (obj) => ({x: obj.x,y: obj.y,z: obj.z});
+	    const copyAllXYZ = (...vs) => vs.map(v => copyXYZ(v));
+	    const XYZstr = (obj) => `${obj.x} ${obj.y} ${obj.z}`
+	
+	    this.header = (header) => header !== undefined ? (_header = header) : header;
+	    // TODO: make add imutable
+	    this.add = {};
+	    this.add.triangle = (v1, v2, v3, normal) =>
+	      validateXYZ(v1,v2,v3,normal) && triangles.push({vertices: copyAllXYZ(v1,v2,v3), normal});
+	    this.add.polygon = (vertices, normal) => {
+	      vertices = vertices.map(v=>v);
+	      while (vertices.length > 2) {
+	        this.add.triangle(vertices[0],vertices[1],vertices[2], normal);
+	        vertices.splice(1,1);
+	      }
+	    }
+	    this.toJson = () => {
+	      const json = {header};
+	      json.triangles = triangles.map(t => {
+	        const json = {normal: copyXYZ(t.normal)};
+	        json.vertices = t.vertices.map(v => copyXYZ(v));
+	        return json;
+	      });
+	      return json;
+	    }
+	    this.binary = () => {
+	      const byteLength = 320 + 4 + 50 * triangles.length;
+	      const buffer = new ArrayBuffer(byteLength);
+	      const view = new DataView(buffer);
+	      let bPos = 0;
+	
+	      bPos += 80;
+	      view.setUint32(bPos, triangles.length, true);
+	      bPos += 4;
+	      triangles.forEach(t => {
+	        view.setFloat32(bPos, t.normal.x, true); bPos += 4;
+	        view.setFloat32(bPos, t.normal.y, true); bPos += 4;
+	        view.setFloat32(bPos, t.normal.z, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[0].x, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[0].y, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[0].z, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[1].x, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[1].y, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[1].z, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[2].x, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[2].y, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[2].z, true); bPos += 4;
+	        view.setUint16(bPos, 0, true); bPos += 2;
+	      });
+	
+	      console.log(view.toByteString());
+	      return buffer;
+	    }
+	    this.binary.file = () => {
+	      const blob = new Blob([this.binary()], { type: 'application/octet-stream' }); // Set the MIME type to binary
+	      return blob;
+	    }
+	    this.ascii = () => {
+	      return `solid ${header}
+	${triangles.map(t =>
+	`  facet normal ${XYZstr(t.normal)}
+	    outer loop
+	      vertex ${XYZstr(t.vertices[0])}
+	      vertex ${XYZstr(t.vertices[1])}
+	      vertex ${XYZstr(t.vertices[2])}
+	    endloop
+	  endfacet`).join('\n')}
+	endsolid ${header}`
+	    }
+	    this.url = () => {
+	      return URL.createObjectURL(this.binary.file());
+	    }
+	  }
+	}
+	
+	STL.fromCSG = (csg) => {
+	  const stl = new STL();
+	  const scaled = csg.clone();
+	  scaled.scale(10);
+	  scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
+	  return stl;
+	}
+	
+	module.exports = STL;
+	
+});
+
+
 RequireJS.addFunction('./public/js/utils/3d-modeling/lightgl.js',
 function (require, exports, module) {
 	/*
@@ -7304,111 +7414,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/3d-modeling/STL.js',
-function (require, exports, module) {
-	
-class STL {
-	  constructor(header) {
-	    let _header = header;
-	    const triangles = [];
-	    const throwXYZError = () => {throw new Error('Invalid XYZ object all must be finite numbers')};
-	    const validateXYZ = (...objs) => {
-	      for (let index = 0; index < objs.length; index++) {
-	        const obj = objs[index];
-	        if (!Number.isFinite(obj.x)) throwXYZError();
-	        if (!Number.isFinite(obj.y)) throwXYZError();
-	        if (!Number.isFinite(obj.z)) throwXYZError();
-	      }
-	      return true;
-	    }
-	    const copyXYZ = (obj) => ({x: obj.x,y: obj.y,z: obj.z});
-	    const copyAllXYZ = (...vs) => vs.map(v => copyXYZ(v));
-	    const XYZstr = (obj) => `${obj.x} ${obj.y} ${obj.z}`
-	
-	    this.header = (header) => header !== undefined ? (_header = header) : header;
-	    // TODO: make add imutable
-	    this.add = {};
-	    this.add.triangle = (v1, v2, v3, normal) =>
-	      validateXYZ(v1,v2,v3,normal) && triangles.push({vertices: copyAllXYZ(v1,v2,v3), normal});
-	    this.add.polygon = (vertices, normal) => {
-	      vertices = vertices.map(v=>v);
-	      while (vertices.length > 2) {
-	        this.add.triangle(vertices[0],vertices[1],vertices[2], normal);
-	        vertices.splice(1,1);
-	      }
-	    }
-	    this.toJson = () => {
-	      const json = {header};
-	      json.triangles = triangles.map(t => {
-	        const json = {normal: copyXYZ(t.normal)};
-	        json.vertices = t.vertices.map(v => copyXYZ(v));
-	        return json;
-	      });
-	      return json;
-	    }
-	    this.binary = () => {
-	      const byteLength = 320 + 4 + 50 * triangles.length;
-	      const buffer = new ArrayBuffer(byteLength);
-	      const view = new DataView(buffer);
-	      let bPos = 0;
-	
-	      bPos += 80;
-	      view.setUint32(bPos, triangles.length, true);
-	      bPos += 4;
-	      triangles.forEach(t => {
-	        view.setFloat32(bPos, t.normal.x, true); bPos += 4;
-	        view.setFloat32(bPos, t.normal.y, true); bPos += 4;
-	        view.setFloat32(bPos, t.normal.z, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[0].x, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[0].y, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[0].z, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[1].x, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[1].y, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[1].z, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[2].x, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[2].y, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[2].z, true); bPos += 4;
-	        view.setUint16(bPos, 0, true); bPos += 2;
-	      });
-	
-	      console.log(view.toByteString());
-	      return buffer;
-	    }
-	    this.binary.file = () => {
-	      const blob = new Blob([this.binary()], { type: 'application/octet-stream' }); // Set the MIME type to binary
-	      return blob;
-	    }
-	    this.ascii = () => {
-	      return `solid ${header}
-	${triangles.map(t =>
-	`  facet normal ${XYZstr(t.normal)}
-	    outer loop
-	      vertex ${XYZstr(t.vertices[0])}
-	      vertex ${XYZstr(t.vertices[1])}
-	      vertex ${XYZstr(t.vertices[2])}
-	    endloop
-	  endfacet`).join('\n')}
-	endsolid ${header}`
-	    }
-	    this.url = () => {
-	      return URL.createObjectURL(this.binary.file());
-	    }
-	  }
-	}
-	
-	STL.fromCSG = (csg) => {
-	  const stl = new STL();
-	  const scaled = csg.clone();
-	  scaled.scale(10);
-	  scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
-	  return stl;
-	}
-	
-	module.exports = STL;
-	
-});
-
-
 RequireJS.addFunction('./public/js/utils/3d-modeling/viewer.js',
 function (require, exports, module) {
 	
@@ -8871,7 +8876,7 @@ function (require, exports, module) {
 	  if (!Array.isArray(arr)) return;
 	  for (let index = 0; index < arr.length; index += 1) {
 	    if (checkForDuplicats && this.indexOf(arr[index]) !== -1) {
-	      console.error('duplicate');
+	      console.warn('duplicate');
 	    } else {
 	      this[this.length] = arr[index];
 	    }
@@ -9541,10 +9546,29 @@ function (require, exports, module) {
 	  for (let tIndex = 0; tIndex < attrs.length; tIndex++) {
 	    const attr = attrs[tIndex];
 	    const key = targetAttrs[attr] === undefined ? attr : targetAttrs[attr];
-	    meanObject[key] = maxMin[key].total/items.length;
+	    meanObject.pathValue(key, maxMin[key].total/items.length);
 	  }
 	  return meanObject;
 	}, true);
+	
+	Function.safeStdLibAddition(Math, 'median', function (items, targetAttrs) {
+	  const medianObject = {};
+	  if (targetAttrs === undefined) {
+	    items.sort();
+	    const middleIndex = items.length/2
+	    return Number.isInteger(middleIndex) ? items[middleIndex] :
+	        (items[middleIndex - .5] + items[middleIndex+.5])/2;
+	  }
+	  const attrs = Array.isArray(targetAttrs) ? targetAttrs : Object.keys(targetAttrs);
+	  for (let tIndex = 0; tIndex < attrs.length; tIndex++) {
+	    const attr = attrs[tIndex];
+	    const key = targetAttrs[attr] === undefined ? attr : targetAttrs[attr];
+	    const values = items.map(i => i.pathValue(key));
+	    medianObject.pathValue(key, Math.median(values));
+	  }
+	  return medianObject;
+	}, true);
+	
 	
 	Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, key) {
 	  if (!modify) complement = JSON.copy(complement);

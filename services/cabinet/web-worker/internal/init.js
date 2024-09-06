@@ -54,12 +54,21 @@ function runTask(task, env) {
   }
 }
 
+const findFunc = (idMap) => (selector, attribute) => {
+    if (selector instanceof Function) return Object.values(idMap).filter(selector);
+    attribute ||= 'id';
+    if ((typeof selector) === 'string') return Object.values(idMap).filter(o => o[attribute] === selector);
+    if (selector instanceof RegExp) return Object.values(idMap).filter(o => (o[attribute] + '').match(selector));
+    throw new Error('Not sure what your trying to do here');
+}
+
 function runTasks(task, env) {
   let payload = task.payload;
   if (payload.environment) {
     payload.environment.byId = RDTO(payload.environment.byId);
     env = payload.environment;
   }
+  if (env && env.byId) env.find = findFunc(env.byId);
   if (!Array.isArray(payload.tasks)) return runTask(task, env);
 
   for (let index = 0; index < payload.tasks.length; index++) {

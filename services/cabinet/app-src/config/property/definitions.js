@@ -22,6 +22,8 @@ defs.iph = new Property('iph', 'Ideal Handle Height', {value: 42, notMetric: IMP
 defs.brr = new Property('brr', 'Bottom Rail Reveal', {value: 1/8, notMetric: IMPERIAL_US});
 defs.showRight = new Property('showRight', 'Show Right', {value: {type: 'None', endStyle: 'No'}});
 defs.ddd = new Property('ddd', 'Default Dado Depth', {value: .25, notMetric: IMPERIAL_US});
+defs.crh = new Property('crh', 'Crown Height', {value: 6, notMetric: IMPERIAL_US});
+
 
 //   Overlay
 defs.ovfls = new Property('ovfls', 'Overlay Frameless', {value: 11/32, notMetric: IMPERIAL_US});

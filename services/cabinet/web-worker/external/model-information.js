@@ -139,6 +139,7 @@ class ModelInformation {
       environment.propertyConfig = propertyConfig;
       environment.jointMap = jointMap;
       environment.explosionFactor = this.explosionFactor();
+      environment.generated = [];
       return environment;
     }
     this.environment = environmentObject;

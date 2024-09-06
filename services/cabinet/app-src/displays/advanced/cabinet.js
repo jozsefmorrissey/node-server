@@ -19,4 +19,11 @@ const render = (cabinet) => {
   return template.render({cabinet, partHtml, parts});
 }
 
+du.on.match('click', '[name="has-frame"]', (elem) => {
+  const id = du.find.up.attribute('lookup-id', elem);
+  const divider = Lookup.get(id);
+  divider.value('fls', !elem.checked);
+  du.find.closest('.frame-width-cnt', elem).hidden = !elem.checked;
+});
+
 module.exports = render;

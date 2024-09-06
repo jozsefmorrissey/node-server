@@ -282,7 +282,7 @@ class DrawLayout extends Draw {
       let hoverin = hovering();
       const snap = hoverin instanceof Snap2d ? hoverin :
                     (hoverin instanceof SnapLocation2d ? hoverin.parent() : undefined);
-      const maxDist = snap ? snap.maxRadius() * 1.5 : Math.sqrt(9*9+9*9) * 2.54;
+      const maxDist = snap ? snap.maxRadius() * .5 : 15;
       objects.forEach((obj) => {
         const hovered = hoverin === obj.snap2d.top();
         const color =  hovered ? 'green' : defaultColor;

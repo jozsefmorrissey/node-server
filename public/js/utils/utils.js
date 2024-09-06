@@ -1023,7 +1023,7 @@ Function.safeStdLibAddition(Array, 'concatInPlace', function (arr, checkForDupli
   if (!Array.isArray(arr)) return;
   for (let index = 0; index < arr.length; index += 1) {
     if (checkForDuplicats && this.indexOf(arr[index]) !== -1) {
-      console.error('duplicate');
+      console.warn('duplicate');
     } else {
       this[this.length] = arr[index];
     }
@@ -1693,10 +1693,29 @@ Function.safeStdLibAddition(Math, 'mean', function (items, targetAttrs) {
   for (let tIndex = 0; tIndex < attrs.length; tIndex++) {
     const attr = attrs[tIndex];
     const key = targetAttrs[attr] === undefined ? attr : targetAttrs[attr];
-    meanObject[key] = maxMin[key].total/items.length;
+    meanObject.pathValue(key, maxMin[key].total/items.length);
   }
   return meanObject;
 }, true);
+
+Function.safeStdLibAddition(Math, 'median', function (items, targetAttrs) {
+  const medianObject = {};
+  if (targetAttrs === undefined) {
+    items.sort();
+    const middleIndex = items.length/2
+    return Number.isInteger(middleIndex) ? items[middleIndex] :
+        (items[middleIndex - .5] + items[middleIndex+.5])/2;
+  }
+  const attrs = Array.isArray(targetAttrs) ? targetAttrs : Object.keys(targetAttrs);
+  for (let tIndex = 0; tIndex < attrs.length; tIndex++) {
+    const attr = attrs[tIndex];
+    const key = targetAttrs[attr] === undefined ? attr : targetAttrs[attr];
+    const values = items.map(i => i.pathValue(key));
+    medianObject.pathValue(key, Math.median(values));
+  }
+  return medianObject;
+}, true);
+
 
 Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, key) {
   if (!modify) complement = JSON.copy(complement);

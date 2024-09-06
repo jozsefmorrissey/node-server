@@ -14,7 +14,7 @@ function updateJoint(values, elem) {
   const vOid = getTarget(elem);
   const selectedJoint = du.find.closest('.joint-selector', elem).value;
   const joint = Object.fromJson({_TYPE: values._TYPE, maleOffset: values.depth});
-  vOid[`${selectedJoint.toLowerCase()}Joint`](joint)
+  vOid[`${selectedJoint.toCamel()}Joint`](joint)
 }
 
 const voids = (cabinet) => Object.values(cabinet.subassemblies).filter(s => s instanceof Void);

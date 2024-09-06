@@ -392,8 +392,8 @@ class Draw2d {
     draw.measurement = (measurement, color, textWidth) => {
       const measurementColor = color || 'grey';
       const measurementLineWidth = '.1';
-      const lines = measurement.I(1, takenLocations);
       try {
+        const lines = measurement.I(1, takenLocations);
         const winner = lines.midpointClear();
         if (winner === undefined) return;
         draw.beginPath();
