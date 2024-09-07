@@ -315,18 +315,6 @@ class Polygon3D {
       this.irregular.crissCross.locations().length > 0 ||
       this.irregular.parrelle.locations().length > 0;
 
-    // conformation definition:
-    //     correspondence especially to a model or plan
-    function validConformation(center, b4int, aftint, line, plane, directions) {
-      const newSide = new Line3D(b4int, aftint);
-      const centSide = newSide.connect(center);
-      if (directions && !directions.expandable(centSide.negitive())) return false;
-      const centLine = line.connect(center);
-      const diff = centSide.length() - centLine.length();
-      const sameDir = centSide.vector().sameDirection(centLine.vector());
-      return (sameDir && diff <= 0) || (!sameDir && diff >= 0);
-    }
-
     /**
                                    1
                     <-----  ---------------  ------>
@@ -337,24 +325,38 @@ class Polygon3D {
                                   3
 
     **/
-    const updateLines = (lines, index, index2, int1, int2) => {
-      if (int1 === null || int2 === null) {
-        console.log('wtf')
+    const applyApplicableVertex = (line, vertex) => {
+      if (vertex === null) {
+        return;
       }
-      const i1 = lines[index][0].distance(int1) < lines[index][1].distance(int1) ? 0 : 1;
-      const i2 = lines[index2][0].distance(int2) < lines[index2][1].distance(int2) ? 0 : 1;
-      if (i1 === i2)
-        throw new Error('I dont think this should happen...');
-      lines[index][i1].positionAt(int1);
-      lines[index2][i2].positionAt(int2);
+      const distFromStart = line[0].distance(vertex);
+      const distFromEnd = line[1].distance(vertex);
+      const index = distFromStart < distFromEnd ? 0 : 1;
+      const distFromTarget = index === 1 ? distFromStart : distFromEnd;
+      if (distFromTarget > line.length()) {
+        line[index].positionAt(vertex);
+      }
+    }
+
+    const updateLines = (lines, index, index2, int1, int2) => {
+      applyApplicableVertex(lines[index], int1);
+      applyApplicableVertex(lines[index2], int2);
+    }
+
+    const mostInLineIndex = (plane, index, offset) => {
+      const iplus = Math.mod(index + offset, lines.length);
+      if (lines.length === 4) return iplus;
+      const iminus = Math.mod(index - offset, lines.length);
+      const plusDot = Math.abs(lines[iplus].vector().unit().dot(plane.normal()));
+      const minusDot = Math.abs(lines[iminus].vector().unit().dot(plane.normal()));
+      if (within(plusDot, minusDot))
+        throw new Error('This should not happen check dot products of lines[index|iplus|iminus]');
+      return plusDot > minusDot ? iplus : iminus;
     }
 
     const polySorter = (poly) => (a,b) => poly.distance(a.line.midpoint()) - poly.distance(b.line.midpoint());
     function extendByLines(plane, index) {
-      const iplus2 = Math.mod(index - 2, lines.length);
-      const iminus2 = Math.mod(index + 2, lines.length);
-      const index2 = Math.abs(lines[iplus2].vector().unit().dot(plane.normal())) >
-                    Math.abs(lines[iminus2].vector().unit().dot(plane.normal())) ? iplus2 : iminus2;
+      const index2 = mostInLineIndex(plane, index, 2);
       const int1 = plane.intersection.line(lines[index]);
       const int2 = plane.intersection.line(lines[index2]);
       const linesCopy = lines.map(l => l.clone());
@@ -372,34 +374,43 @@ class Polygon3D {
         // instance.irregular.concave.fill();
       }
 
-      return instance;
+      return [lines[index], lines[index2]];
     }
 
-    const validCornerExpansion = (line1, v1, line2, v2, directions) => {
-      const nl1 = new Line3D(line1[0], v1);
-      const nl2 = new Line3D(line2[1], v2);
-      if (nl1.length() > line1.length() && !directions.expandable(nl1)) return false;
-      if (nl2.length() > line2.length() && !directions.expandable(nl2)) return false;
-      return true;
+    const positionAtClosest = (line, vert) => {
+      if (line[0].distance(vert) < line[1].distance(vert))
+        line[0] = vert;
+      else line[1] = vert;
     }
 
-    // const extendCorner = (plane, line, index) => {
-    //   const intersection = plane.intersection.line(line);
-    //   lines[index][0].positionAt(intersection);
-    //   return instance;
-    // }
+    const extendCorner = (plane, line, index, vertex) => {
+      const line2 = lines[index];
+      const lowerIndex = Math.mod(index + (line2[0].equals(vertex) ? -1 : 1), lines.length);
+      const line1 = lines[lowerIndex];
+      const int1 = plane.intersection.line(line1);
+      const int2 = plane.intersection.line(line2);
+      if (int1 === null || int2 === null)
+        throw new Error('null int!!!')
+      if (line1.length() + .0001 < line1[0].distance(int1)) {
+        positionAtClosest(line1, int2);
+        positionAtClosest(line2, int1);
+        lines.splice(index, 0, new Line3D(line1[1], line2[0]));
+      }
+      return [vertex, line1, line2];
+    }
 
     const linePerpObject = (normal) => (line, index) => ({line, index,
-        dot: line.vector().unit().dot(normal)});
+        dot: Math.abs(line.vector().unit().dot(normal))});
     const vertPerpObject = (normal, center) => (vertex, index) => {
       const line = new Line3D(center, vertex);
       return ({vertex, index, line,
-        dot: line.vector().unit().dot(normal)});
+        dot: line.vector().unit().dot(normal) - .2});
     }
     const mostPerpendicularTo = (polyOplane, center) => {
-      const vertAndLineMap = lines.map(linePerpObject(polyOplane.normal()))
-          .concat(instance.vertices().map(vertPerpObject(polyOplane.normal(), center)));
-      vertAndLineMap.sortByAttr('dot', true);
+      const normal = polyOplane.connect.vertex(center).vector().inverse().unit();
+      const vertAndLineMap = lines.map(linePerpObject(normal))
+          .concat(instance.vertices().map(vertPerpObject(normal, center)));
+      vertAndLineMap.sortByAttrs(['toString', 'dot'], true);
       return vertAndLineMap[0];
     }
 
@@ -410,7 +421,7 @@ class Polygon3D {
       const plane = polyOplane instanceof Polygon3D ? polyOplane.toPlane() : polyOplane;
       const center = (directions && directions.center) || this.center();
       const mostPerp = mostPerpendicularTo(polyOplane, center);
-      if (mostPerp.vertex) return this;//extendCorner(plane, mostPerp.line, mostPerp.index);
+      if (mostPerp.vertex) extendCorner(plane, mostPerp.line, mostPerp.index, mostPerp.vertex);
       else extendByLines(plane, mostPerp.index);
       return this;
     }

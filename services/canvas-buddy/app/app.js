@@ -27,15 +27,16 @@ let snapShotsDetected = false;
 const snapShotCommentReg = /\/\/[ \t]*(([0-9]{1,}).*)/;
 function parseSnapShots(lines) {
   snapShotControls.hidden = true;
-  let snapShots = [[]];
-  snapShots[0].comments = [];
-  let snapIndex = 0;
+  let snapShots = [];
+  snapShots[-1] = [];
+  snapShots[-1].comments = [];
+  let snapIndex = -1;
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
     const match = line.match(snapShotCommentReg);
     if (match) {
       snapIndex = Number.parseInt(match[2]);
-      snapShots[snapIndex] = [];
+      snapShots[snapIndex] = [].concat(snapShots[-1]);
       snapShots[snapIndex].comments = [match[1]];
     } else {
       const commentMatch = line.match(commentReg);

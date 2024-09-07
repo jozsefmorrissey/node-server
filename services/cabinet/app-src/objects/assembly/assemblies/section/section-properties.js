@@ -612,6 +612,14 @@ class SectionProperties extends KeyValue {
     neigborJoint.maleOffset(0.635);
     divider.addDependencies(neigborJoint);
 
+    this.neighbors = (divider) => {
+      let target = instance[dir]();
+      if (target instanceof DividerSection) target = target.divider();
+      return target.isPanel(assem);
+
+      console.log(assem);
+    }
+
 
     function shelveNiegbor(assem) {
       if (assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section|Shelve)/)) return false;
@@ -671,7 +679,23 @@ class SectionProperties extends KeyValue {
       instance.parentAssembly().addDependencies(...joints);
     }
 
-    this.borders = () => [this.right, this.left, this.top, this.bottom, this.back]
+    const borderOrder = ['right', 'left', 'top', 'bottom', 'back'];
+    this.borders = () => borderOrder.map(dir => this[dir]);
+    this.borders.direction = (border) => {
+      const index = borderOrder.findIndex(dir => border === this[dir]());
+      if (index === -1)
+        throw new Error('invalid border input');
+      return borderOrder[index];
+    }
+    this.borders.neighbors = (border) => {
+      switch (this.borders.direction(border)) {
+        case 'right': return [this.top, this.bottom];
+        case 'left': return [this.top, this.bottom];
+        case 'top': return [this.right, this.left];
+        case 'bottom': return [this.right, this.left];
+        case 'back' : throw new Error('this.borders.neighbors is not applicable for back');
+      }
+    }
 
     this.on.parentSet(p => this.getAssembly('c') && this.isRoot() && cabinetBoxDados());
 

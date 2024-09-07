@@ -34,12 +34,15 @@ class Divider extends Assembly {
     const frame = new Frame('fr', 'Frame');
     frame.parentAssembly(this);
 
-    const isFrontPanel = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider' && a.match(/:(full|f)/);
-    const isFrame = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider' && a.constructor.name === 'Frame';
+    const isThisFrontPanel = (a) => a === pFull || pFront === a;
+    const notThisFrontPanel = (a) => !isThisFrontPanel(a);
+    const isDividerPart = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider';
+    const isFrontPanel = (a) => isDividerPart(a) && a.match(/:(full|f)/);
+    const isFrame = (a) => isDividerPart(a) && a.constructor.name === 'Frame';
     const isFrontPanelWFrame = (a) => isFrontPanel(a) && a.parentAssembly().hasFrame();
     const isFrontPanelWOFrame = (a) => isFrontPanel(a) && !a.parentAssembly().hasFrame();
-    this.addDependencies(new Dado(isFrontPanelWFrame, isFrame, null, 'FramePanelJoint'));
-    this.addDependencies(new Cut(isFrontPanelWOFrame, isFrame, null, 'FramePanelCut'));
+    this.addDependencies(new Dado(isFrontPanel, isFrame, notThisFrontPanel, 'FramePanelJoint'));
+    this.addDependencies(new Dado(isFrontPanel, isFrame, notThisFrontPanel, 'FramePanelJoint'));
 
     const parts = [pFull, pFront, pBack];
     this.possibleParts = () => parts.concat(frame);

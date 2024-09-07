@@ -200,9 +200,6 @@ function runMfcFunc(stage, assem, env) {
 }
 
 function applyCuts(assem, env) {
-  if (assem.id.match(/^Shelve/)) {
-    console.log('here');
-  }
   const femaleJoints = env.jointMap.female[assem.id];
   if (!femaleJoints) return;
   const cutIds = femaleJoints.filter(id => id.match(/^Cut_/));

@@ -203,24 +203,19 @@ apply.ShelveJoint = (assem, joint, femalePolyInfo, frontBackSet, env) => {
     return;
   }
 
-  console.log('//female\n' + femalePolyObj.z.map(p => p.toDrawString('red')).join('\n') +
-              '\n\n//male\n' + frontBackSet.map(p => p.toDrawString()).join('\n'));
-
   const center = new Vertex3D(env.modelInfo.model[assem.id].mean());
   assem.jointSettings.directions.center = center;
   extendFBSetToPoly(femalePolyObj.z[1], frontBackSet, assem.jointSettings);
-  console.log('//female\n' + femalePolyObj.z.map(p => p.toDrawString('red')).join('\n') +
-              '\n\n//male\n' + frontBackSet.map(p => p.toDrawString()).join('\n'));
   const cookie = [cutterFurthestZPoly(femalePolyInfo, center)];
   const offset = joint.eval.maleOffset;
   const offAbs = Math.abs(offset);
   const width = femalePolyInfo().z[0].distance(femalePolyInfo().z[1]) * (offset > 0 ? 1 : -1);
   const polyIndex = closestIndex(femalePolyObj, center);
   const jointCutters = [offsetPolyCutter(femalePolyInfo, polyIndex, offset + width, -offset, offAbs, offAbs)];
-  console.log('//female\n' + femalePolyObj.z.map(p => p.toDrawString('red')).join('\n') +
-              '\n\n//male\n' + frontBackSet.map(p => p.toDrawString()).join('\n') +
-              '\n\n//Far side cutter\n' + cookie[0]().toDrawString('green') +
-              '\n//Joint cutter\n' + jointCutters[0]().toDrawString('yellow'));
+  // console.log('//female\n' + femalePolyObj.z.map(p => p.toDrawString('red')).join('\n') +
+  //             '\n\n//male\n' + frontBackSet.map(p => p.toDrawString()).join('\n') +
+  //             '\n\n//Far side cutter\n' + cookie[0]().toDrawString('green') +
+  //             '\n//Joint cutter\n' + jointCutters[0]().toDrawString('yellow'));
   return {joint: jointCutters, cookie};
 }
 module.exports = apply;

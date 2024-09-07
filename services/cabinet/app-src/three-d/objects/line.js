@@ -263,8 +263,8 @@ class Line3D {
     this.distance = (other, notSegment) => {
       if (other instanceof Line3D && other.isPoint()) return this.distance(other[0]);
       if (this.isPoint()) return other.distance(this[0]);
-      if (other instanceof Vertex3D) return this.connect(other).length();
-      if (notSegment) return this.connect(other).length();
+      if (other instanceof Vertex3D) return this.connect(other, !notSegment).length();
+      if (notSegment) return this.connect(other.length());
       return this.connect.line.segment(other, true).length();
     }
     this.intersection = (other, segment) => {
