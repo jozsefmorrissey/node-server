@@ -223,13 +223,16 @@ class OpeningToeKickUtil {
 }
 
 const built = {};
+const dataPath = (assem) => 'proccessData.OpeningToeKickUtil.' + assem.id;
 OpeningToeKickUtil.instance = (openTk, env) => {
   const rootHash = openTk.find.root().hash;
-  if (built[openTk.id] === undefined || built[openTk.id].rootHash !== rootHash) {
-    built[openTk.id] = new OpeningToeKickUtil(openTk, env);
-    built[openTk.id].rootHash = rootHash;
+  const path = dataPath(openTk);
+  if (env.pathValue(path) === undefined || env.pathValue(path).rootHash !== rootHash) {
+    const openTkUtil = new OpeningToeKickUtil(openTk, env);
+    openTkUtil.rootHash = rootHash;
+    env.pathValue(path, openTkUtil);
   }
-  return built[openTk.id];
+  return env.pathValue(path);
 }
 
 module.exports = OpeningToeKickUtil;

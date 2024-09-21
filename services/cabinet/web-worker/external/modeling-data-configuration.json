@@ -1,7 +1,8 @@
 {
   "_TODO": ["add conditional syntax: if(isRoot, hash) and apply to hash on Assembly"],
   "Assembly": ["id","parentAssembly().id","partCode","partName","locationCode",
-      "part", "position", "included", "children>id", "hash", "name"],
+      "part", "position", "included", "children>id", "hash", "name","outsourced",
+      "digital"],
   "Position": ["current"],
   "DividerSection": ["divider().id"],
   "SectionProperties": ["id", "back().id", "top().id", "bottom().id", "left().id", "right().id", "rotation", "coordinates().inner",
@@ -25,7 +26,8 @@
   "Hinge": [],
   "Door": ["inElivation"],
   "HasPull": [],
-  "Divider": ["thickness", "panelThickness", "frameWidth", "frameThickness", "type", "scribe", "partialWidth"],
+  "Divider": ["thickness", "panelThickness", "frameWidth", "frameThickness",
+              "type", "scribe", "partialWidth", "hasFrame"],
   "OpeningToeKick": ["leftCornerCutter().id", "rightCornerCutter().id", "toKickPanel().id",
       "toeKickCutter().id", "opening().id", "autoToeKick().id"],
   "AutoToekick": ["leftEndStyle", "rightEndStyle", "leftShow", "rightShow", "overlayRight", "overlayLeft"],
@@ -44,8 +46,8 @@
   "CabinetOpeningCorrdinates": ["id", "coordinates", "partCode", "locationCode",
         "right().id", "left().id", "top().id", "bottom().id", "cutter().id", "parentAssembly().id"],
   "Vector3D": ["i", "j", "k"],
-  "Joint": ["id", "maleOffset", "locationId", "priority",
-            "fullLength", "descriptor", "eval.maleOffset"],
+  "Joint": ["id", "maleOffset", "locationId", "priority", "autoExtend",
+            "full.male", "full.female", "descriptor", "eval.maleOffset"],
   "Property": ["value"],
   "ModelInformation": ["environment"]
 }

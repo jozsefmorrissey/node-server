@@ -37,6 +37,9 @@ class Vector3D {
     this.j = () => j;
     this.k = () => k;
 
+    this.dominant = () => Math.abs(i) > Math.abs(j) ? (Math.abs(i) > Math.abs(k) ? 'i' :
+                            (Math.abs(k) > Math.abs(j) ? 'k' : 'j')) : 'j';
+
     this.magnitude = () => Math.sqrt(this.i()*this.i() + this.j()*this.j() + this.k()*this.k());
     this.magnitudeSQ = () => this.i()*this.i() + this.j()*this.j() + this.k()*this.k();
     this.minus = (vector) => {
@@ -254,8 +257,9 @@ Vector3D.cardinal = (array) => array ? [Vector3D.i, Vector3D.j, Vector3D.k] :
 
 const sectorVectors = [Vector3D.i, Vector3D.j, Vector3D.k,
   Vector3D.i.inverse(), Vector3D.j.inverse(), Vector3D.k.inverse()]
-const sectorMap = new SectorMap();
+const secMap = new SectorMap();
 Vector3D.sector = (vector, sectorMap) => {
+  sectorMap ||= secMap;
   const keys = Object.keys(sectorMap);
   return keys[keys.maxIndex(k => sectorMap[k].dot(vector))];
   // sectorVectors[directionVectors.minIndex(v => v.dot(vector))];

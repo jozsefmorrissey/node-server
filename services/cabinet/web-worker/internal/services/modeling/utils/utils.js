@@ -25,10 +25,8 @@ const vectObj = (obj) => new Vector3D(obj);
 function normals(part, env) {
   let norms = part.position.current.normals;
   if (norms === undefined) return {x: Vector3D.i, y: Vector3D.j, z: Vector3D.k}
-  if (part.id.startsWith('PanelVoidIndex')) {
-    norms = Polygon3D.normals(Polygon3D.fromCSG(env.modelInfo.model[part.id].polygons, true));
-  } else if (norms.DETERMINE_FROM_MODEL) {
-    norms = Polygon3D.normals(Polygon3D.fromCSG(env.modelInfo.model[part.id].polygons, true));
+  if (norms.DETERMINE_FROM_MODEL) {
+    norms = Polygon3D.normals(Polygon3D.fromCSG(env.getModel(part, 'cut').polygons, true));
   } else if (norms.DETERMINE_FROM_PARENT !== undefined) {
     const parentNorms = normals(part.parentAssembly(), env);
     norms = parentNorms;

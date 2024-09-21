@@ -9,6 +9,7 @@ const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
 const SimpleModel = require('../../app-src/objects/simple/simple.js');
 const Assembly = require('../../app-src/objects/assembly/assembly.js');
 const Panel = require('../../app-src/objects/assembly/assemblies/panel.js');
+const PartInformation = require('part-information');
 
 class Job {
   constructor() {
@@ -18,8 +19,8 @@ class Job {
     this.finished = (is, result) => {
       if (result instanceof Error) _error = result;
       if (!finished && is === true) {
-        result = this.result(result);
         finished = true;
+        result = this.result(result);
         _error === undefined ? this.trigger.success(result || this, this) :
                                 this.trigger.failed(_error, this);
         this.trigger.finished(_error, this);
@@ -323,30 +324,26 @@ class CsgComplexRoomJob extends CsgRoomJob {constructor(room) {super(room, true)
 CsgRoomJob.task = (room) => CsgRoomJob.tasksAndJobs(room).task;
 
 class PartsDocumentationJob extends TaskJob {
-  constructor(assemblyOs, props) {
-    const allParts = assemblyOs instanceof Assembly;
-    let _result;
+  constructor(assembly, props) {
     let completeTriggered = false;
-    if (allParts) assemblyOs = assemblyOs.getParts();
-    const parts = assemblyOs.filter(part => part.part());
+    const parts = assembly.modelingCollections();
     const modelInfo = ModelInfo.object(parts, props);
-    if (allParts) _result = modelInfo.partInformation();
-    const task = _result ? new InfoAvailible(_result) : Parts(modelInfo);
+    const initialResult = modelInfo.partInformation.finished() ? modelInfo.partInformation : null;
+    const task = initialResult ? new InfoAvailible(initialResult) : Parts(modelInfo);
     super(task);
     this.modelInfo = () => modelInfo;
+    this.result = () => modelInfo.partInformation;
     this.parts = () => parts;
     task.on.success((result) => {
-      _result = result;
-      if (allParts && !completeTriggered) {
+      if (!completeTriggered) {
         completeTriggered = true;
-        modelInfo.partInformation(_result);
-        this.trigger.success(_result, this);
+        this.trigger.success(this.result(), this);
       }
     });
 
     const parentQueue = this.queue;
     this.queue = () => {
-      if (_result) this.trigger.success(_result, this);
+      if (this.result()) this.trigger.success(this.result(), this);
       else parentQueue();
     };
   }
@@ -398,19 +395,25 @@ class OrderDocumentationJob extends TaskJob {
   constructor(order, props) {
     const tasks = [];
     const _result = {order, rooms: []};
+    const partInformation = new PartInformation(order);
     Object.keys(order.rooms).forEach((key, i) => {
       const room = order.rooms[key];
       const task = new RoomDocumentationJob(room).task();
       if (task.tasks().length > 0) {
         task.on.success(result =>
-          _result.rooms[i] = result);
+        _result.rooms[i] = result);
         tasks.push(task);
       }
     });
 
     const task = new Parrelle(...tasks);
-    task.result = () => _result;
+    task.result = () => partInformation;
     super(task);
+    this.result = () => {
+      if (!this.finished()) return null;
+      partInformation.finished(true);
+      return partInformation;
+    }
   }
 }
 CsgAssembliesTo2DJob.Outline = CsgOutlineTo2DJob;

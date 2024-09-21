@@ -7,6 +7,8 @@ const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/poly
 const Cutter = require('../../app-src/objects/assembly/assemblies/cutter.js');
 const Assembly = require('../../app-src/objects/assembly/assembly');
 
+const PartInformation = require('./part-information');
+
 // TODO: move sorting/filtering functions to worker-bundle
 const sortUnderScoreCount = (a, b) => {
   const aC = a.locationCode().count('_:');
@@ -100,7 +102,6 @@ const sorter = (assemblies, jointMap, byId) => {
 
 
 const modelInfoObject = () => ({threeView: {}, model: {}, joined: {}, intersection: {}, biPolygonArray: {}, extended: {}, cut: {}});
-
 class ModelInformation {
   constructor(assemblies, props) {
     props ||= {};
@@ -118,6 +119,7 @@ class ModelInformation {
     allAssemblies.forEach(a => byId[a.id()] = a);
     jointMap.JOINTS.forEach(j => byId[j.id()] = j);
     assemblies = sortAssemMtdos(assemblies);
+    const nonDigitalList = assemblies.filter(a => !a.digital()).map(a=>a.id());
     assemblies = assemblies.map(a => a.id());
 
     const complexityMap = {};
@@ -127,10 +129,10 @@ class ModelInformation {
                                   .map(amo => amo.assembly.id());
 
     this.needsModeled = () => props.needsModeled || allAssemblies;
-    this.needsJoined = () => props.needsJoined || assemblies;
-    this.needsIntersected = () => props.needsIntersected || assemblies;
-    this.needsUnioned = () => props.needsUnioned || assemblies;
-    this.needs2dConverted = () => props.needs2dConverted || assemblies;
+    this.needsJoined = () => props.needsJoined || nonDigitalList;
+    this.needsIntersected = () => props.needsIntersected || nonDigitalList;
+    this.needsUnioned = () => props.needsUnioned || nonDigitalList;
+    this.needs2dConverted = () => props.needs2dConverted || nonDigitalList;
 
     const environmentObject = () => {
       const environment = DTO(props) || {};
@@ -181,11 +183,7 @@ class ModelInformation {
       return unionedCsg;
     }
 
-    let partInformation;
-    this.partInformation = (info) => {
-      if (info) modelInfo.partInformation = info;
-      else return modelInfo.partInformation;
-    }
+    this.partInformation = new PartInformation(root);
 
     let unioned2D
     this.unioned2D = (data) => {
@@ -199,30 +197,6 @@ class ModelInformation {
   }
 }
 
-const all = {};
-const setModelInfomation = (root) => {
-  all[root.id()] ||= ({
-    hash: root.hash(),
-    modelInfo: modelInfoObject(),
-  });
-  all[root.id()].lastAccess = new Date().getTime();
-  return all[root.id()].modelInfo;
-}
-
-function related(target) {
-  const root = target.getRoot();
-  if (all[root.id()] === undefined) {
-    return setModelInfomation(root);
-  } else {
-    const hash = root.hash();
-    if (hash !== all[root.id()].hash) {
-      all[root.id()] = undefined;
-      return setModelInfomation(root);
-    }
-    return all[root.id()].modelInfo;
-  }
-}
-
 function object(targetOs, props) {
   if (!Array.isArray(targetOs)) targetOs = [targetOs];
   const root = targetOs[0].getRoot();
@@ -232,4 +206,4 @@ function object(targetOs, props) {
 }
 
 
-module.exports = {all, related, object};
+module.exports = {object};

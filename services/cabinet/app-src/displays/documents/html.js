@@ -30,46 +30,31 @@ const orderInfoTemplate = new $t('documents/construction/order-information');
 
 const NO_CABINETS_EXIST_HTML = '<h2>Must define atleast one cabinet</h2>';
 
-function forEachCabinetInfo(orderInfo, func) {
-  orderInfo.rooms.forEach(r => r.groups.forEach(g => g.cabinets.forEach(func)));
+function forEachCabinetInfo(order, func) {
+  Object.values(order.rooms).forEach(r => r.groups
+                                .forEach(g => g.objects.forEach(func)));
 }
 
-function getCabinetInfos(orderInfo) {
+function getCabinetInfos(order) {
   const list = [];
-  forEachCabinetInfo(orderInfo, cInfo => list.push(cInfo));
+  forEachCabinetInfo(order, cabinet => list.push(cabinet));
   return list;
 }
 
-function allPartsOfType (orderInfo, type) {
-  const parts = [];
-  const isReg = type instanceof RegExp;
-  forEachCabinetInfo(orderInfo, c => {
-    const keys = Object.keys(c.parts);
-    for (let index = 0; index < keys.length; index++) {
-      const key = keys[index];
-      if ((isReg && key.match(type)) || (!isReg && key === type)) {
-        Object.values(c.parts[key]).forEach(info => info.parts.forEach((part) => {
-          parts.push({part, info});
-        }));
-      }
-    }
-  });
-  return parts;
-}
-
-function listToTemplate(orderInfo, type, template, width, height, thickness) {
-  const parts = allPartsOfType(orderInfo, type);
+function listToTemplate(partInformation, type, template, width, height, thickness) {
+  const partInfos = partInformation.byCategory(type) || [];
   const map = {};
   const disp = Utils.display;
-  parts.forEach(d => {
-    const category = d.part.category;
-    const key = disp.demensions(d.info.demensions);
+  partInfos.forEach(info => {
+    const part = info.parts[0];
+    const category = part.category
+    const key = disp.demensions(info.demensions);
     if (map[category] === undefined) map[category] = {};
     if (map[category][key] === undefined) {
       map[category][key] = [];
-      map[category][key].info = d.info;
+      map[category][key].info = info;
     }
-    map[category][key].push(d.part);
+    map[category][key].push(part);
   });
 
   const partListMap = {};
@@ -77,21 +62,22 @@ function listToTemplate(orderInfo, type, template, width, height, thickness) {
   return template.render({partListMap, disp, type, width, height, thickness});
 }
 
-function materialListToTemplate(orderInfo, type, template) {
-  const parts = allPartsOfType(orderInfo, type);
+function materialListToTemplate(partInformation, type, template) {
+  const parts = partInformation.match(type);
   const map = {};
   const disp = Utils.display;
-  parts.forEach(d => {
-    const category = d.part.category;
-    const key = disp.demensions(d.info.demensions);
-    const thickness = disp.measurement(d.info.demensions.z);
+  parts.forEach(info => {
+    const part = info.parts[0];
+    const category = part.category
+    const key = disp.demensions(info.demensions);
+    const thickness = disp.measurement(info.demensions.z);
     if (map[category] === undefined) map[category] = {};
     if (map[category][thickness] === undefined) map[category][thickness] = {};
     if (map[category][thickness][key] === undefined) {
       map[category][thickness][key] = [];
-      map[category][thickness][key].info = d.info;
+      map[category][thickness][key].info = info;
     }
-    map[category][thickness][key].push(d.part);
+    map[category][thickness][key].push(part);
   });
 
   const partListMap = {};
@@ -111,16 +97,15 @@ DocumentationHtml.print.container = (innerHTML) => {
 `;
 }
 
-DocumentationHtml.cabinetList = (orderInfo) => {
-  const cabinetInfos = getCabinetInfos(orderInfo);
-  return cabinetListTemplate.render({cabinetInfos, Utils});
+DocumentationHtml.cabinetList = (partInformation) => {
+  const cabinets = getCabinetInfos(partInformation.order());
+  return cabinetListTemplate.render({cabinets, Utils});
 }
 
 const area = (dem) => dem.x * dem.y * dem.z;
 const sorter = (pi1, pi2) => area(pi2.demensions) - area(pi1.demensions);
-DocumentationHtml.parts = (partInfo) => {
-  if (!partInfo) return '';
-  const parts = Object.values(partInfo);
+DocumentationHtml.parts = (parts) => {
+  if (!parts) return '';
   parts.sort(sorter);
   let html = '<div class="cabinet-part-doc-cnt">';
   parts.forEach((pi, index) => {
@@ -137,12 +122,8 @@ DocumentationHtml.parts = (partInfo) => {
   return html + '</div>';
 }
 
-const partsFunction = (partType) => (info) => {
-  if (info.cabinet) return DocumentationHtml.parts.cabinet(info, partType);
-  else if (info.group) return DocumentationHtml.parts.group(info, partType);
-  else if (info.room) return DocumentationHtml.parts.room(info, partType);
-  else if (info.order) return DocumentationHtml.parts.order(info, partType);
-  else return DocumentationHtml.parts(info.parts[partType]);
+const partsFunction = (partType) => (partInformation) => {
+  return DocumentationHtml.parts(partInformation.byCategory(partType));
 };
 
 DocumentationHtml.panels = partsFunction('Panel');
@@ -178,40 +159,31 @@ DocumentationHtml.aerials = (order) => {
   return aerialsTemplate.render({order});
 }
 
-DocumentationHtml.parts.order = (orderInfo, partType) => {
-  const order = orderInfo.order;
-  let html = `<div class='order-part-doc-cnt' order-hash='${order.hash()}'>`;
-  orderInfo.rooms.forEach(roomInfo => html += DocumentationHtml.parts.room(roomInfo, partType));
-  return html + '</div>';
-}
 
-DocumentationHtml.panels.cutList = (orderInfo) => DocumentationHtml.parts.cutList(orderInfo, 'Panel');
-DocumentationHtml.shelves.cutList = (orderInfo) => DocumentationHtml.parts.cutList(orderInfo, 'Shelve');
+DocumentationHtml.panels.cutList = (partInformation) => DocumentationHtml.parts.cutList(partInformation, 'Panel');
+DocumentationHtml.shelves.cutList = (partInformation) => DocumentationHtml.parts.cutList(partInformation, 'Shelve');
 
-DocumentationHtml.parts.cutList = (orderInfo, partType) => {
-  console.log(orderInfo);
+DocumentationHtml.parts.cutList = (partInformation, partType) => {
   const panels = new Array(10).fill(null).map(() => ['','','']);
   const pages = [];
   let currentIndex = 0;
   let pageIndex = -1;
   const disp = Utils.display;
-  orderInfo.rooms.forEach(r => r.groups.forEach(g => g.cabinets.forEach(c => {
-    if (!c.parts[partType]) return;
-    Object.values(c.parts[partType]).forEach(p => p.parts.forEach((part) => {
-      const targetIndex = Math.floor((currentIndex % 30)/3);
-      if (currentIndex % 30 === 0) pages[++pageIndex] = new Array(10).fill(null).map(() => ['','','']);
-      const panels = pages[pageIndex];
-      if (!panels[targetIndex]) panels[targetIndex] = [];
-      const demensions = p.demensions;
-      const nextIndex = panels[targetIndex].findIndex(v => v === '');
-      panels[targetIndex][nextIndex] = `${Utils.display.partIdPrefix(part)}:${part.userFriendlyId()}
-          <br>
-          ${disp.measurement(demensions.x)} X
-          ${disp.measurement(demensions.y)} X
-          ${disp.measurement(demensions.z)}`;
-      currentIndex++;
-    }));
-  })));
+  const parts = partInformation.byCategory(partType);
+  parts.forEach(p => p.parts.forEach((part) => {
+    const targetIndex = Math.floor((currentIndex % 30)/3);
+    if (currentIndex % 30 === 0) pages[++pageIndex] = new Array(10).fill(null).map(() => ['','','']);
+    const panels = pages[pageIndex];
+    if (!panels[targetIndex]) panels[targetIndex] = [];
+    const demensions = p.demensions;
+    const nextIndex = panels[targetIndex].findIndex(v => v === '');
+    panels[targetIndex][nextIndex] = `${Utils.display.partIdPrefix(part)}:${part.userFriendlyId()}
+        <br>
+        ${disp.measurement(demensions.x)} X
+        ${disp.measurement(demensions.y)} X
+        ${disp.measurement(demensions.z)}`;
+    currentIndex++;
+  }));
   return DocumentationHtml.print.container(panelCutListTemplate.render({pages}));
 }
 
@@ -296,22 +268,6 @@ DocumentationHtml.openingDiagram = (modelInfoMap, reqId) => {
   });
 }
 
-DocumentationHtml.parts.room = (roomInfo, partType) => {
-  return roomTemplate.render({roomInfo, partType, DocumentationHtml});
-}
-
-DocumentationHtml.parts.group = (groupInfo, partType) => {
-  if (!groupInfo) return '';
-  return groupTemplate.render({groupInfo, partType, DocumentationHtml});
-}
-
-DocumentationHtml.parts.cabinet = (cabinetInfo, partType) => {
-  return cabinetTemplate.render({cabinetInfo, partType, DocumentationHtml});
-}
-
-
-
-
 
 module.exports = DocumentationHtml;
 
@@ -319,7 +275,7 @@ module.exports = DocumentationHtml;
 function buildCanvas(info, zOnz) {
   if (info.model === undefined) return;
   const side = zOnz ? 'z' : '-z';
-  const model = CSG.fromPolygons(info.model.polygons, true);
+  const model = info.model.csg;
   const layers = info.model[side];
   const center = model.center();
   const canvas = du.create.element('canvas', {class: 'mirror-x part-canvas'});

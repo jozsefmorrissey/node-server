@@ -12,6 +12,11 @@ const Vertex2d = require('../../../../../../../public/js/utils/canvas/two-d/obje
 const Tolerance = require('../../../../../../../public/js/utils/tolerance.js');
 const ToleranceMap = require('../../../../../../../public/js/utils/tolerance-map.js');
 
+const axisStr = (axis) => axis.isLine() ? '' : axis.length();
+const lengthWidthDepth = (axis) => {
+  return [axisStr(axis.x), axisStr(axis.y), axisStr(axis.z)];
+}
+
 const ensureCsg = (obj) => !(obj instanceof Object) || obj instanceof CSG ? obj : CSG.fromPolygons(obj.polygons, true);
 class CutInfo {
   constructor(axis, jointInfo, maleId) {
@@ -95,74 +100,105 @@ class CutInfo {
     }
 
     this.fenceEdges = (zOnz, line) => {
-      zOnz ||= true;
+      if (zOnz === undefined) zOnz = true;
       line ||= this.axis(zOnz).y.to2D();
-      const fenceEdges = this.partInfo().edges2D(zOnz);
+      const fenceEdges = this.partInfo().fenceEdges(zOnz);
       return fenceEdges.filter(e => line.isParrelle(e));
     }
 
+
+    function getMarker(yAxis, zOnz) {
+      const edges = instance.partInfo().edges2D(zOnz);
+      const markerEdge = edges.find(l => l.combine(yAxis));
+      if (markerEdge) return {label: markerEdge.label};
+      return null;
+    }
+
+    const CHAR = this.constructor.CHAR;
+    const hasFenceIds = (refs, axis) => {
+      const distances = refs.map(a => a.map(i => i.distance)).concatElements();
+      return distances.map(d => [CHAR, d].concat(lengthWidthDepth(instance.axis())));
+    }
+    const noFenceIds = (refs, axis) => {
+      return refs.map(l => [CHAR].concat([l[0].x,l[0].y,l[1].x,l[1].y])
+                          .concat(lengthWidthDepth(instance.axis())));
+    }
+
     function hasFenceEdges(axis, fenceEdges, zOnz) {
-      const z = fenceEdges.map(e => ({label: e.label, distance: e.distance(axis.z[0])}));
-      const nz = fenceEdges.map(e => ({label: e.label, distance: e.distance(axis.z[1])}));
-      const info = [z, nz];
-      if (zOnz) info.reverse();
-      if (axis.z.isPoint()) info.splice(1,1);
-      return info;
+      const marker = getMarker(axis.y, zOnz);
+      const z = fenceEdges.map(e => ({label: e.label, distance: e.distance(axis.z[1])}));
+      const nz = fenceEdges.map(e => ({label: e.label, distance: e.distance(axis.z[0])}));
+      const refs = [z, nz];
+      const identifiers = hasFenceIds(refs, axis);
+      if (zOnz) refs.reverse();
+      const either = axis.z.isPoint();
+      return {references: refs, either, identifiers, marker};
     }
 
     const xAxis = new Line2d([[0,0],[1,0]]);
     const yAxis = new Line2d([[0,0],[0,1]]);
     const vertMag = (v) => Math.min(xAxis.distance(v, false), yAxis.distance(v, false));
+    const vertSort = (v1,v2) => {
+      const m1 = vertMag(v1);
+      const m2 = vertMag(v2);
+      if (within(m1, 0) && !within(m2, 0)) return -1;
+      if (within(m2, 0) && !within(m1, 0)) return 1;
+      return xAxis.distance(v2, false) - xAxis.distance(v1, false)
+    }
     // [v.x, v.y].sort((a,b) => a-b).sum((v,i) => v*((i+1)*.2));
     function noFenceEdges(axis, zOnz) {
-      const edges = instance.partInfo().edges2D(zOnz).filter(l => !l.isParrelle(axis.y));
+      const allEdges = instance.partInfo().edges2D(zOnz);
+      const marker = getMarker(axis.y, zOnz);
+      const edges = allEdges.filter(l => !l.isParrelle(axis.y));
       let z = axis.y.clone().translate(axis.z.scale(.5, true), true);
-      const zInts = edges.map(e => e.findIntersection(z))
+      const zInts = edges.map(e => e.findSegmentIntersection(z, true))
                       .unique((v) => v.toString())
-                      .sort(Line2d.distanceSort(z, true));
+                      .filter(v => v)
+                      .sort(vertSort);
       let nz = axis.y.translate(axis.z.negitive().scale(.5, true), true);
-      const nzInts = edges.map(e => e.findIntersection(nz))
+      const nzInts = edges.map(e => e.findSegmentIntersection(nz, true))
                       .unique((v) => v.toString())
-                      .sort(Line2d.distanceSort(z, true));
-      const info = [new Line2d(zInts[0], zInts[1]), new Line2d(nzInts[0], nzInts[1])];
-      if (!zOnz) info.reverse();
-      // console.log(instance.partInfo().model(zOnz) + '\n\n' + instance.toDrawString(null, zOnz));
-      if (vertMag(info[0][0]) > vertMag(info[0][1])) info[0] = info[0].negitive();
-      if (axis.z.isPoint()) info.splice(1,1);
-      else {
-        const dems = instance.partInfo().demensions()
-        const reverseIndex = zOnz ? 1 : 1;
-        info[reverseIndex][0].translate(-dems.x, 0);
-        info[reverseIndex][1].translate(-dems.x, 0);
-        info[reverseIndex][0].x = -info[1][0].x;
-        info[reverseIndex][1].x = -info[1][1].x;
-        if (vertMag(info[1][0]) > vertMag(info[1][1])) info[1] = info[1].negitive();
+                      .filter(v => v)
+                      .sort(vertSort);
+      const refs = [new Line2d(zInts[0], zInts[1]), new Line2d(nzInts[0], nzInts[1])];
+      if (!zOnz) refs.reverse();
+      const either = axis.z.isPoint();
+
+      const dems = instance.partInfo().demensions()
+      const reverseIndex = zOnz ? 1 : 1;
+      refs[reverseIndex][0].translate(-dems.x, 0);
+      refs[reverseIndex][1].translate(-dems.x, 0);
+      refs[reverseIndex][0].x = -refs[1][0].x;
+      refs[reverseIndex][1].x = -refs[1][1].x;
+
+      const identifiers = noFenceIds(refs, axis);
+      if (instance.partInfo().part().partCode === 'T:b' || instance.partInfo().part().partCode === 'dv:f') {
+        instance.fenceEdges(zOnz);
       }
-      return info;
+      return {references: refs, either, identifiers, marker};
     }
 
     this.locationRef = () => {
       const info = {};
       const zOnz = this.partInfo().zOnz();
       const axis = this.axis(zOnz);
-      axis.x = axis.x.to2D();
-      axis.y = axis.y.to2D();
-      axis.z = axis.z.to2D();
+      axis.x = axis.x.to2D('x', 'y');
+      axis.y = axis.y.to2D('x', 'y');
+      axis.z = axis.z.to2D('x', 'y');
       const fenceEdges = this.fenceEdges(zOnz);
-      if (fenceEdges.length > 1) {
-        return hasFenceEdges(axis, fenceEdges);
-      }
-      return noFenceEdges(axis, zOnz);
+      if (fenceEdges.length > 1) return hasFenceEdges(axis, fenceEdges, zOnz);
+      else return noFenceEdges(axis, zOnz);
     }
 
     this.toJson = () => {
-      const zOnz = this.partInfo().zOnz();
+      const locationRef = this.locationRef();
+      const id = locationRef.id;
+      const marker = locationRef.marker;
       const axis = {z: this.axis(true)};
       axis['-z'] = this.axis(false);
       return {
-        cutId: '???', axis,
-        tilt: this.tilt(),
-        locationRef: this.locationRef()
+        id, axis, locationRef, marker,
+        tilt: this.tilt()
       }
     }
 
@@ -227,18 +263,6 @@ CutInfo.toDrawString = (cuts, ...colors) => {
 
 CutInfo.is = (axis) => axis.x.length() < .0001;
 
-function removeFullLengthPolys(existsInBoth, jointInfo) {
-  if (jointInfo.joint().fullLength) {
-    const zVect = jointInfo.partInfo().normals().z.positiveUnit();
-    const zPolys = existsInBoth.filter(p => p.normal().positiveUnit().equals(zVect));
-    if (zPolys.length > 0) {
-      const normals = Polygon3D.normals(zPolys[0]);
-      const yNorm = normals.y.positiveUnit();
-      existsInBoth.forEach(p => p.normal().positiveUnit().equals(yNorm) && existsInBoth.remove(p));
-    }
-  }
-}
-
 function possibleOverlaps (intersectionLayers, modelLayers) {
   const vertIndexLength = (il, ml, index) => ml.toPlane().connect.vertex(il.toPlane().points()[index]).length();
   const planesOverlap = modelLayers.map((ml, mi) => intersectionLayers.map((il, ii) => ({
@@ -266,8 +290,8 @@ ${intersectionLayers[obj.ii].toDrawString('blue')}\n\n`;
 function partModelInfo(partId, maleId, env, jointInfo) {
   const intersectionModel = ensureCsg(env.modelInfo.intersection[partId][maleId]);
   if (!intersectionModel || intersectionModel.polygons.length === 0) return null;
-  const jointModel = ensureCsg(env.modelInfo.joined[partId]);
-  const noJointModel = ensureCsg(env.modelInfo.model[partId]);
+  const jointModel = ensureCsg(env.getModel(partId, 'joined'));
+  const noJointModel = ensureCsg(env.getModel(partId, 'model'));
   if (env.modelInfo.joinedLayer === undefined) env.modelInfo.joinedLayer = {};
   if (env.modelInfo.joinedLayer[partId] === undefined)
     env.modelInfo.joinedLayer[partId] = Layer.fromCSG(jointModel);
@@ -281,7 +305,6 @@ const within = Tolerance.within(.0001);
 CutInfo.fromEdges = (polys, partNormals, jointInfo) => {
   const edges  = polys.filter(p => !p.normal().parrelle(partNormals.z));
   const nonPerp = edges.filter(p => !p.normal().perpendicular(partNormals.z), 0);
-  console.log(nonPerp.map(p => p.toDrawString()).join('\n'))
   const cuts = [];
   nonPerp.forEach(poly => {
     const normals = Polygon3D.normals(poly).swap('x', 'z');
@@ -296,7 +319,6 @@ CutInfo.fromEdges = (polys, partNormals, jointInfo) => {
     axis.y.directional(true, true);
     cuts.push(CutInfo.fromAxis(axis, jointInfo));
   });
-  console.log(CutInfo.toDrawString(cuts));
   return cuts;
 }
 
@@ -330,7 +352,7 @@ CutInfo.get = (maleId, jointInfo, env) => {
   const intersectionLayers = Layer.fromCSG(intersectModel);
   const modelLayers = modelInfo.modelLayers;
   const axis = PolyOverlapAxis(modelLayers, intersectionLayers, jointInfo);
-  return CutInfo.fromAxis(axis, jointInfo, maleId);
+  return axis ? axis.map(a => CutInfo.fromAxis(a, jointInfo, maleId)) : [];
 }
 
 const removeMergeable = (cuts, index1, index2) => {
@@ -387,11 +409,24 @@ function unDocumentExtranious(cuts) {
 }
 
 const tol = .001;
-CutInfo.clean = (cuts) => {
+CutInfo.clean = (cuts, fenceEdges) => {
+  for (let index = 0; index < cuts.length; index++) {
+    const line = cuts[index].axis(true).y.to2D();
+    if (fenceEdges.findIndex(l => l.combine(line)) !== -1) {
+      cuts.splice(index--,1);
+    }
+  }
+
+
+  Line3D.combineByLine(cuts, 'axis().y', (c1, c2) => {
+    return within(c1.axis().x.length(), c2.axis().x.length()) ? c1 : null;
+  });
+
   const tolMap = new ToleranceMap({'axis().(x,y,z).(0,1).(x,y,z)': tol});
-  console.warn('not sure tolerance map works...')
   tolMap.addAll(cuts);
-  return tolMap.group().map(g => g[0]);
+  cuts = tolMap.group().map(g => g[0]);
+  cuts.sort(CutInfo.sorter);
+  return cuts;
 }
 
 CutInfo.printPolys = (csgs, colors) => {
@@ -407,6 +442,8 @@ CutInfo.printPolys = (csgs, colors) => {
   }
   console.log(str);
 }
+
+CutInfo.CHAR = 'C';
 
 class UnknownInfo extends CutInfo {
   constructor(axis, jointInfo, maleId) {

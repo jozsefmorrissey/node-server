@@ -26,29 +26,29 @@ function determineMales(assem, env) {
   return maleIdObjs;
 }
 
-const fullLengthModel = (mm, model) => {
-  const intersection = model.intersect(mm);
-  if (intersection.polygons.length === 0) return mm;
-  const center = new Vertex3D(model.center());
-  const polys = Polygon3D.fromCSG(intersection);
-  const normals = Polygon3D.normals(polys);
-  let sets = Polygon3D.parrelleSets(polys);
-  const vectorObj = {
-    y: normals.z,
-    x: normals.x
-  }
-  const posCenter = center.translate(normals.y.scale(100), true);
-  const posPlane = Polygon3D.fromVectorObject(100, 100, posCenter, vectorObj);
-  const negCenter = center.translate(normals.y.scale(-100), true);
-  const negPlane = Polygon3D.fromVectorObject(100, 100, negCenter, vectorObj);
+const fullLengthModel = (intersection) => {
+  const axis = Polygon3D.axis(Polygon3D.fromCSG(intersection)).y.vector();
+  const center1 = new Vertex3D(intersection.center()).translate(axis);
+  const center2 = new Vertex3D(intersection.center()).translate(axis.inverse());
+  const intersection1 = intersection.clone();
+  intersection1.center(center1);
+  const intersection2 = intersection.clone();
+  intersection2.center(center2);
+  return intersection1.union(intersection).union(intersection2);
+}
 
-  polys.forEach(p => p.normal().perpendicular(normals.y, .001) && p.extendTo(posPlane) & p.extendTo(negPlane))
-  const csgPolys = polys.map(p => new CSG.Polygon(p.vertices().map(v => new CSG.Vertex(v))));
-  const csg = CSG.fromPolygons(csgPolys);
-  return csg;
+const demCheck = (m1,m2) => {
+  const dems1 = m1.demensions();
+  const dems2 = m2.demensions();
+  const demSum1 = Math.roundTo(dems1.x+dems1.y+dems1.z);
+  const demSum2 = Math.roundTo(dems2.x+dems2.y+dems2.z);
+  return demSum1 === demSum2 ? true : `${demSum1} - ${demSum2} = ${demSum1 - demSum2}`;
 }
 
 function removeJointMaterial(map, assem, env, model, intersections) {
+  if (assem.locationCode === 'c_T_fr') {
+    console.log('her')
+  }
   const maleIdObjs = determineMales(assem, env);
   const id = assem.id;
   let malesModel = new CSG();
@@ -59,19 +59,23 @@ function removeJointMaterial(map, assem, env, model, intersections) {
     let mm = env.getModel(mid, 'joined');
     if (!mm)
       return console.warn(`I dont think you should see this id: '${env.byId[mid].locationCode}' does not have a joinedModel`);;
-    // if (midObj.joint.fullLength) {
-      //   mm = fullLengthModel(mm, model);
-      // }
-      if (!(mm instanceof CSG)) mm = CSG.fromPolygons(mm.polygons, true);
-      if (intersections) {
-        const intersection = model.intersect(mm);
-        if (intersection.polygons.length) env.modelInfo.intersection[id][mid] = intersection;
-      }
-      malesModel = malesModel.union(mm);
+    let intersection;
+    if (!(mm instanceof CSG)) mm = CSG.fromPolygons(mm.polygons, true);
+    if (intersections) {
+      const intersection = model.intersect(mm);
+      if (intersection.polygons.length) env.modelInfo.intersection[id][mid] = intersection;
+    }
+    if (midObj.joint && midObj.joint.full.female)
+      mm = fullLengthModel(intersection || model.intersect(mm));
+    malesModel = malesModel.union(mm);
   });
   try {
     if (model.polygons.length > 0) {
-      env.modelInfo.joined[id] = model.subtract(malesModel);
+      const reduced = model.subtract(malesModel);
+      if (demCheck(model, reduced) !== true) {
+        console.warn(`error?: ${demCheck(model,reduced)}`);
+      }
+      env.modelInfo.joined[id] = reduced;
     }
   } catch (e) {
     console.warn(e);
@@ -135,13 +139,14 @@ function applyCutters(assem, cutters, env, group) {
         descriptor: cutterId, id: jointId
       }
       env.byId[jointId] = jointObj;
-      env.modelInfo.joined[cutterId] = cutter;
+      env.modelInfo.cut[cutterId] = cutter;
       env.jointMap[jointId] = {male: [cutterId], female: [assem.id]};
       env.jointMap.female[assem.id] ||= [];
       env.jointMap.female[assem.id].push(jointId);
       env.modelInfo.intersection[id] ||= {};
       try {
         if (model.polygons.length > 0) {
+          env.modelInfo.intersection[id] ||= {};
           env.modelInfo.intersection[id][cutterId] = model.intersect(cutter);
           model = model.subtract(cutter);
         }
@@ -207,8 +212,18 @@ function applyCuts(assem, env) {
   const cuts = cutIds.map(id => env.byId[id]);
   for (let index = 0; cutModel && index < cuts.length; index++) {
     const cut = cuts[index];
-    const mms = env.jointMap[cut.id].male.map(id => env.getModel(id, 'joined'));
-    mms.forEach(mm => mm && (cutModel = cutModel.subtract(mm)));
+    const mids = env.jointMap[cut.id].male;
+    mids.forEach(mid => {
+      const mm = env.getModel(mid, 'joined');
+      if (mm) {
+        const intersection = cutModel.intersect(mm);
+        if (intersection.polygons.length) {
+          env.modelInfo.intersection[assem.id] ||= {};
+          env.modelInfo.intersection[assem.id][mid] = intersection;
+          cutModel = cutModel.subtract(intersection);
+        }
+      }
+    });
   }
   env.modelInfo.cut[assem.id] = cutModel;
 }
@@ -237,12 +252,17 @@ function applyMaleJointExtensions(payload, environment) {
       }
       runMfcFunc('extended', assem, env);
     }
+    //TODO: I need to clean and organize a step by step process
     Object.values(jointCutters).forEach(obj => {
       if (obj.assem.jointSettings.male) {
         applyCuts(obj.assem, env);
         sliceAtOpening(assemblyIds, env, 'extended');
         runMfcFunc('cut', obj.assem, env);
-        env.modelInfo.joined[obj.assem.id] = applyCutters(obj.assem, obj.cutters, env, 'Joint');
+      }
+    });
+    Object.values(jointCutters).forEach(obj => {
+      if (obj.assem.jointSettings.male) {
+        env.modelInfo.cut[obj.assem.id] = applyCutters(obj.assem, obj.cutters, env, 'Joint');
       }
     });
 }
@@ -292,6 +312,9 @@ function Apply(payload, environment, taskId, intersections) {
   for (let index = 0; index < assemblyIds.length; index++) {
     const id = assemblyIds[index];
     const assem = environment.byId[id];
+    if (assem.locationCode === 'c_T_fr') {
+      console.log('her')
+    }
     if (assem.included && assem.jointSettings.female) {
       let model = env.getModel(id, 'joined');
       if (model) {

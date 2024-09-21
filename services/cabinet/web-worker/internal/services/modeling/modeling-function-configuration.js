@@ -41,24 +41,24 @@ to.usesDefault = (id, partName) => {
 
 to.SectionProperties = {
   SectionProperties: {
-    biPolygon: (spRmdto, environment) =>
-      SectionPropertiesUtil.instance(spRmdto, environment).biPolygon
+    biPolygon: (spRmdto, env) =>
+      SectionPropertiesUtil.instance(spRmdto, env).biPolygon
   }
 }
 
 to.Assembly = {
   Assembly: {
     model: (mdto, env) => new CSG(),
-    joined: (mdto, environment) => {
+    joined: (mdto, env) => {
       const childs = mdto.children.map(c => c()).filter(c => c instanceof Object);
       const parts = childs.filter(c => c.part || c.id.match(/^Divider/));
       let csg = new CSG();
       for (let index = 0; index < parts.length; index++) {
         const id = parts[index].id;
-        let model = environment.modelInfo.model[id];
+        let model = env.modelInfo.model[id];
         if (model) {
           if (!(model instanceof CSG)) {
-            environment.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
+            env.modelInfo.model[id] = model = CSG.fromPolygons(model, true);
           }
           csg = csg.union(model);
         }
@@ -70,19 +70,19 @@ to.Assembly = {
 
 to.Cabinet = {
   Simple: {
-    model: (mdto, environment) => {
+    model: (mdto, env) => {
       const childs = mdto.children.map(c => c()).filter(c => c instanceof Object);
       const parts = childs.filter(c => c.part || (c.id.match(/^Divider/) && (c.part = true)));
       let csg = new CSG();
       return csg;
     },
-    joined: (mdto, environment) => {
+    joined: (mdto, env) => {
       const childs = mdto.children.map(c => c()).filter(c => c instanceof Object);
       const parts = childs.filter(c => c.part || c.id.match(/^Divider/));
       let csg = new CSG();
       for (let index = 0; index < parts.length; index++) {
         const id = parts[index].id;
-        let model = environment.getModel(id, 'joined');
+        let model = env.getModel(id, 'joined');
         if (model) {
           if (!(model instanceof CSG)) {
             model = CSG.fromPolygons(model, true);
@@ -106,15 +106,8 @@ to.DrawerBox = {
 
 to.Divider = {
   Section: {
-    biPolygon: (rMdto, environment) =>
-        Divider.instance(rMdto, environment).biPolygon
-  }
-}
-
-to.DividerSection = {
-  DividerSection: {
-    biPolygon: (rMdto, environment) =>
-        Divider.instance(rMdto.divider(), environment).biPolygon
+    biPolygon: (rMdto, env) =>
+        Divider.instance(rMdto, env).biPolygon
   }
 }
 
@@ -158,22 +151,22 @@ to.FalseFrontSection = {
 
 to.Handle = {
   Handle: {
-    biPolygon: (rMdto, environment) =>
-        HandleUtil(rMdto, environment, true)
+    biPolygon: (rMdto, env) =>
+        HandleUtil(rMdto, env, true)
   }
 }
 
 to.CutterReference = {
   Reference: {
-    biPolygon: function(rMdto, environment) {
+    biPolygon: function(rMdto, env) {
       let ref = rMdto.reference;
       const isBiPoly = ref instanceof BiPolygon;
       let biPoly = ref;
       if (biPoly instanceof BiPolygon)
         console.log('do i use this');
-      if (environment.modelInfo.biPolygonArray[ref.id]) {
+      if (env.modelInfo.biPolygonArray[ref.id]) {
         if (!(biPoly instanceof BiPolygon)) {
-          let biPolyArr = environment.modelInfo.biPolygonArray[ref.id];
+          let biPolyArr = env.modelInfo.biPolygonArray[ref.id];
           biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
         }
         if (biPoly === undefined) throw new Error('Invalid Reference or assemblies not ordered properly');
@@ -181,7 +174,7 @@ to.CutterReference = {
         let poly = (rMdto.front ? biPoly.front() : biPoly.back()).reverse();
         let length = 0;
         poly.lines().forEach(l => length += l.length());
-        const cabUtil = CabinetUtil.instance(rMdto, environment);
+        const cabUtil = CabinetUtil.instance(rMdto, env);
         const polyCtoCabC = new Line3D(poly.center(), cabUtil.partCenter());
         const sameDir = polyCtoCabC.vector().sameDirection(poly.normal());
         const multiplier = sameDir ? -1 : 1;
@@ -195,13 +188,13 @@ to.CutterReference = {
 
 to.CutterRegExp = {
   RegExp: {
-    model: (rMdto, environment) => CutterUtil.RegExpModel(rMdto, environment, to)
+    model: (rMdto, env) => CutterUtil.RegExpModel(rMdto, env, to)
   }
 }
 
 to.Cutter = {
   Poly: {
-    biPolygon: (rMdto, environment) => {
+    biPolygon: (rMdto, env) => {
       let poly = rMdto.poly;
       let distance = 0;
       poly.lines().forEach(l => distance += l.length());
@@ -209,25 +202,25 @@ to.Cutter = {
     }
   },
   LeftCorner: {
-    model: (rMdto, environment) => {
+    model: (rMdto, env) => {
       const left = rMdto.find('L');
-      const model = Divider.instance(left, environment).biPolygon.model();
-      const tkh = Utils.property('tkh', rMdto, environment);;
+      const model = Divider.instance(left, env).biPolygon.model();
+      const tkh = Utils.property('tkh', rMdto, env);;
       model.translate({x:0, y:tkh, z:0});
       return model;
     }
   },
   RightCorner: {
-    model: (rMdto, environment) => {
+    model: (rMdto, env) => {
       const right = rMdto.find('R');
-      const model = Divider.instance(right, environment).biPolygon.model();
-      const tkh = Utils.property('tkh', rMdto, environment);;
+      const model = Divider.instance(right, env).biPolygon.model();
+      const tkh = Utils.property('tkh', rMdto, env);;
       model.translate({x:0, y:tkh, z:0});
       return model;
     }
   },
   Opening: {
-    biPolygon: (rMdto, environment) => {
+    biPolygon: (rMdto, env) => {
       const outerPoly = rMdto.parentAssembly().coordinates.outer.object();
       const big = 10000000000;
       const biPoly = BiPolygon.fromPolygon(outerPoly, -big, 0, {x:big, y:big});
@@ -235,52 +228,78 @@ to.Cutter = {
     }
   },
   ToeKick: {
-    biPolygon: (rMdto, environment) => {
+    biPolygon: (rMdto, env) => {
       const openTk = rMdto.find('OpenTK');
-      return OpeningToeKick.instance(openTk, environment).Cutter.biPolygon()
+      return OpeningToeKick.instance(openTk, env).Cutter.biPolygon()
+    }
+  },
+  ToeKickPerp: {
+    biPolygon: (rMdto, env) => {
+      const tkh = Utils.property('tkh',rMdto, env);
+      const tkd = Utils.property('tkd',rMdto, env);
+
+      const rightOleft = rMdto.partCode.substr(-1).toUpperCase();
+      const openTk = rMdto.find('OpenTK');
+      const opNorm = openTk.opening().normals.z;
+      const target = env.find(rightOleft, 'partCode')[0];
+      const norms = Utils.normals(target);
+      const center = new Vertex3D(target.position.current.center);
+      const dems = target.position.current.demension;
+      const normX = !norms.x.sameDirection(opNorm) ? norms.x : norms.x.inverse();
+      const normY = norms.y.positive() ? norms.y.inverse() : norms.y;
+      const bottomOuterVect = normX.scale(dems.x/2).add(normY.scale(dems.y/2));
+      const bottomOuter = center.translate(bottomOuterVect, true);
+      const bottomInner = bottomOuter.translate(normX.inverse().scale(tkd), true);
+      const topInner = bottomInner.translate(normY.inverse().scale(tkh), true);
+      const topOuter = topInner.translate(normX.scale(tkd), true);
+
+      const centerPoly = new Polygon3D([bottomOuter, bottomInner, topInner, topOuter]);
+      const biPoly = BiPolygon.fromPolygon(centerPoly, dems.z*2, -dems.z*2);
+
+      return biPoly;
     }
   },
   Front: {
-    biPolygon: (rMdto, environment) => {
-      let poly = Divider.instance(rMdto, environment).Front.Cutter();
-      return to.Cutter.Poly.biPolygon({poly: Divider.instance(rMdto, environment).Front.Cutter()});
+    biPolygon: (rMdto, env) => {
+      let poly = Divider.instance(rMdto, env).Front.Cutter();
+      return to.Cutter.Poly.biPolygon({poly: Divider.instance(rMdto, env).Front.Cutter()});
     }
   },
   FrameRail: {
-    biPolygon: (rMdto, environment) => {
-      let poly = Divider.instance(rMdto, environment).Frame.Cutter();
-      return to.Cutter.Poly.biPolygon({poly: Divider.instance(rMdto, environment).Frame.Cutter()});
+    biPolygon: (rMdto, env) => {
+      let poly = Divider.instance(rMdto, env).Frame.Cutter();
+      return to.Cutter.Poly.biPolygon({poly: Divider.instance(rMdto, env).Frame.Cutter()});
     }
   },
   Back: {
-    biPolygon: (rMdto, environment) => {
-      let poly = Divider.instance(rMdto, environment).Back.Cutter();
+    biPolygon: (rMdto, env) => {
+      let poly = Divider.instance(rMdto, env).Back.Cutter();
       return to.Cutter.Poly.biPolygon({poly});
     }
   },
   Abyss: {
-    model: (rMdto, environment) =>
-      VoidUtil.instance(rMdto, environment).abyss.model()
+    model: (rMdto, env) =>
+      VoidUtil.instance(rMdto, env).abyss.model()
   }
 }
 
 to.PanelVoidIndex = {
   PanelVoidIndex: {
-    biPolygon: (rMdto, environment) =>
-      VoidUtil.instance(rMdto, environment).panel(rMdto, environment)
+    biPolygon: (rMdto, env) =>
+      VoidUtil.instance(rMdto, env).panel(rMdto, env)
   },
 }
 
 to.Frame = {
   Frame: {
-    biPolygon: (rMdto, environment) =>
-      Divider.instance(rMdto, environment).Frame(rMdto)
+    biPolygon: (rMdto, env) =>
+      Divider.instance(rMdto, env).Frame(rMdto)
   }
 }
 
 to.Panel = {
   Section: {
-    biPolygon: (rMdto, environment) => {
+    biPolygon: (rMdto, env) => {
       const sp = sectionProps();
       const ip = sp.innerPoly();
       const tt = sp.top().thickness();
@@ -300,25 +319,25 @@ to.Panel = {
     }
   },
   ToeKickBacker: {
-    biPolygon: (rMdto, environment) => {
+    biPolygon: (rMdto, env) => {
       const openTk = rMdto.find('OpenTK');
-      return OpeningToeKick.instance(openTk, environment).Backer.biPolygon();
+      return OpeningToeKick.instance(openTk, env).Backer.biPolygon();
     }
   },
   Full: {
-    biPolygon: (rMdto, environment) => {
-      return Divider.instance(rMdto, environment).Full(rMdto)
+    biPolygon: (rMdto, env) => {
+      return Divider.instance(rMdto, env).Full(rMdto)
     }
   },
   Front: {
-    biPolygon: (rMdto, environment) =>
-      Divider.instance(rMdto, environment).Full(rMdto),
+    biPolygon: (rMdto, env) =>
+      Divider.instance(rMdto, env).Full(rMdto),
     cut: (rMdto, env) =>
       Divider.instance(rMdto, env).Front(rMdto, env)
   },
   Back: {
-    biPolygon: (rMdto, environment) =>
-      Divider.instance(rMdto, environment).Full(rMdto),
+    biPolygon: (rMdto, env) =>
+      Divider.instance(rMdto, env).Full(rMdto),
     cut: (rMdto, env) =>
       Divider.instance(rMdto, env).Back(rMdto, env)
   }
@@ -326,11 +345,11 @@ to.Panel = {
 
 to.Shelve = {
   Shelve: {
-    biPolygon: (rMdto, environment) => {
+    biPolygon: (rMdto, env) => {
       const parent = rMdto.parentAssembly();
-      const sectionUtils = SectionPropertiesUtil.instance(parent, environment);
+      const sectionUtils = SectionPropertiesUtil.instance(parent, env);
       const divider = parent.bottom();
-      const biPoly = Divider.instance(divider, environment).Full().copy();
+      const biPoly = Divider.instance(divider, env).Full().copy();
       const shelveCount = parent.shelves.length;
       const index = Number.parseInt(rMdto.partCode.replace(/.*?([0-9]{1,})$/, '$1'));
       const dividerNorms = divider.position.current.normals;

@@ -25,8 +25,21 @@ const getModel = (env) => (assemOid, type) => {
   console.warn('No model found');
 }
 
+const PATH = (path, key) => `proccessData.${path}.${key}`;
+const data = (env) => (path) => ({
+  get: (key) => env.pathValue(PATH(path,key)),
+  set: (key, value) => env.pathValue(PATH(path,key), value),
+  inc: (key, value) => env.pathValue(PATH(path,key), env.pathValue(PATH(path,key)) + (value || 1)),
+  dec: (key, value) => env.pathValue(PATH(path,key), env.pathValue(PATH(path,key)) - (value || 1)),
+  initialize: (key, value) => env.pathValue(PATH(path,key)) === undefined &&
+                env.pathValue(PATH(path,key), value)
+})
+
 function handleTask(task, env) {
-  if (env) env.getModel = getModel(env);
+  if (env) {
+    env.getModel = getModel(env);
+    env.data = data(env);
+  }
   const process = task.process;
   const payload = task.payload;
   const taskId = task.id;
@@ -67,6 +80,7 @@ function runTasks(task, env) {
   if (payload.environment) {
     payload.environment.byId = RDTO(payload.environment.byId);
     env = payload.environment;
+    if (env.proccessData === undefined) env.proccessData = {};
   }
   if (env && env.byId) env.find = findFunc(env.byId);
   if (!Array.isArray(payload.tasks)) return runTask(task, env);

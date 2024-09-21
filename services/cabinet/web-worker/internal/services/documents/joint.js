@@ -56,8 +56,8 @@ class JointInfo {
       const males = (jointRel && jointRel.male) || [];
       males.forEach(maleId => {
         try {
-          const cut =  CutInfo.get(maleId, this, env);
-          if (cut) info.push(cut);
+          const cuts =  CutInfo.get(maleId, this, env);
+          if (cuts) info.concatInPlace(cuts);
         } catch (e) {
           console.error(e);
         }

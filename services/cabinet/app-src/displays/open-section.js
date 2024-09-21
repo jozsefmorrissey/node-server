@@ -131,7 +131,7 @@ OpenSectionDisplay.dividerHtml = (opening) => {
     name: 'dividerType',
     list: Divider.Types,
     class: 'divider-type-selector',
-    value: opening.divider().divider().type(),
+    value: opening.divider().type(),
     inline: true
   });
   return OpenSectionDisplay.dividerControlTemplate.render({opening, patternInputHtml, dividerTypeSelect});
@@ -139,7 +139,7 @@ OpenSectionDisplay.dividerHtml = (opening) => {
 
 du.on.match('change', '.divider-type-selector', (elem) => {
   const obj = ExpandableList.get(elem);
-  obj.divider().divider().type(elem.value);
+  obj.divider().type(elem.value);
 });
 
 OpenSectionDisplay.updateDividers = (opening) => {

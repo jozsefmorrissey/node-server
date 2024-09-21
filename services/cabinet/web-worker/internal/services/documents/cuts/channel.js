@@ -14,5 +14,7 @@ ChannelInfo.is = (axis) => {
   return axis.y.isLine() && axis.z.length() > .0001 && axis.x.isSegment();
 }
 
+ChannelInfo.CHAR = 'D';
+
 CutInfo.register(ChannelInfo);
 module.exports = ChannelInfo;

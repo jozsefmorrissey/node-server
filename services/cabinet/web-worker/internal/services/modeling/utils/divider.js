@@ -31,7 +31,6 @@ class DividerUtil {
   constructor(divider, dividerPart, env) {
     const instance = this;
 
-    const framed = !Utils.property('fls', divider, env);
     const sectionProps = divider.find(/_S[0-9]{1,}$/);
     const sectionUtils = SectionPropertiesUtil.instance(sectionProps, env);
     if (!divider.locationCode.match(/_S/)) {
@@ -52,7 +51,7 @@ class DividerUtil {
         case 'R': offset = Utils.property('dsc', assem, env); break;
         case 'L': offset = Utils.property('dsc', assem, env); break;
       }
-      const cabCenter = CabinetUtil.instance(assem).partCenter();
+      const cabCenter = CabinetUtil.instance(assem, env).partCenter();
       const toCentVect = new Line3D(full.center(), cabCenter).vector();
       const norms = Utils.normals(assem, env);
       const unitVect = norms.z.sameDirection(toCentVect) ? norms.z : norms.z.inverse();
@@ -74,7 +73,7 @@ class DividerUtil {
 
         full = biPoly;
       }
-      if (assem && framed)
+      if (assem && divider.hasFrame)
           return scribeRevealOffset(assem);
       return full;
     }
@@ -97,7 +96,7 @@ class DividerUtil {
       bottomBackLine.translate(sectionUtils.normal().scale(-divider.frameThickness));
       const bottomPoly = new Polygon3D([bottomFrontLine[0], bottomFrontLine[1], bottomBackLine[1], bottomBackLine[0]]);
       const framePoly = BiPolygon.fromPolygon(bottomPoly, 0, divider.frameWidth);
-      frame.position.current.normals.z = sectionUtils.normal();
+      // frame.position.current.normals.z = sectionUtils.normal();
 
       return framePoly;
     }
@@ -111,7 +110,7 @@ class DividerUtil {
     let front, back, left, right, up, down;
     function openingOrientationNormals() {
       const biPoly = instance.Full();
-      const cabUtil = CabinetUtil.instance(divider);
+      const cabUtil = CabinetUtil.instance(divider, env);
       const cab = cabUtil.cabinet();
       const norms = sectionUtils.biPolygon.normals();
       const cabCenter = cabUtil.partCenter();
@@ -131,7 +130,7 @@ class DividerUtil {
       const edgePolys = Polygon3D.merge(Polygon3D.fromCSG(edges));
 
       let centerOffsetVector;
-      const cabUtil = CabinetUtil.instance(divider);
+      const cabUtil = CabinetUtil.instance(divider, env);
       const orientNorms = openingOrientationNormals();
       switch (position) {
         case DividerUtil.positions.FRONT: centerOffsetVector = orientNorms.front; break;
@@ -169,15 +168,17 @@ DividerUtil.positions.BACK = 'back';
 DividerUtil.positions.LEFT = 'left';
 DividerUtil.positions.RIGHT = 'right';
 
-const built = {};
-DividerUtil.instance = (rMdto, modelMap) => {
+const dataPath = (assem) => 'proccessData.DividerUtil.built.' + assem.id;
+DividerUtil.instance = (rMdto, env) => {
   let divider = rMdto.linkListFind('parentAssembly', isDivider);
   const rootHash = rMdto.find.root().hash;
-  if (built[divider.id] === undefined || built[divider.id].rootHash !== rootHash) {
-    built[divider.id] = new DividerUtil(divider, rMdto, modelMap);
-    built[divider.id].rootHash = rootHash;
+  const path = dataPath(divider);
+  if (env.pathValue(path) === undefined || env.pathValue(path).rootHash !== rootHash) {
+    const divUtil = new DividerUtil(divider, rMdto, env);
+    divUtil.rootHash = rootHash;
+    env.pathValue(path, divUtil);
   }
-  return built[divider.id];
+  return env.pathValue(path);
 }
 
 module.exports = DividerUtil

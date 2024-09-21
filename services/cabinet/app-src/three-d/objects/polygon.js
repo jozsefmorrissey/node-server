@@ -56,7 +56,7 @@ class Polygon3D {
       for (let i = 0; i < vertices.length; i++) {
         for (let j = 0; j < vertices.length; j++) {
           if (i != j) {
-            const line = new Line3D(vertices[i].clone(), vertices[j].clone()).positiveVectorLine();
+            const line = new Line3D(vertices[i].clone(), vertices[j].clone()).positive();
             const str = line.toString();
             if (!line.isPoint() && lineMap[str] === undefined) {
               lineMap[str] = line;
@@ -361,17 +361,9 @@ class Polygon3D {
       const int2 = plane.intersection.line(lines[index2]);
       const linesCopy = lines.map(l => l.clone());
       updateLines(linesCopy, index, index2, int1, int2);
-      if (linesCopy.sum(l => l.length()) > lines.sum(l => l.length())) {
+      if (!new Polygon3D(linesCopy.map(l => l[0])).irregular.is() &&
+          linesCopy.sum(l => l.length()) > lines.sum(l => l.length())) {
         updateLines(lines, index, index2, int1, int2);
-      }
-      if (instance.irregular.is()) {
-        instance.irregular.crissCross.locations();
-        instance.irregular.is();
-        console.warn('Polygons should be regular: it should be determined if this function is causing the irregularity');
-        /* The following functions will fix irregularities */
-        // instance.irregular.parrelle.fill();
-        // instance.irregular.crissCross.fill();
-        // instance.irregular.concave.fill();
       }
 
       return [lines[index], lines[index2]];
@@ -409,7 +401,7 @@ class Polygon3D {
     const mostPerpendicularTo = (polyOplane, center) => {
       const normal = polyOplane.connect.vertex(center).vector().inverse().unit();
       const vertAndLineMap = lines.map(linePerpObject(normal))
-          .concat(instance.vertices().map(vertPerpObject(normal, center)));
+          // .concat(instance.vertices().map(vertPerpObject(normal, center)));
       vertAndLineMap.sortByAttrs(['toString', 'dot'], true);
       return vertAndLineMap[0];
     }
@@ -1158,7 +1150,6 @@ Polygon3D.fromCSG = (polys) => {
       let polygon = new Polygon3D(verts);
       if (!polygon.normal().sameDirection(new Vector3D(csgPoly.plane.normal))) {
         polygon = polygon.reverse();
-        console.warn.subtle('never tested should work...');
       }
       poly3Ds.push(polygon);
     } catch (e) {
@@ -1303,34 +1294,43 @@ const lineNormals = (polys) => {
   return {x: xVector.unit(), y: yVector.unit(), z};
 }
 
-const centerSort = (center) => (p1, p2) => p2.distance(center) - p1.distance(center);
+const centerSort = (center) => (p1, p2) => p2.toPlane().distance(center) - p1.toPlane().distance(center);
 function normalsGivinPolygons(polygons) {
   const sets = Polygon3D.parrelleSets(polygons).filter(s => s.length > 1);
   if (sets.length === 0) return lineNormals(polygons);
   const positionObjs = [];
   for (let index = 0; index < sets.length; index++) {
     const set = sets[index];
-    if (set.length > 1) {
-      const center = Vertex3D.center(polygons.map(p => p.center()));
-      set.sort(centerSort(center));
-      const distance = set[0].distance(set[1])
-      positionObjs.push({index, distance});
-    }
+    const poly1 = set.max(p => p.distance(set[0][0]));
+    const poly2 = set.max(p => p.distance(poly1[0]));
+    const connection = poly1.connect(poly2[0]);
+    sets[index] = {normal: poly1.normal, distance};
   }
-  positionObjs.sortByAttr('distance');
-  return Polygon3D.normals(sets[positionObjs[0].index][0]);
+  sets.sortByAttr('distance');
+  const zPlane = sets[0];
+  const z = zPlane.normal().positiveUnit();
+  const yPlane = sets[sets.length - 1];
+  const y = yPlane.normal().positiveUnit();
+  return {x: y.crossProduct(z), y, z};
 }
 
 function normalsGivenAPolygon(polygon) {
   const lines = polygon.lines();
   Line3D.combine(lines);
-  const pSets = Line3D.parrelleSets(lines).filter(s => s.length > 1);
-  const normals = {
-    z: polygon.normal(),
-    y: pSets[0][0].vector().unit(),
+  try {
+    const pSets = Line3D.parrelleSets(lines)
+    const moreThanOne = pSets.filter(s => s.length > 1);
+    let y;
+    if (moreThanOne) y = pSets[0][0].vector().positiveUnit();
+    else y = pSets.max(s => s[0].length());
+    const normals = {
+      y,z: polygon.normal(),
+    }
+    normals.x = normals.z.crossProduct(normals.y).positiveUnit();
+    return normals;
+  } catch (e) {
+    console.log(e);
   }
-  normals.x = normals.z.crossProduct(normals.y).unit();
-  return normals;
 }
 
 // This only really makes since for a four sided polygon that has atleast one set of parrelle sides.
@@ -1370,6 +1370,7 @@ const addVector = (normals, axis, attr, centerLine) => {
   if (scalar != 0) {
     const axesVector = normals[attr].scale(scalar);
     const axes = Line3D.fromVector(axesVector);
+    if (axes.isPoint()) return false;
     axes.centerOn(centerLine.midpoint());
     axis[attr].push(axes);
     return true;

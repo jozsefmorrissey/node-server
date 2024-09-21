@@ -48,7 +48,7 @@ class OpeningSketch {
 
     function drawDividerLabel(section, offset, normal) {
       if (section.divideRight()) {
-        const dp = section.divider().divider();
+        const dp = section.divider();
         const outer = section.coordinates().outer;
         const divideCenter3D = section.parentAssembly().vertical() ?
                                 new Line3D(outer[1], outer[2]).midpoint() :

@@ -21,15 +21,27 @@ class OpeningToeKick extends Assembly {
     this.opening = () => opening;
     const toeKickPanel = new Panel(':tkb', `ToeKickBacker`);
 
-
-    function sideJointConfig(sideSelector, cutCond, char) {
-      const dado = new Dado(toeKickPanel, sideSelector, () => !cutCond(), 'tkDADO-'+char);
-      dado.maleOffset(.9525);
-      const butt = new Cut(toeKickPanel, sideSelector, cutCond, 'tkCUT-'+char);
-      toeKickPanel.addDependencies(dado, butt);
+    this.perpendicularToLandR = () => {
+      const lz = this.getAssembly('L').position().normals().z;
+      const rz = this.getAssembly('R').position().normals().z;
+      const oz = opening.normal();
+      return lz.perpendicular(oz) && oz.perpendicular(rz);
     }
 
+
     const instance = this;
+    function sideJointConfig(sideSelector, cutCond, char) {
+      const isButt = () => true;//!instance.perpendicularToLandR();
+      const isDado = () => !isButt() && !cutCond();
+      const isCut = () => !isButt() && cutCond();
+      const dado = new Dado(toeKickPanel, sideSelector, isDado, 'tkDADO-'+char);
+      dado.maleOffset(.9525);
+      const cut = new Cut(toeKickPanel, sideSelector, isCut, 'tkCUT-'+char);
+      const butt = new Butt(toeKickPanel, sideSelector, isButt, 'tkCUT-'+char);
+      butt.autoExtend(false);
+      toeKickPanel.addDependencies(dado, cut, butt);
+    }
+
 
 
     const leftCornerCutter = new Cutter(':lcc', 'LeftCorner', null, 'leftCorner');
@@ -42,26 +54,31 @@ class OpeningToeKick extends Assembly {
     this.leftCornerCutter = () => leftCornerCutter;
     this.rightCornerCutter = () => rightCornerCutter;
 
-    const joint = (part, fullLength) => (otherPartCode, condition) => {
+    const joint = (part) => (otherPartCode, condition) => {
       const joint = new Cut(part, otherPartCode, condition);
-      joint.fullLength(fullLength);
       part.addDependencies(joint);
     }
 
     joint(leftCornerCutter)(toeKickPanel.locationCode());
     joint(rightCornerCutter)(toeKickPanel.locationCode());
     const cutter = new Cutter(':tkc', `ToeKick`);
+    const cutterR = new Cutter(':tkcr', `ToeKickPerp`);
+    const cutterL = new Cutter(':tkcl', `ToeKickPerp`);
     const openNorm = opening.normal();
     const rParrelleToOpening = openNorm.parrelle(instance.getAssembly('R').position().normals().x);
     toeKickPanel.normals(false, {DETERMINE_FROM_MODEL: true})
-    joint(cutter)(/^c_R(:|_)/, () => !autoToeKick.rightEndStyle());
-    joint(cutter)(/^c_L(:|_)/, () => !autoToeKick.leftEndStyle());
+    joint(cutter)(/^c_R(:|_)/, () => !autoToeKick.rightEndStyle() && this.perpendicularToLandR());
+    joint(cutter)(/^c_L(:|_)/, () => !autoToeKick.leftEndStyle() && this.perpendicularToLandR());
     sideJointConfig(/^R:/, autoToeKick.overlayRight, 'r');
     sideJointConfig(/^L:/, autoToeKick.overlayLeft, 'l');
-    // cutter.addDependencies(new Dependency(cutter, /L:|R:/));
 
     this.addSubAssembly(toeKickPanel);
     this.addSubAssembly(cutter);
+    
+    // joint(cutterR)(/^c_R(:|_)/, () => !autoToeKick.rightEndStyle() && this.perpendicularToLandR());
+    // joint(cutterL)(/^c_L(:|_)/, () => !autoToeKick.leftEndStyle() && this.perpendicularToLandR());
+    // this.addSubAssembly(cutterL);
+    // this.addSubAssembly(cutterR);
 
     this.tkb = () => toeKickPanel;
     this.part = () => false;

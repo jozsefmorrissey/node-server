@@ -9,12 +9,12 @@ const Assembly = require('../../assembly.js');
 const Divider = require('../divider.js');
 const Cutter = require('../cutter.js');
 const CSG = require('../../../../../../../public/js/utils/3d-modeling/csg.js');
-const DividerSection = require('./partition/divider.js');
 const Pattern = require('../../../../division-patterns.js');
 const Joint = require('../../../joint/joint.js');
 const Cut = require('../../../joint/joints/cut.js');
 const Dado = require('../../../joint/joints/dado.js');
 const ShelveJoint = require('../../../joint/joints/shelve.js');
+const PlayJoint = require('../../../joint/joints/play.js');
 const Dependency = require('../../../dependency.js');
 const CustomEvent = require('../../../../../../../public/js/utils/custom-event.js')
 const PropertyConfig = require('../../../../config/property/config.js');
@@ -278,7 +278,7 @@ class SectionProperties extends KeyValue {
       for (let index = 0; index < this.sections.length * 2; index += 1) {
         const section = this.sections[Math.ceil((index - 1)/2)];
         let offset = 0;
-        const divider = section.divider().divider();
+        const divider = section.divider();
         const dividerWidth = divider.type() === 'none' ? 0 : divider.thickness();
         if (isReveal) {
           if (index % 2 === 0) {
@@ -556,7 +556,7 @@ class SectionProperties extends KeyValue {
       for (let index = 0; index < this.sections.length; index += 1) {
         if (index < this.sections.length - 1) {
           const section = this.sections[index];
-          const divider = section.divider().divider();
+          const divider = section.divider();
           const offset = divider.type() === 'none' ? 0 : divider.thickness();
           info[index + 1] = {offset, divider};
         } else {
@@ -584,15 +584,14 @@ class SectionProperties extends KeyValue {
       }
     }
 
-    const divider = new DividerSection(this);
+    const divider = new Divider(null, 'Section');
     this.divider(divider);
-    divider.divider().included = this.divideRight;
+    divider.included = this.divideRight;
     divider.parentAssembly(this);
     this.pattern().on.change(this.reevaluate);
 
     const isMatch = (assem, dir) => {
       let target = instance[dir]();
-      if (target instanceof DividerSection) target = target.divider();
       return target.isPanel(assem);
     }
     function isBorder(assem) {
@@ -608,13 +607,12 @@ class SectionProperties extends KeyValue {
         }
       }
     }
-    const neigborJoint = new Dado(divider.divider().isPanel, isNeigbor, null, 'NEIGHBOR_JOINT');
+    const neigborJoint = new Dado(divider.isPanel, isNeigbor, null, 'NEIGHBOR_JOINT');
     neigborJoint.maleOffset(0.635);
     divider.addDependencies(neigborJoint);
 
     this.neighbors = (divider) => {
       let target = instance[dir]();
-      if (target instanceof DividerSection) target = target.divider();
       return target.isPanel(assem);
 
       console.log(assem);
@@ -630,6 +628,18 @@ class SectionProperties extends KeyValue {
         return true;
       return false;
     }
+
+    function shelveNiegbor(assem) {
+      if (assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section|Shelve)/)) return false;
+      if (isMatch(assem, 'left') || isMatch(assem, 'right')) return true;
+      if (assem instanceof Divider) return false;
+      if (assem.locationCode().startsWith('c_S1')) return false;
+      if (assem.locationCode().match(/^c_[^_]*$/))
+        return true;
+      return false;
+    }
+
+
     const shelves = [];
     this.shelves = () => {
       const shelveCount = this.value('shelves') || 0;
@@ -637,8 +647,9 @@ class SectionProperties extends KeyValue {
       for (let index = 0; index < newShelveCount; index++) {
         const shelve = new Shelve(`:sh${shelves.length + 1}`, 'Shelve');
         shelve.parentAssembly(this);
-        const shelveJoint = new ShelveJoint(shelve, shelveNiegbor);
-        shelve.addDependencies(shelveJoint);
+        const shelveJoint = new ShelveJoint(shelve, shelveNiegbor, null, "shelveJoint");
+        const playJoint = new PlayJoint(shelve, /_dv:.{1,}$/, null, 'shelvePlay');
+        shelve.addDependencies(shelveJoint, playJoint);
         shelves.push(shelve);
         shelve.getJointList();
       }
@@ -689,10 +700,10 @@ class SectionProperties extends KeyValue {
     }
     this.borders.neighbors = (border) => {
       switch (this.borders.direction(border)) {
-        case 'right': return [this.top, this.bottom];
-        case 'left': return [this.top, this.bottom];
-        case 'top': return [this.right, this.left];
-        case 'bottom': return [this.right, this.left];
+        case 'right': return [this.top(), this.bottom()];
+        case 'left': return [this.top(), this.bottom()];
+        case 'top': return [this.right(), this.left()];
+        case 'bottom': return [this.right(), this.left()];
         case 'back' : throw new Error('this.borders.neighbors is not applicable for back');
       }
     }
@@ -783,7 +794,7 @@ SectionProperties.fromJson = (json) => {
   if (sp.cover()) sp.cover().parentAssembly(sp);
 
   json.constructed(() => {
-    sp.divider().divider().fromJson(json.divider.subassemblies.dv);
+    sp.divider().fromJson(json.divider.subassemblies.dv);
   });
   return sp;
 }

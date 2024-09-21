@@ -2,6 +2,7 @@
 const Measurement = require('../../../../../../public/js/utils/measurement.js');
 const Vector3D = require('../../../three-d/objects/vector.js');
 const $t = require('../../../../../../public/js/utils/$t.js');
+const within = require('../../../../../../public/js/utils/tolerance.js').within(.01);
 
 const Utils = {};
 Utils.display = {};
@@ -21,6 +22,13 @@ Utils.display.axis = {
 
 
 Utils.display.degrees = (degrees) => `${Math.round(degrees * 10) / 10}`;
+let tol = .01;
+Utils.display.angle = (cut, zOnz) => {
+  const degree = Math.toDegrees(cut.axis[zOnz].y.to2D().radians.positive());
+  let relitive = Math.roundTo(-1 * ((degree - 90) % 180), .1);
+  if (within(Math.abs(relitive), 90)) relitive = 0;
+  return relitive || '';
+}
 Utils.display.group = (part) => part.getAssembly('c').group().room().name();
 Utils.display.cabinet = (part) => part.getAssembly('c').userIdentifier();
 Utils.display.partIdPrefix = (part) => {
@@ -31,7 +39,7 @@ Utils.display.partIdPrefix = (part) => {
 }
 
 Utils.display.partIds = (parts) => {
-  let partStr = parts[0].partName() || parts[0].userFriendlyId();
+  let partStr = parts[0].userFriendlyId();
   if (parts.length !== 1)
     partStr += `[${parts.map(p => p.userFriendlyId()).join(',')}]`;
   return `${partStr} ${Utils.display.cabinet(parts[0])} ${Utils.display.group(parts[0])}`;

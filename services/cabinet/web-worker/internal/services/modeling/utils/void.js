@@ -4,6 +4,7 @@ const Line3D = require('../../../../../app-src/three-d/objects/line.js');
 const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
 const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
 const Plane = require('../../../../../app-src/three-d/objects/plane.js');
+const Utils = require('utils');
 
 class VoidUtil {
   constructor(voidDto, env) {
@@ -55,18 +56,19 @@ class VoidUtil {
     const innerPolys = [];
     const outerPolys = [];
     const biPolys = [];
-    const toBiPoly = (panel, env) => {
+    const toBiPoly = (panel) => {
       const biPoly = instance.biPolygon;
       const center = biPoly.center();
       const vectors = panel.vectors;
       const dems =   voidDto.position.current.demension;
       const outterFaceCenter = center.translate(vectors.z, true);
-      const width = vectors.x
+      const width = vectors.x;
       const outerPoly = Polygon3D.fromMagintudeObject(vectors, outterFaceCenter);
       const innerOffsetVector = vectors.z.unit().inverse().scale(panel.width);
       const innerPoly = outerPoly.translate(innerOffsetVector).reverse();
       outerPolys[panel.index] = outerPoly;
       innerPolys[panel.index] = innerPoly;
+      const norm = panel.position.current.normals;
 
       return new BiPolygon(outerPoly, innerPoly);
     }
@@ -87,15 +89,17 @@ class VoidUtil {
   }
 }
 
-const built = {};
-VoidUtil.instance = (mDto, environment) => {
+const dataPath = (assem) => 'proccessData.VoidUtil.' + assem.id;
+VoidUtil.instance = (mDto, env) => {
   const voidMdto = mDto.parentAssembly();
   const rootHash = mDto.find.root().hash;
-  if (built[voidMdto.id] === undefined || built[voidMdto.id].rootHash !== rootHash) {
-    built[voidMdto.id] = new VoidUtil(voidMdto, environment);
-    built[voidMdto.id].rootHash = rootHash;
+  const path = dataPath(voidMdto);
+  if (env.pathValue(path) === undefined || env.pathValue(path).rootHash !== rootHash) {
+    const voidUtil = new VoidUtil(voidMdto, env);
+    env.pathValue(path, voidUtil);
+    voidUtil.rootHash = rootHash;
   }
-  return built[voidMdto.id];
+  return env.pathValue(path);
 }
 
 

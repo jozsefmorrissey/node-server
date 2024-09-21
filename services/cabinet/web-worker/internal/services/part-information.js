@@ -9,6 +9,7 @@ function buildPartInfo(payload, env, taskId) {
   const map = {};
   for (let index = 0; index < payload.parts.length; index++) {
     const part = env.byId[payload.parts[index]];
+    if (part.digital) continue;
     if (env.modelInfo.model[part.id] === undefined) {
       const result = DTO({demensions: {x:0,y:0,z:0}, partId: part.id, partIds: [part.id], category: 'ignore'});
       postMessage({id: taskId, result});
@@ -19,19 +20,21 @@ function buildPartInfo(payload, env, taskId) {
     try {
       partInfo = new PartInfo(part, env);
       partIds = partInfo.parts().map(p => p.id);
-      cuts = partInfo.cuts.map(c=>c.toJson());
-      model = partInfo.model(true);
-      model.z = partInfo.layers(true);
-      model['-z'] = partInfo.layers(false);
       normals = partInfo.normals();
-      fenceEdges = {};
-      fenceEdges['-z'] = partInfo.edges2D(false);
-      fenceEdges.z = partInfo.edges2D(true);
       demensions = partInfo.demensions();
+      fenceEdges = {};
+      if (!part.outsourced) {
+        model = partInfo.model(true);
+        model.z = partInfo.layers(true);
+        model['-z'] = partInfo.layers(false);
+        cuts = partInfo.cuts.map(c=>c.toJson());
+        fenceEdges['-z'] = partInfo.edges2D(false);
+        fenceEdges.z = partInfo.edges2D(true);
+      }
       // toolingInfo = partInfo.toolingInformation();
     } catch (e) {
       console.error(e);
-      partInfo.model(false)
+      // partInfo.model(false)
     }
     const result = DTO({partId: part.id, partIds, demensions, model, fenceEdges,
       toolingInfo, category, cuts, normals});

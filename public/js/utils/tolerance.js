@@ -42,6 +42,7 @@ function parseTolAbs(attr, attributeMap, tolerance, absoluteValue, modulus) {
   return {tolerance, absoluteValue, singleValue, modulus};
 }
 
+// TODO: modulus would be useful but I dont think it works yet
 function boundsFunc(attr, attributeMap, tolerance, absoluteValue, modulus) {
   const props = parseTolAbs(attr, attributeMap, tolerance, absoluteValue, modulus);
   return (elem) => {
@@ -50,7 +51,7 @@ function boundsFunc(attr, attributeMap, tolerance, absoluteValue, modulus) {
     value = changeToInfinity(value);
     if (props.absoluteValue && value < 0) value *= -1;
     let lower, upper, center;
-    if (Number.NaNfinity(value)) return {lower: value, upper: value, id: rangeStr(Infinity * value, Infinity * value)};
+    if (Number.NaNfinity(value)) return {value, lower: value, upper: value, id: rangeStr(Infinity * value, Infinity * value)};
     else {
       const mod = Math.mod(value, tol);
       let center = mod > tol/2 ? value + (tol - mod) : value - mod;
@@ -70,7 +71,7 @@ function boundsFunc(attr, attributeMap, tolerance, absoluteValue, modulus) {
       const nextId = rangeStr(center, upper + tol);
       if (!props.modulus && lower > upper)
         console.warn.subtle(`Bounding limits may be incorrect: ${id}`);
-      return {lower, upper, prevId, id, nextId};
+      return {value, lower, upper, prevId, id, nextId};
     }
   }
 }

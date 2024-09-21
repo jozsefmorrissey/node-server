@@ -63,7 +63,7 @@ class Layer {
       for (let i = 0; i < vertices.length; i++) {
         for (let j = 0; j < vertices.length; j++) {
           if (i != j) {
-            const line = new Line3D(vertices[i].clone(), vertices[j].clone()).positiveVectorLine();
+            const line = new Line3D(vertices[i].clone(), vertices[j].clone()).positive();
             const detStr = line.toString(.000001);
             if (!line.isPoint() && lineMap[detStr] === undefined) {
               lineMap[detStr] = line;
@@ -97,14 +97,36 @@ class Layer {
       return overlaps;
     }
 
-    this.lines = (tolerance) => {
-      let t = tolerance || tol;
+    const onlyDefinedOnce = (t) => {
       const tolmap = new ToleranceMap({'0.x': t, '0.y': t, '0.z': t,
                                         '1.x': t, '1.y': t, '1.z': t});
+      list.forEach(p => p.lines().forEach(l => tolmap.add(l.positive())));
 
-      list.forEach(p => p.lines().forEach(l => tolmap.add(l.positiveVectorLine())));
       const lines = [];
       const groups = tolmap.group().forEach(s => s.length === 1 && lines.push(s[0]));
+      return lines;
+    }
+
+    const removeLinesThatDoNotShareAVertex = (lines, t) => {
+      let found;
+      do {
+        const map = new ToleranceMap({'vertex.x': t, 'vertex.y': t, 'vertex.z': t});
+        const lvObj = (line, vertex) => ({line, vertex});
+        lines.forEach(l => map.addAll([lvObj(l, l[0]), lvObj(l, l[1])]));
+        const singleSets = map.group().filter(s => s.length === 1);
+        const notOnParrimeter = singleSets.map(s=>s[0].line);
+        if (found = notOnParrimeter.length) lines.removeAll(notOnParrimeter)
+      } while(found);
+      return lines;
+    }
+
+    this.lines = (tolerance) => {
+      let t = tolerance || tol;
+      let lines = onlyDefinedOnce(t);
+      removeLinesThatDoNotShareAVertex(lines, t);
+      Line3D.combine(lines);
+      lines = Line3D.sliceAll(lines);
+      removeLinesThatDoNotShareAVertex(lines, t);
       Line3D.combine(lines);
       return lines;
     }

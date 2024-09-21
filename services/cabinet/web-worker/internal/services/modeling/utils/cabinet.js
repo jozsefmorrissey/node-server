@@ -81,12 +81,14 @@ class CabinetUtil {
 }
 
 const built = {};
-CabinetUtil.instance = (rMdto, environment) => {
+const dataPath = (assem) => 'proccessData.CabinetUtil.' + assem.id;
+CabinetUtil.instance = (rMdto, env) => {
   let cabinet = rMdto.find.up('c');
-  if (built[cabinet.id] === undefined || built[cabinet.id].cabinet().hash !== cabinet.hash) {
-    built[cabinet.id] = new CabinetUtil(cabinet, environment);
+  const path = dataPath(cabinet);
+  if (env.pathValue(path) === undefined || env.pathValue(path).cabinet().hash !== cabinet.hash) {
+    env.pathValue(path, new CabinetUtil(cabinet, env));
   }
-  return built[cabinet.id];
+  return env.pathValue(path);
 }
 
 module.exports = CabinetUtil;

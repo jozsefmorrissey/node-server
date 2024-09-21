@@ -4,7 +4,6 @@
 const SectionProperties = require('../section-properties.js');
 const Panel = require('../../panel');
 const Joint = require('../../../../joint/joint.js');
-const DividerSection = require('../partition/divider.js');
 const Assembly = require('../../../assembly.js');
 
 let count = 0;

@@ -7,10 +7,17 @@ class Joint extends Dependency {
   constructor(dependsSelector, dependentSelector, condition, locationId, priority) {
     super(dependsSelector, dependentSelector, condition, locationId, priority);
     priority ||= 0;
-    let maleOffset, fullLength;
+    let maleOffset;
+    let fullMale = true;
+    let fullFemale = false;
+    let autoExtend = true;
 
     this.maleOffset = (val) => val === undefined ? maleOffset : (maleOffset = val);
-    this.fullLength = (val) => val === undefined ? fullLength : (fullLength = val);
+    this.full = {
+      male: (val) => val === undefined ? fullMale : (fullMale = val),
+      female: (val) => val === undefined ? fullFemale : (fullFemale = val)
+    }
+    this.autoExtend = (trueOfalse) => Boolean.is(trueOfalse) ? (autoExtend = trueOfalse) :  autoExtend; 
     this.priority = (val) => val === undefined ? priority : (priority = val);
     const parentClone = this.clone;
 
@@ -50,7 +57,8 @@ Joint.new = function (id, json) {
   return new Joint.classes[id]().fromJson(json);
 }
 
-Object.class.register(Joint, 'maleOffset', 'fullLength', 'priority', 'evaluator');
+Object.class.register(Joint, 'maleOffset', 'priority', 'evaluator', 'full.male',
+  'full.female', 'autoExtend');
 
 
 

@@ -5,11 +5,11 @@ const CSG = require('./csg');
 const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 
 class PartsInformationTask extends Task {
-  constructor(parts) {
+  constructor(parts, modelInfo) {
     super();
     let _result = {};
     const remaining =  parts.map(p => p + '');
-    this.result = () => _result;
+    this.result = () => modelInfo.partInformation;
     this.payload = () => ({parts});
     this.progress = () => Math.floor(100 * (1 - (remaining.length/parts.length)));
     this.on.message((result) => {
@@ -17,9 +17,10 @@ class PartsInformationTask extends Task {
         console.error(result);
       } else {
         remaining.remove(result.partId);
-        _result[result.partId] = result;
+        modelInfo.partInformation.add(result);
         this.trigger.change(this);
-        if (remaining.length === 0) this.status(STATUS.SUCCESS, _result);
+        if (remaining.length === 0)
+          this.status(STATUS.SUCCESS, this.result());
       }
     });
   }
@@ -85,7 +86,7 @@ function sliceTasks(ids, modelInfo) {
   for (let index = 0; index < groupedIds.length; index += sliceCount) {
     const buildTask = CSG.Intersection(modelInfo, true);
     const currIds = groupedIds.slice(index, index+sliceCount);
-    const partTask = new PartsInformationTask(currIds);
+    const partTask = new PartsInformationTask(currIds, modelInfo);
     partTasks.push(partTask);
     const sequential = new Sequential(modelInfo.environment, buildTask, partTask);
     tasks.push(sequential);
@@ -99,17 +100,7 @@ function Parts(modelInfo) {
 
     const parrelle = new Parrelle(...tasks);
     parrelle.result = () => {
-      let result = {};
-      partTasks.forEach(pt => {
-        const tRes = pt.result();
-        Object.values(tRes).forEach(pi => {
-          pi.parts = pi.partIds.map(id => Lookup.get(id));
-          pi.MATERIAL_UNIT = pi.parts[0].MATERIAL_UNIT;
-          if (result[pi.category] === undefined) result[pi.category] = {};
-          result[pi.category][pi.partId] = pi;
-        });
-      });
-      return result;
+      return modelInfo.partInformation;
     }
     return parrelle;
 }

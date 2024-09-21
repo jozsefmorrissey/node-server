@@ -5,7 +5,6 @@ const Assembly = require('../assembly.js');
 const cabinetBuildConfig = require('../../../../public/json/cabinets.json');
 const Joint = require('../../joint/joint.js');
 const JointSettings = require('../../../../web-worker/shared/settings.js');
-const Dado = require('../../joint/joints/dado.js');
 const Dependency = require('../../dependency');
 const CabinetOpeningCorrdinates = require('../../../services/cabinet-opening-coordinates.js');
 const SectionProperties = require('./section/section-properties.js');
@@ -105,6 +104,9 @@ class Cabinet extends Assembly {
 
     const pAddSubAssem = this.addSubAssembly;
     this.addSubAssembly = (assembly) => {
+      // if (assembly.constructor.name === 'Divider')  {
+      //   const sec
+      // }
       pAddSubAssem(assembly);
       this.addDependencies(new Dependency(assembly, this));
       const simplePart = assembly.constructor.name.match(/Frame|Panel/);
@@ -171,6 +173,14 @@ class Cabinet extends Assembly {
   }
 }
 
+const linkSectionsToDividers = (assembly) => {
+  const sections = assembly.children().filter(a => a.id().startsWith('SectionProperties'));
+  sections.forEach(s => s.borders().forEach(b => {
+    const border = b();
+    if (border.sectionProperties) border.sectionProperties.add(s);
+  }));
+}
+
 Cabinet.build = (type, group, config) => {
   const cabinet = Assembly.build(type, group, config, new Cabinet('c', type));
   config ||= cabinetBuildConfig[type];
@@ -223,9 +233,9 @@ Cabinet.fromJson = (assemblyJson) => {
   const joints = Object.fromJson(assemblyJson.joints);
   assembly.addDependencies.apply(assembly, joints);
   assembly.autoToeKick(assemblyJson.autoToeKick);
-
   trigger();
   assembly.trigger.change();
+  linkSectionsToDividers(assembly);
   return assembly;
 }
 Cabinet.abbriviation = 'c';

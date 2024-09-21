@@ -12,5 +12,7 @@ class MortiseInfo extends ChannelInfo {
 MortiseInfo.is = (axis) =>
   axis.y.isDirectional() && axis.x.length() > .0001;
 
+MortiseInfo.CHAR = 'D';
+
 ChannelInfo.register(MortiseInfo);
 module.exports = MortiseInfo;

@@ -13,5 +13,7 @@ RabbitInfo.is = (axis) => {
   return axis.y.isLine() && axis.z.length() > .0001 && axis.x.isDirectional();
 }
 
+RabbitInfo.CHAR = 'D';
+
 ChannelInfo.register(RabbitInfo);
 module.exports = RabbitInfo;

@@ -236,7 +236,7 @@ class RequireJS {
       if (scripts[path] === undefined) {
         console.warn(`Trying to load a non existent js file
 \t'${relativePath}' from file '${filePath}'
-\t\tDid you mean:\n\t\t\t${guessFilePath(relativePath, filePath).join('\n\t\t\t')}`);
+\t\tDid you mean:\n\t\t\t??${guessFilePath(relativePath, filePath).join('\n\t\t\t')}`);
       }
       return scripts[path];
     }
@@ -611,9 +611,26 @@ function (require, exports, module) {
 	    return csg;
 	  },
 	
-	  scale: function(coeficient) {
+	  scale: function(xOall, y, z, relitive) {
 	    const center = this.center();
-	    this.polygons.map(function(p) { return p.scale(center, coeficient); });
+	    if (y === undefined && z === undefined && relitive === undefined) {
+	      this.polygons.map(function(p) { return p.scale(center, xOall); });
+	    } else {
+	      const dems = this.demensions();
+	      const x = relitive ? (dems.x + xOall)/dems.x : (xOall || 1);
+	      y = relitive ? (dems.y + y)/dems.y : (y || 1);
+	      z = relitive ? (dems.z + z)/dems.z : (z || 1);
+	      this.polygons.forEach(p => p.vertices.forEach(v => {
+	        v.scale(center, x, y, z);
+	      }));
+	    }
+	  },
+	
+	  explode: function(distance) {
+	    const center = this.center();
+	    this.polygons.forEach(p =>
+	      p.translate(p.plane.normal.times(distance))
+	    );
 	  },
 	
 	  setColors: function(func, g, b) {
@@ -622,6 +639,14 @@ function (require, exports, module) {
 	    } else {
 	      this.polygons.forEach(p => p.setColor(func, g, b));
 	    }
+	  },
+	
+	  setColor: function(r, g, b, force) {
+	    this.toPolygons().map(function(polygon) {
+	      if (polygon.shared === undefined || force) {
+	        polygon.setColor(r, g, b);
+	      }
+	    });
 	  },
 	
 	  toPolygons: function() {
@@ -797,7 +822,10 @@ function (require, exports, module) {
 	      z: epts.z - epts['-z']
 	    }
 	  },
-	
+	  demCenter: function () {
+	    const dems = this.demensions();
+	    return {x: dems.x/2, y: dems.y/2, z: dems.z/2};
+	  },
 	  rotateAroundPoint: function (rotations, point) {
 	    const returnVector = new CSG.Vector(point);
 	    const centerVector = returnVector.negated();
@@ -841,6 +869,7 @@ function (require, exports, module) {
 	
 	  translate: function (offset) {
 	    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+	    offset.id = String.random();
 	    this.polygons.forEach((poly) => poly.translate(offset));
 	  },
 	
@@ -956,7 +985,7 @@ function (require, exports, module) {
 	}
 	
 	function vecotrOvertexModel(start, end, model, options) {
-	  if (options.lineDisplayType === CSG.Line.DISPLAY_TYPES.LINE_ONLY) return model;
+	  if (Array.isArray(end) || options.lineDisplayType === CSG.Line.DISPLAY_TYPES.LINE_ONLY) return model;
 	  let color = end.color || options.color;
 	  if (CSG.Line.DISPLAY_TYPES.VECTOR === options.lineDisplayType &&
 	          end instanceof CSG.Vector) {
@@ -977,7 +1006,7 @@ function (require, exports, module) {
 	    return new CSG.Point(options.start, .3, options.color);
 	  }
 	  const radius = options.radius || .2;
-	  let model = new CSG.cylinder({start, end, radius});
+	  let model = new CSG.cylinder({start, end, radius, slices: 32});
 	  model = vecotrOvertexModel(end, start, model, options);
 	  model.setColor(options.color);
 	  return vecotrOvertexModel(start, end, model, options);
@@ -1071,7 +1100,7 @@ function (require, exports, module) {
 	  options = options || {};
 	  var c = new CSG.Vector(options.center || [0, 0, 0]);
 	  var r = options.radius || 1;
-	  var slices = options.slices || 16;
+	  var slices = options.slices || 32;
 	  var stacks = options.stacks || 8;
 	  var polygons = [], vertices;
 	  function vertex(theta, phi) {
@@ -1129,13 +1158,16 @@ function (require, exports, module) {
 	    var normal = out.times(1 - Math.abs(normalBlend)).plus(axisZ.times(normalBlend));
 	    return new CSG.Vertex(pos, normal);
 	  }
+	  const topVerts = [];
+	  const bottomVerts = [];
 	  for (var i = 0; i < slices; i++) {
 	    var t0 = i / slices, t1 = (i + 1) / slices;
-	    polygons.push(new CSG.Polygon([start, point(0, t0, -1), point(0, t1, -1)]));
 	    polygons.push(new CSG.Polygon([point(0, t1, 0), point(0, t0, 0), point(1, t0, 0), point(1, t1, 0)]));
-	    polygons.push(new CSG.Polygon([end, point(1, t1, 1), point(1, t0, 1)]));
+	    topVerts.push(point(1, t0, -1));
+	    bottomVerts.push(point(0, t0, -1));
 	  }
-	  return CSG.fromPolygons(polygons);
+	  return CSG.fromPolygons(polygons.concat([new CSG.Polygon(topVerts),new CSG.Polygon(bottomVerts)]));
+	  // return new CSG.Polygon(verts);
 	};
 	
 	let crossVect;
@@ -1340,6 +1372,11 @@ function (require, exports, module) {
 	// functions like `CSG.sphere()` can return a smooth vertex normal, but `normal`
 	// is not used anywhere else.
 	
+	
+	CSG.Vector.I = new CSG.Vector(1,0,0);
+	CSG.Vector.J = new CSG.Vector(0,1,0);
+	CSG.Vector.K = new CSG.Vector(0,0,1);
+	
 	CSG.Vertex = function(pos, normal) {
 	  this.pos = new CSG.Vector(pos);
 	  this.normal = new CSG.Vector(normal || {x:1,y:0,z:0});
@@ -1348,11 +1385,18 @@ function (require, exports, module) {
 	    return `(${verPer.x},${verPer.y},${verPer.z})`;
 	  }
 	
-	  this.scale = (center, coeficient) => {
+	  this.scale = (center, xOall, y, z) => {
 	    const centerVector = new CSG.Vector(center);
 	    const vector = new CSG.Vector(pos.x - center.x, pos.y - center.y, pos.z - center.z);
-	    const scaled = vector.times(coeficient);
-	    this.pos = centerVector.plus(scaled);
+	    if (y === undefined && z === undefined) {
+	      const scaled = vector.times(xOall);
+	      this.pos = centerVector.plus(scaled);
+	    } else {
+	      const iVect = CSG.Vector.I.times(vector.x * xOall);
+	      const jVect = CSG.Vector.J.times(vector.y * y);
+	      const kVect = CSG.Vector.K.times(vector.z * z);
+	      this.pos = centerVector.plus(iVect.plus(jVect).plus(kVect));
+	    }
 	  }
 	
 	  const tol = .1
@@ -1549,7 +1593,7 @@ function (require, exports, module) {
 	    percision ||= .001;
 	    const verts = this.vertices;
 	    const shared = this.shared;
-	    let color = includeColor ? colors.name(shared) : '';
+	    let color = String.color.next();//includeColor ? colors.name(shared) : '';
 	    let str = `${color}[`;
 	    for (let v = 0; v < verts.length; v++) {
 	      str += `${verts[v].toString(percision)},`;
@@ -1565,10 +1609,14 @@ function (require, exports, module) {
 	
 	  translate: function (offset) {
 	    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+	    const offsetId = offset.id || (offset.id = String.random());
 	    this.forEachVertex((vertex) => {
-	      vertex.pos.x += offset.x;
-	      vertex.pos.y += offset.y;
-	      vertex.pos.z += offset.z;
+	      if (!vertex.offsetId || vertex.offsetId !== offsetId) {
+	        vertex.pos.x += offset.x;
+	        vertex.pos.y += offset.y;
+	        vertex.pos.z += offset.z;
+	        vertex.offsetId = offsetId;
+	      }
 	    });
 	  },
 	
@@ -5128,6 +5176,351 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./public/js/utils/3d-modeling/viewer.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../dom-utils.js');
+	const CSG = require('./csg.js');
+	const GL = require('./lightgl.js');
+	
+	// Convert from CSG solid to GL.Mesh object
+	CSG.prototype.toMesh = function() {
+	  var mesh = new GL.Mesh({ normals: true, colors: true });
+	  var indexer = new GL.Indexer();
+	  this.toPolygons().map(function(polygon) {
+	    var indices = polygon.vertices.map(function(vertex) {
+	      vertex.color = polygon.shared || [1, 1, 1];
+	      return indexer.add(vertex);
+	    });
+	    for (var i = 2; i < indices.length; i++) {
+	      mesh.triangles.push([indices[0], indices[i - 1], indices[i]]);
+	    }
+	  });
+	  mesh.vertices = indexer.unique.map(function(v) { return [v.pos.x, v.pos.y, v.pos.z]; });
+	  mesh.normals = indexer.unique.map(function(v) { return [v.normal.x, v.normal.y, v.normal.z]; });
+	  mesh.colors = indexer.unique.map(function(v) { return v.color; });
+	  mesh.computeWireframe();
+	  return mesh;
+	};
+	
+	var angleX = 0;
+	var angleY = 0;
+	var angleZ = 0;
+	var viewers = [];
+	
+	// Set to true so lines don't use the depth buffer
+	Viewer.lineOverlay = false;
+	
+	// A viewer is a WebGL canvas that lets the user view a mesh. The user can
+	// tumble it around by dragging the mouse.
+	function Viewer(csg, width, height, depth) {
+	  const originalDepth = depth;
+	  viewers.push(this);
+	  this.setDepth = (d) => depth = d;
+	  let x = 0;
+	  let y = 0;
+	
+	  let lastZoom;
+	  let zoomCount = 0;
+	  const zoom = (out) => {
+	    let direction = (out === true ? 1 : -1);
+	    let zoomOffset = 2;
+	    let newTime = new Date().getTime();
+	    if (lastZoom > newTime - 50) {
+	      zoomCount++;
+	      zoomOffset *= zoomCount;
+	      zoomOffset = zoomOffset > 20 ? 20 : zoomOffset;
+	    }
+	    lastZoom = newTime;
+	    depth += zoomOffset * direction;
+	  };
+	  this.zoom = zoom;
+	  const pan = (leftRight, upDown) => {
+	    x += leftRight;
+	    y += upDown * -1;
+	  }
+	
+	  // Get a new WebGL canvas
+	  var gl = GL.create();
+	  this.gl = gl;
+	  this.mesh = csg.toMesh();
+	  this.canvas = () => gl.canvas;
+	
+	  // Set up the viewport
+	  gl.canvas.width = width;
+	  gl.canvas.height = height;
+	  gl.viewport(0, 0, width, height);
+	  gl.matrixMode(gl.PROJECTION);
+	  gl.loadIdentity();
+	  gl.perspective(100, width / height, 10, 1000);
+	  gl.rotate(0, 0, 1, 0);
+	  gl.translate(0, 0, -200);
+	  gl.matrixMode(gl.MODELVIEW);
+	
+	  // Set up WebGL state
+	  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	  gl.clearColor(0.93, 0.93, 0.93, 1);
+	  gl.enable(gl.DEPTH_TEST);
+	  gl.enable(gl.CULL_FACE);
+	  gl.polygonOffset(1, 1);
+	
+	  // Black shader for wireframe
+	  this.blackShader = new GL.Shader('\
+	    void main() {\
+	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\
+	    }\
+	  ', '\
+	    void main() {\
+	      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.1);\
+	    }\
+	  ');
+	
+	  // Shader with diffuse and specular lighting
+	  this.changeLightingShaderDirection = (x,y,z) => this.lightingShader = new GL.Shader(`
+	    varying vec3 color;
+	    varying vec3 normal;
+	    varying vec3 light;
+	    void main() {
+	      const vec3 lightDir = vec3(${x}, ${y}, ${z}) / 3.741657386773941;
+	      light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;
+	      color = gl_Color.rgb;
+	      normal = gl_NormalMatrix * gl_Normal;
+	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+	    }
+	  `, `
+	    varying vec3 color;
+	    varying vec3 normal;
+	    varying vec3 light;
+	    void main() {
+	      vec3 n = normalize(normal);
+	      float diffuse = max(0.0, dot(light, n));
+	      float specular = pow(max(0.0, -reflect(light, n).z), 32.0) * sqrt(diffuse);
+	      gl_FragColor = vec4(mix(color * (0.3 + 0.7 * diffuse), vec3(1.0), specular), 1.0);
+	    }`);
+	
+	  this.changeLightingShaderDirection(0, 0, 0);
+	  // this.changeLightingShaderDirection(3, 2, 3);
+	
+	  let origCenter = {x:0, y:0};
+	  let pointClicked = {x: 0, y: 0, z: 0};
+	  function setPointClicked(e) {
+	    const canvasPos = e.target.getBoundingClientRect();
+	    const clickPos = {x: e.x - canvasPos.x, y: e.y - canvasPos.y};
+	    const canvasCenter = {x: e.target.width/2, y: e.target.height/2};
+	    const canvasOffset = {x: clickPos.x - canvasCenter.x, y: clickPos.y - canvasCenter.y};
+	    const twoDLoc = {x: origCenter.x + canvasOffset.x, y: origCenter.y + canvasOffset.y};
+	    const centerOffset = GL.Matrix.relitiveDirection(twoDLoc.x, twoDLoc.y,0,gl.modelviewMatrix)
+	    pointClicked = {x: centerOffset[0], y: centerOffset[1], z: centerOffset[2]};
+	  }
+	
+	  let rotationUnit;
+	  let rotationOffset = [0,0,0];
+	  let panOffset;
+	  let panUnit;
+	
+	  let rotationVector = new CSG.Vector(25, 12,11.5);
+	  let point = {x: 0, y: 12, z: 11.5};
+	  // let rotationVector = new CSG.Vector(25, 12,11.5);
+	  function rotateEvent(e) {
+	    if (!rotationUnit) {
+	      rotationUnit = {};
+	      rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
+	      rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
+	    }
+	    if (rotationUnit) {
+	      const speed = 40;
+	      if (e.deltaY) {
+	        const dir = e.deltaY < 0 ? -speed : speed;
+	        rotationOffset[0] += rotationUnit.y[0]/dir;
+	        rotationOffset[1] += rotationUnit.y[1]/dir;
+	        rotationOffset[2] += rotationUnit.y[2]/dir;
+	      }
+	      if (e.deltaX) {
+	        const dir = e.deltaX < 0 ? speed : -speed;
+	        rotationOffset[0] += rotationUnit.x[0]/dir;
+	        rotationOffset[1] += rotationUnit.x[1]/dir;
+	        rotationOffset[2] += rotationUnit.x[2]/dir;
+	      }
+	    }
+	    // angleY += e.deltaX * 2;
+	    // angleX += e.deltaY * 2;
+	    // angleX = Math.max(-90, Math.min(90, angleX));
+	  }
+	
+	  gl.onmousemove = function(e) {
+	    if (e.dragging) {
+	      if (shiftHeld) panEvent(e);
+	      else rotateEvent(e);
+	      gl.ondraw();
+	    }
+	  };
+	
+	  function zoomEvent(e) {
+	    const st = document.documentElement.scrollTop;
+	    if (e.deltaY < 0) {
+	      zoom(true);
+	    } else {
+	      zoom();
+	    }
+	  }
+	
+	  function panEvent(e) {
+	    const st = document.documentElement.scrollTop;
+	    pan(-e.deltaX, e.deltaY)
+	  }
+	
+	  let lastScrollTop = 0;
+	  gl.canvas.onwheel = function (e) {
+	    zoomEvent(e);
+	    gl.ondraw();
+	  }
+	  disableScroll(gl.canvas);
+	
+	  let shiftHeld = false;
+	  window.onkeydown = (e) => {
+	    shiftHeld = e.key === "Shift" ? true : false;
+	  }
+	  window.onkeyup = (e) => {
+	    shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
+	  }
+	
+	  let clickHeld = false;
+	  window.onclick = (e) => {
+	    clickHeld = !clickHeld;
+	    if (!clickHeld) {
+	      rotationUnit = null;
+	      panUnit = null;
+	    }
+	  }
+	
+	  window.onmousedown = setPointClicked;
+	
+	  function viewFrom(point, rotation) {
+	      gl.makeCurrent();
+	
+	      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	      // const relDir1 = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
+	      gl.loadIdentity();
+	
+	      gl.rotate(rotation.x, 1, 0, 0);
+	      gl.rotate(rotation.y, 0, 1, 0);
+	      gl.rotate(rotation.z, 0, 0, 1);
+	
+	      gl.translate(0, 0, -20);
+	      // const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
+	      // gl.translate(-relDir[0], -relDir[1], -relDir[2]);
+	
+	      if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+	      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
+	      if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
+	
+	      if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
+	      gl.enable(gl.BLEND);
+	      // that.blackShader.draw(that.mesh, gl.LINES);
+	      gl.disable(gl.BLEND);
+	      if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+	  }
+	  this.viewFrom = viewFrom;
+	
+	  function applyZoom() {
+	    // const depthArr = GL.Matrix.relitiveDirection(0,0,depth,gl.modelviewMatrix);
+	    const transArr = GL.Matrix.relitiveDirection(x,-y,depth,gl.modelviewMatrix);
+	    gl.translate(-transArr[0], -transArr[1], transArr[2])
+	  }
+	
+	  var that = this;
+	  gl.ondraw = function() {
+	    gl.makeCurrent();
+	
+	    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	    // gl.loadIdentity();
+	    applyZoom();
+	    gl.rotateAroundPoint(pointClicked, rotationOffset);
+	
+	    // gl.rotate(angleX, rotationVector.x, rotationVector.y, rotationVector.z);
+	    // gl.rotate(angleY, rotationVector.x, rotationVector.y, rotationVector.z);
+	    // gl.rotate(rotationOffset[2], 0, 0, -1);
+	    x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
+	
+	    if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+	    that.lightingShader.draw(that.mesh, gl.TRIANGLES);
+	    if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
+	
+	    if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
+	    gl.enable(gl.BLEND);
+	    // that.blackShader.draw(that.mesh, gl.LINES);
+	    gl.disable(gl.BLEND);
+	    if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+	  };
+	
+	  gl.ondraw();
+	
+	  // gl.canvas.width = '100vw';
+	  // gl.canvas.height = '100vh';
+	}
+	
+	var nextID = 0;
+	function addViewer(viewer, id) {
+	  du.find(id).appendChild(viewer.gl.canvas);
+	}
+	
+	
+	
+	
+	// left: 37, up: 38, right: 39, down: 40,
+	// spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
+	var keys = {37: 1, 38: 1, 39: 1, 40: 1};
+	
+	function preventDefault(e) {
+	  e.preventDefault();
+	}
+	
+	function preventDefaultForScrollKeys(e) {
+	  if (keys[e.keyCode]) {
+	    preventDefault(e);
+	    return false;
+	  }
+	}
+	
+	// modern Chrome requires { passive: false } when adding event
+	var supportsPassive = false;
+	try {
+	  window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
+	    get: function () { supportsPassive = true; }
+	  }));
+	} catch(e) {}
+	
+	var wheelOpt = supportsPassive ? { passive: false } : false;
+	var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
+	
+	// call this to Disable
+	function disableScroll(element) {
+	  element.addEventListener('DOMMouseScroll', preventDefault, false); // older FF
+	  element.addEventListener(wheelEvent, preventDefault, wheelOpt); // modern desktop
+	  element.addEventListener('touchmove', preventDefault, wheelOpt); // mobile
+	  element.addEventListener('keydown', preventDefaultForScrollKeys, false);
+	}
+	
+	// call this to Enable
+	function enableScroll(element) {
+	  element.removeEventListener('DOMMouseScroll', preventDefault, false);
+	  element.removeEventListener(wheelEvent, preventDefault, wheelOpt);
+	  element.removeEventListener('touchmove', preventDefault, wheelOpt);
+	  element.removeEventListener('keydown', preventDefaultForScrollKeys, false);
+	}
+	
+	exports.Viewer = Viewer
+	exports.addViewer = addViewer
+	exports.preventDefault = preventDefault
+	exports.preventDefaultForScrollKeys = preventDefaultForScrollKeys
+	exports.disableScroll = disableScroll
+	exports.enableScroll = enableScroll
+	
+});
+
+
 RequireJS.addFunction('./public/js/utils/3d-modeling/STL.js',
 function (require, exports, module) {
 	
@@ -7414,437 +7807,354 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/3d-modeling/viewer.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../dom-utils.js');
-	const CSG = require('./csg.js');
-	const GL = require('./lightgl.js');
-	
-	// Set the color of all polygons in this solid
-	CSG.prototype.setColor = function(r, g, b, force) {
-	  this.toPolygons().map(function(polygon) {
-	    if (polygon.shared === undefined || force) {
-	      polygon.setColor(r, g, b);
-	    }
-	  });
-	};
-	
-	// Convert from CSG solid to GL.Mesh object
-	CSG.prototype.toMesh = function() {
-	  var mesh = new GL.Mesh({ normals: true, colors: true });
-	  var indexer = new GL.Indexer();
-	  this.toPolygons().map(function(polygon) {
-	    var indices = polygon.vertices.map(function(vertex) {
-	      vertex.color = polygon.shared || [1, 1, 1];
-	      return indexer.add(vertex);
-	    });
-	    for (var i = 2; i < indices.length; i++) {
-	      mesh.triangles.push([indices[0], indices[i - 1], indices[i]]);
-	    }
-	  });
-	  mesh.vertices = indexer.unique.map(function(v) { return [v.pos.x, v.pos.y, v.pos.z]; });
-	  mesh.normals = indexer.unique.map(function(v) { return [v.normal.x, v.normal.y, v.normal.z]; });
-	  mesh.colors = indexer.unique.map(function(v) { return v.color; });
-	  mesh.computeWireframe();
-	  return mesh;
-	};
-	
-	var angleX = 0;
-	var angleY = 0;
-	var angleZ = 0;
-	var viewers = [];
-	
-	// Set to true so lines don't use the depth buffer
-	Viewer.lineOverlay = false;
-	
-	// A viewer is a WebGL canvas that lets the user view a mesh. The user can
-	// tumble it around by dragging the mouse.
-	function Viewer(csg, width, height, depth) {
-	  const originalDepth = depth;
-	  viewers.push(this);
-	  this.setDepth = (d) => depth = d;
-	  let x = 0;
-	  let y = 0;
-	
-	  let lastZoom;
-	  let zoomCount = 0;
-	  const zoom = (out) => {
-	    let direction = (out === true ? 1 : -1);
-	    let zoomOffset = 2;
-	    let newTime = new Date().getTime();
-	    if (lastZoom > newTime - 50) {
-	      zoomCount++;
-	      zoomOffset *= zoomCount;
-	      zoomOffset = zoomOffset > 20 ? 20 : zoomOffset;
-	    }
-	    lastZoom = newTime;
-	    depth += zoomOffset * direction;
-	  };
-	  this.zoom = zoom;
-	  const pan = (leftRight, upDown) => {
-	    x += leftRight;
-	    y += upDown * -1;
-	  }
-	
-	  // Get a new WebGL canvas
-	  var gl = GL.create();
-	  this.gl = gl;
-	  this.mesh = csg.toMesh();
-	  this.canvas = () => gl.canvas;
-	
-	  // Set up the viewport
-	  gl.canvas.width = width;
-	  gl.canvas.height = height;
-	  gl.viewport(0, 0, width, height);
-	  gl.matrixMode(gl.PROJECTION);
-	  gl.loadIdentity();
-	  gl.perspective(100, width / height, 10, 1000);
-	  gl.rotate(0, 0, 1, 0);
-	  gl.translate(0, 0, -200);
-	  gl.matrixMode(gl.MODELVIEW);
-	
-	  // Set up WebGL state
-	  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-	  gl.clearColor(0.93, 0.93, 0.93, 1);
-	  gl.enable(gl.DEPTH_TEST);
-	  gl.enable(gl.CULL_FACE);
-	  gl.polygonOffset(1, 1);
-	
-	  // Black shader for wireframe
-	  this.blackShader = new GL.Shader('\
-	    void main() {\
-	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\
-	    }\
-	  ', '\
-	    void main() {\
-	      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.1);\
-	    }\
-	  ');
-	
-	  // Shader with diffuse and specular lighting
-	  this.changeLightingShaderDirection = (x,y,z) => this.lightingShader = new GL.Shader(`
-	    varying vec3 color;
-	    varying vec3 normal;
-	    varying vec3 light;
-	    void main() {
-	      const vec3 lightDir = vec3(${x}, ${y}, ${z}) / 3.741657386773941;
-	      light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;
-	      color = gl_Color.rgb;
-	      normal = gl_NormalMatrix * gl_Normal;
-	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-	    }
-	  `, `
-	    varying vec3 color;
-	    varying vec3 normal;
-	    varying vec3 light;
-	    void main() {
-	      vec3 n = normalize(normal);
-	      float diffuse = max(0.0, dot(light, n));
-	      float specular = pow(max(0.0, -reflect(light, n).z), 32.0) * sqrt(diffuse);
-	      gl_FragColor = vec4(mix(color * (0.3 + 0.7 * diffuse), vec3(1.0), specular), 1.0);
-	    }`);
-	
-	  this.changeLightingShaderDirection(0, 0, 0);
-	  // this.changeLightingShaderDirection(3, 2, 3);
-	
-	  let origCenter = {x:0, y:0};
-	  let pointClicked = {x: 0, y: 0, z: 0};
-	  function setPointClicked(e) {
-	    const canvasPos = e.target.getBoundingClientRect();
-	    const clickPos = {x: e.x - canvasPos.x, y: e.y - canvasPos.y};
-	    const canvasCenter = {x: e.target.width/2, y: e.target.height/2};
-	    const canvasOffset = {x: clickPos.x - canvasCenter.x, y: clickPos.y - canvasCenter.y};
-	    const twoDLoc = {x: origCenter.x + canvasOffset.x, y: origCenter.y + canvasOffset.y};
-	    const centerOffset = GL.Matrix.relitiveDirection(twoDLoc.x, twoDLoc.y,0,gl.modelviewMatrix)
-	    pointClicked = {x: centerOffset[0], y: centerOffset[1], z: centerOffset[2]};
-	  }
-	
-	  let rotationUnit;
-	  let rotationOffset = [0,0,0];
-	  let panOffset;
-	  let panUnit;
-	
-	  let rotationVector = new CSG.Vector(25, 12,11.5);
-	  let point = {x: 0, y: 12, z: 11.5};
-	  // let rotationVector = new CSG.Vector(25, 12,11.5);
-	  function rotateEvent(e) {
-	    if (!rotationUnit) {
-	      rotationUnit = {};
-	      rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
-	      rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
-	    }
-	    if (rotationUnit) {
-	      const speed = 40;
-	      if (e.deltaY) {
-	        const dir = e.deltaY < 0 ? -speed : speed;
-	        rotationOffset[0] += rotationUnit.y[0]/dir;
-	        rotationOffset[1] += rotationUnit.y[1]/dir;
-	        rotationOffset[2] += rotationUnit.y[2]/dir;
-	      }
-	      if (e.deltaX) {
-	        const dir = e.deltaX < 0 ? speed : -speed;
-	        rotationOffset[0] += rotationUnit.x[0]/dir;
-	        rotationOffset[1] += rotationUnit.x[1]/dir;
-	        rotationOffset[2] += rotationUnit.x[2]/dir;
-	      }
-	    }
-	    // angleY += e.deltaX * 2;
-	    // angleX += e.deltaY * 2;
-	    // angleX = Math.max(-90, Math.min(90, angleX));
-	  }
-	
-	  gl.onmousemove = function(e) {
-	    if (e.dragging) {
-	      if (shiftHeld) panEvent(e);
-	      else rotateEvent(e);
-	      gl.ondraw();
-	    }
-	  };
-	
-	  function zoomEvent(e) {
-	    const st = document.documentElement.scrollTop;
-	    if (e.deltaY < 0) {
-	      zoom(true);
-	    } else {
-	      zoom();
-	    }
-	  }
-	
-	  function panEvent(e) {
-	    const st = document.documentElement.scrollTop;
-	    pan(-e.deltaX, e.deltaY)
-	  }
-	
-	  let lastScrollTop = 0;
-	  gl.canvas.onwheel = function (e) {
-	    zoomEvent(e);
-	    gl.ondraw();
-	  }
-	  disableScroll(gl.canvas);
-	
-	  let shiftHeld = false;
-	  window.onkeydown = (e) => {
-	    shiftHeld = e.key === "Shift" ? true : false;
-	  }
-	  window.onkeyup = (e) => {
-	    shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
-	  }
-	
-	  let clickHeld = false;
-	  window.onclick = (e) => {
-	    clickHeld = !clickHeld;
-	    if (!clickHeld) {
-	      rotationUnit = null;
-	      panUnit = null;
-	    }
-	  }
-	
-	  window.onmousedown = setPointClicked;
-	
-	  function viewFrom(point, rotation) {
-	      gl.makeCurrent();
-	
-	      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	      // const relDir1 = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
-	      gl.loadIdentity();
-	
-	      gl.rotate(rotation.x, 1, 0, 0);
-	      gl.rotate(rotation.y, 0, 1, 0);
-	      gl.rotate(rotation.z, 0, 0, 1);
-	
-	      gl.translate(0, 0, -20);
-	      // const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
-	      // gl.translate(-relDir[0], -relDir[1], -relDir[2]);
-	
-	      if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
-	      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
-	      if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
-	
-	      if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
-	      gl.enable(gl.BLEND);
-	      // that.blackShader.draw(that.mesh, gl.LINES);
-	      gl.disable(gl.BLEND);
-	      if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
-	  }
-	  this.viewFrom = viewFrom;
-	
-	  function applyZoom() {
-	    // const depthArr = GL.Matrix.relitiveDirection(0,0,depth,gl.modelviewMatrix);
-	    const transArr = GL.Matrix.relitiveDirection(x,-y,depth,gl.modelviewMatrix);
-	    gl.translate(-transArr[0], -transArr[1], transArr[2])
-	  }
-	
-	  var that = this;
-	  gl.ondraw = function() {
-	    gl.makeCurrent();
-	
-	    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	    // gl.loadIdentity();
-	    applyZoom();
-	    gl.rotateAroundPoint(pointClicked, rotationOffset);
-	
-	    // gl.rotate(angleX, rotationVector.x, rotationVector.y, rotationVector.z);
-	    // gl.rotate(angleY, rotationVector.x, rotationVector.y, rotationVector.z);
-	    // gl.rotate(rotationOffset[2], 0, 0, -1);
-	    x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
-	
-	    if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
-	    that.lightingShader.draw(that.mesh, gl.TRIANGLES);
-	    if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
-	
-	    if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
-	    gl.enable(gl.BLEND);
-	    // that.blackShader.draw(that.mesh, gl.LINES);
-	    gl.disable(gl.BLEND);
-	    if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
-	  };
-	
-	  gl.ondraw();
-	
-	  // gl.canvas.width = '100vw';
-	  // gl.canvas.height = '100vh';
-	}
-	
-	var nextID = 0;
-	function addViewer(viewer, id) {
-	  du.find(id).appendChild(viewer.gl.canvas);
-	}
-	
-	
-	
-	
-	// left: 37, up: 38, right: 39, down: 40,
-	// spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
-	var keys = {37: 1, 38: 1, 39: 1, 40: 1};
-	
-	function preventDefault(e) {
-	  e.preventDefault();
-	}
-	
-	function preventDefaultForScrollKeys(e) {
-	  if (keys[e.keyCode]) {
-	    preventDefault(e);
-	    return false;
-	  }
-	}
-	
-	// modern Chrome requires { passive: false } when adding event
-	var supportsPassive = false;
-	try {
-	  window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
-	    get: function () { supportsPassive = true; }
-	  }));
-	} catch(e) {}
-	
-	var wheelOpt = supportsPassive ? { passive: false } : false;
-	var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
-	
-	// call this to Disable
-	function disableScroll(element) {
-	  element.addEventListener('DOMMouseScroll', preventDefault, false); // older FF
-	  element.addEventListener(wheelEvent, preventDefault, wheelOpt); // modern desktop
-	  element.addEventListener('touchmove', preventDefault, wheelOpt); // mobile
-	  element.addEventListener('keydown', preventDefaultForScrollKeys, false);
-	}
-	
-	// call this to Enable
-	function enableScroll(element) {
-	  element.removeEventListener('DOMMouseScroll', preventDefault, false);
-	  element.removeEventListener(wheelEvent, preventDefault, wheelOpt);
-	  element.removeEventListener('touchmove', preventDefault, wheelOpt);
-	  element.removeEventListener('keydown', preventDefaultForScrollKeys, false);
-	}
-	
-	exports.Viewer = Viewer
-	exports.addViewer = addViewer
-	exports.preventDefault = preventDefault
-	exports.preventDefaultForScrollKeys = preventDefaultForScrollKeys
-	exports.disableScroll = disableScroll
-	exports.enableScroll = enableScroll
-	
-});
-
-
 RequireJS.addFunction('./public/js/utils/test/tests/STL.js',
 function (require, exports, module) {
 	
 const STL = require('../../3d-modeling/STL.js');
 	require('../../3d-modeling/csg');
 	require('../../utils');
+	const du = require('../../dom-utils');
+	const Viewer = require('../../3d-modeling/viewer.js').Viewer;
+	const addViewer = require('../../3d-modeling/viewer.js').addViewer;
 	
-	const cube = new CSG.cube({radius: [50,50,50]});
-	const stl = new STL('Cube! Mother Fucker');
-	cube.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
-	const blob = stl.binary.file();
+	function addLink (model, name) {
+	  const stl = STL.fromCSG(model);
+	  console.log(model.toDrawString());
+	  du.copy(model.toDrawString());
 	
-	const link = document.createElement('a');
-	link.innerText = 'Cube!';
-	link.href = URL.createObjectURL(blob);
-	link.download = 'cube.stl'; // Set the desired filename
+	  const link = document.createElement('a');
+	  link.innerText = name;
+	  link.href = URL.createObjectURL(stl.binary.file());
+	  link.download = name.toKebab() + '.stl';
 	
-	document.body.append(link);
+	  document.body.append(link);
+	  link.click();
+	}
 	
-	let height = 1.5*2.54;
-	let width = 1 * 2.54;
-	let wheelScrewCenterZ = (5/16) * -2.54;
-	let glassThickness = (1/4) * 2.54;
-	let glassScrewCenter = [0, .5*2.54, glassThickness - .1];
-	let gsc = glassScrewCenter;
-	let flapThickness = (1/16) * 2.54;
-	let screwThickness = .5;
-	let smallBackThickness = .3
-	let sbt = smallBackThickness;
-	let supportCylRad = (13/32) * 2.54/2;
-	let scr = supportCylRad;
-	const cylinder = new CSG.cylinder({start: [0,0,0], end: [0,height,0], radius: width/2});
-	const glassCutter = new CSG.cube({radius: [width/2, height/2, glassThickness/2], center: [0,(height/2) - flapThickness, glassThickness/2]});
-	const wheelScrewCyl = new CSG.cylinder({radius: screwThickness/2 + .01, start: [0,0,wheelScrewCenterZ], end: [0,height,wheelScrewCenterZ]});
-	const topScrewResess = new CSG.cylinder({radius: .8/2 + .1, start: [0,height - (7/32)*2.54/2, wheelScrewCenterZ], end: [0,height, wheelScrewCenterZ]});
-	const bottomScrewResess = new CSG.cylinder({radius: .8/2 + .01, start: [0,(7/32)*2.54/2, wheelScrewCenterZ], end: [0,0, wheelScrewCenterZ]});
-	const backScrewCyl = new CSG.cylinder({radius: 1.2/2 - .01, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
-	const backScrewHole = new CSG.cylinder({radius: .4/2 + .01, start: [0,gsc[1], gsc[2] + .1], end: [0,gsc[1], 100]});
-	const backScrewResess = new CSG.cylinder({radius: .8/2, start: [0,gsc[1], width/2], end: [0,gsc[1], width/2 - (1/8) * 2.54]});
-	const backScrewWell = new CSG.cylinder({radius: .2/2, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
-	const wheelCavity = new CSG.cube({radius: [100, ((15/16)*2.54)/2 - .01, width/2 - sbt], center: [0, height/2, width/-2 + sbt/2]})
-	const supportCylR = new CSG.cylinder({radius: scr, start: [width/2-scr, .635, 0], end: [width/2-scr, 2.54 + .635, 0]}).subtract(glassCutter);
-	const supportCylL = new CSG.cylinder({radius: scr, start: [width/-2+scr, .635, 0], end: [width/-2+scr, 2.54 + .635, 0]}).subtract(glassCutter);
-	const plierSlot = new CSG.cube({radius: [(3/16)*2.54/2, (7/32)*2.54/2, 5], center: [0,height,-5]});
-	const backAngle = new CSG.cube({radius: [1.5*2.54/2, 1.5*2.54/2, .5/2], center: [0,0,0]});
-	backAngle.rotate({x:-45});
-	backAngle.translate([0,height,(width)/2.54+.1]);
-	const model = cylinder.subtract(glassCutter)
-	                      .subtract(wheelScrewCyl)
-	                      .subtract(topScrewResess)
-	                      .subtract(bottomScrewResess)
-	                      .subtract(backScrewHole)
-	                      .subtract(backScrewResess)
-	                      .union(backScrewCyl)
-	                      .subtract(backScrewWell)
-	                      .subtract(wheelCavity)
-	                      .union(supportCylR)
-	                      .union(supportCylL)
-	                      .subtract(backAngle)
-	                      .subtract(plierSlot)
+	const models = {};
 	
-	// model.rotate({x:180});
-	// model.translate({x: 0, y: model.demensions().y, z: 0});
+	models['Axis'] = (length, diameter, isVector) => {
+	  length ||= 18; diameter ||= .5;
+	  const hl = length / 2;
+	  const hd = diameter / 2;
+	  const start = [-hl,hd,0];
+	  const end = isVector ? new CSG.Vector([hl,0,hd*2]) : [hl,hd,0];
+	  let lineDisplayType;
+	  if (isVector) lineDisplayType = CSG.Line.DISPLAY_TYPES.VECTOR;
+	  const axis = new CSG.Line({start,end, radius: hd, color: 'blue', lineDisplayType});
+	  let base = new CSG.cube({radius: [hl, hd/2, hd/2], center: [0,hd/2,0]});
+	  const elivated = axis.clone();
+	  elivated.translate({x:0,y:10,z:0});
+	  const ss = .2;
+	  const gap = .25;
+	  const chopper = new CSG.cube({radius:[gap/2,hd,hd], center: [-hl+gap/2+ss,hd,0]});
+	  const offset = {x:gap+ss,y:0,z:0};
+	  for (let index = 0; index < 100; index++) {
+	    base = base.subtract(chopper);
+	    chopper.translate(offset);
+	  }
 	
 	
+	  return axis;// base.subtract(axis).union(axis);//.subtract(axis);//elivated.union(base);
+	};
 	
-	const stl2 = STL.fromCSG(model);
-	console.log(stl2.url());
-	console.log(model.toDrawString());
+	models['Shower Wheel Thingy!'] = (one,two) => {
+	  let height = 1.5*2.54;
+	  let width = 1 * 2.54;
+	  let wheelScrewCenterZ = (5/16) * -2.54;
+	  let glassThickness = (1/4) * 2.54;
+	  let glassScrewCenter = [0, .5*2.54, glassThickness - .1];
+	  let gsc = glassScrewCenter;
+	  let flapThickness = (1/16) * 2.54;
+	  let screwThickness = .5;
+	  let smallBackThickness = .3
+	  let sbt = smallBackThickness;
+	  let supportCylRad = (13/32) * 2.54/2;
+	  let scr = supportCylRad;
+	  let notchThickness = .06;
+	  const cylinder = new CSG.cylinder({start: [0,0,0], end: [0,height,0], radius: width/2});
+	  const glassCutter = new CSG.cube({radius: [width, height/2, glassThickness/2], center: [0,(height/2) - flapThickness, glassThickness/2]});
+	  const backNotchCutter = new CSG.cube({radius: [width/2, notchThickness, notchThickness]});
+	  backNotchCutter.rotate({x:45,y:0,z:0});
+	  backNotchCutter.center({x:0, y:(height) - flapThickness, z: glassThickness})
+	  const wheelScrewCyl = new CSG.cylinder({radius: screwThickness/2 + .01, start: [0,0,wheelScrewCenterZ], end: [0,height,wheelScrewCenterZ]});
+	  const topScrewResess = new CSG.cylinder({radius: .8/2 + .1, start: [0,height - (7/32)*2.54/2, wheelScrewCenterZ], end: [0,height, wheelScrewCenterZ]});
+	  const bottomScrewResess = new CSG.cylinder({radius: .8/2 + .01, start: [0,(7/32)*2.54/2, wheelScrewCenterZ], end: [0,0, wheelScrewCenterZ]});
+	  const backScrewCyl = new CSG.cylinder({radius: 1.2/2 - .01, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
+	  const backScrewHole = new CSG.cylinder({radius: .4/2 + .01, start: [0,gsc[1], gsc[2] + .1], end: [0,gsc[1], 100]});
+	  const backScrewResess = new CSG.cylinder({radius: .8/2, start: [0,gsc[1], width/2], end: [0,gsc[1], width/2 - (1/8) * 2.54]});
+	  const backScrewWell = new CSG.cylinder({radius: .2/2, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
+	  const wheelCavity = new CSG.cube({radius: [100, ((15/16)*2.54)/2 - .01, width/2 - sbt], center: [0, height/2, width/-2 + sbt/2]})
+	  const supportCylR = new CSG.cylinder({radius: scr, start: [width/2-scr, .635, 0], end: [width/2-scr, 2.54 + .635, 0]}).subtract(glassCutter);
+	  const supportCylL = new CSG.cylinder({radius: scr, start: [width/-2+scr, .635, 0], end: [width/-2+scr, 2.54 + .635, 0]}).subtract(glassCutter);
+	
+	  let supportSqR = new CSG.cube({radius: [scr,height/2,scr], center: [width/2-scr, height/2, scr/2]}).subtract(glassCutter);
+	  let supportSqL = new CSG.cube({radius: [scr,height/2,scr], center: [width/-2+scr, height/2, scr/2]}).subtract(glassCutter);
 	
 	
-	const link2 = document.createElement('a');
-	link2.innerText = 'Shower Wheel Thingy!';
-	link2.href = URL.createObjectURL(stl2.binary.file());
-	link2.download = 'shower-wheel-thingy.stl'; // Set the desired filename
+	  const plierSlot = new CSG.cube({radius: [(3/16)*2.54/2, (7/32)*2.54/2, 5], center: [0,height,-5]});
+	  const backAngle = new CSG.cube({radius: [1.5*2.54/2, 1.5*2.54/2, .5/2], center: [0,0,0]});
+	  backAngle.rotate({x:-45});
+	  backAngle.translate([0,height,(width)/2.54+.1]);
+	  const model = cylinder.subtract(glassCutter)
+	    .subtract(wheelScrewCyl)
+	    .subtract(topScrewResess)
+	    .subtract(bottomScrewResess)
+	    .subtract(backScrewHole)
+	    .subtract(backScrewResess)
+	    .union(backScrewCyl)
+	    .subtract(backScrewWell)
+	    .subtract(wheelCavity)
+	    .union(supportCylR)
+	    .union(supportCylL)
+	    .union(supportSqR)
+	    .union(supportSqL)
+	    .subtract(backAngle)
+	    .subtract(plierSlot)
+	    .subtract(backNotchCutter);
+	  return model;
+	}
 	
-	document.body.append(link2);
+	models['Rack'] =  (one)  => {
+	  const w = 1.93;
+	  const h = 3.5;
+	  const t = 1;
+	  const cw = .75;
+	  const ct = t + 2;
+	  const blockCenter = {x:cw+w/2, y:h/2, z:t/2};
+	  const _3_32 = 0.238125;
+	  const _3_16 = _3_32*2;
+	  let block = new CSG.cube({radius: [w/2, h/2, t/2], center: blockCenter});
+	  const through = new CSG.cylinder({slices: 8, start: [0,0,0], end: [0,0,ct/2], radius: _3_32});
+	  through.center(blockCenter);
+	  const recess = new CSG.cylinder({slices: 8, start: [0,0,0], end: [0,0,ct/4], radius: _3_16});
+	  recess.center({x:blockCenter.x, y:blockCenter.y, z:t-t/4})
+	  block = block.subtract(through).subtract(recess);
+	
+	  const cer = cw*.6;
+	  let clip = new CSG.cube({radius: [cw/2, h/2, ct/2], center: [cw/2, h/2, ct/2]});
+	  const champherLeft = new CSG.cube({radius: [w/10,h*2,w/10]});
+	  champherLeft.rotate({y:45});
+	  champherLeft.rotate({x:-45});
+	  champherLeft.center({x: 0, y:h, z:2*ct/4});
+	  clip = clip.subtract(champherLeft);
+	  const champherRight = champherLeft.clone();
+	  champherLeft.center({x: 0, y:0, z:2*ct/4});
+	  champherLeft.rotate({x:90});
+	  clip = clip.subtract(champherLeft);
+	  champherRight.translate({x: cw, z:0, y:0});
+	  champherLeft.translate({x: cw, z:0, y:0});
+	  clip = clip.subtract(champherRight).subtract(champherLeft);
+	
+	  const clipEnd = new CSG.cylinder({start: [0,0,0], end: [0,h,0], radius: cer});
+	  clipEnd.center({x: cw/2, y:h/2, z:ct-cer/2});
+	
+	  const clip2 = clip.clone();
+	  const translation = {x: w + cw, y:0, z:0};
+	  clip2.translate(translation)
+	  const blockClip2 = block.union(clip2);
+	  let m = clip.union(blockClip2);
+	  const spots = 6;
+	  for (let i = 0; i < spots; i++) {
+	    blockClip2.translate(translation);
+	    m = m.union(blockClip2);
+	  }
+	
+	  const dems = m.demensions();
+	  const epts = m.endpoints();
+	  const champher = new CSG.cube({radius: [dems.x*2,h/3,h/3]});
+	  champher.rotate({x:45})
+	  champher.center({x:dems.x/2, y:epts.y, z:epts.z});
+	  m = m.subtract(champher);
+	  champher.center({x:dems.x/2, y:0, z:epts.z});
+	  m = m.subtract(champher);
+	
+	  const bAse = m.clone();
+	  bAse.rotate({x:-90});
+	  bAse.translate({x:0,y:0,z:h});
+	  let mBase = m.union(bAse);
+	  mBase.translate({x:0, y:0, z:h + .3});
+	  m.rotate({x:-90});
+	  m.translate({x:0,y:0,z:h});
+	  mBase.polygons.concatInPlace(m.polygons);
+	  return mBase;
+	}
+	
+	models['Sink Drain Plate'] =  (isTpuSeal)  => {
+	  const diameter = (2/16 + 3.25) * 2.54;
+	  const overhang = 3*2.54 / 8;
+	  const sealRingWidth = 2.54/8;
+	  const thickness = 2.54/4;
+	  const subThickness = 2.54/2;
+	  const subWallThickness = 2.54/4;
+	  const solidBottomRadius = diameter / 2 - sealRingWidth;
+	  let topPlate = new CSG.cylinder({start: [0,0,0], end: [0,thickness,0], radius: diameter/2 + overhang});
+	
+	  let bottomStructure = new CSG.cylinder({start: [0,0,0], end: [0,-subThickness,0], radius: solidBottomRadius});
+	  const stopperWidth = sealRingWidth/3;
+	  let sealStopper = new CSG.cylinder({start: [0,-subThickness,0], end: [0,-subThickness + stopperWidth,0], radius: diameter / 2 - stopperWidth});
+	  sealStopper = sealStopper.subtract(bottomStructure);
+	  let sealRing = new CSG.cylinder({start: [0,-subThickness+stopperWidth,0], end: [0,-subThickness + sealRingWidth + stopperWidth,0], radius: diameter / 2});
+	  let sealRing2 = new CSG.cylinder({start: [0,-subThickness+stopperWidth,0], end: [0,-subThickness + sealRingWidth + stopperWidth,0], radius: diameter / 2 + 2.54/16});
+	  sealRing2 = sealRing2.subtract(bottomStructure);
+	  sealRing2.translate({x: 3.5*2.54, y:0,z:0});
+	  sealRing = sealRing.subtract(bottomStructure);
+	  sealRing = sealRing.union(sealRing2);
+	  sealRing.setColor('black');
+	  const bottomCutter = new CSG.cylinder({start: [0,0,0], end: [0,-subThickness,0], radius: solidBottomRadius - subWallThickness/2});
+	  bottomStructure = bottomStructure.subtract(bottomCutter);
+	  const structureSupport = new CSG.cube({radius: [solidBottomRadius - .1, subThickness/2, subWallThickness/2], center: [0,-subThickness/2,0]});
+	
+	  let sideChannel = new CSG.cylinder({slices: 8, start: [diameter, 0,0], end: [-diameter, 0, 0], radius: 3*thickness/4});
+	  const centerSupportRadius = 2*solidBottomRadius/3;
+	  const sideChannelCutter = new CSG.cube({radius: [centerSupportRadius, subThickness, centerSupportRadius], center: [0,0, 0]});
+	  sideChannel = sideChannel.subtract(sideChannelCutter);
+	
+	  const handleWidth = .9*centerSupportRadius;
+	  const handleYoff = 2.54;
+	  const legRadius = 2*thickness/3
+	  let handle =  new CSG.cube({radius: [handleWidth, thickness, thickness/2], center: [0,thickness + handleYoff,0]});
+	  const handleLeg = new CSG.cylinder({slices: 4, start:[0,-subThickness,0], end: [0,subThickness+handleYoff,0], radius: legRadius});
+	  handleLeg.rotate({x:0, y:45,z:0});
+	  handleLeg.translate({x:handleWidth - legRadius,y:0,z:0});
+	  handle = handle.union(handleLeg);
+	  handleLeg.translate({x:-2*handleWidth + 2*legRadius,y:0,z:0});
+	  handle = handle.union(handleLeg);
+	  handle.rotate({x:0, y:-30,z:0});
+	
+	  const explodedHandle = handle.clone();
+	  explodedHandle.explode(.1);
+	  // topPlate = topPlate.subtract(handle);
+	
+	  structureSupport.rotate({x:0,y:15,z:0});
+	  bottomStructure = bottomStructure.union(structureSupport);
+	  structureSupport.rotate({x:0,y:90,z:0});
+	  bottomStructure = bottomStructure.union(structureSupport);
+	  let model = topPlate;
+	  model.polygons.concatInPlace(bottomStructure.polygons.concat(sealStopper.polygons));
+	  sealStopper.translate({x:0,y:sealRingWidth+stopperWidth+.03,z:0});
+	  for (let index = 0; index < 6; index ++) {
+	    model  = model.subtract(sideChannel);
+	    sideChannel.rotate({x:0, y: 180/6, z:0});
+	  }
+	
+	  model = model.union(sealStopper);
+	  model.polygons.concatInPlace(handle.polygons);
+	  return isTpuSeal ? sealRing : model;
+	}
+	
+	models['hingeRouterFence'] =  (isStopper, plateWidth, plateDepth, bitSize, routerDiameter, plateCornerRadius, slotWidth)  => {
+	  plateWidth ||= 4*2.54;
+	  plateDepth ||= 1.75 * 2.54;
+	  routerDiameter ||= 4*2.54;
+	  bitSize ||= 2.54/2;
+	  plateCornerRadius ||= 2.54/2;
+	  routerRadius = routerDiameter/2 - bitSize/2;
+	  slotWidth ||= 3*2.54/16;
+	  const cutterRadius = routerRadius + plateCornerRadius;
+	
+	  const gerth = 2;
+	  const width = plateWidth + routerRadius*2 + .01;
+	  const height = plateDepth + routerRadius*2;
+	  let fence = new CSG.cube({radius: [(width + gerth*2)/2, gerth/4, (height+gerth)/2], center: [0,0, 0]});
+	  let stopper = new CSG.cube({radius: [(width + gerth*2)/2, gerth/4, gerth/2], center: [0,0, 0]});
+	  const squareCutter = new CSG.cube({radius: [width/2 - cutterRadius, gerth/2, height/2], center: [0,0, 0]});
+	  const freeSideCutter = new CSG.cube({radius: [width/2, gerth, height/2 + gerth], center: [0,0, 0]});
+	  freeSideCutter.translate({x:0,y:0,z:-cutterRadius-gerth});
+	
+	  const roundCutterLeft = new CSG.cylinder({start: [width/2 - cutterRadius, -gerth, height/2 - cutterRadius],
+	                                            end: [width/2 - cutterRadius, gerth, height/2 - cutterRadius],
+	                                            radius: cutterRadius,
+	                                            slices:32
+	                                          });
+	  const roundCutterRight = roundCutterLeft.clone();
+	  roundCutterRight.translate({x: -width + 2*cutterRadius,y:0,z:0});
+	
+	  const adjustmentGrooveRight = new CSG.cube({radius: [slotWidth/2, gerth, (height-gerth)/2,], center: [width/2 + gerth/2, 0,0]});
+	  const adjustmentGrooveLeft = adjustmentGrooveRight.clone();
+	  adjustmentGrooveLeft.translate({x:-width - gerth, y:0, z:0});
+	
+	  const threeSixtenths = new CSG.cylinder({slices: 24, radius: slotWidth/2});
+	  threeSixtenths.center(adjustmentGrooveLeft.center());
+	  stopper = stopper.subtract(threeSixtenths);
+	  threeSixtenths.center(adjustmentGrooveRight.center());
+	  stopper = stopper.subtract(threeSixtenths);
+	
+	  stopper.rotate({x:90,y:0,z:0});
+	  stopper.setColors(String.color.next);
+	  if (isStopper) return stopper;
+	  fence = fence.subtract(roundCutterLeft).subtract(roundCutterRight);
+	  const model = fence.subtract(freeSideCutter).subtract(squareCutter).subtract(adjustmentGrooveRight).subtract(adjustmentGrooveLeft);
+	  model.rotate({x:90,y:0,z:0});
+	  model.setColors(String.color.next);
+	  return model;
+	}
+	
+	models['Well Spacer'] =  (width, length, depth, slot, lipOverlay, lipThickness, lengthOffset)  => {
+	  width ||= 3*2.54/8 - .01;
+	  length ||= (1.75 * 2.54 + 3)*2; -.01;
+	  depth ||= 2.9;
+	  slot ||= 3*2.54/16;
+	  lipOverlay ||= .5;
+	  lipThickness ||= 2.54/8;
+	  const offset = lengthOffset || width-slot;
+	  const well = new CSG.cube({radius: [width/2,length/2,depth/2]});
+	  const lip = new CSG.cube({radius: [width/2 + lipOverlay, length/2+lipOverlay, lipThickness/2],
+	                            center: [0,0,depth/2 - lipThickness/4]});
+	  const slotCutter = new CSG.cube({radius: [slot/2, length/2 - offset/2, depth]});
+	  return well.union(lip).subtract(slotCutter);
+	};
+	
+	const cnt = du.create.element('div');
+	const controls = du.create.element('div', {style: 'float: left'});
+	const display = du.create.element('div', {style: 'float: right', id: 'display'});
+	document.body.append(cnt);cnt.append(controls,display);
+	
+	const select = document.createElement('select');
+	select.innerHTML = Object.keys(models).map(k => `<option>${k}</option>`);
+	const argCnt = document.createElement('div');
+	const downloadBtn = document.createElement('button');
+	downloadBtn.innerText = 'Stl';
+	controls.append(select);
+	controls.append(argCnt);
+	controls.append(downloadBtn);
+	
+	const inputValue = i => i.type === 'checkbox' ? i.checked : i.value;
+	const model = () => {
+	  let args = du.find.downAll('input', argCnt).map(inputValue);
+	  args = args.map(a => Boolean.is(a) ? a : Number.parseFloat(a));
+	  return models[select.value](...args);
+	}
+	viewer = new Viewer(new CSG(), 500, 500, 50);
+	
+	const updateModel = () => {
+	  console.log(model().toDrawString())
+	  viewer.mesh = model().toMesh();
+	  viewer.gl.ondraw();
+	}
+	
+	const updateArgs = () => {
+	  const name = select.value;
+	  argCnt.innerHTML = models[name].Arguments().map(a => {
+	    const type = a.match(/^is[A-Z]/) ? 'checkbox' : 'number';
+	    return `<label>${a}</label><br/><input type='${type}'\><br/>`;
+	  }).join('\n');
+	  updateModel();
+	}
+	
+	const download = () => {
+	  addLink(model(), select.value);
+	}
+	
+	select.value = 'hingeRouterFence';
+	
+	du.on.match('change', 'input', updateModel);
+	
+	select.addEventListener('change', updateArgs);
+	downloadBtn.addEventListener('click', download);
+	updateArgs();
+	
+	addViewer(viewer, '#display');
 	
 });
 
@@ -7935,6 +8245,11 @@ function (require, exports, module) {
 	Function.safeStdLibAddition(Function, 'AsyncRunIgnoreSuccessPrintError', function(afunc, args) {
 	  afunc(args).then(() => {}, (e) => console.error(e));
 	}, true);
+	
+	Function.safeStdLibAddition(Function, 'Arguments', function() {
+	  const argumentReg = /^(function|)[^(]*?\(([^)]*?)\)\s*/;
+	  return this.toString().match(argumentReg)[2].split(/\s*,\s*/);
+	});
 	
 	class EventFunction {
 	  constructor(event, list) {
@@ -8570,11 +8885,19 @@ function (require, exports, module) {
 	Function.safeStdLibAddition(Array, 'removeWhere', function (func) {
 	  for (let index = 0; index < this.length; index += 1) {
 	    if (func(this[index])) {
-	      this.remove(this[index]);
-	      index--;
+	      this.splice(index--, 1)
 	    }
 	  }
 	});
+	
+	Function.safeStdLibAddition(Array, 'findIndicies', function (func) {
+	  const indicies = [];
+	  for (let index = 0; index < this.length; index += 1) {
+	    if (func(this[index])) indicies.push(index);
+	  }
+	  return indicies;
+	});
+	
 	
 	Function.safeStdLibAddition(Array, 'deleteAll', function () {
 	  this.forEach((v, i) => delete this[i]);
@@ -9081,9 +9404,6 @@ function (require, exports, module) {
 	              return options.values[attr];
 	            return obj.defaultGetterValue(attr);
 	          }
-	          if (attr === 'capMale' && value) {
-	            console.log('here')
-	          }
 	          return options.values[attr] = value;
 	        });
 	      }
@@ -9229,8 +9549,33 @@ function (require, exports, module) {
 	  lastTimeStamps[callerId] = thisTime;
 	}
 	
+	const logData = {};
+	function logarithmic(callerId, baseOptional, ...args) {
+	  let base = baseOptional;
+	  if (arguments.length === 1) {
+	    base = 10;
+	    args = [callerId];
+	  } else {
+	    if (!Number.isFinite(base) || base < 2) {
+	      base = 10;
+	      args = [baseOptional].concat(args);
+	    }
+	  }
+	  if (!logData[callerId]) logData[callerId] = {base};
+	  if (!logData[callerId].count) {
+	    logData[callerId].count  = 1;
+	    this(1, ...args);
+	  } else {
+	    count = ++logData[callerId].count;
+	    const log = Math.log(count)/Math.log(logData[callerId].base);
+	    if (log === Math.roundTo(log)) this(count, ...args);
+	  }
+	}
+	logarithmic.reset = (callerId) => logData[callerId] && (logData[callerId].count = 0)
+	
 	Function.safeStdLibAddition(Function, 'subtle',   intervalFunction);
 	Function.safeStdLibAddition(Function, 'lastCall',   lastCall);
+	Function.safeStdLibAddition(Function, 'logarithmic',   logarithmic);
 	
 	Function.safeStdLibAddition(String, 'foreach', function (func) {
 	  const arr = [];
@@ -9639,6 +9984,1183 @@ function (require, exports, module) {
 	
 	Function.safeStdLibAddition(Object, 'hash',
 	  (obj) => JSON.stringify(obj === undefined ? 'undefined' : obj).hash(), true);
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/dom-utils.js',
+function (require, exports, module) {
+	
+const frag = document.createDocumentFragment();
+	function validSelector (selector) {
+	  try {
+	    frag.querySelector(selector)
+	    return selector;
+	  } catch (e) {
+	    const errMsg = `Invalid Selector: '${selector}'` ;
+	    console.error(errMsg);
+	    return null;
+	  }
+	};
+	const VS = validSelector;
+	
+	function parseSeperator(string, seperator, isRegex) {
+	  if (isRegex !== true) {
+	    seperator = seperator.replace(/[-[\]{}()*+?.,\\^$|#\\s]/g, '\\$&');
+	  }
+	  var keyValues = string.match(new RegExp('.*?=.*?(' + seperator + '|$)', 'g'));
+	  var json = {};
+	  for (let index = 0; keyValues && index < keyValues.length; index += 1) {
+	    var split = keyValues[index].match(new RegExp('\\s*(.*?)\\s*=\\s*(.*?)\\s*(' + seperator + '|$)'));
+	    if (split) {
+	      json[split[1]] = split[2];
+	    }
+	  }
+	  return json;
+	}
+	
+	function querySelector(selector, context) {
+	  if (context) {
+	    if (context.matches(selector)) return context;
+	    return context.querySelector(selector);
+	  }
+	  return document.querySelector(selector);
+	}
+	
+	function querySelectorAll(selector, context) {
+	  const list = [];
+	  if (context) {
+	    if (context.matches(selector)) list.push(context);
+	    list.concatInPlace(context.querySelectorAll(selector))
+	    return list;
+	  }
+	  return document.querySelectorAll(selector);
+	}
+	
+	const du = {create: {}, class: {}, cookie: {}, param: {}, style: {}, is: {},
+	      scroll: {}, input: {}, on: {}, move: {}, url: {}, fade: {}, position: {},
+	      bounds: {}};
+	du.find = (selector, context) => querySelector(selector, context);
+	du.find.all = (selector, context) => querySelectorAll(selector, context);
+	du.validSelector = VS;
+	
+	du.input.valueObject = (elem) => {
+	  const inputs = du.find.downAll('input,select,textarea', elem);
+	  const obj = {};
+	  inputs.forEach((input) => {
+	    switch(input.type) {
+	      case 'number': obj[input.name] = Number.parseFloat(input.value);break;
+	      case 'checkbox': obj[input.name] = input.checked;break;
+	      default: obj[input.name] = input.value;break;
+	    }
+	  });
+	  return obj;
+	}
+	
+	du.create.element = function (tagname, attributes) {
+	  const elem = document.createElement(tagname);
+	  const keys = Object.keys(attributes || {});
+	  keys.forEach((key) => elem.setAttribute(key, attributes[key]));
+	  return elem;
+	}
+	
+	du.create.event = (eventName) => {
+	  let event;
+	  if(document.createEvent){
+	      event = document.createEvent("HTMLEvents");
+	      event.initEvent(eventName, true, true);
+	      event.eventName = eventName;
+	  } else {
+	      event = document.createEventObject();
+	      event.eventName = eventName;
+	      event.eventType = eventName;
+	  }
+	  event.trigger = (elem) => {
+	    elem ||= document;
+	    if(document.createEvent){
+	      elem.dispatchEvent(event);
+	    } else {
+	      elem.fireEvent("on" + event.eventType, event);
+	    }
+	  }
+	  return event;
+	}
+	
+	
+	
+	// Ripped off of: https://ourcodeworld.com/articles/read/189/how-to-create-a-file-and-generate-a-download-with-javascript-in-the-browser-without-a-server
+	du.download = (filename, contents) => {
+	  var element = document.createElement('a');
+	  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(contents));
+	  element.setAttribute('download', filename);
+	
+	  element.style.display = 'none';
+	  document.body.appendChild(element);
+	
+	  element.click();
+	
+	  document.body.removeChild(element);
+	}
+	
+	function keepInBounds (elem, minimum) {
+	  if (!du.is.fixed(elem)) return;
+	  const ancestors = [elem];
+	  while(elem.parentElement) ancestors.push(elem = elem.parentElement);
+	  while (elem && !du.is.fixed(elem = ancestors.pop()));
+	  elem ||= ancestors[0];
+	  minimum ||= 5;
+	  const windowBounds = du.bounds.window();
+	  function checkDir(dir1, dir2) {
+	    const rect = du.bounds.elem(elem);
+	    const dir1dist = Math.difference(rect[dir1], windowBounds[dir1]);
+	    const dir2dist = Math.difference(rect[dir2], windowBounds[dir2]);
+	    if (dir1dist < dir2dist) {
+	      if (rect[dir1] < windowBounds[dir1] - 1) {
+	        console.log('moving')
+	        du.bounds.window();
+	        du.bounds.window();
+	        elem.style[dir1] = windowBounds[dir1] + minimum + 'px';
+	        elem.style[dir2] = 'unset';
+	      }
+	    }
+	    // TODO: Need to apply scale to window bounds in order for upperLimit check
+	    // else {
+	    //   if (rect[dir2] > windowBounds[dir2] + 1) {
+	    //     console.log('moving1');
+	    //     du.bounds.window();
+	    //     elem.style[dir2] = windowBounds[dir2] + minimum + 'px';
+	    //     elem.style[dir1] = 'unset';
+	    //   }
+	    // }
+	  }
+	  checkDir('left', 'right');
+	  checkDir('top', 'bottom');
+	}
+	
+	du.bounds.window = () => {
+	  const w = window.innerWidth;
+	  const h = window.innerHeight;
+	  const sx = window.scrollX;
+	  const sy = window.scrollY;
+	  return {left: 0, right: sx+w, top: 0, bottom: sy+h};
+	}
+	
+	du.bounds.view = () => {
+	  const w = window.innerWidth;
+	  const h = window.innerHeight;
+	  return {left: 0, right: w, top: 0, bottom: h};
+	}
+	
+	du.bounds.elem = (elem) => {
+	  const rect = elem.getBoundingClientRect();
+	  const sx = window.scrollX;
+	  const sy = window.scrollY;
+	  rect.x += sx;
+	  rect.y += sy;
+	  rect.top += sy;
+	  rect.bottom += sy;
+	  rect.left += sx;
+	  rect.right += sx;
+	  return rect;
+	}
+	
+	du.zIndex = function (elem) {
+	  return Number.parseInt(document.defaultView.getComputedStyle(elem, null)
+	    .getPropertyValue("z-index"), 10);
+	}
+	du.move.inFront = function (elem, timeout) {
+	  setTimeout(function () {
+	    var exclude = du.find.downAll('*', elem);
+	    exclude.push(elem);
+	    var elems = document.querySelectorAll('*');
+	    var highest = Number.MIN_SAFE_INTEGER;
+	    for (var i = 0; i < elems.length; i++) {
+	      const e = elems[i];
+	      if (exclude.indexOf(e) === -1) {
+	        var zindex = du.zIndex(e);
+	      }
+	      if (zindex > highest) highest = zindex;
+	    }
+	    if (highest < Number.MAX_SAFE_INTEGER) elem.style.zIndex = highest + 1;
+	  },  timeout || 0);
+	}
+	
+	du.move.inbounds = keepInBounds;
+	
+	du.move.relitive = function (elem, target, direction, props) {
+	  props = props || {};
+	  const clientHeight = document.documentElement.clientHeight;
+	  const clientWidth = document.documentElement.clientWidth;
+	  const rect = target.getBoundingClientRect();
+	
+	  const style = {};
+	  style.cursor = props.cursor || 'unset';
+	  style.position = props.position || 'absolute';
+	  du.style(elem, style);
+	
+	  const scrollY =  props.isFixed ? 0 : window.scrollY;
+	  const scrollX =  props.isFixed ? 0 : window.scrollX;
+	  const isTop = direction.indexOf('top') !== -1;
+	  const isBottom = direction.indexOf('bottom') !== -1;
+	  const isRight = direction.indexOf('right') !== -1;
+	  const isLeft = direction.indexOf('left') !== -1;
+	  const isCenter = direction.indexOf('center') !== -1;
+	  const isOutside = direction.indexOf('outer') !== -1;
+	  const isVertical = isTop || isBottom;
+	  const position = {};
+	  const outOffset = isOutside ? (isVertical ? elem.clientHeight : elem.clientWidth) : 0;
+	  if (isCenter) {
+	    position.top = (rect.top + rect.bottom - elem.clientHeight) / 2 + scrollY + 'px';
+	    position.left = (rect.left + rect.right - elem.clientWidth) / 2 + scrollX + 'px';
+	  }
+	
+	  if (isOutside) {
+	    if (isTop) {
+	      position.bottom = clientHeight - (rect.top + scrollY + outOffset) + elem.clientHeight + 'px';
+	      position.top = 'unset';
+	    } else { position.bottom = 'unset'; }
+	
+	    if (isBottom) {
+	      position.top = clientHeight - ((clientHeight - rect.bottom) + elem.clientHeight - outOffset - scrollY) + 'px';
+	    } else if (!isCenter) { position.top = 'unset'; }
+	
+	    if (isRight) {
+	      position.left = (rect.right - scrollX) + 'px';
+	    } else if (!isCenter) { position.left = 'unset'; }
+	
+	    if (isLeft) {
+	      position.right = clientWidth - (rect.left + scrollX) + 'px';
+	      position.left = 'unset';
+	    } else { position.right = 'unset'; }
+	  } else {
+	    if (isTop) {
+	      position.top = rect.top + scrollY + 'px';
+	    } else if (!isCenter) { position.top = 'unset'; }
+	
+	    if (isBottom) {
+	      position.bottom = (clientHeight - rect.bottom) - scrollY + 'px';
+	      position.top = 'unset';
+	    } else { position.bottom = 'unset'; }
+	
+	    if (isRight) {
+	      position.right = clientWidth - rect.right - scrollX + 'px';
+	    } else { position.right = 'unset'; }
+	
+	    if (isLeft) {
+	      position.left = rect.left + scrollX + 'px';
+	    } else if (!isCenter) { position.left = 'unset'; }
+	  }
+	
+	  du.style(elem, position);
+	}
+	
+	du.move.below = function (elem, target) {
+	  du.move.relitive(elem, target, 'bottom');
+	}
+	
+	du.move.above = function (elem, target) {
+	  du.move.relitive(elem, target, 'bottom');
+	}
+	
+	du.find.up = function (selector, node) {
+	  selector = VS(selector);
+	  if (node instanceof HTMLElement) {
+	    if (node.matches(selector)) {
+	      return node;
+	    } else {
+	      return du.find.up(selector, node.parentNode);
+	    }
+	  }
+	}
+	
+	function visibility(hide, targets) {
+	  targets = Array.isArray(targets) ? targets : [targets];
+	  for (let index = 0; index < targets.length; index += 1) {
+	    const target = targets[index];
+	    if ((typeof target) === 'string') {
+	      targets = targets.concat(Array.from(document.querySelectorAll(target)));
+	    } else if (target instanceof HTMLElement) {
+	      target.hidden = hide;
+	    } else if (Array.isArray(target) || target instanceof NodeList || target instanceof HTMLCollection) {
+	      targets = targets.concat(Array.from(target));
+	    }
+	  }
+	}
+	
+	du.hide = (...targets) => visibility(true, targets);
+	du.show = (...targets) => visibility(false, targets);
+	
+	du.id = function (id) {return document.getElementById(id);}
+	
+	du.appendError = (target, message) => {
+	  return function (e) {
+	    const parent = target.parentNode;
+	    const error = document.createElement('div');
+	    error.className = 'error';
+	    error.innerHTML = message;
+	    parent.insertBefore(error, target.nextElementSibling)
+	  }
+	}
+	
+	const jsAttrReg = /<([a-zA-Z]{1,}[^>]{1,})(\s|'|")on[a-z]{1,}=/;
+	du.innerHTML = (text, elem) => {
+	  if (text === undefined) return undefined;
+	  const clean = text.replace(/<script(| [^<]*?)>/, '').replace(jsAttrReg, '<$1');
+	  if (clean !== text) {
+	    throw new JsDetected(text, clean);
+	  }
+	  if (elem !== undefined) elem.innerHTML = clean;
+	  return clean;
+	}
+	
+	du.find.upAll = function(selector, node) {
+	  const elems = [];
+	  let elem = node;
+	  selector = VS(selector);
+	  while(elem = du.find.up(selector, elem)) {
+	    elems.push(elem);
+	    elem = elem.parentElement;
+	  }
+	  return elems;
+	}
+	
+	du.depth = function(node) {return upAll('*', node).length};
+	
+	du.find.downInfo = function (selector, node, distance, leafSelector) {
+	  const nodes = node instanceof HTMLCollection ? node : [node];
+	  distance = distance || 0;
+	  selector = VS(selector);
+	
+	  function recurse (node, distance) {
+	    if (node instanceof HTMLElement) {
+	      if (node.matches(selector)) {
+	        return { node, distance, matches: [{node, distance}]};
+	      }
+	    }
+	    return { distance: Number.MAX_SAFE_INTEGER, matches: [] };
+	  }
+	
+	  let matches = [];
+	  let found = { distance: Number.MAX_SAFE_INTEGER };
+	  for (let index = 0; index < nodes.length; index += 1) {
+	    const currNode = nodes[index];
+	    const maybe = recurse(currNode, ++distance);
+	    if (maybe.node) {
+	      matches = matches.concat(maybe.matches);
+	      found = maybe.distance < found.distance ? maybe : found;
+	
+	    }
+	    if (!leafSelector || !currNode.matches(leafSelector)) {
+	      const childRes = du.find.downInfo(selector, currNode.children, distance + 1, leafSelector);
+	      matches = matches.concat(childRes.matches);
+	      found = childRes.distance < found.distance ? childRes : found;
+	    }
+	  }
+	  found.matches = matches
+	  found.list = matches.map((match) => match.node);
+	  return found;
+	}
+	
+	du.find.down = function(selector, node) {return du.find.downInfo(selector, node).node};
+	du.find.downAll = function(selector, node) {return du.find.downInfo(selector, node).list};
+	
+	du.find.closest = function(selector, node) {
+	  node ||= document.head;
+	  const visited = [];
+	  selector = VS(selector);
+	  function recurse (currNode, distance) {
+	    let found = { distance: Number.MAX_SAFE_INTEGER };
+	    if (!currNode || (typeof currNode.matches) !== 'function') {
+	      return found;
+	    }
+	    visited.push(currNode);
+	    if (currNode.matches(selector)) {
+	      return { node: currNode, distance };
+	    } else {
+	      for (let index = 0; index < currNode.children.length; index += 1) {
+	        const child = currNode.children[index];
+	        if (visited.indexOf(child) === -1) {
+	          const maybe = recurse(child, distance + index + 1);
+	          found = maybe && maybe.distance < found.distance ? maybe : found;
+	        }
+	      }
+	      const sibIndex = du.find.siblings.index(currNode);
+	      const parent = currNode.parentNode;
+	      for (let index = 0; index < parent.children.length; index += 1) {
+	        const child = parent.children[index];
+	        if (visited.indexOf(child) === -1) {
+	          const dist = distance + Math.abs(sibIndex - index);
+	          if (child.matches(selector)) {
+	            maybe = {node:child, distance: dist};
+	            found = maybe && maybe.distance < found.distance ? maybe : found;
+	          }
+	        }
+	      }
+	      if (visited.indexOf(parent) === -1) {
+	        const maybe = recurse(parent, distance + sibIndex + 1);
+	        found = maybe && maybe.distance < found.distance ? maybe : found;
+	      }
+	      return found;
+	    }
+	  }
+	
+	  return recurse(node, 0).node;
+	}
+	
+	const findAttrFunc = (findFunc) =>
+	  findFunc.attribute = (attribute, node) => {
+	  const nearestElem = findFunc(`[${attribute}]`, node);
+	  return nearestElem ? nearestElem.getAttribute(attribute) : null;
+	};
+	findAttrFunc(du.find.closest);
+	findAttrFunc(du.find);
+	findAttrFunc(du.find.down);
+	findAttrFunc(du.find.up);
+	
+	
+	
+	// TODO: apply this to all relevant functions. (selector, target)|(selector)|(target)
+	//      target - starting element for function
+	//      selector - filtering of identified elements
+	function selectorAndTarget(selector, target) {
+	  const targetDef = target !== undefined;
+	  const selectorDef = selector !== undefined;
+	  if ((typeof target) === 'string') target = du.find(target);
+	  if (targetDef && selectorDef) return {selector, target};
+	  if (!targetDef && !selectorDef) return {selector: '*'};
+	  if (!selector) return {target, selector: '*'}
+	  if (!targetDef) {
+	    if (selector instanceof HTMLElement) return {target: selector, selector: '*'};
+	    return {selector};
+	  }
+	  throw new Error('This should not Happen');
+	}
+	
+	du.find.siblings = (selector, elem) => {
+	  const selTar = selectorAndTarget(selector, elem);
+	  selector = selTar.selector; elem = selTar.target;
+	  const siblings = [];
+	  let currP = elem;
+	  let currN = elem;
+	  while(currP = currP.previousElementSibling) currP.matches(selector) && siblings.push(currP);
+	  siblings.reverse();
+	  while(currN = currN.nextElementSibling) currN.matches(selector) && siblings.push(currN);
+	  return siblings;
+	}
+	
+	du.find.siblings.index = (elem) => {
+	  let index = 0;
+	  let curr = elem;
+	  while(curr = curr.previousElementSibling) index++;
+	  return index;
+	}
+	
+	du.find.relations = (selector, elem) => {
+	  const selTar = selectorAndTarget(selector, elem);
+	  selector = selTar.selector; elem = selTar.target;
+	  const relations = {};
+	  relations.ancestors = du.find.upAll(selector, elem);
+	  relations.distants = [];
+	  relations.ancestors.forEach(e => relations.distants.concatInPlace(du.find.siblings(selector, e)));
+	  relations.ancestors.splice(0, 1);
+	  return relations;
+	}
+	
+	const selectors = {};
+	let matchRunIdCount = 0;
+	function getTargetId(target) {
+	  if((typeof target.getAttribute) === 'function') {
+	    let targetId = target.getAttribute('du-match-run-id');
+	    if (targetId === null || targetId === undefined) {
+	      targetId = matchRunIdCount + '';
+	      target.setAttribute('du-match-run-id', matchRunIdCount++)
+	    }
+	    return targetId;
+	  }
+	  return target === document ?
+	        '#document' : target === window ? '#window' : undefined;
+	}
+	
+	function runMatches(withinId, eventType, selectStr, target, event) {
+	  const eventSelectors = selectors[withinId][eventType];
+	  if (eventSelectors && eventSelectors[selectStr] !== undefined) {
+	    eventSelectors[selectStr].forEach((func) => {
+	      try {
+	        func(target, event)
+	      } catch (e) {
+	        console.error(e);
+	      }
+	    });
+	  }
+	}
+	
+	function runMatch(event) {
+	  const  matchRunTargetId = getTargetId(event.currentTarget);
+	  const selectStrs = Object.keys(selectors[matchRunTargetId][event.type]);
+	  selectStrs.forEach((selectStr) => {
+	    const target = du.find.up(selectStr, event.target);
+	    const everything = selectStr === '*';
+	    if (everything || target) {
+	      runMatches(matchRunTargetId, event.type, selectStr, target, event);
+	      runMatches(matchRunTargetId, '*', selectStr, target, event);
+	    }
+	  })
+	}
+	
+	du.is.hidden = function (target) {
+	  const elem = du.find.up('[hidden]', target);
+	  return elem !== undefined;
+	}
+	
+	du.is.fixed = function (target) {
+	  const pos = document.defaultView.getComputedStyle(target).position;
+	  const isAbsolute = pos === 'absolute';
+	  const isRelative = pos === 'relative';
+	  const isFixed = pos === 'fixed';
+	  return isAbsolute || isFixed || isRelative;
+	}
+	
+	du.is.inView = function (elem) {
+	  const rect = elem.getBoundingClientRect();
+	  const winTopLim = window.scrollY;
+	  const winBotLim = window.scrollY + window.innerHeight;
+	  const winLeftLim = window.scrollX;
+	  const winRightLim = window.scrollY + window.innerWidth;
+	
+	  const leftGreater = rect.left > winLeftLim;
+	  const leftLess = rect.left < winRightLim;
+	  const rightGreater = rect.right > winLeftLim;
+	  const rightLess = rect.right < winRightLim;
+	  const topGreater = rect.top > winTopLim;
+	  const topLess = rect.top < winBotLim;
+	  const bottomGreater = rect.bottom > winTopLim;
+	  const bottomLess = rect.bottom < winBotLim;
+	
+	  const leftTopCornerIn =  leftGreater && leftLess && topGreater && topLess;
+	  const rightTopCornerIn =  rightGreater && rightLess && topGreater && topLess;
+	
+	  const leftBottomCornerIn =  leftGreater && leftLess && bottomGreater && bottomLess;
+	  const rightBottomCornerIn =  rightGreater && rightLess && bottomGreater && bottomLess;
+	
+	  return leftTopCornerIn || rightTopCornerIn || leftBottomCornerIn || rightBottomCornerIn;
+	}
+	
+	du.is.ancestor = function (elem, ancestor) {
+	  while (elem.parentElement) {
+	    if(elem === ancestor) return true;
+	    elem = elem.parentElement;
+	  }
+	  return false;
+	}
+	
+	du.class.add = function(target, clazz) {
+	  du.class.remove(target, clazz);
+	  target.className += ` ${clazz}`;
+	}
+	
+	du.class.swap = function(target, newClass, oldClass) {
+	  du.class.remove(target, oldClass);
+	  du.class.add(target, newClass)
+	}
+	
+	function classReg(clazz) {
+	  return new RegExp(`(^| )(${clazz}( |$)){1,}`, 'g');
+	}
+	
+	du.class.remove = function(target, clazz) {
+	  if (!(target instanceof HTMLElement)) return;
+	  target.className = target.className.replace(classReg(clazz), ' ').trim();
+	}
+	
+	du.class.has = function(target, clazz) {
+	  return target.className.match(classReg(clazz)) !== null;
+	}
+	
+	du.class.toggle = function(target, clazz) {
+	  if (du.class.has(target, clazz)) du.class.remove(target, clazz);
+	  else du.class.add(target, clazz);
+	}
+	
+	
+	du.class.oft = function(target, clazz, true_false_undefined) {
+	  if (!(target instanceof HTMLElement)) return;
+	  if (true_false_undefined === true) return du.class.add(target, clazz);
+	  if (true_false_undefined === false) return du.class.remove(target, clazz);
+	  if (true_false_undefined === undefined) return du.class.toggle(target, clazz);
+	  return du.has(target, clazz);
+	}
+	
+	let lastKeyId;
+	let keyPressId = 0;
+	function onKeycombo(event, func, args) {
+	  const keysDown = {};
+	  const allPressed = () => {
+	    const keys = Object.keys(keysDown);
+	    if (keys.length !== args.length) return false;
+	    let is = true;
+	    const minTime = new Date().getTime() - 1000;
+	    for (let index = 0; index < keys.length; index++) {
+	      if (keysDown[keys[index]] < minTime) delete keysDown[keys[index]];
+	    }
+	    for (let index = 0; is && index < args.length; index += 1) {
+	      is = is && keysDown[args[index]];
+	    }
+	    return is;
+	  }
+	  const keysString = () => Object.keys(keysDown).sort().join('/');
+	  const setComboObj = (event) => {
+	    const id = keysString;
+	    const firstCall = lastKeyId !== id;
+	    event.keycombonation = {
+	      allPressed: allPressed(),
+	      keysDown: JSON.clone(keysDown),
+	      keyPressId: firstCall ? ++keyPressId : keyPressId,
+	      firstCall, id
+	    }
+	  }
+	
+	  const keyup = (target, event) => {
+	    delete keysDown[event.key];
+	    setComboObj(event);
+	    if (event.keycombonation.firstCall && args.length === 0) {
+	      setComboObj(event);
+	      func(target, event);
+	    }
+	  }
+	  const keydown = (target, event) => {
+	    keysDown[event.key] = new Date().getTime();
+	    setComboObj(event);
+	
+	    if (event.keycombonation.firstCall && event.keycombonation.allPressed) {
+	      func(target, event);
+	    }
+	  }
+	  du.on.match('keyup', '*', keyup);
+	  return {event: 'keydown', func: keydown};
+	}
+	
+	function created(elem, selectors) {
+	  selectors ||= Object.keys(onCreateSelectors);
+	  for (let index = 0; index < selectors.length; index++) {
+	    const selector = selectors[index];
+	    if (elem.matches(selector)) onCreateSelectors[selector](elem);
+	  }
+	  for (let ci = 0; ci < elem.children.length; ci++) {
+	    created(elem.children[ci], selectors);
+	  }
+	}
+	
+	function onCreate(event) {
+	  if (event.target instanceof HTMLElement) created(event.target);
+	}
+	
+	const onCreateSelectors = {};
+	function create(func, selector) {
+	  if (func instanceof Function) onCreateSelectors[selector] = func;
+	}
+	
+	document.addEventListener('DOMNodeInserted', onCreate);
+	
+	function onNoactivity(event, func, selector, args) {
+	  let time = Number.parseInt(args[0]);
+	  if (!Number.isFinite(time)) time = 500;
+	  let lastEventId = 0;
+	  const anyEvent = (target, event) => {
+	    const id = ++lastEventId;
+	    setTimeout(() => {
+	      if (lastEventId === id) {
+	        func(target, null);
+	      }
+	    }, time);
+	  }
+	  return {event: '*', func: anyEvent};
+	}
+	
+	function containerfocusout(event, func, selector, args) {
+	  let time = Number.parseInt(args[1]);
+	  let identifyingAttr = args[0];
+	  if (!Number.isFinite(time)) time = 200;
+	  let lastEventId = 0;
+	  const onFocus = (out) => (target, event) => {
+	    const id = ++lastEventId;
+	    if (out) {
+	      setTimeout(() => {
+	        if (lastEventId === id) {
+	          func(target, null);
+	        }
+	      }, time);
+	    }
+	  }
+	
+	  du.on.match('focusin', `${selector}, ${selector} *`, onFocus(false));
+	  du.on.match('focusout', selector, onFocus(true));
+	}
+	
+	// TODO: add custom function selectors.
+	const argEventReg = /^(.*?)(|:(.*))$/;
+	function filterCustomEvent(event, func, selector) {
+	  const split = event.split(/[\(\),]/).filter(str => str);;
+	  event = split[0];
+	  const args = split.slice(1).map((str, i) => str === ' ' ? ' ' : str.trim());
+	  let customEvent = {func, event};
+	  switch (event) {
+	    case 'enter':
+	      customEvent.func = (target, event) => event.key === 'Enter' && func(target, event);
+	      customEvent.event = 'keydown';
+	      break;
+	    case 'keycombo':
+	      customEvent = onKeycombo(event, func, args);
+	    break;
+	    case 'noactivity':
+	      customEvent = onNoactivity(event, func, selector, args);
+	    case 'create':
+	      create(func, selector);
+	      customEvent = null;
+	    case 'containerfocusout':
+	      containerfocusout(event, func, selector, args);
+	      customEvent = null;
+	  }
+	  return customEvent;
+	}
+	
+	du.on.match = function(event, selector, func, target) {
+	  const events = event.split(':');
+	  if (events.length > 1) return events.forEach((e) => du.on.match(e, selector, func, target));
+	  const filter = filterCustomEvent(event, func, selector);
+	  if (filter === null) return;
+	  target = target || document;
+	  selector = VS(selector);
+	  if (selector === null) return;
+	  if ((typeof func) !== 'function') console.warn(`Attempting to create an event without calling function.\nevent: "${event}"\nselector: ${selector}`)
+	  const  matchRunTargetId = getTargetId(target);
+	  if (selectors[matchRunTargetId] === undefined) {
+	    selectors[matchRunTargetId] = {};
+	  }
+	  if (selectors[matchRunTargetId][filter.event] === undefined) {
+	    selectors[matchRunTargetId][filter.event] = {};
+	    target.addEventListener(filter.event, runMatch);
+	  }
+	  if ( selectors[matchRunTargetId][filter.event][selector] === undefined) {
+	    selectors[matchRunTargetId][filter.event][selector] = [];
+	  }
+	
+	  const selectorArray = selectors[matchRunTargetId][filter.event][selector];
+	  // if (selectorArray.indexOf(func) !== -1) {
+	    selectorArray.push(filter.func);
+	  // }
+	}
+	
+	
+	
+	du.switch = (selector, idAttr) => {
+	  if (!VS(selector)) throw new Error('This class needs a valid selector that can grab your button and your container');
+	  const btnSelector = `button${selector}`;
+	  const cntSelector = `${selector}:not(button)`;
+	  function onlyOne(elem) {
+	    let allBtns = du.find.all(btnSelector);
+	    let allCnts = du.find.all(cntSelector);
+	    for (let i = 0; i < allBtns.length; i++) allBtns[i].hidden = false;
+	    for (let i = 0; i < allCnts.length; i++) allCnts[i].hidden = true;
+	    if (elem) {
+	      let idSel = '';
+	      if (idAttr) {
+	        const attr = elem.getAttribute(idAttr);
+	        idSel = attr ? `[${idAttr}='${attr}']` : '';
+	      }
+	      let cnt = du.find.closest(`${cntSelector}${idSel}`, elem);
+	      if (cnt) cnt.hidden = false;
+	      else console.warn('Element does not appear to have a corresponding container');
+	    }
+	  }
+	
+	  du.on.match('click', btnSelector, onlyOne);
+	  return onlyOne;
+	}
+	
+	du.trigger = (eventName, elemOid) => {
+	  const elem = (typeof elemOid) === 'string' ? du.id(elemOid) : elemOid;
+	  if (elem instanceof HTMLElement) {
+	    const event = du.create.event(eventName);
+	    // event.target = elem;
+	    if(document.createEvent){
+	      elem.dispatchEvent(event);
+	    } else {
+	      elem.fireEvent("on" + event.eventType, event);
+	    }
+	  }
+	}
+	
+	du.cookie.set = function(name, value, lifeMilliSecs) {
+	  if (value instanceof Object) {
+	    value = JSON.stringify(value);
+	  }
+	  const expireDate = new Date();
+	  expireDate.setTime(expireDate.getTime() + (lifeMilliSecs || (8035200000))); //93 days by default
+	  document.cookie = `${name}=${value}; expires=${expireDate.toUTCString()}`;
+	}
+	
+	du.cookie.get = function(name, seperator) {
+	  const cookie = parseSeperator(document.cookie, ';')[name];
+	  if (seperator === undefined) return cookie;
+	  const values = cookie === undefined ? [] : cookie.split(seperator);
+	  if (arguments.length < 3) return values;
+	  let obj = {};
+	  for (let index = 2; index < arguments.length; index += 1) {
+	    const key = arguments[index];
+	    const value = values[index - 2];
+	    obj[key] = value;
+	  }
+	  return obj;
+	}
+	
+	du.url.breakdown = function () {
+	  const breakdown = {};
+	  const hashMatch = window.location.href.match(/(.*?)#(.*)/, '$1');
+	  let noHash;
+	  if (hashMatch) {
+	    noHash = hashMatch[1];
+	    breakdown.hashtag = hashMatch[2]
+	  } else {
+	    noHash = window.location.href;
+	  }
+	  const domainMatch = noHash.match(/(.*?):\/\/([^\/]*?)(:([0-9]{1,5})|)(\/[^?^#]*)/)
+	  breakdown.protocol = domainMatch[1];
+	  breakdown.domain = domainMatch[2];
+	  breakdown.port = domainMatch[4] || undefined;
+	  breakdown.path = domainMatch[5];
+	
+	  const urlMatch = noHash.match(/.*?:\/\/([^.]{1,})\.([^\/]*?)\.([^.^\/]{1,})(\/.*)/);
+	  if (urlMatch) {
+	    breakdown.subdomain = urlMatch[1];
+	    breakdown.secondLevelDomain = urlMatch[2];
+	    breakdown.topLevelDomaian = urlMatch[3]
+	  }
+	  breakdown.paramStr = noHash.substr(noHash.indexOf('?') + 1);
+	
+	  breakdown.params = parseSeperator(breakdown.paramStr, '&');
+	  return breakdown;
+	}
+	
+	du.url.build = function (b) {
+	  const paramArray = [];
+	  Object.keys(b.params).forEach((key) => paramArray.push(`${key}=${b.params[key]}`));
+	  const paramStr = paramArray.length > 0 ? `?${paramArray.join('&')}` : '';
+	  const portStr = b.port ? `:${b.port}` : '';
+	  const hashStr = b.hashtag ? `#${b.hashtag}` : '';
+	  return `${b.protocol}://${b.domain}${portStr}${b.path}${paramStr}${hashStr}`;
+	}
+	
+	du.url.change = function (url) {
+	  window.history.pushState(null,"", url);
+	}
+	
+	du.param.get = function(name) {
+	  let params = du.url.breakdown().params;
+	  const value = params[name];
+	  if (value === undefined) return undefined;
+	  return decodeURI(value);
+	}
+	
+	du.param.remove = function (name) {
+	  const breakdown = du.url.breakdown();
+	  delete breakdown.params[name];
+	  du.url.change(du.url.build(breakdown));
+	}
+	
+	du.style = function(elem, style, time) {
+	  if (!(elem instanceof HTMLElement)) {
+	    for (let index = 0; index < elem.length; index++) {
+	      du.style(elem[index], style, time);
+	    }
+	  } else {
+	    const save = {};
+	    const keys = Object.keys(style);
+	    keys.forEach((key) => {
+	      save[key] = elem.style[key];
+	      elem.style[key] = style[key];
+	    });
+	
+	    if (time) {
+	      setTimeout(() => {
+	        keys.forEach((key) => {
+	          elem.style[key] = save[key];
+	        });
+	      }, time);
+	    }
+	  }
+	}
+	
+	function center(elem) {
+	  const rect = elem.getBoundingClientRect();
+	  const x = rect.x + (rect.height / 2);
+	  const y = rect.y + (rect.height / 2);
+	  return {x, y, top: rect.top};
+	}
+	
+	du.scroll.can = function (elem) {
+	    const horizontallyScrollable = elem.scrollWidth > elem.clientWidth;
+	    const verticallyScrollable = elem.scrollHeight > elem.clientHeight;
+	    return elem.scrollWidth > elem.clientWidth || elem.scrollHeight > elem.clientHeight;
+	};
+	
+	du.scroll.parents = function (elem) {
+	  let scrollable = [];
+	  if (elem instanceof HTMLElement) {
+	    if (du.scroll.can(elem)) {
+	      scrollable.push(elem);
+	    }
+	    return du.scroll.parents(elem.parentNode).concat(scrollable);
+	  }
+	  return scrollable;
+	}
+	
+	du.scroll.intoView = function(elem, divisor, delay, scrollElem) {
+	  let scrollPidCounter = 0;
+	  const lastPosition = {};
+	  let highlighted = false;
+	  function scroll(scrollElem) {
+	    return function() {
+	      const scrollCenter = center(scrollElem);
+	      const elemCenter = center(elem);
+	      const fullDist = Math.abs(scrollCenter.y - elemCenter.y);
+	      const scrollDist = fullDist > 5 ? fullDist/divisor : fullDist;
+	      const yDiff = scrollDist * (elemCenter.y < scrollCenter.y ? -1 : 1);
+	      scrollElem.scroll(0, scrollElem.scrollTop + yDiff);
+	      if (elemCenter.top !== lastPosition[scrollElem.scrollPid]
+	            && (scrollCenter.y < elemCenter.y - 2 || scrollCenter.y > elemCenter.y + 2)) {
+	        lastPosition[scrollElem.scrollPid] = elemCenter.top;
+	        setTimeout(scroll(scrollElem), delay);
+	      } else if(!highlighted) {
+	        highlighted = true;
+	        du.style.temporary(elem, 2000, {
+	          borderStyle: 'solid',
+	          borderColor: '#07ff07',
+	          borderWidth: '5px'
+	        });
+	      }
+	    }
+	  }
+	  const scrollParents = du.scroll.parents(elem);
+	  scrollParents.forEach((scrollParent) => {
+	    scrollParent.scrollPid = scrollPidCounter++;
+	    setTimeout(scroll(scrollParent), 100);
+	  });
+	}
+	
+	du.fade.out = (elem, disapearAt, func) => {
+	  const origOpacity = elem.style.opacity;
+	  let stopFade = false;
+	  function reduceOpacity () {
+	    if (stopFade) return;
+	    elem.style.opacity -= .005;
+	    if (elem.style.opacity <= 0) {
+	      elem.style.opacity = origOpacity;
+	      func(elem);
+	    } else {
+	      setTimeout(reduceOpacity, disapearAt * 2 / 600 * 1000);
+	    }
+	  }
+	
+	  elem.style.opacity = 1;
+	  setTimeout(reduceOpacity, disapearAt / 3 * 1000);
+	  return () => {
+	    stopFade = true;
+	    elem.style.opacity = origOpacity;
+	  };
+	}
+	
+	
+	
+	du.cookie.remove = function (name) {
+	  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+	}
+	
+	let copyTextArea;
+	du.copy = (textOelem) => {
+	  let elem;
+	  if (textOelem instanceof HTMLElement) {
+	    elem = textOelem;
+	  } else {
+	    if (copyTextArea === undefined) {
+	      copyTextArea = du.create.element('textarea', {id: 'du-copy-textarea'});
+	      document.body.append(copyTextArea);
+	    }
+	    elem = copyTextArea;
+	    copyTextArea.value = textOelem;
+	    copyTextArea.innerText = textOelem;
+	  }
+	
+	  elem.select();
+	  document.execCommand("copy");
+	}
+	
+	du.paste = (elem, success, fail, validate) => {
+	  fail ||= err => console.error('Failed to read clipboard contents: ', err);
+	  navigator.clipboard.readText()
+	  .then((text) => {
+	    if ((typeof validate) !== 'function') {
+	      success(text, elem);
+	    } else {
+	      const validResult = validate(text);
+	      if (validResult) {
+	        if (validResult === true) success(text, elem);
+	        else success(validResult, elem);
+	      }
+	    }
+	  })
+	  .catch(fail);
+	};
+	
+	du.paste.json = (elem, success, fail, validate) => {
+	  let obj;
+	  const validateWrapper = (text) => {
+	    try {
+	      const obj = Object.fromJson(JSON.parse(text));
+	      return obj;
+	    } catch (e) {
+	      fail(e);
+	    }
+	  };
+	  const successWrapper = (value, elem) => success(value, elem);
+	  fail ||= err => console.error('Failed to read JSON object from clipboard contents: ', err);
+	  du.paste(elem, successWrapper, fail, validateWrapper);
+	}
+	
+	// du.print = {};
+	// du.print.elem = (selectorOelem) => {
+	//   let elem = selectorOelem;
+	//   if (!(elem instanceof HTMLElement)) elem = du.find(selectorOelem);
+	//   if (elem instanceof HTMLElement) {
+	//    const relations = du.find.relations(elem)
+	//    du.hide(relations.distants);
+	//    du.style(relations.ancestors, {all: 'unset'});
+	//    window.print();
+	//    du.show(relations.distants);
+	//    du.style(relations.ancestors, {all: ''});
+	//  } else console.error(`Cant find HTMLElement '${selectorOelem}'`);
+	// }
+	//
+	// du.on.match('click', 'button.print', (elem) => du.print.elem(elem.parentElement));
+	
+	const attrReg = /^[a-zA-Z-]*$/;
+	du.uniqueSelector = function selector(focusElem) {
+	  if (!focusElem) return '';
+	  let selector = '';
+	  let percice;
+	  let attrSelector;
+	  let currSelector;
+	  let currElem = focusElem;
+	  do {
+	    attrSelector = `${currElem.id ? '#' + currElem.id : `${currElem.tagName}`}`;
+	
+	    currSelector = `${attrSelector}${selector}`;
+	    let found = du.find.all(currSelector);
+	    percice = found && (found.length === 1 || (selector.length > 0 && found[0] === focusElem));
+	    if (!percice) {
+	      const index = Array.from(currElem.parentElement.children).indexOf(currElem);
+	      selector = ` > :nth-child(${index + 1})${selector}`;
+	      currElem = currElem.parentElement;
+	      if (currElem === null) return '';
+	    }
+	  } while (!percice);
+	  return currSelector;
+	}
+	
+	class FocusInfo {
+	  constructor() {
+	    this.elem = document.activeElement;
+	    if (this.elem) {
+	      this.selector = du.uniqueSelector(this.elem);
+	      this.start =  this.elem.selectionStart;
+	      this.end = this.elem.selectionEnd;
+	    } else return null;
+	  }
+	}
+	
+	du.focusInfo = function () { return new FocusInfo();}
+	
+	du.focus = function (selector) {
+	  if ((typeof selector) === 'string') {
+	    const elem = du.find(selector);
+	    if (elem) elem.focus();
+	  } else if (selector instanceof FocusInfo) {
+	    const elem = du.find(selector.selector);
+	    if (elem) {
+	      elem.focus();
+	      if (Number.isFinite(selector.start) && Number.isFinite(selector.end)) {
+	        elem.selectionStart = selector.start;
+	        elem.selectorEnd = selector.end;
+	      }
+	    }
+	  }
+	}
+	
+	// Stolen From: https://stackoverflow.com/a/66569574
+	// Should write and test my own but bigger fish
+	const cssUnitReg = new RegExp(/^((-|)[0-9]{1,})([a-zA-Z]{1,4})$/);
+	du.convertCssUnit = function( cssValue, target ) {
+	    target = target || document.body;
+	    const supportedUnits = {
+	        // Absolute sizes
+	        'px': value => value,
+	        'cm': value => value * 38,
+	        'mm': value => value * 3.8,
+	        'q': value => value * 0.95,
+	        'in': value => value * 96,
+	        'pc': value => value * 16,
+	        'pt': value => value * 1.333333,
+	        // Relative sizes
+	        'rem': value => value * parseFloat( getComputedStyle( document.documentElement ).fontSize ),
+	        'em': value => value * parseFloat( getComputedStyle( target ).fontSize ),
+	        'vw': value => value / 100 * window.innerWidth,
+	        'vh': value => value / 100 * window.innerHeight,
+	        // Times
+	        'ms': value => value,
+	        's': value => value * 1000,
+	        // Angles
+	        'deg': value => value,
+	        'rad': value => value * ( 180 / Math.PI ),
+	        'grad': value => value * ( 180 / 200 ),
+	        'turn': value => value * 360
+	    };
+	
+	    // If is a match, return example: [ "-2.75rem", "-2.75", "rem" ]
+	    const matches = String.prototype.toString.apply( cssValue ).trim().match(cssUnitReg);
+	
+	    if ( matches ) {
+	        const value = Number( matches[ 1 ] );
+	        const unit = matches[ 3 ].toLocaleLowerCase();
+	        // Sanity check, make sure unit conversion function exists
+	        if ( unit in supportedUnits ) {
+	            return supportedUnits[ unit ]( value );
+	        }
+	    }
+	
+	    return cssValue;
+	};
+	
+	function createTimerShortCut() {
+	  let timers = [];
+	  du.on.match('keycombo(s,t)', '*', () => timers.push(new Date().getTime()));
+	  du.on.match('keycombo(t)', '*', (info, info2) => {
+	    if (timers.length === 0) return;
+	    const endTime = new Date().getTime();
+	    let str = '';
+	    for (let index = 0; index < timers.length; index++) {
+	      let time = endTime - timers[index];
+	      if (time < 2000) time = `${time/100} msec`;
+	      else time = `${time/1000} sec`;
+	      str += `${index}) ${time}\n`;
+	    }
+	    if (str) alert(str);
+	    timers = [];
+	  });
+	}
+	createTimerShortCut();
+	
+	try {
+	  module.exports = du;
+	} catch (e) {}
 	
 });
 

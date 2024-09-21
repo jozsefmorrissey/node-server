@@ -38,7 +38,11 @@ class PanelVoidIndex extends Panel {
       const y = Vertex3D.magnitudeVector(rotatedY, verts);
       return {x,y,z};
     }
-    this.normals(false, {DETERMINE_FROM_PARENT: true});
+    this.normals = (array) => {
+      const vects = this.vectors();
+      const normArr = ['x', 'y', 'z'].map(xyz => vects[xyz].unit());
+      return array ? normArr : {x: normArr[0], y: normArr[1], z: normArr[2]};
+    }
     this.width = () => this.resolve('vpt');
   }
 }

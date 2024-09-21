@@ -130,6 +130,7 @@ class Line3D {
     this.toNegitiveString = () => `${new String(this[1])} => ${new String(this[0])}`;
     this.toDrawString = (color, accuracy) => {
       let brackets
+      accuracy ||= .01;
       if (this.isLine()) brackets = ['(', ')'];
       else if (this.isSegment()) brackets = ['[', ']'];
       else if (this.isDirectional.anti()) brackets = ['(', ']'];
@@ -373,7 +374,9 @@ class Line3D {
 
     this.within = (vertex) => {
       vertex = new Vertex3D(vertex);
-      const onLine = (this.x(vertex.x) || this.y(vertex.y) || this.z(vertex.z));
+      const dom = this.vector().dominant();
+      const onLine = dom === 'i' ? this.x(vertex.x) :
+                (dom === 'j' ? this.y(vertex.y) : this.z(vertex.z));
       if (!onLine || !onLine.vertex.equals(vertex)) return false;
       if (onLine.t < -tol) return 'BEFORE';
       if (this[0].distance(onLine.vertex) > this.length() + tol) return 'AFTER';
@@ -420,7 +423,7 @@ class Line3D {
      return this;
     }
 
-    this.positiveVectorLine = () =>
+    this.positive = () =>
       this.vector().positive() ? this : this.negitive();
 
     this.to2D = (x,y) => Line3D.to2D([this], x, y)[0];
@@ -682,11 +685,12 @@ const checkAllAreParrelle = (align, alignTo) => {
 }
 
 const c = ['red', 'green', 'blue']
+const dotCmp = (alignTo) => (l, i) => Math.abs(l.vector().dot(alignTo[i].vector()));
 const alignToString = (align, unitLine, targetLine) => [unitLine ? unitLine[1].toString() : '', align.map((l,i) => l.toDrawString(c[i])).join('\n'),targetLine ? targetLine.toString() : ''].filter(l=>l).join('\n');
 const rotStr = (rot) => rot ? `(${rot.x||''},${rot.y||''},${rot.z||''})` : '';
-const rotationInfo = (aIndex, index, rot) => `// ${aIndex}${index} ${rotStr(rot)}`;
-const snapShotStr = (aIndex, index, rot, align, unitLine, targetLine) =>
-`${rotationInfo(aIndex, index, rot)}\n\n${alignToString(align, unitLine, targetLine)}\n`
+const rotationInfo = (len, aIndex, index, rot) => `// ${len} ${aIndex}${index} ${rotStr(rot)}`;
+const snapShotStr = (len, aIndex, index, rot, align, unitLine, targetLine) =>
+`${rotationInfo(len, aIndex, index, rot)}\n\n${alignToString(align, unitLine, targetLine)}\n`
 function determinRotations(align, alignTo, reverse) {
   align = align.map(l => l.clone());
   const rotations = [];
@@ -696,6 +700,8 @@ function determinRotations(align, alignTo, reverse) {
   const center = new Vertex3D();//.center(Line3D.vertices(align));
   let axisCannotBeEqual;
   let icl = {incorrect: [], correct: [], snapShots: []}
+  const dot = dotCmp(alignTo);
+  proccess:
   while (keepGoing && cycles++ < 7) {
     for (let aIndex = 0; aIndex < align.length; aIndex++) {
       const unitLine = align[aIndex];
@@ -704,9 +710,8 @@ function determinRotations(align, alignTo, reverse) {
       for (let index = 0; index < pivots.length; index++) {
         const pivot = (reverse ? revPivots : pivots)[index];
         const rotation = determineRotation(unitLine, targetLine, pivot, reverse);
-        axisCannotBeEqual = Object.equals(lastRotation, rotation);
-        if (rotation && !axisCannotBeEqual) {
-          icl.snapShots.push(snapShotStr(aIndex, index, rotation, align, unitLine, targetLine));
+        if (rotation && !Object.equals(lastRotation, rotation)) {
+          icl.snapShots.push(snapShotStr(icl.snapShots.length, aIndex, index, rotation, align, unitLine, targetLine));
           align = align.map(l => reverse ? l.reverseRotate(rotation, center) : l.rotate(rotation, center));
           const newRot = determineRotation(unitLine, targetLine, pivot, reverse);
           if (newRot) {
@@ -717,22 +722,20 @@ function determinRotations(align, alignTo, reverse) {
           rotations.push(rotation);
           lastRotation = rotation;
         }
+        if (withinTol(align.sum(dot), 3)) break;
       }
-      keepGoing = rotations.length !== rotationLength;
+      keepGoing = rotations.length !== rotationLength && align.map((l,i) => l.isParrelle(alignTo[i])).contains(false);
     }
   }
-  icl.snapShots.push(snapShotStr(align.length, pivots.length, null, align));
+  icl.snapShots.push(snapShotStr(icl.snapShots.length, align.length, pivots.length, null, align));
   if (icl.incorrect.length > 0) {
     console.log(icl.snapShots.join('\n\n\n'))
     console.log();
   }
 
-  if (axisCannotBeEqual)
-    console.warn('Axis cannot be equal: try to create conditions where they can');
-  // if (!checkAllAreParrelle(align, alignTo))
-  //   throw new Error("This shouldn't happen");
   if (rotations.length > 4) {
-    console.warn('Resolving rotations seams confused...');
+    console.warn.logarithmic('Resolving rotations seams confused...');
+    determinRotations(align, alignTo, reverse);
   }
 
   return rotations.length > 0 ? rotations : null;
@@ -790,21 +793,59 @@ Line3D.combineOrder = (line1, line2) => {
   return verts;
 }
 
-Line3D.combine = (lines) => {
-  for (let i = 0; i < lines.length; i++) {
-    for (let j = i + 1; j < lines.length; j++) {
-      const lineI = lines[i];
-      const lineJ = lines[j];
-      const combineOrder = lineI.combineOrder(lineJ);
-      if (combineOrder) {
-        lineI[0].positionAt(combineOrder[0]);
-        lineI[1].positionAt(combineOrder[combineOrder.length - 1]);
-        lines.splice(j, 1);
-        j--;
+Line3D.combine = (lines, tolerance, prefix) => {
+  tolerance ||= tol;
+  const tolmap = new ToleranceMap({'vector().positiveUnit().i()': tolerance,
+                                  'vector().positiveUnit().j()': tolerance,
+                                  'vector().positiveUnit().k()': tolerance});
+  lines.forEach(l => (l.combineRemoved = -1) & tolmap.add(l))
+  const groups = tolmap.group();
+  for (let g = 0; g < groups.length; g++) {
+    let set = groups[g];
+    for (let i = 0; i < set.length; i++) {
+      for (let j = i + 1; j < set.length; j++) {
+        const lineI = set[i];
+        const lineJ = set[j];
+        if (lineJ.combineRemoved < 0 && lineI.combineRemoved < 0) {
+          const combineOrder = lineI.combineOrder(lineJ);
+          if (combineOrder) {
+            if (lines.findIndex(l => l === lineI) === -1) {
+              console.error('this needs to be fixed!!!');
+            }
+            lineI[0].positionAt(combineOrder[0]);
+            lineI[1].positionAt(combineOrder[combineOrder.length - 1]);
+            if (lines.findIndex(l => l === lineI) === -1) {
+              console.error('this needs to be fixed!!!');
+            }
+            lines.removeWhere(l => l === lineJ);
+            if (lines.findIndex(l => l === lineI) === -1) {
+              console.error('this needs to be fixed!!!');
+            }
+            lineJ.combineRemoved = i;
+            set.splice(j,1)
+            j=i;
+          }
+        }
       }
     }
   }
   return lines;
+}
+
+Line3D.combineByLine = (list, path, combine) => {
+  const lines = list.map(obj => obj.pathValue(path));
+  Line3D.combine(lines.map(l=>l));
+  const removedIndicies = lines.findIndicies(l => l.combineRemoved !== -1);
+  for (let index = 0; index < removedIndicies.length; index++) {
+    const removed = list[index];
+    const kept = list[lines[removedIndicies[index]].combineRemoved];
+    const combined = combine(kept, removed);
+    if (combined) list[removed.combineRemoved] = combined;
+    else removedIndicies.splice(index--, 1);
+  }
+  for (let index = removedIndicies.length - 1; index > -1; index--) {
+    list.splice(removedIndicies[index], 1)
+  }
 }
 
 Line3D.bestPole = (lines, tolerance) => {
@@ -927,14 +968,37 @@ Line3D.radialSort2D = (lines, viewFrom, ccw, center, degreesOstartpoint) => {
   }).filter(l => l));
 }
 
-// console.log(`//${startIndex}, ${endIndex}\n` +
-//             centers.map(v => v.toString()).join('\n') + '\n\n' +
-//             c.line.toDrawString())
-
 Line3D.distanceSort = (target, segment) => (l1,l2) => {
   const ds1 = l1.distance(target, segment);
   const ds2 = l2.distance(target, segment);
   return ds1 - ds2;
+}
+
+const targSlice = new Line3D([0,59.69,0], [8.89,59.69,0]);
+const targLine = new Line3D([8.89,56.515,0], [8.89,73.66,0])
+Line3D.slice = (line, lines) => {
+  const notParrelle = lines.filter(l => !l.isParrelle(line));
+  const intersections = [line[0]];
+  for (let index = 0; index < notParrelle.length; index++) {
+    const slicer = notParrelle[index];
+    const int = line.intersection.segment(slicer, true);
+    if (int && !line[0].equals(int) && !line[1].equals(int)) {
+      intersections.push(int);
+    }
+  }
+  intersections.push(line[1]);
+  const sliced = intersections.map((int, i) => new Line3D(intersections[i-1], int));
+  return intersections.length > 2 ? sliced.slice(1) : null;
+}
+
+Line3D.sliceAll = (lines) => {
+  const fractured = [];
+  for (let index = 0; index < lines.length; index++) {
+    const sliced = Line3D.slice(lines[index], lines);
+    if (sliced) fractured.concatInPlace(sliced);
+    else fractured.push(lines[index]);
+  }
+  return fractured;
 }
 
 Line3D.parrelleSets = (lines, tolerance) => {

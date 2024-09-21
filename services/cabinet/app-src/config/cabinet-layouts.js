@@ -142,12 +142,12 @@ new CabinetLayout('test', (cabinet) => {
   right.sections[1].setSection("DrawerSection");
   right.sections[2].setSection("DrawerSection");
 
-  centerTop.divider().divider().type('frontAndBack');
-  left.sections[0].divider().divider().type('front');
-  left.sections[1].divider().divider().type('front');
-  left.sections[2].divider().divider().type('frontAndBack');
-  right.sections[0].divider().divider().type('front');
-  right.sections[1].divider().divider().type('front');
+  centerTop.divider().type('frontAndBack');
+  left.sections[0].divider().type('front');
+  left.sections[1].divider().type('front');
+  left.sections[2].divider().type('frontAndBack');
+  right.sections[0].divider().type('front');
+  right.sections[1].divider().type('front');
 
   let config = Void.referenceConfig('horizontal', 'c_BACK', 5*2.54, 5*2.54);
   let vOid = new Void(0, 'Void1', config);
@@ -199,11 +199,11 @@ new CabinetLayout('testSplit', (cabinet) => {
   right.sections[1].setSection("DrawerSection");
   right.sections[2].setSection("DrawerSection");
 
-  centerTop.divider().divider().type('frontAndBack');
-  left.sections[0].divider().divider().type('front');
-  left.sections[1].divider().divider().type('front');
-  right.sections[0].divider().divider().type('front');
-  right.sections[1].divider().divider().type('front');
+  centerTop.divider().type('frontAndBack');
+  left.sections[0].divider().type('front');
+  left.sections[1].divider().type('front');
+  right.sections[0].divider().type('front');
+  right.sections[1].divider().type('front');
 
   let config = Void.referenceConfig('horizontal', 'c_BACK', 5*2.54, 5*2.54);
   let vOid = new Void(0, 'Void1', config);

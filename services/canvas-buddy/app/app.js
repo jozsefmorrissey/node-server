@@ -35,8 +35,11 @@ function parseSnapShots(lines) {
     const line = lines[index];
     const match = line.match(snapShotCommentReg);
     if (match) {
-      snapIndex = Number.parseInt(match[2]);
-      snapShots[snapIndex] = [].concat(snapShots[-1]);
+      const newIndex = Number.parseInt(match[2]);
+      if (newIndex > 0)
+        snapShots[snapIndex].concatInPlace(snapShots[-1]);
+      snapIndex = newIndex;
+      snapShots[snapIndex] = [];
       snapShots[snapIndex].comments = [match[1]];
     } else {
       const commentMatch = line.match(commentReg);

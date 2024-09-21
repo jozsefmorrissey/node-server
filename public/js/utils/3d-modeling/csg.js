@@ -264,9 +264,26 @@ CSG.prototype = {
     return csg;
   },
 
-  scale: function(coeficient) {
+  scale: function(xOall, y, z, relitive) {
     const center = this.center();
-    this.polygons.map(function(p) { return p.scale(center, coeficient); });
+    if (y === undefined && z === undefined && relitive === undefined) {
+      this.polygons.map(function(p) { return p.scale(center, xOall); });
+    } else {
+      const dems = this.demensions();
+      const x = relitive ? (dems.x + xOall)/dems.x : (xOall || 1);
+      y = relitive ? (dems.y + y)/dems.y : (y || 1);
+      z = relitive ? (dems.z + z)/dems.z : (z || 1);
+      this.polygons.forEach(p => p.vertices.forEach(v => {
+        v.scale(center, x, y, z);
+      }));
+    }
+  },
+
+  explode: function(distance) {
+    const center = this.center();
+    this.polygons.forEach(p =>
+      p.translate(p.plane.normal.times(distance))
+    );
   },
 
   setColors: function(func, g, b) {
@@ -275,6 +292,14 @@ CSG.prototype = {
     } else {
       this.polygons.forEach(p => p.setColor(func, g, b));
     }
+  },
+
+  setColor: function(r, g, b, force) {
+    this.toPolygons().map(function(polygon) {
+      if (polygon.shared === undefined || force) {
+        polygon.setColor(r, g, b);
+      }
+    });
   },
 
   toPolygons: function() {
@@ -450,7 +475,10 @@ CSG.prototype = {
       z: epts.z - epts['-z']
     }
   },
-
+  demCenter: function () {
+    const dems = this.demensions();
+    return {x: dems.x/2, y: dems.y/2, z: dems.z/2};
+  },
   rotateAroundPoint: function (rotations, point) {
     const returnVector = new CSG.Vector(point);
     const centerVector = returnVector.negated();
@@ -494,6 +522,7 @@ CSG.prototype = {
 
   translate: function (offset) {
     if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+    offset.id = String.random();
     this.polygons.forEach((poly) => poly.translate(offset));
   },
 
@@ -609,7 +638,7 @@ CSG.Point = function (center, radius, color) {
 }
 
 function vecotrOvertexModel(start, end, model, options) {
-  if (options.lineDisplayType === CSG.Line.DISPLAY_TYPES.LINE_ONLY) return model;
+  if (Array.isArray(end) || options.lineDisplayType === CSG.Line.DISPLAY_TYPES.LINE_ONLY) return model;
   let color = end.color || options.color;
   if (CSG.Line.DISPLAY_TYPES.VECTOR === options.lineDisplayType &&
           end instanceof CSG.Vector) {
@@ -630,7 +659,7 @@ CSG.Line = function (options) {
     return new CSG.Point(options.start, .3, options.color);
   }
   const radius = options.radius || .2;
-  let model = new CSG.cylinder({start, end, radius});
+  let model = new CSG.cylinder({start, end, radius, slices: 32});
   model = vecotrOvertexModel(end, start, model, options);
   model.setColor(options.color);
   return vecotrOvertexModel(start, end, model, options);
@@ -724,7 +753,7 @@ CSG.sphere = function(options) {
   options = options || {};
   var c = new CSG.Vector(options.center || [0, 0, 0]);
   var r = options.radius || 1;
-  var slices = options.slices || 16;
+  var slices = options.slices || 32;
   var stacks = options.stacks || 8;
   var polygons = [], vertices;
   function vertex(theta, phi) {
@@ -782,13 +811,16 @@ CSG.cylinder = function(options) {
     var normal = out.times(1 - Math.abs(normalBlend)).plus(axisZ.times(normalBlend));
     return new CSG.Vertex(pos, normal);
   }
+  const topVerts = [];
+  const bottomVerts = [];
   for (var i = 0; i < slices; i++) {
     var t0 = i / slices, t1 = (i + 1) / slices;
-    polygons.push(new CSG.Polygon([start, point(0, t0, -1), point(0, t1, -1)]));
     polygons.push(new CSG.Polygon([point(0, t1, 0), point(0, t0, 0), point(1, t0, 0), point(1, t1, 0)]));
-    polygons.push(new CSG.Polygon([end, point(1, t1, 1), point(1, t0, 1)]));
+    topVerts.push(point(1, t0, -1));
+    bottomVerts.push(point(0, t0, -1));
   }
-  return CSG.fromPolygons(polygons);
+  return CSG.fromPolygons(polygons.concat([new CSG.Polygon(topVerts),new CSG.Polygon(bottomVerts)]));
+  // return new CSG.Polygon(verts);
 };
 
 let crossVect;
@@ -993,6 +1025,11 @@ CSG.Vector.prototype = {
 // functions like `CSG.sphere()` can return a smooth vertex normal, but `normal`
 // is not used anywhere else.
 
+
+CSG.Vector.I = new CSG.Vector(1,0,0);
+CSG.Vector.J = new CSG.Vector(0,1,0);
+CSG.Vector.K = new CSG.Vector(0,0,1);
+
 CSG.Vertex = function(pos, normal) {
   this.pos = new CSG.Vector(pos);
   this.normal = new CSG.Vector(normal || {x:1,y:0,z:0});
@@ -1001,11 +1038,18 @@ CSG.Vertex = function(pos, normal) {
     return `(${verPer.x},${verPer.y},${verPer.z})`;
   }
 
-  this.scale = (center, coeficient) => {
+  this.scale = (center, xOall, y, z) => {
     const centerVector = new CSG.Vector(center);
     const vector = new CSG.Vector(pos.x - center.x, pos.y - center.y, pos.z - center.z);
-    const scaled = vector.times(coeficient);
-    this.pos = centerVector.plus(scaled);
+    if (y === undefined && z === undefined) {
+      const scaled = vector.times(xOall);
+      this.pos = centerVector.plus(scaled);
+    } else {
+      const iVect = CSG.Vector.I.times(vector.x * xOall);
+      const jVect = CSG.Vector.J.times(vector.y * y);
+      const kVect = CSG.Vector.K.times(vector.z * z);
+      this.pos = centerVector.plus(iVect.plus(jVect).plus(kVect));
+    }
   }
 
   const tol = .1
@@ -1202,7 +1246,7 @@ CSG.Polygon.prototype = {
     percision ||= .001;
     const verts = this.vertices;
     const shared = this.shared;
-    let color = includeColor ? colors.name(shared) : '';
+    let color = String.color.next();//includeColor ? colors.name(shared) : '';
     let str = `${color}[`;
     for (let v = 0; v < verts.length; v++) {
       str += `${verts[v].toString(percision)},`;
@@ -1218,10 +1262,14 @@ CSG.Polygon.prototype = {
 
   translate: function (offset) {
     if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+    const offsetId = offset.id || (offset.id = String.random());
     this.forEachVertex((vertex) => {
-      vertex.pos.x += offset.x;
-      vertex.pos.y += offset.y;
-      vertex.pos.z += offset.z;
+      if (!vertex.offsetId || vertex.offsetId !== offsetId) {
+        vertex.pos.x += offset.x;
+        vertex.pos.y += offset.y;
+        vertex.pos.z += offset.z;
+        vertex.offsetId = offsetId;
+      }
     });
   },
 

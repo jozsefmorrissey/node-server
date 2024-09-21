@@ -119,8 +119,10 @@ class Parimeters2d {
         const lastLine = pdObj.parimeter[pdObj.parimeter.length - 1];
         const lastLineNeg = lastLine.negitive();
         let matches = pdObj.lineMap.matches(lastLineNeg).filter(l => !l.equivalent(lastLine));
-        if (matches.length === 0)
-          throw new Error('No parrimeter exists: lines not connected');
+        if (matches.length === 0) {
+          console.warn.logarithmic('No parrimeter exists: lines not connected... should investigate');
+          return null;
+        }
         matches.sort(Parimeters2d.rightLeftSort(lastLine.degrees(), rightOleft));
         pdObj.parimeter.push(matches[0]);
         finished = parimeterFinished(pdObj.parimeter);
@@ -137,7 +139,9 @@ class Parimeters2d {
         const furthestLine = Line2d.isolateFurthestLine(center, lineList);
         const rightPoly = follow(new PartialParimeter2d(furthestLine), true);
         const leftPoly = follow(new PartialParimeter2d(furthestLine),false);
-        const outerPoly = rightPoly.area() > leftPoly.area() ? rightPoly : leftPoly;
+        if (!leftPoly && !rightPoly) throw new Error('No Parimeter can be found');
+        const outerPoly = !rightPoly ? leftPoly : (!leftPoly ? rightPoly :
+                      rightPoly.area() > leftPoly.area() ? rightPoly : leftPoly);
         reduceParimeters(outerPoly);
         polys.push(outerPoly);
         if (onlyOne) break;

@@ -25,7 +25,8 @@ class BiPolygon {
     const face1 = polygon1.vertices();
     const face2 = polygon2.vertices();
     const instance = this;
-    if (face1.length !== face2.length) throw new Error('Polygons need to have an equal number of vertices');
+    if (face1.length !== face2.length)
+      throw new Error('Polygons need to have an equal number of vertices');
 
 
     this.copy = () => new BiPolygon(polygon1.copy(), polygon2.copy());

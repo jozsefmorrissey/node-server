@@ -11,6 +11,7 @@ class Room extends Lookup {
   constructor(name, order, id, layout) {
     super(id || String.random());
     const instance = this;
+    this.order = () => order;
 
     function groupMap(map, detailLists, listId) {
       for(let index = 0; index < detailLists[listId].length; index += 1) {

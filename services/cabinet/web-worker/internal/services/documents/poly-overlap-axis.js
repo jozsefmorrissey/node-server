@@ -12,7 +12,8 @@ const NORM_FUNCTIONS = [
   // Single Plane Layer
   (set, parrelleSets, zPolys, partNormals) => {
     if (set.length !== 1) return null;
-    if (zPolys.length === 1) console.error('Single normals should not be based on a single layer inline with z norm ....');
+    if (zPolys.length === 1)
+      console.error('Single normals should not be based on a single layer inline with z norm ....');
     const normals = Polygon3D.normals(set[0]).swap('x', 'z');
     const zNorm = partNormals.z;
     let yMoreInlineWithZ = Math.abs(normals.z.dot(zNorm)) < Math.abs(normals.y.dot(zNorm));
@@ -24,6 +25,8 @@ const NORM_FUNCTIONS = [
 ];
 
 function defaultNormalFunction(set, parrelleSets, zPolys) {
+  if (set.length === 1 && zPolys.length === 0)
+    return Polygon.normals(set[0]).swap('x', 'z');
   if (zPolys.length > 1 || zPolys.length === 0)
     throw new Error('Have not coded for this yet.(shouldnt have too)');
   const lines = zPolys[0].lines();
@@ -35,7 +38,7 @@ function defaultNormalFunction(set, parrelleSets, zPolys) {
   throw new Error('Have not coded for this yet(shouldnt have too)');
 }
 
-function limitLine(axis, plane, failOnNoLen, failNonEndpointIntersection) {
+function limitLine(axis, plane, failOnNoLen, adjustEndPoint) {
   if (axis[0].DIRECTIONAL === undefined) axis[0].DIRECTIONAL = axis[1].DIRECTIONAL = true;
   if (within(axis.length(), 0)) {
     if (failOnNoLen)
@@ -44,21 +47,21 @@ function limitLine(axis, plane, failOnNoLen, failNonEndpointIntersection) {
   const int = plane.intersection.line(axis);
   if (!int) return;
   if (int instanceof Line3D) return;
-  const distanceFromStart = axis[0].distance(int);
-  const distanceFromEnd = axis[1].distance(int);
+  let distanceFromStart = axis[0].distance(int);
+  let distanceFromEnd = axis[1].distance(int);
+  if (adjustEndPoint) {
+    const index = distanceFromEnd < distanceFromStart ? 1 : 0;
+    axis[index].positionAt(int);
+    distanceFromStart = axis[0].distance(int);
+    distanceFromEnd = axis[1].distance(int);
+  }
   if (within(distanceFromStart, 0)) return axis[0].DIRECTIONAL = false;
   if (within(distanceFromEnd, 0)) return axis[1].DIRECTIONAL = false;
-  if (failNonEndpointIntersection)
-    throw new Error('All intersections should be found at one of the end points');
 }
 
 function determineAxis(set, normals) {
   try {
     let axis = Polygon3D.axis(set, normals).max;
-    if (axis.z.length < .75 * 2.53) {
-      console.log('got depth');
-    }
-    Polygon3D.axis(set, normals);
     // const center = this.intersectModel().center();
     // Object.values(axis).forEach(l => l.centerOn(center));
     set.forEach(layer => {
@@ -74,19 +77,6 @@ function determineAxis(set, normals) {
   }
 }
 
-
-function removeFullLengthPolys(existsInBoth, jointInfo) {
-  if (jointInfo.joint().fullLength) {
-    console.warn.subtle('Hacky fix fullLength joints should also reflect in model');
-    const zVect = jointInfo.partInfo().normals().z.positiveUnit();
-    const zPolys = existsInBoth.filter(p => p.normal().positiveUnit().equals(zVect));
-    if (zPolys.length > 0) {
-      const normals = Polygon3D.normals(zPolys[0]);
-      const yNorm = normals.y.positiveUnit();
-      existsInBoth.forEach(p => p.normal().positiveUnit().equals(yNorm) && existsInBoth.remove(p));
-    }
-  }
-}
 
 function alignZpolyNorms(zPolys, overlapingLayers, zPolyFilter) {
   if (zPolys.length < 1) return;
@@ -110,6 +100,23 @@ function alignZpolyNorms(zPolys, overlapingLayers, zPolyFilter) {
     zPolys.forEach((poly, index) => zUnitDir.sameDirection(poly.normal()) ||
       (zPolys[index] = zPolys[index].reverse()));
   }
+}
+
+function buildAxis(inBoth, overlapLayers, zPolys, zFilter, normals) {
+  const sets = Polygon3D.parrelleSets(inBoth);
+  alignZpolyNorms(zPolys, overlapLayers, zFilter);
+
+  const validObjects = [];
+  let norms;
+  for (let index = 0; !norms && index < NORM_FUNCTIONS.length; index++) {
+    const normFunc = NORM_FUNCTIONS[index];
+    norms = normFunc(inBoth, sets,  zPolys, normals);
+  }
+  norms ||= defaultNormalFunction(inBoth, sets,  zPolys);
+  // console.log(inBoth.map(l => l.toDrawString('green')).concat(['',''])
+                // .concat(targetLayers.map(l => l.toDrawString('red')).concat(['',''])
+                // .concat(overlapLayers.map(l => l.toDrawString()))).join('\n'));
+  return determineAxis(inBoth, norms);
 }
 
 function existsInBothSets(set1, set2) {
@@ -160,23 +167,14 @@ module.exports = (targetLayers, overlapingLayers, jointInfo) => {
     return null;
   }
   // existsInBoth = existsInBothSets(overlapingLayers, modelPolys);
-  removeFullLengthPolys(existsInBoth, jointInfo);
 
   const normals = jointInfo.partInfo().normals();
   const zNorm = normals.z;
+
   const zPolyFilter = p => p.normal().positiveUnit()
                       .equals(zNorm.positiveUnit());
   const zPolys = existsInBoth.filter(zPolyFilter);
-  const sets = Polygon3D.parrelleSets(existsInBoth);
-  alignZpolyNorms(zPolys, overlapingLayers, zPolyFilter);
 
-  const validObjects = [];
-  let norms;
-  for (let index = 0; !norms && index < NORM_FUNCTIONS.length; index++) {
-    const normFunc = NORM_FUNCTIONS[index];
-    norms = normFunc(existsInBoth, sets,  zPolys, normals);
-  }
-  norms ||= defaultNormalFunction(existsInBoth, sets,  zPolys);
-  // console.log(existsInBoth.map(l => l.toDrawString('green')).concat(['','']).concat(targetLayers.map(l => l.toDrawString('red')).concat(['','']).concat(overlapingLayers.map(l => l.toDrawString()))).join('\n'))
-  return determineAxis(existsInBoth, norms);
+  if (zPolys.length === 0) return existsInBoth.map(p => buildAxis([p], overlapingLayers, [], zPolyFilter, normals))
+  else return [buildAxis(existsInBoth, overlapingLayers, zPolys, zPolyFilter, normals)];
 }

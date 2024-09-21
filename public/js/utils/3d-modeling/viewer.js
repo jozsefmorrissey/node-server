@@ -5,15 +5,6 @@ const du = require('../dom-utils.js');
 const CSG = require('./csg.js');
 const GL = require('./lightgl.js');
 
-// Set the color of all polygons in this solid
-CSG.prototype.setColor = function(r, g, b, force) {
-  this.toPolygons().map(function(polygon) {
-    if (polygon.shared === undefined || force) {
-      polygon.setColor(r, g, b);
-    }
-  });
-};
-
 // Convert from CSG solid to GL.Mesh object
 CSG.prototype.toMesh = function() {
   var mesh = new GL.Mesh({ normals: true, colors: true });

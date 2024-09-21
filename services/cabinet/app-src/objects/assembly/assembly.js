@@ -56,6 +56,8 @@ class Assembly extends KeyValue {
     const initialVals = {
       outline: false,
       part: true,
+      outsourced: false,
+      digital: false,
       allModels: false,
       included: true,
       config, partCode: pCode, partName,

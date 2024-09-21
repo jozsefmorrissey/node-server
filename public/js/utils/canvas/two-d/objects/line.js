@@ -841,6 +841,26 @@ Line2d.consolidate = (lines, tolerance, notSegment) => {
   return minList;
 }
 
+Line2d.unique = (lines) => {
+  const tolMap = new ToleranceMap({'slope()': `+.001`});
+  tolMap.addAll(lines);
+  const unique = [];
+  const sets = tolMap.group();
+  for (let i = 0; i < sets.length; i++) {
+    const set = sets[i];
+    unique.push(set[0]);
+    for (let j = 1; j < set.length; j++) {
+      const target = set[j];
+      let add = true;
+      for (let k = 0; k < unique.length; k++) {
+        add &&= target.combine(unique[k], null, true) === undefined;
+      }
+      if (add) unique.push(target);
+    }
+  }
+  return unique;
+}
+
 const within = Tolerance.within(.00001);
 Line2d.favored = (trendLine,lines) => {
   if (lines.length < 2) return lines[0].acquiescent(trendLine);
@@ -960,7 +980,7 @@ function sectionFromString(str, lines) {
 
 Line2d.parrelleSets = (lines, tolerance) => {
   tolerance ||= tol;
-  const tolmap = new ToleranceMap({'radians().positive()': `${tolerance}`});
+  const tolmap = new ToleranceMap({'slope': `+${tolerance}`});
   tolmap.addAll(lines);
   const groups = tolmap.group().sortByAttr('length').reverse();
   return groups;

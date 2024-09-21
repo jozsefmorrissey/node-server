@@ -89,7 +89,10 @@ class Measurement {
       return regObj;
     };
 
-    function reduce(numerator, denominator, info) {
+    const reduceObj = (numerator, denominator, str) =>
+          ({numerator: numerator === denominator ? 0 : numerator,
+            denominator,str,addOne: numerator/denominator === 1});
+    function reduce(numerator, denominator) {
       let reduced = true;
       while (reduced) {
         reduced = false;
@@ -105,20 +108,19 @@ class Measurement {
         }
       }
       if (numerator === 0) {
-        return '';
+        return {numerator: 0, denominator, str: ''};
       }
       if (denominator === 32) {
         const bigger = reduce((numerator + 1)/2, denominator/2, true);
         const smaller = reduce((numerator - 1)/2, denominator/2, true);
-        if (!bigger) ' sh';
-        if (bigger.denominator < smaller.denominator) return  ` ${bigger.string}sh`;
-        return !smaller ? ' st' : ` ${smaller.string}st`;
+        if (!bigger.numerator) return reduceObj(1, 1, 'sh');
+        if (bigger.denominator < smaller.denominator)
+          return  reduceObj(bigger.numerator, bigger.denominator, `sh`);
+
+        return !smaller ? reduceObj(smaller.numerator, smaller.denominator, 'st') :
+                  reduceObj(smaller.numerator, smaller.denominator, `st`);
       }
-      const string = ` ${numerator}/${denominator}`
-      if (string.match(/undefined/)) {
-        console.log('here');
-      }
-      return info ? {numerator, denominator, string} : string;
+      return reduceObj(numerator, denominator, '');
     }
 
     //TODO: This could easily be more efficient.... bigger fish.
@@ -151,9 +153,15 @@ class Measurement {
       if (nan) return NaN;
       const obj = fractionEquivalent(standardDecimal, accuracy);
       if (obj.integer === 0 && obj.numerator === 0) return '0';
-      const integer = obj.integer !== 0 ? obj.integer : '';
+      let integer = Math.abs(obj.integer !== 0 ? obj.integer : 0);
 
-      return `${integer}${reduce(obj.numerator, obj.denominator)}`;
+      const reduction = reduce(obj.numerator, obj.denominator);
+      const mag = standardDecimal > 0 ? '' : '-'
+      if (reduction.addOne) integer += 1;
+      const frac = reduction.numerator === 0 ?
+                      '' : `${reduction.numerator}/${reduction.denominator}`
+      const str = reduction.str ? `${frac}${reduction.str}` : frac;
+      return mag + (integer || !frac ? (str ? `${integer} ${str}` : `${integer}`) : (str ? str : 0));
     }
     this.standardUS = (accuracy) => this.fraction(accuracy, convertMetricToUs(decimal));
 

@@ -9,16 +9,16 @@
       <th>Shelves</th>
       <th>Notes</th>
     </tr>
-    <tr:t repeat='cabInfo in cabinetInfos' class='btm-border-barely-visible'>
-      <td>{{cabInfo.cabinet.groupIndex()}}</td>
-      <td>{{cabInfo.cabinet.name()}}</td>
-      <td>{{Utils.display.demensions(cabInfo.cabinet.position().demension())}}</td>
-      <td>{{cabInfo.cabinet.value('showLeft.type')}}</td>
-      <td>{{cabInfo.cabinet.value('showRight.type')}}</td>
-      <td>{{cabInfo.cabinet.value('showLeft.endStyle')}}</td>
-      <td>{{cabInfo.cabinet.value('showRight.endStyle')}}</td>
-      <td>{{Utils.count.shelves(cabInfo.cabinet)}}</td>
-      <td class='align-left'>{{Utils.textToHtml(cabInfo.cabinet.notes())}}</td>
+    <tr:t repeat='cabinet in cabinets' class='btm-border-barely-visible'>
+      <td>{{cabinet.groupIndex()}}</td>
+      <td>{{cabinet.name()}}</td>
+      <td>{{Utils.display.demensions(cabinet.position().demension())}}</td>
+      <td>{{cabinet.value('showLeft.type')}}</td>
+      <td>{{cabinet.value('showRight.type')}}</td>
+      <td>{{cabinet.value('showLeft.endStyle')}}</td>
+      <td>{{cabinet.value('showRight.endStyle')}}</td>
+      <td>{{Utils.count.shelves(cabinet)}}</td>
+      <td class='align-left'>{{Utils.textToHtml(cabinet.notes())}}</td>
     </tr:t>
   </table>
 </div>

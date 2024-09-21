@@ -145,7 +145,8 @@ class ToleranceMap {
 
     function averageObject(list) {
       const obj = {};
-      const attrs = Object.keys(attributeMap);
+      const attrs = tolerance.attributes();
+      const absOraw = absoluteValue === true ? v=>Math.abs(v) : v=>v;
       for (let index = 0; index < attrs.length; index++) {
         Object.pathValue(obj, attrs[index], 0);
       }
@@ -154,7 +155,7 @@ class ToleranceMap {
         for (let aIndex = 0; aIndex < attrs.length; aIndex++) {
           const path = attrs[aIndex];
           const currTotal = Object.pathValue(obj, path);
-          const value = Object.pathValue(list[index], path);
+          const value = instance.tolerance().bounds[path](list[index]).value;
           const addValue = value === 0 ? 0 : value / list.length;
           if (addValue != 0) Object.pathValue(obj, path, currTotal + addValue);
           total += addValue;
@@ -171,7 +172,7 @@ class ToleranceMap {
 
     this.distance = (elem1, elem2) => {
       const maxDist = 0;
-      const attrs = Object.keys(attributeMap);
+      const attrs = tolerance.attributes();
       for (let aIndex = 0; aIndex < attrs.length; aIndex++) {
         const path = attrs[aIndex];
         const val1 = Object.pathValue(elem1, path);
@@ -185,7 +186,7 @@ class ToleranceMap {
 
     const filterAlreadyFound = (spokenFor, onDeck) => (e) => {
       const hash = tolerance.elemHash(e);
-      return !spokenFor[hash] && !onDeck[hash];
+      return !spokenFor[hash] && (!onDeck || !onDeck[hash]);
     }
 
     this.group = () => {
@@ -196,24 +197,23 @@ class ToleranceMap {
       while (values.length > 0) {
         const elem = values[0];
         const onDeck = {};
+
         let newMatches = this.matches(elem)
-                          .filter(filterAlreadyFound(spokenFor, onDeck));
+                          .filter(filterAlreadyFound(spokenFor));
         newMatches.forEach(e => onDeck[tolerance.elemHash(e)] = true);
-        let moreMatchesFound = true;
-        while(moreMatchesFound && newMatches.length) {
-          const startMatches = this.matches(newMatches[0])
-                                .filter(filterAlreadyFound(spokenFor, onDeck));
-          const endMatches = this.matches(newMatches[newMatches.length - 1])
-                                .filter(filterAlreadyFound(spokenFor, onDeck));
-          if (startMatches.length > 0 && endMatches.length > 0) {
-            if (this.distance(startMatches[0], endMatches[endMatches.length - 1]) < 3) {
-              newMatches = startMatches.concat(newMatches.concat(endMatches));
-              newMatches.forEach(e => onDeck[tolerance.elemHash(e)] = true);
-              moreMatchesFound = true;
-            } else moreMatchesFound = false;
+        const startMatches = this.matches(newMatches[0])
+                              .filter(filterAlreadyFound(spokenFor, onDeck));
+        const endMatches = this.matches(newMatches[newMatches.length - 1])
+                              .filter(filterAlreadyFound(spokenFor, onDeck));
+        if (startMatches.length > 0 && endMatches.length > 0) {
+          if (this.distance(startMatches[0], endMatches[endMatches.length - 1]) < 3) {
+            newMatches = startMatches.concat(newMatches.concat(endMatches));
           }
-          else moreMatchesFound = false;
         }
+        if (newMatches.length === 0) {
+          throw new Error('There should always be atleast one Match');
+        }
+
         const group = bestGroup(newMatches);
         for (let index = 0; index < group.length; index++) {
           spokenFor[tolerance.elemHash(group[index])] = true;

@@ -14,7 +14,7 @@ module.exports = (assembly, environment) => {
   const propConfig = environment.propertyConfig;
   const props = Utils.property.set(assembly, environment, 'Guides');
   const innerPoly = sectionUtils.innerPoly.copy();
-  const coverInfo = sectionUtils.coverInfo().copy();
+  const coverInfo = sectionUtils.coverInfo();
   const depth = getDrawerDepth(sectionUtils.drawerDepth());
   const normal = coverInfo.biPolygon.normal();
   const offsetVect = normal.scale(-coverInfo.backOffset);

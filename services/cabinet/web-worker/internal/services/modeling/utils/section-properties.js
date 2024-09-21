@@ -144,31 +144,6 @@ class SectionPropertiesUtil {
 
     this.normal = () => this.coverInfo().biPolygon.normal();
 
-    function adjustPoints(point1, point2) {
-      const c = spDto.linkListFind('parentAssembly', pa => pa.parentAssembly === undefined);
-      const cDems = c.position.current.demension;
-      // const divider = instance.divider();
-      // const panelThickness = divider.panelThickness();
-      const jointOffset = spDto.dividerJoint.maleOffset;
-      const vert = spDto.verticalDivisions;
-      const right = vert ? spDto.bottom() : spDto.right();
-      const left = vert ? spDto.top() : spDto.left();
-      let maxLen = cDems.x + cDems.y + cDems.z;
-      if (!right.id.startsWith('DividerSection')) {
-        Line3D.adjustDistance(point1, point2, maxLen, true);
-        maxLen *= 1.5;
-      } else {
-        const length = point1.distance(point2) + jointOffset - right.divider().panelThickness/2;
-        Line3D.adjustDistance(point1, point2, length, true);
-      }
-      if (!left.id.startsWith('DividerSection')) {
-        Line3D.adjustDistance(point2, point1, maxLen, true);
-      } else {
-        const length = point1.distance(point2) + jointOffset - left.divider().panelThickness/2;
-        Line3D.adjustDistance(point2, point1, length, true);
-      }
-    }
-
     let dvInfo;
     this.dividerInfo = (panelThickness) => {
       if (dvInfo === undefined) {
@@ -181,18 +156,17 @@ class SectionPropertiesUtil {
         const outer = coordinates.outer;
         const point1 = this.outerPoly.vertex(spDto.verticalDivisions ? 1 : 3);
         const point2 = this.outerPoly.vertex(2);
-        // adjustPoints(point1, point2);
         let depthVector = normal.scale(depth);
         let heightVector = new Line3D(point1, point2).vector().unit();
         let thicknessVector  = depthVector.crossProduct(heightVector);
 
-        const normals = spDto.divider().divider().position.current.normals;
+        const normals = spDto.divider().position.current.normals;
         normals.y = heightVector; normals.x = depthVector.unit(); normals.z = thicknessVector.unit().inverse();
 
         const point3 = point2.translate(depthVector, true);
         const point4 = point1.translate(depthVector, true);
         const points = [point1, point2, point3, point4];
-        const offset = spDto.divider().divider().thickness / 2;
+        const offset = spDto.divider().thickness / 2;
         dvInfo = BiPolygon.fromPolygon(new Polygon3D(points), offset, -offset);
       }
       return dvInfo;
@@ -288,19 +262,22 @@ function buildPanels(sectionUtil, env) {
 }
 
 const built = {};
-SectionPropertiesUtil.instance = (rMdto, environment) => {
+const dataPath = (assem) => 'proccessData.SectionPropertiesUtil.' + assem.id;
+SectionPropertiesUtil.instance = (rMdto, env) => {
   let secProps = rMdto.find.up(/_S[0-9]{1,}$/);
   let rootHash = rMdto.find.root().hash;
-  if (built[secProps.id] === undefined || built[secProps.id].rootHash !== rootHash) {
-    built[secProps.id] = new SectionPropertiesUtil(secProps, environment);
-    built[secProps.id].rootHash = rootHash;
+  const path = dataPath(secProps);
+  if (env.pathValue(path) === undefined || env.pathValue(path).rootHash !== rootHash) {
+    const secPropsUtil = new SectionPropertiesUtil(secProps, env);
+    secPropsUtil.rootHash = rootHash;
+    env.pathValue(path, secPropsUtil);
   }
-  if (built[secProps.id].isRoot) buildPanels(built[secProps.id], environment);
-  return built[secProps.id];
+  if (env.pathValue(path).isRoot) buildPanels(env.pathValue(path), env);
+  return env.pathValue(path);
 }
 
-SectionPropertiesUtil.stdCoverObject = (rMdto, environment) => {
-  const info = SectionPropertiesUtil.instance(rMdto, environment).coverInfo(rMdto);
+SectionPropertiesUtil.stdCoverObject = (rMdto, env) => {
+  const info = SectionPropertiesUtil.instance(rMdto, env).coverInfo(rMdto);
   rMdto.position.current.normals = info.normals;
   return info.biPolygon;
 }

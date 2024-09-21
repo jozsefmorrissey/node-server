@@ -29,20 +29,31 @@ class Divider extends Assembly {
     const pFront = new Panel(':f', 'Front');
     const pBack = new Panel(':b', 'Back');
     pFull.normals(false, {DETERMINE_FROM_PARENT: true});
-    pFront.normals(false, {DETERMINE_FROM_PARENT: true});
-    pBack.normals(false, {DETERMINE_FROM_PARENT: true});
+    pFront.normals(false, {DETERMINE_FROM_MODEL: true});
+    pBack.normals(false, {DETERMINE_FROM_MODEL: true});
     const frame = new Frame('fr', 'Frame');
+    frame.normals(false, {DETERMINE_FROM_MODEL: true});
     frame.parentAssembly(this);
 
-    const isThisFrontPanel = (a) => a === pFull || pFront === a;
-    const notThisFrontPanel = (a) => !isThisFrontPanel(a);
+
+    const notThisFrontPanel = (a) => this.hasFrame() && !isThisFrontPanel(a);
     const isDividerPart = (a) => a.parentAssembly() && a.parentAssembly().constructor.name === 'Divider';
-    const isFrontPanel = (a) => isDividerPart(a) && a.match(/:(full|f)/);
-    const isFrame = (a) => isDividerPart(a) && a.constructor.name === 'Frame';
+    const notThisFrame = (a) => frame !== a;
+    const isFrontPanel = (a) => isDividerPart(a) && a.match(/:(full|f)$/);
     const isFrontPanelWFrame = (a) => isFrontPanel(a) && a.parentAssembly().hasFrame();
     const isFrontPanelWOFrame = (a) => isFrontPanel(a) && !a.parentAssembly().hasFrame();
-    this.addDependencies(new Dado(isFrontPanel, isFrame, notThisFrontPanel, 'FramePanelJoint'));
-    this.addDependencies(new Dado(isFrontPanel, isFrame, notThisFrontPanel, 'FramePanelJoint'));
+    const isNeigbor = (a) => notThisFrame(a) && isDividerPart(a) && isFrame(a) && this.neighbors().indexOf(a.parentAssembly()) !== -1;
+
+
+
+    const isThisFrame = (a) => a === frame;
+    const isThisFrontPanel = (a) => a === pFull || pFront === a;
+
+    const framePanelJoint = new Dado(isThisFrontPanel, isThisFrame, null, 'FramePanelJoint');
+    framePanelJoint.full.female(true);
+    const frameOtherPanelJoint = new Dado(isFrontPanel, isThisFrame, null, 'FrameOtherPanelJoint');
+    frameOtherPanelJoint.full.male(false);
+    this.addDependencies(framePanelJoint, frameOtherPanelJoint);
 
     const parts = [pFull, pFront, pBack];
     this.possibleParts = () => parts.concat(frame);
@@ -137,6 +148,13 @@ class Divider extends Assembly {
         default: return parts.slice(0,1).concat(active);
       }
     }
+
+    let sectionProps = [];
+    this.sectionProperties = (secProps) => sectionProps;
+    this.sectionProperties.add = (secProps) => sectionProps.push(secProps);
+
+    this.neighbors = () =>
+      sectionProps.map(s => s.borders.neighbors(this)).concatElements();
 
     this.getSubassemblies = (childrenOnly) => {
       const children = activeParts().concat(Object.values(this.subassemblies));

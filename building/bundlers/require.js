@@ -202,7 +202,7 @@ class RequireJS {
       Object.keys(scripts).forEach((path) => {
         const name = path.replace(nameReg, '$2').toLowerCase();
         if (name === fileName) {
-          guesses.push(determineRelativePath(currFile, path));
+          guesses.push('??' + determineRelativePath(currFile, path));
         }
       });
       return guesses;

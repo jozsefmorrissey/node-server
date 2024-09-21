@@ -38,21 +38,6 @@ new Screw();
 const Panel = require('./assemblies/panel.js');
 new Panel();
 
-// const PartitionSection = require('./assemblies/section/partition/sections/divider.js');
-// new PartitionSection();
-//
-// const DividerSection = require('./assemblies/section/partition/partition');
-// new DividerSection();
-//
-// const Section = require('./assemblies/section/section.js');
-// new Section();
-//
-// const DivideSection = require('./assemblies/section/space/sections/divide-section.js');
-// new DivideSection();
-//
-// const OpeningCoverSection = require('./assemblies/section/space/sections/open-cover/open-cover.js');
-// new OpeningCoverSection();
-
 const DoorSection = require('./assemblies/section/sections/door.js');
 new DoorSection();
 
@@ -67,9 +52,6 @@ new FalseFrontSection();
 
 const PanelSection = require('./assemblies/section/sections/panel.js');
 new PanelSection();
-
-// const SpaceSection = require('./assemblies/section/space/space.js');
-// new SpaceSection();
 
 const Cutter = require('./assemblies/cutter.js');
 new Cutter();

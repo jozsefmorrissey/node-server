@@ -83,6 +83,11 @@ Function.safeStdLibAddition(Function, 'AsyncRunIgnoreSuccessPrintError', functio
   afunc(args).then(() => {}, (e) => console.error(e));
 }, true);
 
+Function.safeStdLibAddition(Function, 'Arguments', function() {
+  const argumentReg = /^(function|)[^(]*?\(([^)]*?)\)\s*/;
+  return this.toString().match(argumentReg)[2].split(/\s*,\s*/);
+});
+
 class EventFunction {
   constructor(event, list) {
     const add = (func, orderIndex) => {
@@ -717,11 +722,19 @@ Function.safeStdLibAddition(Array, 'removeAll', function (arr) {
 Function.safeStdLibAddition(Array, 'removeWhere', function (func) {
   for (let index = 0; index < this.length; index += 1) {
     if (func(this[index])) {
-      this.remove(this[index]);
-      index--;
+      this.splice(index--, 1)
     }
   }
 });
+
+Function.safeStdLibAddition(Array, 'findIndicies', function (func) {
+  const indicies = [];
+  for (let index = 0; index < this.length; index += 1) {
+    if (func(this[index])) indicies.push(index);
+  }
+  return indicies;
+});
+
 
 Function.safeStdLibAddition(Array, 'deleteAll', function () {
   this.forEach((v, i) => delete this[i]);
@@ -1228,9 +1241,6 @@ function setGettersAndSetters(obj, options) {
               return options.values[attr];
             return obj.defaultGetterValue(attr);
           }
-          if (attr === 'capMale' && value) {
-            console.log('here')
-          }
           return options.values[attr] = value;
         });
       }
@@ -1376,8 +1386,33 @@ function intervalFunction(callerId, intervalOptional, ...args) {
   lastTimeStamps[callerId] = thisTime;
 }
 
+const logData = {};
+function logarithmic(callerId, baseOptional, ...args) {
+  let base = baseOptional;
+  if (arguments.length === 1) {
+    base = 10;
+    args = [callerId];
+  } else {
+    if (!Number.isFinite(base) || base < 2) {
+      base = 10;
+      args = [baseOptional].concat(args);
+    }
+  }
+  if (!logData[callerId]) logData[callerId] = {base};
+  if (!logData[callerId].count) {
+    logData[callerId].count  = 1;
+    this(1, ...args);
+  } else {
+    count = ++logData[callerId].count;
+    const log = Math.log(count)/Math.log(logData[callerId].base);
+    if (log === Math.roundTo(log)) this(count, ...args);
+  }
+}
+logarithmic.reset = (callerId) => logData[callerId] && (logData[callerId].count = 0)
+
 Function.safeStdLibAddition(Function, 'subtle',   intervalFunction);
 Function.safeStdLibAddition(Function, 'lastCall',   lastCall);
+Function.safeStdLibAddition(Function, 'logarithmic',   logarithmic);
 
 Function.safeStdLibAddition(String, 'foreach', function (func) {
   const arr = [];

@@ -32,13 +32,19 @@ function extendFBSetToPoly(poly, frontBackSet, jointSettings, center) {
 }
 
 const big = 1000;//Number.MAX_SAFE_INTEGER/1000000;
+const jointXYoffset = (noneOoffsetObig) => {
+  if (noneOoffsetObig === true) return;
+  if (noneOoffsetObig instanceof Object) return noneOoffsetObig;
+  return {x: big, y: big};
+}
 
-const cutterFurthestZPoly = (femalePolyInfo, vertex, dist) => () => {
+const cutterFurthestZPoly = (femalePolyInfo, vertex, dist, noneOoffsetObig) => () => {
   const femalePolyObj = femalePolyInfo();
   if (femalePolyObj === null) return;
   const index = vertex ? furthestIndex(femalePolyObj, vertex) :  0;
   const multiplier = vertex ? 1 : -1;
-  return BiPolygon.fromPolygon(femalePolyObj.z[index], dist || 0, multiplier * big, {x: big, y: big}).model();
+  const offset = jointXYoffset(noneOoffsetObig);
+  return BiPolygon.fromPolygon(femalePolyObj.z[index], dist || 0, multiplier * big, offset).model();
 }
 
 const closestIndex = (femalePolyObj, vertex) =>
@@ -46,12 +52,13 @@ const closestIndex = (femalePolyObj, vertex) =>
 const furthestIndex = (femalePolyObj, vertex) =>
   femalePolyObj.z[0].distance(vertex) < femalePolyObj.z[1].distance(vertex) ? 1 : 0;
 
-const cutterClosestZPoly = (femalePolyInfo, vertex, dist) => () => {
+const cutterClosestZPoly = (femalePolyInfo, vertex, dist, noneOoffsetObig) => () => {
   const femalePolyObj = femalePolyInfo();
   if (femalePolyObj === null) return;
   const index = vertex ? closestIndex(femalePolyObj, vertex) :  0;
   const multiplier = vertex ? -1 : 1;
-  return BiPolygon.fromPolygon(femalePolyObj.z[index], dist || 0, multiplier*big, {x: big, y: big}).model();
+  const offset = jointXYoffset(noneOoffsetObig);
+  return BiPolygon.fromPolygon(femalePolyObj.z[index], dist || 0, multiplier*big, offset).model();
 }
 
 const offsetZpolyCutter = (femalePolyInfo, index, dist1, dist2) => () => {
@@ -103,7 +110,7 @@ apply.Dado = (assem, joint, femalePolyInfo, frontBackSet, env) => {
     jointCutters = [];
   } else {
     cookie = [cutterFurthestZPoly(femalePolyInfo, center)];
-    jointCutters = [cutterClosestZPoly(femalePolyInfo, center, -joint.eval.maleOffset)];
+    jointCutters = [cutterClosestZPoly(femalePolyInfo, center, -joint.eval.maleOffset, !joint.full.male)];
   }
 
   // console.log('//female\n' + femalePolyObj.z.map(p => p.toDrawString('red')).join('\n') +
@@ -118,7 +125,7 @@ apply.Butt = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   const femalePolyObj = femalePolyInfo();
   const center = new Vertex3D(env.modelInfo.model[assem.id].mean());
   assem.jointSettings.directions.center = center;
-  extendFBSetToPoly(femalePolyObj.z[furthestIndex(femalePolyObj, center)], frontBackSet, assem.jointSettings);
+  if (joint.autoExtend) extendFBSetToPoly(femalePolyObj.z[furthestIndex(femalePolyObj, center)], frontBackSet, assem.jointSettings);
   if (femalePolyObj === null) return;
   if (!sideIntersectsPoly(assem, femalePolyObj, frontBackSet)) {
     return;
@@ -133,7 +140,7 @@ apply.Butt = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   const mateWith = possibleTargets[0].p;
 
   assem.jointSettings.directions.center = center;
-  extendFBSetToPoly(mateWith, frontBackSet, assem.jointSettings);
+  if (joint.autoExtend) extendFBSetToPoly(mateWith, frontBackSet, assem.jointSettings);
   cookie = [cutterFurthestZPoly(femalePolyInfo, center, 0)];
   jointCutters = [cutterClosestZPoly(femalePolyInfo, center, 0)];
 
@@ -217,5 +224,23 @@ apply.ShelveJoint = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   //             '\n\n//Far side cutter\n' + cookie[0]().toDrawString('green') +
   //             '\n//Joint cutter\n' + jointCutters[0]().toDrawString('yellow'));
   return {joint: jointCutters, cookie};
+}
+
+apply.PlayJoint = (assem, joint, femalePolyInfo, frontBackSet, env) => {
+  const femalePolyObj = femalePolyInfo();
+  if (femalePolyObj === null) return;
+  if (!sideIntersectsPoly(assem, femalePolyObj, frontBackSet)) {
+    return;
+  }
+  jointCutter = () => {
+    const csg = env.getModel(femalePolyObj.assem, 'cut').clone();
+    csg.scale(-joint.maleOffset, -joint.maleOffset, -joint.maleOffset, true);
+    return csg;
+  }
+  // console.log('//female\n' + femalePolyObj.z.map(p => p.toDrawString('red')).join('\n') +
+  //             '\n\n//male\n' + frontBackSet.map(p => p.toDrawString()).join('\n') +
+  //             '\n\n//Far side cutter\n' + cookie[0]().toDrawString('green') +
+  //             '\n//Joint cutter\n' + jointCutters[0]().toDrawString('yellow'));
+  return {joint: [jointCutter], cookie: []};
 }
 module.exports = apply;

@@ -7,7 +7,8 @@ class SlideShow {
     let speed = 2000;
     let slideIndex = -1;
     let _slides;
-    this.length = () => slideDataList ? slideDataList.length : 0;
+    this.data = () => slideDataList || (slideDataList = (_slides || []).map(s => parse(s)));
+    this.length = () => this.data().length;
     const len = this.length;
     this.playing = () => playerId !== null;
     CustomEvent.all(this, 'show', 'play', 'pause')
@@ -15,12 +16,11 @@ class SlideShow {
     const validIndex = i => i < 0 ? len() : (i >= len() ? 0 : i);
     this.slide = (i, lines) => {
       if (!Number.isFinite(i)) i = slideIndex;
-      return (lines === true ? _slides : slideDataList)[validIndex(i)];
+      return (lines === true ? _slides : this.data())[validIndex(i)];
     }
 
     this.slides = (slides) => {
       if (slides) {
-        slideDataList = slides.map(s => parse(s));
         _slides = slides;
       }
       return slides;
@@ -40,7 +40,7 @@ class SlideShow {
           slideIndex++;
           show(this.slide());
           this.trigger.show(this);
-          if (slideIndex >= slideDataList.length) slideIndex = 0;
+          if (slideIndex >= this.length()) slideIndex = 0;
         }
         setTimeout(() => this.play(id), speed, 50);
       }

@@ -71,6 +71,7 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 - userFriendlyId() - Cabinet specific unique indexed identifier (for display purposes)
 #### Modeling Flags
 - part() - only parts will be modeled.
+- digital() - exsist solely for program processing.
 - included() - part is is included in model
 - allModels() - to be included in all ModelingCollections
 - composite() - children.length > 0

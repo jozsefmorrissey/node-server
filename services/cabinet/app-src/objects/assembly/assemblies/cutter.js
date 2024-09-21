@@ -14,6 +14,7 @@ class Cutter extends Assembly {
     this.jointSettings.female(false)
     this.jointSettings.extend(false)
     this.jointSettings.extendTo(false)
+    this.digital(true);
   }
 }
 Cutter.abbriviation = 'cut';

@@ -126,7 +126,7 @@ class Vertex3D {
   }
 }
 
-const tol = .001;
+const tol = .0001;
 Vertex3D.tolerance = new Tolerance({x: tol, y: tol, z: tol});
 Vertex3D.infinity = 1000000000;
 
