@@ -102,32 +102,27 @@ let ids = {
   parts: 'disp-canvas-p3d',
   layout: 'two-d-model',
   threeDmodel: 'three-d-model',
-
 }
-
-
 openTabId = ids.layout;
+const is = {};
+Object.keys(ids).forEach(k => is[k] = () => ids[k] === openTabId);
+
 function render() {
-  const isRoom = openTabId === ids.room;
-  const isCabinet = openTabId === ids.cabinet;
-  const isParts2D = openTabId === ids.parts2D;
-  const isParts = openTabId === ids.parts;
-  const isLayout = openTabId === ids.layout;
   const threeDmodel = du.id(ids.threeDmodel);
-  if (isRoom || isCabinet || isParts) {
+  if (is.room() || is.cabinet() || is.parts()) {
     threeDmodel.hidden = false;
-    if(isRoom) {
+    if(is.room()) {
       setTimeout(renderRoom);
-    } else if (isCabinet) {
+    } else if (is.cabinet()) {
       setTimeout(renderCabinet);
-    } else if (isParts) {
+    } else if (is.parts()) {
       setTimeout(renderParts);
     } else {
       throw new Error(`unkown display '${openTabId}'`);
     }
   } else {
     threeDmodel.hidden = true;
-    if (isLayout) {
+    if (is.layout()) {
       if (TwoDLayout.panZoom) TwoDLayout.panZoom.once();
       else {
         du.id(ids.layout).hidden = true;
@@ -135,14 +130,15 @@ function render() {
         switchTo(ids.cabinet);
         render();
       }
-    } else if (isParts2D) {
+    } else if (is.parts2D()) {
       threeView.update();
     } else {
       throw new Error(`unkown display '${openTabId}'`);
     }
   }
-
 }
+
+render.cabinet = () => (is.cabinet() || is.parts() || is.parts2D()) && render();
 
 const switchTo = (id) => {
   if (openTabId !== id) switchEvent.trigger(id);

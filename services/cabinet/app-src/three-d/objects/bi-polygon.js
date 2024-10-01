@@ -300,6 +300,11 @@ BiPolygon.fromPolygon = (polygon, distance1, distance2, offset) => {
   return poly;
 }
 
+BiPolygon.fromLimits = (vectsOvertsOlinesOpolysOcsgs) => {
+  const polys = Polygon3D.fromLimits(vectsOvertsOlinesOpolysOcsgs);
+  return new BiPolygon(polys[0], polys[1]);
+}
+
 BiPolygon.fromVectorObject =
     (width, height, depth, center, vectorObj) => {
       try {

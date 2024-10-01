@@ -77,7 +77,7 @@ class CabinetDisplay {
     const display = (value) => new Measurement(value).display();
     const getBody = (cabinet, $index) => {
       Global.target(cabinet);
-      if (expandList.activeKey() === $index) Canvas.render();
+      if (expandList.activeKey() === $index) Canvas.render.cabinet();
       if (cabinet instanceof SimpleModel) {
         return CabinetDisplay.simpleBodyTemplate.render({});
       } else {
@@ -216,6 +216,14 @@ class CabinetDisplay {
 
       console.log(Global.cabinet().hash());
     });
+
+    du.on.match('change', '.toe-kick-cab-cnt input', (elem) => {
+      const measurementInput = Lookup.get(elem.id);
+      const measurement = measurementInput.measurement();
+      const decimal = measurement.decimal();
+      const name = elem.name;
+      Global.cabinet().value(name, decimal);
+    })
   }
 }
 

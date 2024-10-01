@@ -31,16 +31,17 @@ add('Inset', Defs.is);
 add('Cabinet', Defs.style,Defs.fls,Defs.tid,Defs.dsc,Defs.rvibr,Defs.ddg,Defs.tkbw,Defs.tkd,
                 Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,Defs.ddd,Defs.crh);
 add('Panel', Defs.pt14,Defs.pt12,Defs.pt34,Defs.pt18,Defs.vpt);
-add('Guides', Defs.dbtos,Defs.dbsos,Defs.dbbos);
+add('Guides', Defs.dbtos,Defs.dbsos,Defs.dbbos,Defs.dbn,Defs.dbid, Defs.dbdepths);
 add('DoorAndFront', Defs.daffrw,Defs.dafip)
 // add('Door', [];
-add('DrawerBox', Defs.dbst,Defs.dbbt,Defs.dbid,Defs.dbn);
+add('DrawerBox', Defs.dbst,Defs.dbbt);
 add('DrawerFront', Defs.mfdfd);
 // add('Frame', Defs.fw,Defs.ft);
 add('Handle', Defs.c2c,Defs.proj);
 add('Hinge', Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol);
 // add('Opening', []);
 add('Divider', Defs.dpt,Defs.dft,Defs.dfw,Defs.dpw,Defs.sc);
+add('Material', Defs.linw, Defs.munit);
 
 
 
@@ -72,17 +73,20 @@ class Properties {
       if (assemProps[name] === undefined) return null;
       Object.keys(assemProps[name]).forEach(k => set[k] = config[k]);
     }
-    assemProperties.values = (resolve) => {
+    assemProperties.values = (resolve, allProperties) => {
         const values = {};
         const runFunc = resolve instanceof Function;
-        Object.keys(config).forEach(k => {
-          if (config[k].value) {
-            const raw = config[k].value();
+        const conf = allProperties ? {}.merge(allProps, config) : config;
+        Object.keys(conf).forEach(k => {
+          if (conf[k] && conf[k].value) {
+            const raw = conf[k].value();
             const resolved = runFunc ? resolve(raw) : raw;
             values[k] = Number.isNaN(resolved) ? raw : resolved;
             const set = propertyToSetMap[k];
             if(values[set] === undefined) values[set] = [];
             values[set].push(k);
+          } else {
+            console.log('her');
           }
         });
         return values;

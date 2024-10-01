@@ -29,7 +29,6 @@ DoorSection.fromJson = (json) => {
   return new DoorSection(door);
 }
 
-DoorSection.abbriviation = 'drs';
 SectionProperties.addSection(DoorSection);
 
 module.exports = DoorSection

@@ -11,6 +11,8 @@ const Lookup = require('../../object/lookup.js');
 /** Supported html "directive"
   <input class='measurement-input' name='crownHeight'
             decimal='4.3' units='inch,cm,mm'>
+<measurement-input name='crownHeight'
+          decimal='4.3' units='inch,cm,mm'/>
 **/
 class MeasurementInput extends Input {
   constructor(props) {
@@ -88,10 +90,11 @@ function convert(elem) {
 function initialize(elem) {
   const decimal = elem.getAttribute('decimal');
   const name = elem.getAttribute('name');
-  const label = elem.getAttribute('label') || (name && name.toSentance());
+  let label = elem.getAttribute('label');
+  if (label === null) label = (name && name.toSentance());
   let units = elem.getAttribute('units');
   if (units) units = units.split(',');
-  else units = [];
+  else units = undefined;
   let input = new MeasurementInput({id: elem.id, label, name, units});
   input.setValue(decimal, false);
   elem.outerHTML = input.html();
@@ -99,13 +102,15 @@ function initialize(elem) {
 
 function setValue(elem) {
   let input = MeasurementInput.get(elem.id);
-  if (elem.getAttribute('unit') !== input.unit()) convert(elem);
+  let unit = elem.getAttribute('unit');
+  if (unit === null || unit === 'true') unit = true; if (unit === 'false') unit = false;
+  if (unit && unit !== input.unit()) convert(elem);
   const container = du.find.up('[input-id]', elem);
   if (input === undefined) {
     input = new MeasurementInput({value: elem.value});
     elem.id = input.id();
   } else {
-    input.setValue(elem.value, elem.getAttribute('unit') || true);
+    input.setValue(elem.value, unit);
   }
 
   const id = du.find.up.attribute('lookup-id', elem);
@@ -121,6 +126,6 @@ function setValue(elem) {
 
 du.on.match('click', '.measurement-input-cnt [type="radio"]', convert);
 du.on.match('change,focusout', '.measurement-input', setValue);
-du.on.match('create', '.measurement-input[decimal]', initialize);
+du.on.match('create', '.measurement-input[decimal],measurement-input[decimal]', initialize);
 
 module.exports = MeasurementInput;

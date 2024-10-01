@@ -16,8 +16,14 @@ function addLink (model, name) {
   link.href = URL.createObjectURL(stl.binary.file());
   link.download = name.toKebab() + '.stl';
 
-  document.body.append(link);
+  // document.body.append(link);
   link.click();
+  // link.remove();
+}
+
+function addLinks(modelOmodels, name) {
+  if (modelOmodels instanceof CSG) addLink(modelOmodels, name);
+  Object.keys(modelOmodels).forEach(k => addLink(modelOmodels[k], k));
 }
 
 const models = {};
@@ -294,6 +300,32 @@ models['Well Spacer'] =  (width, length, depth, slot, lipOverlay, lipThickness, 
   return well.union(lip).subtract(slotCutter);
 };
 
+models['screen door latch spacer'] = () =>{
+  let offset = 2.54/2 - 2.54/16;
+  let stepLen = 5*2.54/16;
+  let stepHeight = 2.54/2 + 2.54/16;
+  let length = 5*2.54/2;
+  let width = 3*2.54/4;
+  const spacer = new CSG.cube({radius: [width/2,length/2,offset/2]});
+  const step = new CSG.cube({radius: [(width - stepLen)/2, length/2, stepHeight/2],
+                        center: [width/2 - (width - stepLen)/2, 0, offset/2 + stepHeight/2]});
+  let topScrewHole = new CSG.cylinder({slices: 8, start: [.2,0,-stepHeight - offset],
+                                    radius: 3*2.54/32, end: [.2,0,stepHeight + offset]});
+  let topScrewResess = new CSG.cylinder({slices: 8, start: [.2,0, -offset/2],
+                                    radius: 5*2.54/32, end: [.2,0, -offset/2 + 3*2.54/16 ]});
+  topScrewHole = topScrewHole.union(topScrewResess);
+  const bottomScrewHole = topScrewHole.clone();
+  topScrewHole.translate({x:0,y:length/2 - 2.54/4,z:0});
+  bottomScrewHole.translate({x:0,y:length/-2 + 2.54/4,z:0});
+  return spacer.union(step).subtract(topScrewHole).subtract(bottomScrewHole);
+}
+
+models['screen door latch'] = () =>{
+  const barRadius = 5*2.54/32 - .01;
+  const bar = new CSG.cube({radius: [barRadius, barRadius, 3]});
+  return bar;
+}
+
 const cnt = du.create.element('div');
 const controls = du.create.element('div', {style: 'float: left'});
 const display = du.create.element('div', {style: 'float: right', id: 'display'});
@@ -309,7 +341,7 @@ controls.append(argCnt);
 controls.append(downloadBtn);
 
 const inputValue = i => i.type === 'checkbox' ? i.checked : i.value;
-const model = () => {
+const getSelected = () => {
   let args = du.find.downAll('input', argCnt).map(inputValue);
   args = args.map(a => Boolean.is(a) ? a : Number.parseFloat(a));
   return models[select.value](...args);
@@ -317,8 +349,12 @@ const model = () => {
 viewer = new Viewer(new CSG(), 500, 500, 50);
 
 const updateModel = () => {
-  console.log(model().toDrawString())
-  viewer.mesh = model().toMesh();
+  const modelOmodels = getSelected();
+  modelList = modelOmodels instanceof CSG ? [modelOmodels] : Object.values(modelOmodels);
+  const model = new CSG();
+  modelList.forEach(m => model.polygons.concatInPlace(m.polygons));
+  console.log(modelList.map(m => m.toDrawString(String.color.next())).join('\n\n'));
+  viewer.mesh = model.toMesh();
   viewer.gl.ondraw();
 }
 
@@ -332,10 +368,10 @@ const updateArgs = () => {
 }
 
 const download = () => {
-  addLink(model(), select.value);
+  addLinks(getSelected(), select.value);
 }
 
-select.value = 'hingeRouterFence';
+select.value = 'screen door latch';
 
 du.on.match('change', 'input', updateModel);
 

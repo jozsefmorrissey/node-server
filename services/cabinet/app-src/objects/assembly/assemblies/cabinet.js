@@ -238,7 +238,6 @@ Cabinet.fromJson = (assemblyJson) => {
   linkSectionsToDividers(assembly);
   return assembly;
 }
-Cabinet.abbriviation = 'c';
 
 function getIntersectPoint(line, centerLine, right, dist, gap, noneAdjacent) {
   if (noneAdjacent) {

@@ -378,7 +378,7 @@ du.on.match('enter', '[member="snap-loc"][name="x"],[member="snap-loc"][name="y"
     selected ||= hoverin;
     selected.disconnect();
     const center = selected.center();
-    center[coord](value);
+    center[coord] = value;
     selected.move(center);
     // hovering = selected;
     snapLoc = null;
@@ -386,7 +386,7 @@ du.on.match('enter', '[member="snap-loc"][name="x"],[member="snap-loc"][name="y"
     du.find.closest('.fix-cnt', elem).hidden = false;
   } else {
     const center = snapLoc.center();
-    center[coord](value);
+    center[coord] = value;
     snapLoc.move(center);
   }
   panZ.once();

@@ -66,7 +66,8 @@ class Vertex3D {
       return new Vector3D(this.x, this.y, this.z);
     }
 
-    this.rotate = (rotations, center) => {
+    this.rotate = (rotations, center, doNotModify) => {
+      if (doNotModify) return this.clone().rotate(rotations, center);
       CSG.rotatePointAroundCenter(rotations, this, center);
       return this;
     }
@@ -123,6 +124,7 @@ class Vertex3D {
       const rnd = round(accuracy || .0000000000001);
       return `(${rnd(this.x)},${rnd(this.y)},${rnd(this.z)})`;
     }
+    this.toDrawString = this.toString;
   }
 }
 
@@ -208,15 +210,16 @@ Vertex3D.to2D = (vertices, x, y) => {
   return verts2D;
 }
 
-Vertex3D.radialSort2D = (verts, viewFrom, ccw, center, degreesOstartpoint) => {
-  const verts2D = [];
-  if (degreesOstartpoint instanceof Vertex3D)
-    degreesOstartpoint = degreesOstartpoint.viewFromVector(viewFrom).to2D('x', 'y');
+Vertex3D.radialSort2D = (verts, normal, ccw, center, degreesOstartpoint) => {
   center ||= Vertex3D.center(verts);
-  const mi = Vertex3D.mostInformation(verts);
-  viewFrom ||= mi.viewFrom;
-  center = center.viewFromVector(viewFrom).to2D(mi[0],mi[1]);
-  verts.forEach(v => verts2D.push(v.viewFromVector(viewFrom).to2D(mi[0], mi[1])) & (verts2D[verts2D.length - 1].V3D = v));
+  const coRotz = Vector3D.coDirectionalRotations([normal], [Vector3D.k]);
+
+  if (degreesOstartpoint instanceof Vertex3D)
+    degreesOstartpoint = degreesOstartpoint.rotate(coRotz, center, true).to2D('x','y');
+  const verts2D = verts.map(v => v.rotate(coRotz, center, true).to2D('x','y'));
+  center = center.to2D('x','y');
+  verts2D.forEach((v,i) => v.V3D = verts[i]);
+
   Line2d.radialSort(verts2D, ccw, center, degreesOstartpoint);
   return verts.copy(verts2D.map(v => v.V3D));
 }

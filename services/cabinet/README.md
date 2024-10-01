@@ -72,9 +72,10 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 #### Modeling Flags
 - part() - only parts will be modeled.
 - digital() - exsist solely for program processing.
+- hardware() - isHardware
 - included() - part is is included in model
 - allModels() - to be included in all ModelingCollections
-- composite() - children.length > 0
+- composite() - children(non-hardware).length > 0
 - jointSettings.male() - whether or not part should be used to remove joint material
 - jointSettings.female() - weather or not to remove applicable male joint material
 - jointSettings.extend() - weather or not to extend part to applicable female parts

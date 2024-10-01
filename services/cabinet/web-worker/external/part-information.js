@@ -13,14 +13,15 @@ class PartInformation {
     let order = orderOroomOgroupOcabinet;
     path.forEach(k => order[k] && (order = order[k]()));
     const id = order.id();
+    const hash = order.hash();
     const instance = this;
     this.id = String.random();
     this.order = () => order;
     this.finished = (tRuE) =>
       !!(tRuE === true ? (partInfo[id].finished = true) : partInfo[id] && partInfo[id].finished);
 
-    this.hashMap = (empty) => partInfo[id] && partInfo[id].hash === order.hash() ?
-    partInfo[id].hashMap : (partInfo[id] = {hash: order.hash(), hashMap: {order}});
+    this.hashMap = (empty) => partInfo[id] && partInfo[id].hash === hash ?
+    partInfo[id].hashMap : (partInfo[id] = {hash, partCount: 0, hashMap: {}}).hashMap;
 
     this.byCategory = (type) => {
       if (!this.finished()) return null;
@@ -54,10 +55,10 @@ class PartInformation {
     function initialize(info) {
       if (info.model) {
         info.model.part = {};
+        info.partsId = String.fromInt(partInfo[id].partCount++, String.range.upper);
         info.model.part[info.partId] = info.model.csg.clone();
         delete info.model.polygons;
       }
-      info.MATERIAL_UNIT = info.parts[0].MATERIAL_UNIT;
       return info;
     }
 
@@ -83,15 +84,11 @@ class PartInformation {
     }
     const eqSubtract = (csg1, csg2) => {
       csg1.center(csg2.center());
-      const csg1s = csg1.clone();
-      csg1s.explode(.001);
-      const remaining = csg2.subtract(csg1s);
+      const remaining = csg2.subtract(csg1);
       const eq = remaining.polygons.length === 0;
       if (!eq)
-        console.warn('verify Result');
-      const csg2s = csg2.clone();
-      csg2s.explode(.001);
-      const bothEq = csg1.subtract(csg2s).polygons.length === 0;
+        return console.warn('verify Result') || false;
+      const bothEq = csg1.subtract(csg2).polygons.length === 0;
       if (!bothEq)
         console.warn('verify Result');
       return bothEq;
@@ -128,18 +125,35 @@ class PartInformation {
           }
           return hashMap[hash].push(initialize(info));
         } else {
-          mergeParts(potentalMatches[0], info);
+          return mergeParts(potentalMatches[0], info);
         }
       }
     }
 
+    function addHardware(hardware, parentInfo) {
+      const demensions = hardware.demensions(parentInfo);
+      if (!hardware.composite()) {
+        let info = {
+          category: hardware.category(),
+          hardware: true,
+          demensions,
+          partId: hardware.id(),
+          partIds: [hardware.id()],
+          parts: [hardware]
+        }
+        parentInfo = infoHash(info);
+      }
+      hardware.hardware.forEach(h => addHardware(h, parentInfo));
+    }
+
     this.add = (info) => {
-      const id = info.id;
       info.parts = info.partIds.map(id => Lookup.get(id));
-      if (!info.model && !info.parts[0].outsourced())
+      const part = info.parts[0];
+      if (!info.model && !part.outsourced())
         console.warn('model was not returned');
       if (info.model) info.model.csg = CSG.fromPolygons(info.model.polygons, true);
-      infoHash(info);
+      info = infoHash(info);
+      part.hardware.forEach(h => addHardware(h, info));
     }
   }
 }

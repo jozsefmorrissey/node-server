@@ -142,7 +142,7 @@ class Measurement {
       }
       const diff1 = Math.abs(decimalValue) - ((numerator - fracObj.numerator) / denominator);
       const diff2 = (numerator / denominator) - Math.abs(decimalValue);
-      numerator -= diff1 < diff2 ? fracObj.numerator : 0;
+      numerator -= diff1 + .0001 < diff2 ? fracObj.numerator : 0;
       const integer = sign * Math.floor(numerator / denominator);
       numerator = numerator % denominator;
       return {integer, numerator, denominator};

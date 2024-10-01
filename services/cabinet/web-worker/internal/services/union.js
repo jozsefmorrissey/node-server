@@ -9,7 +9,7 @@ function unionAll(payload, environment) {
     const id = assemIds[index];
     if (!id.match(cutterReg)) {
       let model = environment.getModel(id, 'joined');
-      if (model) {
+      if (model && model.polygons.length > 0) {
         model = CSG.fromPolygons(model.polygons, true);
         model.setColors(...Color());
         csg = csg.union(model);

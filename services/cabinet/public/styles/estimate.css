@@ -136,7 +136,7 @@ body {
 }
 
 .cab-tab-cnt {
-  padding: 15pt;
+  padding: 2pt;
 }
 
 #order-select-cnt {
@@ -541,6 +541,11 @@ canvas {
 
 .center {
   text-align: center;
+  margin: auto;
+}
+
+.auto-fit {
+  width: fit-content;
   margin: auto;
 }
 

@@ -2,20 +2,23 @@
 const SimpleModels = require('../generic-models');
 const SectionPropertiesUtil = require('./section-properties');
 const Utils = require('./utils');
+const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
+const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
 
-function getDrawerDepth(depth) {
-  const adjustedDepth = (depth/2.54) - .5;
-  if (adjustedDepth < 3) return 0;
-  return Math.floor((adjustedDepth/3)) * 3 * 2.54;
+function drawerDepth(depth, guideDepths, assembly) {
+  const guideDepth = guideDepths.find(gd => gd.min <= depth && gd.max >= depth);
+  if (!guideDepth) return 0;
+  const drawerDepth = guideDepth.actual ? guideDepth.approx : depth - guideDepth.clearance;
+  return drawerDepth;
 }
 
-module.exports = (assembly, environment) => {
+const drawerBox = (assembly, environment) => {
   const sectionUtils = SectionPropertiesUtil.instance(assembly, environment);
   const propConfig = environment.propertyConfig;
   const props = Utils.property.set(assembly, environment, 'Guides');
   const innerPoly = sectionUtils.innerPoly.copy();
   const coverInfo = sectionUtils.coverInfo();
-  const depth = getDrawerDepth(sectionUtils.drawerDepth());
+  const depth = drawerDepth(sectionUtils.drawerDepth(), props.dbdepths, assembly);
   const normal = coverInfo.biPolygon.normal();
   const offsetVect = normal.scale(-coverInfo.backOffset);
   const sideOffset = props.dbsos;
@@ -25,5 +28,7 @@ module.exports = (assembly, environment) => {
   innerPoly.translate(offsetVect);
   assembly.position.current.normals = coverInfo.normals;
   const dbProps = Utils.property.set(assembly, environment, 'DrawerBox');
-  return SimpleModels.DrawerBox(innerPoly, normal, depth, dbProps);
+  return SimpleModels.DrawerBox(innerPoly, normal, depth, props.merge(dbProps));
 }
+
+module.exports = {drawerBox};

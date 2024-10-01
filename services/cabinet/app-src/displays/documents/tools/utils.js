@@ -76,10 +76,13 @@ Utils.printPolys = (csgs, colors) => {
   console.log(str);
 }
 
-Utils.display.materialUnits = (partList, thickness) => {
-  if (partList[0][0].constructor.MATERIAL_UNIT == 'Qty') return 'Qty';
-  return thickness;
+Utils.materialUnit = (part) => {
+  const munit = part.resolve('munit', true)[part.category()] || 'Qty';
+  const unit = munit.unit || munit;
+  const attribute = munit.attribute || munit;
+  return {unit, attribute};
 }
+
 
 const forEach = (part, selector, func) => {
   const assems = part.getSubassemblies();
@@ -94,17 +97,69 @@ Utils.count.shelves = (cabinet) => {
   return count;
 }
 
-Utils.display.materialArea = (partList) => {
-  if (partList[0][0].constructor.MATERIAL_UNIT == 'Qty')
-    return partList.map(list => list.length).sum();
+const firstOfNestedList = (nestedList => {
+  let target = nestedList;
+  while (Array.isArray(target)) target = target[0];
+  return target.parts[0];
+});
 
+Utils.display.material = (partList) => {
+  const part = firstOfNestedList(partList);
+  const {unit, attribute} = Utils.materialUnit(part);
+  const matFunc = Utils.display.material[unit.toLowerCase()] || Utils.display.material.qty;
+  return matFunc(partList);
+}
+Utils.display.material.unit = (partList, group) => {
+  const {unit, attribute} = Utils.materialUnit(firstOfNestedList(partList));
+  if (unit === 'Qty') return 'Qty';
+  return group;
+}
+
+Utils.display.material.qty = (infoOnestedList) => Array.isArray(infoOnestedList) ?
+  infoOnestedList.elements().sum(info => info.parts.length) :
+  infoOnestedList.parts.length;
+Utils.display.material.cubic = Utils.display.material.qty;
+Utils.display.material.set = Utils.display.material.qty;
+
+Utils.display.material.lin = (partList) => {
+  let length = 0;
+  for (let index = 0; index < partList.length; index++) {
+    const list = partList[index];
+    const qty = list.sum(info => info.parts.length);
+    length += qty * list[0].demensions.y;
+  }
+  return `${disp(length)} LIN`;
+}
+
+Utils.display.material.sq = (partList) => {
   let area = 0;
   for (let index = 0; index < partList.length; index++) {
     const list = partList[index];
-    const qty = list.length;
-    area += qty * Measurement.area([list.info.demensions]);
+    const qty = list.sum(info => info.parts.length);
+    area += qty * Measurement.area([list[0].demensions]);
   }
   return Measurement.display.area(area);
+}
+
+Utils.materialGroup = (info) => {
+  const part = info.parts[0];
+  const {unit, attribute} = Utils.materialUnit(part);
+  let sizeStr;
+  switch (unit) {
+    case 'Qty': sizeStr = `Qty:${String.random()}`; break;
+    case 'LIN':
+      const widths =  part.resolve('linw', true)[part.category()];
+      const width = info.demensions.x;
+      const bestWidth = !widths ? width : widths.find(p => p.value() > width - .0001).value();
+      sizeStr = `${disp(bestWidth)} X ${disp(info.demensions.z)}`;
+      break;
+    case 'SQ': sizeStr = disp(info.demensions.z); break;
+    case 'CUBIC': sizeStr = Utils.display.demensions(info.demensions); break;
+    case 'SET': sizeStr = disp(info.pathValue(attribute)); break;
+    default: throw new Error('Undefined Group: Howd that get in there...');
+  }
+  if (attribute !== unit) return `${unit}(${sizeStr})`;
+  return sizeStr;
 }
 
 Utils.textToHtml = (text) => {

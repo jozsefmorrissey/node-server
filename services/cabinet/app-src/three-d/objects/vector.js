@@ -1,7 +1,10 @@
 
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
+const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 
+const withinTol = new Tolerance(.00000001).within;
 
 function isZero(val) {
   return Vector3D.tolerance.bounds.i.within(val, 0);
@@ -38,7 +41,8 @@ class Vector3D {
     this.k = () => k;
 
     this.dominant = () => Math.abs(i) > Math.abs(j) ? (Math.abs(i) > Math.abs(k) ? 'i' :
-                            (Math.abs(k) > Math.abs(j) ? 'k' : 'j')) : 'j';
+                            (Math.abs(k) > Math.abs(j) ? 'k' : 'j')) :
+                            (Math.abs(j) > Math.abs(k) ? 'j' : 'k');
 
     this.magnitude = () => Math.sqrt(this.i()*this.i() + this.j()*this.j() + this.k()*this.k());
     this.magnitudeSQ = () => this.i()*this.i() + this.j()*this.j() + this.k()*this.k();
@@ -74,6 +78,10 @@ class Vector3D {
       const equivVect = new Vector3D(vector.i() * coef, vector.j() * coef, vector.k() * coef);
       return Vector3D.tolerance.within(equivVect, this);
     }
+
+    this.to2D = (i, j) => Vector3D.to2D([this], i, j)[0];
+    this.viewFromVector = (vector) => Vector3D.viewFromVector([this], vector)[0];
+
 
     this.toDrawString = (color, percision, center, scale) => {
       color ||= '';
@@ -199,6 +207,159 @@ Vector3D.mostInLine = (vectors, target) => {
   return closest.vector;
 }
 
+Vector3D.viewFromVector = (vectors, vector, filter) => {
+  const negitive = !vector.positive();
+  const orthoVects = [];
+  const runFilter = (typeof filter) === 'function';
+  for (let index = 0; index < vectors.length; index++) {
+    const u = vectors[index];
+    const projection = u.projectOnTo(vector);
+    let orthogonal = u.minus(projection).scale(negitive ? 1 : -1);
+    if (!runFilter || (runFilter && filter(orthogonal, vertex)))
+      orthoVects.push(orthogonal);
+  }
+  return orthoVects;
+}
+
+Vector3D.to2D = (vectors, i, j) => {
+  i ||= 'i';
+  j ||= 'j';
+  const verts2D = [];
+  for (let index = 0; index < vectors.length; index++) {
+    verts2D.push(new Line2d(null, new Vertex2d(vectors[index][i](), vectors[index][j]())));
+  }
+  return verts2D;
+}
+
+
+
+
+
+function get2dLines(ortho1, ortho2, pivot) {
+  if (pivot === 'i')
+    return [ortho1.to2D('j','k'), ortho2.to2D('j','k')];
+  if (pivot === 'j')
+    return [ortho1.to2D('k','i'), ortho2.to2D('k','i')];
+  if (pivot === 'k')
+    return [ortho1.to2D('i','j'), ortho2.to2D('i','j')];
+}
+
+const pivotVectors = {i: new Vector3D(1,0,0), j: new Vector3D(0,1,0), k: new Vector3D(0,0,1)};
+function determineRotation(unitLine, target, pivot, reverse) {
+  const pivotVec = pivotVectors[pivot];
+  const orthoLine = Vector3D.viewFromVector([unitLine], pivotVec)[0];
+  const orthoTar = Vector3D.viewFromVector([target], pivotVec)[0];
+  const twoDlines = get2dLines(orthoLine, orthoTar, pivot);
+  if (!twoDlines[0].isPoint() && !twoDlines[1].isPoint()) {
+    const degrees = Math.toDegrees(twoDlines[0].radians.sub(twoDlines[1]));
+    if (degrees !== 0 && degrees !== 360) {
+      const rotation = {};
+      rotation[pivot] = reverse ? degrees : -degrees;
+      return rotation;
+    }
+  }
+}
+
+const revPivots = ['k', 'j', 'i'];
+const pivots = ['i', 'j', 'k'];
+const checkAllAreParrelle = (align, alignTo) => {
+  let equal = true;
+  for (let index = 0; index < align.length; index++) {
+    if (!align[index].isParrelle(alignTo[index])) equal = false;
+  }
+  return equal;
+}
+
+const c = ['red', 'green', 'blue']
+const dotCmp = (alignTo) => (l, i) => Math.abs(l.dot(alignTo[i]));
+const alignToString = (align, unitLine, targetLine) => [unitLine ? unitLine.toString() : '', align.map((l,i) => l.toDrawString(c[i])).join('\n'),targetLine ? targetLine.toString() : ''].filter(l=>l).join('\n');
+const rotStr = (rot) => rot ? `(${rot.i||''},${rot.j||''},${rot.k||''})` : '';
+const rotationInfo = (len, aIndex, index, rot) => `// ${len} ${aIndex}${index} ${rotStr(rot)}`;
+const snapShotStr = (len, aIndex, index, rot, align, unitLine, targetLine) =>
+`${rotationInfo(len, aIndex, index, rot)}\n\n${alignToString(align, unitLine, targetLine)}\n`
+function determinRotations(align, alignTo, reverse) {
+  align = align.map(l => l.clone());
+  const rotations = [];
+  let cycles = 0;
+  let keepGoing = true;
+  let lastRotation;
+  const center = {x:0,y:0,z:0};
+  let axisCannotBeEqual;
+  let icl = {incorrect: [], correct: [], snapShots: []}
+  const dot = dotCmp(alignTo);
+  proccess:
+  while (keepGoing && cycles++ < 7) {
+    for (let aIndex = 0; aIndex < align.length; aIndex++) {
+      const unitLine = align[aIndex];
+      const targetLine = alignTo[aIndex];
+      const rotationLength = rotations.length;
+      for (let index = 0; index < pivots.length; index++) {
+        const pivot = (reverse ? revPivots : pivots)[index];
+        const rotation = determineRotation(unitLine, targetLine, pivot, reverse);
+        if (rotation && !Object.equals(lastRotation, rotation)) {
+          icl.snapShots.push(snapShotStr(icl.snapShots.length, aIndex, index, rotation, align, unitLine, targetLine));
+          align = align.map(l => reverse ? l.reverseRotate(rotation, center) : l.rotate(rotation, center));
+          const newRot = determineRotation(align[0], targetLine, pivot, reverse);
+          if (newRot) {
+            icl.incorrect.push({rotation});
+            align[0].rotate(newRot).toString()
+          } else {
+            icl.correct.push(rotation);
+          }
+          rotations.push(rotation);
+          lastRotation = rotation;
+        }
+        if (withinTol(align.sum(dot), alignTo.length)) break;
+      }
+      keepGoing = rotations.length !== rotationLength && align.map((l,i) => l.parrelle(alignTo[i])).contains(false);
+    }
+  }
+  icl.snapShots.push(snapShotStr(icl.snapShots.length, align.length, pivots.length, null, align));
+  if (icl.incorrect.length > 0) {
+    console.log.logarithmic('rotations were incorrectly determined');
+  }
+
+  if (rotations.length > 4) {
+    console.warn.logarithmic('Resolving rotations seams confused...');
+    determinRotations(align, alignTo, reverse);
+  }
+
+  return rotations.length > 0 ? rotations : null;
+}
+
+const defaultAlignVectors = [
+  new Vector3D(1,0,0),
+  new Vector3D(0,1,0),
+  new Vector3D(0,0,1)
+]
+
+Vector3D.coDirectionalRotations = (align, alignTo, reverse) => {
+  if (alignTo == null) alignTo = defaultAlignVectors;
+  if (!Array.isArray(align)) align = [align];
+  if (!Array.isArray(alignTo)) alignTo = [alignTo];
+  if (align.length != alignTo.length) throw new Error('The same number of vectors must be in align and alignTo');
+  align = align.map(v => v.unit());
+  alignTo = alignTo.map(v => v.unit());
+  if (align.equals(alignTo) === true) {
+    return [];
+  }
+
+  let rotations = determinRotations(align, alignTo, reverse);
+  if (!reverse || rotations.length > 3) return rotations;
+  const combine = {x: 0, y: 0, z:0};
+  rotations.forEach(r => {
+    combine.x += r.x ? r.x : 0;
+    combine.y += r.y ? r.y : 0;
+    combine.z += r.z ? r.z : 0;
+  })
+  return combine;
+}
+
+
+
+
+
+
 class SectorMap {
   constructor(normals, divideItterations) {
     if (!Number.isFinite(divideItterations)) divideItterations = 0;
@@ -243,17 +404,25 @@ class SectorMap {
     }
 
     for (let index = 0; index < divideItterations; index++) divide();
-    this.passiveProperty('toString', () =>
-      Object.keys(this).map((k,i) => `//${i} ${k}\n${this[k].toDrawString()}`).join('\n'));
+    this.property('toString', () =>
+      Object.keys(this).map((k,i) => `//${i} ${k}\n${this[k].toDrawString()}`).join('\n'), false);
   }
 }
 Vector3D.SectorMap = SectorMap;
 
-Vector3D.i = new Vector3D(1,0,0);
-Vector3D.j = new Vector3D(0,1,0);
-Vector3D.k = new Vector3D(0,0,1);
-Vector3D.cardinal = (array) => array ? [Vector3D.i, Vector3D.j, Vector3D.k] :
-                    {i: Vector3D.i, j: Vector3D.j, k: Vector3D.k};
+const vMap = {
+  i: new Vector3D(1,0,0),
+  j: new Vector3D(0,1,0),
+  k: new Vector3D(0,0,1),
+  ij: new Vector3D(1,1,0).unit(),
+  ik: new Vector3D(1,0,1).unit(),
+  jk: new Vector3D(0,1,1).unit(),
+}
+Object.keys(vMap).forEach(k => Vector3D[k] = vMap[k]);
+
+Vector3D.cardinal = (array) => array ? [vMap.i, vMap.j, vMap.k] :
+                    {i: vMap.i, j: vMap.j, k: vMap.k};
+Vector3D.cardinal.plus = (array) => array ? Object.values(vMap) : vMap;
 
 const sectorVectors = [Vector3D.i, Vector3D.j, Vector3D.k,
   Vector3D.i.inverse(), Vector3D.j.inverse(), Vector3D.k.inverse()]

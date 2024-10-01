@@ -8,7 +8,7 @@ const Vertex3D = require('../../../three-d/objects/vertex.js');
 class Panel extends Assembly {
   constructor(partCode, partName, config) {
     super(partCode, partName, config);
-    this.category = 'Panel';
+    this.category('Panel');
     Object.getSet(this, {hasFrame: false});
   }
 }
@@ -52,8 +52,6 @@ class PanelToeKickBacker extends Panel {
     super(...args);
   }
 }
-
-Panel.abbriviation = 'pn';
 
 Panel.VoidIndex = PanelVoidIndex;
 Panel.ToeKickBacker = PanelToeKickBacker;

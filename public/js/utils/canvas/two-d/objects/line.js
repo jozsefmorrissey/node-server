@@ -1072,8 +1072,8 @@ Line2d.radialSorter = (center, ccw, degreesOstartpoint) => {
     const isL2 = l2 instanceof Line2d;
     if (isL1) polarize(l1, center, ccw);
     if (isL2) polarize(l2, center, ccw);
-    let line1 = new Line2d(center.clone(), isL1 ? l1.midpoint() : l1);
-    let line2 = new Line2d(center.clone(), isL2 ? l2.midpoint() : l2);
+    let line1 = new Line2d(center.clone(), isL1 ? l1.midpoint() : l1.clone());
+    let line2 = new Line2d(center.clone(), isL2 ? l2.midpoint() : l2.clone());
     if (degrees) {
       line1.rotate(rads, center);
       line2.rotate(rads, center);

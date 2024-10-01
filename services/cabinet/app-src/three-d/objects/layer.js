@@ -1,7 +1,10 @@
 
 const Polygon3D = require('polygon');
-const Line3D = require('line');
+const Plane = require('plane');
+const Vector3D = require('vector');
 const Vertex3D = require('vertex');
+const Line3D = require('line');
+const Parimeter3D = require('parimeter');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
@@ -22,6 +25,10 @@ class Layer {
     const primary = list[0];
 
     this.add = (poly) => {
+      if (polygon.area() > .01) {
+        console.warn.logarithmic('Polygon will not be added\n\tArea < .1mm');
+        return null;
+      }
       const norm = this.normal();
       poly = norm.equals(poly.normal()) ? poly : poly.reverse();
       if (poly.normal().equals(norm)) {
@@ -31,12 +38,29 @@ class Layer {
       return false;
     }
 
+    this.parimeter = () => new Parimeter3D(this.lines(), this.normal());
+    this.combined = () => new Layer(this.parimeter());
+
     this.addAll = (polys) => {
       polys.forEach(p => this.add(p));
     }
 
     this.reverse = () => {
       list.forEach(p => p.reverse());
+    }
+    this.limitPoly = () => {
+      const polys = Polygon3D.fromLines(this.lines());
+      const tolMap = Vertex3D.ToleranceMap();
+      tolMap.addAll(Line3D.vertices(this.lines()));
+      const vts = tolMap.minSet();
+      const center = Vertex3D.midrange(vts);
+      Vertex3D.radialSort2D(vts, this.normal(), true, center, Vertex3D.center(vts.slice(0,2)));
+      const poly = new Polygon3D(Line3D.combine(new Polygon3D(vts).lines()).map(l=>l[0]));
+      if (poly.irregular.is()) {
+        console.warn('Make sure this is working properly');
+        poly.irregular.fix();
+      }
+      return poly;
     }
 
     this.normal = () => primary.normal();
@@ -47,6 +71,33 @@ class Layer {
     this.rotate = (rotations, center) => {
       for (let index = 0; index < list.length; index++) {
         list[index].rotate(rotations, center);
+      }
+    }
+
+    this.connect = (to) => {
+      if (to instanceof Vertex3D || to instanceof Line3D) {
+        const connections = list.map(p => p.connect(to));
+        return connections.min(l => l.length());
+      } else {
+        const plane = this.toPlane();
+        const otherPlane = to instanceof Plane ? to : to.toPlane();
+        const planeIntersection = plane.intersection(otherPlane);
+        const closestToIntersection = this.connect(planeIntersection)[1];
+        let connection = to.connect(closestToIntersection);
+        connection = this.connect(connection[0]);
+        let lastLen;
+        let itterations = 0;
+        do {
+          itterations++;
+          connection = to.connect(connection[0]);
+          lastLen = connection.length();
+          connection = this.connect(connection[0]);
+          if (itterations > 100) throw new Error('Something is wrong');
+        } while (lastLen - connection.length() > .00001);
+        if (itterations > 5)
+          console.warn.logarithmic('Layer Connection Algorithym is not working as well as expected');
+        console.log(itterations);
+        return connection;
       }
     }
 
@@ -114,8 +165,8 @@ class Layer {
         const lvObj = (line, vertex) => ({line, vertex});
         lines.forEach(l => map.addAll([lvObj(l, l[0]), lvObj(l, l[1])]));
         const singleSets = map.group().filter(s => s.length === 1);
-        const notOnParrimeter = singleSets.map(s=>s[0].line);
-        if (found = notOnParrimeter.length) lines.removeAll(notOnParrimeter)
+        const notOnParimeter = singleSets.map(s=>s[0].line);
+        if (found = notOnParimeter.length) lines.removeAll(notOnParimeter)
       } while(found);
       return lines;
     }
@@ -172,8 +223,7 @@ class Layer {
   }
 }
 
-Layer.fromCSG = (csg) => {
-  const polys = Polygon3D.fromCSG(csg);
+Layer.fromPolygons = (polys) => {
   const tolmap = new ToleranceMap({'normal().positiveUnit().i()': tol,
                         'normal().positiveUnit().j()': tol,
                         'normal().positiveUnit().k()': tol,
@@ -186,6 +236,8 @@ Layer.fromCSG = (csg) => {
   groups.forEach(g => layers.push(new Layer(g)));
   return layers;
 }
+
+Layer.fromCSG = (csg) => Layer.fromPolygons(Polygon3D.fromCSG(csg));
 
 Layer.to2D = (layersOcsg, x, y) => {
   let layers = layersOcsg instanceof CSG ? Layer.fromCSG(layersOcsg) : layersOcsg;
@@ -200,6 +252,85 @@ Layer.toDrawString = (layers, ...colors) => {
   let str = '';
   layers.forEach((l,i) => str += l.toDrawString(colors[i % colors.length]) + '\n\n');
   return str;
+}
+
+const getPolys = (polysOlayersOcsgOs) => {
+  let polys = [];
+  if (polysOlayersOcsgOs instanceof CSG)
+    polys.concatInPlace(Polygon3D.fromCSG(polysOlayersOcsgOs));
+  else if (polysOlayersOcsgOs instanceof Layer)
+    polys.concatInPlace(polysOlayersOcsgOs.polygons());
+  else if (polysOlayersOcsgOs instanceof Polygon3D)
+    polys.push(polysOlayersOcsgOs);
+  else
+    polys.concatInPlace(polysOlayersOcsgOs.map(plc => getPolys(plc)).elements());
+  return polys;
+}
+
+Layer.from = (polysOlayersOcsgOs) => Layer.fromPolygons(getPolys(polysOlayersOcsgOs));
+
+const centerSort = (center) => (p1, p2) => p2.toPlane().distance(center) - p1.toPlane().distance(center);
+Layer.axis = (polysOlayersOcsgOs) => {
+  const nonLayer = !Array.isArray(polysOlayersOcsgOs) ? true :
+                      polysOlayersOcsgOs.find(plc => !(plc instanceof Layer));
+  const layers = nonLayer ? Layer.from(polysOlayersOcsgOs) : polysOlayersOcsgOs;
+  const parimeters = layers.map((l,i) => l.parimeter());
+  const axisObj = parimeters.map((polys,i) =>
+          ({polys, axis: polys.length === 1 ? polys[0].axis() : Layers.axis(polys)}));
+  axisObj.sortByAttr('axis.y.length()', true);
+  const biggestYs = axisObj.filter(o => o.axis.y.length() + .0001 > axisObj[0].axis.y.length());
+  biggestYs.sortByAttr('axis.x.length()', true);
+  try {
+    const y = biggestYs[0].axis.y;
+    const x = biggestYs[0].axis.x;
+    let z = y.vector().unit().crossProduct(x.vector().unit());
+    const center = Vertex3D.midrange(layers.map(l => l.vertices()).elements());
+    const parrellePolys = parimeters.map(p=>p[0]).filter(p => p.normal().parrelle(z));
+    if (parrellePolys.length === 1) z = new Line3D(center, center);
+    else {
+      parrellePolys.sort(centerSort(center));
+      const magnitude = parrellePolys[0].distance(parrellePolys[1]);
+      z = Line3D.fromVector(z.scale(magnitude), center.translate(z.scale(magnitude/-2), true));
+    }
+    x.centerOn(center); y.centerOn(center);
+
+    return {y,x,z};
+  } catch (e) {
+    Layer.axis(polysOlayersOcsgOs);
+  }
+}
+
+Layer.normals = (polysOlayersOcsgOs) => {
+  let axis = Layer.axis(polysOlayersOcsgOs);
+  const x = axis.x.vector().unit();
+  const y = axis.y.vector().unit();
+  const z = x.crossProduct(y).unit();
+  return {x,y,z};
+}
+
+Layer.fromLimits = (vectsOvertsOlinesOpolysOcsgs) => {
+  const vertices = Polygon3D.vertices(vectsOvertsOlinesOpolysOcsgs);
+  const limits = Math.minMax(vertices, ['x', 'y', 'z']);
+
+  const x = limits.x.max; const xn = limits.x.min;
+  const y = limits.y.max; const yn = limits.y.min;
+  const z = limits.z.max; const zn = limits.z.min;
+  const center = new Vertex3D((x+xn)/2,(y+yn)/2,(z+zn)/2);
+
+  const verts = [
+    new Vertex3D(x,y,z),new Vertex3D(xn,y,z),new Vertex3D(xn,yn,z),new Vertex3D(x,yn,z),
+    new Vertex3D(x,y,zn),new Vertex3D(xn,y,zn),new Vertex3D(xn,yn,zn),new Vertex3D(x,yn,zn),
+  ];
+  const polys = [
+    new Polygon3D([verts[0],verts[1],verts[2],verts[3]]),
+    new Polygon3D([verts[7],verts[6],verts[5],verts[4]]),
+    new Polygon3D([verts[4],verts[5],verts[1],verts[0]]),
+    new Polygon3D([verts[6],verts[7],verts[3],verts[2]]),
+    new Polygon3D([verts[5],verts[6],verts[2],verts[1]]),
+    new Polygon3D([verts[7],verts[4],verts[0],verts[3]]),
+  ];
+  console.log(polys.map(p => p.toDrawString('red', true)).join('\n'));
+  return polys;
 }
 
 let lineCount = 0;

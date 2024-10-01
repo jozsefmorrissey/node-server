@@ -9,6 +9,7 @@ const Panel = require('./panel');
 const Frame = require('./frame');
 const Joint = require('../../joint/joint.js');
 const Dado = require('../../joint/joints/dado.js');
+const Butt = require('../../joint/joints/butt.js');
 const Cut = require('../../joint/joints/cut.js');
 const JointSettings = require('../../../../web-worker/shared/settings.js');
 const Dependency = require('../../dependency.js');
@@ -51,7 +52,7 @@ class Divider extends Assembly {
 
     const framePanelJoint = new Dado(isThisFrontPanel, isThisFrame, null, 'FramePanelJoint');
     framePanelJoint.full.female(true);
-    const frameOtherPanelJoint = new Dado(isFrontPanel, isThisFrame, null, 'FrameOtherPanelJoint');
+    const frameOtherPanelJoint = new Butt(isFrontPanel, isThisFrame, null, 'FrameOtherPanelJoint');
     frameOtherPanelJoint.full.male(false);
     this.addDependencies(framePanelJoint, frameOtherPanelJoint);
 
@@ -182,8 +183,6 @@ class Divider extends Assembly {
 
 Divider.Types = ['full', 'none', 'front', 'back', 'frontAndBack'];
 Divider.count = 0;
-
-Divider.abbriviation = 'dv';
 
 Divider.fromJson = (json) => {
   const obj = Assembly.fromJson(json);

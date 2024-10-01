@@ -114,7 +114,7 @@ class ModelInformation {
     const allJointMap = assemblies[0].dependencyMap(allAssemblies);
     const byId = {};
     const root = assemblies[0].getRoot();
-    const propertyConfig = root.group().propertyConfig().values(root.resolve);
+    const propertyConfig = root.group().propertyConfig().values(root.resolve, true);
 
     allAssemblies.forEach(a => byId[a.id()] = a);
     jointMap.JOINTS.forEach(j => byId[j.id()] = j);

@@ -30,6 +30,7 @@ class Handle extends Assembly {
     this.inElivation = true;
     instance = this;
 
+    this.category = () => `${this.parentAssembly().category()}_Handle`;
     this.index = () => {
       const parent = this.parentAssembly();
       if (!parent) return 1;
@@ -56,8 +57,6 @@ Handle.location.RIGHT = {multiple: true, rotate: true, position: 'RIGHT'};
 Handle.location.LEFT = {multiple: true, rotate: true, position: 'LEFT'};
 Handle.location.CENTER = {multiple: true, position: 'CENTER'};
 
-Handle.abbriviation = 'hn';
-
 Handle.fromJson = (json) => {
   const obj = Assembly.fromJson(json);
   obj.location(Handle.location[json.location.position]);
@@ -65,8 +64,5 @@ Handle.fromJson = (json) => {
   obj.jointSettings.sliceAtOpening(false);
   return obj;
 }
-
-Handle.MATERIAL_UNIT = 'Qty';
-
 
 module.exports = Handle

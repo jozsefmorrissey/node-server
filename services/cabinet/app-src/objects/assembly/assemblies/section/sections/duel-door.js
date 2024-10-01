@@ -51,7 +51,6 @@ DualDoorSection.fromJson = (json) => {
 }
 
 
-DualDoorSection.abbriviation = 'dds';
 SectionProperties.addSection(DualDoorSection);
 
 

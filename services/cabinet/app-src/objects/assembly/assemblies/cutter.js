@@ -17,7 +17,6 @@ class Cutter extends Assembly {
     this.digital(true);
   }
 }
-Cutter.abbriviation = 'cut';
 
 class CutterModel extends Cutter {
   constructor(partCode, partName) {

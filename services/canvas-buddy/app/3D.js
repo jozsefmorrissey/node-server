@@ -105,7 +105,7 @@ const getColor = (str) => {
 
 pointReg.Array = (string) => {
   let match = string.match(pointReg);
-  let arr = [num(match[2]), num(match[7]), num(match[12])];
+  let arr = new CSG.Point([num(match[2]), num(match[7]), num(match[12])]);
   arr.color = getColor(match[1].trim());
   return arr;
 }

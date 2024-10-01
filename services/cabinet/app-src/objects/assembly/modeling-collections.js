@@ -4,14 +4,14 @@ class ModelingCollections {
   constructor(assem) {
     const Assembly = ModelingCollections.Assembly;
     this.physical = () => {
-      return assem.getSubassemblies().filter((a) => {
+      return assem.allAssemblies().filter((a) => {
         if (!(a instanceof Assembly && a.included() && a.part())) return false;
         if (a.locationCode().match(userDefinedReg)) return !a.composite();
         return (a.outline() || a.composite()) === false;
       });
     };
     this.physical.outline = () => {
-      return assem.getSubassemblies().filter((a) => {
+      return assem.allAssemblies().filter((a) => {
         if (!(a instanceof Assembly && a.included() && a.part())) return false;
         if (a.allModels()) return true;
         if (a.locationCode().match(userDefinedReg)) return true;
@@ -19,7 +19,7 @@ class ModelingCollections {
       });
     };
     this.physical.simple = () => {
-      return assem.getSubassemblies().filter((a) => {
+      return assem.allAssemblies().filter((a) => {
         if (!(a instanceof Assembly && a.included() && a.part())) return false;
         if (a.allModels()) return true;
         if (a.locationCode().match(userDefinedReg)) return true;

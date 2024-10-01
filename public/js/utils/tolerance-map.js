@@ -18,11 +18,16 @@ class ToleranceMap {
     const instance = this;
 
     this.clone = (newElems) => {
-      const tMap = new ToleranceMap(attributeMap);
+      const tMap = this.clone.empty();
       this.forEach(value => tMap.add(value));
       tMap.addAll(newElems);
       return tMap;
     }
+    this.clone.empty = () => {
+      const tMap = new ToleranceMap(attributeMap);
+      return tMap;
+    }
+
     function forEachSet(func, node, attrs, attrIndex) {
       if ((typeof func) !== 'function') throw new Error('Arg1 must be of type function');
       if (Array.isArray(node)) {
@@ -118,14 +123,19 @@ class ToleranceMap {
       matchArr.push(elem);
       matchArr.sortByAttrs(tolerance.attributes());
     }
+    this.add.all = (elems) => elems.forEach(e => this.add(e));
+
 
     this.remove = (elem) => {
+      if (elem === undefined) return;
       const matchArr = getSet(elem);
       if (matchArr) {
         const index = matchArr.indexOf(elem);
-        if (index !== -1) matchArr.splice(index, 1);
+        if (index !== -1) return matchArr.splice(index, 1)[0];
       }
     }
+
+    this.remove.all = (elems) => elems.map(e => this.remove(e)).filter(e=>e);
 
     this.filter = (elem, filter) => {
       const matchArr = matches(elem);

@@ -29,7 +29,6 @@ class Assembly extends KeyValue {
     super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly',
           object: true});
 
-    this.category = this.constructor.name;
     new AssemblyResolver(this);
     const pcIsFunc = partCode instanceof Function;
     function pCode(doNotAppendParent) {
@@ -56,14 +55,17 @@ class Assembly extends KeyValue {
     const initialVals = {
       outline: false,
       part: true,
+      hardware: [],
       outsourced: false,
       digital: false,
+      category: this.constructor.name,
       allModels: false,
       included: true,
       config, partCode: pCode, partName,
       locationCode: lCode,
       propertyId: undefined,
     }
+
 
     const subAssems = this.subassemblies;
     Object.getSet(this, initialVals, 'subassemblies', 'joints', 'name',  'normals', 'notes', 'jointSettings');
@@ -75,6 +77,7 @@ class Assembly extends KeyValue {
     });
     Object.getSet(this, temporaryInitialVals);
     this.jointSettings = new JointSettings();
+    this.hardware = [];
     this.path = () => `${this.constructor.name}.${partName}`.toDot();
 
     const parentIncluded = this.included;
@@ -640,13 +643,14 @@ Assembly.fromJson = (assemblyJson) => {
   const clazz = Object.class.get(assemblyJson._TYPE);
   const assembly = new (clazz)(partCode, partName, assemblyJson.config);
   assembly.id(assemblyJson.id);
+  assembly.name(assemblyJson.name);
   assembly.normals(null, assemblyJson.normals);
   assembly.outline( assemblyJson.outline);
   assembly.notes(assemblyJson.notes);
   assembly.value.all(assemblyJson.value.values);
   if (assemblyJson.parent) assembly.parentAssembly(assemblyJson.parent);
   else {
-    assembly.group(new Group());
+    assembly.group(assemblyJson.group || new Group());
     assembly.part(false);
   }
   Object.values(assemblyJson.subassemblies).forEach((json) => {
@@ -727,8 +731,6 @@ Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc)
 Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
 Assembly.lists = {};
 Assembly.idCounters = {};
-
-Assembly.MATERIAL_UNIT = 'SQFT';
 
 // PartCode reg matches starting from the end aswell as at each simicolon
 // The simicolon tells you that it is to be considered the preceding

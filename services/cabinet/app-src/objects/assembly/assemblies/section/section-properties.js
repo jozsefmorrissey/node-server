@@ -794,7 +794,7 @@ SectionProperties.fromJson = (json) => {
   if (sp.cover()) sp.cover().parentAssembly(sp);
 
   json.constructed(() => {
-    sp.divider().fromJson(json.divider.subassemblies.dv);
+    sp.divider().fromJson(json.divider);
   });
   return sp;
 }

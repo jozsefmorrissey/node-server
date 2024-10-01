@@ -1,7 +1,6 @@
 
 const CustomEvent = require('../custom-event');
 
-const initEvent = new CustomEvent('AutoSave:Init');
 const decoder = new TextDecoder();
 const prevDirReg = /\/[^/]*\/\.\./;
 const rootReg = /^\//;
@@ -75,7 +74,7 @@ const Navigator = {
     workingDir.absPath = "/";
     let permission = await workingDir.queryPermission();
     createMethods();
-    initEvent.trigger();
+    Navigator.trigger.init();
   },
   concatPaths,
   absPath: (groundedPath, relitivePath) => {
@@ -106,9 +105,9 @@ const Navigator = {
     const absPath = Navigator.absPath(groundedPath, relitivePath);
     if (absPath !== concatPaths(groundedPath, relitivePath)) return absPath;
   },
-  onInit: initEvent.on
 };
 const N = Navigator;
+CustomEvent.all(N, 'init');
 
 module.exports = N;
 

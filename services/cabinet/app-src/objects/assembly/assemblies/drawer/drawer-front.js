@@ -27,7 +27,4 @@ class DrawerFront extends HasPull {
   }
 }
 
-DrawerFront.abbriviation = 'df';
-
-
 module.exports = DrawerFront

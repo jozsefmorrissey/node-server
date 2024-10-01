@@ -2,7 +2,6 @@
 
 const Navigator = require('../../local-file/navigator.js');
 
-Navigator.on = {};
 Navigator.on.init(async () => {
   return;
   if (confirm('AutoSave tests: \nWARNING! Will create garbage information on your computer.') === false) return;

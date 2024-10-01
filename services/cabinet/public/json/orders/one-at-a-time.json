@@ -166,13 +166,10 @@
             {
               "value": {
                 "values": {
-                  "bo": "4*2.54",
-                  "pbw": "Math.sqrt((bo-BACK.t*1.5)*(bo-BACK.t*1.5)*2)",
-                  "innerWidth": "c.w - R.t",
-                  "innerDepth": "c.t - L.t",
-                  "backhype": "Math.sqrt(bo*bo/2)",
+                  "innerWidth": "c.w - pt34 * 2",
+                  "innerWidthCenter": "innerWidth + pt34",
                   "dividerJoint": {
-                    "_TYPE": "Butt",
+                    "_TYPE": "Dado",
                     "priority": 0
                   }
                 }
@@ -184,14 +181,14 @@
               "included": true,
               "config": {
                 "demension": {
-                  "x": "based",
+                  "x": 29.21,
                   "y": "baseh",
-                  "z": 76.2
+                  "z": 25.4
                 },
                 "center": {
-                  "x": 461.69754184854384,
-                  "y": 175.26000000000002,
-                  "z": 469.0285500933913
+                  "x": 487.0975418485438,
+                  "y": 43.18,
+                  "z": 422.9894
                 },
                 "rotation": {
                   "x": 0,
@@ -203,52 +200,6 @@
               "partName": "Simple",
               "locationCode": "c",
               "subassemblies": {
-                "BACK": {
-                  "value": {
-                    "values": {}
-                  },
-                  "_TYPE": "Panel",
-                  "outline": true,
-                  "part": true,
-                  "allModels": false,
-                  "included": true,
-                  "config": {
-                    "demension": {
-                      "x": "pbw",
-                      "y": "c.h",
-                      "z": "pt14"
-                    },
-                    "center": {
-                      "x": "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
-                      "y": "c.h/2",
-                      "z": "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
-                    },
-                    "rotation": {
-                      "x": "0",
-                      "y": "135",
-                      "z": "0"
-                    }
-                  },
-                  "partCode": "BACK",
-                  "partName": "back",
-                  "locationCode": "c_BACK",
-                  "subassemblies": {},
-                  "joints": [],
-                  "jointSettings": {
-                    "_TYPE": "JointSettings",
-                    "male": true,
-                    "female": true,
-                    "extend": true,
-                    "extendTo": true,
-                    "directions": {
-                      "_TYPE": "Polygon3DExpandDirections",
-                      "fixed": false,
-                      "vectors": {}
-                    },
-                    "sliceAtOpening": true
-                  },
-                  "hasFrame": false
-                },
                 "R": {
                   "value": {
                     "values": {}
@@ -262,7 +213,7 @@
                     "demension": {
                       "x": "c.t",
                       "y": "c.l",
-                      "z": "pt34"
+                      "z": "t"
                     },
                     "center": {
                       "x": "c.w - (R.t / 2)",
@@ -279,16 +230,7 @@
                   "partName": "right",
                   "locationCode": "c_R",
                   "subassemblies": {},
-                  "joints": [
-                    {
-                      "_TYPE": "Butt",
-                      "selector": {
-                        "depends": "R",
-                        "dependent": "BACK"
-                      },
-                      "priority": 0
-                    }
-                  ],
+                  "joints": [],
                   "jointSettings": {
                     "_TYPE": "JointSettings",
                     "male": true,
@@ -315,18 +257,18 @@
                   "included": true,
                   "config": {
                     "demension": {
-                      "x": "c.w",
+                      "x": "c.t",
                       "y": "c.l",
-                      "z": "pt34"
+                      "z": "t"
                     },
                     "center": {
-                      "x": "L.w/2",
+                      "x": "(L.t / 2)",
                       "y": "L.l / 2",
-                      "z": "-(c.t - L.t/2)"
+                      "z": " (w/-2)"
                     },
                     "rotation": {
                       "x": "0",
-                      "y": "0",
+                      "y": "90",
                       "z": "0"
                     }
                   },
@@ -334,12 +276,66 @@
                   "partName": "left",
                   "locationCode": "c_L",
                   "subassemblies": {},
+                  "joints": [],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": true,
+                    "female": true,
+                    "extend": true,
+                    "extendTo": true,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    },
+                    "sliceAtOpening": true
+                  },
+                  "type": "full"
+                },
+                "BACK": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Panel",
+                  "outline": true,
+                  "part": true,
+                  "allModels": false,
+                  "included": true,
+                  "config": {
+                    "demension": {
+                      "x": "innerWidth",
+                      "y": "c.l - tkh",
+                      "z": "pt14"
+                    },
+                    "center": {
+                      "x": " w / 2 + R.t",
+                      "y": "(BACK.h / 2) + tkh",
+                      "z": " -1*(c.t - (t / 2))"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "0",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "BACK",
+                  "partName": "back",
+                  "locationCode": "c_BACK",
+                  "subassemblies": {},
                   "joints": [
                     {
-                      "_TYPE": "Butt",
+                      "_TYPE": "Dado",
                       "selector": {
-                        "depends": "L",
-                        "dependent": "BACK"
+                        "depends": "BACK",
+                        "dependent": "R"
+                      },
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "BACK",
+                        "dependent": "L"
                       },
                       "priority": 0
                     }
@@ -357,7 +353,7 @@
                     },
                     "sliceAtOpening": true
                   },
-                  "type": "full"
+                  "hasFrame": false
                 },
                 "B": {
                   "value": {
@@ -370,18 +366,18 @@
                   "included": true,
                   "config": {
                     "demension": {
-                      "x": "innerWidth",
-                      "y": "innerDepth",
-                      "z": "pt34"
+                      "x": "c.t - BACK.t",
+                      "y": "innerWidth",
+                      "z": "t"
                     },
                     "center": {
-                      "x": "B.w / 2",
-                      "y": "t/2",
-                      "z": "B.h / -2"
+                      "x": "c.w / 2",
+                      "y": "tkh + (t/2)",
+                      "z": "w / -2"
                     },
                     "rotation": {
                       "x": "90",
-                      "y": "0",
+                      "y": "90",
                       "z": "0"
                     }
                   },
@@ -403,14 +399,6 @@
                       "selector": {
                         "depends": "B",
                         "dependent": "L"
-                      },
-                      "priority": 0
-                    },
-                    {
-                      "_TYPE": "Butt",
-                      "selector": {
-                        "depends": "B",
-                        "dependent": "BACK"
                       },
                       "priority": 0
                     }
@@ -441,18 +429,18 @@
                   "included": true,
                   "config": {
                     "demension": {
-                      "x": "innerWidth",
-                      "y": "innerDepth",
-                      "z": "pt34"
+                      "x": "(c.t - BACK.t)",
+                      "y": "innerWidth",
+                      "z": "t"
                     },
                     "center": {
-                      "x": "T.w / 2",
-                      "y": "c.h - T.t/2",
-                      "z": "T.h /-2"
+                      "x": "c.w / 2",
+                      "y": "c.h - t/2",
+                      "z": "(w / -2)"
                     },
                     "rotation": {
                       "x": "90",
-                      "y": "0",
+                      "y": "90",
                       "z": "0"
                     }
                   },
@@ -476,14 +464,6 @@
                         "dependent": "L"
                       },
                       "priority": 0
-                    },
-                    {
-                      "_TYPE": "Butt",
-                      "selector": {
-                        "depends": "T",
-                        "dependent": "BACK"
-                      },
-                      "priority": 0
                     }
                   ],
                   "jointSettings": {
@@ -499,12 +479,83 @@
                     },
                     "sliceAtOpening": true
                   },
-                  "type": "full"
+                  "type": "frontAndBack"
+                },
+                "void-1": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Void",
+                  "outline": false,
+                  "part": true,
+                  "allModels": false,
+                  "config": {
+                    "demension": {
+                      "x": "3.75 *2.54",
+                      "y": "7*2.54",
+                      "z": "W"
+                    },
+                    "center": {
+                      "x": "c_BACK.c.x",
+                      "y": "h/2",
+                      "z": "c_BACK.c.z + w/2 - 2.54/8"
+                    },
+                    "rotation": {
+                      "x": "c_BACK.r.x",
+                      "y": "c_BACK.r.y + 90",
+                      "z": "c_BACK.r.z"
+                    }
+                  },
+                  "partCode": "void-1",
+                  "partName": "void-c_BACK-12.7x12.7",
+                  "locationCode": "c_void-1",
+                  "subassemblies": {},
+                  "joints": [],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": true,
+                    "female": false,
+                    "extend": false,
+                    "extendTo": false,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    },
+                    "sliceAtOpening": false
+                  },
+                  "includedSides": [
+                    false,
+                    false,
+                    true,
+                    false,
+                    false,
+                    true
+                  ],
+                  "capSet": 0,
+                  "maleSet": 0,
+                  "capMale": true,
+                  "bodyJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  },
+                  "capJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  },
+                  "voidPanelJoint": {
+                    "_TYPE": "Cut",
+                    "priority": 0
+                  },
+                  "nonVoidJoint": {
+                    "_TYPE": "Cut",
+                    "priority": 0
+                  }
                 },
                 "S1": {
                   "value": {
                     "values": {
-                      "shelves": 3
+                      "shelves": 2
                     }
                   },
                   "_TYPE": "SectionProperties",
@@ -513,10 +564,7 @@
                     "bottom": "B",
                     "left": "L",
                     "right": "R",
-                    "back": "BACK",
-                    "_Type": "slice",
-                    "leftDepth": "c.w",
-                    "rightDepth": "c.t"
+                    "back": "BACK"
                   },
                   "index": 1,
                   "divider": {
@@ -610,15 +658,1265 @@
                       "sliceAtOpening": true
                     }
                   },
-                  "cover": {
+                  "pattern": {
+                    "str": "ab",
+                    "values": {},
+                    "props": {}
+                  },
+                  "subassemblies": [
+                    {
+                      "value": {
+                        "values": {}
+                      },
+                      "_TYPE": "SectionProperties",
+                      "divideRight": true,
+                      "config": {},
+                      "index": 1,
+                      "divider": {
+                        "value": {
+                          "values": {}
+                        },
+                        "_TYPE": "DividerSection",
+                        "outline": false,
+                        "part": false,
+                        "allModels": false,
+                        "included": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S1_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "Divider",
+                            "outline": false,
+                            "part": true,
+                            "allModels": false,
+                            "included": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S1_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": true
+                            },
+                            "type": "full"
+                          }
+                        },
+                        "joints": [],
+                        "jointSettings": {
+                          "_TYPE": "JointSettings",
+                          "male": true,
+                          "female": true,
+                          "extend": true,
+                          "extendTo": true,
+                          "directions": {
+                            "_TYPE": "Polygon3DExpandDirections",
+                            "fixed": false,
+                            "vectors": {}
+                          },
+                          "sliceAtOpening": true
+                        }
+                      },
+                      "cover": {
+                        "value": {
+                          "values": {}
+                        },
+                        "_TYPE": "DrawerSection",
+                        "outline": false,
+                        "part": false,
+                        "allModels": false,
+                        "included": true,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "d",
+                        "locationCode": "c_S1_S1_d",
+                        "subassemblies": {
+                          "df": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "DrawerFront",
+                            "outline": false,
+                            "part": true,
+                            "allModels": false,
+                            "included": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "df",
+                            "partName": "Solid",
+                            "locationCode": "c_S1_S1_d_df",
+                            "subassemblies": {
+                              "pu": {
+                                "value": {
+                                  "values": {}
+                                },
+                                "_TYPE": "Handle",
+                                "outline": false,
+                                "part": true,
+                                "allModels": false,
+                                "included": true,
+                                "config": {
+                                  "demension": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "center": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "rotation": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  }
+                                },
+                                "partCode": "pu",
+                                "partName": "Solid.Pull.CENTER",
+                                "locationCode": "c_S1_S1_d_df:pu1",
+                                "subassemblies": {},
+                                "joints": [],
+                                "jointSettings": {
+                                  "_TYPE": "JointSettings",
+                                  "male": false,
+                                  "female": false,
+                                  "extend": false,
+                                  "extendTo": false,
+                                  "directions": {
+                                    "_TYPE": "Polygon3DExpandDirections",
+                                    "fixed": false,
+                                    "vectors": {}
+                                  },
+                                  "sliceAtOpening": false
+                                },
+                                "location": {
+                                  "multiple": true,
+                                  "position": "CENTER"
+                                },
+                                "centerToCenter": 9.6
+                              }
+                            },
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": false
+                            }
+                          },
+                          "db": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "DrawerBox",
+                            "outline": false,
+                            "part": true,
+                            "allModels": false,
+                            "included": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "db",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S1_d_db",
+                            "subassemblies": {},
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": false
+                            }
+                          }
+                        },
+                        "joints": [],
+                        "jointSettings": {
+                          "_TYPE": "JointSettings",
+                          "male": true,
+                          "female": true,
+                          "extend": true,
+                          "extendTo": true,
+                          "directions": {
+                            "_TYPE": "Polygon3DExpandDirections",
+                            "fixed": false,
+                            "vectors": {}
+                          },
+                          "sliceAtOpening": true
+                        }
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": [
+                        {
+                          "value": {
+                            "values": {}
+                          },
+                          "_TYPE": "SectionProperties",
+                          "divideRight": false,
+                          "config": {},
+                          "index": 1,
+                          "divider": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "DividerSection",
+                            "outline": false,
+                            "part": false,
+                            "allModels": false,
+                            "included": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "",
+                            "locationCode": "c_S1_S1_S1_dv",
+                            "subassemblies": {
+                              "dv": {
+                                "value": {
+                                  "values": {}
+                                },
+                                "_TYPE": "Divider",
+                                "outline": false,
+                                "part": true,
+                                "allModels": false,
+                                "included": false,
+                                "config": {
+                                  "demension": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "center": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "rotation": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  }
+                                },
+                                "partCode": "dv",
+                                "partName": "Section",
+                                "locationCode": "c_S1_S1_S1_dv_dv",
+                                "subassemblies": {},
+                                "joints": [],
+                                "jointSettings": {
+                                  "_TYPE": "JointSettings",
+                                  "male": true,
+                                  "female": true,
+                                  "extend": true,
+                                  "extendTo": true,
+                                  "directions": {
+                                    "_TYPE": "Polygon3DExpandDirections",
+                                    "fixed": false,
+                                    "vectors": {}
+                                  },
+                                  "sliceAtOpening": true
+                                },
+                                "type": "full"
+                              }
+                            },
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": true
+                            }
+                          },
+                          "pattern": {
+                            "str": "z",
+                            "values": {},
+                            "props": {}
+                          },
+                          "subassemblies": []
+                        }
+                      ]
+                    },
+                    {
+                      "value": {
+                        "values": {}
+                      },
+                      "_TYPE": "SectionProperties",
+                      "divideRight": false,
+                      "config": {},
+                      "index": 2,
+                      "divider": {
+                        "value": {
+                          "values": {}
+                        },
+                        "_TYPE": "DividerSection",
+                        "outline": false,
+                        "part": false,
+                        "allModels": false,
+                        "included": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S2_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "Divider",
+                            "outline": false,
+                            "part": true,
+                            "allModels": false,
+                            "included": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S2_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": true
+                            },
+                            "type": "full"
+                          }
+                        },
+                        "joints": [],
+                        "jointSettings": {
+                          "_TYPE": "JointSettings",
+                          "male": true,
+                          "female": true,
+                          "extend": true,
+                          "extendTo": true,
+                          "directions": {
+                            "_TYPE": "Polygon3DExpandDirections",
+                            "fixed": false,
+                            "vectors": {}
+                          },
+                          "sliceAtOpening": true
+                        }
+                      },
+                      "cover": {
+                        "value": {
+                          "values": {}
+                        },
+                        "_TYPE": "DoorSection",
+                        "outline": false,
+                        "part": false,
+                        "allModels": false,
+                        "included": true,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "DS",
+                        "locationCode": "c_S1_S2_DS",
+                        "subassemblies": {
+                          "D": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "Door",
+                            "outline": false,
+                            "part": true,
+                            "allModels": false,
+                            "included": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "D",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S2_DS_D",
+                            "subassemblies": {
+                              "pu": {
+                                "value": {
+                                  "values": {}
+                                },
+                                "_TYPE": "Handle",
+                                "outline": false,
+                                "part": true,
+                                "allModels": false,
+                                "included": true,
+                                "config": {
+                                  "demension": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "center": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "rotation": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  }
+                                },
+                                "partCode": "pu",
+                                "partName": "Section.Pull.TOP_LEFT",
+                                "locationCode": "c_S1_S2_DS_D:pu1",
+                                "subassemblies": {},
+                                "joints": [],
+                                "jointSettings": {
+                                  "_TYPE": "JointSettings",
+                                  "male": false,
+                                  "female": false,
+                                  "extend": false,
+                                  "extendTo": false,
+                                  "directions": {
+                                    "_TYPE": "Polygon3DExpandDirections",
+                                    "fixed": false,
+                                    "vectors": {}
+                                  },
+                                  "sliceAtOpening": false
+                                },
+                                "location": {
+                                  "rotate": true,
+                                  "position": "TOP_LEFT"
+                                },
+                                "centerToCenter": 9.6
+                              }
+                            },
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": false
+                            }
+                          }
+                        },
+                        "joints": [],
+                        "jointSettings": {
+                          "_TYPE": "JointSettings",
+                          "male": true,
+                          "female": true,
+                          "extend": true,
+                          "extendTo": true,
+                          "directions": {
+                            "_TYPE": "Polygon3DExpandDirections",
+                            "fixed": false,
+                            "vectors": {}
+                          },
+                          "sliceAtOpening": true
+                        }
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": [
+                        {
+                          "value": {
+                            "values": {}
+                          },
+                          "_TYPE": "SectionProperties",
+                          "divideRight": false,
+                          "config": {},
+                          "index": 1,
+                          "divider": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "DividerSection",
+                            "outline": false,
+                            "part": false,
+                            "allModels": false,
+                            "included": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "",
+                            "locationCode": "c_S1_S2_S1_dv",
+                            "subassemblies": {
+                              "dv": {
+                                "value": {
+                                  "values": {}
+                                },
+                                "_TYPE": "Divider",
+                                "outline": false,
+                                "part": true,
+                                "allModels": false,
+                                "included": false,
+                                "config": {
+                                  "demension": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "center": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "rotation": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  }
+                                },
+                                "partCode": "dv",
+                                "partName": "Section",
+                                "locationCode": "c_S1_S2_S1_dv_dv",
+                                "subassemblies": {},
+                                "joints": [],
+                                "jointSettings": {
+                                  "_TYPE": "JointSettings",
+                                  "male": true,
+                                  "female": true,
+                                  "extend": true,
+                                  "extendTo": true,
+                                  "directions": {
+                                    "_TYPE": "Polygon3DExpandDirections",
+                                    "fixed": false,
+                                    "vectors": {}
+                                  },
+                                  "sliceAtOpening": true
+                                },
+                                "type": "full"
+                              }
+                            },
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": true
+                            }
+                          },
+                          "pattern": {
+                            "str": "z",
+                            "values": {},
+                            "props": {}
+                          },
+                          "subassemblies": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              "joints": [
+                {
+                  "_TYPE": "Dado",
+                  "priority": 0
+                }
+              ],
+              "name": "tpBase1",
+              "normals": {
+                "y": {
+                  "_TYPE": "Vector3D",
+                  "i": 0,
+                  "j": 1,
+                  "k": 0
+                },
+                "x": {
+                  "_TYPE": "Vector3D",
+                  "i": 0,
+                  "j": 0,
+                  "k": -1
+                },
+                "z": {
+                  "_TYPE": "Vector3D",
+                  "i": 1,
+                  "j": 0,
+                  "k": 0
+                }
+              },
+              "jointSettings": {
+                "_TYPE": "JointSettings",
+                "male": false,
+                "female": false,
+                "extend": false,
+                "extendTo": false,
+                "directions": {
+                  "_TYPE": "Polygon3DExpandDirections",
+                  "fixed": false,
+                  "vectors": {}
+                },
+                "sliceAtOpening": true
+              },
+              "currentPosition": {
+                "center": {
+                  "x": 487.0975418485438,
+                  "y": 43.18,
+                  "z": 422.9894
+                },
+                "demension": {
+                  "x": 29.21,
+                  "y": 86.36,
+                  "z": 25.4
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 270,
+                  "z": 0
+                },
+                "normals": {
+                  "y": {
+                    "_TYPE": "Vector3D",
+                    "i": 0,
+                    "j": 1,
+                    "k": 0
+                  },
+                  "x": {
+                    "_TYPE": "Vector3D",
+                    "i": 0,
+                    "j": 0,
+                    "k": -1
+                  },
+                  "z": {
+                    "_TYPE": "Vector3D",
+                    "i": 1,
+                    "j": 0,
+                    "k": 0
+                  }
+                }
+              },
+              "autoToeKick": true,
+              "id": "Cabinet_7342vz3"
+            },
+            {
+              "value": {
+                "values": {
+                  "innerWidth": "c.w - pt34 * 2",
+                  "innerWidthCenter": "innerWidth + pt34",
+                  "dividerJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  }
+                }
+              },
+              "_TYPE": "Cabinet",
+              "outline": false,
+              "part": false,
+              "allModels": false,
+              "included": true,
+              "config": {
+                "demension": {
+                  "x": 29.21,
+                  "y": "baseh",
+                  "z": 25.4
+                },
+                "center": {
+                  "x": 487.0975418485438,
+                  "y": 43.18,
+                  "z": 422.9894
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 270,
+                  "z": 0
+                }
+              },
+              "partCode": "c",
+              "partName": "Simple",
+              "locationCode": "c",
+              "subassemblies": {
+                "R": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Divider",
+                  "outline": true,
+                  "part": true,
+                  "allModels": false,
+                  "included": true,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "t"
+                    },
+                    "center": {
+                      "x": "c.w - (R.t / 2)",
+                      "y": "R.l / 2",
+                      "z": "(w / -2)"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "R",
+                  "partName": "right",
+                  "locationCode": "c_R",
+                  "subassemblies": {},
+                  "joints": [],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": true,
+                    "female": true,
+                    "extend": true,
+                    "extendTo": true,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    },
+                    "sliceAtOpening": true
+                  },
+                  "type": "full"
+                },
+                "L": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Divider",
+                  "outline": true,
+                  "part": true,
+                  "allModels": false,
+                  "included": true,
+                  "config": {
+                    "demension": {
+                      "x": "c.t",
+                      "y": "c.l",
+                      "z": "t"
+                    },
+                    "center": {
+                      "x": "(L.t / 2)",
+                      "y": "L.l / 2",
+                      "z": " (w/-2)"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "L",
+                  "partName": "left",
+                  "locationCode": "c_L",
+                  "subassemblies": {},
+                  "joints": [],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": true,
+                    "female": true,
+                    "extend": true,
+                    "extendTo": true,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    },
+                    "sliceAtOpening": true
+                  },
+                  "type": "full"
+                },
+                "BACK": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Panel",
+                  "outline": true,
+                  "part": true,
+                  "allModels": false,
+                  "included": true,
+                  "config": {
+                    "demension": {
+                      "x": "innerWidth",
+                      "y": "c.l - tkh",
+                      "z": "pt14"
+                    },
+                    "center": {
+                      "x": " w / 2 + R.t",
+                      "y": "(BACK.h / 2) + tkh",
+                      "z": " -1*(c.t - (t / 2))"
+                    },
+                    "rotation": {
+                      "x": "0",
+                      "y": "0",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "BACK",
+                  "partName": "back",
+                  "locationCode": "c_BACK",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "BACK",
+                        "dependent": "R"
+                      },
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "BACK",
+                        "dependent": "L"
+                      },
+                      "priority": 0
+                    }
+                  ],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": true,
+                    "female": true,
+                    "extend": true,
+                    "extendTo": true,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    },
+                    "sliceAtOpening": true
+                  },
+                  "hasFrame": false
+                },
+                "B": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Divider",
+                  "outline": true,
+                  "part": true,
+                  "allModels": false,
+                  "included": true,
+                  "config": {
+                    "demension": {
+                      "x": "c.t - BACK.t",
+                      "y": "innerWidth",
+                      "z": "t"
+                    },
+                    "center": {
+                      "x": "c.w / 2",
+                      "y": "tkh + (t/2)",
+                      "z": "w / -2"
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "B",
+                  "partName": "bottom",
+                  "locationCode": "c_B",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "B",
+                        "dependent": "R"
+                      },
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "B",
+                        "dependent": "L"
+                      },
+                      "priority": 0
+                    }
+                  ],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": true,
+                    "female": true,
+                    "extend": true,
+                    "extendTo": true,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    },
+                    "sliceAtOpening": true
+                  },
+                  "type": "full"
+                },
+                "T": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Divider",
+                  "outline": true,
+                  "part": true,
+                  "allModels": false,
+                  "included": true,
+                  "config": {
+                    "demension": {
+                      "x": "(c.t - BACK.t)",
+                      "y": "innerWidth",
+                      "z": "t"
+                    },
+                    "center": {
+                      "x": "c.w / 2",
+                      "y": "c.h - t/2",
+                      "z": "(w / -2)"
+                    },
+                    "rotation": {
+                      "x": "90",
+                      "y": "90",
+                      "z": "0"
+                    }
+                  },
+                  "partCode": "T",
+                  "partName": "top",
+                  "locationCode": "c_T",
+                  "subassemblies": {},
+                  "joints": [
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "T",
+                        "dependent": "R"
+                      },
+                      "priority": 0
+                    },
+                    {
+                      "_TYPE": "Dado",
+                      "selector": {
+                        "depends": "T",
+                        "dependent": "L"
+                      },
+                      "priority": 0
+                    }
+                  ],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": true,
+                    "female": true,
+                    "extend": true,
+                    "extendTo": true,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    },
+                    "sliceAtOpening": true
+                  },
+                  "type": "frontAndBack"
+                },
+                "void-1": {
+                  "value": {
+                    "values": {}
+                  },
+                  "_TYPE": "Void",
+                  "outline": false,
+                  "part": true,
+                  "allModels": false,
+                  "config": {
+                    "demension": {
+                      "x": "3.75 *2.54",
+                      "y": "7*2.54",
+                      "z": "W"
+                    },
+                    "center": {
+                      "x": "c_BACK.c.x",
+                      "y": "h/2",
+                      "z": "c_BACK.c.z + w/2 - 2.54/8"
+                    },
+                    "rotation": {
+                      "x": "c_BACK.r.x",
+                      "y": "c_BACK.r.y + 90",
+                      "z": "c_BACK.r.z"
+                    }
+                  },
+                  "partCode": "void-1",
+                  "partName": "void-c_BACK-12.7x12.7",
+                  "locationCode": "c_void-1",
+                  "subassemblies": {},
+                  "joints": [],
+                  "jointSettings": {
+                    "_TYPE": "JointSettings",
+                    "male": true,
+                    "female": false,
+                    "extend": false,
+                    "extendTo": false,
+                    "directions": {
+                      "_TYPE": "Polygon3DExpandDirections",
+                      "fixed": false,
+                      "vectors": {}
+                    },
+                    "sliceAtOpening": false
+                  },
+                  "includedSides": [
+                    false,
+                    false,
+                    true,
+                    false,
+                    false,
+                    true
+                  ],
+                  "capSet": 0,
+                  "maleSet": 0,
+                  "capMale": true,
+                  "bodyJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  },
+                  "capJoint": {
+                    "_TYPE": "Dado",
+                    "priority": 0
+                  },
+                  "voidPanelJoint": {
+                    "_TYPE": "Cut",
+                    "priority": 0
+                  },
+                  "nonVoidJoint": {
+                    "_TYPE": "Cut",
+                    "priority": 0
+                  }
+                },
+                "S1": {
+                  "value": {
+                    "values": {
+                      "shelves": 2
+                    }
+                  },
+                  "_TYPE": "SectionProperties",
+                  "config": {
+                    "top": "T",
+                    "bottom": "B",
+                    "left": "L",
+                    "right": "R",
+                    "back": "BACK"
+                  },
+                  "index": 1,
+                  "divider": {
                     "value": {
                       "values": {}
                     },
-                    "_TYPE": "DualDoorSection",
+                    "_TYPE": "DividerSection",
                     "outline": false,
                     "part": false,
                     "allModels": false,
-                    "included": true,
+                    "included": false,
                     "config": {
                       "demension": {
                         "x": "0",
@@ -636,19 +1934,18 @@
                         "z": "0"
                       }
                     },
-                    "partCode": "DDS",
-                    "partName": "Duel.Door.Section",
-                    "locationCode": "c_S1_DDS",
+                    "partCode": "dv",
+                    "partName": "",
+                    "locationCode": "c_S1_dv",
                     "subassemblies": {
-                      "Dl": {
+                      "dv": {
                         "value": {
                           "values": {}
                         },
-                        "_TYPE": "Door",
+                        "_TYPE": "Divider",
                         "outline": false,
                         "part": true,
                         "allModels": false,
-                        "included": true,
                         "config": {
                           "demension": {
                             "x": "0",
@@ -666,75 +1963,11 @@
                             "z": "0"
                           }
                         },
-                        "partCode": "Dl",
-                        "partName": "Left",
-                        "locationCode": "c_S1_DDS_Dl",
-                        "subassemblies": {
-                          "pu": {
-                            "value": {
-                              "values": {}
-                            },
-                            "_TYPE": "Handle",
-                            "outline": false,
-                            "part": true,
-                            "allModels": false,
-                            "included": true,
-                            "config": {
-                              "demension": {
-                                "x": "0",
-                                "y": "0",
-                                "z": "0"
-                              },
-                              "center": {
-                                "x": "0",
-                                "y": "0",
-                                "z": "0"
-                              },
-                              "rotation": {
-                                "x": "0",
-                                "y": "0",
-                                "z": "0"
-                              }
-                            },
-                            "partCode": "pu",
-                            "partName": "Left.Pull.BOTTOM_RIGHT",
-                            "locationCode": "c_S1_DDS_Dl:pu1",
-                            "subassemblies": {},
-                            "joints": [],
-                            "jointSettings": {
-                              "_TYPE": "JointSettings",
-                              "male": false,
-                              "female": false,
-                              "extend": false,
-                              "extendTo": false,
-                              "directions": {
-                                "_TYPE": "Polygon3DExpandDirections",
-                                "fixed": false,
-                                "vectors": {}
-                              },
-                              "sliceAtOpening": false
-                            },
-                            "location": {
-                              "rotate": true,
-                              "position": "BOTTOM_RIGHT"
-                            },
-                            "centerToCenter": 9.6
-                          }
-                        },
+                        "partCode": "dv",
+                        "partName": "Section",
+                        "locationCode": "c_S1_dv_dv",
+                        "subassemblies": {},
                         "joints": [],
-                        "normals": {
-                          "y": [
-                            "c.n.y.i",
-                            "c.n.y.j",
-                            "c.n.y.k"
-                          ],
-                          "z": [
-                            "OP.i.n.i",
-                            "OP.i.n.j",
-                            "OP.i.n.k"
-                          ],
-                          "calc": 0
-                        },
                         "jointSettings": {
                           "_TYPE": "JointSettings",
                           "male": true,
@@ -746,117 +1979,9 @@
                             "fixed": false,
                             "vectors": {}
                           },
-                          "sliceAtOpening": false
-                        }
-                      },
-                      "Dr": {
-                        "value": {
-                          "values": {}
+                          "sliceAtOpening": true
                         },
-                        "_TYPE": "Door",
-                        "outline": false,
-                        "part": true,
-                        "allModels": false,
-                        "included": true,
-                        "config": {
-                          "demension": {
-                            "x": "0",
-                            "y": "0",
-                            "z": "0"
-                          },
-                          "center": {
-                            "x": "0",
-                            "y": "0",
-                            "z": "0"
-                          },
-                          "rotation": {
-                            "x": "0",
-                            "y": "0",
-                            "z": "0"
-                          }
-                        },
-                        "partCode": "Dr",
-                        "partName": "Right",
-                        "locationCode": "c_S1_DDS_Dr",
-                        "subassemblies": {
-                          "pu": {
-                            "value": {
-                              "values": {}
-                            },
-                            "_TYPE": "Handle",
-                            "outline": false,
-                            "part": true,
-                            "allModels": false,
-                            "included": true,
-                            "config": {
-                              "demension": {
-                                "x": "0",
-                                "y": "0",
-                                "z": "0"
-                              },
-                              "center": {
-                                "x": "0",
-                                "y": "0",
-                                "z": "0"
-                              },
-                              "rotation": {
-                                "x": "0",
-                                "y": "0",
-                                "z": "0"
-                              }
-                            },
-                            "partCode": "pu",
-                            "partName": "Right.Pull.BOTTOM_LEFT",
-                            "locationCode": "c_S1_DDS_Dr:pu1",
-                            "subassemblies": {},
-                            "joints": [],
-                            "jointSettings": {
-                              "_TYPE": "JointSettings",
-                              "male": false,
-                              "female": false,
-                              "extend": false,
-                              "extendTo": false,
-                              "directions": {
-                                "_TYPE": "Polygon3DExpandDirections",
-                                "fixed": false,
-                                "vectors": {}
-                              },
-                              "sliceAtOpening": false
-                            },
-                            "location": {
-                              "rotate": true,
-                              "position": "BOTTOM_LEFT"
-                            },
-                            "centerToCenter": 9.6
-                          }
-                        },
-                        "joints": [],
-                        "normals": {
-                          "y": [
-                            "c.n.y.i",
-                            "c.n.y.j",
-                            "c.n.y.k"
-                          ],
-                          "z": [
-                            "OP.i.n.i",
-                            "OP.i.n.j",
-                            "OP.i.n.k"
-                          ],
-                          "calc": 0
-                        },
-                        "jointSettings": {
-                          "_TYPE": "JointSettings",
-                          "male": true,
-                          "female": true,
-                          "extend": true,
-                          "extendTo": true,
-                          "directions": {
-                            "_TYPE": "Polygon3DExpandDirections",
-                            "fixed": false,
-                            "vectors": {}
-                          },
-                          "sliceAtOpening": false
-                        }
+                        "type": "full"
                       }
                     },
                     "joints": [],
@@ -875,15 +2000,778 @@
                     }
                   },
                   "pattern": {
-                    "str": "z",
+                    "str": "ab",
                     "values": {},
                     "props": {}
                   },
-                  "subassemblies": []
+                  "subassemblies": [
+                    {
+                      "value": {
+                        "values": {}
+                      },
+                      "_TYPE": "SectionProperties",
+                      "divideRight": true,
+                      "config": {},
+                      "index": 1,
+                      "divider": {
+                        "value": {
+                          "values": {}
+                        },
+                        "_TYPE": "DividerSection",
+                        "outline": false,
+                        "part": false,
+                        "allModels": false,
+                        "included": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S1_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "Divider",
+                            "outline": false,
+                            "part": true,
+                            "allModels": false,
+                            "included": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S1_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": true
+                            },
+                            "type": "full"
+                          }
+                        },
+                        "joints": [],
+                        "jointSettings": {
+                          "_TYPE": "JointSettings",
+                          "male": true,
+                          "female": true,
+                          "extend": true,
+                          "extendTo": true,
+                          "directions": {
+                            "_TYPE": "Polygon3DExpandDirections",
+                            "fixed": false,
+                            "vectors": {}
+                          },
+                          "sliceAtOpening": true
+                        }
+                      },
+                      "cover": {
+                        "value": {
+                          "values": {}
+                        },
+                        "_TYPE": "DrawerSection",
+                        "outline": false,
+                        "part": false,
+                        "allModels": false,
+                        "included": true,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "d",
+                        "locationCode": "c_S1_S1_d",
+                        "subassemblies": {
+                          "df": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "DrawerFront",
+                            "outline": false,
+                            "part": true,
+                            "allModels": false,
+                            "included": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "df",
+                            "partName": "Solid",
+                            "locationCode": "c_S1_S1_d_df",
+                            "subassemblies": {
+                              "pu": {
+                                "value": {
+                                  "values": {}
+                                },
+                                "_TYPE": "Handle",
+                                "outline": false,
+                                "part": true,
+                                "allModels": false,
+                                "included": true,
+                                "config": {
+                                  "demension": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "center": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "rotation": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  }
+                                },
+                                "partCode": "pu",
+                                "partName": "Solid.Pull.CENTER",
+                                "locationCode": "c_S1_S1_d_df:pu1",
+                                "subassemblies": {},
+                                "joints": [],
+                                "jointSettings": {
+                                  "_TYPE": "JointSettings",
+                                  "male": false,
+                                  "female": false,
+                                  "extend": false,
+                                  "extendTo": false,
+                                  "directions": {
+                                    "_TYPE": "Polygon3DExpandDirections",
+                                    "fixed": false,
+                                    "vectors": {}
+                                  },
+                                  "sliceAtOpening": false
+                                },
+                                "location": {
+                                  "multiple": true,
+                                  "position": "CENTER"
+                                },
+                                "centerToCenter": 9.6
+                              }
+                            },
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": false
+                            }
+                          },
+                          "db": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "DrawerBox",
+                            "outline": false,
+                            "part": true,
+                            "allModels": false,
+                            "included": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "db",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S1_d_db",
+                            "subassemblies": {},
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": false
+                            }
+                          }
+                        },
+                        "joints": [],
+                        "jointSettings": {
+                          "_TYPE": "JointSettings",
+                          "male": true,
+                          "female": true,
+                          "extend": true,
+                          "extendTo": true,
+                          "directions": {
+                            "_TYPE": "Polygon3DExpandDirections",
+                            "fixed": false,
+                            "vectors": {}
+                          },
+                          "sliceAtOpening": true
+                        }
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": [
+                        {
+                          "value": {
+                            "values": {}
+                          },
+                          "_TYPE": "SectionProperties",
+                          "divideRight": false,
+                          "config": {},
+                          "index": 1,
+                          "divider": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "DividerSection",
+                            "outline": false,
+                            "part": false,
+                            "allModels": false,
+                            "included": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "",
+                            "locationCode": "c_S1_S1_S1_dv",
+                            "subassemblies": {
+                              "dv": {
+                                "value": {
+                                  "values": {}
+                                },
+                                "_TYPE": "Divider",
+                                "outline": false,
+                                "part": true,
+                                "allModels": false,
+                                "included": false,
+                                "config": {
+                                  "demension": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "center": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "rotation": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  }
+                                },
+                                "partCode": "dv",
+                                "partName": "Section",
+                                "locationCode": "c_S1_S1_S1_dv_dv",
+                                "subassemblies": {},
+                                "joints": [],
+                                "jointSettings": {
+                                  "_TYPE": "JointSettings",
+                                  "male": true,
+                                  "female": true,
+                                  "extend": true,
+                                  "extendTo": true,
+                                  "directions": {
+                                    "_TYPE": "Polygon3DExpandDirections",
+                                    "fixed": false,
+                                    "vectors": {}
+                                  },
+                                  "sliceAtOpening": true
+                                },
+                                "type": "full"
+                              }
+                            },
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": true
+                            }
+                          },
+                          "pattern": {
+                            "str": "z",
+                            "values": {},
+                            "props": {}
+                          },
+                          "subassemblies": []
+                        }
+                      ]
+                    },
+                    {
+                      "value": {
+                        "values": {}
+                      },
+                      "_TYPE": "SectionProperties",
+                      "divideRight": false,
+                      "config": {},
+                      "index": 2,
+                      "divider": {
+                        "value": {
+                          "values": {}
+                        },
+                        "_TYPE": "DividerSection",
+                        "outline": false,
+                        "part": false,
+                        "allModels": false,
+                        "included": false,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "dv",
+                        "partName": "",
+                        "locationCode": "c_S1_S2_dv",
+                        "subassemblies": {
+                          "dv": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "Divider",
+                            "outline": false,
+                            "part": true,
+                            "allModels": false,
+                            "included": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S2_dv_dv",
+                            "subassemblies": {},
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": true
+                            },
+                            "type": "full"
+                          }
+                        },
+                        "joints": [],
+                        "jointSettings": {
+                          "_TYPE": "JointSettings",
+                          "male": true,
+                          "female": true,
+                          "extend": true,
+                          "extendTo": true,
+                          "directions": {
+                            "_TYPE": "Polygon3DExpandDirections",
+                            "fixed": false,
+                            "vectors": {}
+                          },
+                          "sliceAtOpening": true
+                        }
+                      },
+                      "cover": {
+                        "value": {
+                          "values": {}
+                        },
+                        "_TYPE": "DoorSection",
+                        "outline": false,
+                        "part": false,
+                        "allModels": false,
+                        "included": true,
+                        "config": {
+                          "demension": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "center": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          },
+                          "rotation": {
+                            "x": "0",
+                            "y": "0",
+                            "z": "0"
+                          }
+                        },
+                        "partCode": "DS",
+                        "locationCode": "c_S1_S2_DS",
+                        "subassemblies": {
+                          "D": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "Door",
+                            "outline": false,
+                            "part": true,
+                            "allModels": false,
+                            "included": true,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "D",
+                            "partName": "Section",
+                            "locationCode": "c_S1_S2_DS_D",
+                            "subassemblies": {
+                              "pu": {
+                                "value": {
+                                  "values": {}
+                                },
+                                "_TYPE": "Handle",
+                                "outline": false,
+                                "part": true,
+                                "allModels": false,
+                                "included": true,
+                                "config": {
+                                  "demension": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "center": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "rotation": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  }
+                                },
+                                "partCode": "pu",
+                                "partName": "Section.Pull.TOP_LEFT",
+                                "locationCode": "c_S1_S2_DS_D:pu1",
+                                "subassemblies": {},
+                                "joints": [],
+                                "jointSettings": {
+                                  "_TYPE": "JointSettings",
+                                  "male": false,
+                                  "female": false,
+                                  "extend": false,
+                                  "extendTo": false,
+                                  "directions": {
+                                    "_TYPE": "Polygon3DExpandDirections",
+                                    "fixed": false,
+                                    "vectors": {}
+                                  },
+                                  "sliceAtOpening": false
+                                },
+                                "location": {
+                                  "rotate": true,
+                                  "position": "TOP_LEFT"
+                                },
+                                "centerToCenter": 9.6
+                              }
+                            },
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": false
+                            }
+                          }
+                        },
+                        "joints": [],
+                        "jointSettings": {
+                          "_TYPE": "JointSettings",
+                          "male": true,
+                          "female": true,
+                          "extend": true,
+                          "extendTo": true,
+                          "directions": {
+                            "_TYPE": "Polygon3DExpandDirections",
+                            "fixed": false,
+                            "vectors": {}
+                          },
+                          "sliceAtOpening": true
+                        }
+                      },
+                      "pattern": {
+                        "str": "z",
+                        "values": {},
+                        "props": {}
+                      },
+                      "subassemblies": [
+                        {
+                          "value": {
+                            "values": {}
+                          },
+                          "_TYPE": "SectionProperties",
+                          "divideRight": false,
+                          "config": {},
+                          "index": 1,
+                          "divider": {
+                            "value": {
+                              "values": {}
+                            },
+                            "_TYPE": "DividerSection",
+                            "outline": false,
+                            "part": false,
+                            "allModels": false,
+                            "included": false,
+                            "config": {
+                              "demension": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "center": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              },
+                              "rotation": {
+                                "x": "0",
+                                "y": "0",
+                                "z": "0"
+                              }
+                            },
+                            "partCode": "dv",
+                            "partName": "",
+                            "locationCode": "c_S1_S2_S1_dv",
+                            "subassemblies": {
+                              "dv": {
+                                "value": {
+                                  "values": {}
+                                },
+                                "_TYPE": "Divider",
+                                "outline": false,
+                                "part": true,
+                                "allModels": false,
+                                "included": false,
+                                "config": {
+                                  "demension": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "center": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  },
+                                  "rotation": {
+                                    "x": "0",
+                                    "y": "0",
+                                    "z": "0"
+                                  }
+                                },
+                                "partCode": "dv",
+                                "partName": "Section",
+                                "locationCode": "c_S1_S2_S1_dv_dv",
+                                "subassemblies": {},
+                                "joints": [],
+                                "jointSettings": {
+                                  "_TYPE": "JointSettings",
+                                  "male": true,
+                                  "female": true,
+                                  "extend": true,
+                                  "extendTo": true,
+                                  "directions": {
+                                    "_TYPE": "Polygon3DExpandDirections",
+                                    "fixed": false,
+                                    "vectors": {}
+                                  },
+                                  "sliceAtOpening": true
+                                },
+                                "type": "full"
+                              }
+                            },
+                            "joints": [],
+                            "jointSettings": {
+                              "_TYPE": "JointSettings",
+                              "male": true,
+                              "female": true,
+                              "extend": true,
+                              "extendTo": true,
+                              "directions": {
+                                "_TYPE": "Polygon3DExpandDirections",
+                                "fixed": false,
+                                "vectors": {}
+                              },
+                              "sliceAtOpening": true
+                            }
+                          },
+                          "pattern": {
+                            "str": "z",
+                            "values": {},
+                            "props": {}
+                          },
+                          "subassemblies": []
+                        }
+                      ]
+                    }
+                  ]
                 }
               },
-              "joints": [],
-              "name": "mirror",
+              "joints": [
+                {
+                  "_TYPE": "Dado",
+                  "priority": 0
+                }
+              ],
+              "name": "tpBase1",
               "normals": {
                 "y": {
                   "_TYPE": "Vector3D",
@@ -893,15 +2781,15 @@
                 },
                 "x": {
                   "_TYPE": "Vector3D",
-                  "i": 0.7808688094430304,
+                  "i": 0,
                   "j": 0,
-                  "k": -0.6246950475544243
+                  "k": -1
                 },
                 "z": {
                   "_TYPE": "Vector3D",
-                  "i": 0.6246950475544243,
+                  "i": 1,
                   "j": 0,
-                  "k": 0.7808688094430304
+                  "k": 0
                 }
               },
               "jointSettings": {
@@ -919,14 +2807,14 @@
               },
               "currentPosition": {
                 "center": {
-                  "x": 461.69754184854384,
-                  "y": 175.26000000000002,
-                  "z": 469.0285500933913
+                  "x": 487.0975418485438,
+                  "y": 43.18,
+                  "z": 422.9894
                 },
                 "demension": {
-                  "x": 60.96,
+                  "x": 29.21,
                   "y": 86.36,
-                  "z": 76.2
+                  "z": 25.4
                 },
                 "rotation": {
                   "x": 0,
@@ -942,22 +2830,21 @@
                   },
                   "x": {
                     "_TYPE": "Vector3D",
-                    "i": 0.7808688094430304,
+                    "i": 0,
                     "j": 0,
-                    "k": -0.6246950475544243
+                    "k": -1
                   },
                   "z": {
                     "_TYPE": "Vector3D",
-                    "i": 0.6246950475544243,
+                    "i": 1,
                     "j": 0,
-                    "k": 0.7808688094430304
+                    "k": 0
                   }
                 }
               },
-              "autoToeKick": false,
-              "id": "Cabinet_wrtrt1u"
+              "autoToeKick": true,
+              "id": "Cabinet_7342z3"
             }
-
           ],
           "_TYPE": "Group",
           "name": "Group ",

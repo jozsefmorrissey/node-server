@@ -1,4 +1,58 @@
 {
+  "panel": {
+    "_TYPE": "AssemblyTemplate",
+    "type": "Panel",
+    "values": [],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "0",
+          "H/2",
+          0
+        ],
+        "demensions": [
+          "W",
+          "H",
+          "D"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "Panel",
+        "code": "p"
+      }
+    ],
+    "joints": [],
+    "shape": "square",
+    "width": "10*2.54",
+    "height": "100*2.54",
+    "thickness": "pt34",
+    "_FORCE_FROM_JSON": true
+  },
   "shelve-floating": {
     "_TYPE": "AssemblyTemplate",
     "type": "shelve-floating",
@@ -3457,7 +3511,7 @@
       "code": "T",
       "center": [
         "c.w / 2 ",
-        "c.h - pt34/2",
+        "c.h - T.t/2",
         "w / -2 "
       ],
       "demensions": [
@@ -4111,7 +4165,7 @@
         "code": "T",
         "center": [
           "c.w / 2",
-          "c.h - pt34/2",
+          "c.h - T.t/2",
           "w / -2"
         ],
         "demensions": [
@@ -4132,7 +4186,7 @@
         "code": "pt2",
         "center": [
           "c.w / 2",
-          "c.h - pt34/2",
+          "c.h - T.t/2",
           "-(c.t - BACK.t - (w / 2))"
         ],
         "demensions": [
@@ -4510,7 +4564,7 @@
         "code": "T",
         "center": [
           "c.w / 2",
-          "c.h - pt34/2",
+          "c.h - T.t/2",
           "w / -2"
         ],
         "demensions": [
@@ -4530,7 +4584,7 @@
         "code": "pt2",
         "center": [
           "c.w / 2",
-          "c.h - pt34/2",
+          "c.h - T.t/2",
           "-(c.t - BACK.t - (w / 2))"
         ],
         "demensions": [
@@ -4926,7 +4980,7 @@
         "code": "T",
         "center": [
           "T.w / 2",
-          "c.h - pt34/2",
+          "c.h - T.t/2",
           "T.h /-2"
         ],
         "demensions": [
@@ -5257,7 +5311,7 @@
         "code": "T",
         "center": [
           "T.w / 2",
-          "c.h - pt34/2",
+          "c.h - T.t/2",
           "T.h /-2"
         ],
         "demensions": [
@@ -5553,7 +5607,7 @@
         "code": "T",
         "center": [
           "T.w / 2",
-          "c.h - pt34/2",
+          "c.h - T.t/2",
           "T.h /-2"
         ],
         "demensions": [

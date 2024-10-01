@@ -20,6 +20,7 @@ const groupTemplate = new $t('documents/construction/group');
 const cabinetTemplate = new $t('documents/construction/cabinet');
 const cabinetListTemplate = new $t('documents/construction/cabinetList');
 const panelCutListTemplate = new $t('documents/construction/panel-cut-list');
+const cutListLabelTemplate = new $t('documents/construction/cut-list-label');
 const partTemplate = new $t('documents/construction/part');
 const cutsTemplate = new $t('documents/cuts/cuts');
 const openingDiagramsTemplate = new $t('documents/construction/opening-diagrams');
@@ -47,7 +48,7 @@ function listToTemplate(partInformation, type, template, width, height, thicknes
   const disp = Utils.display;
   partInfos.forEach(info => {
     const part = info.parts[0];
-    const category = part.category
+    const category = part.category();
     const key = disp.demensions(info.demensions);
     if (map[category] === undefined) map[category] = {};
     if (map[category][key] === undefined) {
@@ -68,22 +69,25 @@ function materialListToTemplate(partInformation, type, template) {
   const disp = Utils.display;
   parts.forEach(info => {
     const part = info.parts[0];
-    const category = part.category
+    const category = part.category();
     const key = disp.demensions(info.demensions);
-    const thickness = disp.measurement(info.demensions.z);
-    if (map[category] === undefined) map[category] = {};
-    if (map[category][thickness] === undefined) map[category][thickness] = {};
-    if (map[category][thickness][key] === undefined) {
-      map[category][thickness][key] = [];
-      map[category][thickness][key].info = info;
+    const group = Utils.materialGroup(info);
+    if (Utils.materialUnit(part).unit !== 'CUBIC') {
+      if (map[category] === undefined) map[category] = {};
+      if (map[category][group] === undefined) map[category][group] = {};
+      if (map[category][group][key] === undefined) {
+        map[category][group][key] = [];
+      }
+      map[category][group][key].push(info);
     }
-    map[category][thickness][key].push(part);
   });
 
   const partListMap = {};
-  Object.keys(map).forEach(category => Object.keys(map[category]).forEach(thickness => {
+  Object.keys(map).forEach(category => Object.keys(map[category]).forEach(group => {
+    const cleanGroup = group.replace(/^(.*)?:.*$/, '$1');
     if (partListMap[category] === undefined) partListMap[category] = {};
-    partListMap[category][thickness] = Object.values(map[category][thickness]);
+    if (partListMap[category][cleanGroup] === undefined) partListMap[category][cleanGroup] = [];
+    partListMap[category][cleanGroup].push(Object.values(map[category][group]));
   }));
   return template.render({partListMap, disp, type});
 }
@@ -165,25 +169,13 @@ DocumentationHtml.shelves.cutList = (partInformation) => DocumentationHtml.parts
 
 DocumentationHtml.parts.cutList = (partInformation, partType) => {
   const panels = new Array(10).fill(null).map(() => ['','','']);
-  const pages = [];
-  let currentIndex = 0;
-  let pageIndex = -1;
   const disp = Utils.display;
   const parts = partInformation.byCategory(partType);
-  parts.forEach(p => p.parts.forEach((part) => {
-    const targetIndex = Math.floor((currentIndex % 30)/3);
-    if (currentIndex % 30 === 0) pages[++pageIndex] = new Array(10).fill(null).map(() => ['','','']);
-    const panels = pages[pageIndex];
-    if (!panels[targetIndex]) panels[targetIndex] = [];
-    const demensions = p.demensions;
-    const nextIndex = panels[targetIndex].findIndex(v => v === '');
-    panels[targetIndex][nextIndex] = `${Utils.display.partIdPrefix(part)}:${part.userFriendlyId()}
-        <br>
-        ${disp.measurement(demensions.x)} X
-        ${disp.measurement(demensions.y)} X
-        ${disp.measurement(demensions.z)}`;
-    currentIndex++;
+  const pages = [];
+  parts.forEach(info => info.parts.forEach((part) => {
+    pages.push(cutListLabelTemplate.render({info, part, disp}));
   }));
+  pages.group(30,3);
   return DocumentationHtml.print.container(panelCutListTemplate.render({pages}));
 }
 

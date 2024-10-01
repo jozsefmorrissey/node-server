@@ -35,7 +35,7 @@ class Parimeters2d {
     const priority = (center) => (a, b) => {
       const reverse = deadEndCount > 10;
       if (reverse) {
-        if (deadEndCount > 20) throw new Error('Parrimeter cannot be found: lines are probably inline');
+        if (deadEndCount > 20) throw new Error('Parimeter cannot be found: lines are probably inline');
         reversed = true;
         return b.distance(center) - a.distance(center);
       }
@@ -104,7 +104,7 @@ class Parimeters2d {
       if (madeItFullCircle) {
         const poly = Polygon2d.fromLines(parimeter);
         poly.combine();
-        if (deadEndCount > 2) throw new Error('Parrimeter cannot be found: lines are probably inline');
+        if (deadEndCount > 2) throw new Error('Parimeter cannot be found: lines are probably inline');
         if (poly.vertices().length === 0) deadEndCount++;
         return poly;
       }
@@ -120,7 +120,7 @@ class Parimeters2d {
         const lastLineNeg = lastLine.negitive();
         let matches = pdObj.lineMap.matches(lastLineNeg).filter(l => !l.equivalent(lastLine));
         if (matches.length === 0) {
-          console.warn.logarithmic('No parrimeter exists: lines not connected... should investigate');
+          console.warn.logarithmic('No parimeter exists: lines not connected... should investigate');
           return null;
         }
         matches.sort(Parimeters2d.rightLeftSort(lastLine.degrees(), rightOleft));

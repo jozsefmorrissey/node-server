@@ -76,6 +76,10 @@ class SectionPropertiesUtil {
           }
         }
       }
+      // if (((closest && closest.dist) || 0) < 9 * 2.54) {
+      //   console.log('here');
+      //   this.drawerDepth()
+      // }
       drawerDepth = closest ? closest.dist : 0;
       return drawerDepth;
     };
@@ -184,6 +188,7 @@ class SectionPropertiesUtil {
       return spatialMap;
     }
 
+    this.sectionProps = () => spDto;
     this.biPolygon = BiPolygon.fromPolygon(this.innerPoly, 0, this.innerDepth());
   }
 }
@@ -202,7 +207,7 @@ function expandToNeigbors(poly, spatialMap) {
     }
   }
 }
-
+// Iron Ore: 7069 CabinetColor https://www.loveandrenovations.com/wp-content/uploads/2023/04/side-by-side-5-1000x833.jpg
 
 const panelSectionThickness = .75 * 2.54;
 function panelSectionInformation(sectionUtil, env) {
@@ -264,7 +269,8 @@ function buildPanels(sectionUtil, env) {
 const built = {};
 const dataPath = (assem) => 'proccessData.SectionPropertiesUtil.' + assem.id;
 SectionPropertiesUtil.instance = (rMdto, env) => {
-  let secProps = rMdto.find.up(/_S[0-9]{1,}$/);
+  let secProps = rMdto.find.up(/_S[0-9]{1,}$/) || rMdto.find(/_S[0-9]{1,}$/);
+  if (!secProps) return null;
   let rootHash = rMdto.find.root().hash;
   const path = dataPath(secProps);
   if (env.pathValue(path) === undefined || env.pathValue(path).rootHash !== rootHash) {

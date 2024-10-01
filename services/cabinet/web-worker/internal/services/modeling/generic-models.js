@@ -140,6 +140,7 @@ function unionAll(...polygons) {
 }
 
 to.DrawerBox = (frontPoly, normal, length, props) => {
+  if (length === 0) return;
   const sideThickness = props.dbst;
   const bottomThickness = props.dbbt;
   const bottomHeight = props.dbid;

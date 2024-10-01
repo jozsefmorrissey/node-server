@@ -2,11 +2,21 @@
 const PartInfo = require('./documents/part');
 const dataTransferConfig = require('../math-data-transfer-config.json');
 const Layer = require('../../../app-src/three-d/objects/layer.js');
+const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
 const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
 const DTO = require('../../shared/data-transfer-object')(dataTransferConfig);
+const SectionPropertiesUtil = require('./modeling/utils/section-properties.js');
+
+const finishCoverReg = /^(Door|DuelDoor)/;
+const needsFinished = n => {
+  const cover = n.payload().sectionProps().cover;
+  return !cover || cover().id.match(finishCoverReg);
+}
 
 function buildPartInfo(payload, env, taskId) {
   const map = {};
+  const sectUtil = SectionPropertiesUtil.instance(env.byId[payload.parts[0]], env);
+  const spatialMap = sectUtil && sectUtil.leafSpatialMap();
   for (let index = 0; index < payload.parts.length; index++) {
     const part = env.byId[payload.parts[index]];
     if (part.digital) continue;
@@ -30,6 +40,14 @@ function buildPartInfo(payload, env, taskId) {
         cuts = partInfo.cuts.map(c=>c.toJson());
         fenceEdges['-z'] = partInfo.edges2D(false);
         fenceEdges.z = partInfo.edges2D(true);
+        if (spatialMap && part.id.match(/^Panel/)) {
+          const center = env.getModel(part, 'joined').center();
+          const poly = Polygon3D.fromVectorObject(demensions.x, demensions.y, center, normals);
+          const neighbors = spatialMap.neighbors(poly, normals.z, normals.z.inverse());
+          model.finishedInterior = {};
+          model.finishedInterior.z = !!neighbors[0].find(needsFinished);
+          model.finishedInterior['-z'] = !!neighbors[1].find(needsFinished);
+        }
       }
       // toolingInfo = partInfo.toolingInformation();
     } catch (e) {

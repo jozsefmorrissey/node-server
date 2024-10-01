@@ -85,9 +85,11 @@ class Line3D {
       return new Vector3D(i,j,k);
     };
 
-    this.translate = (vector) => {
+    this.translate = (vector, doNotModify) => {
+      if (doNotModify) return this.clone().translate(vector);
       this[0].translate(vector);
       this[1].translate(vector);
+      return this;
     }
 
     this.finite = (limit) => this[0].finite(limit) && this[1].finite(limit);
@@ -728,10 +730,7 @@ function determinRotations(align, alignTo, reverse) {
     }
   }
   icl.snapShots.push(snapShotStr(icl.snapShots.length, align.length, pivots.length, null, align));
-  if (icl.incorrect.length > 0) {
-    console.log(icl.snapShots.join('\n\n\n'))
-    console.log();
-  }
+  console.log.logarithmic('This function should be removed algorithm exists within vector');
 
   if (rotations.length > 4) {
     console.warn.logarithmic('Resolving rotations seams confused...');
@@ -809,18 +808,9 @@ Line3D.combine = (lines, tolerance, prefix) => {
         if (lineJ.combineRemoved < 0 && lineI.combineRemoved < 0) {
           const combineOrder = lineI.combineOrder(lineJ);
           if (combineOrder) {
-            if (lines.findIndex(l => l === lineI) === -1) {
-              console.error('this needs to be fixed!!!');
-            }
-            lineI[0].positionAt(combineOrder[0]);
-            lineI[1].positionAt(combineOrder[combineOrder.length - 1]);
-            if (lines.findIndex(l => l === lineI) === -1) {
-              console.error('this needs to be fixed!!!');
-            }
+            lineI[0] = combineOrder[0].clone();
+            lineI[1] = combineOrder[combineOrder.length - 1].clone();
             lines.removeWhere(l => l === lineJ);
-            if (lines.findIndex(l => l === lineI) === -1) {
-              console.error('this needs to be fixed!!!');
-            }
             lineJ.combineRemoved = i;
             set.splice(j,1)
             j=i;
@@ -968,14 +958,58 @@ Line3D.radialSort2D = (lines, viewFrom, ccw, center, degreesOstartpoint) => {
   }).filter(l => l));
 }
 
+const quadrant = o => o.inline.pos ? 2 :
+  (o.inline.neg ? 0 :
+    (o.dir.pos > .95 ? (o.neg > 0 ? 0 : 1) :
+                        (o.pos > 0 ? 2 : 3)));
+
+const priority = (o) => {
+  const q = quadrant(o);
+  switch (q) {
+    case 0: return o.unit.dot(o.tarUnit);
+    case 1: return o.unit.dot(o.dirVect.inverse());
+    case 2: return o.unit.dot(o.tarUnit.inverse());
+    case 3: return o.unit.dot(o.dirVect);
+  }
+}
+
+const quadrantInfoObj = (target, dirVect) => (line) => {
+
+  const dotInfo = {
+      line, dirVect,
+      tarUnit: target.vector().unit(),
+      unit: line.vector().unit(),
+      dir: {
+        pos: target.connect.vertex(line[1], false).vector().unit().dot(dirVect),
+        neg: target.negitive().connect.vertex(line[1], false).vector().unit().dot(dirVect)
+      },
+      inline: {
+        pos: target.vector().unit().equals(line.vector().unit()),
+        neg: target.negitive().vector().unit().equals(line.vector().unit()),
+      },
+      pos: target.vector().unit().dot(line.vector().unit()),
+      neg: target.negitive().vector().unit().dot(line.vector().unit())
+    };
+  return {line, quadrant: quadrant(dotInfo), priority: priority(dotInfo)};
+};
+
+Line3D.quadrantSort = (lines, target, normal, ccw) => {
+  const multiplier = ccw === true ? 1 : -1;
+  if (target === undefined) throw new Error('Target can be auto configured but has not been implemented because it seams like the sort of thing that you want to define');
+  if (normal === undefined) throw new Error('Normal can be auto configured but has not been implemented because it seams like the sort of thing that you want to define');
+  const dirVector = target.vector().unit().crossProduct(normal).scale(multiplier);
+
+  const quadrantInfo = lines.map(quadrantInfoObj(target, dirVector));
+  quadrantInfo.sortByAttrs(['quadrant', 'priority']);
+  return lines.copy(quadrantInfo.map(qi => qi.line));
+}
+
 Line3D.distanceSort = (target, segment) => (l1,l2) => {
   const ds1 = l1.distance(target, segment);
   const ds2 = l2.distance(target, segment);
   return ds1 - ds2;
 }
 
-const targSlice = new Line3D([0,59.69,0], [8.89,59.69,0]);
-const targLine = new Line3D([8.89,56.515,0], [8.89,73.66,0])
 Line3D.slice = (line, lines) => {
   const notParrelle = lines.filter(l => !l.isParrelle(line));
   const intersections = [line[0]];
@@ -986,9 +1020,13 @@ Line3D.slice = (line, lines) => {
       intersections.push(int);
     }
   }
+  if (intersections.length === 1) return null;
   intersections.push(line[1]);
-  const sliced = intersections.map((int, i) => new Line3D(intersections[i-1], int));
-  return intersections.length > 2 ? sliced.slice(1) : null;
+  intersections.sort(Line3D.distanceSort(line[0]));
+  const sliced = intersections.map((int, i) => i < intersections.length - 1 &&
+                                          new Line3D(int, intersections[i+1]))
+                                          .slice(0, intersections.length - 1);
+  return sliced.filter(l=>!l.isPoint());
 }
 
 Line3D.sliceAll = (lines) => {
@@ -996,7 +1034,7 @@ Line3D.sliceAll = (lines) => {
   for (let index = 0; index < lines.length; index++) {
     const sliced = Line3D.slice(lines[index], lines);
     if (sliced) fractured.concatInPlace(sliced);
-    else fractured.push(lines[index]);
+    else if (!lines[index].isPoint()) fractured.push(lines[index]);
   }
   return fractured;
 }

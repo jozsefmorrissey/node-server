@@ -35,7 +35,6 @@ DrawerSection.fromJson = (json) => {
   return new DrawerSection(drawerFront, drawerBox);
 }
 
-DrawerSection.abbriviation = 'dws';
 SectionProperties.addSection(DrawerSection);
 
 

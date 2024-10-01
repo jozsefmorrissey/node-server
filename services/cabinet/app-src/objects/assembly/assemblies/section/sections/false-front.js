@@ -27,7 +27,6 @@ FalseFrontSection.fromJson = (json) => {
   return new FalseFrontSection(front);
 }
 
-FalseFrontSection.abbriviation = 'ffs';
 SectionProperties.addSection(FalseFrontSection);
 
 

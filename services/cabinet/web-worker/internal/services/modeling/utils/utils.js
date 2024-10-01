@@ -2,6 +2,7 @@
 const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
 const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
 const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
+const Layer = require('../../../../../app-src/three-d/objects/layer.js');
 const RDTO = require('../../../../shared/reconnect-transfer-object.js');
 const JointSettings = require('../../../../shared/settings.js');
 
@@ -26,7 +27,7 @@ function normals(part, env) {
   let norms = part.position.current.normals;
   if (norms === undefined) return {x: Vector3D.i, y: Vector3D.j, z: Vector3D.k}
   if (norms.DETERMINE_FROM_MODEL) {
-    norms = Polygon3D.normals(Polygon3D.fromCSG(env.getModel(part, 'cut').polygons, true));
+    norms = Layer.normals(env.getModel(part, 'cut'));
   } else if (norms.DETERMINE_FROM_PARENT !== undefined) {
     const parentNorms = normals(part.parentAssembly(), env);
     norms = parentNorms;

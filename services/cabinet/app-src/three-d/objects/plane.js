@@ -270,8 +270,19 @@ class Plane extends Array {
       return generateAxisPoints(count, radius, center);
     }
 
+    // const vect1 = new Line3D(points[0], points[1]).vector();
+    // const vect2 = new Line3D(points[1], vertex).vector();
+    // const vect3 = new Line3D(points[0], vertex).vector();
+    // let validPoints = [points[0], points[1], vertex];
+    // if (isZero(vect2.magnitude())) validPoints = [points[0], points[2], vertex];
+    // else if (isZero(vect3.magnitude())) validPoints = [points[1], points[2], vertex];
+    // else if (vect1.parrelle(vect3) || vect2.parrelle(vect3)) validPoints = [points[0], points[2], vertex];
+
     this.within = (vertex) => {
       if (vertex instanceof Line3D) return this.within(vertex[0]) && this.within(vertex[1]);
+      if (vertex.toString() === '(6.6,40.8142091868206,-46.6878584209772)') {
+        console.log('here');
+      }
       const normal = this.normal();
       const points = this.points();
       const plane = new Plane(points[0], points[1], vertex);
@@ -291,11 +302,12 @@ class Plane extends Array {
     }
 
     this.normal = () => {
-      if (normal) return normal;
+      if (normal !== undefined) return normal;
       const points = this.points();
       const vector1 = points[1].vector().minus(points[0]);
       const vector2 = points[2].vector().minus(points[0]);
       const normVect = vector1.crossProduct(vector2);
+      if (vector1.parrelle(vector2)) return (normal = new Vector3D(NaN,NaN,NaN));
       normal = normVect.scale(1 / normVect.magnitude());
       return normal;
     }
@@ -390,7 +402,12 @@ class Plane extends Array {
     this.intersection.line.segment = (line) => lineIntersection(line, true);
     this.intersection.line.directional = (line) => lineIntersection(line, null, true);
 
-    this.connect = {}
+    this.connect = (to) => {
+      if (to instanceof Vertex3D) return this.connect.vertex(to);
+      if (to instanceof Line3D) return this.connect.line(to);
+      if (to instanceof Plane) return this.intersection(to).midpoint();
+      return to.connect(this);
+    }
     this.connect.vertex = (vertex) => {
       const line = Line3D.fromVector(this.normal(), vertex);
       const planeInter = this.intersection.line(line);

@@ -153,7 +153,7 @@ module.exports = (targetLayers, overlapingLayers, jointInfo) => {
       let hash = oLayer.hash();
       const equivNorms = oLayer.normal().positiveUnit().equals(tLayer.normal().positiveUnit());
       if (equivNorms) {
-        if (existsInBoth[hash] === undefined && tLayer.overlaps(oLayer, true)) {
+        if (existsInBoth[hash] === undefined && tLayer.overlaps(oLayer.combined(), true)) {
           tLayer.overlaps(oLayer, true);
           tLayer.overlaps(oLayer, true);
           existsInBoth[hash] = oLayer;
@@ -163,6 +163,7 @@ module.exports = (targetLayers, overlapingLayers, jointInfo) => {
     }
   }
   existsInBoth = Object.values(existsInBoth);
+
   if (existsInBoth.length === 0) {
     return null;
   }
@@ -174,6 +175,9 @@ module.exports = (targetLayers, overlapingLayers, jointInfo) => {
   const zPolyFilter = p => p.normal().positiveUnit()
                       .equals(zNorm.positiveUnit());
   const zPolys = existsInBoth.filter(zPolyFilter);
+  // if (zPolys.length > 1) {
+  //   module.exports(targetLayers, overlapingLayers, jointInfo);
+  // }
 
   if (zPolys.length === 0) return existsInBoth.map(p => buildAxis([p], overlapingLayers, [], zPolyFilter, normals))
   else return [buildAxis(existsInBoth, overlapingLayers, zPolys, zPolyFilter, normals)];

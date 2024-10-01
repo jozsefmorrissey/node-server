@@ -81,6 +81,8 @@ CSG = function() {
   }
 };
 
+CSG.BIG = 160934.4;//One Mile in cm
+
 const colors = {
   babyblue: [34,183,232],
   limegreen: [50, 205, 50],
@@ -606,10 +608,11 @@ CSG.marroonedOn = function(csgOpolyOvertex, islands) {
 CSG.cube = function(options) {
   options = options || {};
   var c = new CSG.Vector(options.center || [0, 0, 0]);
-  var r = !options.radius ? [1, 1, 1] : options.radius.length ?
-           options.radius : [options.radius, options.radius, options.radius];
+  var r = !options.radius ? [1, 1, 1] : Number.isFinite(options.radius) ?
+                      [options.radius, options.radius, options.radius] :
+                      new CSG.Vector(options.radius).toArray();
   if (options.demensions) {
-    r = [options.demensions[0]/2, options.demensions[1]/2, options.demensions[2]/2];
+    r = new CSG.Vector(options.demensions).times(.5).toArray();
   }
   return CSG.fromPolygons([
     [[0, 4, 6, 2], [-1, 0, 0]],
@@ -659,7 +662,7 @@ CSG.Line = function (options) {
     return new CSG.Point(options.start, .3, options.color);
   }
   const radius = options.radius || .2;
-  let model = new CSG.cylinder({start, end, radius, slices: 32});
+  let model = new CSG.cylinder({start, end, radius, slices: 8});
   model = vecotrOvertexModel(end, start, model, options);
   model.setColor(options.color);
   return vecotrOvertexModel(start, end, model, options);
@@ -776,7 +779,13 @@ CSG.sphere = function(options) {
       polygons.push(new CSG.Polygon(vertices));
     }
   }
-  return CSG.fromPolygons(polygons);
+
+  const csg = CSG.fromPolygons(polygons);
+  csg.property('x', c.x, false, false);
+  csg.property('y', c.y, false, false);
+  csg.property('z', c.z, false, false);
+  csg.property('radius', c.radius, false, false);
+  return csg;
 };
 
 // Construct a solid cylinder. Optional parameters are `start`, `end`,
@@ -797,8 +806,14 @@ CSG.cylinder = function(options) {
   var e = new CSG.Vector(options.end || [0, 1, 0]);
   var ray = e.minus(s);
   var r = options.radius || 1;
-  var slices = options.slices || 16;
-  var axisZ = ray.unit(), isY = (Math.abs(axisZ.y) > 0.5);
+  if (!ray.positive()) {
+    let temp = s;
+    s = e;
+    e = temp;
+    ray = ray.negated();
+  }
+  var slices = options.slices || 8;
+  var axisZ = ray.unit(); isY = (Math.abs(axisZ.y) > 0.5);
   var axisX = new CSG.Vector(isY, !isY, 0).cross(axisZ).unit();
   var axisY = axisX.cross(axisZ).unit();
   var start = new CSG.Vertex(s, axisZ.negated());
@@ -816,9 +831,10 @@ CSG.cylinder = function(options) {
   for (var i = 0; i < slices; i++) {
     var t0 = i / slices, t1 = (i + 1) / slices;
     polygons.push(new CSG.Polygon([point(0, t1, 0), point(0, t0, 0), point(1, t0, 0), point(1, t1, 0)]));
-    topVerts.push(point(1, t0, -1));
-    bottomVerts.push(point(0, t0, -1));
+    topVerts.push(point(1, t0, 1));
+    bottomVerts.push(point(0, t0, 1));
   }
+  topVerts.reverse();
   return CSG.fromPolygons(polygons.concat([new CSG.Polygon(topVerts),new CSG.Polygon(bottomVerts)]));
   // return new CSG.Polygon(verts);
 };
@@ -848,7 +864,7 @@ CSG.cone = function (options) {
   length = end.minus(start).length();
   const point = new CSG.sphere({radius: 1, center: end});
   const radius = options.radius || 1;
-  const slices = options.slices || 16;
+  const slices = options.slices || 8;
   let cylinder = new CSG.cylinder({start, end, radius, slices});
   let cone = cylinder.clone();
   cone.setColor(options.color);
@@ -858,14 +874,14 @@ CSG.cone = function (options) {
   const perpVector = perpendicularVector(rotationVector.clone()).times(radius/-2);
   const widthVector = perpVector.cross(rotationVector).unit().times(30);
   const cutterCenter = end;
-  const plane = new CSG.Rectangle([30, length*10, radius], cutterCenter, rotationVector.unit(), widthVector.unit());
+  const plane = new CSG.Rectangle([30, length*10, radius*2], cutterCenter, rotationVector.unit(), widthVector.unit());
   const planeCenter = new CSG.Vector(plane.center());
   plane.setColor(options.color);
-  plane.translate(perpVector);
-  plane.translate(cutterCenter.negated());
   const degrees = Math.toDegrees(Math.atan(radius/(2*length)));
   plane.ArbitraryRotate(degrees, widthVector.unit());
-  plane.translate(cutterCenter);
+  plane.center(cutterCenter);
+  plane.translate(perpVector);
+  // plane.translate(cutterCenter.negated());
 
   for (let index = 0; index < slices; index++) {
     plane.translate(cutterCenter.negated());
@@ -932,16 +948,20 @@ CSG.Axis =  function (size, radius, origin, vectors) {
 //     new CSG.Vector(1, 2, 3);
 //     new CSG.Vector([1, 2, 3]);
 //     new CSG.Vector({ x: 1, y: 2, z: 3 });
-
+const isZeros = (...vals) => vals.findIndex(v => withinEPSILON(v, 0)) === -1;
 CSG.Vector = function(x, y, z) {
   if (arguments.length == 3) {
     this.x = x;
     this.y = y;
     this.z = z;
-  } else if ('x' in x) {
+  } else if ('x' in x || 'y' in x || 'z' in x) {
     this.x = x.x;
     this.y = x.y;
     this.z = x.z;
+  } else if ('i' in x || 'j' in x || 'k' in x) {
+    this.x = x.i;
+    this.y = x.j;
+    this.z = x.k;
   } else {
     this.x = x[0];
     this.y = x[1];
@@ -953,6 +973,11 @@ CSG.Vector.prototype = {
   clone: function() {
     return new CSG.Vector(this.x, this.y, this.z);
   },
+  positive: function () {
+    return this.x > 0 || (isZeros(this.x) && this.y > 0) ||
+              (isZeros(this.x,this.y) && this.z > 0) || isZeros(this.x, this.y, this.z);
+  },
+  toArray: function() {return [this.x,this.y,this.z]},
 
   negated: function() {
     return new CSG.Vector(-this.x, -this.y, -this.z);
@@ -1246,7 +1271,7 @@ CSG.Polygon.prototype = {
     percision ||= .001;
     const verts = this.vertices;
     const shared = this.shared;
-    let color = String.color.next();//includeColor ? colors.name(shared) : '';
+    let color = includeColor ? colors.name(shared) : '';
     let str = `${color}[`;
     for (let v = 0; v < verts.length; v++) {
       str += `${verts[v].toString(percision)},`;
@@ -1475,6 +1500,7 @@ function ArbitraryRotate(point, degreestheta, radius)
 function rotate (point, rotation) {
   if (Array.isArray(rotation)) return rotation.forEach(r => rotate(point, r));
   if (!(rotation instanceof Object)) return;
+  rotation = new CSG.Vector(rotation);
   let newPos = point;
   newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
   newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
@@ -1484,6 +1510,7 @@ function rotate (point, rotation) {
 
 function reverseRotate (point, rotation) {
   if (Array.isArray(rotation)) return rotation.forEach(r => reverseRotate(point, r));
+  rotation = new CSG.Vector(rotation);
   rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
   let newPos = point;
   newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});

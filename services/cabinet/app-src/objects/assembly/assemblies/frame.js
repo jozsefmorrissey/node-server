@@ -9,7 +9,4 @@ class Frame extends Assembly {
   }
 }
 
-Frame.abbriviation = 'fr';
-
-
 module.exports = Frame

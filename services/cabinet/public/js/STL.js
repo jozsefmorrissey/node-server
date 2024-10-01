@@ -202,7 +202,7 @@ class RequireJS {
       Object.keys(scripts).forEach((path) => {
         const name = path.replace(nameReg, '$2').toLowerCase();
         if (name === fileName) {
-          guesses.push(determineRelativePath(currFile, path));
+          guesses.push('??' + determineRelativePath(currFile, path));
         }
       });
       return guesses;
@@ -236,7 +236,7 @@ class RequireJS {
       if (scripts[path] === undefined) {
         console.warn(`Trying to load a non existent js file
 \t'${relativePath}' from file '${filePath}'
-\t\tDid you mean:\n\t\t\t??${guessFilePath(relativePath, filePath).join('\n\t\t\t')}`);
+\t\tDid you mean:\n\t\t\t${guessFilePath(relativePath, filePath).join('\n\t\t\t')}`);
       }
       return scripts[path];
     }
@@ -427,6 +427,8 @@ function (require, exports, module) {
 	    return false;
 	  }
 	};
+	
+	CSG.BIG = 160934.4;//One Mile in cm
 	
 	const colors = {
 	  babyblue: [34,183,232],
@@ -953,10 +955,11 @@ function (require, exports, module) {
 	CSG.cube = function(options) {
 	  options = options || {};
 	  var c = new CSG.Vector(options.center || [0, 0, 0]);
-	  var r = !options.radius ? [1, 1, 1] : options.radius.length ?
-	           options.radius : [options.radius, options.radius, options.radius];
+	  var r = !options.radius ? [1, 1, 1] : Number.isFinite(options.radius) ?
+	                      [options.radius, options.radius, options.radius] :
+	                      new CSG.Vector(options.radius).toArray();
 	  if (options.demensions) {
-	    r = [options.demensions[0]/2, options.demensions[1]/2, options.demensions[2]/2];
+	    r = new CSG.Vector(options.demensions).times(.5).toArray();
 	  }
 	  return CSG.fromPolygons([
 	    [[0, 4, 6, 2], [-1, 0, 0]],
@@ -1006,7 +1009,7 @@ function (require, exports, module) {
 	    return new CSG.Point(options.start, .3, options.color);
 	  }
 	  const radius = options.radius || .2;
-	  let model = new CSG.cylinder({start, end, radius, slices: 32});
+	  let model = new CSG.cylinder({start, end, radius, slices: 8});
 	  model = vecotrOvertexModel(end, start, model, options);
 	  model.setColor(options.color);
 	  return vecotrOvertexModel(start, end, model, options);
@@ -1123,7 +1126,13 @@ function (require, exports, module) {
 	      polygons.push(new CSG.Polygon(vertices));
 	    }
 	  }
-	  return CSG.fromPolygons(polygons);
+	
+	  const csg = CSG.fromPolygons(polygons);
+	  csg.property('x', c.x, false, false);
+	  csg.property('y', c.y, false, false);
+	  csg.property('z', c.z, false, false);
+	  csg.property('radius', c.radius, false, false);
+	  return csg;
 	};
 	
 	// Construct a solid cylinder. Optional parameters are `start`, `end`,
@@ -1144,8 +1153,14 @@ function (require, exports, module) {
 	  var e = new CSG.Vector(options.end || [0, 1, 0]);
 	  var ray = e.minus(s);
 	  var r = options.radius || 1;
-	  var slices = options.slices || 16;
-	  var axisZ = ray.unit(), isY = (Math.abs(axisZ.y) > 0.5);
+	  if (!ray.positive()) {
+	    let temp = s;
+	    s = e;
+	    e = temp;
+	    ray = ray.negated();
+	  }
+	  var slices = options.slices || 8;
+	  var axisZ = ray.unit(); isY = (Math.abs(axisZ.y) > 0.5);
 	  var axisX = new CSG.Vector(isY, !isY, 0).cross(axisZ).unit();
 	  var axisY = axisX.cross(axisZ).unit();
 	  var start = new CSG.Vertex(s, axisZ.negated());
@@ -1163,9 +1178,10 @@ function (require, exports, module) {
 	  for (var i = 0; i < slices; i++) {
 	    var t0 = i / slices, t1 = (i + 1) / slices;
 	    polygons.push(new CSG.Polygon([point(0, t1, 0), point(0, t0, 0), point(1, t0, 0), point(1, t1, 0)]));
-	    topVerts.push(point(1, t0, -1));
-	    bottomVerts.push(point(0, t0, -1));
+	    topVerts.push(point(1, t0, 1));
+	    bottomVerts.push(point(0, t0, 1));
 	  }
+	  topVerts.reverse();
 	  return CSG.fromPolygons(polygons.concat([new CSG.Polygon(topVerts),new CSG.Polygon(bottomVerts)]));
 	  // return new CSG.Polygon(verts);
 	};
@@ -1195,7 +1211,7 @@ function (require, exports, module) {
 	  length = end.minus(start).length();
 	  const point = new CSG.sphere({radius: 1, center: end});
 	  const radius = options.radius || 1;
-	  const slices = options.slices || 16;
+	  const slices = options.slices || 8;
 	  let cylinder = new CSG.cylinder({start, end, radius, slices});
 	  let cone = cylinder.clone();
 	  cone.setColor(options.color);
@@ -1205,14 +1221,14 @@ function (require, exports, module) {
 	  const perpVector = perpendicularVector(rotationVector.clone()).times(radius/-2);
 	  const widthVector = perpVector.cross(rotationVector).unit().times(30);
 	  const cutterCenter = end;
-	  const plane = new CSG.Rectangle([30, length*10, radius], cutterCenter, rotationVector.unit(), widthVector.unit());
+	  const plane = new CSG.Rectangle([30, length*10, radius*2], cutterCenter, rotationVector.unit(), widthVector.unit());
 	  const planeCenter = new CSG.Vector(plane.center());
 	  plane.setColor(options.color);
-	  plane.translate(perpVector);
-	  plane.translate(cutterCenter.negated());
 	  const degrees = Math.toDegrees(Math.atan(radius/(2*length)));
 	  plane.ArbitraryRotate(degrees, widthVector.unit());
-	  plane.translate(cutterCenter);
+	  plane.center(cutterCenter);
+	  plane.translate(perpVector);
+	  // plane.translate(cutterCenter.negated());
 	
 	  for (let index = 0; index < slices; index++) {
 	    plane.translate(cutterCenter.negated());
@@ -1279,16 +1295,20 @@ function (require, exports, module) {
 	//     new CSG.Vector(1, 2, 3);
 	//     new CSG.Vector([1, 2, 3]);
 	//     new CSG.Vector({ x: 1, y: 2, z: 3 });
-	
+	const isZeros = (...vals) => vals.findIndex(v => withinEPSILON(v, 0)) === -1;
 	CSG.Vector = function(x, y, z) {
 	  if (arguments.length == 3) {
 	    this.x = x;
 	    this.y = y;
 	    this.z = z;
-	  } else if ('x' in x) {
+	  } else if ('x' in x || 'y' in x || 'z' in x) {
 	    this.x = x.x;
 	    this.y = x.y;
 	    this.z = x.z;
+	  } else if ('i' in x || 'j' in x || 'k' in x) {
+	    this.x = x.i;
+	    this.y = x.j;
+	    this.z = x.k;
 	  } else {
 	    this.x = x[0];
 	    this.y = x[1];
@@ -1300,6 +1320,11 @@ function (require, exports, module) {
 	  clone: function() {
 	    return new CSG.Vector(this.x, this.y, this.z);
 	  },
+	  positive: function () {
+	    return this.x > 0 || (isZeros(this.x) && this.y > 0) ||
+	              (isZeros(this.x,this.y) && this.z > 0) || isZeros(this.x, this.y, this.z);
+	  },
+	  toArray: function() {return [this.x,this.y,this.z]},
 	
 	  negated: function() {
 	    return new CSG.Vector(-this.x, -this.y, -this.z);
@@ -1593,7 +1618,7 @@ function (require, exports, module) {
 	    percision ||= .001;
 	    const verts = this.vertices;
 	    const shared = this.shared;
-	    let color = String.color.next();//includeColor ? colors.name(shared) : '';
+	    let color = includeColor ? colors.name(shared) : '';
 	    let str = `${color}[`;
 	    for (let v = 0; v < verts.length; v++) {
 	      str += `${verts[v].toString(percision)},`;
@@ -1822,6 +1847,7 @@ function (require, exports, module) {
 	function rotate (point, rotation) {
 	  if (Array.isArray(rotation)) return rotation.forEach(r => rotate(point, r));
 	  if (!(rotation instanceof Object)) return;
+	  rotation = new CSG.Vector(rotation);
 	  let newPos = point;
 	  newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
 	  newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
@@ -1831,6 +1857,7 @@ function (require, exports, module) {
 	
 	function reverseRotate (point, rotation) {
 	  if (Array.isArray(rotation)) return rotation.forEach(r => reverseRotate(point, r));
+	  rotation = new CSG.Vector(rotation);
 	  rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
 	  let newPos = point;
 	  newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});
@@ -5176,351 +5203,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/3d-modeling/viewer.js',
-function (require, exports, module) {
-	
-
-	
-	const du = require('../dom-utils.js');
-	const CSG = require('./csg.js');
-	const GL = require('./lightgl.js');
-	
-	// Convert from CSG solid to GL.Mesh object
-	CSG.prototype.toMesh = function() {
-	  var mesh = new GL.Mesh({ normals: true, colors: true });
-	  var indexer = new GL.Indexer();
-	  this.toPolygons().map(function(polygon) {
-	    var indices = polygon.vertices.map(function(vertex) {
-	      vertex.color = polygon.shared || [1, 1, 1];
-	      return indexer.add(vertex);
-	    });
-	    for (var i = 2; i < indices.length; i++) {
-	      mesh.triangles.push([indices[0], indices[i - 1], indices[i]]);
-	    }
-	  });
-	  mesh.vertices = indexer.unique.map(function(v) { return [v.pos.x, v.pos.y, v.pos.z]; });
-	  mesh.normals = indexer.unique.map(function(v) { return [v.normal.x, v.normal.y, v.normal.z]; });
-	  mesh.colors = indexer.unique.map(function(v) { return v.color; });
-	  mesh.computeWireframe();
-	  return mesh;
-	};
-	
-	var angleX = 0;
-	var angleY = 0;
-	var angleZ = 0;
-	var viewers = [];
-	
-	// Set to true so lines don't use the depth buffer
-	Viewer.lineOverlay = false;
-	
-	// A viewer is a WebGL canvas that lets the user view a mesh. The user can
-	// tumble it around by dragging the mouse.
-	function Viewer(csg, width, height, depth) {
-	  const originalDepth = depth;
-	  viewers.push(this);
-	  this.setDepth = (d) => depth = d;
-	  let x = 0;
-	  let y = 0;
-	
-	  let lastZoom;
-	  let zoomCount = 0;
-	  const zoom = (out) => {
-	    let direction = (out === true ? 1 : -1);
-	    let zoomOffset = 2;
-	    let newTime = new Date().getTime();
-	    if (lastZoom > newTime - 50) {
-	      zoomCount++;
-	      zoomOffset *= zoomCount;
-	      zoomOffset = zoomOffset > 20 ? 20 : zoomOffset;
-	    }
-	    lastZoom = newTime;
-	    depth += zoomOffset * direction;
-	  };
-	  this.zoom = zoom;
-	  const pan = (leftRight, upDown) => {
-	    x += leftRight;
-	    y += upDown * -1;
-	  }
-	
-	  // Get a new WebGL canvas
-	  var gl = GL.create();
-	  this.gl = gl;
-	  this.mesh = csg.toMesh();
-	  this.canvas = () => gl.canvas;
-	
-	  // Set up the viewport
-	  gl.canvas.width = width;
-	  gl.canvas.height = height;
-	  gl.viewport(0, 0, width, height);
-	  gl.matrixMode(gl.PROJECTION);
-	  gl.loadIdentity();
-	  gl.perspective(100, width / height, 10, 1000);
-	  gl.rotate(0, 0, 1, 0);
-	  gl.translate(0, 0, -200);
-	  gl.matrixMode(gl.MODELVIEW);
-	
-	  // Set up WebGL state
-	  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-	  gl.clearColor(0.93, 0.93, 0.93, 1);
-	  gl.enable(gl.DEPTH_TEST);
-	  gl.enable(gl.CULL_FACE);
-	  gl.polygonOffset(1, 1);
-	
-	  // Black shader for wireframe
-	  this.blackShader = new GL.Shader('\
-	    void main() {\
-	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\
-	    }\
-	  ', '\
-	    void main() {\
-	      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.1);\
-	    }\
-	  ');
-	
-	  // Shader with diffuse and specular lighting
-	  this.changeLightingShaderDirection = (x,y,z) => this.lightingShader = new GL.Shader(`
-	    varying vec3 color;
-	    varying vec3 normal;
-	    varying vec3 light;
-	    void main() {
-	      const vec3 lightDir = vec3(${x}, ${y}, ${z}) / 3.741657386773941;
-	      light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;
-	      color = gl_Color.rgb;
-	      normal = gl_NormalMatrix * gl_Normal;
-	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-	    }
-	  `, `
-	    varying vec3 color;
-	    varying vec3 normal;
-	    varying vec3 light;
-	    void main() {
-	      vec3 n = normalize(normal);
-	      float diffuse = max(0.0, dot(light, n));
-	      float specular = pow(max(0.0, -reflect(light, n).z), 32.0) * sqrt(diffuse);
-	      gl_FragColor = vec4(mix(color * (0.3 + 0.7 * diffuse), vec3(1.0), specular), 1.0);
-	    }`);
-	
-	  this.changeLightingShaderDirection(0, 0, 0);
-	  // this.changeLightingShaderDirection(3, 2, 3);
-	
-	  let origCenter = {x:0, y:0};
-	  let pointClicked = {x: 0, y: 0, z: 0};
-	  function setPointClicked(e) {
-	    const canvasPos = e.target.getBoundingClientRect();
-	    const clickPos = {x: e.x - canvasPos.x, y: e.y - canvasPos.y};
-	    const canvasCenter = {x: e.target.width/2, y: e.target.height/2};
-	    const canvasOffset = {x: clickPos.x - canvasCenter.x, y: clickPos.y - canvasCenter.y};
-	    const twoDLoc = {x: origCenter.x + canvasOffset.x, y: origCenter.y + canvasOffset.y};
-	    const centerOffset = GL.Matrix.relitiveDirection(twoDLoc.x, twoDLoc.y,0,gl.modelviewMatrix)
-	    pointClicked = {x: centerOffset[0], y: centerOffset[1], z: centerOffset[2]};
-	  }
-	
-	  let rotationUnit;
-	  let rotationOffset = [0,0,0];
-	  let panOffset;
-	  let panUnit;
-	
-	  let rotationVector = new CSG.Vector(25, 12,11.5);
-	  let point = {x: 0, y: 12, z: 11.5};
-	  // let rotationVector = new CSG.Vector(25, 12,11.5);
-	  function rotateEvent(e) {
-	    if (!rotationUnit) {
-	      rotationUnit = {};
-	      rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
-	      rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
-	    }
-	    if (rotationUnit) {
-	      const speed = 40;
-	      if (e.deltaY) {
-	        const dir = e.deltaY < 0 ? -speed : speed;
-	        rotationOffset[0] += rotationUnit.y[0]/dir;
-	        rotationOffset[1] += rotationUnit.y[1]/dir;
-	        rotationOffset[2] += rotationUnit.y[2]/dir;
-	      }
-	      if (e.deltaX) {
-	        const dir = e.deltaX < 0 ? speed : -speed;
-	        rotationOffset[0] += rotationUnit.x[0]/dir;
-	        rotationOffset[1] += rotationUnit.x[1]/dir;
-	        rotationOffset[2] += rotationUnit.x[2]/dir;
-	      }
-	    }
-	    // angleY += e.deltaX * 2;
-	    // angleX += e.deltaY * 2;
-	    // angleX = Math.max(-90, Math.min(90, angleX));
-	  }
-	
-	  gl.onmousemove = function(e) {
-	    if (e.dragging) {
-	      if (shiftHeld) panEvent(e);
-	      else rotateEvent(e);
-	      gl.ondraw();
-	    }
-	  };
-	
-	  function zoomEvent(e) {
-	    const st = document.documentElement.scrollTop;
-	    if (e.deltaY < 0) {
-	      zoom(true);
-	    } else {
-	      zoom();
-	    }
-	  }
-	
-	  function panEvent(e) {
-	    const st = document.documentElement.scrollTop;
-	    pan(-e.deltaX, e.deltaY)
-	  }
-	
-	  let lastScrollTop = 0;
-	  gl.canvas.onwheel = function (e) {
-	    zoomEvent(e);
-	    gl.ondraw();
-	  }
-	  disableScroll(gl.canvas);
-	
-	  let shiftHeld = false;
-	  window.onkeydown = (e) => {
-	    shiftHeld = e.key === "Shift" ? true : false;
-	  }
-	  window.onkeyup = (e) => {
-	    shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
-	  }
-	
-	  let clickHeld = false;
-	  window.onclick = (e) => {
-	    clickHeld = !clickHeld;
-	    if (!clickHeld) {
-	      rotationUnit = null;
-	      panUnit = null;
-	    }
-	  }
-	
-	  window.onmousedown = setPointClicked;
-	
-	  function viewFrom(point, rotation) {
-	      gl.makeCurrent();
-	
-	      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	      // const relDir1 = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
-	      gl.loadIdentity();
-	
-	      gl.rotate(rotation.x, 1, 0, 0);
-	      gl.rotate(rotation.y, 0, 1, 0);
-	      gl.rotate(rotation.z, 0, 0, 1);
-	
-	      gl.translate(0, 0, -20);
-	      // const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
-	      // gl.translate(-relDir[0], -relDir[1], -relDir[2]);
-	
-	      if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
-	      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
-	      if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
-	
-	      if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
-	      gl.enable(gl.BLEND);
-	      // that.blackShader.draw(that.mesh, gl.LINES);
-	      gl.disable(gl.BLEND);
-	      if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
-	  }
-	  this.viewFrom = viewFrom;
-	
-	  function applyZoom() {
-	    // const depthArr = GL.Matrix.relitiveDirection(0,0,depth,gl.modelviewMatrix);
-	    const transArr = GL.Matrix.relitiveDirection(x,-y,depth,gl.modelviewMatrix);
-	    gl.translate(-transArr[0], -transArr[1], transArr[2])
-	  }
-	
-	  var that = this;
-	  gl.ondraw = function() {
-	    gl.makeCurrent();
-	
-	    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	    // gl.loadIdentity();
-	    applyZoom();
-	    gl.rotateAroundPoint(pointClicked, rotationOffset);
-	
-	    // gl.rotate(angleX, rotationVector.x, rotationVector.y, rotationVector.z);
-	    // gl.rotate(angleY, rotationVector.x, rotationVector.y, rotationVector.z);
-	    // gl.rotate(rotationOffset[2], 0, 0, -1);
-	    x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
-	
-	    if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
-	    that.lightingShader.draw(that.mesh, gl.TRIANGLES);
-	    if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
-	
-	    if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
-	    gl.enable(gl.BLEND);
-	    // that.blackShader.draw(that.mesh, gl.LINES);
-	    gl.disable(gl.BLEND);
-	    if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
-	  };
-	
-	  gl.ondraw();
-	
-	  // gl.canvas.width = '100vw';
-	  // gl.canvas.height = '100vh';
-	}
-	
-	var nextID = 0;
-	function addViewer(viewer, id) {
-	  du.find(id).appendChild(viewer.gl.canvas);
-	}
-	
-	
-	
-	
-	// left: 37, up: 38, right: 39, down: 40,
-	// spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
-	var keys = {37: 1, 38: 1, 39: 1, 40: 1};
-	
-	function preventDefault(e) {
-	  e.preventDefault();
-	}
-	
-	function preventDefaultForScrollKeys(e) {
-	  if (keys[e.keyCode]) {
-	    preventDefault(e);
-	    return false;
-	  }
-	}
-	
-	// modern Chrome requires { passive: false } when adding event
-	var supportsPassive = false;
-	try {
-	  window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
-	    get: function () { supportsPassive = true; }
-	  }));
-	} catch(e) {}
-	
-	var wheelOpt = supportsPassive ? { passive: false } : false;
-	var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
-	
-	// call this to Disable
-	function disableScroll(element) {
-	  element.addEventListener('DOMMouseScroll', preventDefault, false); // older FF
-	  element.addEventListener(wheelEvent, preventDefault, wheelOpt); // modern desktop
-	  element.addEventListener('touchmove', preventDefault, wheelOpt); // mobile
-	  element.addEventListener('keydown', preventDefaultForScrollKeys, false);
-	}
-	
-	// call this to Enable
-	function enableScroll(element) {
-	  element.removeEventListener('DOMMouseScroll', preventDefault, false);
-	  element.removeEventListener(wheelEvent, preventDefault, wheelOpt);
-	  element.removeEventListener('touchmove', preventDefault, wheelOpt);
-	  element.removeEventListener('keydown', preventDefaultForScrollKeys, false);
-	}
-	
-	exports.Viewer = Viewer
-	exports.addViewer = addViewer
-	exports.preventDefault = preventDefault
-	exports.preventDefaultForScrollKeys = preventDefaultForScrollKeys
-	exports.disableScroll = disableScroll
-	exports.enableScroll = enableScroll
-	
-});
-
-
 RequireJS.addFunction('./public/js/utils/3d-modeling/STL.js',
 function (require, exports, module) {
 	
@@ -7807,6 +7489,351 @@ function (require, exports, module) {
 });
 
 
+RequireJS.addFunction('./public/js/utils/3d-modeling/viewer.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../dom-utils.js');
+	const CSG = require('./csg.js');
+	const GL = require('./lightgl.js');
+	
+	// Convert from CSG solid to GL.Mesh object
+	CSG.prototype.toMesh = function() {
+	  var mesh = new GL.Mesh({ normals: true, colors: true });
+	  var indexer = new GL.Indexer();
+	  this.toPolygons().map(function(polygon) {
+	    var indices = polygon.vertices.map(function(vertex) {
+	      vertex.color = polygon.shared || [1, 1, 1];
+	      return indexer.add(vertex);
+	    });
+	    for (var i = 2; i < indices.length; i++) {
+	      mesh.triangles.push([indices[0], indices[i - 1], indices[i]]);
+	    }
+	  });
+	  mesh.vertices = indexer.unique.map(function(v) { return [v.pos.x, v.pos.y, v.pos.z]; });
+	  mesh.normals = indexer.unique.map(function(v) { return [v.normal.x, v.normal.y, v.normal.z]; });
+	  mesh.colors = indexer.unique.map(function(v) { return v.color; });
+	  mesh.computeWireframe();
+	  return mesh;
+	};
+	
+	var angleX = 0;
+	var angleY = 0;
+	var angleZ = 0;
+	var viewers = [];
+	
+	// Set to true so lines don't use the depth buffer
+	Viewer.lineOverlay = false;
+	
+	// A viewer is a WebGL canvas that lets the user view a mesh. The user can
+	// tumble it around by dragging the mouse.
+	function Viewer(csg, width, height, depth) {
+	  const originalDepth = depth;
+	  viewers.push(this);
+	  this.setDepth = (d) => depth = d;
+	  let x = 0;
+	  let y = 0;
+	
+	  let lastZoom;
+	  let zoomCount = 0;
+	  const zoom = (out) => {
+	    let direction = (out === true ? 1 : -1);
+	    let zoomOffset = 2;
+	    let newTime = new Date().getTime();
+	    if (lastZoom > newTime - 50) {
+	      zoomCount++;
+	      zoomOffset *= zoomCount;
+	      zoomOffset = zoomOffset > 20 ? 20 : zoomOffset;
+	    }
+	    lastZoom = newTime;
+	    depth += zoomOffset * direction;
+	  };
+	  this.zoom = zoom;
+	  const pan = (leftRight, upDown) => {
+	    x += leftRight;
+	    y += upDown * -1;
+	  }
+	
+	  // Get a new WebGL canvas
+	  var gl = GL.create();
+	  this.gl = gl;
+	  this.mesh = csg.toMesh();
+	  this.canvas = () => gl.canvas;
+	
+	  // Set up the viewport
+	  gl.canvas.width = width;
+	  gl.canvas.height = height;
+	  gl.viewport(0, 0, width, height);
+	  gl.matrixMode(gl.PROJECTION);
+	  gl.loadIdentity();
+	  gl.perspective(100, width / height, 10, 1000);
+	  gl.rotate(0, 0, 1, 0);
+	  gl.translate(0, 0, -200);
+	  gl.matrixMode(gl.MODELVIEW);
+	
+	  // Set up WebGL state
+	  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	  gl.clearColor(0.93, 0.93, 0.93, 1);
+	  gl.enable(gl.DEPTH_TEST);
+	  gl.enable(gl.CULL_FACE);
+	  gl.polygonOffset(1, 1);
+	
+	  // Black shader for wireframe
+	  this.blackShader = new GL.Shader('\
+	    void main() {\
+	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\
+	    }\
+	  ', '\
+	    void main() {\
+	      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.1);\
+	    }\
+	  ');
+	
+	  // Shader with diffuse and specular lighting
+	  this.changeLightingShaderDirection = (x,y,z) => this.lightingShader = new GL.Shader(`
+	    varying vec3 color;
+	    varying vec3 normal;
+	    varying vec3 light;
+	    void main() {
+	      const vec3 lightDir = vec3(${x}, ${y}, ${z}) / 3.741657386773941;
+	      light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;
+	      color = gl_Color.rgb;
+	      normal = gl_NormalMatrix * gl_Normal;
+	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+	    }
+	  `, `
+	    varying vec3 color;
+	    varying vec3 normal;
+	    varying vec3 light;
+	    void main() {
+	      vec3 n = normalize(normal);
+	      float diffuse = max(0.0, dot(light, n));
+	      float specular = pow(max(0.0, -reflect(light, n).z), 32.0) * sqrt(diffuse);
+	      gl_FragColor = vec4(mix(color * (0.3 + 0.7 * diffuse), vec3(1.0), specular), 1.0);
+	    }`);
+	
+	  this.changeLightingShaderDirection(0, 0, 0);
+	  // this.changeLightingShaderDirection(3, 2, 3);
+	
+	  let origCenter = {x:0, y:0};
+	  let pointClicked = {x: 0, y: 0, z: 0};
+	  function setPointClicked(e) {
+	    const canvasPos = e.target.getBoundingClientRect();
+	    const clickPos = {x: e.x - canvasPos.x, y: e.y - canvasPos.y};
+	    const canvasCenter = {x: e.target.width/2, y: e.target.height/2};
+	    const canvasOffset = {x: clickPos.x - canvasCenter.x, y: clickPos.y - canvasCenter.y};
+	    const twoDLoc = {x: origCenter.x + canvasOffset.x, y: origCenter.y + canvasOffset.y};
+	    const centerOffset = GL.Matrix.relitiveDirection(twoDLoc.x, twoDLoc.y,0,gl.modelviewMatrix)
+	    pointClicked = {x: centerOffset[0], y: centerOffset[1], z: centerOffset[2]};
+	  }
+	
+	  let rotationUnit;
+	  let rotationOffset = [0,0,0];
+	  let panOffset;
+	  let panUnit;
+	
+	  let rotationVector = new CSG.Vector(25, 12,11.5);
+	  let point = {x: 0, y: 12, z: 11.5};
+	  // let rotationVector = new CSG.Vector(25, 12,11.5);
+	  function rotateEvent(e) {
+	    if (!rotationUnit) {
+	      rotationUnit = {};
+	      rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
+	      rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
+	    }
+	    if (rotationUnit) {
+	      const speed = 40;
+	      if (e.deltaY) {
+	        const dir = e.deltaY < 0 ? -speed : speed;
+	        rotationOffset[0] += rotationUnit.y[0]/dir;
+	        rotationOffset[1] += rotationUnit.y[1]/dir;
+	        rotationOffset[2] += rotationUnit.y[2]/dir;
+	      }
+	      if (e.deltaX) {
+	        const dir = e.deltaX < 0 ? speed : -speed;
+	        rotationOffset[0] += rotationUnit.x[0]/dir;
+	        rotationOffset[1] += rotationUnit.x[1]/dir;
+	        rotationOffset[2] += rotationUnit.x[2]/dir;
+	      }
+	    }
+	    // angleY += e.deltaX * 2;
+	    // angleX += e.deltaY * 2;
+	    // angleX = Math.max(-90, Math.min(90, angleX));
+	  }
+	
+	  gl.onmousemove = function(e) {
+	    if (e.dragging) {
+	      if (shiftHeld) panEvent(e);
+	      else rotateEvent(e);
+	      gl.ondraw();
+	    }
+	  };
+	
+	  function zoomEvent(e) {
+	    const st = document.documentElement.scrollTop;
+	    if (e.deltaY < 0) {
+	      zoom(true);
+	    } else {
+	      zoom();
+	    }
+	  }
+	
+	  function panEvent(e) {
+	    const st = document.documentElement.scrollTop;
+	    pan(-e.deltaX, e.deltaY)
+	  }
+	
+	  let lastScrollTop = 0;
+	  gl.canvas.onwheel = function (e) {
+	    zoomEvent(e);
+	    gl.ondraw();
+	  }
+	  disableScroll(gl.canvas);
+	
+	  let shiftHeld = false;
+	  window.onkeydown = (e) => {
+	    shiftHeld = e.key === "Shift" ? true : false;
+	  }
+	  window.onkeyup = (e) => {
+	    shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
+	  }
+	
+	  let clickHeld = false;
+	  window.onclick = (e) => {
+	    clickHeld = !clickHeld;
+	    if (!clickHeld) {
+	      rotationUnit = null;
+	      panUnit = null;
+	    }
+	  }
+	
+	  window.onmousedown = setPointClicked;
+	
+	  function viewFrom(point, rotation) {
+	      gl.makeCurrent();
+	
+	      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	      // const relDir1 = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
+	      gl.loadIdentity();
+	
+	      gl.rotate(rotation.x, 1, 0, 0);
+	      gl.rotate(rotation.y, 0, 1, 0);
+	      gl.rotate(rotation.z, 0, 0, 1);
+	
+	      gl.translate(0, 0, -20);
+	      // const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
+	      // gl.translate(-relDir[0], -relDir[1], -relDir[2]);
+	
+	      if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+	      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
+	      if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
+	
+	      if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
+	      gl.enable(gl.BLEND);
+	      // that.blackShader.draw(that.mesh, gl.LINES);
+	      gl.disable(gl.BLEND);
+	      if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+	  }
+	  this.viewFrom = viewFrom;
+	
+	  function applyZoom() {
+	    // const depthArr = GL.Matrix.relitiveDirection(0,0,depth,gl.modelviewMatrix);
+	    const transArr = GL.Matrix.relitiveDirection(x,-y,depth,gl.modelviewMatrix);
+	    gl.translate(-transArr[0], -transArr[1], transArr[2])
+	  }
+	
+	  var that = this;
+	  gl.ondraw = function() {
+	    gl.makeCurrent();
+	
+	    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	    // gl.loadIdentity();
+	    applyZoom();
+	    gl.rotateAroundPoint(pointClicked, rotationOffset);
+	
+	    // gl.rotate(angleX, rotationVector.x, rotationVector.y, rotationVector.z);
+	    // gl.rotate(angleY, rotationVector.x, rotationVector.y, rotationVector.z);
+	    // gl.rotate(rotationOffset[2], 0, 0, -1);
+	    x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
+	
+	    if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+	    that.lightingShader.draw(that.mesh, gl.TRIANGLES);
+	    if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
+	
+	    if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
+	    gl.enable(gl.BLEND);
+	    // that.blackShader.draw(that.mesh, gl.LINES);
+	    gl.disable(gl.BLEND);
+	    if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+	  };
+	
+	  gl.ondraw();
+	
+	  // gl.canvas.width = '100vw';
+	  // gl.canvas.height = '100vh';
+	}
+	
+	var nextID = 0;
+	function addViewer(viewer, id) {
+	  du.find(id).appendChild(viewer.gl.canvas);
+	}
+	
+	
+	
+	
+	// left: 37, up: 38, right: 39, down: 40,
+	// spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
+	var keys = {37: 1, 38: 1, 39: 1, 40: 1};
+	
+	function preventDefault(e) {
+	  e.preventDefault();
+	}
+	
+	function preventDefaultForScrollKeys(e) {
+	  if (keys[e.keyCode]) {
+	    preventDefault(e);
+	    return false;
+	  }
+	}
+	
+	// modern Chrome requires { passive: false } when adding event
+	var supportsPassive = false;
+	try {
+	  window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
+	    get: function () { supportsPassive = true; }
+	  }));
+	} catch(e) {}
+	
+	var wheelOpt = supportsPassive ? { passive: false } : false;
+	var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
+	
+	// call this to Disable
+	function disableScroll(element) {
+	  element.addEventListener('DOMMouseScroll', preventDefault, false); // older FF
+	  element.addEventListener(wheelEvent, preventDefault, wheelOpt); // modern desktop
+	  element.addEventListener('touchmove', preventDefault, wheelOpt); // mobile
+	  element.addEventListener('keydown', preventDefaultForScrollKeys, false);
+	}
+	
+	// call this to Enable
+	function enableScroll(element) {
+	  element.removeEventListener('DOMMouseScroll', preventDefault, false);
+	  element.removeEventListener(wheelEvent, preventDefault, wheelOpt);
+	  element.removeEventListener('touchmove', preventDefault, wheelOpt);
+	  element.removeEventListener('keydown', preventDefaultForScrollKeys, false);
+	}
+	
+	exports.Viewer = Viewer
+	exports.addViewer = addViewer
+	exports.preventDefault = preventDefault
+	exports.preventDefaultForScrollKeys = preventDefaultForScrollKeys
+	exports.disableScroll = disableScroll
+	exports.enableScroll = enableScroll
+	
+});
+
+
 RequireJS.addFunction('./public/js/utils/test/tests/STL.js',
 function (require, exports, module) {
 	
@@ -7827,8 +7854,14 @@ const STL = require('../../3d-modeling/STL.js');
 	  link.href = URL.createObjectURL(stl.binary.file());
 	  link.download = name.toKebab() + '.stl';
 	
-	  document.body.append(link);
+	  // document.body.append(link);
 	  link.click();
+	  // link.remove();
+	}
+	
+	function addLinks(modelOmodels, name) {
+	  if (modelOmodels instanceof CSG) addLink(modelOmodels, name);
+	  Object.keys(modelOmodels).forEach(k => addLink(modelOmodels[k], k));
 	}
 	
 	const models = {};
@@ -8105,6 +8138,32 @@ const STL = require('../../3d-modeling/STL.js');
 	  return well.union(lip).subtract(slotCutter);
 	};
 	
+	models['screen door latch spacer'] = () =>{
+	  let offset = 2.54/2 - 2.54/16;
+	  let stepLen = 5*2.54/16;
+	  let stepHeight = 2.54/2 + 2.54/16;
+	  let length = 5*2.54/2;
+	  let width = 3*2.54/4;
+	  const spacer = new CSG.cube({radius: [width/2,length/2,offset/2]});
+	  const step = new CSG.cube({radius: [(width - stepLen)/2, length/2, stepHeight/2],
+	                        center: [width/2 - (width - stepLen)/2, 0, offset/2 + stepHeight/2]});
+	  let topScrewHole = new CSG.cylinder({slices: 8, start: [.2,0,-stepHeight - offset],
+	                                    radius: 3*2.54/32, end: [.2,0,stepHeight + offset]});
+	  let topScrewResess = new CSG.cylinder({slices: 8, start: [.2,0, -offset/2],
+	                                    radius: 5*2.54/32, end: [.2,0, -offset/2 + 3*2.54/16 ]});
+	  topScrewHole = topScrewHole.union(topScrewResess);
+	  const bottomScrewHole = topScrewHole.clone();
+	  topScrewHole.translate({x:0,y:length/2 - 2.54/4,z:0});
+	  bottomScrewHole.translate({x:0,y:length/-2 + 2.54/4,z:0});
+	  return spacer.union(step).subtract(topScrewHole).subtract(bottomScrewHole);
+	}
+	
+	models['screen door latch'] = () =>{
+	  const barRadius = 5*2.54/32 - .01;
+	  const bar = new CSG.cube({radius: [barRadius, barRadius, 3]});
+	  return bar;
+	}
+	
 	const cnt = du.create.element('div');
 	const controls = du.create.element('div', {style: 'float: left'});
 	const display = du.create.element('div', {style: 'float: right', id: 'display'});
@@ -8120,7 +8179,7 @@ const STL = require('../../3d-modeling/STL.js');
 	controls.append(downloadBtn);
 	
 	const inputValue = i => i.type === 'checkbox' ? i.checked : i.value;
-	const model = () => {
+	const getSelected = () => {
 	  let args = du.find.downAll('input', argCnt).map(inputValue);
 	  args = args.map(a => Boolean.is(a) ? a : Number.parseFloat(a));
 	  return models[select.value](...args);
@@ -8128,8 +8187,12 @@ const STL = require('../../3d-modeling/STL.js');
 	viewer = new Viewer(new CSG(), 500, 500, 50);
 	
 	const updateModel = () => {
-	  console.log(model().toDrawString())
-	  viewer.mesh = model().toMesh();
+	  const modelOmodels = getSelected();
+	  modelList = modelOmodels instanceof CSG ? [modelOmodels] : Object.values(modelOmodels);
+	  const model = new CSG();
+	  modelList.forEach(m => model.polygons.concatInPlace(m.polygons));
+	  console.log(modelList.map(m => m.toDrawString(String.color.next())).join('\n\n'));
+	  viewer.mesh = model.toMesh();
 	  viewer.gl.ondraw();
 	}
 	
@@ -8143,10 +8206,10 @@ const STL = require('../../3d-modeling/STL.js');
 	}
 	
 	const download = () => {
-	  addLink(model(), select.value);
+	  addLinks(getSelected(), select.value);
 	}
 	
-	select.value = 'hingeRouterFence';
+	select.value = 'screen door latch';
 	
 	du.on.match('change', 'input', updateModel);
 	
@@ -8169,8 +8232,6 @@ function (require, exports, module) {
 	Math.PI34 = 3*Math.PI/4;
 	Math.PI54 = 5*Math.PI/4;
 	Math.PI74 = 7*Math.PI/4;
-	
-	
 	
 	function safeStdLibAddition() {
 	  const addition = [];
@@ -8212,6 +8273,7 @@ function (require, exports, module) {
 	
 	Function.safeStdLibAddition(Boolean, 'is', (boolean) =>
 	    (typeof boolean) === 'boolean' || boolean instanceof Boolean, true);
+	Function.safeStdLibAddition(Boolean, 'first', (...booleans) => booleans.find(b => Boolean.is(b)), true);
 	
 	// TODO: implement depth first search... I cant remember needing it so not worth my time
 	Function.safeStdLibAddition(Object, 'linkListFind', function(attr, is) {
@@ -8361,15 +8423,9 @@ function (require, exports, module) {
 	  if (Array.isArray(other)) {
 	    this.deleteAll();
 	    this.merge(other, false);
-	    if (!objEq(this, other)) {
-	      throw new Error('toodles');
-	    }
 	  } else {
 	    const newArr = [];
 	    newArr.merge(this, false);
-	    if (!objEq(this, newArr)) {
-	      throw new Error('toodles');
-	    }
 	    return newArr;
 	  }
 	});
@@ -8649,9 +8705,6 @@ function (require, exports, module) {
 	  if (tol > mod) return true;
 	  const min2 = Math.mod(val2 - tol/2, mod);
 	  const max2 = Math.mod(val2 + tol/2, mod);
-	
-	  const minSat = min2 < val2 ? val1 > min2 : (val1 < val2 || val1 > min2);
-	  const maxSat = max2 > val2 ? val1 < max2 : (val1 > val2 || val1 < max2);
 	  return Math.modWithin(val1, mod, min2, max2);
 	}, true);
 	
@@ -9644,6 +9697,79 @@ function (require, exports, module) {
 	  return colors[colorIndex];
 	}, true);
 	
+	{
+	  const a = 'a'.charCodeAt(0);
+	  const z = 'z'.charCodeAt(0);
+	  const A = 'A'.charCodeAt(0);
+	  const Z = 'Z'.charCodeAt(0);
+	  const zero = '0'.charCodeAt(0);
+	  const nine = '9'.charCodeAt(0);
+	  const range = {
+	    upper: [A,Z],
+	    lower: [a,z],
+	    alpha: [A,z],
+	    numeric: [zero, nine]
+	  }
+	  range.alpha.exclude = [Z+1, a-1];
+	
+	  Function.safeStdLibAddition(String, 'range', range, true);
+	}
+	
+	const rangeLength = range => !range ? 0 : range[1] - range[0] - rangeLength(range.exclude) + 1;
+	
+	const integerToChar = (int, range) => {
+	  if (range.exclude) {
+	    if (int + range[0] >= range.exclude[0]) int += rangeLength(range.exclude);
+	    // if (int + range[0] - 1 <= range.exclude[1]) int += 1;
+	  }
+	  return String.fromCharCode(int + range[0]);
+	}
+	function integerToStr(int, range) {
+	  if (!range) range = String.range.alpha;
+	  const rangeLen = rangeLength(range);
+	  let mod = rangeLen;
+	  let str = '';
+	  do {
+	    const value = int % mod;
+	    str += integerToChar(value, range);
+	    int = (int - value - 1) / rangeLen;
+	  } while (int > 0);
+	  return Array.from(str).reverse().join('');
+	}
+	Function.safeStdLibAddition(String, 'fromInt', integerToStr, true);
+	
+	const charInteger = (char, range) => {
+	  const rangeLen = rangeLength(range);
+	  const code = char.charCodeAt(0);
+	  if (code >= range[0]) {
+	    if (range.exclude) {
+	      if (code < range.exclude[0]) return code - range[0];
+	      if (code > range.exclude[1] && code <= range[1]) return code - range[0] - rangeLength(range.exclude);
+	      throw new Error ('This shouldnt happen but char is not within range');
+	    }
+	    if (code <= range[1])  return code - range[0];
+	  }
+	  throw new Error ('This shouldnt happen but char is not within range');
+	}
+	
+	const strInteger = function (range) {
+	  if (!range) range = String.range.alpha;
+	  const rangeLen = rangeLength(range);
+	  let int = 0;
+	  this.foreach((char, i) => {
+	    const placeValue = Math.pow(rangeLen, this.length -1 - i);
+	    const charInt = charInteger(char, range) + (i !== this.length - 1 ? 1 : 0);
+	    int += placeValue * charInt;
+	  });
+	  return int;
+	}
+	Function.safeStdLibAddition(String, 'toInt', strInteger);
+	
+	Function.safeStdLibAddition(String, 'plus', function (intOstring, range) {
+	  return String.fromInt(this.toInt(range) + (Number.isInteger(intOstring) ? intOstring : intOstring.toInt(range)));
+	});
+	
+	
 	const numberReg = /^[0-9]{1,}$/;
 	const funcReg = /^(.*?)(\(\)|)$/;
 	Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
@@ -9655,7 +9781,7 @@ function (require, exports, module) {
 	    const match = attrs[index].match(funcReg);
 	    attr = match[1];
 	    parent = value;
-	    const isFunc = value[attr] instanceof Function && match[2] === '()';
+	    const isFunc = value && value[attr] instanceof Function && match[2] === '()';
 	
 	    const nextIsIndex = new String(attrs[index + 1]).match(numberReg);
 	    if (value[attr] === undefined) {
@@ -9669,6 +9795,7 @@ function (require, exports, module) {
 	    target = value[attr];
 	    value = isFunc ? target() : target;
 	    if (value === undefined) return value;
+	    if (value === null) break;
 	  }
 	  return {parent, value, target, attr, created}
 	});
@@ -9691,15 +9818,18 @@ function (require, exports, module) {
 	  return Object.pathValue(this, path, value);
 	});
 	
-	Function.safeStdLibAddition(Object, 'passiveProperty', function (path, value) {
+	
+	function setProperty(path, value, enumerable, writable, configurable, get, set) {
 	  const pathInfo = this.pathInfo(path, true);
-	  Object.defineProperty(pathInfo.parent, pathInfo.attr, {
-	      writable: true,
-	      enumerable: false,
-	      configurable: true,
-	      value
-	  });
-	});
+	  writable = Boolean.first(writable, true);
+	  enumerable = Boolean.first(enumerable, true);
+	  configurable = Boolean.first(configurable, true);
+	  Object.defineProperty(pathInfo.parent, pathInfo.attr,
+	    {writable, enumerable, configurable, value});
+	}
+	
+	
+	Function.safeStdLibAddition(Object, 'property', setProperty);
 	
 	Function.safeStdLibAddition(Object, 'undefinedKey', function (key, joinStr, requireIndex) {
 	  if (!requireIndex && this[key] === undefined) return key;
@@ -9833,6 +9963,26 @@ function (require, exports, module) {
 	  return sum;
 	});
 	
+	Function.safeStdLibAddition(Array, 'group', function (...groupSizes) {
+	  if (groupSizes.length === 0) return;
+	  const elements = this.map(o => o);
+	  const groupSize = groupSizes.splice(0,1)[0];
+	  this.deleteAll();
+	  let i = 0;
+	  let j = 0;
+	  elements.forEach(e => {
+	    if (i === groupSize) (i = 0) & j++;
+	    if (i === 0) this[j] = [];
+	    this[j][i++] = e;
+	  });
+	  this.forEach(elem => elem.group(...groupSizes));
+	  return this;
+	});
+	
+	Function.safeStdLibAddition(Array, 'inSetOf', function (setSize) {
+	  this.length = Math.ceil(this.length/setSize) * setSize;
+	});
+	
 	const MSI = Number.MAX_SAFE_INTEGER;
 	const msi = Number.MIN_SAFE_INTEGER;
 	Function.safeStdLibAddition(Math, 'minMax', function (items, targetAttrs) {
@@ -9937,6 +10087,13 @@ function (require, exports, module) {
 	
 	Function.safeStdLibAddition(Object, 'filter', function(func) {
 	  return Object.filter(this, func, true).filtered;
+	});
+	
+	Function.safeStdLibAddition(Array, 'elements', function(func) {
+	  const elements = [];
+	  this.forEach(e => Array.isArray(e) ?
+	              elements.concatInPlace(e.elements()) : elements.push(e));
+	  return elements;
 	});
 	
 	Function.safeStdLibAddition(Object, 'copy', function(arr) {

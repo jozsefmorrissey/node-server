@@ -7,8 +7,6 @@ Math.PI34 = 3*Math.PI/4;
 Math.PI54 = 5*Math.PI/4;
 Math.PI74 = 7*Math.PI/4;
 
-
-
 function safeStdLibAddition() {
   const addition = [];
   function verify() {
@@ -49,6 +47,7 @@ Function.safeStdLibAddition(Object, 'definedPropertyNames', function(object) {
 
 Function.safeStdLibAddition(Boolean, 'is', (boolean) =>
     (typeof boolean) === 'boolean' || boolean instanceof Boolean, true);
+Function.safeStdLibAddition(Boolean, 'first', (...booleans) => booleans.find(b => Boolean.is(b)), true);
 
 // TODO: implement depth first search... I cant remember needing it so not worth my time
 Function.safeStdLibAddition(Object, 'linkListFind', function(attr, is) {
@@ -198,15 +197,9 @@ Function.safeStdLibAddition(Array, 'copy',   function (other) {
   if (Array.isArray(other)) {
     this.deleteAll();
     this.merge(other, false);
-    if (!objEq(this, other)) {
-      throw new Error('toodles');
-    }
   } else {
     const newArr = [];
     newArr.merge(this, false);
-    if (!objEq(this, newArr)) {
-      throw new Error('toodles');
-    }
     return newArr;
   }
 });
@@ -486,9 +479,6 @@ Function.safeStdLibAddition(Math, 'modTolerance',  function (val1, val2, mod, to
   if (tol > mod) return true;
   const min2 = Math.mod(val2 - tol/2, mod);
   const max2 = Math.mod(val2 + tol/2, mod);
-
-  const minSat = min2 < val2 ? val1 > min2 : (val1 < val2 || val1 > min2);
-  const maxSat = max2 > val2 ? val1 < max2 : (val1 > val2 || val1 < max2);
   return Math.modWithin(val1, mod, min2, max2);
 }, true);
 
@@ -1481,6 +1471,79 @@ Function.safeStdLibAddition(String.color, 'distinct', () => {
   return colors[colorIndex];
 }, true);
 
+{
+  const a = 'a'.charCodeAt(0);
+  const z = 'z'.charCodeAt(0);
+  const A = 'A'.charCodeAt(0);
+  const Z = 'Z'.charCodeAt(0);
+  const zero = '0'.charCodeAt(0);
+  const nine = '9'.charCodeAt(0);
+  const range = {
+    upper: [A,Z],
+    lower: [a,z],
+    alpha: [A,z],
+    numeric: [zero, nine]
+  }
+  range.alpha.exclude = [Z+1, a-1];
+
+  Function.safeStdLibAddition(String, 'range', range, true);
+}
+
+const rangeLength = range => !range ? 0 : range[1] - range[0] - rangeLength(range.exclude) + 1;
+
+const integerToChar = (int, range) => {
+  if (range.exclude) {
+    if (int + range[0] >= range.exclude[0]) int += rangeLength(range.exclude);
+    // if (int + range[0] - 1 <= range.exclude[1]) int += 1;
+  }
+  return String.fromCharCode(int + range[0]);
+}
+function integerToStr(int, range) {
+  if (!range) range = String.range.alpha;
+  const rangeLen = rangeLength(range);
+  let mod = rangeLen;
+  let str = '';
+  do {
+    const value = int % mod;
+    str += integerToChar(value, range);
+    int = (int - value - 1) / rangeLen;
+  } while (int > 0);
+  return Array.from(str).reverse().join('');
+}
+Function.safeStdLibAddition(String, 'fromInt', integerToStr, true);
+
+const charInteger = (char, range) => {
+  const rangeLen = rangeLength(range);
+  const code = char.charCodeAt(0);
+  if (code >= range[0]) {
+    if (range.exclude) {
+      if (code < range.exclude[0]) return code - range[0];
+      if (code > range.exclude[1] && code <= range[1]) return code - range[0] - rangeLength(range.exclude);
+      throw new Error ('This shouldnt happen but char is not within range');
+    }
+    if (code <= range[1])  return code - range[0];
+  }
+  throw new Error ('This shouldnt happen but char is not within range');
+}
+
+const strInteger = function (range) {
+  if (!range) range = String.range.alpha;
+  const rangeLen = rangeLength(range);
+  let int = 0;
+  this.foreach((char, i) => {
+    const placeValue = Math.pow(rangeLen, this.length -1 - i);
+    const charInt = charInteger(char, range) + (i !== this.length - 1 ? 1 : 0);
+    int += placeValue * charInt;
+  });
+  return int;
+}
+Function.safeStdLibAddition(String, 'toInt', strInteger);
+
+Function.safeStdLibAddition(String, 'plus', function (intOstring, range) {
+  return String.fromInt(this.toInt(range) + (Number.isInteger(intOstring) ? intOstring : intOstring.toInt(range)));
+});
+
+
 const numberReg = /^[0-9]{1,}$/;
 const funcReg = /^(.*?)(\(\)|)$/;
 Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
@@ -1492,7 +1555,7 @@ Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
     const match = attrs[index].match(funcReg);
     attr = match[1];
     parent = value;
-    const isFunc = value[attr] instanceof Function && match[2] === '()';
+    const isFunc = value && value[attr] instanceof Function && match[2] === '()';
 
     const nextIsIndex = new String(attrs[index + 1]).match(numberReg);
     if (value[attr] === undefined) {
@@ -1506,6 +1569,7 @@ Function.safeStdLibAddition(Object, 'pathInfo', function (path, create) {
     target = value[attr];
     value = isFunc ? target() : target;
     if (value === undefined) return value;
+    if (value === null) break;
   }
   return {parent, value, target, attr, created}
 });
@@ -1528,15 +1592,18 @@ Function.safeStdLibAddition(Object, 'pathValue', function (path, value) {
   return Object.pathValue(this, path, value);
 });
 
-Function.safeStdLibAddition(Object, 'passiveProperty', function (path, value) {
+
+function setProperty(path, value, enumerable, writable, configurable, get, set) {
   const pathInfo = this.pathInfo(path, true);
-  Object.defineProperty(pathInfo.parent, pathInfo.attr, {
-      writable: true,
-      enumerable: false,
-      configurable: true,
-      value
-  });
-});
+  writable = Boolean.first(writable, true);
+  enumerable = Boolean.first(enumerable, true);
+  configurable = Boolean.first(configurable, true);
+  Object.defineProperty(pathInfo.parent, pathInfo.attr,
+    {writable, enumerable, configurable, value});
+}
+
+
+Function.safeStdLibAddition(Object, 'property', setProperty);
 
 Function.safeStdLibAddition(Object, 'undefinedKey', function (key, joinStr, requireIndex) {
   if (!requireIndex && this[key] === undefined) return key;
@@ -1670,6 +1737,26 @@ Function.safeStdLibAddition(Array, 'sum', function (valueOfuncOarray) {
   return sum;
 });
 
+Function.safeStdLibAddition(Array, 'group', function (...groupSizes) {
+  if (groupSizes.length === 0) return;
+  const elements = this.map(o => o);
+  const groupSize = groupSizes.splice(0,1)[0];
+  this.deleteAll();
+  let i = 0;
+  let j = 0;
+  elements.forEach(e => {
+    if (i === groupSize) (i = 0) & j++;
+    if (i === 0) this[j] = [];
+    this[j][i++] = e;
+  });
+  this.forEach(elem => elem.group(...groupSizes));
+  return this;
+});
+
+Function.safeStdLibAddition(Array, 'inSetOf', function (setSize) {
+  this.length = Math.ceil(this.length/setSize) * setSize;
+});
+
 const MSI = Number.MAX_SAFE_INTEGER;
 const msi = Number.MIN_SAFE_INTEGER;
 Function.safeStdLibAddition(Math, 'minMax', function (items, targetAttrs) {
@@ -1774,6 +1861,13 @@ Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify,
 
 Function.safeStdLibAddition(Object, 'filter', function(func) {
   return Object.filter(this, func, true).filtered;
+});
+
+Function.safeStdLibAddition(Array, 'elements', function(func) {
+  const elements = [];
+  this.forEach(e => Array.isArray(e) ?
+              elements.concatInPlace(e.elements()) : elements.push(e));
+  return elements;
 });
 
 Function.safeStdLibAddition(Object, 'copy', function(arr) {

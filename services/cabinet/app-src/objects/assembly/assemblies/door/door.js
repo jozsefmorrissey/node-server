@@ -3,6 +3,7 @@
 
 const HasPull = require('../has-pull.js');
 const Handle = require('../hardware/pull.js');
+const Hinges = require('hinges');
 
 class Door extends HasPull {
   constructor(partCode, partName) {
@@ -21,6 +22,8 @@ class Door extends HasPull {
       return biPoly.back();
     }
 
+    this.hardware.push(new Hinges('hg'));
+    this.hardware[0].parentAssembly(this);
     this.addPull(Handle.location.TOP_RIGHT);
     // this.setPulls([Handle.location.TOP_RIGHT,
     // Handle.location.TOP_LEFT,
@@ -33,8 +36,5 @@ class Door extends HasPull {
     // Handle.location.LEFT]);
   }
 }
-
-Door.abbriviation = 'dr';
-
 
 module.exports = Door

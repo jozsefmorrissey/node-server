@@ -5,16 +5,33 @@
         <label>Show</label>
         <select class="show-select" name='type' side='left'>
           <option:t repeat='showType in showTypes'
-              {{cabinet.value('showLeft.type') === showType.name ? 'selected' : ''}}>
+              {{cabinet.value('show.left.type') === showType.name ? 'selected' : ''}}>
             {{showType.name}}
           </option:t>
         </select>
         <br>
         <label>End Style</label>
         <select class="show-select" name='endStyle' side='left'>
-          <option>No</option>
-          <option>Yes</option>
+          <option {{!cabinet.value('show.left.endStyle') ? 'selected' : ''}}>
+            No
+          </option>
+          <option {{cabinet.value('show.left.endStyle') ? 'selected' : ''}}>
+            Yes
+          </option>
         </select>
+      </div>
+    </div>
+    <div class='toe-kick-cab-cnt auto-fit'>
+      <label>Toe Kick</label>
+      <br>
+      <div class='auto-fit inline-flex'>
+        <span>
+          <measurement-input name='tkd' label='Depth' decimal='{{cabinet.resolve('tkd')}}'/>
+        </span>
+        &nbsp;&nbsp;&nbsp;
+        <span>
+          <measurement-input name='tkh' label='Height' decimal='{{cabinet.resolve('tkh')}}'/>
+        </span>
       </div>
     </div>
     <div class='cab-tab-cnt'>{{fileTabDisp.html()}}</div>
@@ -22,15 +39,19 @@
       <div class='align-left'>
         <select class="show-select" name='type' side='right'>
           <option:t repeat='showType in showTypes'
-              {{cabinet.value('showRight.type') === showType.name ? 'selected' : ''}}>
+              {{cabinet.value('show.right.type') === showType.name ? 'selected' : ''}}>
             {{showType.name}}
           </option:t>
         </select>
         <label>Show</label>
         <br>
         <select class="show-select" name='endStyle' side='right'>
-          <option>No</option>
-          <option>Yes</option>
+          <option {{!cabinet.value('show.right.endStyle') ? 'selected' : ''}}>
+            No
+          </option>
+          <option {{cabinet.value('show.right.endStyle') ? 'selected' : ''}}>
+            Yes
+          </option>
         </select>
         <label>End Style</label>
       </div>

@@ -21,7 +21,6 @@ PanelSection.fromJson = (json) => {
   return new PanelSection(panel);
 }
 
-PanelSection.abbriviation = 'ps';
 SectionProperties.addSection(PanelSection);
 
 module.exports = PanelSection

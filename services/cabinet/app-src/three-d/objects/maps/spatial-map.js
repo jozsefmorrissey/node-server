@@ -5,6 +5,9 @@ const Vector3D = require('../vector.js');
 class SpatialNode {
   constructor(object, tolerance, sectorMap, payload) {
     const neighbors = {}
+    if (object.constructor.name !== 'Polygon3D') {
+      console.warn('some algorithyms expect Polygon3D... SpatialMap.neighbors');
+    }
     sectorMap ||= new Vector3D.SectorMap();
     const sectors = Object.keys(sectorMap);
     sectors.forEach(s => (neighbors[s] = []) & (this[s] = () => neighbors[s]));
@@ -45,6 +48,26 @@ class SpatialMap {
     this.addAll = (objects) => objects.forEach(obj => this.add(obj));
     this.nodes = () => nodes;
     this.node = (object) => nodes.find(node => object === node.object());
+
+    this.connectNodes = (object) => this.nodes()
+                .map(node => ({node, connection: node.object().connect(object)}));
+    this.closest = (object) => {
+      const min = this.connectNodes().map(l=>l.length());
+      return min;
+    }
+    this.neighbors = (object, ...vectors) => {
+      const nodes = this.nodes();
+      const connections = this.connectNodes(object);
+      const neighbors = vectors.map(v => connections
+                          .filter(o => o.connection.isPoint() ||
+                                  (o.connection.vector().dot(v) > .99 &&
+                                    o.connection.length < tolerance))
+                          .map(o=> o.node || null));
+      vectors.forEach((v, i) => neighbors[i] = neighbors[i].filter(node =>
+              object.connect(node.object().center()).vector().sameDirection(v)));
+
+      return neighbors;
+    }
   }
 }
 

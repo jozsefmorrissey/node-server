@@ -1,5 +1,6 @@
 
 const DTO = require('../../shared/data-transfer-object')();
+const Layer = require('../../../app-src/three-d/objects/layer.js');
 const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
 const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
 const Line3D = require('../../../app-src/three-d/objects/line.js');
@@ -27,7 +28,8 @@ function determineMales(assem, env) {
 }
 
 const fullLengthModel = (intersection) => {
-  const axis = Polygon3D.axis(Polygon3D.fromCSG(intersection)).y.vector();
+  if (intersection.polygons.length === 0) return intersection;
+  const axis = Layer.axis(Polygon3D.fromCSG(intersection)).y.vector();
   const center1 = new Vertex3D(intersection.center()).translate(axis);
   const center2 = new Vertex3D(intersection.center()).translate(axis.inverse());
   const intersection1 = intersection.clone();
@@ -58,16 +60,18 @@ function removeJointMaterial(map, assem, env, model, intersections) {
     if (!env.byId[mid].jointSettings.male) return;
     let mm = env.getModel(mid, 'joined');
     if (!mm)
-      return console.warn(`I dont think you should see this id: '${env.byId[mid].locationCode}' does not have a joinedModel`);;
-    let intersection;
-    if (!(mm instanceof CSG)) mm = CSG.fromPolygons(mm.polygons, true);
-    if (intersections) {
-      const intersection = model.intersect(mm);
-      if (intersection.polygons.length) env.modelInfo.intersection[id][mid] = intersection;
-    }
-    if (midObj.joint && midObj.joint.full.female)
+      return console.warn(`I dont think you should see this id: '${env.byId[mid].locationCode}' does not have a joinedModel`);
+    if (mm.polygons.length > 0) {
+      let intersection;
+      if (!(mm instanceof CSG)) mm = CSG.fromPolygons(mm.polygons, true);
+      if (intersections) {
+        const intersection = model.intersect(mm);
+        if (intersection.polygons.length) env.modelInfo.intersection[id][mid] = intersection;
+      }
+      if (midObj.joint && midObj.joint.full.female)
       mm = fullLengthModel(intersection || model.intersect(mm));
-    malesModel = malesModel.union(mm);
+      malesModel = malesModel.union(mm);
+    }
   });
   try {
     if (model.polygons.length > 0) {

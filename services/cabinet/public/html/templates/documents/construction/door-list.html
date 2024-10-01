@@ -12,7 +12,7 @@
         </tr>
         <tr:t repeat='doorObj in partListMap[type]' {{!partListMap[type] ? 'hidden' : ''}}
                class='btm-border-barely-visible'>
-          <td>{{doorObj.length}}</td>
+          <td>{{disp.material.qty(doorObj.info)}}</td>
           <td>{{disp.measurement(doorObj.info.demensions.x)}}</td>
           <td>{{disp.measurement(doorObj.info.demensions.y)}}</td>
           <td>{{disp.measurement(doorObj.info.demensions.z)}}</td>

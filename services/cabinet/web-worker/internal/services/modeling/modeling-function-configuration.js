@@ -100,7 +100,13 @@ to.DrawerBox = {
     model: SimpleModels.DrawerBox
   },
   Section: {
-    model: DrawerBoxUtil
+    model: DrawerBoxUtil.drawerBox
+  }
+}
+
+to.Guide = {
+  Guide: {
+    model: DrawerBoxUtil.guide
   }
 }
 

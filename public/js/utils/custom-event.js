@@ -81,16 +81,16 @@ CustomEvent.all = (obj, eventObject, ...eventNames) => {
     eventNames.push(eventObject);
     eventObject = {};
   }
-  if (obj.on === undefined) obj.passiveProperty('on', {});
-  if (obj.trigger === undefined) obj.passiveProperty('trigger', {});
-  if (obj.events === undefined) obj.passiveProperty('events', {});
+  if (obj.on === undefined) obj.property('on', {}, false);
+  if (obj.trigger === undefined) obj.property('trigger', {}, false);
+  if (obj.events === undefined) obj.property('events', {}, false);
   for (let index = 0; index < eventNames.length; index++) {
     const name = eventNames[index];
     const e = eventObject[name] || new CustomEvent(name);
-    obj.events.passiveProperty(name, e);
-    if (obj.on[name] === undefined) obj.on.passiveProperty(name, e.on);
+    obj.events.property(name, e, false);
+    if (obj.on[name] === undefined) obj.on.property(name, e.on, false);
     else obj.on[name](e.trigger);
-    obj.trigger.passiveProperty(name, (...args) => e.trigger.apply(e, args));
+    obj.trigger.property(name, (...args) => e.trigger.apply(e, args), false);
   }
 }
 
