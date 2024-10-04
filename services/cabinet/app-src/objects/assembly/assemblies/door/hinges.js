@@ -8,7 +8,7 @@ class Hinge extends Assembly {
   constructor(partCode) {
     super(partCode);
     this.demensions = (parentInfo) => {
-      console.log('hinge dem!!');
+      console.log.logarithmic('hinge dem!!');
       return {x:1,y:1,z:1}
     }
   }

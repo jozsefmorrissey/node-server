@@ -35,6 +35,7 @@ function buildPartInfo(payload, env, taskId) {
       fenceEdges = {};
       if (!part.outsourced) {
         model = partInfo.model(true);
+
         model.z = partInfo.layers(true);
         model['-z'] = partInfo.layers(false);
         cuts = partInfo.cuts.map(c=>c.toJson());

@@ -115,9 +115,9 @@ class Vector3D {
       -Math.copysign(i,k) - Math.copysign(j,k)
     );
 
-    this.rotate = (rotations, center) => {
+    this.rotate = (rotations, center, reverse) => {
       const point = {x: i, y: j, z: k};
-      CSG.rotatePointAroundCenter(rotations, point);
+      CSG.rotatePointAroundCenter(rotations, point, null, reverse);
       return new Vector3D(point);
     }
 
@@ -247,12 +247,12 @@ function get2dLines(ortho1, ortho2, pivot) {
 const pivotVectors = {i: new Vector3D(1,0,0), j: new Vector3D(0,1,0), k: new Vector3D(0,0,1)};
 function determineRotation(unitLine, target, pivot, reverse) {
   const pivotVec = pivotVectors[pivot];
-  const orthoLine = Vector3D.viewFromVector([unitLine], pivotVec)[0];
-  const orthoTar = Vector3D.viewFromVector([target], pivotVec)[0];
-  const twoDlines = get2dLines(orthoLine, orthoTar, pivot);
+  // const orthoLine = Vector3D.viewFromVector([unitLine], pivotVec)[0];
+  // const orthoTar = Vector3D.viewFromVector([target], pivotVec)[0];
+  const twoDlines = get2dLines(unitLine, target, pivot);
   if (!twoDlines[0].isPoint() && !twoDlines[1].isPoint()) {
-    const degrees = Math.toDegrees(twoDlines[0].radians.sub(twoDlines[1]));
-    if (degrees !== 0 && degrees !== 360) {
+    const degrees = (twoDlines[0].radians.sub(twoDlines[1], false) * 180)/Math.PI;
+    if (!Math.modTolerance(degrees, 0,360, .01)) {
       const rotation = {};
       rotation[pivot] = reverse ? degrees : -degrees;
       return rotation;
@@ -270,6 +270,7 @@ const checkAllAreParrelle = (align, alignTo) => {
   return equal;
 }
 
+let correctCount = 0;
 const c = ['red', 'green', 'blue']
 const dotCmp = (alignTo) => (l, i) => Math.abs(l.dot(alignTo[i]));
 const alignToString = (align, unitLine, targetLine) => [unitLine ? unitLine.toString() : '', align.map((l,i) => l.toDrawString(c[i])).join('\n'),targetLine ? targetLine.toString() : ''].filter(l=>l).join('\n');
@@ -290,20 +291,26 @@ function determinRotations(align, alignTo, reverse) {
   proccess:
   while (keepGoing && cycles++ < 7) {
     for (let aIndex = 0; aIndex < align.length; aIndex++) {
-      const unitLine = align[aIndex];
       const targetLine = alignTo[aIndex];
       const rotationLength = rotations.length;
       for (let index = 0; index < pivots.length; index++) {
+        const unitLine = align[aIndex];
         const pivot = (reverse ? revPivots : pivots)[index];
+        const state = [align.map(v=>v.toString())];
         const rotation = determineRotation(unitLine, targetLine, pivot, reverse);
         if (rotation && !Object.equals(lastRotation, rotation)) {
           icl.snapShots.push(snapShotStr(icl.snapShots.length, aIndex, index, rotation, align, unitLine, targetLine));
-          align = align.map(l => reverse ? l.reverseRotate(rotation, center) : l.rotate(rotation, center));
+          align = align.map(l => l.rotate(rotation, center, reverse));
+          state[1] = align.map(v=>v.toString());
           const newRot = determineRotation(align[0], targetLine, pivot, reverse);
           if (newRot) {
             icl.incorrect.push({rotation});
-            align[0].rotate(newRot).toString()
+            align = align.map(l => l.rotate(rotation, center, !reverse));
+            state[2] = align.map(v=>v.toString());
+            determineRotation(align[0], targetLine, pivot, reverse);
+            // align[0].rotate(newRot).toString()
           } else {
+            correctCount++;
             icl.correct.push(rotation);
           }
           rotations.push(rotation);

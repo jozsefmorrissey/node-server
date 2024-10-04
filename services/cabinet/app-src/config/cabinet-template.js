@@ -4,6 +4,9 @@ const Cabinet = require('../objects/assembly/assemblies/cabinet.js')
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const PropertyConfig = require('./property/config');
 const AssemblyTemplate = require('assembly-template');
+const Order = require('../objects/order.js');
+
+
 
 class CabinetTemplate extends AssemblyTemplate {
   constructor(type) {
@@ -20,7 +23,8 @@ class CabinetTemplate extends AssemblyTemplate {
     CabinetTemplate.map[type] = this;
 
     function get(length, width, thickness, pc) {
-      const cabinet = Cabinet.build(instance.type(), undefined, instance.toJson());
+      const group = Order.createGroup('cabinet-template');
+      const cabinet = Cabinet.build(instance.type(), group, instance.toJson());
       cabinet.length(length || this.height());
       cabinet.width(width || this.width());
       cabinet.thickness(thickness || this.thickness());

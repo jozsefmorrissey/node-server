@@ -91,7 +91,7 @@ class BiPolygon {
       extendFaces(vector, face2);
     }
 
-    this.toArray = () => [polygon1.vertices(), polygon2.vertices()];
+    this.toArray = () => [face1, face2];
     this.orderBy = {};
     this.orderBy.polygon = (polygon) => {
       const faces = this.closestOrder(polygon.center());
@@ -333,8 +333,35 @@ BiPolygon.fromVectorObject =
 BiPolygon.fromPositionObject = (position) => {
   const dem = position.demension;
   const center = new Vertex3D(position.center);
-  const vecObj = position.normals;
-  return BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center, vecObj);
+  const biPoly = BiPolygon.fromVectorObject(dem.x, dem.y, dem.z, center);
+  biPoly.rotate(position.rotation);
+  return biPoly;
+}
+
+BiPolygon.fromCSG = (csg, normals) => {
+  const polys = Polygon3D.fromCSG(csg.polygons);
+  normals ||= Layer.normals(polys);
+  const frontBackSet = Polygon3D.parrelleSets(polys).filter(s => s[0].normal().parrelle(normals.z))[0];
+  if (!frontBackSet || !frontBackSet[0] || !frontBackSet[1])
+    throw new Error('Trying to build bipoly from csg\n\tNormals are not correct');
+  const front = frontBackSet[0]; const back = frontBackSet[1];
+  const fVerts = front.vertices();
+  const bVerts = back.vertices();
+  if (fVerts.length !== bVerts.length)
+    throw new Error('Trying to build bipoly from csg\n\tthe polygons identified as front and back do not have the same number of vertices.');
+  if ((fVerts.length + 2) !== polys.length)
+    throw new Error('Trying to build bipoly from csg\n\tThe total number of polygons is incorrect according to the identified front and back');
+  const sides = polys.filter(p => p !== front && p !== back && p.vertices().length === 4);
+  if ((sides.length + 2) !== polys.length)
+    throw new Error('Trying to build bipoly from csg\n\tOne or more of the sides does not have the neccisary 4 vertices.');
+  const verts = sides[0].vertices();
+  const bStartI = verts.findIndex((s,i) => bVerts.find(v => v.equals(verts[i])) &&
+                          fVerts.find(v => verts[(verts.length+i-1)%verts.length]) &&
+                          fVerts.find(v => verts[(verts.length+i-2)%verts.length]));
+  const fStartI = (verts.length + bStartI  - 2) % verts.length;
+  while (!fVerts[0].equals(verts[fStartI])) fVerts.push(fVerts.shift());
+  while (!bVerts[0].equals(verts[bStartI])) bVerts.push(bVerts.shift());
+  return new BiPolygon(fVerts, bVerts);
 }
 
 Object.class.register(BiPolygon);

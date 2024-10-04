@@ -75,7 +75,7 @@ class SectionProperties extends KeyValue {
       const outer = this.coordinates().outer;
       const normals = {
         z: this.normal(),
-        y: new Line3D(outer[1],outer[2]).vector().unit(),
+        y: new Line3D(outer[1],outer[2]).vector().positiveUnit(),
       }
       normals.x = normals.z.crossProduct(normals.y).unit();
       return normals;

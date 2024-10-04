@@ -259,10 +259,8 @@ class Polygon3D {
 
 
     const identifyConcaveLocations = () =>
-      forEachVertex(info => info.line.after.length() + info.line.before.length() >
-          info.vertex.before.distance(info.connection[1]) + info.vertex.after.distance(info.connection[1]) + .000001 &&
-          !(new Line3D(info.connection[0], info.vertex.before).vector().sameDirection(new Line3D(info.connection[0], info.vertex.after).vector())) &&
-          !instance.isWithin2d(info.connection[0]));
+        forEachVertex(info => new Line3D(info.connection[1], instance.center()).length() <
+                new Line3D(info.connection[0], instance.center()).length() + .0001);
       const identifyCrissCrossLocations = () => instance.lines.length < 4 ? [] :
         forEachVertex(info => info.line.before.intersection.segment(info.line.after, true));
       const identifyParrelleLocations = () =>
@@ -353,18 +351,22 @@ class Polygon3D {
       const iminus = Math.mod(index - offset, lines.length);
       const plusDot = Math.abs(lines[iplus].vector().unit().dot(plane.normal()));
       const minusDot = Math.abs(lines[iminus].vector().unit().dot(plane.normal()));
-      if (within(plusDot, minusDot))
-        throw new Error('This should not happen check dot products of lines[index|iplus|iminus]');
+      if (within(plusDot, minusDot)) {
+        console.warn.logarithmic('This should not happen check dot products of lines[index|iplus|iminus]');
+        return null;
+      }
       return plusDot > minusDot ? iplus : iminus;
     }
 
     const polySorter = (poly) => (a,b) => poly.distance(a.line.midpoint()) - poly.distance(b.line.midpoint());
     function extendByLines(plane, index) {
       const index2 = mostInLineIndex(plane, index, 2);
+      if(index2 === null) return null;
       const int1 = plane.intersection.line(lines[index]);
       const int2 = plane.intersection.line(lines[index2]);
-      const linesCopy = lines.map(l => l.clone());
+      const linesCopy = Polygon3D.connectedLines(lines);
       updateLines(linesCopy, index, index2, int1, int2);
+      Polygon3D.debug.states.push({lines: [lines[index], lines[index2]], ints: [int1, int2]});
       if (!new Polygon3D(linesCopy.map(l => l[0])).irregular.is() &&
           linesCopy.sum(l => l.length()) > lines.sum(l => l.length())) {
         updateLines(lines, index, index2, int1, int2);
@@ -406,14 +408,16 @@ class Polygon3D {
       const normal = polyOplane.connect.vertex(center).vector().inverse().unit();
       const vertAndLineMap = lines.map(linePerpObject(normal))
           // .concat(instance.vertices().map(vertPerpObject(normal, center)));
-      vertAndLineMap.sortByAttrs(['toString', 'dot'], true);
-      return vertAndLineMap[0];
+      vertAndLineMap.sortByAttr('dot', true);
+      return vertAndLineMap.max(o => o.line[0].vector().magnitude() +
+                                        o.line[1].vector().magnitude());
     }
 
     const MSI = Number.MAX_SAFE_INTEGER;
     this.extendTo = (polyOplane, doNotModify, directions) => {
-      if (instance.normal().parrelle(polyOplane.normal())) return this;
       if (doNotModify) return this.copy().extendTo(polyOplane, false, directions);
+      if (instance.normal().parrelle(polyOplane.normal())) return this;
+      if (within(polyOplane.distance(this), 0)) return this;
       const plane = polyOplane instanceof Polygon3D ? polyOplane.toPlane() : polyOplane;
       const center = (directions && directions.center) || this.center();
       const mostPerp = mostPerpendicularTo(polyOplane, center);
@@ -903,7 +907,7 @@ class Polygon3D {
     }
 
     const zVector = new Vector3D(0,0,1);
-    this.coDirectionalRotations = (vector) => Line3D.coDirectionalRotations(this.normal(), vector || zVector);
+    this.coDirectionalRotations = (vector) => Vector3D.coDirectionalRotations(this.normal(), vector || zVector);
 
     this.alignZpolyNorms = () => {
       const copy = this.copy();
@@ -1546,6 +1550,19 @@ Polygon3D.midRange = (...polys) => {
   return Vertex3D.midrange(...verts);
 }
 
+const vertOstart = (vOl) => (vOl instanceof Vertex3D ? vOl : vOl[0]).clone();
+Polygon3D.connectedLines = (verticesOlines) => {
+  let lastVert = vertOstart(verticesOlines[0]);
+  const lines = [];
+  for (let index = 0; index < verticesOlines.length; index++) {
+    const vert =  index === verticesOlines.length - 1 ? lines[0][0] :
+                  vertOstart(verticesOlines[(index+1)%verticesOlines.length]);
+    lines.push(new Line3D(lastVert, vert));
+    lastVert = vert;
+  }
+  return lines;
+}
+
 Polygon3D.encloseLines = (lines, normal, planeBarriers, nonExistantEdgeLength) => {
   if (lines.length < 2 && !normal) throw new Error('I need help here function requires atleast 2 lines or 1 line and a normal');
   nonExistantEdgeLength ||= 1000000;
@@ -1722,5 +1739,6 @@ Object.class.register(Polygon3D);
 Polygon3D.toJson = (poly) => {
   return {verts: poly.vertices(), _TYPE: Polygon3D.name};
 }
+Polygon3D.debug = {states: []};
 Polygon3D.fromJson = (json) => new Polygon3D(json.verts.map(j => Vertex3D.fromJson(j)));
 module.exports = Polygon3D;

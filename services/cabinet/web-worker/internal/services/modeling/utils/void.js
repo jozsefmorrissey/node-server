@@ -83,7 +83,10 @@ class VoidUtil {
     }
 
     const current = voidDto.position.current;
-    this.biPolygon = BiPolygon.fromPositionObject(current);
+    const dems = current.demension;
+    const norms = current.normals;
+    const center = new Vertex3D(current.center);
+    this.biPolygon = BiPolygon.fromVectorObject(dems.x, dems.y, dems.z,center, norms);
 
     this.abyss = {model: abyssModel};
   }

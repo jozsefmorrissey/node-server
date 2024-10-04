@@ -85,8 +85,6 @@ class Properties {
             const set = propertyToSetMap[k];
             if(values[set] === undefined) values[set] = [];
             values[set].push(k);
-          } else {
-            console.log('her');
           }
         });
         return values;

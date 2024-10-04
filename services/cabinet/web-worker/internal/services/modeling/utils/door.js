@@ -6,11 +6,12 @@ const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
 const Utils = require('utils');
 
 function doorBiPoly(assem, fullPoly, gap, left) {
-  const normals = Utils.normals(assem);
-  const demension = {x: 2000, y:2000, z:2000};
+  const normals = Utils.normals(assem, true);
+  const dems = {x: 2000, y:2000, z:2000};
   const scaler = left ? -1000 + gap/2 : 1000 - gap/2;
   const center = fullPoly.center().translate(normals.x.unit().scale(scaler));
-  const cutter = BiPolygon.fromPositionObject({demension, normals, center}).model();
+  const rotation = Vector3D.coDirectionalRotations([normals.x,normals.y,normals.z]);
+  const cutter = BiPolygon.fromVectorObject(dems.x, dems.y, dems.z,center, normals).model();
   const csg = fullPoly.model().subtract(cutter);
   const parrelleSets = Polygon3D.parrelleSets(Polygon3D.fromCSG(csg));
   const polys = parrelleSets.filter(set => set[0].normal().parrelle(normals.z))[0];

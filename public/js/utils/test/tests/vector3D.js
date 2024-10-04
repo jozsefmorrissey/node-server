@@ -21,8 +21,8 @@ function testRotations(rotations, ts) {
   const alignTo = [new Vector3D(1,0,0),new Vector3D(0,1,0),new Vector3D(0,0,1)];
   let align = alignTo;
   align = align.map(v => Line3D.fromVector(v).rotate(rotations).vector());
-  const calculated = Line3D.coDirectionalRotations(align, alignTo);
-  const revCalculated = Line3D.coDirectionalRotations(align, alignTo, true);
+  const calculated = Vector3D.coDirectionalRotations(align, alignTo);
+  const revCalculated = Vector3D.coDirectionalRotations(align, alignTo, true);
   ts.assertTrue(Object.equals(rotations, revCalculated));
   const realignedRev = align.map(v => Line3D.fromVector(v).reverseRotate(revCalculated).vector());
   const realigned = align.map(v => Line3D.fromVector(v).rotate(calculated).vector());
@@ -50,7 +50,7 @@ Test.add('Vector3D: coDirectionalRotations(simple)', (ts) => {
 function multipleRotations(rotations, ts) {
   const alignTo = [new Vector3D(1,0,0),new Vector3D(0,1,0),new Vector3D(0,0,1)];
   align = alignTo.map(v => Line3D.fromVector(v).rotate(rotations).vector());
-  const calculated = Line3D.coDirectionalRotations(align, alignTo, true);
+  const calculated = Vector3D.coDirectionalRotations(align, alignTo, true);
 
   const realigned = align.map(v => Line3D.fromVector(v).reverseRotate(calculated).vector());
   closeEnough(alignTo, realigned, ts);

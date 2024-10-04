@@ -91,8 +91,8 @@
                 "height": 198.12,
                 "fromFloor": 0,
                 "fromPreviousWall": 4.141002460695006,
-                "wallId": "Wall2D_tlad57g",
-                "id": "Door2D_81khpwx",
+                "wallId": "Wall2D_78mv0iz",
+                "id": "Door2D_h781t7n",
                 "hinge": 6
               }
             ],
@@ -658,7 +658,7 @@
                     "demension": {
                       "x": "3.75*2.54",
                       "y": "10*2.54",
-                      "z": "c.w - 10*2.54 "
+                      "z": "c.w - 9.5*2.54 "
                     },
                     "center": {
                       "x": "c_BACK.c.x +BACK.W/2 - t/2",
@@ -5147,12 +5147,12 @@
                   "config": {
                     "demension": {
                       "x": "c.w - L.t - R.t",
-                      "y": "c.h - B.t -T.t",
+                      "y": "c.h",
                       "z": "pt14"
                     },
                     "center": {
                       "x": "L.t + BACK.w/2",
-                      "y": "BACK.h/2 + B.t",
+                      "y": "BACK.h/2",
                       "z": "-(c.t - BACK.t /2)"
                     },
                     "rotation": {
@@ -5167,10 +5167,10 @@
                   "subassemblies": {},
                   "joints": [
                     {
-                      "_TYPE": "Dado",
+                      "_TYPE": "Butt",
                       "selector": {
-                        "depends": "BACK",
-                        "dependent": "T"
+                        "depends": "T",
+                        "dependent": "BACK"
                       },
                       "priority": 0,
                       "full": {
@@ -5249,18 +5249,18 @@
                   "included": true,
                   "config": {
                     "demension": {
-                      "x": "c.w - L.t - R.t",
-                      "y": "c.t ",
+                      "x": "c.t ",
+                      "y": "c.w - L.t - R.t",
                       "z": "pt34"
                     },
                     "center": {
-                      "x": "L.t + T.w / 2",
+                      "x": "L.t + T.l / 2",
                       "y": "c.h - T.t/2",
-                      "z": "T.l/-2 "
+                      "z": "T.w/-2 "
                     },
                     "rotation": {
                       "x": "90",
-                      "y": "0",
+                      "y": "90",
                       "z": "0"
                     }
                   },
@@ -5347,6 +5347,7 @@
                   "partName": "bottom",
                   "locationCode": "c_B",
                   "subassemblies": {},
+                  "normals": {"DETERMINE_FROM_MODEL": true},
                   "joints": [
                     {
                       "_TYPE": "Dado",

@@ -48,9 +48,6 @@ const demCheck = (m1,m2) => {
 }
 
 function removeJointMaterial(map, assem, env, model, intersections) {
-  if (assem.locationCode === 'c_T_fr') {
-    console.log('her')
-  }
   const maleIdObjs = determineMales(assem, env);
   const id = assem.id;
   let malesModel = new CSG();
@@ -163,15 +160,13 @@ function applyCutters(assem, cutters, env, group) {
   return model;
 }
 
+const sel = /B:full/;
 function buildExtendedModel(assem, joints, env) {
   const id = assem.id;
   let model = env.getModel(id, 'extended');
   if (model === undefined) return;
-  const polys = Polygon3D.fromCSG(model.polygons);
-  const normals = Utils.normals(assem, env);
-  const frontBackSet = Polygon3D.parrelleSets(polys).filter(s => s[0].normal().parrelle(normals.z))[0];
-  if (!frontBackSet || !frontBackSet[0] || !frontBackSet[1])
-    console.warn('normals misConfigured???');
+  const biPoly = BiPolygon.fromCSG(model, Utils.normals(assem, env));
+  const frontBackSet = [biPoly.front(), biPoly.back()];
   const front = frontBackSet[0];
   const back = frontBackSet[1];
   if (back === undefined) {
@@ -316,9 +311,6 @@ function Apply(payload, environment, taskId, intersections) {
   for (let index = 0; index < assemblyIds.length; index++) {
     const id = assemblyIds[index];
     const assem = environment.byId[id];
-    if (assem.locationCode === 'c_T_fr') {
-      console.log('her')
-    }
     if (assem.included && assem.jointSettings.female) {
       let model = env.getModel(id, 'joined');
       if (model) {

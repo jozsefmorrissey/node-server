@@ -34,9 +34,6 @@ class PartInfo {
       return false;
     }
 
-    if (part.locationCode === 'c_S1_S1_S2_S2_S1_dv:f') {
-      console.log('her')
-    }
     let normals = Utils.normals(part, env);
     this.normals = (array) => {
       if (array) return [normals.x, normals.y, normals.z];
@@ -63,7 +60,7 @@ class PartInfo {
       return zOnlyCuts.length < nzOnlyCuts.length ? 'z' : 'nz';
     };
 
-    const normRotz = Line3D.coDirectionalRotations(this.normals(true));
+    const normRotz = Vector3D.coDirectionalRotations(this.normals(true));
     let noJointModel = env.getModel(part, 'cut');
     let poly;
     if (!(noJointModel instanceof CSG)) noJointModel = CSG.fromPolygons(noJointModel.polygons, true);

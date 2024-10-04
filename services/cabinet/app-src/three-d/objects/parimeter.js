@@ -13,9 +13,9 @@ class Parimeter3D {
     //TODO: sliceAll is introducing duplicates
     lines = lines.unique(l => l.toString());
 
-    const allMap = new ToleranceMap({'0.x': .0001,
-                                    '0.y': .0001,
-                                    '0.z': .0001});
+    const allMap = new ToleranceMap({'0.x': .01,
+                                    '0.y': .01,
+                                    '0.z': .01});
     allMap.addAll(lines.concat(lines.map(l=>
       ((l.negitive.line = l.clone().negitive()).negitive.line = l).negitive.line
     )));
@@ -79,6 +79,10 @@ class Parimeter3D {
       else if (left.length > right.length) add(left, right);
       else if (left.length > 0) add(left, right);
     } while (remainingMap.values().length);
+
+    if (polys.length === 0) {
+      console.warn('Parimeter3D could not find a single parimeter');
+    }
     return polys;
   }
 }

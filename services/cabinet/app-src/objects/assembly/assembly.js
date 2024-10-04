@@ -13,6 +13,7 @@ const ModelingCollections = require('modeling-collections');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
 const assemblyBuildConfig = require('../../../public/json/cabinets.json');
 const JointSettings = require('../../../web-worker/shared/settings.js');
+const Utils = require('../../utils')
 // const ToModel = require('../../../web-worker/services/to-model.js');
 
 FunctionCache.on('hash', 250);
@@ -349,36 +350,7 @@ class Assembly extends KeyValue {
       return currAssem;
     }
 
-    let normObj;
-    const ensureVector = (cno, attr) => cno[attr].length === 2 ?
-                            cno[attr] = new Line3D(this.evalObject(cno[attr][0]), this.evalObject(cno[attr][1])).vector().unit() :
-                            (cno[attr] instanceof Vector3D ? cno[attr] :
-                            cno[attr] = new Vector3D(this.eval(cno[attr][0]), this.eval(cno[attr][1]), this.eval(cno[attr][2])).unit());
-
-    let lastNormHash;
-    this.normals = (array, normalObj) => {
-      const currHash = Object.hash(normalObj);
-      const settingNorms = lastNormHash !== currHash && normalObj instanceof Object;
-      if (settingNorms) {
-        lastNormHash = currHash;
-        if (!Array.isArray(normalObj)) normObj = normalObj;
-        else normObj = {x: normalObj[0], y: normalObj[1], z: normalObj[2]};
-        normObj.calc = normalObj.calc;
-        return normObj;
-      }
-      if (array !== true && array !== false) return normObj;
-      if (normObj === undefined) return;
-      if (normObj.DETERMINE_FROM_MODEL) return normObj;
-      if (!normObj.x && !normObj.y && !normObj.z) return undefined;
-      const calcNormObj = this.evalObject(normObj);
-      if (normObj.calc !== 0) ensureVector(calcNormObj, 'x');
-      if (normObj.calc !== 1) ensureVector(calcNormObj, 'y');
-      if (normObj.calc !== 2) ensureVector(calcNormObj, 'z');
-      if (normObj.calc === 0) calcNormObj.x = calcNormObj.y.crossProduct(calcNormObj.z).unit();
-      if (normObj.calc === 1) calcNormObj.y = calcNormObj.x.crossProduct(calcNormObj.z).unit();
-      if (normObj.calc === 2) calcNormObj.z = calcNormObj.x.crossProduct(calcNormObj.y).unit();
-      return array ? (calcNormObj ? [calcNormObj.x, calcNormObj.y, calcNormObj.z] : undefined) : calcNormObj;
-    }
+    this.normals = Utils.normals(this);
 
     this.getDependencies = (assem) => {
       assem ||= this;
@@ -644,7 +616,7 @@ Assembly.fromJson = (assemblyJson) => {
   const assembly = new (clazz)(partCode, partName, assemblyJson.config);
   assembly.id(assemblyJson.id);
   assembly.name(assemblyJson.name);
-  assembly.normals(null, assemblyJson.normals);
+  assembly.normals.set(false, assemblyJson.normals);
   assembly.outline( assemblyJson.outline);
   assembly.notes(assemblyJson.notes);
   assembly.value.all(assemblyJson.value.values);

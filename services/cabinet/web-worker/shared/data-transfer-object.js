@@ -57,9 +57,6 @@ class DataTransferObject{constructor(){}};
 function toDto (functionValueConfiguration, objectPreProcessor) {
   functionValueConfiguration ||= {};
   const to = function toDto (objectOval) {
-    if (objectOval && objectOval.constructor.name === 'Assembly') {
-      console.log(objectOval);
-    }
     if (objectOval === null || objectOval === undefined) return objectOval;
     if (objectOval instanceof Function) return;
     if (isPrimitive(objectOval)) return objectOval;

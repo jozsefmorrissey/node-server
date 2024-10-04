@@ -76,10 +76,6 @@ class SectionPropertiesUtil {
           }
         }
       }
-      // if (((closest && closest.dist) || 0) < 9 * 2.54) {
-      //   console.log('here');
-      //   this.drawerDepth()
-      // }
       drawerDepth = closest ? closest.dist : 0;
       return drawerDepth;
     };

@@ -555,7 +555,7 @@ Line3D.thetaBetween = (line, relToLine, viewFrom, acute) => {
     viewFrom = [x,y,z];
   }
   console.log(viewFrom.map(v => v.toString(.1)).join('\n'));
-  const rotz = Line3D.coDirectionalRotations(viewFrom);
+  const rotz = Vector3D.coDirectionalRotations(viewFrom);
   const clone1 = line.clone();
   const clone2 = relToLine.clone();
   const origin = new Vertex3D();
@@ -644,128 +644,6 @@ Line3D.sharedEndpoint = (...lines) => {
     if (existsInAll) return vertex;
   }
   return null;
-}
-
-const unitLine = (vectOline) => {
-  const vector = vectOline instanceof Line3D ? vectOline.vector() : vectOline;
-  return Line3D.fromVector(vector.unit());
-}
-
-function get2dLines(ortho1, ortho2, pivot) {
-  if (pivot === 'x')
-    return Line3D.to2D([ortho1, ortho2], 'y', 'z');
-  if (pivot === 'y')
-    return Line3D.to2D([ortho1, ortho2], 'z', 'x');
-  if (pivot === 'z')
-    return Line3D.to2D([ortho1, ortho2], 'x', 'y');
-}
-
-const pivotVectors = {x: new Vector3D(1,0,0), y: new Vector3D(0,1,0), z: new Vector3D(0,0,1)};
-function determineRotation(unitLine, target, pivot, reverse) {
-  const pivotVec = pivotVectors[pivot];
-  const orthoLine = Line3D.viewFromVector([unitLine], pivotVec)[0];
-  const orthoTar = Line3D.viewFromVector([target], pivotVec)[0];
-  const twoDlines = get2dLines(orthoLine, orthoTar, pivot);
-  if (!twoDlines[0].isPoint() && !twoDlines[1].isPoint()) {
-    const degrees = Math.toDegrees(twoDlines[0].radians.sub(twoDlines[1]));
-    if (degrees !== 0 && degrees !== 360) {
-      const rotation = {};
-      rotation[pivot] = reverse ? degrees : -degrees;
-      return rotation;
-    }
-  }
-}
-
-const revPivots = ['z', 'y', 'x'];
-const pivots = ['x', 'y', 'z'];
-const checkAllAreParrelle = (align, alignTo) => {
-  let equal = true;
-  for (let index = 0; index < align.length; index++) {
-    if (!align[index].isParrelle(alignTo[index])) equal = false;
-  }
-  return equal;
-}
-
-const c = ['red', 'green', 'blue']
-const dotCmp = (alignTo) => (l, i) => Math.abs(l.vector().dot(alignTo[i].vector()));
-const alignToString = (align, unitLine, targetLine) => [unitLine ? unitLine[1].toString() : '', align.map((l,i) => l.toDrawString(c[i])).join('\n'),targetLine ? targetLine.toString() : ''].filter(l=>l).join('\n');
-const rotStr = (rot) => rot ? `(${rot.x||''},${rot.y||''},${rot.z||''})` : '';
-const rotationInfo = (len, aIndex, index, rot) => `// ${len} ${aIndex}${index} ${rotStr(rot)}`;
-const snapShotStr = (len, aIndex, index, rot, align, unitLine, targetLine) =>
-`${rotationInfo(len, aIndex, index, rot)}\n\n${alignToString(align, unitLine, targetLine)}\n`
-function determinRotations(align, alignTo, reverse) {
-  align = align.map(l => l.clone());
-  const rotations = [];
-  let cycles = 0;
-  let keepGoing = true;
-  let lastRotation;
-  const center = new Vertex3D();//.center(Line3D.vertices(align));
-  let axisCannotBeEqual;
-  let icl = {incorrect: [], correct: [], snapShots: []}
-  const dot = dotCmp(alignTo);
-  proccess:
-  while (keepGoing && cycles++ < 7) {
-    for (let aIndex = 0; aIndex < align.length; aIndex++) {
-      const unitLine = align[aIndex];
-      const targetLine = alignTo[aIndex];
-      const rotationLength = rotations.length;
-      for (let index = 0; index < pivots.length; index++) {
-        const pivot = (reverse ? revPivots : pivots)[index];
-        const rotation = determineRotation(unitLine, targetLine, pivot, reverse);
-        if (rotation && !Object.equals(lastRotation, rotation)) {
-          icl.snapShots.push(snapShotStr(icl.snapShots.length, aIndex, index, rotation, align, unitLine, targetLine));
-          align = align.map(l => reverse ? l.reverseRotate(rotation, center) : l.rotate(rotation, center));
-          const newRot = determineRotation(unitLine, targetLine, pivot, reverse);
-          if (newRot) {
-            icl.incorrect.push({rotation});
-          } else {
-            icl.correct.push(rotation);
-          }
-          rotations.push(rotation);
-          lastRotation = rotation;
-        }
-        if (withinTol(align.sum(dot), 3)) break;
-      }
-      keepGoing = rotations.length !== rotationLength && align.map((l,i) => l.isParrelle(alignTo[i])).contains(false);
-    }
-  }
-  icl.snapShots.push(snapShotStr(icl.snapShots.length, align.length, pivots.length, null, align));
-  console.log.logarithmic('This function should be removed algorithm exists within vector');
-
-  if (rotations.length > 4) {
-    console.warn.logarithmic('Resolving rotations seams confused...');
-    determinRotations(align, alignTo, reverse);
-  }
-
-  return rotations.length > 0 ? rotations : null;
-}
-
-const defaultAlignVectors = [
-  new Vector3D(1,0,0),
-  new Vector3D(0,1,0),
-  new Vector3D(0,0,1)
-]
-
-Line3D.coDirectionalRotations = (align, alignTo, reverse) => {
-  if (alignTo == null) alignTo = defaultAlignVectors;
-  if (!Array.isArray(align)) align = [align];
-  if (!Array.isArray(alignTo)) alignTo = [alignTo];
-  if (align.length != alignTo.length) throw new Error('The same number of vectors must be in align and alignTo');
-  align = align.map(unitLine);
-  alignTo = alignTo.map(unitLine);
-  if (align.equals(alignTo) === true) {
-    return [];
-  }
-
-  let rotations = determinRotations(align, alignTo, reverse);
-  if (!reverse || rotations.length > 3) return rotations;
-  const combine = {x: 0, y: 0, z:0};
-  rotations.forEach(r => {
-    combine.x += r.x ? r.x : 0;
-    combine.y += r.y ? r.y : 0;
-    combine.z += r.z ? r.z : 0;
-  })
-  return combine;
 }
 
 Line3D.combineOrder = (line1, line2) => {

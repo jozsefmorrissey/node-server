@@ -3,7 +3,7 @@ const objectsJson = require('../../public/json/cabinets.json');
 const Assembly = require('../objects/assembly/assembly.js')
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const PropertyConfig = require('./property/config');
-const Group = require('../objects/group.js')
+const Order = require('../objects/order.js');
 
 class AssemblyTemplate extends Lookup {
   constructor(type) {
@@ -21,7 +21,8 @@ class AssemblyTemplate extends Lookup {
     AssemblyTemplate.map[type] = this;
 
     function get(length, width, thickness) {
-      const assem = Assembly.build(instance.type(), undefined, instance.toJson());
+      const group = Order.createGroup('cabinet-template');
+      const assem = Assembly.build(instance.type(), group, instance.toJson());
       assem.part(false);
       return assem;
     }

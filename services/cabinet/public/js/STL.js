@@ -842,6 +842,7 @@ function (require, exports, module) {
 	      for (let i = 0; i < rotations.length; i++) this.rotate(rotations[i])
 	      return;
 	    }
+	    rotations = new CSG.Vector(rotations)
 	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
 	      let newPos = vertex.pos;
 	      newPos = ArbitraryRotate(newPos, rotations.x, {x: pivot.x, y:0, z:0});
@@ -851,6 +852,7 @@ function (require, exports, module) {
 	    }));
 	  },
 	  reverseRotate: function (rotation) {
+	    rotation = new CSG.Vector(rotation)
 	    rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
 	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
 	      let newPos = vertex.pos;
@@ -870,6 +872,7 @@ function (require, exports, module) {
 	  },
 	
 	  translate: function (offset) {
+	    offset = new CSG.Vector(offset)
 	    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
 	    offset.id = String.random();
 	    this.polygons.forEach((poly) => poly.translate(offset));
@@ -1786,8 +1789,12 @@ function (require, exports, module) {
 	  // new polygons are filtered down to the bottom of the tree and become new
 	  // nodes there. Each set of polygons is partitioned using the first polygon
 	  // (no heuristic is used to pick a good split).
-	  build: function(polygons) {
+	  build: function(polygons, callCount) {
 	    if (!polygons.length) return;
+	    callCount ||= 0;
+	    if (callCount > 500) {
+	      throw new Error('CSG.polygons are misconfigured');
+	    }
 	    if (!this.plane) this.plane = polygons[0].plane.clone();
 	    var front = [], back = [];
 	    for (var i = 0; i < polygons.length; i++) {
@@ -1795,11 +1802,11 @@ function (require, exports, module) {
 	    }
 	    if (front.length) {
 	      if (!this.front) this.front = new CSG.Node();
-	      this.front.build(front);
+	      this.front.build(front, callCount + 1);
 	    }
 	    if (back.length) {
 	      if (!this.back) this.back = new CSG.Node();
-	      this.back.build(back);
+	      this.back.build(back, callCount + 1);
 	    }
 	  }
 	};
@@ -1935,6 +1942,16 @@ function (require, exports, module) {
 	  return points;
 	}
 	
+	CSG.printDrawString = (model, normals, center, scale) => {
+	  center ||= model.center();
+	  scale ||= 200;
+	  const str = `${normals.x.toDrawString('red', .001, center, scale)}\n` +
+	                `${normals.y.toDrawString('green', .001, center, scale)}\n` +
+	                `${normals.z.toDrawString('blue', .001, center, scale)}\n\n` +
+	                model.toDrawString();
+	
+	  console.log(str);
+	}
 	CSG.ArbitraryRotate = ArbitraryRotate;
 	CSG.rotatePointsAroundCenter = rotatePointsAroundCenter;
 	CSG.rotatePointAroundCenter = rotatePointAroundCenter;

@@ -87,10 +87,10 @@ class PartInformation {
       const remaining = csg2.subtract(csg1);
       const eq = remaining.polygons.length === 0;
       if (!eq)
-        return console.warn('verify Result') || false;
+        return console.warn.logarithmic('verify Result') || false;
       const bothEq = csg1.subtract(csg2).polygons.length === 0;
       if (!bothEq)
-        console.warn('verify Result');
+        console.warn.logarithmic('verify Result');
       return bothEq;
     }
     const equalFuncs = [eqToString, eqDisplay, eqSubtract];

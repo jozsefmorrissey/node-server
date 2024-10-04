@@ -288,7 +288,8 @@ ${intersectionLayers[obj.ii].toDrawString('blue')}\n\n`;
 // console.log(time / 1000);
 
 function partModelInfo(partId, maleId, env, jointInfo) {
-  const intersectionModel = ensureCsg(env.modelInfo.intersection[partId][maleId]);
+  const intersectionMap = env.modelInfo.intersection[partId];
+  const intersectionModel = intersectionMap && ensureCsg(intersectionMap[maleId]);
   if (!intersectionModel || intersectionModel.polygons.length === 0) return null;
   const jointModel = ensureCsg(env.getModel(partId, 'joined'));
   const noJointModel = ensureCsg(env.getModel(partId, 'model'));

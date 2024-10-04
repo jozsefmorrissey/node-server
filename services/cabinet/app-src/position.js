@@ -108,23 +108,9 @@ class Position {
       return this.center(center) + (magnitude * offset);
     }
 
-    this.limits = (targetStr, relitiveToCenter) => {
+    this.limits = () => {
       let center = this.center();
-
       let d = new Vertex3D(this.demension()).rotate(this.rotation());
-      if (targetStr !== undefined) {
-        const match = targetStr.match(/^(\+|-|)([xyz])$/)
-        const attr = match[2];
-        const d = d[attr]/2;
-        const pos = `+${attr}`;
-        const neg = `-${attr}`;
-        const limits = {};
-        limits[pos] = d;
-        if (match[1] === '+') return limits[pos];
-        limits[neg] = -d;
-        if (match[1] === '-') return limits[neg];
-        return  limits;
-      }
       return  {
         x: center.x + d.x / 2,
         '-x': center.x - d.x / 2,
@@ -134,6 +120,7 @@ class Position {
         '-z': center.z - d.z / 2,
       }
     }
+    this.limits.endpoints = () => Vertex3D.fromLimits(this.limits());
 
     this.normals = (array) => {
       const assemNorms = assembly.normals(array);

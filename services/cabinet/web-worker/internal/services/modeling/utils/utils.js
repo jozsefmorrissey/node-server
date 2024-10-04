@@ -27,7 +27,11 @@ function normals(part, env) {
   let norms = part.position.current.normals;
   if (norms === undefined) return {x: Vector3D.i, y: Vector3D.j, z: Vector3D.k}
   if (norms.DETERMINE_FROM_MODEL) {
-    norms = Layer.normals(env.getModel(part, 'cut'));
+    const model = env.getModel(part, 'cut');
+    if (!model.normals) {
+      model.normals = Layer.normals(env.getModel(part, 'cut'));
+    }
+    return model.normals;
   } else if (norms.DETERMINE_FROM_PARENT !== undefined) {
     const parentNorms = normals(part.parentAssembly(), env);
     norms = parentNorms;

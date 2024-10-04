@@ -524,9 +524,10 @@ class Line2d {
       return Math.atan2(deltaY, deltaX);
     }
 
-    const radianAddSub = (multiplier) => (otherOrads) => {
+    const radianAddSub = (multiplier) => (otherOrads, modulus) => {
       const otherRads = otherOrads instanceof Line2d ? otherOrads.radians() : otherOrads;
-      return Math.mod(Math.abs(this.radians() + 2*Math.PI + multiplier*otherRads) + 2*Math.PI, 2*Math.PI);
+      if (modulus === false) return this.radians() + 6*Math.PI + multiplier*otherRads;
+      return Math.mod(Math.abs(this.radians() + 4*Math.PI + multiplier*otherRads) + 2*Math.PI, 2*Math.PI);
     }
     this.radians.add = radianAddSub(1);
     this.radians.sub = radianAddSub(-1);

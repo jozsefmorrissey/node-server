@@ -273,16 +273,15 @@ const centerSort = (center) => (p1, p2) => p2.toPlane().distance(center) - p1.to
 Layer.axis = (polysOlayersOcsgOs) => {
   const nonLayer = !Array.isArray(polysOlayersOcsgOs) ? true :
                       polysOlayersOcsgOs.find(plc => !(plc instanceof Layer));
-  const layers = nonLayer ? Layer.from(polysOlayersOcsgOs) : polysOlayersOcsgOs;
-  const parimeters = layers.map((l,i) => l.parimeter());
-  const axisObj = parimeters.map((polys,i) =>
-          ({polys, axis: polys.length === 1 ? polys[0].axis() : Layers.axis(polys)}));
-  axisObj.sortByAttr('axis.y.length()', true);
-  const biggestYs = axisObj.filter(o => o.axis.y.length() + .0001 > axisObj[0].axis.y.length());
-  biggestYs.sortByAttr('axis.x.length()', true);
   try {
-    const y = biggestYs[0].axis.y;
-    const x = biggestYs[0].axis.x;
+    const layers = nonLayer ? Layer.from(polysOlayersOcsgOs) : polysOlayersOcsgOs;
+    const parimeters = layers.map((l,i) => l.parimeter());
+    const axisObj = parimeters.map((polys,i) =>
+    ({polys, axis: polys.length === 1 ? polys[0].axis() : Polygon3D.axis(polys)}));
+    axisObj.forEach(ao => ao.length = (ao.axis.y.length() * 2) + ao.axis.x.length());
+    axisObj.sortByAttr('length', true);
+    const y = axisObj[0].axis.y;
+    const x = axisObj[0].axis.x;
     let z = y.vector().unit().crossProduct(x.vector().unit());
     const center = Vertex3D.midrange(layers.map(l => l.vertices()).elements());
     const parrellePolys = parimeters.map(p=>p[0]).filter(p => p.normal().parrelle(z));
@@ -296,7 +295,8 @@ Layer.axis = (polysOlayersOcsgOs) => {
 
     return {y,x,z};
   } catch (e) {
-    Layer.axis(polysOlayersOcsgOs);
+    console.log(e);
+    throw e;
   }
 }
 

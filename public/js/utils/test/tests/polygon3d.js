@@ -355,8 +355,6 @@ const buildWeb = (excludeMap, degrees, length, rotation, translation) => {
       const line = new Line3D(verts[i].clone(), verts[j].clone());
       line.directional(false, true);
       if (!excludeMap[line.toDrawString()]) lines.push(line);
-      else
-        console.log('here')
     }
   }
   lines.normal = clockLines.normal;

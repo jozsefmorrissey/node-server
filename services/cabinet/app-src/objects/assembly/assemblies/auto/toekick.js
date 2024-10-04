@@ -21,17 +21,9 @@ class OpeningToeKick extends Assembly {
     this.opening = () => opening;
     const toeKickPanel = new Panel(':tkb', `ToeKickBacker`);
 
-    this.perpendicularToLandR = () => {
-      const lz = this.getAssembly('L').position().normals().z;
-      const rz = this.getAssembly('R').position().normals().z;
-      const oz = opening.normal();
-      return lz.perpendicular(oz) && oz.perpendicular(rz);
-    }
-
-
     const instance = this;
     function sideJointConfig(sideSelector, cutCond, char) {
-      const isButt = () => true;//!instance.perpendicularToLandR();
+      const isButt = () => true;
       const isDado = () => !isButt() && !cutCond();
       const isCut = () => !isButt() && cutCond();
       const dado = new Dado(toeKickPanel, sideSelector, isDado, 'tkDADO-'+char);
@@ -64,19 +56,17 @@ class OpeningToeKick extends Assembly {
     const cutter = new Cutter(':tkc', `ToeKick`);
     const cutterR = new Cutter(':tkcr', `ToeKickPerp`);
     const cutterL = new Cutter(':tkcl', `ToeKickPerp`);
-    const openNorm = opening.normal();
-    const rParrelleToOpening = openNorm.parrelle(instance.getAssembly('R').position().normals().x);
     toeKickPanel.normals(false, {DETERMINE_FROM_MODEL: true})
-    joint(cutter)(/^c_R(:|_)/, () => !autoToeKick.rightEndStyle() && this.perpendicularToLandR());
-    joint(cutter)(/^c_L(:|_)/, () => !autoToeKick.leftEndStyle() && this.perpendicularToLandR());
+    joint(cutter)(/^c_R(:|_)/, () => !autoToeKick.rightEndStyle());
+    joint(cutter)(/^c_L(:|_)/, () => !autoToeKick.leftEndStyle());
     sideJointConfig(/^R:/, autoToeKick.overlayRight, 'r');
     sideJointConfig(/^L:/, autoToeKick.overlayLeft, 'l');
 
     this.addSubAssembly(toeKickPanel);
     this.addSubAssembly(cutter);
-    
-    // joint(cutterR)(/^c_R(:|_)/, () => !autoToeKick.rightEndStyle() && this.perpendicularToLandR());
-    // joint(cutterL)(/^c_L(:|_)/, () => !autoToeKick.leftEndStyle() && this.perpendicularToLandR());
+
+    // joint(cutterR)(/^c_R(:|_)/, () => !autoToeKick.rightEndStyle());
+    // joint(cutterL)(/^c_L(:|_)/, () => !autoToeKick.leftEndStyle());
     // this.addSubAssembly(cutterL);
     // this.addSubAssembly(cutterR);
 

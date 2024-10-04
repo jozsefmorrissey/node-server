@@ -22,7 +22,7 @@ const targetNormals = [new Vector3D(0,0,-1),new Vector3D(0,1,0),new Vector3D(1,0
 function To2D(csg, normals, gap) {
   if (!(csg instanceof CSG)) return null;
   if (normals) {
-    const rots = Line3D.coDirectionalRotations(normals, targetNormals);
+    const rots = Vector3D.coDirectionalRotations(normals, targetNormals);
     csg.rotate(rots);
   }
   const polys = Polygon3D.fromCSG(csg);

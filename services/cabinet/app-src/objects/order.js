@@ -44,5 +44,12 @@ Order.fromJson = (json) => {
   return order;
 }
 
+Order.createGroup = (orderAndRoomName) => {
+  const order = new Order(orderAndRoomName);
+  order.addRoom(orderAndRoomName);
+  const group = order.rooms[orderAndRoomName].groups[0];
+  return group;
+}
+
 Order.count = 0;
 module.exports = Order

@@ -50,11 +50,13 @@ class Divider extends Assembly {
     const isThisFrame = (a) => a === frame;
     const isThisFrontPanel = (a) => a === pFull || pFront === a;
 
+    frame.jointSettings.extend(false)
     const framePanelJoint = new Dado(isThisFrontPanel, isThisFrame, null, 'FramePanelJoint');
     framePanelJoint.full.female(true);
-    const frameOtherPanelJoint = new Butt(isFrontPanel, isThisFrame, null, 'FrameOtherPanelJoint');
+    const frameOtherPanelJoint = new Butt(isThisFrame, isFrontPanelWOFrame, null, 'FrameOtherPanelJoint');
     frameOtherPanelJoint.full.male(false);
     this.addDependencies(framePanelJoint, frameOtherPanelJoint);
+
 
     const parts = [pFull, pFront, pBack];
     this.possibleParts = () => parts.concat(frame);

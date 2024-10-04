@@ -280,9 +280,6 @@ class Plane extends Array {
 
     this.within = (vertex) => {
       if (vertex instanceof Line3D) return this.within(vertex[0]) && this.within(vertex[1]);
-      if (vertex.toString() === '(6.6,40.8142091868206,-46.6878584209772)') {
-        console.log('here');
-      }
       const normal = this.normal();
       const points = this.points();
       const plane = new Plane(points[0], points[1], vertex);
