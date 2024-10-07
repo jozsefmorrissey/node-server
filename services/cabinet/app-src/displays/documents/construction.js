@@ -37,9 +37,9 @@ const render = (containerOselector, htmlFunc) => (result) => {
   }
 }
 
-const orderJob = (order, containerOselector, htmlFunc) => {
+const orderJob = (order, containerOselector, htmlFunc, props) => {
   order ||= Global.order();
-  const job = new Jobs.Documentation.Order(order);
+  const job = new Jobs.Documentation.Order(order, props);
   job.on.change(progressUpdate(containerOselector));
   if (containerOselector && htmlFunc)
     job.then(render(containerOselector, htmlFunc), err)
@@ -114,11 +114,11 @@ const BuildDiagram = (containerOselector, order) => {
   const reqId = String.random();
   // TODO: cabinet information should seperate box/shelve/cover models
   //        then this call will be no longer nessisary
-  const job = new Jobs.CSG.Assemblies.BoxOnly(cabinets);
-  job.on.change(() => DocHtml.sketchLayout(cabinets, containerOselector, reqId));
-  const renderFunc = (result) => DocHtml.openingDiagram(result, reqId);
-  job.then(render(containerOselector, renderFunc), err)
-  job.queue();
+  const job = orderJob(order, containerOselector, DocHtml.openingDiagram, {partInfo: false});
+  // job.on.change(() => DocHtml.sketchLayout(cabinets, containerOselector, reqId));
+  // const renderFunc = (result) => DocHtml.openingDiagram(result, reqId);
+  // job.then(render(containerOselector, renderFunc), err)
+  // job.queue();
   return job;
 }
 

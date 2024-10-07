@@ -45,13 +45,10 @@ To2D.simple = simpleTo2D;
 function setTo2D (payload, env, taskId) {
   const assems = payload.assemblies.concat(env.generated);
   let twoDObjs = {};
-  const modelMap = env.modelInfo.joined;
   for (let index = 0; index < assems.length; index++) {
     const key = assems[index];
-    if (!(modelMap[key] instanceof CSG) && modelMap[key] && modelMap[key].polygons) {
-      modelMap[key] = CSG.fromPolygons(modelMap[key].polygons, true);
-    }
-    twoDObjs[key] = To2D(modelMap[key], undefined, env.gap);
+    const model = env.getModel(key, 'joined');
+    twoDObjs[key] = To2D(model, undefined, env.gap);
     if ((index + 1) % 20 === 0) {
       reportBack(twoDObjs, taskId);
       twoDObjs = {};

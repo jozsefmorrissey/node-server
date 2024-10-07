@@ -27,17 +27,12 @@ class PartInformation {
       if (!this.finished()) return null;
       const hashMap = this.hashMap();
       const byCat = Object.values(instance.hashMap()).concatElements().filterSplit(p => p.category);
-      return type ? byCat[type] : byCat;
+      if (type) return byCat[type];
+      delete byCat.Cabinet;
+      return byCat;
     }
 
-    this.byCabinet = (type) => {
-      if (!finished) return null;
-      return Object.values(instance.hashMap()).concatElements()
-          .filterSplit(p => {
-              const ids = p.parts.map(p => p.getRoot().id() + '').unique();
-              return ids.length === 1 ? ids[0] : 'MULTIPLE';
-      });
-    }
+    this.cabinets = (type) => this.byCategory('Cabinet');
 
     this.all = () => {
       if (!this.finished()) return null;
@@ -56,15 +51,15 @@ class PartInformation {
       if (info.model) {
         info.model.part = {};
         info.partsId = String.fromInt(partInfo[id].partCount++, String.range.upper);
-        info.model.part[info.partId] = info.model.csg.clone();
+        info.model.part[info.partIds[0]] = info.model.csg;
         delete info.model.polygons;
       }
       return info;
     }
 
     function mergeParts(target, other) {
-      if (target.model) target.model.part[other.partId] = other.model.csg;
-      target.partIds.push(other.partId);
+      if (target.model) target.model.part[other.partIds[0]] = other.model.csg;
+      target.partIds.push(other.partIds[0]);
       target.parts.concatInPlace(other.parts);
       return target;
     }
@@ -149,6 +144,9 @@ class PartInformation {
     this.add = (info) => {
       info.parts = info.partIds.map(id => Lookup.get(id));
       const part = info.parts[0];
+      if (part.category() === 'Cabinet') {
+        console.log('her')
+      }
       if (!info.model && !part.outsourced())
         console.warn('model was not returned');
       if (info.model) info.model.csg = CSG.fromPolygons(info.model.polygons, true);

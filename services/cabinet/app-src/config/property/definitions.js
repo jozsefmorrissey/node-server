@@ -80,6 +80,8 @@ defs.dbdepths = new Property('dbdepths', 'Drawer Box Depths', {value: [
 //   DoorAndFront
 defs.daffrw = imp('daffrw', 'Door and front frame rail width', '2 3/8');
 defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null});
+defs.daft = imp('daft', 'Door and front thickness', 3 / 4);
+defs.dafbt = imp('dafbt', 'Door and front bumper thickness', 3 / 16);
 
 //   Door
 

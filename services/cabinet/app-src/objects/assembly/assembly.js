@@ -127,7 +127,7 @@ class Assembly extends KeyValue {
     let lastHash;
     function hash() {
       const valueObj = instance.value.values;
-      let hashVal = Object.hash(valueObj);
+      let hashVal = Object.hash(valueObj) + (instance.id()+'').hash();
       if (instance.parentAssembly() === undefined) hashVal += `${instance.length()}x${instance.width()}x${instance.thickness()}`.hash();
       hashVal += Object.hash(instance.config());
       hashVal += keyValHash();

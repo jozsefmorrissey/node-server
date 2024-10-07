@@ -30,7 +30,6 @@ class Handle extends Assembly {
     this.inElivation = true;
     instance = this;
 
-    this.category = () => `${this.parentAssembly().category()}_Handle`;
     this.index = () => {
       const parent = this.parentAssembly();
       if (!parent) return 1;

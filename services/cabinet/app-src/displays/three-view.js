@@ -46,9 +46,11 @@ function updatePartsDataList(container) {
   let htmlArr = ['<option value="ASSEMBLY"></option>'];
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
-    const locationCode = part.locationCode();
-    const partName = part.partName();
-    htmlArr.push(`<option value='${locationCode}' part-id='${part.id()}'></option>`);
+    if (!part.composite()) {
+      const locationCode = part.locationCode();
+      const partName = part.partName();
+      htmlArr.push(`<option value='${locationCode}' part-id='${part.id()}'></option>`);
+    }
   }
   htmlArr.sort()
   datalist.innerHTML = htmlArr.join('');
@@ -65,8 +67,9 @@ class ThreeView extends Lookup {
     let side = 'right';
     let threeViewObj;
 
-    const setThreeView = (target) => (modelInfo) => {
-      threeViewObj = {target, threeView: modelInfo.threeView(target.id())};
+    const setThreeView = (target) => (infoObj) => {
+      infoObj.target = target;
+      threeViewObj = infoObj;
     };
     let lastHash;
     function getThreeView() {
@@ -74,7 +77,7 @@ class ThreeView extends Lookup {
         const hash = targetPart.hash();
         if (lastHash !== hash) {
           lastHash = hash;
-          new Jobs.CSG.Assembly.To2D(targetPart).then(setThreeView(targetPart));
+          new Jobs.CSG.Assembly.To2D(targetPart).then(setThreeView(targetPart)).queue();
         }
       } else {
         const cabinet = Global.cabinet();
@@ -107,11 +110,10 @@ class ThreeView extends Lookup {
 
     this.toLines = () => {
       if (!threeViewObj) return [];
-      const threeView = threeViewObj.threeView;
-      if (!targetPart) {
-        return threeView.top.concat(threeView.right.concat(threeView.front));
+      if (targetPart) {
+        return threeViewObj.threeView || [];
       } else {
-        return threeView.parimeter.threeView;
+        return threeViewObj.parimeter && (threeViewObj.parimeter.threeView || []);
       }
     }
 
@@ -173,8 +175,9 @@ class ThreeView extends Lookup {
 
     function updatePartInfo(elem) {
       const infoCnt = du.find.closest('.part-info-cnt', elem);
-      const html = construction.Part.html(targetPart);
-      infoCnt.innerHTML = html;
+      // const html = construction.Part.html(targetPart);
+      // infoCnt.innerHTML = html;
+      console.warn('fix or remove function')
     }
 
     this.isolatePart = (partId, partCode) => {
@@ -185,6 +188,7 @@ class ThreeView extends Lookup {
       const partCodeCnt = du.id(`three-view-part-code-${this.id()}`);
       partCodeCnt.innerText = `${partCode}: ${partId}`;
       updatePartInfo(partCodeCnt);
+      this.update();
     }
 
     function rulerClick(elem) {

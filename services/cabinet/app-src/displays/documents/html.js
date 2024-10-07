@@ -3,6 +3,7 @@ const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/ve
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vector3D = require('../../three-d/objects/vector.js');
 const Polygon3D = require('../../three-d/objects/polygon.js');
+const Layer = require('../../three-d/objects/layer.js');
 const du = require('../../../../../public/js/utils/dom-utils');
 const Utils = require('./tools/utils.js');
 const Draw2d = require('../../../../../public/js/utils/canvas/two-d/draw.js');
@@ -13,6 +14,7 @@ const OpeningSketch = require('../opening-sketch.js');
 const DrawLayout = require('../draw/layout.js');
 const PanZoom = require('../../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 const Measurement = require('../../../../../public/js/utils/measurement.js');
+const ModelInfo = require('../../../web-worker/external/model-information.js');
 
 const orderTemplate = new $t('documents/construction');
 const roomTemplate = new $t('documents/construction/room');
@@ -69,16 +71,18 @@ function materialListToTemplate(partInformation, type, template) {
   const disp = Utils.display;
   parts.forEach(info => {
     const part = info.parts[0];
-    const category = part.category();
-    const key = disp.demensions(info.demensions);
-    const group = Utils.materialGroup(info);
-    if (Utils.materialUnit(part).unit !== 'CUBIC') {
-      if (map[category] === undefined) map[category] = {};
-      if (map[category][group] === undefined) map[category][group] = {};
-      if (map[category][group][key] === undefined) {
-        map[category][group][key] = [];
+    if (part.parentAssembly()) {
+      const category = info.category || part.category();
+      const key = disp.demensions(info.demensions);
+      const group = Utils.materialGroup(info);
+      if (Utils.materialUnit(part).unit !== 'CUBIC') {
+        if (map[category] === undefined) map[category] = {};
+        if (map[category][group] === undefined) map[category][group] = {};
+        if (map[category][group][key] === undefined) {
+          map[category][group][key] = [];
+        }
+        map[category][group][key].push(info);
       }
-      map[category][group][key].push(info);
     }
   });
 
@@ -249,15 +253,44 @@ DocumentationHtml.sketchLayout = (cabinets, containerOselector, reqId) => {
   }
 }
 
-DocumentationHtml.openingDiagram = (modelInfoMap, reqId) => {
+const cabCanvasId = (cabinet, dir) => `cabinet-${dir}-${cabinet.id()}-canvas`;
+const ij = [Vector3D.i, Vector3D.j];
+function drawNormalizedLayers(cabInfo, layers, dir, x, y) {
+  const canvas = du.id(cabCanvasId(cabInfo.parts[0], dir));
+  layers = layers.map(l => l.copy());
+  const norms = [cabInfo.normals[x], cabInfo.normals[y]];
+  const rotations = Vector3D.coDirectionalRotations(norms, ij);
+  const center = cabInfo.model.csg.center();
+  const dems = cabInfo.demensions;
+  layers.forEach(l => l.rotate(rotations, center));
+  layers.sort((a,b) => a.center().z - b.center().z);
+  const draw = new Draw2d(canvas);
+  draw.position(center, {x: dems[x] * 1.1, y: dems[y] * 1.1});
+  draw(layers);
+}
+async function drawCabinets(cabinets) {
+  for (let index = 0; index < cabinets.length; index++) {
+    const cabInfo = cabinets[index];
+    const normals = cabInfo.normals;
+    const layers = cabInfo.layers;
+    drawNormalizedLayers(cabInfo, layers, 'front', 'x', 'y');
+    drawNormalizedLayers(cabInfo, layers, 'top', 'x', 'z');
+    drawNormalizedLayers(cabInfo, layers, 'side', 'z', 'y');
+  }
+}
+
+DocumentationHtml.openingDiagram = (partInformation, reqId) => {
   reqId ||= String.random();
-  const cabinets = [];
-  Object.keys(modelInfoMap).forEach(id => {
-    const cabinet = Lookup.get(id);
-    const modelInfo = modelInfoMap[id];
-    const selector = `#${openingDiagramCntId(reqId)(id)}`;
-    new OpeningSketch(selector, cabinet, modelInfo);
-  });
+  const cabinetInfos = partInformation.cabinets();
+  setTimeout(() => drawCabinets(cabinetInfos));
+  const disp = Utils.display;
+  return openingDiagramsTemplate.render({cabinetInfos, cabCanvasId, disp})
+  // Object.keys(modelInfoMap).forEach(id => {
+  //   const cabinet = Lookup.get(id);
+  //   const modelInfo = modelInfoMap[id];
+  //   const selector = `#${openingDiagramCntId(reqId)(id)}`;
+  //   new OpeningSketch(selector, cabinet, modelInfo);
+  // });
 }
 
 

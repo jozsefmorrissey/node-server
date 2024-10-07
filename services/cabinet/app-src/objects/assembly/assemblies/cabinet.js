@@ -161,9 +161,20 @@ class Cabinet extends Assembly {
     this.normals = (array) => {
       if (this.openings.length === 0) return;
       const normObj = {};
+      const mainOpening = this.openings[0];
+      const secProps = mainOpening.sectionProperties();
       normObj.y = new Vector3D(0,1,0);
-      normObj.x = this.openings[0].normal();
-      normObj.z = normObj.x.crossProduct(normObj.y);
+      normObj.z = mainOpening.normal();
+      normObj.x = normObj.z.crossProduct(normObj.y).inverse();
+      const center = this.buildCenter();
+      const outerCenter = mainOpening.sectionProperties().outerCenter();
+      const rightCenter = secProps.right().position().center();
+      if (center.distance(rightCenter) < center.translate(normObj.x, true).distance(rightCenter))
+        normObj.x = normObj.x.inverse();
+      if (center.distance(outerCenter) < center.translate(normObj.z, true).distance(outerCenter))
+        normObj.z = normObj.z.inverse();
+
+
       return array ? [normObj.x, normObj.y, normObj.z] : normObj;
     }
 

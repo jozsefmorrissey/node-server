@@ -196,7 +196,7 @@ to.Pull = (baseCenter, line, normal, projection, cTOc) => {
   const centerRL = baseCenter.translate(vecObj.z.scale(sideProjection/2), true);
   const centerLeft = centerRL.translate(vecObj.x.scale(cTOc/-2), true);
   const centerRight = centerRL.translate(vecObj.x.scale(cTOc/2), true);
-  const centerMain = baseCenter.translate(vecObj.z.scale(projection - gerth/2));
+  const centerMain = baseCenter.translate(vecObj.z.scale(projection + gerth));
 
   var lCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerLeft, vecObj);
   var rCyl = BiPolygon.fromVectorObject(gerth, gerth, sideProjection, centerRight, vecObj);
@@ -210,8 +210,8 @@ to.Pull.Simple = (baseCenter, line, normal, projection, cTOc) => {
   let length = cTOc + gerth;
   const vecObj = getVectorObj(line, normal);
 
-  let sideProjection = projection - gerth;
-  const center = baseCenter.translate(vecObj.z.scale((sideProjection + gerth) /2), true);
+  //TODO: cannot figure out why adding gerth positions handle depth properly...
+  const center = baseCenter.translate(vecObj.z.scale(projection/2 + gerth), true);
 
   return BiPolygon.fromVectorObject(length, gerth, projection, center, vecObj);
 }

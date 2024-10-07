@@ -441,12 +441,7 @@ class Line3D {
       return this.clone();
     }
 
-    this.isParrelle = (other) => {
-      const vect = this.vector().positiveUnit();
-      const oVect = (other instanceof Vector3D ? other : other.vector()).positiveUnit();
-      return withinTol(vect.i(), oVect.i()) && withinTol(vect.j(), oVect.j()) &&
-              withinTol(vect.k(), oVect.k());
-    }
+    this.isParrelle = (other) => this.vector().unit().parrelle(other.vector().unit());
 
     this.acquies = (trendSetter) => {
       const acLine = this.acquiescent(trendSetter);

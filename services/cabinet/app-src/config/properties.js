@@ -35,7 +35,7 @@ add('Guides', Defs.dbtos,Defs.dbsos,Defs.dbbos,Defs.dbn,Defs.dbid, Defs.dbdepths
 add('DoorAndFront', Defs.daffrw,Defs.dafip)
 // add('Door', [];
 add('DrawerBox', Defs.dbst,Defs.dbbt);
-add('DrawerFront', Defs.mfdfd);
+add('DrawerFront', Defs.mfdfd, Defs.daft, Defs.dafbt);
 // add('Frame', Defs.fw,Defs.ft);
 add('Handle', Defs.c2c,Defs.proj);
 add('Hinge', Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol);

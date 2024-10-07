@@ -16,7 +16,7 @@ class PartsInformationTask extends Task {
       if (result instanceof Error) {
         console.error(result);
       } else {
-        remaining.remove(result.partId);
+        remaining.removeAll(result.partIds);
         modelInfo.partInformation.add(result);
         this.trigger.change(this);
         if (remaining.length === 0)

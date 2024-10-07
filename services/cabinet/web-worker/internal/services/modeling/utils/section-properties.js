@@ -112,8 +112,8 @@ class SectionPropertiesUtil {
       if (!rMdto && coverInfo) return coverInfo;
       rMdto ||= spDto;
       let biPolygon, backOffset, frontOffset, offset, coords;
-      const doorThickness = 3 * 2.54/4;
-      const bumperThickness = 3 * 2.54 / 16;
+      const doorThickness = Utils.property('daft', rMdto, env);
+      const bumperThickness = Utils.property('dafbt', rMdto, env);
       const style = Utils.property('style', rMdto, env);
       if (style === 'Inset') {
         coords = spDto.coordinates.inner;

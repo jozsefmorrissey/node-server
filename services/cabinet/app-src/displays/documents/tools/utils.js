@@ -77,7 +77,8 @@ Utils.printPolys = (csgs, colors) => {
 }
 
 Utils.materialUnit = (part) => {
-  const munit = part.resolve('munit', true)[part.category()] || 'Qty';
+  const unitMap = part.resolve('munit', true);
+  const munit = (unitMap && unitMap[part.category()]) || 'Qty';
   const unit = munit.unit || munit;
   const attribute = munit.attribute || munit;
   return {unit, attribute};
