@@ -106,23 +106,13 @@ const Materials = (containerOselector, order) => {
 }
 
 const BuildDiagram = (containerOselector, order) => {
-  order ||= Global.order();
-  const cabinets = [];
-  Object.values(order.rooms).forEach(r => r.groups.forEach(g => g.objects.forEach(obj => {
-    if (obj && Array.isArray(obj.openings)) cabinets.push(obj);
-  })));
-  const reqId = String.random();
-  // TODO: cabinet information should seperate box/shelve/cover models
-  //        then this call will be no longer nessisary
-  const job = orderJob(order, containerOselector, DocHtml.openingDiagram, {partInfo: false});
-  // job.on.change(() => DocHtml.sketchLayout(cabinets, containerOselector, reqId));
-  // const renderFunc = (result) => DocHtml.openingDiagram(result, reqId);
-  // job.then(render(containerOselector, renderFunc), err)
-  // job.queue();
-  return job;
+  return orderJob(order, containerOselector, DocHtml.openingDiagram, {partInfo: false});
 }
 
-const Elevation = () => 'coming soon';
+const Elevation = (containerOselector, order) => {
+  return orderJob(order, containerOselector, DocHtml.elevationDiagram, {partInfo: false});
+}
+
 const everythingTemplate = new $t('documents/construction/everything');
 const MultiSection = (sectionsObj) => (containerOselector, order) => {
   const htmlFunc = () => {
@@ -153,6 +143,6 @@ const Everything = MultiSection(everythingSections);
 
 module.exports = {
   PanelComplexCutList, ShelveComplexCutList, PanelCutList, ShelveCutList,
-  CabinetList, BuildDiagram, DoorList, DrawerBoxList,
+  CabinetList, BuildDiagram, DoorList, DrawerBoxList, Elevation,
   DrawerFrontList, Materials, Aerial, Summary, Everything
 };

@@ -22,7 +22,7 @@ class Divider extends Assembly {
     const instance = this;
     const pToJson = this.toJson;
     // this.jointSettings = new JointSettings(true,true,true,true);
-
+    this.digital = () => true;
 
     Object.getSet(this, 'type');
 

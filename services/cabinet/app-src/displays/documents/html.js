@@ -1,11 +1,13 @@
 const $t = require('../../../../../public/js/utils/$t.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Vertex3D = require('../../three-d/objects/vertex.js');
 const Vector3D = require('../../three-d/objects/vector.js');
 const Polygon3D = require('../../three-d/objects/polygon.js');
 const Layer = require('../../three-d/objects/layer.js');
 const du = require('../../../../../public/js/utils/dom-utils');
 const Utils = require('./tools/utils.js');
+const positionAssemblyCsg = require('../../utils.js').positionAssemblyCsg;
 const Draw2d = require('../../../../../public/js/utils/canvas/two-d/draw.js');
 const Tooling = require('./tooling');
 const Select = require('../../../../../public/js/utils/input/styles/select.js');
@@ -15,6 +17,7 @@ const DrawLayout = require('../draw/layout.js');
 const PanZoom = require('../../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 const Measurement = require('../../../../../public/js/utils/measurement.js');
 const ModelInfo = require('../../../web-worker/external/model-information.js');
+const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
 const orderTemplate = new $t('documents/construction');
 const roomTemplate = new $t('documents/construction/room');
@@ -26,6 +29,7 @@ const cutListLabelTemplate = new $t('documents/construction/cut-list-label');
 const partTemplate = new $t('documents/construction/part');
 const cutsTemplate = new $t('documents/cuts/cuts');
 const openingDiagramsTemplate = new $t('documents/construction/opening-diagrams');
+const elevationDiagramsTemplate = new $t('documents/construction/elevation-diagrams');
 const doorListTemplate = new $t('documents/construction/door-list');
 const materialsTemplate = new $t('documents/construction/materials');
 const aerialsTemplate = new $t('documents/construction/aerials');
@@ -65,6 +69,12 @@ function listToTemplate(partInformation, type, template, width, height, thicknes
   return template.render({partListMap, disp, type, width, height, thickness});
 }
 
+const materialGroupInit = (map, category, groupStr, groupLen) => {
+  if (map[category].pathValue(groupStr) !== undefined) return;
+  const list = map[category].pathValue(groupStr, {list: []}).list;
+  list.depth = groupLen;
+}
+
 function materialListToTemplate(partInformation, type, template) {
   const parts = partInformation.match(type);
   const map = {};
@@ -74,26 +84,22 @@ function materialListToTemplate(partInformation, type, template) {
     if (part.parentAssembly()) {
       const category = info.category || part.category();
       const key = disp.demensions(info.demensions);
-      const group = Utils.materialGroup(info);
+      const groups = Utils.materialGroup(info);
+      groups.concatInPlace(info.subCategory);
       if (Utils.materialUnit(part).unit !== 'CUBIC') {
         if (map[category] === undefined) map[category] = {};
-        if (map[category][group] === undefined) map[category][group] = {};
-        if (map[category][group][key] === undefined) {
-          map[category][group][key] = [];
-        }
-        map[category][group][key].push(info);
+        groups.forEach((str, i) => materialGroupInit(map, category, groups.slice(0,i+1).join('.'), i + 1));
+        map[category].pathValue(groups.join('.')).list.push(info);
       }
     }
   });
 
-  const partListMap = {};
-  Object.keys(map).forEach(category => Object.keys(map[category]).forEach(group => {
-    const cleanGroup = group.replace(/^(.*)?:.*$/, '$1');
-    if (partListMap[category] === undefined) partListMap[category] = {};
-    if (partListMap[category][cleanGroup] === undefined) partListMap[category][cleanGroup] = [];
-    partListMap[category][cleanGroup].push(Object.values(map[category][group]));
-  }));
-  return template.render({partListMap, disp, type});
+  const categories = o => {
+    const cats = {};
+    Object.keys(o).filter(k=>k!=='list').forEach(k => cats[k] = o[k]);
+    return cats;
+  }
+  return template.render({partListMap: map, disp, type, categories});
 }
 
 const DocumentationHtml = {}
@@ -125,6 +131,7 @@ DocumentationHtml.parts = (parts) => {
     pi.views ||= buildViews(pi);
     // pi.toolingHtml ||= new Tooling(pi).html;
     pi.toolingHtml ||= () => cutsTemplate.render(pi);
+    pi.cuts.map(c => c.locationRef.references).forEach(refs => Object.equals(refs[0], refs[1]) && refs.splice(1,1));
     html += partTemplate.render(pi);
   });
   return html + '</div>';
@@ -172,13 +179,14 @@ DocumentationHtml.panels.cutList = (partInformation) => DocumentationHtml.parts.
 DocumentationHtml.shelves.cutList = (partInformation) => DocumentationHtml.parts.cutList(partInformation, 'Shelve');
 
 DocumentationHtml.parts.cutList = (partInformation, partType) => {
-  const panels = new Array(10).fill(null).map(() => ['','','']);
   const disp = Utils.display;
   const parts = partInformation.byCategory(partType);
   const pages = [];
   parts.forEach(info => info.parts.forEach((part) => {
     pages.push(cutListLabelTemplate.render({info, part, disp}));
   }));
+  let levelOffCount = 30 - (pages.length % 30);
+  pages.concatInPlace(Array.fill(levelOffCount, 'X'));
   pages.group(30,3);
   return DocumentationHtml.print.container(panelCutListTemplate.render({pages}));
 }
@@ -279,18 +287,65 @@ async function drawCabinets(cabinets) {
   }
 }
 
-DocumentationHtml.openingDiagram = (partInformation, reqId) => {
-  reqId ||= String.random();
+DocumentationHtml.openingDiagram = (partInformation) => {
   const cabinetInfos = partInformation.cabinets();
   setTimeout(() => drawCabinets(cabinetInfos));
   const disp = Utils.display;
   return openingDiagramsTemplate.render({cabinetInfos, cabCanvasId, disp})
-  // Object.keys(modelInfoMap).forEach(id => {
-  //   const cabinet = Lookup.get(id);
-  //   const modelInfo = modelInfoMap[id];
-  //   const selector = `#${openingDiagramCntId(reqId)(id)}`;
-  //   new OpeningSketch(selector, cabinet, modelInfo);
-  // });
+}
+
+
+const elevationCanvasId = index => `elevation-disp-group-${index}`;
+DocumentationHtml.elevationDiagram = (partInformation) => {
+  const cabinetInfos = partInformation.cabinets();
+  if (cabinetInfos.find(info => info.parts.length > 1))
+    console.warn.logarithmic('Algorithym is not set up for duplicate cabinets');
+  const normalMap = new ToleranceMap({"normals.z.(i,j,k)": .001});
+  normalMap.addAll(cabinetInfos);
+  const groups = normalMap.group();
+  if (Object.values(partInformation.order().rooms).find(room => room.layout().walls().length > 4))
+    console.warn.logarithmic('Algorithym is not set up for rooms with more than 4 walls need to sort/makeNew groups based on distance');
+
+  groups.forEach((group, i) => {
+    group.normals = [group[0].normals.x, group[0].normals.y, group[0].normals.z];
+    group.rotz = Vector3D.coDirectionalRotations(group.normals);
+    group.csg = new CSG();
+    group.forEach(info => {
+      group.csg = group.csg.union(positionAssemblyCsg(info.model.csg, info.parts[0]));
+    });
+  });
+
+  for (let i = 0; i < groups.length; i++) {
+    const polys = Polygon3D.fromCSG(groups[i].csg.cube());
+    for (let j = i + 1; j < groups.length; j++) {
+      const dist = polys.map(p => p.distance(new Vertex3D(groups[j].csg.center()))).min();
+      if (dist < 2.54*36) {
+        groups[i].concatInPlace(groups[j]);
+        groups[i].csg = groups[i].csg.union(groups[j].csg);
+        groups.splice(j, 1);
+        j--;
+      }
+    }
+  }
+
+  const groupLayerArr = groups.map((group, i) => {
+    group.csg.rotate(group.rotz);
+    const layers = Layer.fromCSG(group.csg);
+    layers.sortByAttr('center().z');
+    return layers;
+  });
+
+  setTimeout(() => {
+    groups.forEach((group, i) => {
+      const canvas = du.id(elevationCanvasId(i));
+      const draw = new Draw2d(canvas);
+      const dems = group.csg.demensions();
+      draw.position(group.csg.center(), {x: dems.x * 1.1, y: dems.y * 1.1});
+      draw(groupLayerArr[i]);
+    });
+  }, 2000);
+
+  return elevationDiagramsTemplate.render({groups, elevationCanvasId});
 }
 
 

@@ -1,6 +1,6 @@
 
 const Test = require('../test.js').Test;
-const STL = require('../../3d-modeling/STL.js');
+const Tolerance = require('../../tolerance.js');
 
 Test.add('Array: scale',(ts) => {
   const original = [1,2,3,4];
@@ -67,5 +67,38 @@ Test.add('Utils: Array.relitiveIndex',(ts) => {
   ts.assertEquals(a.relitiveIndex(9, 5), 4);
   ts.assertEquals(a.relitiveIndex(1, 5), -4);
   ts.assertEquals(a.relitiveIndex(0, 5), 5);
+  ts.success();
+});
+
+Test.add('Tolerance: bounds',(ts) => {
+  let a = [0,1,2,3,4,5,6,7,8,9];
+  a.add(.5);
+  a.scale(.1);
+
+  const places = 10;
+  const tol = .001;
+  const tolObj = new Tolerance(tol);
+  for (let i = 0; i < places; i++) {
+    if (i !== 0) a.scale(10);
+    for (let j = 0; j < 10; j++) {
+      const tolerance = a[j] < 1 ? tol:
+            Math.pow(10, Math.floor(Math.log10(a[j]) + 1)) * tol;
+      const target = Math.roundTo(Math.floor(Math.roundTo(a[j] / tolerance, tol)) * tolerance);
+      const answer = {
+        upper: Math.roundTo(target+tolerance, tol),
+        target: Math.roundTo(target, tol),
+        lower: Math.roundTo(target - tolerance, tol)
+      };
+      if (answer.lower === 0 && answer.target > tol)
+        answer.lower = Math.roundTo(answer.target - answer.target/10, tol);
+      const bounds = tolObj.bounds(answer.target);
+      if (bounds.lower !== answer.lower ||
+          bounds.upper !== answer.upper ||
+          bounds.target !== answer.target) {
+        tolObj.bounds(answer.target);
+      }
+      console.log(a[j], tolerance, answer);
+    }
+  }
   ts.success();
 });

@@ -12,6 +12,7 @@ class DrawerSection extends Assembly {
     const instance = this;
     const sectionProps = () => instance.parentAssembly();
     this.part = () => false;
+    this.digital = () => true;
     this.normals({DETERMINE_FROM_PARENT: true});
 
     this.front = () => front;

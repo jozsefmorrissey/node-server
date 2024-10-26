@@ -82,6 +82,7 @@ class Parimeter3D {
 
     if (polys.length === 0) {
       console.warn('Parimeter3D could not find a single parimeter');
+      new Parimeter3D(lines, normal);
     }
     return polys;
   }

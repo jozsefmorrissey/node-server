@@ -69,7 +69,7 @@ class Assembly extends KeyValue {
 
 
     const subAssems = this.subassemblies;
-    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'name',  'normals', 'notes', 'jointSettings');
+    Object.getSet(this, initialVals, 'subassemblies', 'joints', 'name', 'notes', 'jointSettings');
     Object.defineProperty(this, "subassemblies", {
       writable: false,
       enumerable: false,
@@ -99,6 +99,7 @@ class Assembly extends KeyValue {
     const pToJson = this.toJson;
     this.toJson = () => {
       const json = pToJson();
+      if (this.normals.raw) json.normals = this.normals.raw();
       json.joints = json.joints.filter(j => !j.locationId);
       return json;
     }

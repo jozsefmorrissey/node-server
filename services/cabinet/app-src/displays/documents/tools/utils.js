@@ -104,7 +104,10 @@ const firstOfNestedList = (nestedList => {
   return target.parts[0];
 });
 
+Utils.display.tabStr = (count) => !count ? '' : Array.fill(count*3, '&nbsp;').join('');
+
 Utils.display.material = (partList) => {
+  if (!partList || partList.length === 0) return '';
   const part = firstOfNestedList(partList);
   const {unit, attribute} = Utils.materialUnit(part);
   const matFunc = Utils.display.material[unit.toLowerCase()] || Utils.display.material.qty;
@@ -125,19 +128,19 @@ Utils.display.material.set = Utils.display.material.qty;
 Utils.display.material.lin = (partList) => {
   let length = 0;
   for (let index = 0; index < partList.length; index++) {
-    const list = partList[index];
-    const qty = list.sum(info => info.parts.length);
-    length += qty * list[0].demensions.y;
+    const info = partList[index];
+    const qty = info.parts.length;
+    length += qty * info.demensions.y;
   }
-  return `${disp(length)} LIN`;
+  return `${disp(length/12)} LIN FT`;
 }
 
 Utils.display.material.sq = (partList) => {
   let area = 0;
   for (let index = 0; index < partList.length; index++) {
-    const list = partList[index];
-    const qty = list.sum(info => info.parts.length);
-    area += qty * Measurement.area([list[0].demensions]);
+    const info = partList[index];
+    const qty = info.parts.length;
+    area += qty * Measurement.area([info.demensions]);
   }
   return Measurement.display.area(area);
 }
@@ -145,22 +148,23 @@ Utils.display.material.sq = (partList) => {
 Utils.materialGroup = (info) => {
   const part = info.parts[0];
   const {unit, attribute} = Utils.materialUnit(part);
-  let sizeStr;
+  let groups;
   switch (unit) {
-    case 'Qty': sizeStr = `Qty:${String.random()}`; break;
+    case 'Qty': groups = [`Qty`]; break;
     case 'LIN':
       const widths =  part.resolve('linw', true)[part.category()];
       const width = info.demensions.x;
-      const bestWidth = !widths ? width : widths.find(p => p.value() > width - .0001).value();
-      sizeStr = `${disp(bestWidth)} X ${disp(info.demensions.z)}`;
+      const m = new Measurement(width);
+      const bestWidth = !widths ? new Measurement(width).ceil(true).decimal() :
+                    widths.find(p => p.value() > width - .0001).value();
+      groups = [disp(info.demensions.z), disp(bestWidth)];
       break;
-    case 'SQ': sizeStr = disp(info.demensions.z); break;
-    case 'CUBIC': sizeStr = Utils.display.demensions(info.demensions); break;
-    case 'SET': sizeStr = disp(info.pathValue(attribute)); break;
+    case 'SQ': groups = [disp(info.demensions.z)]; break;
+    case 'CUBIC': groups = [disp(info.demensions.x), disp(info.demensions.y), disp(info.demensions.z)]; break;
+    case 'SET': groups = [disp(info.pathValue(attribute))]; break;
     default: throw new Error('Undefined Group: Howd that get in there...');
   }
-  if (attribute !== unit) return `${unit}(${sizeStr})`;
-  return sizeStr;
+  return groups;
 }
 
 Utils.textToHtml = (text) => {

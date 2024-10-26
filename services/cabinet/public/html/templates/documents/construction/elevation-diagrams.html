@@ -1,0 +1,6 @@
+<div cabinet-list-hash='{{hash}}'>
+  <div:t repeat='group in groups' class='avoid-page-break center'>
+    <label>{{$index}}</label>
+    <canvas class='upside-down mirror-x' id='{{elevationCanvasId($index)}}'></canvas>
+  </div:t>
+</div>

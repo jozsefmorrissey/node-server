@@ -45,4 +45,37 @@ du.on.match('click', '.orient-arrows>tbody>tr>td[dir]', function (target) {
   }
 });
 
+OrientationArrows.forCSG = (parentSelector, viewerOgetter, modelOgetter) => {
+  let lastViewId;
+  const getViewer = viewerOgetter instanceof Function ? viewerOgetter : () => viewerOgetter;
+  const getModel = modelOgetter instanceof Function ? modelOgetter : () => modelOgetter;
+  function centerOnObj(x,y,z, viewId) {
+    const model = getModel();
+    const center = model ? model.center() : {x:0, y:0, z:0};
+    center.x += 200 * y;
+    center.y += -200 * x;
+    center.z += 100;
+    const rotation = {x: x*90, y: y*90, z: z*90};
+
+    lastViewId = viewId;
+    return [center, rotation];
+  }
+
+  let viewer;
+  const orientArrows = new OrientationArrows(parentSelector);
+  orientArrows.on.center(() =>
+    (viewer = getViewer()) && viewer.viewFrom(...(lastViewId === 'front' ?
+                    centerOnObj(2,0,2, 'back') : centerOnObj(0,0, 0, 'front'))));
+  orientArrows.on.up(() =>
+    (viewer = getViewer()) && viewer.viewFrom(...centerOnObj(1, 0,0)));
+  orientArrows.on.down(() =>
+    (viewer = getViewer()) && viewer.viewFrom(...centerOnObj(-1,0,0)));
+  orientArrows.on.left(() =>
+    (viewer = getViewer()) && viewer.viewFrom(...centerOnObj(0,1,0)));
+  orientArrows.on.right(() =>
+    (viewer = getViewer()) && viewer.viewFrom(...centerOnObj(0,-1,0)));
+
+  return orientArrows;
+}
+
 module.exports = OrientationArrows;

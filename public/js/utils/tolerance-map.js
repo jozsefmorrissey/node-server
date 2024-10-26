@@ -62,7 +62,7 @@ class ToleranceMap {
       matches(elem, node[bounds.prevId], attrs, list, attrIndex + 1);
 
       if (attrIndex === 0) {
-        const matchList = list.filter((other) => true || tolerance.within(elem, other));
+        const matchList = list.filter((other) => tolerance.within(elem, other));
         matchList.sortByAttrs(tolerance.attributes());
 
         // TODO: I feel like the algorithum could prevent duplications if written correctly.... maybe not
@@ -70,7 +70,7 @@ class ToleranceMap {
       }
     }
 
-    function getSet(elem, error) {
+    function getSet(elem) {
       let curr = map;
       let attrs = tolerance.attributes();
       for (let index = 0; index < attrs.length; index += 1) {
@@ -239,7 +239,7 @@ class ToleranceMap {
       if (!Array.isArray(list)) return;
       for (let index = 0; index < list.length; index++) {
         const elem = list[index];
-        let matchArr = getSet(elem, index === 37);
+        let matchArr = getSet(elem);
         matchArr.push(elem);
         matchArr.sortByAttrs(tolerance.attributes());
       }

@@ -33,3 +33,7 @@
 #three-d-display {
   position: relative;
 }
+
+.error {
+  color: red;
+}

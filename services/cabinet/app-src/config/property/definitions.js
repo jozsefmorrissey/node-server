@@ -122,12 +122,12 @@ defs.munit = new Property('munit', 'Material Units',
                Shelve: 'LIN',
                Frame: 'LIN',
                DrawerBox: 'CUBIC',
-               Door: 'CUBIC',
-               DrawerFront: 'CUBIC',
+               Door: 'SQ',
+               DrawerFront: 'SQ',
                Guides: {unit: 'SET', attribute: 'demensions.z'}
       }});
 defs.linw = new Property('linw', 'Linear Widths',
-     {value: {Shelve: [impSh(12), impSh(24), impSh(48)],
+     {value: {Shelvish: [impSh(12), impSh(24), impSh(48)],
               Frame: [impFr(1.5), impFr(2.5), impFr(4.5), impFr(8)]}});
 
 

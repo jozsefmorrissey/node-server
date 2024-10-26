@@ -4,8 +4,30 @@ const Viewer = require('../../../public/js/utils/3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../../public/js/utils/3d-modeling/viewer.js').addViewer;
 const OrientationArrows = require('../../../public/js/utils/display/orientation-arrows.js');
 const SlideShow = require('./slide-show');
+const STL = require('../../../public/js/utils/3d-modeling/STL.js');
 
 let lineDisplayType;
+let STLs = {};
+
+function updateStlList() {
+  const cnt = du.id('stl-list-cnt');
+  cnt.innerHTML = Object.values(STLs).map(stl =>
+    `<div class='${stl instanceof Error ? 'error': ''}'>${stl.header()}<button class='rm-btn'>X</button></div>`).join('\n');
+  display();
+}
+
+du.on.match('change', '[name="stlFile"]', async (input) => {
+  const stls = await STL.fromFiles(input.files);
+  stls.forEach(stl => !(stl instanceof Error) && (STLs[stl.header().hash()] = stl));
+  updateStlList();
+  input.value = '';
+});
+
+du.on.match('click', '#stl-list-cnt .rm-btn', (rmBtn) => {
+  const header = rmBtn.parentElement.innerText.trim().slice(0,-1);
+  delete STLs[header.hash()];
+  updateStlList();
+});
 
 const checkedLineDispSelector = '#display-radios-3d>input:checked';
 const setLineDisplayType = () => {
@@ -30,19 +52,6 @@ du.on.match('change:keyup', '#axis-controls-3d input', (elem) => {
   radLenCnt.hidden = !axis.include;
 });
 
-let lastViewId;
-function centerOnObj(x,y,z, viewId) {
-  const center = model.center();
-  center.x += 200 * y;
-  center.y += -200 * x;
-  center.z += 100;
-  const rotation = {x: x*90, y: y*90, z: z*90};
-  // const rotation = {x: 0, y: 0, z: 0};
-
-  lastViewId = viewId;
-  return [center, rotation];
-}
-
 let viewer;
 let viewerSize = '60vh';
 const viewerSelector = '#three-d-display';
@@ -54,17 +63,8 @@ function getViewer (model) {
     if (model === undefined) return undefined;
     viewer = new Viewer(model, size, size, 50);
     addViewer(viewer, viewerSelector);
-    const orientArrows = new OrientationArrows(`${viewerSelector} .orientation-controls`);
-    orientArrows.on.center(() =>
-      viewer.viewFrom(...(lastViewId === 'front' ? centerOnObj(2,0,2, 'back') : centerOnObj(0,0, 0, 'front'))));
-    orientArrows.on.up(() =>
-      viewer.viewFrom(...centerOnObj(1, 0,0)));
-    orientArrows.on.down(() =>
-      viewer.viewFrom(...centerOnObj(-1,0,0)));
-    orientArrows.on.left(() =>
-      viewer.viewFrom(...centerOnObj(0,1,0)));
-    orientArrows.on.right(() =>
-      viewer.viewFrom(...centerOnObj(0,-1,0)));
+    const orientSelector = `${viewerSelector} .orientation-controls`;
+    const orientArrows = OrientationArrows.forCSG(orientSelector, viewer, model);
   }
   return viewer;
 }
@@ -184,16 +184,19 @@ function parse(lines, sc) {
   setTimeout(() => {
     if (callId === call) {
       model = buildModel(lines);
-      viewer.mesh = model.toMesh();
-      viewer.gl.ondraw();
+      display(model);
     }
   }, 800);
 }
 
 const display = (m) => {
-  m ||= model;
-  getViewer(m);
-  viewer.mesh = m.toMesh();
+  m ||= model || new CSG();
+  const renderModel = m.clone();
+  const stls = Object.values(STLs);
+  renderModel.polygons.concatInPlace(stls.map(
+                  stl=>CSG.fromSTL(stl).scale(scale).polygons).concatElements());
+  getViewer(renderModel);
+  viewer.mesh = renderModel.toMesh();
   viewer.gl.ondraw();
 }
 

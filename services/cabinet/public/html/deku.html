@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <style>
+      table {
+        border-collapse: collapse !important;;
+      }
+      td,th {
+        padding: 0 4pt !important;;
+        border: solid !important;;
+        border-width: 2px !important;;
+      }
+    </style>
+    <title></title>
+  </head>
+  <body>
+    <table>
+       <tbody>
+          <tr>
+             <th>Qty</th>
+             <th>Stock No.</th>
+             <th>Size</th>
+             <th>Unit</th>
+             <th>Description</th>
+             <th>Unit Price</th>
+             <th>Amount</th>
+          </tr>
+       </tbody>
+    </table>
+    <script>
+      const items = [];
+      const addItem = (size, description, quantity, stockNo, unit, unitPrice, amount) =>
+        items.push({quantity, stockNo, unit, description, unitPrice, amount, size});
+
+      addItem('3/4 4\'x8\'', 'plywood paint grade', 2, '', 'sheet', '', '');
+      addItem('3/4 4\'x8\'', 'MDF', 2, '', 'sheet', '', '');
+      addItem('3/4 4\'x8\'', 'maple prefinished 1 side', 1, '', 'sheet', '', '');
+      addItem('1/2 4\'x8\'', 'plywood paint grade', 1, '', 'sheet', '', '');
+      addItem('1/4 4\'x8\'', 'maple prefinished 1 side', 1, '', 'sheet', '', '');
+      addItem('10 7/8', 'shelving UV Amigo Maple', 2, 'HB-781108UV2AMV', 'board', '', '');
+      addItem('15 7/8', 'shelving UV Amigo Maple', 1, 'HB-781608UV2AMV', 'board', '', '');
+      addItem('5/16', 'Blum hinge press-in', 18, 'BL-30C258BS05', 'overlay', '', '');
+      addItem('16 oz', 'Titebond II Premium', 1, 'FC-TB216Z', 'bottle', '', '');
+      addItem('16 oz', 'Titebond Melamine', 1, 'FC-TBM16Z', 'bottle', '', '');
+      addItem('1/4', 'Shelf Rests Nickle Plated', 50, 'HD-X-72N', 'ea', '', '');
+      addItem('#8 3/4', 'Pan Head screws', 500, 'BTXP08034S2Z', 'ea', '', '');
+      addItem('#7 3/4', 'Recessed screws', 500, 'BFXP07034R2N', 'ea', '', '');
+
+      const tbody = document.querySelector('tbody');
+      items.forEach(i => {
+        const tr = document.createElement('tr');
+        tbody.append(tr);
+        tr.innerHTML = `<tr>
+                 <td>${i.quantity}</td>
+                 <td>${i.stockNo}</td>
+                 <td>${i.size}</td>
+                 <td>${i.unit}</td>
+                 <td>${i.description}</td>
+                 <td>${i.unitPrice}</td>
+                 <td>${i.amount}</td>
+              </tr>`;
+      });
+    </script>
+  </body>
+</html>

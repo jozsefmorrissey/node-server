@@ -132,6 +132,7 @@ class CutInfo {
       const identifiers = hasFenceIds(refs, axis);
       if (zOnz) refs.reverse();
       const either = axis.z.isPoint();
+      if (either) refs.splice(1,1);
       return {references: refs, either, identifiers, marker};
     }
 
@@ -175,6 +176,7 @@ class CutInfo {
       if (instance.partInfo().part().partCode === 'T:b' || instance.partInfo().part().partCode === 'dv:f') {
         instance.fenceEdges(zOnz);
       }
+      if (either) refs.splice(1,1);
       return {references: refs, either, identifiers, marker};
     }
 

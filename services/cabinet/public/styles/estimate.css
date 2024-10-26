@@ -27,13 +27,12 @@ input.void-dem {
     max-width: 75pt;
 }
 
-@page {
-    size: auto;
-    /* margin: 20mm 0 10mm 0; */
-}
-
 .build-diagram-measurement-cnt {
   padding-right: 5pt;
+}
+
+.min-width-20 {
+  min-width: 20pt;
 }
 
 .padding-left-right {
@@ -674,6 +673,12 @@ canvas {
   right: 0;
 }
 
+#stl-three-d-model-cnt {
+  position: fixed;
+  top: 0;
+  right: 0;
+}
+
 .center-vert {
   text-align: center;
   margin: auto;
@@ -715,6 +720,18 @@ canvas {
 .orientation-controls > div {
   font-size: 20pt;
   position: absolute;
+}
+
+.orientation-arrows-table, .orientation-arrows-table > tbody,
+.orientation-arrows-table > tbody > tr, .orientation-arrows-table > tbody > tr > td {
+  border: none;
+  text-align: center;
+}
+
+.orientation-arrows {
+  position: absolute;
+  bottom: 0;
+  right: 10px;
 }
 
 td[dir] {
@@ -837,26 +854,15 @@ table.no-borders, table.no-borders td, table.no-borders th, table.no-borders tr,
 
 /*               print-formats           */
 .avery-5160 {
+  size: auto;
+  margin: 0;
   width: 100vw;
   height: 100vh;
 }
 
-.avery-5160>.center-div {
-  margin: auto;
-  vertical-align: middle;
-  margin: 0;
-  padding: 0;
-  text-align: center;
-  position: relative;
-  top: 50%;
-  right: 50%;
-  transform: translate(50%, -50%);
-
-}
-
 .avery-5160 table {
     border: none;
-    margin: auto;
+    margin: .48in .125in;
 }
 
 .avery-5160 table>tbody {
@@ -864,11 +870,12 @@ table.no-borders, table.no-borders td, table.no-borders th, table.no-borders tr,
 }
 
 .avery-5160 table td {
-  border: solid 1pt;
+  border: solid .015in;
   border-color: #80808040;
-  border-radius: 3px;
-  width: 31.5vw;
-  height: 8.9vh;
+  border-radius: .05in;
+  min-width: 2.575in;
+  height: 1in;
+  padding-right: .125in;
 }
 
 .project-image-cnt img {

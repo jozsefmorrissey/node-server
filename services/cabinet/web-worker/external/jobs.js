@@ -5,6 +5,7 @@ const WebWorkerDeligator = require('./deligator');
 const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js');
 const {Intersection, Join, Model, Union, AssembliesTo2D, SimpleTo2D, Simple} = require('./tasks/csg');
 const {Parts} = require('./tasks/documentation');
+const Utils = require('../../app-src/utils.js');
 const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
 const SimpleModel = require('../../app-src/objects/simple/simple.js');
 const Assembly = require('../../app-src/objects/assembly/assembly.js');
@@ -277,16 +278,9 @@ class CsgRoomJob extends TaskJob {
           const job = jobs[index];
           let model;
           if (job.modelInfo) {
-            model = jobs[index].modelInfo().unioned().clone();
             const cabinet = jobs[index].cabinet();
-            const rotation = cabinet.position().rotation();
-            const buildCenter = cabinet.buildCenter(true);
-            const center = new Vertex3D(cabinet.position().center());
-            const layoutCenterVect = new Vertex3D((center.minus(buildCenter)));
-            const modelCenter = model.center();
-            model.translate({x: -buildCenter.x, y: -buildCenter.y, z: -buildCenter.z})
-            model.rotate(rotation);
-            model.translate(center);
+            model = jobs[index].modelInfo().unioned();
+            model = Utils.positionAssemblyCsg(model, cabinet);
           } else {
             model = job.result();
           }

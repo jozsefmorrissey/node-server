@@ -3,16 +3,10 @@
       <tbody>
         <tr>
           <th>Category</th>
-          <th>Unit</th>
           <th>Size</th>
         </tr>
         <no-tag:t repeat='category, set in partListMap'>
-          <no-no-tag:t class='pad' repeat='groupId, partGroup in set' {{disp.material.unit(partGroup,groupId).trim() === '0' ? 'hidden' : ''}}>
-            <tr:t repeat='partList in partGroup'>
-              <td>{{category}}</td>
-              <td class='pad'>{{disp.material.unit(partList,groupId)}}</td>
-              <td>{{disp.material(partList)}}</td>
-            </tr:t>
+          <no-no-tag:t $t-id='documents/construction/materials-row'>
           </no-no-tag:t>
         </no-tag:t>
       </tbody>

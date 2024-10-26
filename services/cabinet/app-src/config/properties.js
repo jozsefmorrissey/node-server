@@ -176,7 +176,7 @@ Properties.default = (code) => {
     return allProps[code].value();
   } catch (e) {
     if (code.length < 10 && !code.match(/Overlay|Inset|Reveal|pattern/))
-      console.warn(`code '${code}' is not defined`);
+      console.warn.logarithmic(`code '${code}' is not defined`);
   }
 }
 Properties.cabinetStyles = () => ['Overlay', 'Inset', 'Reveal'];

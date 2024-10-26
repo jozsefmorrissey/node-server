@@ -1,5 +1,9 @@
 
 const STL = require('../../3d-modeling/STL.js');
+const OrientationArrows = require('../../display/orientation-arrows.js');
+const $t = require('../../$t.js');
+$t.loadFunctions(require('../../../../../services/cabinet/generated/html-templates.js'));
+
 require('../../3d-modeling/csg');
 require('../../utils');
 const du = require('../../dom-utils');
@@ -7,7 +11,7 @@ const Viewer = require('../../3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../3d-modeling/viewer.js').addViewer;
 
 function addLink (model, name) {
-  const stl = STL.fromCSG(model);
+  const stl = STL.fromCSG(model, name);
   console.log(model.toDrawString());
   du.copy(model.toDrawString());
 
@@ -23,7 +27,7 @@ function addLink (model, name) {
 
 function addLinks(modelOmodels, name) {
   if (modelOmodels instanceof CSG) addLink(modelOmodels, name);
-  Object.keys(modelOmodels).forEach(k => addLink(modelOmodels[k], k));
+  else Object.keys(modelOmodels).forEach(k => addLink(modelOmodels[k], k));
 }
 
 const models = {};
@@ -66,39 +70,38 @@ models['Shower Wheel Thingy!'] = (one,two) => {
   let sbt = smallBackThickness;
   let supportCylRad = (13/32) * 2.54/2;
   let scr = supportCylRad;
-  let notchThickness = .06;
-  const cylinder = new CSG.cylinder({start: [0,0,0], end: [0,height,0], radius: width/2});
+  let notchThickness = .08;
+  let slices = 48;
+  const cylinder = new CSG.cylinder({slices, start: [0,0,0], end: [0,height,0], radius: width/2});
   const glassCutter = new CSG.cube({radius: [width, height/2, glassThickness/2], center: [0,(height/2) - flapThickness, glassThickness/2]});
   const backNotchCutter = new CSG.cube({radius: [width/2, notchThickness, notchThickness]});
-  backNotchCutter.rotate({x:45,y:0,z:0});
+  // backNotchCutter.rotate({x:45,y:0,z:0});
   backNotchCutter.center({x:0, y:(height) - flapThickness, z: glassThickness})
-  const wheelScrewCyl = new CSG.cylinder({radius: screwThickness/2 + .01, start: [0,0,wheelScrewCenterZ], end: [0,height,wheelScrewCenterZ]});
-  const topScrewResess = new CSG.cylinder({radius: .8/2 + .1, start: [0,height - (7/32)*2.54/2, wheelScrewCenterZ], end: [0,height, wheelScrewCenterZ]});
-  const bottomScrewResess = new CSG.cylinder({radius: .8/2 + .01, start: [0,(7/32)*2.54/2, wheelScrewCenterZ], end: [0,0, wheelScrewCenterZ]});
-  const backScrewCyl = new CSG.cylinder({radius: 1.2/2 - .01, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
-  const backScrewHole = new CSG.cylinder({radius: .4/2 + .01, start: [0,gsc[1], gsc[2] + .1], end: [0,gsc[1], 100]});
-  const backScrewResess = new CSG.cylinder({radius: .8/2, start: [0,gsc[1], width/2], end: [0,gsc[1], width/2 - (1/8) * 2.54]});
-  const backScrewWell = new CSG.cylinder({radius: .2/2, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
+  const wheelScrewCyl = new CSG.cylinder({slices, radius: screwThickness/2 + .01, start: [0,0,wheelScrewCenterZ], end: [0,height,wheelScrewCenterZ]});
+  const topScrewResess = new CSG.cylinder({slices, radius: .8/2 + .1, start: [0,height - (7/32)*2.54/2, wheelScrewCenterZ], end: [0,height, wheelScrewCenterZ]});
+  const bottomScrewResess = new CSG.cylinder({slices, radius: .8/2 + .01, start: [0,(7/32)*2.54/2, wheelScrewCenterZ], end: [0,0, wheelScrewCenterZ]});
+  const backScrewCyl = new CSG.cylinder({slices, radius: 1.09/2 - .01, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
+  const backScrewHole = new CSG.cylinder({slices, radius: .4/2 + .01, start: [0,gsc[1], gsc[2] - 1], end: [0,gsc[1], 100]});
+  const backScrewResess = new CSG.cylinder({slices, radius: .8/2, start: [0,gsc[1], width/2], end: [0,gsc[1], width/2 - (1/8) * 2.54]});
+  const backScrewWell = new CSG.cylinder({slices, radius: .3, start: [0,gsc[1], -1], end: [0,gsc[1], gsc[2] - .2]});
   const wheelCavity = new CSG.cube({radius: [100, ((15/16)*2.54)/2 - .01, width/2 - sbt], center: [0, height/2, width/-2 + sbt/2]})
-  const supportCylR = new CSG.cylinder({radius: scr, start: [width/2-scr, .635, 0], end: [width/2-scr, 2.54 + .635, 0]}).subtract(glassCutter);
-  const supportCylL = new CSG.cylinder({radius: scr, start: [width/-2+scr, .635, 0], end: [width/-2+scr, 2.54 + .635, 0]}).subtract(glassCutter);
+  const supportCylR = new CSG.cylinder({slices, radius: scr, start: [width/2-scr, .635, 0], end: [width/2-scr, 2.54 + .635, 0]}).subtract(glassCutter);
+  const supportCylL = new CSG.cylinder({slices, radius: scr, start: [width/-2+scr, .635, 0], end: [width/-2+scr, 2.54 + .635, 0]}).subtract(glassCutter);
 
   let supportSqR = new CSG.cube({radius: [scr,height/2,scr], center: [width/2-scr, height/2, scr/2]}).subtract(glassCutter);
   let supportSqL = new CSG.cube({radius: [scr,height/2,scr], center: [width/-2+scr, height/2, scr/2]}).subtract(glassCutter);
-
 
   const plierSlot = new CSG.cube({radius: [(3/16)*2.54/2, (7/32)*2.54/2, 5], center: [0,height,-5]});
   const backAngle = new CSG.cube({radius: [1.5*2.54/2, 1.5*2.54/2, .5/2], center: [0,0,0]});
   backAngle.rotate({x:-45});
   backAngle.translate([0,height,(width)/2.54+.1]);
-  const model = cylinder.subtract(glassCutter)
+  const crossSection = new CSG.cube({radius: [50,50,50], center: [0,0,50]});
+  let body = cylinder.subtract(glassCutter)
     .subtract(wheelScrewCyl)
     .subtract(topScrewResess)
     .subtract(bottomScrewResess)
-    .subtract(backScrewHole)
     .subtract(backScrewResess)
     .union(backScrewCyl)
-    .subtract(backScrewWell)
     .subtract(wheelCavity)
     .union(supportCylR)
     .union(supportCylL)
@@ -106,8 +109,15 @@ models['Shower Wheel Thingy!'] = (one,two) => {
     .union(supportSqL)
     .subtract(backAngle)
     .subtract(plierSlot)
-    .subtract(backNotchCutter);
-  return model;
+    .subtract(backNotchCutter)
+    .subtract(backScrewWell)
+    .subtract(backScrewHole)
+  body.rotate({y:90});
+  const pilotHole = new CSG.cylinder({slices, radius: .14, start: [0,gsc[1], -1], end: [0,gsc[1], gsc[2] + .2]});
+  const dowel = backScrewCyl.intersect(backScrewHole.union(backScrewWell)).subtract(pilotHole);
+  dowel.scale(.95);
+  // body = body.subtract(crossSection);
+  return {body, dowel};
 }
 
 models['Rack'] =  (one)  => {
@@ -326,10 +336,180 @@ models['screen door latch'] = () =>{
   return bar;
 }
 
+models['shifter boot bracket'] = (innerWidth, innerDepth, innerHeight, bracketWidth, bracketHeight,
+                      innerLip, bracketThickness, topHoleDia, bottomHoleDia, champherAngle,
+                      champherDepth, prongHeight, prongDia) => {
+  innerWidth ||= 10;
+  innerDepth ||= 13.75;
+  innerHeight ||= 3;
+  bracketWidth ||= 3.9;
+  bracketHeight ||= 1.5;
+  innerLip ||= 1;
+  bracketThickness ||= .25;
+  topHoleDia ||= 1;
+  bottomHoleDia ||= 3*2.54/16;
+  champherAngle ||= 45;
+  champherDepth ||= 2;
+  prongHeight ||= .9;
+  prongDia ||= .3;
+
+  const bt = bracketThickness;
+
+  const insideCutout = new CSG.cube({demensions: [innerWidth, innerHeight, innerDepth]});
+  const dbw = bracketWidth * 2;
+  let bracket = new CSG.cube({demensions: [innerWidth+dbw, bracketHeight, innerDepth+dbw]});
+  bracket.translate({x: 0, y: innerHeight/2-bracketHeight/2, z: 0});
+  bracket = bracket.subtract(insideCutout);
+
+  const champerBracket = (innerLen, rotation, offset, direction, xOz) => {
+    const champher = new CSG.cube({demensions: [champherDepth, champherDepth, 100]});
+    let underCut = new CSG.cube({demensions: [champherDepth, champherDepth, innerLen]});
+
+    const x = xOz ? 'x' : 'z';
+    const z = xOz ? 'z' : 'x';
+    const depth = xOz ? innerDepth : innerWidth;
+    const width = xOz ? innerWidth : innerDepth;
+    const radius = 6;
+    const hype = Math.sqrt((radius)*(radius)*2)/2
+
+    let innerMiter1 = new CSG.cube({radius});
+    const innerOffset1 = new CSG.Vector(offset).clone();
+    innerOffset1[z] = -depth/2 - hype;
+    innerOffset1[x] = direction * (-width/2 + hype);
+    innerMiter1.rotate({y:-45});
+    innerMiter1.translate(innerOffset1);
+
+    let innerMiter2 = new CSG.cube({radius});
+    const innerOffset2 = new CSG.Vector(offset).clone();
+    innerOffset2[z] = depth/2 + hype;
+    innerOffset2[x] = direction * (-width/2 + hype);
+    innerMiter2.rotate({y:-45});
+    innerMiter2.translate(innerOffset2);
+
+
+    champher.rotate(rotation);
+    underCut.rotate(rotation);
+    champher.translate(offset);
+    underCut.translate(offset);
+    const translation = {y: -Math.sin(Math.toRadians(45)) * (bt + champherDepth), x:0, z:0};
+    if (xOz) translation.x = direction * Math.cos(Math.toRadians(45)) * (bt + champherDepth);
+    else translation.z = direction * Math.cos(Math.toRadians(45)) * (bt + champherDepth);
+    underCut.translate(translation);
+    underCut = underCut.subtract(innerMiter1).subtract(innerMiter2);
+    bracket = bracket.subtract(champher).subtract(underCut);
+  }
+
+  let rotation = {z:champherAngle};
+  let offset = {x: innerWidth/2 + bracketWidth, y: innerHeight/2, z:0};
+  champerBracket(innerDepth+bracketWidth*2, rotation, offset, -1, true);
+
+  rotation = {z:-champherAngle};
+  offset = {x: -(innerWidth/2 + bracketWidth), y: innerHeight/2, z:0};
+  champerBracket(innerDepth+bracketWidth*2, rotation, offset, 1, true);
+
+  rotation = [{y: 90}, {x:-champherAngle}];
+  offset = {z: -(innerDepth/2 + bracketWidth), y: innerHeight/2, x:0};
+  champerBracket(innerWidth+bracketWidth*2, rotation, offset, 1, false);
+
+  rotation = [{y: 90}, {x:champherAngle}];
+  offset = {z: innerDepth/2 + bracketWidth, y: innerHeight/2, x:0};
+  champerBracket(innerWidth+bracketWidth*2, rotation, offset, -1, false);
+
+  const dil = innerLip * 2;
+  const dbt = bracketThickness * 2
+  const dilAdbt = dil + dbt;
+  let squareSupport = new CSG.cube({demensions: [innerWidth + dilAdbt, innerHeight, innerDepth+dilAdbt]});
+  const squareSupportCutter = new CSG.cube({demensions: [innerWidth + dil, innerHeight, innerDepth+dil]});
+  squareSupportCutter.translate({x:0,y:-bracketThickness,z:0});
+  let model = bracket.union(squareSupport).subtract(squareSupportCutter).subtract(insideCutout);
+
+
+  const slices = 48;
+  const hole = new CSG.cylinder({slices, start: [0,-innerHeight/2 + bt, 0], end: [0,100,0], radius: topHoleDia/2});
+  const screwWell = new CSG.cylinder({slices, start: [0,-innerHeight/2, 0], end: [0,innerHeight/2,0], radius: topHoleDia/2 + bt});
+  const pilotHole = new CSG.cylinder({slices, start: [0,-100, 0], end: [0,100,0], radius: bottomHoleDia/2});
+
+  offset = {x: innerWidth/2 + topHoleDia/2 + dbt/2, z: innerDepth/2 + topHoleDia/2 + dbt/2, y:0};
+  hole.translate(offset);
+  screwWell.translate(offset);
+  pilotHole.translate(offset);
+  model = model.union(screwWell).subtract(hole).subtract(pilotHole);
+
+  offset = {x: -(innerWidth + topHoleDia + dbt), z:0 , y:0};
+  hole.translate(offset);
+  screwWell.translate(offset);
+  pilotHole.translate(offset);
+  model = model.union(screwWell).subtract(hole).subtract(pilotHole);
+
+  offset = {x: 0, z: -(innerDepth + topHoleDia + dbt), y:0};
+  hole.translate(offset);
+  screwWell.translate(offset);
+  pilotHole.translate(offset);
+  model = model.union(screwWell).subtract(hole).subtract(pilotHole);
+
+  offset = {x: innerWidth + topHoleDia + dbt, z:0 , y:0};
+  hole.translate(offset);
+  screwWell.translate(offset);
+  pilotHole.translate(offset);
+  model = model.union(screwWell).subtract(hole).subtract(pilotHole);
+
+  let start = [0, innerHeight/2 - bracketThickness, 0];
+  let end = [0, innerHeight/2 - bracketThickness - 2*prongHeight/3, 0];
+  let prong = new CSG.cylinder({slices, start, end, radius: prongDia/2});
+  start = end;
+  end = [0, innerHeight/2 - bracketThickness - prongHeight, 0];
+  let coneTip = new CSG.cone({slices, start, end, radius: prongDia/2, color: 'red'});
+  let bluntTip = new CSG.cube({radius:.1, center: end});
+  prong = prong.union(coneTip.subtract(bluntTip));
+
+  const y = prong.center().y;
+  const x = 5.2;
+  const z = 7.075;
+  const prongPoints = [
+    {x: -2.95, y, z},
+    {x: 1.65, y, z},
+    {x: 2.95, y, z},
+    {x, y, z: -5.24},
+    {x, y, z: -1.785},
+    {x, y, z: 1.785},
+    {x, y, z: 5.24},
+    {x: 2.95, y, z: -z},
+    {x: -2.95, y, z: -z},
+    {x: -x, y, z: 5.24},
+    {x: -x, y, z: 1.785},
+    {x: -x, y, z: -1.785},
+    {x: -x, y, z: -5.24}
+  ];
+
+  prongPoints.forEach(p => {
+    prong.center(p);
+    model = model.union(prong);
+  });
+
+  let prongClip = new CSG.cylinder({slices, radius: .5, start: [0,0,0], end: [0,.3,0]});
+  let splitCone = new CSG.cone({slices, radius: .5, start: [0,0,0], end: [0,.6,0]});
+  // prongClip = prongClip.subtract(splitCone);
+  const splitConeCavity = new CSG.cone({slices, radius: .4, start: [0,0,0], end: [0,.4,0]});
+  splitCone = splitCone.subtract(splitConeCavity);
+  splitter = new CSG.cube({demensions: [10, 10, .08]});
+  splitCone = splitCone.subtract(splitter);
+  splitter.rotate({y:60});
+  splitCone = splitCone.subtract(splitter);
+  splitter.rotate({y:60});
+  splitCone = splitCone.subtract(splitter);
+  // prongClip = splitCone.union(prongClip);
+  const prongHole = new CSG.cylinder({slices, radius: prongDia/2 - .01, start: [0,-10,0], end: [0,10,0]});
+  prongClip = prongClip.subtract(prongHole);
+  prongClip.rotate({x:90})
+
+  return prongClip;
+}
+
 const cnt = du.create.element('div');
 const controls = du.create.element('div', {style: 'float: left'});
-const display = du.create.element('div', {style: 'float: right', id: 'display'});
-document.body.append(cnt);cnt.append(controls,display);
+const display = du.create.element('div', {id: 'stl-three-d-model-cnt'});
+const orientCnt = du.create.element('div', {class: 'orientation-controls'});
+document.body.append(cnt);cnt.append(controls,display);display.append(orientCnt);
 
 const select = document.createElement('select');
 select.innerHTML = Object.keys(models).map(k => `<option>${k}</option>`);
@@ -346,14 +526,24 @@ const getSelected = () => {
   args = args.map(a => Boolean.is(a) ? a : Number.parseFloat(a));
   return models[select.value](...args);
 }
-viewer = new Viewer(new CSG(), 500, 500, 50);
 
-const updateModel = () => {
+const getModel = () => {
   const modelOmodels = getSelected();
   modelList = modelOmodels instanceof CSG ? [modelOmodels] : Object.values(modelOmodels);
   const model = new CSG();
   modelList.forEach(m => model.polygons.concatInPlace(m.polygons));
-  console.log(modelList.map(m => m.toDrawString(String.color.next())).join('\n\n'));
+  // console.log(modelList.map(m => m.toDrawString(String.color.next())).join('\n\n'));
+  model.scale(10);
+  return model;
+}
+
+viewer = new Viewer(new CSG(), 500, 500, 50);
+const orientSelector = `#stl-three-d-model-cnt .orientation-controls`;
+const orientArrows = OrientationArrows.forCSG(orientSelector, viewer, getModel);
+
+
+const updateModel = () => {
+  const model = getModel();
   viewer.mesh = model.toMesh();
   viewer.gl.ondraw();
 }
@@ -371,7 +561,7 @@ const download = () => {
   addLinks(getSelected(), select.value);
 }
 
-select.value = 'screen door latch';
+select.value = 'shifter boot bracket';
 
 du.on.match('change', 'input', updateModel);
 
@@ -379,4 +569,4 @@ select.addEventListener('change', updateArgs);
 downloadBtn.addEventListener('click', download);
 updateArgs();
 
-addViewer(viewer, '#display');
+addViewer(viewer, '#stl-three-d-model-cnt');

@@ -1,8 +1,9 @@
 
 const DEFAULT_TOLERANCE = .0001;
-const infinity = 1000000000;
-const changeToInfinity = (value) =>
-  value < infinity && value > -infinity ? value : value * Infinity;
+// TODO: make tolerance comparisons based off of percent difference
+// const infinity = 1000000;
+// const changeToInfinity = (value) =>
+//   value < infinity && value > -infinity ? value : value * Infinity;
 
 
 function round(val) {
@@ -42,36 +43,60 @@ function parseTolAbs(attr, attributeMap, tolerance, absoluteValue, modulus) {
   return {tolerance, absoluteValue, singleValue, modulus};
 }
 
+const relitiveTolerance = (value, tol) => {
+  if (value < 1) return tol;
+  const log10Floored = Math.floor(Math.log10(value) + 1);
+  return log10Floored ? Math.roundTo(Math.pow(10, log10Floored)*tol, tol) : tol;
+}
 // TODO: modulus would be useful but I dont think it works yet
 function boundsFunc(attr, attributeMap, tolerance, absoluteValue, modulus) {
   const props = parseTolAbs(attr, attributeMap, tolerance, absoluteValue, modulus);
   return (elem) => {
     const tol = props.tolerance;
     let value = props.singleValue ? elem : Object.pathValue(elem, attr);
-    value = changeToInfinity(value);
     if (props.absoluteValue && value < 0) value *= -1;
     let lower, upper, center;
     if (Number.NaNfinity(value)) return {value, lower: value, upper: value, id: rangeStr(Infinity * value, Infinity * value)};
     else {
-      const mod = Math.mod(value, tol);
-      let center = mod > tol/2 ? value + (tol - mod) : value - mod;
-      if (center > props.modulus - tol) center = 0;
-      if (absoluteValue) center = Math.abs(center);
-      lower = center - tol;
-      upper = center + tol;
-      if (props.modulus) {
-        lower = Math.mod(lower, props.modulus);
-        upper = Math.mod(upper, props.modulus);
+      value = Math.roundTo(value, tol);
+      const relitiveTol = relitiveTolerance(value, tol);
+      const target = Math.roundTo(Math.floor(Math.roundTo(value / relitiveTol, tol)) * relitiveTol);
+      const bounds = {
+        value, target,
+        upper: Math.roundTo(target + relitiveTol, tol),
+        lower: Math.roundTo(target - relitiveTol, tol),
       }
-      lower = round(lower);
-      upper = round(upper);
-      // if (lower>upper) {const temp = lower; lower = upper; upper = temp;}
-      const prevId = rangeStr(lower - tol, center);
-      const id = rangeStr(lower, upper);
-      const nextId = rangeStr(center, upper + tol);
+      let lowerTol = relitiveTol;
+      let upperTol = relitiveTol;
+      if (bounds.target > tol) {
+        if (bounds.lower === 0) {
+          bounds.lower = Math.roundTo(bounds.target - bounds.target/10, tol);
+          lowerTol = relitiveTolerance(bounds.target - bounds.target/10, tol);
+        }
+        if (bounds.upper % 10 === 0) {
+          upperTol = relitiveTolerance(bounds.upper, tol);
+        }
+      }
+      //
+      // const mod = Math.mod(value, tol);
+      // let center = mod > tol/2 ? value + (tol - mod) : value - mod;
+      // if (center > props.modulus - tol) center = 0;
+      // if (absoluteValue) center = Math.abs(center);
+      // lower = center - tol;
+      // upper = center + tol;
+      // if (props.modulus) {
+      //   lower = Math.mod(lower, props.modulus);
+      //   upper = Math.mod(upper, props.modulus);
+      // }
+      // lower = round(lower);
+      // upper = round(upper);
+      // // if (lower>upper) {const temp = lower; lower = upper; upper = temp;}
+      bounds.prevId = rangeStr(bounds.lower, bounds.target);
+      bounds.id = rangeStr(bounds.target, bounds.upper);
+      bounds.nextId = rangeStr(bounds.upper, bounds.upper + upperTol);
       if (!props.modulus && lower > upper)
         console.warn.subtle(`Bounding limits may be incorrect: ${id}`);
-      return {value, lower, upper, prevId, id, nextId};
+      return bounds;
     }
   }
 }
@@ -81,6 +106,9 @@ const stringModulusReg = /^(([0-9]{1,}|)(\.[0-9]{1,}|))%(([0-9]{1,}|)(\.[0-9]{1,
 function withinBounds(attr, attributeMap, tolerance, absoluteValue, modulus) {
   const props = parseTolAbs(attr, attributeMap, tolerance, absoluteValue, modulus);
   const func = (value1, value2) => {
+    if (Number.isNaN(value1) && Number.isNaN(value2)) return true;
+    if (value1 === Infinity && value2 === Infinity) return true;
+    if (value1 === -Infinity && value2 === -Infinity) return true;
     if (props.absoluteValue) {
       value1 = Math.abs(value1);
       value2 = Math.abs(value2);
@@ -143,6 +171,7 @@ class Tolerance {
       tolerance ||= DEFAULT_TOLERANCE;
       bounds = boundsFunc(undefined, undefined, tolerance, absoluteValue, modulus);
       within = withinBounds(undefined, undefined, tolerance, absoluteValue, modulus);
+      this.bounds = bounds;
     }
 
     this.attributes = () => attrs.map(a => a);

@@ -343,1630 +343,6 @@ RequireJS = new RequireJS();
 
 
 
-RequireJS.addFunction('./public/js/utils/3d-modeling/csg.js',
-function (require, exports, module) {
-	// Constructive Solid Geometry (CSG) is a modeling technique that uses Boolean
-	// operations like union and intersection to combine 3D solids. This library
-	// implements CSG operations on meshes elegantly and concisely using BSP trees,
-	// and is meant to serve as an easily understandable implementation of the
-	// algorithm. All edge cases involving overlapping coplanar polygons in both
-	// solids are correctly handled.
-	//
-	// Example usage:
-	//
-	//     var cube = CSG.cube();
-	//     var sphere = CSG.sphere({ radius: 1.3 });
-	//     var polygons = cube.subtract(sphere).toPolygons();
-	//
-	// ## Implementation Details
-	//
-	// All CSG operations are implemented in terms of two functions, `clipTo()` and
-	// `invert()`, which remove parts of a BSP tree inside another BSP tree and swap
-	// solid and empty space, respectively. To find the union of `a` and `b`, we
-	// want to remove everything in `a` inside `b` and everything in `b` inside `a`,
-	// then combine polygons from `a` and `b` into one solid:
-	//
-	//     a.clipTo(b);
-	//     b.clipTo(a);
-	//     a.build(b.allPolygons());
-	//
-	// The only tricky part is handling overlapping coplanar polygons in both trees.
-	// The code above keeps both copies, but we need to keep them in one tree and
-	// remove them in the other tree. To remove them from `b` we can clip the
-	// inverse of `b` against `a`. The code for union now looks like this:
-	//
-	//     a.clipTo(b);
-	//     b.clipTo(a);
-	//     b.invert();
-	//     b.clipTo(a);
-	//     b.invert();
-	//     a.build(b.allPolygons());
-	//
-	// Subtraction and intersection naturally follow from set operations. If
-	// union is `A | B`, subtraction is `A - B = ~(~A | B)` and intersection is
-	// `A & B = ~(~A | ~B)` where `~` is the complement operator.
-	//
-	// ## License
-	//
-	// Copyright (c) 2011 Evan Wallace (http://madebyevan.com/), under the MIT license.
-	
-	// # class CSG
-	
-	// Holds a binary space partition tree representing a 3D solid. Two solids can
-	// be combined using the `union()`, `subtract()`, and `intersect()` methods.
-	
-	CSG = function() {
-	  this.polygons = [];
-	  this.toString = (percision, includeColor) => {
-	    percision ||= .001;
-	    let strs = [];
-	    this.polygons.forEach(p => strs.push(p.toString(percision, includeColor)));
-	    strs.sort();
-	    return strs.join('\n');
-	  }
-	  this.toDrawString = (color, percision) => color ?
-	      this.toString(percision).replace(/(^|\n)\[/g, `$1${color}[`) :
-	      this.toString(percision, true).replace(/(^|\n)\[/g, `$1${'blue'}[`);
-	  this.vertices = (percision) => {
-	    const verts = [];
-	    this.polygons.forEach(p => p.vertices.forEach(v => verts.push(v)));
-	    return verts.unique(o => o.toString(percision || .0001));
-	  }
-	  //TODO: USE TOLERANCE MAP FOR 2N RUNTIME!!!;
-	  this.sharesVertex = function (other) {
-	    const otherVerts = other.vertices();
-	    for (let pi = 0; pi < this.polygons.length; pi++) {
-	      const poly = this.polygons[pi];
-	      for (let vi = 0; vi < poly.vertices.length; vi++) {
-	        const vert = poly.vertices[vi];
-	        for (let ovi = 0; ovi < otherVerts.length; ovi++) {
-	          if (otherVerts[ovi].equals(vert)) return true;
-	        }
-	      }
-	    }
-	    return false;
-	  }
-	};
-	
-	CSG.BIG = 160934.4;//One Mile in cm
-	
-	const colors = {
-	  babyblue: [34,183,232],
-	  limegreen: [50, 205, 50],
-	
-	  indianred: [205, 92, 92],
-	  gray: [128, 128, 128],
-	  fuchsia: [255, 0, 255],
-	  lime: [0, 255, 0],
-	  black: [0, 0, 0],
-	  lightsalmon: [255, 160, 122],
-	  red: [255, 0, 0],
-	  maroon: [128, 0, 0],
-	  yellow: [255, 255, 0],
-	  olive: [128, 128, 0],
-	  lightcoral: [240, 128, 128],
-	  green: [0, 128, 0],
-	  aqua: [0, 255, 255],
-	  white: [255, 255, 255],
-	  teal: [0, 128, 128],
-	  darksalmon: [233, 150, 122],
-	  blue: [0, 0, 255],
-	  navy: [0, 0, 128],
-	  salmon: [250, 128, 114],
-	  silver: [192, 192, 192],
-	  purple: [128, 0, 128]
-	}
-	colors.list = () => Object.keys(colors).filter(k => Array.isArray(colors[k]));
-	
-	colors.codeMap = {}
-	colors.list().forEach(k => colors.codeMap[colors[k].join(',')] = k);
-	colors.name = (shared) => {
-	  if (!Array.isArray(shared)) return '';
-	  const strKey = shared.map(v => Math.round(v * 255)).join(',');
-	  return colors.codeMap[strKey] || strKey;
-	}
-	
-	
-	// Construct a CSG solid from a list of `CSG.Polygon` instances.
-	CSG.fromPolygons = function(polygons, deepCopy) {
-	  var csg = new CSG();
-	
-	  if (deepCopy) {
-	    const newPolys = [];
-	    for (let pi = 0; pi < polygons.length; pi++) {
-	      const polygon = polygons[pi];
-	      const vertices =  polygon.vertices;
-	      const newVerts = [];
-	      const shared = polygon.shared ? Array.from(polygon.shared) : undefined;
-	      for (let vi = 0; vi < vertices.length; vi++) {
-	        const vert = vertices[vi];
-	        const norm = vert.normal;
-	        const pos = vert.pos;
-	        const newNorm = new CSG.Vector(norm.x, norm.y, norm.z);
-	        const newPos = new CSG.Vector(pos.x, pos.y, pos.z);
-	        newVerts.push(new CSG.Vertex(newPos, newNorm));
-	      }
-	      newPolys.push(new CSG.Polygon(newVerts, shared));
-	    }
-	    polygons = newPolys;
-	  }
-	
-	  csg.polygons = polygons;
-	  return csg;
-	};
-	
-	CSG.fromPolygon = (poly, offset) => {
-	  const front = poly.clone();
-	  const back = poly.clone();
-	  const offsetVect = poly.vertices[0].normal.times(offset);
-	  back.translate(offsetVect);
-	  const center = new CSG.Vector(front.center().pos).plus(new CSG.Vector(back.center().pos)).dividedBy(2);
-	  const len = poly.vertices.length;
-	  const fverts = front.vertices.map(v => new CSG.Vector(v.pos));
-	  const bverts = back.vertices.map(v => new CSG.Vector(v.pos));
-	  const sides = [];
-	  for (let index = 0; index < len; index++) {
-	    const vi1 = index%len;
-	    const vi2 = (index + 1)%len;
-	    const pts = [fverts[vi1], fverts[vi2], bverts[vi2], bverts[vi1]];
-	    let norm = pts[1].minus(pts[0]).cross(pts[1].minus(pts[2])).unit();
-	    const vertices = pts.map(p => new CSG.Vertex(p, norm));
-	    const poly = new CSG.Polygon(vertices);
-	    poly.alignNormal(center);
-	    sides.push(poly);
-	  }
-	  if (offset < 0) {
-	    back.vertices.forEach(v => v.normal = v.normal.times(-1));
-	    back.vertices.reverse();
-	    back.plane.normal = back.plane.normal.times(-1);
-	  } else {
-	    front.vertices.forEach(v => v.normal = v.normal.times(-1));
-	    front.vertices.reverse();
-	    front.plane.normal = front.plane.normal.times(-1);
-	  }
-	  front.alignNormal(center);
-	  back.alignNormal(center);
-	  console.log([front, back].concat(sides).map((p, i) => `// ${i} ${p.plane.normal.unit()}\n${p.toString()}`).join('\n'))
-	  const csg = CSG.fromPolygons([front, back].concat(sides));
-	  return csg;
-	}
-	
-	function sliceConfig(x, y, width, dems, center) {
-	  if (!Array.isArray(dems)) dems = [dems.x, dems.y, dems.z];
-	  const notIncluded = [x,y].indexOf('z') === -1 ? 2 : ([x,y].indexOf('y')) === -1 ? 1 : 0;
-	  const length = dems[notIncluded];
-	  const demensions = dems.map(v => v);
-	  demensions[notIncluded] = width;
-	  const startOffset = [0, 0, 0];
-	  startOffset[notIncluded] = (length / -2) + (width / 2);
-	  center = center.translate(startOffset);
-	  center = [center.pos.x, center.pos.y, center.pos.z];
-	  let step = [0, 0, 0];
-	  step[notIncluded] = width;
-	  step = new CSG.Vector(step);
-	  const steps = Math.ceil(length/width);
-	  return {demensions, center, step, steps, width, index: 0};
-	}
-	
-	CSG.fromString = function (string) {
-	  const numRegStr = '([0-9]*\\.[0-9]{1,}|[0-9]{1,})'
-	  const vertRegStr = `\\(${numRegStr},${numRegStr},${numRegStr}\\)`;
-	  const polyRegStr = `([a-zA-z0-9, ]*)\\[(${vertRegStr}(,|)){3,}\\]`;
-	  const polyRegG = new RegExp(polyRegStr, 'g');
-	  const polyReg = new RegExp(polyRegStr);
-	  const vertRegG = new RegExp(vertRegStr, 'g');
-	  const vertReg = new RegExp(vertRegStr);
-	  const numRegG = new RegExp(numRegStr, 'g');
-	  const numReg = new RegExp(numRegStr);
-	
-	  const pf = Number.parseFloat;
-	  const polyStrs = string.match(polyRegG);
-	  if (polyStrs === null) return null;
-	  const polys = [];
-	  for (let i = 0; i < polyStrs.length; i++) {
-	    const vertStrs = polyStrs[i].match(vertRegG);
-	    let color = polyStrs[i].match(polyReg)[1];
-	    let colorMatch = color.match(numRegG);
-	    if (colorMatch && colorMatch.length === 3) color = colorMatch.map(s => pf(s));
-	    const verts = [];
-	    for (let j = 0; vertStrs && j < vertStrs.length; j++) {
-	      const match = vertStrs[j].match(vertReg);
-	      const vertex = {x: pf(match[1]), y: pf(match[2]), z: pf(match[3])};
-	      verts.push(vertex);
-	    }
-	    const a = new CSG.Vector(verts[0]);
-	    const b = new CSG.Vector(verts[1]);
-	    const c = new CSG.Vector(verts[2]);
-	    const norm = a.minus(b).cross(b.minus(c));
-	    const vertices = verts.map(v => new CSG.Vertex(v, norm));
-	    const poly = new CSG.Polygon(vertices);
-	    if (color) poly.setColor(color);
-	    polys.push(poly);
-	  }
-	
-	  return CSG.fromPolygons(polys);
-	}
-	
-	const vertexPercision = (percision, x, y, z) => ({
-	  x: percision ? Math.roundTo(x, percision) : x,
-	  y: percision ? Math.roundTo(y, percision) : y,
-	  z: percision ? Math.roundTo(z, percision) : z
-	});
-	
-	CSG.toString = function (percision) {
-	  const list = [];
-	  this.polygons.forEach((polygon) => {
-	    const obj = {vertices: []};
-	    polygon.vertices.forEach((vertex) => {
-	      obj.vertices.push(vertexPercision(percision, vertex.pos.x, vertex.pos.y, vertex.pos.z));
-	    });
-	    list.push(obj);
-	  });
-	  return JSON.stringify(list, null, 2);
-	}
-	
-	CSG.prototype = {
-	  clone: function() {
-	    var csg = new CSG();
-	    //csg.normals = this.normals;
-	    csg.polygons = this.polygons.map(function(p) { return p.clone(); });
-	    return csg;
-	  },
-	
-	  scale: function(xOall, y, z, relitive) {
-	    const center = this.center();
-	    if (y === undefined && z === undefined && relitive === undefined) {
-	      this.polygons.map(function(p) { return p.scale(center, xOall); });
-	    } else {
-	      const dems = this.demensions();
-	      const x = relitive ? (dems.x + xOall)/dems.x : (xOall || 1);
-	      y = relitive ? (dems.y + y)/dems.y : (y || 1);
-	      z = relitive ? (dems.z + z)/dems.z : (z || 1);
-	      this.polygons.forEach(p => p.vertices.forEach(v => {
-	        v.scale(center, x, y, z);
-	      }));
-	    }
-	  },
-	
-	  explode: function(distance) {
-	    const center = this.center();
-	    this.polygons.forEach(p =>
-	      p.translate(p.plane.normal.times(distance))
-	    );
-	  },
-	
-	  setColors: function(func, g, b) {
-	    if (func instanceof Function) {
-	      this.polygons.forEach(p => p.setColor(func(p)));
-	    } else {
-	      this.polygons.forEach(p => p.setColor(func, g, b));
-	    }
-	  },
-	
-	  setColor: function(r, g, b, force) {
-	    this.toPolygons().map(function(polygon) {
-	      if (polygon.shared === undefined || force) {
-	        polygon.setColor(r, g, b);
-	      }
-	    });
-	  },
-	
-	  toPolygons: function() {
-	    return this.polygons;
-	  },
-	
-	  // Return a new CSG solid representing space in either this solid or in the
-	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
-	  //
-	  //     A.union(B)
-	  //
-	  //     +-------+            +-------+
-	  //     |       |            |       |
-	  //     |   A   |            |       |
-	  //     |    +--+----+   =   |       +----+
-	  //     +----+--+    |       +----+       |
-	  //          |   B   |            |       |
-	  //          |       |            |       |
-	  //          +-------+            +-------+
-	  //
-	  union: function(csg) {
-	    if (csg.polygons.length === 0) return CSG.fromPolygons(this.polygons);
-	    var a = new CSG.Node(this.clone().polygons);
-	    var b = new CSG.Node(csg.clone().polygons);
-	    a.clipTo(b);
-	    b.clipTo(a);
-	    b.invert();
-	    b.clipTo(a);
-	    b.invert();
-	    a.build(b.allPolygons());
-	    return CSG.fromPolygons(a.allPolygons());
-	  },
-	  islands: function() {
-	    const islands = [];
-	    let allVerts = [];
-	    for (let index = 0; index < this.polygons.length; index++) {
-	      const poly = this.polygons[index];
-	      let addToIndex = -1;
-	      for (let vi = 0; vi < poly.vertices.length; vi++) {
-	        const vert = poly.vertices[vi];
-	        for (let avi = 0; addToIndex < 0 && avi < allVerts.length; avi++) {
-	          if (vert.equals(allVerts[avi].vert)) addToIndex = allVerts[avi].index;
-	        }
-	        if (addToIndex === -1) addToIndex = islands.push(new CSG()) - 1;
-	        islands[addToIndex].polygons.push(poly);
-	      }
-	      for (let vi = 0; vi < poly.vertices.length; vi++) {
-	        allVerts.push({vert: poly.vertices[vi], index: addToIndex});
-	      }
-	    }
-	    CSG.combine(islands);
-	    return islands;
-	  },
-	
-	  // Return a new CSG solid representing space in this solid but not in the
-	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
-	  //
-	  //     A.subtract(B)
-	  //
-	  //     +-------+            +-------+
-	  //     |       |            |       |
-	  //     |   A   |            |       |
-	  //     |    +--+----+   =   |    +--+
-	  //     +----+--+    |       +----+
-	  //          |   B   |
-	  //          |       |
-	  //          +-------+
-	  //
-	  subtract: function(csg) {
-	    if (!csg || csg.polygons.length === 0) return this.clone();
-	    var a = new CSG.Node(this.clone().polygons);
-	    var b = new CSG.Node(csg.clone().polygons);
-	    a.invert();
-	    a.clipTo(b);
-	    b.clipTo(a);
-	    b.invert();
-	    b.clipTo(a);
-	    b.invert();
-	    a.build(b.allPolygons());
-	    a.invert();
-	    return CSG.fromPolygons(a.allPolygons());
-	  },
-	
-	  // Return a new CSG solid representing space both this solid and in the
-	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
-	  //
-	  //     A.intersect(B)
-	  //
-	  //     +-------+
-	  //     |       |
-	  //     |   A   |
-	  //     |    +--+----+   =   +--+
-	  //     +----+--+    |       +--+
-	  //          |   B   |
-	  //          |       |
-	  //          +-------+
-	  //
-	  intersect: function(csg) {
-	    var a = new CSG.Node(this.clone().polygons);
-	    var b = new CSG.Node(csg.clone().polygons);
-	    a.invert();
-	    b.clipTo(a);
-	    b.invert();
-	    a.clipTo(b);
-	    b.clipTo(a);
-	    a.build(b.allPolygons());
-	    a.invert();
-	    return CSG.fromPolygons(a.allPolygons());
-	  },
-	
-	  slice: function (width, x, y, map) {
-	    width ||= .01;
-	    if ((!x && y) || (x && !y)) throw new Error('If you define x you must define y and vice versa')
-	    if (!x && !y) (x = 'x') & (y = 'z');
-	    const dems = this.demensions();
-	    const center = new CSG.Vertex(this.center());
-	    const config = sliceConfig(x,y, width, dems, center);
-	    config.slice = new CSG.cube(config);
-	    config.slices = [];
-	    const runFunc = map instanceof Function;
-	    for (;config.index < config.steps; config.index++) {
-	        const int = config.slice.intersect(this);
-	        int.polygons = int.polygons.filter(p => config.step.dot(p.plane.normal) === config.width);
-	        if (runFunc) config.slices.push(map(int, config));
-	        else config.slices.push(int);
-	        config.slice.translate(config.step);
-	    }
-	    console.log(config.slices.map((s, i) => `//${i}\n${s.toDrawString()}\n${this.toDrawString('green')}`).join('\n\n'))
-	    return config.slices;
-	  },
-	
-	  // Return a new CSG solid with solid and empty space switched. This solid is
-	  // not modified.
-	  inverse: function() {
-	    var csg = this.clone();
-	    csg.polygons.map(function(p) { p.flip(); });
-	    return csg;
-	  },
-	  endpoints: function () {
-	    const endpoints = {};
-	    const endpoint = (attr, value) => {
-	      const max = endpoints[attr];
-	      endpoints[attr] = max === undefined || max < value ? value : max;
-	      const minAttr = `-${attr}`;
-	      const min = endpoints[minAttr];
-	      endpoints[minAttr] = min === undefined || min > value ? value : min;
-	    }
-	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-	      endpoint('x', vertex.pos.x);
-	      endpoint('y', vertex.pos.y);
-	      endpoint('z', vertex.pos.z);
-	    }));
-	    return endpoints;
-	  },
-	  distCenter: function () {
-	    const endpoints = this.endpoints();
-	    const x = ((endpoints.x + endpoints['-x']) / 2);
-	    const y = ((endpoints.y + endpoints['-y']) / 2);
-	    const z = ((endpoints.z + endpoints['-z']) / 2);
-	    return {x,y,z};
-	  },
-	  mean: function () {
-	    const vertices = this.vertices();
-	    const mean = Math.mean(vertices, ['pos.x', 'pos.y', 'pos.z']);
-	    return mean.pos;
-	  },
-	
-	  demensions: function () {
-	    const epts = this.endpoints();
-	    return {
-	      x: epts.x - epts['-x'],
-	      y: epts.y - epts['-y'],
-	      z: epts.z - epts['-z']
-	    }
-	  },
-	  demCenter: function () {
-	    const dems = this.demensions();
-	    return {x: dems.x/2, y: dems.y/2, z: dems.z/2};
-	  },
-	  rotateAroundPoint: function (rotations, point) {
-	    const returnVector = new CSG.Vector(point);
-	    const centerVector = returnVector.negated();
-	    this.translate(centerVector);
-	    this.rotate(rotations);
-	    this.translate(returnVector);
-	  },
-	
-	  rotate: function (rotations, pivot) {
-	    pivot ||= {x: 1, y:1, z:1};
-	    if (Array.isArray(rotations)) {
-	      for (let i = 0; i < rotations.length; i++) this.rotate(rotations[i])
-	      return;
-	    }
-	    rotations = new CSG.Vector(rotations)
-	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-	      let newPos = vertex.pos;
-	      newPos = ArbitraryRotate(newPos, rotations.x, {x: pivot.x, y:0, z:0});
-	      newPos = ArbitraryRotate(newPos, rotations.y, {x: 0, y:pivot.y, z:0});
-	      newPos = ArbitraryRotate(newPos, rotations.z, {x: 0, y:0, z:pivot.z});
-	      return new CSG.Vertex(newPos, vertex.normal);
-	    }));
-	  },
-	  reverseRotate: function (rotation) {
-	    rotation = new CSG.Vector(rotation)
-	    rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
-	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-	      let newPos = vertex.pos;
-	      newPos = ArbitraryRotate(newPos, rotation.z, {x: 0, y:0, z:1});
-	      newPos = ArbitraryRotate(newPos, rotation.y, {x: 0, y:1, z:0});
-	      newPos = ArbitraryRotate(newPos, rotation.x, {x: 1, y:0, z:0});
-	      return new CSG.Vertex(newPos, vertex.normal);
-	    }));
-	  },
-	
-	  ArbitraryRotate: function(degrees, pivot) {
-	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-	        let newPos = vertex.pos;
-	        newPos = ArbitraryRotate(newPos, degrees, pivot);
-	        return new CSG.Vertex(newPos, vertex.normal);
-	    }));
-	  },
-	
-	  translate: function (offset) {
-	    offset = new CSG.Vector(offset)
-	    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
-	    offset.id = String.random();
-	    this.polygons.forEach((poly) => poly.translate(offset));
-	  },
-	
-	  center: function (newCenter) {
-	    const center = this.distCenter();
-	    if (!newCenter) return center;
-	    const offset = {
-	      x: newCenter.x - center.x,
-	      y: newCenter.y - center.y,
-	      z: newCenter.z - center.z
-	    }
-	    this.translate(offset);
-	    return newCenter;
-	  },
-	
-	  normalize: function (rotations, rightSide, leftOfAxis) {
-	    if (rightSide) {
-	      if (rotations) {
-	        if (Array.isArray(rotations)) rotations = rotations.concat([{y:180}]);
-	        else rotations = [rotations, {y: 180}];
-	      } else rotations = [{y:180}];
-	    }
-	    const clone = this.clone();
-	    if (rotations) clone.rotate(rotations);
-	    const dems = clone.demensions();
-	    const divisor = leftOfAxis ? -2 : 2;
-	    const normCenter = {x: dems.x/divisor, y: dems.y/2, z: dems.z/2};
-	    // const translationVector = new CSG.Vector(clone.center()).minus(normCenter);
-	    const translationVector = new CSG.Vector(normCenter).minus(clone.center());
-	    clone.translate(translationVector);
-	    const side = !rightSide ? 'Left' : 'Right';
-	    return {poly: clone, translationVector, rotations, normCenter, side};
-	  }
-	};
-	
-	CSG.combine = function(csgs) {
-	  for (let index = csgs.length - 1; index > -1; index--) {
-	    const proposer = csgs[index];
-	    for (let oi = 0; oi < index; oi++) {
-	      const proposeTo = csgs[oi];
-	      if (proposer.sharesVertex(proposeTo)) {
-	        proposeTo.polygons.concatInPlace(proposer.polygons);
-	        csgs.splice(index, 1);
-	        break;
-	      }
-	    }
-	  }
-	}
-	
-	CSG.marroonedOn = function(csgOpolyOvertex, islands) {
-	  let vertices;
-	  if (csgOpolyOvertex instanceof CSG) vertices = csgOpolyOvertex.vertices();
-	  else if (csgOpolyOvertex instanceof CSG.Polygon) vertices = csgOpolyOvertex.vertices;
-	  else if (csgOpolyOvertex instanceof CSG.Vertex) vertices = [csgOpolyOvertex];
-	  else throw new Error(`marroonedOn not configured for input '${csgOpolyOvertex}'`);
-	  for(let ii = 0; ii < islands.length; ii++) {
-	    const island = islands[ii];
-	    const iVerts = island.vertices();
-	    for (let ivi = 0; ivi < iVerts.length; ivi++) {
-	      for (let vi = 0; vi < vertices.length; vi++) {
-	        if (vertices[vi].equals(iVerts[ivi])) return island;
-	      }
-	    }
-	  }
-	  return null;
-	},
-	
-	// Construct an axis-aligned solid cuboid. Optional parameters are `center` and
-	// `radius`, which default to `[0, 0, 0]` and `[1, 1, 1]`. The radius can be
-	// specified using a single number or a list of three numbers, one for each axis.
-	//
-	// Example code:
-	//
-	//     var cube = CSG.cube({
-	//       center: [0, 0, 0],
-	//       radius: 1
-	//     });
-	//
-	// x1 = (x0 – xc)cos(θ) – (y0 – yc)sin(θ) + xc(Equation 3)
-	// y1 = (x0 – xc)sin(θ) + (y0 – yc)cos(θ) + yc(Equation 4)
-	CSG.cube = function(options) {
-	  options = options || {};
-	  var c = new CSG.Vector(options.center || [0, 0, 0]);
-	  var r = !options.radius ? [1, 1, 1] : Number.isFinite(options.radius) ?
-	                      [options.radius, options.radius, options.radius] :
-	                      new CSG.Vector(options.radius).toArray();
-	  if (options.demensions) {
-	    r = new CSG.Vector(options.demensions).times(.5).toArray();
-	  }
-	  return CSG.fromPolygons([
-	    [[0, 4, 6, 2], [-1, 0, 0]],
-	    [[1, 3, 7, 5], [+1, 0, 0]],
-	    [[0, 1, 5, 4], [0, -1, 0]],
-	    [[2, 6, 7, 3], [0, +1, 0]],
-	    [[0, 2, 3, 1], [0, 0, -1]],
-	    [[4, 5, 7, 6], [0, 0, +1]]
-	  ].map(function(info) {
-	    return new CSG.Polygon(info[0].map(function(i) {
-	      var pos = new CSG.Vector(
-	        c.x + r[0] * (2 * !!(i & 1) - 1),
-	        c.y + r[1] * (2 * !!(i & 2) - 1),
-	        c.z + r[2] * (2 * !!(i & 4) - 1)
-	      );
-	      return new CSG.Vertex(pos, new CSG.Vector(info[1]));
-	    }));
-	  }));
-	};
-	
-	CSG.Point = function (center, radius, color) {
-	  radius ||= .5
-	  const sphere = new CSG.sphere({radius, center});
-	  sphere.setColor(color);
-	  return sphere;
-	}
-	
-	function vecotrOvertexModel(start, end, model, options) {
-	  if (Array.isArray(end) || options.lineDisplayType === CSG.Line.DISPLAY_TYPES.LINE_ONLY) return model;
-	  let color = end.color || options.color;
-	  if (CSG.Line.DISPLAY_TYPES.VECTOR === options.lineDisplayType &&
-	          end instanceof CSG.Vector) {
-	    const maxLen = end.distance(new CSG.Vector(start)) / 2;
-	    const unit = end.minus(new CSG.Vector(start)).unit().times(maxLen > 6 ? 6 : maxLen);
-	    start = end.minus(unit);
-	    return new CSG.cone({start, end, model, color});
-	  } else {
-	    return new CSG.Point(end, null, color).union(model);
-	  }
-	}
-	
-	CSG.Line = function (options) {
-	  options ||= {};
-	  const start = options.start || [0,0,0];
-	  const end = options.end || [0,0,0];
-	  if (new CSG.Vector(start).equals(new CSG.Vector(end))) {
-	    return new CSG.Point(options.start, .3, options.color);
-	  }
-	  const radius = options.radius || .2;
-	  let model = new CSG.cylinder({start, end, radius, slices: 8});
-	  model = vecotrOvertexModel(end, start, model, options);
-	  model.setColor(options.color);
-	  return vecotrOvertexModel(start, end, model, options);
-	}
-	
-	CSG.Line.DISPLAY_TYPES = {};
-	CSG.Line.DISPLAY_TYPES.LINE_ONLY = 'lineOnly';
-	CSG.Line.DISPLAY_TYPES.VECTOR = 'vector';
-	
-	CSG.Rectangle = function (demensions, center, yVector, xVector) {
-	  yVector = new CSG.Vector(yVector || [0,1,0]).unit();
-	  const defaultVector = !Object.equals(yVector, {x:1, y:0, z:0}) ? {x:1, y:0, z:0} : {x:0, y:0, z:1};
-	  xVector = new CSG.Vector(xVector || defaultVector);
-	  center = new CSG.Vector(center || [0,0,0]);
-	  const demVector = new CSG.Vector(demensions || [3,5,1]);
-	  const width = demVector.x;
-	  const length = demVector.y;
-	  const depth = demVector.z;
-	  const zVector = xVector.cross(yVector).unit();
-	
-	  const vs = {
-	    x: yVector.times(length/2),
-	    y: xVector.times(width/2),
-	    z: zVector.times(depth/2),
-	    nx: yVector.times(length/2).negated(),
-	    ny: xVector.times(width/2).negated(),
-	    nz: zVector.times(depth/2).negated()
-	  }
-	
-	  const vert = (...args) => {
-	    const vertex = new CSG.Vertex(center);
-	    for(let index = 0; index < args.length; index++) vertex.plus(args[index]);
-	    return vertex;
-	  }
-	
-	  // const front = new CSG.Polygon([vert(vs.x, vs.y), vert(vs.nx, vs.y), vert(vs.nx, vs.ny), vert(vs.x, vs.ny)]);
-	  let v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.nz);
-	  let v2 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.nz);
-	  let v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.nz);
-	  let v4 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.nz);
-	  const front = new CSG.Polygon([v1,v2,v3,v4]);
-	
-	  // const back = new CSG.Polygon([vert(vs.x,vs.y,vs.z),vert(vs.nx,vs.y,vs.z),vert(vs.nx,vs.ny,vs.z),vert(vs.x,vs.ny,vs.z)]);
-	  v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.z);
-	  v2 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.z);
-	  v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.z);
-	  v4 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.z);
-	  const back = new CSG.Polygon([v4,v3,v2,v1]);
-	
-	  v1 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.y);
-	  v2 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.y);
-	  v3 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.y);
-	  v4 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.y);
-	  const top = new CSG.Polygon([v4,v3,v2,v1]);
-	
-	  v1 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.ny);
-	  v2 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.ny);
-	  v4 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.ny);
-	  v3 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.ny);
-	  const bottom = new CSG.Polygon([v4,v3,v2,v1]);
-	
-	  v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.x);
-	  v2 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.x);
-	  v3 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.x);
-	  v4 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.x);
-	  const left = new CSG.Polygon([v1,v2,v3,v4]);
-	
-	  v4 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.nx);
-	  v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.nx);
-	  v2 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.nx);
-	  v1 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.nx);
-	  const right = new CSG.Polygon([v1,v2,v3,v4]);
-	
-	  return CSG.fromPolygons([front, back, top, bottom, left, right])
-	}
-	
-	// Construct a solid sphere. Optional parameters are `center`, `radius`,
-	// `slices`, and `stacks`, which default to `[0, 0, 0]`, `1`, `16`, and `8`.
-	// The `slices` and `stacks` parameters control the tessellation along the
-	// longitude and latitude directions.
-	//
-	// Example usage:
-	//
-	//     var sphere = CSG.sphere({
-	//       center: [0, 0, 0],
-	//       radius: 1,
-	//       slices: 16,
-	//       stacks: 8
-	//     });
-	CSG.sphere = function(options) {
-	  options = options || {};
-	  var c = new CSG.Vector(options.center || [0, 0, 0]);
-	  var r = options.radius || 1;
-	  var slices = options.slices || 32;
-	  var stacks = options.stacks || 8;
-	  var polygons = [], vertices;
-	  function vertex(theta, phi) {
-	    theta *= Math.PI * 2;
-	    phi *= Math.PI;
-	    var dir = new CSG.Vector(
-	      Math.cos(theta) * Math.sin(phi),
-	      Math.cos(phi),
-	      Math.sin(theta) * Math.sin(phi)
-	    );
-	    vertices.push(new CSG.Vertex(c.plus(dir.times(r)), dir));
-	  }
-	  for (var i = 0; i < slices; i++) {
-	    for (var j = 0; j < stacks; j++) {
-	      vertices = [];
-	      vertex(i / slices, j / stacks);
-	      if (j > 0) vertex((i + 1) / slices, j / stacks);
-	      if (j < stacks - 1) vertex((i + 1) / slices, (j + 1) / stacks);
-	      vertex(i / slices, (j + 1) / stacks);
-	      polygons.push(new CSG.Polygon(vertices));
-	    }
-	  }
-	
-	  const csg = CSG.fromPolygons(polygons);
-	  csg.property('x', c.x, false, false);
-	  csg.property('y', c.y, false, false);
-	  csg.property('z', c.z, false, false);
-	  csg.property('radius', c.radius, false, false);
-	  return csg;
-	};
-	
-	// Construct a solid cylinder. Optional parameters are `start`, `end`,
-	// `radius`, and `slices`, which default to `[0, -1, 0]`, `[0, 1, 0]`, `1`, and
-	// `16`. The `slices` parameter controls the tessellation.
-	//
-	// Example usage:
-	//
-	//     var cylinder = CSG.cylinder({
-	//       start: [0, -1, 0],
-	//       end: [0, 1, 0],
-	//       radius: 1,
-	//       slices: 16
-	//     });
-	CSG.cylinder = function(options) {
-	  options = options || {};
-	  var s = new CSG.Vector(options.start || [0, -1, 0]);
-	  var e = new CSG.Vector(options.end || [0, 1, 0]);
-	  var ray = e.minus(s);
-	  var r = options.radius || 1;
-	  if (!ray.positive()) {
-	    let temp = s;
-	    s = e;
-	    e = temp;
-	    ray = ray.negated();
-	  }
-	  var slices = options.slices || 8;
-	  var axisZ = ray.unit(); isY = (Math.abs(axisZ.y) > 0.5);
-	  var axisX = new CSG.Vector(isY, !isY, 0).cross(axisZ).unit();
-	  var axisY = axisX.cross(axisZ).unit();
-	  var start = new CSG.Vertex(s, axisZ.negated());
-	  var end = new CSG.Vertex(e, axisZ.unit());
-	  var polygons = [];
-	  function point(stack, slice, normalBlend) {
-	    var angle = slice * Math.PI * 2;
-	    var out = axisX.times(Math.cos(angle)).plus(axisY.times(Math.sin(angle)));
-	    var pos = s.plus(ray.times(stack)).plus(out.times(r));
-	    var normal = out.times(1 - Math.abs(normalBlend)).plus(axisZ.times(normalBlend));
-	    return new CSG.Vertex(pos, normal);
-	  }
-	  const topVerts = [];
-	  const bottomVerts = [];
-	  for (var i = 0; i < slices; i++) {
-	    var t0 = i / slices, t1 = (i + 1) / slices;
-	    polygons.push(new CSG.Polygon([point(0, t1, 0), point(0, t0, 0), point(1, t0, 0), point(1, t1, 0)]));
-	    topVerts.push(point(1, t0, 1));
-	    bottomVerts.push(point(0, t0, 1));
-	  }
-	  topVerts.reverse();
-	  return CSG.fromPolygons(polygons.concat([new CSG.Polygon(topVerts),new CSG.Polygon(bottomVerts)]));
-	  // return new CSG.Polygon(verts);
-	};
-	
-	let crossVect;
-	const perpendicularVector = (vector) => {
-	  let other;
-	  const option1Mag = vector.z*vector.z+vector.y*vector.y;
-	  const option2Mag = vector.z*vector.z+vector.x*vector.x;
-	  const option3Mag = vector.y*vector.y+vector.x*vector.x;
-	  if (option1Mag > option2Mag && option1Mag > option3Mag) {
-	    other = new CSG.Vector(0, vector.z, -vector.y);
-	  } else if (option2Mag > option3Mag) {
-	    other = new CSG.Vector(-vector.z, 0, vector.x);
-	  } else {
-	    other = new CSG.Vector(-vector.y, vector.x, 0);
-	  }
-	  crossVect = other;
-	  return other;
-	}
-	
-	CSG.cone = function (options) {
-	  options ||= {};
-	  let length = options.length || 10;
-	  const start = new CSG.Vector(options.start || [0,0,0]);
-	  const end = new CSG.Vector(options.end || start.add([0,length,0]));
-	  length = end.minus(start).length();
-	  const point = new CSG.sphere({radius: 1, center: end});
-	  const radius = options.radius || 1;
-	  const slices = options.slices || 8;
-	  let cylinder = new CSG.cylinder({start, end, radius, slices});
-	  let cone = cylinder.clone();
-	  cone.setColor(options.color);
-	  const sliceRotation = 360/slices;
-	  const rotationVector = end.minus(start).unit();
-	  const lengthVector = rotationVector.clone().times(length);
-	  const perpVector = perpendicularVector(rotationVector.clone()).times(radius/-2);
-	  const widthVector = perpVector.cross(rotationVector).unit().times(30);
-	  const cutterCenter = end;
-	  const plane = new CSG.Rectangle([30, length*10, radius*2], cutterCenter, rotationVector.unit(), widthVector.unit());
-	  const planeCenter = new CSG.Vector(plane.center());
-	  plane.setColor(options.color);
-	  const degrees = Math.toDegrees(Math.atan(radius/(2*length)));
-	  plane.ArbitraryRotate(degrees, widthVector.unit());
-	  plane.center(cutterCenter);
-	  plane.translate(perpVector);
-	  // plane.translate(cutterCenter.negated());
-	
-	  for (let index = 0; index < slices; index++) {
-	    plane.translate(cutterCenter.negated());
-	    plane.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-	        let newPos = vertex.pos;
-	        newPos = ArbitraryRotate(newPos, sliceRotation, rotationVector.unit());
-	        return new CSG.Vertex(newPos, vertex.normal);
-	      }));
-	      plane.translate(cutterCenter);
-	      cone = cone.subtract(plane);
-	  }
-	
-	  if(options.model) {
-	    const model = options.model.subtract(cylinder);
-	    cone = cone.union(model);
-	  }
-	
-	  // const e = rotationVector.times(1000);
-	  // const s = cutterCenter;
-	  // const p = perpVector.times(100);
-	  // const w = widthVector.times(100);
-	  // const r = cutterCenter.plus(lengthVector);
-	  // // const line = new CSG.Line({start: [s.x,s.y,s.z], end: [e.x,e.y,e.z]});
-	  // const line1 = new CSG.Line({start: [0,0,0], end: [w.x,w.y,w.z], color: 'green'});
-	  // const line2 = new CSG.Line({start: [0,0,0], end: [p.x,p.y,p.z], color: 'blue'});
-	  // const line3 = new CSG.Line({start: [0,0,0], end: [e.x,e.y,e.z], color: 'yellow'});
-	  // // const line4 = new CSG.Line({start: [0,0,0], end: [r.x,r.y,r.z], color: 'red'});
-	  // return line1.union(line2).union(line3).union(cone);//.union(line4).union(line);//.union(options.model);//cylinder.union(line);
-	
-	  return cone;
-	}
-	
-	function axis(vector, origin, color, size, radius) {
-	  origin ||= [0,0,0];
-	  const end = [vector[0]*size+origin[0],vector[1]*size+origin[1],vector[2]*size+origin[2]]
-	  const ax = CSG.cylinder({start: origin, end, radius})
-	  ax.setColor(color);
-	  return ax;
-	}
-	
-	CSG.Axis =  function (size, radius, origin, vectors) {
-	  size ||= 100;
-	  origin ||= [0,0,0];
-	  vectors ||= [[1,0,0], [0,1,0], [0,0,1]];
-	  radius ||= size/100;
-	  const center = CSG.sphere({center: origin, radius: radius*1.5})
-	  const xAxis = axis(vectors[0], origin, [255,0,0], size, radius);
-	  const yAxis = axis(vectors[1], origin, [0,128,0], size, radius);
-	  const zAxis = axis(vectors[2], origin, [0,0,255], size, radius);
-	  const csg = new CSG();
-	  csg.polygons.concatInPlace(center.polygons);
-	  csg.polygons.concatInPlace(xAxis.polygons);
-	  csg.polygons.concatInPlace(yAxis.polygons);
-	  csg.polygons.concatInPlace(zAxis.polygons);
-	  return csg;
-	}
-	
-	// # class Vector
-	
-	// Represents a 3D vector.
-	//
-	// Example usage:
-	//
-	//     new CSG.Vector(1, 2, 3);
-	//     new CSG.Vector([1, 2, 3]);
-	//     new CSG.Vector({ x: 1, y: 2, z: 3 });
-	const isZeros = (...vals) => vals.findIndex(v => withinEPSILON(v, 0)) === -1;
-	CSG.Vector = function(x, y, z) {
-	  if (arguments.length == 3) {
-	    this.x = x;
-	    this.y = y;
-	    this.z = z;
-	  } else if ('x' in x || 'y' in x || 'z' in x) {
-	    this.x = x.x;
-	    this.y = x.y;
-	    this.z = x.z;
-	  } else if ('i' in x || 'j' in x || 'k' in x) {
-	    this.x = x.i;
-	    this.y = x.j;
-	    this.z = x.k;
-	  } else {
-	    this.x = x[0];
-	    this.y = x[1];
-	    this.z = x[2];
-	  }
-	};
-	
-	CSG.Vector.prototype = {
-	  clone: function() {
-	    return new CSG.Vector(this.x, this.y, this.z);
-	  },
-	  positive: function () {
-	    return this.x > 0 || (isZeros(this.x) && this.y > 0) ||
-	              (isZeros(this.x,this.y) && this.z > 0) || isZeros(this.x, this.y, this.z);
-	  },
-	  toArray: function() {return [this.x,this.y,this.z]},
-	
-	  negated: function() {
-	    return new CSG.Vector(-this.x, -this.y, -this.z);
-	  },
-	
-	  plus: function(a) {
-	    return new CSG.Vector(this.x + a.x, this.y + a.y, this.z + a.z);
-	  },
-	
-	  minus: function(a) {
-	    return new CSG.Vector(this.x - a.x, this.y - a.y, this.z - a.z);
-	  },
-	
-	  times: function(a) {
-	    return new CSG.Vector(this.x * a, this.y * a, this.z * a);
-	  },
-	
-	  dividedBy: function(a) {
-	    return new CSG.Vector(this.x / a, this.y / a, this.z / a);
-	  },
-	
-	  dot: function(a) {
-	    return this.x * a.x + this.y * a.y + this.z * a.z;
-	  },
-	
-	  lerp: function(a, t) {
-	    return this.plus(a.minus(this).times(t));
-	  },
-	
-	  length: function() {
-	    return Math.sqrt(this.dot(this));
-	  },
-	
-	  unit: function() {
-	    return this.dividedBy(this.length());
-	  },
-	
-	  distance: function (other) {
-	    const vector = this.minus(other);
-	    return vector.length();
-	  },
-	
-	  cross: function(a) {
-	    return new CSG.Vector(
-	      this.y * a.z - this.z * a.y,
-	      this.z * a.x - this.x * a.z,
-	      this.x * a.y - this.y * a.x
-	    );
-	  },
-	
-	  equals: function(other) {
-	    return withinEPSILON(this.x, other.x) &&
-	            withinEPSILON(this.y, other.y) &&
-	            withinEPSILON(this.z, other.z);
-	  },
-	
-	  toString: function(percision) {
-	    const vertPer = vertexPercision(percision, this.x, this.y, this.z);
-	    return `(${vertPer.x},${vertPer.y},${vertPer.z})`
-	  }
-	};
-	
-	// # class Vertex
-	
-	// Represents a vertex of a polygon. Use your own vertex class instead of this
-	// one to provide additional features like texture coordinates and vertex
-	// colors. Custom vertex classes need to provide a `pos` property and `clone()`,
-	// `flip()`, and `interpolate()` methods that behave analogous to the ones
-	// defined by `CSG.Vertex`. This class provides `normal` so convenience
-	// functions like `CSG.sphere()` can return a smooth vertex normal, but `normal`
-	// is not used anywhere else.
-	
-	
-	CSG.Vector.I = new CSG.Vector(1,0,0);
-	CSG.Vector.J = new CSG.Vector(0,1,0);
-	CSG.Vector.K = new CSG.Vector(0,0,1);
-	
-	CSG.Vertex = function(pos, normal) {
-	  this.pos = new CSG.Vector(pos);
-	  this.normal = new CSG.Vector(normal || {x:1,y:0,z:0});
-	  this.toString = (percision) => {
-	    const verPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
-	    return `(${verPer.x},${verPer.y},${verPer.z})`;
-	  }
-	
-	  this.scale = (center, xOall, y, z) => {
-	    const centerVector = new CSG.Vector(center);
-	    const vector = new CSG.Vector(pos.x - center.x, pos.y - center.y, pos.z - center.z);
-	    if (y === undefined && z === undefined) {
-	      const scaled = vector.times(xOall);
-	      this.pos = centerVector.plus(scaled);
-	    } else {
-	      const iVect = CSG.Vector.I.times(vector.x * xOall);
-	      const jVect = CSG.Vector.J.times(vector.y * y);
-	      const kVect = CSG.Vector.K.times(vector.z * z);
-	      this.pos = centerVector.plus(iVect.plus(jVect).plus(kVect));
-	    }
-	  }
-	
-	  const tol = .1
-	  const attrSq = (other, attr) => (this.pos[attr]-other.pos[attr]) * (this.pos[attr]-other.pos[attr]);
-	  this.equals = (other, tolerance) => {
-	    tolerance ||= tol;
-	    if (!(other instanceof CSG.Vertex)) return false;
-	    const sqrtError = Math.sqrt(attrSq(other, 'x') + attrSq(other, 'y') + attrSq(other, 'z'));
-	    return Math.abs(sqrtError) < tol;
-	  }
-	};
-	
-	CSG.VertexNoNorm = function (pos) {
-	  return new CSG.Vertex(pos, [-1,-1,-1]);
-	}
-	
-	CSG.Vertex.Center = function (vertices) {
-	  vertices = vertices.map(v => new CSG.Vector(v));
-	  const total = {x:0, y:0,z:0};
-	  vertices.forEach(v => {
-	    total.x += v.x;total.y += v.y;total.z += v.z;
-	  })
-	  return {
-	    x: total.x / vertices.length,
-	    y: total.y / vertices.length,
-	    z: total.z / vertices.length
-	  }
-	}
-	
-	CSG.Vertex.prototype = {
-	  clone: function() {
-	    return new CSG.Vertex(this.pos.clone(), this.normal.clone());
-	  },
-	  toString: function (percision) {
-	    const vertPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
-	    return `(${vertPer.x},${vertPer.y},${vertPer.z})`
-	  },
-	  translate: function (offset) {return translate(this, offset)},
-	
-	  // Invert all orientation-specific data (e.g. vertex normal). Called when the
-	  // orientation of a polygon is flipped.
-	  flip: function() {
-	    this.normal = this.normal.negated();
-	  },
-	
-	  // Create a new vertex between this vertex and `other` by linearly
-	  // interpolating all properties using a parameter of `t`. Subclasses should
-	  // override this to interpolate additional properties.
-	  interpolate: function(other, t) {
-	    return new CSG.Vertex(
-	      this.pos.lerp(other.pos, t),
-	      this.normal.lerp(other.normal, t)
-	    );
-	  }
-	};
-	
-	// # class Plane
-	
-	// Represents a plane in 3D space.
-	
-	CSG.Plane = function(normal, w) {
-	  this.normal = normal;
-	  this.w = w;
-	  this.setColor = function(r, g, b) {
-	    if (colors[r]) r = colors[r];
-	    if (Array.isArray(r)) {
-	      g = r[1];
-	      b = r[2];
-	      r = r[0];
-	    }
-	    this.shared = [r/255, g/255, b/255];
-	  }
-	};
-	
-	// `CSG.Plane.EPSILON` is the tolerance used by `splitPolygon()` to decide if a
-	// point is on the plane.
-	CSG.Plane.EPSILON = 1e-5;//1e-3;
-	const withinEPSILON = (v1,v2) => Math.abs(v1-v2) < CSG.Plane.EPSILON;
-	
-	CSG.Plane.fromPoints = function(a, b, c) {
-	  if (Array.isArray(a)) (c = a[2]) & (b = a[1]) & (a = a[0]);
-	  a = new CSG.Vector(a);
-	  b = new CSG.Vector(b);
-	  c = new CSG.Vector(c);
-	  var n = b.minus(a).cross(c.minus(a)).unit();
-	  return new CSG.Plane(n, n.dot(a));
-	};
-	
-	CSG.Plane.prototype = {
-	  clone: function() {
-	    return new CSG.Plane(this.normal.clone(), this.w);
-	  },
-	
-	  flip: function() {
-	    this.normal = this.normal.negated();
-	    this.w = -this.w;
-	  },
-	
-	  // Split `polygon` by this plane if needed, then put the polygon or polygon
-	  // fragments in the appropriate lists. Coplanar polygons go into either
-	  // `coplanarFront` or `coplanarBack` depending on their orientation with
-	  // respect to this plane. Polygons in front or in back of this plane go into
-	  // either `front` or `back`.
-	  splitPolygon: function(polygon, coplanarFront, coplanarBack, front, back) {
-	    var COPLANAR = 0;
-	    var FRONT = 1;
-	    var BACK = 2;
-	    var SPANNING = 3;
-	
-	    // Classify each point as well as the entire polygon into one of the above
-	    // four classes.
-	    var polygonType = 0;
-	    var types = [];
-	    for (var i = 0; i < polygon.vertices.length; i++) {
-	      var t = this.normal.dot(polygon.vertices[i].pos) - this.w;
-	      var type = (t < -CSG.Plane.EPSILON) ? BACK : (t > CSG.Plane.EPSILON) ? FRONT : COPLANAR;
-	      polygonType |= type;
-	      types.push(type);
-	    }
-	
-	    // Put the polygon in the correct list, splitting it when necessary.
-	    switch (polygonType) {
-	      case COPLANAR:
-	        (this.normal.dot(polygon.plane.normal) > 0 ? coplanarFront : coplanarBack).push(polygon);
-	        break;
-	      case FRONT:
-	        front.push(polygon);
-	        break;
-	      case BACK:
-	        back.push(polygon);
-	        break;
-	      case SPANNING:
-	        var f = [], b = [];
-	        for (var i = 0; i < polygon.vertices.length; i++) {
-	          var j = (i + 1) % polygon.vertices.length;
-	          var ti = types[i], tj = types[j];
-	          var vi = polygon.vertices[i], vj = polygon.vertices[j];
-	          if (ti != BACK) f.push(vi);
-	          if (ti != FRONT) b.push(ti != BACK ? vi.clone() : vi);
-	          if ((ti | tj) == SPANNING) {
-	            var t = (this.w - this.normal.dot(vi.pos)) / this.normal.dot(vj.pos.minus(vi.pos));
-	            var v = vi.interpolate(vj, t);
-	            f.push(v);
-	            b.push(v.clone());
-	          }
-	        }
-	        if (f.length >= 3) front.push(new CSG.Polygon(f, polygon.shared));
-	        if (b.length >= 3) back.push(new CSG.Polygon(b, polygon.shared));
-	        break;
-	    }
-	  }
-	};
-	
-	// # class Polygon
-	
-	// Represents a convex polygon. The vertices used to initialize a polygon must
-	// be coplanar and form a convex loop. They do not have to be `CSG.Vertex`
-	// instances but they must behave similarly (duck typing can be used for
-	// customization).
-	//
-	// Each convex polygon has a `shared` property, which is shared between all
-	// polygons that are clones of each other or were split from the same polygon.
-	// This can be used to define per-polygon properties (such as surface color).
-	
-	CSG.Polygon = function(vertices, shared) {
-	  this.vertices = vertices;
-	  this.shared = shared;
-	  this.plane = CSG.Plane.fromPoints(vertices[0].pos, vertices[1].pos, vertices[2].pos);
-	};
-	
-	CSG.Polygon.prototype = {
-	  clone: function() {
-	    var vertices = this.vertices.map(function(v) { return v.clone(); });
-	    return new CSG.Polygon(vertices, this.shared);
-	  },
-	
-	  lines: function () {
-	    const verts = this.vertices;
-	    return verts.map((v,i) => [v.pos, verts[(i+1)%verts.length].pos]);
-	  },
-	
-	  alignNormal: function (objectCenter) {
-	    const center = new CSG.Vector(this.center().pos);
-	    const dir = center.minus(objectCenter).unit();
-	    const norm = this.plane.normal;
-	    if (norm.dot(dir) < 0) {
-	      this.plane.normal = norm.times(-1);
-	      this.vertices.forEach(v => v.normal = v.normal.times(-1));
-	      console.log('realigned');
-	    }
-	  },
-	
-	  toString: function (percision, includeColor) {
-	    percision ||= .001;
-	    const verts = this.vertices;
-	    const shared = this.shared;
-	    let color = includeColor ? colors.name(shared) : '';
-	    let str = `${color}[`;
-	    for (let v = 0; v < verts.length; v++) {
-	      str += `${verts[v].toString(percision)},`;
-	    }
-	    str = `${str.substring(0, str.length - 1)}]`;
-	    return str;
-	  },
-	
-	  center: function () {
-	    const mr = Math.midrange(this.vertices, ['pos.x','pos.y','pos.z']);
-	    return new CSG.Vertex({x: mr['pos.x'], y: mr['pos.y'], z: mr['pos.z']});
-	  },
-	
-	  translate: function (offset) {
-	    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
-	    const offsetId = offset.id || (offset.id = String.random());
-	    this.forEachVertex((vertex) => {
-	      if (!vertex.offsetId || vertex.offsetId !== offsetId) {
-	        vertex.pos.x += offset.x;
-	        vertex.pos.y += offset.y;
-	        vertex.pos.z += offset.z;
-	        vertex.offsetId = offsetId;
-	      }
-	    });
-	  },
-	
-	  color: function () {
-	    const name = colors.name(this.shared);
-	    return name.indexOf(',') === -1 ? name : this.shared.map(v => Math.round(v*255));
-	  },
-	
-	  scale: function(center, coeficient) {
-	    this.vertices.forEach(function(v) { return v.scale(center, coeficient); });
-	  },
-	
-	  flip: function() {
-	    this.vertices.reverse().map(function(v) { v.flip(); });
-	    this.plane.flip();
-	  },
-	  forEachVertex: function (func) {
-	    for (let vIndex = 0; vIndex < this.vertices.length; vIndex += 1) {
-	      const vertex = this.vertices[vIndex];
-	      const newVertex = func(vertex);
-	      this.vertices[vIndex] = newVertex instanceof CSG.Vertex ? newVertex : vertex;
-	    }
-	  },
-	  setColor: function(r, g, b) {
-	    if (colors[r]) r = colors[r];
-	    if (Array.isArray(r)) {
-	      g = r[1];
-	      b = r[2];
-	      r = r[0];
-	    }
-	    this.shared = [r/255, g/255, b/255];
-	  }
-	};
-	
-	CSG.Polygon.Enclosed = function (verts, width, color) {
-	  width ||= .1;
-	  const centerNormal = (verts) => {
-	    const center = CSG.Vertex.Center(verts);
-	    const v1 = new CSG.Vector(verts[0]).minus(center)
-	    const v2 = new CSG.Vector(verts[1]).minus(center)
-	    return v1.cross(v2).unit()
-	  }
-	
-	  const normal = centerNormal(verts);
-	  const transVert = (normal) => (pos) => {let v = new CSG.Vertex(pos, normal); return translate(v, normal.times(width/2));}
-	  const vert = (normal) => (pos) => new CSG.Vertex(pos, normal);
-	  const frontVerts = verts.map(vert(normal));
-	  let front = new CSG.Polygon(frontVerts);
-	
-	
-	  const backVerts = verts.map(transVert(normal.negated()));
-	  let back = new CSG.Polygon(backVerts.map(v => v.clone()).reverse());
-	
-	  const polys = [front, back];
-	  if (width > 0) {
-	    for (let index = 0; index < frontVerts.length; index++) {
-	      const index2 = (index + 1) % frontVerts.length;
-	      let sideVerts = [backVerts[index].pos, backVerts[index2].pos, frontVerts[index2].pos, frontVerts[index].pos];
-	      const sideNormal = centerNormal(sideVerts);
-	      sideVerts = sideVerts.map((v) => new CSG.Vertex(v, sideNormal));
-	      let side = new CSG.Polygon(sideVerts);
-	      polys.push(side);
-	    }
-	  }
-	
-	  let model = new CSG.fromPolygons(polys);
-	  verts.forEach(v => v.color && (model = model.union(new CSG.Point(v, null, v.color))));
-	  model.setColor(color);
-	  return model;//model.union(vect);
-	}
-	
-	// # class Node
-	
-	// Holds a node in a BSP tree. A BSP tree is built from a collection of polygons
-	// by picking a polygon to split along. That polygon (and all other coplanar
-	// polygons) are added directly to that node and the other polygons are added to
-	// the front and/or back subtrees. This is not a leafy BSP tree since there is
-	// no distinction between internal and leaf nodes.
-	
-	CSG.Node = function(polygons) {
-	  this.plane = null;
-	  this.front = null;
-	  this.back = null;
-	  this.polygons = [];
-	  if (polygons) this.build(polygons);
-	};
-	
-	CSG.Node.prototype = {
-	  clone: function() {
-	    var node = new CSG.Node();
-	    node.plane = this.plane && this.plane.clone();
-	    node.front = this.front && this.front.clone();
-	    node.back = this.back && this.back.clone();
-	    node.polygons = this.polygons.map(function(p) { return p.clone(); });
-	    return node;
-	  },
-	
-	  // Convert solid space to empty space and empty space to solid space.
-	  invert: function() {
-	    for (var i = 0; i < this.polygons.length; i++) {
-	      this.polygons[i].flip();
-	    }
-	    this.plane.flip();
-	    if (this.front) this.front.invert();
-	    if (this.back) this.back.invert();
-	    var temp = this.front;
-	    this.front = this.back;
-	    this.back = temp;
-	  },
-	
-	  // Recursively remove all polygons in `polygons` that are inside this BSP
-	  // tree.
-	  clipPolygons: function(polygons) {
-	    if (!this.plane) return polygons.slice();
-	    var front = [], back = [];
-	    for (var i = 0; i < polygons.length; i++) {
-	      this.plane.splitPolygon(polygons[i], front, back, front, back);
-	    }
-	    if (this.front) front = this.front.clipPolygons(front);
-	    if (this.back) back = this.back.clipPolygons(back);
-	    else back = [];
-	    return front.concat(back);
-	  },
-	
-	  // Remove all polygons in this BSP tree that are inside the other BSP tree
-	  // `bsp`.
-	  clipTo: function(bsp) {
-	    this.polygons = bsp.clipPolygons(this.polygons);
-	    if (this.front) this.front.clipTo(bsp);
-	    if (this.back) this.back.clipTo(bsp);
-	  },
-	
-	  // Return a list of all polygons in this BSP tree.
-	  allPolygons: function() {
-	    var polygons = this.polygons.slice();
-	    if (this.front) polygons = polygons.concat(this.front.allPolygons());
-	    if (this.back) polygons = polygons.concat(this.back.allPolygons());
-	    return polygons;
-	  },
-	
-	  // Build a BSP tree out of `polygons`. When called on an existing tree, the
-	  // new polygons are filtered down to the bottom of the tree and become new
-	  // nodes there. Each set of polygons is partitioned using the first polygon
-	  // (no heuristic is used to pick a good split).
-	  build: function(polygons, callCount) {
-	    if (!polygons.length) return;
-	    callCount ||= 0;
-	    if (callCount > 500) {
-	      throw new Error('CSG.polygons are misconfigured');
-	    }
-	    if (!this.plane) this.plane = polygons[0].plane.clone();
-	    var front = [], back = [];
-	    for (var i = 0; i < polygons.length; i++) {
-	      this.plane.splitPolygon(polygons[i], this.polygons, this.polygons, front, back);
-	    }
-	    if (front.length) {
-	      if (!this.front) this.front = new CSG.Node();
-	      this.front.build(front, callCount + 1);
-	    }
-	    if (back.length) {
-	      if (!this.back) this.back = new CSG.Node();
-	      this.back.build(back, callCount + 1);
-	    }
-	  }
-	};
-	
-	/*
-	   Rotate a point p by angle theta around an arbitrary axis r
-	   Return the rotated point.
-	   Positive angles are anticlockwise looking down the axis
-	   towards the origin.
-	   Assume right hand coordinate system.
-	*/
-	function ArbitraryRotate(point, degreestheta, radius)
-	{
-	  if (!Number.isFinite(degreestheta)) return point;
-	  radius = radius.copy();
-	  theta = degreestheta * Math.PI/180;
-	  let p = point;
-	  let r = radius;
-	   let q = {x: 0.0, y: 0.0, z: 0.0};
-	   let costheta,sintheta;
-	
-	   // const Normalise = (obj, attr) => obj[attr] *= obj[attr] > 0 ? 1 : -1;
-	   // Normalise(r, 'x',);
-	   // Normalise(r, 'y',);
-	   // Normalise(r, 'z',);
-	
-	   costheta = Math.cos(theta);
-	   sintheta = Math.sin(theta);
-	
-	   q.x += (costheta + (1 - costheta) * r.x * r.x) * p.x;
-	   q.x += ((1 - costheta) * r.x * r.y - r.z * sintheta) * p.y;
-	   q.x += ((1 - costheta) * r.x * r.z + r.y * sintheta) * p.z;
-	
-	   q.y += ((1 - costheta) * r.x * r.y + r.z * sintheta) * p.x;
-	   q.y += (costheta + (1 - costheta) * r.y * r.y) * p.y;
-	   q.y += ((1 - costheta) * r.y * r.z - r.x * sintheta) * p.z;
-	
-	   q.z += ((1 - costheta) * r.x * r.z - r.y * sintheta) * p.x;
-	   q.z += ((1 - costheta) * r.y * r.z + r.x * sintheta) * p.y;
-	   q.z += (costheta + (1 - costheta) * r.z * r.z) * p.z;
-	
-	   return(q);
-	}
-	
-	function rotate (point, rotation) {
-	  if (Array.isArray(rotation)) return rotation.forEach(r => rotate(point, r));
-	  if (!(rotation instanceof Object)) return;
-	  rotation = new CSG.Vector(rotation);
-	  let newPos = point;
-	  newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
-	  newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
-	  newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});
-	  return newPos;
-	}
-	
-	function reverseRotate (point, rotation) {
-	  if (Array.isArray(rotation)) return rotation.forEach(r => reverseRotate(point, r));
-	  rotation = new CSG.Vector(rotation);
-	  rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
-	  let newPos = point;
-	  newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});
-	  newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
-	  newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
-	  return newPos;
-	}
-	
-	function transRotate (point, offset, rotation) {
-	  let newPos = rotate (offset, rotation);
-	  newPos.x += point.x;
-	  newPos.y += point.y;
-	  newPos.z += point.z;
-	  return newPos;
-	}
-	
-	function translate (point, offset) {
-	  if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
-	  if (point instanceof CSG.Vertex) {
-	    const newPos = point.clone();
-	    newPos.pos.x += offset.x;
-	    newPos.pos.y += offset.y;
-	    newPos.pos.z += offset.z;
-	    return newPos;
-	
-	  } else {
-	    const newPos = point.clone();
-	    newPos.x += offset.x;
-	    newPos.y += offset.y;
-	    newPos.z += offset.z;
-	    return newPos;
-	  }
-	}
-	
-	function transRotateAll (points, offset, rotation) {
-	  for (let index = 0; index < points.length; index++) {
-	    points[index] = transRotate(points[index], offset, rotation);
-	  }
-	}
-	
-	function rotateAll (points, rotation) {
-	  const ret = [];
-	  for (let index = 0; index < points.length; index++) {
-	    ret[index] = rotate(points[index], rotation);
-	  }
-	  return ret;
-	}
-	
-	function reverseRotateAll (points, rotation) {
-	  const ret = [];
-	  for (let index = 0; index < points.length; index++) {
-	    ret[index] = reverseRotate(points[index], rotation);
-	  }
-	  return ret;
-	}
-	
-	function rotatePointAroundCenter(rotation, point, center, reverse) {
-	  if (Array.isArray(rotation)) return rotation.forEach(r => rotatePointAroundCenter(r, point, center, reverse));
-	  if (!(rotation instanceof Object)) return;
-	  center ||= {x:0, y:0, z:0};
-	  point.x -=  center.x;
-	  point.y -= center.y;
-	  point.z -= center.z;
-	  const rotated = reverse ? reverseRotate(point, rotation) : rotate(point, rotation);
-	  point.x =  center.x + rotated.x;
-	  point.y = center.y + rotated.y;
-	  point.z = center.z + rotated.z;
-	  return point;
-	}
-	
-	function rotatePointsAroundCenter(rotation, points, center, reverse) {
-	  for (let index = 0; index < points.length; index++) {
-	    rotatePointAroundCenter(rotation, points[index], center, reverse);
-	  }
-	  return points;
-	}
-	
-	CSG.printDrawString = (model, normals, center, scale) => {
-	  center ||= model.center();
-	  scale ||= 200;
-	  const str = `${normals.x.toDrawString('red', .001, center, scale)}\n` +
-	                `${normals.y.toDrawString('green', .001, center, scale)}\n` +
-	                `${normals.z.toDrawString('blue', .001, center, scale)}\n\n` +
-	                model.toDrawString();
-	
-	  console.log(str);
-	}
-	CSG.ArbitraryRotate = ArbitraryRotate;
-	CSG.rotatePointsAroundCenter = rotatePointsAroundCenter;
-	CSG.rotatePointAroundCenter = rotatePointAroundCenter;
-	CSG.transRotate = transRotate;
-	CSG.translate = translate;
-	CSG.rotateAll = rotateAll;
-	CSG.transRotateAll = transRotateAll;
-	CSG.reverseRotateAll = reverseRotateAll;
-	CSG.rotate = rotate;
-	CSG.reverseRotate = reverseRotate;
-	module.exports = CSG;
-	
-});
-
-
 RequireJS.addFunction('./public/js/utils/3d-modeling/export-dxf.js',
 function (require, exports, module) {
 	
@@ -5225,7 +3601,7 @@ function (require, exports, module) {
 	
 class STL {
 	  constructor(header) {
-	    let _header = header;
+	    let _header;
 	    const triangles = [];
 	    const throwXYZError = () => {throw new Error('Invalid XYZ object all must be finite numbers')};
 	    const validateXYZ = (...objs) => {
@@ -5241,7 +3617,8 @@ class STL {
 	    const copyAllXYZ = (...vs) => vs.map(v => copyXYZ(v));
 	    const XYZstr = (obj) => `${obj.x} ${obj.y} ${obj.z}`
 	
-	    this.header = (header) => header !== undefined ? (_header = header) : header;
+	    this.header = (header) => header !== undefined ? (_header = header.slice(0,80)) : _header;
+	    this.header(header);
 	    // TODO: make add imutable
 	    this.add = {};
 	    this.add.triangle = (v1, v2, v3, normal) =>
@@ -5263,12 +3640,14 @@ class STL {
 	      return json;
 	    }
 	    this.binary = () => {
-	      const byteLength = 320 + 4 + 50 * triangles.length;
+	      const byteLength = STL.binaryLength(triangles.length);
 	      const buffer = new ArrayBuffer(byteLength);
 	      const view = new DataView(buffer);
 	      let bPos = 0;
 	
-	      bPos += 80;
+	      if (header) header.split('').forEach((c,i) => view.setUint8(i, c.charCodeAt(0)));
+	
+	      bPos = 80;
 	      view.setUint32(bPos, triangles.length, true);
 	      bPos += 4;
 	      triangles.forEach(t => {
@@ -5312,15 +3691,405 @@ class STL {
 	  }
 	}
 	
-	STL.fromCSG = (csg) => {
-	  const stl = new STL();
+	STL.fromCSG = (csg, header) => {
+	  const stl = new STL(header);
 	  const scaled = csg.clone();
 	  scaled.scale(10);
 	  scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
 	  return stl;
 	}
 	
+	STL.binaryLength = (length) => 80+4+50*length;
+	
+	const viewVertex = (view, i) => {
+	  const x = view.getFloat32(i, true);
+	  const y = view.getFloat32(i + 4, true);
+	  const z = view.getFloat32(i + 8, true);
+	  return {x, y, z};
+	}
+	
+	STL.fromArrayBuffer = (arrayBuffer, header) => {
+	  const view = new DataView(arrayBuffer);
+	  const length = view.getUint32(80, true);
+	  const expectedLength = STL.binaryLength(length);
+	  if (expectedLength < 1 || arrayBuffer.length < expectedLength)
+	    throw new Error(`Data is corrupt or invalid\n\tExpecting a bufferLength of at least ${expectedLength}`);
+	  header ||= Array.fill(80, (i) => (charCode = view.getUint8(i)) ?
+	                                  String.fromCharCode(charCode) : '').join('')
+	  const stl = new STL(header);
+	  for (let i = 84; i < expectedLength - 1;) {
+	    const normal = viewVertex(view, i);
+	    const v1 = viewVertex(view, i+=12);
+	    const v2 = viewVertex(view, i+=12);
+	    const v3 = viewVertex(view, i+=12);
+	    stl.add.triangle(v1, v2, v3, normal);
+	    i+=14;
+	  }
+	
+	  return stl;
+	}
+	
+	STL.fromFiles = async (files) => {
+	  const stls = [];
+	  for (let index = 0; index < files.length; index++) {
+	    const file = files[index];
+	    try {
+	      stls.push(STL.fromArrayBuffer(await file.arrayBuffer(), file.name));
+	    } catch (e) {
+	      e.name = file.name;
+	      stls.push(e);
+	    }
+	  }
+	
+	  return stls;
+	}
+	
 	module.exports = STL;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/3d-modeling/viewer.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../dom-utils.js');
+	const CSG = require('./csg.js');
+	const GL = require('./lightgl.js');
+	
+	// Convert from CSG solid to GL.Mesh object
+	CSG.prototype.toMesh = function() {
+	  var mesh = new GL.Mesh({ normals: true, colors: true });
+	  var indexer = new GL.Indexer();
+	  this.toPolygons().map(function(polygon) {
+	    var indices = polygon.vertices.map(function(vertex) {
+	      vertex.color = polygon.shared || [1, 1, 1];
+	      return indexer.add(vertex);
+	    });
+	    for (var i = 2; i < indices.length; i++) {
+	      mesh.triangles.push([indices[0], indices[i - 1], indices[i]]);
+	    }
+	  });
+	  mesh.vertices = indexer.unique.map(function(v) { return [v.pos.x, v.pos.y, v.pos.z]; });
+	  mesh.normals = indexer.unique.map(function(v) { return [v.normal.x, v.normal.y, v.normal.z]; });
+	  mesh.colors = indexer.unique.map(function(v) { return v.color; });
+	  mesh.computeWireframe();
+	  return mesh;
+	};
+	
+	var angleX = 0;
+	var angleY = 0;
+	var angleZ = 0;
+	var viewers = [];
+	
+	// Set to true so lines don't use the depth buffer
+	Viewer.lineOverlay = false;
+	
+	// A viewer is a WebGL canvas that lets the user view a mesh. The user can
+	// tumble it around by dragging the mouse.
+	function Viewer(csg, width, height, depth) {
+	  const originalDepth = depth;
+	  viewers.push(this);
+	  this.setDepth = (d) => depth = d;
+	  let x = 0;
+	  let y = 0;
+	
+	  let lastZoom;
+	  let zoomCount = 0;
+	  const zoom = (out) => {
+	    let direction = (out === true ? 1 : -1);
+	    let zoomOffset = 2;
+	    let newTime = new Date().getTime();
+	    if (lastZoom > newTime - 50) {
+	      zoomCount++;
+	      zoomOffset *= zoomCount;
+	      zoomOffset = zoomOffset > 20 ? 20 : zoomOffset;
+	    }
+	    lastZoom = newTime;
+	    depth += zoomOffset * direction;
+	  };
+	  this.zoom = zoom;
+	  const pan = (leftRight, upDown) => {
+	    x += leftRight;
+	    y += upDown * -1;
+	  }
+	
+	  // Get a new WebGL canvas
+	  var gl = GL.create();
+	  this.gl = gl;
+	  this.mesh = csg.toMesh();
+	  this.canvas = () => gl.canvas;
+	
+	  // Set up the viewport
+	  gl.canvas.width = width;
+	  gl.canvas.height = height;
+	  gl.viewport(0, 0, width, height);
+	  gl.matrixMode(gl.PROJECTION);
+	  gl.loadIdentity();
+	  gl.perspective(100, width / height, 10, 1000);
+	  gl.rotate(0, 0, 1, 0);
+	  gl.translate(0, 0, -200);
+	  gl.matrixMode(gl.MODELVIEW);
+	
+	  // Set up WebGL state
+	  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	  gl.clearColor(0.93, 0.93, 0.93, 1);
+	  gl.enable(gl.DEPTH_TEST);
+	  gl.enable(gl.CULL_FACE);
+	  gl.polygonOffset(1, 1);
+	
+	  // Black shader for wireframe
+	  this.blackShader = new GL.Shader('\
+	    void main() {\
+	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\
+	    }\
+	  ', '\
+	    void main() {\
+	      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.1);\
+	    }\
+	  ');
+	
+	  // Shader with diffuse and specular lighting
+	  this.changeLightingShaderDirection = (x,y,z) => this.lightingShader = new GL.Shader(`
+	    varying vec3 color;
+	    varying vec3 normal;
+	    varying vec3 light;
+	    void main() {
+	      const vec3 lightDir = vec3(${x}, ${y}, ${z}) / 3.741657386773941;
+	      light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;
+	      color = gl_Color.rgb;
+	      normal = gl_NormalMatrix * gl_Normal;
+	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+	    }
+	  `, `
+	    varying vec3 color;
+	    varying vec3 normal;
+	    varying vec3 light;
+	    void main() {
+	      vec3 n = normalize(normal);
+	      float diffuse = max(0.0, dot(light, n));
+	      float specular = pow(max(0.0, -reflect(light, n).z), 32.0) * sqrt(diffuse);
+	      gl_FragColor = vec4(mix(color * (0.3 + 0.7 * diffuse), vec3(1.0), specular), 1.0);
+	    }`);
+	
+	  this.changeLightingShaderDirection(0, 0, 0);
+	  // this.changeLightingShaderDirection(3, 2, 3);
+	
+	  let origCenter = {x:0, y:0};
+	  let pointClicked = {x: 0, y: 0, z: 0};
+	  function setPointClicked(e) {
+	    const canvasPos = e.target.getBoundingClientRect();
+	    const clickPos = {x: e.x - canvasPos.x, y: e.y - canvasPos.y};
+	    const canvasCenter = {x: e.target.width/2, y: e.target.height/2};
+	    const canvasOffset = {x: clickPos.x - canvasCenter.x, y: clickPos.y - canvasCenter.y};
+	    const twoDLoc = {x: origCenter.x + canvasOffset.x, y: origCenter.y + canvasOffset.y};
+	    const centerOffset = GL.Matrix.relitiveDirection(twoDLoc.x, twoDLoc.y,0,gl.modelviewMatrix)
+	    pointClicked = {x: centerOffset[0], y: centerOffset[1], z: centerOffset[2]};
+	  }
+	
+	  let rotationUnit;
+	  let rotationOffset = [0,0,0];
+	  let panOffset;
+	  let panUnit;
+	
+	  let rotationVector = new CSG.Vector(25, 12,11.5);
+	  let point = {x: 0, y: 12, z: 11.5};
+	  // let rotationVector = new CSG.Vector(25, 12,11.5);
+	  function rotateEvent(e) {
+	    if (!rotationUnit) {
+	      rotationUnit = {};
+	      rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
+	      rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
+	    }
+	    if (rotationUnit) {
+	      const speed = 40;
+	      if (e.deltaY) {
+	        const dir = e.deltaY < 0 ? -speed : speed;
+	        rotationOffset[0] += rotationUnit.y[0]/dir;
+	        rotationOffset[1] += rotationUnit.y[1]/dir;
+	        rotationOffset[2] += rotationUnit.y[2]/dir;
+	      }
+	      if (e.deltaX) {
+	        const dir = e.deltaX < 0 ? speed : -speed;
+	        rotationOffset[0] += rotationUnit.x[0]/dir;
+	        rotationOffset[1] += rotationUnit.x[1]/dir;
+	        rotationOffset[2] += rotationUnit.x[2]/dir;
+	      }
+	    }
+	    // angleY += e.deltaX * 2;
+	    // angleX += e.deltaY * 2;
+	    // angleX = Math.max(-90, Math.min(90, angleX));
+	  }
+	
+	  gl.onmousemove = function(e) {
+	    if (e.dragging) {
+	      if (shiftHeld) panEvent(e);
+	      else rotateEvent(e);
+	      gl.ondraw();
+	    }
+	  };
+	
+	  function zoomEvent(e) {
+	    const st = document.documentElement.scrollTop;
+	    if (e.deltaY < 0) {
+	      zoom(true);
+	    } else {
+	      zoom();
+	    }
+	  }
+	
+	  function panEvent(e) {
+	    const st = document.documentElement.scrollTop;
+	    pan(-e.deltaX, e.deltaY)
+	  }
+	
+	  let lastScrollTop = 0;
+	  gl.canvas.onwheel = function (e) {
+	    zoomEvent(e);
+	    gl.ondraw();
+	  }
+	  disableScroll(gl.canvas);
+	
+	  let shiftHeld = false;
+	  window.onkeydown = (e) => {
+	    shiftHeld = e.key === "Shift" ? true : false;
+	  }
+	  window.onkeyup = (e) => {
+	    shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
+	  }
+	
+	  let clickHeld = false;
+	  window.onclick = (e) => {
+	    clickHeld = !clickHeld;
+	    if (!clickHeld) {
+	      rotationUnit = null;
+	      panUnit = null;
+	    }
+	  }
+	
+	  window.onmousedown = setPointClicked;
+	
+	  function viewFrom(point, rotation) {
+	      gl.makeCurrent();
+	
+	      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	      // const relDir1 = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
+	      gl.loadIdentity();
+	
+	      gl.rotate(rotation.x, 1, 0, 0);
+	      gl.rotate(rotation.y, 0, 1, 0);
+	      gl.rotate(rotation.z, 0, 0, 1);
+	
+	      gl.translate(0, 0, -20);
+	      // const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
+	      // gl.translate(-relDir[0], -relDir[1], -relDir[2]);
+	
+	      if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+	      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
+	      if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
+	
+	      if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
+	      gl.enable(gl.BLEND);
+	      // that.blackShader.draw(that.mesh, gl.LINES);
+	      gl.disable(gl.BLEND);
+	      if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+	  }
+	  this.viewFrom = viewFrom;
+	
+	  function applyZoom() {
+	    // const depthArr = GL.Matrix.relitiveDirection(0,0,depth,gl.modelviewMatrix);
+	    const transArr = GL.Matrix.relitiveDirection(x,-y,depth,gl.modelviewMatrix);
+	    gl.translate(-transArr[0], -transArr[1], transArr[2])
+	  }
+	
+	  var that = this;
+	  gl.ondraw = function() {
+	    gl.makeCurrent();
+	
+	    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	    // gl.loadIdentity();
+	    applyZoom();
+	    gl.rotateAroundPoint(pointClicked, rotationOffset);
+	
+	    // gl.rotate(angleX, rotationVector.x, rotationVector.y, rotationVector.z);
+	    // gl.rotate(angleY, rotationVector.x, rotationVector.y, rotationVector.z);
+	    // gl.rotate(rotationOffset[2], 0, 0, -1);
+	    x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
+	
+	    if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+	    that.lightingShader.draw(that.mesh, gl.TRIANGLES);
+	    if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
+	
+	    if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
+	    gl.enable(gl.BLEND);
+	    // that.blackShader.draw(that.mesh, gl.LINES);
+	    gl.disable(gl.BLEND);
+	    if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+	  };
+	
+	  gl.ondraw();
+	
+	  // gl.canvas.width = '100vw';
+	  // gl.canvas.height = '100vh';
+	}
+	
+	var nextID = 0;
+	function addViewer(viewer, id) {
+	  du.find(id).appendChild(viewer.gl.canvas);
+	}
+	
+	
+	
+	
+	// left: 37, up: 38, right: 39, down: 40,
+	// spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
+	var keys = {37: 1, 38: 1, 39: 1, 40: 1};
+	
+	function preventDefault(e) {
+	  e.preventDefault();
+	}
+	
+	function preventDefaultForScrollKeys(e) {
+	  if (keys[e.keyCode]) {
+	    preventDefault(e);
+	    return false;
+	  }
+	}
+	
+	// modern Chrome requires { passive: false } when adding event
+	var supportsPassive = false;
+	try {
+	  window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
+	    get: function () { supportsPassive = true; }
+	  }));
+	} catch(e) {}
+	
+	var wheelOpt = supportsPassive ? { passive: false } : false;
+	var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
+	
+	// call this to Disable
+	function disableScroll(element) {
+	  element.addEventListener('DOMMouseScroll', preventDefault, false); // older FF
+	  element.addEventListener(wheelEvent, preventDefault, wheelOpt); // modern desktop
+	  element.addEventListener('touchmove', preventDefault, wheelOpt); // mobile
+	  element.addEventListener('keydown', preventDefaultForScrollKeys, false);
+	}
+	
+	// call this to Enable
+	function enableScroll(element) {
+	  element.removeEventListener('DOMMouseScroll', preventDefault, false);
+	  element.removeEventListener(wheelEvent, preventDefault, wheelOpt);
+	  element.removeEventListener('touchmove', preventDefault, wheelOpt);
+	  element.removeEventListener('keydown', preventDefaultForScrollKeys, false);
+	}
+	
+	exports.Viewer = Viewer
+	exports.addViewer = addViewer
+	exports.preventDefault = preventDefault
+	exports.preventDefaultForScrollKeys = preventDefaultForScrollKeys
+	exports.disableScroll = disableScroll
+	exports.enableScroll = enableScroll
 	
 });
 
@@ -7506,347 +6275,1656 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/3d-modeling/viewer.js',
+RequireJS.addFunction('./public/js/utils/3d-modeling/csg.js',
 function (require, exports, module) {
+	// TODO: Use Require Class to include ToleranceMap and STL
+	const ToleranceMap = require('../tolerance-map');
+	const STL = require('./STL');
 	
-
 	
-	const du = require('../dom-utils.js');
-	const CSG = require('./csg.js');
-	const GL = require('./lightgl.js');
+	// Constructive Solid Geometry (CSG) is a modeling technique that uses Boolean
+	// operations like union and intersection to combine 3D solids. This library
+	// implements CSG operations on meshes elegantly and concisely using BSP trees,
+	// and is meant to serve as an easily understandable implementation of the
+	// algorithm. All edge cases involving overlapping coplanar polygons in both
+	// solids are correctly handled.
+	//
+	// Example usage:
+	//
+	//     var cube = CSG.cube();
+	//     var sphere = CSG.sphere({ radius: 1.3 });
+	//     var polygons = cube.subtract(sphere).toPolygons();
+	//
+	// ## Implementation Details
+	//
+	// All CSG operations are implemented in terms of two functions, `clipTo()` and
+	// `invert()`, which remove parts of a BSP tree inside another BSP tree and swap
+	// solid and empty space, respectively. To find the union of `a` and `b`, we
+	// want to remove everything in `a` inside `b` and everything in `b` inside `a`,
+	// then combine polygons from `a` and `b` into one solid:
+	//
+	//     a.clipTo(b);
+	//     b.clipTo(a);
+	//     a.build(b.allPolygons());
+	//
+	// The only tricky part is handling overlapping coplanar polygons in both trees.
+	// The code above keeps both copies, but we need to keep them in one tree and
+	// remove them in the other tree. To remove them from `b` we can clip the
+	// inverse of `b` against `a`. The code for union now looks like this:
+	//
+	//     a.clipTo(b);
+	//     b.clipTo(a);
+	//     b.invert();
+	//     b.clipTo(a);
+	//     b.invert();
+	//     a.build(b.allPolygons());
+	//
+	// Subtraction and intersection naturally follow from set operations. If
+	// union is `A | B`, subtraction is `A - B = ~(~A | B)` and intersection is
+	// `A & B = ~(~A | ~B)` where `~` is the complement operator.
+	//
+	// ## License
+	//
+	// Copyright (c) 2011 Evan Wallace (http://madebyevan.com/), under the MIT license.
 	
-	// Convert from CSG solid to GL.Mesh object
-	CSG.prototype.toMesh = function() {
-	  var mesh = new GL.Mesh({ normals: true, colors: true });
-	  var indexer = new GL.Indexer();
-	  this.toPolygons().map(function(polygon) {
-	    var indices = polygon.vertices.map(function(vertex) {
-	      vertex.color = polygon.shared || [1, 1, 1];
-	      return indexer.add(vertex);
-	    });
-	    for (var i = 2; i < indices.length; i++) {
-	      mesh.triangles.push([indices[0], indices[i - 1], indices[i]]);
-	    }
-	  });
-	  mesh.vertices = indexer.unique.map(function(v) { return [v.pos.x, v.pos.y, v.pos.z]; });
-	  mesh.normals = indexer.unique.map(function(v) { return [v.normal.x, v.normal.y, v.normal.z]; });
-	  mesh.colors = indexer.unique.map(function(v) { return v.color; });
-	  mesh.computeWireframe();
-	  return mesh;
-	};
+	// # class CSG
 	
-	var angleX = 0;
-	var angleY = 0;
-	var angleZ = 0;
-	var viewers = [];
+	// Holds a binary space partition tree representing a 3D solid. Two solids can
+	// be combined using the `union()`, `subtract()`, and `intersect()` methods.
 	
-	// Set to true so lines don't use the depth buffer
-	Viewer.lineOverlay = false;
-	
-	// A viewer is a WebGL canvas that lets the user view a mesh. The user can
-	// tumble it around by dragging the mouse.
-	function Viewer(csg, width, height, depth) {
-	  const originalDepth = depth;
-	  viewers.push(this);
-	  this.setDepth = (d) => depth = d;
-	  let x = 0;
-	  let y = 0;
-	
-	  let lastZoom;
-	  let zoomCount = 0;
-	  const zoom = (out) => {
-	    let direction = (out === true ? 1 : -1);
-	    let zoomOffset = 2;
-	    let newTime = new Date().getTime();
-	    if (lastZoom > newTime - 50) {
-	      zoomCount++;
-	      zoomOffset *= zoomCount;
-	      zoomOffset = zoomOffset > 20 ? 20 : zoomOffset;
-	    }
-	    lastZoom = newTime;
-	    depth += zoomOffset * direction;
-	  };
-	  this.zoom = zoom;
-	  const pan = (leftRight, upDown) => {
-	    x += leftRight;
-	    y += upDown * -1;
+	CSG = function() {
+	  this.polygons = [];
+	  this.toString = (percision, includeColor) => {
+	    percision ||= .001;
+	    let strs = [];
+	    this.polygons.forEach(p => strs.push(p.toString(percision, includeColor)));
+	    strs.sort();
+	    return strs.join('\n');
 	  }
-	
-	  // Get a new WebGL canvas
-	  var gl = GL.create();
-	  this.gl = gl;
-	  this.mesh = csg.toMesh();
-	  this.canvas = () => gl.canvas;
-	
-	  // Set up the viewport
-	  gl.canvas.width = width;
-	  gl.canvas.height = height;
-	  gl.viewport(0, 0, width, height);
-	  gl.matrixMode(gl.PROJECTION);
-	  gl.loadIdentity();
-	  gl.perspective(100, width / height, 10, 1000);
-	  gl.rotate(0, 0, 1, 0);
-	  gl.translate(0, 0, -200);
-	  gl.matrixMode(gl.MODELVIEW);
-	
-	  // Set up WebGL state
-	  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-	  gl.clearColor(0.93, 0.93, 0.93, 1);
-	  gl.enable(gl.DEPTH_TEST);
-	  gl.enable(gl.CULL_FACE);
-	  gl.polygonOffset(1, 1);
-	
-	  // Black shader for wireframe
-	  this.blackShader = new GL.Shader('\
-	    void main() {\
-	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\
-	    }\
-	  ', '\
-	    void main() {\
-	      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.1);\
-	    }\
-	  ');
-	
-	  // Shader with diffuse and specular lighting
-	  this.changeLightingShaderDirection = (x,y,z) => this.lightingShader = new GL.Shader(`
-	    varying vec3 color;
-	    varying vec3 normal;
-	    varying vec3 light;
-	    void main() {
-	      const vec3 lightDir = vec3(${x}, ${y}, ${z}) / 3.741657386773941;
-	      light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;
-	      color = gl_Color.rgb;
-	      normal = gl_NormalMatrix * gl_Normal;
-	      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-	    }
-	  `, `
-	    varying vec3 color;
-	    varying vec3 normal;
-	    varying vec3 light;
-	    void main() {
-	      vec3 n = normalize(normal);
-	      float diffuse = max(0.0, dot(light, n));
-	      float specular = pow(max(0.0, -reflect(light, n).z), 32.0) * sqrt(diffuse);
-	      gl_FragColor = vec4(mix(color * (0.3 + 0.7 * diffuse), vec3(1.0), specular), 1.0);
-	    }`);
-	
-	  this.changeLightingShaderDirection(0, 0, 0);
-	  // this.changeLightingShaderDirection(3, 2, 3);
-	
-	  let origCenter = {x:0, y:0};
-	  let pointClicked = {x: 0, y: 0, z: 0};
-	  function setPointClicked(e) {
-	    const canvasPos = e.target.getBoundingClientRect();
-	    const clickPos = {x: e.x - canvasPos.x, y: e.y - canvasPos.y};
-	    const canvasCenter = {x: e.target.width/2, y: e.target.height/2};
-	    const canvasOffset = {x: clickPos.x - canvasCenter.x, y: clickPos.y - canvasCenter.y};
-	    const twoDLoc = {x: origCenter.x + canvasOffset.x, y: origCenter.y + canvasOffset.y};
-	    const centerOffset = GL.Matrix.relitiveDirection(twoDLoc.x, twoDLoc.y,0,gl.modelviewMatrix)
-	    pointClicked = {x: centerOffset[0], y: centerOffset[1], z: centerOffset[2]};
+	  this.toDrawString = (color, percision) => color ?
+	      this.toString(percision).replace(/(^|\n)\[/g, `$1${color}[`) :
+	      this.toString(percision, true).replace(/(^|\n)\[/g, `$1${'blue'}[`);
+	  this.vertices = (percision) => {
+	    const verts = [];
+	    this.polygons.forEach(p => p.vertices.forEach(v => verts.push(v)));
+	    return verts.unique(o => o.toString(percision || .0001));
 	  }
-	
-	  let rotationUnit;
-	  let rotationOffset = [0,0,0];
-	  let panOffset;
-	  let panUnit;
-	
-	  let rotationVector = new CSG.Vector(25, 12,11.5);
-	  let point = {x: 0, y: 12, z: 11.5};
-	  // let rotationVector = new CSG.Vector(25, 12,11.5);
-	  function rotateEvent(e) {
-	    if (!rotationUnit) {
-	      rotationUnit = {};
-	      rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
-	      rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
-	    }
-	    if (rotationUnit) {
-	      const speed = 40;
-	      if (e.deltaY) {
-	        const dir = e.deltaY < 0 ? -speed : speed;
-	        rotationOffset[0] += rotationUnit.y[0]/dir;
-	        rotationOffset[1] += rotationUnit.y[1]/dir;
-	        rotationOffset[2] += rotationUnit.y[2]/dir;
-	      }
-	      if (e.deltaX) {
-	        const dir = e.deltaX < 0 ? speed : -speed;
-	        rotationOffset[0] += rotationUnit.x[0]/dir;
-	        rotationOffset[1] += rotationUnit.x[1]/dir;
-	        rotationOffset[2] += rotationUnit.x[2]/dir;
+	  //TODO: USE TOLERANCE MAP FOR 2N RUNTIME!!!;
+	  this.sharesVertex = function (other) {
+	    const otherVerts = other.vertices();
+	    for (let pi = 0; pi < this.polygons.length; pi++) {
+	      const poly = this.polygons[pi];
+	      for (let vi = 0; vi < poly.vertices.length; vi++) {
+	        const vert = poly.vertices[vi];
+	        for (let ovi = 0; ovi < otherVerts.length; ovi++) {
+	          if (otherVerts[ovi].equals(vert)) return true;
+	        }
 	      }
 	    }
-	    // angleY += e.deltaX * 2;
-	    // angleX += e.deltaY * 2;
-	    // angleX = Math.max(-90, Math.min(90, angleX));
-	  }
-	
-	  gl.onmousemove = function(e) {
-	    if (e.dragging) {
-	      if (shiftHeld) panEvent(e);
-	      else rotateEvent(e);
-	      gl.ondraw();
-	    }
-	  };
-	
-	  function zoomEvent(e) {
-	    const st = document.documentElement.scrollTop;
-	    if (e.deltaY < 0) {
-	      zoom(true);
-	    } else {
-	      zoom();
-	    }
-	  }
-	
-	  function panEvent(e) {
-	    const st = document.documentElement.scrollTop;
-	    pan(-e.deltaX, e.deltaY)
-	  }
-	
-	  let lastScrollTop = 0;
-	  gl.canvas.onwheel = function (e) {
-	    zoomEvent(e);
-	    gl.ondraw();
-	  }
-	  disableScroll(gl.canvas);
-	
-	  let shiftHeld = false;
-	  window.onkeydown = (e) => {
-	    shiftHeld = e.key === "Shift" ? true : false;
-	  }
-	  window.onkeyup = (e) => {
-	    shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
-	  }
-	
-	  let clickHeld = false;
-	  window.onclick = (e) => {
-	    clickHeld = !clickHeld;
-	    if (!clickHeld) {
-	      rotationUnit = null;
-	      panUnit = null;
-	    }
-	  }
-	
-	  window.onmousedown = setPointClicked;
-	
-	  function viewFrom(point, rotation) {
-	      gl.makeCurrent();
-	
-	      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	      // const relDir1 = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
-	      gl.loadIdentity();
-	
-	      gl.rotate(rotation.x, 1, 0, 0);
-	      gl.rotate(rotation.y, 0, 1, 0);
-	      gl.rotate(rotation.z, 0, 0, 1);
-	
-	      gl.translate(0, 0, -20);
-	      // const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
-	      // gl.translate(-relDir[0], -relDir[1], -relDir[2]);
-	
-	      if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
-	      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
-	      if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
-	
-	      if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
-	      gl.enable(gl.BLEND);
-	      // that.blackShader.draw(that.mesh, gl.LINES);
-	      gl.disable(gl.BLEND);
-	      if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
-	  }
-	  this.viewFrom = viewFrom;
-	
-	  function applyZoom() {
-	    // const depthArr = GL.Matrix.relitiveDirection(0,0,depth,gl.modelviewMatrix);
-	    const transArr = GL.Matrix.relitiveDirection(x,-y,depth,gl.modelviewMatrix);
-	    gl.translate(-transArr[0], -transArr[1], transArr[2])
-	  }
-	
-	  var that = this;
-	  gl.ondraw = function() {
-	    gl.makeCurrent();
-	
-	    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	    // gl.loadIdentity();
-	    applyZoom();
-	    gl.rotateAroundPoint(pointClicked, rotationOffset);
-	
-	    // gl.rotate(angleX, rotationVector.x, rotationVector.y, rotationVector.z);
-	    // gl.rotate(angleY, rotationVector.x, rotationVector.y, rotationVector.z);
-	    // gl.rotate(rotationOffset[2], 0, 0, -1);
-	    x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
-	
-	    if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
-	    that.lightingShader.draw(that.mesh, gl.TRIANGLES);
-	    if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
-	
-	    if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
-	    gl.enable(gl.BLEND);
-	    // that.blackShader.draw(that.mesh, gl.LINES);
-	    gl.disable(gl.BLEND);
-	    if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
-	  };
-	
-	  gl.ondraw();
-	
-	  // gl.canvas.width = '100vw';
-	  // gl.canvas.height = '100vh';
-	}
-	
-	var nextID = 0;
-	function addViewer(viewer, id) {
-	  du.find(id).appendChild(viewer.gl.canvas);
-	}
-	
-	
-	
-	
-	// left: 37, up: 38, right: 39, down: 40,
-	// spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
-	var keys = {37: 1, 38: 1, 39: 1, 40: 1};
-	
-	function preventDefault(e) {
-	  e.preventDefault();
-	}
-	
-	function preventDefaultForScrollKeys(e) {
-	  if (keys[e.keyCode]) {
-	    preventDefault(e);
 	    return false;
 	  }
+	
+	  this.toSTL = (csg, header) => {
+	    const stl = new STL(header);
+	    const scaled = csg.clone();
+	    scaled.scale(10);
+	    scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
+	    return stl;
+	  }
+	};
+	
+	CSG.BIG = 160934.4;//One Mile in cm
+	
+	const colors = {
+	  babyblue: [34,183,232],
+	  limegreen: [50, 205, 50],
+	
+	  indianred: [205, 92, 92],
+	  gray: [128, 128, 128],
+	  fuchsia: [255, 0, 255],
+	  lime: [0, 255, 0],
+	  black: [0, 0, 0],
+	  lightsalmon: [255, 160, 122],
+	  red: [255, 0, 0],
+	  maroon: [128, 0, 0],
+	  yellow: [255, 255, 0],
+	  olive: [128, 128, 0],
+	  lightcoral: [240, 128, 128],
+	  green: [0, 128, 0],
+	  aqua: [0, 255, 255],
+	  white: [255, 255, 255],
+	  teal: [0, 128, 128],
+	  darksalmon: [233, 150, 122],
+	  blue: [0, 0, 255],
+	  navy: [0, 0, 128],
+	  salmon: [250, 128, 114],
+	  silver: [192, 192, 192],
+	  purple: [128, 0, 128]
+	}
+	colors.list = () => Object.keys(colors).filter(k => Array.isArray(colors[k]));
+	
+	colors.codeMap = {}
+	colors.list().forEach(k => colors.codeMap[colors[k].join(',')] = k);
+	colors.name = (shared) => {
+	  if (!Array.isArray(shared)) return '';
+	  const strKey = shared.map(v => Math.round(v * 255)).join(',');
+	  return colors.codeMap[strKey] || strKey;
 	}
 	
-	// modern Chrome requires { passive: false } when adding event
-	var supportsPassive = false;
-	try {
-	  window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
-	    get: function () { supportsPassive = true; }
+	
+	// Construct a CSG solid from a list of `CSG.Polygon` instances.
+	CSG.fromPolygons = function(polygons, deepCopy) {
+	  var csg = new CSG();
+	
+	  if (deepCopy) {
+	    const newPolys = [];
+	    for (let pi = 0; pi < polygons.length; pi++) {
+	      const polygon = polygons[pi];
+	      const vertices =  polygon.vertices;
+	      const newVerts = [];
+	      const shared = polygon.shared ? Array.from(polygon.shared) : undefined;
+	      for (let vi = 0; vi < vertices.length; vi++) {
+	        const vert = vertices[vi];
+	        const norm = vert.normal;
+	        const pos = vert.pos;
+	        const newNorm = new CSG.Vector(norm.x, norm.y, norm.z);
+	        const newPos = new CSG.Vector(pos.x, pos.y, pos.z);
+	        newVerts.push(new CSG.Vertex(newPos, newNorm));
+	      }
+	      newPolys.push(new CSG.Polygon(newVerts, shared));
+	    }
+	    polygons = newPolys;
+	  }
+	
+	  csg.polygons = polygons;
+	  return csg;
+	};
+	
+	const oneTenth = (v) => ({x: v.x / 10, y: v.y /= 10, z: v.z /= 10});
+	CSG.fromSTL = (stl) => {
+	  const json = stl.toJson();
+	  const triangles = json.triangles;
+	  const polys = triangles.map(t => {
+	    const normal = new CSG.Vector(t.normal);
+	    if (normal.length() < .999) normal = CSG.normal(t.vertices[0], t.vertices[1], t.vertices[2]);
+	    const v1 = new CSG.Vertex(oneTenth(t.vertices[0]), normal);
+	    const v2 = new CSG.Vertex(oneTenth(t.vertices[1]), normal);
+	    const v3 = new CSG.Vertex(oneTenth(t.vertices[2]), normal);
+	    return new CSG.Polygon([v1,v2,v3]);
+	  });
+	  const csg = CSG.fromPolygons(polys);
+	  csg.setColor(...String.color.RGB[String.color.next()]);
+	  return csg;
+	}
+	
+	CSG.normal = (verts) => {
+	  if (verts.length < 3) throw new Error('Normal calculations require atleast 3 vertices');
+	  v0 = new CSG.Vector(verts[0]);
+	  v1 = new CSG.Vector(verts[1]);
+	  v2 = new CSG.Vector(verts[2]);
+	  return v1.minus(v0).cross(v1.minus(v2)).unit();
+	}
+	
+	CSG.fromPolygon = (poly, offset) => {
+	  const front = poly.clone();
+	  const back = poly.clone();
+	  const offsetVect = poly.vertices[0].normal.times(offset);
+	  back.translate(offsetVect);
+	  const center = new CSG.Vector(front.center().pos).plus(new CSG.Vector(back.center().pos)).dividedBy(2);
+	  const len = poly.vertices.length;
+	  const fverts = front.vertices.map(v => new CSG.Vector(v.pos));
+	  const bverts = back.vertices.map(v => new CSG.Vector(v.pos));
+	  const sides = [];
+	  for (let index = 0; index < len; index++) {
+	    const vi1 = index%len;
+	    const vi2 = (index + 1)%len;
+	    const pts = [fverts[vi1], fverts[vi2], bverts[vi2], bverts[vi1]];
+	    let norm = pts[1].minus(pts[0]).cross(pts[1].minus(pts[2])).unit();
+	    const vertices = pts.map(p => new CSG.Vertex(p, norm));
+	    const poly = new CSG.Polygon(vertices);
+	    poly.alignNormal(center);
+	    sides.push(poly);
+	  }
+	  if (offset < 0) {
+	    back.vertices.forEach(v => v.normal = v.normal.times(-1));
+	    back.vertices.reverse();
+	    back.plane.normal = back.plane.normal.times(-1);
+	  } else {
+	    front.vertices.forEach(v => v.normal = v.normal.times(-1));
+	    front.vertices.reverse();
+	    front.plane.normal = front.plane.normal.times(-1);
+	  }
+	  front.alignNormal(center);
+	  back.alignNormal(center);
+	  console.log([front, back].concat(sides).map((p, i) => `// ${i} ${p.plane.normal.unit()}\n${p.toString()}`).join('\n'))
+	  const csg = CSG.fromPolygons([front, back].concat(sides));
+	  return csg;
+	}
+	
+	function sliceConfig(x, y, width, dems, center) {
+	  if (!Array.isArray(dems)) dems = [dems.x, dems.y, dems.z];
+	  const notIncluded = [x,y].indexOf('z') === -1 ? 2 : ([x,y].indexOf('y')) === -1 ? 1 : 0;
+	  const length = dems[notIncluded];
+	  const demensions = dems.map(v => v);
+	  demensions[notIncluded] = width;
+	  const startOffset = [0, 0, 0];
+	  startOffset[notIncluded] = (length / -2) + (width / 2);
+	  center = center.translate(startOffset);
+	  center = [center.pos.x, center.pos.y, center.pos.z];
+	  let step = [0, 0, 0];
+	  step[notIncluded] = width;
+	  step = new CSG.Vector(step);
+	  const steps = Math.ceil(length/width);
+	  return {demensions, center, step, steps, width, index: 0};
+	}
+	
+	CSG.fromString = function (string) {
+	  const numRegStr = '([0-9]*\\.[0-9]{1,}|[0-9]{1,})'
+	  const vertRegStr = `\\(${numRegStr},${numRegStr},${numRegStr}\\)`;
+	  const polyRegStr = `([a-zA-z0-9, ]*)\\[(${vertRegStr}(,|)){3,}\\]`;
+	  const polyRegG = new RegExp(polyRegStr, 'g');
+	  const polyReg = new RegExp(polyRegStr);
+	  const vertRegG = new RegExp(vertRegStr, 'g');
+	  const vertReg = new RegExp(vertRegStr);
+	  const numRegG = new RegExp(numRegStr, 'g');
+	  const numReg = new RegExp(numRegStr);
+	
+	  const pf = Number.parseFloat;
+	  const polyStrs = string.match(polyRegG);
+	  if (polyStrs === null) return null;
+	  const polys = [];
+	  for (let i = 0; i < polyStrs.length; i++) {
+	    const vertStrs = polyStrs[i].match(vertRegG);
+	    let color = polyStrs[i].match(polyReg)[1];
+	    let colorMatch = color.match(numRegG);
+	    if (colorMatch && colorMatch.length === 3) color = colorMatch.map(s => pf(s));
+	    const verts = [];
+	    for (let j = 0; vertStrs && j < vertStrs.length; j++) {
+	      const match = vertStrs[j].match(vertReg);
+	      const vertex = {x: pf(match[1]), y: pf(match[2]), z: pf(match[3])};
+	      verts.push(vertex);
+	    }
+	    const a = new CSG.Vector(verts[0]);
+	    const b = new CSG.Vector(verts[1]);
+	    const c = new CSG.Vector(verts[2]);
+	    const norm = a.minus(b).cross(b.minus(c));
+	    const vertices = verts.map(v => new CSG.Vertex(v, norm));
+	    const poly = new CSG.Polygon(vertices);
+	    if (color) poly.setColor(color);
+	    polys.push(poly);
+	  }
+	
+	  return CSG.fromPolygons(polys);
+	}
+	
+	const vertexPercision = (percision, x, y, z) => ({
+	  x: percision ? Math.roundTo(x, percision) : x,
+	  y: percision ? Math.roundTo(y, percision) : y,
+	  z: percision ? Math.roundTo(z, percision) : z
+	});
+	
+	CSG.toString = function (percision) {
+	  const list = [];
+	  this.polygons.forEach((polygon) => {
+	    const obj = {vertices: []};
+	    polygon.vertices.forEach((vertex) => {
+	      obj.vertices.push(vertexPercision(percision, vertex.pos.x, vertex.pos.y, vertex.pos.z));
+	    });
+	    list.push(obj);
+	  });
+	  return JSON.stringify(list, null, 2);
+	}
+	
+	CSG.prototype = {
+	  clone: function() {
+	    var csg = new CSG();
+	    //csg.normals = this.normals;
+	    csg.polygons = this.polygons.map(function(p) { return p.clone(); });
+	    return csg;
+	  },
+	
+	  scale: function(xOall, y, z, relitive) {
+	    const center = this.center();
+	    if (y === undefined && z === undefined && relitive === undefined) {
+	      this.polygons.map(function(p) { return p.scale(center, xOall); });
+	    } else {
+	      const dems = this.demensions();
+	      const x = relitive ? (dems.x + xOall)/dems.x : (xOall || 1);
+	      y = relitive ? (dems.y + y)/dems.y : (y || 1);
+	      z = relitive ? (dems.z + z)/dems.z : (z || 1);
+	      this.polygons.forEach(p => p.vertices.forEach(v => {
+	        v.scale(center, x, y, z);
+	      }));
+	    }
+	    return this;
+	  },
+	
+	  explode: function(distance) {
+	    const center = this.center();
+	    this.polygons.forEach(p =>
+	      p.translate(p.plane.normal.times(distance))
+	    );
+	  },
+	
+	  setColors: function(func, g, b) {
+	    if (func instanceof Function) {
+	      this.polygons.forEach(p => p.setColor(func(p)));
+	    } else {
+	      this.polygons.forEach(p => p.setColor(func, g, b));
+	    }
+	  },
+	
+	  setColor: function(r, g, b, force) {
+	    this.toPolygons().map(function(polygon) {
+	      if (polygon.shared === undefined || force) {
+	        polygon.setColor(r, g, b);
+	      }
+	    });
+	  },
+	
+	  toPolygons: function() {
+	    return this.polygons;
+	  },
+	
+	  // Return a new CSG solid representing space in either this solid or in the
+	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
+	  //
+	  //     A.union(B)
+	  //
+	  //     +-------+            +-------+
+	  //     |       |            |       |
+	  //     |   A   |            |       |
+	  //     |    +--+----+   =   |       +----+
+	  //     +----+--+    |       +----+       |
+	  //          |   B   |            |       |
+	  //          |       |            |       |
+	  //          +-------+            +-------+
+	  //
+	  union: function(csg) {
+	    if (csg.polygons.length === 0) return CSG.fromPolygons(this.polygons);
+	    var a = new CSG.Node(this.clone().polygons);
+	    var b = new CSG.Node(csg.clone().polygons);
+	    a.clipTo(b);
+	    b.clipTo(a);
+	    b.invert();
+	    b.clipTo(a);
+	    b.invert();
+	    a.build(b.allPolygons());
+	    return CSG.fromPolygons(a.allPolygons());
+	  },
+	  islands: function() {
+	    const islands = [];
+	    let allVerts = [];
+	    for (let index = 0; index < this.polygons.length; index++) {
+	      const poly = this.polygons[index];
+	      let addToIndex = -1;
+	      for (let vi = 0; vi < poly.vertices.length; vi++) {
+	        const vert = poly.vertices[vi];
+	        for (let avi = 0; addToIndex < 0 && avi < allVerts.length; avi++) {
+	          if (vert.equals(allVerts[avi].vert)) addToIndex = allVerts[avi].index;
+	        }
+	        if (addToIndex === -1) addToIndex = islands.push(new CSG()) - 1;
+	        islands[addToIndex].polygons.push(poly);
+	      }
+	      for (let vi = 0; vi < poly.vertices.length; vi++) {
+	        allVerts.push({vert: poly.vertices[vi], index: addToIndex});
+	      }
+	    }
+	    CSG.combine(islands);
+	    return islands;
+	  },
+	
+	  // Return a new CSG solid representing space in this solid but not in the
+	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
+	  //
+	  //     A.subtract(B)
+	  //
+	  //     +-------+            +-------+
+	  //     |       |            |       |
+	  //     |   A   |            |       |
+	  //     |    +--+----+   =   |    +--+
+	  //     +----+--+    |       +----+
+	  //          |   B   |
+	  //          |       |
+	  //          +-------+
+	  //
+	  subtract: function(csg) {
+	    if (!csg || csg.polygons.length === 0) return this.clone();
+	    var a = new CSG.Node(this.clone().polygons);
+	    var b = new CSG.Node(csg.clone().polygons);
+	    a.invert();
+	    a.clipTo(b);
+	    b.clipTo(a);
+	    b.invert();
+	    b.clipTo(a);
+	    b.invert();
+	    a.build(b.allPolygons());
+	    a.invert();
+	    return CSG.fromPolygons(a.allPolygons());
+	  },
+	
+	  // Return a new CSG solid representing space both this solid and in the
+	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
+	  //
+	  //     A.intersect(B)
+	  //
+	  //     +-------+
+	  //     |       |
+	  //     |   A   |
+	  //     |    +--+----+   =   +--+
+	  //     +----+--+    |       +--+
+	  //          |   B   |
+	  //          |       |
+	  //          +-------+
+	  //
+	  intersect: function(csg) {
+	    var a = new CSG.Node(this.clone().polygons);
+	    var b = new CSG.Node(csg.clone().polygons);
+	    a.invert();
+	    b.clipTo(a);
+	    b.invert();
+	    a.clipTo(b);
+	    b.clipTo(a);
+	    a.build(b.allPolygons());
+	    a.invert();
+	    return CSG.fromPolygons(a.allPolygons());
+	  },
+	
+	  slice: function (width, x, y, map) {
+	    width ||= .01;
+	    if ((!x && y) || (x && !y)) throw new Error('If you define x you must define y and vice versa')
+	    if (!x && !y) (x = 'x') & (y = 'z');
+	    const dems = this.demensions();
+	    const center = new CSG.Vertex(this.center());
+	    const config = sliceConfig(x,y, width, dems, center);
+	    config.slice = new CSG.cube(config);
+	    config.slices = [];
+	    const runFunc = map instanceof Function;
+	    for (;config.index < config.steps; config.index++) {
+	        const int = config.slice.intersect(this);
+	        int.polygons = int.polygons.filter(p => config.step.dot(p.plane.normal) === config.width);
+	        if (runFunc) config.slices.push(map(int, config));
+	        else config.slices.push(int);
+	        config.slice.translate(config.step);
+	    }
+	    console.log(config.slices.map((s, i) => `//${i}\n${s.toDrawString()}\n${this.toDrawString('green')}`).join('\n\n'))
+	    return config.slices;
+	  },
+	
+	  // Return a new CSG solid with solid and empty space switched. This solid is
+	  // not modified.
+	  inverse: function() {
+	    var csg = this.clone();
+	    csg.polygons.map(function(p) { p.flip(); });
+	    return csg;
+	  },
+	  endpoints: function () {
+	    const endpoints = {};
+	    const endpoint = (attr, value) => {
+	      const max = endpoints[attr];
+	      endpoints[attr] = max === undefined || max < value ? value : max;
+	      const minAttr = `-${attr}`;
+	      const min = endpoints[minAttr];
+	      endpoints[minAttr] = min === undefined || min > value ? value : min;
+	    }
+	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+	      endpoint('x', vertex.pos.x);
+	      endpoint('y', vertex.pos.y);
+	      endpoint('z', vertex.pos.z);
+	    }));
+	    return endpoints;
+	  },
+	  distCenter: function () {
+	    const endpoints = this.endpoints();
+	    const x = ((endpoints.x + endpoints['-x']) / 2);
+	    const y = ((endpoints.y + endpoints['-y']) / 2);
+	    const z = ((endpoints.z + endpoints['-z']) / 2);
+	    return {x,y,z};
+	  },
+	  mean: function () {
+	    const vertices = this.vertices();
+	    const mean = Math.mean(vertices, ['pos.x', 'pos.y', 'pos.z']);
+	    return mean.pos;
+	  },
+	
+	  demensions: function () {
+	    const epts = this.endpoints();
+	    return {
+	      x: epts.x - epts['-x'],
+	      y: epts.y - epts['-y'],
+	      z: epts.z - epts['-z']
+	    }
+	  },
+	  cube: function () {
+	    return new CSG.cube({demensions: this.demensions(), center: this.center()});
+	  },
+	  demCenter: function () {
+	    const dems = this.demensions();
+	    return {x: dems.x/2, y: dems.y/2, z: dems.z/2};
+	  },
+	  rotateAroundPoint: function (rotations, point) {
+	    const returnVector = new CSG.Vector(point);
+	    const centerVector = returnVector.negated();
+	    this.translate(centerVector);
+	    this.rotate(rotations);
+	    this.translate(returnVector);
+	  },
+	
+	  rotate: function (rotations, pivot) {
+	    pivot ||= {x: 1, y:1, z:1};
+	    if (Array.isArray(rotations)) {
+	      for (let i = 0; i < rotations.length; i++) this.rotate(rotations[i])
+	      return;
+	    }
+	    rotations = new CSG.Vector(rotations)
+	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+	      let newPos = vertex.pos;
+	      newPos = ArbitraryRotate(newPos, rotations.x, {x: pivot.x, y:0, z:0});
+	      newPos = ArbitraryRotate(newPos, rotations.y, {x: 0, y:pivot.y, z:0});
+	      newPos = ArbitraryRotate(newPos, rotations.z, {x: 0, y:0, z:pivot.z});
+	      return new CSG.Vertex(newPos, vertex.normal);
+	    }));
+	  },
+	  reverseRotate: function (rotation) {
+	    rotation = new CSG.Vector(rotation)
+	    rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
+	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+	      let newPos = vertex.pos;
+	      newPos = ArbitraryRotate(newPos, rotation.z, {x: 0, y:0, z:1});
+	      newPos = ArbitraryRotate(newPos, rotation.y, {x: 0, y:1, z:0});
+	      newPos = ArbitraryRotate(newPos, rotation.x, {x: 1, y:0, z:0});
+	      return new CSG.Vertex(newPos, vertex.normal);
+	    }));
+	  },
+	
+	  ArbitraryRotate: function(degrees, pivot) {
+	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+	        let newPos = vertex.pos;
+	        newPos = ArbitraryRotate(newPos, degrees, pivot);
+	        return new CSG.Vertex(newPos, vertex.normal);
+	    }));
+	  },
+	
+	  translate: function (offset) {
+	    offset = new CSG.Vector(offset)
+	    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+	    offset.id = String.random();
+	    this.polygons.forEach((poly) => poly.translate(offset));
+	  },
+	
+	  center: function (newCenter) {
+	    const center = this.distCenter();
+	    if (!newCenter) return center;
+	    const offset = {
+	      x: newCenter.x - center.x,
+	      y: newCenter.y - center.y,
+	      z: newCenter.z - center.z
+	    }
+	    this.translate(offset);
+	    return newCenter;
+	  },
+	
+	  normalize: function (rotations, rightSide, leftOfAxis) {
+	    if (rightSide) {
+	      if (rotations) {
+	        if (Array.isArray(rotations)) rotations = rotations.concat([{y:180}]);
+	        else rotations = [rotations, {y: 180}];
+	      } else rotations = [{y:180}];
+	    }
+	    const clone = this.clone();
+	    if (rotations) clone.rotate(rotations);
+	    const dems = clone.demensions();
+	    const divisor = leftOfAxis ? -2 : 2;
+	    const normCenter = {x: dems.x/divisor, y: dems.y/2, z: dems.z/2};
+	    // const translationVector = new CSG.Vector(clone.center()).minus(normCenter);
+	    const translationVector = new CSG.Vector(normCenter).minus(clone.center());
+	    clone.translate(translationVector);
+	    const side = !rightSide ? 'Left' : 'Right';
+	    return {poly: clone, translationVector, rotations, normCenter, side};
+	  }
+	};
+	
+	CSG.combine = function(csgs) {
+	  for (let index = csgs.length - 1; index > -1; index--) {
+	    const proposer = csgs[index];
+	    for (let oi = 0; oi < index; oi++) {
+	      const proposeTo = csgs[oi];
+	      if (proposer.sharesVertex(proposeTo)) {
+	        proposeTo.polygons.concatInPlace(proposer.polygons);
+	        csgs.splice(index, 1);
+	        break;
+	      }
+	    }
+	  }
+	}
+	
+	CSG.marroonedOn = function(csgOpolyOvertex, islands) {
+	  let vertices;
+	  if (csgOpolyOvertex instanceof CSG) vertices = csgOpolyOvertex.vertices();
+	  else if (csgOpolyOvertex instanceof CSG.Polygon) vertices = csgOpolyOvertex.vertices;
+	  else if (csgOpolyOvertex instanceof CSG.Vertex) vertices = [csgOpolyOvertex];
+	  else throw new Error(`marroonedOn not configured for input '${csgOpolyOvertex}'`);
+	  for(let ii = 0; ii < islands.length; ii++) {
+	    const island = islands[ii];
+	    const iVerts = island.vertices();
+	    for (let ivi = 0; ivi < iVerts.length; ivi++) {
+	      for (let vi = 0; vi < vertices.length; vi++) {
+	        if (vertices[vi].equals(iVerts[ivi])) return island;
+	      }
+	    }
+	  }
+	  return null;
+	},
+	
+	// Construct an axis-aligned solid cuboid. Optional parameters are `center` and
+	// `radius`, which default to `[0, 0, 0]` and `[1, 1, 1]`. The radius can be
+	// specified using a single number or a list of three numbers, one for each axis.
+	//
+	// Example code:
+	//
+	//     var cube = CSG.cube({
+	//       center: [0, 0, 0],
+	//       radius: 1
+	//     });
+	//
+	// x1 = (x0 – xc)cos(θ) – (y0 – yc)sin(θ) + xc(Equation 3)
+	// y1 = (x0 – xc)sin(θ) + (y0 – yc)cos(θ) + yc(Equation 4)
+	CSG.cube = function(options) {
+	  options = options || {};
+	  var c = new CSG.Vector(options.center || [0, 0, 0]);
+	  var r = !options.radius ? [1, 1, 1] : Number.isFinite(options.radius) ?
+	                      [options.radius, options.radius, options.radius] :
+	                      new CSG.Vector(options.radius).toArray();
+	  if (options.demensions) {
+	    r = new CSG.Vector(options.demensions).times(.5).toArray();
+	  }
+	  return CSG.fromPolygons([
+	    [[0, 4, 6, 2], [-1, 0, 0]],
+	    [[1, 3, 7, 5], [+1, 0, 0]],
+	    [[0, 1, 5, 4], [0, -1, 0]],
+	    [[2, 6, 7, 3], [0, +1, 0]],
+	    [[0, 2, 3, 1], [0, 0, -1]],
+	    [[4, 5, 7, 6], [0, 0, +1]]
+	  ].map(function(info) {
+	    return new CSG.Polygon(info[0].map(function(i) {
+	      var pos = new CSG.Vector(
+	        c.x + r[0] * (2 * !!(i & 1) - 1),
+	        c.y + r[1] * (2 * !!(i & 2) - 1),
+	        c.z + r[2] * (2 * !!(i & 4) - 1)
+	      );
+	      return new CSG.Vertex(pos, new CSG.Vector(info[1]));
+	    }));
 	  }));
-	} catch(e) {}
+	};
 	
-	var wheelOpt = supportsPassive ? { passive: false } : false;
-	var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
-	
-	// call this to Disable
-	function disableScroll(element) {
-	  element.addEventListener('DOMMouseScroll', preventDefault, false); // older FF
-	  element.addEventListener(wheelEvent, preventDefault, wheelOpt); // modern desktop
-	  element.addEventListener('touchmove', preventDefault, wheelOpt); // mobile
-	  element.addEventListener('keydown', preventDefaultForScrollKeys, false);
+	CSG.Point = function (center, radius, color) {
+	  radius ||= .5
+	  const sphere = new CSG.sphere({radius, center});
+	  sphere.setColor(color);
+	  return sphere;
 	}
 	
-	// call this to Enable
-	function enableScroll(element) {
-	  element.removeEventListener('DOMMouseScroll', preventDefault, false);
-	  element.removeEventListener(wheelEvent, preventDefault, wheelOpt);
-	  element.removeEventListener('touchmove', preventDefault, wheelOpt);
-	  element.removeEventListener('keydown', preventDefaultForScrollKeys, false);
+	function vecotrOvertexModel(start, end, model, options) {
+	  if (Array.isArray(end) || options.lineDisplayType === CSG.Line.DISPLAY_TYPES.LINE_ONLY) return model;
+	  let color = end.color || options.color;
+	  if (CSG.Line.DISPLAY_TYPES.VECTOR === options.lineDisplayType &&
+	          end instanceof CSG.Vector) {
+	    const maxLen = end.distance(new CSG.Vector(start)) / 2;
+	    const unit = end.minus(new CSG.Vector(start)).unit().times(maxLen > 6 ? 6 : maxLen);
+	    start = end.minus(unit);
+	    return new CSG.cone({start, end, model, color});
+	  } else {
+	    return new CSG.Point(end, null, color).union(model);
+	  }
 	}
 	
-	exports.Viewer = Viewer
-	exports.addViewer = addViewer
-	exports.preventDefault = preventDefault
-	exports.preventDefaultForScrollKeys = preventDefaultForScrollKeys
-	exports.disableScroll = disableScroll
-	exports.enableScroll = enableScroll
+	CSG.Line = function (options) {
+	  options ||= {};
+	  const start = options.start || [0,0,0];
+	  const end = options.end || [0,0,0];
+	  if (new CSG.Vector(start).equals(new CSG.Vector(end))) {
+	    return new CSG.Point(options.start, .3, options.color);
+	  }
+	  const radius = options.radius || .2;
+	  let model = new CSG.cylinder({start, end, radius, slices: 8});
+	  model = vecotrOvertexModel(end, start, model, options);
+	  model.setColor(options.color);
+	  return vecotrOvertexModel(start, end, model, options);
+	}
+	
+	CSG.Line.DISPLAY_TYPES = {};
+	CSG.Line.DISPLAY_TYPES.LINE_ONLY = 'lineOnly';
+	CSG.Line.DISPLAY_TYPES.VECTOR = 'vector';
+	
+	CSG.Rectangle = function (demensions, center, yVector, xVector) {
+	  yVector = new CSG.Vector(yVector || [0,1,0]).unit();
+	  const defaultVector = !Object.equals(yVector, {x:1, y:0, z:0}) ? {x:1, y:0, z:0} : {x:0, y:0, z:1};
+	  xVector = new CSG.Vector(xVector || defaultVector);
+	  center = new CSG.Vector(center || [0,0,0]);
+	  const demVector = new CSG.Vector(demensions || [3,5,1]);
+	  const width = demVector.x;
+	  const length = demVector.y;
+	  const depth = demVector.z;
+	  const zVector = xVector.cross(yVector).unit();
+	
+	  const vs = {
+	    x: yVector.times(length/2),
+	    y: xVector.times(width/2),
+	    z: zVector.times(depth/2),
+	    nx: yVector.times(length/2).negated(),
+	    ny: xVector.times(width/2).negated(),
+	    nz: zVector.times(depth/2).negated()
+	  }
+	
+	  const vert = (...args) => {
+	    const vertex = new CSG.Vertex(center);
+	    for(let index = 0; index < args.length; index++) vertex.plus(args[index]);
+	    return vertex;
+	  }
+	
+	  // const front = new CSG.Polygon([vert(vs.x, vs.y), vert(vs.nx, vs.y), vert(vs.nx, vs.ny), vert(vs.x, vs.ny)]);
+	  let v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.nz);
+	  let v2 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.nz);
+	  let v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.nz);
+	  let v4 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.nz);
+	  const front = new CSG.Polygon([v1,v2,v3,v4]);
+	
+	  // const back = new CSG.Polygon([vert(vs.x,vs.y,vs.z),vert(vs.nx,vs.y,vs.z),vert(vs.nx,vs.ny,vs.z),vert(vs.x,vs.ny,vs.z)]);
+	  v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.z);
+	  v2 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.z);
+	  v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.z);
+	  v4 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.z);
+	  const back = new CSG.Polygon([v4,v3,v2,v1]);
+	
+	  v1 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.y);
+	  v2 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.y);
+	  v3 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.y);
+	  v4 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.y);
+	  const top = new CSG.Polygon([v4,v3,v2,v1]);
+	
+	  v1 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.ny);
+	  v2 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.ny);
+	  v4 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.ny);
+	  v3 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.ny);
+	  const bottom = new CSG.Polygon([v4,v3,v2,v1]);
+	
+	  v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.x);
+	  v2 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.x);
+	  v3 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.x);
+	  v4 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.x);
+	  const left = new CSG.Polygon([v1,v2,v3,v4]);
+	
+	  v4 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.nx);
+	  v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.nx);
+	  v2 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.nx);
+	  v1 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.nx);
+	  const right = new CSG.Polygon([v1,v2,v3,v4]);
+	
+	  return CSG.fromPolygons([front, back, top, bottom, left, right])
+	}
+	
+	// Construct a solid sphere. Optional parameters are `center`, `radius`,
+	// `slices`, and `stacks`, which default to `[0, 0, 0]`, `1`, `16`, and `8`.
+	// The `slices` and `stacks` parameters control the tessellation along the
+	// longitude and latitude directions.
+	//
+	// Example usage:
+	//
+	//     var sphere = CSG.sphere({
+	//       center: [0, 0, 0],
+	//       radius: 1,
+	//       slices: 16,
+	//       stacks: 8
+	//     });
+	CSG.sphere = function(options) {
+	  options = options || {};
+	  var c = new CSG.Vector(options.center || [0, 0, 0]);
+	  var r = options.radius || 1;
+	  var slices = options.slices || 32;
+	  var stacks = options.stacks || 8;
+	  var polygons = [], vertices;
+	  function vertex(theta, phi) {
+	    theta *= Math.PI * 2;
+	    phi *= Math.PI;
+	    var dir = new CSG.Vector(
+	      Math.cos(theta) * Math.sin(phi),
+	      Math.cos(phi),
+	      Math.sin(theta) * Math.sin(phi)
+	    );
+	    vertices.push(new CSG.Vertex(c.plus(dir.times(r)), dir));
+	  }
+	  for (var i = 0; i < slices; i++) {
+	    for (var j = 0; j < stacks; j++) {
+	      vertices = [];
+	      vertex(i / slices, j / stacks);
+	      if (j > 0) vertex((i + 1) / slices, j / stacks);
+	      if (j < stacks - 1) vertex((i + 1) / slices, (j + 1) / stacks);
+	      vertex(i / slices, (j + 1) / stacks);
+	      polygons.push(new CSG.Polygon(vertices));
+	    }
+	  }
+	
+	  const csg = CSG.fromPolygons(polygons);
+	  csg.property('x', c.x, false, false);
+	  csg.property('y', c.y, false, false);
+	  csg.property('z', c.z, false, false);
+	  csg.property('radius', c.radius, false, false);
+	  return csg;
+	};
+	
+	// TODO: add a length option so that start and end dont need to be defined;
+	// Construct a solid cylinder. Optional parameters are `start`, `end`,
+	// `radius`, and `slices`, which default to `[0, -1, 0]`, `[0, 1, 0]`, `1`, and
+	// `16`. The `slices` parameter controls the tessellation.
+	//
+	// Example usage:
+	//
+	//     var cylinder = CSG.cylinder({
+	//       start: [0, -1, 0],
+	//       end: [0, 1, 0],
+	//       radius: 1,
+	//       slices: 16
+	//     });
+	CSG.cylinder = function(options) {
+	  options = options || {};
+	  var s = new CSG.Vector(options.start || [0, -1, 0]);
+	  var e = new CSG.Vector(options.end || [0, 1, 0]);
+	  var ray = e.minus(s);
+	  var r = options.radius || 1;
+	  if (!ray.positive()) {
+	    let temp = s;
+	    s = e;
+	    e = temp;
+	    ray = ray.negated();
+	  }
+	  var slices = options.slices || 8;
+	  var axisZ = ray.unit(); isY = (Math.abs(axisZ.y) > 0.5);
+	  var axisX = new CSG.Vector(isY, !isY, 0).cross(axisZ).unit();
+	  var axisY = axisX.cross(axisZ).unit();
+	  var start = new CSG.Vertex(s, axisZ.negated());
+	  var end = new CSG.Vertex(e, axisZ.unit());
+	  var polygons = [];
+	  function point(stack, slice, normalBlend) {
+	    var angle = slice * Math.PI * 2;
+	    var out = axisX.times(Math.cos(angle)).plus(axisY.times(Math.sin(angle)));
+	    var pos = s.plus(ray.times(stack)).plus(out.times(r));
+	    var normal = out.times(1 - Math.abs(normalBlend)).plus(axisZ.times(normalBlend));
+	    return new CSG.Vertex(pos, normal);
+	  }
+	  const topVerts = [];
+	  const bottomVerts = [];
+	  for (var i = 0; i < slices; i++) {
+	    var t0 = i / slices, t1 = (i + 1) / slices;
+	    polygons.push(new CSG.Polygon([point(0, t1, 0), point(0, t0, 0), point(1, t0, 0), point(1, t1, 0)]));
+	    topVerts.push(point(1, t0, 1));
+	    bottomVerts.push(point(0, t0, 1));
+	  }
+	  topVerts.reverse();
+	  return CSG.fromPolygons(polygons.concat([new CSG.Polygon(topVerts),new CSG.Polygon(bottomVerts)]));
+	  // return new CSG.Polygon(verts);
+	};
+	
+	let crossVect;
+	const perpendicularVector = (vector) => {
+	  let other;
+	  const option1Mag = vector.z*vector.z+vector.y*vector.y;
+	  const option2Mag = vector.z*vector.z+vector.x*vector.x;
+	  const option3Mag = vector.y*vector.y+vector.x*vector.x;
+	  if (option1Mag > option2Mag && option1Mag > option3Mag) {
+	    other = new CSG.Vector(0, vector.z, -vector.y);
+	  } else if (option2Mag > option3Mag) {
+	    other = new CSG.Vector(-vector.z, 0, vector.x);
+	  } else {
+	    other = new CSG.Vector(-vector.y, vector.x, 0);
+	  }
+	  crossVect = other;
+	  return other;
+	}
+	
+	CSG.cone = function (options) {
+	  options ||= {};
+	  let length = options.length || 10;
+	  const start = new CSG.Vector(options.start || [0,0,0]);
+	  const end = new CSG.Vector(options.end || start.add([0,length,0]));
+	  length = end.minus(start).length();
+	  const point = new CSG.sphere({radius: 1, center: end});
+	  const radius = options.radius || 1;
+	  const slices = options.slices || 8;
+	  let cylinder = new CSG.cylinder({start, end, radius, slices});
+	  let cone = cylinder.clone();
+	  if (options.color) cone.setColor(options.color);
+	  const sliceRotation = 360/slices;
+	  const rotationVector = end.minus(start).unit();
+	  const lengthVector = rotationVector.clone().times(length);
+	  const perpVector = perpendicularVector(rotationVector.clone()).times(radius/-2);
+	  const widthVector = perpVector.cross(rotationVector).unit().times(30);
+	  const cutterCenter = end;
+	  const plane = new CSG.Rectangle([30, length*10, radius*2], cutterCenter, rotationVector.unit(), widthVector.unit());
+	  const planeCenter = new CSG.Vector(plane.center());
+	  if (options.color) plane.setColor(options.color);
+	  const degrees = Math.toDegrees(Math.atan(radius/(2*length)))*2;
+	  plane.ArbitraryRotate(degrees, widthVector.unit());
+	  plane.center(cutterCenter);
+	  plane.translate(perpVector);
+	
+	  for (let index = 0; index < slices; index++) {
+	    plane.translate(cutterCenter.negated());
+	    plane.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+	        let newPos = vertex.pos;
+	        newPos = ArbitraryRotate(newPos, sliceRotation, rotationVector.unit());
+	        return new CSG.Vertex(newPos, vertex.normal);
+	      }));
+	      plane.translate(cutterCenter);
+	      cone = cone.subtract(plane);
+	  }
+	
+	  if(options.model) {
+	    const model = options.model.subtract(cylinder);
+	    cone = cone.union(model);
+	  }
+	
+	  return cone;
+	}
+	
+	function axis(vector, origin, color, size, radius) {
+	  origin ||= [0,0,0];
+	  const end = [vector[0]*size+origin[0],vector[1]*size+origin[1],vector[2]*size+origin[2]]
+	  const ax = CSG.cylinder({start: origin, end, radius})
+	  ax.setColor(color);
+	  return ax;
+	}
+	
+	CSG.Axis =  function (size, radius, origin, vectors) {
+	  size ||= 100;
+	  origin ||= [0,0,0];
+	  vectors ||= [[1,0,0], [0,1,0], [0,0,1]];
+	  radius ||= size/100;
+	  const center = CSG.sphere({center: origin, radius: radius*1.5})
+	  const xAxis = axis(vectors[0], origin, [255,0,0], size, radius);
+	  const yAxis = axis(vectors[1], origin, [0,128,0], size, radius);
+	  const zAxis = axis(vectors[2], origin, [0,0,255], size, radius);
+	  const csg = new CSG();
+	  csg.polygons.concatInPlace(center.polygons);
+	  csg.polygons.concatInPlace(xAxis.polygons);
+	  csg.polygons.concatInPlace(yAxis.polygons);
+	  csg.polygons.concatInPlace(zAxis.polygons);
+	  return csg;
+	}
+	
+	// # class Vector
+	
+	// Represents a 3D vector.
+	//
+	// Example usage:
+	//
+	//     new CSG.Vector(1, 2, 3);
+	//     new CSG.Vector([1, 2, 3]);
+	//     new CSG.Vector({ x: 1, y: 2, z: 3 });
+	const isZeros = (...vals) => vals.findIndex(v => withinEPSILON(v, 0)) === -1;
+	CSG.Vector = function(x, y, z) {
+	  if (arguments.length == 3) {
+	    this.x = x;
+	    this.y = y;
+	    this.z = z;
+	  } else if ('x' in x || 'y' in x || 'z' in x) {
+	    this.x = x.x;
+	    this.y = x.y;
+	    this.z = x.z;
+	  } else if ('i' in x || 'j' in x || 'k' in x) {
+	    this.x = x.i;
+	    this.y = x.j;
+	    this.z = x.k;
+	  } else {
+	    this.x = x[0];
+	    this.y = x[1];
+	    this.z = x[2];
+	  }
+	};
+	
+	CSG.Vector.prototype = {
+	  clone: function() {
+	    return new CSG.Vector(this.x, this.y, this.z);
+	  },
+	  positive: function () {
+	    return this.x > 0 || (isZeros(this.x) && this.y > 0) ||
+	              (isZeros(this.x,this.y) && this.z > 0) || isZeros(this.x, this.y, this.z);
+	  },
+	  toArray: function() {return [this.x,this.y,this.z]},
+	
+	  negated: function() {
+	    return new CSG.Vector(-this.x, -this.y, -this.z);
+	  },
+	
+	  plus: function(a) {
+	    return new CSG.Vector(this.x + a.x, this.y + a.y, this.z + a.z);
+	  },
+	
+	  minus: function(a) {
+	    return new CSG.Vector(this.x - a.x, this.y - a.y, this.z - a.z);
+	  },
+	
+	  times: function(a) {
+	    return new CSG.Vector(this.x * a, this.y * a, this.z * a);
+	  },
+	
+	  dividedBy: function(a) {
+	    return new CSG.Vector(this.x / a, this.y / a, this.z / a);
+	  },
+	
+	  dot: function(a) {
+	    return this.x * a.x + this.y * a.y + this.z * a.z;
+	  },
+	
+	  lerp: function(a, t) {
+	    return this.plus(a.minus(this).times(t));
+	  },
+	
+	  length: function() {
+	    return Math.sqrt(this.dot(this));
+	  },
+	
+	  unit: function() {
+	    return this.dividedBy(this.length());
+	  },
+	
+	  distance: function (other) {
+	    const vector = this.minus(other);
+	    return vector.length();
+	  },
+	
+	  cross: function(a) {
+	    return new CSG.Vector(
+	      this.y * a.z - this.z * a.y,
+	      this.z * a.x - this.x * a.z,
+	      this.x * a.y - this.y * a.x
+	    );
+	  },
+	
+	  equals: function(other) {
+	    return withinEPSILON(this.x, other.x) &&
+	            withinEPSILON(this.y, other.y) &&
+	            withinEPSILON(this.z, other.z);
+	  },
+	
+	  toString: function(percision) {
+	    const vertPer = vertexPercision(percision, this.x, this.y, this.z);
+	    return `(${vertPer.x},${vertPer.y},${vertPer.z})`
+	  }
+	};
+	
+	// # class Vertex
+	
+	// Represents a vertex of a polygon. Use your own vertex class instead of this
+	// one to provide additional features like texture coordinates and vertex
+	// colors. Custom vertex classes need to provide a `pos` property and `clone()`,
+	// `flip()`, and `interpolate()` methods that behave analogous to the ones
+	// defined by `CSG.Vertex`. This class provides `normal` so convenience
+	// functions like `CSG.sphere()` can return a smooth vertex normal, but `normal`
+	// is not used anywhere else.
+	
+	
+	CSG.Vector.I = new CSG.Vector(1,0,0);
+	CSG.Vector.J = new CSG.Vector(0,1,0);
+	CSG.Vector.K = new CSG.Vector(0,0,1);
+	
+	CSG.Vertex = function(pos, normal) {
+	  this.pos = new CSG.Vector(pos);
+	  this.normal = new CSG.Vector(normal || {x:1,y:0,z:0});
+	  this.toString = (percision) => {
+	    const verPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
+	    return `(${verPer.x},${verPer.y},${verPer.z})`;
+	  }
+	
+	  this.scale = (center, xOall, y, z) => {
+	    const centerVector = new CSG.Vector(center);
+	    const vector = new CSG.Vector(pos.x - center.x, pos.y - center.y, pos.z - center.z);
+	    if (y === undefined && z === undefined) {
+	      const scaled = vector.times(xOall);
+	      this.pos = centerVector.plus(scaled);
+	    } else {
+	      const iVect = CSG.Vector.I.times(vector.x * xOall);
+	      const jVect = CSG.Vector.J.times(vector.y * y);
+	      const kVect = CSG.Vector.K.times(vector.z * z);
+	      this.pos = centerVector.plus(iVect.plus(jVect).plus(kVect));
+	    }
+	  }
+	
+	  const tol = .1
+	  const attrSq = (other, attr) => (this.pos[attr]-other.pos[attr]) * (this.pos[attr]-other.pos[attr]);
+	  this.equals = (other, tolerance) => {
+	    tolerance ||= tol;
+	    if (!(other instanceof CSG.Vertex)) return false;
+	    const sqrtError = Math.sqrt(attrSq(other, 'x') + attrSq(other, 'y') + attrSq(other, 'z'));
+	    return Math.abs(sqrtError) < tol;
+	  }
+	};
+	
+	CSG.VertexNoNorm = function (pos) {
+	  return new CSG.Vertex(pos, [-1,-1,-1]);
+	}
+	
+	CSG.Vertex.Center = function (vertices) {
+	  vertices = vertices.map(v => new CSG.Vector(v));
+	  const total = {x:0, y:0,z:0};
+	  vertices.forEach(v => {
+	    total.x += v.x;total.y += v.y;total.z += v.z;
+	  })
+	  return {
+	    x: total.x / vertices.length,
+	    y: total.y / vertices.length,
+	    z: total.z / vertices.length
+	  }
+	}
+	
+	CSG.Vertex.prototype = {
+	  clone: function() {
+	    return new CSG.Vertex(this.pos.clone(), this.normal.clone());
+	  },
+	  toString: function (percision) {
+	    const vertPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
+	    return `(${vertPer.x},${vertPer.y},${vertPer.z})`
+	  },
+	  translate: function (offset) {return translate(this, offset)},
+	
+	  // Invert all orientation-specific data (e.g. vertex normal). Called when the
+	  // orientation of a polygon is flipped.
+	  flip: function() {
+	    this.normal = this.normal.negated();
+	  },
+	
+	  // Create a new vertex between this vertex and `other` by linearly
+	  // interpolating all properties using a parameter of `t`. Subclasses should
+	  // override this to interpolate additional properties.
+	  interpolate: function(other, t) {
+	    return new CSG.Vertex(
+	      this.pos.lerp(other.pos, t),
+	      this.normal.lerp(other.normal, t)
+	    );
+	  }
+	};
+	
+	// # class Plane
+	
+	// Represents a plane in 3D space.
+	
+	CSG.Plane = function(normal, w) {
+	  this.normal = normal;
+	  this.w = w;
+	  this.setColor = function(r, g, b) {
+	    if (colors[r]) r = colors[r];
+	    if (Array.isArray(r)) {
+	      g = r[1];
+	      b = r[2];
+	      r = r[0];
+	    }
+	    this.shared = [r/255, g/255, b/255];
+	  }
+	};
+	
+	// `CSG.Plane.EPSILON` is the tolerance used by `splitPolygon()` to decide if a
+	// point is on the plane.
+	CSG.Plane.EPSILON = 1e-5;//1e-3;
+	const withinEPSILON = (v1,v2) => Math.abs(v1-v2) < CSG.Plane.EPSILON;
+	
+	CSG.Plane.fromPoints = function(a, b, c) {
+	  if (Array.isArray(a)) (c = a[2]) & (b = a[1]) & (a = a[0]);
+	  a = new CSG.Vector(a);
+	  b = new CSG.Vector(b);
+	  c = new CSG.Vector(c);
+	  var n = b.minus(a).cross(c.minus(a)).unit();
+	  return new CSG.Plane(n, n.dot(a));
+	};
+	
+	CSG.Plane.prototype = {
+	  clone: function() {
+	    return new CSG.Plane(this.normal.clone(), this.w);
+	  },
+	
+	  flip: function() {
+	    this.normal = this.normal.negated();
+	    this.w = -this.w;
+	  },
+	
+	  // Split `polygon` by this plane if needed, then put the polygon or polygon
+	  // fragments in the appropriate lists. Coplanar polygons go into either
+	  // `coplanarFront` or `coplanarBack` depending on their orientation with
+	  // respect to this plane. Polygons in front or in back of this plane go into
+	  // either `front` or `back`.
+	  splitPolygon: function(polygon, coplanarFront, coplanarBack, front, back) {
+	    var COPLANAR = 0;
+	    var FRONT = 1;
+	    var BACK = 2;
+	    var SPANNING = 3;
+	
+	    // Classify each point as well as the entire polygon into one of the above
+	    // four classes.
+	    var polygonType = 0;
+	    var types = [];
+	    for (var i = 0; i < polygon.vertices.length; i++) {
+	      var t = this.normal.dot(polygon.vertices[i].pos) - this.w;
+	      var type = (t < -CSG.Plane.EPSILON) ? BACK : (t > CSG.Plane.EPSILON) ? FRONT : COPLANAR;
+	      polygonType |= type;
+	      types.push(type);
+	    }
+	
+	    // Put the polygon in the correct list, splitting it when necessary.
+	    switch (polygonType) {
+	      case COPLANAR:
+	        (this.normal.dot(polygon.plane.normal) > 0 ? coplanarFront : coplanarBack).push(polygon);
+	        break;
+	      case FRONT:
+	        front.push(polygon);
+	        break;
+	      case BACK:
+	        back.push(polygon);
+	        break;
+	      case SPANNING:
+	        var f = [], b = [];
+	        for (var i = 0; i < polygon.vertices.length; i++) {
+	          var j = (i + 1) % polygon.vertices.length;
+	          var ti = types[i], tj = types[j];
+	          var vi = polygon.vertices[i], vj = polygon.vertices[j];
+	          if (ti != BACK) f.push(vi);
+	          if (ti != FRONT) b.push(ti != BACK ? vi.clone() : vi);
+	          if ((ti | tj) == SPANNING) {
+	            var t = (this.w - this.normal.dot(vi.pos)) / this.normal.dot(vj.pos.minus(vi.pos));
+	            var v = vi.interpolate(vj, t);
+	            f.push(v);
+	            b.push(v.clone());
+	          }
+	        }
+	        if (f.length >= 3) front.push(new CSG.Polygon(f, polygon.shared));
+	        if (b.length >= 3) back.push(new CSG.Polygon(b, polygon.shared));
+	        break;
+	    }
+	  }
+	};
+	
+	// # class Polygon
+	
+	// Represents a convex polygon. The vertices used to initialize a polygon must
+	// be coplanar and form a convex loop. They do not have to be `CSG.Vertex`
+	// instances but they must behave similarly (duck typing can be used for
+	// customization).
+	//
+	// Each convex polygon has a `shared` property, which is shared between all
+	// polygons that are clones of each other or were split from the same polygon.
+	// This can be used to define per-polygon properties (such as surface color).
+	
+	CSG.Polygon = function(vertices, shared) {
+	  this.vertices = vertices;
+	  this.shared = shared;
+	  this.plane = CSG.Plane.fromPoints(vertices[0].pos, vertices[1].pos, vertices[2].pos);
+	};
+	
+	CSG.Polygon.prototype = {
+	  clone: function() {
+	    var vertices = this.vertices.map(function(v) { return v.clone(); });
+	    return new CSG.Polygon(vertices, this.shared);
+	  },
+	
+	  lines: function () {
+	    const verts = this.vertices;
+	    return verts.map((v,i) => [v.pos, verts[(i+1)%verts.length].pos]);
+	  },
+	
+	  alignNormal: function (objectCenter) {
+	    const center = new CSG.Vector(this.center().pos);
+	    const dir = center.minus(objectCenter).unit();
+	    const norm = this.plane.normal;
+	    if (norm.dot(dir) < 0) {
+	      this.plane.normal = norm.times(-1);
+	      this.vertices.forEach(v => v.normal = v.normal.times(-1));
+	      console.log('realigned');
+	    }
+	  },
+	
+	  toString: function (percision, includeColor) {
+	    percision ||= .001;
+	    const verts = this.vertices;
+	    const shared = this.shared;
+	    let color = includeColor ? colors.name(shared) : '';
+	    let str = `${color}[`;
+	    for (let v = 0; v < verts.length; v++) {
+	      str += `${verts[v].toString(percision)},`;
+	    }
+	    str = `${str.substring(0, str.length - 1)}]`;
+	    return str;
+	  },
+	
+	  center: function () {
+	    const mr = Math.midrange(this.vertices, ['pos.x','pos.y','pos.z']);
+	    return new CSG.Vertex({x: mr['pos.x'], y: mr['pos.y'], z: mr['pos.z']});
+	  },
+	
+	  translate: function (offset) {
+	    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+	    const offsetId = offset.id || (offset.id = String.random());
+	    this.forEachVertex((vertex) => {
+	      if (!vertex.offsetId || vertex.offsetId !== offsetId) {
+	        vertex.pos.x += offset.x;
+	        vertex.pos.y += offset.y;
+	        vertex.pos.z += offset.z;
+	        vertex.offsetId = offsetId;
+	      }
+	    });
+	  },
+	
+	  color: function () {
+	    const name = colors.name(this.shared);
+	    return name.indexOf(',') === -1 ? name : this.shared.map(v => Math.round(v*255));
+	  },
+	
+	  scale: function(center, coeficient) {
+	    this.vertices.forEach(function(v) { return v.scale(center, coeficient); });
+	  },
+	
+	  flip: function() {
+	    this.vertices.reverse().map(function(v) { v.flip(); });
+	    this.plane.flip();
+	  },
+	  forEachVertex: function (func) {
+	    for (let vIndex = 0; vIndex < this.vertices.length; vIndex += 1) {
+	      const vertex = this.vertices[vIndex];
+	      const newVertex = func(vertex);
+	      this.vertices[vIndex] = newVertex instanceof CSG.Vertex ? newVertex : vertex;
+	    }
+	  },
+	  setColor: function(r, g, b) {
+	    if (colors[r]) r = colors[r];
+	    if (Array.isArray(r)) {
+	      g = r[1];
+	      b = r[2];
+	      r = r[0];
+	    }
+	    this.shared = [r/255, g/255, b/255];
+	  }
+	};
+	
+	CSG.Polygon.Enclosed = function (verts, width, color) {
+	  width ||= .1;
+	  const centerNormal = (verts) => {
+	    const center = CSG.Vertex.Center(verts);
+	    const v1 = new CSG.Vector(verts[0]).minus(center)
+	    const v2 = new CSG.Vector(verts[1]).minus(center)
+	    return v1.cross(v2).unit()
+	  }
+	
+	  const normal = centerNormal(verts);
+	  const transVert = (normal) => (pos) => {let v = new CSG.Vertex(pos, normal); return translate(v, normal.times(width/2));}
+	  const vert = (normal) => (pos) => new CSG.Vertex(pos, normal);
+	  const frontVerts = verts.map(vert(normal));
+	  let front = new CSG.Polygon(frontVerts);
+	
+	
+	  const backVerts = verts.map(transVert(normal.negated()));
+	  let back = new CSG.Polygon(backVerts.map(v => v.clone()).reverse());
+	
+	  const polys = [front, back];
+	  if (width > 0) {
+	    for (let index = 0; index < frontVerts.length; index++) {
+	      const index2 = (index + 1) % frontVerts.length;
+	      let sideVerts = [backVerts[index].pos, backVerts[index2].pos, frontVerts[index2].pos, frontVerts[index].pos];
+	      const sideNormal = centerNormal(sideVerts);
+	      sideVerts = sideVerts.map((v) => new CSG.Vertex(v, sideNormal));
+	      let side = new CSG.Polygon(sideVerts);
+	      polys.push(side);
+	    }
+	  }
+	
+	  let model = new CSG.fromPolygons(polys);
+	  verts.forEach(v => v.color && (model = model.union(new CSG.Point(v, null, v.color))));
+	  model.setColor(color);
+	  return model;//model.union(vect);
+	}
+	
+	// # class Node
+	
+	// Holds a node in a BSP tree. A BSP tree is built from a collection of polygons
+	// by picking a polygon to split along. That polygon (and all other coplanar
+	// polygons) are added directly to that node and the other polygons are added to
+	// the front and/or back subtrees. This is not a leafy BSP tree since there is
+	// no distinction between internal and leaf nodes.
+	
+	CSG.Node = function(polygons) {
+	  this.plane = null;
+	  this.front = null;
+	  this.back = null;
+	  this.polygons = [];
+	  if (polygons) this.build(polygons);
+	};
+	
+	CSG.Node.prototype = {
+	  clone: function() {
+	    var node = new CSG.Node();
+	    node.plane = this.plane && this.plane.clone();
+	    node.front = this.front && this.front.clone();
+	    node.back = this.back && this.back.clone();
+	    node.polygons = this.polygons.map(function(p) { return p.clone(); });
+	    return node;
+	  },
+	
+	  // Convert solid space to empty space and empty space to solid space.
+	  invert: function() {
+	    for (var i = 0; i < this.polygons.length; i++) {
+	      this.polygons[i].flip();
+	    }
+	    this.plane.flip();
+	    if (this.front) this.front.invert();
+	    if (this.back) this.back.invert();
+	    var temp = this.front;
+	    this.front = this.back;
+	    this.back = temp;
+	  },
+	
+	  // Recursively remove all polygons in `polygons` that are inside this BSP
+	  // tree.
+	  clipPolygons: function(polygons) {
+	    if (!this.plane) return polygons.slice();
+	    var front = [], back = [];
+	    for (var i = 0; i < polygons.length; i++) {
+	      this.plane.splitPolygon(polygons[i], front, back, front, back);
+	    }
+	    if (this.front) front = this.front.clipPolygons(front);
+	    if (this.back) back = this.back.clipPolygons(back);
+	    else back = [];
+	    return front.concat(back);
+	  },
+	
+	  // Remove all polygons in this BSP tree that are inside the other BSP tree
+	  // `bsp`.
+	  clipTo: function(bsp) {
+	    this.polygons = bsp.clipPolygons(this.polygons);
+	    if (this.front) this.front.clipTo(bsp);
+	    if (this.back) this.back.clipTo(bsp);
+	  },
+	
+	  // Return a list of all polygons in this BSP tree.
+	  allPolygons: function() {
+	    var polygons = this.polygons.slice();
+	    if (this.front) polygons = polygons.concat(this.front.allPolygons());
+	    if (this.back) polygons = polygons.concat(this.back.allPolygons());
+	    return polygons;
+	  },
+	
+	  // Build a BSP tree out of `polygons`. When called on an existing tree, the
+	  // new polygons are filtered down to the bottom of the tree and become new
+	  // nodes there. Each set of polygons is partitioned using the first polygon
+	  // (no heuristic is used to pick a good split).
+	  build: function(polygons, callCount) {
+	    if (!polygons.length) return;
+	    callCount ||= 0;
+	    if (callCount > 500) {
+	      throw new Error('CSG.polygons are misconfigured');
+	    }
+	    if (!this.plane) this.plane = polygons[0].plane.clone();
+	    var front = [], back = [];
+	    for (var i = 0; i < polygons.length; i++) {
+	      this.plane.splitPolygon(polygons[i], this.polygons, this.polygons, front, back);
+	    }
+	    if (front.length) {
+	      if (!this.front) this.front = new CSG.Node();
+	      this.front.build(front, callCount + 1);
+	    }
+	    if (back.length) {
+	      if (!this.back) this.back = new CSG.Node();
+	      this.back.build(back, callCount + 1);
+	    }
+	  }
+	};
+	
+	/*
+	   Rotate a point p by angle theta around an arbitrary axis r
+	   Return the rotated point.
+	   Positive angles are anticlockwise looking down the axis
+	   towards the origin.
+	   Assume right hand coordinate system.
+	*/
+	function ArbitraryRotate(point, degreestheta, radius)
+	{
+	  if (!Number.isFinite(degreestheta)) return point;
+	  radius = radius.copy();
+	  theta = degreestheta * Math.PI/180;
+	  let p = point;
+	  let r = radius;
+	   let q = {x: 0.0, y: 0.0, z: 0.0};
+	   let costheta,sintheta;
+	
+	   // const Normalise = (obj, attr) => obj[attr] *= obj[attr] > 0 ? 1 : -1;
+	   // Normalise(r, 'x',);
+	   // Normalise(r, 'y',);
+	   // Normalise(r, 'z',);
+	
+	   costheta = Math.cos(theta);
+	   sintheta = Math.sin(theta);
+	
+	   q.x += (costheta + (1 - costheta) * r.x * r.x) * p.x;
+	   q.x += ((1 - costheta) * r.x * r.y - r.z * sintheta) * p.y;
+	   q.x += ((1 - costheta) * r.x * r.z + r.y * sintheta) * p.z;
+	
+	   q.y += ((1 - costheta) * r.x * r.y + r.z * sintheta) * p.x;
+	   q.y += (costheta + (1 - costheta) * r.y * r.y) * p.y;
+	   q.y += ((1 - costheta) * r.y * r.z - r.x * sintheta) * p.z;
+	
+	   q.z += ((1 - costheta) * r.x * r.z - r.y * sintheta) * p.x;
+	   q.z += ((1 - costheta) * r.y * r.z + r.x * sintheta) * p.y;
+	   q.z += (costheta + (1 - costheta) * r.z * r.z) * p.z;
+	
+	   return(q);
+	}
+	
+	function rotate (point, rotation) {
+	  if (Array.isArray(rotation)) return rotation.forEach(r => rotate(point, r));
+	  if (!(rotation instanceof Object)) return;
+	  rotation = new CSG.Vector(rotation);
+	  let newPos = point;
+	  newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
+	  newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
+	  newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});
+	  return newPos;
+	}
+	
+	function reverseRotate (point, rotation) {
+	  if (Array.isArray(rotation)) return rotation.forEach(r => reverseRotate(point, r));
+	  rotation = new CSG.Vector(rotation);
+	  rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
+	  let newPos = point;
+	  newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});
+	  newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
+	  newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
+	  return newPos;
+	}
+	
+	function transRotate (point, offset, rotation) {
+	  let newPos = rotate (offset, rotation);
+	  newPos.x += point.x;
+	  newPos.y += point.y;
+	  newPos.z += point.z;
+	  return newPos;
+	}
+	
+	function translate (point, offset) {
+	  if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+	  if (point instanceof CSG.Vertex) {
+	    const newPos = point.clone();
+	    newPos.pos.x += offset.x;
+	    newPos.pos.y += offset.y;
+	    newPos.pos.z += offset.z;
+	    return newPos;
+	
+	  } else {
+	    const newPos = point.clone();
+	    newPos.x += offset.x;
+	    newPos.y += offset.y;
+	    newPos.z += offset.z;
+	    return newPos;
+	  }
+	}
+	
+	function transRotateAll (points, offset, rotation) {
+	  for (let index = 0; index < points.length; index++) {
+	    points[index] = transRotate(points[index], offset, rotation);
+	  }
+	}
+	
+	function rotateAll (points, rotation) {
+	  const ret = [];
+	  for (let index = 0; index < points.length; index++) {
+	    ret[index] = rotate(points[index], rotation);
+	  }
+	  return ret;
+	}
+	
+	function reverseRotateAll (points, rotation) {
+	  const ret = [];
+	  for (let index = 0; index < points.length; index++) {
+	    ret[index] = reverseRotate(points[index], rotation);
+	  }
+	  return ret;
+	}
+	
+	function rotatePointAroundCenter(rotation, point, center, reverse) {
+	  if (Array.isArray(rotation)) return rotation.forEach(r => rotatePointAroundCenter(r, point, center, reverse));
+	  if (!(rotation instanceof Object)) return;
+	  center ||= {x:0, y:0, z:0};
+	  point.x -=  center.x;
+	  point.y -= center.y;
+	  point.z -= center.z;
+	  const rotated = reverse ? reverseRotate(point, rotation) : rotate(point, rotation);
+	  point.x =  center.x + rotated.x;
+	  point.y = center.y + rotated.y;
+	  point.z = center.z + rotated.z;
+	  return point;
+	}
+	
+	function rotatePointsAroundCenter(rotation, points, center, reverse) {
+	  for (let index = 0; index < points.length; index++) {
+	    rotatePointAroundCenter(rotation, points[index], center, reverse);
+	  }
+	  return points;
+	}
+	
+	CSG.printDrawString = (model, normals, center, scale) => {
+	  center ||= model.center();
+	  scale ||= 200;
+	  const str = `${normals.x.toDrawString('red', .001, center, scale)}\n` +
+	                `${normals.y.toDrawString('green', .001, center, scale)}\n` +
+	                `${normals.z.toDrawString('blue', .001, center, scale)}\n\n` +
+	                model.toDrawString();
+	
+	  console.log(str);
+	}
+	CSG.ArbitraryRotate = ArbitraryRotate;
+	CSG.rotatePointsAroundCenter = rotatePointsAroundCenter;
+	CSG.rotatePointAroundCenter = rotatePointAroundCenter;
+	CSG.transRotate = transRotate;
+	CSG.translate = translate;
+	CSG.rotateAll = rotateAll;
+	CSG.transRotateAll = transRotateAll;
+	CSG.reverseRotateAll = reverseRotateAll;
+	CSG.rotate = rotate;
+	CSG.reverseRotate = reverseRotate;
+	module.exports = CSG;
 	
 });
 
@@ -7855,6 +7933,10 @@ RequireJS.addFunction('./public/js/utils/test/tests/STL.js',
 function (require, exports, module) {
 	
 const STL = require('../../3d-modeling/STL.js');
+	const OrientationArrows = require('../../display/orientation-arrows.js');
+	const $t = require('../../$t.js');
+	$t.loadFunctions(require('../../../../../services/cabinet/generated/html-templates.js'));
+	
 	require('../../3d-modeling/csg');
 	require('../../utils');
 	const du = require('../../dom-utils');
@@ -7862,7 +7944,7 @@ const STL = require('../../3d-modeling/STL.js');
 	const addViewer = require('../../3d-modeling/viewer.js').addViewer;
 	
 	function addLink (model, name) {
-	  const stl = STL.fromCSG(model);
+	  const stl = STL.fromCSG(model, name);
 	  console.log(model.toDrawString());
 	  du.copy(model.toDrawString());
 	
@@ -7878,7 +7960,7 @@ const STL = require('../../3d-modeling/STL.js');
 	
 	function addLinks(modelOmodels, name) {
 	  if (modelOmodels instanceof CSG) addLink(modelOmodels, name);
-	  Object.keys(modelOmodels).forEach(k => addLink(modelOmodels[k], k));
+	  else Object.keys(modelOmodels).forEach(k => addLink(modelOmodels[k], k));
 	}
 	
 	const models = {};
@@ -7921,39 +8003,38 @@ const STL = require('../../3d-modeling/STL.js');
 	  let sbt = smallBackThickness;
 	  let supportCylRad = (13/32) * 2.54/2;
 	  let scr = supportCylRad;
-	  let notchThickness = .06;
-	  const cylinder = new CSG.cylinder({start: [0,0,0], end: [0,height,0], radius: width/2});
+	  let notchThickness = .08;
+	  let slices = 48;
+	  const cylinder = new CSG.cylinder({slices, start: [0,0,0], end: [0,height,0], radius: width/2});
 	  const glassCutter = new CSG.cube({radius: [width, height/2, glassThickness/2], center: [0,(height/2) - flapThickness, glassThickness/2]});
 	  const backNotchCutter = new CSG.cube({radius: [width/2, notchThickness, notchThickness]});
-	  backNotchCutter.rotate({x:45,y:0,z:0});
+	  // backNotchCutter.rotate({x:45,y:0,z:0});
 	  backNotchCutter.center({x:0, y:(height) - flapThickness, z: glassThickness})
-	  const wheelScrewCyl = new CSG.cylinder({radius: screwThickness/2 + .01, start: [0,0,wheelScrewCenterZ], end: [0,height,wheelScrewCenterZ]});
-	  const topScrewResess = new CSG.cylinder({radius: .8/2 + .1, start: [0,height - (7/32)*2.54/2, wheelScrewCenterZ], end: [0,height, wheelScrewCenterZ]});
-	  const bottomScrewResess = new CSG.cylinder({radius: .8/2 + .01, start: [0,(7/32)*2.54/2, wheelScrewCenterZ], end: [0,0, wheelScrewCenterZ]});
-	  const backScrewCyl = new CSG.cylinder({radius: 1.2/2 - .01, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
-	  const backScrewHole = new CSG.cylinder({radius: .4/2 + .01, start: [0,gsc[1], gsc[2] + .1], end: [0,gsc[1], 100]});
-	  const backScrewResess = new CSG.cylinder({radius: .8/2, start: [0,gsc[1], width/2], end: [0,gsc[1], width/2 - (1/8) * 2.54]});
-	  const backScrewWell = new CSG.cylinder({radius: .2/2, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
+	  const wheelScrewCyl = new CSG.cylinder({slices, radius: screwThickness/2 + .01, start: [0,0,wheelScrewCenterZ], end: [0,height,wheelScrewCenterZ]});
+	  const topScrewResess = new CSG.cylinder({slices, radius: .8/2 + .1, start: [0,height - (7/32)*2.54/2, wheelScrewCenterZ], end: [0,height, wheelScrewCenterZ]});
+	  const bottomScrewResess = new CSG.cylinder({slices, radius: .8/2 + .01, start: [0,(7/32)*2.54/2, wheelScrewCenterZ], end: [0,0, wheelScrewCenterZ]});
+	  const backScrewCyl = new CSG.cylinder({slices, radius: 1.09/2 - .01, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
+	  const backScrewHole = new CSG.cylinder({slices, radius: .4/2 + .01, start: [0,gsc[1], gsc[2] - 1], end: [0,gsc[1], 100]});
+	  const backScrewResess = new CSG.cylinder({slices, radius: .8/2, start: [0,gsc[1], width/2], end: [0,gsc[1], width/2 - (1/8) * 2.54]});
+	  const backScrewWell = new CSG.cylinder({slices, radius: .3, start: [0,gsc[1], -1], end: [0,gsc[1], gsc[2] - .2]});
 	  const wheelCavity = new CSG.cube({radius: [100, ((15/16)*2.54)/2 - .01, width/2 - sbt], center: [0, height/2, width/-2 + sbt/2]})
-	  const supportCylR = new CSG.cylinder({radius: scr, start: [width/2-scr, .635, 0], end: [width/2-scr, 2.54 + .635, 0]}).subtract(glassCutter);
-	  const supportCylL = new CSG.cylinder({radius: scr, start: [width/-2+scr, .635, 0], end: [width/-2+scr, 2.54 + .635, 0]}).subtract(glassCutter);
+	  const supportCylR = new CSG.cylinder({slices, radius: scr, start: [width/2-scr, .635, 0], end: [width/2-scr, 2.54 + .635, 0]}).subtract(glassCutter);
+	  const supportCylL = new CSG.cylinder({slices, radius: scr, start: [width/-2+scr, .635, 0], end: [width/-2+scr, 2.54 + .635, 0]}).subtract(glassCutter);
 	
 	  let supportSqR = new CSG.cube({radius: [scr,height/2,scr], center: [width/2-scr, height/2, scr/2]}).subtract(glassCutter);
 	  let supportSqL = new CSG.cube({radius: [scr,height/2,scr], center: [width/-2+scr, height/2, scr/2]}).subtract(glassCutter);
-	
 	
 	  const plierSlot = new CSG.cube({radius: [(3/16)*2.54/2, (7/32)*2.54/2, 5], center: [0,height,-5]});
 	  const backAngle = new CSG.cube({radius: [1.5*2.54/2, 1.5*2.54/2, .5/2], center: [0,0,0]});
 	  backAngle.rotate({x:-45});
 	  backAngle.translate([0,height,(width)/2.54+.1]);
-	  const model = cylinder.subtract(glassCutter)
+	  const crossSection = new CSG.cube({radius: [50,50,50], center: [0,0,50]});
+	  let body = cylinder.subtract(glassCutter)
 	    .subtract(wheelScrewCyl)
 	    .subtract(topScrewResess)
 	    .subtract(bottomScrewResess)
-	    .subtract(backScrewHole)
 	    .subtract(backScrewResess)
 	    .union(backScrewCyl)
-	    .subtract(backScrewWell)
 	    .subtract(wheelCavity)
 	    .union(supportCylR)
 	    .union(supportCylL)
@@ -7961,8 +8042,15 @@ const STL = require('../../3d-modeling/STL.js');
 	    .union(supportSqL)
 	    .subtract(backAngle)
 	    .subtract(plierSlot)
-	    .subtract(backNotchCutter);
-	  return model;
+	    .subtract(backNotchCutter)
+	    .subtract(backScrewWell)
+	    .subtract(backScrewHole)
+	  body.rotate({y:90});
+	  const pilotHole = new CSG.cylinder({slices, radius: .14, start: [0,gsc[1], -1], end: [0,gsc[1], gsc[2] + .2]});
+	  const dowel = backScrewCyl.intersect(backScrewHole.union(backScrewWell)).subtract(pilotHole);
+	  dowel.scale(.95);
+	  // body = body.subtract(crossSection);
+	  return {body, dowel};
 	}
 	
 	models['Rack'] =  (one)  => {
@@ -8181,10 +8269,180 @@ const STL = require('../../3d-modeling/STL.js');
 	  return bar;
 	}
 	
+	models['shifter boot bracket'] = (innerWidth, innerDepth, innerHeight, bracketWidth, bracketHeight,
+	                      innerLip, bracketThickness, topHoleDia, bottomHoleDia, champherAngle,
+	                      champherDepth, prongHeight, prongDia) => {
+	  innerWidth ||= 10;
+	  innerDepth ||= 13.75;
+	  innerHeight ||= 3;
+	  bracketWidth ||= 3.9;
+	  bracketHeight ||= 1.5;
+	  innerLip ||= 1;
+	  bracketThickness ||= .25;
+	  topHoleDia ||= 1;
+	  bottomHoleDia ||= 3*2.54/16;
+	  champherAngle ||= 45;
+	  champherDepth ||= 2;
+	  prongHeight ||= .9;
+	  prongDia ||= .3;
+	
+	  const bt = bracketThickness;
+	
+	  const insideCutout = new CSG.cube({demensions: [innerWidth, innerHeight, innerDepth]});
+	  const dbw = bracketWidth * 2;
+	  let bracket = new CSG.cube({demensions: [innerWidth+dbw, bracketHeight, innerDepth+dbw]});
+	  bracket.translate({x: 0, y: innerHeight/2-bracketHeight/2, z: 0});
+	  bracket = bracket.subtract(insideCutout);
+	
+	  const champerBracket = (innerLen, rotation, offset, direction, xOz) => {
+	    const champher = new CSG.cube({demensions: [champherDepth, champherDepth, 100]});
+	    let underCut = new CSG.cube({demensions: [champherDepth, champherDepth, innerLen]});
+	
+	    const x = xOz ? 'x' : 'z';
+	    const z = xOz ? 'z' : 'x';
+	    const depth = xOz ? innerDepth : innerWidth;
+	    const width = xOz ? innerWidth : innerDepth;
+	    const radius = 6;
+	    const hype = Math.sqrt((radius)*(radius)*2)/2
+	
+	    let innerMiter1 = new CSG.cube({radius});
+	    const innerOffset1 = new CSG.Vector(offset).clone();
+	    innerOffset1[z] = -depth/2 - hype;
+	    innerOffset1[x] = direction * (-width/2 + hype);
+	    innerMiter1.rotate({y:-45});
+	    innerMiter1.translate(innerOffset1);
+	
+	    let innerMiter2 = new CSG.cube({radius});
+	    const innerOffset2 = new CSG.Vector(offset).clone();
+	    innerOffset2[z] = depth/2 + hype;
+	    innerOffset2[x] = direction * (-width/2 + hype);
+	    innerMiter2.rotate({y:-45});
+	    innerMiter2.translate(innerOffset2);
+	
+	
+	    champher.rotate(rotation);
+	    underCut.rotate(rotation);
+	    champher.translate(offset);
+	    underCut.translate(offset);
+	    const translation = {y: -Math.sin(Math.toRadians(45)) * (bt + champherDepth), x:0, z:0};
+	    if (xOz) translation.x = direction * Math.cos(Math.toRadians(45)) * (bt + champherDepth);
+	    else translation.z = direction * Math.cos(Math.toRadians(45)) * (bt + champherDepth);
+	    underCut.translate(translation);
+	    underCut = underCut.subtract(innerMiter1).subtract(innerMiter2);
+	    bracket = bracket.subtract(champher).subtract(underCut);
+	  }
+	
+	  let rotation = {z:champherAngle};
+	  let offset = {x: innerWidth/2 + bracketWidth, y: innerHeight/2, z:0};
+	  champerBracket(innerDepth+bracketWidth*2, rotation, offset, -1, true);
+	
+	  rotation = {z:-champherAngle};
+	  offset = {x: -(innerWidth/2 + bracketWidth), y: innerHeight/2, z:0};
+	  champerBracket(innerDepth+bracketWidth*2, rotation, offset, 1, true);
+	
+	  rotation = [{y: 90}, {x:-champherAngle}];
+	  offset = {z: -(innerDepth/2 + bracketWidth), y: innerHeight/2, x:0};
+	  champerBracket(innerWidth+bracketWidth*2, rotation, offset, 1, false);
+	
+	  rotation = [{y: 90}, {x:champherAngle}];
+	  offset = {z: innerDepth/2 + bracketWidth, y: innerHeight/2, x:0};
+	  champerBracket(innerWidth+bracketWidth*2, rotation, offset, -1, false);
+	
+	  const dil = innerLip * 2;
+	  const dbt = bracketThickness * 2
+	  const dilAdbt = dil + dbt;
+	  let squareSupport = new CSG.cube({demensions: [innerWidth + dilAdbt, innerHeight, innerDepth+dilAdbt]});
+	  const squareSupportCutter = new CSG.cube({demensions: [innerWidth + dil, innerHeight, innerDepth+dil]});
+	  squareSupportCutter.translate({x:0,y:-bracketThickness,z:0});
+	  let model = bracket.union(squareSupport).subtract(squareSupportCutter).subtract(insideCutout);
+	
+	
+	  const slices = 48;
+	  const hole = new CSG.cylinder({slices, start: [0,-innerHeight/2 + bt, 0], end: [0,100,0], radius: topHoleDia/2});
+	  const screwWell = new CSG.cylinder({slices, start: [0,-innerHeight/2, 0], end: [0,innerHeight/2,0], radius: topHoleDia/2 + bt});
+	  const pilotHole = new CSG.cylinder({slices, start: [0,-100, 0], end: [0,100,0], radius: bottomHoleDia/2});
+	
+	  offset = {x: innerWidth/2 + topHoleDia/2 + dbt/2, z: innerDepth/2 + topHoleDia/2 + dbt/2, y:0};
+	  hole.translate(offset);
+	  screwWell.translate(offset);
+	  pilotHole.translate(offset);
+	  model = model.union(screwWell).subtract(hole).subtract(pilotHole);
+	
+	  offset = {x: -(innerWidth + topHoleDia + dbt), z:0 , y:0};
+	  hole.translate(offset);
+	  screwWell.translate(offset);
+	  pilotHole.translate(offset);
+	  model = model.union(screwWell).subtract(hole).subtract(pilotHole);
+	
+	  offset = {x: 0, z: -(innerDepth + topHoleDia + dbt), y:0};
+	  hole.translate(offset);
+	  screwWell.translate(offset);
+	  pilotHole.translate(offset);
+	  model = model.union(screwWell).subtract(hole).subtract(pilotHole);
+	
+	  offset = {x: innerWidth + topHoleDia + dbt, z:0 , y:0};
+	  hole.translate(offset);
+	  screwWell.translate(offset);
+	  pilotHole.translate(offset);
+	  model = model.union(screwWell).subtract(hole).subtract(pilotHole);
+	
+	  let start = [0, innerHeight/2 - bracketThickness, 0];
+	  let end = [0, innerHeight/2 - bracketThickness - 2*prongHeight/3, 0];
+	  let prong = new CSG.cylinder({slices, start, end, radius: prongDia/2});
+	  start = end;
+	  end = [0, innerHeight/2 - bracketThickness - prongHeight, 0];
+	  let coneTip = new CSG.cone({slices, start, end, radius: prongDia/2, color: 'red'});
+	  let bluntTip = new CSG.cube({radius:.1, center: end});
+	  prong = prong.union(coneTip.subtract(bluntTip));
+	
+	  const y = prong.center().y;
+	  const x = 5.2;
+	  const z = 7.075;
+	  const prongPoints = [
+	    {x: -2.95, y, z},
+	    {x: 1.65, y, z},
+	    {x: 2.95, y, z},
+	    {x, y, z: -5.24},
+	    {x, y, z: -1.785},
+	    {x, y, z: 1.785},
+	    {x, y, z: 5.24},
+	    {x: 2.95, y, z: -z},
+	    {x: -2.95, y, z: -z},
+	    {x: -x, y, z: 5.24},
+	    {x: -x, y, z: 1.785},
+	    {x: -x, y, z: -1.785},
+	    {x: -x, y, z: -5.24}
+	  ];
+	
+	  prongPoints.forEach(p => {
+	    prong.center(p);
+	    model = model.union(prong);
+	  });
+	
+	  let prongClip = new CSG.cylinder({slices, radius: .5, start: [0,0,0], end: [0,.3,0]});
+	  let splitCone = new CSG.cone({slices, radius: .5, start: [0,0,0], end: [0,.6,0]});
+	  // prongClip = prongClip.subtract(splitCone);
+	  const splitConeCavity = new CSG.cone({slices, radius: .4, start: [0,0,0], end: [0,.4,0]});
+	  splitCone = splitCone.subtract(splitConeCavity);
+	  splitter = new CSG.cube({demensions: [10, 10, .08]});
+	  splitCone = splitCone.subtract(splitter);
+	  splitter.rotate({y:60});
+	  splitCone = splitCone.subtract(splitter);
+	  splitter.rotate({y:60});
+	  splitCone = splitCone.subtract(splitter);
+	  // prongClip = splitCone.union(prongClip);
+	  const prongHole = new CSG.cylinder({slices, radius: prongDia/2 - .01, start: [0,-10,0], end: [0,10,0]});
+	  prongClip = prongClip.subtract(prongHole);
+	  prongClip.rotate({x:90})
+	
+	  return prongClip;
+	}
+	
 	const cnt = du.create.element('div');
 	const controls = du.create.element('div', {style: 'float: left'});
-	const display = du.create.element('div', {style: 'float: right', id: 'display'});
-	document.body.append(cnt);cnt.append(controls,display);
+	const display = du.create.element('div', {id: 'stl-three-d-model-cnt'});
+	const orientCnt = du.create.element('div', {class: 'orientation-controls'});
+	document.body.append(cnt);cnt.append(controls,display);display.append(orientCnt);
 	
 	const select = document.createElement('select');
 	select.innerHTML = Object.keys(models).map(k => `<option>${k}</option>`);
@@ -8201,14 +8459,24 @@ const STL = require('../../3d-modeling/STL.js');
 	  args = args.map(a => Boolean.is(a) ? a : Number.parseFloat(a));
 	  return models[select.value](...args);
 	}
-	viewer = new Viewer(new CSG(), 500, 500, 50);
 	
-	const updateModel = () => {
+	const getModel = () => {
 	  const modelOmodels = getSelected();
 	  modelList = modelOmodels instanceof CSG ? [modelOmodels] : Object.values(modelOmodels);
 	  const model = new CSG();
 	  modelList.forEach(m => model.polygons.concatInPlace(m.polygons));
-	  console.log(modelList.map(m => m.toDrawString(String.color.next())).join('\n\n'));
+	  // console.log(modelList.map(m => m.toDrawString(String.color.next())).join('\n\n'));
+	  model.scale(10);
+	  return model;
+	}
+	
+	viewer = new Viewer(new CSG(), 500, 500, 50);
+	const orientSelector = `#stl-three-d-model-cnt .orientation-controls`;
+	const orientArrows = OrientationArrows.forCSG(orientSelector, viewer, getModel);
+	
+	
+	const updateModel = () => {
+	  const model = getModel();
 	  viewer.mesh = model.toMesh();
 	  viewer.gl.ondraw();
 	}
@@ -8226,7 +8494,7 @@ const STL = require('../../3d-modeling/STL.js');
 	  addLinks(getSelected(), select.value);
 	}
 	
-	select.value = 'screen door latch';
+	select.value = 'shifter boot bracket';
 	
 	du.on.match('change', 'input', updateModel);
 	
@@ -8234,7 +8502,7 @@ const STL = require('../../3d-modeling/STL.js');
 	downloadBtn.addEventListener('click', download);
 	updateArgs();
 	
-	addViewer(viewer, '#display');
+	addViewer(viewer, '#stl-three-d-model-cnt');
 	
 });
 
@@ -9687,9 +9955,9 @@ function (require, exports, module) {
 	});
 	
 	const colors = [
-	  'indianred', 'gray', 'fuchsia', 'lime', 'black', 'lightsalmon', 'red',
-	  'maroon', 'yellow', 'olive', 'lightcoral', 'green', 'aqua', 'white',
-	  'teal', 'darksalmon', 'blue', 'navy', 'salmon', 'silver', 'purple'
+	  'blue', 'red', 'yellow', 'lime', 'gray', 'indianred', 'fuchsia', 'black', 'lightsalmon',
+	  'maroon', 'olive', 'lightcoral', 'green', 'aqua', 'white',
+	  'teal', 'darksalmon', 'navy', 'salmon', 'silver', 'purple'
 	];
 	const colorRGBs = {indianred: [205, 92, 92],gray: [128, 128, 128],fuchsia: [255, 0, 255],
 	  lime: [0, 255, 0],black: [0, 0, 0],lightsalmon: [255, 160, 122],red: [255, 0, 0],
@@ -11335,6 +11603,4075 @@ const frag = document.createDocumentFragment();
 	try {
 	  module.exports = du;
 	} catch (e) {}
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/display/orientation-arrows.js',
+function (require, exports, module) {
+	
+const $t = require('../../../../public/js/utils/$t.js');
+	const du = require('../../../../public/js/utils/dom-utils.js');
+	const Lookup = require('../../../../public/js/utils/object/lookup.js');
+	const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+	
+	class OrientationArrows extends Lookup {
+	  constructor(parentSelector) {
+	    super();
+	    const navId = `orientation-arrows-${this.id()}`;
+	    this.navId = () => navId;
+	    this.space = () => '&nbsp;&nbsp;';
+	    CustomEvent.all(this, 'up', 'right', 'down', 'left', 'center');
+	
+	    const elem = du.find(parentSelector);
+	    if (elem === undefined) throw new Error(`No container found: '${parentSelector}'`);
+	    elem.innerHTML = OrientationArrows.template.render(this);
+	  }
+	}
+	
+	OrientationArrows.template = new $t('orientation-arrows');
+	
+	du.on.match('click', '.orient-arrows>tbody>tr>td[dir]', function (target) {
+	  const tableElem = du.find.up('[l-id]', target);
+	  if (!tableElem) return;
+	  const id = tableElem.getAttribute('l-id');
+	  const instance = OrientationArrows.get(id);
+	  const direction = target.getAttribute('dir');
+	  switch (direction) {
+	    case 'u':
+	      instance.trigger.up(target, {direction, instance});
+	      break;
+	    case 'r':
+	      instance.trigger.right(target, {direction, instance});
+	      break;
+	    case 'd':
+	      instance.trigger.down(null, {direction, instance});
+	      break;
+	    case 'l':
+	      instance.trigger.left(target, {direction, instance});
+	      break;
+	    case 'c':
+	      instance.trigger.center(target, {direction, instance});
+	      break;
+	  }
+	});
+	
+	OrientationArrows.forCSG = (parentSelector, viewerOgetter, modelOgetter) => {
+	  let lastViewId;
+	  const getViewer = viewerOgetter instanceof Function ? viewerOgetter : () => viewerOgetter;
+	  const getModel = modelOgetter instanceof Function ? modelOgetter : () => modelOgetter;
+	  function centerOnObj(x,y,z, viewId) {
+	    const model = getModel();
+	    const center = model ? model.center() : {x:0, y:0, z:0};
+	    center.x += 200 * y;
+	    center.y += -200 * x;
+	    center.z += 100;
+	    const rotation = {x: x*90, y: y*90, z: z*90};
+	
+	    lastViewId = viewId;
+	    return [center, rotation];
+	  }
+	
+	  let viewer;
+	  const orientArrows = new OrientationArrows(parentSelector);
+	  orientArrows.on.center(() =>
+	    (viewer = getViewer()) && viewer.viewFrom(...(lastViewId === 'front' ?
+	                    centerOnObj(2,0,2, 'back') : centerOnObj(0,0, 0, 'front'))));
+	  orientArrows.on.up(() =>
+	    (viewer = getViewer()) && viewer.viewFrom(...centerOnObj(1, 0,0)));
+	  orientArrows.on.down(() =>
+	    (viewer = getViewer()) && viewer.viewFrom(...centerOnObj(-1,0,0)));
+	  orientArrows.on.left(() =>
+	    (viewer = getViewer()) && viewer.viewFrom(...centerOnObj(0,1,0)));
+	  orientArrows.on.right(() =>
+	    (viewer = getViewer()) && viewer.viewFrom(...centerOnObj(0,-1,0)));
+	
+	  return orientArrows;
+	}
+	
+	module.exports = OrientationArrows;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/expression-definition.js',
+function (require, exports, module) {
+	
+
+	
+	
+	let idCount = 0;
+	class ExprDef {
+	  constructor(name, options, notify, stages, alwaysPossible) {
+	    this.id = idCount++;
+	    let id = this.id;
+	    let string;
+	    let modified = '';
+	    let start;
+	    let end;
+	    alwaysPossible = alwaysPossible ? alwaysPossible : [];
+	    stages = stages ? stages : {};
+	    let currStage = stages;
+	
+	    function getRoutes(prefix, stage) {
+	      let routes = [];
+	      let keys = Object.keys(stage);
+	      for (let index = 0; index < keys.length; index += 1) {
+	        const key = keys[index];
+	        if (key !== '_meta') {
+	          let newPrefix;
+	          if (prefix) {
+	            newPrefix = `${prefix}.${key}`;
+	          } else {
+	            newPrefix = key;
+	          }
+	          const deepRoutes = getRoutes(newPrefix, stage[key]);
+	          if (deepRoutes.length > 0) {
+	            routes = routes.concat(deepRoutes);
+	          }
+	          if (stage[key]._meta && stage[key]._meta.end) {
+	            routes.push(newPrefix + '.end');
+	          }
+	          if (stage[key]._meta && stage[key]._meta.repeat) {
+	            routes.push(newPrefix + '.repeat');
+	          }
+	        }
+	      }
+	      return routes;
+	    }
+	
+	    this.always = function () {
+	      for (let index = 0; index < arguments.length; index += 1) {
+	        alwaysPossible.push(arguments[index]);
+	      }
+	    };
+	    this.getAlways = function (exprDef) {return alwaysPossible;};
+	
+	    this.allRoutes = function () {
+	      return getRoutes(null, stages);
+	    }
+	
+	    function getNotice (exprDef) {
+	      let isInAlways = false;
+	      alwaysPossible.map(function (value) {if (value.getName() === exprDef.getName()) isInAlways = true;});
+	      if (isInAlways) return;
+	      if (!exprDef.closed()) {
+	        if (currStage[exprDef.getName()] === undefined) {
+	          throw new Error(`Invalid Stage Transition ${currStage._meta.expr.getName()} -> ${exprDef.getName()}\n${currStage._meta.expr.allRoutes()}`)
+	        }
+	        currStage = currStage[exprDef.getName()];
+	      }
+	    }
+	    this.getNotice = getNotice;
+	
+	    function getName () {return name;};
+	    this.getName = getName;
+	    this.onClose = function (start, end) {
+	      return function (str, start, end) {
+	        if (notify) notify(this);
+	        options.onClose(str, start, end);
+	      }
+	    }
+	
+	    function setMeta(targetNodes, attr, value) {
+	      return function () {
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          targetNodes[lIndex]._meta[attr] = value;
+	        }
+	      }
+	    }
+	
+	    function then (targetNodes) {
+	      return function () {
+	        const createdNodes = [];
+	        for (let lIndex = 0; lIndex < targetNodes.length; lIndex += 1) {
+	          const targetNode = targetNodes[lIndex];
+	          for (let index = 0; index < arguments.length; index += 1) {
+	            const exprDef = arguments[index];
+	            if (!exprDef instanceof ExprDef) {
+	              throw new Error(`Argument is not an instanceof ExprDef`);
+	            }
+	            const nextExpr = exprDef.clone(getNotice);
+	            if (targetNode[nextExpr.getName()] === undefined) {
+	              targetNode[nextExpr.getName()] = {
+	                _meta: {
+	                  expr: nextExpr
+	                }
+	              };
+	            }
+	            createdNodes.push(targetNode[nextExpr.getName()]);
+	          }
+	        }
+	        return {
+	          then: then(createdNodes),
+	          repeat: setMeta(createdNodes, 'repeat', true),
+	          end: setMeta(createdNodes, 'end', true),
+	        };
+	      }
+	    }
+	
+	    this.if = function () {return then([stages]).apply(this, arguments);}
+	
+	    function isEscaped(str, index) {
+	      if (options.escape === undefined) {
+	        return false;
+	      }
+	      let count = -1;
+	      let firstIndex, secondIndex;
+	      do {
+	        count += 1;
+	        firstIndex = index - (options.escape.length * (count + 1));
+	        secondIndex = options.escape.length;
+	      } while (str.substr(firstIndex, secondIndex) === options.escape);
+	      return count % 2 == 0;
+	    }
+	
+	    function foundCall(onFind, sub) {
+	      if ((typeof notify) === 'function') {
+	        notify(this);
+	      }
+	      if ((typeof onFind) === 'function') {
+	        return onFind(sub);
+	      } else {
+	        return sub;
+	      }
+	    }
+	
+	    this.find = function (str, index) {
+	      let startedThisCall = false;
+	      let needle = options.closing;
+	      let starting = false;
+	      if (start === undefined) {
+	        needle = options.opening;
+	        starting = true;
+	      }
+	      const sub = str.substr(index);
+	      let needleLength;
+	      if (needle instanceof RegExp) {
+	        const match = sub.match(needle);
+	        if (match && match.index === 0) {
+	          needleLength = match[0].length;
+	        }
+	      } else if ((typeof needle) === 'string') {
+	        if (sub.indexOf(needle) === 0 && !isEscaped(str, index))
+	          needleLength = needle.length;
+	      } else if (needle === undefined || needle === null) {
+	        needleLength = 0;
+	      } else {
+	        throw new Error('Opening or closing type not supported. Needs to be a RegExp or a string');
+	      }
+	      needleLength += options.tailOffset ? options.tailOffset : 0;
+	      let changes = '';
+	      if (start === undefined && starting && (needleLength || needle === null)) {
+	        string = str;
+	        start = index;
+	        startedThisCall = true;
+	        if (needle === null) {
+	          if ((typeof notify) === 'function') {
+	            notify(this);
+	          }          return {index, changes}
+	        } else {
+	          changes += foundCall.apply(this, [options.onOpen, str.substr(start, needleLength)]);
+	        }
+	      }
+	      if ((!startedThisCall && needleLength) ||
+	            (startedThisCall && options.closing === undefined) ||
+	            (!startedThisCall && options.closing === null)) {
+	        if (str !== string) {
+	          throw new Error ('Trying to apply an expression to two different strings.');
+	        }
+	        end = index + needleLength;
+	        if (options.closing === null) {
+	          return {index, changes}
+	        }
+	        if (!startedThisCall) {
+	          changes += foundCall.apply(this, [options.onClose, str.substr(end - needleLength, needleLength)]);
+	        }
+	        return { index: end, changes };
+	      }
+	
+	      return start !== undefined ? { index: start + needleLength, changes } :
+	                      { index: -1, changes };
+	    }
+	
+	    this.clone = function (notify) {
+	      return new ExprDef(name, options, notify, stages, alwaysPossible);
+	    };
+	    this.name = this.getName();
+	    this.canEnd = function () {return (currStage._meta && currStage._meta.end) || options.closing === null};
+	    this.endDefined = function () {return options.closing !== undefined && options.closing !== null};
+	    this.location = function () {return {start, end, length: end - start}};
+	    this.closed = function () {return end !== undefined;}
+	    this.open = function () {return start !== undefined;}
+	    this.next =  function () {
+	      const expressions = [];
+	      if (currStage._meta && currStage._meta.repeat) {
+	        currStage = stages;
+	      }
+	      Object.values(currStage).map(
+	        function (val) {if (val._meta) expressions.push(val._meta.expr);}
+	      )
+	      return alwaysPossible.concat(expressions);
+	    };
+	  }
+	}
+	
+	function parse(exprDef, str) {
+	  exprDef = exprDef.clone();
+	  let index = 0;
+	  let modified = '';
+	  const breakDown = [];
+	  const stack = [];
+	
+	  function topOfStack() {
+	    return stack[stack.length - 1];
+	  }
+	
+	  function closeCheck(exprDef) {
+	    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
+	      let result = exprDef.find(str, index);
+	      if (result.index) {
+	        modified += result.changes;
+	        return result.index;
+	      }
+	    }
+	  }
+	
+	  function checkArray(exprDef, array) {
+	    if (exprDef.endDefined()) {
+	      let nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
+	      const childExprDef = array[aIndex].clone(exprDef.getNotice);
+	      const result = childExprDef.find(str, index);
+	      if (result.index !== -1) {
+	        modified += result.changes;
+	        if (childExprDef.closed()) {
+	          breakDown.push(childExprDef);
+	        } else {
+	          stack.push(childExprDef);
+	        }
+	        return result.index;
+	      }
+	    }
+	    if (exprDef.canEnd()) {
+	      nextIndex = closeCheck(exprDef);
+	      if (nextIndex) return nextIndex;
+	    }
+	    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
+	  }
+	
+	  function open(exprDef, index) {
+	    const always = exprDef.getAlways();
+	    while (!exprDef.open()) {
+	      let result = exprDef.find(str, index);
+	      modified += result.changes;
+	      if(result.index === -1) {
+	        let newIndex = checkArray(exprDef, always);
+	        index = newIndex;
+	      } else {
+	        if (exprDef.closed()) {
+	          breakDown.push(exprDef);
+	        } else {
+	          stack.push(exprDef);
+	        }
+	        index = result.index;
+	      }
+	    }
+	    return index;
+	  }
+	
+	  let loopCount = 0;
+	  index = open(exprDef, index);
+	  progress = [-3, -2, -1];
+	  while (topOfStack() !== undefined) {
+	    const tos = topOfStack();
+	    if (progress[0] === index) {
+	      throw new Error(`ExprDef stopped making progress`);
+	    }
+	    let stackIds = '';
+	    let options = '';
+	    stack.map(function (value) {stackIds+=value.getName() + ','});
+	    tos.next().map(function (value) {options+=value.getName() + ','})
+	    index = checkArray(tos, tos.next());
+	    if (tos.closed()) {
+	      stack.pop();
+	    }
+	    loopCount++;
+	  }
+	  // if (index < str.length) {
+	  //   throw new Error("String not fully read");
+	  // }
+	  return modified;
+	}
+	
+	
+	ExprDef.parse = parse;
+	
+	if ((typeof module) !== 'undefined')
+	  module.exports = ExprDef;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/$t.js',
+function (require, exports, module) {
+	
+
+	
+	const moduleExists = (typeof module) !== 'undefined';
+	
+	if (moduleExists) {
+	CustomEvent = require('./custom-event');
+	ExprDef = require('./expression-definition');
+	}
+	
+	class $t {
+		constructor(template, id, selector) {
+			if (selector) {
+				CustomEvent.all(this, 'after.render', 'before.render');
+			}
+	
+			function varReg(prefix, suffix) {
+			  const vReg = '([a-zA-Z_\\$][a-zA-Z0-9_\\$]*)';
+			  prefix = prefix ? prefix : '';
+			  suffix = suffix ? suffix : '';
+			  return new RegExp(`${prefix}${vReg}${suffix}`)
+			};
+	
+			function replace(needleRegEx, replaceStr, exceptions) {
+			  return function (sub) {
+			    if (!exceptions || exceptions.indexOf(sub) === -1) {
+			      return sub.replace(needleRegEx, replaceStr)
+			    } else {
+			      return sub;
+			    }
+			  }
+			}
+	
+			const relationalProps = {opening: /((!==|===|!=|==|\<|\>|\<\=|\>\=|\|\||\||&&|&))/};
+	    const signProps = {opening: /([-+\!])/};
+			const ternaryProps = {opening: /\?/};
+			const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
+	      		const ignoreProps = {opening: /new \$t\(.*?\).render\(.*?, (.*?), get\)|\$t\.clean\(.*?\)/};
+			const commaProps = {opening: /,/};
+			const colonProps = {opening: /:/};
+			const multiplierProps = {opening: /([-+*\/%](=|))/};
+			const stringProps = {opening: /('|"|`)(\1|.*?([^\\]((\\\\)*?|[^\\])(\1)))/};
+			const spaceProps = {opening: /\s{1}/};
+			const numberProps = {opening: /([0-9]*((\.)[0-9]{1,})|[0-9]{1,})/};
+			const objectProps = {opening: '{', closing: '}'};
+			const objectLabelProps = {opening: varReg(null, '\\:')};
+			const groupProps = {opening: /\(/, closing: /\)/};
+			const expressionProps = {opening: null, closing: null};
+			const attrProps = {opening: varReg('(\\.', '){1,}')};
+	
+			// const funcProps = {
+			//   opening: varReg(null, '\\('),
+			//   onOpen: replace(varReg(null, '\\('), 'get("$1")('),
+			//   closing: /\)/
+			// };
+			const arrayProps = {
+			  opening: varReg(null, '\\['),
+			  onOpen: replace(varReg(null, '\\['), 'get("$1")['),
+			  closing: /\]/
+			};
+			const funcRefProps = {
+				opening: /\[|\(/,
+				closing: /\]|\)/
+			};
+			const memberRefProps = {
+				opening: varReg('\\.', ''),
+			};
+			const variableProps = {
+			  opening: varReg(),
+			  onOpen: replace(varReg(), 'get("$1")'),
+			};
+			const objectShorthandProps = {
+			  opening: varReg(),
+			  onOpen: replace(varReg(), '$1: get("$1")'),
+			};
+	
+	
+			const expression = new ExprDef('expression', expressionProps);
+			const ternary = new ExprDef('ternary', ternaryProps);
+			const relational = new ExprDef('relational', relationalProps);
+			const comma = new ExprDef('comma', commaProps);
+			const colon = new ExprDef('colon', colonProps);
+			const attr = new ExprDef('attr', attrProps);
+			// const func = new ExprDef('func', funcProps);
+			const funcRef = new ExprDef('funcRef', funcRefProps);
+			const memberRef = new ExprDef('memberRef', memberRefProps);
+			const string = new ExprDef('string', stringProps);
+			const space = new ExprDef('space', spaceProps);
+			const keyWord = new ExprDef('keyWord', keyWordProps);
+			const group = new ExprDef('group', groupProps);
+			const object = new ExprDef('object', objectProps);
+			const array = new ExprDef('array', arrayProps);
+			const number = new ExprDef('number', numberProps);
+			const multiplier = new ExprDef('multiplier', multiplierProps);
+			const sign = new ExprDef('sign', signProps);
+			const ignore = new ExprDef('ignore', ignoreProps);
+			const variable = new ExprDef('variable', variableProps);
+			const objectLabel = new ExprDef('objectLabel', objectLabelProps);
+			const objectShorthand = new ExprDef('objectShorthand', objectShorthandProps);
+	
+			expression.always(space, ignore, keyWord);
+			expression.if(string, number, group, array, variable, funcRef, memberRef)
+			      .then(multiplier, relational, sign, group)
+			      .repeat();
+			expression.if(string, group, array, variable, funcRef, memberRef)
+						.then(attr)
+			      .then(multiplier, relational, sign, expression, funcRef, memberRef)
+						.repeat();
+			expression.if(string, group, array, variable, funcRef, memberRef)
+						.then(attr)
+						.end();
+	
+			funcRef.if(expression).then(comma).repeat();
+			funcRef.if(expression).end();
+			memberRef.if(expression).then(comma).repeat();
+			memberRef.if(expression).end();
+	
+	    expression.if(relational)
+			      .then(expression)
+			      .then(multiplier, relational, sign, group)
+			      .repeat();
+			expression.if(sign)
+			      .then(expression)
+			      .then(multiplier, relational, sign, group)
+			      .repeat();
+			expression.if(string, number, group, array, variable)
+			      .then(ternary)
+			      .then(expression)
+			      .then(colon)
+			      .then(expression)
+			      .end();
+			expression.if(ternary)
+			      .then(expression)
+			      .then(colon)
+			      .then(expression)
+			      .end();
+			expression.if(object, string, number, group, array, variable)
+			      .end();
+			expression.if(sign)
+			      .then(number)
+			      .end();
+	
+			object.always(space, ignore, keyWord);
+			object.if(objectLabel).then(expression).then(comma).repeat();
+			object.if(objectShorthand).then(comma).repeat();
+			object.if(objectLabel).then(expression).end();
+			object.if(objectShorthand).end();
+	
+			group.always(space, ignore, keyWord);
+			group.if(expression).then(comma).repeat();
+			group.if(expression).end();
+	
+			array.always(space, ignore, keyWord);
+			array.if(expression).then(comma).repeat();
+			array.if(expression).end();
+	
+			function getter(scope, parentScope) {
+				parentScope = parentScope || function () {return undefined};
+				function get(name) {
+					if (name === 'scope') return scope;
+					const split = new String(name).split('.');
+	        if (split.length === 0) return currObj[split]
+					let currObj = scope;
+					for (let index = 0; currObj != undefined && index < split.length; index += 1) {
+						currObj = currObj[split[index]];
+					}
+					if (currObj !== undefined) return currObj;
+					const parentScopeVal = parentScope(name);
+					if (parentScopeVal !== undefined) return parentScopeVal;
+	        else {
+	          const globalVal = $t.global(name);
+	          return globalVal === undefined ? '' : globalVal;
+	        }
+				}
+				return get;
+			}
+	
+			function defaultArray(elemName, get) {
+				let resp = '';
+				for (let index = 0; index < get('scope').length; index += 1) {
+					if (elemName) {
+						const obj = {};
+						obj.$index = index;
+						obj[elemName] = get(index);
+						resp += new $t(template).render(obj, undefined, get);
+					} else {
+						const parentScope = getter({$index: index}, get);
+						resp += new $t(template).render(get(index), undefined, parentScope);
+					}
+				}
+				return `${resp}`;
+			}
+	
+			function arrayExp(varName, get) {
+				varName = varName.trim();
+				const array = get('scope');
+				let built = '';
+				for (let index = 0; index < array.length; index += 1) {
+					const obj = {};
+					obj[varName] = array[index];
+					obj.$index = index;
+					built += new $t(template).render(obj, undefined, get);
+				}
+				return built;
+			}
+	
+			function itOverObject(varNames, get) {
+				const match = varNames.match($t.objectNameReg);
+				const keyName = match[1];
+				const valueName = match[2];
+				const obj = get('scope');
+				const keys = Object.keys(obj);
+				const isArray = Array.isArray(obj);
+				let built = '';
+				for (let index = 0; index < keys.length; index += 1) {
+					let key = keys[index];
+					if (!isArray || key.match(/^[0-9]{1,}$/)) {
+						if (isArray) key = Number.parseInt(key);
+						const childScope = {};
+						childScope[keyName] = key;
+						childScope[valueName] = obj[key];
+						childScope.$index = index;
+						built += new $t(template).render(childScope, undefined, get);
+					}
+				}
+	      return built;
+			}
+	
+			function rangeExp(rangeItExpr, varName, get) {
+				const match = rangeItExpr.match($t.rangeItExpReg);
+				const elemName = varName;
+				let startIndex = (typeof match[2]) === 'number' ||
+							match[1].match(/^[0-9]*$/) ?
+							match[1] : get(`${match[2]}`);
+				let endIndex = (typeof match[3]) === 'number' ||
+							match[2].match(/^[0-9]*$/) ?
+							match[2] : get(`${match[3]}`);
+				if (((typeof startIndex) !== 'string' &&
+								(typeof	startIndex) !== 'number') ||
+									(typeof endIndex) !== 'string' &&
+									(typeof endIndex) !== 'number') {
+										throw Error(`Invalid range '${rangeItExpr}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+	
+				try {
+					startIndex = Number.parseInt(startIndex);
+				} catch (e) {
+					throw Error(`Invalid range '${rangeItExpr}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+				try {
+					endIndex = Number.parseInt(endIndex);
+				} catch (e) {
+					throw Error(`Invalid range '${rangeItExpr}' evaluates to '${startIndex}..${endIndex}'`);
+				}
+	
+				let index = startIndex;
+				let built = '';
+				while (true) {
+					let increment = 1;
+					if (startIndex > endIndex) {
+						if (index <= endIndex) {
+							break;
+						}
+						increment = -1;
+					} else if (index >= endIndex) {
+						break;
+					}
+					const obj = {$index: index};
+					obj[elemName] = index;
+					built += new $t(template).render(obj, undefined, get);
+					index += increment;
+				}
+				return built;
+			}
+	
+			function evaluate(get) {
+				if ($t.functions[id]) {
+					try {
+						return $t.functions[id](get, $t);
+					} catch (e) {
+					  console.error(e);
+					}
+				} else {
+					return eval($t.templates[id])
+				}
+			}
+	
+			function type(scope, expression) {
+	      const noExpression = expression === undefined || expression === null || expression === '';
+				if ((typeof scope) === 'string' && scope.match($t.rangeAttemptExpReg)) {
+					if (scope.match($t.rangeItExpReg)) {
+						return 'rangeExp'
+					}
+					return 'rangeExpFormatError';
+				} else if (Array.isArray(scope)) {
+					if (noExpression) {
+						return 'defaultArray';
+					} else if (expression.match($t.nameScopeExpReg)) {
+						return 'nameArrayExp';
+					}
+				}
+	
+				if ((typeof scope) === 'object') {
+					if (noExpression) {
+						return 'defaultObject';
+					} else if (expression.match($t.objectNameReg)){
+						return 'itOverObject';
+					} else if (expression.match($t.arrayNameReg)){
+						return 'arrayExp';
+					} else {
+						return 'invalidObject';
+					}
+				} else {
+					return 'defaultObject';
+				}
+			}
+	
+			function render(scope, varName, parentScope) {
+	      if (scope === undefined) return '';
+				let rendered = '';
+				const get = getter(scope, parentScope);
+				switch (type(scope, varName)) {
+					case 'rangeExp':
+						rendered = rangeExp(scope, varName, get);
+						break;
+					case 'rangeExpFormatError':
+						throw new Error(`Invalid range itteration expression "${varName}"`);
+					case 'defaultArray':
+						rendered = defaultArray(varName, get);
+						break;
+					case 'nameArrayExp':
+						rendered = defaultArray(varName, get);
+						break;
+					case 'arrayExp':
+						rendered = arrayExp(varName, get);
+						break;
+					case 'invalidArray':
+						throw new Error(`Invalid iterative expression for an array "${varName}"`);
+					case 'defaultObject':
+						rendered = evaluate(get);
+						break;
+					case 'itOverObject':
+						rendered = itOverObject(varName, get);
+						break;
+					case 'invalidObject':
+						throw new Error(`Invalid iterative expression for an object "${varName}"`);
+					default:
+						throw new Error(`Programming error defined type '${type()}' not implmented in switch`);
+				}
+	
+	      if (selector) {
+	        const elem = document.querySelector(selector);
+	        if (elem !== null) {
+	          beforeRenderEvent.trigger();
+	          elem.innerHTML = rendered;
+						instance.trigger.after.render();
+	        }
+	      }
+				return rendered;
+			}
+	
+	
+	//---------------------  Compile Functions ---------------//
+	
+			function stringHash(string) {
+				let hashString = string;
+				let hash = 0;
+				for (let i = 0; i < hashString.length; i += 1) {
+					const character = hashString.charCodeAt(i);
+					hash = ((hash << 5) - hash) + character;
+					hash &= hash; // Convert to 32bit integer
+				}
+				return hash;
+			}
+	
+			function isolateBlocks(template) {
+				let inBlock = false;
+				let openBracketCount = 0;
+				let block = '';
+				let blocks = [];
+				let str = template;
+				for (let index = 0; index < str.length; index += 1) {
+					if (inBlock) {
+						block += str[index];
+					}
+					if (!inBlock && index > 0 &&
+						str[index] == '{' && str[index - 1] == '{') {
+						inBlock = true;
+					} else if (inBlock && str[index] == '{') {
+						openBracketCount++;
+					} else if (openBracketCount > 0 && str[index] == '}') {
+						openBracketCount--;
+					} else if (str[index + 1] == '}' && str[index] == '}' ) {
+						inBlock = false;
+						blocks.push(`${block.substr(0, block.length - 1)}`);
+						block = '';
+					}
+				}
+				return blocks;
+			}
+	
+			function resolve(str) {
+				return ExprDef.parse(expression, str);
+			}
+	
+			function compile(strToCompile) {
+	      			if (!strToCompile) strToCompile = template;
+				const blocks = isolateBlocks(strToCompile);
+				let str = strToCompile;
+				for (let index = 0; index < blocks.length; index += 1) {
+					const parced = resolve(blocks[index]);
+					str = str.replace(`{{${blocks[index]}}}`, `\` + $t.clean(${parced}) + \``);
+				}
+				return `\`${str}\``;
+			}
+	
+			// format: <[tagName]:t .*repeat='[repeatExpression]'.*$t-id='[templateName]'.*>[templateHtml]</[tagName]:t>
+			const repeatReg = /<([a-zA-Z-]*):t( ([^>]* |))repeat=("|')(([^>^\4]*?)\s{1,}in\s{1,}([^>^\4]*?))\4([^>]*>((?!(<\1:t[^>]*>|<\/\1:t>)).)*<\/)\1:t>/;
+			function formatRepeat(string) {
+				let match;
+				while (match = string.match(repeatReg)) {
+					let tagContents = match[2] + match[8];
+	        let tagName = match[1];
+	        let varNames = match[6];
+	        let realScope = match[7];
+					let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+					let templateName = tagContents.replace(/.*\$t-id=('|")([\.a-zA-Z-_\/]*?)(\1).*/, '$2');
+					let scope = 'scope';
+					template = templateName !== tagContents ? templateName : template;
+					templateName = exprToStr(templateName);
+					if (templateName.indexOf(' + ') === -1) {
+						const t = templateName === instance.id() ? instance : eval(`new $t(\`${template}\`)`);
+						templateName = `'${t.id()}'`;
+					}
+	        let resolvedScope = "get('scope')";
+	        try {
+						if (realScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
+	            resolvedScope = `'${realScope}'`;
+	          } else {
+	            resolvedScope = ExprDef.parse(expression, realScope);
+	          }
+	        } catch (e) {}
+	        string = string.replace(match[0], `{{ new $t(${templateName}).render(${resolvedScope}, '${varNames}', get)}}`);
+				}
+				return string;
+			}
+	
+	    function exprToStr(expr) {
+	      if (isolateBlocks(expr).length === 0) return `'${expr}'`;
+	      const raw = compile(expr);
+	      const formatted = raw.replace(/(^ \+ | \+ $)/, '');
+	      return formatted;
+	    }
+	
+	    // format: <[tagName]:t .*$t-id='[templateName]'.*>[scopeVariableName]</[tagName]:t>
+	    const templateReg = /<([a-zA-Z-]*):t( ([^>]* |))\$t-id=("|')([^>^\4]*?)\4([^>]*>(((?!(<\1:t[^>]*>|<\/\1:t>)).)*)<\/)\1:t>/;
+			function formatTemplate(string) {
+				let match;
+				while (match = string.match(templateReg)) {
+					let tagContents = match[7];
+					let tagName = match[1];
+					let template = `<${tagName}${tagContents}${tagName}>`.replace(/\\'/g, '\\\\\\\'').replace(/([^\\])'/g, '$1\\\'').replace(/''/g, '\'\\\'');
+					let templateName = match[0].replace(/.*\$t-id=('|")(.*?)(\1).*/, '$2');
+	        templateName = exprToStr(templateName);
+					template = templateName !== tagContents ? templateName : template;
+					let resolvedScope = ExprDef.parse(expression, match[7].trim() || "scope");
+					string = string.replace(match[0], `{{ new $t(${templateName}).render(${resolvedScope}, undefined, get)}}`);
+				}
+				return string;
+			}
+	
+			if (id) {
+				$t.templates[id] = undefined;
+				$t.functions[id] = undefined;
+			}
+	
+			template = template.replace(/\s{1,}/g, ' ');
+	    const fileStringMatch = template.match(/^[a-zA-Z0-9\/\._-]{1,}$/) !== null;
+			id = fileStringMatch ? template : id || stringHash(template);
+	    this.id = () => id;
+			if (!$t.functions[id]) {
+				if (!$t.templates[id]) {
+					template = template.replace(/\s{2,}|\n/g, ' ');
+					template = formatRepeat(template);
+					template = formatTemplate(template);
+					$t.templates[id] = compile();
+				}
+			}
+			this.compiled = function () { return $t.templates[id];}
+			this.render = render;
+			this.type = type;
+			this.isolateBlocks = isolateBlocks;
+	    this.id = () => id;
+		}
+	}
+	
+	$t.templates = {};//{"-1554135584": '<h1>{{greeting}}</h1>'};
+	$t.functions = {};
+	$t.loadFunctions = (functions) => {
+		Object.keys(functions).forEach((name) => {
+			$t.functions[name] = functions[name];
+		});
+	
+	}
+	$t.isTemplate = (id) => $t.functions[id] !== undefined;
+	$t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.rangeAttemptExpReg = /^\s*(.*\.\..*)\s*$/;
+	$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\.\.([a-z0-9A-Z]*)\s*$/;
+	$t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
+	$t.quoteStr = function (str) {
+			str = str.replace(/\\`/g, '\\\\\\`')
+			str = str.replace(/([^\\])`/g, '$1\\\`')
+			return `\`${str.replace(/``/g, '`\\`')}\``;
+		}
+	$t.formatName = function (string) {
+	    function toCamel(whoCares, one, two) {return `${one}${two.toUpperCase()}`;}
+	    return string.replace(/([a-z])[^a-z^A-Z]{1,}([a-zA-Z])/g, toCamel);
+	}
+	$t.dumpTemplates = function (debug) {
+		let templateFunctions = '';
+		let tempNames = Object.keys($t.templates);
+		for (let index = 0; index < tempNames.length; index += 1) {
+			const tempName = tempNames[index];
+			if (tempName) {
+				let template = $t.templates[tempName] || tempName;
+	      if (debug === true) {
+	        const endTagReg = /( \+) /g;
+	        template = template.replace(endTagReg, '$1\n\t\t');
+	      }
+				templateFunctions += `\nexports['${tempName}'] = (get, $t) => \n\t\t${template}\n`;
+			}
+		}
+		return templateFunctions;
+	}
+	
+	$t.clean = (val) => val === undefined ? '' : val;
+	
+	function createGlobalsInterface() {
+	  const GLOBALS = {};
+	  const isMotifiable = (name) => GLOBALS[name] === undefined ||
+	        GLOBALS[name].imutable !== 'true';
+	  $t.global = function (name, value, imutable) {
+	    if (value === undefined) return GLOBALS[name] ? GLOBALS[name].value : undefined;
+	    if (isMotifiable(name)) GLOBALS[name] = {value, imutable};
+	  }
+	  $t.rmGlobal = function(name) {
+	    if (isMotifiable(name)) delete GLOBALS[name];
+	  }
+	}
+	createGlobalsInterface();
+	
+	if (moduleExists) module.exports = $t;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/object/lookup.js',
+function (require, exports, module) {
+	
+class IdString extends String {
+	  constructor(...ids) {
+	    let id = '';
+	    for (let index = 0; index < ids.length; index++) {
+	      id += `${ids[index]}_`;
+	    }
+	    id = id.substring(0, id.length - 1);
+	    super(id);
+	    this.split = () => {
+	      return id.split('_');
+	    }
+	    this.toJson = () => new String(id).toString();
+	    this.index = (index) => this.split().at(index);
+	    this.equals = (other) => `${this}` ===`${other}`;
+	    this.equivalent = (other, ...indicies) => {
+	      if (indicies.length === 0) return this.equals(other);
+	      const thisSplit = this.split();
+	      const otherSplit = other.split();
+	      for (let index = 0; index < indicies.length; index++) {
+	        const i = indicies[index];
+	        if (thisSplit[i] !== otherSplit[i]) return false;
+	      }
+	      return true;
+	    }
+	  }
+	}
+	
+	
+	
+	class Lookup {
+	  constructor(id, attr, singleton) {
+	    if (id && id._TYPE) {
+	      attr = id.ID_ATTRIBUTE;
+	      id = id.id;
+	    }
+	    Lookup.convert(this, attr, id, singleton);
+	  }
+	}
+	
+	Lookup.convert = function (obj, attr, id, singleton) {
+	  if (id) {
+	    const decoded = Lookup.decode(id);
+	    if (decoded) {
+	      id = decoded.id;
+	    } else if (id._TYPE !== undefined) {
+	      id = Lookup.decode(id[id[Lookup.ID_ATTRIBUTE]]).id;
+	    }
+	  }
+	
+	  const cxtr = obj.constructor;
+	  const cxtrName = cxtr.name;
+	  id = new IdString(cxtrName, id || String.random());
+	  let group;
+	  if (singleton && cxtr.get(id)) return cxtr.get(id);
+	
+	  let constructedAt = new Date().getTime();
+	  let modificationWindowOpen = true;
+	  attr = attr || 'id';
+	  if (obj.constructor.name === 'Object' && !obj.toJson) {
+	    obj.toJson = () => JSON.copy(obj);
+	  }
+	  obj.lookupGroup = (g) => {
+	    if (group === undefined && g !== undefined) {
+	      if (Lookup.groups[g] === undefined) Lookup.groups[g] = [];
+	      group = g;
+	      Lookup.groups[g].push(obj);
+	    }
+	    return group;
+	  }
+	
+	  obj.lookupRelease = () => {
+	    if (cxtr.reusable === true) {
+	      if (Lookup.freeAgents[cxtr.name] === undefined) Lookup.freeAgents[cxtr.name] = [];
+	      Lookup.freeAgents[cxtr.name].push(obj);
+	      const index = Lookup.groups[group] ? Lookup.groups[group].indexOf(obj) : -1;
+	      if (index !== -1) Lookup.groups[group].splice(index, 1);
+	    }
+	    delete Lookup.byId[cxtr.name][obj[attr]().index(-1)];
+	  }
+	
+	
+	  obj[Lookup.ID_ATTRIBUTE] = () => attr;
+	  obj[attr] = (idStr) => {
+	    if (modificationWindowOpen) {
+	      if ((typeof idStr) === 'string' && idStr) idStr = new IdString(idStr);
+	      if (idStr instanceof IdString && idStr.split().length === 2) {
+	        let objId = idStr.index(-1);
+	        id = new IdString(cxtrName, objId);
+	        Lookup.byId[cxtr.name][id.index(-1)] = obj;
+	        modificationWindowOpen = false;
+	      } else if (constructedAt < new Date().getTime() - 200) {
+	        modificationWindowOpen = false;
+	      }
+	    }
+	    return id;
+	  }
+	
+	  function registerConstructor() {
+	    if (Lookup.byId[cxtr.name] === undefined) {
+	      Lookup.byId[cxtr.name] = {};
+	      Lookup.constructorMap[cxtr.name] = cxtr;
+	    }
+	  }
+	
+	  function addSelectListFuncToConstructor() {
+	    if (cxtr !== Lookup) {
+	      if(cxtr.selectList === Lookup.selectList) {
+	        cxtr.get = (id) => Lookup.get(id, cxtr);
+	        if (cxtr.instance === undefined) cxtr.instance = () => Lookup.instance(cxtr.name);
+	        Lookup.byId[cxtr.name] = {};
+	        cxtr.selectList = () => Lookup.selectList(cxtr.name);
+	      }
+	    }
+	  }
+	
+	  registerConstructor();
+	  addSelectListFuncToConstructor();
+	
+	  if (id.toString() === 'Group_9kcdyju') {
+	    console.log('foundOne');
+	  }
+	
+	  if (!Lookup.byId[cxtrName][id.index(-1)])
+	    Lookup.byId[cxtrName][id.index(-1)] = obj;
+	  else
+	    console.warn(`Lookup id '${id}' object has been created more than once.`);
+	  if (obj.toString === undefined) obj.toString = () => obj[attr]();
+	}
+	
+	Lookup.ID_ATTRIBUTE = 'ID_ATTRIBUTE';
+	Lookup.byId = {Lookup};
+	Lookup.constructorMap = {Lookup: Lookup};
+	Lookup.groups = {};
+	Lookup.freeAgents = {};
+	
+	Lookup.get = (id, cxtr) => {
+	  const decoded = Lookup.decode(id);
+	  let decodedId, decodedCxtr;
+	  if (decoded) {
+	    decodedId = decoded.id;
+	    decodedCxtr = decoded.constructor;
+	  }
+	  id = decodedId || id;
+	  cxtr = cxtr || decodedCxtr || Lookup;
+	  const instance = Lookup.byId[cxtr.name][id] || (decodedCxtr && Lookup.byId[decodedCxtr.name][id]);
+	  return instance;
+	}
+	Lookup.selectList = (className) => {
+	  return Object.keys(Lookup.byId[className]);
+	}
+	Lookup.instance = (cxtrName) => {
+	  const agents = Lookup.freeAgents[cxtrName];
+	  if (!agents || agents.length === 0) {
+	    return new (Lookup.constructorMap[cxtrName])();
+	  }
+	
+	  const index = agents.length - 1;
+	  const agent = agents[index];
+	  agents.splice(index, 1);
+	  return agent;
+	}
+	Lookup.decode = (id) => {
+	  if ((typeof id) === 'string') id = new IdString(...id.split('_'));
+	  if (!(id instanceof IdString)) return;
+	  const cxtrId = id.index(0);
+	  const objId = id.index(-1);
+	  return {
+	    constructor: cxtrId === objId ? undefined : Lookup.constructorMap[cxtrId],
+	    id: objId
+	  };
+	}
+	Lookup.release = (groupOlist) => {
+	  if ((typeof groupOobject) === 'string') {
+	    const groupList = Lookup.groups[groupOlist];
+	    if (groupList === undefined) return;
+	    Lookup.groups[groupOlist] = [];
+	    for (let index = 0; index < groupList.length; index += 1) {
+	      groupList[index].release();
+	    }
+	  } else if (Array.isArray(groupOlist)) {
+	    for (let index = 0; index < groupOlist.length; index++) {
+	      const obj = groupOlist[index];
+	      if (obj && obj.lookupRelease instanceof Function) obj.lookupRelease();
+	    }
+	  }
+	}
+	
+	Lookup.fromJson = (json, obj) => {
+	  const attr = json[Lookup.ID_ATTRIBUTE];
+	  if (attr) {
+	    const obj = Lookup.get(json[attr]);
+	    if(obj) return obj;
+	  }
+	
+	  const type = json._TYPE;
+	  if (type && type === 'Lookup') return new Lookup(json);
+	  obj ||= Object.fromJson(json);
+	  if (obj instanceof Lookup) return obj;
+	  if (attr) {
+	    Lookup.convert(obj, obj[attr], attr);
+	    return obj;
+	  }
+	  return null;
+	}
+	
+	Lookup.IdString = IdString;
+	try {
+	  module.exports = Lookup;
+	} catch (e) {}
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/custom-event.js',
+function (require, exports, module) {
+	
+let domAccessible = false;
+	
+	try {
+	  document;
+	  domAccessible = true;
+	} catch (e) {}
+	
+	
+	
+	
+	class CustomEvent {
+	  constructor(name) {
+	    const watchers = [];
+	    this.name = name;
+	    let lastArgs;
+	
+	    const runFuncs = (elem, detail) =>
+	    watchers.forEach((func) => {
+	      try {
+	        func(elem, detail, event);
+	      } catch (e) {
+	        console.error(e);
+	      }
+	    });
+	
+	
+	    this.watchers = () => watchers;
+	    this.on = function (func) {
+	      if ((typeof func) === 'function') {
+	        if (lastArgs)
+	          func(...lastArgs);
+	        if (watchers.indexOf(func) === -1) watchers.push(func);
+	      } else {
+	        return 'on' + name;
+	      }
+	    }
+	
+	    this.remove = (func) =>
+	      watchers.remove(func);
+	
+	
+	    this.trigger = function (element, detail) {
+	      lastArgs = [element, detail];
+	      element = element !== undefined ? element : domAccessible ? window : detail;
+	      runFuncs(element, detail);
+	      event.detail = detail;
+	      if (domAccessible) {
+	        if (element instanceof HTMLElement) {
+	          if(document.createEvent){
+	            element.dispatchEvent(event);
+	          } else {
+	            element.fireEvent("on" + event.eventType, event);
+	          }
+	        }
+	      }
+	    }
+	//https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
+	    let event;
+	    if (domAccessible) {
+	      if(document.createEvent){
+	        event = document.createEvent("HTMLEvents");
+	        event.initEvent(name, true, true);
+	        event.eventName = name;
+	      } else {
+	        event = document.createEventObject();
+	        event.eventName = name;
+	        event.eventType = name;
+	      }
+	    } else {
+	      event = {name, type: name};
+	    }
+	    this.event = event;
+	  }
+	}
+	
+	CustomEvent.all = (obj, eventObject, ...eventNames) => {
+	  if (eventObject instanceof Object) {
+	    eventNames.concatInPlace(Object.keys(eventObject));
+	  } else {
+	    eventNames.push(eventObject);
+	    eventObject = {};
+	  }
+	  if (obj.on === undefined) obj.property('on', {}, false);
+	  if (obj.trigger === undefined) obj.property('trigger', {}, false);
+	  if (obj.events === undefined) obj.property('events', {}, false);
+	  for (let index = 0; index < eventNames.length; index++) {
+	    const name = eventNames[index];
+	    const e = eventObject[name] || new CustomEvent(name);
+	    obj.events.property(name, e, false);
+	    if (obj.on[name] === undefined) obj.on.property(name, e.on, false);
+	    else obj.on[name](e.trigger);
+	    obj.trigger.property(name, (...args) => e.trigger.apply(e, args), false);
+	  }
+	}
+	
+	CustomEvent.dynamic = () => {
+	  const events = {};
+	  return {
+	    on: (eventType, func) => {
+	      if (events[eventType] === undefined)
+	        events[eventType] = new CustomEvent(eventType);
+	      events[eventType].on(func);
+	    },
+	    trigger: (event, detail) => {
+	      if (events[event.type] === undefined) return;
+	      events[event.type].trigger(event, detail);
+	    }
+	  }
+	}
+	
+	if ((typeof module) !== 'undefined')
+	  module.exports = CustomEvent;
+	
+});
+
+
+RequireJS.addFunction('./services/cabinet/generated/html-templates.js',
+function (require, exports, module) {
+	
+exports['40671914'] = (get, $t) => 
+			`<tr class='btm-border-barely-visible'> <td>` +
+			$t.clean(get("cabinet").groupIndex()) +
+			`</td> <td>` +
+			$t.clean(get("cabinet").name()) +
+			`</td> <td>` +
+			$t.clean(get("Utils").display.demensions(get("cabinet").position().demension())) +
+			`</td> <td class='min-width-20'>` +
+			$t.clean(get("cabinet").value('show.left.type')) +
+			`</td> <td class='min-width-20'>` +
+			$t.clean(get("cabinet").value('show.right.type')) +
+			`</td> <td class='min-width-20'>` +
+			$t.clean(get("cabinet").value('show.left.endStyle')) +
+			`</td> <td class='min-width-20'>` +
+			$t.clean(get("cabinet").value('show.right.endStyle')) +
+			`</td> <td>` +
+			$t.clean(get("Utils").count.shelves(get("cabinet")) || '') +
+			`</td> <td class='align-left'>` +
+			$t.clean(get("Utils").textToHtml(get("cabinet").notes())) +
+			`</td> </tr>`
+	
+	exports['72251508'] = (get, $t) => 
+			`<tr ` +
+			$t.clean(!get("partListMap")[get("type")] ? 'hidden' : '') +
+			` class='btm-border-barely-visible'> <td>` +
+			$t.clean(get("disp").material.qty(get("doorObj").info)) +
+			`</td> <td>` +
+			$t.clean(get("disp").measurement(get("doorObj").info.demensions.x)) +
+			`</td> <td>` +
+			$t.clean(get("disp").measurement(get("doorObj").info.demensions.y)) +
+			`</td> <td>` +
+			$t.clean(get("disp").measurement(get("doorObj").info.demensions.z)) +
+			`</td> <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td> <td>` +
+			$t.clean(get("disp").roots(get("doorObj"))) +
+			` <td></td> </tr>`
+	
+	exports['107913065'] = (get, $t) => 
+			`<td class='cut-info-cnt tab font-medium' > ` +
+			$t.clean(get("loc").vertexLabel) +
+			`@` +
+			$t.clean(get("loc").length ? get("display").measurement(get("loc").length) : '') +
+			`</td>`
+	
+	exports['110915528'] = (get, $t) => 
+			`<div key='` +
+			$t.clean(get("key")) +
+			`'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'>X</button> <div class="expand-header ` +
+			$t.clean(get("type")()) +
+			`` +
+			$t.clean(get("active")() === get("item") ? ' active' : '') +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'> ` +
+			$t.clean(get("getHeader")(get("item"), get("key"))) +
+			` </div> </div> </div>`
+	
+	exports['115117775'] = (get, $t) => 
+			`<div ` +
+			$t.clean(get("hideAll")(get("properties")) ? 'hidden' : '') +
+			`> <div class="property-container close" radio-id='666'> <div class='` +
+			$t.clean(get("key") ? "expand-header" : "") +
+			`'> ` +
+			$t.clean(get("key")) +
+			` </div> <div id='config-expand-list-` +
+			$t.clean(get("childIdMap")[get("key")]) +
+			`' hidden> ` +
+			$t.clean(get("childIdMap")[get("key")]) +
+			` </div> </div> </div>`
+	
+	exports['133324092'] = (get, $t) => 
+			`<div index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("getXyzSelect")('').html()) +
+			` <input class='template-input xyz' attr='subassemblies' name='polyConfig.points.` +
+			$t.clean(get("$index")) +
+			`' value='` +
+			$t.clean(get("point")[0]) +
+			`'> <input disabled class='measurement-input' name='value'> <input type="checkbox" name="convert" checked> <button class="remove-btn smaller" key="0">X</button> </div>`
+	
+	exports['134249436'] = (get, $t) => 
+			`<div class='avoid-page-break'> <h2 class=''>` +
+			$t.clean(get("section").toSentance()) +
+			`</h2> <div class='everything-` +
+			$t.clean(get("section").toKebab()) +
+			`-cnt'> <h3>Coming Soon...</h3> </div> </div>`
+	
+	exports['184800797'] = (get, $t) => 
+			`<option value='` +
+			$t.clean(get("section").prototype.constructor.name) +
+			`' ` +
+			$t.clean(get("opening").coverType() === get("section").name ? 'selected' : '') +
+			`> ` +
+			$t.clean(get("section").name.toSentance().replace('Section', '')) +
+			` </option>`
+	
+	exports['313689006'] = (get, $t) => 
+			`<span > ` +
+			$t.clean( new $t(`documents/cuts/cut-` +
+			$t.clean(get("er")[0].label ? "edge" : "point") +
+			`-ref`).render(get("er"), undefined, get)) +
+			` <br/> </span>`
+	
+	exports['360645387'] = (get, $t) => 
+			`<div class='avery-5160 page'> <div> <table> <tbody> ` +
+			$t.clean( new $t('-275817973').render(get("page"), 'row', get)) +
+			` </tbody> </table> </div> </div>`
+	
+	exports['406900361'] = (get, $t) => 
+			`<option ` +
+			$t.clean(get("partCode") === 'c_BACK' ? 'selected' : '') +
+			`> ` +
+			$t.clean(get("partCode")) +
+			` </option>`
+	
+	exports['447219845'] = (get, $t) => 
+			`<no-tag > <td>` +
+			$t.clean(get("section").userFriendlyIndex()) +
+			`)</td> <td> ` +
+			$t.clean(get("disp").measurement(get("section").innerWidth())) +
+			` X ` +
+			$t.clean(get("disp").measurement(get("section").innerLength())) +
+			` <br> ` +
+			$t.clean(get("section").value('shelves') > 0 ? "Adj Shelves: " +
+			get("section").value('shelves') : '') +
+			` </td> ` +
+			$t.clean((get("$index") % 2) === 0 ? '<td>&nbsp&nbsp&nbsp</td>' : '') +
+			` </no-tag>`
+	
+	exports['550500469'] = (get, $t) => 
+			`<span > <input list='auto-fill-list-` +
+			$t.clean(get("input").id() +
+			get("willFailCheckClassnameConstruction")()) +
+			` expand-list-` +
+			$t.clean(get("type")()) +
+			`-input' id='` +
+			$t.clean(get("input").id()) +
+			`' placeholder='` +
+			$t.clean(get("input").placeholder) +
+			`' type='text'> <datalist id="auto-fill-list-` +
+			$t.clean(get("input").id()) +
+			`"> ` +
+			$t.clean( new $t('-1921787246').render(get("input").autofill(), 'option', get)) +
+			` </datalist> </span>`
+	
+	exports['568362631'] = (get, $t) => 
+			`<div class='room-part-doc-cnt' > ` +
+			$t.clean(get("DocumentationHtml").parts.group(get("group"), get("partType"))) +
+			` </div>`
+	
+	exports['672662266'] = (get, $t) => 
+			`<div ` +
+			$t.clean(get("selected").is(get("title")) ? 'class="selected"' : 'empty-contents') +
+			` title='` +
+			$t.clean(get("title")) +
+			`' ` +
+			$t.clean(get("selected").is(get("title")) ? '' : 'hidden') +
+			`> ` +
+			$t.clean(get("title") === get("selected")() ? get("html")(get("title")) : '') +
+			` </div>`
+	
+	exports['678094078'] = (get, $t) => 
+			`<tr > ` +
+			$t.clean( new $t('447219845').render(get("set"), 'section', get)) +
+			` </tr>`
+	
+	exports['714657883'] = (get, $t) => 
+			`<div >` +
+			$t.clean(get("groupHtml")(get("group"))) +
+			`</div>`
+	
+	exports['772459705'] = (get, $t) => 
+			`<option ` +
+			$t.clean(get("pull").location().position === get("location").position ? 'selected' : '') +
+			`> ` +
+			$t.clean(get("id")) +
+			` </option>`
+	
+	exports['821257078'] = (get, $t) => 
+			`<li ` +
+			$t.clean(get("title") === get("selected")() ? 'class="selected"' : '') +
+			` title='` +
+			$t.clean(get("title")) +
+			`'> ` +
+			$t.clean(get("title")) +
+			` </li>`
+	
+	exports['976176139'] = (get, $t) => 
+			`<td > ` +
+			$t.clean(get("col").html()) +
+			` </td>`
+	
+	exports['1036581066'] = (get, $t) => 
+			`<div class='tab' > ` +
+			$t.clean(get("property").name()) +
+			` (` +
+			$t.clean(get("property").code()) +
+			`) </div>`
+	
+	exports['1088583088'] = (get, $t) => 
+			`<div > <input type='text' value='` +
+			$t.clean(get("key")) +
+			`'/> => ` +
+			$t.clean(get("listItemHtml")(get("value"))) +
+			` <br> </div>`
+	
+	exports['1100231627'] = (get, $t) => 
+			`<th colspan='3' >` +
+			$t.clean(get("char")) +
+			`</th>`
+	
+	exports['1254550278'] = (get, $t) => 
+			`<td >` +
+			$t.clean(get("name")) +
+			`</td>`
+	
+	exports['1410278299'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("property").name()) +
+			`</label> <input type='radio' name='` +
+			$t.clean(get("key")) +
+			`' prop-radio-update='` +
+			$t.clean(get("property").id()) +
+			`' ` +
+			$t.clean(get("property").value() === true ? 'checked' : '') +
+			`> </span>`
+	
+	exports['1417643187'] = (get, $t) => 
+			`<li name='` +
+			$t.clean(get("property").name()) +
+			`'> ` +
+			$t.clean(get("property").name()) +
+			` </li>`
+	
+	exports['1507176312'] = (get, $t) => 
+			`<div class='single-entry-cnt' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("setHtml")(get("$index"))) +
+			` </div>`
+	
+	exports['1586878820'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("property").name()) +
+			`</label> <input class='transparent' type='radio' name='UNIT2' value="` +
+			$t.clean(get("property").name()) +
+			`" ` +
+			$t.clean(get("property").value() === true ? 'checked' : '') +
+			` is-raw> </span>`
+	
+	exports['1682356664'] = (get, $t) => 
+			`<div id="input-input-list-` +
+			$t.clean(get("id")()) +
+			`" > ` +
+			$t.clean(get("input").html()) +
+			` <br> </div>`
+	
+	exports['1819729875'] = (get, $t) => 
+			`<th >` +
+			$t.clean(get("char")) +
+			`</th>`
+	
+	exports['1835219150'] = (get, $t) => 
+			`<option value='` +
+			$t.clean(get("isArray")() ? get("value") : get("key")) +
+			`' ` +
+			$t.clean(get("selected")(get("isArray")() ? get("value") : get("key")) ? 'selected' : '') +
+			`> ` +
+			$t.clean(get("value")) +
+			` </option>`
+	
+	exports['1856420978'] = (get, $t) => 
+			`<li class='align-left ` +
+			$t.clean(get("issue").solved ? 'strike' : '') +
+			`' > ` +
+			$t.clean(get("issue").text) +
+			` </li>`
+	
+	exports['1860435907'] = (get, $t) => 
+			`<div > <label>` +
+			$t.clean(get("obj").key) +
+			`</label> <input type='text' value='` +
+			$t.clean(get("display")(get("obj").value)) +
+			`' class='modifiable-value-input'> </div>`
+	
+	exports['1903603615'] = (get, $t) => 
+			`<tr class='cut-info-cnt tab font-medium' > <td>` +
+			$t.clean(get("item").width ? get("display").measurement(get("item").width) : '') +
+			`</td> <td>` +
+			$t.clean(get("item").depth ? get("display").measurement(get("item").depth) : '') +
+			`</td> <td>` +
+			$t.clean(get("item").length ? get("display").measurement(get("item").length) : '') +
+			`</td> <td>` +
+			$t.clean(get("item").angle ? get("display").degrees(get("item").angle) : '') +
+			`</td> ` +
+			$t.clean( new $t('107913065').render(get("item").relitiveLocations, 'loc', get)) +
+			` </tr>`
+	
+	exports['1927703609'] = (get, $t) => 
+			`<div > ` +
+			$t.clean(get("recurse")(get("key"), get("group"))) +
+			` </div>`
+	
+	exports['1932279957'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("void").label(get("i"))) +
+			`</label> <input type='checkbox' name='` +
+			$t.clean(get("void").label(get("i"))) +
+			`' ` +
+			$t.clean(get("void").include(get("void").label(get("i"))) ? 'checked' : '') +
+			`> </span>`
+	
+	exports['1970100821'] = (get, $t) => 
+			`<div index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("$index") +
+			1) +
+			`) <button class='remove-btn'>X</button> ` +
+			$t.clean(get("sizeInputHtml")(get("$index"))) +
+			` <label>Location</label> <select name='location'> ` +
+			$t.clean( new $t('772459705').render(get("pull").constructor.location, 'id, location', get)) +
+			` </select> </div>`
+	
+	exports['2053240362'] = (get, $t) => 
+			`<span ` +
+			$t.clean(get("task").progress() === 100 ? 'hidden' : '') +
+			`> ` +
+			$t.clean(get("task").process()) +
+			`) ` +
+			$t.clean(get("task").status()) +
+			` ` +
+			$t.clean(get("task").progress()) +
+			`% <div class="loading-bar-cnt"> <div class="loading-bar center" style="width:` +
+			$t.clean(get("task").progress()) +
+			`%"> ` +
+			$t.clean(get("task").progress()) +
+			`% </div> </div> </span>`
+	
+	exports['2055573719'] = (get, $t) => 
+			`<div > ` +
+			$t.clean(get("CostManager").headHtml(get("child"))) +
+			` ` +
+			$t.clean(get("CostManager").bodyHtml(get("child"))) +
+			` </div>`
+	
+	exports['auto-save'] = (get, $t) => 
+			`<div> <button type="button" class='auto-save-btn' name="button">Auto Save</button> <span class='status'></span> </div> `
+	
+	exports['expandable/input-repeat'] = (get, $t) => 
+			`<div> ` +
+			$t.clean( new $t('550500469').render(get("inputs")(), 'input', get)) +
+			` <button ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' class='expandable-list-add-btn' ` +
+			$t.clean(get("hideAddBtn") ? 'hidden' : '') +
+			`> Add ` +
+			$t.clean(get("listElemLable")()) +
+			` here </button> <div class='error' id='` +
+			$t.clean(get("ERROR_CNT_ID")) +
+			`'></div> </div> `
+	
+	exports['-1921787246'] = (get, $t) => 
+			`<option value="` +
+			$t.clean(get("option")) +
+			`" ></option>`
+	
+	exports['expandable/list'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('-357054111').render(get("list")(), 'key, item', get)) +
+			` <div class='expand-input-cnt' hidden has-input-tree='` +
+			$t.clean(get("hasInputTree")()) +
+			`'>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'> <button ` +
+			$t.clean(get("hideAddBtn") ? 'hidden' : '') +
+			`>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button> </div> </div> `
+	
+	exports['-357054111'] = (get, $t) => 
+			`<div class="expandable-list-body" key='` +
+			$t.clean(get("key")) +
+			`'> <div class="expand-item"> <button class='expandable-item-rm-btn' ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'>X</button> <div class="expand-header ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'> ` +
+			$t.clean(get("getHeader")(get("item"), get("key"))) +
+			` </div> <div class="expand-body ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`' ` +
+			$t.clean(get("active")() === get("item") ? '' : 'hidden') +
+			`> ` +
+			$t.clean(get("initialBody")(get("key"))) +
+			` </div> </div> </div>`
+	
+	exports['expandable/pill'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> <div class="expand-list-cnt ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('110915528').render(get("list")(), 'key, item', get)) +
+			` <div class='input-open-cnt'> <button ` +
+			$t.clean(get("hideAddBtn") ? 'hidden' : '') +
+			`>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button> </div> </div> <div> <div class='expand-input-cnt' hidden>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <br> <div class='error' id='` +
+			$t.clean(get("ERROR_CNT_ID")()) +
+			`'></div> </div> <div class='expand-tab'> <div class="expand-body ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("activeKey")()) +
+			`' ` +
+			$t.clean(get("active")() ? '' : 'hidden') +
+			`> ` +
+			$t.clean(get("initialBody")(get("activeKey")())) +
+			` </div> </div> </div> `
+	
+	exports['expandable/sidebar'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> <div class="expand-list-cnt ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('-688234735').render(get("list")(), 'key, item', get)) +
+			` <div class='expand-input-cnt' hidden>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'> <button ` +
+			$t.clean(get("hideAddBtn") ? 'hidden' : '') +
+			`>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button> </div> </div> <div> </div> <div class="expand-body ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("activeKey")()) +
+			`'> ` +
+			$t.clean(get("active")() && get("getBody")(get("active")())) +
+			` </div> </div> `
+	
+	exports['-688234735'] = (get, $t) => 
+			`<div class="expandable-list-body" key='` +
+			$t.clean(get("key")) +
+			`'> <div class="expand-item"> <div class='expand-rm-btn-cnt'> <button class='expandable-item-rm-btn' ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'>X</button> </div> <div class="expand-header ` +
+			$t.clean(get("type")()) +
+			` ` +
+			$t.clean(get("activeKey")() === get("key") ? ' active' : '') +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`' key='` +
+			$t.clean(get("key")) +
+			`'> ` +
+			$t.clean(get("getHeader")(get("item"), get("key"))) +
+			` </div> </div> </div>`
+	
+	exports['expandable/top-add-list'] = (get, $t) => 
+			` <div class="expandable-list ` +
+			$t.clean(get("type")()) +
+			`" ex-list-id='` +
+			$t.clean(get("id")()) +
+			`'> <div class='expand-input-cnt' hidden has-input-tree='` +
+			$t.clean(get("hasInputTree")()) +
+			`'>` +
+			$t.clean(get("inputHtml")()) +
+			`</div> <div class='input-open-cnt'><button>Add ` +
+			$t.clean(get("listElemLable")()) +
+			`</button></div> ` +
+			$t.clean( new $t('-357054111').render(get("list")(), 'key, item', get)) +
+			` </div> `
+	
+	exports['input/data-list'] = (get, $t) => 
+			`` +
+			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+			` `
+	
+	exports['-994603408'] = (get, $t) => 
+			`<option value="` +
+			$t.clean(get("item")) +
+			`" ></option>`
+	
+	exports['input/decision/decision-modification'] = (get, $t) => 
+			` <div class='decision-tree-mod-cnt'> <div class='then-add-cnt'> <button hidden class='then-btn modify-edit' mod-id='1'> Then... </button> <button hidden class='add-btn modify-edit'mod-id='4'>Add Input</button> </div> <div hidden class='if-edit-cnt'> <button class='twentys edit-btn modify-edit' mod-id='2'> <i class="inline gg-pen"></i> </button> <button class='twentys conditional-btn modify-edit' mod-id='3'> If </button> </div> <div hidden class='then-cnt tab modify-edit' mod-id='1'>Then Html!</div> <div hidden class='condition-cnt tab modify-edit' mod-id='3'>Condition Tree Html!</div> <div hidden class='rm-edit-cnt modify-edit' mod-id='2'> <div class='edit-cnt'>Edit Tree Html!</div> <button class='modiy-rm-input-btn'>Remove</button> </div> <div hidden class='add-cnt tab modify-edit' mod-id='4'> Add Input Html! </div> <div class='remove-btn-cnt' hidden> <button class='rm-node modify-edit'>X</button> </div> <div class='close-cnts' hidden><button class='modify-edit'>X</button></div> <br> <br> <div class='copy-save-paste-cnt'> <div style='display: inline-block'> <textarea id='json-data'></textarea> <br> <button id="copy">Copy</button> <button id='paste' class='modify-edit' style='float:right'>Paste</button> <br><br> <button id="save" class='modify-edit'>Save</button> </div> </div> </div> `
+	
+	exports['input/decision/decisionTree'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("node").tree().class()) +
+			` ` +
+			$t.clean(get("DecisionInputTree").class) +
+			`' tree-id='` +
+			$t.clean(get("node").tree().id()) +
+			`' input-id='` +
+			$t.clean(get("node").tree().id()) +
+			`' node-id='` +
+			$t.clean(get("node").id()) +
+			`'> ` +
+			$t.clean(get("header")) +
+			` ` +
+			$t.clean(get("inputHtml")) +
+			` <div ` +
+			$t.clean(get("node").tree().hideButton ? 'hidden' : '') +
+			`> <br> <button class='` +
+			$t.clean(get("node").tree().buttonClass()) +
+			` ` +
+			$t.clean(get("DecisionInputTree").buttonClass) +
+			`' tree-id='` +
+			$t.clean(get("node").tree().id()) +
+			`'> ` +
+			$t.clean(get("node").tree().buttonText()) +
+			` </button> </div> </div> `
+	
+	exports['input/decision/decision'] = (get, $t) => 
+			` <div class='decision-input-cnt card` +
+			$t.clean(get("empty")() ? ' empty' : '') +
+			`' node-id='` +
+			$t.clean(get("id")()) +
+			`' recursion="disabled"> <span id='` +
+			$t.clean(get("id")()) +
+			`'> <div class='payload-cnt'>` +
+			$t.clean(get("payloadHtml")()) +
+			`</div> ` +
+			$t.clean(get("empty")() ? '<br><br>' : '') +
+			` ` +
+			$t.clean( new $t('-1551174699').render(get("inputArray")(), 'input', get)) +
+			` <div class='orphan-cnt tab'>` +
+			$t.clean(get("childrenHtml")()) +
+			`</div> </span> </div> `
+	
+	exports['-1551174699'] = (get, $t) => 
+			`<div class='decision-input-array-cnt pad ` +
+			$t.clean(get("class")) +
+			`' index='` +
+			$t.clean(get("$index")) +
+			`'> ` +
+			$t.clean(get("input").html()) +
+			` </div>`
+	
+	exports['input/edit/input'] = (get, $t) => 
+			`<div class='input-edit-cnt' input-ref-id='` +
+			$t.clean(get("input").id()) +
+			`'> <label>Label</label> <input type='text' attr='label' value='` +
+			$t.clean(get("input").label()) +
+			`'/> <br> <label>Name</label> <input type='text' attr='name' value='` +
+			$t.clean(get("input").name()) +
+			`'/> <br> <label ` +
+			$t.clean(get("input").list().length === 0 ? 'hidden' : '') +
+			`>List</label> <div class='tab edit-input-list-cnt relative'> ` +
+			$t.clean( new $t('1088583088').render(get("input").list(), 'key, value', get)) +
+			` </div> <br> </div> `
+	
+	exports['input/edit/list/object'] = (get, $t) => 
+			`<div class='edit-input-list-obj tab'> ` +
+			$t.clean( new $t('-2045511556').render(get("scope"), 'key, value', get)) +
+			` </div> `
+	
+	exports['-2045511556'] = (get, $t) => 
+			`<div > <input type='text' value='` +
+			$t.clean(get("key")) +
+			`'/> = <input type='text' value='` +
+			$t.clean(get("value")) +
+			`'/> </div>`
+	
+	exports['input/input'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <input class='` +
+			$t.clean(get("class")()) +
+			`' list='input-list-` +
+			$t.clean(get("id")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' placeholder='` +
+			$t.clean(get("placeholder")()) +
+			`' type='` +
+			$t.clean(get("type")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`' ` +
+			$t.clean(get("disabled")() ? 'disabled' : '') +
+			` ` +
+			$t.clean(get("attrString")()) +
+			` ` +
+			$t.clean(get("checked")()) +
+			`> <datalist id="input-list-` +
+			$t.clean(get("id")()) +
+			`"> ` +
+			$t.clean( new $t('-994603408').render(get("list")(), 'item', get)) +
+			` </datalist> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['input/list'] = (get, $t) => 
+			`<div class='input-cnt` +
+			$t.clean(get("inline")() ? ' inline' : '') +
+			`'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> ` +
+			$t.clean( new $t('1682356664').render(get("list")(), 'input', get)) +
+			` <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
+	
+	exports['input/edit/list/string'] = (get, $t) => 
+			`<input type='text' name='value' value='` +
+			$t.clean(get("value")) +
+			`'/> `
+	
+	exports['input/edit/table'] = (get, $t) => 
+			`<div class='input-edit-cnt' input-ref-id='` +
+			$t.clean(get("table").id()) +
+			`'> <label>Label</label> <input type='text' attr='label' value='` +
+			$t.clean(get("table").label()) +
+			`'/> <br> <label>Name</label> <input type='text' attr='name' value='` +
+			$t.clean(get("table").name()) +
+			`'/> <br> <div class='table-column-edit-cnt'> <label ` +
+			$t.clean(get("table").columns().length === 0 ? 'hidden' : '') +
+			`>Columns</label> ` +
+			$t.clean(get("listHtml")(get("table").columns())) +
+			`; <button id='table-column-edit-btn'>Apply</button> </div> <div class='table-row-edit-cnt'> <label ` +
+			$t.clean(get("table").rows().length === 0 ? 'hidden' : '') +
+			`>Rows</label> ` +
+			$t.clean(get("listHtml")(get("table").rows())) +
+			`; <button id='table-row-edit-btn'>Apply</button> </div> <br> </div> `
+	
+	exports['input/measurement'] = (get, $t) => 
+			`<div class='fit input-cnt measurement-input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <input class='measurement-input ` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' value='` +
+			$t.clean(get("value")() ? get("value")() : "") +
+			`' placeholder='` +
+			$t.clean(get("placeholder")()) +
+			`' type='` +
+			$t.clean(get("type")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`' unit='` +
+			$t.clean(get("unit")()) +
+			`' ` +
+			$t.clean(get("disabled")() ? 'disabled' : '') +
+			`> ` +
+			$t.clean( new $t('-992439070').render(get("units")(), 'unit', get)) +
+			` <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
+	
+	exports['-992439070'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("unit")) +
+			`</label><input type='radio' name='` +
+			$t.clean(get("id")()) +
+			`-unit' value='` +
+			$t.clean(get("unit")) +
+			`' ` +
+			$t.clean(get("$index") === 0 ? 'checked' : '') +
+			`> </span>`
+	
+	exports['input/multiple-entries'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt multi'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <div class='multiple-entry-cnt tab card ` +
+			$t.clean(get("inline")() ? 'inline' : '') +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('1507176312').render(get("list")(), 'inputArray', get)) +
+			` </div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['input/number'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <input class='` +
+			$t.clean(get("class")()) +
+			`' list='input-list-` +
+			$t.clean(get("id")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' placeholder='` +
+			$t.clean(get("placeholder")()) +
+			`' type='number' name='` +
+			$t.clean(get("name")()) +
+			`' max='` +
+			$t.clean(get("max")()) +
+			`' min='` +
+			$t.clean(get("min")()) +
+			`' step='` +
+			$t.clean(get("step")()) +
+			`'> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['input/one-entry'] = (get, $t) => 
+			`<span class='one-entry-cnt'> ` +
+			$t.clean(get("html")()) +
+			` </span> `
+	
+	exports['input/object'] = (get, $t) => 
+			`<div class='input-cnt` +
+			$t.clean(get("inline")() ? ' inline' : '') +
+			`'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> ` +
+			$t.clean( new $t('1682356664').render(get("list")(), 'input', get)) +
+			` <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </div> `
+	
+	exports['input/radio-table'] = (get, $t) => 
+			`<div class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <br> <div class='tab'> <table border="1"> <tbody> <tr> <td></td> ` +
+			$t.clean( new $t('1254550278').render(get("columns")(), 'name', get)) +
+			` </tr> ` +
+			$t.clean( new $t('-44250289').render(get("rowDetail")(), 'row', get)) +
+			` </tbody> </table> </div> </div> `
+	
+	exports['-54469610'] = (get, $t) => 
+			`<td class='radio-table-input-cnt' > <input type='radio' name='` +
+			$t.clean(get("row").name) +
+			`' key='` +
+			$t.clean(get("row").key) +
+			`' value='` +
+			$t.clean(get("col")) +
+			`' ` +
+			$t.clean(get("row").value === get("col") ? 'checked' : '') +
+			`/> </td>`
+	
+	exports['-44250289'] = (get, $t) => 
+			`<tr > <td>` +
+			$t.clean(get("row").label) +
+			`</td> ` +
+			$t.clean( new $t('-54469610').render(get("columns")(get("rowIndex")), 'col', get)) +
+			` </tr>`
+	
+	exports['input/radio'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")() ? get("label")() +
+			':' : '') +
+			`</label> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <div class='inline tab'> ` +
+			$t.clean( new $t('-2140138526').render(get("list")(), 'key, val', get)) +
+			` </div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['-2140138526'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("isArray")() ? get("val") : get("key")) +
+			`</label> <input type='radio' ` +
+			$t.clean((get("isArray")() ? get("val") : get("key")) === get("value")() ? 'checked' : '') +
+			` class='` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' name='` +
+			$t.clean(get("uniqueName")()) +
+			`' value='` +
+			$t.clean(get("val")) +
+			`'> &nbsp;&nbsp; </span>`
+	
+	exports['input/select'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <select class='` +
+			$t.clean(get("class")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`' value='` +
+			$t.clean(get("value")()) +
+			`'> ` +
+			$t.clean( new $t('1835219150').render(get("list")(), 'key, value', get)) +
+			` </select> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['input/textarea'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <br> <textarea class='` +
+			$t.clean(get("class")()) +
+			`' list='input-list-` +
+			$t.clean(get("id")()) +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`' placeholder='` +
+			$t.clean(get("placeholder")()) +
+			`' type='` +
+			$t.clean(get("type")()) +
+			`' name='` +
+			$t.clean(get("name")()) +
+			`' ` +
+			$t.clean(get("attrString")()) +
+			`></textarea> <div class='error' id='` +
+			$t.clean(get("errorMsgId")()) +
+			`' hidden>` +
+			$t.clean(get("errorMsg")()) +
+			`</div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['input/table'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <br> <div class='tab'> <table border="1"> <tbody> <tr> <td></td> ` +
+			$t.clean( new $t('1254550278').render(get("columnNames")(), 'name', get)) +
+			` </tr> ` +
+			$t.clean( new $t('-808712670').render(get("rows")(), 'rowIndex, row', get)) +
+			` </tbody> </table> </div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
+	exports['-808712670'] = (get, $t) => 
+			`<tr > <td>` +
+			$t.clean(get("row")) +
+			`</td> ` +
+			$t.clean( new $t('976176139').render(get("columns")(get("rowIndex")), 'col', get)) +
+			` </tr>`
+	
+	exports['lists/file-tab'] = (get, $t) => 
+			`<div class='file-tab-cnt ` +
+			$t.clean(get("type")()) +
+			`` +
+			$t.clean(get("isOpen")() ? ' open' : '') +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`'> <ul class='list no-print'> ` +
+			$t.clean( new $t('821257078').render(get("list")(), 'title', get)) +
+			` </ul> <div class='content-cnt'> ` +
+			$t.clean( new $t('672662266').render(get("list")(), 'title', get)) +
+			` </div> </div> `
+	
+	exports['orientation-arrows'] = (get, $t) => 
+			`<div class='orientation-arrows' id='` +
+			$t.clean(get("navId")()) +
+			`' l-id='` +
+			$t.clean(get("id")()) +
+			`'> <table class='orientation-arrows-table orient-arrows' cellspacing="0" cellpadding="0"> <tr><td></td> <td dir='u'>&#8681;</td> <td></td></tr> <tr><td dir='l'>&#8680;</td> <td dir='c'>` +
+			$t.clean(get("space")()) +
+			`&#8865;` +
+			$t.clean(get("space")()) +
+			`</td> <td dir='r'>&#8678;</td></tr> <tr><td></td> <td dir='d'>&#8679;</td> <td></td></tr> </table> </div> `
+	
+	exports['2d/auto-location-properties'] = (get, $t) => 
+			`<div class='auto-location-properties-cnt'> <h3 class='inline-flex chev-dropdown-toggle'> Auto Location Settings <i class='down gg-chevron-down hidden' ></i> <i class='right gg-chevron-right'></i> </h3> <div class='tab chev-dropdown' hidden> <input type='text' value='` +
+			$t.clean(get("id")()) +
+			`' name='id' hidden/> <div ` +
+			$t.clean(get("isDefault")() ? 'hidden' : '') +
+			`> Default <button class='default-reset'>Return</button> <button class='apply-to-defualt'>Apply</button> </div> <label>Interior Only</label> <input type='checkbox' name='LAYOUT_INTERIOR_ONLY' ` +
+			$t.clean(get("LAYOUT_INTERIOR_ONLY") ? 'checked' : '') +
+			`/> <br> <label>Snaps</label> <input type='checkbox' name='SNAPS' ` +
+			$t.clean(get("SNAPS") ? 'checked' : '') +
+			`/> <br> <label>Corners</label> <input type='checkbox' name='CORNERS' ` +
+			$t.clean(get("CORNERS") ? 'checked' : '') +
+			`/> <div> <div class='inline-flex chev-dropdown-toggle'> <label>Walls</label> <input type='checkbox' name='WALLS' ` +
+			$t.clean(get("WALLS") ? 'checked' : '') +
+			`/> <i class='down gg-chevron-down hidden' ></i> <i class='right gg-chevron-right'></i> </div> <div class='tab chev-dropdown' hidden> <label>Match Angle</label> <input type='checkbox' name='MATCH_WALL_ANGLE' ` +
+			$t.clean(get("MATCH_WALL_ANGLE") ? 'checked' : '') +
+			`/> <br> <label>Size Adjust (0 to deactivate)</label> <input class='dem' type='number' name='SIZE_ADJUST_PERCENT' value='` +
+			$t.clean(get("SIZE_ADJUST_PERCENT")) +
+			`'/>% </div> </div> <label>Fixed Object Angle</label> <input type='checkbox' name='FIXED_ANGLE' ` +
+			$t.clean(get("FIXED_ANGLE") ? 'checked' : '') +
+			`/> <br> <label>Tolerance</label> <input class='dem' type='number' name='TOLERANCE' value='` +
+			$t.clean(get("TOLERANCE")) +
+			`'/> </div> </div> `
+	
+	exports['2d/controls'] = (get, $t) => 
+			`<div class='orientation-arrows' id='` +
+			$t.clean(get("navId")()) +
+			`' l-id='` +
+			$t.clean(get("id")()) +
+			`'> <table class='orientation-arrows-table controls-2d' cellspacing="0" cellpadding="0"> <tbody> <tr><td></td> <td dir='u'>&#8679;</td> <td></td></tr> <tr><td dir='l'>&#8635;</td> <td dir='c'>` +
+			$t.clean(get("space")()) +
+			`&#` +
+			$t.clean(get("centerCode")()) +
+			`;` +
+			$t.clean(get("space")()) +
+			`</td> <td dir='r'>&#8634;</td></tr> <tr><td></td> <td dir='d'>&#8681;</td> <td></td></tr> </tbody> </table> </div> `
+	
+	exports['2d/pop-up/corner-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <table> <tr> <td><label>X</label></td> <td><input class='value-2d' key='x' value='` +
+			$t.clean(get("display")(get("target").x)) +
+			`'></td> </tr> <tr> <td><label>Y</label></td> <td><input class='value-2d' key='y' value='` +
+			$t.clean(get("display")(get("target").y)) +
+			`'></td> </tr> <tr> <td><label>Angle</label></td> <td><input class='value-2d' key='angle' value='` +
+			$t.clean(get("target").angle()) +
+			`' convert='false'></td> </tr> <tr> <td><label>Show Angle</label></td> <td><input class='value-2d' key='showAngle' type='checkbox' convert='false' ` +
+			$t.clean(get("target").showAngle ? 'checked' : '') +
+			`></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d transparent'>Remove</button></td> </tr> </table> </div> `
+	
+	exports['2d/pop-up/door-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <table> <tr> <td><label>Height</label></td> <td><input class='value-2d' key='height' value='` +
+			$t.clean(get("display")(get("target").height())) +
+			`'></td> </tr> <tr> <td><label>Width</label></td> <td><input class='value-2d' key='width' value='` +
+			$t.clean(get("display")(get("target").width())) +
+			`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
+			$t.clean(get("display")(get("target").fromFloor())) +
+			`'></td> </tr> <tr> <td> <button class='hinge-btn transparent'>Hinge</button> </td> <td><button class='remove-btn-2d transparent'>Remove</button></td> </tr> </table> </div> `
+	
+	exports['2d/pop-up/layout-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <button class='add-object-btn-2d transparent'>Add Object</button> <br> <label>Ceiling Height</label> <input class='value-2d' type="text" key="ceilingHeight" convert='false' value="` +
+			$t.clean(get("display")(get("target").ceilingHeight())) +
+			`"> <br> <div class='center-vert center'> <button class='layout ruler` +
+			$t.clean(get("panZ").measurements.enabled() ? ' active' : '') +
+			`'> <i class="gg-ruler"></i> </button> </div> </div> `
+	
+	exports['2d/pop-up/line-measurement-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> ` +
+			$t.clean( new $t('1586878820').render(get("UNITS"), 'property', get)) +
+			` <br> <input type='text' class='measurement-mod transparent' value='` +
+			$t.clean(get("target").display()) +
+			`'> </div> `
+	
+	exports['2d/pop-up/snap-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").parent().constructor.name) +
+			`' id='` +
+			$t.clean(get("target").parent().id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> ` +
+			$t.clean( new $t('2d/auto-location-properties').render(get("autoLocProps"), undefined, get)) +
+			` <label>Name</label> <input class='value-2d' member='object' type="text" key="name" value="` +
+			$t.clean(get("target").parent().name()) +
+			`"> <br><br> <label>Width</label> <input class='value-2d' member='object' type="text" key="width" value="` +
+			$t.clean(get("display")(get("target").width())) +
+			`"> <br> <label>Depth</label> <input class='value-2d' member='object' type="text" key="thickness" value="` +
+			$t.clean(get("display")(get("target").height())) +
+			`"> <br> <label>height</label> <input class='value-2d' member='bridge' type="text" key="depth" value="` +
+			$t.clean(get("display")(get("target").parent().depth())) +
+			`"> <br> <label>Angle</label> <input class='value-2d' member='snap' type="text" convert='false' key="angle" value="` +
+			$t.clean(get("target").angle()) +
+			`"> <br> <label>X</label> <input class='value-2d' member='snap' type="text" key="x" value="` +
+			$t.clean(get("display")(get("target").x())) +
+			`"> <br> <label>Y</label> <input class='value-2d' member='snap' type="text" key="y" value="` +
+			$t.clean(get("display")(get("target").y())) +
+			`"> <br> <label>From Floor</label> <input class='value-2d' member='bridge' type="text" key="fromFloor" cascade='fromCeiling' value="` +
+			$t.clean(get("display")(get("target").parent().fromFloor())) +
+			`"> <br> <label>From Ceiling</label> <input class='value-2d' member='bridge' type="text" key="fromCeiling" cascade='fromFloor' value="` +
+			$t.clean(get("display")(get("target").parent().fromCeiling())) +
+			`"> <br> <button class='remove-btn-2d transparent'>Remove</button> </div> `
+	
+	exports['2d/pop-up/snap-location-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").parent().constructor.name) +
+			`' id='` +
+			$t.clean(get("target").parent().id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <div class='which-radio-cnt'` +
+			$t.clean(get("scope").snapPartner() ? '' : ' hidden') +
+			`> <label>Both</label> <input type="radio" name="which" checked value='Both'> <div class='tab'> <label>` +
+			$t.clean(get("name1")()) +
+			`</label> <input type="radio" name="which" value="` +
+			$t.clean(get("name1")()) +
+			`"> <br> <label>` +
+			$t.clean(get("name2")()) +
+			`</label> <input type="radio" name="which" value="` +
+			$t.clean(get("name2")()) +
+			`"> </div> <br> </div> <label>` +
+			$t.clean(get("scope").partner() ? 'Rotate' : 'Angle') +
+			`</label> <input member='snap-loc' type="text" convert='false' name="angle" value="` +
+			$t.clean(get("angle")()) +
+			`"> <br> <label>X</label> <input member='snap-loc' type="text" name="x" value="` +
+			$t.clean(get("display")(get("target").center().x)) +
+			`"> <br> <label>Y</label> <input member='snap-loc' type="text" name="y" value="` +
+			$t.clean(get("display")(get("target").center().y)) +
+			`"> <br> <button class='remove-btn-2d transparent'>Remove</button> <span class='fix-cnt right'` +
+			$t.clean(!get("scope").snapPartner() ? '' : ' hidden') +
+			`> <label>Fix</label> <input member='snap-loc' type="checkbox" name="fix" value=""> </span> </div> `
+	
+	exports['2d/pop-up/wall-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <button class='add-door-btn-2d transparent'>Add Door</button> <button class='add-window-btn-2d transparent'>Add Window</button> <button class='add-vertex-btn-2d transparent'>Add Vertex</button> <button class='remove-btn-2d transparent'>Remove</button> </div> `
+	
+	exports['2d/pop-up/window-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <table> <tr> <td><label>Height</label></td> <td><input class='value-2d' key='height' value='` +
+			$t.clean(get("display")(get("target").height())) +
+			`'></td> </tr> <tr> <td><label>Width</label></td> <td><input class='value-2d' key='width' value='` +
+			$t.clean(get("display")(get("target").width())) +
+			`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
+			$t.clean(get("display")(get("target").fromFloor())) +
+			`'></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d'>Remove</button></td> </tr> </table> </div> `
+	
+	exports['advanced/cabinet/divider'] = (get, $t) => 
+			`<div lookup-id='` +
+			$t.clean(get("divider").id()) +
+			`'> <label>Type</label> ` +
+			$t.clean(get("DividerTypeSelector")(get("divider")).html()) +
+			` <br> <label>Panel Thickness</label> <input type="text" name="panelThickness" value="` +
+			$t.clean(get("divider").panelThickness(undefined, true)) +
+			`"> <input disabled class='dem' type="text" name="panelThickness" value="` +
+			$t.clean(get("Measurement").display(get("divider").panelThickness())) +
+			`"> <br> <label>Has Frame</label> <input type="checkbox" name="has-frame"` +
+			$t.clean(get("divider").hasFrame() ? ' checked' : '') +
+			`> <br> <div class='frame-width-cnt'` +
+			$t.clean(get("divider").hasFrame() ? '' : ' hidden') +
+			`> <label>Frame Width</label> <input type="text" name="frameWidth" value="` +
+			$t.clean(get("divider").frameWidth()) +
+			`"> <input disabled class='dem' type="text" name="frameWidth" value="` +
+			$t.clean(get("Measurement").display(get("divider").frameWidth())) +
+			`"> </div> </div> `
+	
+	exports['advanced/cabinet'] = (get, $t) => 
+			`<div class='align-left'> ` +
+			$t.clean( new $t('-194441702').render(get("parts"), 'part', get)) +
+			` </div> `
+	
+	exports['-194441702'] = (get, $t) => 
+			`<div > <div class='inline-flex chev-dropdown-toggle'> ` +
+			$t.clean(get("part").partCode()) +
+			` <i class='down gg-chevron-down hidden' ></i> <i class='right gg-chevron-right'></i> </div> <div class='tab chev-dropdown' hidden> ` +
+			$t.clean(get("partHtml")(get("part"))) +
+			` </div> </div>`
+	
+	exports['advanced/subassemblies/assembly-config'] = (get, $t) => 
+			`<div id='` +
+			$t.clean(get("id")()) +
+			`'> <div class='sub-demension-cnt inline-flex'> ` +
+			$t.clean(get("demension").html()) +
+			` <input attr='subassemblies' name='demension' value='` +
+			$t.clean(get("demension").eqn()) +
+			`'> <input disabled class='measurement-input' name='value' value='` +
+			$t.clean(get("demension").value()) +
+			`'> <input type="checkbox" name="convert" checked> </div> <br> <div class='sub-center-cnt inline-flex'> ` +
+			$t.clean(get("center").html()) +
+			` <input attr='subassemblies' name='center' value='` +
+			$t.clean(get("center").eqn()) +
+			`'> <input disabled class='measurement-input' name='value' value='` +
+			$t.clean(get("center").value()) +
+			`'> <input type="checkbox" name="convert" checked> </div> <br> <div class='sub-rotation-cnt inline-flex'> ` +
+			$t.clean(get("rotation").html()) +
+			` <input attr='subassemblies' name='rotation' value='` +
+			$t.clean(get("rotation").eqn()) +
+			`'> <input disabled class='measurement-input' name='value' value='` +
+			$t.clean(get("rotation").value()) +
+			`'> </div> </div> `
+	
+	exports['advanced/subassemblies/void'] = (get, $t) => 
+			`<div class='void-display-cnt inline-flex' void-id='` +
+			$t.clean(get("id")()) +
+			`' cabinet-id='` +
+			$t.clean(get("cabinetId")()) +
+			`' void-disp-hash='` +
+			$t.clean(get("hash")()) +
+			`'> <div class='void-join-direction-toggle'` +
+			$t.clean(get("voids")().length > 1 ? '' : ' hidden') +
+			`> <div> <h3> <span` +
+			$t.clean(get("cabinet")().value('acsendingVoidJoin') ? '' : ' hidden') +
+			`> <i class='left gg-chevron-left'></i> </span> Join <span` +
+			$t.clean(!get("cabinet")().value('acsendingVoidJoin') ? '' : ' hidden') +
+			`> <i class='right gg-chevron-right'></i> </span> </h3> </div> </div> <div> <select class='void-part-code-select'> ` +
+			$t.clean( new $t('406900361').render(get("partCodes")(), 'partCode', get)) +
+			` </select> <label>Horizontal</label> <input type='radio' name='orientation' value='horizontal' checked> <label>Vertical</label> <input type='radio' name='orientation' value='vertical'> <label>Size</label> <input type='text' name='width' class='dem' value='5'> <label>X</label> <input type='text' name='height' class='dem' value='5'> <button class='add-void-btn'>Add</button> <div class='void-cnt'> ` +
+			$t.clean( new $t('-636533943').render(get("voids")(), 'void', get)) +
+			` </div> </div> </div> `
+	
+	exports['-636533943'] = (get, $t) => 
+			`<div class='card margin' index='` +
+			$t.clean(get("$index")) +
+			`' target-id='` +
+			$t.clean(get("void").id()) +
+			`'> <button class='assembly remove-btn'>X</button> <h3 class='inline-flex chev-dropdown-toggle'> ` +
+			$t.clean(get("void").partCode()) +
+			` <i class='down gg-chevron-down hidden' ></i> <i class='right gg-chevron-right'></i> </h3> <input type="text" class='void-dem' name="width" value="` +
+			$t.clean(get("displayWidth")(get("void"))) +
+			`"> X <input type="text" class='void-dem' name="length" value="` +
+			$t.clean(get("displayLength")(get("void"))) +
+			`"> <br> <div class='tab chev-dropdown' hidden> <div> <h3 class='inline-flex chev-dropdown-toggle'> Joint Config <i class='down gg-chevron-down hidden' ></i> <i class='right gg-chevron-right'></i> </h3> <div class='tab chev-dropdown joint-config' hidden> <label>Cap Set</label> <input type='number' min='0' max='2' step='1' value='` +
+			$t.clean(get("void").capSet()) +
+			`'/> <br/> <label>Cap Male</label> <input type='checkbox' ` +
+			$t.clean(get("void").capMale() ? 'checked' : '') +
+			`/> <br/> <label>Male Set</label> <input type='number' min='0' max='1' step='1' value='` +
+			$t.clean(get("void").maleSet()) +
+			`'/> <br/> <label>Joint</label> <select class='joint-selector'> <option>Body</option> <option>Cap</option> <option>Non Void</option> <option>Void Panel</option> </select> <div class='joint-input-cnt tab'> ` +
+			$t.clean(get("joint")(get("void"), 'body').html()) +
+			` </div> </div> </div> <div class='input-set'> <label>Include sides</label> ` +
+			$t.clean( new $t('1932279957').render('0..6', 'i', get)) +
+			` </div> ` +
+			$t.clean(get("assemblyConfig")(get("void")).html()) +
+			` </div> </div>`
+	
+	exports['cabinet/body'] = (get, $t) => 
+			`<div lookup-id='` +
+			$t.clean(get("cabinet").id()) +
+			`'> <div class='center relitive'> <div class='absolute-top-left show-cnt'> <div class='align-right'> <label>Show</label> <select class="show-select" name='type' side='left'> ` +
+			$t.clean( new $t('-94499910').render(get("showTypes"), 'showType', get)) +
+			` </select> <br> <label>End Style</label> <select class="show-select" name='endStyle' side='left'> <option ` +
+			$t.clean(!get("cabinet").value('show.left.endStyle') ? 'selected' : '') +
+			`> No </option> <option ` +
+			$t.clean(get("cabinet").value('show.left.endStyle') ? 'selected' : '') +
+			`> Yes </option> </select> </div> </div> <div class='toe-kick-cab-cnt auto-fit'> <label>Toe Kick</label> <br> <div class='auto-fit inline-flex'> <span> <measurement-input name='tkd' label='Depth' decimal='` +
+			$t.clean(get("cabinet").resolve('tkd')) +
+			`'/> </span> &nbsp;&nbsp;&nbsp; <span> <measurement-input name='tkh' label='Height' decimal='` +
+			$t.clean(get("cabinet").resolve('tkh')) +
+			`'/> </span> </div> </div> <div class='cab-tab-cnt'>` +
+			$t.clean(get("fileTabDisp").html()) +
+			`</div> <div class='absolute-top-right show-cnt'> <div class='align-left'> <select class="show-select" name='type' side='right'> ` +
+			$t.clean( new $t('-445556989').render(get("showTypes"), 'showType', get)) +
+			` </select> <label>Show</label> <br> <select class="show-select" name='endStyle' side='right'> <option ` +
+			$t.clean(!get("cabinet").value('show.right.endStyle') ? 'selected' : '') +
+			`> No </option> <option ` +
+			$t.clean(get("cabinet").value('show.right.endStyle') ? 'selected' : '') +
+			`> Yes </option> </select> <label>End Style</label> </div> </div> </div> <br> <div> ` +
+			$t.clean( new $t('1860435907').render(get("modifiableValues"), 'obj', get)) +
+			` </div> <div class='center' hidden> <button class='save-cabinet-btn' index='` +
+			$t.clean(get("$index")) +
+			`'>Save</button> </div> </div> `
+	
+	exports['-94499910'] = (get, $t) => 
+			`<option ` +
+			$t.clean(get("cabinet").value('show.left.type') === get("showType").name ? 'selected' : '') +
+			`> ` +
+			$t.clean(get("showType").name) +
+			` </option>`
+	
+	exports['-445556989'] = (get, $t) => 
+			`<option ` +
+			$t.clean(get("cabinet").value('show.right.type') === get("showType").name ? 'selected' : '') +
+			`> ` +
+			$t.clean(get("showType").name) +
+			` </option>`
+	
+	exports['cabinet/head'] = (get, $t) => 
+			`<div class='cabinet-header' cabinet-id='` +
+			$t.clean(get("cabinet").id()) +
+			`'> ` +
+			$t.clean(get("$index") +
+			1) +
+			`) <input class='cabinet-id-input' name='name' prop-update='` +
+			$t.clean(get("$index")) +
+			`.name' index='` +
+			$t.clean(get("$index")) +
+			`' display-id='` +
+			$t.clean(get("displayId")) +
+			`' value='` +
+			$t.clean(get("cabinet").name()) +
+			`'> &nbsp;&nbsp;&nbsp;&nbsp; Size: <div class='cabinet-dem-cnt' cabinet-id='` +
+			$t.clean(get("cabinet").id()) +
+			`'> <label>W:</label> <input class='cabinet-id-input dem' prop-update='` +
+			$t.clean(get("$index")) +
+			`.width' name='width' display-id='` +
+			$t.clean(get("displayId")) +
+			`' value='` +
+			$t.clean(get("displayValue")(get("cabinet").width())) +
+			`'> <label>H:</label> <input class='cabinet-id-input dem' prop-update='` +
+			$t.clean(get("$index")) +
+			`.length' name='length' display-id='` +
+			$t.clean(get("displayId")) +
+			`' value='` +
+			$t.clean(get("displayValue")(get("cabinet").length())) +
+			`'> <label>D:</label> <input class='cabinet-id-input dem' prop-update='` +
+			$t.clean(get("$index")) +
+			`.thickness' name='thickness' display-id='` +
+			$t.clean(get("displayId")) +
+			`' value='` +
+			$t.clean(get("displayValue")(get("cabinet").thickness())) +
+			`'> </div> </div> `
+	
+	exports['cabinet/notes'] = (get, $t) => 
+			`<div> <textarea class="cab-notes">` +
+			$t.clean(get("cabinet").notes()) +
+			`</textarea> </div> `
+	
+	exports['cabinet/simple'] = (get, $t) => 
+			`Im simple bitch `
+	
+	exports['canvas-displays'] = (get, $t) => 
+			`<div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <div name="Layout" id='two-d-model'> <canvas id="two-d-model-canvas"></canvas> <div class='orientation-controls'></div> </div> <div name='Cabinet' id='disp-canvas-cab'></div> <div name='Parts 3D' id='disp-canvas-p3d'> <div id='model-controller'></div> </div> <div name='Parts 2D' id='disp-canvas-p2d'></div> <div name='Room' id='disp-canvas-room'></div> <div id="three-d-model" class="viewer small"> <div class='inline left'> <div class='orientation-controls'></div> </div> </div> </div> </div> `
+	
+	exports['display-manager'] = (get, $t) => 
+			`<div class='display-manager' id='` +
+			$t.clean(get("switchCntId")) +
+			`'> ` +
+			$t.clean( new $t('-533097724').render(get("list"), 'item', get)) +
+			` </div> `
+	
+	exports['-533097724'] = (get, $t) => 
+			`<span class='display-manager-item'> <button class='display-manager-input` +
+			$t.clean(get("$index") === 0 ? " active" : "") +
+			`' type='button' display-id='` +
+			$t.clean(get("item").id) +
+			`' link='` +
+			$t.clean(get("link")) +
+			`'>` +
+			$t.clean(get("item").name) +
+			`</button> </span>`
+	
+	exports['divide/body'] = (get, $t) => 
+			`<h2>` +
+			$t.clean(get("list").activeKey()) +
+			`</h2> val: ` +
+			$t.clean(get("list").value()('selected')) +
+			` `
+	
+	exports['divide/head'] = (get, $t) => 
+			`<div> <div class='open-divider-select` +
+			$t.clean(get("sections").length === 0 ? '' : ' hidden') +
+			`'> ` +
+			$t.clean(get("headText")) +
+			` </div> </div> `
+	
+	exports['divider-controls'] = (get, $t) => 
+			`<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` +
+			$t.clean(get("opening").id()) +
+			`' value='` +
+			$t.clean(get("opening").pattern().str.length < 2 ? '' : get("opening").pattern().str) +
+			`'> <span class="open-orientation-radio-cnt"> <div class='div-orien-btn ` +
+			$t.clean(get("opening").value('vertical') ? '' : 'pressed') +
+			`' orientation='horizontal'> <i class='gg-horizontal'></i> </div> <div class='div-orien-btn ` +
+			$t.clean(!get("opening").value('vertical') ? '' : 'pressed') +
+			`' orientation='vertical'> <i class='gg-vertical'></i> </div> </span> <div` +
+			$t.clean(get("opening").divideRight() ? '': ' hidden') +
+			`> ` +
+			$t.clean(get("dividerTypeSelect").html()) +
+			` </div> <div class='open-pattern-input-cnt' opening-id='` +
+			$t.clean(get("opening").id()) +
+			`' ` +
+			$t.clean(get("opening").pattern().equals ? 'hidden' : '') +
+			`> ` +
+			$t.clean(get("patternInputHtml")) +
+			` </div> </div> `
+	
+	exports['documents/construction/aerials'] = (get, $t) => 
+			`<div class='aerial-views'> ` +
+			$t.clean( new $t('-1044419277').render(get("order").rooms, 'name, room', get)) +
+			` </div> `
+	
+	exports['-1044419277'] = (get, $t) => 
+			`<div > <h3>` +
+			$t.clean(get("room").name()) +
+			`</h3> <canvas class='this-one' order-room='` +
+			$t.clean(get("order").name().toKebab()) +
+			`-` +
+			$t.clean(get("room").name().toKebab()) +
+			`'></canvas> </div>`
+	
+	exports['documents/construction/cabinet'] = (get, $t) => 
+			`<div> ` +
+			$t.clean(get("DocumentationHtml").parts(get("cabinetInfo").parts[get("partType")])) +
+			` </div> `
+	
+	exports['documents/construction/door-list'] = (get, $t) => 
+			`<div class='small-margin last-col-full '> <table> <tbody> <tr class='btm-border-barely-visible'> <th>Qt</th> <th>` +
+			$t.clean(get("width")) +
+			`</th> <th>` +
+			$t.clean(get("height")) +
+			`</th> <th>` +
+			$t.clean(get("thickness")) +
+			`</th> <th>Style</th> <th>Location</th> <th>Notes</th> </tr> ` +
+			$t.clean( new $t('72251508').render(get("partListMap")[get("type")], 'doorObj', get)) +
+			` </tbody> </table> </div> `
+	
+	exports['documents/construction/elevation-diagrams'] = (get, $t) => 
+			`<div cabinet-list-hash='` +
+			$t.clean(get("hash")) +
+			`'> ` +
+			$t.clean( new $t('-892612743').render(get("groups"), 'group', get)) +
+			` </div> `
+	
+	exports['-892612743'] = (get, $t) => 
+			`<div class='avoid-page-break center'> <label>` +
+			$t.clean(get("$index")) +
+			`</label> <canvas class='upside-down mirror-x' id='` +
+			$t.clean(get("elevationCanvasId")(get("$index"))) +
+			`'></canvas> </div>`
+	
+	exports['documents/construction/everything'] = (get, $t) => 
+			`<div class='everything-cnt' id='everything-cnt-` +
+			$t.clean(get("id")) +
+			`'> ` +
+			$t.clean( new $t('134249436').render(get("sections"), 'section', get)) +
+			` </div> `
+	
+	exports['documents/construction/group'] = (get, $t) => 
+			`<div class='page group-part-doc-cnt'> ` +
+			$t.clean( new $t('-535896152').render(get("groupInfo").cabinets, 'cabinet', get)) +
+			` </div> `
+	
+	exports['-535896152'] = (get, $t) => 
+			`<div class='page' > ` +
+			$t.clean(get("DocumentationHtml").parts.cabinet(get("cabinet"), get("partType"))) +
+			` </div>`
+	
+	exports['documents/construction/materials'] = (get, $t) => 
+			`<div class='small-margin'> <table> <tbody> <tr> <th>Category</th> <th>Size</th> </tr> ` +
+			$t.clean( new $t('documents/construction/materials-row').render(get("partListMap"), 'category, set', get)) +
+			` </tbody> </table> </div> `
+	
+	exports['documents/construction/materials-row'] = (get, $t) => 
+			`<tr> <td class='align-left'>` +
+			$t.clean(get("disp").tabStr(get("set").list && get("set").list.depth)) +
+			`` +
+			$t.clean(get("category")) +
+			`</td> <td>` +
+			$t.clean(get("disp").material(get("set").list)) +
+			`</td> </tr> ` +
+			$t.clean( new $t('documents/construction/materials-row').render(get("categories")(get("set")), 'category, set', get)) +
+			` `
+	
+	exports['documents/construction/open-sketch'] = (get, $t) => 
+			`<div cabinet-list-hash=` +
+			$t.clean(get("hash")) +
+			` class='build-diagram-cnt'> ` +
+			$t.clean( new $t('-1303323074').render(get("cabinetSets"), 'set', get)) +
+			` </div> `
+	
+	exports['-1255362949'] = (get, $t) => 
+			`<span class='fit'> <div class='center'> <b>` +
+			$t.clean(get("disp").partIdPrefix(get("cabinet"))) +
+			`</b> </div> <div id='` +
+			$t.clean(get("cntId")(get("cabinet").id())) +
+			`'></div> <div class='inline-flex'> <table class='no-borders'> <tbody> ` +
+			$t.clean( new $t('678094078').render(get("sectionSets")(get("cabinet")), 'set', get)) +
+			` </tbody> </table> </div> </span>`
+	
+	exports['-1303323074'] = (get, $t) => 
+			`<div class='avoid-page-break inline-flex'> ` +
+			$t.clean( new $t('-1255362949').render(get("set"), 'cabinet', get)) +
+			` </div>`
+	
+	exports['documents/construction/opening-diagrams'] = (get, $t) => 
+			`<div cabinet-list-hash='` +
+			$t.clean(get("hash")) +
+			`'> ` +
+			$t.clean( new $t('-1730737816').render(get("cabinetInfos"), 'cabInfo', get)) +
+			` </div> `
+	
+	exports['-1730737816'] = (get, $t) => 
+			`<div class='avoid-page-break center'> <div> <b>` +
+			$t.clean(get("disp").partIdPrefix(get("cabInfo").parts[0])) +
+			`</b> </div> <div> <canvas class='upside-down mirror-x' id='` +
+			$t.clean(get("cabCanvasId")(get("cabInfo").parts[0], 'front')) +
+			`'></canvas> <canvas class='upside-down mirror-x' id='` +
+			$t.clean(get("cabCanvasId")(get("cabInfo").parts[0], 'top')) +
+			`'></canvas> <canvas class='upside-down mirror-x' id='` +
+			$t.clean(get("cabCanvasId")(get("cabInfo").parts[0], 'side')) +
+			`'></canvas> </div> </div>`
+	
+	exports['documents/construction/order-information'] = (get, $t) => 
+			`<div> ` +
+			$t.clean(get("order").name()) +
+			`&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;` +
+			$t.clean(get("order").date().initial) +
+			` <div class='tab'> ` +
+			$t.clean(get("Utils").textToHtml(get("order").notes())) +
+			` </div> </div> `
+	
+	exports['documents/construction/panel-cut-list'] = (get, $t) => 
+			`` +
+			$t.clean( new $t('360645387').render(get("pages"), 'page', get)) +
+			` `
+	
+	exports['-1210538210'] = (get, $t) => 
+			`<td > ` +
+			$t.clean(get("pickles")) +
+			` </td>`
+	
+	exports['-275817973'] = (get, $t) => 
+			`<tr > ` +
+			$t.clean( new $t('-1210538210').render(get("row"), 'pickles', get)) +
+			` </tr>`
+	
+	exports['-1487921430'] = (get, $t) => 
+			`<div class='avery-5160'> <div class='center-div'> <table> <tbody> ` +
+			$t.clean( new $t('-275817973').render(get("page"), 'row', get)) +
+			` </tbody> </table> </div> </div>`
+	
+	exports['documents/construction/part'] = (get, $t) => 
+			`<div class='avoid-page-break part-top-margin'> <div class='part-header-cnt'> <h2 class='part-header'> ` +
+			$t.clean(get("parts").length) +
+			`|` +
+			$t.clean(get("partsId")) +
+			`) ` +
+			$t.clean(get("disp").demensions(get("demensions"))) +
+			` &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp; ` +
+			$t.clean(get("disp").partIds(get("parts"))) +
+			` </h2> </div> <div class='font-medium part-cnt'> <div>` +
+			$t.clean(get("toolingHtml")()) +
+			`</div> <span class='tab' id='` +
+			$t.clean(get("viewContainer")(get("views").left)) +
+			`'></span> <span class='tab' id='` +
+			$t.clean(get("viewContainer")(get("views").right)) +
+			`'></span> </div> </div> `
+	
+	exports['documents/construction'] = (get, $t) => 
+			`<div class='target-input-selector'> ` +
+			$t.clean(get("selectorHtml")) +
+			` </div> <div id='document-print-body' hidden> <button class='print'>Print</button> <div class='document-cnt'></div> <button class='print'>Print</button> </div> `
+	
+	exports['documents/construction/room'] = (get, $t) => 
+			`` +
+			$t.clean( new $t('568362631').render(get("roomInfo").groups, 'group', get)) +
+			` `
+	
+	exports['documents/cuts/cut-data'] = (get, $t) => 
+			`<tr> <td>` +
+			$t.clean(get("cut").id) +
+			`</td> <td>` +
+			$t.clean(get("cut").marker && get("cut").marker.label) +
+			`</td> <td>` +
+			$t.clean(get("disp").axis.x(get("cut").axis)) +
+			`</td> <td>` +
+			$t.clean(get("disp").axis.z(get("cut").axis)) +
+			`</td> <td>` +
+			$t.clean(get("disp").roundTo(get("cut").tilt) || '') +
+			`</td> <td>` +
+			$t.clean(get("disp").angle(get("cut"), 'z')) +
+			`<br/>` +
+			$t.clean(get("disp").angle(get("cut"), '-z')) +
+			`</td> <td> ` +
+			$t.clean( new $t('313689006').render(get("cut").locationRef.references, 'er', get)) +
+			` </td> <td>` +
+			$t.clean(get("disp").axis.y(get("cut").axis)) +
+			`</td> </tr> `
+	
+	exports['documents/cuts/cut-edge-ref'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("$index") === 0 ? "left" : "right") +
+			`'> ` +
+			$t.clean(get("label")) +
+			`@` +
+			$t.clean(get("disp").measurement(get("distance"))) +
+			` </div> `
+	
+	exports['documents/cuts/cut-point-ref'] = (get, $t) => 
+			`` +
+			$t.clean(get("disp").line2d(get("scope"))) +
+			` `
+	
+	exports['documents/cuts/hand-saw'] = (get, $t) => 
+			`<div class='hand-saw-cnt'> <table class='no-border-cells'> <caption><b>Hand Saw</b></caption> <tr> <th>Width</th> <th>Depth</th> <th>Length</th> <th>Angle</th> <th>Relitive To Vertex</th> <th>Relitive To Vertex</th> </tr> ` +
+			$t.clean( new $t('1903603615').render(get("list"), 'item', get)) +
+			` </table> </div> `
+	
+	exports['documents/cuts/cuts'] = (get, $t) => 
+			`<span> <table class='no-border-cells'> <caption><b>Cut References</b></caption> <tr> <th>Cut ID</th> <th>Marker</th> <th>Width</th> <th>Depth</th> <th><i class='gg-shape-triangle no-right no-bottom'></i></th> <th><i class='gg-shape-triangle no-right'></i></th> <th class='edge-ref'>Edge References<div>Left<br/>Right</div></th> <th>Length</th> </tr> ` +
+			$t.clean( new $t('documents/cuts/cut-data').render(get("cuts"), 'cut', get)) +
+			` </table> </span> `
+	
+	exports['documents/cuts/table-data'] = (get, $t) => 
+			`<tr> <td class='no-border'>` +
+			$t.clean(!get("item").valid ? '!!!' : '') +
+			`</td> <td>` +
+			$t.clean(get("item").width ? get("display").measurement(get("item").width) : '') +
+			`</td> <td>` +
+			$t.clean(get("item").depth ? get("display").measurement(get("item").depth) : '') +
+			`</td> <td>` +
+			$t.clean(get("item").angle ? get("display").degrees(get("item").angle) : '') +
+			`</td> <td>` +
+			$t.clean(get("item").upSide === 'Both' ? '' : get("item").upSide) +
+			`</td> <td>` +
+			$t.clean(get("item").fenceEdge.label) +
+			`</td> <td>` +
+			$t.clean(get("display").measurement(get("item").fenceDistance)) +
+			`</td> <td>` +
+			$t.clean(get("item").length ? get("display").measurement(get("item").length) : '') +
+			`</td> <td>` +
+			$t.clean(get("item").outsideOfBlade ? 'true' : '') +
+			`</td> </tr> `
+	
+	exports['documents/construction/cabinetList'] = (get, $t) => 
+			`<div class='small-margin'> <table class='last-col-full'> <tr class='btm-border-barely-visible'> <th>Index</th> <th>Name</th> <th>Demensions</th> <th colspan="2">Show(L|R)</th> <th colspan="2">End Style(L|R)</th> <th>Shelves</th> <th>Notes</th> </tr> ` +
+			$t.clean( new $t('40671914').render(get("cabinets"), 'cabinet', get)) +
+			` </table> </div> `
+	
+	exports['-1387031246'] = (get, $t) => 
+			`<tr class='btm-border-barely-visible'> <td>` +
+			$t.clean(get("cabinet").groupIndex()) +
+			`</td> <td>` +
+			$t.clean(get("cabinet").name()) +
+			`</td> <td>` +
+			$t.clean(get("Utils").display.demensions(get("cabinet").position().demension())) +
+			`</td> <td>` +
+			$t.clean(get("cabinet").value('show.left.type')) +
+			`</td> <td>` +
+			$t.clean(get("cabinet").value('show.right.type')) +
+			`</td> <td>` +
+			$t.clean(get("cabinet").value('show.left.endStyle')) +
+			`</td> <td>` +
+			$t.clean(get("cabinet").value('show.right.endStyle')) +
+			`</td> <td>` +
+			$t.clean(get("Utils").count.shelves(get("cabinet")) || '') +
+			`</td> <td class='align-left'>` +
+			$t.clean(get("Utils").textToHtml(get("cabinet").notes())) +
+			`</td> </tr>`
+	
+	exports['documents/construction/cut-list-label'] = (get, $t) => 
+			`<div> <div>` +
+			$t.clean(get("info").partsId) +
+			`</div> <div> ` +
+			$t.clean(get("disp").partIdPrefix(get("part"))) +
+			`:` +
+			$t.clean(get("part").userFriendlyId()) +
+			` <br> ` +
+			$t.clean(get("disp").measurement(get("info").demensions.x)) +
+			` X ` +
+			$t.clean(get("disp").measurement(get("info").demensions.y)) +
+			` X ` +
+			$t.clean(get("disp").measurement(get("info").demensions.z)) +
+			` </div> </div> `
+	
+	exports['documents/cuts/unknown'] = (get, $t) => 
+			`<div class='unknown-cnt'> <h3>Cut information Cannot Be Determined for joints:</h3> ` +
+			$t.clean( new $t('-506182427').render(get("list"), 'item', get)) +
+			` </div> `
+	
+	exports['-506182427'] = (get, $t) => 
+			`<div class='cut-info-cnt tab font-medium' > ` +
+			$t.clean(get("item").descriptor) +
+			` </div>`
+	
+	exports['documents/cuts/table-saw'] = (get, $t) => 
+			`<span> <table class='no-border-cells'> <caption><b>Table Saw</b></caption> <tr> <th class='no-border'></th> <th>Width</th> <th>Depth</th> <th>Angle</th> <th>Side&nbsp;Up</th> <th>Edge</th> <th>Fence&nbsp;@</th> <th>Length</th> <th>OOB</th> </tr> ` +
+			$t.clean( new $t('documents/cuts/table-data').render(get("list"), 'item', get)) +
+			` </table> </span> `
+	
+	exports['documents/task-completion'] = (get, $t) => 
+			`<div> <br> <div class="loading-bar-cnt main-progress-cnt"> <div class="loading-bar center" style="width:` +
+			$t.clean(get("progress")) +
+			`%"> ` +
+			$t.clean(get("progress")) +
+			`% </div> </div> <br> <div class='ind-task-progress-cnt'> ` +
+			$t.clean( new $t('2053240362').render(get("tasks"), 'task', get)) +
+			` </div> </div> `
+	
+	exports['group/body'] = (get, $t) => 
+			`<div group-id='` +
+			$t.clean(get("group").id()) +
+			`' lookup-id='` +
+			$t.clean(get("group").id()) +
+			`'> <div class='group-descriptor'> ` +
+			$t.clean( new $t(`group/descriptors/` +
+			$t.clean(get("group").resolve("style").toLowerCase()) +
+			``).render(get("scope"), undefined, get)) +
+			` </div> ` +
+			$t.clean(get("propertyHtml")(get("group"))) +
+			` <div class='cabinet-cnt'>` +
+			$t.clean(get("groupDisplay").cabinetHtml(get("group"))) +
+			`</div> </div> `
+	
+	exports['feature'] = (get, $t) => 
+			`<h3>Feature Display</h3> `
+	
+	exports['group/descriptors/inset'] = (get, $t) => 
+			`<div cab-style='Inset'> <h5> ` +
+			$t.clean(get("group").resolve('fls') ? '' : get("group").propertyConfig('dfw').display() +
+			' Frame - ') +
+			` <b class='group-key'>` +
+			$t.clean(get("group").propertyConfig('is').display()) +
+			`</b> Inset </h5> </div> `
+	
+	exports['group/descriptors/overlay'] = (get, $t) => 
+			`<div cab-style='Overlay'> <h5> ` +
+			$t.clean(get("group").resolve('fls') ? '' : get("group").propertyConfig('dfw').display() +
+			' Frame - ') +
+			` <b class='group-key'>` +
+			$t.clean(get("group").propertyConfig('ov').display()) +
+			`</b> Overlay </h5> </div> `
+	
+	exports['group/descriptors/reveal'] = (get, $t) => 
+			`<div cab-style='Reveal'> <h5> ` +
+			$t.clean(get("group").resolve('fls') ? '' : get("group").propertyConfig('dfw').display() +
+			' Frame - ') +
+			` <b class='group-key'>` +
+			$t.clean(get("group").propertyConfig('r').display()) +
+			`</b> Reveal </h5> </div> `
+	
+	exports['group/head'] = (get, $t) => 
+			`<div group-display-id='` +
+			$t.clean(get("groupDisplay").id()) +
+			`'> <div group-id='` +
+			$t.clean(get("group").id()) +
+			`' class='expand-header group-display-header ` +
+			$t.clean(get("groupDisplay").active() === get("group") ? 'active' : '') +
+			`'> <input class='group-input' group-id='` +
+			$t.clean(get("group").id()) +
+			`' value='` +
+			$t.clean(get("group").name()) +
+			`' prop-update='name'> </div> <div class='group-display-body' ` +
+			$t.clean(get("groupDisplay").active() === get("group") ? '' : 'hidden') +
+			`> ` +
+			$t.clean(get("body")) +
+			` </div> <br> </div> `
+	
+	exports['hello'] = (get, $t) => 
+			`Hello World `
+	
+	exports['group/style-descriptor'] = (get, $t) => 
+			``
+	
+	exports['login/confirmation-message'] = (get, $t) => 
+			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
+	
+	exports['login/create-account'] = (get, $t) => 
+			`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
+			$t.clean(get("email")) +
+			`'> <input type='password' placeholder="password" name='password' value='` +
+			$t.clean(get("password")) +
+			`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
+	
+	exports['login/reset-password'] = (get, $t) => 
+			`<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` +
+			$t.clean(get("email")) +
+			`'> <input type='password' placeholder="password" name='password' value='` +
+			$t.clean(get("password")) +
+			`'> <br><br> <button id='reset-password'>Reset</button> <br><br> <a href='#' user-state='LOGIN'>Login</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+	
+	exports['login/login'] = (get, $t) => 
+			`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
+			$t.clean(get("email")) +
+			`'> <input type='password' placeholder="password" name='password' value='` +
+			$t.clean(get("password")) +
+			`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+	
+	exports['managers/abstract-manager'] = (get, $t) => 
+			`<div> <div class="center"> <h2 id='` +
+			$t.clean(get("headerId")) +
+			`'> ` +
+			$t.clean(get("header")) +
+			` <button class='manager-save-btn' id='` +
+			$t.clean(get("saveBtnId")) +
+			`'>Save</button> </h2> </div> <div id="` +
+			$t.clean(get("bodyId")) +
+			`"></div> </div> `
+	
+	exports['index'] = (get, $t) => 
+			`<html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <style> /* #two-d-model { width: 500px; height:500px;} */ div { font-size:x-small; } </style> <script type="text/javascript" src='/cabinet/js/index.js'></script> <script type="text/javascript" src='/js/qrious.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/styles/file-tab.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <link rel="stylesheet" href="/styles/icons.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>` +
+			$t.clean(get("title")) +
+			`</title> </head> <body> <button id='menu-btn'>&#8801;</button> <div id='menu' hidden></div> <div id='login' hidden><div id='login-cnt' class='center-all'></div></div> <div id='display-ctn'> <div id='app' name='Orders' ` +
+			$t.clean(get("pageId") !== 'home' ? "link='/cabinet/home'" : '') +
+			` hidden> <div id='order-cnt'></div> </div> <div name='Property Manager' ` +
+			$t.clean(get("pageId") !== 'home' ? "link='/cabinet/property'" : '') +
+			` id='property-manager-cnt' hidden> <div class='center'> <button id='property-manager-save-all'>Save All</button> </div> <div id='property-manager'></div> </div> <div id='cost-manager' "link='/cabinet/cost'" name='Cost Manager' ` +
+			$t.clean(get("pageId") !== 'cost' ? "link='/cabinet/cost'" : '') +
+			` hidden></div> <div id='template-manager' name='Template Manager' ` +
+			$t.clean(get("pageId") !== 'template' ? "link='/cabinet/template'" : '') +
+			` hidden>Temp Man</div> <div id='pattern-manager' name='Pattern Manager' ` +
+			$t.clean(get("pageId") !== 'home' ? "link='/cabinet/pattern'" : '') +
+			` hidden>Pat Man</div> </div> ` +
+			$t.clean( new $t('canvas-displays').render(get("autoLocProps"), undefined, get)) +
+			` <div id='property-select-cnt'></div> </body> </html> `
+	
+	exports['managers/cost/body'] = (get, $t) => 
+			`<div hidden> <div> <span> ` +
+			$t.clean(get("CostManager").nodeInputHtml()) +
+			` <button>Add Cost</button> <button>Add Node</button> </span> <span> Cost Display </span> </div> ` +
+			$t.clean( new $t('2055573719').render(get("node").children(), 'child', get)) +
+			` </div> `
+	
+	exports['managers/cost/main'] = (get, $t) => 
+			`<div> <div class="center"> <h2 id='cost-manager-header'> Cost Tree Manager </h2> </div> ` +
+			$t.clean( new $t('-496477131').render(get("root")().children(), 'child', get)) +
+			` <button id='cost-manager-save-btn'>Save</button> </div> `
+	
+	exports['-496477131'] = (get, $t) => 
+			`<div class='expandable-list cost-tree' radio-id='poo'> ` +
+			$t.clean(get("headHtml")(get("child"))) +
+			` ` +
+			$t.clean(get("bodyHtml")(get("child"))) +
+			` </div>`
+	
+	exports['managers/cost/head'] = (get, $t) => 
+			`<div class='expand-header' node-id='` +
+			$t.clean(get("node").nodeId()) +
+			`'> <b> ` +
+			$t.clean(get("node").payload().name()) +
+			` - ` +
+			$t.clean(get("node").payload().type()) +
+			` </b> <ul> ` +
+			$t.clean( new $t('1417643187').render(get("node").payload().requiredProperties, 'property', get)) +
+			` </ul> </div> `
+	
+	exports['managers/cost/property-select'] = (get, $t) => 
+			`<div> ` +
+			$t.clean( new $t('-1569738859').render(get("groups"), 'group, properties', get)) +
+			` </div> `
+	
+	exports['-1569738859'] = (get, $t) => 
+			`<div > <b>` +
+			$t.clean(get("group")) +
+			` (` +
+			$t.clean(get("abbriviation")(get("group"))) +
+			`)</b> ` +
+			$t.clean( new $t('1036581066').render(get("properties"), 'property', get)) +
+			` </div>`
+	
+	exports['managers/cost/types/labor'] = (get, $t) => 
+			`<div cost-id='` +
+			$t.clean(get("cost").id()) +
+			`'> <b>Labor</b> <span` +
+			$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
+			`> <input value='` +
+			$t.clean(get("cost").length()) +
+			`'> </span> <span` +
+			$t.clean(get("cost").width() === undefined ? ' hidden' : '') +
+			`> <label>X</label> <input value='` +
+			$t.clean(get("cost").width()) +
+			`'> </span> <span` +
+			$t.clean(get("cost").depth() === undefined ? ' hidden' : '') +
+			`> <label>X</label> <input value='` +
+			$t.clean(get("cost").depth()) +
+			`'> </span> <br> <div> <label>Cost</label> <input value='` +
+			$t.clean(get("cost").cost()) +
+			`'> <label>Per ` +
+			$t.clean(get("cost").unitCost('name')) +
+			` = ` +
+			$t.clean(get("cost").unitCost('value')) +
+			`</label> </div> </div> `
+	
+	exports['managers/property/header'] = (get, $t) => 
+			`<div> <b>` +
+			$t.clean(get("instance").name) +
+			` (` +
+			$t.clean(get("instance").constructor.code) +
+			`) - ` +
+			$t.clean(get("instance").value) +
+			`</b> </div> `
+	
+	exports['managers/property/body'] = (get, $t) => 
+			`<div> No Need </div> `
+	
+	exports['managers/cost/types/material'] = (get, $t) => 
+			`<div cost-id='` +
+			$t.clean(get("cost").id()) +
+			`'> <b>Material</b> <span` +
+			$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
+			`> <input value='` +
+			$t.clean(get("cost").length()) +
+			`'> </span> <span` +
+			$t.clean(get("cost").width() === undefined ? ' hidden' : '') +
+			`> <label>X</label> <input value='` +
+			$t.clean(get("cost").width()) +
+			`'> </span> <span` +
+			$t.clean(get("cost").depth() === undefined ? ' hidden' : '') +
+			`> <label>X</label> <input value='` +
+			$t.clean(get("cost").depth()) +
+			`'> </span> <br> <div> <label>Cost</label> <input value='` +
+			$t.clean(get("cost").cost()) +
+			`'> <label>Per ` +
+			$t.clean(get("cost").unitCost('name')) +
+			` = ` +
+			$t.clean(get("cost").unitCost('value')) +
+			`</label> </div> </div> `
+	
+	exports['managers/template/body'] = (get, $t) => 
+			`<div class='template-body' template-id=` +
+			$t.clean(get("template").id()) +
+			`> <div class='inline-flex full-width'> <h4 class='nowrap'>` +
+			$t.clean(get("template").type()) +
+			`</h4> <div class='full-width'> <button class='copy-template right'>Copy</button> <button class='paste-template right'>Paste</button> </div> </div> ` +
+			$t.clean( new $t(`managers/template/headers/` +
+			$t.clean(get("template").constructor.cxtrType.toLowerCase()) +
+			``).render({hideEmpty: true}, undefined, get)) +
+			` <br> <div class='inline-flex'> <label>Demensions: </label> <span> <input class='cabinet-input dem' type="text" name="width" value="` +
+			$t.clean(get("toDisplay")(get("template").width())) +
+			`"> X <input class='cabinet-input dem' type="text" name="height" value="` +
+			$t.clean(get("toDisplay")(get("template").height())) +
+			`"> X <input class='cabinet-input dem' type="text" name="thickness" value="` +
+			$t.clean(get("toDisplay")(get("template").thickness())) +
+			`"> <br> <input class='cabinet-input' type="text" name="widthValue" disabled> X <input class='cabinet-input' type="text" name="heightValue" disabled> X <input class='cabinet-input' type="text" name="thicknessValue" disabled> </span> </div> ` +
+			$t.clean( new $t('managers/template/expand-cnt').render(get("containers"), 'container', get)) +
+			` <div template-id='` +
+			$t.clean(get("template").id()) +
+			`' class='cabinet-template-input-cnt'> <div class='expand-header'>View Shape</div> <div hidden> <div template-id='` +
+			$t.clean(get("template").id()) +
+			`' class='layout-shape-display'> <canvas class="top-sketch upside-down mirror-x" width="200" height="200"></canvas> <canvas class="front-sketch upside-down mirror-x" width="200" height="200"></canvas> </div> </div> </div> </div> `
+	
+	exports['managers/template/expand-cnt'] = (get, $t) => 
+			`<div template-id='` +
+			$t.clean(get("template").id()) +
+			`' class='cabinet-template-input-cnt'> <div class='expand-header'>` +
+			$t.clean(get("container").name) +
+			`</div> <div hidden class="` +
+			$t.clean(get("container").class) +
+			`"> ` +
+			$t.clean(get("container").html && get("container").html(get("template"))) +
+			` </div> </div> `
+	
+	exports['managers/template/head'] = (get, $t) => 
+			`<div> <b>` +
+			$t.clean(get("template").type()) +
+			`</b> </div> `
+	
+	exports['managers/template/headers/assembly'] = (get, $t) => 
+			``
+	
+	exports['managers/template/headers/cabinet'] = (get, $t) => 
+			`<label>Automatic Toekick</label> <input type="checkbox" name="autoToeKick" ` +
+			$t.clean(get("template").autoToeKick() ? 'checked' : '') +
+			`> <br> <label>Height from floor:</label> <input class='cabinet-input dem' type="text" name="fromFloor" value="` +
+			$t.clean(get("template").fromFloor()) +
+			`"> <input class='cabinet-input' type="text" name="fromFloorValue" disabled> <br> `
+	
+	exports['managers/template/joints/head'] = (get, $t) => 
+			`<b> <input class='template-input' value='` +
+			$t.clean(get("obj").selector.depends()) +
+			`' attr='joints' placeholder='Male Part Code' name='selector-depends'> => <input class='template-input' value='` +
+			$t.clean(get("obj").selector.dependent()) +
+			`' attr='joints' placeholder='Female Part Code' name='selector-dependent'> </b> `
+	
+	exports['managers/template/main'] = (get, $t) => 
+			`<div template-manager=` +
+			$t.clean(get("id")()) +
+			`> <div class='section-properties'> <br> <label>Inset</label> <input class='style-selector' type="radio" name="style" value="Inset" ` +
+			$t.clean(get("sectionState").style === 'Inset' ? 'checked' : '') +
+			`> <label>overlay</label> <input class='style-selector' type="radio" name="style" value="Overlay" ` +
+			$t.clean(get("sectionState").style === 'Overlay' ? 'checked' : '') +
+			`> <label>Reveal</label> <input class='style-selector' type="radio" name="style" value="Reveal" ` +
+			$t.clean(get("sectionState").style === 'Reveal' ? 'checked' : '') +
+			`> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <label>Door</label> <input type="radio" name='sectionType' value="DoorSection"> <label>Drawer</label> <input type="radio" name='sectionType' value="DrawerSection"> <label>Duel Door</label> <input type="radio" name='sectionType' value="DualDoorSection"> <label>False Front</label> <input type="radio" name='sectionType' value="FalseFrontSection"> <label>Open</label> <input type="radio" name='sectionType' value=""> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <label>Divider Count</label> <input id='template-divider-count-input' type="number" name="count" min='0' max='3' value=0> <label>Vertical</label> <input type="checkbox" name="vertical"> <label>Test</label> <input type="checkbox" name="testDividers"> </div> <div id='` +
+			$t.clean(get("parentId")()) +
+			`'></div> <div class='center center-vert' id='opening-sketch-cnt'></div> </div> `
+	
+	exports['managers/template/joints/body'] = (get, $t) => 
+			`` +
+			$t.clean(get("jointInput").html()) +
+			` <input type="text" name="value" disabled > <input type="checkbox" name="convert" checked> `
+	
+	exports['managers/template/openings/body'] = (get, $t) => 
+			`<div> <h4>Opening Border Part Codes</h4> <div class='tab border-part-code-cnt'> ` +
+			$t.clean(get("select").html()) +
+			` <input class='opening-part-code-input' attr='openings' name='partCode' value="` +
+			$t.clean(get("obj")[get("select").value()]) +
+			`"> </div> <h4>Opening Border Locations</h4> <div class='tab'> Definition Type: <div class='tab'> <label>Default</label> <input class='opening-type-selector' type='radio' name="definitionType-` +
+			$t.clean(get("obj").id) +
+			`" value='Default' ` +
+			$t.clean(get("obj")._Type === undefined ? 'checked' : '') +
+			`> <label>Manual</label> <input class='opening-type-selector' type='radio' name="definitionType-` +
+			$t.clean(get("obj").id) +
+			`" value='location' ` +
+			$t.clean(get("obj")._Type === 'location' ? 'checked' : '') +
+			`> <label>Slice (L/R)</label> <input class='opening-type-selector' type='radio' name="definitionType-` +
+			$t.clean(get("obj").id) +
+			`" value='slice' ` +
+			$t.clean(get("obj")._Type === 'slice' ? 'checked' : '') +
+			`> </div> <div class='border-location-cnt' ` +
+			$t.clean(get("obj")._Type === 'location' ? '' : 'hidden') +
+			`> <label>Inner</label> <input type="radio" name="innerOouter-` +
+			$t.clean(get("obj").id) +
+			`" value="true" ` +
+			$t.clean(get("state").innerOouter === 'true' ? 'checked' : '') +
+			`> <label>Outer</label> <input type="radio" name="innerOouter-` +
+			$t.clean(get("obj").id) +
+			`" value="false" ` +
+			$t.clean(get("state").innerOouter === 'false' ? 'checked' : '') +
+			`> <br><br> <label>Vertex:</label> <br> ` +
+			$t.clean( new $t('-182533851').render('0..4', 'i', get)) +
+			` <br><br> <label>X</label> <input type="radio" name="xOyOz-` +
+			$t.clean(get("obj").id) +
+			`" value="x" ` +
+			$t.clean(get("state").xOyOz === 'x' ? 'checked' : '') +
+			`> <label>Y</label> <input type="radio" name="xOyOz-` +
+			$t.clean(get("obj").id) +
+			`" value="y" ` +
+			$t.clean(get("state").xOyOz === 'y' ? 'checked' : '') +
+			`> <label>Z</label> <input type="radio" name="xOyOz-` +
+			$t.clean(get("obj").id) +
+			`" value="z" ` +
+			$t.clean(get("state").xOyOz === 'z' ? 'checked' : '') +
+			`> <br><br> <input type='text' name='opening-coordinate-value' value=''> </div> <div class='border-slice-cnt' ` +
+			$t.clean(get("obj")._Type === 'slice' ? '' : 'hidden') +
+			`> Left Side Depth <input type='text' name='leftDepth' value='` +
+			$t.clean(get("leftDepth")) +
+			`'> <br> Right Side Depth <input type='text' name='rightDepth' value='` +
+			$t.clean(get("rightDepth")) +
+			`'> </div> <div class='opening-location-value-cnt'></div> <div class='opening-location-description-cnt'></div> </div> </div> `
+	
+	exports['-182533851'] = (get, $t) => 
+			`<span class='border-location-cnt'> <label>` +
+			$t.clean(get("i")) +
+			`</label> <input type="radio" name="index-` +
+			$t.clean(get("obj").id) +
+			`" value="` +
+			$t.clean(get("i")) +
+			`" ` +
+			$t.clean(get("state").index === get("i") ? 'checked' : '') +
+			`> </span>`
+	
+	exports['managers/template/openings/head'] = (get, $t) => 
+			`<div class='inline-flex' opening-index='` +
+			$t.clean(get("index")) +
+			`' opening-id='` +
+			$t.clean(get("obj").id) +
+			`'> Openings </div> `
+	
+	exports['managers/template/openings/points'] = (get, $t) => 
+			`<table> <tr> <td` +
+			$t.clean(get("target")(4) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[0])) +
+			`</td> <td></td> <td></td> <td` +
+			$t.clean(get("target")(5) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[1])) +
+			`</td> </tr> <tr> <td></td> <td` +
+			$t.clean(get("target")(0) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[0])) +
+			`</td> <td` +
+			$t.clean(get("target")(1) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[1])) +
+			`</td> <td></td> </tr> <tr> <td></td> <td` +
+			$t.clean(get("target")(3) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[3])) +
+			`</td> <td` +
+			$t.clean(get("target")(2) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[2])) +
+			`</td> <td></td> </tr> <tr> <td` +
+			$t.clean(get("target")(7) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[3])) +
+			`</td> <td></td> <td></td> <td` +
+			$t.clean(get("target")(6) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[2])) +
+			`</td> </tr> </table> `
+	
+	exports['managers/template/subassemblies/head'] = (get, $t) => 
+			`<label>Part Code</label> <input class='template-input' attr='subassemblies' name='code' value="` +
+			$t.clean(get("obj").code) +
+			`"> ` +
+			$t.clean(get("typeInput").html()) +
+			` `
+	
+	exports['managers/template/subassemblies/object/lines'] = (get, $t) => 
+			`<table class='` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.valid ? '' : 'error') +
+			`'> <tr> <th></th> ` +
+			$t.clean( new $t('1100231627').render(['start(x|y|z)', 'end(x|y|z)'], 'char', get)) +
+			` <th>Calculated</th> <th>Value</th> </tr> ` +
+			$t.clean( new $t('-1858767942').render(['Cross Grain', 'With Grain', 'End Grain'], 'label', get)) +
+			` </table> `
+	
+	exports['-1858767942'] = (get, $t) => 
+			`<tr index="` +
+			$t.clean(get("$index")) +
+			`" class='tab normal-vector-input-cnt ` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.normals[get("$index")] ? '' : 'error') +
+			`'> <td><label>` +
+			$t.clean(get("label")) +
+			`</label></td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.0.x" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".0.x")) +
+			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.0.y" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".0.y")) +
+			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.0.z" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".0.z")) +
+			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.1.x" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".1.x")) +
+			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.1.y" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".1.y")) +
+			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.1.z" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".1.z")) +
+			`"> </td> <td> <input type='radio' name='calculated-` +
+			$t.clean(get("obj").id) +
+			`' class='calc-vect-radio' ` +
+			$t.clean(get("obj").pathValue('normalInfo.calc') === get("$index") ? 'checked' : '') +
+			`> </td> <td> <input name='display' type='text' disabled value='` +
+			$t.clean(get("normalToString")(get("obj"), get("$index"))) +
+			`'> </td> </tr>`
+	
+	exports['managers/template/subassemblies/body'] = (get, $t) => 
+			`<div template-attr='subassembles'> <div class='center'> <label>All</label> <input class='template-include' type='radio' name='is-` +
+			$t.clean(get("obj").id) +
+			`' value='All' ` +
+			$t.clean(get("obj").include === 'All' ? 'checked' : '') +
+			`> <label>Overlay</label> <input class='template-include' type='radio' name='is-` +
+			$t.clean(get("obj").id) +
+			`' value='Overlay' ` +
+			$t.clean(get("obj").include === 'Overlay' ? 'checked' : '') +
+			`> <label>Reveal</label> <input class='template-include' type='radio' name='is-` +
+			$t.clean(get("obj").id) +
+			`' value='Reveal' ` +
+			$t.clean(get("obj").include === 'Reveal' ? 'checked' : '') +
+			`> <label>Inset</label> <input class='template-include' type='radio' name='is-` +
+			$t.clean(get("obj").id) +
+			`' value='Inset' ` +
+			$t.clean(get("obj").include === 'Inset' ? 'checked' : '') +
+			`> </div> <label>Name</label> <input class='template-input' attr='subassemblies' name="name" value="` +
+			$t.clean(get("obj").name) +
+			`"> <div> ` +
+			$t.clean(get("dividerTypeSelect") && get("dividerTypeSelect").html()) +
+			` </div> <div> <div class='center'> <label><b>Position:</b></label> <label>Box</label> <input type='radio' name='positionMethod-` +
+			$t.clean(get("obj").id) +
+			`' value='box' ` +
+			$t.clean(get("obj").positionMethod !== 'poly' ? 'checked' : '') +
+			`> <label>Poly</label> <input type='radio' name='positionMethod-` +
+			$t.clean(get("obj").id) +
+			`' value='poly' ` +
+			$t.clean(get("obj").positionMethod === 'poly' ? 'checked' : '') +
+			`> </div> <div class='poly-input-cnt' ` +
+			$t.clean(get("obj").positionMethod !== 'poly' ? 'hidden' : '') +
+			`> ` +
+			$t.clean(get("polyHtml")) +
+			` </div> <div class='box-input-cnt' ` +
+			$t.clean(get("obj").positionMethod === 'poly' ? 'hidden' : '') +
+			`> ` +
+			$t.clean(get("referenceSelect").html()) +
+			` <select name='type' hidden> <option>All</option> <option>Center</option> <option>Demension</option> <option>Rotation</option> </select> <select name='axis' hidden> <option>All</option> <option>X</option> <option>Y</option> <option>Z</option> </select> <button class='template-reference-update-btn' hidden>Change</button> <br> <div class='sub-demensions-cnt inline-flex'> ` +
+			$t.clean(get("demensionXyzSelect").html()) +
+			` <input class='template-input xyz' attr='subassemblies' name='demensions' value='` +
+			$t.clean(get("getEqn")(get("demensionXyzSelect"), get("obj").demensions)) +
+			`'> <input disabled class='measurement-input' name='value'> <input type="checkbox" name="convert" checked> </div> <br> <div class='sub-center-cnt inline-flex'> ` +
+			$t.clean(get("centerXyzSelect").html()) +
+			` <input class='template-input xyz' attr='subassemblies' name='center' value='` +
+			$t.clean(get("getEqn")(get("centerXyzSelect"), get("obj").center)) +
+			`'> <input disabled class='measurement-input' name='value'> <input type="checkbox" name="convert" checked> </div> <br> </div> <div class='subassem-normal-cnt center'> <label><b>Normals:</b></label> <label>Rotation</label> <input type='radio' name='normalStyle-` +
+			$t.clean(get("obj").id) +
+			`' value='rotation' ` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.style !== 'rotation' ? 'checked' : '') +
+			`> <label>Vector</label> <input type='radio' name='normalStyle-` +
+			$t.clean(get("obj").id) +
+			`' value='vector' ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'vector' ? 'checked' : '') +
+			`> <label>Line</label> <input type='radio' name='normalStyle-` +
+			$t.clean(get("obj").id) +
+			`' value='line' ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'line' ? 'checked' : '') +
+			`> <div class='rotation-normal-cnt tab' ` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.style === 'rotation' ? '' : 'hidden') +
+			`> <div class='sub-center-cnt inline-flex'> ` +
+			$t.clean(get("rotationXyzSelect").html()) +
+			` <input class='template-input xyz' attr='subassemblies' name='rotation' value='` +
+			$t.clean(get("getEqn")(get("rotationXyzSelect"), get("obj").rotation)) +
+			`'> <input disabled class='measurement-input' name='value'> </div> </div> <div class='vector-normal-cnt tab' ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'vector' ? '' : 'hidden') +
+			`> ` +
+			$t.clean( new $t('managers/template/subassemblies/object/normals').render(get("scope"), undefined, get)) +
+			` </div> <div class='line-normal-cnt tab' ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'line' ? '' : 'hidden') +
+			`> ` +
+			$t.clean( new $t('managers/template/subassemblies/object/lines').render(get("scope"), undefined, get)) +
+			` </div> </div> <div> ` +
+			$t.clean(get("typeSpecificHtml")) +
+			` </div> </div> `
+	
+	exports['managers/template/subassemblies/object/normals'] = (get, $t) => 
+			`<table class='` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.valid ? '' : 'error') +
+			`'> <tr> <th></th> ` +
+			$t.clean( new $t('1819729875').render(['i', 'j', 'k'], 'char', get)) +
+			` <th>Calculated</th> <th>Value</th> </tr> ` +
+			$t.clean( new $t('-1855337671').render(['Cross Grain', 'With Grain', 'End Grain'], 'label', get)) +
+			` </table> `
+	
+	exports['-1855337671'] = (get, $t) => 
+			`<tr index="` +
+			$t.clean(get("$index")) +
+			`" class='tab normal-vector-input-cnt ` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.normals[get("$index")] ? '' : 'error') +
+			`'> <td><label>` +
+			$t.clean(get("label")) +
+			`</label></td> <td> <input class="dem" type="text" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.normals[get("$index")][0]) +
+			`"> </td> <td> <input class="dem" type="text" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.normals[get("$index")][1]) +
+			`"> </td> <td> <input class="dem" type="text" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.normals[get("$index")][2]) +
+			`"> </td> <td> <input type='radio' name='calculated-` +
+			$t.clean(get("obj").id) +
+			`' class='calc-vect-radio' ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'checked' : '') +
+			`> </td> <td> <input name='display' type='text' disabled value='` +
+			$t.clean(get("normalToString")(get("obj"), get("$index"))) +
+			`'> </td> </tr>`
+	
+	exports['managers/template/subassemblies/object/poly'] = (get, $t) => 
+			`<div class='poly-input-cnt'> <label>Thickness</label> <input class='template-input measurement-display' attr='subassemblies' name='polyConfig.thickness' value='` +
+			$t.clean(get("subAssem").polyConfig.thickness) +
+			`'> <input disabled class='measurement-input' name='value'> <br> <label>Points</label> ` +
+			$t.clean( new $t('133324092').render(get("subAssem").polyConfig.points, 'point', get)) +
+			` <button class='add-poly-point'>Add</button> </div> `
+	
+	exports['managers/template/subassemblies/object/void'] = (get, $t) => 
+			`<div> <label>Joint Set:</label> <select class='template-input set-selector' name='jointSetIndex'> ` +
+			$t.clean( new $t('-2013474054').render('0..6', 'i', get)) +
+			` </select> <br> <div> <label>Include sides</label> ` +
+			$t.clean( new $t('-1101208247').render('0..6', 'i', get)) +
+			` </div> </div> `
+	
+	exports['-2013474054'] = (get, $t) => 
+			`<option ` +
+			$t.clean(get("jointSetIndex") === get("i") ? 'selected' : '') +
+			`>` +
+			$t.clean(get("i")) +
+			`</option>`
+	
+	exports['-1101208247'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("i")) +
+			`</label> <input class='template-input' type='checkbox' name='includedSides.` +
+			$t.clean(get("i")) +
+			`' ` +
+			$t.clean(get("includedSides")[get("i")] ? 'checked' : '') +
+			`> </span>`
+	
+	exports['order/body'] = (get, $t) => 
+			`<div order-id='` +
+			$t.clean(get("order").id()) +
+			`'> <b>` +
+			$t.clean(get("order").name()) +
+			`</b> <ul id='order-nav' class='center toggle-display-list'> <li class='toggle-display-item active' display-id='builder-display-` +
+			$t.clean(get("order").id()) +
+			`'>Builder</li> <li class='toggle-display-item' display-id='information-display-` +
+			$t.clean(get("order").id()) +
+			`'>Information</li> </ul> <div id='builder-display-` +
+			$t.clean(get("order").id()) +
+			`'> <b>` +
+			$t.clean(get("order").name()) +
+			`</b> <button class='save-order-btn' index='` +
+			$t.clean(get("$index")) +
+			`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> <div id='information-display-` +
+			$t.clean(get("order").id()) +
+			`' hidden> <utility-filter id='uf-info-` +
+			$t.clean(get("order").id()) +
+			`' edit='true'> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> </div> </div> `
+	
+	exports['managers/template/values/head'] = (get, $t) => 
+			`<div template-attr='values'> <input class='template-input' attr='values' type='text' name='name' value='` +
+			$t.clean(get("obj").key) +
+			`' placeholder="Variable Name"> <input class='measurement-input' type='text' name='value' value='` +
+			$t.clean(get("obj").eqn) +
+			`' placeholder="Value" disabled> <input type="checkbox" name="convert" checked> <br> <input class='template-input full-width' attr='values' type='text' name='eqn' value='` +
+			$t.clean(get("obj").eqn) +
+			`' placeholder="Equation"> </div> `
+	
+	exports['opening'] = (get, $t) => 
+			`<div class='opening-cnt' opening-id='` +
+			$t.clean(get("opening").id()) +
+			`'> <b class='copy-inner-text'>` +
+			$t.clean(get("opening").name()) +
+			`</b> <div class='divider-controls'> ` +
+			$t.clean(get("OpenSectionDisplay").dividerHtml(get("opening"))) +
+			` </div> <div> <label>Section Type:</label> <select class='section-selection'> <option>Open</option> ` +
+			$t.clean( new $t('184800797').render(get("sections"), 'section', get)) +
+			` </select> <div class='section-feature-cnt'> <div class='inline-flex chev-dropdown-toggle'> Opening Features <i class='down gg-chevron-down hidden' ></i> <i class='right gg-chevron-right'></i> </div> <div class='tab chev-dropdown' hidden> ` +
+			$t.clean(get("featuresHtml")) +
+			` </div> </div> <div id='` +
+			$t.clean(get("openDispId")) +
+			`'> </div> </div> </div> `
+	
+	exports['model-controller-old'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("group").level < 2 ? '' : 'model-selector indent') +
+			`' ` +
+			$t.clean(get("group").level < 2 ? '' : 'hidden') +
+			`> <div class='model-state ` +
+			$t.clean(get("tdm").isTarget("prefix", get("group").prefix) ? "active " : "") +
+			` ` +
+			$t.clean(get("label") ? "prefix-switch" : "") +
+			`'> <label type='prefix'>` +
+			$t.clean(get("label")) +
+			`</label> <input type='checkbox' class='prefix-checkbox' prefix='` +
+			$t.clean(get("group").prefix) +
+			`' ` +
+			$t.clean(!get("tdm").hidePrefix(get("label")) ? 'checked' : '') +
+			` ` +
+			$t.clean(get("group").level === 0 ? 'hidden' : '') +
+			`> <div class='model-container'> ` +
+			$t.clean( new $t('-986829271').render(get("group").parts, 'partName, partList', get)) +
+			` </div> ` +
+			$t.clean( new $t('model-controller').render(get("group").groups, 'label, group', get)) +
+			` </div> </div> `
+	
+	exports['-103984952'] = (get, $t) => 
+			`<div part-id='` +
+			$t.clean(get("part").id()) +
+			`' part-code='` +
+			$t.clean(get("part").partCode()) +
+			`' class='model-state ` +
+			$t.clean(get("tdm").isTarget("part-id", get("part").id()) ? "active " : "") +
+			`' ` +
+			$t.clean(get("partList").length === 1 ? 'hidden' : '') +
+			`> <label type='part-id' target part-code='` +
+			$t.clean(get("part").partCode()) +
+			`'> ` +
+			$t.clean(get("part").partCode()) +
+			`-` +
+			$t.clean(get("$index") +
+			1) +
+			` </label> <input type='checkbox' class='part-id-checkbox' part-id='` +
+			$t.clean(get("part").id()) +
+			`' part-code='` +
+			$t.clean(get("part").partCode()) +
+			`' ` +
+			$t.clean(!get("tdm").hidePartId(get("part").id()) ? 'checked' : '') +
+			`> </div>`
+	
+	exports['-986829271'] = (get, $t) => 
+			`<div class='model-state ` +
+			$t.clean(get("group").level < 1 ? '' : 'model-label indent') +
+			` ` +
+			$t.clean(get("tdm").isTarget("part-name", get("partName")) ? " active" : "") +
+			`' ` +
+			$t.clean(get("group").level < 1 ? '' : 'hidden') +
+			` ` +
+			$t.clean(get("partList").length === 1 ? 'target part-code="' +
+			get("partList")[0].partCode() +
+			'"' : '') +
+			`> <label type='part-name' part-name='` +
+			$t.clean(get("partName")) +
+			`'> ` +
+			$t.clean(get("partName")) +
+			`` +
+			$t.clean(get("partList").length === 1 ? '(' +
+			get("partList")[0].partCode() +
+			')' : '') +
+			` </label> <input type='checkbox' class='part-name-checkbox' part-name='` +
+			$t.clean(get("partName")) +
+			`' ` +
+			$t.clean(!get("tdm").hidePartName(get("partName")) ? 'checked' : '') +
+			`> <div class='indent'> ` +
+			$t.clean( new $t('-103984952').render(get("partList"), 'part', get)) +
+			` </div> </div>`
+	
+	exports['order/builder/head'] = (get, $t) => 
+			`<h3 class='margin-zero'> ` +
+			$t.clean(get("order").name) +
+			` </h3> `
+	
+	exports['order/builder/body'] = (get, $t) => 
+			`<div order-id='` +
+			$t.clean(get("order").id()) +
+			`'> <b>` +
+			$t.clean(get("order").name) +
+			`</b> <button class='save-order-btn' index='` +
+			$t.clean(get("$index")) +
+			`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> `
+	
+	exports['order/head'] = (get, $t) => 
+			`<h3 class='margin-zero'> ` +
+			$t.clean(get("order").name()) +
+			` </h3> `
+	
+	exports['order-redirect'] = (get, $t) => 
+			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <title>` +
+			$t.clean(get("order").name()) +
+			`</title> <data hidden>` +
+			$t.clean(get("JSON").stringify(get("order").toJson())) +
+			`</data> <script> let stop = false; let urlElem, countdownElem, buttonElem; function postOrder() { const xhr = new XMLHttpRequest(); const url = urlElem.value; const body = 'heyoooo'; xhr.open('post', url, true); xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); xhr.setRequestHeader('Access-Control-Allow-Origin', '*'); xhr.setRequestHeader('Content-Type', 'application/json'); xhr.onreadystatechange = function () { if (this.readyState != 4) return; if (this.status == 200) { console.log('success'); } else { console.error('failure'); } } xhr.send(JSON.stringify(body)); return xhr; } window.addEventListener('click', () => { stop = true; urlElem.parentElement.hidden = false; countdownElem.parentElement.hidden = true; }); let count = 15; const countdown = () => { if (count === 0) return postOrder(); if (!stop) { countdownElem.innerText = count--; setTimeout(countdown, 1000); } } window.onload = () => { urlElem = document.getElementById('url-input'); countdownElem = document.getElementById('load-countdown'); buttonElem = document.getElementById('load-btn'); buttonElem.addEventListener('click', postOrder); countdown(); } </script> </head> <body> <div> <h3> Loading '` +
+			$t.clean(get("order").name()) +
+			`' using url: ` +
+			$t.clean(get("url")) +
+			` </h3> <h3 id='load-countdown'></h3> <h4> Click anywhare to stop/change url</h4> </div> <div hidden> <input id='url-input' type="text" name="url" value="` +
+			$t.clean(get("url")) +
+			`"> <button id='load-btn'>Load</button> </div> </body> </html> `
+	
+	exports['order/information/body'] = (get, $t) => 
+			`<utility-filter hidden> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> `
+	
+	exports['order/information/head'] = (get, $t) => 
+			`<b>Information</b> `
+	
+	exports['order'] = (get, $t) => 
+			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/cabinet/js/index.js'></script> <script type="text/javascript" src='/js/qrious.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/styles/file-tab.css"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>CComp</title> </head> <body> <div id='order-select-cnt' class='center no-print'> <span id='order-selector-cnt' hidden></span> <button type="button" class='auto-save-btn' name="button">Choose Save Location</button> <span id='save-time-cnt'></span> </div> <div class='expandable-list' id='single-order-cnt'> <div id='main-display-menu' class='display-manager center'></div> <div id='display-cnt'> <div id='order-display-cnt'> <div id='order-cnt'> <div class='center pad no-print'> <input id='order-name-input' class='header-input' size='20' type="text" name="order-name"> <input id='order-version-input' class='header-input' size='20' type="text" name="order-version"> </div> <div id="order-tab-cnt"></div> </div> ` +
+			$t.clean( new $t('canvas-displays').render(get("scope"), undefined, get)) +
+			` </div> <div id='information-display'> <utility-filter id='uf-order-info' edit='true'></utility-filter> </div> </div> </div> <canvas id='qr-demo' hidden></canvas> </body> </html> `
+	
+	exports['parts/model-controller'] = (get, $t) => 
+			` <div class='model-controller-cnt'> <label>Explosion Factor</label> <input type='number' min=0 max=10 step=1 name='explosionFactor' value='` +
+			$t.clean(get("dispExplosionFactor")) +
+			`'> <br> <label>location</label> <input type='radio' name='grouping' value='location' ` +
+			$t.clean(get("groupingType") === 'location' ? 'checked' : '') +
+			`> <label>id</label> <input type='radio' name='grouping' value='id' ` +
+			$t.clean(get("groupingType") === 'id' ? 'checked' : '') +
+			`> ` +
+			$t.clean( new $t('parts/selector').render(get("grouping"), undefined, get)) +
+			` </div> `
+	
+	exports['parts/selector'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("group").level < 2 ? '' : 'model-selector indent') +
+			`' ` +
+			$t.clean(get("group").level < 2 ? '' : 'hidden') +
+			`> <div prefix='` +
+			$t.clean(get("group").prefix) +
+			`' class='model-state` +
+			$t.clean(get("label") ? " prefix-switch" : "") +
+			`'> <label type='prefix'>` +
+			$t.clean(get("label")) +
+			`</label> ` +
+			$t.clean( new $t('parts/selector').render(get("group").groups, 'label, group', get)) +
+			` </div> </div> `
+	
+	exports['projects'] = (get, $t) => 
+			`<div class='center'> ` +
+			$t.clean( new $t('-1239278236').render(get("projects"), 'project', get)) +
+			` </div> `
+	
+	exports['-241913653'] = (get, $t) => 
+			`<span > <image src='` +
+			$t.clean(get("image").url) +
+			`'> </span>`
+	
+	exports['-1823929975'] = (get, $t) => 
+			`<li > ` +
+			$t.clean(get("note")) +
+			` </li>`
+	
+	exports['-1239278236'] = (get, $t) => 
+			`<div class='project-cnt'> <input id="_` +
+			$t.clean(get("$index")) +
+			`" type="checkbox" hidden> <label class="css-dropdown" for="_` +
+			$t.clean(get("$index")) +
+			`"> <b> <a href='http://localhost:3000/cabinet/order?staticOrder=` +
+			$t.clean(get("project").file) +
+			`' target="_blank"> ` +
+			$t.clean(get("project").name) +
+			` </a> </b> - <b class='project-date'>` +
+			$t.clean(get("project").date) +
+			`</b> </label> <div> ` +
+			$t.clean(get("project").description) +
+			` <div> <table border='1' class='border-collapse center'> <tbody> <tr> <th> Design Time </th> <th>Build Time</th> <th>Finished With</th> <th>Finish Time</th> </tr> <tr> <td>` +
+			$t.clean(get("project").designTime) +
+			`</td> <td>` +
+			$t.clean(get("project").buildTime) +
+			`</td> <td>` +
+			$t.clean(get("project").finishedWith) +
+			`</td> <td>` +
+			$t.clean(get("project").finishTime) +
+			`</td> </tr> </tbody> </table> </div> <br> <div class='project-image-cnt'> ` +
+			$t.clean( new $t('-241913653').render(get("project").images, 'image', get)) +
+			` </div> <br> <label><b>Notes</b></label> <div class='center fit'> <ul> ` +
+			$t.clean( new $t('-1823929975').render(get("project").notes, 'note', get)) +
+			` </ul> </div> <br> <label><b>Issues</b></label> <div class='center fit'> <ul> ` +
+			$t.clean( new $t('1856420978').render(get("project").issues, 'issue', get)) +
+			` </ul> </div> </div> </div>`
+	
+	exports['properties/config-body'] = (get, $t) => 
+			`<div> ` +
+			$t.clean( new $t('-302479018').render(get("properties"), 'property', get)) +
+			` <button class='save-change' properties-id='` +
+			$t.clean(get("properties")._ID) +
+			`' ` +
+			$t.clean(get("changed")(get("properties")._ID) ? '' : 'hidden') +
+			`> Save </button> </div> `
+	
+	exports['-302479018'] = (get, $t) => 
+			`<div class='property-cnt' > <label>` +
+			$t.clean(get("property").name()) +
+			`</label> <span ` +
+			$t.clean(get("property").measurementId() ? '' : 'hidden') +
+			`> <input type="text" prop-value-update='` +
+			$t.clean(get("property").id()) +
+			`' value="` +
+			$t.clean(get("property").display()) +
+			`" measurement-id='` +
+			$t.clean(get("property").measurementId()) +
+			`'> </span> <span ` +
+			$t.clean((typeof (get("property").value())) === 'boolean' ? '' : 'hidden') +
+			`> <input type="checkbox" prop-boolean-update='` +
+			$t.clean(get("property").id()) +
+			`' ` +
+			$t.clean(get("property").value() === true ? 'checked' : '') +
+			`> </span> </div>`
+	
+	exports['properties/config-body0'] = (get, $t) => 
+			`<div> ` +
+			$t.clean( new $t('-179269626').render(get("properties"), 'property', get)) +
+			` <button class='save-change' properties-id='` +
+			$t.clean(get("properties")._ID) +
+			`' ` +
+			$t.clean(get("changed")(get("properties")._ID) ? '' : 'hidden') +
+			`> Save </button> </div> `
+	
+	exports['-179269626'] = (get, $t) => 
+			`<div class='property-cnt' > <label>` +
+			$t.clean(get("property").name()) +
+			`</label> <input type="text" prop-value-update='` +
+			$t.clean(get("property").id()) +
+			`' value="` +
+			$t.clean(get("property").display()) +
+			`" measurement-id='` +
+			$t.clean(get("property").measurementId()) +
+			`'> </div>`
+	
+	exports['properties/config-head0'] = (get, $t) => 
+			`` +
+			$t.clean(get("name")) +
+			` `
+	
+	exports['properties/config-head'] = (get, $t) => 
+			`` +
+			$t.clean(get("name")) +
+			` `
+	
+	exports['properties/properties'] = (get, $t) => 
+			`<div class='center'> <div class='center'> <label>UNIT :&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
+			$t.clean( new $t('-766481261').render(get("Properties").UNITS, 'property', get)) +
+			` </div> ` +
+			$t.clean( new $t('115117775').render(get("values"), 'key, properties', get)) +
+			` </div> `
+	
+	exports['-766481261'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("property").name()) +
+			`</label> <input type='radio' name='UNIT' prop-radio-update='` +
+			$t.clean(get("property").id()) +
+			`' value="` +
+			$t.clean(get("property").name()) +
+			`" ` +
+			$t.clean(get("property").value() === true ? 'checked' : '') +
+			`> </span>`
+	
+	exports['properties/properties0'] = (get, $t) => 
+			`<div class='center'> <div class='` +
+			$t.clean(get("key") ? "property-container close" : "") +
+			`' radio-id='` +
+			$t.clean(get("radioId")) +
+			`' ` +
+			$t.clean(get("noChildren")() ? 'hidden' : '') +
+			`> <div class='` +
+			$t.clean(get("key") ? "expand-header" : "") +
+			`'> ` +
+			$t.clean(get("label")) +
+			` </div> <div` +
+			$t.clean(get("key") ? ' hidden' : '') +
+			`> <div` +
+			$t.clean(get("branch") ? ' hidden' : '') +
+			`> <div id='config-expand-list-` +
+			$t.clean(get("id")) +
+			`'></div> ` +
+			$t.clean( new $t('1927703609').render(get("groups"), 'key, group', get)) +
+			` </div> </div> </div> </div> `
+	
+	exports['properties/property-menu'] = (get, $t) => 
+			` <div class='inline-flex chev-dropdown-toggle'> Property Menu <i class='down gg-chevron-down hidden' ></i> <i class='right gg-chevron-right'></i> </div> <div class='tab chev-dropdown' hidden> <div class='cabinet-style-selector-cnt'>` +
+			$t.clean(get("styleSelector")(get("group"))) +
+			`</div> <input class='measurement-input' name='crownHeight' decimal='` +
+			$t.clean(get("group").resolve('crh')) +
+			`'> </div> <br/><br/> `
+	
+	exports['properties/radio'] = (get, $t) => 
+			`<div class='center'> <label>` +
+			$t.clean(get("key")) +
+			`:&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
+			$t.clean( new $t('1410278299').render(get("values"), 'property', get)) +
+			` </div> `
+	
+	exports['properties/unit'] = (get, $t) => 
+			`<div> <label>Imperial inch (US)</label> <input type='radio' name='unit' ` +
+			$t.clean(get("unit").value() === 'inch' ? 'checked' : '') +
+			` value='inch'> <label>cm</label> <input type='radio' name='unit' ` +
+			$t.clean(get("unit").value() === 'cm' ? 'checked' : '') +
+			` value='cm'> </div> `
+	
+	exports['room/body'] = (get, $t) => 
+			`<div> ` +
+			$t.clean( new $t('714657883').render(get("room").groups, 'group', get)) +
+			` <div> <button class='group-add-btn' room-id='` +
+			$t.clean(get("room").id()) +
+			`'>Add Group</button> </div> </div> `
+	
+	exports['room/head'] = (get, $t) => 
+			`<b>` +
+			$t.clean(get("room").name()) +
+			`</b> `
+	
+	exports['sections/divider'] = (get, $t) => 
+			`<h2>Divider: ` +
+			$t.clean(get("list").activeKey()) +
+			`</h2> <div class='section-feature-ctn'> ` +
+			$t.clean(get("featureDisplay")) +
+			` </div> `
+	
+	exports['sections/dual-door'] = (get, $t) => 
+			`<div class='section-feature-ctn'> ` +
+			$t.clean(get("Features").opening(get("section"))) +
+			` ` +
+			$t.clean(get("Features").pulls(get("section").left(), 'Left')) +
+			` ` +
+			$t.clean(get("Features").pulls(get("section").right(), 'Right')) +
+			` </div> `
+	
+	exports['sections/door'] = (get, $t) => 
+			`<div> ` +
+			$t.clean(get("Features").opening(get("section"))) +
+			` ` +
+			$t.clean(get("Features").pulls(get("section").door())) +
+			` </div> `
+	
+	exports['sections/drawer'] = (get, $t) => 
+			`<div class='section-feature-ctn'> ` +
+			$t.clean(get("Features").pulls(get("section").front())) +
+			` </div> `
+	
+	exports['sections/false-front'] = (get, $t) => 
+			`<div class='section-feature-ctn'> ` +
+			$t.clean(get("Features").pulls(get("section").front())) +
+			` </div> `
+	
+	exports['sections/open'] = (get, $t) => 
+			`<div class='open-section-feature-ctn'> ` +
+			$t.clean(get("Features").opening(get("section"))) +
+			` </div> `
+	
+	exports['sections/helpers/opening'] = (get, $t) => 
+			`<div class='opening-feature-cnt' section-id='` +
+			$t.clean(get("section").id()) +
+			`'> <label>Shelves</label> <input type='number' name='shelveCount' step='1' min='0' max='10' value='` +
+			$t.clean(get("shelveCount")) +
+			`'> </div> `
+	
+	exports['sections/helpers/pulls'] = (get, $t) => 
+			`<div class='pulls-mod-cnt' has-pulls-id='` +
+			$t.clean(get("hasPulls").id()) +
+			`' prefix=` +
+			$t.clean(get("prefix")) +
+			`> <div class='inline-flex chev-dropdown-toggle'> ` +
+			$t.clean(get("prefix")) +
+			` Pulls <i class='down gg-chevron-down ` +
+			$t.clean(get("open") ? '' : 'hidden') +
+			`'></i> <i class='right gg-chevron-right ` +
+			$t.clean(!get("open") ? '' : 'hidden') +
+			`'></i> </div> <div class='tab chev-dropdown' ` +
+			$t.clean(get("open") ? '' : 'hidden') +
+			`> ` +
+			$t.clean( new $t('1970100821').render(get("hasPulls").pulls(), 'pull', get)) +
+			` <button type="button" class="add-pull">Add Pull</button> </div> </div> `
+	
+	exports['three-view'] = (get, $t) => 
+			`<div class='three-view-cnt' id='` +
+			$t.clean(get("id")()) +
+			`'> <div class='three-view-three-d-cnt'> <div class='inline left'> <div class='orientation-controls' id='three-d-orientation-controls'></div> <span id="model-controller"></span> </div> </div> <div class='three-view-two-d-cnt'> <div class='three-view-canvases-cnt' id='` +
+			$t.clean(get("id")()) +
+			`-cnt'> <div class='inline-flex'> <div class='part-input-cnt center-vert'> <label>Side:</label> <label>Right</label> <input type="radio" name="side" value="right" ` +
+			$t.clean(get("side")() === 'right' ? 'checked' : '') +
+			`> <label>Left</label> <input type="radio" name="side" value="left" ` +
+			$t.clean(get("side")() === 'left' ? 'checked' : '') +
+			`> <br> <input type="text" name="partSelector" list='part-list'> <datalist id='part-list'></datalist> <br> <div class='center-vert'>Part Code: <b id='three-view-part-code-` +
+			$t.clean(get("id")()) +
+			`'></b></div> <button class='ruler'> <i class="gg-ruler"></i> </button> </div> <span class='three-view-canvas-cnt'> <b>Three View Drawing</b> <button class='three-view-draw-string-btn'>Copy Draw String</button> <canvas id="three-view" width="` +
+			$t.clean(get("maxDem")()) +
+			`" height="` +
+			$t.clean(get("maxDem")()) +
+			`"></canvas> </span> </div> <div class='part-info-cnt'>P INF CNT</div> </div> </div> </div> `
+	
+	exports['static-page'] = (get, $t) => 
+			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <title>` +
+			$t.clean(get("title")) +
+			`</title> </head> <body> ` +
+			$t.clean( new $t(`` +
+			$t.clean(get("file")) +
+			``).render(get("scope"), undefined, get)) +
+			` </body> </html> `
 	
 });
 

@@ -561,7 +561,7 @@
                   "allModels": false,
                   "config": {
                     "demension": {
-                      "x": "3.75*2.54",
+                      "x": "5*2.54",
                       "y": "12*2.54",
                       "z": "(10+ 1/4)*2.54"
                     },
@@ -656,7 +656,7 @@
                   "allModels": false,
                   "config": {
                     "demension": {
-                      "x": "3.75*2.54",
+                      "x": "5*2.54",
                       "y": "10*2.54",
                       "z": "c.w - 9.5*2.54 "
                     },
@@ -3098,7 +3098,11 @@
                   },
                   "show": {
                     "right": {
-                      "type": "Yes"
+                      "type": "Yes",
+                      "endStyle": "Yes"
+                    },
+                    "left": {
+                      "endStyle": "Yes"
                     }
                   }
                 }
@@ -3720,7 +3724,7 @@
                   "allModels": false,
                   "config": {
                     "demension": {
-                      "x": "3.75 + 2.54",
+                      "x": "6*2.54",
                       "y": "6*2.54",
                       "z": "W"
                     },
@@ -6645,7 +6649,7 @@
                   "allModels": false,
                   "config": {
                     "demension": {
-                      "x": "3.75 *2.54",
+                      "x": "5 *2.54",
                       "y": "7*2.54",
                       "z": "W"
                     },

@@ -14,20 +14,6 @@ const Global = require('../services/global');
 
 const ThreeDModel = {};
 
-let lastViewId;
-function centerOnObj(x,y,z, viewId) {
-  const csg = ThreeDModel.lastRendered;
-  const center = new Vertex3D(csg.center());
-  center.x += 200 * y;
-  center.y += -200 * x;
-  center.z += 100;
-  const rotation = {x: x*90, y: y*90, z: z*90};
-  // const rotation = {x: 0, y: 0, z: 0};
-
-  lastViewId = viewId;
-  return [center, rotation];
-}
-
 let viewer;
 let viewerSelector = '#three-d-model';
 let viewerSize = '60vh';
@@ -39,17 +25,8 @@ ThreeDModel.getViewer = (model) => {
     if (model === undefined) return undefined;
     viewer = new Viewer(model, size, size, 50);
     addViewer(viewer, viewerSelector);
-    const orientArrows = new OrientationArrows(`${viewerSelector} .orientation-controls`);
-    orientArrows.on.center(() =>
-      viewer.viewFrom(...(lastViewId === 'front' ? centerOnObj(2,0,2, 'back') : centerOnObj(0,0, 0, 'front'))));
-    orientArrows.on.up(() =>
-      viewer.viewFrom(...centerOnObj(1, 0,0)));
-    orientArrows.on.down(() =>
-      viewer.viewFrom(...centerOnObj(-1,0,0)));
-    orientArrows.on.left(() =>
-      viewer.viewFrom(...centerOnObj(0,-1,0)));
-    orientArrows.on.right(() =>
-      viewer.viewFrom(...centerOnObj(0,1,0)));
+    const orientSelector = `${viewerSelector} .orientation-controls`;
+    const orientArrows = OrientationArrows.forCSG(orientSelector, viewer, model);
   }
   return viewer;
 }

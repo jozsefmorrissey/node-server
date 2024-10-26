@@ -13,11 +13,11 @@
       <td>{{cabinet.groupIndex()}}</td>
       <td>{{cabinet.name()}}</td>
       <td>{{Utils.display.demensions(cabinet.position().demension())}}</td>
-      <td>{{cabinet.value('showLeft.type')}}</td>
-      <td>{{cabinet.value('showRight.type')}}</td>
-      <td>{{cabinet.value('showLeft.endStyle')}}</td>
-      <td>{{cabinet.value('showRight.endStyle')}}</td>
-      <td>{{Utils.count.shelves(cabinet)}}</td>
+      <td class='min-width-20'>{{cabinet.value('show.left.type')}}</td>
+      <td class='min-width-20'>{{cabinet.value('show.right.type')}}</td>
+      <td class='min-width-20'>{{cabinet.value('show.left.endStyle')}}</td>
+      <td class='min-width-20'>{{cabinet.value('show.right.endStyle')}}</td>
+      <td>{{Utils.count.shelves(cabinet) || ''}}</td>
       <td class='align-left'>{{Utils.textToHtml(cabinet.notes())}}</td>
     </tr:t>
   </table>

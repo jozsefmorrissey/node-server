@@ -47,6 +47,7 @@ const normals = (assembly) => {
       return normObj;
     }
   }
+  normFunc.raw = () => normObj;
 
   normFunc.vector = () => {
     const calcNormObj = assembly.evalObject(normObj);
@@ -71,6 +72,20 @@ const normals = (assembly) => {
   return normFunc;
 }
 
+function positionAssemblyCsg(csg, assembly) {
+  csg = csg.clone();
+  const rotation = assembly.position().rotation();
+  const buildCenter = assembly.buildCenter(true);
+  const center = new Vertex3D(assembly.position().center());
+  const layoutCenterVect = new Vertex3D((center.minus(buildCenter)));
+  const csgCenter = csg.center();
+  csg.translate({x: -buildCenter.x, y: -buildCenter.y, z: -buildCenter.z})
+  csg.rotate(rotation);
+  csg.translate(center);
+  return csg;
+}
+
 exports.normals = normals;
 exports.formatConstructorId = formatConstructorId;
 exports.getDefaultSize = getDefaultSize;
+exports.positionAssemblyCsg = positionAssemblyCsg;

@@ -1444,9 +1444,9 @@ Function.safeStdLibAddition(String, 'parseSeperator',   function (seperator, isR
 });
 
 const colors = [
-  'indianred', 'gray', 'fuchsia', 'lime', 'black', 'lightsalmon', 'red',
-  'maroon', 'yellow', 'olive', 'lightcoral', 'green', 'aqua', 'white',
-  'teal', 'darksalmon', 'blue', 'navy', 'salmon', 'silver', 'purple'
+  'blue', 'red', 'yellow', 'lime', 'gray', 'indianred', 'fuchsia', 'black', 'lightsalmon',
+  'maroon', 'olive', 'lightcoral', 'green', 'aqua', 'white',
+  'teal', 'darksalmon', 'navy', 'salmon', 'silver', 'purple'
 ];
 const colorRGBs = {indianred: [205, 92, 92],gray: [128, 128, 128],fuchsia: [255, 0, 255],
   lime: [0, 255, 0],black: [0, 0, 0],lightsalmon: [255, 160, 122],red: [255, 0, 0],

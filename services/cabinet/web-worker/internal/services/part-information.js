@@ -35,17 +35,23 @@ function detailedPartInfo(part, info, env, spatialMap) {
     info.fenceEdges['-z'] = partInfo.edges2D(false);
     info.fenceEdges.z = partInfo.edges2D(true);
     if (spatialMap && part.id.match(/^Panel/)) {
-      const center = env.getModel(part, 'joined').center();
-      const dems = info.demensions;
-      const norms = info.normals;
-      const poly = Polygon3D.fromVectorObject(dems.x, dems.y, center, norms);
-      const nebrs = spatialMap.neighbors(poly, norms.z, norms.z.inverse());
-      info.model.finishedInterior = {};
-      const finished = [!!nebrs[0].find(needsFinished), !!nebrs[1].find(needsFinished)];
-      const finishedSides = finished.count(b => b === true);
-      info.model.finishedInterior.z = finished[0];
-      info.model.finishedInterior['-z'] = finished[1];
-      if (finishedSides > 0) info.category = `PreFinished${finishedSides}Side`;
+      if (part.partCode === 'BACK') {
+        if (Object.values(env.byId).find(assem => assem.id.match(finishCoverReg))) {
+          info.subCategory = ['Pre Finished', '1 side'];
+        }
+      } else {
+        const center = env.getModel(part, 'joined').center();
+        const dems = info.demensions;
+        const norms = info.normals;
+        const poly = Polygon3D.fromVectorObject(dems.x, dems.y, center, norms);
+        const nebrs = spatialMap.neighbors(poly, norms.z, norms.z.inverse());
+        info.model.finishedInterior = {};
+        const finished = [!!nebrs[0].find(needsFinished), !!nebrs[1].find(needsFinished)];
+        const finishedSides = finished.count(b => b === true);
+        info.model.finishedInterior.z = finished[0];
+        info.model.finishedInterior['-z'] = finished[1];
+        if (finishedSides > 0) info.subCategory = ['Pre Finished', finishedSides === 1 ? '1 side' : '2 side'];
+      }
     }
   }
 }
@@ -53,6 +59,10 @@ function detailedPartInfo(part, info, env, spatialMap) {
 function addCabinetInfo(payload, env, taskId) {
   const root = env.byId[payload.parts[0]].find.root();
   const result = basicPartInfo(root, env);
+  const rotation = root.position.current.rotation;
+  result.normals.x = result.normals.x.rotate(rotation);
+  result.normals.y = result.normals.y.rotate(rotation);
+  result.normals.z = result.normals.z.rotate(rotation);
   result.layers = Layer.fromCSG(result.model).map(l => l.combined());
   postMessage({id: taskId, result: DTO(result)});
 }

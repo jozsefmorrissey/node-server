@@ -110,20 +110,20 @@ class ModelInformation {
       throw new Error('Has not yet conformed to the assemblies being a list of all assemblies to be modeled');
     const modelInfo = props.modelInfo || modelInfoObject();
     let allAssemblies = assemblies[0].allAssemblies();
-    const jointMap = assemblies[0].dependencyMap(assemblies);
-    const allJointMap = assemblies[0].dependencyMap(allAssemblies);
-    const byId = {};
     const root = assemblies[0].getRoot();
+    const byId = {};
     const propertyConfig = root.group().propertyConfig().values(root.resolve, true);
 
     allAssemblies.forEach(a => byId[a.id()] = a);
-    jointMap.JOINTS.forEach(j => byId[j.id()] = j);
     assemblies = sortAssemMtdos(assemblies);
-    const nonDigitalList = assemblies.filter(a => !a.digital()).map(a=>a.id());
+    const nonDigitalList = allAssemblies.filter(a => a instanceof Assembly &&
+                          a.included() && a.part() && !a.digital()).map(a=>a.id());
     assemblies = assemblies.map(a => a.id());
 
     const complexityMap = {};
-    allAssemblies = sorter(allAssemblies, allJointMap, byId);
+    const jointMap = root.dependencyMap(allAssemblies.filter(a => a.part()));
+    jointMap.JOINTS.forEach(j => byId[j.id()] = j);
+    allAssemblies = sorter(allAssemblies, jointMap, byId);
     allAssemblies.forEach(amo => complexityMap[amo.assembly.id()] = amo.complexity());
     allAssemblies = allAssemblies.filter(amo => amo.assembly.part() && amo.assembly.included())
                                   .map(amo => amo.assembly.id());
@@ -132,7 +132,7 @@ class ModelInformation {
     this.needsJoined = () => props.needsJoined || nonDigitalList;
     this.needsIntersected = () => props.needsIntersected || nonDigitalList;
     this.needsUnioned = () => props.needsUnioned || nonDigitalList;
-    this.needs2dConverted = () => props.needs2dConverted || nonDigitalList;
+    this.needs2dConverted = () => props.needs2dConverted || assemblies;
 
     const environmentObject = () => {
       const environment = DTO(props) || {};

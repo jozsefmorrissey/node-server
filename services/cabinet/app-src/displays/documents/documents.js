@@ -15,7 +15,7 @@ const notDefined = () => 'Yet To Be Defined:' + count++;
 const fileTabDisp = new FileTabDisplay();
 fileTabDisp.TITLES = {
   AERIAL: {title: 'Areal', html: Construction.Aerial},
-  ELEVATION: {title: 'Elevation', html: notDefined},
+  ELEVATION: {title: 'Elevation', html: Construction.Elevation},
   BUILD_DIAGRAM: {title: 'Build Diagram', html: Construction.BuildDiagram},
   MATERIALS: {title: 'Materials', html: Construction.Materials},
   DOOR_LIST: {title: 'Door List', html: Construction.DoorList},

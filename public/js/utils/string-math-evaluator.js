@@ -249,7 +249,7 @@ class StringMathEvaluator {
     function evalObject(obj, scope) {
       const returnObj = Object.forEachConditional(obj, (value, key, object) => {
         value = evaluate(value, scope);
-        if (!Number.isNaN(value)) object[key] = value;
+        object[key] = value;
       }, (value) => (typeof value) === 'string');
       return returnObj;
     }

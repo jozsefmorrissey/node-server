@@ -1,3 +1,8 @@
+// TODO: Use Require Class to include ToleranceMap and STL
+const ToleranceMap = require('../tolerance-map');
+const STL = require('./STL');
+
+
 // Constructive Solid Geometry (CSG) is a modeling technique that uses Boolean
 // operations like union and intersection to combine 3D solids. This library
 // implements CSG operations on meshes elegantly and concisely using BSP trees,
@@ -79,6 +84,14 @@ CSG = function() {
     }
     return false;
   }
+
+  this.toSTL = (csg, header) => {
+    const stl = new STL(header);
+    const scaled = csg.clone();
+    scaled.scale(10);
+    scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
+    return stl;
+  }
 };
 
 CSG.BIG = 160934.4;//One Mile in cm
@@ -147,6 +160,31 @@ CSG.fromPolygons = function(polygons, deepCopy) {
   csg.polygons = polygons;
   return csg;
 };
+
+const oneTenth = (v) => ({x: v.x / 10, y: v.y /= 10, z: v.z /= 10});
+CSG.fromSTL = (stl) => {
+  const json = stl.toJson();
+  const triangles = json.triangles;
+  const polys = triangles.map(t => {
+    const normal = new CSG.Vector(t.normal);
+    if (normal.length() < .999) normal = CSG.normal(t.vertices[0], t.vertices[1], t.vertices[2]);
+    const v1 = new CSG.Vertex(oneTenth(t.vertices[0]), normal);
+    const v2 = new CSG.Vertex(oneTenth(t.vertices[1]), normal);
+    const v3 = new CSG.Vertex(oneTenth(t.vertices[2]), normal);
+    return new CSG.Polygon([v1,v2,v3]);
+  });
+  const csg = CSG.fromPolygons(polys);
+  csg.setColor(...String.color.RGB[String.color.next()]);
+  return csg;
+}
+
+CSG.normal = (verts) => {
+  if (verts.length < 3) throw new Error('Normal calculations require atleast 3 vertices');
+  v0 = new CSG.Vector(verts[0]);
+  v1 = new CSG.Vector(verts[1]);
+  v2 = new CSG.Vector(verts[2]);
+  return v1.minus(v0).cross(v1.minus(v2)).unit();
+}
 
 CSG.fromPolygon = (poly, offset) => {
   const front = poly.clone();
@@ -279,6 +317,7 @@ CSG.prototype = {
         v.scale(center, x, y, z);
       }));
     }
+    return this;
   },
 
   explode: function(distance) {
@@ -476,6 +515,9 @@ CSG.prototype = {
       y: epts.y - epts['-y'],
       z: epts.z - epts['-z']
     }
+  },
+  cube: function () {
+    return new CSG.cube({demensions: this.demensions(), center: this.center()});
   },
   demCenter: function () {
     const dems = this.demensions();
@@ -791,6 +833,7 @@ CSG.sphere = function(options) {
   return csg;
 };
 
+// TODO: add a length option so that start and end dont need to be defined;
 // Construct a solid cylinder. Optional parameters are `start`, `end`,
 // `radius`, and `slices`, which default to `[0, -1, 0]`, `[0, 1, 0]`, `1`, and
 // `16`. The `slices` parameter controls the tessellation.
@@ -870,7 +913,7 @@ CSG.cone = function (options) {
   const slices = options.slices || 8;
   let cylinder = new CSG.cylinder({start, end, radius, slices});
   let cone = cylinder.clone();
-  cone.setColor(options.color);
+  if (options.color) cone.setColor(options.color);
   const sliceRotation = 360/slices;
   const rotationVector = end.minus(start).unit();
   const lengthVector = rotationVector.clone().times(length);
@@ -879,12 +922,11 @@ CSG.cone = function (options) {
   const cutterCenter = end;
   const plane = new CSG.Rectangle([30, length*10, radius*2], cutterCenter, rotationVector.unit(), widthVector.unit());
   const planeCenter = new CSG.Vector(plane.center());
-  plane.setColor(options.color);
-  const degrees = Math.toDegrees(Math.atan(radius/(2*length)));
+  if (options.color) plane.setColor(options.color);
+  const degrees = Math.toDegrees(Math.atan(radius/(2*length)))*2;
   plane.ArbitraryRotate(degrees, widthVector.unit());
   plane.center(cutterCenter);
   plane.translate(perpVector);
-  // plane.translate(cutterCenter.negated());
 
   for (let index = 0; index < slices; index++) {
     plane.translate(cutterCenter.negated());
@@ -901,18 +943,6 @@ CSG.cone = function (options) {
     const model = options.model.subtract(cylinder);
     cone = cone.union(model);
   }
-
-  // const e = rotationVector.times(1000);
-  // const s = cutterCenter;
-  // const p = perpVector.times(100);
-  // const w = widthVector.times(100);
-  // const r = cutterCenter.plus(lengthVector);
-  // // const line = new CSG.Line({start: [s.x,s.y,s.z], end: [e.x,e.y,e.z]});
-  // const line1 = new CSG.Line({start: [0,0,0], end: [w.x,w.y,w.z], color: 'green'});
-  // const line2 = new CSG.Line({start: [0,0,0], end: [p.x,p.y,p.z], color: 'blue'});
-  // const line3 = new CSG.Line({start: [0,0,0], end: [e.x,e.y,e.z], color: 'yellow'});
-  // // const line4 = new CSG.Line({start: [0,0,0], end: [r.x,r.y,r.z], color: 'red'});
-  // return line1.union(line2).union(line3).union(cone);//.union(line4).union(line);//.union(options.model);//cylinder.union(line);
 
   return cone;
 }

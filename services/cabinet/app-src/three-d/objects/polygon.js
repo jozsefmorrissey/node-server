@@ -1408,9 +1408,9 @@ function normalsGivinPolygons(polygons) {
 }
 
 function normalsGivenAPolygon(polygon) {
-  const lines = polygon.lines();
-  Line3D.combine(lines);
   try {
+    const lines = polygon.lines();
+    Line3D.combine(lines);
     const pSets = Line3D.parrelleSets(lines)
     const moreThanOne = pSets.filter(s => s.length > 1);
     let y;

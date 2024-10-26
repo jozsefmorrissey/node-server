@@ -366,7 +366,7 @@ to.Shelve = {
     extended: (rMdto, env) => {
       const parent = rMdto.parentAssembly();
       const sectionUtils = SectionPropertiesUtil.instance(parent, env);
-      const csg = env.modelInfo.extended[rMdto.id];
+      const csg = env.getModel(rMdto, 'extended');
       if (csg.polygons.length === 0) return csg;
       const cutter = BiPolygon.fromPolygon(sectionUtils.outerPoly, 0, 13*2.54/16).model();
       return csg.subtract(cutter);

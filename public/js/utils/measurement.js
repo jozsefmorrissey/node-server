@@ -21,6 +21,7 @@ let units = [
   'inch',
   'mm'
 ]
+const BASE_UNITS = units[0];
 let unit = units[1];
 
 let areaUnits = [
@@ -42,7 +43,7 @@ const determineUnit = (notMetric) => {
   } else if ((typeof notMetric) === 'boolean') {
     if (notMetric === true) return unit;
   }
-  return units[0];
+  return BASE_UNITS;
 }
 
 function standardize(ambiguousDecimal, notMetric) {
@@ -167,22 +168,31 @@ class Measurement {
 
     this.display = (accuracy, dispUnit) => {
       switch (dispUnit || this.unit()) {
-        case units[0]: return new String(Math.floor(this.decimal(.1)*10)/10);
+        case units[0]: return new String(this.decimal(accuracy || .1), units[0]);
         case units[1]: return this.standardUS(accuracy);
-        case units[2]: return Math.floor(this.decimal(.001)*100)/10;
+        case units[2]: return new String(this.decimal(accuracy || .1), units[2]);
         default:
             return this.standardUS(accuracy);
       }
     }
 
+    // TODO: Remove
     this.value = (accuracy) => this.decimal(accuracy);
 
-    this.decimal = (accuracy) => {
+    this.decimal = (accuracy, convert) => {
       if (nan) return NaN;
-      accuracy ||= .0001;
-      const multiplier = 1/accuracy;
-      return Math.round(decimal * multiplier) / multiplier;
+      accuracy ||= 1e-32;
+      const unit = Boolean.is(convert) ? (convert ? this.unit() : BASE_UNITS) :
+                      convert ? convert : BASE_UNITS;
+      switch (unit) {
+        case units[0]: return Math.roundTo(decimal, accuracy);
+        case units[1]: return Math.roundTo(convertMetricToUs(decimal), accuracy);
+        case units[2]: return Math.roundTo(decimal * 10, accuracy);
+        default: return Math.roundTo(decimal, accuracy);
+      }
     }
+    this.ceil = (convert) => new Measurement(Math.ceil(this.decimal(.00000001, (convert ||= true))), convert);
+    this.floor = (convert) => new Measurement(Math.floor(this.decimal(.00000001, (convert ||= true))), convert);
 
     function getDecimalEquivalant(string) {
       string = string.trim();
@@ -198,7 +208,7 @@ class Measurement {
       return NaN;
     }
 
-    this.unit = (unit) => unit !== undefined ? (notMetric = unit) : notMetric || unit;
+    this.unit = (unit) => unit !== undefined ? (notMetric = unit) : notMetric || Measurement.unit();
 
     if ((typeof value) === 'number') {
       decimal = standardize(value, notMetric);
@@ -253,8 +263,8 @@ Measurement.display.area = (SQCM, units, percision) => {
   switch (units) {
     case 'SQMM': return `${Measurement.round(SQCM * 100, percision)} mm2`;
     case 'SQM': return `${Measurement.round(SQCM / 100000, percision)} M2`;
-    case 'SQIN': return `${Measurement.round(SQCM / 6.4516, percision)} SQIN`;
-    case 'SQFT': return `${Measurement.round(SQCM / 929.0304, percision)} SQFT`;// ~ ${Measurement.round(SQCM / 29729, percision)}, 4 X 8 Sheets`;
+    case 'SQIN': return `${Measurement.round(SQCM / 6.4516, percision)} SQ IN`;
+    case 'SQFT': return `${Measurement.round(SQCM / 929.0304, percision)} SQ FT`;// ~ ${Measurement.round(SQCM / 29729, percision)}, 4 X 8 Sheets`;
 
 
     default: return `${SQCM} cm2`;

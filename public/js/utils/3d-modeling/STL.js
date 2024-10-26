@@ -1,7 +1,7 @@
 
 class STL {
   constructor(header) {
-    let _header = header;
+    let _header;
     const triangles = [];
     const throwXYZError = () => {throw new Error('Invalid XYZ object all must be finite numbers')};
     const validateXYZ = (...objs) => {
@@ -17,7 +17,8 @@ class STL {
     const copyAllXYZ = (...vs) => vs.map(v => copyXYZ(v));
     const XYZstr = (obj) => `${obj.x} ${obj.y} ${obj.z}`
 
-    this.header = (header) => header !== undefined ? (_header = header) : header;
+    this.header = (header) => header !== undefined ? (_header = header.slice(0,80)) : _header;
+    this.header(header);
     // TODO: make add imutable
     this.add = {};
     this.add.triangle = (v1, v2, v3, normal) =>
@@ -39,12 +40,14 @@ class STL {
       return json;
     }
     this.binary = () => {
-      const byteLength = 320 + 4 + 50 * triangles.length;
+      const byteLength = STL.binaryLength(triangles.length);
       const buffer = new ArrayBuffer(byteLength);
       const view = new DataView(buffer);
       let bPos = 0;
 
-      bPos += 80;
+      if (header) header.split('').forEach((c,i) => view.setUint8(i, c.charCodeAt(0)));
+
+      bPos = 80;
       view.setUint32(bPos, triangles.length, true);
       bPos += 4;
       triangles.forEach(t => {
@@ -88,12 +91,57 @@ endsolid ${header}`
   }
 }
 
-STL.fromCSG = (csg) => {
-  const stl = new STL();
+STL.fromCSG = (csg, header) => {
+  const stl = new STL(header);
   const scaled = csg.clone();
   scaled.scale(10);
   scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
   return stl;
+}
+
+STL.binaryLength = (length) => 80+4+50*length;
+
+const viewVertex = (view, i) => {
+  const x = view.getFloat32(i, true);
+  const y = view.getFloat32(i + 4, true);
+  const z = view.getFloat32(i + 8, true);
+  return {x, y, z};
+}
+
+STL.fromArrayBuffer = (arrayBuffer, header) => {
+  const view = new DataView(arrayBuffer);
+  const length = view.getUint32(80, true);
+  const expectedLength = STL.binaryLength(length);
+  if (expectedLength < 1 || arrayBuffer.length < expectedLength)
+    throw new Error(`Data is corrupt or invalid\n\tExpecting a bufferLength of at least ${expectedLength}`);
+  header ||= Array.fill(80, (i) => (charCode = view.getUint8(i)) ?
+                                  String.fromCharCode(charCode) : '').join('')
+  const stl = new STL(header);
+  for (let i = 84; i < expectedLength - 1;) {
+    const normal = viewVertex(view, i);
+    const v1 = viewVertex(view, i+=12);
+    const v2 = viewVertex(view, i+=12);
+    const v3 = viewVertex(view, i+=12);
+    stl.add.triangle(v1, v2, v3, normal);
+    i+=14;
+  }
+
+  return stl;
+}
+
+STL.fromFiles = async (files) => {
+  const stls = [];
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index];
+    try {
+      stls.push(STL.fromArrayBuffer(await file.arrayBuffer(), file.name));
+    } catch (e) {
+      e.name = file.name;
+      stls.push(e);
+    }
+  }
+
+  return stls;
 }
 
 module.exports = STL;
