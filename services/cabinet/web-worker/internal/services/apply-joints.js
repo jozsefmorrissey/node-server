@@ -179,6 +179,9 @@ function buildExtendedModel(assem, joints, env) {
     const modelCenter = new Vertex3D(env.getModel(id, 'model').center());
     for (let ji = 0; ji < joints.length; ji++) {
       try {
+        if (assem.partCode === 'BACK') {
+          console.log(joints[ji].descriptor);
+        }
         const cutObj = applyMaleJointApplicator(joints[ji], frontBackSet, assem, env, modelCenter);
         if (cutObj) {
           cutters.cookie.concatInPlace(cutObj.cookie);

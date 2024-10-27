@@ -121,7 +121,7 @@ class ModelInformation {
     assemblies = assemblies.map(a => a.id());
 
     const complexityMap = {};
-    const jointMap = root.dependencyMap(allAssemblies.filter(a => a.part()));
+    const jointMap = root.dependencyMap(allAssemblies.filter(a => a.part() && !a.composite()));
     jointMap.JOINTS.forEach(j => byId[j.id()] = j);
     allAssemblies = sorter(allAssemblies, jointMap, byId);
     allAssemblies.forEach(amo => complexityMap[amo.assembly.id()] = amo.complexity());

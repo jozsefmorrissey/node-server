@@ -409,6 +409,7 @@ class Polygon3D {
       const vertAndLineMap = lines.map(linePerpObject(normal))
           // .concat(instance.vertices().map(vertPerpObject(normal, center)));
       vertAndLineMap.sortByAttr('dot', true);
+      vertAndLineMap.splice(2,vertAndLineMap.length);
       return vertAndLineMap.max(o => o.line[0].vector().magnitude() +
                                         o.line[1].vector().magnitude());
     }
