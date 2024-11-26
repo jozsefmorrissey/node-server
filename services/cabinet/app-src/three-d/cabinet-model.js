@@ -247,8 +247,8 @@ class CabinetModel {
       return complexModel.clone();
     }
 
-    this.topVector = () => Line3D.fromVector(this.normal(), undefined, {x:90,y:0,z:0}).vector();
-    this.rightVector = () => Line3D.fromVector(this.normal(), undefined, {x:0,y:90,z:0}).vector();
+    this.topVector = () => Line3D.fromVector(this.normal(), undefined, true, {x:90,y:0,z:0}).vector();
+    this.rightVector = () => Line3D.fromVector(this.normal(), undefined, true, {x:0,y:90,z:0}).vector();
 
     this.frontView = () => this.viewFromVector(this.normal(), true);
     this.topView = () => this.viewFromVector(this.topVector(), true);

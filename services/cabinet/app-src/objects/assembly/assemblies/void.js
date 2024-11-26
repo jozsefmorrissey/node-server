@@ -14,7 +14,7 @@ const Polygon3D = require('../../../three-d/objects/polygon.js');
 const Assembly = require('../assembly.js');
 
 let voidCount = 0;
-class Void extends Cutter {
+class Void extends Cutter.AutoConfigured {
   constructor(partCodeOindex, partName, config) {
     let partCode = (typeof partCodeOindex) === 'string' ? partCodeOindex :
               `void-${typeof partCodeOindex === 'number' ? partCodeOindex : ++voidCount}`;

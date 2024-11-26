@@ -25,10 +25,11 @@ defs.brr = imp('brr', 'Bottom Rail Reveal', 1/8);
 defs.showRight = new Property('showRight', 'Show Right', {value: {type: 'None', endStyle: 'No'}});
 defs.ddd = imp('ddd', 'Default Dado Depth', .25);
 defs.crh = imp('crh', 'Crown Height', 3.5);
+defs.crw = imp('crw', 'Crown Width', '2 7/8');
 
 
 //   Overlay
-defs.ovfls = imp('ovfls', 'Overlay Frameless', 11/32);
+defs.ovfls = imp('ovfls', 'Overlay Frameless', 1/4);
 defs.ovfrd = imp('ovfrd', 'Overlay Framed', 1/2);
 defs.ov = new Property('ov', 'Overlay', {value: ov});
 
@@ -66,9 +67,9 @@ const fullExtGuidDepths = (val) => new Property(`dbdepths${val}`, `Drawer Box De
 }});
 
 //   Guides
-defs.dbtos = new Property('dbtos', 'Drawer Box Top Offset', .5*2.54);
-defs.dbsos = new Property('dbsos', 'Drawer Box Side Offest', 3*2.54/8);
-defs.dbbos = new Property('dbbos', 'Drawer Box Bottom Offset', 2.54/2);
+defs.dbtos = imp('dbtos', 'Drawer Box Top Offset', .5);
+defs.dbsos = imp('dbsos', 'Drawer Box Side Offest', '1 1/16');
+defs.dbbos = imp('dbbos', 'Drawer Box Bottom Offset', 1/2);
 defs.dbn = new Property('dbn', 'Bottom Notched', {value: true});
 defs.dbid = imp('dbid', 'Bottom Inset Depth', 1/8);
 defs.dbdepths = new Property('dbdepths', 'Drawer Box Depths', {value: [

@@ -35,6 +35,8 @@ class SectionPropertiesUtil {
 
     this.outerPoly = spDto.coordinates.outer.object();
     this.innerPoly = spDto.coordinates.inner.object();
+    this.outerPoly.normals(spDto.normals.x);
+    this.innerPoly.normals(spDto.normals.x);
 
     this.outerCenter = Vertex3D.center(coordinates.outer);
     this.innerCenter = Vertex3D.center(coordinates.inner);
@@ -207,7 +209,7 @@ function expandToNeigbors(poly, spatialMap) {
 
 const panelSectionThickness = .75 * 2.54;
 function panelSectionInformation(sectionUtil, env) {
-  const panelSections = Object.values(env.byId).filter(a => a.id.startsWith('PanelSection'));
+  const panelSections = Object.values(env.byId).filter(a => a.id.startsWith('PanelSection_'));
   if (panelSections.length === 0) return;
   const spatialMap = sectionUtil.leafSpatialMap();
   const models = [];
@@ -247,7 +249,10 @@ function combineModels(models) {
   } while (found);
 }
 
+const partName = 'Panel Section Panel';
 const prefix = 'PanelSectionPanel';
+const id = (index) => `${prefix}_${index}`;
+const partCode = 'psp'
 function buildPanels(sectionUtil, env) {
   if (env.pathValue(`building-${prefix}`)) return;
   env.pathValue(`building-${prefix}`, true);
@@ -255,8 +260,12 @@ function buildPanels(sectionUtil, env) {
   if (!models) return;
   combineModels(models);
   if (models.length > 1) console.warn('Not tested for multiple panel Sections');
-  models.forEach(m => {
-    const rdto = Utils.generated({catigory: 'Panel'}, env, m, prefix);
+  const root = sectionUtil.sectionProps().find.root();
+  models.forEach((model, index) => {
+    const blockModel = new CSG.cube({demensions: model.demensions(), center: model.center()});
+    const assem = {id: id(index), category: 'Panel', partCode, partName};
+    const rdto = Utils.generated(assem, env, blockModel, prefix, root);
+    env.modelInfo.cut[rdto.id] = model;
     const joints = env.find(/^PanelSection-/, 'locationId');
     joints.forEach(j => env.jointMap[j.id].male.push(rdto.id))
   });
@@ -265,7 +274,7 @@ function buildPanels(sectionUtil, env) {
 const built = {};
 const dataPath = (assem) => 'proccessData.SectionPropertiesUtil.' + assem.id;
 SectionPropertiesUtil.instance = (rMdto, env) => {
-  let secProps = rMdto.find.up(/_S[0-9]{1,}$/) || rMdto.find(/_S[0-9]{1,}$/);
+  let secProps = rMdto.find.up(/_S$/) || rMdto.find(/_S$/);
   if (!secProps) return null;
   let rootHash = rMdto.find.root().hash;
   const path = dataPath(secProps);

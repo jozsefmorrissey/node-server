@@ -23,14 +23,17 @@ Utils.display.axis = {
 
 Utils.display.degrees = (degrees) => `${Math.round(degrees * 10) / 10}`;
 let tol = .01;
-Utils.display.angle = (cut, zOnz) => {
+Utils.display.angle = (cut, leftOright) => {
+  const zOnz = leftOright ? (cut.primarySide ? 'z' : '-z') : (cut.primarySide ? '-z' : 'z');
   const degree = Math.toDegrees(cut.axis[zOnz].y.to2D().radians.positive());
+
   let relitive = Math.roundTo(-1 * ((degree - 90) % 180), .1);
   if (within(Math.abs(relitive), 90)) relitive = 0;
+  if (relitive < 0) relitive = -(relitive + 90);
   return relitive || '';
 }
-Utils.display.group = (part) => part.getAssembly('c').group().room().name();
-Utils.display.cabinet = (part) => part.getAssembly('c').userIdentifier();
+Utils.display.group = (part) => part.getRoot().group().room().name();
+Utils.display.cabinet = (part) => part.getRoot().userIdentifier();
 Utils.display.partIdPrefix = (part) => {
   const cabinet = part.getAssembly('c');
   const room = cabinet.group().room().name();
@@ -38,11 +41,13 @@ Utils.display.partIdPrefix = (part) => {
   return `${room}:${cId}`;
 }
 
+Utils.display.cabinetAndGroup = (part) =>
+      `${Utils.display.cabinet(part) } ${Utils.display.group(part)}`;
 Utils.display.partIds = (parts) => {
   let partStr = parts[0].userFriendlyId();
   if (parts.length !== 1)
     partStr += `[${parts.map(p => p.userFriendlyId()).join(',')}]`;
-  return `${partStr} ${Utils.display.cabinet(parts[0])} ${Utils.display.group(parts[0])}`;
+  return `${partStr}`;
 }
 Utils.display.roots = (parts) => {
   const map = {};
@@ -50,7 +55,21 @@ Utils.display.roots = (parts) => {
     const root = parts[index].getRoot();
     map[root.id()] = root;
   }
-  return Object.values(map).map(r => r.userFriendlyId());
+  return Object.values(map).map(r => r.name());
+}
+
+Utils.display.sectionLocation = (parts) => {
+  const locations = [];
+  for (let index = 0; index < parts.length; index++) {
+    const part = parts[index];
+    const root = part.getRoot();
+    const sp = part.linkListFind('parentAssembly', a => a.constructor.name === 'SectionProperties');
+    const userFriendlyIndex = sp.userFriendlyIndex();
+    const leftOright = part.partCode() === 'dl' ? '-L' :
+          (part.partCode() === 'dr' ? '-R' : '');
+    locations.push(`${root.name()}-${userFriendlyIndex || 0}${leftOright}`);
+  }
+  return locations;
 }
 
 Utils.display.partCodes = (parts) => {
@@ -94,7 +113,7 @@ const forEach = (part, selector, func) => {
 Utils.count = {};
 Utils.count.shelves = (cabinet) => {
   let count = 0;
-  forEach(cabinet, /^S[0-9]{1,}:sh[0-9]{1,}$/, () => count++)
+  forEach(cabinet, /^S:sh[0-9]{1,}$/, () => count++)
   return count;
 }
 

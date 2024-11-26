@@ -64,7 +64,8 @@ class SectionProperties extends KeyValue {
     const sectionCutters = [];
     this.userFriendlyId = () => this.getRoot().userFriendlyId(this.id());
     this.allAssemblies = () => this.getRoot().allAssemblies();
-    this.userFriendlyIndex = () => this.userFriendlyId().replace(/^.*?([0-9]{1,})$/, '$1');
+    this.userFriendlyIndex = () =>
+      (this.userFriendlyId().replace(/^.*?([0-9]*)$/, '$1') || 0);
     // index ||= 0;
     const coordinates = {inner: [v(),v(10,0,0),v(10,10,0),v(0,10,0)], outer: [v(),v(20,0,0),v(20,20,0),v(0,20,0)]};
     const temporaryInitialVals = {parent, _TEMPORARY: true};
@@ -123,8 +124,17 @@ class SectionProperties extends KeyValue {
 
     this.divideRight = () => this.parentAssembly() && this.parentAssembly().sectionCount
       && this.parentAssembly().sectionCount() !== index;
-    this.partCode = () => 'S' + index;
+    this.partCode = () => 'S';
     this.partName = () => undefined;
+
+    let parentAssembly;
+    this.parentAssembly = (pa) => {
+      if (pa) {
+        parentAssembly = pa;
+        instance.trigger.parentSet();
+      }
+      return parentAssembly;
+    }
 
     this.locationCode = () => {
       const parent = this.parentAssembly();
@@ -227,6 +237,15 @@ class SectionProperties extends KeyValue {
       return assems;
     }
     this.children = () => this.getSubassemblies(true);
+    this.ancestors = () => {
+      const parents = [];
+      let curr = this.parentAssembly();
+      while (curr) {
+        parents.push(curr);
+        curr = curr.parentAssembly();
+      }
+      return parents;
+    }
 
     this.propertyConfig = (...args) => this.getCabinet() ?
           this.getCabinet().propertyConfig(...args) : new PropertyConfig(...args);
@@ -623,7 +642,7 @@ class SectionProperties extends KeyValue {
       if (assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section|Shelve)/)) return false;
       if (isMatch(assem, 'left') || isMatch(assem, 'right')) return true;
       if (assem instanceof Divider) return false;
-      if (assem.locationCode().startsWith('c_S1')) return false;
+      if (assem.locationCode().startsWith('c_S($|:|_)')) return false;
       if (assem.locationCode().match(/^c_[^_]*$/))
         return true;
       return false;
@@ -633,7 +652,7 @@ class SectionProperties extends KeyValue {
       if (assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section|Shelve)/)) return false;
       if (isMatch(assem, 'left') || isMatch(assem, 'right')) return true;
       if (assem instanceof Divider) return false;
-      if (assem.locationCode().startsWith('c_S1')) return false;
+      if (assem.locationCode().startsWith('c_S($|:|_)')) return false;
       if (assem.locationCode().match(/^c_[^_]*$/))
         return true;
       return false;
@@ -676,7 +695,7 @@ class SectionProperties extends KeyValue {
     function cabinetBoxDados() {
       const cabinet = instance.getCabinet();
       const subAssems = Object.values(cabinet.subassemblies).filter((assem) => !assem.constructor.name.match(/^(Cabinet|Cutter|Void|Auto|Section)/));
-      const joints = [new Dado(null, isBorder, null,  'PanelSection-Joint'),
+      const joints = [new Dado(null, isBorder, null,  'f-Joint'),
                       new Cut(null, (a) => a.part(), null,  'PanelSection-Cut')];
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
@@ -708,7 +727,8 @@ class SectionProperties extends KeyValue {
       }
     }
 
-    this.on.parentSet(p => this.getAssembly('c') && this.isRoot() && cabinetBoxDados());
+    this.on.parentSet(p =>
+        this.getAssembly('c') && this.isRoot() && cabinetBoxDados());
 
     this.toDrawString = (notRecursive) => {
       const color = String.color.next();

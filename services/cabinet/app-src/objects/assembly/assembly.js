@@ -7,7 +7,6 @@ const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
 const Joint = require('../joint/joint');
 const Dependency = require('../dependency');
-const Group = require('../group');
 const AssemblyResolver = require('./resolvers/assembly');
 const ModelingCollections = require('modeling-collections');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
@@ -55,6 +54,8 @@ class Assembly extends KeyValue {
     const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
     const initialVals = {
       outline: false,
+      color: '#ADB5C2',
+      manuallyConfigurable: false,
       part: true,
       hardware: [],
       outsourced: false,
@@ -119,7 +120,7 @@ class Assembly extends KeyValue {
     this.eval = (eqn) => sme.eval(eqn, this);
     this.evalObject = (obj) => sme.evalObject(obj, this);
 
-    const nonUserDefinedPartReg = /^c(_(S[0-9]{1,}|AUTOTK|COC|CabinetOpeningCorrdinates)(_|$)|$)/;
+    const nonUserDefinedPartReg = /^c(_(S|AUTOTK|COC|CabinetOpeningCorrdinates)(_|$)|$)/;
     this.userDefinedParts = () => this.allAssemblies().filter(a => !a.locationCode().match(nonUserDefinedPartReg));
 
     const changeEvent = new CustomEvent('change');
@@ -196,30 +197,39 @@ class Assembly extends KeyValue {
 
     const constructUserFriendlyId = (idMap) => (part) => {
       const pc = part.partCode();
-      if (!pc.startsWith(':')) return pc;
+      if (!pc.includes(':')) return pc;
       const parent = part.parentAssembly();
       if (parent) {
-        const parentId = idMap[parent.id()];
-        if (parentId) return `${parentId}${pc}`;
-        else return 'unidentified';
+        return `:${part.id()}`;
       }
       return pc;
     }
 
+    this.generatedParts = [];
+
+    const subPartReg = /(.*?):.*/;
     function buildUserFriendlyIdMap() {
-      let unidentified = this.allAssemblies();
+      let unidentified = this.allAssemblies().concat(this.generatedParts);
+      unidentified.sort(Assembly.inheritanceSorter);
       const idMap = {};
       do {
         const split = unidentified.filterSplit(constructUserFriendlyId(idMap));
         const keys = Object.keys(split);
         for(let index = 0; index < keys.length; index++) {
-          const key = keys[index];
+          let key = keys[index];
+          let si = 0;
+          if (key.startsWith(':')) {
+            const part = Assembly.get(key.substring(1));
+            key = idMap[part.parentAssembly().id()] + part.partCode(true);
+            split[key] ||= [];
+            si = split[key].length;
+            split[key].push(part);
+          }
           const set = split[key];
-          if (set.length === 1) idMap[set[0].id()] = key;
-          else {
-            for (let si = 0; si < set.length; si++) {
-              idMap[set[si].id()] = `${key}${si+1}`;
-            }
+          for (;si < set.length; si++) {
+            // TODO: eliminate all hardCoded partCode Indicies and insure children
+            //      share the same userFriendlyId Index as parent.
+            idMap[set[si].id()] = `${key}${si ? si : ''}`;
           }
         }
         unidentified = split.unidentified;
@@ -236,11 +246,13 @@ class Assembly extends KeyValue {
 
     this.userFriendlyIdMap = new FunctionCache(buildUserFriendlyIdMap, this, 'alwaysOn');
     this.userFriendlyId = (id) => {
-      if (id === undefined) `${this.partCode()}${this.groupIndex() + 1}`;
       id ||= this.id();
       if (this.parentAssembly() !== undefined) return this.getRoot().userFriendlyIdMap()[id];
-      return this.userFriendlyIdMap()[id];
+      return this.userFriendlyIdMap()[id] || Assembly.get(id).locationCode();
     }
+    this.userFriendlyIndex = () =>
+      (this.userFriendlyId().replace(/^.*?([0-9]*)$/, '$1') || 0) + 1;
+
 
     function nearestAssembly(partCode) {
       const searchReg = Assembly.partCodeReg(partCode);
@@ -458,6 +470,15 @@ class Assembly extends KeyValue {
       }
       return parentAssembly;
     }
+    this.ancestors = () => {
+      const parents = [];
+      let curr = this.parentAssembly();
+      while (curr) {
+        parents.push(curr);
+        curr = this.parentAssembly();
+      }
+      return parents;
+    }
     this.addSubAssembly = (assembly) => {
       assembly.parentAssembly(this);
       this.subassemblies[assembly.partCode()] = assembly;
@@ -512,8 +533,7 @@ class Assembly extends KeyValue {
       }).map(str => ({key: str, value: this.eval(valueObj[str])}));
     }
 
-    this.isSubPart = (assem) =>
-      assem.locationCode().startsWith(`${this.locationCode()}:`)
+    this.isSubPart = (assem) => assem.parentAssembly() === this;
 
     if (Assembly.idCounters[this.objId] === undefined) {
       Assembly.idCounters[this.objId] = 0;
@@ -623,7 +643,7 @@ Assembly.fromJson = (assemblyJson) => {
   assembly.value.all(assemblyJson.value.values);
   if (assemblyJson.parent) assembly.parentAssembly(assemblyJson.parent);
   else {
-    assembly.group(assemblyJson.group || new Group());
+    assembly.group(assemblyJson.group);
     assembly.part(false);
   }
   Object.values(assemblyJson.subassemblies).forEach((json) => {
@@ -637,7 +657,6 @@ Assembly.fromJson = (assemblyJson) => {
 }
 
 Assembly.build = (type, group, config, assembly) => {
-  group ||= new Group();
   assembly ||= new Assembly('c', type);
   assembly.group(group);
   config ||= assemblyBuildConfig[type];
@@ -698,10 +717,7 @@ Assembly.new = function (id) {
   return null;
 };
 Assembly.class = Object.class.get;
-Assembly.classObj = Object.class.filter;
 
-Assembly.classList = (filterFunc) => Object.values(Assembly.classObj(filterFunc));
-Assembly.classIds = (filterFunc) => Object.keys(Assembly.classObj(filterFunc));
 Assembly.lists = {};
 Assembly.idCounters = {};
 
@@ -724,6 +740,11 @@ Assembly.idCounters = {};
 //m-q-p:1-2-4-L-4:fi-fi-fo-fum     :false
 
 Assembly.partCodeReg = (partCode) => new RegExp(`(.{1,}?_|^)${partCode}(|:.*)$`);
+Assembly.inheritanceSorter = (a1,a2) => {
+  const loc1 = a1.locationCode();
+  const loc2 = a2.locationCode();
+  return loc1.count('_') - loc2.count('_') || loc1.length - loc2.length;
+}
 
 ModelingCollections.Assembly = Assembly;
 module.exports = Assembly

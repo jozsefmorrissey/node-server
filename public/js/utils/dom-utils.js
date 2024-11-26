@@ -68,7 +68,9 @@ du.input.valueObject = (elem) => {
 du.create.element = function (tagname, attributes) {
   const elem = document.createElement(tagname);
   const keys = Object.keys(attributes || {});
-  keys.forEach((key) => elem.setAttribute(key, attributes[key]));
+  keys.forEach((key) => key === 'innerText' ?
+                        elem.innerText = attributes.innerText :
+                        elem.setAttribute(key, attributes[key]));
   return elem;
 }
 
@@ -108,6 +110,17 @@ du.download = (filename, contents) => {
   element.click();
 
   document.body.removeChild(element);
+}
+
+du.download.binary = (filename, binaryFile) => {
+  const link = document.createElement('a');
+  link.innerText = filename;
+  link.href = URL.createObjectURL(binaryFile);
+  link.download = filename;
+
+  document.body.append(link);
+  link.click();
+  link.remove();
 }
 
 function keepInBounds (elem, minimum) {

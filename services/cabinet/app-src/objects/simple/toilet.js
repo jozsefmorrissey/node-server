@@ -8,6 +8,7 @@ class Toilet extends SimpleModel {
     this.width(18*2.54);
     this.height(28*2.54);
     this.thickness(29*2.54);
+    this.color('#FFF')
   }
 }
 

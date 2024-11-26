@@ -7,6 +7,7 @@ const HoverObject2d = HoverMap2d.Object;
 const Vertex2d = require('./objects/vertex');
 const Line2d = require('./objects/line');
 const LineMeasurement2d = require('./objects/line-measurement');
+const AngleMeasurement2d = require('./objects/angle-measurement');
 const Polygon2d = require('./objects/polygon');
 const Draw2D = require('draw');
 
@@ -125,7 +126,10 @@ class PanZoomClickMeasure extends PanZoomClick {
         lastClicked = null;
       } else {
         const line = new LineMeasurement2d(Line2d.between(lastTwo[0], lastTwo[1]));
-        if (line) measurementLines.push(line);
+        const angle = new AngleMeasurement2d(...lastTwo);
+        if (line.line().length() > .0001) measurementLines.push(line);
+        const mod45 = Math.modTolerance(270, 0, 45, .001);
+        if (!mod45) measurementLines.push(angle);
         lastClicked = null;
       }
     }

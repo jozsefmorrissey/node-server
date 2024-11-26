@@ -33,19 +33,25 @@
       const addItem = (size, description, quantity, stockNo, unit, unitPrice, amount) =>
         items.push({quantity, stockNo, unit, description, unitPrice, amount, size});
 
-      addItem('3/4 4\'x8\'', 'plywood paint grade', 2, '', 'sheet', '', '');
-      addItem('3/4 4\'x8\'', 'MDF', 2, '', 'sheet', '', '');
-      addItem('3/4 4\'x8\'', 'maple prefinished 1 side', 1, '', 'sheet', '', '');
-      addItem('1/2 4\'x8\'', 'plywood paint grade', 1, '', 'sheet', '', '');
-      addItem('1/4 4\'x8\'', 'maple prefinished 1 side', 1, '', 'sheet', '', '');
-      addItem('10 7/8', 'shelving UV Amigo Maple', 2, 'HB-781108UV2AMV', 'board', '', '');
-      addItem('15 7/8', 'shelving UV Amigo Maple', 1, 'HB-781608UV2AMV', 'board', '', '');
-      addItem('5/16', 'Blum hinge press-in', 18, 'BL-30C258BS05', 'overlay', '', '');
-      addItem('16 oz', 'Titebond II Premium', 1, 'FC-TB216Z', 'bottle', '', '');
-      addItem('16 oz', 'Titebond Melamine', 1, 'FC-TBM16Z', 'bottle', '', '');
-      addItem('1/4', 'Shelf Rests Nickle Plated', 50, 'HD-X-72N', 'ea', '', '');
-      addItem('#8 3/4', 'Pan Head screws', 500, 'BTXP08034S2Z', 'ea', '', '');
-      addItem('#7 3/4', 'Recessed screws', 500, 'BFXP07034R2N', 'ea', '', '');
+      // addItem('3/4 4\'x8\'', 'plywood paint grade', 2, '', 'sheet', '', '');
+      // addItem('3/4 4\'x8\'', 'MDF', 2, '', 'sheet', '', '');
+      // addItem('3/4 4\'x8\'', 'maple prefinished 1 side', 1, '', 'sheet', '', '');
+      // addItem('1/2 4\'x8\'', 'plywood paint grade', 1, '', 'sheet', '', '');
+      // addItem('1/4 4\'x8\'', 'maple prefinished 1 side', 1, '', 'sheet', '', '');
+      // addItem('10 7/8', 'shelving UV Amigo Maple', 2, 'HB-781108UV2AMV', 'board', '', '');
+      // addItem('15 7/8', 'shelving UV Amigo Maple', 1, 'HB-781608UV2AMV', 'board', '', '');
+      // addItem('5/16', 'Blum hinge press-in', 18, 'BL-30C258BS05', 'overlay', '', '');
+      // addItem('16 oz', 'Titebond II Premium', 1, 'FC-TB216Z', 'bottle', '', '');
+      // addItem('16 oz', 'Titebond Melamine', 1, 'FC-TBM16Z', 'bottle', '', '');
+      // addItem('1/4', 'Shelf Rests Nickle Plated', 50, 'HD-X-72N', 'ea', '', '');
+      // addItem('#8 3/4', 'Pan Head screws', 500, 'BTXP08034S2Z', 'ea', '', '');
+      // addItem('#7 3/4', 'Recessed screws', 500, 'BFXP07034R2N', 'ea', '', '');
+
+      addItem('-30', '-30 deg, inserta', 3, 'BL-79B3491', 'ea', '', '');
+      addItem('0mm', '0mm cam adjust plate', 7, 'BL-173H7100', 'ea', '', '');
+      addItem('2mm', '2mm Thickness, Wedge Plate', 3, 'BL-171A5500', 'ea', '', '');
+      addItem('-45', '-45 deg Inserta', 4, 'BL-79B3491', 'ea', '', '');
+      addItem('5mm', '5mm Thickness, Wedge Plate', 4, 'BL-171A5040', 'ea', '', '');
 
       const tbody = document.querySelector('tbody');
       items.forEach(i => {

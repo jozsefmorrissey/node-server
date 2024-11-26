@@ -48,16 +48,20 @@ class Line3D {
     this.invert = (condition) => {
       if (condition === undefined || condition) {
         const temp = [this[0].x, this[0].y, this[0].z];
+        temp.DIRECTIONAL = this[0].DIRECTIONAL;
         this[0].x = this[1].x;
         this[0].y = this[1].y;
         this[0].z = this[1].z;
+        this[0].DIRECTIONAL = this[1].DIRECTIONAL;
         this[1].x = temp[0];
         this[1].y = temp[1];
         this[1].z = temp[2];
+        this[1].DIRECTIONAL = temp.DIRECTIONAL;
       }
+      return this;
     }
 
-    this.negitive = () => new Line3D(this[1].clone(), this[0].clone()).directional(this[1].DIRECTIONAL, this[0].DIRECTIONAL);
+    this.negitive = () => this.clone().invert();
     this.equals = (other, tolerance) => {
       if (!this[0] || !this[1] || !(other instanceof Line3D)) return false
       return this[0].equals(other[0], tolerance) && this[1].equals(other[1], tolerance);
@@ -84,6 +88,10 @@ class Line3D {
       let k = this[1].z - this[0].z;
       return new Vector3D(i,j,k);
     };
+    this.vector.directional = () => {
+      if (this[0].DIRECTIONAL && !this[1].DIRECTIONAL) return this.negitive().vector();
+      return this.vector();
+    }
 
     this.translate = (vector, doNotModify) => {
       if (doNotModify) return this.clone().translate(vector);
@@ -278,7 +286,7 @@ class Line3D {
         l2 = this.clone(); l2.length(Number.MAX_SAFE_INTEGER / 100);
       }
       const connector = Line3D.connect(this, other);
-      if (connector && withinTol(connector.length(), 0)) return connector[0];
+      if (connector && withinThousandth(connector.length(), 0)) return connector[0];
       return null;
     }
 
@@ -387,13 +395,13 @@ class Line3D {
 
     this.intersection.segment = (other, both) => {
       const connector = this.connect.line.segment(other, both);
-      if (connector && withinTol(connector.length(), 0)) return connector[0];
+      if (connector && withinThousandth(connector.length(), 0)) return connector[0];
       return null;
     }
 
     this.intersection.directional = (other, both) => {
       const connector = this.connect.line.directional(other, both);
-      if (connector && withinTol(connector.length(), 0)) return connector[0];
+      if (connector && withinThousandth(connector.length(), 0)) return connector[0];
       return null;
     }
 
@@ -433,6 +441,9 @@ class Line3D {
     // Ensures returnLine startVertex is closer to trendSetter endVertex.
     // Get In Line
     this.acquiescent = (trendSetter) => {
+      if (trendSetter instanceof Vector3D) {
+        return this.vector().sameDirection(trendSetter) ? this.clone() : this.negitive();
+      }
       if (!(trendSetter instanceof Line3D)) return this;
       const endDist = trendSetter[1].distance(this[1]);
       const startDist = trendSetter[1].distance(this[0]);
@@ -532,6 +543,7 @@ Line3D.startAndVector = (startVertex, offsetVector) => {
   return new Line3D(startVertex, endVertex);
 }
 
+
 Line3D.to2D = (lines, x, y) => {
   const lines2d = [];
   for (let index = 0; index < lines.length; index++) {
@@ -564,11 +576,28 @@ Line3D.thetaBetween = (line, relToLine, viewFrom, acute) => {
   return acute === true ? l12d.acute(l22d) : (acute === false ? l12d.obtuse(l22d) : l12d.radians.sub(l22d));
 }
 
-Line3D.fromVector = (vector, startVertex, rotation) => {
-  const sv = new Vertex3D(startVertex);
+Line3D.fromCSG = (csg) => {
+  const lines = [];
+  csg.polygons.forEach(p => {
+    let lastVert = p.vertices[p.vertices.length - 1].pos;
+    for(let index = 0; index < p.vertices.length; index++) {
+      const vert = p.vertices[index].pos;
+      lines.push(new Line3D(lastVert, vert));
+      lastVert = vert;
+    }
+  });
+  return lines
+}
+
+Line3D.fromVector = (vector, vertex, startOendOcenter, rotation) => {
+  if (startOendOcenter === undefined) startOendOcenter = true;
+  let sv = new Vertex3D(vertex);
+  if (startOendOcenter === false) vector = vector.inverse();
+  if (startOendOcenter === null) sv.translate(vector.inverse().scale(.5));
   const ev = sv.translate(vector, true)
   const line = new Line3D(sv, ev);
   if (rotation) line.rotate(rotation);
+  if (startOendOcenter === false) return line.negitive();
   return line;
 }
 
@@ -652,7 +681,7 @@ Line3D.combineOrder = (line1, line2) => {
   const verts = [line1[0], line1[1],line2[0], line2[1]];
   verts.sort(Vertex3D.sortByCenter(Vertex3D.center(...verts)));
   verts.sort(Vertex3D.sortByCenter(verts[verts.length - 1]));
-  let longest = new Line3D(verts[0], verts[verts.length - 1]);
+  let longest = new Line3D(verts[0].clone(), verts[verts.length - 1].clone());
   const shorterBy = line1.length() + line2.length() - longest.length();
   if (zero(shorterBy) < 0) return null;
   if (!unitVec1.equals(longest.vector().unit())) longest = longest.negitive();
@@ -670,7 +699,7 @@ Line3D.combine = (lines, tolerance, prefix) => {
   const tolmap = new ToleranceMap({'vector().positiveUnit().i()': tolerance,
                                   'vector().positiveUnit().j()': tolerance,
                                   'vector().positiveUnit().k()': tolerance});
-  lines.forEach(l => (l.combineRemoved = -1) & tolmap.add(l))
+  lines.forEach((l,i) => (l.combined = {with: -1, index: i}) & tolmap.add(l))
   const groups = tolmap.group();
   for (let g = 0; g < groups.length; g++) {
     let set = groups[g];
@@ -678,13 +707,16 @@ Line3D.combine = (lines, tolerance, prefix) => {
       for (let j = i + 1; j < set.length; j++) {
         const lineI = set[i];
         const lineJ = set[j];
-        if (lineJ.combineRemoved < 0 && lineI.combineRemoved < 0) {
+        if (lineJ.combined.with < 0 && lineI.combined.with < 0) {
           const combineOrder = lineI.combineOrder(lineJ);
           if (combineOrder) {
             lineI[0] = combineOrder[0].clone();
+            lineI[0].DIRECTIONAL = combineOrder[0].DIRECTIONAL;
             lineI[1] = combineOrder[combineOrder.length - 1].clone();
+            lineI[1].DIRECTIONAL = combineOrder[combineOrder.length - 1].DIRECTIONAL;
             lines.removeWhere(l => l === lineJ);
-            lineJ.combineRemoved = i;
+            lineJ.combined.with = lineI.combined.index;
+            lineJ.combined.line = lineI;
             set.splice(j,1)
             j=i;
           }
@@ -696,14 +728,17 @@ Line3D.combine = (lines, tolerance, prefix) => {
 }
 
 Line3D.combineByLine = (list, path, combine) => {
+  if (list.length === 0) return;
   const lines = list.map(obj => obj.pathValue(path));
   Line3D.combine(lines.map(l=>l));
-  const removedIndicies = lines.findIndicies(l => l.combineRemoved !== -1);
+  const removedIndicies = lines.findIndicies(l => l.combined.with > -1);
   for (let index = 0; index < removedIndicies.length; index++) {
-    const removed = list[index];
-    const kept = list[lines[removedIndicies[index]].combineRemoved];
-    const combined = combine(kept, removed);
-    if (combined) list[removed.combineRemoved] = combined;
+    const removeIndex = removedIndicies[index];
+    const removed = list[removeIndex];
+    const combinedObj = lines[removeIndex].combined;
+    const kept = list[combinedObj.with];
+    const combined = combine(kept, removed, combinedObj.line);
+    if (combined) list[combinedObj.with] = combined;
     else removedIndicies.splice(index--, 1);
   }
   for (let index = removedIndicies.length - 1; index > -1; index--) {
@@ -762,6 +797,23 @@ Line3D.averageLine = (lines, pole) => {
     endPoint.z += line[1].z / lines.length;
   }
   return new Line3D(startPoint, endPoint);
+}
+
+Line3D.collectiveMidpoint = (lines) => {
+  let midpoint = lines[0].midpoint();
+  for (let index = 0; index < lines.length - 1; index++) {
+    line = lines[index+1];
+    const connection = line.connect.line(lines[0]);
+    if (connection.length() > .0001) {
+      line = line.translate(connection.vector(), true);
+      if (lines[0].connect.line(line).length() > .0001) {
+        console.warn.logarithmic('Information will likely be incorrect ensure lines are connected');
+      }
+    }
+    const vect = lines[0].connect.vertex(line.midpoint()).vector();
+    midpoint.translate(vect);
+  }
+  return midpoint;
 }
 
 Line3D.vectorSorter = (vector, center) => {
@@ -825,8 +877,8 @@ Line3D.radialSort2D = (lines, viewFrom, ccw, center, degreesOstartpoint) => {
     if (c.line) {
       const startIndex = centers.relitiveIndex(c.line[0], i);
       const endIndex = centers.relitiveIndex(c.line[1], i);
-      if (startIndex < 0 && 0 < endIndex) return c.line.clone();
-      else return c.line.clone(true);
+      if (startIndex < 0 && endIndex > 0) return c.line.clone();
+      return c.line.clone(true);
     }
   }).filter(l => l));
 }

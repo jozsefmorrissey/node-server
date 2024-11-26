@@ -1,6 +1,10 @@
 
 const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 
+const tOfOnull = (tOfOnullOund) => Boolean.is(tOfOnullOund) ||
+                                    tOfOnullOund === null ||
+                                    tOfOnullOund === undefined;
+
 class JointSettings {
   constructor(male, female, extend, extendTo, noDependencies, sliceAtOpening) {
     if (!Boolean.is(male)) male = true;
@@ -16,9 +20,15 @@ class JointSettings {
     this.noDependencies = (trueOfalse) => Boolean.is(trueOfalse) ? (noDependencies = trueOfalse) : noDependencies;
     this.sliceAtOpening = (trueOfalse) => Boolean.is(trueOfalse) ? (sliceAtOpening = trueOfalse) : sliceAtOpening;
     this.directions = new Polygon3D.Directions();
+    const normals = {y: true};
+    this.normals = () => Object.copy(normals);
+    this.normals.x = (tfnu) => tOfOnullOund(tfnu) ? (normals.x = tfnu) : normals.x;
+    this.normals.y = (tfnu) => tOfOnullOund(tfnu) ? (normals.y = tfnu) : normals.y;
+    this.normals.z = (tfnu) => tOfOnullOund(tfnu) ? (normals.z = tfnu) : normals.z;
+    this.normals.any = (tf) => Boolean.is(tf) ? (normals.any = tf) : normals.any;
     this.toJson = () => JointSettings.toJson(this);
   }
 }
 
-Object.class.register(JointSettings, 'male', 'female', 'extend', 'extendTo', 'directions', 'sliceAtOpening');
+Object.class.register(JointSettings, 'male', 'female', 'extend', 'extendTo', 'directions', 'sliceAtOpening', 'normals');
 module.exports = JointSettings;

@@ -523,7 +523,7 @@ function getTypeInput(obj) {
     name: 'type',
     value: obj.type,
     class: 'template-input',
-    list: Object.keys(Assembly.components),
+    list: Object.class.filter(c => c.manuallyConfigurable).map(c => c.name),
     inline: true
   });
 }

@@ -13,7 +13,7 @@ class OnWall extends Lookup {
         height: json.height,
         fromFloor: json.fromFloor,
         fromPreviousWall: json.fromPreviousWall
-      }, 'wallId', 'id');
+      });
     let start = new Vertex2d();
     let end = new Vertex2d();
     this.wallId = () => wall.id();
@@ -94,7 +94,7 @@ class OnWall extends Lookup {
 }
 OnWall.sort = (ow1, ow2) => ow1.fromPreviousWall() - ow2.fromPreviousWall();
 OnWall.fromJson = (json) => {
-  const cxtr = Lookup.decode(json.id).constructor;
+  const cxtr = Object.class.get(json._TYPE);
   const instance = new cxtr(json);
   return instance;
 }

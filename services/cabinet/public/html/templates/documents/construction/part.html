@@ -1,14 +1,29 @@
-<div class='avoid-page-break part-top-margin'>
-  <div class='part-header-cnt'>
-    <h2 class='part-header'>
-      {{parts.length}}|{{partsId}}) {{disp.demensions(demensions)}}
-      &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
-      {{disp.partIds(parts)}}
-    </h2>
-  </div>
-  <div class='font-medium part-cnt'>
-    <div>{{toolingHtml()}}</div>
-    <span class='tab' id='{{viewContainer(views.left)}}'></span>
-    <span class='tab' id='{{viewContainer(views.right)}}'></span>
-  </div>
+<div class='center'>
+  <h3>{{category.PARTS.length ? category.PARTS[0].categories.join('-') : ''}}</h3>
 </div>
+<div:t class="cabinet-part-doc-cnt" repeat='info in category.PARTS'>
+  <div class='avoid-page-break part-top-margin'>
+    <div class='part-header-cnt'>
+      <h3 class='part-header'>
+        {{info.parts.length}}|{{info.partsId}}) {{disp.demensions(info.demensions)}}
+        &nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;
+        {{disp.partIds(info.parts)}}
+      </h3>
+    </div>
+    <div class='font-medium part-cnt'>
+      <div>{{toolingHtml(info)}}</div>
+      <span class='tab' id='{{viewContainer(views(info).left)}}'>
+        <div class='part-label'><b>{{views(info).left.label}}</b></div>
+        <div class='part-material'><b>{{views(info).left.material}}</b></div>
+        <br>
+      </span>
+      <span class='tab border-left' id='{{viewContainer(views(info).right)}}'>
+        <div class='part-label'><b>{{views(info).right.label}}</b></div>
+        <div class='part-material'><b>{{views(info).right.material}}</b></div>
+        <br>
+      </span>
+    </div>
+  </div>
+</div:t>
+<no-tag:t repeat='category in subCategories(category)'
+        $t-id='documents/construction/part'></no-tag:t>

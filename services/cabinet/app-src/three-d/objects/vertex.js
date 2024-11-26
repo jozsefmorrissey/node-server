@@ -177,13 +177,15 @@ Vertex3D.ToleranceMap = (tolerance) => {
 }
 
 Vertex3D.uniqueFilter = (tolerance) => {
-  const map = Vertex3D.ToleranceMap(tolerance);
-  return (vert) => {
+  let map = Vertex3D.ToleranceMap(tolerance);
+  const filter = (vert) => {
     if (!(vert instanceof Vertex3D)) return false;
     if (map.matches(vert).length > 0) return false;
     map.add(vert);
     return true;
-  }
+  };
+  filter.reset = map.reset;
+  return filter;
 }
 
 Vertex3D.center = (...vertices) => {

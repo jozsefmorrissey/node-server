@@ -89,49 +89,13 @@ CSG = function() {
     const stl = new STL(header);
     const scaled = csg.clone();
     scaled.scale(10);
-    scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
+    scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos),
+                            p.plane.normal, String.color.rgb.percent(p.rgb())));
     return stl;
   }
 };
 
 CSG.BIG = 160934.4;//One Mile in cm
-
-const colors = {
-  babyblue: [34,183,232],
-  limegreen: [50, 205, 50],
-
-  indianred: [205, 92, 92],
-  gray: [128, 128, 128],
-  fuchsia: [255, 0, 255],
-  lime: [0, 255, 0],
-  black: [0, 0, 0],
-  lightsalmon: [255, 160, 122],
-  red: [255, 0, 0],
-  maroon: [128, 0, 0],
-  yellow: [255, 255, 0],
-  olive: [128, 128, 0],
-  lightcoral: [240, 128, 128],
-  green: [0, 128, 0],
-  aqua: [0, 255, 255],
-  white: [255, 255, 255],
-  teal: [0, 128, 128],
-  darksalmon: [233, 150, 122],
-  blue: [0, 0, 255],
-  navy: [0, 0, 128],
-  salmon: [250, 128, 114],
-  silver: [192, 192, 192],
-  purple: [128, 0, 128]
-}
-colors.list = () => Object.keys(colors).filter(k => Array.isArray(colors[k]));
-
-colors.codeMap = {}
-colors.list().forEach(k => colors.codeMap[colors[k].join(',')] = k);
-colors.name = (shared) => {
-  if (!Array.isArray(shared)) return '';
-  const strKey = shared.map(v => Math.round(v * 255)).join(',');
-  return colors.codeMap[strKey] || strKey;
-}
-
 
 // Construct a CSG solid from a list of `CSG.Polygon` instances.
 CSG.fromPolygons = function(polygons, deepCopy) {
@@ -171,10 +135,9 @@ CSG.fromSTL = (stl) => {
     const v1 = new CSG.Vertex(oneTenth(t.vertices[0]), normal);
     const v2 = new CSG.Vertex(oneTenth(t.vertices[1]), normal);
     const v3 = new CSG.Vertex(oneTenth(t.vertices[2]), normal);
-    return new CSG.Polygon([v1,v2,v3]);
+    return new CSG.Polygon([v1,v2,v3], t.color);
   });
   const csg = CSG.fromPolygons(polys);
-  csg.setColor(...String.color.RGB[String.color.next()]);
   return csg;
 }
 
@@ -240,7 +203,7 @@ function sliceConfig(x, y, width, dems, center) {
 }
 
 CSG.fromString = function (string) {
-  const numRegStr = '([0-9]*\\.[0-9]{1,}|[0-9]{1,})'
+  const numRegStr = '((-|)[0-9]*\\.[0-9]{1,}|[0-9]{1,})'
   const vertRegStr = `\\(${numRegStr},${numRegStr},${numRegStr}\\)`;
   const polyRegStr = `([a-zA-z0-9, ]*)\\[(${vertRegStr}(,|)){3,}\\]`;
   const polyRegG = new RegExp(polyRegStr, 'g');
@@ -262,7 +225,7 @@ CSG.fromString = function (string) {
     const verts = [];
     for (let j = 0; vertStrs && j < vertStrs.length; j++) {
       const match = vertStrs[j].match(vertReg);
-      const vertex = {x: pf(match[1]), y: pf(match[2]), z: pf(match[3])};
+      const vertex = {x: pf(match[1]), y: pf(match[3]), z: pf(match[5])};
       verts.push(vertex);
     }
     const a = new CSG.Vector(verts[0]);
@@ -327,18 +290,18 @@ CSG.prototype = {
     );
   },
 
-  setColors: function(func, g, b) {
-    if (func instanceof Function) {
-      this.polygons.forEach(p => p.setColor(func(p)));
+  setColors: function(funcOcolor) {
+    if (funcOcolor instanceof Function) {
+      this.polygons.forEach(p => p.setColor(funcOcolor(p)));
     } else {
-      this.polygons.forEach(p => p.setColor(func, g, b));
+      this.polygons.forEach(p => p.setColor(funcOcolor));
     }
   },
 
-  setColor: function(r, g, b, force) {
+  setColor: function(color, force) {
     this.toPolygons().map(function(polygon) {
       if (polygon.shared === undefined || force) {
-        polygon.setColor(r, g, b);
+        polygon.setColor(color);
       }
     });
   },
@@ -362,7 +325,7 @@ CSG.prototype = {
   //          +-------+            +-------+
   //
   union: function(csg) {
-    if (csg.polygons.length === 0) return CSG.fromPolygons(this.polygons);
+    if (!csg || csg.polygons.length === 0) return this.clone();
     var a = new CSG.Node(this.clone().polygons);
     var b = new CSG.Node(csg.clone().polygons);
     a.clipTo(b);
@@ -439,6 +402,7 @@ CSG.prototype = {
   //          +-------+
   //
   intersect: function(csg) {
+    if (!csg || csg.polygons.length === 0) return null;
     var a = new CSG.Node(this.clone().polygons);
     var b = new CSG.Node(csg.clone().polygons);
     a.invert();
@@ -619,6 +583,14 @@ CSG.combine = function(csgs) {
   }
 }
 
+CSG.concat = function(csgs) {
+  const all = new CSG();
+  for (let index = 0; index < csgs.length; index++) {
+    all.polygons.concatInPlace(csgs[index].polygons);
+  }
+  return all;
+}
+
 CSG.marroonedOn = function(csgOpolyOvertex, islands) {
   let vertices;
   if (csgOpolyOvertex instanceof CSG) vertices = csgOpolyOvertex.vertices();
@@ -635,7 +607,7 @@ CSG.marroonedOn = function(csgOpolyOvertex, islands) {
     }
   }
   return null;
-},
+}
 
 // Construct an axis-aligned solid cuboid. Optional parameters are `center` and
 // `radius`, which default to `[0, 0, 0]` and `[1, 1, 1]`. The radius can be
@@ -650,15 +622,25 @@ CSG.marroonedOn = function(csgOpolyOvertex, islands) {
 //
 // x1 = (x0 – xc)cos(θ) – (y0 – yc)sin(θ) + xc(Equation 3)
 // y1 = (x0 – xc)sin(θ) + (y0 – yc)cos(θ) + yc(Equation 4)
+
+function getRadius(options) {
+  if (options.demension)
+    options.radius = [options.demension/2,options.demension/2,options.demension/2];
+  if (!options.radius && options.demensions) {
+      options.radius = new CSG.Vector(options.demensions).times(.5).toArray();
+  }
+  if (options.radius) {
+    return Number.isFinite(options.radius) ?
+      [options.radius, options.radius, options.radius] :
+      new CSG.Vector(options.radius).toArray();
+  }
+  return  [1, 1, 1];
+}
+
 CSG.cube = function(options) {
   options = options || {};
   var c = new CSG.Vector(options.center || [0, 0, 0]);
-  var r = !options.radius ? [1, 1, 1] : Number.isFinite(options.radius) ?
-                      [options.radius, options.radius, options.radius] :
-                      new CSG.Vector(options.radius).toArray();
-  if (options.demensions) {
-    r = new CSG.Vector(options.demensions).times(.5).toArray();
-  }
+  var r = getRadius(options);
   return CSG.fromPolygons([
     [[0, 4, 6, 2], [-1, 0, 0]],
     [[1, 3, 7, 5], [+1, 0, 0]],
@@ -677,6 +659,53 @@ CSG.cube = function(options) {
     }));
   }));
 };
+
+const oneOnone = (val) => val > 0 ? 1 : (val < 0) ? -1 : 0;
+function champerCube(center, x, y, z, depth) {
+  const big = 10;
+  const bigVect = new CSG.Vector(oneOnone(x), oneOnone(y), oneOnone(z)).unit();
+  const cube = new CSG.cube({demension: big});
+  const rotations = x === 0 ? {x: 45} : (y === 0 ? {y: 45} : {z: 45});
+  cube.rotate(rotations);
+  const vector = new CSG.Vector(x, y, z);
+  const bigOffset = bigVect.unit().times(big/2);
+  const depthOffset = bigVect.unit().times(depth);
+  cube.translate(vector.plus(bigOffset).minus(depthOffset));
+  return cube;
+}
+
+CSG.cube.champhered = function (options) {
+  let cube = new CSG.cube(options);
+  const depth = options.depth || 1;
+  const edges = options.edges || [true,true,true];
+  if (edges[0] === true) edges[0] = [true,true,true,true];
+  if (edges[1] === true) edges[1] = [true,true,true,true];
+  if (edges[2] === true) edges[2] = [true,true,true,true];
+  const c = options.center;
+  const r = getRadius(options);
+
+  if (edges[0]) {
+    if (edges[0][0]) cube = cube.subtract(champerCube(c, 0, r[1], r[2], depth));
+    if (edges[0][1]) cube = cube.subtract(champerCube(c, 0, r[1], -r[2], depth));
+    if (edges[0][2]) cube = cube.subtract(champerCube(c, 0, -r[1], -r[2], depth));
+    if (edges[0][3]) cube = cube.subtract(champerCube(c, 0, -r[1], r[2], depth));
+  }
+
+  if (edges[1]) {
+    if (edges[1][0]) cube = cube.subtract(champerCube(c, r[0], 0, r[2], depth));
+    if (edges[1][1]) cube = cube.subtract(champerCube(c, r[0], 0, -r[2], depth));
+    if (edges[1][2]) cube = cube.subtract(champerCube(c, -r[0], 0, -r[2], depth));
+    if (edges[1][3]) cube = cube.subtract(champerCube(c, -r[0], 0, r[2], depth));
+  }
+
+  if (edges[2]) {
+    if (edges[2][0]) cube = cube.subtract(champerCube(c, r[0], r[1], 0, depth));
+    if (edges[2][1]) cube = cube.subtract(champerCube(c, r[0], -r[1], 0, depth));
+    if (edges[2][2]) cube = cube.subtract(champerCube(c, -r[0], -r[1], 0, depth));
+    if (edges[2][3]) cube = cube.subtract(champerCube(c, -r[0], r[1], 0, depth));
+  }
+  return cube
+}
 
 CSG.Point = function (center, radius, color) {
   radius ||= .5
@@ -900,6 +929,26 @@ const perpendicularVector = (vector) => {
   }
   crossVect = other;
   return other;
+}
+
+CSG.cylinder.step = function(cylinders, options) {
+  let stepCylinder = new CSG();
+  options ||= {};
+  const mainCenter = options.center || {x:0,y:0,z:0};
+  const mainSlices = options.slices;
+  cylinders.forEach(c => {
+    const vector = c.vector || new CSG.Vector({y: 0, x: 0, z: 1});
+    const center = new CSG.Vector(c.center || mainCenter);
+    const length = c.length;
+    const radius = c.radius || c.diameter / 2;
+    const slices = c.slices || mainSlices;
+    const half = c.half || options.half;
+    const start = half === true ? center : center.minus(vector.times(c.length/-2));
+    const end = half === false ? center : center.minus(vector.times(c.length/2));
+    const cylinder = new CSG.cylinder({start, end, center, radius, slices});
+    stepCylinder = stepCylinder.union(cylinder);
+  });
+  return stepCylinder;
 }
 
 CSG.cone = function (options) {
@@ -1171,14 +1220,9 @@ CSG.Vertex.prototype = {
 CSG.Plane = function(normal, w) {
   this.normal = normal;
   this.w = w;
-  this.setColor = function(r, g, b) {
-    if (colors[r]) r = colors[r];
-    if (Array.isArray(r)) {
-      g = r[1];
-      b = r[2];
-      r = r[0];
-    }
-    this.shared = [r/255, g/255, b/255];
+  this.setColor = function(color) {
+    const rgb = String.color.rgb(color);
+    this.shared = [rgb[0]/255, rgb[1]/255, rgb[2]/255];
   }
 };
 
@@ -1304,7 +1348,7 @@ CSG.Polygon.prototype = {
     percision ||= .001;
     const verts = this.vertices;
     const shared = this.shared;
-    let color = includeColor ? colors.name(shared) : '';
+    let color = includeColor ? String.colorName(shared) : '';
     let str = `${color}[`;
     for (let v = 0; v < verts.length; v++) {
       str += `${verts[v].toString(percision)},`;
@@ -1332,10 +1376,10 @@ CSG.Polygon.prototype = {
   },
 
   color: function () {
-    const name = colors.name(this.shared);
+    const name = String.colorName(this.shared);
     return name.indexOf(',') === -1 ? name : this.shared.map(v => Math.round(v*255));
   },
-
+  rgb: function () {return !this.shared ? [0,0,0] : this.shared.map(v => Math.round(v*255));},
   scale: function(center, coeficient) {
     this.vertices.forEach(function(v) { return v.scale(center, coeficient); });
   },
@@ -1351,19 +1395,26 @@ CSG.Polygon.prototype = {
       this.vertices[vIndex] = newVertex instanceof CSG.Vertex ? newVertex : vertex;
     }
   },
-  setColor: function(r, g, b) {
-    if (colors[r]) r = colors[r];
-    if (Array.isArray(r)) {
-      g = r[1];
-      b = r[2];
-      r = r[0];
-    }
-    this.shared = [r/255, g/255, b/255];
+  setColor: function(color) {
+    const rgb = String.color.rgb(color);
+    this.shared = [rgb[0]/255, rgb[1]/255, rgb[2]/255];
   }
 };
 
+CSG.Polygon.fromVertices = (verts) => {
+  const a = new CSG.Vector(verts[0]);
+  const b = new CSG.Vector(verts[1]);
+  const c = new CSG.Vector(verts[2]);
+  const norm = a.minus(b).cross(b.minus(c));
+  const vertices = verts.map(v => new CSG.Vertex(v, norm));
+  const poly = new CSG.Polygon(vertices);
+
+  return poly;
+}
+
 CSG.Polygon.Enclosed = function (verts, width, color) {
   width ||= .1;
+  verts = verts.map(v => new CSG.Vector(v));
   const centerNormal = (verts) => {
     const center = CSG.Vertex.Center(verts);
     const v1 = new CSG.Vector(verts[0]).minus(center)

@@ -1,10 +1,10 @@
+require('./public/js/utils/utils.js')
 var express = require("express");
 var fs = require("fs");
 var shell = require("shelljs")
 var bodyParser = require('body-parser');
 var fileUpload = require('express-fileupload');
 const cookieParser = require("cookie-parser");
-require('./public/js/utils/utils.js')
 
 const Context = require('./src/context');
 

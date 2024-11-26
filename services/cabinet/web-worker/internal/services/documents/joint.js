@@ -1,12 +1,16 @@
 
 const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
 const CutInfo = require('./cuts/cut');
+const Utils = require('../modeling/utils/utils.js');
 
 const ensureCsg = (obj) => !(obj instanceof Object) || obj instanceof CSG ? obj : CSG.fromPolygons(obj.polygons, true);
 class JointInfo {
-  constructor(joint, partInfo) {
+  constructor(joint, partInfo, maleId) {
     this.partInfo = () => partInfo;
     this.joint = () => joint;
+    this.male = () => partInfo.environment().byId[maleId];
+    this.male.normals = () => Utils.normals(this.male(), partInfo.environment());
+    this.clone = (mId) => new JointInfo(joint, partInfo, mId || maleId);
 
     let jointModel;
     this.model = (zOnz, model) => {
@@ -56,7 +60,7 @@ class JointInfo {
       const males = (jointRel && jointRel.male) || [];
       males.forEach(maleId => {
         try {
-          const cuts =  CutInfo.get(maleId, this, env);
+          const cuts =  CutInfo.get(maleId, this.clone(maleId), env);
           if (cuts) info.concatInPlace(cuts);
         } catch (e) {
           console.error(e);

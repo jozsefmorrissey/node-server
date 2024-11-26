@@ -9,16 +9,21 @@ const taskCompletionTemplate = new $t('documents/task-completion');
 const recusiveAddTask = (list, task) => task.tasks  ?
   task.tasks().forEach(t => recusiveAddTask(list, t)) :
   (task.task ? recusiveAddTask(list, task.task()) : list.push(task));
-const progressUpdate = (containerOselector) => (task, job) => {
-  if (job.task().status() === 'complete') return;
-  const tasks = [];
-  recusiveAddTask(tasks, job);
-  const container = containerOselector instanceof HTMLElement ? containerOselector : du.find(containerOselector);
-  if (container) {
-    const finished = tasks.filter(t => t.finished()).length;
-    const remaining = tasks.filter(t => !t.finished()).length;
-    const progress = Math.floor(finished/(finished+remaining) * 100);
-    container.innerHTML = taskCompletionTemplate.render({tasks, progress});
+const progressUpdate = (containerOselector) => {
+  let _progress = 0;
+  return  (task, job) => {
+    if (job.task().status() === 'complete') return;
+    const tasks = [];
+    recusiveAddTask(tasks, job);
+    const container = containerOselector instanceof HTMLElement ? containerOselector : du.find(containerOselector);
+    if (container) {
+      const finished = tasks.filter(t => t.finished()).length;
+      const remaining = tasks.filter(t => !t.finished()).length;
+      const progress = Math.floor(finished/(finished+remaining) * 100);
+      if (progress > _progress && progress < 99.99) {
+        container.innerHTML = taskCompletionTemplate.render({tasks, progress});
+      }
+    }
   }
 }
 
@@ -31,7 +36,7 @@ const render = (containerOselector, htmlFunc) => (result) => {
   if (container) {
     container.innerHTML = 'Building Document...';
     setTimeout(() => {
-      const html = htmlFunc(result);
+      const html = htmlFunc(result, containerOselector);
       if ((typeof html) === 'string') container.innerHTML = html;
     });
   }
@@ -40,7 +45,9 @@ const render = (containerOselector, htmlFunc) => (result) => {
 const orderJob = (order, containerOselector, htmlFunc, props) => {
   order ||= Global.order();
   const job = new Jobs.Documentation.Order(order, props);
-  job.on.change(progressUpdate(containerOselector));
+  const update = progressUpdate(containerOselector);
+  job.on.change(update);
+  job.then(update, update);
   if (containerOselector && htmlFunc)
     job.then(render(containerOselector, htmlFunc), err)
   job.queue();
@@ -73,12 +80,18 @@ const PanelComplexCutList = (containerOselector, order) => {
 const ShelveComplexCutList = (containerOselector, order) => {
   return orderJob(order, containerOselector, DocHtml.shelves);
 }
+const FrameComplexCutList = (containerOselector, order) => {
+  return orderJob(order, containerOselector, DocHtml.frames);
+}
 
 const PanelCutList = (containerOselector, order) => {
   return orderJob(order, containerOselector, DocHtml.panels.cutList);
 }
 const ShelveCutList = (containerOselector, order) => {
   return orderJob(order, containerOselector, DocHtml.shelves.cutList);
+}
+const FrameCutList = (containerOselector, order) => {
+  return orderJob(order, containerOselector, DocHtml.frames.cutList);
 }
 
 const CabinetList = (containerOselector, order) => {
@@ -106,7 +119,12 @@ const Materials = (containerOselector, order) => {
 }
 
 const BuildDiagram = (containerOselector, order) => {
-  return orderJob(order, containerOselector, DocHtml.openingDiagram, {partInfo: false});
+  const job = orderJob(order, containerOselector, DocHtml.buildDiagram, {partInfo: false});
+  return job;
+}
+
+const ThreeView = (containerOselector, order) => {
+  return orderJob(order, containerOselector, DocHtml.threeView, {partInfo: false});
 }
 
 const Elevation = (containerOselector, order) => {
@@ -143,6 +161,7 @@ const Everything = MultiSection(everythingSections);
 
 module.exports = {
   PanelComplexCutList, ShelveComplexCutList, PanelCutList, ShelveCutList,
-  CabinetList, BuildDiagram, DoorList, DrawerBoxList, Elevation,
+  CabinetList, ThreeView, BuildDiagram, DoorList, DrawerBoxList, Elevation,
+  FrameComplexCutList, FrameCutList,
   DrawerFrontList, Materials, Aerial, Summary, Everything
 };

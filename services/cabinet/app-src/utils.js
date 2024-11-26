@@ -74,14 +74,16 @@ const normals = (assembly) => {
 
 function positionAssemblyCsg(csg, assembly) {
   csg = csg.clone();
-  const rotation = assembly.position().rotation();
-  const buildCenter = assembly.buildCenter(true);
-  const center = new Vertex3D(assembly.position().center());
-  const layoutCenterVect = new Vertex3D((center.minus(buildCenter)));
-  const csgCenter = csg.center();
-  csg.translate({x: -buildCenter.x, y: -buildCenter.y, z: -buildCenter.z})
-  csg.rotate(rotation);
-  csg.translate(center);
+  if (assembly.position) {
+    const rotation = assembly.position().rotation();
+    const buildCenter = assembly.buildCenter(true);
+    const center = new Vertex3D(assembly.position().center());
+    const layoutCenterVect = new Vertex3D((center.minus(buildCenter)));
+    const csgCenter = csg.center();
+    csg.translate({x: -buildCenter.x, y: -buildCenter.y, z: -buildCenter.z})
+    csg.rotate(rotation);
+    csg.translate(center);
+  }
   return csg;
 }
 

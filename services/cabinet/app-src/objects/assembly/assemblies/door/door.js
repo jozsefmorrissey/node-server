@@ -37,4 +37,7 @@ class Door extends HasPull {
   }
 }
 
+Door.property('manuallyConfigurable', true, false, false, false);
+
+
 module.exports = Door

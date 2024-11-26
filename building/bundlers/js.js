@@ -135,13 +135,12 @@ class JsBundler extends Bundler {
                 let contents = item.contents;
                 if (item.filename.endsWith('.json')) {
                   contents = 'module.exports = ' + contents;
+                } else if (!item.filename.endsWith('.js')) {
+                  contents = `module.exports = \`${contents}\``;
                 }
                 bundle += await formatScript(item.filename, contents);
                 fileCount--;
-                // TODO: Not sure if this is a proper fix, only became a problem
-                //      when source code contained 111 files and ~17,400 lines
-                //      of code.
-                if (fileCount === 0) setTimeout(writeBundle, 100);
+                writeBundle.lastCall(`Writing js bundle to file '${file}'`, 50);
                 release();
               });
               addAfterFiles(item.filename);

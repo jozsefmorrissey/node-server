@@ -81,7 +81,7 @@ class SequentialTask extends Task {
     const completed = tasks.map(t => null);
     this.process = () => 'sequential';
     this.environment = environment instanceof Function ? environment : () => environment;
-    this.payload = () => ({tasks, environment: environment()});
+    this.payload = () => ({tasks, environment: environment && environment()});
     this.tasks = () => tasks;
     this.completed = () => tasks.map((v,i) => completed[i] === true && v).filter(a => a);
     this.failed = () => tasks.map((v,i) => completed[i] === false && v).filter(a => a);
@@ -95,6 +95,33 @@ class SequentialTask extends Task {
     tasks.forEach((t, i) => t.on.change(() => {
       this.trigger.change(t, this);
     }));
+
+    tasks.forEach((t, i) => t.on.success(() => {
+      completed[i] = true;
+      if (this.completed().length === tasks.length) this.status(STATUS.SUCCESS);
+      else if (this.failed().length > 0) this.status(STATUS.FAILED);
+      this.trigger.change(this);
+    }));
+    tasks.forEach((t, i) => t.on.failed((error) => {
+      completed[i] = false;
+      this.status(STATUS.FAILED, error);
+      this.trigger.change(this);
+    }));
+  }
+}
+
+class SequentialSeperateTask extends Task {
+  constructor(...tasks) {
+    super();
+    const instance = this;
+    const completed = tasks.map(t => null);
+    this.tasks = () => tasks;
+    this.completed = () => tasks.map((v,i) => completed[i] === true && v).filter(a => a);
+    this.failed = () => tasks.map((v,i) => completed[i] === false && v).filter(a => a);
+    this.error = () => tasks.map(t => t.error()).filter(e => e)[0];
+    this.result = () =>  tasks.map(t => t.result());
+
+    tasks.forEach((t, i) => t.on.change(() => this.trigger.change(t, this)));
 
     tasks.forEach((t, i) => t.on.success(() => {
       completed[i] = true;
@@ -133,6 +160,8 @@ class AndShortCircutTask extends SequentialTask {
     });
   }
 }
+
+AndShortCircutTask.Seperate = SequentialSeperateTask;
 
 class OrTask extends Task {
   constructor(...tasks) {

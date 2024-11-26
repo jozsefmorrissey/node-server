@@ -55,28 +55,25 @@ function limitLine(axis, plane, failOnNoLen, adjustEndPoint) {
     distanceFromStart = axis[0].distance(int);
     distanceFromEnd = axis[1].distance(int);
   }
-  if (within(distanceFromStart, 0)) return axis[0].DIRECTIONAL = false;
-  if (within(distanceFromEnd, 0)) return axis[1].DIRECTIONAL = false;
-}
-
-function determineAxis(set, normals) {
-  try {
-    let axis = Polygon3D.axis(set, normals).max;
-    // const center = this.intersectModel().center();
-    // Object.values(axis).forEach(l => l.centerOn(center));
-    set.forEach(layer => {
-      const plane = layer.toPlane();
-      limitLine(axis.x, plane);
-      limitLine(axis.y, plane, true, true);
-      limitLine(axis.z, plane);
-    })
-    return axis;
-  } catch(e) {
-    console.error(e);
-    if (goDownTheRabbitHole) determineAxis(set, normals);
+  if (within(distanceFromStart, 0)) {
+    axis[0].DIRECTIONAL = false;
   }
+  if (within(distanceFromEnd, 0)) {
+    axis[1].DIRECTIONAL = false;
+    axis.invert();
+  }
+  if (axis[0].DIRECTIONAL === true)axis.invert();
 }
 
+function limitAxis(axis, planesOlayersOpolys) {
+  planesOlayersOpolys.forEach(pOlOp => {
+    const plane = pOlOp.toPlane ? pOlOp.toPlane() : pOlOp;
+    limitLine(axis.x, plane);
+    limitLine(axis.y, plane, true, true);
+    limitLine(axis.z, plane);
+  })
+  return axis;
+}
 
 function alignZpolyNorms(zPolys, overlapingLayers, zPolyFilter) {
   if (zPolys.length < 1) return;
@@ -116,7 +113,9 @@ function buildAxis(inBoth, overlapLayers, zPolys, zFilter, normals) {
   // console.log(inBoth.map(l => l.toDrawString('green')).concat(['',''])
                 // .concat(targetLayers.map(l => l.toDrawString('red')).concat(['',''])
                 // .concat(overlapLayers.map(l => l.toDrawString()))).join('\n'));
-  return determineAxis(inBoth, norms);
+  let axis = Polygon3D.axis(inBoth, norms).max;
+  limitAxis(axis, inBoth);
+  return axis;
 }
 
 function existsInBothSets(set1, set2) {
@@ -171,14 +170,34 @@ module.exports = (targetLayers, overlapingLayers, jointInfo) => {
 
   const normals = jointInfo.partInfo().normals();
   const zNorm = normals.z;
+  if (jointInfo.joint().descriptor === 'Butt(FrameOtherPanelJoint)') {
+    console.log('her')
+  }
+  const layerDot = l => Math.abs(l.normal().dot(zNorm));
+  const zPolyEqFilter = p => p.normal().positiveUnit()
+                        .equals(zNorm.positiveUnit());
+  let zPolys = existsInBoth.filter(zPolyEqFilter);
+  if (zPolys.length === 0 && existsInBoth.length > 1) {
+    const dots = existsInBoth.map((l,i) => ({dot: layerDot(l),i}));
+    dots.sortByAttr('dot', true);
+    for (let index = 0; !zPolys.length && index < dots.length; index++) {
+      if (dots[index].dot < .2) continue;
+      const maleNorms = jointInfo.male.normals();
+      const layer = existsInBoth[dots[index].i];
+      if (maleNorms.y.equivalent(layer.normal())) {
+        const count = existsInBoth.count(l => layer.normal().equivalent(l.normal()));
+        if (count === 1) zPolys = [layer];
+        else console.warn.logarithmic('Did not plan for this yet...')
+      }
+    }
+  }
+  let zFilter = () => false;
+  if (zPolys.length) zFilter = l => zPolys.indexOf(l) !== -1;
 
-  const zPolyFilter = p => p.normal().positiveUnit()
-                      .equals(zNorm.positiveUnit());
-  const zPolys = existsInBoth.filter(zPolyFilter);
-  // if (zPolys.length > 1) {
-  //   module.exports(targetLayers, overlapingLayers, jointInfo);
-  // }
-
-  if (zPolys.length === 0) return existsInBoth.map(p => buildAxis([p], overlapingLayers, [], zPolyFilter, normals))
-  else return [buildAxis(existsInBoth, overlapingLayers, zPolys, zPolyFilter, normals)];
+  if (jointInfo.joint().descriptor === 'Butt(FrameOtherPanelJoint)') {
+    console.log('her')
+  }
+  if (zPolys.length === 0) return existsInBoth.map(p =>
+    limitAxis(buildAxis([p], overlapingLayers, [], zFilter, normals), existsInBoth));
+  else return [buildAxis(existsInBoth, overlapingLayers, zPolys, zFilter, normals)];
 }

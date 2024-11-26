@@ -42,7 +42,7 @@ class Parimeters2d {
       return a.distance(center) - b.distance(center);
     }
 
-    const partialsToDrawString = (pdObj, startIndex, endIndex) => {
+    let partialsToDrawString = (pdObj, rightOleft, startIndex, endIndex) => {
       startIndex ||= 0;
       endIndex ||= 1;
       for (let index = startIndex; index < endIndex; index++) {
@@ -51,10 +51,10 @@ class Parimeters2d {
         const lastLine = pdObj.parimeter[pdObj.parimeter.length - 1];
         const lastLineNeg = lastLine.negitive();
         let matches = pdObj.lineMap.matches(lastLineNeg).filter(l => !l.equivalent(lastLine));
-        matches.sort(priority(center));
+        matches.sort(Parimeters2d.rightLeftSort(lastLine.degrees(), rightOleft));
 
         const matchesStr = '//Match Lines\n' + Line2d.toDrawString(matches, 'blue');
-        const nextLineStr = '//Next Line\nyellow' + matches[matches.length - 1].toString();
+        const nextLineStr = '//Next Line\nyellow' + (matches[0] && matches[0].toString());
         const lastLineStr = '//Last Line\n' + Line2d.toDrawString([lastLine], 'red');
         const startLineStr = '//Start Line\ngreen' + pdObj.parimeter[0].toString()
         const order = [allLinesStr, parimeterStr, matchesStr, nextLineStr, lastLineStr, startLineStr];
@@ -111,22 +111,24 @@ class Parimeters2d {
       return null;
     }
 
-
     function follow(pdObj, rightOleft) {
       let finished = false;
       let count = 0;
+      const deadEnds = {};
       while (!finished) {
+        if (lines.length === 36) partialsToDrawString(pdObj, rightOleft);
         const lastLine = pdObj.parimeter[pdObj.parimeter.length - 1];
         const lastLineNeg = lastLine.negitive();
-        let matches = pdObj.lineMap.matches(lastLineNeg).filter(l => !l.equivalent(lastLine));
+        let matches = pdObj.lineMap.matches(lastLineNeg)
+                    .filter(l => !l.equivalent(lastLine) && !deadEnds[l.hash()]);
         if (matches.length === 0) {
-          console.warn.logarithmic('No parimeter exists: lines not connected... should investigate');
-          return null;
+          deadEnds[pdObj.parimeter.splice(-1,1)[0].hash()] = true;
+        } else {
+          matches.sort(Parimeters2d.rightLeftSort(lastLine.degrees(), rightOleft));
+          pdObj.parimeter.push(matches[0]);
+          finished = parimeterFinished(pdObj.parimeter);
+          if (count++ > lines.length) return null;
         }
-        matches.sort(Parimeters2d.rightLeftSort(lastLine.degrees(), rightOleft));
-        pdObj.parimeter.push(matches[0]);
-        finished = parimeterFinished(pdObj.parimeter);
-        if (count++ > lines.length) return null;
       };
       return finished;
     }

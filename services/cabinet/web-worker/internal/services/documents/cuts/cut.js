@@ -24,7 +24,17 @@ class CutInfo {
     const partId = jointInfo.partInfo().part().id;
 
     this.partInfo = () => jointInfo.partInfo();
-    if (axis.z.vector().dot(this.partInfo().normals().z) < 0) axis.z = axis.z.negitive()
+
+    const tiltAligned =  () => {
+      if (!axis.z.isLine() || axis.z.vector().parrelle.toAxis()) return true;
+      const center = this.partInfo().center(true).to2D();
+      const zA2D = this.partInfo().normalize(true, axis.z).to2D();
+      const positive = center.distance(zA2D[1]) < center.distance(zA2D[0]);
+      return positive;
+    }
+    if (!tiltAligned()) {
+      axis.z = axis.z.negitive()
+    }
 
     let instance = this;
     this.maleId = () => maleId;
@@ -39,22 +49,17 @@ class CutInfo {
     }
     this.normalize = jointInfo.partInfo().normalize;
 
-    this.primarySide = () => {
-      const zPos = jointInfo.partInfo().normals().z;
-      const zPolys = this.normals().z.equals(zPos);
-      const nzPolys = this.normals().z.equals(zPos.inverse());
-      if (zPolys.length && !nzPolys.length) return 'z';
+    this.zOnz = () =>
+      this.normals().z.sameDirection(this.partInfo().normals().z) ? true : false;
 
-      if (nzPolys.length && !zPolys.length) return 'nz';
-      const tilt = this.tilt();
-      return tilt === 0 ? 'Both' : (tilt > 0 ? 'nz' : 'z');
+    this.primarySide = (boolean) => {
+      const pzN = jointInfo.partInfo().normals().z;
+      const zNorm = pzN.sameDirection(instance.normals().z) ? pzN : pzN.inverse();
+      const sideLabel = Vector3D.sector(zNorm);
+      const leftOright = sideLabel.match(/^(Left|Front|Top)$/) !== null;
+      return boolean ? leftOright : (leftOright ? 'z' : 'nz');
     };
-    this.secondarySide = () => {
-      const ps = this.primarySide();
-      if (ps === 'nz') return 'z';
-      if (ps === 'z') return 'nz';
-      return 'Both';
-    }
+
     this.toolType = 'table-saw';
     this.center = () => axis.y.midpoint();
     const printInfo = (zOnz) => {
@@ -82,21 +87,26 @@ class CutInfo {
       }
     }
 
-    this.tilt = (zOnz) => {
-      if (zOnz !== true && zOnz !== false) zOnz = this.partInfo().zOnz();
-      let zAxis = this.axis(zOnz).z;
-      let angle = Math.roundTo(Plane.xy.angle.line(zAxis), .000001) + 90;
+    this.tilt = () => {
+      let zOnz = this.partInfo().primarySide(true);
+      let zAxis = this.axis(zOnz).z.acquiescent(this.partInfo().normals().z);
+      let angle = Math.roundTo(Plane.xy.angle.line(zAxis), .000001) + 180;
       if (Number.isNaN(angle)) {
         Math.roundTo(Plane.xy.angle.line(zAxis), .000001) + 360;
         throw new Error('This Shouldnt Ever F****** Happen!');
       }
       while (angle >= 90) angle -= 90;
-      if (angle === 0) return 0;
+      if (within(angle, 0)) return 0;
+      return this.tilting() ? {left:angle,right:-(90-angle)} : {left:-angle,right:90 - angle};
+    }
+
+    this.tilting = () => {
+      let zOnz = this.partInfo().primarySide(true);
+      let zAxis = this.axis(zOnz).z.acquiescent(this.partInfo().normals().z);
       const center = this.partInfo().center(zOnz).to2D();
       const zA2D = zAxis.to2D();
       const positive = center.distance(zA2D[1]) < center.distance(zA2D[0]);
-      if (zOnz) return positive ? angle : -angle;
-      else return positive ? -angle : angle;
+      return zOnz === positive;
     }
 
     this.fenceEdges = (zOnz, line) => {
@@ -111,12 +121,15 @@ class CutInfo {
       const edges = instance.partInfo().edges2D(zOnz);
       const markerEdge = edges.find(l => l.combine(yAxis));
       if (markerEdge) return {label: markerEdge.label};
-      return null;
+      const markerIds = (instance.partInfo().markerIds ||= {});
+      const label = markerIds.undefinedKey(' ', '', 1);
+      markerIds[label] = true;
+      return {label, line: yAxis};
     }
 
     const CHAR = this.constructor.CHAR;
     const hasFenceIds = (refs, axis) => {
-      const distances = refs.map(a => a.map(i => i.distance)).concatElements();
+      const distances = refs.map(a => a ? a.map(i => i.distance) : []).concatElements();
       return distances.map(d => [CHAR, d].concat(lengthWidthDepth(instance.axis())));
     }
     const noFenceIds = (refs, axis) => {
@@ -125,44 +138,50 @@ class CutInfo {
     }
 
     function hasFenceEdges(axis, fenceEdges, zOnz) {
-      const marker = getMarker(axis.y, zOnz);
-      const z = fenceEdges.map(e => ({label: e.label, distance: e.distance(axis.z[1])}));
-      const nz = fenceEdges.map(e => ({label: e.label, distance: e.distance(axis.z[0])}));
+      const halfWidth = axis.x.length()/2;
+      const axis3D = instance.axis();
+      const z = fenceEdges.map(e => ({label: e.label, distance: e.distance(axis.z[1], false) - halfWidth}));
+      const nz = !axis3D.z.isLine() ? null : fenceEdges.map(e => ({label: e.label, distance: e.distance(axis.z[0], false) - halfWidth}));
       const refs = [z, nz];
       const identifiers = hasFenceIds(refs, axis);
-      if (zOnz) refs.reverse();
-      const either = axis.z.isPoint();
-      if (either) refs.splice(1,1);
-      return {references: refs, either, identifiers, marker};
+      const marker = getMarker(axis.y, zOnz);
+      const primarySide = instance.primarySide(true);
+      if (primarySide === false) refs.reverse();
+      if (axis3D.z.isLine() && axis.z.isPoint()) delete refs[1];
+      return {references: refs, identifiers, marker};
     }
 
     const xAxis = new Line2d([[0,0],[1,0]]);
     const yAxis = new Line2d([[0,0],[0,1]]);
     const vertMag = (v) => Math.min(xAxis.distance(v, false), yAxis.distance(v, false));
     const vertSort = (v1,v2) => {
-      const m1 = vertMag(v1);
-      const m2 = vertMag(v2);
-      if (within(m1, 0) && !within(m2, 0)) return -1;
-      if (within(m2, 0) && !within(m1, 0)) return 1;
-      return xAxis.distance(v2, false) - xAxis.distance(v1, false)
+      const dist1 = {x: xAxis.distance(v1, false), y: yAxis.distance(v2, false)};
+      const dist2 = {x: xAxis.distance(v1, false), y: yAxis.distance(v2, false)};
+      if (within(dist1.x + dist1.y, 0) && !within(dist2.x + dist2.y, 0)) return -1;
+      if (!within(dist1.x + dist1.y, 0) && within(dist2.x + dist2.y, 0)) return 1;
+      if (within(dist1.y, 0) && !within(dist2.y, 0)) return -1;
+      if (!within(dist1.y, 0) && within(dist2.y, 0)) return 1;
+      if (within(dist1.x, 0) && !within(dist2.x, 0)) return -1;
+      if (!within(dist1.x, 0) && within(dist2.x, 0)) return 1;
+      return dist2.x - dist1.x;
     }
     // [v.x, v.y].sort((a,b) => a-b).sum((v,i) => v*((i+1)*.2));
     function noFenceEdges(axis, zOnz) {
       const allEdges = instance.partInfo().edges2D(zOnz);
       const marker = getMarker(axis.y, zOnz);
       const edges = allEdges.filter(l => !l.isParrelle(axis.y));
-      let z = axis.y.clone().translate(axis.z.scale(.5, true), true);
+      let z = axis.y.clone().translate(axis.z.negitive().scale(.5, true), true);
       const zInts = edges.map(e => e.findSegmentIntersection(z, true))
                       .unique((v) => v.toString())
                       .filter(v => v)
                       .sort(vertSort);
-      let nz = axis.y.translate(axis.z.negitive().scale(.5, true), true);
+      let nz = axis.y.translate(axis.z.scale(.5, true), true);
       const nzInts = edges.map(e => e.findSegmentIntersection(nz, true))
                       .unique((v) => v.toString())
                       .filter(v => v)
                       .sort(vertSort);
       const refs = [new Line2d(zInts[0], zInts[1]), new Line2d(nzInts[0], nzInts[1])];
-      if (!zOnz) refs.reverse();
+      if (instance.primarySide(true) === false) refs.reverse();
       const either = axis.z.isPoint();
 
       const dems = instance.partInfo().demensions()
@@ -176,13 +195,13 @@ class CutInfo {
       if (instance.partInfo().part().partCode === 'T:b' || instance.partInfo().part().partCode === 'dv:f') {
         instance.fenceEdges(zOnz);
       }
-      if (either) refs.splice(1,1);
+      // if (either) refs.splice(1,1);
       return {references: refs, either, identifiers, marker};
     }
 
     this.locationRef = () => {
       const info = {};
-      const zOnz = this.partInfo().zOnz();
+      const zOnz = this.zOnz();
       const axis = this.axis(zOnz);
       axis.x = axis.x.to2D('x', 'y');
       axis.y = axis.y.to2D('x', 'y');
@@ -197,17 +216,19 @@ class CutInfo {
       const id = locationRef.id;
       const marker = locationRef.marker;
       const axis = {z: this.axis(true)};
+      const joint = this.jointInfo().joint().descriptor;
+      const primarySide = this.primarySide(true);
       axis['-z'] = this.axis(false);
       return {
-        id, axis, locationRef, marker,
+        id, axis, locationRef, marker, joint, primarySide,
         tilt: this.tilt()
       }
     }
 
     const normals = {
-      x: axis.x.vector().unit(),
-      y: axis.y.vector().unit(),
-      z: axis.z.vector().unit()
+      x: axis.x.vector.directional().unit(),
+      y: axis.y.vector.directional().unit(),
+      z: axis.z.vector.directional().unit()
     }
     this.normals = () => normals;
     this.axis = (zOnz) => ({
@@ -232,7 +253,7 @@ class CutInfo {
     this.toDrawString = (color, zOnz) => {
       const axis = this.axis(zOnz);
       axis.x = axis.x.clone(); axis.y = axis.y.clone(); axis.z = axis.z.clone();
-      axis.z.adjustLength(100);
+      // axis.z.adjustLength(100);
       axis.z.directional(false, true);
       let str = `// ${this.jointInfo().joint().descriptor}\n`;
       str += axis.x.toDrawString('red') + '\n';
@@ -242,6 +263,11 @@ class CutInfo {
     }
 
     this.toString = this.toDrawString;
+
+    if (axis.z.isLine() && !axis.z.vector().parrelle.toAxis()) {
+      console.log('her');
+      this.primarySide();
+    }
   }
 }
 
@@ -306,10 +332,8 @@ function partModelInfo(partId, maleId, env, jointInfo) {
 
 const within = Tolerance.within(.0001);
 CutInfo.fromEdges = (polys, partNormals, jointInfo) => {
-  const edges  = polys.filter(p => !p.normal().parrelle(partNormals.z));
-  const nonPerp = edges.filter(p => !p.normal().perpendicular(partNormals.z), 0);
   const cuts = [];
-  nonPerp.forEach(poly => {
+  polys.forEach(poly => {
     const normals = Polygon3D.normals(poly).swap('x', 'z');
     const zNorm = partNormals.z;
     let yMoreInlineWithZ = Math.abs(normals.z.dot(zNorm)) < Math.abs(normals.y.dot(zNorm));
@@ -354,6 +378,9 @@ CutInfo.get = (maleId, jointInfo, env) => {
 
   const intersectionLayers = Layer.fromCSG(intersectModel);
   const modelLayers = modelInfo.modelLayers;
+  if (jointInfo.joint().descriptor === 'Dado(FramePanelJoint)') {
+    console.log('her')
+  }
   const axis = PolyOverlapAxis(modelLayers, intersectionLayers, jointInfo);
   return axis ? axis.map(a => CutInfo.fromAxis(a, jointInfo, maleId)) : [];
 }
@@ -377,40 +404,6 @@ CutInfo.sorter = (cut1, cut2) => {
   }
 }
 
-function unDocumentDemensionalCut(cuts, index, demEdges) {
-  const cut = cuts[index];
-  const y2D = cut.axis(true).y.to2D('x', 'y');
-
-  if (demEdges.find(l => y2D.combine(l))) {
-    cut.documented(false);
-    return true;
-  }
-  return false;
-}
-
-function unDocumentExtranious(cuts) {
-  const demEdges = cuts[0].jointInfo().partInfo().demensionEdges(true);
-  for (let i = 0; i < cuts.length; i++) {
-    const cut1 = cuts[i];
-    if (cut1.documented()) {
-      const isCut1 = cut1.constructor === CutInfo;
-      if (isCut1) {
-        if (!unDocumentDemensionalCut(cuts, i, demEdges)) {
-          for (let j = i + 1; j < cuts.length; j++) {
-            const cut2 = cuts[j];
-            if (cut2.documented() && cut2.constructor === CutInfo) {
-              if (removeMergeable(cuts, i, j)) {
-                i--;
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
 const tol = .001;
 CutInfo.clean = (cuts, fenceEdges) => {
   for (let index = 0; index < cuts.length; index++) {
@@ -421,8 +414,17 @@ CutInfo.clean = (cuts, fenceEdges) => {
   }
 
 
-  Line3D.combineByLine(cuts, 'axis().y', (c1, c2) => {
-    return within(c1.axis().x.length(), c2.axis().x.length()) ? c1 : null;
+  Line3D.combineByLine(cuts, 'axis().y', (c1, c2, combined) => {
+    if (!within(c1.axis().x.length(), c2.axis().x.length())) return null;
+    if (!within(c1.axis().x.length(), c2.axis().x.length())) return null;
+    const maleId = c1.maleId() + '&' + c2.maleId();
+    const axis = {
+      x: c1.axis().x.centerOn(combined.midpoint()),
+      y: combined,
+      z: c1.axis().z.centerOn(combined.midpoint())
+
+    }
+    return new c1.constructor(axis, c1.jointInfo(), maleId);
   });
 
   const tolMap = new ToleranceMap({'axis().(x,y,z).(0,1).(x,y,z)': tol});

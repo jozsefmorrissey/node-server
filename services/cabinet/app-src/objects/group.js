@@ -1,6 +1,8 @@
 
 const PropertyConfig = require('../config/property/config');
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
+const LayoutAssembly = require('./assembly/layout.js');
+const Crown = require('./assembly/assemblies/layout/crown.js');
 
 let groupIndex = -2;
 class Group extends Lookup {
@@ -29,14 +31,9 @@ class Group extends Lookup {
 
     this.hash = () => name.hash() + this.objects.map(o => o.hash ? o.hash() : 0).sum();
 
-    this.crownHeight = (value) => {
-      this.propertyConfig.value('crh',  value);
-    }
-
-    this.hasChrown = (cabinet) => {
-      const highEnough = (5*12*2.54) < cabinet.length()/2 + cabinet.position().center().y;
-      return highEnough;
-    }
+    this.crown = new Crown(this);
+    this.layoutParts = () => Object.class.filter(c => c.layoutPart)
+                              .map(c => new c(this));
 
     this.resolve = (code, value, notMetric, raw) => {
       const lower = code ? code.toLowerCase() : null;

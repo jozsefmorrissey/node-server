@@ -31,7 +31,7 @@ class DividerUtil {
   constructor(divider, dividerPart, env) {
     const instance = this;
 
-    const sectionProps = divider.find(/_S[0-9]{1,}$/);
+    const sectionProps = divider.find(/_S$/);
     const sectionUtils = SectionPropertiesUtil.instance(sectionProps, env);
     if (!divider.locationCode.match(/_S/)) {
       const dividerBiPoly = env.modelInfo.biPolygonArray[divider.id];
@@ -125,6 +125,10 @@ class DividerUtil {
 
     function cropExtendedFrom(position, distance, assem, env) {
       const csg = env.getModel(assem, 'cut');
+      if (csg.polygons.length === 0) {
+        console.warn.logarithmic('model has been completely removed, may not be intentional');
+        return csg;
+      }
       const norms = Utils.normals(assem, env);
       const edges = csg.polygons.filter(p => !norms.z.parrelle(new Vector3D(p.plane.normal)));
       const edgePolys = Polygon3D.merge(Polygon3D.fromCSG(edges));

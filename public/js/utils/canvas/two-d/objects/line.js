@@ -188,24 +188,18 @@ class Line2d {
       return new Vertex2d({x,y});
     }
 
+    const furthestEndpoint = (int, l) => [l[0], l[1]].max(v => v.distance(int));
     this.bisector = (other, dist) => {
       const intersection = this.findIntersection(other);
       if (!intersection) return null;
       if (intersection === Infinity) return this.clone();
-      const negAcquiesed = other.acquiescent(this).negitive();
-      const radians = (this.radians() + negAcquiesed.radians()) / 2;
-      const bisector = Line2d.startAndTheta(intersection, radians, dist);
-      const bev = bisector[1];
-      const startDist = this[0].distance(intersection);
-      const endDist = this[1].distance(intersection);
-      const furthestVertId = startDist > endDist ? '0' : '1';
-
-      const negBisector = Line2d.startAndTheta(intersection, radians + Math.PI, dist);
-      const dist1 = bisector[1].distance(this[furthestVertId]) +
-                    bisector[1].distance(negAcquiesed[furthestVertId]);
-      const dist2 = negBisector[1].distance(this[furthestVertId]) +
-                    negBisector[1].distance(negAcquiesed[furthestVertId]);
-      return dist1 < dist2 ? bisector : negBisector;
+      const leg1 = new Line2d(intersection, furthestEndpoint(intersection, this));
+      const leg2 = new Line2d(intersection, furthestEndpoint(intersection, other));
+      let radians = Math.midpoint(Math.mod(leg1.radians(), Math.PI*2), Math.mod(leg2.radians(), Math.PI*2));
+      const bis = Line2d.startAndTheta(intersection, radians, dist);
+      const negbis = Line2d.startAndTheta(intersection, radians, -dist);
+      return bis[1].distance(leg1[1]) + bis[1].distance(leg2[1]) <
+          negbis[1].distance(leg1[1]) + negbis[1].distance(leg2[1]) ? bis : negbis;
     }
 
     this.closestEnds = (other) => {
@@ -734,6 +728,7 @@ class Line2d {
                         `angle: ${this.angle()}\n` +
                         `segment: ${this.toString()}`;
     this.toNegitiveString = () => `[${this[1].toString()}, ${this[0].toString()}]`;
+    this.hash = () => this.toString(.00000000000001).hash();
   }
 }
 
@@ -799,38 +794,35 @@ Line2d.consolidate = (lines, tolerance, notSegment) => {
   tolerance ||= tol;
   const tolMap = new ToleranceMap({'slope()': `+.001`, 'yIntercept()': tolerance});
   const lineMap = {};
+  const nonPoints = [];
   for (let index = 0; index < lines.length; index += 1) {
     if (!lines[index].isPoint()) {
       tolMap.add(lines[index]);
+      nonPoints.push(lines[index]);
     }
   }
   let minList = [];
   const combinedKeys = {};
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    const matches = tolMap.matches(line);
-    const mapId = tolMap.tolerance().boundries(line);
-    if (!combinedKeys[mapId]) {
-      combinedKeys[mapId] = true;
-      let lastIndex;
-      for (let tIndex = 0; tIndex < matches.length; tIndex += 1) {
-        let target = matches[tIndex];
-        let found = false;
-        for (let mIndex = tIndex + 1; mIndex < matches.length; mIndex += 1) {
-          const combined = target.combine(matches[mIndex], tolerance, notSegment);
-          if (combined) {
-            found = true;;
-            const m = matches[mIndex];
-            matches.splice(mIndex, 1);
-            matches[tIndex] = combined;
-            target = combined;
-            mIndex = tIndex;
-          }
+  const groups = tolMap.group();
+  for (let index = 0; index < groups.length; index += 1) {
+    const group = groups[index];
+    for (let tIndex = 0; tIndex < group.length; tIndex += 1) {
+      let target = group[tIndex];
+      let found = false;
+      for (let mIndex = tIndex + 1; mIndex < group.length; mIndex += 1) {
+        const combined = target.combine(group[mIndex], tolerance, notSegment);
+        if (combined) {
+          found = true;;
+          const m = group[mIndex];
+          group.splice(mIndex, 1);
+          group[tIndex] = combined;
+          target = combined;
+          mIndex = tIndex;
         }
-        if (found) tIndex--;
       }
-      minList = minList.concat(matches);
+      if (found) tIndex--;
     }
+    minList = minList.concat(group);
   }
 
   const strMap = {};
@@ -1084,7 +1076,7 @@ Line2d.radialSorter = (center, ccw, degreesOstartpoint) => {
 }
 
 Line2d.radialSort = (linesOverts, ccw, center, degreesOstartpoint) => {
-  center ||= Line2d.center(linesOverts);
+  center ||= new Vertex2d(Math.mean(Line2d.vertices(linesOverts), ['x','y']));
   const sorter = Line2d.radialSorter(center, ccw, degreesOstartpoint);
   linesOverts.sort(sorter);
 }

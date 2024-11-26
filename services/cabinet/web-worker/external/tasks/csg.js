@@ -88,7 +88,6 @@ class CsgIntersectionTask extends CsgJoinTask {
   }
 }
 
-
 class CsgModelTask  extends CsgTask {
   constructor(modelInfo) {
     super(modelInfo);
@@ -106,7 +105,8 @@ class CsgUnionTask  extends CsgTask {
     super(modelInfo);
     this.remainingModels = modelInfo.needsUnioned;
     this.progress = () => this.status() === 'success' ? 100 : 0;
-    this.processResult = (result) => modelInfo.unioned(result);
+    this.processResult = (result) =>
+      modelInfo.unioned.set(result);
   }
 }
 
@@ -134,6 +134,21 @@ const AssembliesTo2D = (modelInfo, union) => {
   return new Sequential(modelInfo.environment, ...tasks);
 };
 
+class LayoutPartsTask extends Task {
+  constructor(group, partInformation) {
+    super();
+    const layout = group.room().layout();
+    this.process = () => 'layoutParts';
+    this.result = () => 'hello';
+    this.payload = () => ({layout, partInfos: partInformation.parts()})
+    this.progress = () => this.status() === 'success' ? 100 : 0;
+
+    this.on.finished = () =>
+      this.status(STATUS.SUCCESS);
+  }
+}
+
+
 module.exports = {
   Intersection: (modelInfo, envDefined) => new Sequential(envDefined ? null : modelInfo.environment,
                                         new CsgModelTask(modelInfo),
@@ -148,5 +163,6 @@ module.exports = {
                                         new CsgUnionTask(modelInfo)),
   AssembliesTo2D,
   SimpleTo2D: (objects) => new CsgSimpleTo2DTask(objects),
-  Simple: (objects) => new CsgSimpleTask(objects)
+  Simple: (objects) => new CsgSimpleTask(objects),
+  LayoutParts: LayoutPartsTask
 }

@@ -1,7 +1,7 @@
 
 const DTO = require('./data-transfer-object.js');
 const TASK_STATUS = require('./tasks/status');
-const {Parrelle} = require('./tasks/basic.js');
+const {Parrelle, Sequential} = require('./tasks/basic.js');
 const RDTO = require('../shared/reconnect-transfer-object.js');
 
 
@@ -94,6 +94,18 @@ class WebWorkerDeligator {
       if (taskOs instanceof Parrelle) {
         taskOs.status(TASK_STATUS.PENDING);
         taskOs.tasks().forEach(t => this.queue(t));
+      } else if (taskOs instanceof Sequential.Seperate) {
+        const tasks = taskOs.tasks();
+        let index = 0;
+        const exc = () => {
+          const task = tasks[index++];
+          if (task) {
+            task.on.success(() => exc());
+            this.queue(task);
+            exicute();
+          }
+        };
+        exc();
       } else {
         if (Array.isArray(taskOs)) taskQue.concatInPlace(taskOs);
         else taskQue.push(taskOs);

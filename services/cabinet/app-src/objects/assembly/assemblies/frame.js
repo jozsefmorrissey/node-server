@@ -9,4 +9,6 @@ class Frame extends Assembly {
   }
 }
 
+Frame.property('manuallyConfigurable', true, false, false, false);
+
 module.exports = Frame

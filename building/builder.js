@@ -47,7 +47,7 @@ class Builder {
     // TODO: create seperate object that watches
     function process(path, item) {
       return (eventType, filename) => {
-        console.log('File Changed:', `${filename} - ${eventType}`);
+        console.log.lastCall(`File Changed: ${filename} - ${eventType}`);
         function wait(release) {
           if (pending[path][filename]) {release();return;}
           pending[path][filename] = true;

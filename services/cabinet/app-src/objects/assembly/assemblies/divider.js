@@ -21,8 +21,9 @@ class Divider extends Assembly {
     super(partCode, partName, config);
     const instance = this;
     const pToJson = this.toJson;
-    // this.jointSettings = new JointSettings(true,true,true,true);
+    this.jointSettings.sliceAtOpening(true);
     this.digital = () => true;
+    this.manuallyConfigurable = () => true;
 
     Object.getSet(this, 'type');
 
@@ -50,11 +51,11 @@ class Divider extends Assembly {
     const isThisFrame = (a) => a === frame;
     const isThisFrontPanel = (a) => a === pFull || pFront === a;
 
-    frame.jointSettings.extend(false)
+    // frame.jointSettings.extend(false);
     const framePanelJoint = new Dado(isThisFrontPanel, isThisFrame, null, 'FramePanelJoint');
     framePanelJoint.full.female(true);
     const frameOtherPanelJoint = new Butt(isThisFrame, isFrontPanelWOFrame, null, 'FrameOtherPanelJoint');
-    frameOtherPanelJoint.full.male(false);
+    // frameOtherPanelJoint.full.male(false);
     this.addDependencies(framePanelJoint, frameOtherPanelJoint);
 
 
@@ -92,12 +93,12 @@ class Divider extends Assembly {
         if (pt >= evaluated) this.value('dpt', rawOthickness);
         this.value('dfw', rawOthickness);
       }
-      const crownTarget = this.match('^c_T');
-      if (crownTarget) {
-        const hasChrown = this.group().hasChrown(this.getRoot());
-        return this.resolve('crh');
-      }
-      return this.eval('dfw');
+
+      const hasCrown = this.group().crown.applyTo(this.getRoot());
+      const dfw = this.resolve('dfw');
+      if (!hasCrown) return dfw;
+      const crh = this.resolve('crh');
+      return crh > dfw ? crh : dfw;
     }
     this.panelThickness = (rawOthickness) => {
       if (Boolean.is(rawOthickness)) return this.resolve('dpt', rawOthickness);
@@ -132,8 +133,7 @@ class Divider extends Assembly {
       if (!frameless) return true;
       const crownTarget = this.match('^c_T');
       if (crownTarget) {
-        const hasChrown = this.group().hasChrown(this.getRoot());
-        return hasChrown;
+        return this.group().crown.applyTo(this.getRoot());
       }
       return false;
     }
@@ -182,6 +182,8 @@ class Divider extends Assembly {
         `${type}:${this.thickness()}`.hash();
   }
 }
+Divider.property('manuallyConfigurable', true, false, false, false);
+
 
 Divider.Types = ['full', 'none', 'front', 'back', 'frontAndBack'];
 Divider.count = 0;

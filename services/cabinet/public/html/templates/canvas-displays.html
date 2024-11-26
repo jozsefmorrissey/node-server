@@ -10,7 +10,27 @@
       <div id='model-controller'></div>
     </div>
     <div name='Parts 2D' id='disp-canvas-p2d'></div>
-    <div name='Room' id='disp-canvas-room'></div>
+    <div name='Room' id='disp-canvas-room'>
+      <table class='borderless'>
+        <tbody class='borderless'>
+          <tr id='wall-color-cnt'>
+            <td class='borderless'><label>Walls</label></td>
+            <td class='borderless'><select class='color-selector'></select></td>
+            <td class='borderless'><input type='color'></td>
+          </tr>
+          <tr id='cab-color-cnt'>
+            <td class='borderless'><label>Cabinet</label></td>
+            <td class='borderless'><select class='color-selector'></select></td>
+            <td class='borderless'><input type='color'></td>
+          </tr>
+          <tr id='obj-color-cnt'>
+            <td class='borderless'><label>Object</label></td>
+            <td class='borderless'><select class='color-selector'></select></td>
+            <td class='borderless'><input type='color'></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     <div id="three-d-model" class="viewer small">
       <div class='inline left'>
         <div class='orientation-controls'></div>

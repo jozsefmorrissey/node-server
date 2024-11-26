@@ -25,7 +25,7 @@ const objPreProc = (obj, dto, to) => {
     to.evaluateAttributes(obj, mdConfig.Object3D, dto);
   }
   if (obj instanceof Task) {
-    dto.payload = to(obj.payload());
+    if (obj.payload) dto.payload = to(obj.payload());
     dto.process = obj.process();
   }
 }

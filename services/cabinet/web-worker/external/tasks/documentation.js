@@ -5,12 +5,12 @@ const CSG = require('./csg');
 const Lookup = require('../../../../../public/js/utils/object/lookup.js');
 
 class PartsInformationTask extends Task {
-  constructor(parts, modelInfo) {
+  constructor(parts, modelInfo, includeGenerated) {
     super();
     let _result = {};
     const remaining =  parts.map(p => p + '');
     this.result = () => modelInfo.partInformation;
-    this.payload = () => ({parts});
+    this.payload = () => ({parts, includeGenerated});
     this.progress = () => Math.floor(100 * (1 - (remaining.length/parts.length)));
     this.on.message((result) => {
       if (result instanceof Error) {
@@ -67,7 +67,7 @@ function logarithmicTasks(ids, modelInfo) {
   return {tasks, partTasks};
 }
 
-const sliceCount = 16;
+const sliceCount = 8;
 function sliceTasks(ids, modelInfo) {
   const complexityMap = modelInfo.complexityMap();
   ids.sort(complexitySort(complexityMap));
@@ -86,7 +86,8 @@ function sliceTasks(ids, modelInfo) {
   for (let index = 0; index < groupedIds.length; index += sliceCount) {
     const buildTask = CSG.Intersection(modelInfo, true);
     const currIds = groupedIds.slice(index, index+sliceCount);
-    const partTask = new PartsInformationTask(currIds, modelInfo);
+    const includeGenerated = index + sliceCount >= groupedIds.length;
+    const partTask = new PartsInformationTask(currIds, modelInfo, includeGenerated);
     partTasks.push(partTask);
     const sequential = new Sequential(modelInfo.environment, buildTask, partTask);
     tasks.push(sequential);

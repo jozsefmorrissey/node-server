@@ -5,6 +5,7 @@ const SimpleModel = require('./simple');
 class ShowerBase extends SimpleModel {
   constructor(layout) {
     super(layout);
+    this.color('#CFC7A0')
   }
 }
 

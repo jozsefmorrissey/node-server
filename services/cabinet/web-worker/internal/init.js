@@ -11,6 +11,7 @@ const PartInfo = require("./services/part-information");
 const dataTransferConfig = require('./math-data-transfer-config.json');
 const DTO = require('../shared/data-transfer-object')(dataTransferConfig);
 const RDTO = require('../shared/reconnect-transfer-object');
+const LayoutParts = require('./services/layout-parts');
 goDownTheRabbitHole = false;
 
 const order = ['model', 'extended', 'cut', 'joined']
@@ -52,6 +53,7 @@ function handleTask(task, env) {
     case 'intersection': return ApplyJoints(payload, env, taskId, true);
     case 'assembliesto2d': return To2D.assemblies(payload, env, taskId);
     case 'partsinformation': return PartInfo(payload, env, taskId);
+    case 'layoutParts': return LayoutParts(payload);
     default: return new Error('UnkownTask');
   }
 }

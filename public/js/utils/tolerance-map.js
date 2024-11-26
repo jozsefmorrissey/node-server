@@ -13,7 +13,7 @@ function sortByAttr(attr) {
 
 class ToleranceMap {
   constructor(attributeMap, absoluteValue, modulus) {
-    const map = {};
+    let map = {};
     const tolerance = new Tolerance(attributeMap, null, absoluteValue, modulus);
     const instance = this;
 
@@ -27,6 +27,8 @@ class ToleranceMap {
       const tMap = new ToleranceMap(attributeMap);
       return tMap;
     }
+
+    this.reset = () => map = {};
 
     function forEachSet(func, node, attrs, attrIndex) {
       if ((typeof func) !== 'function') throw new Error('Arg1 must be of type function');

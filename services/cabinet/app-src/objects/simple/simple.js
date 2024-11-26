@@ -5,6 +5,8 @@ class SimpleModel extends Object3D {
   constructor(layout) {
     super(layout);
     this.length = this.height;
+    let _color = 'black';
+    this.color = (color) => color !== undefined ? (_color = color) : _color;
   }
 }
 

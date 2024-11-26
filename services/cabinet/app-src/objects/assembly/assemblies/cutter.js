@@ -18,14 +18,23 @@ class Cutter extends Assembly {
   }
 }
 
-class CutterModel extends Cutter {
+Cutter.property('manuallyConfigurable', true, false, false, false);
+
+class CutterAutoConfigured extends Cutter {
+  constructor(...args) {
+    super(...args);
+  }
+}
+CutterAutoConfigured.property('manuallyConfigurable', false, false, false, false);
+
+class CutterModel extends CutterAutoConfigured {
   constructor(partCode, partName) {
     super(partCode);
     this.partName = partName instanceof Function ? partName : () => partName;
   }
 }
 
-class CutterReference extends Cutter {
+class CutterReference extends CutterAutoConfigured {
     constructor (reference, fromPoint, offset, front) {
     front = front === false ? false : true;
     const partCode = `CR${reference.toString().hash(9949, false)}`;
@@ -48,7 +57,8 @@ class CutterReference extends Cutter {
   }
 }
 
-class CutterRegExp extends Cutter {
+
+class CutterRegExp extends CutterAutoConfigured {
     constructor (regexp, offsetRatio, ingulf, axis, fromPoint) {
     const partCode = `CREG${String.random()}`;
     const partName = 'RegExp';
@@ -66,7 +76,8 @@ class CutterRegExp extends Cutter {
   }
 }
 
-class CutterPoly extends Cutter {
+
+class CutterPoly extends CutterAutoConfigured {
     constructor (poly) {
     const partCode = `CP${String.random(4)}`;
     super(partCode);
@@ -79,6 +90,7 @@ class CutterPoly extends Cutter {
   }
 }
 
+
 class ControlableAbyss extends CutterModel {
   constructor(...args) {
     super(...args)
@@ -89,5 +101,6 @@ Cutter.Model = CutterModel;
 Cutter.Reference = CutterReference;
 Cutter.RegExp = CutterRegExp;
 Cutter.Poly = CutterPoly;
+Cutter.AutoConfigured = CutterAutoConfigured;
 
 module.exports = Cutter;

@@ -206,11 +206,11 @@ class Polygon2d {
     this.faces = () => this.lines().filter((l, i) => faceIndecies.indexOf(i) !== -1);
     this.normals = () => {
       let normals = [];
-      let center = this.center();
+      let mean = new Vertex2d(Math.mean(this.vertices(), ['x', 'y']));
       for (let index = 0; index < faceIndecies.length; index++) {
         const line = lines[faceIndecies[index]];
         if (line)
-          normals.push(new Line2d(center.copy(), line.midpoint()));
+          normals.push(new Line2d(mean.copy(), line.midpoint()));
       }
       return normals;
     }

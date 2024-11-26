@@ -384,7 +384,7 @@ class Plane extends Array {
       const lines = points.map((p,i) => new Line3D(points[0], points[i]));
       for (let index = 1; index < lines.length; index++) {
         const connection = this.connect.line(lines[index]);
-        if (connection && !pointInfo || pointInfo.dist < connection.length()) {
+        if (connection && !pointInfo || pointInfo.dist > connection.length()) {
           pointInfo = {point: connection[0], dist: connection.length()};
         }
       }

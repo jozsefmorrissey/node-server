@@ -14,6 +14,12 @@ class PartInformation {
     path.forEach(k => order[k] && (order = order[k]()));
     const id = order.id();
     const hash = order.hash();
+    const rooms = Object.values(order.rooms);
+    const groups = rooms.map(r => r.groups.map(g=>g)).concatElements();
+    const assemblies = groups.map(g => g.objects.map(o=>o)).concatElements();
+    if (partInfo[id] && partInfo[id].hash !== hash) assemblies.forEach(a => a.generatedParts = []);
+
+    Object.values(order.rooms).map(r => r.groups.map(g => g.objects).concatElements()).concatElements();
     const instance = this;
     this.id = String.random();
     this.order = () => order;
@@ -22,20 +28,51 @@ class PartInformation {
 
     this.hashMap = (empty) => partInfo[id] && partInfo[id].hash === hash ?
     partInfo[id].hashMap : (partInfo[id] = {hash, partCount: 0, hashMap: {}}).hashMap;
+    this.parts = () => Object.values(instance.hashMap()).concatElements();
 
-    this.byCategory = (type) => {
-      if (!this.finished()) return null;
+    const nameSort = (o1,o2) => {
+      const n1 = o1.parts[0].getRoot().name();
+      const n2 = o2.parts[0].getRoot().name();
+      return n1 === n2 ? 0 : (n1 < n2 ? 1 : -1);
+    };
+    const area = (dem) => dem.x * dem.y;
+    const areaSort = (pi1, pi2) => area(pi1.demensions) - area(pi2.demensions);
+    this.byCategory = (type, parts, sorter) => {
+      sorter = sorter === 'area' ? areaSort : nameSort;
+      // if (!this.finished()) return null;
       const hashMap = this.hashMap();
-      const byCat = Object.values(instance.hashMap()).concatElements().filterSplit(p => p.category);
+      const byCat = {};
+      const partLists = {};
+      parts ||= this.parts();
+      parts.forEach(p => {
+        const paths = p.categories.map((g,i) => p.categories.slice(0,i+1).join('.subCategories.'));
+        paths.forEach(p => byCat.pathValue(p) || byCat.pathValue(p, {PARTS: []}))
+        const path = paths[paths.length - 1];
+        const obj = byCat.pathValue(path);
+        obj.PARTS.sort(sorter);
+        partLists.pathValue(path, obj.PARTS);
+        obj.PARTS.push(p);
+      });
       if (type) return byCat[type];
       delete byCat.Cabinet;
       return byCat;
     }
 
-    this.cabinets = (type) => this.byCategory('Cabinet');
+    this.byCabinet = (partFilter) => {
+      const parts = this.parts().filter(partFilter || (() => true))
+                    .filterSplit(p => p.parts[0].getRoot().name());
+      Object.keys(parts).forEach((key) => {
+        const root = parts[key][0].parts[0].getRoot();
+        parts[key] = this.byCategory(null, parts[key], 'area');
+        parts[key].property('root', root, false)
+      });
+      return parts;
+    }
+
+    this.cabinets = () => this.byCategory('Cabinet').PARTS;
 
     this.all = () => {
-      if (!this.finished()) return null;
+      // if (!this.finished()) return null;
       const hashMap = this.hashMap();
       return Object.values(instance.hashMap()).concatElements();
     }
@@ -52,8 +89,8 @@ class PartInformation {
         info.model.part = {};
         info.partsId = String.fromInt(partInfo[id].partCount++, String.range.upper);
         info.model.part[info.partIds[0]] = info.model.csg;
-        delete info.model.polygons;
       }
+      info.categories =  info.subCategory ? [info.category].concat(info.subCategory) : [info.category];
       return info;
     }
 
@@ -143,15 +180,22 @@ class PartInformation {
 
     this.add = (info) => {
       info.parts = info.partIds.map(id => Lookup.get(id));
-      const part = info.parts[0];
-      if (part.category() === 'Cabinet') {
-        console.log('her')
+      let part = info.parts[0];
+      if (!part) {
+        part = new (Object.class.get(info.category))(info.partCode, info.partName);
+        part.parentAssembly(Lookup.get(info.parentId))
+        info.parts[0] = part;
+        part.getRoot().generatedParts.push(part);
       }
       if (!info.model && !part.outsourced())
         console.warn('model was not returned');
-      if (info.model) info.model.csg = CSG.fromPolygons(info.model.polygons, true);
+      if (info.model) {
+        info.model.csg = CSG.fromPolygons(info.model.polygons, true);
+        delete info.model.polygons;
+      }
+      if (info.boxOnly) info.model.boxOnly = CSG.fromPolygons(info.boxOnly.polygons, true);
       info = infoHash(info);
-      part.hardware.forEach(h => addHardware(h, info));
+      if (part) part.hardware.forEach(h => addHardware(h, info));
     }
   }
 }

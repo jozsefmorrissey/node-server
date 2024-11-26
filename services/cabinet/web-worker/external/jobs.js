@@ -3,7 +3,8 @@ const {InfoAvailible, Parrelle, Sequential, And, Or} = require('./tasks/basic.js
 const ModelInfo = require('./model-information');
 const WebWorkerDeligator = require('./deligator');
 const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js');
-const {Intersection, Join, Model, Union, AssembliesTo2D, SimpleTo2D, Simple} = require('./tasks/csg');
+const {Intersection, Join, Model, Union, AssembliesTo2D, SimpleTo2D, Simple,
+        LayoutParts} = require('./tasks/csg');
 const {Parts} = require('./tasks/documentation');
 const Utils = require('../../app-src/utils.js');
 const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
@@ -90,6 +91,7 @@ class SimpleModelJob extends TaskJob {
   constructor(simpleObjs) {
     const task = Simple(simpleObjs);
     super(task);
+    this.object = () => simpleObjs;
   }
 }
 
@@ -157,7 +159,10 @@ class CsgComplexAssembly extends CsgJoinJob {
   constructor(cabinet) {
     const assemblies = cabinet.modelingCollections();
     super(assemblies);
-    this.cabinet = () => cabinet;
+    const modelInfo = this.task().tasks()[2].modelInfo();
+    this.object = () => cabinet;
+    this.result = () =>
+        modelInfo.unioned('all');
   }
 }
 
@@ -217,10 +222,10 @@ class CsgAssembliesTo2DJob extends CsgModelInfoJob {
 
 class CsgAssemblyTo2DJob extends CsgModelInfoJob {
   constructor(assembly, props) {
-    const needs2dConverted = [assembly.id()];
-    const parts = assembly.getRoot().getParts();
-    const modelInfo = ModelInfo.object(parts , props);
-    const task = AssembliesTo2D(modelInfo);
+    props ||= {};
+    props.needs2dConverted = [assembly.id()];
+    const modelInfo = ModelInfo.object([assembly], props);
+    const task = AssembliesTo2D(modelInfo, true);
     super(task, modelInfo);
   }
 }
@@ -263,39 +268,30 @@ class CsgTo2DJob extends Jobs {
   }
 }
 
+let modelIdMap;
 class CsgRoomJob extends TaskJob {
   constructor(room, complex) {
-    const {task, tasks, jobs} = CsgRoomJob.tasksAndJobs(room, complex);
+    let modelMapHashMatch = modelIdMap && (modelIdMap.ROOM_HASH === room.hash());
+    const {task, tasks, jobs} = modelMapHashMatch ?
+        {task: new InfoAvailible(modelIdMap)} : CsgRoomJob.tasksAndJobs(room, complex);
     super(task);
     this.room = () => room;
     this.jobs = () => jobs;
     let _result;
     this.result =  () => {
-      if (_result === undefined) {
-        const start = new Date().getTime();
-        let csg = new CSG();
-        for (let index = 0; index < jobs.length; index++) {
-          const job = jobs[index];
-          let model;
-          if (job.modelInfo) {
-            const cabinet = jobs[index].cabinet();
-            model = jobs[index].modelInfo().unioned();
-            model = Utils.positionAssemblyCsg(model, cabinet);
-          } else {
-            model = job.result();
-          }
-
-          if (model) csg.polygons.concatInPlace(model.polygons);
-        }
-        let objects = room.layout().objects().filter(o => o.constructor.name === 'Object3D');
-        if (objects.length > 0) throw new Error('have not implemented this');
-        console.log('build?:', (new Date().getTime() - start)/1000)
-        _result = csg;
+      if (!modelMapHashMatch) {
+        modelIdMap = {};
+        modelIdMap.property('ROOM_HASH', room.hash(), false, false, false)
+        jobs.forEach(job =>
+          modelIdMap[job.object().id()] = (job.modelInfo ? job.modelInfo().unioned('boxOnly', 'fronts') :
+                  job.result()));
       }
-      return _result;
+
+      return modelIdMap;
     }
   }
 }
+
 CsgRoomJob.tasksAndJobs = (room, complex) => {
   const tasks = [];
   const jobs = [];
@@ -352,18 +348,18 @@ class AssemblyDocumentationJob extends PartsDocumentationJob {
 class GroupDocumentationJob extends TaskJob {
   constructor(group, props) {
     const tasks = [];
-    const _result = {group, cabinets: []};
+    const _result = {group, partInfos: [], layoutAssemblies: []};
     group.objects.forEach((cabinet, i) => {
       if (!(cabinet instanceof Assembly)) return;
       const task = new AssemblyDocumentationJob(cabinet).task();
-      task.on.success(parts =>
-          _result.cabinets[i] = {cabinet, parts});
       tasks.push(task);
     });
 
-    const task = new Parrelle(...tasks);
-    task.result = () => _result;
-    super(task);
+    const partInformation = new PartInformation(group);
+    const assemblyTasks = new Parrelle(...tasks);
+    const layoutTask = new LayoutParts(group, partInformation);
+    const seq = new Sequential.Seperate(assemblyTasks, layoutTask);
+    super(seq);
   }
 }
 
@@ -387,6 +383,8 @@ class RoomDocumentationJob extends TaskJob {
 
 class OrderDocumentationJob extends TaskJob {
   constructor(order, props) {
+    const start = new Date().getTime();
+    let end;
     const tasks = [];
     const _result = {order, rooms: []};
     const partInformation = new PartInformation(order);
@@ -404,13 +402,16 @@ class OrderDocumentationJob extends TaskJob {
     task.result = () => partInformation;
     super(task);
     this.result = () => {
-      if (!this.finished()) return null;
+      if (!task.finished()) return null;
+      if (!end) end = new Date().getTime();
+      console.log(`Order Documentation Job Completion Time: ${Math.roundTo((end - start)/1000, .01)}s`);
       partInformation.finished(true);
       return partInformation;
     }
   }
 }
 CsgAssembliesTo2DJob.Outline = CsgOutlineTo2DJob;
+// TODO: change Assembly to Part and Assemblies to Assembly
 module.exports = {
   CSG: {
     Assembly: {
@@ -419,7 +420,7 @@ module.exports = {
       Join: CsgJoinJob,
       Simple: CsgSimpleAssembly,
       Complex: CsgComplexAssembly,
-      To2D: CsgAssembliesTo2DJob
+      To2D: CsgAssemblyTo2DJob
     },
     To2D: CsgTo2DJob,
     Simple: {

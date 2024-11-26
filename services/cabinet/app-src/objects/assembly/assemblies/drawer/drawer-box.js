@@ -17,4 +17,7 @@ class DrawerBox extends Assembly {
   }
 }
 
+DrawerBox.property('manuallyConfigurable', true, false, false, false);
+
+
 module.exports = DrawerBox

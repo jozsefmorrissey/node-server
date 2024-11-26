@@ -1,3 +1,4 @@
+require('../../public/js/utils/utils');
 const fs = require('fs');
 const Builder = require('../../building/builder');
 const { HtmlBundler } = require('../../building/bundlers/html.js');
@@ -57,6 +58,7 @@ const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         .add('../../public/js/utils/canvas/two-d/objects/')
         .add('../../public/js/utils/canvas/two-d/maps/')
         .add('./app-src/three-d/objects/')
+        .add('./app-src/two-d/layout/')
         .add('./web-worker/shared/')
         .add('./web-worker/internal/')
 

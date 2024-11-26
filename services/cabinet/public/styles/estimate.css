@@ -1,5 +1,11 @@
 
+@page {
+  @bottom-left {
+    content: counter(page) ' of ' counter(pages);
+  }
+}
 @media print {
+
   .no-print, .no-print *
   {
       display: none !important;
@@ -20,6 +26,25 @@
   }
   .page {
     break-after: page;
+  }
+
+  .avery-5160 {
+    /* size: auto; */
+    margin: 0 0.1875in;
+    display: block;
+    max-width: 8.5in;
+  }
+
+  .avery-5160-label {
+    border: solid 0.015in;
+    border-color:black;
+    border-radius: 0.05in;
+    min-width: 2.625in;
+    max-width: 2.625in;
+    min-height: .99in;
+    max-height: .99in;
+    margin: 0 0.125in 0 0;
+    position: relative;
   }
 }
 
@@ -59,6 +84,10 @@ table td {
 
 .decision-input-cnt.card.empty {
     display: none;
+}
+
+.flow-root {
+  display: flow-root;
 }
 
 /**
@@ -425,6 +454,20 @@ canvas {
   overflow: auto;
 }
 
+.border-left {
+  border-left: solid;
+}
+
+.part-label {
+  float: left;
+  padding-left: 10pt;
+}
+
+.part-material {
+  float: right;
+  padding-right: 10pt;
+}
+
 #model-controller {
   width: fit-content;
   background-color: white;
@@ -599,6 +642,11 @@ canvas {
 .flex {
   display: flex;
 }
+
+.half-inch-height {
+  min-height: .5in;
+}
+
 
 .inline-flex {
   display: inline-flex;
@@ -854,28 +902,21 @@ table.no-borders, table.no-borders td, table.no-borders th, table.no-borders tr,
 
 /*               print-formats           */
 .avery-5160 {
-  size: auto;
-  margin: 0;
-  width: 100vw;
-  height: 100vh;
+  margin: 0 0.1875in;
+  display: block;
+  max-width: 8.5in;
 }
 
-.avery-5160 table {
-    border: none;
-    margin: .48in .125in;
-}
-
-.avery-5160 table>tbody {
-    border: none;
-}
-
-.avery-5160 table td {
-  border: solid .015in;
-  border-color: #80808040;
-  border-radius: .05in;
-  min-width: 2.575in;
-  height: 1in;
-  padding-right: .125in;
+.avery-5160-label {
+  border: solid 0.015in;
+  border-color: black;
+  border-radius: 0.05in;
+  min-width: 2.625in;
+  max-width: 2.625in;
+  min-height: .99in;
+  max-height: .99in;
+  margin: 0 0.125in 0 0;
+  position: relative;
 }
 
 .project-image-cnt img {
@@ -887,6 +928,10 @@ table.no-borders, table.no-borders td, table.no-borders th, table.no-borders tr,
     margin: 10pt 10pt;
 }
 
+.borderless {
+  border: none;
+}
+
 th.edge-ref {
   position: relative;
   min-width: 130pt;
@@ -895,4 +940,14 @@ th.edge-ref>div {
   font-size: xx-small;
   position: absolute;
   top: 0;
+}
+
+.dashed {
+  border: dashed;
+  border-width: 1px;
+  margin: 4pt 15pt;
+}
+
+#disp-canvas-room {
+  margin: auto;
 }

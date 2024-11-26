@@ -9,9 +9,16 @@ class Panel extends Assembly {
   constructor(partCode, partName, config) {
     super(partCode, partName, config);
     this.category('Panel');
-    Object.getSet(this, {hasFrame: false});
   }
 }
+Panel.property('manuallyConfigurable', true, false, false, false);
+
+class PanelAutoConfigured extends Panel {
+  constructor(...args) {
+    super(...args);
+  }
+}
+PanelAutoConfigured.property('manuallyConfigurable', false, false, false, false);
 
 function absoluteVector() {
   const pos = this.parentAssembly().position();
@@ -21,7 +28,7 @@ function absoluteVector() {
   return vector;
 }
 
-class PanelVoidIndex extends Panel {
+class PanelVoidIndex extends PanelAutoConfigured {
   constructor(index, vOid, included, zNormal, xNormal) {
     const partCode = `:p${index}`;
     super(partCode);
@@ -47,7 +54,8 @@ class PanelVoidIndex extends Panel {
   }
 }
 
-class PanelToeKickBacker extends Panel {
+
+class PanelToeKickBacker extends PanelAutoConfigured {
   constructor(...args) {
     super(...args);
   }
@@ -55,5 +63,6 @@ class PanelToeKickBacker extends Panel {
 
 Panel.VoidIndex = PanelVoidIndex;
 Panel.ToeKickBacker = PanelToeKickBacker;
+Panel.AutoConfigured = PanelAutoConfigured;
 
 module.exports = Panel

@@ -4,6 +4,7 @@
 const du = require('../dom-utils.js');
 const CSG = require('./csg.js');
 const GL = require('./lightgl.js');
+const shaders = require('./shaders.js');
 
 // Convert from CSG solid to GL.Mesh object
 CSG.prototype.toMesh = function() {
@@ -87,40 +88,26 @@ function Viewer(csg, width, height, depth) {
   gl.polygonOffset(1, 1);
 
   // Black shader for wireframe
-  this.blackShader = new GL.Shader('\
-    void main() {\
-      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\
-    }\
-  ', '\
-    void main() {\
-      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.1);\
-    }\
-  ');
+  this.blackShader = new GL.Shader(...shaders.WireFrame());
+
+  // const program = gl.createProgram();
+  // this.realisticLightShader = new GL.Shader(...shaders.RealisticLight());
 
   // Shader with diffuse and specular lighting
-  this.changeLightingShaderDirection = (x,y,z) => this.lightingShader = new GL.Shader(`
-    varying vec3 color;
-    varying vec3 normal;
-    varying vec3 light;
-    void main() {
-      const vec3 lightDir = vec3(${x}, ${y}, ${z}) / 3.741657386773941;
-      light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;
-      color = gl_Color.rgb;
-      normal = gl_NormalMatrix * gl_Normal;
-      gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-    }
-  `, `
-    varying vec3 color;
-    varying vec3 normal;
-    varying vec3 light;
-    void main() {
-      vec3 n = normalize(normal);
-      float diffuse = max(0.0, dot(light, n));
-      float specular = pow(max(0.0, -reflect(light, n).z), 32.0) * sqrt(diffuse);
-      gl_FragColor = vec4(mix(color * (0.3 + 0.7 * diffuse), vec3(1.0), specular), 1.0);
-    }`);
+  this.changeLightingShaderDirection = (x,y,z) =>
+      this.lightingShader = new GL.Shader(...shaders.LightDirection({x:3,y:2,z:3}));
 
-  this.changeLightingShaderDirection(0, 0, 0);
+  // this.lightingShaders = [
+  //   new GL.Shader(...shaders.LightDirection({x:3,y:2,z:3})),
+  //   new GL.Shader(...shaders.LightDirection({x:1,y:0,z:0})),
+  //   new GL.Shader(...shaders.LightDirection({x:-1,y:0,z:0})),
+  //   new GL.Shader(...shaders.LightDirection({x:0,y:0,z:-1})),
+  //   new GL.Shader(...shaders.LightDirection({x:0,y:0,z:1})),
+  //   new GL.Shader(...shaders.LightDirection({x:-3,y:-2,z:-3}))
+  // ];
+  this.lightingShader = new GL.Shader(...shaders.IlluminateAll({x:3,y:2,z:3}));
+
+  // this.changeLightingShaderDirection(0, 0, 0);
   // this.changeLightingShaderDirection(3, 2, 3);
 
   let origCenter = {x:0, y:0};
@@ -233,12 +220,13 @@ function Viewer(csg, width, height, depth) {
       // gl.translate(-relDir[0], -relDir[1], -relDir[2]);
 
       if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+      // that.lightingShaders.forEach(s => s.draw(that.mesh, gl.TRIANGLES));
       that.lightingShader.draw(that.mesh, gl.TRIANGLES);
       if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
 
       if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
       gl.enable(gl.BLEND);
-      // that.blackShader.draw(that.mesh, gl.LINES);
+      that.blackShader.draw(that.mesh, gl.LINES);
       gl.disable(gl.BLEND);
       if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
   }
@@ -265,12 +253,13 @@ function Viewer(csg, width, height, depth) {
     x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
 
     if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+    // that.lightingShaders.forEach(s => s.draw(that.mesh, gl.TRIANGLES));
     that.lightingShader.draw(that.mesh, gl.TRIANGLES);
     if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
 
     if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
-    // that.blackShader.draw(that.mesh, gl.LINES);
+    that.blackShader.draw(that.mesh, gl.LINES);
     gl.disable(gl.BLEND);
     if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
   };

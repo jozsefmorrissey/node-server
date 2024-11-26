@@ -58,6 +58,34 @@ class BiPolygon {
       return frontDist < backDist ? frontDist : backDist;
     }
 
+    this.corners = () => this.front().vertices().concat(this.back().vertices());
+
+    this.connect = (other) => {
+      let min;
+      const center = this.center();
+      const polys = this.toPolygons();
+      const others = other instanceof BiPolygon ? other.toPolygons() : [other];
+      let overlaps = false;
+      for(let i = 0; (!min || !min.isPoint()) && i < polys.length; i++) {
+        for(let j = 0; (!min || !min.isPoint()) && j < others.length; j++) {
+          const connection = polys[i].connect(others[j]);
+          if (!connection.isPoint()) {
+            const polyPointDist = connection[0].distance(center);
+            const oPolyPointDist = connection[1].distance(center);
+            if (polyPointDist > oPolyPointDist)
+              overlaps = true;
+          }
+          if (!min || connection.length() < min.length()) {
+            min = connection;
+          }
+        }
+      }
+      if (overlaps && !min.isPoint()) {
+        console.warn.logarithmic('Overlap detected however connection does not correspont to overlap');
+        return new Line3D(min[1], min[1]);
+      }
+      return min;
+    }
 
     function extendAlongNormal(vector) {
       const normal = instance.normal();
@@ -203,7 +231,7 @@ class BiPolygon {
          const poly = new CSG.Polygon(normalized);
          polygonSets.push(poly);
       }
-      // polygonSets.forEach(p => p.setColor(0,0,255));
+      // polygonSets.forEach(p => p.setColor([0,0,255]));
 
       return CSG.fromPolygons(polygonSets);
     }

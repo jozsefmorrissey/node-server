@@ -50,22 +50,36 @@ class SpatialMap {
     this.node = (object) => nodes.find(node => object === node.object());
 
     this.connectNodes = (object) => this.nodes()
-                .map(node => ({node, connection: node.object().connect(object)}));
+                .map(node => ({node, connection: node.object().connect(object).negitive().directional(false, false)}));
     this.closest = (object) => {
       const min = this.connectNodes().map(l=>l.length());
       return min;
     }
     this.neighbors = (object, ...vectors) => {
       const nodes = this.nodes();
-      const connections = this.connectNodes(object);
-      const neighbors = vectors.map(v => connections
-                          .filter(o => o.connection.isPoint() ||
-                                  (o.connection.vector().dot(v) > .99 &&
-                                    o.connection.length < tolerance))
-                          .map(o=> o.node || null));
-      vectors.forEach((v, i) => neighbors[i] = neighbors[i].filter(node =>
-              object.connect(node.object().center()).vector().sameDirection(v)));
-
+      const connObj = this.connectNodes(object);
+      const center = object.center();
+      const neighbors = Array.fill(vectors.length, () => []);
+      for (let j = 0; j < connObj.length; j++) {
+        const connection = connObj[j].connection;
+        const node = connObj[j].node;
+        const connUnit = connection.vector().unit();
+        if (connection.isPoint()) {
+          let index = vectors.minIndex(v => node.object().center().distance(new Vertex3D(v).translate(center)));
+          neighbors[index].push({dot:1, index, connection, node});
+        } else {
+          let max;
+          for (let index = 0; index < vectors.length; index++) {
+            const dot = vectors[index].unit().dot(connUnit);
+            if (!max || dot > max.dot) max = {dot, index, connection, node};
+          }
+          if (max && max.dot > .0001) neighbors[max.index].push(max);
+        }
+      }
+      neighbors.forEach((list,j) => {
+        list.sort((n1,n2) => n1.connection.length() - n2.connection.length())
+        neighbors[j] = neighbors[j].map(o => o.node);
+      });
       return neighbors;
     }
   }

@@ -27,4 +27,6 @@ class DrawerFront extends HasPull {
   }
 }
 
+DrawerFront.property('manuallyConfigurable', true, false, false, false);
+
 module.exports = DrawerFront

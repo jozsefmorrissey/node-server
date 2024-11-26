@@ -4,6 +4,7 @@ const Vertex2d = require('vertex');
 const Line2d = require('line');
 const Lookup = require('../../../object/lookup');
 const Measurement = require('../../../measurement.js');
+const AngleMeasurement = require('./angle-measurement.js');
 const ToleranceMap = require('../../../tolerance-map.js');
 
 class LineMeasurement2d {

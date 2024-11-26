@@ -34,7 +34,7 @@ class Cabinet extends Assembly {
     new CabinetResolver(this);
     // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
     Object.getSet(this, 'propertyId','currentPosition', 'autoToeKick',
-                    'dividerJoint');
+                    'dividerJoint', 'sectionProperties');
 
     // TODO: this is stupid id needs to be added to toJson however getter/setter should not change...
     const idFunc = this.id;
@@ -49,8 +49,10 @@ class Cabinet extends Assembly {
     this.currentPosition = () => this.position().current();
     this.display = false;
     this.overlay = OVERLAY.HALF;
-    this.openings = new NotifictionArray(false);
     this.type = CABINET_TYPE.FRAMED;
+    this.openings = new NotifictionArray(false);
+
+    this.sectionProperties = () => this.openings.map(o => o.sectionProperties());
 
     this.faceNormals = () => this.openings.map(o => o.sectionProperties().normal())
 
@@ -72,6 +74,7 @@ class Cabinet extends Assembly {
 
     this.getSubassemblies = (childrenOnly) => {
       const subs = parentGetSubAssems(childrenOnly).map(sa => sa);
+      subs.concatInPlace(this.openings.map(o => o.sectionProperties()));
       const toeKick = getToeKick();
       if (toeKick) {
         subs.push(toeKick);
@@ -111,7 +114,7 @@ class Cabinet extends Assembly {
       this.addDependencies(new Dependency(assembly, this));
       const simplePart = assembly.constructor.name.match(/Frame|Panel/);
       if (simplePart) {
-        this.addDependencies(new Joint(/.*S[0-9]{1,}:.*[^a-z^A-Z]dv:.*/, assembly, null, assembly.id()));
+        this.addDependencies(new Joint(/.*S:.*[^a-z^A-Z]dv:.*/, assembly, null, assembly.id()));
       }
     }
 
@@ -203,7 +206,7 @@ Cabinet.build = (type, group, config) => {
     sectionProperties.name(config.name);
     const cabOpenCoords = new CabinetOpeningCorrdinates(cabinet, sectionProperties);
     cabinet.openings.push(cabOpenCoords);
-    cabinet.addSubAssembly(sectionProperties);
+    sectionProperties.parentAssembly(cabinet);
     cabOpenCoords.update();
   });
   config.subassemblies.filter(sac => sac.dividerType).forEach((sac) =>
@@ -217,8 +220,7 @@ const addSectionProps = (sectionProperties, assembly) => () => {
   const openingCoords = new CabinetOpeningCorrdinates(assembly, sectionProperties);
   assembly.openings.push(openingCoords);
   openingCoords.update();
-
-  assembly.addSubAssembly(sectionProperties);
+  sectionProperties.parentAssembly(assembly);
 }
 
 Cabinet.fromJson = (assemblyJson) => {
@@ -235,11 +237,12 @@ Cabinet.fromJson = (assemblyJson) => {
   Object.values(assemblyJson.subassemblies).forEach((json) => {
     const clazz = Assembly.class(json._TYPE);
     json.parent = assembly;
-    if (clazz !== SectionProperties) {
-      assembly.addSubAssembly(Object.fromJson(json));
-    } else {
-      assemblyJson.constructed(addSectionProps(clazz.fromJson(json, assembly), assembly));
-    }
+    assembly.addSubAssembly(Object.fromJson(json));
+  });
+  assemblyJson.sectionProperties.forEach(json => {
+    const clazz = Assembly.class(json._TYPE);
+    json.parent = assembly;
+    assemblyJson.constructed(addSectionProps(clazz.fromJson(json, assembly), assembly));
   });
   const joints = Object.fromJson(assemblyJson.joints);
   assembly.addDependencies.apply(assembly, joints);

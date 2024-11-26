@@ -78,6 +78,13 @@ class Vector3D {
       const equivVect = new Vector3D(vector.i() * coef, vector.j() * coef, vector.k() * coef);
       return Vector3D.tolerance.within(equivVect, this);
     }
+    this.parrelle.toAxis = (boolean) => {
+      const unit = this.positiveUnit();
+      if (withinTol(unit.i(), 1)) return (boolean ? true : 'x');
+      if (withinTol(unit.j(), 1)) return (boolean ? true : 'y');
+      if (withinTol(unit.k(), 1)) return (boolean ? true : 'z');
+      return false;
+    }
 
     this.to2D = (i, j) => Vector3D.to2D([this], i, j)[0];
     this.viewFromVector = (vector) => Vector3D.viewFromVector([this], vector)[0];
@@ -175,6 +182,8 @@ class Vector3D {
       return this;
     }
 
+    this.equivalent = (vector, tol) => !tol ? Vector3D.tolerance.within(vector.positiveUnit(), this.positiveUnit()) :
+                  new Tolerance({i: tol, j: tol, k: tol}).within(new Vector3D(vector.positiveUnit()), this.positiveUnit());
     this.equals = (vector, tol) => !tol ? Vector3D.tolerance.within(vector, this) :
                   new Tolerance({i: tol, j: tol, k: tol}).within(new Vector3D(vector), this);
     this.toString = (percision) => !percision ? `<${i},  ${j},  ${k}>` :

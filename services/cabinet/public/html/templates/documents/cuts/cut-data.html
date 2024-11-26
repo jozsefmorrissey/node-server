@@ -3,12 +3,17 @@
   <td>{{cut.marker && cut.marker.label}}</td>
   <td>{{disp.axis.x(cut.axis)}}</td>
   <td>{{disp.axis.z(cut.axis)}}</td>
-  <td>{{disp.roundTo(cut.tilt) || ''}}</td>
-  <td>{{disp.angle(cut, 'z')}}<br/>{{disp.angle(cut, '-z')}}</td>
   <td>
-    <span:t repeat='er in cut.locationRef.references'>
-      <div:t class='tab' $t-id='documents/cuts/cut-{{er[0].label ? "edge" : "point"}}-ref'>er</div:t>
-      <br/>
+    {{disp.roundTo(cut.tilt && cut.tilt.left) || ''}}
+    <br>
+    {{disp.roundTo(cut.tilt && cut.tilt.right) || ''}}
+  </td>
+  <td>{{disp.angle(cut, true)}}<br/>{{disp.angle(cut, false)}}</td>
+  <td>
+    <span:t class='flow-root' repeat='er in cut.locationRef.references'>
+      <div:t class='tab' $t-id='documents/cuts/cut-{{er ? (er[0].label ? "edge" : "point") : "no"}}-ref'>
+        er
+      </div:t>
     </span:t>
   </td>
   <td>{{disp.axis.y(cut.axis)}}</td>

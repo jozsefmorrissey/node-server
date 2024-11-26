@@ -30,8 +30,8 @@ function determineMales(assem, env) {
 const fullLengthModel = (intersection) => {
   if (intersection.polygons.length === 0) return intersection;
   const axis = Layer.axis(Polygon3D.fromCSG(intersection)).y.vector();
-  const center1 = new Vertex3D(intersection.center()).translate(axis);
-  const center2 = new Vertex3D(intersection.center()).translate(axis.inverse());
+  const center1 = new Vertex3D(intersection.center()).translate(axis.scale(.5));
+  const center2 = new Vertex3D(intersection.center()).translate(axis.inverse().scale(.5));
   const intersection1 = intersection.clone();
   intersection1.center(center1);
   const intersection2 = intersection.clone();
@@ -59,15 +59,17 @@ function removeJointMaterial(map, assem, env, model, intersections) {
     if (!mm)
       return console.warn(`I dont think you should see this id: '${env.byId[mid].locationCode}' does not have a joinedModel`);
     if (mm.polygons.length > 0) {
-      let intersection;
+      let intersection = model.intersect(mm);
       if (!(mm instanceof CSG)) mm = CSG.fromPolygons(mm.polygons, true);
-      if (intersections) {
-        const intersection = model.intersect(mm);
-        if (intersection.polygons.length) env.modelInfo.intersection[id][mid] = intersection;
+      if (midObj.joint && midObj.joint.full.female) {
+        if (assem.locationCode === 'c_T_fr') {
+          console.log('her')
+        }
+        intersection = fullLengthModel(intersection || model.intersect(mm));
       }
-      if (midObj.joint && midObj.joint.full.female)
-      mm = fullLengthModel(intersection || model.intersect(mm));
-      malesModel = malesModel.union(mm);
+      if (!env.modelInfo.intersection[id]) env.modelInfo.intersection[id] = {};
+      if (intersection.polygons.length) env.modelInfo.intersection[id][mid] = intersection;
+      malesModel = malesModel.union(intersection);
     }
   });
   try {
@@ -141,14 +143,14 @@ function applyCutters(assem, cutters, env, group) {
       }
       env.byId[jointId] = jointObj;
       env.modelInfo.cut[cutterId] = cutter;
-      env.jointMap[jointId] = {male: [cutterId], female: [assem.id]};
-      env.jointMap.female[assem.id] ||= [];
-      env.jointMap.female[assem.id].push(jointId);
+      // env.jointMap[jointId] = {male: [cutterId], female: [assem.id]};
+      // env.jointMap.female[assem.id] ||= [];
+      // env.jointMap.female[assem.id].push(jointId);
       env.modelInfo.intersection[id] ||= {};
       try {
         if (model.polygons.length > 0) {
-          env.modelInfo.intersection[id] ||= {};
-          env.modelInfo.intersection[id][cutterId] = model.intersect(cutter);
+          // env.modelInfo.intersection[id] ||= {};
+          // env.modelInfo.intersection[id][cutterId] = model.intersect(cutter);
           model = model.subtract(cutter);
         }
       } catch (e) {
@@ -177,10 +179,13 @@ function buildExtendedModel(assem, joints, env) {
   try {
     const cutters = {cookie: [], joint: []};
     const modelCenter = new Vertex3D(env.getModel(id, 'model').center());
+    if (assem.locationCode === 'c_T:fr') {
+      console.log('her')
+    }
     for (let ji = 0; ji < joints.length; ji++) {
       try {
-        if (assem.partCode === 'BACK') {
-          console.log(joints[ji].descriptor);
+        if (ji === 6 && assem.locationCode === 'c_S_S_S_S_dv:f') {
+          console.log('her')
         }
         const cutObj = applyMaleJointApplicator(joints[ji], frontBackSet, assem, env, modelCenter);
         if (cutObj) {
@@ -216,6 +221,7 @@ function applyCuts(assem, env) {
     const cut = cuts[index];
     const mids = env.jointMap[cut.id].male;
     mids.forEach(mid => {
+      if (cutModel.polygons.length === 0) return console.warn.logarithmic('Model has been completely removed may not be intentional');
       const mm = env.getModel(mid, 'joined');
       if (mm) {
         const intersection = cutModel.intersect(mm);
@@ -326,6 +332,7 @@ function Apply(payload, environment, taskId, intersections) {
     const assem = env.byId[assemblyIds[index]];
     runMfcFunc('joined', assem, env);
   }
+
   exploadedTranslation(assemblyIds, env);
 }
 

@@ -25,9 +25,17 @@ function addLink (model, name) {
   // link.remove();
 }
 
+let individual = false;
 function addLinks(modelOmodels, name) {
   if (modelOmodels instanceof CSG) addLink(modelOmodels, name);
-  else Object.keys(modelOmodels).forEach(k => addLink(modelOmodels[k], k));
+  else {
+    if (individual) Object.keys(modelOmodels).forEach(k => addLink(modelOmodels[k], k));
+    else {
+      let collective = new CSG();
+      Object.keys(modelOmodels).forEach(k => collective = collective.union(modelOmodels[k]));
+      addLink(collective, name);
+    }
+  }
 }
 
 const models = {};
@@ -505,6 +513,106 @@ models['shifter boot bracket'] = (innerWidth, innerDepth, innerHeight, bracketWi
   return prongClip;
 }
 
+models['Blum Narrow Rear Bracket Jig'] = () => {
+  const height = 7.5;
+  const width = 4;
+
+  const sleeveOuterRadius = .435;
+  const retainingLip = .1;
+  const sleeveInnerRadius = sleeveOuterRadius - retainingLip;
+  const sleeveLength = 2.54/2;
+  const thickness = sleeveLength + .01 + retainingLip*2;
+
+  const slices = 128;
+
+  let body = new CSG.cube({demensions: [width, height, thickness]});
+
+  const steps = [{length: sleeveLength, radius: sleeveOuterRadius + .05},
+                  {length: thickness*2, radius: sleeveInnerRadius}];
+  const stepCyl = new CSG.cylinder.step(steps, {slices});
+
+  const holeCenters = [{x:-width/2+1.44,y:-height/2+1.6, z:0},
+                        {x:-width/2+2.88,y:-height/2+4.6, z:0}];
+
+  holeCenters.forEach(c => {
+    stepCyl.center(c);
+    body = body.subtract(stepCyl);
+  });
+
+  const cornerCutter = new CSG.cylinder({start:[0,0,0], end: [0,0,thickness*2], radius: 2.54/2, slices});
+  const corners = [{x: width/2, y: height/2, z:0}, {x: -width/2, y: height/2, z:0}, {x: width/2, y: -height/2, z:0}]
+  corners.forEach(c => {
+    cornerCutter.center(c);
+    body = body.subtract(cornerCutter);
+  });
+
+  const champh = .5;
+  const champerCorner = new CSG.cube({demensions: [champh,champh*4,champh*4]});
+  champerCorner.rotate({z:45});
+  champerCorner.center({x:-width/2, y:-height/2, z:0});
+
+  body = body.subtract(champerCorner);
+
+  return body;//.union(champerCorner);// base.subtract(axis).union(axis);//.subtract(axis);//elivated.union(base);
+};
+
+models['Uberest Drawer Jigs'] = (guideHeight, guideReveal, bottomGap,
+      bumperThickness, sleeveOuterRadius, retainingLip, sleeveLength,
+      innerRailHeight, innerRailInsetDepth) => {
+  bumperThickness ||= 2.54/8;
+  guideHeight ||= 3.95
+  guideReveal ||= 2.54/16;
+  bottomGap ||= 2.54/8;
+  retainingLip ||= .1;
+  sleeveOuterRadius ||= .435;
+  sleeveInnerRadius = sleeveOuterRadius - retainingLip;
+  sleeveLength ||= 2.54/2;
+  innerRailHeight ||= 2;
+  innerRailInsetDepth ||= .2;
+  thickness = sleeveLength + .01 + retainingLip*2;
+  const minDbGuideReveal = 2.54/4;
+
+  const centerCabinetGuide = {
+    y: guideHeight/2 + bottomGap + minDbGuideReveal, x: .65 + guideReveal, z:thickness/2
+  }
+  let cabinetGuideJig = new CSG.cube.champhered({radius: [centerCabinetGuide.x, centerCabinetGuide.y, thickness/2], edges: [true], depth: .2});
+  cabinetGuideJig.center({x: centerCabinetGuide.x, y:centerCabinetGuide.y, z: thickness/2})
+
+  const lipSize = [2.54/4, centerCabinetGuide.y * 2 + 2.54/2, thickness + 2.54/2];
+  const lipCenter = [lipSize[0]/-2, lipSize[1]/2 - 2.54/4, lipSize[2]/2 - 2.54/4];
+  const lip = new CSG.cube({demensions: lipSize, center: lipCenter})
+
+  const slices = 128;
+  // const steps = [{length: sleeveLength, radius: sleeveOuterRadius + .05},
+  //                 {length: thickness*2, radius: sleeveInnerRadius}];
+  const steps = [{length: thickness*2, radius: sleeveInnerRadius}];
+  let drillHole = new CSG.cylinder.step(steps, {slices});
+  drillHole.center(centerCabinetGuide);
+  cabinetGuideJig = cabinetGuideJig.union(lip).subtract(drillHole);
+
+  const guideLen = 2.54*6;
+  const demsBase = [guideLen, 2.54/4, 2.54*5/4];
+  const centerBase = [demsBase[0]/2, demsBase[1]/2, 0];
+  let drawerGuideJig = new CSG.cube({demensions: demsBase, center: centerBase});
+
+  const demsRail = [guideLen, (guideHeight - innerRailHeight)/2 + minDbGuideReveal, 2.54/4];
+  const railCenter = [demsRail[0]/2, demsBase[1] + demsRail[1]/2, 0];
+  const centerRail = new CSG.cube({demensions: demsRail, center: railCenter});
+
+  const shimSize = innerRailInsetDepth + bumperThickness + guideReveal;
+  const demsStop = [shimSize, 2.54/2, 2.54/4];
+  const centerStop = [shimSize / 2, demsBase[1] + demsRail[1] + demsStop[1]/2, 0];
+  const stopShim = new CSG.cube({demensions: demsStop, center: centerStop});
+
+  drawerGuideJig = drawerGuideJig.union(centerRail).union(stopShim);
+  drawerGuideJig.rotate({x: 90, z: 90});
+  cabinetGuideJig.rotate({y: -90});
+  drawerGuideJig.center({x: 2.54,y: drawerGuideJig.demensions().y/2, z: drawerGuideJig.demensions().z/2});
+  cabinetGuideJig.center({x:-2.54, y: cabinetGuideJig.demensions().y/2, z:cabinetGuideJig.demensions().z/2});
+
+  return {cabinetGuideJig, drawerGuideJig};
+}
+
 const cnt = du.create.element('div');
 const controls = du.create.element('div', {style: 'float: left'});
 const display = du.create.element('div', {id: 'stl-three-d-model-cnt'});
@@ -561,7 +669,7 @@ const download = () => {
   addLinks(getSelected(), select.value);
 }
 
-select.value = 'shifter boot bracket';
+select.value = 'Uberest Drawer Jigs';
 
 du.on.match('change', 'input', updateModel);
 

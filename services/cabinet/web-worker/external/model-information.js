@@ -28,7 +28,7 @@ function sortAssemMtdos(assemMtdos) {
     else if (a.partCode() === 'aoc') aoc = a;
     else {
       if (MFC.usesDefault(a.id(), a.partName()) === true) defaultBuilt.push(a);
-      else if (a.locationCode().match(/_S[0-9]{1,}/)) sectionAssems.push(a);
+      else if (a.locationCode().match(/_S/)) sectionAssems.push(a);
       else customBuilt.push(a);
     }
   }
@@ -177,10 +177,29 @@ class ModelInformation {
     this.assemblies = () => props.assemblies || assemblies;
     this.assembly = (id) => assemMap[id];
 
-    let unionedCsg;
-    this.unioned = (data) => {
-      if (data) unionedCsg = CSG.fromPolygons(data.polygons, true);
-      return unionedCsg;
+    let unionObj;
+    this.unioned = (...keys) => {
+      let csg = new CSG();
+      keys.forEach(k => unionObj[k] instanceof CSG && (csg = csg.union(unionObj[k])));
+      return csg;
+    }
+
+    this.unioned.silloute = () => unionObj.silloute;
+    this.unioned.all = () => unionObj;
+    this.unioned.set = (data) => {
+      const keys = Object.keys(data);
+      if (data) {
+        unionObj = {};
+        for (let index = 0; index < keys.length; index++) {
+          const key = keys[index];
+          if (Array.isArray(data[key].polygons)) {
+            unionObj[key] = CSG.fromPolygons(data[key].polygons, true);
+          } else {
+            unionObj[key] = data[key];
+          }
+        }
+      }
+      return unionObj;
     }
 
     this.partInformation = new PartInformation(root);

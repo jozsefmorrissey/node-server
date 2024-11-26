@@ -100,8 +100,9 @@ class Vertex2d {
 
     this.scale = (scale, doNotModify) => {
       if (doNotModify === true) return this.clone().scale(scale);
-      this.x = this.x * scale;
-      this.y = this.y * scale;
+      if ((typeof scale) === 'number') scale = {x: scale, y: scale};
+      this.x = this.x * scale.x;
+      this.y = this.y * scale.y;
       return this;
     }
 

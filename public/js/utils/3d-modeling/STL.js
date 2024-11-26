@@ -1,4 +1,15 @@
 
+const colorShifts = [0,5,10,15]
+function encodeColor(color) {
+  if (color === undefined) return 0;
+  const values = [(Math.floor(color[0] * 32)), (Math.floor(color[1] * 32)), (Math.floor(color[2] * 32)), 1];
+  return values.sum((v,i) => (v << colorShifts[i]));
+}
+
+function extractColor(encoding) {
+  return colorShifts.map((s,i) => i === 3 ? encoding % 2 : ((encoding >> s) % 32)/32);
+}
+
 class STL {
   constructor(header) {
     let _header;
@@ -21,12 +32,13 @@ class STL {
     this.header(header);
     // TODO: make add imutable
     this.add = {};
-    this.add.triangle = (v1, v2, v3, normal) =>
-      validateXYZ(v1,v2,v3,normal) && triangles.push({vertices: copyAllXYZ(v1,v2,v3), normal});
-    this.add.polygon = (vertices, normal) => {
+    this.add.triangle = (v1, v2, v3, normal, colorPercent) =>
+          validateXYZ(v1,v2,v3,normal) &&
+          triangles.push({vertices: copyAllXYZ(v1,v2,v3), normal, color: colorPercent});
+    this.add.polygon = (vertices, normal, colorPercent) => {
       vertices = vertices.map(v=>v);
       while (vertices.length > 2) {
-        this.add.triangle(vertices[0],vertices[1],vertices[2], normal);
+        this.add.triangle(vertices[0],vertices[1],vertices[2], normal, colorPercent);
         vertices.splice(1,1);
       }
     }
@@ -34,6 +46,7 @@ class STL {
       const json = {header};
       json.triangles = triangles.map(t => {
         const json = {normal: copyXYZ(t.normal)};
+        if (t.color) json.color = t.color.slice(0,3);
         json.vertices = t.vertices.map(v => copyXYZ(v));
         return json;
       });
@@ -63,7 +76,7 @@ class STL {
         view.setFloat32(bPos, t.vertices[2].x, true); bPos += 4;
         view.setFloat32(bPos, t.vertices[2].y, true); bPos += 4;
         view.setFloat32(bPos, t.vertices[2].z, true); bPos += 4;
-        view.setUint16(bPos, 0, true); bPos += 2;
+        view.setUint16(bPos, encodeColor(t.color), true); bPos += 2;
       });
 
       console.log(view.toByteString());
@@ -122,8 +135,9 @@ STL.fromArrayBuffer = (arrayBuffer, header) => {
     const v1 = viewVertex(view, i+=12);
     const v2 = viewVertex(view, i+=12);
     const v3 = viewVertex(view, i+=12);
-    stl.add.triangle(v1, v2, v3, normal);
-    i+=14;
+    const color = extractColor(view.getUint16(i += 12, true));
+    stl.add.triangle(v1, v2, v3, normal, color);
+    i+=2;
   }
 
   return stl;

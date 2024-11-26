@@ -93,18 +93,41 @@ const sideIntersectsPoly = (assem, femalePolyObj, frontBackSet) => {
   }
 }
 
+const intersection = (poly, center) => (vector) => {
+  const line = Line3D.startAndVector(center, vector.scale(big));
+  const int = poly.intersection.line(line);
+  return int && line.within(int);
+}
+const eqOnull = (val, bool) => val === bool || val === null;
+function validExpansionDirection(assem, poly, frontBackSet, env) {
+  const settingNorms = assem.jointSettings.normals;
+  if (settingNorms.any) return true;
+  const assemNorms = Utils.normals(assem, env);
+  const center = frontBackSet[0].center();
+  const int = intersection(poly, center);
+  if (eqOnull(settingNorms.x,true) && int(assemNorms.x)) return true;
+  if (eqOnull(settingNorms.y,true) && int(assemNorms.y)) return true;
+  if (eqOnull(settingNorms.z,true) && int(assemNorms.z)) return true;
+  if (eqOnull(settingNorms.x,false) && int(assemNorms.x.inverse())) return true;
+  if (eqOnull(settingNorms.y,false) && int(assemNorms.y.inverse())) return true;
+  if (eqOnull(settingNorms.z,false) && int(assemNorms.z.inverse())) return true;
+  return false;
+}
+
 apply.Dado = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   const femalePolyObj = femalePolyInfo();
-  if (femalePolyObj === null) return;
-  if (!sideIntersectsPoly(assem, femalePolyObj, frontBackSet)) {
-    return;
-  }
+  if (femalePolyObj === null) return null;
+  const center = new Vertex3D(env.modelInfo.model[assem.id].mean());
+  const furthIndex = furthestIndex(femalePolyObj, center);
+  const valExpDir = validExpansionDirection(assem, femalePolyObj.z[furthIndex], frontBackSet, env);
+  if (valExpDir === null) return;
 
   const femaleThickness = femalePolyObj.z[0].distance(femalePolyObj.z[1]);
   let cookie, jointCutters;
-  const center = new Vertex3D(env.modelInfo.model[assem.id].mean());
   assem.jointSettings.directions.center = center;
-  extendFBSetToPoly(femalePolyObj.z[furthestIndex(femalePolyObj, center)], frontBackSet, assem.jointSettings);
+  console.warn.logarithmic('Need to remove true if objects are configured correctly should work... also add to other joint functions');
+  if (true || valExpDir)
+    extendFBSetToPoly(femalePolyObj.z[furthIndex], frontBackSet, assem.jointSettings);
   if (femaleThickness - joint.eval.maleOffset - 2.54/4 < -.01) {
     cookie = [cutterClosestZPoly(femalePolyInfo, center)];
     jointCutters = [];
@@ -114,18 +137,22 @@ apply.Dado = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   }
 
   // console.log('//female\n' + femalePolyObj.z.map(p => p.toDrawString('red')).join('\n') +
-  //             '\n\n//male\n' + frontBackSet.map(p => p.toDrawString()).join('\n') +
-  //             '\n\n//Far side cutter\n' + cookie[0]().toDrawString('green') +
-  //             '\n//Joint cutter\n' + jointCutters.map(jc => jc().toDrawString('yellow')),
-  //             '\n\n//center\ngreen', center.toString());
+  //             '\n\n//male\n' + frontBackSet.map(p => p.toDrawString()).join('\n'))
   return {joint: jointCutters, cookie};
 }
 
 apply.Butt = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   const femalePolyObj = femalePolyInfo();
+  if (femalePolyObj === null) return null;
   const center = new Vertex3D(env.modelInfo.model[assem.id].mean());
+
+  const furthIndex = furthestIndex(femalePolyObj, center);
+  let valExpDir = validExpansionDirection(assem, femalePolyObj.z[furthIndex], frontBackSet, env);
+  if (valExpDir === null) return;
+
   assem.jointSettings.directions.center = center;
-  if (joint.autoExtend) extendFBSetToPoly(femalePolyObj.z[furthestIndex(femalePolyObj, center)], frontBackSet, assem.jointSettings);
+  if (valExpDir)
+    extendFBSetToPoly(femalePolyObj.z[furthIndex], frontBackSet, assem.jointSettings);
   if (femalePolyObj === null) return;
   if (!sideIntersectsPoly(assem, femalePolyObj, frontBackSet)) {
     return;
@@ -139,8 +166,9 @@ apply.Butt = (assem, joint, femalePolyInfo, frontBackSet, env) => {
 
   const mateWith = possibleTargets[0].p;
 
+  valExpDir = validExpansionDirection(assem, mateWith, frontBackSet, env);
   assem.jointSettings.directions.center = center;
-  if (joint.autoExtend) extendFBSetToPoly(mateWith, frontBackSet, assem.jointSettings);
+  if (valExpDir) extendFBSetToPoly(mateWith, frontBackSet, assem.jointSettings);
   cookie = [cutterFurthestZPoly(femalePolyInfo, center, 0)];
   jointCutters = [cutterClosestZPoly(femalePolyInfo, center, 0)];
 

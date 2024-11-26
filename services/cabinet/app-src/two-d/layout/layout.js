@@ -12,7 +12,7 @@ const IMPERIAL_US = Measurement.units()[1];
 const Wall2D = require('./wall');
 const Corner2d = require('./corner');
 const Window2D = require('./window');
-const Object3D = require('../../three-d/layout/object.js');
+const Light3D = require('../../three-d/layout/objects/light.js');
 const Door2D = require('./door');
 const LayoutHoverMap = require('../../services/layout-hover-map.js');
 
@@ -36,12 +36,13 @@ class Layout2D extends Lookup {
     this.setObjects = (objs) => objects = objs;
     this.objects = () => (objects instanceof Function ? objects() : objects) || [];
     let walls = [];
+    let lights = [new Light3D(this, 8*2.54, {x: 440, y: 243, z: 202}), new Light3D(this, 8*2.54, {x: 440, y: 243, z: 452})];
     const vertexMap = {};
     // Array.isArray(wallJson) && wallJson.forEach((wallJson) => walls.push(Wall2D.fromJson(wallJson, this, vertexMap)));
     let history;
     CustomEvent.all(this, 'add', 'remove', 'stateChange', 'change');
 
-    Object.getSet(this, {walls, _FORCE_FROM_JSON: true});
+    Object.getSet(this, {walls, lights, _FORCE_FROM_JSON: true});
     const initialized = walls.length > 0;
     const instance = this;
 
@@ -149,12 +150,9 @@ class Layout2D extends Lookup {
       const objs = this.objects().filter(o => o.shouldSave());
       const json = {walls: []};
       json.id = this.id();
-      json.objects = Array.toJson(objs);
       this.walls().forEach((wall) => {
         json.walls.push(Wall2D.toJson(wall));
       });
-      // json.walls.sort(sortById);
-      json.objects.sort(sortById);
       const snapMap = {};
       objs.forEach((obj) => {
         const snapLocs = obj.snap2d.top().snapLocations.paired();

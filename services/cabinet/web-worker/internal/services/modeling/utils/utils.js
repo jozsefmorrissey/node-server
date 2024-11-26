@@ -24,7 +24,7 @@ function toBiPolygon(assem, env) {
 
 const vectObj = (obj) => new Vector3D(obj);
 function normals(part, env) {
-  let norms = part.position.current.normals;
+  let norms = part.position ? part.position.current.normals : {DETERMINE_FROM_MODEL: true};
   if (norms === undefined) return {x: Vector3D.i, y: Vector3D.j, z: Vector3D.k}
   if (norms.DETERMINE_FROM_MODEL) {
     const model = env.getModel(part, 'cut');
@@ -68,14 +68,16 @@ property.set = (assem, env, ...setNameOpropName) => {
     return set;
 }
 
-const generated = (assem, env, model, idPrefix) => {
+const generated = (assem, env, model, idPrefix, parent) => {
+  parent ||= Object.values(env.byId).find(a => a.find).find.root();
   assem.id ||= `${idPrefix || 'Generated'}_${String.random()}`;
-  assem.locationCode ||= `${idPrefix || 'Generated'}_${String.random(4)}`;
-  assem.parentAssembly ||= {id: Object.values(env.byId).find(a => a.find).find.root().id};
-  assem.partCode ||= `${idPrefix || 'Generated'}_${String.random(4)}`;
+  assem.partCode ||= `Gen:${String.random(4)}`;
+  assem.locationCode ||= `${parent.locationCode}_${assem.partCode}`;
+  assem.parentAssembly ||= {id: parent.id};
+  assem.generated = true;
   env.modelInfo.model[assem.id] = model;
   env.generated.push(assem.id);
-  assem.jointSettings = new JointSettings().toJson();
+  assem.jointSettings ||= new JointSettings().toJson();
   return RDTO(assem, env.byId);
 }
 

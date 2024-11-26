@@ -26,9 +26,10 @@ const cabinetTemplate = new $t('documents/construction/cabinet');
 const cabinetListTemplate = new $t('documents/construction/cabinetList');
 const panelCutListTemplate = new $t('documents/construction/panel-cut-list');
 const cutListLabelTemplate = new $t('documents/construction/cut-list-label');
-const partTemplate = new $t('documents/construction/part');
+const cabinetPartTemplate = new $t('documents/construction/cabinet-parts');
 const cutsTemplate = new $t('documents/cuts/cuts');
 const openingDiagramsTemplate = new $t('documents/construction/opening-diagrams');
+const threeViewTemplate = new $t('documents/construction/three-view');
 const elevationDiagramsTemplate = new $t('documents/construction/elevation-diagrams');
 const doorListTemplate = new $t('documents/construction/door-list');
 const materialsTemplate = new $t('documents/construction/materials');
@@ -49,7 +50,7 @@ function getCabinetInfos(order) {
 }
 
 function listToTemplate(partInformation, type, template, width, height, thickness) {
-  const partInfos = partInformation.byCategory(type) || [];
+  const partInfos = (partInformation.byCategory(type) || {PARTS: []}).PARTS;
   const map = {};
   const disp = Utils.display;
   partInfos.forEach(info => {
@@ -118,31 +119,40 @@ DocumentationHtml.cabinetList = (partInformation) => {
 
 const area = (dem) => dem.x * dem.y * dem.z;
 const sorter = (pi1, pi2) => area(pi2.demensions) - area(pi1.demensions);
-DocumentationHtml.parts = (parts) => {
-  if (!parts) return '';
-  parts.sort(sorter);
-  let html = '<div class="cabinet-part-doc-cnt">';
-  parts.forEach((pi, index) => {
-    if (!pi.cuts || pi.cuts.length === 0) return;
-    pi.DocumentationDisplay = DocumentationHtml;
-    pi.viewContainer = viewContainer;
-    pi.disp = Utils.display;
-    pi.index = index;
-    pi.views ||= buildViews(pi);
-    // pi.toolingHtml ||= new Tooling(pi).html;
-    pi.toolingHtml ||= () => cutsTemplate.render(pi);
-    pi.cuts.map(c => c.locationRef.references).forEach(refs => Object.equals(refs[0], refs[1]) && refs.splice(1,1));
-    html += partTemplate.render(pi);
+DocumentationHtml.parts = (cabinetPartMap) => {
+  if (!cabinetPartMap) return '';
+
+  const parentScope = {};
+
+  parentScope.DocumentationDisplay = DocumentationHtml;
+  parentScope.viewContainer = viewContainer;
+  parentScope.disp = Utils.display;
+  parentScope.views  = pi => pi.views ||= buildViews(pi);
+  parentScope.toolingHtml = pi => pi.toolingHtml ||= cutsTemplate.render(pi, null, parentScope);
+  parentScope.subCategories = cat => Object.values(cat.subCategories || {});
+  let html = '';
+  Object.keys(cabinetPartMap).forEach(key1 => {
+    Object.keys(cabinetPartMap[key1]).forEach(key2 => {
+      const scope = {root: cabinetPartMap[key1].root, category: cabinetPartMap[key1][key2]};
+      html += cabinetPartTemplate.render(scope, null, parentScope);
+    });
   });
-  return html + '</div>';
+
+  return html;
 }
 
 const partsFunction = (partType) => (partInformation) => {
-  return DocumentationHtml.parts(partInformation.byCategory(partType));
+  const cabinetPartMap = partInformation.byCabinet(p => p.category === partType && p.cuts && p.cuts.length);
+  return DocumentationHtml.parts(cabinetPartMap);
 };
 
 DocumentationHtml.panels = partsFunction('Panel');
 DocumentationHtml.shelves = partsFunction('Shelve');
+DocumentationHtml.frames = partsFunction('Frame');
+DocumentationHtml.panels.cutList = (partInformation) => DocumentationHtml.parts.cutList(partInformation, 'Panel');
+DocumentationHtml.shelves.cutList = (partInformation) => DocumentationHtml.parts.cutList(partInformation, 'Shelve');
+DocumentationHtml.frames.cutList = (partInformation) => DocumentationHtml.parts.cutList(partInformation, 'Frame');
+
 
 DocumentationHtml.panels.main = (orderInfo) => {
   const order = orderInfo.order;
@@ -175,20 +185,32 @@ DocumentationHtml.aerials = (order) => {
 }
 
 
-DocumentationHtml.panels.cutList = (partInformation) => DocumentationHtml.parts.cutList(partInformation, 'Panel');
-DocumentationHtml.shelves.cutList = (partInformation) => DocumentationHtml.parts.cutList(partInformation, 'Shelve');
-
 DocumentationHtml.parts.cutList = (partInformation, partType) => {
   const disp = Utils.display;
-  const parts = partInformation.byCategory(partType);
+  const scope = {};
+  const parts = partInformation.parts().filter(p => p.category === partType).sort((p1, p2) => {
+    const s1 = p1.categories.join('-');
+    const s2 = p2.categories.join('-');
+    if (s1 !== s2) return s1 < s2 ? 1 : -1;
+    const n1 = p1.parts[0].getRoot().name();
+    const n2 = p2.parts[0].getRoot().name();
+    if (n1 !== n2) return n1 < n2 ? 1 : -1;
+    return p1.partsId === p2.partsId ? 0 : (p1.partsId < p2.partsId ? 1 : -1)
+  });
   const pages = [];
+  let currentCat;
   parts.forEach(info => info.parts.forEach((part) => {
+    const cat = info.categories.join('-');
+    if (currentCat !== cat) pages.push(`<div class=\'center-all\'>${currentCat = cat}</div>`);
     pages.push(cutListLabelTemplate.render({info, part, disp}));
   }));
   let levelOffCount = 30 - (pages.length % 30);
-  pages.concatInPlace(Array.fill(levelOffCount, 'X'));
+  pages.concatInPlace(Array.fill(levelOffCount, ''));//<div class=\'center-all\'>X</div>'));
   pages.group(30,3);
-  return DocumentationHtml.print.container(panelCutListTemplate.render({pages}));
+
+  scope.disp = Utils.display;
+  scope.pages = pages;
+  return DocumentationHtml.print.container(panelCutListTemplate.render(scope));
 }
 
 DocumentationHtml.doorList = (orderInfo) => {
@@ -241,17 +263,14 @@ DocumentationHtml.sketchLayout = (cabinets, containerOselector, reqId) => {
 
     const sectionSets = (cabinet) => {
       const sectionSets = [];
-      const sectionPropList = cabinet.openings.map(o => o.sectionProperties());
+      const sectionPropList = OpeningSketch.demensionSections(cabinet);
       let index = 0;
       let setIndex = 0;
       while (target = sectionPropList[index++]) {
-        if (includeSection(target)) {
-          const i1 = Math.floor(setIndex/2);
-          const i2 = setIndex++%2;
-          if (sectionSets[i1] === undefined) sectionSets[i1] = [];
-          sectionSets[i1][i2] = target;
-        }
-        sectionPropList.concatInPlace(target.sections);
+        const i1 = Math.floor(setIndex/2);
+        const i2 = setIndex++%2;
+        if (sectionSets[i1] === undefined) sectionSets[i1] = [];
+        sectionSets[i1][i2] = target;
       }
       return sectionSets;
     }
@@ -261,12 +280,29 @@ DocumentationHtml.sketchLayout = (cabinets, containerOselector, reqId) => {
   }
 }
 
+DocumentationHtml.buildDiagram = (partInformation, containerOselector) => {
+  const reqId = String.random();
+  const cabinetInfos = partInformation.cabinets();
+  const cabinets = cabinetInfos.map(ci => ci.parts[0]);
+  const html = DocumentationHtml.sketchLayout(cabinets, containerOselector, reqId);
+
+  setTimeout(() => {
+    cabinetInfos.forEach(info => {
+      const cabinet = info.parts[0];
+      const selector = `#${openingDiagramCntId(reqId)(cabinet.id())}`;
+      new OpeningSketch(selector, cabinet, info);
+    });
+  })
+  return html;
+}
+
 const cabCanvasId = (cabinet, dir) => `cabinet-${dir}-${cabinet.id()}-canvas`;
 const ij = [Vector3D.i, Vector3D.j];
 function drawNormalizedLayers(cabInfo, layers, dir, x, y) {
   const canvas = du.id(cabCanvasId(cabInfo.parts[0], dir));
   layers = layers.map(l => l.copy());
-  const norms = [cabInfo.normals[x], cabInfo.normals[y]];
+  const cabNorms = cabInfo.parts[0].normals();
+  const norms = [cabNorms[x], cabNorms[y]];
   const rotations = Vector3D.coDirectionalRotations(norms, ij);
   const center = cabInfo.model.csg.center();
   const dems = cabInfo.demensions;
@@ -287,11 +323,11 @@ async function drawCabinets(cabinets) {
   }
 }
 
-DocumentationHtml.openingDiagram = (partInformation) => {
+DocumentationHtml.threeView = (partInformation) => {
   const cabinetInfos = partInformation.cabinets();
   setTimeout(() => drawCabinets(cabinetInfos));
   const disp = Utils.display;
-  return openingDiagramsTemplate.render({cabinetInfos, cabCanvasId, disp})
+  return threeViewTemplate.render({cabinetInfos, cabCanvasId, disp})
 }
 
 
@@ -375,7 +411,7 @@ function buildCanvas(info, zOnz) {
   draw.text('(0,0)', origin, {size, radians: Math.PI, location: 'BottomRight', mirror: 'y'});
 
   draw(layers);
-  draw.text(sideLabel, sideLabelCenter, {size, radians: Math.PI, location: 'BottomLeft', mirror: 'y'});
+  // draw.text(sideLabel, sideLabelCenter, {size, radians: Math.PI, location: 'BottomLeft', mirror: 'y'});
   const infoEdges = info.fenceEdges[side];
   const edges = infoEdges.map(l => l.copy());
   edges.forEach((l, i) => {
@@ -384,17 +420,27 @@ function buildCanvas(info, zOnz) {
     const text = `${label}`;
     draw.text(text, l.midpoint(), textProps);
   });
-  return {canvas, label: sideLabel, leftOright};
+
+  info.cuts.filter(c => c.marker && c.marker.line && c.primarySide === leftOright).forEach((c,i) => {
+    const line = c.marker.line;
+    const radians = line.radians()-Math.PI;
+    const textProps = {size, radians, location: 'Left', mirror: 'y'};
+    const label = c.marker.label;
+    const text = `${label}`;
+    draw.text(text, line[1], textProps);
+  });
+  const finishedInt = info.model.finishedInterior;
+  const material = finishedInt && finishedInt[side] ? 'Pre Finished' : '';
+  return {canvas, label: sideLabel, leftOright, material};
 }
 
 function buildViews(info) {
   if (!info.cuts || info.cuts.length === 0) return;
-  const view1 = buildCanvas(info, true);
-  const view2 = buildCanvas(info, false);
-  const view1left = view1.label.match(/^(Left|Front|Top)$/) !== null;
+  const view1 = buildCanvas(info, info.primarySide);
+  const view2 = buildCanvas(info, !info.primarySide);
   return views = {
-    right: view1.leftOright ? view2.canvas : view1.canvas,
-    left: view1.leftOright ? view1.canvas : view2.canvas
+    left: view1,
+    right: view2
   }
 }
 
@@ -492,12 +538,12 @@ function buildTargetInputSelector(orderInfo) {
   return inputTree;
 }
 
-function viewContainer(view) {
+function viewContainer(viewObj) {
   const id = `view-container-${String.random()}`;
   setTimeout(() => {
-    if (view) {
+    if (viewObj && viewObj.canvas) {
       const cnt = du.id(id);
-      cnt.append(view);
+      cnt.append(viewObj.canvas);
     }
   });
   return id;

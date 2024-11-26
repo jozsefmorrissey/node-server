@@ -37,9 +37,13 @@ class Draw2d {
 
     let scale = {x: 1, y: 1};
     draw.scale = (x, y) => {
-      CTX().scale(1/scale.x, 1/scale.y);
-      CTX().scale(x,y);
-      scale = {x, y};
+      if (x) {
+        y ||= x;
+        CTX().scale(1/scale.x, 1/scale.y);
+        CTX().scale(x,y);
+        scale = {x, y};
+      }
+      return scale;
     }
     draw.width = () => canvas.width/scale.x;
     draw.height = () => canvas.height/scale.y;
@@ -124,9 +128,6 @@ class Draw2d {
     }
     draw.array = (obj, color, width) => {
       if (obj.length === 0) return;
-      if (obj[0].x !== undefined)
-        return obj.length === 2 ? draw.line(obj, color, width) : draw.polygon(obj, color, width);
-
       takenLocations = [];
       vertLocTolMap = new ToleranceMap({x: tol, y: tol});
       for (let index = 0; index < obj.length; index += 1)
@@ -187,9 +188,6 @@ class Draw2d {
       if (Array.isArray(poly)) lines = poly.map((v,i) => [v, poly[(i+1)%poly.length]])
       else lines = poly.lines();
       const ctx = CTX();
-      // lines.forEach((line) => draw.line(line, color, width));
-      // ctx.rect(10, 10, 150, 100);
-      // lines.reverse();
       let region = new Path2D();
       const verts = [new Vertex2d(lines[0][0].x, lines[0][0].y)];
       region.moveTo(lines[0][0].x, lines[0][0].y);
@@ -202,20 +200,6 @@ class Draw2d {
         ctx.fillStyle = fillColor;
         ctx.fill(region, 'evenodd');
       }
-      // if ((typeof poly.getTextInfo) === 'function') {
-      //   ctx.save();
-      //   const info = poly.getTextInfo();
-      //   ctx.translate(info.center.x, info.center.y);
-      //   ctx.rotate(info.radians);
-      //   ctx.beginPath();
-      //   ctx.lineWidth = 4;
-      //   ctx.strokeStyle = color;
-      //   ctx.fillStyle =  color;
-      //   const text = info.limit === undefined ? info.text : (info.text || '').substring(0, info.limit);
-      //   ctx.fillText(text, info.x, info.y, info.maxWidth);
-      //   ctx.stroke()
-      //   ctx.restore();
-      // }
     }
 
     draw.layer = (layer, color, width, fillColor) => {
@@ -343,13 +327,14 @@ class Draw2d {
       }
       ctx.strokeStyle = props.color || 'black';
       ctx.fillStyle =  props.color || 'black';
-      // TODO: Cant figure out why satic drawings require this but panz drawings do not.
+
       const mirrorX = props.mirror && (props.mirror.x || props.mirror === 'x');
       const mirrorY = props.mirror && (props.mirror.y || props.mirror === 'y');
       if (mirrorX && mirrorY) ctx.scale(-1,-1);
       else if (mirrorX) ctx.scale(1, -1);
       else if (mirrorY) ctx.scale(-1, 1);
 
+      // TODO: Cant figure out why satic drawings require this but panz drawings do not.
       if (draw.staticOffset) ctx.fillText(text, textSize.width/-2, textSize.height/2, props.maxWidth);
       else ctx.fillText(text, 0, 0, props.maxWidth);
       ctx.stroke()
@@ -365,28 +350,6 @@ class Draw2d {
       const radians = line.radians();
 
       draw.text(measurement.display(), midpoint, {radians})
-
-      // ctx.save();
-      // ctx.lineWidth = 0;
-      // const length = measurement.display();
-      // const textLength = length.length;
-      // ctx.translate(midpoint.x, midpoint.y);
-      // ctx.rotate(line.radians());
-      // ctx.beginPath();
-      // ctx.fillStyle = "white";
-      // ctx.strokeStyle = 'white';
-      // ctx.rect((textLength * -3)/14, -4/15, (textLength * 6)/14, 8/15);
-      // ctx.fill();
-      // ctx.stroke();
-      //
-      // ctx.beginPath();
-      // ctx.font = '3px Arial';//(Math.abs((Math.log(Math.floor(line.length() * 10)))) || .1) + "px Arial";
-      // ctx.lineWidth = .2;
-      // ctx.strokeStyle = 'black';
-      // ctx.fillStyle =  'black';
-      // ctx.fillText(length, 0, 0);
-      // ctx.stroke()
-      // ctx.restore();
     }
 
     draw.measurement = (measurement, color, textWidth) => {
@@ -404,6 +367,12 @@ class Draw2d {
       } catch (e) {
         console.error('Measurement render error:', e);
       }
+    }
+
+    draw.measurement.angle = (angle, color, textWidth) => {
+      const bisector = angle.bisector(2.54*20);
+      const labelPoint = bisector[1];
+      draw.text(angle.degrees(), labelPoint);
     }
 
     function snapLocColor(snapLoc) {
@@ -436,7 +405,8 @@ class Draw2d {
     const cxtrFuncMap = { Object: draw.object, Array: draw.array,
       Vertex2d: draw.vertex, Line2d: draw.line, Circle2d: draw.circle, Corner: draw.vertex,
       Polygon2d: draw.polygon, Square2d: draw.square, LineMeasurement2d: draw.measurement,
-      Snap: draw.snap, SnapLocation2d: draw.snapLocation, Layer: draw.layer
+      Snap: draw.snap, SnapLocation2d: draw.snapLocation, Layer: draw.layer,
+      AngleMeasurement2d: draw.measurement.angle
     }
 
     return draw;

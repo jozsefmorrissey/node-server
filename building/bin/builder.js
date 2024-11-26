@@ -455,6 +455,8 @@ class $t {
 		array.if(expression).end();
 
 		function getter(scope, parentScope) {
+      if (!(parentScope instanceof Function) && parentScope instanceof Object)
+				parentScope = getter(parentScope);
 			parentScope = parentScope || function () {return undefined};
 			function get(name) {
 				if (name === 'scope') return scope;

@@ -9,6 +9,29 @@ const Line2d = require('../../canvas/two-d/objects/line.js');
 const Polygon2d = require('../../canvas/two-d/objects/polygon.js');
 const Test = require('../test.js').Test;
 
+Test.add('Polygon3D: connections', ts => {
+  const str1 = 'red[(0,71.279,-66.04),(53.34,71.279,0),(53.34,10.16,0),(0,10.16,-66.04)]';
+  const str2 = 'red[(0,86.36,-66.04),(53.34,86.36,0),(53.34,71.279,0),(0,71.279,-66.04)]';
+  const str3 = 'blue[(51.801,86.36,-0.953),(60.96,86.36,-0.953),(60.96,0,-0.953),(51.801,0,-0.953)]';
+
+  const poly1 = Polygon3D.fromCSG(CSG.fromString(str1))[0];
+  const poly2 = Polygon3D.fromCSG(CSG.fromString(str2))[0];
+  const poly3 = Polygon3D.fromCSG(CSG.fromString(str3))[0];
+
+  const red = [poly1,poly2];
+  const blue = [poly3];
+
+  // console.log(red.map(p => p.toDrawString('red')).concat(blue.map(p=>p.toDrawString('blue'))).join('\n\n'));
+  red.forEach(rp => blue.forEach(bp => {
+    const planeInt = rp.toPlane().intersection(bp.toPlane());
+    ts.assertTrue(planeInt instanceof Line3D);
+    console.log(rp.intersection(bp));
+    const polyInt = rp.intersection(bp);
+    ts.assertTrue(polyInt instanceof Line3D);
+  }));
+  ts.success();
+});
+
 Test.add('Polygon3D: fromIntersections(perpendicular/connected)',async (ts) => {
   const intersected = new Polygon3D([{x:0,y:0,z:0},{x:0,y:10,z:0},{x:10,y:10,z:0},{x:10,y:0,z:0}])
   const poly1 = new Polygon3D([{x:2,y:2,z:0},{x:5,y:8,z:0},{x:5,y:8,z:10},{x:2,y:2,z:10}]);

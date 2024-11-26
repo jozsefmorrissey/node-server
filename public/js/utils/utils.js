@@ -24,7 +24,8 @@ function safeStdLibAddition() {
     if (!static && lib.prototype[field] === undefined) {
       Object.defineProperty(lib.prototype, field, {
           value: func,
-          writable: true
+          writable: true,
+          itterable: false
       });
     } else if (lib[field] === undefined)
       lib[field] = func;
@@ -588,7 +589,7 @@ const forceFromJsonAttr = '_FORCE_FROM_JSON';
 
 const clazz = {};
 const universalCloneFunction = (obj) => obj.constructor.fromJson(obj.constructor.toJson());
-clazz.object = () => JSON.clone(classLookup);
+clazz.object = () => Object.merge({}, classLookup);
 clazz.register = (clazz, ...attrs) => {
   const cxtrName = clazz.name;
   classLookup[cxtrName] = clazz;
@@ -623,12 +624,12 @@ clazz.filter = (filterFunc) => {
   const classes = clazz.object();
   if ((typeof filterFunc) !== 'function') return classes;
   const classIds = Object.keys(classes);
-  const obj = {};
+  const list = [];
   for (let index = 0; index < classIds.length; index += 1) {
     const id = classIds[index];
-    if (filterFunc(classes[id])) obj[id] = classes[id];
+    if (filterFunc(classes[id])) list.push(classes[id]);
   }
-  return obj;
+  return list;
 }
 
 const filterOutUndefined = (obj) => (key) => obj[key] !== undefined;
@@ -1456,8 +1457,17 @@ const colorRGBs = {indianred: [205, 92, 92],gray: [128, 128, 128],fuchsia: [255,
   silver: [192, 192, 192],purple: [128, 0, 128]
 }
 
+const colorsCodeMap = {}
+colors.forEach(k => colorsCodeMap[colorRGBs[k].join(',')] = k);
+
 Function.safeStdLibAddition(String, 'color', () => colors[colorIndex % colors.length], true);
 String.color.RGB = colorRGBs;
+Function.safeStdLibAddition(String, 'colorName', function (color) {
+  if (!Array.isArray(color)) return '';
+  const strKey = color.map(v => Math.round(v * 255)).join(',');
+  return colorsCodeMap[strKey] || strKey;
+}, true);
+
 let colorIndex = 0;
 Function.safeStdLibAddition(String.color, 'next', (...exclude) => {
   const filteredColors = colors.filter(c => exclude.indexOf(c) === -1)
@@ -1470,6 +1480,108 @@ Function.safeStdLibAddition(String.color, 'distinct', () => {
   colorIndex = colors.findIndex((c) => c === distinct[distinctColorIndex % distinct.length]);
   return colors[colorIndex];
 }, true);
+
+function hexToRgb(hex) {
+  hex = hex.replace("#", "");
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((char) => char + char)
+      .join("");
+  }
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+
+  return [r, g, b];
+}
+
+function rgbToHex(rgb) {
+  return "#" + ((1 << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2]).toString(16).slice(1);
+}
+
+function rgbToHSL(rgb) {
+  const r = rgb[0];
+  const g = rgb[1];
+  const b = rgb[2];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100)
+  };
+}
+
+function hslToRgb(h, s, l) {
+  h /= 360;
+  s /= 100;
+  l /= 100;
+
+  let r, g, b;
+
+  if (s === 0) {
+    r = g = b = l; // achromatic
+  } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return rgb;
+}
+
+function getRgb(color, deFault) {
+  if (deFault === undefined) deFault = [0,0,0];
+  if (Array.isArray(color)) {
+    if (color[0] < 1) return color.map(v => Math.floor(v*255));
+    return color;
+  }
+  if (color instanceof Object) return String.color.hslToRgb(color) || deFault;
+  if ((typeof color) === 'string')
+    if (String.color.RGB[color]) return String.color.RGB[color] || deFault;
+    else return hexToRgb(color) || deFault;
+  return deFault;
+}
+
+const getHex = (color) => rgbToHex(getRgb(color));
+const getHexShortHand = (color) => rgbToHex(getRgb(color)).replace(/(#.).(.).(.)./, '$1$2$3');
+const rgbPercent = (color) => getRgb(color).map(v => v/255);
+
+
+Function.safeStdLibAddition(String.color, 'hexToRgb', hexToRgb, true);
+Function.safeStdLibAddition(String.color, 'rgbToHex', rgbToHex, true);
+Function.safeStdLibAddition(String.color, 'rgbToHSL', rgbToHSL, true);
+Function.safeStdLibAddition(String.color, 'hslToRgb', hslToRgb, true);
+Function.safeStdLibAddition(String.color, 'rgb', getRgb, true);
+Function.safeStdLibAddition(String.color, 'hex', getHex, true);
+Function.safeStdLibAddition(String.color.hex, 'short', getHexShortHand, true);
+Function.safeStdLibAddition(String.color.rgb, 'percent', rgbPercent, true);
+
+
 
 {
   const a = 'a'.charCodeAt(0);
@@ -1872,17 +1984,20 @@ Function.safeStdLibAddition(Array, 'elements', function(func) {
 
 Function.safeStdLibAddition(Object, 'copy', function(arr) {
   if (Array.isArray(arr)) throw new Error('point to merge...');
-  const root = Array.isArray(this) ? [] : {};
-  const keys = Object.keys(this);
+  const root = Array.isArray(arr) ? [] : {};
+  const keys = Object.keys(arr);
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
-    const value = this[key];
+    const value = arr[key];
     if (!(value instanceof Object)) root[key] = value;
     else root[key] = value.copy();
   }
   return root;
-});
+}, true);
 
+Function.safeStdLibAddition(Object, 'copy', function(arr) {
+  return Object.copy(this);
+});
 
 Function.safeStdLibAddition(Object, 'foreach', function(obj, func, filter, pathPrefix) {
   if (!pathPrefix) pathPrefix = '';

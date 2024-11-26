@@ -143,6 +143,26 @@ Test.add('BiPolygon extend',(ts) => {
   ts.success();
 });
 
+Test.add('BiPolygon: connections', ts => {
+  const str1 = 'red[(0,71.279,-66.04),(53.34,71.279,0),(53.34,10.16,0),(0,10.16,-66.04)]';
+  const str2 = 'red[(0,86.36,-66.04),(53.34,86.36,0),(53.34,71.279,0),(0,71.279,-66.04)]';
+  const str3 = 'blue[(51.801,56.36,-0.953),(60.96,56.36,-0.953),(60.96,46,-0.953),(51.801,46,-0.953)]';
+
+  const biPoly1 = BiPolygon.fromPolygon(Polygon3D.fromCSG(CSG.fromString(str1))[0], 0, 50);
+  const biPoly2 = BiPolygon.fromPolygon(Polygon3D.fromCSG(CSG.fromString(str2))[0], 0, 50);
+  const biPoly3 = BiPolygon.fromPolygon(Polygon3D.fromCSG(CSG.fromString(str3))[0], 12, 16);
+
+  const red = [biPoly1,biPoly2];
+  const blue = [biPoly3];
+
+  console.log(red.map(p => p.toDrawString('red')).concat(blue.map(p=>p.toDrawString('blue'))).join('\n'));
+
+  const conn = biPoly1.connect(biPoly3);
+  console.log(conn.toDrawString());
+
+  ts.success();
+});
+
 
 // Hinge 25 * 73B3580
 // Plate 25 * 175H6000

@@ -18,7 +18,7 @@ function addMathObjectGetter(dto, rDto) {
   else if (dto.defined('i', 'j', 'k'))
     rDto.object = () => new Vector3D(dto);
   else if (Array.isArray(dto) && dto.length > 1) {
-    const allVerticies = dto.find(o => !o.defined(vertexDefinedObj)) === undefined;
+    const allVerticies = dto.find(o => o && !o.defined(vertexDefinedObj)) === undefined;
     if (allVerticies) {
       if (dto.length === 2) rDto.object = () => new Line3D(dto);
       else rDto.object = () => new Polygon3D(dto);

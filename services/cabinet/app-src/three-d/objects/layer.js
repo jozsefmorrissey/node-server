@@ -174,7 +174,7 @@ class Layer {
     this.lines = (tolerance) => {
       let t = tolerance || tol;
       let lines = onlyDefinedOnce(t);
-      removeLinesThatDoNotShareAVertex(lines, t);
+      // removeLinesThatDoNotShareAVertex(lines, t);
       Line3D.combine(lines);
       lines = Line3D.sliceAll(lines);
       removeLinesThatDoNotShareAVertex(lines, t);
