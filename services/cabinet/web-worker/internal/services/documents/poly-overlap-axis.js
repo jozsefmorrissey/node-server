@@ -170,9 +170,6 @@ module.exports = (targetLayers, overlapingLayers, jointInfo) => {
 
   const normals = jointInfo.partInfo().normals();
   const zNorm = normals.z;
-  if (jointInfo.joint().descriptor === 'Butt(FrameOtherPanelJoint)') {
-    console.log('her')
-  }
   const layerDot = l => Math.abs(l.normal().dot(zNorm));
   const zPolyEqFilter = p => p.normal().positiveUnit()
                         .equals(zNorm.positiveUnit());
@@ -194,9 +191,6 @@ module.exports = (targetLayers, overlapingLayers, jointInfo) => {
   let zFilter = () => false;
   if (zPolys.length) zFilter = l => zPolys.indexOf(l) !== -1;
 
-  if (jointInfo.joint().descriptor === 'Butt(FrameOtherPanelJoint)') {
-    console.log('her')
-  }
   if (zPolys.length === 0) return existsInBoth.map(p =>
     limitAxis(buildAxis([p], overlapingLayers, [], zFilter, normals), existsInBoth));
   else return [buildAxis(existsInBoth, overlapingLayers, zPolys, zFilter, normals)];

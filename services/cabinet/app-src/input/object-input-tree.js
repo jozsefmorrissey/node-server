@@ -18,8 +18,6 @@ Object.keys(Objects).forEach(k => {
   OBJS[typeKey][k] = Objects[k];
 });
 
-console.log(OBJS);
-
 function typeTree(types, tree, node) {
   types.sort((k1, k2) => k1.count('-') - k2.count('-'))
   for(let index = 0; index < types.length; index++) {

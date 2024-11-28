@@ -79,7 +79,7 @@ const findFunc = (idMap) => (selector, attribute) => {
 
 function runTasks(task, env) {
   let payload = task.payload;
-  if (payload.environment) {
+  if (payload && payload.environment) {
     payload.environment.byId = RDTO(payload.environment.byId);
     env = payload.environment;
     if (env.proccessData === undefined) env.proccessData = {};

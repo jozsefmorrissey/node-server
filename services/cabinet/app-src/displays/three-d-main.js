@@ -169,7 +169,7 @@ Canvas.on.switch((id) => {
 function update(part, force) {
   if (part) part = Global.target();
   if (part) {
-    new Jobs.CSG.Assembly.Join(part).then(Canvas.render, console.error).queue();
+    new Jobs.CSG.Assembly(part).then(Canvas.render, console.error).queue();
     updateController();
   }
 }

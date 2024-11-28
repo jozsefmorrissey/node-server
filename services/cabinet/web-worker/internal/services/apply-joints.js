@@ -62,9 +62,6 @@ function removeJointMaterial(map, assem, env, model, intersections) {
       let intersection = model.intersect(mm);
       if (!(mm instanceof CSG)) mm = CSG.fromPolygons(mm.polygons, true);
       if (midObj.joint && midObj.joint.full.female) {
-        if (assem.locationCode === 'c_T_fr') {
-          console.log('her')
-        }
         intersection = fullLengthModel(intersection || model.intersect(mm));
       }
       if (!env.modelInfo.intersection[id]) env.modelInfo.intersection[id] = {};
@@ -179,14 +176,8 @@ function buildExtendedModel(assem, joints, env) {
   try {
     const cutters = {cookie: [], joint: []};
     const modelCenter = new Vertex3D(env.getModel(id, 'model').center());
-    if (assem.locationCode === 'c_T:fr') {
-      console.log('her')
-    }
     for (let ji = 0; ji < joints.length; ji++) {
       try {
-        if (ji === 6 && assem.locationCode === 'c_S_S_S_S_dv:f') {
-          console.log('her')
-        }
         const cutObj = applyMaleJointApplicator(joints[ji], frontBackSet, assem, env, modelCenter);
         if (cutObj) {
           cutters.cookie.concatInPlace(cutObj.cookie);

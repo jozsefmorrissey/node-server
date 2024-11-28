@@ -35,43 +35,40 @@ const onFail = (ts) => (error) => {
   ts.fail(error);
 }
 
-Test.add('Jobs.CSG.Assembly.Join base-basic', async (ts, allAssemblies) => {
-  const parts = allAssemblies.filter(a => a.part() && a.included());
-  new Jobs.CSG.Assembly.Join(parts).then(onComplete(ts, parts), onFail(ts)).queue();
-}, async () => get(true));
+throw new Error('Job Structure has changed suggnificantly all test are likely invalid');
 
-Test.add('Jobs.CSG.Assembly.Join base:layout(test)', async (ts, allAssemblies) => {
+Test.add('Jobs.CSG.Assembly base:layout(test)', async (ts, allAssemblies) => {
   const parts = allAssemblies.filter(a => a.part() && a.included());
-  new Jobs.CSG.Assembly.Join(parts).then(onComplete(ts, parts), onFail(ts)).queue();
+  new Jobs.CSG.Assembly(parts).then(onComplete(ts, parts), onFail(ts)).queue();
 }, async () => get());
 
-Test.add('Jobs.CSG.Assembly.Simple dcb', async (ts, cabinet) => {
-  new Jobs.CSG.Assembly.Simple(cabinet)
+Test.add('Jobs.CSG.Assembly dcb', async (ts, cabinet) => {
+  new Jobs.CSG.Assembly(cabinet)
         .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
 }, async () => get("", 'diagonal-corner-base'));
 
-Test.add('Jobs.CSG.Assembly.Simple base:layout(test)', async (ts, allAssemblies) => {
+Test.add('Jobs.CSG.Assembly base:layout(test)', async (ts, allAssemblies) => {
   const cabinet = allAssemblies[0].getRoot();
-  new Jobs.CSG.Assembly.Simple(cabinet)
+  new Jobs.CSG.Assembly(cabinet)
         .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
 }, async () => get());
 
-Test.add('Jobs.CSG.Assembly.Model base:layout(c)', async (ts, allAssemblies) => {
+Test.add('Jobs.CSG.Assembly base:layout(c)', async (ts, allAssemblies) => {
   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
   const parts = [cabinet];
-  new Jobs.CSG.Assembly.Model(parts, {partsOnly: false})
+  new Jobs.CSG.Assembly(parts, {partsOnly: false})
   .then(onComplete(ts, parts), onFail(ts)).queue();
 }, async () => get());
 
-Test.add('Jobs.CSG.Assembly.Model diagonal-corner-base:test-cabinet', async (ts, allAssemblies) => {
+Test.add('Jobs.CSG.Assembly diagonal-corner-base:test-cabinet', async (ts, allAssemblies) => {
   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
   const parts = cabinet.getParts();
-  new Jobs.CSG.Assembly.Model(parts).then(onComplete(ts, parts), onFail).queue();
+  new Jobs.CSG.Assembly(parts).then(onComplete(ts, parts), onFail).queue();
 }, async () => get(true, 'diagonal-corner-base'));
 
-Test.add('Jobs.CSG.Assembly.Simple diagonal-corner-base:layout(3dsb3d)', async (ts, allAssemblies) => {
+Test.add('Jobs.CSG.Assembly diagonal-corner-base:layout(3dsb3d)', async (ts, allAssemblies) => {
   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
-  new Jobs.CSG.Assembly.Complex(cabinet)
+  new Jobs.CSG.Assembly(cabinet)
         .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
 }, async () => get("3dsb3d", 'diagonal-corner-base'));
 
@@ -82,9 +79,9 @@ const on2DComplete = (objects, ts) => (result, job) => {
   ts.success();
 }
 
-Test.add('Jobs.CSG.Assembly.To2D', async (ts, cabinet) => {
+Test.add('Jobs.CSG.Assembly', async (ts, cabinet) => {
   const gap = 25;
 
-  new Jobs.CSG.Assembly.To2D(cabinet, {gap})
+  new Jobs.CSG.Assembly(cabinet, {gap})
           .then(on2DComplete(cabinet, ts), onFail(ts)).queue();
 }, async () => get('', 'diagonal-corner-base'));

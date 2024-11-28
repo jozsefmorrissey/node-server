@@ -66,14 +66,11 @@ class Assembly3D extends Object3D {
       return poly;
     }
 
-    function applyTopOutline(twoDInfo) {
-      if (!twoDInfo) return;
-      twoDInfo.parimeter.top.generalizeShape();
+    function applyTopOutline(modelInfo) {
       const initialize = topSnap === undefined;
-      const poly = configurePoly(twoDInfo.parimeter.top, twoDInfo);
-      console.log(poly.toDrawString());
+      const poly = modelInfo.unioned.silloute();
       if (initialize) {
-        topSnap = new SnapPolygon(instance.bridge.top(), twoDInfo.parimeter.top.copy(), 10);
+        topSnap = new SnapPolygon(instance.bridge.top(), poly.copy(), 10);
         instance.snap2d.top = () => topSnap;
       } else {
         topSnap.polyCopy(poly);
@@ -86,7 +83,7 @@ class Assembly3D extends Object3D {
 
     function updateOutline(force) {
       if (force || assembly.hash()) {
-        new Jobs.CSG.Assemblies.To2D.Outline(assembly).then(applyTopOutline, error).queue();
+        new Jobs.CSG.Assembly(assembly).then(applyTopOutline, error).queue();
       }
     }
     function outlineNeedsUpdated (force) {

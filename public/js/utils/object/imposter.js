@@ -1,7 +1,12 @@
 
 class Imposter {
   constructor(object, cuckooEggs, ...args) {
-    const imposter = new (object.constructor)(...args);
+    let imposter;
+    try {
+      imposter = new (object.constructor)(...args);
+    } catch(e) {
+      imposter = this;
+    }
     cuckooEggs ||= {};
     const cuckooKeys = Object.getOwnPropertyNames(cuckooEggs);
 

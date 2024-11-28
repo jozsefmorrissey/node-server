@@ -15,8 +15,9 @@ const union = (assemIds, env, filter) => {
   for (let index = 0; index < assemIds.length; index++) {
     const part = env.byId[assemIds[index]];
     if (filter(part)) {
-      csg.setColors(Color());
-      csg = csg.union(env.getModel(part, 'joined'));
+      const model = env.getModel(part, 'joined');
+      model.setColors(String.color.next());
+      csg = csg.union(model);
     }
   }
   return csg;

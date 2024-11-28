@@ -125,7 +125,7 @@ apply.Dado = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   const femaleThickness = femalePolyObj.z[0].distance(femalePolyObj.z[1]);
   let cookie, jointCutters;
   assem.jointSettings.directions.center = center;
-  console.warn.logarithmic('Need to remove true if objects are configured correctly should work... also add to other joint functions');
+  // console.warn.logarithmic('Need to remove true if objects are configured correctly should work... also add to other joint functions');
   if (true || valExpDir)
     extendFBSetToPoly(femalePolyObj.z[furthIndex], frontBackSet, assem.jointSettings);
   if (femaleThickness - joint.eval.maleOffset - 2.54/4 < -.01) {

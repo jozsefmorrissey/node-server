@@ -263,11 +263,6 @@ class CutInfo {
     }
 
     this.toString = this.toDrawString;
-
-    if (axis.z.isLine() && !axis.z.vector().parrelle.toAxis()) {
-      console.log('her');
-      this.primarySide();
-    }
   }
 }
 
@@ -378,9 +373,6 @@ CutInfo.get = (maleId, jointInfo, env) => {
 
   const intersectionLayers = Layer.fromCSG(intersectModel);
   const modelLayers = modelInfo.modelLayers;
-  if (jointInfo.joint().descriptor === 'Dado(FramePanelJoint)') {
-    console.log('her')
-  }
   const axis = PolyOverlapAxis(modelLayers, intersectionLayers, jointInfo);
   return axis ? axis.map(a => CutInfo.fromAxis(a, jointInfo, maleId)) : [];
 }

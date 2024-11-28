@@ -16,8 +16,24 @@ function updateStlList() {
   display();
 }
 
+let cutLetherman = (stls) => {
+  const csg = CSG.fromSTL(stls[0])
+  const cut = new CSG.cube({radius: [5,6,.5]});
+  csg.center({x:0,y:0,z:0});
+  cut.center({x:0,y:0,z:0});
+  csg.setColor('blue', true);
+  cut.setColor('green');
+  cut.translate({x:0,y:0,z:-.6});
+  cut.polygons.concatInPlace(csg.polygons)
+  // stls[0] = cut.toSTL(stls[0].header());
+  stls[0] = csg.subtract(cut).toSTL(stls[0].header());
+  // stls[0] = cut.intersect(csg).toSTL(stls[0].header());
+  // stls[0] = csg.intersect(cut).toSTL(stls[0].header());
+}
+
 du.on.match('change', '[name="stlFile"]', async (input) => {
   const stls = await STL.fromFiles(input.files);
+  // cutLetherman(stls);
   stls.forEach(stl => !(stl instanceof Error) && (STLs[stl.header().hash()] = stl));
   updateStlList();
   input.value = '';

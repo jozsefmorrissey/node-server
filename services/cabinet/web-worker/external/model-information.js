@@ -103,14 +103,16 @@ const sorter = (assemblies, jointMap, byId) => {
 
 const modelInfoObject = () => ({threeView: {}, model: {}, joined: {}, intersection: {}, biPolygonArray: {}, extended: {}, cut: {}});
 class ModelInformation {
-  constructor(assemblies, props) {
-    props ||= {};
+  constructor(assembly) {
     const instance = this;
-    if (!Array.isArray(assemblies))
-      throw new Error('Has not yet conformed to the assemblies being a list of all assemblies to be modeled');
-    const modelInfo = props.modelInfo || modelInfoObject();
-    let allAssemblies = assemblies[0].allAssemblies();
-    const root = assemblies[0].getRoot();
+    const modelInfo = modelInfoObject();
+    const root = assembly.getRoot();
+    const hash = root.hash();
+    this.hash = () => hash;
+    this.id = () => root.id();
+
+    let assemblies = root.modelingCollections();
+    let allAssemblies = root.allAssemblies();
     const byId = {};
     const propertyConfig = root.group().propertyConfig().values(root.resolve, true);
 
@@ -128,14 +130,14 @@ class ModelInformation {
     allAssemblies = allAssemblies.filter(amo => amo.assembly.part() && amo.assembly.included())
                                   .map(amo => amo.assembly.id());
 
-    this.needsModeled = () => props.needsModeled || allAssemblies;
-    this.needsJoined = () => props.needsJoined || nonDigitalList;
-    this.needsIntersected = () => props.needsIntersected || nonDigitalList;
-    this.needsUnioned = () => props.needsUnioned || nonDigitalList;
-    this.needs2dConverted = () => props.needs2dConverted || assemblies;
+    this.needsModeled = () => allAssemblies;
+    this.needsJoined = () => nonDigitalList;
+    this.needsIntersected = () => nonDigitalList;
+    this.needsUnioned = () => nonDigitalList;
+    this.needs2dConverted = () => assemblies;
 
     const environmentObject = () => {
-      const environment = DTO(props) || {};
+      const environment = {};
       environment.byId = byId;
       environment.modelInfo = modelInfoObject();
       environment.propertyConfig = propertyConfig;
@@ -174,11 +176,12 @@ class ModelInformation {
     addTrackingFunctions('threeView', 'model', 'joined', 'intersection', 'biPolygonArray')
     this.allInfo = () => modelInfo;
 
-    this.assemblies = () => props.assemblies || assemblies;
+    this.assemblies = () => assemblies;
     this.assembly = (id) => assemMap[id];
 
     let unionObj;
     this.unioned = (...keys) => {
+      if (keys.length === 0) keys = ['all'];
       let csg = new CSG();
       keys.forEach(k => unionObj[k] instanceof CSG && (csg = csg.union(unionObj[k])));
       return csg;
@@ -216,12 +219,13 @@ class ModelInformation {
   }
 }
 
-function object(targetOs, props) {
-  if (!Array.isArray(targetOs)) targetOs = [targetOs];
-  const root = targetOs[0].getRoot();
-  props ||= {};
-  const itterator = new ModelInformation(targetOs, props);
-  return itterator;
+const infos = {};
+
+function object(assembly) {
+  const _HASH = assembly.hash()
+  if (infos[assembly.id()] && infos[assembly.id()]._HASH === _HASH)
+    return infos[assembly.id()].modelInfo;
+  return (infos[assembly.id()] = {_HASH, modelInfo: new ModelInformation(assembly)}).modelInfo;
 }
 
 

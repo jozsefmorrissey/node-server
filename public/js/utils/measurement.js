@@ -214,9 +214,6 @@ class Measurement {
       decimal = standardize(value, notMetric);
     } else if ((typeof value) === 'string') {
       try {
-        if (value.match(/^.*?(st|sh)\s*$/)) {
-          console.log('strong/shy');
-        }
         const ambiguousDecimal = getDecimalEquivalant(value);
         decimal = standardize(ambiguousDecimal, notMetric);
       } catch (e) {

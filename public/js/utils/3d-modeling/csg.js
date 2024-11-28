@@ -85,9 +85,9 @@ CSG = function() {
     return false;
   }
 
-  this.toSTL = (csg, header) => {
+  this.toSTL = (header) => {
     const stl = new STL(header);
-    const scaled = csg.clone();
+    const scaled = this.clone();
     scaled.scale(10);
     scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos),
                             p.plane.normal, String.color.rgb.percent(p.rgb())));
@@ -1497,8 +1497,8 @@ CSG.Node.prototype = {
     for (var i = 0; i < polygons.length; i++) {
       this.plane.splitPolygon(polygons[i], front, back, front, back);
     }
-    if (this.front) front = this.front.clipPolygons(front);
-    if (this.back) back = this.back.clipPolygons(back);
+    if (this.front && front.length) front = this.front.clipPolygons(front);
+    if (this.back && back.length) back = this.back.clipPolygons(back);
     else back = [];
     return front.concat(back);
   },
@@ -1526,9 +1526,9 @@ CSG.Node.prototype = {
   build: function(polygons, callCount) {
     if (!polygons.length) return;
     callCount ||= 0;
-    if (callCount > 500) {
-      throw new Error('CSG.polygons are misconfigured');
-    }
+    // if (callCount > 500) {
+    //   throw new Error('CSG.polygons are misconfigured');
+    // }
     if (!this.plane) this.plane = polygons[0].plane.clone();
     var front = [], back = [];
     for (var i = 0; i < polygons.length; i++) {

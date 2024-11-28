@@ -35,7 +35,7 @@ const applyExtraObjAndDisplay = (info, csg) => {
     }
   }
   csg.center({x:0,y:0,z:0})
-  // du.download.binary('bathroom.stl', csg.toSTL(csg).binary.file())
+  // du.download.binary('bathroom.stl', csg.toSTL().binary.file())
   ThreeDModel.display(csg);
 }
 
@@ -44,7 +44,7 @@ function positionAndColorRoomCSGs(modelIdMap) {
   const csgs = [];
   for (let index = 0; index < ids.length; index++) {
     const id = ids[index];
-    const csg = modelIdMap[id];
+    const csg = modelIdMap[id].unioned();
     const cabinet = Lookup.get(id);
     csg.setColors(() => cabinet.color());
     csgs.push(Utils.positionAssemblyCsg(csg, cabinet));
@@ -88,8 +88,8 @@ function layoutCsg(room) {
 }
 
 function renderRoom() {
-  console.log(JSON.stringify(Global.order().toJson(), null, 2))
-  new Jobs.CSG.Room.Complex(Global.room()).then((modelIdMap) => {
+  // console.log(JSON.stringify(Global.order().toJson(), null, 2))
+  new Jobs.CSG.Room.Complex(Global.room()).then((modelIdMap, job) => {
     let csg = positionAndColorRoomCSGs(modelIdMap);
     const room = Global.room();
     csg.polygons.concatInPlace(layoutCsg(room).polygons);
@@ -103,11 +103,13 @@ function  renderCabinet() {
   const target = Global.target();
   if (target) {
     if (target.constructor.name === 'Cabinet') {
-      new Jobs.CSG.Assembly.Complex(target).then((csg, job) => {
+      new Jobs.CSG.Assembly(target).then((modelInfo, job) => {
+        const csg = modelInfo.unioned();
         applyExtraObjAndDisplay(target, csg);
       }).queue();
     } else if (target.constructor.name === 'Assembly') {
-      new Jobs.CSG.Assembly.Complex(target).then((csg, job) => {
+      new Jobs.CSG.Assembly(target).then((modelInfo, job) => {
+        const csg = modelInfo.unioned();
         applyExtraObjAndDisplay(target, csg);
       }).queue();
     } else {
@@ -145,7 +147,8 @@ function  renderParts() {
     resetAll();
     parts = cabinet.modelingCollections();
   }
-  new Jobs.CSG.Assembly.Join(parts, Canvas.explosionFactor()).then((csg, job) => {
+  new Jobs.CSG.Assembly(cabinet, Canvas.explosionFactor()).then((modelInfo, job) => {
+    throw new Error('locate part or parts...');
     applyExtraObjAndDisplay(parts, csg);
   }).queue();
 }

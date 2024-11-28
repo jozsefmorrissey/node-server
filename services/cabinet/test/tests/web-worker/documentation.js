@@ -61,13 +61,6 @@ const onSingleComplete = (part, ts) => (map, job) => {
   console.log(map, job);
 }
 
-// Test.add('Jobs.Documentation.Parts', async (ts) => {
-//   const cabinet = get(true, null, true);
-//   const parts = [cabinet.getAssembly('L:full')];
-//   new Jobs.Documentation.Parts(parts)
-//         .then(onSingleComplete(parts[0], ts), onFail(ts)).queue();
-// });
-
 const onTestComplete = (parts, ts) => (result, job) => {
   console.log(ts.time());
 }

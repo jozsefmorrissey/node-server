@@ -33,6 +33,17 @@ class Task {
   }
 }
 
+class PendingTask extends Task {
+  constructor(task) {
+    super();
+    this.status = () => {
+      const taskStatus = task.STATUS;
+      if (!taskStatus || (taskStatus === STATUS.EXICUTE)) return STATUS.PENDING;
+      return taskStatus;
+    }
+  }
+}
+
 class InformationAlreadyAvailible extends Task {
   constructor(result) {
     super();
@@ -190,6 +201,7 @@ OrTask.ShortCircut = OrShortCircutTask;
 AndTask.ShortCircut = AndShortCircutTask;
 module.exports = {
   Task,
+  Pending: PendingTask,
   InfoAvailible: InformationAlreadyAvailible,
   Parrelle: AndTask,
   Sequential: AndShortCircutTask,

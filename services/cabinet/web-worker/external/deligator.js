@@ -84,9 +84,9 @@ class WebWorkerDeligator {
         if (task.status() === TASK_STATUS.EXICUTE) {
           const msg = DTO(task);
           worker.postMessage(msg);
+          registerTask(worker)(task);
+          task.initiated = new Date().getTime();
         }
-        registerTask(worker)(task);
-        task.initiated = new Date().getTime();
       }
     }
 

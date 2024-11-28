@@ -95,7 +95,6 @@ class DisplayManager {
     if (listId) {
       du.id(listId).innerHTML = DisplayManager.template.render({switchCntId, switchId, list: this.list()});
     }
-    this.on.switch(console.log);
   }
 }
 

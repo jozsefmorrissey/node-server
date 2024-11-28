@@ -67,12 +67,14 @@ class ThreeView extends Lookup {
     let side = 'right';
     let threeViewObj;
 
-    const setThreeView = (target) => (infoObj) => {
+    const setThreeView = (target) => (infoObj, job) => {
+      console.log(job.modelInfo());
       infoObj.target = target;
       threeViewObj = infoObj;
     };
     let lastHash;
     function getThreeView() {
+      return  console.warn.logarithmic('Need to reroute Jobs...')
       if (targetPart) {
         const hash = targetPart.hash();
         if (lastHash !== hash) {
@@ -85,7 +87,7 @@ class ThreeView extends Lookup {
         const hash = cabinet.hash();
         if (lastHash !== hash) {
           lastHash = hash;
-          new Jobs.CSG.Assembly.To2D(cabinet).then(setThreeView(cabinet)).queue();
+          new Jobs.CSG.Assembly(cabinet).then(setThreeView(cabinet)).queue();
         }
       }
     }
