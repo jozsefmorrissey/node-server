@@ -613,6 +613,31 @@ models['Uberest Drawer Jigs'] = (guideHeight, guideReveal, bottomGap,
   return {cabinetGuideJig, drawerGuideJig};
 }
 
+models['chrismas tree leg'] = (guideHeight, guideReveal, bottomGap) => {
+  const body = new CSG.cube({demensions: [9*2.54, 7.5, 1.4]});
+  const bottomCutter = new CSG.cube({demensions: [8.25*2.54, .75, 1.4]})
+  const slotCutter = new CSG.cube({demensions: [.8, 7.5, .725]});
+  const endPiece = new CSG.cube({demensions: [.32, 7.5 - .75 - .28, 1.08]});
+  const angleCutter = body.clone();
+  angleCutter.rotate({z:15.5});
+  angleCutter.translate({x:-2,y:4.3,z:0});
+
+  body.center({x:0,y:0,z:0});
+  bottomCutter.center({x:3*2.54/8, y:-3.75 + 3/8, z:0});
+  body.setColor('blue');
+  bottomCutter.setColor('green');
+  angleCutter.setColor('blue');
+  slotCutter.setColor('blue');
+  endPiece.setColor('red')
+
+  let model = body.subtract(angleCutter);
+  slotCutter.center({x:9*2.54/2 - .4, y: 1.1, z: -.55/2 - .725/2});
+  endPiece.center({x:9*2.54/2 - .16, y: .14 + .375, z: 0});
+  model=model.subtract(slotCutter);
+  slotCutter.translate({x:0,y:0,z:.55+.725});
+  return model.subtract(slotCutter).union(endPiece).subtract(bottomCutter);
+}
+
 const cnt = du.create.element('div');
 const controls = du.create.element('div', {style: 'float: left'});
 const display = du.create.element('div', {id: 'stl-three-d-model-cnt'});
@@ -656,20 +681,25 @@ const updateModel = () => {
   viewer.gl.ondraw();
 }
 
-const updateArgs = () => {
-  const name = select.value;
-  argCnt.innerHTML = models[name].Arguments().map(a => {
-    const type = a.match(/^is[A-Z]/) ? 'checkbox' : 'number';
-    return `<label>${a}</label><br/><input type='${type}'\><br/>`;
-  }).join('\n');
+
+const updateArgs = (arg) => {
+  if (arg !== undefined){
+    const name = select.value;
+    argCnt.innerHTML = models[name].Arguments().map(a => {
+      const type = a.match(/^is[A-Z]/) ? 'checkbox' : 'number';
+      return `<label>${a}</label><br/><input type='${type}'\><br/>`;
+    }).join('\n');
+  }
   updateModel();
 }
+
+
 
 const download = () => {
   addLinks(getSelected(), select.value);
 }
 
-select.value = 'Uberest Drawer Jigs';
+select.value = 'chrismas tree leg';
 
 du.on.match('change', 'input', updateModel);
 

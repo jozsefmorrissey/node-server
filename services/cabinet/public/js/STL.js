@@ -343,336 +343,1707 @@ RequireJS = new RequireJS();
 
 
 
-RequireJS.addFunction('./public/js/utils/3d-modeling/viewer.js',
+RequireJS.addFunction('./public/js/utils/3d-modeling/csg.js',
 function (require, exports, module) {
+	// TODO: Use Require Class to include ToleranceMap and STL
+	const ToleranceMap = require('../tolerance-map');
+	const STL = require('./STL');
 	
-
 	
-	const du = require('../dom-utils.js');
-	const CSG = require('./csg.js');
-	const GL = require('./lightgl.js');
-	const shaders = require('./shaders.js');
+	// Constructive Solid Geometry (CSG) is a modeling technique that uses Boolean
+	// operations like union and intersection to combine 3D solids. This library
+	// implements CSG operations on meshes elegantly and concisely using BSP trees,
+	// and is meant to serve as an easily understandable implementation of the
+	// algorithm. All edge cases involving overlapping coplanar polygons in both
+	// solids are correctly handled.
+	//
+	// Example usage:
+	//
+	//     var cube = CSG.cube();
+	//     var sphere = CSG.sphere({ radius: 1.3 });
+	//     var polygons = cube.subtract(sphere).toPolygons();
+	//
+	// ## Implementation Details
+	//
+	// All CSG operations are implemented in terms of two functions, `clipTo()` and
+	// `invert()`, which remove parts of a BSP tree inside another BSP tree and swap
+	// solid and empty space, respectively. To find the union of `a` and `b`, we
+	// want to remove everything in `a` inside `b` and everything in `b` inside `a`,
+	// then combine polygons from `a` and `b` into one solid:
+	//
+	//     a.clipTo(b);
+	//     b.clipTo(a);
+	//     a.build(b.allPolygons());
+	//
+	// The only tricky part is handling overlapping coplanar polygons in both trees.
+	// The code above keeps both copies, but we need to keep them in one tree and
+	// remove them in the other tree. To remove them from `b` we can clip the
+	// inverse of `b` against `a`. The code for union now looks like this:
+	//
+	//     a.clipTo(b);
+	//     b.clipTo(a);
+	//     b.invert();
+	//     b.clipTo(a);
+	//     b.invert();
+	//     a.build(b.allPolygons());
+	//
+	// Subtraction and intersection naturally follow from set operations. If
+	// union is `A | B`, subtraction is `A - B = ~(~A | B)` and intersection is
+	// `A & B = ~(~A | ~B)` where `~` is the complement operator.
+	//
+	// ## License
+	//
+	// Copyright (c) 2011 Evan Wallace (http://madebyevan.com/), under the MIT license.
 	
-	// Convert from CSG solid to GL.Mesh object
-	CSG.prototype.toMesh = function() {
-	  var mesh = new GL.Mesh({ normals: true, colors: true });
-	  var indexer = new GL.Indexer();
-	  this.toPolygons().map(function(polygon) {
-	    var indices = polygon.vertices.map(function(vertex) {
-	      vertex.color = polygon.shared || [1, 1, 1];
-	      return indexer.add(vertex);
-	    });
-	    for (var i = 2; i < indices.length; i++) {
-	      mesh.triangles.push([indices[0], indices[i - 1], indices[i]]);
-	    }
-	  });
-	  mesh.vertices = indexer.unique.map(function(v) { return [v.pos.x, v.pos.y, v.pos.z]; });
-	  mesh.normals = indexer.unique.map(function(v) { return [v.normal.x, v.normal.y, v.normal.z]; });
-	  mesh.colors = indexer.unique.map(function(v) { return v.color; });
-	  mesh.computeWireframe();
-	  return mesh;
-	};
+	// # class CSG
 	
-	var angleX = 0;
-	var angleY = 0;
-	var angleZ = 0;
-	var viewers = [];
+	// Holds a binary space partition tree representing a 3D solid. Two solids can
+	// be combined using the `union()`, `subtract()`, and `intersect()` methods.
 	
-	// Set to true so lines don't use the depth buffer
-	Viewer.lineOverlay = false;
-	
-	// A viewer is a WebGL canvas that lets the user view a mesh. The user can
-	// tumble it around by dragging the mouse.
-	function Viewer(csg, width, height, depth) {
-	  const originalDepth = depth;
-	  viewers.push(this);
-	  this.setDepth = (d) => depth = d;
-	  let x = 0;
-	  let y = 0;
-	
-	  let lastZoom;
-	  let zoomCount = 0;
-	  const zoom = (out) => {
-	    let direction = (out === true ? 1 : -1);
-	    let zoomOffset = 2;
-	    let newTime = new Date().getTime();
-	    if (lastZoom > newTime - 50) {
-	      zoomCount++;
-	      zoomOffset *= zoomCount;
-	      zoomOffset = zoomOffset > 20 ? 20 : zoomOffset;
-	    }
-	    lastZoom = newTime;
-	    depth += zoomOffset * direction;
-	  };
-	  this.zoom = zoom;
-	  const pan = (leftRight, upDown) => {
-	    x += leftRight;
-	    y += upDown * -1;
+	CSG = function() {
+	  this.polygons = [];
+	  this.toString = (percision, includeColor) => {
+	    percision ||= .001;
+	    let strs = [];
+	    this.polygons.forEach(p => strs.push(p.toString(percision, includeColor)));
+	    strs.sort();
+	    return strs.join('\n');
 	  }
-	
-	  // Get a new WebGL canvas
-	  var gl = GL.create();
-	  this.gl = gl;
-	  this.mesh = csg.toMesh();
-	  this.canvas = () => gl.canvas;
-	
-	  // Set up the viewport
-	  gl.canvas.width = width;
-	  gl.canvas.height = height;
-	  gl.viewport(0, 0, width, height);
-	  gl.matrixMode(gl.PROJECTION);
-	  gl.loadIdentity();
-	  gl.perspective(100, width / height, 10, 1000);
-	  gl.rotate(0, 0, 1, 0);
-	  gl.translate(0, 0, -200);
-	  gl.matrixMode(gl.MODELVIEW);
-	
-	  // Set up WebGL state
-	  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-	  gl.clearColor(0.93, 0.93, 0.93, 1);
-	  gl.enable(gl.DEPTH_TEST);
-	  gl.enable(gl.CULL_FACE);
-	  gl.polygonOffset(1, 1);
-	
-	  // Black shader for wireframe
-	  this.blackShader = new GL.Shader(...shaders.WireFrame());
-	
-	  // const program = gl.createProgram();
-	  // this.realisticLightShader = new GL.Shader(...shaders.RealisticLight());
-	
-	  // Shader with diffuse and specular lighting
-	  this.changeLightingShaderDirection = (x,y,z) =>
-	      this.lightingShader = new GL.Shader(...shaders.LightDirection({x:3,y:2,z:3}));
-	
-	  // this.lightingShaders = [
-	  //   new GL.Shader(...shaders.LightDirection({x:3,y:2,z:3})),
-	  //   new GL.Shader(...shaders.LightDirection({x:1,y:0,z:0})),
-	  //   new GL.Shader(...shaders.LightDirection({x:-1,y:0,z:0})),
-	  //   new GL.Shader(...shaders.LightDirection({x:0,y:0,z:-1})),
-	  //   new GL.Shader(...shaders.LightDirection({x:0,y:0,z:1})),
-	  //   new GL.Shader(...shaders.LightDirection({x:-3,y:-2,z:-3}))
-	  // ];
-	  this.lightingShader = new GL.Shader(...shaders.IlluminateAll({x:3,y:2,z:3}));
-	
-	  // this.changeLightingShaderDirection(0, 0, 0);
-	  // this.changeLightingShaderDirection(3, 2, 3);
-	
-	  let origCenter = {x:0, y:0};
-	  let pointClicked = {x: 0, y: 0, z: 0};
-	  function setPointClicked(e) {
-	    const canvasPos = e.target.getBoundingClientRect();
-	    const clickPos = {x: e.x - canvasPos.x, y: e.y - canvasPos.y};
-	    const canvasCenter = {x: e.target.width/2, y: e.target.height/2};
-	    const canvasOffset = {x: clickPos.x - canvasCenter.x, y: clickPos.y - canvasCenter.y};
-	    const twoDLoc = {x: origCenter.x + canvasOffset.x, y: origCenter.y + canvasOffset.y};
-	    const centerOffset = GL.Matrix.relitiveDirection(twoDLoc.x, twoDLoc.y,0,gl.modelviewMatrix)
-	    pointClicked = {x: centerOffset[0], y: centerOffset[1], z: centerOffset[2]};
+	  this.toDrawString = (color, percision) => color ?
+	      this.toString(percision).replace(/(^|\n)\[/g, `$1${color}[`) :
+	      this.toString(percision, true).replace(/(^|\n)\[/g, `$1${'blue'}[`);
+	  this.vertices = (percision) => {
+	    const verts = [];
+	    this.polygons.forEach(p => p.vertices.forEach(v => verts.push(v)));
+	    return verts.unique(o => o.toString(percision || .0001));
 	  }
-	
-	  let rotationUnit;
-	  let rotationOffset = [0,0,0];
-	  let panOffset;
-	  let panUnit;
-	
-	  let rotationVector = new CSG.Vector(25, 12,11.5);
-	  let point = {x: 0, y: 12, z: 11.5};
-	  // let rotationVector = new CSG.Vector(25, 12,11.5);
-	  function rotateEvent(e) {
-	    if (!rotationUnit) {
-	      rotationUnit = {};
-	      rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
-	      rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
-	    }
-	    if (rotationUnit) {
-	      const speed = 40;
-	      if (e.deltaY) {
-	        const dir = e.deltaY < 0 ? -speed : speed;
-	        rotationOffset[0] += rotationUnit.y[0]/dir;
-	        rotationOffset[1] += rotationUnit.y[1]/dir;
-	        rotationOffset[2] += rotationUnit.y[2]/dir;
-	      }
-	      if (e.deltaX) {
-	        const dir = e.deltaX < 0 ? speed : -speed;
-	        rotationOffset[0] += rotationUnit.x[0]/dir;
-	        rotationOffset[1] += rotationUnit.x[1]/dir;
-	        rotationOffset[2] += rotationUnit.x[2]/dir;
+	  //TODO: USE TOLERANCE MAP FOR 2N RUNTIME!!!;
+	  this.sharesVertex = function (other) {
+	    const otherVerts = other.vertices();
+	    for (let pi = 0; pi < this.polygons.length; pi++) {
+	      const poly = this.polygons[pi];
+	      for (let vi = 0; vi < poly.vertices.length; vi++) {
+	        const vert = poly.vertices[vi];
+	        for (let ovi = 0; ovi < otherVerts.length; ovi++) {
+	          if (otherVerts[ovi].equals(vert)) return true;
+	        }
 	      }
 	    }
-	    // angleY += e.deltaX * 2;
-	    // angleX += e.deltaY * 2;
-	    // angleX = Math.max(-90, Math.min(90, angleX));
-	  }
-	
-	  gl.onmousemove = function(e) {
-	    if (e.dragging) {
-	      if (shiftHeld) panEvent(e);
-	      else rotateEvent(e);
-	      gl.ondraw();
-	    }
-	  };
-	
-	  function zoomEvent(e) {
-	    const st = document.documentElement.scrollTop;
-	    if (e.deltaY < 0) {
-	      zoom(true);
-	    } else {
-	      zoom();
-	    }
-	  }
-	
-	  function panEvent(e) {
-	    const st = document.documentElement.scrollTop;
-	    pan(-e.deltaX, e.deltaY)
-	  }
-	
-	  let lastScrollTop = 0;
-	  gl.canvas.onwheel = function (e) {
-	    zoomEvent(e);
-	    gl.ondraw();
-	  }
-	  disableScroll(gl.canvas);
-	
-	  let shiftHeld = false;
-	  window.onkeydown = (e) => {
-	    shiftHeld = e.key === "Shift" ? true : false;
-	  }
-	  window.onkeyup = (e) => {
-	    shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
-	  }
-	
-	  let clickHeld = false;
-	  window.onclick = (e) => {
-	    clickHeld = !clickHeld;
-	    if (!clickHeld) {
-	      rotationUnit = null;
-	      panUnit = null;
-	    }
-	  }
-	
-	  window.onmousedown = setPointClicked;
-	
-	  function viewFrom(point, rotation) {
-	      gl.makeCurrent();
-	
-	      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	      // const relDir1 = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
-	      gl.loadIdentity();
-	
-	      gl.rotate(rotation.x, 1, 0, 0);
-	      gl.rotate(rotation.y, 0, 1, 0);
-	      gl.rotate(rotation.z, 0, 0, 1);
-	
-	      gl.translate(0, 0, -20);
-	      // const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
-	      // gl.translate(-relDir[0], -relDir[1], -relDir[2]);
-	
-	      if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
-	      // that.lightingShaders.forEach(s => s.draw(that.mesh, gl.TRIANGLES));
-	      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
-	      if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
-	
-	      if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
-	      gl.enable(gl.BLEND);
-	      that.blackShader.draw(that.mesh, gl.LINES);
-	      gl.disable(gl.BLEND);
-	      if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
-	  }
-	  this.viewFrom = viewFrom;
-	
-	  function applyZoom() {
-	    // const depthArr = GL.Matrix.relitiveDirection(0,0,depth,gl.modelviewMatrix);
-	    const transArr = GL.Matrix.relitiveDirection(x,-y,depth,gl.modelviewMatrix);
-	    gl.translate(-transArr[0], -transArr[1], transArr[2])
-	  }
-	
-	  var that = this;
-	  gl.ondraw = function() {
-	    gl.makeCurrent();
-	
-	    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	    // gl.loadIdentity();
-	    applyZoom();
-	    gl.rotateAroundPoint(pointClicked, rotationOffset);
-	
-	    // gl.rotate(angleX, rotationVector.x, rotationVector.y, rotationVector.z);
-	    // gl.rotate(angleY, rotationVector.x, rotationVector.y, rotationVector.z);
-	    // gl.rotate(rotationOffset[2], 0, 0, -1);
-	    x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
-	
-	    if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
-	    // that.lightingShaders.forEach(s => s.draw(that.mesh, gl.TRIANGLES));
-	    that.lightingShader.draw(that.mesh, gl.TRIANGLES);
-	    if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
-	
-	    if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
-	    gl.enable(gl.BLEND);
-	    that.blackShader.draw(that.mesh, gl.LINES);
-	    gl.disable(gl.BLEND);
-	    if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
-	  };
-	
-	  gl.ondraw();
-	
-	  // gl.canvas.width = '100vw';
-	  // gl.canvas.height = '100vh';
-	}
-	
-	var nextID = 0;
-	function addViewer(viewer, id) {
-	  du.find(id).appendChild(viewer.gl.canvas);
-	}
-	
-	
-	
-	
-	// left: 37, up: 38, right: 39, down: 40,
-	// spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
-	var keys = {37: 1, 38: 1, 39: 1, 40: 1};
-	
-	function preventDefault(e) {
-	  e.preventDefault();
-	}
-	
-	function preventDefaultForScrollKeys(e) {
-	  if (keys[e.keyCode]) {
-	    preventDefault(e);
 	    return false;
 	  }
+	
+	  this.toSTL = (header) => {
+	    const stl = new STL(header);
+	    const scaled = this.clone();
+	    scaled.scale(10);
+	    scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos),
+	                            p.plane.normal, String.color.rgb.percent(p.rgb())));
+	    return stl;
+	  }
+	};
+	
+	CSG.BIG = 160934.4;//One Mile in cm
+	
+	// Construct a CSG solid from a list of `CSG.Polygon` instances.
+	CSG.fromPolygons = function(polygons, deepCopy) {
+	  var csg = new CSG();
+	
+	  if (deepCopy) {
+	    const newPolys = [];
+	    for (let pi = 0; pi < polygons.length; pi++) {
+	      const polygon = polygons[pi];
+	      const vertices =  polygon.vertices;
+	      const newVerts = [];
+	      const shared = polygon.shared ? Array.from(polygon.shared) : undefined;
+	      for (let vi = 0; vi < vertices.length; vi++) {
+	        const vert = vertices[vi];
+	        const norm = vert.normal;
+	        const pos = vert.pos;
+	        const newNorm = new CSG.Vector(norm.x, norm.y, norm.z);
+	        const newPos = new CSG.Vector(pos.x, pos.y, pos.z);
+	        newVerts.push(new CSG.Vertex(newPos, newNorm));
+	      }
+	      newPolys.push(new CSG.Polygon(newVerts, shared));
+	    }
+	    polygons = newPolys;
+	  }
+	
+	  csg.polygons = polygons;
+	  return csg;
+	};
+	
+	const oneTenth = (v) => ({x: v.x / 10, y: v.y /= 10, z: v.z /= 10});
+	CSG.fromSTL = (stl) => {
+	  const json = stl.toJson();
+	  const triangles = json.triangles;
+	  const polys = triangles.map(t => {
+	    const normal = new CSG.Vector(t.normal);
+	    if (normal.length() < .999) normal = CSG.normal(t.vertices[0], t.vertices[1], t.vertices[2]);
+	    const v1 = new CSG.Vertex(oneTenth(t.vertices[0]), normal);
+	    const v2 = new CSG.Vertex(oneTenth(t.vertices[1]), normal);
+	    const v3 = new CSG.Vertex(oneTenth(t.vertices[2]), normal);
+	    return new CSG.Polygon([v1,v2,v3], t.color);
+	  });
+	  const csg = CSG.fromPolygons(polys);
+	  return csg;
 	}
 	
-	// modern Chrome requires { passive: false } when adding event
-	var supportsPassive = false;
-	try {
-	  window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
-	    get: function () { supportsPassive = true; }
+	CSG.normal = (verts) => {
+	  if (verts.length < 3) throw new Error('Normal calculations require atleast 3 vertices');
+	  v0 = new CSG.Vector(verts[0]);
+	  v1 = new CSG.Vector(verts[1]);
+	  v2 = new CSG.Vector(verts[2]);
+	  return v1.minus(v0).cross(v1.minus(v2)).unit();
+	}
+	
+	CSG.fromPolygon = (poly, offset) => {
+	  const front = poly.clone();
+	  const back = poly.clone();
+	  const offsetVect = poly.vertices[0].normal.times(offset);
+	  back.translate(offsetVect);
+	  const center = new CSG.Vector(front.center().pos).plus(new CSG.Vector(back.center().pos)).dividedBy(2);
+	  const len = poly.vertices.length;
+	  const fverts = front.vertices.map(v => new CSG.Vector(v.pos));
+	  const bverts = back.vertices.map(v => new CSG.Vector(v.pos));
+	  const sides = [];
+	  for (let index = 0; index < len; index++) {
+	    const vi1 = index%len;
+	    const vi2 = (index + 1)%len;
+	    const pts = [fverts[vi1], fverts[vi2], bverts[vi2], bverts[vi1]];
+	    let norm = pts[1].minus(pts[0]).cross(pts[1].minus(pts[2])).unit();
+	    const vertices = pts.map(p => new CSG.Vertex(p, norm));
+	    const poly = new CSG.Polygon(vertices);
+	    poly.alignNormal(center);
+	    sides.push(poly);
+	  }
+	  if (offset < 0) {
+	    back.vertices.forEach(v => v.normal = v.normal.times(-1));
+	    back.vertices.reverse();
+	    back.plane.normal = back.plane.normal.times(-1);
+	  } else {
+	    front.vertices.forEach(v => v.normal = v.normal.times(-1));
+	    front.vertices.reverse();
+	    front.plane.normal = front.plane.normal.times(-1);
+	  }
+	  front.alignNormal(center);
+	  back.alignNormal(center);
+	  console.log([front, back].concat(sides).map((p, i) => `// ${i} ${p.plane.normal.unit()}\n${p.toString()}`).join('\n'))
+	  const csg = CSG.fromPolygons([front, back].concat(sides));
+	  return csg;
+	}
+	
+	function sliceConfig(x, y, width, dems, center) {
+	  if (!Array.isArray(dems)) dems = [dems.x, dems.y, dems.z];
+	  const notIncluded = [x,y].indexOf('z') === -1 ? 2 : ([x,y].indexOf('y')) === -1 ? 1 : 0;
+	  const length = dems[notIncluded];
+	  const demensions = dems.map(v => v);
+	  demensions[notIncluded] = width;
+	  const startOffset = [0, 0, 0];
+	  startOffset[notIncluded] = (length / -2) + (width / 2);
+	  center = center.translate(startOffset);
+	  center = [center.pos.x, center.pos.y, center.pos.z];
+	  let step = [0, 0, 0];
+	  step[notIncluded] = width;
+	  step = new CSG.Vector(step);
+	  const steps = Math.ceil(length/width);
+	  return {demensions, center, step, steps, width, index: 0};
+	}
+	
+	CSG.fromString = function (string) {
+	  const numRegStr = '((-|)[0-9]*\\.[0-9]{1,}|[0-9]{1,})'
+	  const vertRegStr = `\\(${numRegStr},${numRegStr},${numRegStr}\\)`;
+	  const polyRegStr = `([a-zA-z0-9, ]*)\\[(${vertRegStr}(,|)){3,}\\]`;
+	  const polyRegG = new RegExp(polyRegStr, 'g');
+	  const polyReg = new RegExp(polyRegStr);
+	  const vertRegG = new RegExp(vertRegStr, 'g');
+	  const vertReg = new RegExp(vertRegStr);
+	  const numRegG = new RegExp(numRegStr, 'g');
+	  const numReg = new RegExp(numRegStr);
+	
+	  const pf = Number.parseFloat;
+	  const polyStrs = string.match(polyRegG);
+	  if (polyStrs === null) return null;
+	  const polys = [];
+	  for (let i = 0; i < polyStrs.length; i++) {
+	    const vertStrs = polyStrs[i].match(vertRegG);
+	    let color = polyStrs[i].match(polyReg)[1];
+	    let colorMatch = color.match(numRegG);
+	    if (colorMatch && colorMatch.length === 3) color = colorMatch.map(s => pf(s));
+	    const verts = [];
+	    for (let j = 0; vertStrs && j < vertStrs.length; j++) {
+	      const match = vertStrs[j].match(vertReg);
+	      const vertex = {x: pf(match[1]), y: pf(match[3]), z: pf(match[5])};
+	      verts.push(vertex);
+	    }
+	    const a = new CSG.Vector(verts[0]);
+	    const b = new CSG.Vector(verts[1]);
+	    const c = new CSG.Vector(verts[2]);
+	    const norm = a.minus(b).cross(b.minus(c));
+	    const vertices = verts.map(v => new CSG.Vertex(v, norm));
+	    const poly = new CSG.Polygon(vertices);
+	    if (color) poly.setColor(color);
+	    polys.push(poly);
+	  }
+	
+	  return CSG.fromPolygons(polys);
+	}
+	
+	const vertexPercision = (percision, x, y, z) => ({
+	  x: percision ? Math.roundTo(x, percision) : x,
+	  y: percision ? Math.roundTo(y, percision) : y,
+	  z: percision ? Math.roundTo(z, percision) : z
+	});
+	
+	CSG.toString = function (percision) {
+	  const list = [];
+	  this.polygons.forEach((polygon) => {
+	    const obj = {vertices: []};
+	    polygon.vertices.forEach((vertex) => {
+	      obj.vertices.push(vertexPercision(percision, vertex.pos.x, vertex.pos.y, vertex.pos.z));
+	    });
+	    list.push(obj);
+	  });
+	  return JSON.stringify(list, null, 2);
+	}
+	
+	CSG.prototype = {
+	  clone: function() {
+	    var csg = new CSG();
+	    //csg.normals = this.normals;
+	    csg.polygons = this.polygons.map(function(p) { return p.clone(); });
+	    return csg;
+	  },
+	
+	  scale: function(xOall, y, z, relitive) {
+	    const center = this.center();
+	    if (y === undefined && z === undefined && relitive === undefined) {
+	      this.polygons.map(function(p) { return p.scale(center, xOall); });
+	    } else {
+	      const dems = this.demensions();
+	      const x = relitive ? (dems.x + xOall)/dems.x : (xOall || 1);
+	      y = relitive ? (dems.y + y)/dems.y : (y || 1);
+	      z = relitive ? (dems.z + z)/dems.z : (z || 1);
+	      this.polygons.forEach(p => p.vertices.forEach(v => {
+	        v.scale(center, x, y, z);
+	      }));
+	    }
+	    return this;
+	  },
+	
+	  explode: function(distance) {
+	    const center = this.center();
+	    this.polygons.forEach(p =>
+	      p.translate(p.plane.normal.times(distance))
+	    );
+	  },
+	
+	  setColors: function(funcOcolor) {
+	    if (funcOcolor instanceof Function) {
+	      this.polygons.forEach(p => p.setColor(funcOcolor(p)));
+	    } else {
+	      this.polygons.forEach(p => p.setColor(funcOcolor));
+	    }
+	  },
+	
+	  setColor: function(color, force) {
+	    this.toPolygons().map(function(polygon) {
+	      if (polygon.shared === undefined || force) {
+	        polygon.setColor(color);
+	      }
+	    });
+	  },
+	
+	  toPolygons: function() {
+	    return this.polygons;
+	  },
+	
+	  // Return a new CSG solid representing space in either this solid or in the
+	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
+	  //
+	  //     A.union(B)
+	  //
+	  //     +-------+            +-------+
+	  //     |       |            |       |
+	  //     |   A   |            |       |
+	  //     |    +--+----+   =   |       +----+
+	  //     +----+--+    |       +----+       |
+	  //          |   B   |            |       |
+	  //          |       |            |       |
+	  //          +-------+            +-------+
+	  //
+	  union: function(csg) {
+	    if (!csg || csg.polygons.length === 0) return this.clone();
+	    var a = new CSG.Node(this.clone().polygons);
+	    var b = new CSG.Node(csg.clone().polygons);
+	    a.clipTo(b);
+	    b.clipTo(a);
+	    b.invert();
+	    b.clipTo(a);
+	    b.invert();
+	    a.build(b.allPolygons());
+	    return CSG.fromPolygons(a.allPolygons());
+	  },
+	  islands: function() {
+	    const islands = [];
+	    let allVerts = [];
+	    for (let index = 0; index < this.polygons.length; index++) {
+	      const poly = this.polygons[index];
+	      let addToIndex = -1;
+	      for (let vi = 0; vi < poly.vertices.length; vi++) {
+	        const vert = poly.vertices[vi];
+	        for (let avi = 0; addToIndex < 0 && avi < allVerts.length; avi++) {
+	          if (vert.equals(allVerts[avi].vert)) addToIndex = allVerts[avi].index;
+	        }
+	        if (addToIndex === -1) addToIndex = islands.push(new CSG()) - 1;
+	        islands[addToIndex].polygons.push(poly);
+	      }
+	      for (let vi = 0; vi < poly.vertices.length; vi++) {
+	        allVerts.push({vert: poly.vertices[vi], index: addToIndex});
+	      }
+	    }
+	    CSG.combine(islands);
+	    return islands;
+	  },
+	
+	  // Return a new CSG solid representing space in this solid but not in the
+	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
+	  //
+	  //     A.subtract(B)
+	  //
+	  //     +-------+            +-------+
+	  //     |       |            |       |
+	  //     |   A   |            |       |
+	  //     |    +--+----+   =   |    +--+
+	  //     +----+--+    |       +----+
+	  //          |   B   |
+	  //          |       |
+	  //          +-------+
+	  //
+	  subtract: function(csg) {
+	    if (!csg || csg.polygons.length === 0) return this.clone();
+	    var a = new CSG.Node(this.clone().polygons);
+	    var b = new CSG.Node(csg.clone().polygons);
+	    a.invert();
+	    a.clipTo(b);
+	    b.clipTo(a);
+	    b.invert();
+	    b.clipTo(a);
+	    b.invert();
+	    a.build(b.allPolygons());
+	    a.invert();
+	    return CSG.fromPolygons(a.allPolygons());
+	  },
+	
+	  // Return a new CSG solid representing space both this solid and in the
+	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
+	  //
+	  //     A.intersect(B)
+	  //
+	  //     +-------+
+	  //     |       |
+	  //     |   A   |
+	  //     |    +--+----+   =   +--+
+	  //     +----+--+    |       +--+
+	  //          |   B   |
+	  //          |       |
+	  //          +-------+
+	  //
+	  intersect: function(csg) {
+	    if (!csg || csg.polygons.length === 0) return null;
+	    var a = new CSG.Node(this.clone().polygons);
+	    var b = new CSG.Node(csg.clone().polygons);
+	    a.invert();
+	    b.clipTo(a);
+	    b.invert();
+	    a.clipTo(b);
+	    b.clipTo(a);
+	    a.build(b.allPolygons());
+	    a.invert();
+	    return CSG.fromPolygons(a.allPolygons());
+	  },
+	
+	  slice: function (width, x, y, map) {
+	    width ||= .01;
+	    if ((!x && y) || (x && !y)) throw new Error('If you define x you must define y and vice versa')
+	    if (!x && !y) (x = 'x') & (y = 'z');
+	    const dems = this.demensions();
+	    const center = new CSG.Vertex(this.center());
+	    const config = sliceConfig(x,y, width, dems, center);
+	    config.slice = new CSG.cube(config);
+	    config.slices = [];
+	    const runFunc = map instanceof Function;
+	    for (;config.index < config.steps; config.index++) {
+	        const int = config.slice.intersect(this);
+	        int.polygons = int.polygons.filter(p => config.step.dot(p.plane.normal) === config.width);
+	        if (runFunc) config.slices.push(map(int, config));
+	        else config.slices.push(int);
+	        config.slice.translate(config.step);
+	    }
+	    console.log(config.slices.map((s, i) => `//${i}\n${s.toDrawString()}\n${this.toDrawString('green')}`).join('\n\n'))
+	    return config.slices;
+	  },
+	
+	  // Return a new CSG solid with solid and empty space switched. This solid is
+	  // not modified.
+	  inverse: function() {
+	    var csg = this.clone();
+	    csg.polygons.map(function(p) { p.flip(); });
+	    return csg;
+	  },
+	  endpoints: function () {
+	    const endpoints = {};
+	    const endpoint = (attr, value) => {
+	      const max = endpoints[attr];
+	      endpoints[attr] = max === undefined || max < value ? value : max;
+	      const minAttr = `-${attr}`;
+	      const min = endpoints[minAttr];
+	      endpoints[minAttr] = min === undefined || min > value ? value : min;
+	    }
+	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+	      endpoint('x', vertex.pos.x);
+	      endpoint('y', vertex.pos.y);
+	      endpoint('z', vertex.pos.z);
+	    }));
+	    return endpoints;
+	  },
+	  distCenter: function () {
+	    const endpoints = this.endpoints();
+	    const x = ((endpoints.x + endpoints['-x']) / 2);
+	    const y = ((endpoints.y + endpoints['-y']) / 2);
+	    const z = ((endpoints.z + endpoints['-z']) / 2);
+	    return {x,y,z};
+	  },
+	  mean: function () {
+	    const vertices = this.vertices();
+	    const mean = Math.mean(vertices, ['pos.x', 'pos.y', 'pos.z']);
+	    return mean.pos;
+	  },
+	
+	  demensions: function () {
+	    const epts = this.endpoints();
+	    return {
+	      x: epts.x - epts['-x'],
+	      y: epts.y - epts['-y'],
+	      z: epts.z - epts['-z']
+	    }
+	  },
+	  cube: function () {
+	    return new CSG.cube({demensions: this.demensions(), center: this.center()});
+	  },
+	  demCenter: function () {
+	    const dems = this.demensions();
+	    return {x: dems.x/2, y: dems.y/2, z: dems.z/2};
+	  },
+	  rotateAroundPoint: function (rotations, point) {
+	    const returnVector = new CSG.Vector(point);
+	    const centerVector = returnVector.negated();
+	    this.translate(centerVector);
+	    this.rotate(rotations);
+	    this.translate(returnVector);
+	  },
+	
+	  rotate: function (rotations, pivot) {
+	    pivot ||= {x: 1, y:1, z:1};
+	    if (Array.isArray(rotations)) {
+	      for (let i = 0; i < rotations.length; i++) this.rotate(rotations[i])
+	      return;
+	    }
+	    rotations = new CSG.Vector(rotations)
+	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+	      let newPos = vertex.pos;
+	      newPos = ArbitraryRotate(newPos, rotations.x, {x: pivot.x, y:0, z:0});
+	      newPos = ArbitraryRotate(newPos, rotations.y, {x: 0, y:pivot.y, z:0});
+	      newPos = ArbitraryRotate(newPos, rotations.z, {x: 0, y:0, z:pivot.z});
+	      return new CSG.Vertex(newPos, vertex.normal);
+	    }));
+	  },
+	  reverseRotate: function (rotation) {
+	    rotation = new CSG.Vector(rotation)
+	    rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
+	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+	      let newPos = vertex.pos;
+	      newPos = ArbitraryRotate(newPos, rotation.z, {x: 0, y:0, z:1});
+	      newPos = ArbitraryRotate(newPos, rotation.y, {x: 0, y:1, z:0});
+	      newPos = ArbitraryRotate(newPos, rotation.x, {x: 1, y:0, z:0});
+	      return new CSG.Vertex(newPos, vertex.normal);
+	    }));
+	  },
+	
+	  ArbitraryRotate: function(degrees, pivot) {
+	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+	        let newPos = vertex.pos;
+	        newPos = ArbitraryRotate(newPos, degrees, pivot);
+	        return new CSG.Vertex(newPos, vertex.normal);
+	    }));
+	  },
+	
+	  translate: function (offset) {
+	    offset = new CSG.Vector(offset)
+	    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+	    offset.id = String.random();
+	    this.polygons.forEach((poly) => poly.translate(offset));
+	  },
+	
+	  center: function (newCenter) {
+	    const center = this.distCenter();
+	    if (!newCenter) return center;
+	    const offset = {
+	      x: newCenter.x - center.x,
+	      y: newCenter.y - center.y,
+	      z: newCenter.z - center.z
+	    }
+	    this.translate(offset);
+	    return newCenter;
+	  },
+	
+	  normalize: function (rotations, rightSide, leftOfAxis) {
+	    if (rightSide) {
+	      if (rotations) {
+	        if (Array.isArray(rotations)) rotations = rotations.concat([{y:180}]);
+	        else rotations = [rotations, {y: 180}];
+	      } else rotations = [{y:180}];
+	    }
+	    const clone = this.clone();
+	    if (rotations) clone.rotate(rotations);
+	    const dems = clone.demensions();
+	    const divisor = leftOfAxis ? -2 : 2;
+	    const normCenter = {x: dems.x/divisor, y: dems.y/2, z: dems.z/2};
+	    // const translationVector = new CSG.Vector(clone.center()).minus(normCenter);
+	    const translationVector = new CSG.Vector(normCenter).minus(clone.center());
+	    clone.translate(translationVector);
+	    const side = !rightSide ? 'Left' : 'Right';
+	    return {poly: clone, translationVector, rotations, normCenter, side};
+	  }
+	};
+	
+	CSG.combine = function(csgs) {
+	  for (let index = csgs.length - 1; index > -1; index--) {
+	    const proposer = csgs[index];
+	    for (let oi = 0; oi < index; oi++) {
+	      const proposeTo = csgs[oi];
+	      if (proposer.sharesVertex(proposeTo)) {
+	        proposeTo.polygons.concatInPlace(proposer.polygons);
+	        csgs.splice(index, 1);
+	        break;
+	      }
+	    }
+	  }
+	}
+	
+	CSG.concat = function(csgs) {
+	  const all = new CSG();
+	  for (let index = 0; index < csgs.length; index++) {
+	    all.polygons.concatInPlace(csgs[index].polygons);
+	  }
+	  return all;
+	}
+	
+	CSG.marroonedOn = function(csgOpolyOvertex, islands) {
+	  let vertices;
+	  if (csgOpolyOvertex instanceof CSG) vertices = csgOpolyOvertex.vertices();
+	  else if (csgOpolyOvertex instanceof CSG.Polygon) vertices = csgOpolyOvertex.vertices;
+	  else if (csgOpolyOvertex instanceof CSG.Vertex) vertices = [csgOpolyOvertex];
+	  else throw new Error(`marroonedOn not configured for input '${csgOpolyOvertex}'`);
+	  for(let ii = 0; ii < islands.length; ii++) {
+	    const island = islands[ii];
+	    const iVerts = island.vertices();
+	    for (let ivi = 0; ivi < iVerts.length; ivi++) {
+	      for (let vi = 0; vi < vertices.length; vi++) {
+	        if (vertices[vi].equals(iVerts[ivi])) return island;
+	      }
+	    }
+	  }
+	  return null;
+	}
+	
+	// Construct an axis-aligned solid cuboid. Optional parameters are `center` and
+	// `radius`, which default to `[0, 0, 0]` and `[1, 1, 1]`. The radius can be
+	// specified using a single number or a list of three numbers, one for each axis.
+	//
+	// Example code:
+	//
+	//     var cube = CSG.cube({
+	//       center: [0, 0, 0],
+	//       radius: 1
+	//     });
+	//
+	// x1 = (x0 – xc)cos(θ) – (y0 – yc)sin(θ) + xc(Equation 3)
+	// y1 = (x0 – xc)sin(θ) + (y0 – yc)cos(θ) + yc(Equation 4)
+	
+	function getRadius(options) {
+	  if (options.demension)
+	    options.radius = [options.demension/2,options.demension/2,options.demension/2];
+	  if (!options.radius && options.demensions) {
+	      options.radius = new CSG.Vector(options.demensions).times(.5).toArray();
+	  }
+	  if (options.radius) {
+	    return Number.isFinite(options.radius) ?
+	      [options.radius, options.radius, options.radius] :
+	      new CSG.Vector(options.radius).toArray();
+	  }
+	  return  [1, 1, 1];
+	}
+	
+	CSG.cube = function(options) {
+	  options = options || {};
+	  var c = new CSG.Vector(options.center || [0, 0, 0]);
+	  var r = getRadius(options);
+	  return CSG.fromPolygons([
+	    [[0, 4, 6, 2], [-1, 0, 0]],
+	    [[1, 3, 7, 5], [+1, 0, 0]],
+	    [[0, 1, 5, 4], [0, -1, 0]],
+	    [[2, 6, 7, 3], [0, +1, 0]],
+	    [[0, 2, 3, 1], [0, 0, -1]],
+	    [[4, 5, 7, 6], [0, 0, +1]]
+	  ].map(function(info) {
+	    return new CSG.Polygon(info[0].map(function(i) {
+	      var pos = new CSG.Vector(
+	        c.x + r[0] * (2 * !!(i & 1) - 1),
+	        c.y + r[1] * (2 * !!(i & 2) - 1),
+	        c.z + r[2] * (2 * !!(i & 4) - 1)
+	      );
+	      return new CSG.Vertex(pos, new CSG.Vector(info[1]));
+	    }));
 	  }));
-	} catch(e) {}
+	};
 	
-	var wheelOpt = supportsPassive ? { passive: false } : false;
-	var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
-	
-	// call this to Disable
-	function disableScroll(element) {
-	  element.addEventListener('DOMMouseScroll', preventDefault, false); // older FF
-	  element.addEventListener(wheelEvent, preventDefault, wheelOpt); // modern desktop
-	  element.addEventListener('touchmove', preventDefault, wheelOpt); // mobile
-	  element.addEventListener('keydown', preventDefaultForScrollKeys, false);
+	const oneOnone = (val) => val > 0 ? 1 : (val < 0) ? -1 : 0;
+	function champerCube(center, x, y, z, depth) {
+	  const big = 10;
+	  const bigVect = new CSG.Vector(oneOnone(x), oneOnone(y), oneOnone(z)).unit();
+	  const cube = new CSG.cube({demension: big});
+	  const rotations = x === 0 ? {x: 45} : (y === 0 ? {y: 45} : {z: 45});
+	  cube.rotate(rotations);
+	  const vector = new CSG.Vector(x, y, z);
+	  const bigOffset = bigVect.unit().times(big/2);
+	  const depthOffset = bigVect.unit().times(depth);
+	  cube.translate(vector.plus(bigOffset).minus(depthOffset));
+	  return cube;
 	}
 	
-	// call this to Enable
-	function enableScroll(element) {
-	  element.removeEventListener('DOMMouseScroll', preventDefault, false);
-	  element.removeEventListener(wheelEvent, preventDefault, wheelOpt);
-	  element.removeEventListener('touchmove', preventDefault, wheelOpt);
-	  element.removeEventListener('keydown', preventDefaultForScrollKeys, false);
+	CSG.cube.champhered = function (options) {
+	  let cube = new CSG.cube(options);
+	  const depth = options.depth || 1;
+	  const edges = options.edges || [true,true,true];
+	  if (edges[0] === true) edges[0] = [true,true,true,true];
+	  if (edges[1] === true) edges[1] = [true,true,true,true];
+	  if (edges[2] === true) edges[2] = [true,true,true,true];
+	  const c = options.center;
+	  const r = getRadius(options);
+	
+	  if (edges[0]) {
+	    if (edges[0][0]) cube = cube.subtract(champerCube(c, 0, r[1], r[2], depth));
+	    if (edges[0][1]) cube = cube.subtract(champerCube(c, 0, r[1], -r[2], depth));
+	    if (edges[0][2]) cube = cube.subtract(champerCube(c, 0, -r[1], -r[2], depth));
+	    if (edges[0][3]) cube = cube.subtract(champerCube(c, 0, -r[1], r[2], depth));
+	  }
+	
+	  if (edges[1]) {
+	    if (edges[1][0]) cube = cube.subtract(champerCube(c, r[0], 0, r[2], depth));
+	    if (edges[1][1]) cube = cube.subtract(champerCube(c, r[0], 0, -r[2], depth));
+	    if (edges[1][2]) cube = cube.subtract(champerCube(c, -r[0], 0, -r[2], depth));
+	    if (edges[1][3]) cube = cube.subtract(champerCube(c, -r[0], 0, r[2], depth));
+	  }
+	
+	  if (edges[2]) {
+	    if (edges[2][0]) cube = cube.subtract(champerCube(c, r[0], r[1], 0, depth));
+	    if (edges[2][1]) cube = cube.subtract(champerCube(c, r[0], -r[1], 0, depth));
+	    if (edges[2][2]) cube = cube.subtract(champerCube(c, -r[0], -r[1], 0, depth));
+	    if (edges[2][3]) cube = cube.subtract(champerCube(c, -r[0], r[1], 0, depth));
+	  }
+	  return cube
 	}
 	
-	exports.Viewer = Viewer
-	exports.addViewer = addViewer
-	exports.preventDefault = preventDefault
-	exports.preventDefaultForScrollKeys = preventDefaultForScrollKeys
-	exports.disableScroll = disableScroll
-	exports.enableScroll = enableScroll
+	CSG.Point = function (center, radius, color) {
+	  radius ||= .5
+	  const sphere = new CSG.sphere({radius, center});
+	  sphere.setColor(color);
+	  return sphere;
+	}
+	
+	function vecotrOvertexModel(start, end, model, options) {
+	  if (Array.isArray(end) || options.lineDisplayType === CSG.Line.DISPLAY_TYPES.LINE_ONLY) return model;
+	  let color = end.color || options.color;
+	  if (CSG.Line.DISPLAY_TYPES.VECTOR === options.lineDisplayType &&
+	          end instanceof CSG.Vector) {
+	    const maxLen = end.distance(new CSG.Vector(start)) / 2;
+	    const unit = end.minus(new CSG.Vector(start)).unit().times(maxLen > 6 ? 6 : maxLen);
+	    start = end.minus(unit);
+	    return new CSG.cone({start, end, model, color});
+	  } else {
+	    return new CSG.Point(end, null, color).union(model);
+	  }
+	}
+	
+	CSG.Line = function (options) {
+	  options ||= {};
+	  const start = options.start || [0,0,0];
+	  const end = options.end || [0,0,0];
+	  if (new CSG.Vector(start).equals(new CSG.Vector(end))) {
+	    return new CSG.Point(options.start, .3, options.color);
+	  }
+	  const radius = options.radius || .2;
+	  let model = new CSG.cylinder({start, end, radius, slices: 8});
+	  model = vecotrOvertexModel(end, start, model, options);
+	  model.setColor(options.color);
+	  return vecotrOvertexModel(start, end, model, options);
+	}
+	
+	CSG.Line.DISPLAY_TYPES = {};
+	CSG.Line.DISPLAY_TYPES.LINE_ONLY = 'lineOnly';
+	CSG.Line.DISPLAY_TYPES.VECTOR = 'vector';
+	
+	CSG.Rectangle = function (demensions, center, yVector, xVector) {
+	  yVector = new CSG.Vector(yVector || [0,1,0]).unit();
+	  const defaultVector = !Object.equals(yVector, {x:1, y:0, z:0}) ? {x:1, y:0, z:0} : {x:0, y:0, z:1};
+	  xVector = new CSG.Vector(xVector || defaultVector);
+	  center = new CSG.Vector(center || [0,0,0]);
+	  const demVector = new CSG.Vector(demensions || [3,5,1]);
+	  const width = demVector.x;
+	  const length = demVector.y;
+	  const depth = demVector.z;
+	  const zVector = xVector.cross(yVector).unit();
+	
+	  const vs = {
+	    x: yVector.times(length/2),
+	    y: xVector.times(width/2),
+	    z: zVector.times(depth/2),
+	    nx: yVector.times(length/2).negated(),
+	    ny: xVector.times(width/2).negated(),
+	    nz: zVector.times(depth/2).negated()
+	  }
+	
+	  const vert = (...args) => {
+	    const vertex = new CSG.Vertex(center);
+	    for(let index = 0; index < args.length; index++) vertex.plus(args[index]);
+	    return vertex;
+	  }
+	
+	  // const front = new CSG.Polygon([vert(vs.x, vs.y), vert(vs.nx, vs.y), vert(vs.nx, vs.ny), vert(vs.x, vs.ny)]);
+	  let v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.nz);
+	  let v2 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.nz);
+	  let v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.nz);
+	  let v4 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.nz);
+	  const front = new CSG.Polygon([v1,v2,v3,v4]);
+	
+	  // const back = new CSG.Polygon([vert(vs.x,vs.y,vs.z),vert(vs.nx,vs.y,vs.z),vert(vs.nx,vs.ny,vs.z),vert(vs.x,vs.ny,vs.z)]);
+	  v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.z);
+	  v2 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.z);
+	  v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.z);
+	  v4 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.z);
+	  const back = new CSG.Polygon([v4,v3,v2,v1]);
+	
+	  v1 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.y);
+	  v2 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.y);
+	  v3 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.y);
+	  v4 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.y);
+	  const top = new CSG.Polygon([v4,v3,v2,v1]);
+	
+	  v1 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.ny);
+	  v2 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.ny);
+	  v4 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.ny);
+	  v3 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.ny);
+	  const bottom = new CSG.Polygon([v4,v3,v2,v1]);
+	
+	  v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.x);
+	  v2 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.x);
+	  v3 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.x);
+	  v4 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.x);
+	  const left = new CSG.Polygon([v1,v2,v3,v4]);
+	
+	  v4 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.nx);
+	  v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.nx);
+	  v2 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.nx);
+	  v1 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.nx);
+	  const right = new CSG.Polygon([v1,v2,v3,v4]);
+	
+	  return CSG.fromPolygons([front, back, top, bottom, left, right])
+	}
+	
+	// Construct a solid sphere. Optional parameters are `center`, `radius`,
+	// `slices`, and `stacks`, which default to `[0, 0, 0]`, `1`, `16`, and `8`.
+	// The `slices` and `stacks` parameters control the tessellation along the
+	// longitude and latitude directions.
+	//
+	// Example usage:
+	//
+	//     var sphere = CSG.sphere({
+	//       center: [0, 0, 0],
+	//       radius: 1,
+	//       slices: 16,
+	//       stacks: 8
+	//     });
+	CSG.sphere = function(options) {
+	  options = options || {};
+	  var c = new CSG.Vector(options.center || [0, 0, 0]);
+	  var r = options.radius || 1;
+	  var slices = options.slices || 32;
+	  var stacks = options.stacks || 8;
+	  var polygons = [], vertices;
+	  function vertex(theta, phi) {
+	    theta *= Math.PI * 2;
+	    phi *= Math.PI;
+	    var dir = new CSG.Vector(
+	      Math.cos(theta) * Math.sin(phi),
+	      Math.cos(phi),
+	      Math.sin(theta) * Math.sin(phi)
+	    );
+	    vertices.push(new CSG.Vertex(c.plus(dir.times(r)), dir));
+	  }
+	  for (var i = 0; i < slices; i++) {
+	    for (var j = 0; j < stacks; j++) {
+	      vertices = [];
+	      vertex(i / slices, j / stacks);
+	      if (j > 0) vertex((i + 1) / slices, j / stacks);
+	      if (j < stacks - 1) vertex((i + 1) / slices, (j + 1) / stacks);
+	      vertex(i / slices, (j + 1) / stacks);
+	      polygons.push(new CSG.Polygon(vertices));
+	    }
+	  }
+	
+	  const csg = CSG.fromPolygons(polygons);
+	  csg.property('x', c.x, false, false);
+	  csg.property('y', c.y, false, false);
+	  csg.property('z', c.z, false, false);
+	  csg.property('radius', c.radius, false, false);
+	  return csg;
+	};
+	
+	// TODO: add a length option so that start and end dont need to be defined;
+	// Construct a solid cylinder. Optional parameters are `start`, `end`,
+	// `radius`, and `slices`, which default to `[0, -1, 0]`, `[0, 1, 0]`, `1`, and
+	// `16`. The `slices` parameter controls the tessellation.
+	//
+	// Example usage:
+	//
+	//     var cylinder = CSG.cylinder({
+	//       start: [0, -1, 0],
+	//       end: [0, 1, 0],
+	//       radius: 1,
+	//       slices: 16
+	//     });
+	CSG.cylinder = function(options) {
+	  options = options || {};
+	  var s = new CSG.Vector(options.start || [0, -1, 0]);
+	  var e = new CSG.Vector(options.end || [0, 1, 0]);
+	  var ray = e.minus(s);
+	  var r = options.radius || 1;
+	  if (!ray.positive()) {
+	    let temp = s;
+	    s = e;
+	    e = temp;
+	    ray = ray.negated();
+	  }
+	  var slices = options.slices || 8;
+	  var axisZ = ray.unit(); isY = (Math.abs(axisZ.y) > 0.5);
+	  var axisX = new CSG.Vector(isY, !isY, 0).cross(axisZ).unit();
+	  var axisY = axisX.cross(axisZ).unit();
+	  var start = new CSG.Vertex(s, axisZ.negated());
+	  var end = new CSG.Vertex(e, axisZ.unit());
+	  var polygons = [];
+	  function point(stack, slice, normalBlend) {
+	    var angle = slice * Math.PI * 2;
+	    var out = axisX.times(Math.cos(angle)).plus(axisY.times(Math.sin(angle)));
+	    var pos = s.plus(ray.times(stack)).plus(out.times(r));
+	    var normal = out.times(1 - Math.abs(normalBlend)).plus(axisZ.times(normalBlend));
+	    return new CSG.Vertex(pos, normal);
+	  }
+	  const topVerts = [];
+	  const bottomVerts = [];
+	  for (var i = 0; i < slices; i++) {
+	    var t0 = i / slices, t1 = (i + 1) / slices;
+	    polygons.push(new CSG.Polygon([point(0, t1, 0), point(0, t0, 0), point(1, t0, 0), point(1, t1, 0)]));
+	    topVerts.push(point(1, t0, 1));
+	    bottomVerts.push(point(0, t0, 1));
+	  }
+	  topVerts.reverse();
+	  return CSG.fromPolygons(polygons.concat([new CSG.Polygon(topVerts),new CSG.Polygon(bottomVerts)]));
+	  // return new CSG.Polygon(verts);
+	};
+	
+	let crossVect;
+	const perpendicularVector = (vector) => {
+	  let other;
+	  const option1Mag = vector.z*vector.z+vector.y*vector.y;
+	  const option2Mag = vector.z*vector.z+vector.x*vector.x;
+	  const option3Mag = vector.y*vector.y+vector.x*vector.x;
+	  if (option1Mag > option2Mag && option1Mag > option3Mag) {
+	    other = new CSG.Vector(0, vector.z, -vector.y);
+	  } else if (option2Mag > option3Mag) {
+	    other = new CSG.Vector(-vector.z, 0, vector.x);
+	  } else {
+	    other = new CSG.Vector(-vector.y, vector.x, 0);
+	  }
+	  crossVect = other;
+	  return other;
+	}
+	
+	CSG.cylinder.step = function(cylinders, options) {
+	  let stepCylinder = new CSG();
+	  options ||= {};
+	  const mainCenter = options.center || {x:0,y:0,z:0};
+	  const mainSlices = options.slices;
+	  cylinders.forEach(c => {
+	    const vector = c.vector || new CSG.Vector({y: 0, x: 0, z: 1});
+	    const center = new CSG.Vector(c.center || mainCenter);
+	    const length = c.length;
+	    const radius = c.radius || c.diameter / 2;
+	    const slices = c.slices || mainSlices;
+	    const half = c.half || options.half;
+	    const start = half === true ? center : center.minus(vector.times(c.length/-2));
+	    const end = half === false ? center : center.minus(vector.times(c.length/2));
+	    const cylinder = new CSG.cylinder({start, end, center, radius, slices});
+	    stepCylinder = stepCylinder.union(cylinder);
+	  });
+	  return stepCylinder;
+	}
+	
+	CSG.cone = function (options) {
+	  options ||= {};
+	  let length = options.length || 10;
+	  const start = new CSG.Vector(options.start || [0,0,0]);
+	  const end = new CSG.Vector(options.end || start.add([0,length,0]));
+	  length = end.minus(start).length();
+	  const point = new CSG.sphere({radius: 1, center: end});
+	  const radius = options.radius || 1;
+	  const slices = options.slices || 8;
+	  let cylinder = new CSG.cylinder({start, end, radius, slices});
+	  let cone = cylinder.clone();
+	  if (options.color) cone.setColor(options.color);
+	  const sliceRotation = 360/slices;
+	  const rotationVector = end.minus(start).unit();
+	  const lengthVector = rotationVector.clone().times(length);
+	  const perpVector = perpendicularVector(rotationVector.clone()).times(radius/-2);
+	  const widthVector = perpVector.cross(rotationVector).unit().times(30);
+	  const cutterCenter = end;
+	  const plane = new CSG.Rectangle([30, length*10, radius*2], cutterCenter, rotationVector.unit(), widthVector.unit());
+	  const planeCenter = new CSG.Vector(plane.center());
+	  if (options.color) plane.setColor(options.color);
+	  const degrees = Math.toDegrees(Math.atan(radius/(2*length)))*2;
+	  plane.ArbitraryRotate(degrees, widthVector.unit());
+	  plane.center(cutterCenter);
+	  plane.translate(perpVector);
+	
+	  for (let index = 0; index < slices; index++) {
+	    plane.translate(cutterCenter.negated());
+	    plane.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
+	        let newPos = vertex.pos;
+	        newPos = ArbitraryRotate(newPos, sliceRotation, rotationVector.unit());
+	        return new CSG.Vertex(newPos, vertex.normal);
+	      }));
+	      plane.translate(cutterCenter);
+	      cone = cone.subtract(plane);
+	  }
+	
+	  if(options.model) {
+	    const model = options.model.subtract(cylinder);
+	    cone = cone.union(model);
+	  }
+	
+	  return cone;
+	}
+	
+	function axis(vector, origin, color, size, radius) {
+	  origin ||= [0,0,0];
+	  const end = [vector[0]*size+origin[0],vector[1]*size+origin[1],vector[2]*size+origin[2]]
+	  const ax = CSG.cylinder({start: origin, end, radius})
+	  ax.setColor(color);
+	  return ax;
+	}
+	
+	CSG.Axis =  function (size, radius, origin, vectors) {
+	  size ||= 100;
+	  origin ||= [0,0,0];
+	  vectors ||= [[1,0,0], [0,1,0], [0,0,1]];
+	  radius ||= size/100;
+	  const center = CSG.sphere({center: origin, radius: radius*1.5})
+	  const xAxis = axis(vectors[0], origin, [255,0,0], size, radius);
+	  const yAxis = axis(vectors[1], origin, [0,128,0], size, radius);
+	  const zAxis = axis(vectors[2], origin, [0,0,255], size, radius);
+	  const csg = new CSG();
+	  csg.polygons.concatInPlace(center.polygons);
+	  csg.polygons.concatInPlace(xAxis.polygons);
+	  csg.polygons.concatInPlace(yAxis.polygons);
+	  csg.polygons.concatInPlace(zAxis.polygons);
+	  return csg;
+	}
+	
+	// # class Vector
+	
+	// Represents a 3D vector.
+	//
+	// Example usage:
+	//
+	//     new CSG.Vector(1, 2, 3);
+	//     new CSG.Vector([1, 2, 3]);
+	//     new CSG.Vector({ x: 1, y: 2, z: 3 });
+	const isZeros = (...vals) => vals.findIndex(v => withinEPSILON(v, 0)) === -1;
+	CSG.Vector = function(x, y, z) {
+	  if (arguments.length == 3) {
+	    this.x = x;
+	    this.y = y;
+	    this.z = z;
+	  } else if ('x' in x || 'y' in x || 'z' in x) {
+	    this.x = x.x;
+	    this.y = x.y;
+	    this.z = x.z;
+	  } else if ('i' in x || 'j' in x || 'k' in x) {
+	    this.x = x.i;
+	    this.y = x.j;
+	    this.z = x.k;
+	  } else {
+	    this.x = x[0];
+	    this.y = x[1];
+	    this.z = x[2];
+	  }
+	};
+	
+	CSG.Vector.prototype = {
+	  clone: function() {
+	    return new CSG.Vector(this.x, this.y, this.z);
+	  },
+	  positive: function () {
+	    return this.x > 0 || (isZeros(this.x) && this.y > 0) ||
+	              (isZeros(this.x,this.y) && this.z > 0) || isZeros(this.x, this.y, this.z);
+	  },
+	  toArray: function() {return [this.x,this.y,this.z]},
+	
+	  negated: function() {
+	    return new CSG.Vector(-this.x, -this.y, -this.z);
+	  },
+	
+	  plus: function(a) {
+	    return new CSG.Vector(this.x + a.x, this.y + a.y, this.z + a.z);
+	  },
+	
+	  minus: function(a) {
+	    return new CSG.Vector(this.x - a.x, this.y - a.y, this.z - a.z);
+	  },
+	
+	  times: function(a) {
+	    return new CSG.Vector(this.x * a, this.y * a, this.z * a);
+	  },
+	
+	  dividedBy: function(a) {
+	    return new CSG.Vector(this.x / a, this.y / a, this.z / a);
+	  },
+	
+	  dot: function(a) {
+	    return this.x * a.x + this.y * a.y + this.z * a.z;
+	  },
+	
+	  lerp: function(a, t) {
+	    return this.plus(a.minus(this).times(t));
+	  },
+	
+	  length: function() {
+	    return Math.sqrt(this.dot(this));
+	  },
+	
+	  unit: function() {
+	    return this.dividedBy(this.length());
+	  },
+	
+	  distance: function (other) {
+	    const vector = this.minus(other);
+	    return vector.length();
+	  },
+	
+	  cross: function(a) {
+	    return new CSG.Vector(
+	      this.y * a.z - this.z * a.y,
+	      this.z * a.x - this.x * a.z,
+	      this.x * a.y - this.y * a.x
+	    );
+	  },
+	
+	  equals: function(other) {
+	    return withinEPSILON(this.x, other.x) &&
+	            withinEPSILON(this.y, other.y) &&
+	            withinEPSILON(this.z, other.z);
+	  },
+	
+	  toString: function(percision) {
+	    const vertPer = vertexPercision(percision, this.x, this.y, this.z);
+	    return `(${vertPer.x},${vertPer.y},${vertPer.z})`
+	  }
+	};
+	
+	// # class Vertex
+	
+	// Represents a vertex of a polygon. Use your own vertex class instead of this
+	// one to provide additional features like texture coordinates and vertex
+	// colors. Custom vertex classes need to provide a `pos` property and `clone()`,
+	// `flip()`, and `interpolate()` methods that behave analogous to the ones
+	// defined by `CSG.Vertex`. This class provides `normal` so convenience
+	// functions like `CSG.sphere()` can return a smooth vertex normal, but `normal`
+	// is not used anywhere else.
+	
+	
+	CSG.Vector.I = new CSG.Vector(1,0,0);
+	CSG.Vector.J = new CSG.Vector(0,1,0);
+	CSG.Vector.K = new CSG.Vector(0,0,1);
+	
+	CSG.Vertex = function(pos, normal) {
+	  this.pos = new CSG.Vector(pos);
+	  this.normal = new CSG.Vector(normal || {x:1,y:0,z:0});
+	  this.toString = (percision) => {
+	    const verPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
+	    return `(${verPer.x},${verPer.y},${verPer.z})`;
+	  }
+	
+	  this.scale = (center, xOall, y, z) => {
+	    const centerVector = new CSG.Vector(center);
+	    const vector = new CSG.Vector(pos.x - center.x, pos.y - center.y, pos.z - center.z);
+	    if (y === undefined && z === undefined) {
+	      const scaled = vector.times(xOall);
+	      this.pos = centerVector.plus(scaled);
+	    } else {
+	      const iVect = CSG.Vector.I.times(vector.x * xOall);
+	      const jVect = CSG.Vector.J.times(vector.y * y);
+	      const kVect = CSG.Vector.K.times(vector.z * z);
+	      this.pos = centerVector.plus(iVect.plus(jVect).plus(kVect));
+	    }
+	  }
+	
+	  const tol = .1
+	  const attrSq = (other, attr) => (this.pos[attr]-other.pos[attr]) * (this.pos[attr]-other.pos[attr]);
+	  this.equals = (other, tolerance) => {
+	    tolerance ||= tol;
+	    if (!(other instanceof CSG.Vertex)) return false;
+	    const sqrtError = Math.sqrt(attrSq(other, 'x') + attrSq(other, 'y') + attrSq(other, 'z'));
+	    return Math.abs(sqrtError) < tol;
+	  }
+	};
+	
+	CSG.VertexNoNorm = function (pos) {
+	  return new CSG.Vertex(pos, [-1,-1,-1]);
+	}
+	
+	CSG.Vertex.Center = function (vertices) {
+	  vertices = vertices.map(v => new CSG.Vector(v));
+	  const total = {x:0, y:0,z:0};
+	  vertices.forEach(v => {
+	    total.x += v.x;total.y += v.y;total.z += v.z;
+	  })
+	  return {
+	    x: total.x / vertices.length,
+	    y: total.y / vertices.length,
+	    z: total.z / vertices.length
+	  }
+	}
+	
+	CSG.Vertex.prototype = {
+	  clone: function() {
+	    return new CSG.Vertex(this.pos.clone(), this.normal.clone());
+	  },
+	  toString: function (percision) {
+	    const vertPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
+	    return `(${vertPer.x},${vertPer.y},${vertPer.z})`
+	  },
+	  translate: function (offset) {return translate(this, offset)},
+	
+	  // Invert all orientation-specific data (e.g. vertex normal). Called when the
+	  // orientation of a polygon is flipped.
+	  flip: function() {
+	    this.normal = this.normal.negated();
+	  },
+	
+	  // Create a new vertex between this vertex and `other` by linearly
+	  // interpolating all properties using a parameter of `t`. Subclasses should
+	  // override this to interpolate additional properties.
+	  interpolate: function(other, t) {
+	    return new CSG.Vertex(
+	      this.pos.lerp(other.pos, t),
+	      this.normal.lerp(other.normal, t)
+	    );
+	  }
+	};
+	
+	// # class Plane
+	
+	// Represents a plane in 3D space.
+	
+	CSG.Plane = function(normal, w) {
+	  this.normal = normal;
+	  this.w = w;
+	  this.setColor = function(color) {
+	    const rgb = String.color.rgb(color);
+	    this.shared = [rgb[0]/255, rgb[1]/255, rgb[2]/255];
+	  }
+	};
+	
+	// `CSG.Plane.EPSILON` is the tolerance used by `splitPolygon()` to decide if a
+	// point is on the plane.
+	CSG.Plane.EPSILON = 1e-5;//1e-3;
+	const withinEPSILON = (v1,v2) => Math.abs(v1-v2) < CSG.Plane.EPSILON;
+	
+	CSG.Plane.fromPoints = function(a, b, c) {
+	  if (Array.isArray(a)) (c = a[2]) & (b = a[1]) & (a = a[0]);
+	  a = new CSG.Vector(a);
+	  b = new CSG.Vector(b);
+	  c = new CSG.Vector(c);
+	  var n = b.minus(a).cross(c.minus(a)).unit();
+	  return new CSG.Plane(n, n.dot(a));
+	};
+	
+	CSG.Plane.prototype = {
+	  clone: function() {
+	    return new CSG.Plane(this.normal.clone(), this.w);
+	  },
+	
+	  flip: function() {
+	    this.normal = this.normal.negated();
+	    this.w = -this.w;
+	  },
+	
+	  // Split `polygon` by this plane if needed, then put the polygon or polygon
+	  // fragments in the appropriate lists. Coplanar polygons go into either
+	  // `coplanarFront` or `coplanarBack` depending on their orientation with
+	  // respect to this plane. Polygons in front or in back of this plane go into
+	  // either `front` or `back`.
+	  splitPolygon: function(polygon, coplanarFront, coplanarBack, front, back) {
+	    var COPLANAR = 0;
+	    var FRONT = 1;
+	    var BACK = 2;
+	    var SPANNING = 3;
+	
+	    // Classify each point as well as the entire polygon into one of the above
+	    // four classes.
+	    var polygonType = 0;
+	    var types = [];
+	    for (var i = 0; i < polygon.vertices.length; i++) {
+	      var t = this.normal.dot(polygon.vertices[i].pos) - this.w;
+	      var type = (t < -CSG.Plane.EPSILON) ? BACK : (t > CSG.Plane.EPSILON) ? FRONT : COPLANAR;
+	      polygonType |= type;
+	      types.push(type);
+	    }
+	
+	    // Put the polygon in the correct list, splitting it when necessary.
+	    switch (polygonType) {
+	      case COPLANAR:
+	        (this.normal.dot(polygon.plane.normal) > 0 ? coplanarFront : coplanarBack).push(polygon);
+	        break;
+	      case FRONT:
+	        front.push(polygon);
+	        break;
+	      case BACK:
+	        back.push(polygon);
+	        break;
+	      case SPANNING:
+	        var f = [], b = [];
+	        for (var i = 0; i < polygon.vertices.length; i++) {
+	          var j = (i + 1) % polygon.vertices.length;
+	          var ti = types[i], tj = types[j];
+	          var vi = polygon.vertices[i], vj = polygon.vertices[j];
+	          if (ti != BACK) f.push(vi);
+	          if (ti != FRONT) b.push(ti != BACK ? vi.clone() : vi);
+	          if ((ti | tj) == SPANNING) {
+	            var t = (this.w - this.normal.dot(vi.pos)) / this.normal.dot(vj.pos.minus(vi.pos));
+	            var v = vi.interpolate(vj, t);
+	            f.push(v);
+	            b.push(v.clone());
+	          }
+	        }
+	        if (f.length >= 3) front.push(new CSG.Polygon(f, polygon.shared));
+	        if (b.length >= 3) back.push(new CSG.Polygon(b, polygon.shared));
+	        break;
+	    }
+	  }
+	};
+	
+	// # class Polygon
+	
+	// Represents a convex polygon. The vertices used to initialize a polygon must
+	// be coplanar and form a convex loop. They do not have to be `CSG.Vertex`
+	// instances but they must behave similarly (duck typing can be used for
+	// customization).
+	//
+	// Each convex polygon has a `shared` property, which is shared between all
+	// polygons that are clones of each other or were split from the same polygon.
+	// This can be used to define per-polygon properties (such as surface color).
+	
+	CSG.Polygon = function(vertices, shared) {
+	  this.vertices = vertices;
+	  this.shared = shared;
+	  this.plane = CSG.Plane.fromPoints(vertices[0].pos, vertices[1].pos, vertices[2].pos);
+	};
+	
+	CSG.Polygon.prototype = {
+	  clone: function() {
+	    var vertices = this.vertices.map(function(v) { return v.clone(); });
+	    return new CSG.Polygon(vertices, this.shared);
+	  },
+	
+	  lines: function () {
+	    const verts = this.vertices;
+	    return verts.map((v,i) => [v.pos, verts[(i+1)%verts.length].pos]);
+	  },
+	
+	  alignNormal: function (objectCenter) {
+	    const center = new CSG.Vector(this.center().pos);
+	    const dir = center.minus(objectCenter).unit();
+	    const norm = this.plane.normal;
+	    if (norm.dot(dir) < 0) {
+	      this.plane.normal = norm.times(-1);
+	      this.vertices.forEach(v => v.normal = v.normal.times(-1));
+	      console.log('realigned');
+	    }
+	  },
+	
+	  toString: function (percision, includeColor) {
+	    percision ||= .001;
+	    const verts = this.vertices;
+	    const shared = this.shared;
+	    let color = includeColor ? String.colorName(shared) : '';
+	    let str = `${color}[`;
+	    for (let v = 0; v < verts.length; v++) {
+	      str += `${verts[v].toString(percision)},`;
+	    }
+	    str = `${str.substring(0, str.length - 1)}]`;
+	    return str;
+	  },
+	
+	  center: function () {
+	    const mr = Math.midrange(this.vertices, ['pos.x','pos.y','pos.z']);
+	    return new CSG.Vertex({x: mr['pos.x'], y: mr['pos.y'], z: mr['pos.z']});
+	  },
+	
+	  translate: function (offset) {
+	    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+	    const offsetId = offset.id || (offset.id = String.random());
+	    this.forEachVertex((vertex) => {
+	      if (!vertex.offsetId || vertex.offsetId !== offsetId) {
+	        vertex.pos.x += offset.x;
+	        vertex.pos.y += offset.y;
+	        vertex.pos.z += offset.z;
+	        vertex.offsetId = offsetId;
+	      }
+	    });
+	  },
+	
+	  color: function () {
+	    const name = String.colorName(this.shared);
+	    return name.indexOf(',') === -1 ? name : this.shared.map(v => Math.round(v*255));
+	  },
+	  rgb: function () {return !this.shared ? [0,0,0] : this.shared.map(v => Math.round(v*255));},
+	  scale: function(center, coeficient) {
+	    this.vertices.forEach(function(v) { return v.scale(center, coeficient); });
+	  },
+	
+	  flip: function() {
+	    this.vertices.reverse().map(function(v) { v.flip(); });
+	    this.plane.flip();
+	  },
+	  forEachVertex: function (func) {
+	    for (let vIndex = 0; vIndex < this.vertices.length; vIndex += 1) {
+	      const vertex = this.vertices[vIndex];
+	      const newVertex = func(vertex);
+	      this.vertices[vIndex] = newVertex instanceof CSG.Vertex ? newVertex : vertex;
+	    }
+	  },
+	  setColor: function(color) {
+	    const rgb = String.color.rgb(color);
+	    this.shared = [rgb[0]/255, rgb[1]/255, rgb[2]/255];
+	  }
+	};
+	
+	CSG.Polygon.fromVertices = (verts) => {
+	  const a = new CSG.Vector(verts[0]);
+	  const b = new CSG.Vector(verts[1]);
+	  const c = new CSG.Vector(verts[2]);
+	  const norm = a.minus(b).cross(b.minus(c));
+	  const vertices = verts.map(v => new CSG.Vertex(v, norm));
+	  const poly = new CSG.Polygon(vertices);
+	
+	  return poly;
+	}
+	
+	CSG.Polygon.Enclosed = function (verts, width, color) {
+	  width ||= .1;
+	  verts = verts.map(v => new CSG.Vector(v));
+	  const centerNormal = (verts) => {
+	    const center = CSG.Vertex.Center(verts);
+	    const v1 = new CSG.Vector(verts[0]).minus(center)
+	    const v2 = new CSG.Vector(verts[1]).minus(center)
+	    return v1.cross(v2).unit()
+	  }
+	
+	  const normal = centerNormal(verts);
+	  const transVert = (normal) => (pos) => {let v = new CSG.Vertex(pos, normal); return translate(v, normal.times(width/2));}
+	  const vert = (normal) => (pos) => new CSG.Vertex(pos, normal);
+	  const frontVerts = verts.map(vert(normal));
+	  let front = new CSG.Polygon(frontVerts);
+	
+	
+	  const backVerts = verts.map(transVert(normal.negated()));
+	  let back = new CSG.Polygon(backVerts.map(v => v.clone()).reverse());
+	
+	  const polys = [front, back];
+	  if (width > 0) {
+	    for (let index = 0; index < frontVerts.length; index++) {
+	      const index2 = (index + 1) % frontVerts.length;
+	      let sideVerts = [backVerts[index].pos, backVerts[index2].pos, frontVerts[index2].pos, frontVerts[index].pos];
+	      const sideNormal = centerNormal(sideVerts);
+	      sideVerts = sideVerts.map((v) => new CSG.Vertex(v, sideNormal));
+	      let side = new CSG.Polygon(sideVerts);
+	      polys.push(side);
+	    }
+	  }
+	
+	  let model = new CSG.fromPolygons(polys);
+	  verts.forEach(v => v.color && (model = model.union(new CSG.Point(v, null, v.color))));
+	  model.setColor(color);
+	  return model;//model.union(vect);
+	}
+	
+	// # class Node
+	
+	// Holds a node in a BSP tree. A BSP tree is built from a collection of polygons
+	// by picking a polygon to split along. That polygon (and all other coplanar
+	// polygons) are added directly to that node and the other polygons are added to
+	// the front and/or back subtrees. This is not a leafy BSP tree since there is
+	// no distinction between internal and leaf nodes.
+	
+	CSG.Node = function(polygons) {
+	  this.plane = null;
+	  this.front = null;
+	  this.back = null;
+	  this.polygons = [];
+	  if (polygons) this.build(polygons);
+	};
+	
+	CSG.Node.prototype = {
+	  clone: function() {
+	    var node = new CSG.Node();
+	    node.plane = this.plane && this.plane.clone();
+	    node.front = this.front && this.front.clone();
+	    node.back = this.back && this.back.clone();
+	    node.polygons = this.polygons.map(function(p) { return p.clone(); });
+	    return node;
+	  },
+	
+	  // Convert solid space to empty space and empty space to solid space.
+	  invert: function() {
+	    for (var i = 0; i < this.polygons.length; i++) {
+	      this.polygons[i].flip();
+	    }
+	    this.plane.flip();
+	    if (this.front) this.front.invert();
+	    if (this.back) this.back.invert();
+	    var temp = this.front;
+	    this.front = this.back;
+	    this.back = temp;
+	  },
+	
+	  // Recursively remove all polygons in `polygons` that are inside this BSP
+	  // tree.
+	  clipPolygons: function(polygons) {
+	    if (!this.plane) return polygons.slice();
+	    var front = [], back = [];
+	    for (var i = 0; i < polygons.length; i++) {
+	      this.plane.splitPolygon(polygons[i], front, back, front, back);
+	    }
+	    if (this.front && front.length) front = this.front.clipPolygons(front);
+	    if (this.back && back.length) back = this.back.clipPolygons(back);
+	    else back = [];
+	    return front.concat(back);
+	  },
+	
+	  // Remove all polygons in this BSP tree that are inside the other BSP tree
+	  // `bsp`.
+	  clipTo: function(bsp) {
+	    this.polygons = bsp.clipPolygons(this.polygons);
+	    if (this.front) this.front.clipTo(bsp);
+	    if (this.back) this.back.clipTo(bsp);
+	  },
+	
+	  // Return a list of all polygons in this BSP tree.
+	  allPolygons: function() {
+	    var polygons = this.polygons.slice();
+	    if (this.front) polygons = polygons.concat(this.front.allPolygons());
+	    if (this.back) polygons = polygons.concat(this.back.allPolygons());
+	    return polygons;
+	  },
+	
+	  // Build a BSP tree out of `polygons`. When called on an existing tree, the
+	  // new polygons are filtered down to the bottom of the tree and become new
+	  // nodes there. Each set of polygons is partitioned using the first polygon
+	  // (no heuristic is used to pick a good split).
+	  build: function(polygons, callCount) {
+	    if (!polygons.length) return;
+	    callCount ||= 0;
+	    // if (callCount > 500) {
+	    //   throw new Error('CSG.polygons are misconfigured');
+	    // }
+	    if (!this.plane) this.plane = polygons[0].plane.clone();
+	    var front = [], back = [];
+	    for (var i = 0; i < polygons.length; i++) {
+	      this.plane.splitPolygon(polygons[i], this.polygons, this.polygons, front, back);
+	    }
+	    if (front.length) {
+	      if (!this.front) this.front = new CSG.Node();
+	      this.front.build(front, callCount + 1);
+	    }
+	    if (back.length) {
+	      if (!this.back) this.back = new CSG.Node();
+	      this.back.build(back, callCount + 1);
+	    }
+	  }
+	};
+	
+	/*
+	   Rotate a point p by angle theta around an arbitrary axis r
+	   Return the rotated point.
+	   Positive angles are anticlockwise looking down the axis
+	   towards the origin.
+	   Assume right hand coordinate system.
+	*/
+	function ArbitraryRotate(point, degreestheta, radius)
+	{
+	  if (!Number.isFinite(degreestheta)) return point;
+	  radius = radius.copy();
+	  theta = degreestheta * Math.PI/180;
+	  let p = point;
+	  let r = radius;
+	   let q = {x: 0.0, y: 0.0, z: 0.0};
+	   let costheta,sintheta;
+	
+	   // const Normalise = (obj, attr) => obj[attr] *= obj[attr] > 0 ? 1 : -1;
+	   // Normalise(r, 'x',);
+	   // Normalise(r, 'y',);
+	   // Normalise(r, 'z',);
+	
+	   costheta = Math.cos(theta);
+	   sintheta = Math.sin(theta);
+	
+	   q.x += (costheta + (1 - costheta) * r.x * r.x) * p.x;
+	   q.x += ((1 - costheta) * r.x * r.y - r.z * sintheta) * p.y;
+	   q.x += ((1 - costheta) * r.x * r.z + r.y * sintheta) * p.z;
+	
+	   q.y += ((1 - costheta) * r.x * r.y + r.z * sintheta) * p.x;
+	   q.y += (costheta + (1 - costheta) * r.y * r.y) * p.y;
+	   q.y += ((1 - costheta) * r.y * r.z - r.x * sintheta) * p.z;
+	
+	   q.z += ((1 - costheta) * r.x * r.z - r.y * sintheta) * p.x;
+	   q.z += ((1 - costheta) * r.y * r.z + r.x * sintheta) * p.y;
+	   q.z += (costheta + (1 - costheta) * r.z * r.z) * p.z;
+	
+	   return(q);
+	}
+	
+	function rotate (point, rotation) {
+	  if (Array.isArray(rotation)) return rotation.forEach(r => rotate(point, r));
+	  if (!(rotation instanceof Object)) return;
+	  rotation = new CSG.Vector(rotation);
+	  let newPos = point;
+	  newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
+	  newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
+	  newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});
+	  return newPos;
+	}
+	
+	function reverseRotate (point, rotation) {
+	  if (Array.isArray(rotation)) return rotation.forEach(r => reverseRotate(point, r));
+	  rotation = new CSG.Vector(rotation);
+	  rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
+	  let newPos = point;
+	  newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});
+	  newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
+	  newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
+	  return newPos;
+	}
+	
+	function transRotate (point, offset, rotation) {
+	  let newPos = rotate (offset, rotation);
+	  newPos.x += point.x;
+	  newPos.y += point.y;
+	  newPos.z += point.z;
+	  return newPos;
+	}
+	
+	function translate (point, offset) {
+	  if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
+	  if (point instanceof CSG.Vertex) {
+	    const newPos = point.clone();
+	    newPos.pos.x += offset.x;
+	    newPos.pos.y += offset.y;
+	    newPos.pos.z += offset.z;
+	    return newPos;
+	
+	  } else {
+	    const newPos = point.clone();
+	    newPos.x += offset.x;
+	    newPos.y += offset.y;
+	    newPos.z += offset.z;
+	    return newPos;
+	  }
+	}
+	
+	function transRotateAll (points, offset, rotation) {
+	  for (let index = 0; index < points.length; index++) {
+	    points[index] = transRotate(points[index], offset, rotation);
+	  }
+	}
+	
+	function rotateAll (points, rotation) {
+	  const ret = [];
+	  for (let index = 0; index < points.length; index++) {
+	    ret[index] = rotate(points[index], rotation);
+	  }
+	  return ret;
+	}
+	
+	function reverseRotateAll (points, rotation) {
+	  const ret = [];
+	  for (let index = 0; index < points.length; index++) {
+	    ret[index] = reverseRotate(points[index], rotation);
+	  }
+	  return ret;
+	}
+	
+	function rotatePointAroundCenter(rotation, point, center, reverse) {
+	  if (Array.isArray(rotation)) return rotation.forEach(r => rotatePointAroundCenter(r, point, center, reverse));
+	  if (!(rotation instanceof Object)) return;
+	  center ||= {x:0, y:0, z:0};
+	  point.x -=  center.x;
+	  point.y -= center.y;
+	  point.z -= center.z;
+	  const rotated = reverse ? reverseRotate(point, rotation) : rotate(point, rotation);
+	  point.x =  center.x + rotated.x;
+	  point.y = center.y + rotated.y;
+	  point.z = center.z + rotated.z;
+	  return point;
+	}
+	
+	function rotatePointsAroundCenter(rotation, points, center, reverse) {
+	  for (let index = 0; index < points.length; index++) {
+	    rotatePointAroundCenter(rotation, points[index], center, reverse);
+	  }
+	  return points;
+	}
+	
+	CSG.printDrawString = (model, normals, center, scale) => {
+	  center ||= model.center();
+	  scale ||= 200;
+	  const str = `${normals.x.toDrawString('red', .001, center, scale)}\n` +
+	                `${normals.y.toDrawString('green', .001, center, scale)}\n` +
+	                `${normals.z.toDrawString('blue', .001, center, scale)}\n\n` +
+	                model.toDrawString();
+	
+	  console.log(str);
+	}
+	CSG.ArbitraryRotate = ArbitraryRotate;
+	CSG.rotatePointsAroundCenter = rotatePointsAroundCenter;
+	CSG.rotatePointAroundCenter = rotatePointAroundCenter;
+	CSG.transRotate = transRotate;
+	CSG.translate = translate;
+	CSG.rotateAll = rotateAll;
+	CSG.transRotateAll = transRotateAll;
+	CSG.reverseRotateAll = reverseRotateAll;
+	CSG.rotate = rotate;
+	CSG.reverseRotate = reverseRotate;
+	module.exports = CSG;
 	
 });
 
@@ -3930,1908 +5301,6 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/3d-modeling/csg.js',
-function (require, exports, module) {
-	// TODO: Use Require Class to include ToleranceMap and STL
-	const ToleranceMap = require('../tolerance-map');
-	const STL = require('./STL');
-	
-	
-	// Constructive Solid Geometry (CSG) is a modeling technique that uses Boolean
-	// operations like union and intersection to combine 3D solids. This library
-	// implements CSG operations on meshes elegantly and concisely using BSP trees,
-	// and is meant to serve as an easily understandable implementation of the
-	// algorithm. All edge cases involving overlapping coplanar polygons in both
-	// solids are correctly handled.
-	//
-	// Example usage:
-	//
-	//     var cube = CSG.cube();
-	//     var sphere = CSG.sphere({ radius: 1.3 });
-	//     var polygons = cube.subtract(sphere).toPolygons();
-	//
-	// ## Implementation Details
-	//
-	// All CSG operations are implemented in terms of two functions, `clipTo()` and
-	// `invert()`, which remove parts of a BSP tree inside another BSP tree and swap
-	// solid and empty space, respectively. To find the union of `a` and `b`, we
-	// want to remove everything in `a` inside `b` and everything in `b` inside `a`,
-	// then combine polygons from `a` and `b` into one solid:
-	//
-	//     a.clipTo(b);
-	//     b.clipTo(a);
-	//     a.build(b.allPolygons());
-	//
-	// The only tricky part is handling overlapping coplanar polygons in both trees.
-	// The code above keeps both copies, but we need to keep them in one tree and
-	// remove them in the other tree. To remove them from `b` we can clip the
-	// inverse of `b` against `a`. The code for union now looks like this:
-	//
-	//     a.clipTo(b);
-	//     b.clipTo(a);
-	//     b.invert();
-	//     b.clipTo(a);
-	//     b.invert();
-	//     a.build(b.allPolygons());
-	//
-	// Subtraction and intersection naturally follow from set operations. If
-	// union is `A | B`, subtraction is `A - B = ~(~A | B)` and intersection is
-	// `A & B = ~(~A | ~B)` where `~` is the complement operator.
-	//
-	// ## License
-	//
-	// Copyright (c) 2011 Evan Wallace (http://madebyevan.com/), under the MIT license.
-	
-	// # class CSG
-	
-	// Holds a binary space partition tree representing a 3D solid. Two solids can
-	// be combined using the `union()`, `subtract()`, and `intersect()` methods.
-	
-	CSG = function() {
-	  this.polygons = [];
-	  this.toString = (percision, includeColor) => {
-	    percision ||= .001;
-	    let strs = [];
-	    this.polygons.forEach(p => strs.push(p.toString(percision, includeColor)));
-	    strs.sort();
-	    return strs.join('\n');
-	  }
-	  this.toDrawString = (color, percision) => color ?
-	      this.toString(percision).replace(/(^|\n)\[/g, `$1${color}[`) :
-	      this.toString(percision, true).replace(/(^|\n)\[/g, `$1${'blue'}[`);
-	  this.vertices = (percision) => {
-	    const verts = [];
-	    this.polygons.forEach(p => p.vertices.forEach(v => verts.push(v)));
-	    return verts.unique(o => o.toString(percision || .0001));
-	  }
-	  //TODO: USE TOLERANCE MAP FOR 2N RUNTIME!!!;
-	  this.sharesVertex = function (other) {
-	    const otherVerts = other.vertices();
-	    for (let pi = 0; pi < this.polygons.length; pi++) {
-	      const poly = this.polygons[pi];
-	      for (let vi = 0; vi < poly.vertices.length; vi++) {
-	        const vert = poly.vertices[vi];
-	        for (let ovi = 0; ovi < otherVerts.length; ovi++) {
-	          if (otherVerts[ovi].equals(vert)) return true;
-	        }
-	      }
-	    }
-	    return false;
-	  }
-	
-	  this.toSTL = (header) => {
-	    const stl = new STL(header);
-	    const scaled = this.clone();
-	    scaled.scale(10);
-	    scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos),
-	                            p.plane.normal, String.color.rgb.percent(p.rgb())));
-	    return stl;
-	  }
-	};
-	
-	CSG.BIG = 160934.4;//One Mile in cm
-	
-	// Construct a CSG solid from a list of `CSG.Polygon` instances.
-	CSG.fromPolygons = function(polygons, deepCopy) {
-	  var csg = new CSG();
-	
-	  if (deepCopy) {
-	    const newPolys = [];
-	    for (let pi = 0; pi < polygons.length; pi++) {
-	      const polygon = polygons[pi];
-	      const vertices =  polygon.vertices;
-	      const newVerts = [];
-	      const shared = polygon.shared ? Array.from(polygon.shared) : undefined;
-	      for (let vi = 0; vi < vertices.length; vi++) {
-	        const vert = vertices[vi];
-	        const norm = vert.normal;
-	        const pos = vert.pos;
-	        const newNorm = new CSG.Vector(norm.x, norm.y, norm.z);
-	        const newPos = new CSG.Vector(pos.x, pos.y, pos.z);
-	        newVerts.push(new CSG.Vertex(newPos, newNorm));
-	      }
-	      newPolys.push(new CSG.Polygon(newVerts, shared));
-	    }
-	    polygons = newPolys;
-	  }
-	
-	  csg.polygons = polygons;
-	  return csg;
-	};
-	
-	const oneTenth = (v) => ({x: v.x / 10, y: v.y /= 10, z: v.z /= 10});
-	CSG.fromSTL = (stl) => {
-	  const json = stl.toJson();
-	  const triangles = json.triangles;
-	  const polys = triangles.map(t => {
-	    const normal = new CSG.Vector(t.normal);
-	    if (normal.length() < .999) normal = CSG.normal(t.vertices[0], t.vertices[1], t.vertices[2]);
-	    const v1 = new CSG.Vertex(oneTenth(t.vertices[0]), normal);
-	    const v2 = new CSG.Vertex(oneTenth(t.vertices[1]), normal);
-	    const v3 = new CSG.Vertex(oneTenth(t.vertices[2]), normal);
-	    return new CSG.Polygon([v1,v2,v3], t.color);
-	  });
-	  const csg = CSG.fromPolygons(polys);
-	  return csg;
-	}
-	
-	CSG.normal = (verts) => {
-	  if (verts.length < 3) throw new Error('Normal calculations require atleast 3 vertices');
-	  v0 = new CSG.Vector(verts[0]);
-	  v1 = new CSG.Vector(verts[1]);
-	  v2 = new CSG.Vector(verts[2]);
-	  return v1.minus(v0).cross(v1.minus(v2)).unit();
-	}
-	
-	CSG.fromPolygon = (poly, offset) => {
-	  const front = poly.clone();
-	  const back = poly.clone();
-	  const offsetVect = poly.vertices[0].normal.times(offset);
-	  back.translate(offsetVect);
-	  const center = new CSG.Vector(front.center().pos).plus(new CSG.Vector(back.center().pos)).dividedBy(2);
-	  const len = poly.vertices.length;
-	  const fverts = front.vertices.map(v => new CSG.Vector(v.pos));
-	  const bverts = back.vertices.map(v => new CSG.Vector(v.pos));
-	  const sides = [];
-	  for (let index = 0; index < len; index++) {
-	    const vi1 = index%len;
-	    const vi2 = (index + 1)%len;
-	    const pts = [fverts[vi1], fverts[vi2], bverts[vi2], bverts[vi1]];
-	    let norm = pts[1].minus(pts[0]).cross(pts[1].minus(pts[2])).unit();
-	    const vertices = pts.map(p => new CSG.Vertex(p, norm));
-	    const poly = new CSG.Polygon(vertices);
-	    poly.alignNormal(center);
-	    sides.push(poly);
-	  }
-	  if (offset < 0) {
-	    back.vertices.forEach(v => v.normal = v.normal.times(-1));
-	    back.vertices.reverse();
-	    back.plane.normal = back.plane.normal.times(-1);
-	  } else {
-	    front.vertices.forEach(v => v.normal = v.normal.times(-1));
-	    front.vertices.reverse();
-	    front.plane.normal = front.plane.normal.times(-1);
-	  }
-	  front.alignNormal(center);
-	  back.alignNormal(center);
-	  console.log([front, back].concat(sides).map((p, i) => `// ${i} ${p.plane.normal.unit()}\n${p.toString()}`).join('\n'))
-	  const csg = CSG.fromPolygons([front, back].concat(sides));
-	  return csg;
-	}
-	
-	function sliceConfig(x, y, width, dems, center) {
-	  if (!Array.isArray(dems)) dems = [dems.x, dems.y, dems.z];
-	  const notIncluded = [x,y].indexOf('z') === -1 ? 2 : ([x,y].indexOf('y')) === -1 ? 1 : 0;
-	  const length = dems[notIncluded];
-	  const demensions = dems.map(v => v);
-	  demensions[notIncluded] = width;
-	  const startOffset = [0, 0, 0];
-	  startOffset[notIncluded] = (length / -2) + (width / 2);
-	  center = center.translate(startOffset);
-	  center = [center.pos.x, center.pos.y, center.pos.z];
-	  let step = [0, 0, 0];
-	  step[notIncluded] = width;
-	  step = new CSG.Vector(step);
-	  const steps = Math.ceil(length/width);
-	  return {demensions, center, step, steps, width, index: 0};
-	}
-	
-	CSG.fromString = function (string) {
-	  const numRegStr = '((-|)[0-9]*\\.[0-9]{1,}|[0-9]{1,})'
-	  const vertRegStr = `\\(${numRegStr},${numRegStr},${numRegStr}\\)`;
-	  const polyRegStr = `([a-zA-z0-9, ]*)\\[(${vertRegStr}(,|)){3,}\\]`;
-	  const polyRegG = new RegExp(polyRegStr, 'g');
-	  const polyReg = new RegExp(polyRegStr);
-	  const vertRegG = new RegExp(vertRegStr, 'g');
-	  const vertReg = new RegExp(vertRegStr);
-	  const numRegG = new RegExp(numRegStr, 'g');
-	  const numReg = new RegExp(numRegStr);
-	
-	  const pf = Number.parseFloat;
-	  const polyStrs = string.match(polyRegG);
-	  if (polyStrs === null) return null;
-	  const polys = [];
-	  for (let i = 0; i < polyStrs.length; i++) {
-	    const vertStrs = polyStrs[i].match(vertRegG);
-	    let color = polyStrs[i].match(polyReg)[1];
-	    let colorMatch = color.match(numRegG);
-	    if (colorMatch && colorMatch.length === 3) color = colorMatch.map(s => pf(s));
-	    const verts = [];
-	    for (let j = 0; vertStrs && j < vertStrs.length; j++) {
-	      const match = vertStrs[j].match(vertReg);
-	      const vertex = {x: pf(match[1]), y: pf(match[3]), z: pf(match[5])};
-	      verts.push(vertex);
-	    }
-	    const a = new CSG.Vector(verts[0]);
-	    const b = new CSG.Vector(verts[1]);
-	    const c = new CSG.Vector(verts[2]);
-	    const norm = a.minus(b).cross(b.minus(c));
-	    const vertices = verts.map(v => new CSG.Vertex(v, norm));
-	    const poly = new CSG.Polygon(vertices);
-	    if (color) poly.setColor(color);
-	    polys.push(poly);
-	  }
-	
-	  return CSG.fromPolygons(polys);
-	}
-	
-	const vertexPercision = (percision, x, y, z) => ({
-	  x: percision ? Math.roundTo(x, percision) : x,
-	  y: percision ? Math.roundTo(y, percision) : y,
-	  z: percision ? Math.roundTo(z, percision) : z
-	});
-	
-	CSG.toString = function (percision) {
-	  const list = [];
-	  this.polygons.forEach((polygon) => {
-	    const obj = {vertices: []};
-	    polygon.vertices.forEach((vertex) => {
-	      obj.vertices.push(vertexPercision(percision, vertex.pos.x, vertex.pos.y, vertex.pos.z));
-	    });
-	    list.push(obj);
-	  });
-	  return JSON.stringify(list, null, 2);
-	}
-	
-	CSG.prototype = {
-	  clone: function() {
-	    var csg = new CSG();
-	    //csg.normals = this.normals;
-	    csg.polygons = this.polygons.map(function(p) { return p.clone(); });
-	    return csg;
-	  },
-	
-	  scale: function(xOall, y, z, relitive) {
-	    const center = this.center();
-	    if (y === undefined && z === undefined && relitive === undefined) {
-	      this.polygons.map(function(p) { return p.scale(center, xOall); });
-	    } else {
-	      const dems = this.demensions();
-	      const x = relitive ? (dems.x + xOall)/dems.x : (xOall || 1);
-	      y = relitive ? (dems.y + y)/dems.y : (y || 1);
-	      z = relitive ? (dems.z + z)/dems.z : (z || 1);
-	      this.polygons.forEach(p => p.vertices.forEach(v => {
-	        v.scale(center, x, y, z);
-	      }));
-	    }
-	    return this;
-	  },
-	
-	  explode: function(distance) {
-	    const center = this.center();
-	    this.polygons.forEach(p =>
-	      p.translate(p.plane.normal.times(distance))
-	    );
-	  },
-	
-	  setColors: function(funcOcolor) {
-	    if (funcOcolor instanceof Function) {
-	      this.polygons.forEach(p => p.setColor(funcOcolor(p)));
-	    } else {
-	      this.polygons.forEach(p => p.setColor(funcOcolor));
-	    }
-	  },
-	
-	  setColor: function(color, force) {
-	    this.toPolygons().map(function(polygon) {
-	      if (polygon.shared === undefined || force) {
-	        polygon.setColor(color);
-	      }
-	    });
-	  },
-	
-	  toPolygons: function() {
-	    return this.polygons;
-	  },
-	
-	  // Return a new CSG solid representing space in either this solid or in the
-	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
-	  //
-	  //     A.union(B)
-	  //
-	  //     +-------+            +-------+
-	  //     |       |            |       |
-	  //     |   A   |            |       |
-	  //     |    +--+----+   =   |       +----+
-	  //     +----+--+    |       +----+       |
-	  //          |   B   |            |       |
-	  //          |       |            |       |
-	  //          +-------+            +-------+
-	  //
-	  union: function(csg) {
-	    if (!csg || csg.polygons.length === 0) return this.clone();
-	    var a = new CSG.Node(this.clone().polygons);
-	    var b = new CSG.Node(csg.clone().polygons);
-	    a.clipTo(b);
-	    b.clipTo(a);
-	    b.invert();
-	    b.clipTo(a);
-	    b.invert();
-	    a.build(b.allPolygons());
-	    return CSG.fromPolygons(a.allPolygons());
-	  },
-	  islands: function() {
-	    const islands = [];
-	    let allVerts = [];
-	    for (let index = 0; index < this.polygons.length; index++) {
-	      const poly = this.polygons[index];
-	      let addToIndex = -1;
-	      for (let vi = 0; vi < poly.vertices.length; vi++) {
-	        const vert = poly.vertices[vi];
-	        for (let avi = 0; addToIndex < 0 && avi < allVerts.length; avi++) {
-	          if (vert.equals(allVerts[avi].vert)) addToIndex = allVerts[avi].index;
-	        }
-	        if (addToIndex === -1) addToIndex = islands.push(new CSG()) - 1;
-	        islands[addToIndex].polygons.push(poly);
-	      }
-	      for (let vi = 0; vi < poly.vertices.length; vi++) {
-	        allVerts.push({vert: poly.vertices[vi], index: addToIndex});
-	      }
-	    }
-	    CSG.combine(islands);
-	    return islands;
-	  },
-	
-	  // Return a new CSG solid representing space in this solid but not in the
-	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
-	  //
-	  //     A.subtract(B)
-	  //
-	  //     +-------+            +-------+
-	  //     |       |            |       |
-	  //     |   A   |            |       |
-	  //     |    +--+----+   =   |    +--+
-	  //     +----+--+    |       +----+
-	  //          |   B   |
-	  //          |       |
-	  //          +-------+
-	  //
-	  subtract: function(csg) {
-	    if (!csg || csg.polygons.length === 0) return this.clone();
-	    var a = new CSG.Node(this.clone().polygons);
-	    var b = new CSG.Node(csg.clone().polygons);
-	    a.invert();
-	    a.clipTo(b);
-	    b.clipTo(a);
-	    b.invert();
-	    b.clipTo(a);
-	    b.invert();
-	    a.build(b.allPolygons());
-	    a.invert();
-	    return CSG.fromPolygons(a.allPolygons());
-	  },
-	
-	  // Return a new CSG solid representing space both this solid and in the
-	  // solid `csg`. Neither this solid nor the solid `csg` are modified.
-	  //
-	  //     A.intersect(B)
-	  //
-	  //     +-------+
-	  //     |       |
-	  //     |   A   |
-	  //     |    +--+----+   =   +--+
-	  //     +----+--+    |       +--+
-	  //          |   B   |
-	  //          |       |
-	  //          +-------+
-	  //
-	  intersect: function(csg) {
-	    if (!csg || csg.polygons.length === 0) return null;
-	    var a = new CSG.Node(this.clone().polygons);
-	    var b = new CSG.Node(csg.clone().polygons);
-	    a.invert();
-	    b.clipTo(a);
-	    b.invert();
-	    a.clipTo(b);
-	    b.clipTo(a);
-	    a.build(b.allPolygons());
-	    a.invert();
-	    return CSG.fromPolygons(a.allPolygons());
-	  },
-	
-	  slice: function (width, x, y, map) {
-	    width ||= .01;
-	    if ((!x && y) || (x && !y)) throw new Error('If you define x you must define y and vice versa')
-	    if (!x && !y) (x = 'x') & (y = 'z');
-	    const dems = this.demensions();
-	    const center = new CSG.Vertex(this.center());
-	    const config = sliceConfig(x,y, width, dems, center);
-	    config.slice = new CSG.cube(config);
-	    config.slices = [];
-	    const runFunc = map instanceof Function;
-	    for (;config.index < config.steps; config.index++) {
-	        const int = config.slice.intersect(this);
-	        int.polygons = int.polygons.filter(p => config.step.dot(p.plane.normal) === config.width);
-	        if (runFunc) config.slices.push(map(int, config));
-	        else config.slices.push(int);
-	        config.slice.translate(config.step);
-	    }
-	    console.log(config.slices.map((s, i) => `//${i}\n${s.toDrawString()}\n${this.toDrawString('green')}`).join('\n\n'))
-	    return config.slices;
-	  },
-	
-	  // Return a new CSG solid with solid and empty space switched. This solid is
-	  // not modified.
-	  inverse: function() {
-	    var csg = this.clone();
-	    csg.polygons.map(function(p) { p.flip(); });
-	    return csg;
-	  },
-	  endpoints: function () {
-	    const endpoints = {};
-	    const endpoint = (attr, value) => {
-	      const max = endpoints[attr];
-	      endpoints[attr] = max === undefined || max < value ? value : max;
-	      const minAttr = `-${attr}`;
-	      const min = endpoints[minAttr];
-	      endpoints[minAttr] = min === undefined || min > value ? value : min;
-	    }
-	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-	      endpoint('x', vertex.pos.x);
-	      endpoint('y', vertex.pos.y);
-	      endpoint('z', vertex.pos.z);
-	    }));
-	    return endpoints;
-	  },
-	  distCenter: function () {
-	    const endpoints = this.endpoints();
-	    const x = ((endpoints.x + endpoints['-x']) / 2);
-	    const y = ((endpoints.y + endpoints['-y']) / 2);
-	    const z = ((endpoints.z + endpoints['-z']) / 2);
-	    return {x,y,z};
-	  },
-	  mean: function () {
-	    const vertices = this.vertices();
-	    const mean = Math.mean(vertices, ['pos.x', 'pos.y', 'pos.z']);
-	    return mean.pos;
-	  },
-	
-	  demensions: function () {
-	    const epts = this.endpoints();
-	    return {
-	      x: epts.x - epts['-x'],
-	      y: epts.y - epts['-y'],
-	      z: epts.z - epts['-z']
-	    }
-	  },
-	  cube: function () {
-	    return new CSG.cube({demensions: this.demensions(), center: this.center()});
-	  },
-	  demCenter: function () {
-	    const dems = this.demensions();
-	    return {x: dems.x/2, y: dems.y/2, z: dems.z/2};
-	  },
-	  rotateAroundPoint: function (rotations, point) {
-	    const returnVector = new CSG.Vector(point);
-	    const centerVector = returnVector.negated();
-	    this.translate(centerVector);
-	    this.rotate(rotations);
-	    this.translate(returnVector);
-	  },
-	
-	  rotate: function (rotations, pivot) {
-	    pivot ||= {x: 1, y:1, z:1};
-	    if (Array.isArray(rotations)) {
-	      for (let i = 0; i < rotations.length; i++) this.rotate(rotations[i])
-	      return;
-	    }
-	    rotations = new CSG.Vector(rotations)
-	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-	      let newPos = vertex.pos;
-	      newPos = ArbitraryRotate(newPos, rotations.x, {x: pivot.x, y:0, z:0});
-	      newPos = ArbitraryRotate(newPos, rotations.y, {x: 0, y:pivot.y, z:0});
-	      newPos = ArbitraryRotate(newPos, rotations.z, {x: 0, y:0, z:pivot.z});
-	      return new CSG.Vertex(newPos, vertex.normal);
-	    }));
-	  },
-	  reverseRotate: function (rotation) {
-	    rotation = new CSG.Vector(rotation)
-	    rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
-	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-	      let newPos = vertex.pos;
-	      newPos = ArbitraryRotate(newPos, rotation.z, {x: 0, y:0, z:1});
-	      newPos = ArbitraryRotate(newPos, rotation.y, {x: 0, y:1, z:0});
-	      newPos = ArbitraryRotate(newPos, rotation.x, {x: 1, y:0, z:0});
-	      return new CSG.Vertex(newPos, vertex.normal);
-	    }));
-	  },
-	
-	  ArbitraryRotate: function(degrees, pivot) {
-	    this.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-	        let newPos = vertex.pos;
-	        newPos = ArbitraryRotate(newPos, degrees, pivot);
-	        return new CSG.Vertex(newPos, vertex.normal);
-	    }));
-	  },
-	
-	  translate: function (offset) {
-	    offset = new CSG.Vector(offset)
-	    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
-	    offset.id = String.random();
-	    this.polygons.forEach((poly) => poly.translate(offset));
-	  },
-	
-	  center: function (newCenter) {
-	    const center = this.distCenter();
-	    if (!newCenter) return center;
-	    const offset = {
-	      x: newCenter.x - center.x,
-	      y: newCenter.y - center.y,
-	      z: newCenter.z - center.z
-	    }
-	    this.translate(offset);
-	    return newCenter;
-	  },
-	
-	  normalize: function (rotations, rightSide, leftOfAxis) {
-	    if (rightSide) {
-	      if (rotations) {
-	        if (Array.isArray(rotations)) rotations = rotations.concat([{y:180}]);
-	        else rotations = [rotations, {y: 180}];
-	      } else rotations = [{y:180}];
-	    }
-	    const clone = this.clone();
-	    if (rotations) clone.rotate(rotations);
-	    const dems = clone.demensions();
-	    const divisor = leftOfAxis ? -2 : 2;
-	    const normCenter = {x: dems.x/divisor, y: dems.y/2, z: dems.z/2};
-	    // const translationVector = new CSG.Vector(clone.center()).minus(normCenter);
-	    const translationVector = new CSG.Vector(normCenter).minus(clone.center());
-	    clone.translate(translationVector);
-	    const side = !rightSide ? 'Left' : 'Right';
-	    return {poly: clone, translationVector, rotations, normCenter, side};
-	  }
-	};
-	
-	CSG.combine = function(csgs) {
-	  for (let index = csgs.length - 1; index > -1; index--) {
-	    const proposer = csgs[index];
-	    for (let oi = 0; oi < index; oi++) {
-	      const proposeTo = csgs[oi];
-	      if (proposer.sharesVertex(proposeTo)) {
-	        proposeTo.polygons.concatInPlace(proposer.polygons);
-	        csgs.splice(index, 1);
-	        break;
-	      }
-	    }
-	  }
-	}
-	
-	CSG.concat = function(csgs) {
-	  const all = new CSG();
-	  for (let index = 0; index < csgs.length; index++) {
-	    all.polygons.concatInPlace(csgs[index].polygons);
-	  }
-	  return all;
-	}
-	
-	CSG.marroonedOn = function(csgOpolyOvertex, islands) {
-	  let vertices;
-	  if (csgOpolyOvertex instanceof CSG) vertices = csgOpolyOvertex.vertices();
-	  else if (csgOpolyOvertex instanceof CSG.Polygon) vertices = csgOpolyOvertex.vertices;
-	  else if (csgOpolyOvertex instanceof CSG.Vertex) vertices = [csgOpolyOvertex];
-	  else throw new Error(`marroonedOn not configured for input '${csgOpolyOvertex}'`);
-	  for(let ii = 0; ii < islands.length; ii++) {
-	    const island = islands[ii];
-	    const iVerts = island.vertices();
-	    for (let ivi = 0; ivi < iVerts.length; ivi++) {
-	      for (let vi = 0; vi < vertices.length; vi++) {
-	        if (vertices[vi].equals(iVerts[ivi])) return island;
-	      }
-	    }
-	  }
-	  return null;
-	}
-	
-	// Construct an axis-aligned solid cuboid. Optional parameters are `center` and
-	// `radius`, which default to `[0, 0, 0]` and `[1, 1, 1]`. The radius can be
-	// specified using a single number or a list of three numbers, one for each axis.
-	//
-	// Example code:
-	//
-	//     var cube = CSG.cube({
-	//       center: [0, 0, 0],
-	//       radius: 1
-	//     });
-	//
-	// x1 = (x0 – xc)cos(θ) – (y0 – yc)sin(θ) + xc(Equation 3)
-	// y1 = (x0 – xc)sin(θ) + (y0 – yc)cos(θ) + yc(Equation 4)
-	
-	function getRadius(options) {
-	  if (options.demension)
-	    options.radius = [options.demension/2,options.demension/2,options.demension/2];
-	  if (!options.radius && options.demensions) {
-	      options.radius = new CSG.Vector(options.demensions).times(.5).toArray();
-	  }
-	  if (options.radius) {
-	    return Number.isFinite(options.radius) ?
-	      [options.radius, options.radius, options.radius] :
-	      new CSG.Vector(options.radius).toArray();
-	  }
-	  return  [1, 1, 1];
-	}
-	
-	CSG.cube = function(options) {
-	  options = options || {};
-	  var c = new CSG.Vector(options.center || [0, 0, 0]);
-	  var r = getRadius(options);
-	  return CSG.fromPolygons([
-	    [[0, 4, 6, 2], [-1, 0, 0]],
-	    [[1, 3, 7, 5], [+1, 0, 0]],
-	    [[0, 1, 5, 4], [0, -1, 0]],
-	    [[2, 6, 7, 3], [0, +1, 0]],
-	    [[0, 2, 3, 1], [0, 0, -1]],
-	    [[4, 5, 7, 6], [0, 0, +1]]
-	  ].map(function(info) {
-	    return new CSG.Polygon(info[0].map(function(i) {
-	      var pos = new CSG.Vector(
-	        c.x + r[0] * (2 * !!(i & 1) - 1),
-	        c.y + r[1] * (2 * !!(i & 2) - 1),
-	        c.z + r[2] * (2 * !!(i & 4) - 1)
-	      );
-	      return new CSG.Vertex(pos, new CSG.Vector(info[1]));
-	    }));
-	  }));
-	};
-	
-	const oneOnone = (val) => val > 0 ? 1 : (val < 0) ? -1 : 0;
-	function champerCube(center, x, y, z, depth) {
-	  const big = 10;
-	  const bigVect = new CSG.Vector(oneOnone(x), oneOnone(y), oneOnone(z)).unit();
-	  const cube = new CSG.cube({demension: big});
-	  const rotations = x === 0 ? {x: 45} : (y === 0 ? {y: 45} : {z: 45});
-	  cube.rotate(rotations);
-	  const vector = new CSG.Vector(x, y, z);
-	  const bigOffset = bigVect.unit().times(big/2);
-	  const depthOffset = bigVect.unit().times(depth);
-	  cube.translate(vector.plus(bigOffset).minus(depthOffset));
-	  return cube;
-	}
-	
-	CSG.cube.champhered = function (options) {
-	  let cube = new CSG.cube(options);
-	  const depth = options.depth || 1;
-	  const edges = options.edges || [true,true,true];
-	  if (edges[0] === true) edges[0] = [true,true,true,true];
-	  if (edges[1] === true) edges[1] = [true,true,true,true];
-	  if (edges[2] === true) edges[2] = [true,true,true,true];
-	  const c = options.center;
-	  const r = getRadius(options);
-	
-	  if (edges[0]) {
-	    if (edges[0][0]) cube = cube.subtract(champerCube(c, 0, r[1], r[2], depth));
-	    if (edges[0][1]) cube = cube.subtract(champerCube(c, 0, r[1], -r[2], depth));
-	    if (edges[0][2]) cube = cube.subtract(champerCube(c, 0, -r[1], -r[2], depth));
-	    if (edges[0][3]) cube = cube.subtract(champerCube(c, 0, -r[1], r[2], depth));
-	  }
-	
-	  if (edges[1]) {
-	    if (edges[1][0]) cube = cube.subtract(champerCube(c, r[0], 0, r[2], depth));
-	    if (edges[1][1]) cube = cube.subtract(champerCube(c, r[0], 0, -r[2], depth));
-	    if (edges[1][2]) cube = cube.subtract(champerCube(c, -r[0], 0, -r[2], depth));
-	    if (edges[1][3]) cube = cube.subtract(champerCube(c, -r[0], 0, r[2], depth));
-	  }
-	
-	  if (edges[2]) {
-	    if (edges[2][0]) cube = cube.subtract(champerCube(c, r[0], r[1], 0, depth));
-	    if (edges[2][1]) cube = cube.subtract(champerCube(c, r[0], -r[1], 0, depth));
-	    if (edges[2][2]) cube = cube.subtract(champerCube(c, -r[0], -r[1], 0, depth));
-	    if (edges[2][3]) cube = cube.subtract(champerCube(c, -r[0], r[1], 0, depth));
-	  }
-	  return cube
-	}
-	
-	CSG.Point = function (center, radius, color) {
-	  radius ||= .5
-	  const sphere = new CSG.sphere({radius, center});
-	  sphere.setColor(color);
-	  return sphere;
-	}
-	
-	function vecotrOvertexModel(start, end, model, options) {
-	  if (Array.isArray(end) || options.lineDisplayType === CSG.Line.DISPLAY_TYPES.LINE_ONLY) return model;
-	  let color = end.color || options.color;
-	  if (CSG.Line.DISPLAY_TYPES.VECTOR === options.lineDisplayType &&
-	          end instanceof CSG.Vector) {
-	    const maxLen = end.distance(new CSG.Vector(start)) / 2;
-	    const unit = end.minus(new CSG.Vector(start)).unit().times(maxLen > 6 ? 6 : maxLen);
-	    start = end.minus(unit);
-	    return new CSG.cone({start, end, model, color});
-	  } else {
-	    return new CSG.Point(end, null, color).union(model);
-	  }
-	}
-	
-	CSG.Line = function (options) {
-	  options ||= {};
-	  const start = options.start || [0,0,0];
-	  const end = options.end || [0,0,0];
-	  if (new CSG.Vector(start).equals(new CSG.Vector(end))) {
-	    return new CSG.Point(options.start, .3, options.color);
-	  }
-	  const radius = options.radius || .2;
-	  let model = new CSG.cylinder({start, end, radius, slices: 8});
-	  model = vecotrOvertexModel(end, start, model, options);
-	  model.setColor(options.color);
-	  return vecotrOvertexModel(start, end, model, options);
-	}
-	
-	CSG.Line.DISPLAY_TYPES = {};
-	CSG.Line.DISPLAY_TYPES.LINE_ONLY = 'lineOnly';
-	CSG.Line.DISPLAY_TYPES.VECTOR = 'vector';
-	
-	CSG.Rectangle = function (demensions, center, yVector, xVector) {
-	  yVector = new CSG.Vector(yVector || [0,1,0]).unit();
-	  const defaultVector = !Object.equals(yVector, {x:1, y:0, z:0}) ? {x:1, y:0, z:0} : {x:0, y:0, z:1};
-	  xVector = new CSG.Vector(xVector || defaultVector);
-	  center = new CSG.Vector(center || [0,0,0]);
-	  const demVector = new CSG.Vector(demensions || [3,5,1]);
-	  const width = demVector.x;
-	  const length = demVector.y;
-	  const depth = demVector.z;
-	  const zVector = xVector.cross(yVector).unit();
-	
-	  const vs = {
-	    x: yVector.times(length/2),
-	    y: xVector.times(width/2),
-	    z: zVector.times(depth/2),
-	    nx: yVector.times(length/2).negated(),
-	    ny: xVector.times(width/2).negated(),
-	    nz: zVector.times(depth/2).negated()
-	  }
-	
-	  const vert = (...args) => {
-	    const vertex = new CSG.Vertex(center);
-	    for(let index = 0; index < args.length; index++) vertex.plus(args[index]);
-	    return vertex;
-	  }
-	
-	  // const front = new CSG.Polygon([vert(vs.x, vs.y), vert(vs.nx, vs.y), vert(vs.nx, vs.ny), vert(vs.x, vs.ny)]);
-	  let v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.nz);
-	  let v2 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.nz);
-	  let v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.nz);
-	  let v4 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.nz);
-	  const front = new CSG.Polygon([v1,v2,v3,v4]);
-	
-	  // const back = new CSG.Polygon([vert(vs.x,vs.y,vs.z),vert(vs.nx,vs.y,vs.z),vert(vs.nx,vs.ny,vs.z),vert(vs.x,vs.ny,vs.z)]);
-	  v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.z);
-	  v2 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.z);
-	  v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.z);
-	  v4 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.z);
-	  const back = new CSG.Polygon([v4,v3,v2,v1]);
-	
-	  v1 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.y);
-	  v2 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.y);
-	  v3 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.y);
-	  v4 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.y);
-	  const top = new CSG.Polygon([v4,v3,v2,v1]);
-	
-	  v1 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.ny);
-	  v2 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.ny);
-	  v4 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.ny);
-	  v3 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.ny);
-	  const bottom = new CSG.Polygon([v4,v3,v2,v1]);
-	
-	  v1 = new CSG.Vertex(center.plus(vs.x).plus(vs.y), vs.x);
-	  v2 = new CSG.Vertex(center.plus(vs.x).minus(vs.y),  vs.x);
-	  v3 = new CSG.Vertex(center.plus(vs.x).minus(vs.y).plus(vs.z),  vs.x);
-	  v4 = new CSG.Vertex(center.plus(vs.x).plus(vs.y).plus(vs.z), vs.x);
-	  const left = new CSG.Polygon([v1,v2,v3,v4]);
-	
-	  v4 = new CSG.Vertex(center.minus(vs.x).plus(vs.y),  vs.nx);
-	  v3 = new CSG.Vertex(center.minus(vs.x).minus(vs.y),  vs.nx);
-	  v2 = new CSG.Vertex(center.minus(vs.x).minus(vs.y).plus(vs.z),  vs.nx);
-	  v1 = new CSG.Vertex(center.minus(vs.x).plus(vs.y).plus(vs.z),  vs.nx);
-	  const right = new CSG.Polygon([v1,v2,v3,v4]);
-	
-	  return CSG.fromPolygons([front, back, top, bottom, left, right])
-	}
-	
-	// Construct a solid sphere. Optional parameters are `center`, `radius`,
-	// `slices`, and `stacks`, which default to `[0, 0, 0]`, `1`, `16`, and `8`.
-	// The `slices` and `stacks` parameters control the tessellation along the
-	// longitude and latitude directions.
-	//
-	// Example usage:
-	//
-	//     var sphere = CSG.sphere({
-	//       center: [0, 0, 0],
-	//       radius: 1,
-	//       slices: 16,
-	//       stacks: 8
-	//     });
-	CSG.sphere = function(options) {
-	  options = options || {};
-	  var c = new CSG.Vector(options.center || [0, 0, 0]);
-	  var r = options.radius || 1;
-	  var slices = options.slices || 32;
-	  var stacks = options.stacks || 8;
-	  var polygons = [], vertices;
-	  function vertex(theta, phi) {
-	    theta *= Math.PI * 2;
-	    phi *= Math.PI;
-	    var dir = new CSG.Vector(
-	      Math.cos(theta) * Math.sin(phi),
-	      Math.cos(phi),
-	      Math.sin(theta) * Math.sin(phi)
-	    );
-	    vertices.push(new CSG.Vertex(c.plus(dir.times(r)), dir));
-	  }
-	  for (var i = 0; i < slices; i++) {
-	    for (var j = 0; j < stacks; j++) {
-	      vertices = [];
-	      vertex(i / slices, j / stacks);
-	      if (j > 0) vertex((i + 1) / slices, j / stacks);
-	      if (j < stacks - 1) vertex((i + 1) / slices, (j + 1) / stacks);
-	      vertex(i / slices, (j + 1) / stacks);
-	      polygons.push(new CSG.Polygon(vertices));
-	    }
-	  }
-	
-	  const csg = CSG.fromPolygons(polygons);
-	  csg.property('x', c.x, false, false);
-	  csg.property('y', c.y, false, false);
-	  csg.property('z', c.z, false, false);
-	  csg.property('radius', c.radius, false, false);
-	  return csg;
-	};
-	
-	// TODO: add a length option so that start and end dont need to be defined;
-	// Construct a solid cylinder. Optional parameters are `start`, `end`,
-	// `radius`, and `slices`, which default to `[0, -1, 0]`, `[0, 1, 0]`, `1`, and
-	// `16`. The `slices` parameter controls the tessellation.
-	//
-	// Example usage:
-	//
-	//     var cylinder = CSG.cylinder({
-	//       start: [0, -1, 0],
-	//       end: [0, 1, 0],
-	//       radius: 1,
-	//       slices: 16
-	//     });
-	CSG.cylinder = function(options) {
-	  options = options || {};
-	  var s = new CSG.Vector(options.start || [0, -1, 0]);
-	  var e = new CSG.Vector(options.end || [0, 1, 0]);
-	  var ray = e.minus(s);
-	  var r = options.radius || 1;
-	  if (!ray.positive()) {
-	    let temp = s;
-	    s = e;
-	    e = temp;
-	    ray = ray.negated();
-	  }
-	  var slices = options.slices || 8;
-	  var axisZ = ray.unit(); isY = (Math.abs(axisZ.y) > 0.5);
-	  var axisX = new CSG.Vector(isY, !isY, 0).cross(axisZ).unit();
-	  var axisY = axisX.cross(axisZ).unit();
-	  var start = new CSG.Vertex(s, axisZ.negated());
-	  var end = new CSG.Vertex(e, axisZ.unit());
-	  var polygons = [];
-	  function point(stack, slice, normalBlend) {
-	    var angle = slice * Math.PI * 2;
-	    var out = axisX.times(Math.cos(angle)).plus(axisY.times(Math.sin(angle)));
-	    var pos = s.plus(ray.times(stack)).plus(out.times(r));
-	    var normal = out.times(1 - Math.abs(normalBlend)).plus(axisZ.times(normalBlend));
-	    return new CSG.Vertex(pos, normal);
-	  }
-	  const topVerts = [];
-	  const bottomVerts = [];
-	  for (var i = 0; i < slices; i++) {
-	    var t0 = i / slices, t1 = (i + 1) / slices;
-	    polygons.push(new CSG.Polygon([point(0, t1, 0), point(0, t0, 0), point(1, t0, 0), point(1, t1, 0)]));
-	    topVerts.push(point(1, t0, 1));
-	    bottomVerts.push(point(0, t0, 1));
-	  }
-	  topVerts.reverse();
-	  return CSG.fromPolygons(polygons.concat([new CSG.Polygon(topVerts),new CSG.Polygon(bottomVerts)]));
-	  // return new CSG.Polygon(verts);
-	};
-	
-	let crossVect;
-	const perpendicularVector = (vector) => {
-	  let other;
-	  const option1Mag = vector.z*vector.z+vector.y*vector.y;
-	  const option2Mag = vector.z*vector.z+vector.x*vector.x;
-	  const option3Mag = vector.y*vector.y+vector.x*vector.x;
-	  if (option1Mag > option2Mag && option1Mag > option3Mag) {
-	    other = new CSG.Vector(0, vector.z, -vector.y);
-	  } else if (option2Mag > option3Mag) {
-	    other = new CSG.Vector(-vector.z, 0, vector.x);
-	  } else {
-	    other = new CSG.Vector(-vector.y, vector.x, 0);
-	  }
-	  crossVect = other;
-	  return other;
-	}
-	
-	CSG.cylinder.step = function(cylinders, options) {
-	  let stepCylinder = new CSG();
-	  options ||= {};
-	  const mainCenter = options.center || {x:0,y:0,z:0};
-	  const mainSlices = options.slices;
-	  cylinders.forEach(c => {
-	    const vector = c.vector || new CSG.Vector({y: 0, x: 0, z: 1});
-	    const center = new CSG.Vector(c.center || mainCenter);
-	    const length = c.length;
-	    const radius = c.radius || c.diameter / 2;
-	    const slices = c.slices || mainSlices;
-	    const half = c.half || options.half;
-	    const start = half === true ? center : center.minus(vector.times(c.length/-2));
-	    const end = half === false ? center : center.minus(vector.times(c.length/2));
-	    const cylinder = new CSG.cylinder({start, end, center, radius, slices});
-	    stepCylinder = stepCylinder.union(cylinder);
-	  });
-	  return stepCylinder;
-	}
-	
-	CSG.cone = function (options) {
-	  options ||= {};
-	  let length = options.length || 10;
-	  const start = new CSG.Vector(options.start || [0,0,0]);
-	  const end = new CSG.Vector(options.end || start.add([0,length,0]));
-	  length = end.minus(start).length();
-	  const point = new CSG.sphere({radius: 1, center: end});
-	  const radius = options.radius || 1;
-	  const slices = options.slices || 8;
-	  let cylinder = new CSG.cylinder({start, end, radius, slices});
-	  let cone = cylinder.clone();
-	  if (options.color) cone.setColor(options.color);
-	  const sliceRotation = 360/slices;
-	  const rotationVector = end.minus(start).unit();
-	  const lengthVector = rotationVector.clone().times(length);
-	  const perpVector = perpendicularVector(rotationVector.clone()).times(radius/-2);
-	  const widthVector = perpVector.cross(rotationVector).unit().times(30);
-	  const cutterCenter = end;
-	  const plane = new CSG.Rectangle([30, length*10, radius*2], cutterCenter, rotationVector.unit(), widthVector.unit());
-	  const planeCenter = new CSG.Vector(plane.center());
-	  if (options.color) plane.setColor(options.color);
-	  const degrees = Math.toDegrees(Math.atan(radius/(2*length)))*2;
-	  plane.ArbitraryRotate(degrees, widthVector.unit());
-	  plane.center(cutterCenter);
-	  plane.translate(perpVector);
-	
-	  for (let index = 0; index < slices; index++) {
-	    plane.translate(cutterCenter.negated());
-	    plane.polygons.forEach((poly) => poly.forEachVertex((vertex) => {
-	        let newPos = vertex.pos;
-	        newPos = ArbitraryRotate(newPos, sliceRotation, rotationVector.unit());
-	        return new CSG.Vertex(newPos, vertex.normal);
-	      }));
-	      plane.translate(cutterCenter);
-	      cone = cone.subtract(plane);
-	  }
-	
-	  if(options.model) {
-	    const model = options.model.subtract(cylinder);
-	    cone = cone.union(model);
-	  }
-	
-	  return cone;
-	}
-	
-	function axis(vector, origin, color, size, radius) {
-	  origin ||= [0,0,0];
-	  const end = [vector[0]*size+origin[0],vector[1]*size+origin[1],vector[2]*size+origin[2]]
-	  const ax = CSG.cylinder({start: origin, end, radius})
-	  ax.setColor(color);
-	  return ax;
-	}
-	
-	CSG.Axis =  function (size, radius, origin, vectors) {
-	  size ||= 100;
-	  origin ||= [0,0,0];
-	  vectors ||= [[1,0,0], [0,1,0], [0,0,1]];
-	  radius ||= size/100;
-	  const center = CSG.sphere({center: origin, radius: radius*1.5})
-	  const xAxis = axis(vectors[0], origin, [255,0,0], size, radius);
-	  const yAxis = axis(vectors[1], origin, [0,128,0], size, radius);
-	  const zAxis = axis(vectors[2], origin, [0,0,255], size, radius);
-	  const csg = new CSG();
-	  csg.polygons.concatInPlace(center.polygons);
-	  csg.polygons.concatInPlace(xAxis.polygons);
-	  csg.polygons.concatInPlace(yAxis.polygons);
-	  csg.polygons.concatInPlace(zAxis.polygons);
-	  return csg;
-	}
-	
-	// # class Vector
-	
-	// Represents a 3D vector.
-	//
-	// Example usage:
-	//
-	//     new CSG.Vector(1, 2, 3);
-	//     new CSG.Vector([1, 2, 3]);
-	//     new CSG.Vector({ x: 1, y: 2, z: 3 });
-	const isZeros = (...vals) => vals.findIndex(v => withinEPSILON(v, 0)) === -1;
-	CSG.Vector = function(x, y, z) {
-	  if (arguments.length == 3) {
-	    this.x = x;
-	    this.y = y;
-	    this.z = z;
-	  } else if ('x' in x || 'y' in x || 'z' in x) {
-	    this.x = x.x;
-	    this.y = x.y;
-	    this.z = x.z;
-	  } else if ('i' in x || 'j' in x || 'k' in x) {
-	    this.x = x.i;
-	    this.y = x.j;
-	    this.z = x.k;
-	  } else {
-	    this.x = x[0];
-	    this.y = x[1];
-	    this.z = x[2];
-	  }
-	};
-	
-	CSG.Vector.prototype = {
-	  clone: function() {
-	    return new CSG.Vector(this.x, this.y, this.z);
-	  },
-	  positive: function () {
-	    return this.x > 0 || (isZeros(this.x) && this.y > 0) ||
-	              (isZeros(this.x,this.y) && this.z > 0) || isZeros(this.x, this.y, this.z);
-	  },
-	  toArray: function() {return [this.x,this.y,this.z]},
-	
-	  negated: function() {
-	    return new CSG.Vector(-this.x, -this.y, -this.z);
-	  },
-	
-	  plus: function(a) {
-	    return new CSG.Vector(this.x + a.x, this.y + a.y, this.z + a.z);
-	  },
-	
-	  minus: function(a) {
-	    return new CSG.Vector(this.x - a.x, this.y - a.y, this.z - a.z);
-	  },
-	
-	  times: function(a) {
-	    return new CSG.Vector(this.x * a, this.y * a, this.z * a);
-	  },
-	
-	  dividedBy: function(a) {
-	    return new CSG.Vector(this.x / a, this.y / a, this.z / a);
-	  },
-	
-	  dot: function(a) {
-	    return this.x * a.x + this.y * a.y + this.z * a.z;
-	  },
-	
-	  lerp: function(a, t) {
-	    return this.plus(a.minus(this).times(t));
-	  },
-	
-	  length: function() {
-	    return Math.sqrt(this.dot(this));
-	  },
-	
-	  unit: function() {
-	    return this.dividedBy(this.length());
-	  },
-	
-	  distance: function (other) {
-	    const vector = this.minus(other);
-	    return vector.length();
-	  },
-	
-	  cross: function(a) {
-	    return new CSG.Vector(
-	      this.y * a.z - this.z * a.y,
-	      this.z * a.x - this.x * a.z,
-	      this.x * a.y - this.y * a.x
-	    );
-	  },
-	
-	  equals: function(other) {
-	    return withinEPSILON(this.x, other.x) &&
-	            withinEPSILON(this.y, other.y) &&
-	            withinEPSILON(this.z, other.z);
-	  },
-	
-	  toString: function(percision) {
-	    const vertPer = vertexPercision(percision, this.x, this.y, this.z);
-	    return `(${vertPer.x},${vertPer.y},${vertPer.z})`
-	  }
-	};
-	
-	// # class Vertex
-	
-	// Represents a vertex of a polygon. Use your own vertex class instead of this
-	// one to provide additional features like texture coordinates and vertex
-	// colors. Custom vertex classes need to provide a `pos` property and `clone()`,
-	// `flip()`, and `interpolate()` methods that behave analogous to the ones
-	// defined by `CSG.Vertex`. This class provides `normal` so convenience
-	// functions like `CSG.sphere()` can return a smooth vertex normal, but `normal`
-	// is not used anywhere else.
-	
-	
-	CSG.Vector.I = new CSG.Vector(1,0,0);
-	CSG.Vector.J = new CSG.Vector(0,1,0);
-	CSG.Vector.K = new CSG.Vector(0,0,1);
-	
-	CSG.Vertex = function(pos, normal) {
-	  this.pos = new CSG.Vector(pos);
-	  this.normal = new CSG.Vector(normal || {x:1,y:0,z:0});
-	  this.toString = (percision) => {
-	    const verPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
-	    return `(${verPer.x},${verPer.y},${verPer.z})`;
-	  }
-	
-	  this.scale = (center, xOall, y, z) => {
-	    const centerVector = new CSG.Vector(center);
-	    const vector = new CSG.Vector(pos.x - center.x, pos.y - center.y, pos.z - center.z);
-	    if (y === undefined && z === undefined) {
-	      const scaled = vector.times(xOall);
-	      this.pos = centerVector.plus(scaled);
-	    } else {
-	      const iVect = CSG.Vector.I.times(vector.x * xOall);
-	      const jVect = CSG.Vector.J.times(vector.y * y);
-	      const kVect = CSG.Vector.K.times(vector.z * z);
-	      this.pos = centerVector.plus(iVect.plus(jVect).plus(kVect));
-	    }
-	  }
-	
-	  const tol = .1
-	  const attrSq = (other, attr) => (this.pos[attr]-other.pos[attr]) * (this.pos[attr]-other.pos[attr]);
-	  this.equals = (other, tolerance) => {
-	    tolerance ||= tol;
-	    if (!(other instanceof CSG.Vertex)) return false;
-	    const sqrtError = Math.sqrt(attrSq(other, 'x') + attrSq(other, 'y') + attrSq(other, 'z'));
-	    return Math.abs(sqrtError) < tol;
-	  }
-	};
-	
-	CSG.VertexNoNorm = function (pos) {
-	  return new CSG.Vertex(pos, [-1,-1,-1]);
-	}
-	
-	CSG.Vertex.Center = function (vertices) {
-	  vertices = vertices.map(v => new CSG.Vector(v));
-	  const total = {x:0, y:0,z:0};
-	  vertices.forEach(v => {
-	    total.x += v.x;total.y += v.y;total.z += v.z;
-	  })
-	  return {
-	    x: total.x / vertices.length,
-	    y: total.y / vertices.length,
-	    z: total.z / vertices.length
-	  }
-	}
-	
-	CSG.Vertex.prototype = {
-	  clone: function() {
-	    return new CSG.Vertex(this.pos.clone(), this.normal.clone());
-	  },
-	  toString: function (percision) {
-	    const vertPer = vertexPercision(percision, this.pos.x, this.pos.y, this.pos.z);
-	    return `(${vertPer.x},${vertPer.y},${vertPer.z})`
-	  },
-	  translate: function (offset) {return translate(this, offset)},
-	
-	  // Invert all orientation-specific data (e.g. vertex normal). Called when the
-	  // orientation of a polygon is flipped.
-	  flip: function() {
-	    this.normal = this.normal.negated();
-	  },
-	
-	  // Create a new vertex between this vertex and `other` by linearly
-	  // interpolating all properties using a parameter of `t`. Subclasses should
-	  // override this to interpolate additional properties.
-	  interpolate: function(other, t) {
-	    return new CSG.Vertex(
-	      this.pos.lerp(other.pos, t),
-	      this.normal.lerp(other.normal, t)
-	    );
-	  }
-	};
-	
-	// # class Plane
-	
-	// Represents a plane in 3D space.
-	
-	CSG.Plane = function(normal, w) {
-	  this.normal = normal;
-	  this.w = w;
-	  this.setColor = function(color) {
-	    const rgb = String.color.rgb(color);
-	    this.shared = [rgb[0]/255, rgb[1]/255, rgb[2]/255];
-	  }
-	};
-	
-	// `CSG.Plane.EPSILON` is the tolerance used by `splitPolygon()` to decide if a
-	// point is on the plane.
-	CSG.Plane.EPSILON = 1e-5;//1e-3;
-	const withinEPSILON = (v1,v2) => Math.abs(v1-v2) < CSG.Plane.EPSILON;
-	
-	CSG.Plane.fromPoints = function(a, b, c) {
-	  if (Array.isArray(a)) (c = a[2]) & (b = a[1]) & (a = a[0]);
-	  a = new CSG.Vector(a);
-	  b = new CSG.Vector(b);
-	  c = new CSG.Vector(c);
-	  var n = b.minus(a).cross(c.minus(a)).unit();
-	  return new CSG.Plane(n, n.dot(a));
-	};
-	
-	CSG.Plane.prototype = {
-	  clone: function() {
-	    return new CSG.Plane(this.normal.clone(), this.w);
-	  },
-	
-	  flip: function() {
-	    this.normal = this.normal.negated();
-	    this.w = -this.w;
-	  },
-	
-	  // Split `polygon` by this plane if needed, then put the polygon or polygon
-	  // fragments in the appropriate lists. Coplanar polygons go into either
-	  // `coplanarFront` or `coplanarBack` depending on their orientation with
-	  // respect to this plane. Polygons in front or in back of this plane go into
-	  // either `front` or `back`.
-	  splitPolygon: function(polygon, coplanarFront, coplanarBack, front, back) {
-	    var COPLANAR = 0;
-	    var FRONT = 1;
-	    var BACK = 2;
-	    var SPANNING = 3;
-	
-	    // Classify each point as well as the entire polygon into one of the above
-	    // four classes.
-	    var polygonType = 0;
-	    var types = [];
-	    for (var i = 0; i < polygon.vertices.length; i++) {
-	      var t = this.normal.dot(polygon.vertices[i].pos) - this.w;
-	      var type = (t < -CSG.Plane.EPSILON) ? BACK : (t > CSG.Plane.EPSILON) ? FRONT : COPLANAR;
-	      polygonType |= type;
-	      types.push(type);
-	    }
-	
-	    // Put the polygon in the correct list, splitting it when necessary.
-	    switch (polygonType) {
-	      case COPLANAR:
-	        (this.normal.dot(polygon.plane.normal) > 0 ? coplanarFront : coplanarBack).push(polygon);
-	        break;
-	      case FRONT:
-	        front.push(polygon);
-	        break;
-	      case BACK:
-	        back.push(polygon);
-	        break;
-	      case SPANNING:
-	        var f = [], b = [];
-	        for (var i = 0; i < polygon.vertices.length; i++) {
-	          var j = (i + 1) % polygon.vertices.length;
-	          var ti = types[i], tj = types[j];
-	          var vi = polygon.vertices[i], vj = polygon.vertices[j];
-	          if (ti != BACK) f.push(vi);
-	          if (ti != FRONT) b.push(ti != BACK ? vi.clone() : vi);
-	          if ((ti | tj) == SPANNING) {
-	            var t = (this.w - this.normal.dot(vi.pos)) / this.normal.dot(vj.pos.minus(vi.pos));
-	            var v = vi.interpolate(vj, t);
-	            f.push(v);
-	            b.push(v.clone());
-	          }
-	        }
-	        if (f.length >= 3) front.push(new CSG.Polygon(f, polygon.shared));
-	        if (b.length >= 3) back.push(new CSG.Polygon(b, polygon.shared));
-	        break;
-	    }
-	  }
-	};
-	
-	// # class Polygon
-	
-	// Represents a convex polygon. The vertices used to initialize a polygon must
-	// be coplanar and form a convex loop. They do not have to be `CSG.Vertex`
-	// instances but they must behave similarly (duck typing can be used for
-	// customization).
-	//
-	// Each convex polygon has a `shared` property, which is shared between all
-	// polygons that are clones of each other or were split from the same polygon.
-	// This can be used to define per-polygon properties (such as surface color).
-	
-	CSG.Polygon = function(vertices, shared) {
-	  this.vertices = vertices;
-	  this.shared = shared;
-	  this.plane = CSG.Plane.fromPoints(vertices[0].pos, vertices[1].pos, vertices[2].pos);
-	};
-	
-	CSG.Polygon.prototype = {
-	  clone: function() {
-	    var vertices = this.vertices.map(function(v) { return v.clone(); });
-	    return new CSG.Polygon(vertices, this.shared);
-	  },
-	
-	  lines: function () {
-	    const verts = this.vertices;
-	    return verts.map((v,i) => [v.pos, verts[(i+1)%verts.length].pos]);
-	  },
-	
-	  alignNormal: function (objectCenter) {
-	    const center = new CSG.Vector(this.center().pos);
-	    const dir = center.minus(objectCenter).unit();
-	    const norm = this.plane.normal;
-	    if (norm.dot(dir) < 0) {
-	      this.plane.normal = norm.times(-1);
-	      this.vertices.forEach(v => v.normal = v.normal.times(-1));
-	      console.log('realigned');
-	    }
-	  },
-	
-	  toString: function (percision, includeColor) {
-	    percision ||= .001;
-	    const verts = this.vertices;
-	    const shared = this.shared;
-	    let color = includeColor ? String.colorName(shared) : '';
-	    let str = `${color}[`;
-	    for (let v = 0; v < verts.length; v++) {
-	      str += `${verts[v].toString(percision)},`;
-	    }
-	    str = `${str.substring(0, str.length - 1)}]`;
-	    return str;
-	  },
-	
-	  center: function () {
-	    const mr = Math.midrange(this.vertices, ['pos.x','pos.y','pos.z']);
-	    return new CSG.Vertex({x: mr['pos.x'], y: mr['pos.y'], z: mr['pos.z']});
-	  },
-	
-	  translate: function (offset) {
-	    if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
-	    const offsetId = offset.id || (offset.id = String.random());
-	    this.forEachVertex((vertex) => {
-	      if (!vertex.offsetId || vertex.offsetId !== offsetId) {
-	        vertex.pos.x += offset.x;
-	        vertex.pos.y += offset.y;
-	        vertex.pos.z += offset.z;
-	        vertex.offsetId = offsetId;
-	      }
-	    });
-	  },
-	
-	  color: function () {
-	    const name = String.colorName(this.shared);
-	    return name.indexOf(',') === -1 ? name : this.shared.map(v => Math.round(v*255));
-	  },
-	  rgb: function () {return !this.shared ? [0,0,0] : this.shared.map(v => Math.round(v*255));},
-	  scale: function(center, coeficient) {
-	    this.vertices.forEach(function(v) { return v.scale(center, coeficient); });
-	  },
-	
-	  flip: function() {
-	    this.vertices.reverse().map(function(v) { v.flip(); });
-	    this.plane.flip();
-	  },
-	  forEachVertex: function (func) {
-	    for (let vIndex = 0; vIndex < this.vertices.length; vIndex += 1) {
-	      const vertex = this.vertices[vIndex];
-	      const newVertex = func(vertex);
-	      this.vertices[vIndex] = newVertex instanceof CSG.Vertex ? newVertex : vertex;
-	    }
-	  },
-	  setColor: function(color) {
-	    const rgb = String.color.rgb(color);
-	    this.shared = [rgb[0]/255, rgb[1]/255, rgb[2]/255];
-	  }
-	};
-	
-	CSG.Polygon.fromVertices = (verts) => {
-	  const a = new CSG.Vector(verts[0]);
-	  const b = new CSG.Vector(verts[1]);
-	  const c = new CSG.Vector(verts[2]);
-	  const norm = a.minus(b).cross(b.minus(c));
-	  const vertices = verts.map(v => new CSG.Vertex(v, norm));
-	  const poly = new CSG.Polygon(vertices);
-	
-	  return poly;
-	}
-	
-	CSG.Polygon.Enclosed = function (verts, width, color) {
-	  width ||= .1;
-	  verts = verts.map(v => new CSG.Vector(v));
-	  const centerNormal = (verts) => {
-	    const center = CSG.Vertex.Center(verts);
-	    const v1 = new CSG.Vector(verts[0]).minus(center)
-	    const v2 = new CSG.Vector(verts[1]).minus(center)
-	    return v1.cross(v2).unit()
-	  }
-	
-	  const normal = centerNormal(verts);
-	  const transVert = (normal) => (pos) => {let v = new CSG.Vertex(pos, normal); return translate(v, normal.times(width/2));}
-	  const vert = (normal) => (pos) => new CSG.Vertex(pos, normal);
-	  const frontVerts = verts.map(vert(normal));
-	  let front = new CSG.Polygon(frontVerts);
-	
-	
-	  const backVerts = verts.map(transVert(normal.negated()));
-	  let back = new CSG.Polygon(backVerts.map(v => v.clone()).reverse());
-	
-	  const polys = [front, back];
-	  if (width > 0) {
-	    for (let index = 0; index < frontVerts.length; index++) {
-	      const index2 = (index + 1) % frontVerts.length;
-	      let sideVerts = [backVerts[index].pos, backVerts[index2].pos, frontVerts[index2].pos, frontVerts[index].pos];
-	      const sideNormal = centerNormal(sideVerts);
-	      sideVerts = sideVerts.map((v) => new CSG.Vertex(v, sideNormal));
-	      let side = new CSG.Polygon(sideVerts);
-	      polys.push(side);
-	    }
-	  }
-	
-	  let model = new CSG.fromPolygons(polys);
-	  verts.forEach(v => v.color && (model = model.union(new CSG.Point(v, null, v.color))));
-	  model.setColor(color);
-	  return model;//model.union(vect);
-	}
-	
-	// # class Node
-	
-	// Holds a node in a BSP tree. A BSP tree is built from a collection of polygons
-	// by picking a polygon to split along. That polygon (and all other coplanar
-	// polygons) are added directly to that node and the other polygons are added to
-	// the front and/or back subtrees. This is not a leafy BSP tree since there is
-	// no distinction between internal and leaf nodes.
-	
-	CSG.Node = function(polygons) {
-	  this.plane = null;
-	  this.front = null;
-	  this.back = null;
-	  this.polygons = [];
-	  if (polygons) this.build(polygons);
-	};
-	
-	CSG.Node.prototype = {
-	  clone: function() {
-	    var node = new CSG.Node();
-	    node.plane = this.plane && this.plane.clone();
-	    node.front = this.front && this.front.clone();
-	    node.back = this.back && this.back.clone();
-	    node.polygons = this.polygons.map(function(p) { return p.clone(); });
-	    return node;
-	  },
-	
-	  // Convert solid space to empty space and empty space to solid space.
-	  invert: function() {
-	    for (var i = 0; i < this.polygons.length; i++) {
-	      this.polygons[i].flip();
-	    }
-	    this.plane.flip();
-	    if (this.front) this.front.invert();
-	    if (this.back) this.back.invert();
-	    var temp = this.front;
-	    this.front = this.back;
-	    this.back = temp;
-	  },
-	
-	  // Recursively remove all polygons in `polygons` that are inside this BSP
-	  // tree.
-	  clipPolygons: function(polygons) {
-	    if (!this.plane) return polygons.slice();
-	    var front = [], back = [];
-	    for (var i = 0; i < polygons.length; i++) {
-	      this.plane.splitPolygon(polygons[i], front, back, front, back);
-	    }
-	    if (this.front && front.length) front = this.front.clipPolygons(front);
-	    if (this.back && back.length) back = this.back.clipPolygons(back);
-	    else back = [];
-	    return front.concat(back);
-	  },
-	
-	  // Remove all polygons in this BSP tree that are inside the other BSP tree
-	  // `bsp`.
-	  clipTo: function(bsp) {
-	    this.polygons = bsp.clipPolygons(this.polygons);
-	    if (this.front) this.front.clipTo(bsp);
-	    if (this.back) this.back.clipTo(bsp);
-	  },
-	
-	  // Return a list of all polygons in this BSP tree.
-	  allPolygons: function() {
-	    var polygons = this.polygons.slice();
-	    if (this.front) polygons = polygons.concat(this.front.allPolygons());
-	    if (this.back) polygons = polygons.concat(this.back.allPolygons());
-	    return polygons;
-	  },
-	
-	  // Build a BSP tree out of `polygons`. When called on an existing tree, the
-	  // new polygons are filtered down to the bottom of the tree and become new
-	  // nodes there. Each set of polygons is partitioned using the first polygon
-	  // (no heuristic is used to pick a good split).
-	  build: function(polygons, callCount) {
-	    if (!polygons.length) return;
-	    callCount ||= 0;
-	    // if (callCount > 500) {
-	    //   throw new Error('CSG.polygons are misconfigured');
-	    // }
-	    if (!this.plane) this.plane = polygons[0].plane.clone();
-	    var front = [], back = [];
-	    for (var i = 0; i < polygons.length; i++) {
-	      this.plane.splitPolygon(polygons[i], this.polygons, this.polygons, front, back);
-	    }
-	    if (front.length) {
-	      if (!this.front) this.front = new CSG.Node();
-	      this.front.build(front, callCount + 1);
-	    }
-	    if (back.length) {
-	      if (!this.back) this.back = new CSG.Node();
-	      this.back.build(back, callCount + 1);
-	    }
-	  }
-	};
-	
-	/*
-	   Rotate a point p by angle theta around an arbitrary axis r
-	   Return the rotated point.
-	   Positive angles are anticlockwise looking down the axis
-	   towards the origin.
-	   Assume right hand coordinate system.
-	*/
-	function ArbitraryRotate(point, degreestheta, radius)
-	{
-	  if (!Number.isFinite(degreestheta)) return point;
-	  radius = radius.copy();
-	  theta = degreestheta * Math.PI/180;
-	  let p = point;
-	  let r = radius;
-	   let q = {x: 0.0, y: 0.0, z: 0.0};
-	   let costheta,sintheta;
-	
-	   // const Normalise = (obj, attr) => obj[attr] *= obj[attr] > 0 ? 1 : -1;
-	   // Normalise(r, 'x',);
-	   // Normalise(r, 'y',);
-	   // Normalise(r, 'z',);
-	
-	   costheta = Math.cos(theta);
-	   sintheta = Math.sin(theta);
-	
-	   q.x += (costheta + (1 - costheta) * r.x * r.x) * p.x;
-	   q.x += ((1 - costheta) * r.x * r.y - r.z * sintheta) * p.y;
-	   q.x += ((1 - costheta) * r.x * r.z + r.y * sintheta) * p.z;
-	
-	   q.y += ((1 - costheta) * r.x * r.y + r.z * sintheta) * p.x;
-	   q.y += (costheta + (1 - costheta) * r.y * r.y) * p.y;
-	   q.y += ((1 - costheta) * r.y * r.z - r.x * sintheta) * p.z;
-	
-	   q.z += ((1 - costheta) * r.x * r.z - r.y * sintheta) * p.x;
-	   q.z += ((1 - costheta) * r.y * r.z + r.x * sintheta) * p.y;
-	   q.z += (costheta + (1 - costheta) * r.z * r.z) * p.z;
-	
-	   return(q);
-	}
-	
-	function rotate (point, rotation) {
-	  if (Array.isArray(rotation)) return rotation.forEach(r => rotate(point, r));
-	  if (!(rotation instanceof Object)) return;
-	  rotation = new CSG.Vector(rotation);
-	  let newPos = point;
-	  newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
-	  newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
-	  newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});
-	  return newPos;
-	}
-	
-	function reverseRotate (point, rotation) {
-	  if (Array.isArray(rotation)) return rotation.forEach(r => reverseRotate(point, r));
-	  rotation = new CSG.Vector(rotation);
-	  rotation = {x: rotation.x * -1, y: rotation.y * -1, z: rotation.z * -1};
-	  let newPos = point;
-	  newPos = ArbitraryRotate(newPos, rotation.z || 0, {x: 0, y:0, z:1});
-	  newPos = ArbitraryRotate(newPos, rotation.y || 0, {x: 0, y:1, z:0});
-	  newPos = ArbitraryRotate(newPos, rotation.x || 0, {x: 1, y:0, z:0});
-	  return newPos;
-	}
-	
-	function transRotate (point, offset, rotation) {
-	  let newPos = rotate (offset, rotation);
-	  newPos.x += point.x;
-	  newPos.y += point.y;
-	  newPos.z += point.z;
-	  return newPos;
-	}
-	
-	function translate (point, offset) {
-	  if (Array.isArray(offset)) offset = {x: offset[0], y: offset[1], z: offset[2]};
-	  if (point instanceof CSG.Vertex) {
-	    const newPos = point.clone();
-	    newPos.pos.x += offset.x;
-	    newPos.pos.y += offset.y;
-	    newPos.pos.z += offset.z;
-	    return newPos;
-	
-	  } else {
-	    const newPos = point.clone();
-	    newPos.x += offset.x;
-	    newPos.y += offset.y;
-	    newPos.z += offset.z;
-	    return newPos;
-	  }
-	}
-	
-	function transRotateAll (points, offset, rotation) {
-	  for (let index = 0; index < points.length; index++) {
-	    points[index] = transRotate(points[index], offset, rotation);
-	  }
-	}
-	
-	function rotateAll (points, rotation) {
-	  const ret = [];
-	  for (let index = 0; index < points.length; index++) {
-	    ret[index] = rotate(points[index], rotation);
-	  }
-	  return ret;
-	}
-	
-	function reverseRotateAll (points, rotation) {
-	  const ret = [];
-	  for (let index = 0; index < points.length; index++) {
-	    ret[index] = reverseRotate(points[index], rotation);
-	  }
-	  return ret;
-	}
-	
-	function rotatePointAroundCenter(rotation, point, center, reverse) {
-	  if (Array.isArray(rotation)) return rotation.forEach(r => rotatePointAroundCenter(r, point, center, reverse));
-	  if (!(rotation instanceof Object)) return;
-	  center ||= {x:0, y:0, z:0};
-	  point.x -=  center.x;
-	  point.y -= center.y;
-	  point.z -= center.z;
-	  const rotated = reverse ? reverseRotate(point, rotation) : rotate(point, rotation);
-	  point.x =  center.x + rotated.x;
-	  point.y = center.y + rotated.y;
-	  point.z = center.z + rotated.z;
-	  return point;
-	}
-	
-	function rotatePointsAroundCenter(rotation, points, center, reverse) {
-	  for (let index = 0; index < points.length; index++) {
-	    rotatePointAroundCenter(rotation, points[index], center, reverse);
-	  }
-	  return points;
-	}
-	
-	CSG.printDrawString = (model, normals, center, scale) => {
-	  center ||= model.center();
-	  scale ||= 200;
-	  const str = `${normals.x.toDrawString('red', .001, center, scale)}\n` +
-	                `${normals.y.toDrawString('green', .001, center, scale)}\n` +
-	                `${normals.z.toDrawString('blue', .001, center, scale)}\n\n` +
-	                model.toDrawString();
-	
-	  console.log(str);
-	}
-	CSG.ArbitraryRotate = ArbitraryRotate;
-	CSG.rotatePointsAroundCenter = rotatePointsAroundCenter;
-	CSG.rotatePointAroundCenter = rotatePointAroundCenter;
-	CSG.transRotate = transRotate;
-	CSG.translate = translate;
-	CSG.rotateAll = rotateAll;
-	CSG.transRotateAll = transRotateAll;
-	CSG.reverseRotateAll = reverseRotateAll;
-	CSG.rotate = rotate;
-	CSG.reverseRotate = reverseRotate;
-	module.exports = CSG;
-	
-});
-
-
-RequireJS.addFunction('./public/js/utils/3d-modeling/STL.js',
-function (require, exports, module) {
-	
-const colorShifts = [0,5,10,15]
-	function encodeColor(color) {
-	  if (color === undefined) return 0;
-	  const values = [(Math.floor(color[0] * 32)), (Math.floor(color[1] * 32)), (Math.floor(color[2] * 32)), 1];
-	  return values.sum((v,i) => (v << colorShifts[i]));
-	}
-	
-	function extractColor(encoding) {
-	  return colorShifts.map((s,i) => i === 3 ? encoding % 2 : ((encoding >> s) % 32)/32);
-	}
-	
-	class STL {
-	  constructor(header) {
-	    let _header;
-	    const triangles = [];
-	    const throwXYZError = () => {throw new Error('Invalid XYZ object all must be finite numbers')};
-	    const validateXYZ = (...objs) => {
-	      for (let index = 0; index < objs.length; index++) {
-	        const obj = objs[index];
-	        if (!Number.isFinite(obj.x)) throwXYZError();
-	        if (!Number.isFinite(obj.y)) throwXYZError();
-	        if (!Number.isFinite(obj.z)) throwXYZError();
-	      }
-	      return true;
-	    }
-	    const copyXYZ = (obj) => ({x: obj.x,y: obj.y,z: obj.z});
-	    const copyAllXYZ = (...vs) => vs.map(v => copyXYZ(v));
-	    const XYZstr = (obj) => `${obj.x} ${obj.y} ${obj.z}`
-	
-	    this.header = (header) => header !== undefined ? (_header = header.slice(0,80)) : _header;
-	    this.header(header);
-	    // TODO: make add imutable
-	    this.add = {};
-	    this.add.triangle = (v1, v2, v3, normal, colorPercent) =>
-	          validateXYZ(v1,v2,v3,normal) &&
-	          triangles.push({vertices: copyAllXYZ(v1,v2,v3), normal, color: colorPercent});
-	    this.add.polygon = (vertices, normal, colorPercent) => {
-	      vertices = vertices.map(v=>v);
-	      while (vertices.length > 2) {
-	        this.add.triangle(vertices[0],vertices[1],vertices[2], normal, colorPercent);
-	        vertices.splice(1,1);
-	      }
-	    }
-	    this.toJson = () => {
-	      const json = {header};
-	      json.triangles = triangles.map(t => {
-	        const json = {normal: copyXYZ(t.normal)};
-	        if (t.color) json.color = t.color.slice(0,3);
-	        json.vertices = t.vertices.map(v => copyXYZ(v));
-	        return json;
-	      });
-	      return json;
-	    }
-	    this.binary = () => {
-	      const byteLength = STL.binaryLength(triangles.length);
-	      const buffer = new ArrayBuffer(byteLength);
-	      const view = new DataView(buffer);
-	      let bPos = 0;
-	
-	      if (header) header.split('').forEach((c,i) => view.setUint8(i, c.charCodeAt(0)));
-	
-	      bPos = 80;
-	      view.setUint32(bPos, triangles.length, true);
-	      bPos += 4;
-	      triangles.forEach(t => {
-	        view.setFloat32(bPos, t.normal.x, true); bPos += 4;
-	        view.setFloat32(bPos, t.normal.y, true); bPos += 4;
-	        view.setFloat32(bPos, t.normal.z, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[0].x, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[0].y, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[0].z, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[1].x, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[1].y, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[1].z, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[2].x, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[2].y, true); bPos += 4;
-	        view.setFloat32(bPos, t.vertices[2].z, true); bPos += 4;
-	        view.setUint16(bPos, encodeColor(t.color), true); bPos += 2;
-	      });
-	
-	      console.log(view.toByteString());
-	      return buffer;
-	    }
-	    this.binary.file = () => {
-	      const blob = new Blob([this.binary()], { type: 'application/octet-stream' }); // Set the MIME type to binary
-	      return blob;
-	    }
-	    this.ascii = () => {
-	      return `solid ${header}
-	${triangles.map(t =>
-	`  facet normal ${XYZstr(t.normal)}
-	    outer loop
-	      vertex ${XYZstr(t.vertices[0])}
-	      vertex ${XYZstr(t.vertices[1])}
-	      vertex ${XYZstr(t.vertices[2])}
-	    endloop
-	  endfacet`).join('\n')}
-	endsolid ${header}`
-	    }
-	    this.url = () => {
-	      return URL.createObjectURL(this.binary.file());
-	    }
-	  }
-	}
-	
-	STL.fromCSG = (csg, header) => {
-	  const stl = new STL(header);
-	  const scaled = csg.clone();
-	  scaled.scale(10);
-	  scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
-	  return stl;
-	}
-	
-	STL.binaryLength = (length) => 80+4+50*length;
-	
-	const viewVertex = (view, i) => {
-	  const x = view.getFloat32(i, true);
-	  const y = view.getFloat32(i + 4, true);
-	  const z = view.getFloat32(i + 8, true);
-	  return {x, y, z};
-	}
-	
-	STL.fromArrayBuffer = (arrayBuffer, header) => {
-	  const view = new DataView(arrayBuffer);
-	  const length = view.getUint32(80, true);
-	  const expectedLength = STL.binaryLength(length);
-	  if (expectedLength < 1 || arrayBuffer.length < expectedLength)
-	    throw new Error(`Data is corrupt or invalid\n\tExpecting a bufferLength of at least ${expectedLength}`);
-	  header ||= Array.fill(80, (i) => (charCode = view.getUint8(i)) ?
-	                                  String.fromCharCode(charCode) : '').join('')
-	  const stl = new STL(header);
-	  for (let i = 84; i < expectedLength - 1;) {
-	    const normal = viewVertex(view, i);
-	    const v1 = viewVertex(view, i+=12);
-	    const v2 = viewVertex(view, i+=12);
-	    const v3 = viewVertex(view, i+=12);
-	    const color = extractColor(view.getUint16(i += 12, true));
-	    stl.add.triangle(v1, v2, v3, normal, color);
-	    i+=2;
-	  }
-	
-	  return stl;
-	}
-	
-	STL.fromFiles = async (files) => {
-	  const stls = [];
-	  for (let index = 0; index < files.length; index++) {
-	    const file = files[index];
-	    try {
-	      stls.push(STL.fromArrayBuffer(await file.arrayBuffer(), file.name));
-	    } catch (e) {
-	      e.name = file.name;
-	      stls.push(e);
-	    }
-	  }
-	
-	  return stls;
-	}
-	
-	module.exports = STL;
-	
-});
-
-
-RequireJS.addFunction('./public/js/utils/3d-modeling/shaders.js',
-function (require, exports, module) {
-	const GL = require('./lightgl.js');
-	
-	const LightDirection = require('./shaders/light-direction.frag');
-	const WireFrame = require('./shaders/wire-frame.vert');
-	const RealisticLight = require('./shaders/realistic-light-shader.frag');
-	const IlluminateAll = require('./shaders/illuminate-all.vert');
-	const shaders = {LightDirection, WireFrame, RealisticLight, IlluminateAll};
-	
-	const splitReg = /\n\s*,\n/;
-	const templatize = (string) => {
-	  const func = (scope) => {
-	    let str = string;
-	    if (scope) {
-	      const keys = Object.keys(scope);
-	      keys.forEach(k => str = str.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), scope[k]));
-	    }
-	    return str.split(splitReg);
-	  }
-	  func.raw = string.split(splitReg);
-	  return func;
-	}
-	
-	module.exports = {};
-	Object.keys(shaders).forEach(k => module.exports[k] = templatize(shaders[k]));
-	
-});
-
-
 RequireJS.addFunction('./public/js/utils/3d-modeling/lightgl.js',
 function (require, exports, module) {
 	/*
@@ -8013,35 +7482,534 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/3d-modeling/shaders/realistic-light-shader.frag.js',
+RequireJS.addFunction('./public/js/utils/3d-modeling/shaders.js',
 function (require, exports, module) {
-	module.exports = `uniform vec3 uLightPosition[16];
-	uniform vec3 uLightColor[16];
-	uniform vec3 uLightDirection[16];
-	uniform bool uLightIsDirectional[16];
+	const GL = require('./lightgl.js');
 	
-	uniform vec3 uAmbientColor;
+	const LightDirection = require('./shaders/light-direction.frag');
+	const WireFrame = require('./shaders/wire-frame.vert');
+	const RealisticLight = require('./shaders/realistic-light-shader.frag');
+	const IlluminateAll = require('./shaders/illuminate-all.vert');
+	const shaders = {LightDirection, WireFrame, RealisticLight, IlluminateAll};
 	
-	varying vec4 vPosition;
-	varying vec3 vTransformedNormal;
-	varying vec3 vColor;
-	
-	void main(void) {
-	 vec3 reflectedLightColor;
-	
-	 for(int i = 0; i < 16; i++) {
-	   vec3 lightDirection = normalize(uLightPosition[i], vPosition.xyz);
-	   if (uLightIsDirectional[i]) {
-	     reflectedLightColor += max(dot(vTransformedNormal, uLightDirection[i]), 0.0) * uLightColor[i];
-	   }
-	   else  {
-	     reflectedLightColor += max(dot(normalize(vTransformedNormal, lightDirection), 0.0) * uLightColor[i];
-	   }
-	 }
-	
-	 glFragColor = vec4(uAmbientColor + reflectedLightColor * vColor, uAlpha);
+	const splitReg = /\n\s*,\n/;
+	const templatize = (string) => {
+	  const func = (scope) => {
+	    let str = string;
+	    if (scope) {
+	      const keys = Object.keys(scope);
+	      keys.forEach(k => str = str.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), scope[k]));
+	    }
+	    return str.split(splitReg);
+	  }
+	  func.raw = string.split(splitReg);
+	  return func;
 	}
-	`
+	
+	module.exports = {};
+	Object.keys(shaders).forEach(k => module.exports[k] = templatize(shaders[k]));
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/3d-modeling/STL.js',
+function (require, exports, module) {
+	
+const colorShifts = [0,5,10,15]
+	function encodeColor(color) {
+	  if (color === undefined) return 0;
+	  const values = [(Math.floor(color[0] * 32)), (Math.floor(color[1] * 32)), (Math.floor(color[2] * 32)), 1];
+	  return values.sum((v,i) => (v << colorShifts[i]));
+	}
+	
+	function extractColor(encoding) {
+	  return colorShifts.map((s,i) => i === 3 ? encoding % 2 : ((encoding >> s) % 32)/32);
+	}
+	
+	class STL {
+	  constructor(header) {
+	    let _header;
+	    const triangles = [];
+	    const throwXYZError = () => {throw new Error('Invalid XYZ object all must be finite numbers')};
+	    const validateXYZ = (...objs) => {
+	      for (let index = 0; index < objs.length; index++) {
+	        const obj = objs[index];
+	        if (!Number.isFinite(obj.x)) throwXYZError();
+	        if (!Number.isFinite(obj.y)) throwXYZError();
+	        if (!Number.isFinite(obj.z)) throwXYZError();
+	      }
+	      return true;
+	    }
+	    const copyXYZ = (obj) => ({x: obj.x,y: obj.y,z: obj.z});
+	    const copyAllXYZ = (...vs) => vs.map(v => copyXYZ(v));
+	    const XYZstr = (obj) => `${obj.x} ${obj.y} ${obj.z}`
+	
+	    this.header = (header) => header !== undefined ? (_header = header.slice(0,80)) : _header;
+	    this.header(header);
+	    // TODO: make add imutable
+	    this.add = {};
+	    this.add.triangle = (v1, v2, v3, normal, colorPercent) =>
+	          validateXYZ(v1,v2,v3,normal) &&
+	          triangles.push({vertices: copyAllXYZ(v1,v2,v3), normal, color: colorPercent});
+	    this.add.polygon = (vertices, normal, colorPercent) => {
+	      vertices = vertices.map(v=>v);
+	      while (vertices.length > 2) {
+	        this.add.triangle(vertices[0],vertices[1],vertices[2], normal, colorPercent);
+	        vertices.splice(1,1);
+	      }
+	    }
+	    this.toJson = () => {
+	      const json = {header};
+	      json.triangles = triangles.map(t => {
+	        const json = {normal: copyXYZ(t.normal)};
+	        if (t.color) json.color = t.color.slice(0,3);
+	        json.vertices = t.vertices.map(v => copyXYZ(v));
+	        return json;
+	      });
+	      return json;
+	    }
+	    this.binary = () => {
+	      const byteLength = STL.binaryLength(triangles.length);
+	      const buffer = new ArrayBuffer(byteLength);
+	      const view = new DataView(buffer);
+	      let bPos = 0;
+	
+	      if (header) header.split('').forEach((c,i) => view.setUint8(i, c.charCodeAt(0)));
+	
+	      bPos = 80;
+	      view.setUint32(bPos, triangles.length, true);
+	      bPos += 4;
+	      triangles.forEach(t => {
+	        view.setFloat32(bPos, t.normal.x, true); bPos += 4;
+	        view.setFloat32(bPos, t.normal.y, true); bPos += 4;
+	        view.setFloat32(bPos, t.normal.z, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[0].x, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[0].y, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[0].z, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[1].x, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[1].y, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[1].z, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[2].x, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[2].y, true); bPos += 4;
+	        view.setFloat32(bPos, t.vertices[2].z, true); bPos += 4;
+	        view.setUint16(bPos, encodeColor(t.color), true); bPos += 2;
+	      });
+	
+	      console.log(view.toByteString());
+	      return buffer;
+	    }
+	    this.binary.file = () => {
+	      const blob = new Blob([this.binary()], { type: 'application/octet-stream' }); // Set the MIME type to binary
+	      return blob;
+	    }
+	    this.ascii = () => {
+	      return `solid ${header}
+	${triangles.map(t =>
+	`  facet normal ${XYZstr(t.normal)}
+	    outer loop
+	      vertex ${XYZstr(t.vertices[0])}
+	      vertex ${XYZstr(t.vertices[1])}
+	      vertex ${XYZstr(t.vertices[2])}
+	    endloop
+	  endfacet`).join('\n')}
+	endsolid ${header}`
+	    }
+	    this.url = () => {
+	      return URL.createObjectURL(this.binary.file());
+	    }
+	  }
+	}
+	
+	STL.fromCSG = (csg, header) => {
+	  const stl = new STL(header);
+	  const scaled = csg.clone();
+	  scaled.scale(10);
+	  scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos), p.plane.normal));
+	  return stl;
+	}
+	
+	STL.binaryLength = (length) => 80+4+50*length;
+	
+	const viewVertex = (view, i) => {
+	  const x = view.getFloat32(i, true);
+	  const y = view.getFloat32(i + 4, true);
+	  const z = view.getFloat32(i + 8, true);
+	  return {x, y, z};
+	}
+	
+	STL.fromArrayBuffer = (arrayBuffer, header) => {
+	  const view = new DataView(arrayBuffer);
+	  const length = view.getUint32(80, true);
+	  const expectedLength = STL.binaryLength(length);
+	  if (expectedLength < 1 || arrayBuffer.length < expectedLength)
+	    throw new Error(`Data is corrupt or invalid\n\tExpecting a bufferLength of at least ${expectedLength}`);
+	  header ||= Array.fill(80, (i) => (charCode = view.getUint8(i)) ?
+	                                  String.fromCharCode(charCode) : '').join('')
+	  const stl = new STL(header);
+	  for (let i = 84; i < expectedLength - 1;) {
+	    const normal = viewVertex(view, i);
+	    const v1 = viewVertex(view, i+=12);
+	    const v2 = viewVertex(view, i+=12);
+	    const v3 = viewVertex(view, i+=12);
+	    const color = extractColor(view.getUint16(i += 12, true));
+	    stl.add.triangle(v1, v2, v3, normal, color);
+	    i+=2;
+	  }
+	
+	  return stl;
+	}
+	
+	STL.fromFiles = async (files) => {
+	  const stls = [];
+	  for (let index = 0; index < files.length; index++) {
+	    const file = files[index];
+	    try {
+	      stls.push(STL.fromArrayBuffer(await file.arrayBuffer(), file.name));
+	    } catch (e) {
+	      e.name = file.name;
+	      stls.push(e);
+	    }
+	  }
+	
+	  return stls;
+	}
+	
+	module.exports = STL;
+	
+});
+
+
+RequireJS.addFunction('./public/js/utils/3d-modeling/viewer.js',
+function (require, exports, module) {
+	
+
+	
+	const du = require('../dom-utils.js');
+	const CSG = require('./csg.js');
+	const GL = require('./lightgl.js');
+	const shaders = require('./shaders.js');
+	
+	// Convert from CSG solid to GL.Mesh object
+	CSG.prototype.toMesh = function() {
+	  var mesh = new GL.Mesh({ normals: true, colors: true });
+	  var indexer = new GL.Indexer();
+	  this.toPolygons().map(function(polygon) {
+	    var indices = polygon.vertices.map(function(vertex) {
+	      vertex.color = polygon.shared || [1, 1, 1];
+	      return indexer.add(vertex);
+	    });
+	    for (var i = 2; i < indices.length; i++) {
+	      mesh.triangles.push([indices[0], indices[i - 1], indices[i]]);
+	    }
+	  });
+	  mesh.vertices = indexer.unique.map(function(v) { return [v.pos.x, v.pos.y, v.pos.z]; });
+	  mesh.normals = indexer.unique.map(function(v) { return [v.normal.x, v.normal.y, v.normal.z]; });
+	  mesh.colors = indexer.unique.map(function(v) { return v.color; });
+	  mesh.computeWireframe();
+	  return mesh;
+	};
+	
+	var angleX = 0;
+	var angleY = 0;
+	var angleZ = 0;
+	var viewers = [];
+	
+	// Set to true so lines don't use the depth buffer
+	Viewer.lineOverlay = false;
+	
+	// A viewer is a WebGL canvas that lets the user view a mesh. The user can
+	// tumble it around by dragging the mouse.
+	function Viewer(csg, width, height, depth) {
+	  const originalDepth = depth;
+	  viewers.push(this);
+	  this.setDepth = (d) => depth = d;
+	  let x = 0;
+	  let y = 0;
+	
+	  let lastZoom;
+	  let zoomCount = 0;
+	  const zoom = (out) => {
+	    let direction = (out === true ? 1 : -1);
+	    let zoomOffset = 2;
+	    let newTime = new Date().getTime();
+	    if (lastZoom > newTime - 50) {
+	      zoomCount++;
+	      zoomOffset *= zoomCount;
+	      zoomOffset = zoomOffset > 20 ? 20 : zoomOffset;
+	    }
+	    lastZoom = newTime;
+	    depth += zoomOffset * direction;
+	  };
+	  this.zoom = zoom;
+	  const pan = (leftRight, upDown) => {
+	    x += leftRight;
+	    y += upDown * -1;
+	  }
+	
+	  // Get a new WebGL canvas
+	  var gl = GL.create();
+	  this.gl = gl;
+	  this.mesh = csg.toMesh();
+	  this.canvas = () => gl.canvas;
+	
+	  // Set up the viewport
+	  gl.canvas.width = width;
+	  gl.canvas.height = height;
+	  gl.viewport(0, 0, width, height);
+	  gl.matrixMode(gl.PROJECTION);
+	  gl.loadIdentity();
+	  gl.perspective(100, width / height, 10, 1000);
+	  gl.rotate(0, 0, 1, 0);
+	  gl.translate(0, 0, -200);
+	  gl.matrixMode(gl.MODELVIEW);
+	
+	  // Set up WebGL state
+	  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	  gl.clearColor(0.93, 0.93, 0.93, 1);
+	  gl.enable(gl.DEPTH_TEST);
+	  gl.enable(gl.CULL_FACE);
+	  gl.polygonOffset(1, 1);
+	
+	  // Black shader for wireframe
+	  this.blackShader = new GL.Shader(...shaders.WireFrame());
+	
+	  // const program = gl.createProgram();
+	  // this.realisticLightShader = new GL.Shader(...shaders.RealisticLight());
+	
+	  // Shader with diffuse and specular lighting
+	  this.changeLightingShaderDirection = (x,y,z) =>
+	      this.lightingShader = new GL.Shader(...shaders.LightDirection({x:3,y:2,z:3}));
+	
+	  // this.lightingShaders = [
+	  //   new GL.Shader(...shaders.LightDirection({x:3,y:2,z:3})),
+	  //   new GL.Shader(...shaders.LightDirection({x:1,y:0,z:0})),
+	  //   new GL.Shader(...shaders.LightDirection({x:-1,y:0,z:0})),
+	  //   new GL.Shader(...shaders.LightDirection({x:0,y:0,z:-1})),
+	  //   new GL.Shader(...shaders.LightDirection({x:0,y:0,z:1})),
+	  //   new GL.Shader(...shaders.LightDirection({x:-3,y:-2,z:-3}))
+	  // ];
+	  this.lightingShader = new GL.Shader(...shaders.IlluminateAll({x:3,y:2,z:3}));
+	
+	  // this.changeLightingShaderDirection(0, 0, 0);
+	  // this.changeLightingShaderDirection(3, 2, 3);
+	
+	  let origCenter = {x:0, y:0};
+	  let pointClicked = {x: 0, y: 0, z: 0};
+	  function setPointClicked(e) {
+	    const canvasPos = e.target.getBoundingClientRect();
+	    const clickPos = {x: e.x - canvasPos.x, y: e.y - canvasPos.y};
+	    const canvasCenter = {x: e.target.width/2, y: e.target.height/2};
+	    const canvasOffset = {x: clickPos.x - canvasCenter.x, y: clickPos.y - canvasCenter.y};
+	    const twoDLoc = {x: origCenter.x + canvasOffset.x, y: origCenter.y + canvasOffset.y};
+	    const centerOffset = GL.Matrix.relitiveDirection(twoDLoc.x, twoDLoc.y,0,gl.modelviewMatrix)
+	    pointClicked = {x: centerOffset[0], y: centerOffset[1], z: centerOffset[2]};
+	  }
+	
+	  let rotationUnit;
+	  let rotationOffset = [0,0,0];
+	  let panOffset;
+	  let panUnit;
+	
+	  let rotationVector = new CSG.Vector(25, 12,11.5);
+	  let point = {x: 0, y: 12, z: 11.5};
+	  // let rotationVector = new CSG.Vector(25, 12,11.5);
+	  function rotateEvent(e) {
+	    if (!rotationUnit) {
+	      rotationUnit = {};
+	      rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
+	      rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
+	    }
+	    if (rotationUnit) {
+	      const speed = 40;
+	      if (e.deltaY) {
+	        const dir = e.deltaY < 0 ? -speed : speed;
+	        rotationOffset[0] += rotationUnit.y[0]/dir;
+	        rotationOffset[1] += rotationUnit.y[1]/dir;
+	        rotationOffset[2] += rotationUnit.y[2]/dir;
+	      }
+	      if (e.deltaX) {
+	        const dir = e.deltaX < 0 ? speed : -speed;
+	        rotationOffset[0] += rotationUnit.x[0]/dir;
+	        rotationOffset[1] += rotationUnit.x[1]/dir;
+	        rotationOffset[2] += rotationUnit.x[2]/dir;
+	      }
+	    }
+	    // angleY += e.deltaX * 2;
+	    // angleX += e.deltaY * 2;
+	    // angleX = Math.max(-90, Math.min(90, angleX));
+	  }
+	
+	  gl.onmousemove = function(e) {
+	    if (e.dragging) {
+	      if (shiftHeld) panEvent(e);
+	      else rotateEvent(e);
+	      gl.ondraw();
+	    }
+	  };
+	
+	  function zoomEvent(e) {
+	    const st = document.documentElement.scrollTop;
+	    if (e.deltaY < 0) {
+	      zoom(true);
+	    } else {
+	      zoom();
+	    }
+	  }
+	
+	  function panEvent(e) {
+	    const st = document.documentElement.scrollTop;
+	    pan(-e.deltaX, e.deltaY)
+	  }
+	
+	  let lastScrollTop = 0;
+	  gl.canvas.onwheel = function (e) {
+	    zoomEvent(e);
+	    gl.ondraw();
+	  }
+	  disableScroll(gl.canvas);
+	
+	  let shiftHeld = false;
+	  window.onkeydown = (e) => {
+	    shiftHeld = e.key === "Shift" ? true : false;
+	  }
+	  window.onkeyup = (e) => {
+	    shiftHeld = !shiftHeld || e.key === "Shift" ? false : true;
+	  }
+	
+	  let clickHeld = false;
+	  window.onclick = (e) => {
+	    clickHeld = !clickHeld;
+	    if (!clickHeld) {
+	      rotationUnit = null;
+	      panUnit = null;
+	    }
+	  }
+	
+	  window.onmousedown = setPointClicked;
+	
+	  function viewFrom(point, rotation) {
+	      gl.makeCurrent();
+	
+	      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	      // const relDir1 = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
+	      gl.loadIdentity();
+	
+	      gl.rotate(rotation.x, 1, 0, 0);
+	      gl.rotate(rotation.y, 0, 1, 0);
+	      gl.rotate(rotation.z, 0, 0, 1);
+	
+	      gl.translate(0, 0, -20);
+	      // const relDir = GL.Matrix.relitiveDirection(point.x, point.y, point.z, gl.modelviewMatrix);
+	      // gl.translate(-relDir[0], -relDir[1], -relDir[2]);
+	
+	      if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+	      // that.lightingShaders.forEach(s => s.draw(that.mesh, gl.TRIANGLES));
+	      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
+	      if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
+	
+	      if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
+	      gl.enable(gl.BLEND);
+	      that.blackShader.draw(that.mesh, gl.LINES);
+	      gl.disable(gl.BLEND);
+	      if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+	  }
+	  this.viewFrom = viewFrom;
+	
+	  function applyZoom() {
+	    // const depthArr = GL.Matrix.relitiveDirection(0,0,depth,gl.modelviewMatrix);
+	    const transArr = GL.Matrix.relitiveDirection(x,-y,depth,gl.modelviewMatrix);
+	    gl.translate(-transArr[0], -transArr[1], transArr[2])
+	  }
+	
+	  var that = this;
+	  gl.ondraw = function() {
+	    gl.makeCurrent();
+	
+	    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	    // gl.loadIdentity();
+	    applyZoom();
+	    gl.rotateAroundPoint(pointClicked, rotationOffset);
+	
+	    // gl.rotate(angleX, rotationVector.x, rotationVector.y, rotationVector.z);
+	    // gl.rotate(angleY, rotationVector.x, rotationVector.y, rotationVector.z);
+	    // gl.rotate(rotationOffset[2], 0, 0, -1);
+	    x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
+	
+	    if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+	    // that.lightingShaders.forEach(s => s.draw(that.mesh, gl.TRIANGLES));
+	    that.lightingShader.draw(that.mesh, gl.TRIANGLES);
+	    if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
+	
+	    if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
+	    gl.enable(gl.BLEND);
+	    that.blackShader.draw(that.mesh, gl.LINES);
+	    gl.disable(gl.BLEND);
+	    if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+	  };
+	
+	  gl.ondraw();
+	
+	  // gl.canvas.width = '100vw';
+	  // gl.canvas.height = '100vh';
+	}
+	
+	var nextID = 0;
+	function addViewer(viewer, id) {
+	  du.find(id).appendChild(viewer.gl.canvas);
+	}
+	
+	
+	
+	
+	// left: 37, up: 38, right: 39, down: 40,
+	// spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
+	var keys = {37: 1, 38: 1, 39: 1, 40: 1};
+	
+	function preventDefault(e) {
+	  e.preventDefault();
+	}
+	
+	function preventDefaultForScrollKeys(e) {
+	  if (keys[e.keyCode]) {
+	    preventDefault(e);
+	    return false;
+	  }
+	}
+	
+	// modern Chrome requires { passive: false } when adding event
+	var supportsPassive = false;
+	try {
+	  window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
+	    get: function () { supportsPassive = true; }
+	  }));
+	} catch(e) {}
+	
+	var wheelOpt = supportsPassive ? { passive: false } : false;
+	var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
+	
+	// call this to Disable
+	function disableScroll(element) {
+	  element.addEventListener('DOMMouseScroll', preventDefault, false); // older FF
+	  element.addEventListener(wheelEvent, preventDefault, wheelOpt); // modern desktop
+	  element.addEventListener('touchmove', preventDefault, wheelOpt); // mobile
+	  element.addEventListener('keydown', preventDefaultForScrollKeys, false);
+	}
+	
+	// call this to Enable
+	function enableScroll(element) {
+	  element.removeEventListener('DOMMouseScroll', preventDefault, false);
+	  element.removeEventListener(wheelEvent, preventDefault, wheelOpt);
+	  element.removeEventListener('touchmove', preventDefault, wheelOpt);
+	  element.removeEventListener('keydown', preventDefaultForScrollKeys, false);
+	}
+	
+	exports.Viewer = Viewer
+	exports.addViewer = addViewer
+	exports.preventDefault = preventDefault
+	exports.preventDefaultForScrollKeys = preventDefaultForScrollKeys
+	exports.disableScroll = disableScroll
+	exports.enableScroll = enableScroll
+	
 });
 
 
@@ -8062,6 +8030,34 @@ function (require, exports, module) {
 	varying vec3 light;
 	void main() {
 	  gl_FragColor = vec4(color, 1.0);
+	}
+	`
+});
+
+
+RequireJS.addFunction('./public/js/utils/3d-modeling/shaders/light-direction.frag.js',
+function (require, exports, module) {
+	module.exports = `varying vec3 color;
+	varying vec3 normal;
+	varying vec3 light;
+	void main() {
+	  const vec3 lightDir = vec3({{x}}, {{y}}, {{z}}) / 3.741657386773941;
+	  light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;
+	  color = gl_Color.rgb;
+	  normal = gl_NormalMatrix * gl_Normal;
+	  gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+	}
+	
+	,
+	
+	varying vec3 color;
+	varying vec3 normal;
+	varying vec3 light;
+	void main() {
+	  vec3 n = normalize(normal);
+	  float diffuse = max(0.0, dot(light, n));
+	  float specular = pow(max(0.0, -reflect(light, n).z), 32.0) * sqrt(diffuse);
+	  gl_FragColor = vec4(mix(color * (0.3 + 0.7 * diffuse), vec3(1.0), specular), 1.0);
 	}
 	`
 });
@@ -8134,29 +8130,33 @@ function (require, exports, module) {
 });
 
 
-RequireJS.addFunction('./public/js/utils/3d-modeling/shaders/light-direction.frag.js',
+RequireJS.addFunction('./public/js/utils/3d-modeling/shaders/realistic-light-shader.frag.js',
 function (require, exports, module) {
-	module.exports = `varying vec3 color;
-	varying vec3 normal;
-	varying vec3 light;
-	void main() {
-	  const vec3 lightDir = vec3({{x}}, {{y}}, {{z}}) / 3.741657386773941;
-	  light = (gl_ModelViewMatrix * vec4(lightDir, 0.005)).xyz;
-	  color = gl_Color.rgb;
-	  normal = gl_NormalMatrix * gl_Normal;
-	  gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-	}
+	module.exports = `uniform vec3 uLightPosition[16];
+	uniform vec3 uLightColor[16];
+	uniform vec3 uLightDirection[16];
+	uniform bool uLightIsDirectional[16];
 	
-	,
+	uniform vec3 uAmbientColor;
 	
-	varying vec3 color;
-	varying vec3 normal;
-	varying vec3 light;
-	void main() {
-	  vec3 n = normalize(normal);
-	  float diffuse = max(0.0, dot(light, n));
-	  float specular = pow(max(0.0, -reflect(light, n).z), 32.0) * sqrt(diffuse);
-	  gl_FragColor = vec4(mix(color * (0.3 + 0.7 * diffuse), vec3(1.0), specular), 1.0);
+	varying vec4 vPosition;
+	varying vec3 vTransformedNormal;
+	varying vec3 vColor;
+	
+	void main(void) {
+	 vec3 reflectedLightColor;
+	
+	 for(int i = 0; i < 16; i++) {
+	   vec3 lightDirection = normalize(uLightPosition[i], vPosition.xyz);
+	   if (uLightIsDirectional[i]) {
+	     reflectedLightColor += max(dot(vTransformedNormal, uLightDirection[i]), 0.0) * uLightColor[i];
+	   }
+	   else  {
+	     reflectedLightColor += max(dot(normalize(vTransformedNormal, lightDirection), 0.0) * uLightColor[i];
+	   }
+	 }
+	
+	 glFragColor = vec4(uAmbientColor + reflectedLightColor * vColor, uAlpha);
 	}
 	`
 });
@@ -8794,6 +8794,31 @@ const STL = require('../../3d-modeling/STL.js');
 	  return {cabinetGuideJig, drawerGuideJig};
 	}
 	
+	models['chrismas tree leg'] = (guideHeight, guideReveal, bottomGap) => {
+	  const body = new CSG.cube({demensions: [9*2.54, 7.5, 1.4]});
+	  const bottomCutter = new CSG.cube({demensions: [8.25*2.54, .75, 1.4]})
+	  const slotCutter = new CSG.cube({demensions: [.8, 7.5, .725]});
+	  const endPiece = new CSG.cube({demensions: [.32, 7.5 - .75 - .28, 1.08]});
+	  const angleCutter = body.clone();
+	  angleCutter.rotate({z:15.5});
+	  angleCutter.translate({x:-2,y:4.3,z:0});
+	
+	  body.center({x:0,y:0,z:0});
+	  bottomCutter.center({x:3*2.54/8, y:-3.75 + 3/8, z:0});
+	  body.setColor('blue');
+	  bottomCutter.setColor('green');
+	  angleCutter.setColor('blue');
+	  slotCutter.setColor('blue');
+	  endPiece.setColor('red')
+	
+	  let model = body.subtract(angleCutter);
+	  slotCutter.center({x:9*2.54/2 - .4, y: 1.1, z: -.55/2 - .725/2});
+	  endPiece.center({x:9*2.54/2 - .16, y: .14 + .375, z: 0});
+	  model=model.subtract(slotCutter);
+	  slotCutter.translate({x:0,y:0,z:.55+.725});
+	  return model.subtract(slotCutter).union(endPiece).subtract(bottomCutter);
+	}
+	
 	const cnt = du.create.element('div');
 	const controls = du.create.element('div', {style: 'float: left'});
 	const display = du.create.element('div', {id: 'stl-three-d-model-cnt'});
@@ -8837,20 +8862,25 @@ const STL = require('../../3d-modeling/STL.js');
 	  viewer.gl.ondraw();
 	}
 	
-	const updateArgs = () => {
-	  const name = select.value;
-	  argCnt.innerHTML = models[name].Arguments().map(a => {
-	    const type = a.match(/^is[A-Z]/) ? 'checkbox' : 'number';
-	    return `<label>${a}</label><br/><input type='${type}'\><br/>`;
-	  }).join('\n');
+	
+	const updateArgs = (arg) => {
+	  if (arg !== undefined){
+	    const name = select.value;
+	    argCnt.innerHTML = models[name].Arguments().map(a => {
+	      const type = a.match(/^is[A-Z]/) ? 'checkbox' : 'number';
+	      return `<label>${a}</label><br/><input type='${type}'\><br/>`;
+	    }).join('\n');
+	  }
 	  updateModel();
 	}
+	
+	
 	
 	const download = () => {
 	  addLinks(getSelected(), select.value);
 	}
 	
-	select.value = 'Uberest Drawer Jigs';
+	select.value = 'chrismas tree leg';
 	
 	du.on.match('change', 'input', updateModel);
 	
@@ -14079,6 +14109,25 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("errorMsg")()) +
 			`</div> </div> `
 	
+	exports['input/multiple-entries'] = (get, $t) => 
+			`<` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			` class='input-cnt multi'` +
+			$t.clean(get("hidden")() ? ' hidden' : '') +
+			` input-id='` +
+			$t.clean(get("id")()) +
+			`'> <label>` +
+			$t.clean(get("label")()) +
+			`</label> <div class='multiple-entry-cnt tab card ` +
+			$t.clean(get("inline")() ? 'inline' : '') +
+			`' id='` +
+			$t.clean(get("id")()) +
+			`'> ` +
+			$t.clean( new $t('1507176312').render(get("list")(), 'inputArray', get)) +
+			` </div> </` +
+			$t.clean(get("inline")() ? 'span' : 'div') +
+			`> `
+	
 	exports['input/measurement'] = (get, $t) => 
 			`<div class='fit input-cnt measurement-input-cnt'` +
 			$t.clean(get("hidden")() ? ' hidden' : '') +
@@ -14120,25 +14169,6 @@ exports['40671914'] = (get, $t) =>
 			`' ` +
 			$t.clean(get("$index") === 0 ? 'checked' : '') +
 			`> </span>`
-	
-	exports['input/multiple-entries'] = (get, $t) => 
-			`<` +
-			$t.clean(get("inline")() ? 'span' : 'div') +
-			` class='input-cnt multi'` +
-			$t.clean(get("hidden")() ? ' hidden' : '') +
-			` input-id='` +
-			$t.clean(get("id")()) +
-			`'> <label>` +
-			$t.clean(get("label")()) +
-			`</label> <div class='multiple-entry-cnt tab card ` +
-			$t.clean(get("inline")() ? 'inline' : '') +
-			`' id='` +
-			$t.clean(get("id")()) +
-			`'> ` +
-			$t.clean( new $t('1507176312').render(get("list")(), 'inputArray', get)) +
-			` </div> </` +
-			$t.clean(get("inline")() ? 'span' : 'div') +
-			`> `
 	
 	exports['input/number'] = (get, $t) => 
 			`<` +
@@ -14418,21 +14448,6 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("target").showAngle ? 'checked' : '') +
 			`></td> </tr> <tr> <td colspan="2"><button class='remove-btn-2d transparent'>Remove</button></td> </tr> </table> </div> `
 	
-	exports['2d/pop-up/layout-2d'] = (get, $t) => 
-			`<div type-2d='` +
-			$t.clean(get("target").constructor.name) +
-			`' id='` +
-			$t.clean(get("target").id()) +
-			`' x='` +
-			$t.clean(get("lastImagePoint").x) +
-			`' y='` +
-			$t.clean(get("lastImagePoint").y) +
-			`'> <button class='add-object-btn-2d transparent'>Add Object</button> <br> <label>Ceiling Height</label> <input class='value-2d' type="text" key="ceilingHeight" convert='false' value="` +
-			$t.clean(get("display")(get("target").ceilingHeight())) +
-			`"> <br> <div class='center-vert center'> <button class='layout ruler` +
-			$t.clean(get("panZ").measurements.enabled() ? ' active' : '') +
-			`'> <i class="gg-ruler"></i> </button> </div> </div> `
-	
 	exports['2d/pop-up/door-2d'] = (get, $t) => 
 			`<div type-2d='` +
 			$t.clean(get("target").constructor.name) +
@@ -14449,6 +14464,21 @@ exports['40671914'] = (get, $t) =>
 			`'></td> </tr> <tr> <td><label>Distance From Floor</label></td> <td><input class='value-2d' key='fromFloor' value='` +
 			$t.clean(get("display")(get("target").fromFloor())) +
 			`'></td> </tr> <tr> <td> <button class='hinge-btn transparent'>Hinge</button> </td> <td><button class='remove-btn-2d transparent'>Remove</button></td> </tr> </table> </div> `
+	
+	exports['2d/pop-up/layout-2d'] = (get, $t) => 
+			`<div type-2d='` +
+			$t.clean(get("target").constructor.name) +
+			`' id='` +
+			$t.clean(get("target").id()) +
+			`' x='` +
+			$t.clean(get("lastImagePoint").x) +
+			`' y='` +
+			$t.clean(get("lastImagePoint").y) +
+			`'> <button class='add-object-btn-2d transparent'>Add Object</button> <br> <label>Ceiling Height</label> <input class='value-2d' type="text" key="ceilingHeight" convert='false' value="` +
+			$t.clean(get("display")(get("target").ceilingHeight())) +
+			`"> <br> <div class='center-vert center'> <button class='layout ruler` +
+			$t.clean(get("panZ").measurements.enabled() ? ' active' : '') +
+			`'> <i class="gg-ruler"></i> </button> </div> </div> `
 	
 	exports['2d/pop-up/line-measurement-2d'] = (get, $t) => 
 			`<div type-2d='` +
@@ -14609,6 +14639,85 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("rotation").value()) +
 			`'> </div> </div> `
 	
+	exports['cabinet/head'] = (get, $t) => 
+			`<div class='cabinet-header' cabinet-id='` +
+			$t.clean(get("cabinet").id()) +
+			`'> ` +
+			$t.clean(get("$index") +
+			1) +
+			`) <input class='cabinet-id-input' name='name' prop-update='` +
+			$t.clean(get("$index")) +
+			`.name' index='` +
+			$t.clean(get("$index")) +
+			`' display-id='` +
+			$t.clean(get("displayId")) +
+			`' value='` +
+			$t.clean(get("cabinet").name()) +
+			`'> &nbsp;&nbsp;&nbsp;&nbsp; Size: <div class='cabinet-dem-cnt' cabinet-id='` +
+			$t.clean(get("cabinet").id()) +
+			`'> <label>W:</label> <input class='cabinet-id-input dem' prop-update='` +
+			$t.clean(get("$index")) +
+			`.width' name='width' display-id='` +
+			$t.clean(get("displayId")) +
+			`' value='` +
+			$t.clean(get("displayValue")(get("cabinet").width())) +
+			`'> <label>H:</label> <input class='cabinet-id-input dem' prop-update='` +
+			$t.clean(get("$index")) +
+			`.length' name='length' display-id='` +
+			$t.clean(get("displayId")) +
+			`' value='` +
+			$t.clean(get("displayValue")(get("cabinet").length())) +
+			`'> <label>D:</label> <input class='cabinet-id-input dem' prop-update='` +
+			$t.clean(get("$index")) +
+			`.thickness' name='thickness' display-id='` +
+			$t.clean(get("displayId")) +
+			`' value='` +
+			$t.clean(get("displayValue")(get("cabinet").thickness())) +
+			`'> </div> </div> `
+	
+	exports['cabinet/notes'] = (get, $t) => 
+			`<div> <textarea class="cab-notes">` +
+			$t.clean(get("cabinet").notes()) +
+			`</textarea> </div> `
+	
+	exports['cabinet/simple'] = (get, $t) => 
+			`Im simple bitch `
+	
+	exports['divide/body'] = (get, $t) => 
+			`<h2>` +
+			$t.clean(get("list").activeKey()) +
+			`</h2> val: ` +
+			$t.clean(get("list").value()('selected')) +
+			` `
+	
+	exports['divide/head'] = (get, $t) => 
+			`<div> <div class='open-divider-select` +
+			$t.clean(get("sections").length === 0 ? '' : ' hidden') +
+			`'> ` +
+			$t.clean(get("headText")) +
+			` </div> </div> `
+	
+	exports['divider-controls'] = (get, $t) => 
+			`<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` +
+			$t.clean(get("opening").id()) +
+			`' value='` +
+			$t.clean(get("opening").pattern().str.length < 2 ? '' : get("opening").pattern().str) +
+			`'> <span class="open-orientation-radio-cnt"> <div class='div-orien-btn ` +
+			$t.clean(get("opening").value('vertical') ? '' : 'pressed') +
+			`' orientation='horizontal'> <i class='gg-horizontal'></i> </div> <div class='div-orien-btn ` +
+			$t.clean(!get("opening").value('vertical') ? '' : 'pressed') +
+			`' orientation='vertical'> <i class='gg-vertical'></i> </div> </span> <div` +
+			$t.clean(get("opening").divideRight() ? '': ' hidden') +
+			`> ` +
+			$t.clean(get("dividerTypeSelect").html()) +
+			` </div> <div class='open-pattern-input-cnt' opening-id='` +
+			$t.clean(get("opening").id()) +
+			`' ` +
+			$t.clean(get("opening").pattern().equals ? 'hidden' : '') +
+			`> ` +
+			$t.clean(get("patternInputHtml")) +
+			` </div> </div> `
+	
 	exports['advanced/subassemblies/void'] = (get, $t) => 
 			`<div class='void-display-cnt inline-flex' void-id='` +
 			$t.clean(get("id")()) +
@@ -14694,106 +14803,6 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("showType").name) +
 			` </option>`
 	
-	exports['cabinet/head'] = (get, $t) => 
-			`<div class='cabinet-header' cabinet-id='` +
-			$t.clean(get("cabinet").id()) +
-			`'> ` +
-			$t.clean(get("$index") +
-			1) +
-			`) <input class='cabinet-id-input' name='name' prop-update='` +
-			$t.clean(get("$index")) +
-			`.name' index='` +
-			$t.clean(get("$index")) +
-			`' display-id='` +
-			$t.clean(get("displayId")) +
-			`' value='` +
-			$t.clean(get("cabinet").name()) +
-			`'> &nbsp;&nbsp;&nbsp;&nbsp; Size: <div class='cabinet-dem-cnt' cabinet-id='` +
-			$t.clean(get("cabinet").id()) +
-			`'> <label>W:</label> <input class='cabinet-id-input dem' prop-update='` +
-			$t.clean(get("$index")) +
-			`.width' name='width' display-id='` +
-			$t.clean(get("displayId")) +
-			`' value='` +
-			$t.clean(get("displayValue")(get("cabinet").width())) +
-			`'> <label>H:</label> <input class='cabinet-id-input dem' prop-update='` +
-			$t.clean(get("$index")) +
-			`.length' name='length' display-id='` +
-			$t.clean(get("displayId")) +
-			`' value='` +
-			$t.clean(get("displayValue")(get("cabinet").length())) +
-			`'> <label>D:</label> <input class='cabinet-id-input dem' prop-update='` +
-			$t.clean(get("$index")) +
-			`.thickness' name='thickness' display-id='` +
-			$t.clean(get("displayId")) +
-			`' value='` +
-			$t.clean(get("displayValue")(get("cabinet").thickness())) +
-			`'> </div> </div> `
-	
-	exports['cabinet/notes'] = (get, $t) => 
-			`<div> <textarea class="cab-notes">` +
-			$t.clean(get("cabinet").notes()) +
-			`</textarea> </div> `
-	
-	exports['cabinet/simple'] = (get, $t) => 
-			`Im simple bitch `
-	
-	exports['canvas-displays'] = (get, $t) => 
-			`<div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <div name="Layout" id='two-d-model'> <canvas id="two-d-model-canvas"></canvas> <div class='orientation-controls'></div> </div> <div name='Cabinet' id='disp-canvas-cab'></div> <div name='Parts 3D' id='disp-canvas-p3d'> <div id='model-controller'></div> </div> <div name='Parts 2D' id='disp-canvas-p2d'></div> <div name='Room' id='disp-canvas-room'> <table class='borderless'> <tbody class='borderless'> <tr id='wall-color-cnt'> <td class='borderless'><label>Walls</label></td> <td class='borderless'><select class='color-selector'></select></td> <td class='borderless'><input type='color'></td> </tr> <tr id='cab-color-cnt'> <td class='borderless'><label>Cabinet</label></td> <td class='borderless'><select class='color-selector'></select></td> <td class='borderless'><input type='color'></td> </tr> <tr id='obj-color-cnt'> <td class='borderless'><label>Object</label></td> <td class='borderless'><select class='color-selector'></select></td> <td class='borderless'><input type='color'></td> </tr> </tbody> </table> </div> <div id="three-d-model" class="viewer small"> <div class='inline left'> <div class='orientation-controls'></div> </div> </div> </div> </div> `
-	
-	exports['display-manager'] = (get, $t) => 
-			`<div class='display-manager' id='` +
-			$t.clean(get("switchCntId")) +
-			`'> ` +
-			$t.clean( new $t('-533097724').render(get("list"), 'item', get)) +
-			` </div> `
-	
-	exports['-533097724'] = (get, $t) => 
-			`<span class='display-manager-item'> <button class='display-manager-input` +
-			$t.clean(get("$index") === 0 ? " active" : "") +
-			`' type='button' display-id='` +
-			$t.clean(get("item").id) +
-			`' link='` +
-			$t.clean(get("link")) +
-			`'>` +
-			$t.clean(get("item").name) +
-			`</button> </span>`
-	
-	exports['divide/body'] = (get, $t) => 
-			`<h2>` +
-			$t.clean(get("list").activeKey()) +
-			`</h2> val: ` +
-			$t.clean(get("list").value()('selected')) +
-			` `
-	
-	exports['divide/head'] = (get, $t) => 
-			`<div> <div class='open-divider-select` +
-			$t.clean(get("sections").length === 0 ? '' : ' hidden') +
-			`'> ` +
-			$t.clean(get("headText")) +
-			` </div> </div> `
-	
-	exports['divider-controls'] = (get, $t) => 
-			`<div> <label>Dividers:</label> <input class='division-pattern-input' type='text' name='pattern' opening-id='` +
-			$t.clean(get("opening").id()) +
-			`' value='` +
-			$t.clean(get("opening").pattern().str.length < 2 ? '' : get("opening").pattern().str) +
-			`'> <span class="open-orientation-radio-cnt"> <div class='div-orien-btn ` +
-			$t.clean(get("opening").value('vertical') ? '' : 'pressed') +
-			`' orientation='horizontal'> <i class='gg-horizontal'></i> </div> <div class='div-orien-btn ` +
-			$t.clean(!get("opening").value('vertical') ? '' : 'pressed') +
-			`' orientation='vertical'> <i class='gg-vertical'></i> </div> </span> <div` +
-			$t.clean(get("opening").divideRight() ? '': ' hidden') +
-			`> ` +
-			$t.clean(get("dividerTypeSelect").html()) +
-			` </div> <div class='open-pattern-input-cnt' opening-id='` +
-			$t.clean(get("opening").id()) +
-			`' ` +
-			$t.clean(get("opening").pattern().equals ? 'hidden' : '') +
-			`> ` +
-			$t.clean(get("patternInputHtml")) +
-			` </div> </div> `
-	
 	exports['documents/construction/aerials'] = (get, $t) => 
 			`<div class='aerial-views'> ` +
 			$t.clean( new $t('-1044419277').render(get("order").rooms, 'name, room', get)) +
@@ -14815,6 +14824,11 @@ exports['40671914'] = (get, $t) =>
 			$t.clean( new $t('documents/construction/part').render(get("scope"), undefined, get)) +
 			` </div> `
 	
+	exports['documents/construction/cabinetList'] = (get, $t) => 
+			`<div class='small-margin'> <table class='last-col-full'> <tr class='btm-border-barely-visible'> <th>Index</th> <th>Name</th> <th>Demensions</th> <th colspan="2">Show(L|R)</th> <th colspan="2">End Style(L|R)</th> <th>Shelves</th> <th>Notes</th> </tr> ` +
+			$t.clean( new $t('40671914').render(get("cabinets"), 'cabinet', get)) +
+			` </table> </div> `
+	
 	exports['documents/construction/cut-list-label'] = (get, $t) => 
 			`<div class='center-all'> <div>` +
 			$t.clean(get("info").partsId) +
@@ -14829,11 +14843,6 @@ exports['40671914'] = (get, $t) =>
 			` X ` +
 			$t.clean(get("disp").measurement(get("info").demensions.z)) +
 			` </div> </div> `
-	
-	exports['documents/construction/cabinetList'] = (get, $t) => 
-			`<div class='small-margin'> <table class='last-col-full'> <tr class='btm-border-barely-visible'> <th>Index</th> <th>Name</th> <th>Demensions</th> <th colspan="2">Show(L|R)</th> <th colspan="2">End Style(L|R)</th> <th>Shelves</th> <th>Notes</th> </tr> ` +
-			$t.clean( new $t('40671914').render(get("cabinets"), 'cabinet', get)) +
-			` </table> </div> `
 	
 	exports['documents/construction/door-list'] = (get, $t) => 
 			`<div class='small-margin last-col-full '> <table> <tbody> <tr class='btm-border-barely-visible'> <th>Qt</th> <th>` +
@@ -14908,21 +14917,6 @@ exports['40671914'] = (get, $t) =>
 			$t.clean( new $t('documents/construction/materials-row').render(get("categories")(get("set")), 'category, set', get)) +
 			` `
 	
-	exports['documents/construction/panel-cut-list'] = (get, $t) => 
-			`` +
-			$t.clean( new $t('1442479092').render(get("pages"), 'page', get)) +
-			` `
-	
-	exports['-628650965'] = (get, $t) => 
-			`<span class='avery-5160-label center'> ` +
-			$t.clean(get("pickles")) +
-			` </span>`
-	
-	exports['-1550030595'] = (get, $t) => 
-			`<div class='flex fit'> ` +
-			$t.clean( new $t('-628650965').render(get("row"), 'pickles', get)) +
-			` </div>`
-	
 	exports['documents/construction/opening-diagrams'] = (get, $t) => 
 			`<div cabinet-list-hash=` +
 			$t.clean(get("hash")) +
@@ -14953,6 +14947,21 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("Utils").textToHtml(get("order").notes())) +
 			` </div> </div> `
 	
+	exports['documents/construction/panel-cut-list'] = (get, $t) => 
+			`` +
+			$t.clean( new $t('1442479092').render(get("pages"), 'page', get)) +
+			` `
+	
+	exports['-628650965'] = (get, $t) => 
+			`<span class='avery-5160-label center'> ` +
+			$t.clean(get("pickles")) +
+			` </span>`
+	
+	exports['-1550030595'] = (get, $t) => 
+			`<div class='flex fit'> ` +
+			$t.clean( new $t('-628650965').render(get("row"), 'pickles', get)) +
+			` </div>`
+	
 	exports['documents/construction/part'] = (get, $t) => 
 			`<div class='center'> <h3>` +
 			$t.clean(get("category").PARTS.length ? get("category").PARTS[0].categories.join('-') : '') +
@@ -14966,29 +14975,6 @@ exports['40671914'] = (get, $t) =>
 			`` +
 			$t.clean( new $t('568362631').render(get("roomInfo").groups, 'group', get)) +
 			` `
-	
-	exports['documents/construction/three-view'] = (get, $t) => 
-			`<div cabinet-list-hash='` +
-			$t.clean(get("hash")) +
-			`'> ` +
-			$t.clean( new $t('-1730737816').render(get("cabinetInfos"), 'cabInfo', get)) +
-			` </div> `
-	
-	exports['-1730737816'] = (get, $t) => 
-			`<div class='avoid-page-break center'> <div> <b>` +
-			$t.clean(get("disp").partIdPrefix(get("cabInfo").parts[0])) +
-			`</b> </div> <div> <canvas class='upside-down mirror-x' id='` +
-			$t.clean(get("cabCanvasId")(get("cabInfo").parts[0], 'front')) +
-			`'></canvas> <canvas class='upside-down mirror-x' id='` +
-			$t.clean(get("cabCanvasId")(get("cabInfo").parts[0], 'top')) +
-			`'></canvas> <canvas class='upside-down mirror-x' id='` +
-			$t.clean(get("cabCanvasId")(get("cabInfo").parts[0], 'side')) +
-			`'></canvas> </div> </div>`
-	
-	exports['documents/construction'] = (get, $t) => 
-			`<div class='target-input-selector'> ` +
-			$t.clean(get("selectorHtml")) +
-			` </div> <div id='document-print-body' hidden> <button class='print'>Print</button> <div class='document-cnt'></div> <button class='print'>Print</button> </div> `
 	
 	exports['documents/cuts/cut-data'] = (get, $t) => 
 			`<tr> <td>` +
@@ -15020,6 +15006,29 @@ exports['40671914'] = (get, $t) =>
 			`-ref`).render(get("er"), undefined, get)) +
 			` </span>`
 	
+	exports['documents/construction/three-view'] = (get, $t) => 
+			`<div cabinet-list-hash='` +
+			$t.clean(get("hash")) +
+			`'> ` +
+			$t.clean( new $t('-1730737816').render(get("cabinetInfos"), 'cabInfo', get)) +
+			` </div> `
+	
+	exports['-1730737816'] = (get, $t) => 
+			`<div class='avoid-page-break center'> <div> <b>` +
+			$t.clean(get("disp").partIdPrefix(get("cabInfo").parts[0])) +
+			`</b> </div> <div> <canvas class='upside-down mirror-x' id='` +
+			$t.clean(get("cabCanvasId")(get("cabInfo").parts[0], 'front')) +
+			`'></canvas> <canvas class='upside-down mirror-x' id='` +
+			$t.clean(get("cabCanvasId")(get("cabInfo").parts[0], 'top')) +
+			`'></canvas> <canvas class='upside-down mirror-x' id='` +
+			$t.clean(get("cabCanvasId")(get("cabInfo").parts[0], 'side')) +
+			`'></canvas> </div> </div>`
+	
+	exports['documents/construction'] = (get, $t) => 
+			`<div class='target-input-selector'> ` +
+			$t.clean(get("selectorHtml")) +
+			` </div> <div id='document-print-body' hidden> <button class='print'>Print</button> <div class='document-cnt'></div> <button class='print'>Print</button> </div> `
+	
 	exports['documents/cuts/cut-edge-ref'] = (get, $t) => 
 			`<div class='` +
 			$t.clean(get("$index") === 0 ? "left" : "right") +
@@ -15028,11 +15037,6 @@ exports['40671914'] = (get, $t) =>
 			`@` +
 			$t.clean(get("disp").measurement(get("distance"))) +
 			` </div> </div> `
-	
-	exports['documents/cuts/hand-saw'] = (get, $t) => 
-			`<div class='hand-saw-cnt'> <table class='no-border-cells'> <caption><b>Hand Saw</b></caption> <tr> <th>Width</th> <th>Depth</th> <th>Length</th> <th>Angle</th> <th>Relitive To Vertex</th> <th>Relitive To Vertex</th> </tr> ` +
-			$t.clean( new $t('1903603615').render(get("list"), 'item', get)) +
-			` </table> </div> `
 	
 	exports['documents/cuts/cut-no-ref'] = (get, $t) => 
 			`<div class='center dashed'></div> `
@@ -15045,6 +15049,16 @@ exports['40671914'] = (get, $t) =>
 	exports['documents/cuts/cuts'] = (get, $t) => 
 			`<span> <table class='no-border-cells'> <caption><b>Cut References</b></caption> <tr> <th>Cut ID</th> <th>Marker</th> <th>Width</th> <th>Depth</th> <th><i class='gg-shape-triangle no-right no-bottom'></i></th> <th><i class='gg-shape-triangle no-right'></i></th> <th class='edge-ref'>Edge References<div>Left<br/>Right</div></th> <th>Length</th> </tr> ` +
 			$t.clean( new $t('documents/cuts/cut-data').render(get("cuts"), 'cut', get)) +
+			` </table> </span> `
+	
+	exports['documents/cuts/hand-saw'] = (get, $t) => 
+			`<div class='hand-saw-cnt'> <table class='no-border-cells'> <caption><b>Hand Saw</b></caption> <tr> <th>Width</th> <th>Depth</th> <th>Length</th> <th>Angle</th> <th>Relitive To Vertex</th> <th>Relitive To Vertex</th> </tr> ` +
+			$t.clean( new $t('1903603615').render(get("list"), 'item', get)) +
+			` </table> </div> `
+	
+	exports['documents/cuts/table-saw'] = (get, $t) => 
+			`<span> <table class='no-border-cells'> <caption><b>Table Saw</b></caption> <tr> <th class='no-border'></th> <th>Width</th> <th>Depth</th> <th>Angle</th> <th>Side&nbsp;Up</th> <th>Edge</th> <th>Fence&nbsp;@</th> <th>Length</th> <th>OOB</th> </tr> ` +
+			$t.clean( new $t('documents/cuts/table-data').render(get("list"), 'item', get)) +
 			` </table> </span> `
 	
 	exports['documents/cuts/table-data'] = (get, $t) => 
@@ -15068,11 +15082,6 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("item").outsideOfBlade ? 'true' : '') +
 			`</td> </tr> `
 	
-	exports['documents/cuts/table-saw'] = (get, $t) => 
-			`<span> <table class='no-border-cells'> <caption><b>Table Saw</b></caption> <tr> <th class='no-border'></th> <th>Width</th> <th>Depth</th> <th>Angle</th> <th>Side&nbsp;Up</th> <th>Edge</th> <th>Fence&nbsp;@</th> <th>Length</th> <th>OOB</th> </tr> ` +
-			$t.clean( new $t('documents/cuts/table-data').render(get("list"), 'item', get)) +
-			` </table> </span> `
-	
 	exports['documents/cuts/unknown'] = (get, $t) => 
 			`<div class='unknown-cnt'> <h3>Cut information Cannot Be Determined for joints:</h3> ` +
 			$t.clean( new $t('-506182427').render(get("list"), 'item', get)) +
@@ -15083,9 +15092,6 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("item").descriptor) +
 			` </div>`
 	
-	exports['feature'] = (get, $t) => 
-			`<h3>Feature Display</h3> `
-	
 	exports['documents/task-completion'] = (get, $t) => 
 			`<div> <br> <div class="loading-bar-cnt main-progress-cnt"> <div class="loading-bar center" style="width:` +
 			$t.clean(get("progress")) +
@@ -15094,6 +15100,9 @@ exports['40671914'] = (get, $t) =>
 			`% </div> </div> <br> <div class='ind-task-progress-cnt'> ` +
 			$t.clean( new $t('2053240362').render(get("tasks"), 'task', get)) +
 			` </div> </div> `
+	
+	exports['feature'] = (get, $t) => 
+			`<h3>Feature Display</h3> `
 	
 	exports['group/body'] = (get, $t) => 
 			`<div group-id='` +
@@ -15154,8 +15163,8 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("body")) +
 			` </div> <br> </div> `
 	
-	exports['login/confirmation-message'] = (get, $t) => 
-			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
+	exports['hello'] = (get, $t) => 
+			`Hello World `
 	
 	exports['index'] = (get, $t) => 
 			`<html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <style> /* #two-d-model { width: 500px; height:500px;} */ div { font-size:x-small; } </style> <script type="text/javascript" src='/cabinet/js/index.js'></script> <script type="text/javascript" src='/js/qrious.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/styles/file-tab.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <link rel="stylesheet" href="/styles/icons.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>` +
@@ -15174,15 +15183,8 @@ exports['40671914'] = (get, $t) =>
 			$t.clean( new $t('canvas-displays').render(get("autoLocProps"), undefined, get)) +
 			` <div id='property-select-cnt'></div> </body> </html> `
 	
-	exports['hello'] = (get, $t) => 
-			`Hello World `
-	
-	exports['login/login'] = (get, $t) => 
-			`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
-			$t.clean(get("email")) +
-			`'> <input type='password' placeholder="password" name='password' value='` +
-			$t.clean(get("password")) +
-			`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
+	exports['login/confirmation-message'] = (get, $t) => 
+			`<h3> Check your email for confirmation. </h3> <button id='resend-activation'>Resend</button> `
 	
 	exports['login/create-account'] = (get, $t) => 
 			`<h3>Create An Account</h3> <input type='text' placeholder="email" name='email' value='` +
@@ -15190,6 +15192,13 @@ exports['40671914'] = (get, $t) =>
 			`'> <input type='password' placeholder="password" name='password' value='` +
 			$t.clean(get("password")) +
 			`'> <br><br> <button id='register'>Register</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='LOGIN'>Login</a> `
+	
+	exports['login/login'] = (get, $t) => 
+			`<h3>Login</h3> <input type='text' placeholder="email" name='email' value='` +
+			$t.clean(get("email")) +
+			`'> <input type='password' placeholder="password" name='password' value='` +
+			$t.clean(get("password")) +
+			`'> <br><br> <button id='login-btn'>Login</button> <br><br> <a href='#' user-state='RESET_PASSWORD'>Reset Passord</a> | <a href='#' user-state='CREATE_ACCOUNT'>Create An Account</a> `
 	
 	exports['login/reset-password'] = (get, $t) => 
 			`<h3>Reset Password</h3> <input type='text' placeholder="email" name='email' value='` +
@@ -15227,29 +15236,6 @@ exports['40671914'] = (get, $t) =>
 			$t.clean( new $t('1417643187').render(get("node").payload().requiredProperties, 'property', get)) +
 			` </ul> </div> `
 	
-	exports['managers/cost/types/labor'] = (get, $t) => 
-			`<div cost-id='` +
-			$t.clean(get("cost").id()) +
-			`'> <b>Labor</b> <span` +
-			$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
-			`> <input value='` +
-			$t.clean(get("cost").length()) +
-			`'> </span> <span` +
-			$t.clean(get("cost").width() === undefined ? ' hidden' : '') +
-			`> <label>X</label> <input value='` +
-			$t.clean(get("cost").width()) +
-			`'> </span> <span` +
-			$t.clean(get("cost").depth() === undefined ? ' hidden' : '') +
-			`> <label>X</label> <input value='` +
-			$t.clean(get("cost").depth()) +
-			`'> </span> <br> <div> <label>Cost</label> <input value='` +
-			$t.clean(get("cost").cost()) +
-			`'> <label>Per ` +
-			$t.clean(get("cost").unitCost('name')) +
-			` = ` +
-			$t.clean(get("cost").unitCost('value')) +
-			`</label> </div> </div> `
-	
 	exports['managers/cost/main'] = (get, $t) => 
 			`<div> <div class="center"> <h2 id='cost-manager-header'> Cost Tree Manager </h2> </div> ` +
 			$t.clean( new $t('-496477131').render(get("root")().children(), 'child', get)) +
@@ -15276,8 +15262,28 @@ exports['40671914'] = (get, $t) =>
 			$t.clean( new $t('1036581066').render(get("properties"), 'property', get)) +
 			` </div>`
 	
-	exports['managers/property/body'] = (get, $t) => 
-			`<div> No Need </div> `
+	exports['managers/cost/types/labor'] = (get, $t) => 
+			`<div cost-id='` +
+			$t.clean(get("cost").id()) +
+			`'> <b>Labor</b> <span` +
+			$t.clean(get("cost").length() === undefined ? ' hidden' : '') +
+			`> <input value='` +
+			$t.clean(get("cost").length()) +
+			`'> </span> <span` +
+			$t.clean(get("cost").width() === undefined ? ' hidden' : '') +
+			`> <label>X</label> <input value='` +
+			$t.clean(get("cost").width()) +
+			`'> </span> <span` +
+			$t.clean(get("cost").depth() === undefined ? ' hidden' : '') +
+			`> <label>X</label> <input value='` +
+			$t.clean(get("cost").depth()) +
+			`'> </span> <br> <div> <label>Cost</label> <input value='` +
+			$t.clean(get("cost").cost()) +
+			`'> <label>Per ` +
+			$t.clean(get("cost").unitCost('name')) +
+			` = ` +
+			$t.clean(get("cost").unitCost('value')) +
+			`</label> </div> </div> `
 	
 	exports['managers/cost/types/material'] = (get, $t) => 
 			`<div cost-id='` +
@@ -15302,25 +15308,8 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("cost").unitCost('value')) +
 			`</label> </div> </div> `
 	
-	exports['managers/property/header'] = (get, $t) => 
-			`<div> <b>` +
-			$t.clean(get("instance").name) +
-			` (` +
-			$t.clean(get("instance").constructor.code) +
-			`) - ` +
-			$t.clean(get("instance").value) +
-			`</b> </div> `
-	
-	exports['managers/template/expand-cnt'] = (get, $t) => 
-			`<div template-id='` +
-			$t.clean(get("template").id()) +
-			`' class='cabinet-template-input-cnt'> <div class='expand-header'>` +
-			$t.clean(get("container").name) +
-			`</div> <div hidden class="` +
-			$t.clean(get("container").class) +
-			`"> ` +
-			$t.clean(get("container").html && get("container").html(get("template"))) +
-			` </div> </div> `
+	exports['managers/property/body'] = (get, $t) => 
+			`<div> No Need </div> `
 	
 	exports['managers/template/body'] = (get, $t) => 
 			`<div class='template-body' template-id=` +
@@ -15345,10 +15334,33 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("template").id()) +
 			`' class='layout-shape-display'> <canvas class="top-sketch upside-down mirror-x" width="200" height="200"></canvas> <canvas class="front-sketch upside-down mirror-x" width="200" height="200"></canvas> </div> </div> </div> </div> `
 	
+	exports['managers/property/header'] = (get, $t) => 
+			`<div> <b>` +
+			$t.clean(get("instance").name) +
+			` (` +
+			$t.clean(get("instance").constructor.code) +
+			`) - ` +
+			$t.clean(get("instance").value) +
+			`</b> </div> `
+	
+	exports['managers/template/expand-cnt'] = (get, $t) => 
+			`<div template-id='` +
+			$t.clean(get("template").id()) +
+			`' class='cabinet-template-input-cnt'> <div class='expand-header'>` +
+			$t.clean(get("container").name) +
+			`</div> <div hidden class="` +
+			$t.clean(get("container").class) +
+			`"> ` +
+			$t.clean(get("container").html && get("container").html(get("template"))) +
+			` </div> </div> `
+	
 	exports['managers/template/head'] = (get, $t) => 
 			`<div> <b>` +
 			$t.clean(get("template").type()) +
 			`</b> </div> `
+	
+	exports['managers/template/headers/assembly'] = (get, $t) => 
+			``
 	
 	exports['managers/template/headers/cabinet'] = (get, $t) => 
 			`<label>Automatic Toekick</label> <input type="checkbox" name="autoToeKick" ` +
@@ -15362,8 +15374,12 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("jointInput").html()) +
 			` <input type="text" name="value" disabled > <input type="checkbox" name="convert" checked> `
 	
-	exports['managers/template/headers/assembly'] = (get, $t) => 
-			``
+	exports['managers/template/joints/head'] = (get, $t) => 
+			`<b> <input class='template-input' value='` +
+			$t.clean(get("obj").selector.depends()) +
+			`' attr='joints' placeholder='Male Part Code' name='selector-depends'> => <input class='template-input' value='` +
+			$t.clean(get("obj").selector.dependent()) +
+			`' attr='joints' placeholder='Female Part Code' name='selector-dependent'> </b> `
 	
 	exports['managers/template/main'] = (get, $t) => 
 			`<div template-manager=` +
@@ -15378,54 +15394,250 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("parentId")()) +
 			`'></div> <div class='center center-vert' id='opening-sketch-cnt'></div> </div> `
 	
-	exports['managers/template/joints/head'] = (get, $t) => 
-			`<b> <input class='template-input' value='` +
-			$t.clean(get("obj").selector.depends()) +
-			`' attr='joints' placeholder='Male Part Code' name='selector-depends'> => <input class='template-input' value='` +
-			$t.clean(get("obj").selector.dependent()) +
-			`' attr='joints' placeholder='Female Part Code' name='selector-dependent'> </b> `
-	
-	exports['managers/template/openings/points'] = (get, $t) => 
-			`<table> <tr> <td` +
-			$t.clean(get("target")(4) ? ' class="bold"' : '') +
-			`>` +
-			$t.clean(get("display")(get("coords").outer[0])) +
-			`</td> <td></td> <td></td> <td` +
-			$t.clean(get("target")(5) ? ' class="bold"' : '') +
-			`>` +
-			$t.clean(get("display")(get("coords").outer[1])) +
-			`</td> </tr> <tr> <td></td> <td` +
-			$t.clean(get("target")(0) ? ' class="bold"' : '') +
-			`>` +
-			$t.clean(get("display")(get("coords").inner[0])) +
-			`</td> <td` +
-			$t.clean(get("target")(1) ? ' class="bold"' : '') +
-			`>` +
-			$t.clean(get("display")(get("coords").inner[1])) +
-			`</td> <td></td> </tr> <tr> <td></td> <td` +
-			$t.clean(get("target")(3) ? ' class="bold"' : '') +
-			`>` +
-			$t.clean(get("display")(get("coords").inner[3])) +
-			`</td> <td` +
-			$t.clean(get("target")(2) ? ' class="bold"' : '') +
-			`>` +
-			$t.clean(get("display")(get("coords").inner[2])) +
-			`</td> <td></td> </tr> <tr> <td` +
-			$t.clean(get("target")(7) ? ' class="bold"' : '') +
-			`>` +
-			$t.clean(get("display")(get("coords").outer[3])) +
-			`</td> <td></td> <td></td> <td` +
-			$t.clean(get("target")(6) ? ' class="bold"' : '') +
-			`>` +
-			$t.clean(get("display")(get("coords").outer[2])) +
-			`</td> </tr> </table> `
-	
 	exports['managers/template/openings/head'] = (get, $t) => 
 			`<div class='inline-flex' opening-index='` +
 			$t.clean(get("index")) +
 			`' opening-id='` +
 			$t.clean(get("obj").id) +
 			`'> Openings </div> `
+	
+	exports['canvas-displays'] = (get, $t) => 
+			`<div id='model-cnt'> <div id='display-menu'></div> <div id='model-display-cnt'> <div name="Layout" id='two-d-model'> <canvas id="two-d-model-canvas"></canvas> <div class='orientation-controls'></div> </div> <div name='Cabinet' id='disp-canvas-cab'></div> <div name='Parts 3D' id='disp-canvas-p3d'> <div id='model-controller'></div> </div> <div name='Parts 2D' id='disp-canvas-p2d'></div> <div name='Room' id='disp-canvas-room'> <table class='borderless'> <tbody class='borderless'> <tr id='wall-color-cnt'> <td class='borderless'><label>Walls</label></td> <td class='borderless'><select class='color-selector'></select></td> <td class='borderless'><input type='color'></td> </tr> <tr id='cab-color-cnt'> <td class='borderless'><label>Cabinet</label></td> <td class='borderless'><select class='color-selector'></select></td> <td class='borderless'><input type='color'></td> </tr> <tr id='obj-color-cnt'> <td class='borderless'><label>Object</label></td> <td class='borderless'><select class='color-selector'></select></td> <td class='borderless'><input type='color'></td> </tr> </tbody> </table> </div> <div id="three-d-model" class="viewer small"> <div class='inline left'> <div class='orientation-controls'></div> </div> </div> </div> </div> `
+	
+	exports['display-manager'] = (get, $t) => 
+			`<div class='display-manager' id='` +
+			$t.clean(get("switchCntId")) +
+			`'> ` +
+			$t.clean( new $t('-533097724').render(get("list"), 'item', get)) +
+			` </div> `
+	
+	exports['-533097724'] = (get, $t) => 
+			`<span class='display-manager-item'> <button class='display-manager-input` +
+			$t.clean(get("$index") === 0 ? " active" : "") +
+			`' type='button' display-id='` +
+			$t.clean(get("item").id) +
+			`' link='` +
+			$t.clean(get("link")) +
+			`'>` +
+			$t.clean(get("item").name) +
+			`</button> </span>`
+	
+	exports['managers/template/subassemblies/head'] = (get, $t) => 
+			`<label>Part Code</label> <input class='template-input' attr='subassemblies' name='code' value="` +
+			$t.clean(get("obj").code) +
+			`"> ` +
+			$t.clean(get("typeInput").html()) +
+			` `
+	
+	exports['managers/template/subassemblies/object/normals'] = (get, $t) => 
+			`<table class='` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.valid ? '' : 'error') +
+			`'> <tr> <th></th> ` +
+			$t.clean( new $t('1819729875').render(['i', 'j', 'k'], 'char', get)) +
+			` <th>Calculated</th> <th>Value</th> </tr> ` +
+			$t.clean( new $t('-1855337671').render(['Cross Grain', 'With Grain', 'End Grain'], 'label', get)) +
+			` </table> `
+	
+	exports['-1855337671'] = (get, $t) => 
+			`<tr index="` +
+			$t.clean(get("$index")) +
+			`" class='tab normal-vector-input-cnt ` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.normals[get("$index")] ? '' : 'error') +
+			`'> <td><label>` +
+			$t.clean(get("label")) +
+			`</label></td> <td> <input class="dem" type="text" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.normals[get("$index")][0]) +
+			`"> </td> <td> <input class="dem" type="text" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.normals[get("$index")][1]) +
+			`"> </td> <td> <input class="dem" type="text" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.normals[get("$index")][2]) +
+			`"> </td> <td> <input type='radio' name='calculated-` +
+			$t.clean(get("obj").id) +
+			`' class='calc-vect-radio' ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'checked' : '') +
+			`> </td> <td> <input name='display' type='text' disabled value='` +
+			$t.clean(get("normalToString")(get("obj"), get("$index"))) +
+			`'> </td> </tr>`
+	
+	exports['managers/template/subassemblies/object/poly'] = (get, $t) => 
+			`<div class='poly-input-cnt'> <label>Thickness</label> <input class='template-input measurement-display' attr='subassemblies' name='polyConfig.thickness' value='` +
+			$t.clean(get("subAssem").polyConfig.thickness) +
+			`'> <input disabled class='measurement-input' name='value'> <br> <label>Points</label> ` +
+			$t.clean( new $t('133324092').render(get("subAssem").polyConfig.points, 'point', get)) +
+			` <button class='add-poly-point'>Add</button> </div> `
+	
+	exports['managers/template/subassemblies/object/void'] = (get, $t) => 
+			`<div> <label>Joint Set:</label> <select class='template-input set-selector' name='jointSetIndex'> ` +
+			$t.clean( new $t('-2013474054').render('0..6', 'i', get)) +
+			` </select> <br> <div> <label>Include sides</label> ` +
+			$t.clean( new $t('-1101208247').render('0..6', 'i', get)) +
+			` </div> </div> `
+	
+	exports['-2013474054'] = (get, $t) => 
+			`<option ` +
+			$t.clean(get("jointSetIndex") === get("i") ? 'selected' : '') +
+			`>` +
+			$t.clean(get("i")) +
+			`</option>`
+	
+	exports['-1101208247'] = (get, $t) => 
+			`<span > <label>` +
+			$t.clean(get("i")) +
+			`</label> <input class='template-input' type='checkbox' name='includedSides.` +
+			$t.clean(get("i")) +
+			`' ` +
+			$t.clean(get("includedSides")[get("i")] ? 'checked' : '') +
+			`> </span>`
+	
+	exports['managers/template/values/head'] = (get, $t) => 
+			`<div template-attr='values'> <input class='template-input' attr='values' type='text' name='name' value='` +
+			$t.clean(get("obj").key) +
+			`' placeholder="Variable Name"> <input class='measurement-input' type='text' name='value' value='` +
+			$t.clean(get("obj").eqn) +
+			`' placeholder="Value" disabled> <input type="checkbox" name="convert" checked> <br> <input class='template-input full-width' attr='values' type='text' name='eqn' value='` +
+			$t.clean(get("obj").eqn) +
+			`' placeholder="Equation"> </div> `
+	
+	exports['model-controller-old'] = (get, $t) => 
+			`<div class='` +
+			$t.clean(get("group").level < 2 ? '' : 'model-selector indent') +
+			`' ` +
+			$t.clean(get("group").level < 2 ? '' : 'hidden') +
+			`> <div class='model-state ` +
+			$t.clean(get("tdm").isTarget("prefix", get("group").prefix) ? "active " : "") +
+			` ` +
+			$t.clean(get("label") ? "prefix-switch" : "") +
+			`'> <label type='prefix'>` +
+			$t.clean(get("label")) +
+			`</label> <input type='checkbox' class='prefix-checkbox' prefix='` +
+			$t.clean(get("group").prefix) +
+			`' ` +
+			$t.clean(!get("tdm").hidePrefix(get("label")) ? 'checked' : '') +
+			` ` +
+			$t.clean(get("group").level === 0 ? 'hidden' : '') +
+			`> <div class='model-container'> ` +
+			$t.clean( new $t('-986829271').render(get("group").parts, 'partName, partList', get)) +
+			` </div> ` +
+			$t.clean( new $t('model-controller').render(get("group").groups, 'label, group', get)) +
+			` </div> </div> `
+	
+	exports['-103984952'] = (get, $t) => 
+			`<div part-id='` +
+			$t.clean(get("part").id()) +
+			`' part-code='` +
+			$t.clean(get("part").partCode()) +
+			`' class='model-state ` +
+			$t.clean(get("tdm").isTarget("part-id", get("part").id()) ? "active " : "") +
+			`' ` +
+			$t.clean(get("partList").length === 1 ? 'hidden' : '') +
+			`> <label type='part-id' target part-code='` +
+			$t.clean(get("part").partCode()) +
+			`'> ` +
+			$t.clean(get("part").partCode()) +
+			`-` +
+			$t.clean(get("$index") +
+			1) +
+			` </label> <input type='checkbox' class='part-id-checkbox' part-id='` +
+			$t.clean(get("part").id()) +
+			`' part-code='` +
+			$t.clean(get("part").partCode()) +
+			`' ` +
+			$t.clean(!get("tdm").hidePartId(get("part").id()) ? 'checked' : '') +
+			`> </div>`
+	
+	exports['-986829271'] = (get, $t) => 
+			`<div class='model-state ` +
+			$t.clean(get("group").level < 1 ? '' : 'model-label indent') +
+			` ` +
+			$t.clean(get("tdm").isTarget("part-name", get("partName")) ? " active" : "") +
+			`' ` +
+			$t.clean(get("group").level < 1 ? '' : 'hidden') +
+			` ` +
+			$t.clean(get("partList").length === 1 ? 'target part-code="' +
+			get("partList")[0].partCode() +
+			'"' : '') +
+			`> <label type='part-name' part-name='` +
+			$t.clean(get("partName")) +
+			`'> ` +
+			$t.clean(get("partName")) +
+			`` +
+			$t.clean(get("partList").length === 1 ? '(' +
+			get("partList")[0].partCode() +
+			')' : '') +
+			` </label> <input type='checkbox' class='part-name-checkbox' part-name='` +
+			$t.clean(get("partName")) +
+			`' ` +
+			$t.clean(!get("tdm").hidePartName(get("partName")) ? 'checked' : '') +
+			`> <div class='indent'> ` +
+			$t.clean( new $t('-103984952').render(get("partList"), 'part', get)) +
+			` </div> </div>`
+	
+	exports['opening'] = (get, $t) => 
+			`<div class='opening-cnt' opening-id='` +
+			$t.clean(get("opening").id()) +
+			`'> <b class='copy-inner-text'>` +
+			$t.clean(get("opening").name()) +
+			`</b> <div class='divider-controls'> ` +
+			$t.clean(get("OpenSectionDisplay").dividerHtml(get("opening"))) +
+			` </div> <div> <label>Section Type:</label> <select class='section-selection'> <option>Open</option> ` +
+			$t.clean( new $t('184800797').render(get("sections"), 'section', get)) +
+			` </select> <div class='section-feature-cnt'> <div class='inline-flex chev-dropdown-toggle'> Opening Features <i class='down gg-chevron-down hidden' ></i> <i class='right gg-chevron-right'></i> </div> <div class='tab chev-dropdown' hidden> ` +
+			$t.clean(get("featuresHtml")) +
+			` </div> </div> <div id='` +
+			$t.clean(get("openDispId")) +
+			`'> </div> </div> </div> `
+	
+	exports['order/body'] = (get, $t) => 
+			`<div order-id='` +
+			$t.clean(get("order").id()) +
+			`'> <b>` +
+			$t.clean(get("order").name()) +
+			`</b> <ul id='order-nav' class='center toggle-display-list'> <li class='toggle-display-item active' display-id='builder-display-` +
+			$t.clean(get("order").id()) +
+			`'>Builder</li> <li class='toggle-display-item' display-id='information-display-` +
+			$t.clean(get("order").id()) +
+			`'>Information</li> </ul> <div id='builder-display-` +
+			$t.clean(get("order").id()) +
+			`'> <b>` +
+			$t.clean(get("order").name()) +
+			`</b> <button class='save-order-btn' index='` +
+			$t.clean(get("$index")) +
+			`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> <div id='information-display-` +
+			$t.clean(get("order").id()) +
+			`' hidden> <utility-filter id='uf-info-` +
+			$t.clean(get("order").id()) +
+			`' edit='true'> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> </div> </div> `
+	
+	exports['order/builder/body'] = (get, $t) => 
+			`<div order-id='` +
+			$t.clean(get("order").id()) +
+			`'> <b>` +
+			$t.clean(get("order").name) +
+			`</b> <button class='save-order-btn' index='` +
+			$t.clean(get("$index")) +
+			`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> `
+	
+	exports['order/builder/head'] = (get, $t) => 
+			`<h3 class='margin-zero'> ` +
+			$t.clean(get("order").name) +
+			` </h3> `
+	
+	exports['order/head'] = (get, $t) => 
+			`<h3 class='margin-zero'> ` +
+			$t.clean(get("order").name()) +
+			` </h3> `
+	
+	exports['order/information/body'] = (get, $t) => 
+			`<utility-filter hidden> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> `
+	
+	exports['order/information/head'] = (get, $t) => 
+			`<b>Information</b> `
 	
 	exports['managers/template/openings/body'] = (get, $t) => 
 			`<div> <h4>Opening Border Part Codes</h4> <div class='tab border-part-code-cnt'> ` +
@@ -15487,308 +15699,10 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("state").index === get("i") ? 'checked' : '') +
 			`> </span>`
 	
-	exports['managers/template/subassemblies/body'] = (get, $t) => 
-			`<div template-attr='subassembles'> <div class='center'> <label>All</label> <input class='template-include' type='radio' name='is-` +
-			$t.clean(get("obj").id) +
-			`' value='All' ` +
-			$t.clean(get("obj").include === 'All' ? 'checked' : '') +
-			`> <label>Overlay</label> <input class='template-include' type='radio' name='is-` +
-			$t.clean(get("obj").id) +
-			`' value='Overlay' ` +
-			$t.clean(get("obj").include === 'Overlay' ? 'checked' : '') +
-			`> <label>Reveal</label> <input class='template-include' type='radio' name='is-` +
-			$t.clean(get("obj").id) +
-			`' value='Reveal' ` +
-			$t.clean(get("obj").include === 'Reveal' ? 'checked' : '') +
-			`> <label>Inset</label> <input class='template-include' type='radio' name='is-` +
-			$t.clean(get("obj").id) +
-			`' value='Inset' ` +
-			$t.clean(get("obj").include === 'Inset' ? 'checked' : '') +
-			`> </div> <label>Name</label> <input class='template-input' attr='subassemblies' name="name" value="` +
-			$t.clean(get("obj").name) +
-			`"> <div> ` +
-			$t.clean(get("dividerTypeSelect") && get("dividerTypeSelect").html()) +
-			` </div> <div> <div class='center'> <label><b>Position:</b></label> <label>Box</label> <input type='radio' name='positionMethod-` +
-			$t.clean(get("obj").id) +
-			`' value='box' ` +
-			$t.clean(get("obj").positionMethod !== 'poly' ? 'checked' : '') +
-			`> <label>Poly</label> <input type='radio' name='positionMethod-` +
-			$t.clean(get("obj").id) +
-			`' value='poly' ` +
-			$t.clean(get("obj").positionMethod === 'poly' ? 'checked' : '') +
-			`> </div> <div class='poly-input-cnt' ` +
-			$t.clean(get("obj").positionMethod !== 'poly' ? 'hidden' : '') +
-			`> ` +
-			$t.clean(get("polyHtml")) +
-			` </div> <div class='box-input-cnt' ` +
-			$t.clean(get("obj").positionMethod === 'poly' ? 'hidden' : '') +
-			`> ` +
-			$t.clean(get("referenceSelect").html()) +
-			` <select name='type' hidden> <option>All</option> <option>Center</option> <option>Demension</option> <option>Rotation</option> </select> <select name='axis' hidden> <option>All</option> <option>X</option> <option>Y</option> <option>Z</option> </select> <button class='template-reference-update-btn' hidden>Change</button> <br> <div class='sub-demensions-cnt inline-flex'> ` +
-			$t.clean(get("demensionXyzSelect").html()) +
-			` <input class='template-input xyz' attr='subassemblies' name='demensions' value='` +
-			$t.clean(get("getEqn")(get("demensionXyzSelect"), get("obj").demensions)) +
-			`'> <input disabled class='measurement-input' name='value'> <input type="checkbox" name="convert" checked> </div> <br> <div class='sub-center-cnt inline-flex'> ` +
-			$t.clean(get("centerXyzSelect").html()) +
-			` <input class='template-input xyz' attr='subassemblies' name='center' value='` +
-			$t.clean(get("getEqn")(get("centerXyzSelect"), get("obj").center)) +
-			`'> <input disabled class='measurement-input' name='value'> <input type="checkbox" name="convert" checked> </div> <br> </div> <div class='subassem-normal-cnt center'> <label><b>Normals:</b></label> <label>Rotation</label> <input type='radio' name='normalStyle-` +
-			$t.clean(get("obj").id) +
-			`' value='rotation' ` +
-			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.style !== 'rotation' ? 'checked' : '') +
-			`> <label>Vector</label> <input type='radio' name='normalStyle-` +
-			$t.clean(get("obj").id) +
-			`' value='vector' ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'vector' ? 'checked' : '') +
-			`> <label>Line</label> <input type='radio' name='normalStyle-` +
-			$t.clean(get("obj").id) +
-			`' value='line' ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'line' ? 'checked' : '') +
-			`> <div class='rotation-normal-cnt tab' ` +
-			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.style === 'rotation' ? '' : 'hidden') +
-			`> <div class='sub-center-cnt inline-flex'> ` +
-			$t.clean(get("rotationXyzSelect").html()) +
-			` <input class='template-input xyz' attr='subassemblies' name='rotation' value='` +
-			$t.clean(get("getEqn")(get("rotationXyzSelect"), get("obj").rotation)) +
-			`'> <input disabled class='measurement-input' name='value'> </div> </div> <div class='vector-normal-cnt tab' ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'vector' ? '' : 'hidden') +
-			`> ` +
-			$t.clean( new $t('managers/template/subassemblies/object/normals').render(get("scope"), undefined, get)) +
-			` </div> <div class='line-normal-cnt tab' ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'line' ? '' : 'hidden') +
-			`> ` +
-			$t.clean( new $t('managers/template/subassemblies/object/lines').render(get("scope"), undefined, get)) +
-			` </div> </div> <div> ` +
-			$t.clean(get("typeSpecificHtml")) +
-			` </div> </div> `
-	
-	exports['managers/template/subassemblies/head'] = (get, $t) => 
-			`<label>Part Code</label> <input class='template-input' attr='subassemblies' name='code' value="` +
-			$t.clean(get("obj").code) +
-			`"> ` +
-			$t.clean(get("typeInput").html()) +
-			` `
-	
-	exports['managers/template/subassemblies/object/lines'] = (get, $t) => 
-			`<table class='` +
-			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.valid ? '' : 'error') +
-			`'> <tr> <th></th> ` +
-			$t.clean( new $t('1100231627').render(['start(x|y|z)', 'end(x|y|z)'], 'char', get)) +
-			` <th>Calculated</th> <th>Value</th> </tr> ` +
-			$t.clean( new $t('-1858767942').render(['Cross Grain', 'With Grain', 'End Grain'], 'label', get)) +
-			` </table> `
-	
-	exports['-1858767942'] = (get, $t) => 
-			`<tr index="` +
-			$t.clean(get("$index")) +
-			`" class='tab normal-vector-input-cnt ` +
-			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.normals[get("$index")] ? '' : 'error') +
-			`'> <td><label>` +
-			$t.clean(get("label")) +
-			`</label></td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
-			$t.clean(get("$index")) +
-			`.0.x" ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
-			` value="` +
-			$t.clean(get("obj").pathValue("normalInfo.lines." +
-			get("$index") +
-			".0.x")) +
-			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
-			$t.clean(get("$index")) +
-			`.0.y" ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
-			` value="` +
-			$t.clean(get("obj").pathValue("normalInfo.lines." +
-			get("$index") +
-			".0.y")) +
-			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
-			$t.clean(get("$index")) +
-			`.0.z" ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
-			` value="` +
-			$t.clean(get("obj").pathValue("normalInfo.lines." +
-			get("$index") +
-			".0.z")) +
-			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
-			$t.clean(get("$index")) +
-			`.1.x" ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
-			` value="` +
-			$t.clean(get("obj").pathValue("normalInfo.lines." +
-			get("$index") +
-			".1.x")) +
-			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
-			$t.clean(get("$index")) +
-			`.1.y" ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
-			` value="` +
-			$t.clean(get("obj").pathValue("normalInfo.lines." +
-			get("$index") +
-			".1.y")) +
-			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
-			$t.clean(get("$index")) +
-			`.1.z" ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
-			` value="` +
-			$t.clean(get("obj").pathValue("normalInfo.lines." +
-			get("$index") +
-			".1.z")) +
-			`"> </td> <td> <input type='radio' name='calculated-` +
-			$t.clean(get("obj").id) +
-			`' class='calc-vect-radio' ` +
-			$t.clean(get("obj").pathValue('normalInfo.calc') === get("$index") ? 'checked' : '') +
-			`> </td> <td> <input name='display' type='text' disabled value='` +
-			$t.clean(get("normalToString")(get("obj"), get("$index"))) +
-			`'> </td> </tr>`
-	
-	exports['managers/template/subassemblies/object/normals'] = (get, $t) => 
-			`<table class='` +
-			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.valid ? '' : 'error') +
-			`'> <tr> <th></th> ` +
-			$t.clean( new $t('1819729875').render(['i', 'j', 'k'], 'char', get)) +
-			` <th>Calculated</th> <th>Value</th> </tr> ` +
-			$t.clean( new $t('-1855337671').render(['Cross Grain', 'With Grain', 'End Grain'], 'label', get)) +
-			` </table> `
-	
-	exports['-1855337671'] = (get, $t) => 
-			`<tr index="` +
-			$t.clean(get("$index")) +
-			`" class='tab normal-vector-input-cnt ` +
-			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.normals[get("$index")] ? '' : 'error') +
-			`'> <td><label>` +
-			$t.clean(get("label")) +
-			`</label></td> <td> <input class="dem" type="text" ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
-			` value="` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.normals[get("$index")][0]) +
-			`"> </td> <td> <input class="dem" type="text" ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
-			` value="` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.normals[get("$index")][1]) +
-			`"> </td> <td> <input class="dem" type="text" ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
-			` value="` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.normals[get("$index")][2]) +
-			`"> </td> <td> <input type='radio' name='calculated-` +
-			$t.clean(get("obj").id) +
-			`' class='calc-vect-radio' ` +
-			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'checked' : '') +
-			`> </td> <td> <input name='display' type='text' disabled value='` +
-			$t.clean(get("normalToString")(get("obj"), get("$index"))) +
-			`'> </td> </tr>`
-	
-	exports['managers/template/subassemblies/object/poly'] = (get, $t) => 
-			`<div class='poly-input-cnt'> <label>Thickness</label> <input class='template-input measurement-display' attr='subassemblies' name='polyConfig.thickness' value='` +
-			$t.clean(get("subAssem").polyConfig.thickness) +
-			`'> <input disabled class='measurement-input' name='value'> <br> <label>Points</label> ` +
-			$t.clean( new $t('133324092').render(get("subAssem").polyConfig.points, 'point', get)) +
-			` <button class='add-poly-point'>Add</button> </div> `
-	
-	exports['opening'] = (get, $t) => 
-			`<div class='opening-cnt' opening-id='` +
-			$t.clean(get("opening").id()) +
-			`'> <b class='copy-inner-text'>` +
-			$t.clean(get("opening").name()) +
-			`</b> <div class='divider-controls'> ` +
-			$t.clean(get("OpenSectionDisplay").dividerHtml(get("opening"))) +
-			` </div> <div> <label>Section Type:</label> <select class='section-selection'> <option>Open</option> ` +
-			$t.clean( new $t('184800797').render(get("sections"), 'section', get)) +
-			` </select> <div class='section-feature-cnt'> <div class='inline-flex chev-dropdown-toggle'> Opening Features <i class='down gg-chevron-down hidden' ></i> <i class='right gg-chevron-right'></i> </div> <div class='tab chev-dropdown' hidden> ` +
-			$t.clean(get("featuresHtml")) +
-			` </div> </div> <div id='` +
-			$t.clean(get("openDispId")) +
-			`'> </div> </div> </div> `
-	
-	exports['managers/template/subassemblies/object/void'] = (get, $t) => 
-			`<div> <label>Joint Set:</label> <select class='template-input set-selector' name='jointSetIndex'> ` +
-			$t.clean( new $t('-2013474054').render('0..6', 'i', get)) +
-			` </select> <br> <div> <label>Include sides</label> ` +
-			$t.clean( new $t('-1101208247').render('0..6', 'i', get)) +
-			` </div> </div> `
-	
-	exports['-2013474054'] = (get, $t) => 
-			`<option ` +
-			$t.clean(get("jointSetIndex") === get("i") ? 'selected' : '') +
-			`>` +
-			$t.clean(get("i")) +
-			`</option>`
-	
-	exports['-1101208247'] = (get, $t) => 
-			`<span > <label>` +
-			$t.clean(get("i")) +
-			`</label> <input class='template-input' type='checkbox' name='includedSides.` +
-			$t.clean(get("i")) +
-			`' ` +
-			$t.clean(get("includedSides")[get("i")] ? 'checked' : '') +
-			`> </span>`
-	
-	exports['managers/template/values/head'] = (get, $t) => 
-			`<div template-attr='values'> <input class='template-input' attr='values' type='text' name='name' value='` +
-			$t.clean(get("obj").key) +
-			`' placeholder="Variable Name"> <input class='measurement-input' type='text' name='value' value='` +
-			$t.clean(get("obj").eqn) +
-			`' placeholder="Value" disabled> <input type="checkbox" name="convert" checked> <br> <input class='template-input full-width' attr='values' type='text' name='eqn' value='` +
-			$t.clean(get("obj").eqn) +
-			`' placeholder="Equation"> </div> `
-	
-	exports['order/body'] = (get, $t) => 
-			`<div order-id='` +
-			$t.clean(get("order").id()) +
-			`'> <b>` +
-			$t.clean(get("order").name()) +
-			`</b> <ul id='order-nav' class='center toggle-display-list'> <li class='toggle-display-item active' display-id='builder-display-` +
-			$t.clean(get("order").id()) +
-			`'>Builder</li> <li class='toggle-display-item' display-id='information-display-` +
-			$t.clean(get("order").id()) +
-			`'>Information</li> </ul> <div id='builder-display-` +
-			$t.clean(get("order").id()) +
-			`'> <b>` +
-			$t.clean(get("order").name()) +
-			`</b> <button class='save-order-btn' index='` +
-			$t.clean(get("$index")) +
-			`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> <div id='information-display-` +
-			$t.clean(get("order").id()) +
-			`' hidden> <utility-filter id='uf-info-` +
-			$t.clean(get("order").id()) +
-			`' edit='true'> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> </div> </div> `
-	
-	exports['order/builder/body'] = (get, $t) => 
-			`<div order-id='` +
-			$t.clean(get("order").id()) +
-			`'> <b>` +
-			$t.clean(get("order").name) +
-			`</b> <button class='save-order-btn' index='` +
-			$t.clean(get("$index")) +
-			`'>Save</button> <div id='room-pills'>RoomPills!</div> </div> `
-	
-	exports['order/information/body'] = (get, $t) => 
-			`<utility-filter hidden> [ {"ID":1,"NAME":"Linktype","LEGAL_NAME":"Telephone and Data Systems, Inc.","LOGO_URI":"http://dummyimage.com/349x31.jpg/dddddd/000000","OWNER_ID":988}, {"ID":2,"NAME":"Eare","LEGAL_NAME":"Zymeworks Inc.","LOGO_URI":null,"OWNER_ID":933}, {"ID":3,"NAME":"Ainyx","LEGAL_NAME":"Pacira Pharmaceuticals, Inc.","LOGO_URI":null,"OWNER_ID":960}, {"ID":4,"NAME":"Photobean","LEGAL_NAME":"ArQule, Inc.","LOGO_URI":null,"OWNER_ID":443}, {"ID":5,"NAME":"Zoombeat","LEGAL_NAME":"Domtar Corporation","LOGO_URI":"http://dummyimage.com/83x401.bmp/5fa2dd/ffffff","OWNER_ID":739}] </utility-filter> `
-	
-	exports['order/builder/head'] = (get, $t) => 
-			`<h3 class='margin-zero'> ` +
-			$t.clean(get("order").name) +
-			` </h3> `
-	
-	exports['order/head'] = (get, $t) => 
-			`<h3 class='margin-zero'> ` +
-			$t.clean(get("order").name()) +
-			` </h3> `
-	
-	exports['order/information/head'] = (get, $t) => 
-			`<b>Information</b> `
-	
-	exports['order-redirect'] = (get, $t) => 
-			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <title>` +
-			$t.clean(get("order").name()) +
-			`</title> <data hidden>` +
-			$t.clean(get("JSON").stringify(get("order").toJson())) +
-			`</data> <script> let stop = false; let urlElem, countdownElem, buttonElem; function postOrder() { const xhr = new XMLHttpRequest(); const url = urlElem.value; const body = 'heyoooo'; xhr.open('post', url, true); xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); xhr.setRequestHeader('Access-Control-Allow-Origin', '*'); xhr.setRequestHeader('Content-Type', 'application/json'); xhr.onreadystatechange = function () { if (this.readyState != 4) return; if (this.status == 200) { console.log('success'); } else { console.error('failure'); } } xhr.send(JSON.stringify(body)); return xhr; } window.addEventListener('click', () => { stop = true; urlElem.parentElement.hidden = false; countdownElem.parentElement.hidden = true; }); let count = 15; const countdown = () => { if (count === 0) return postOrder(); if (!stop) { countdownElem.innerText = count--; setTimeout(countdown, 1000); } } window.onload = () => { urlElem = document.getElementById('url-input'); countdownElem = document.getElementById('load-countdown'); buttonElem = document.getElementById('load-btn'); buttonElem.addEventListener('click', postOrder); countdown(); } </script> </head> <body> <div> <h3> Loading '` +
-			$t.clean(get("order").name()) +
-			`' using url: ` +
-			$t.clean(get("url")) +
-			` </h3> <h3 id='load-countdown'></h3> <h4> Click anywhare to stop/change url</h4> </div> <div hidden> <input id='url-input' type="text" name="url" value="` +
-			$t.clean(get("url")) +
-			`"> <button id='load-btn'>Load</button> </div> </body> </html> `
+	exports['order'] = (get, $t) => 
+			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/cabinet/js/index.js'></script> <script type="text/javascript" src='/js/qrious.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/styles/file-tab.css"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>CComp</title> </head> <body> <div id='order-select-cnt' class='center no-print'> <span id='order-selector-cnt' hidden></span> <button type="button" class='auto-save-btn' name="button">Choose Save Location</button> <span id='save-time-cnt'></span> </div> <div class='expandable-list' id='single-order-cnt'> <div id='main-display-menu' class='display-manager center'></div> <div id='display-cnt'> <div id='order-display-cnt'> <div id='order-cnt'> <div class='center pad no-print'> <input id='order-name-input' class='header-input' size='20' type="text" name="order-name"> <input id='order-version-input' class='header-input' size='20' type="text" name="order-version"> </div> <div id="order-tab-cnt"></div> </div> ` +
+			$t.clean( new $t('canvas-displays').render(get("scope"), undefined, get)) +
+			` </div> <div id='information-display'> <utility-filter id='uf-order-info' edit='true'></utility-filter> </div> </div> </div> <canvas id='qr-demo' hidden></canvas> </body> </html> `
 	
 	exports['parts/model-controller'] = (get, $t) => 
 			` <div class='model-controller-cnt'> <label>Explosion Factor</label> <input type='number' min=0 max=10 step=1 name='explosionFactor' value='` +
@@ -15800,11 +15714,6 @@ exports['40671914'] = (get, $t) =>
 			`> ` +
 			$t.clean( new $t('parts/selector').render(get("grouping"), undefined, get)) +
 			` </div> `
-	
-	exports['order'] = (get, $t) => 
-			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <script type="text/javascript" src='/cabinet/js/index.js'></script> <script type="text/javascript" src='/js/qrious.js'></script> <link rel="stylesheet" href="/styles/expandable-list.css"> <link rel="stylesheet" href="/styles/file-tab.css"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <script src="/js/utility-filter.js" run-type='auto'></script> <title>CComp</title> </head> <body> <div id='order-select-cnt' class='center no-print'> <span id='order-selector-cnt' hidden></span> <button type="button" class='auto-save-btn' name="button">Choose Save Location</button> <span id='save-time-cnt'></span> </div> <div class='expandable-list' id='single-order-cnt'> <div id='main-display-menu' class='display-manager center'></div> <div id='display-cnt'> <div id='order-display-cnt'> <div id='order-cnt'> <div class='center pad no-print'> <input id='order-name-input' class='header-input' size='20' type="text" name="order-name"> <input id='order-version-input' class='header-input' size='20' type="text" name="order-version"> </div> <div id="order-tab-cnt"></div> </div> ` +
-			$t.clean( new $t('canvas-displays').render(get("scope"), undefined, get)) +
-			` </div> <div id='information-display'> <utility-filter id='uf-order-info' edit='true'></utility-filter> </div> </div> </div> <canvas id='qr-demo' hidden></canvas> </body> </html> `
 	
 	exports['parts/selector'] = (get, $t) => 
 			`<div class='` +
@@ -15893,11 +15802,6 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("property").value() === true ? 'checked' : '') +
 			`> </span> </div>`
 	
-	exports['properties/config-head'] = (get, $t) => 
-			`` +
-			$t.clean(get("name")) +
-			` `
-	
 	exports['properties/config-body0'] = (get, $t) => 
 			`<div> ` +
 			$t.clean( new $t('-179269626').render(get("properties"), 'property', get)) +
@@ -15918,6 +15822,88 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("property").measurementId()) +
 			`'> </div>`
 	
+	exports['properties/config-head'] = (get, $t) => 
+			`` +
+			$t.clean(get("name")) +
+			` `
+	
+	exports['properties/config-head0'] = (get, $t) => 
+			`` +
+			$t.clean(get("name")) +
+			` `
+	
+	exports['managers/template/subassemblies/object/lines'] = (get, $t) => 
+			`<table class='` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.valid ? '' : 'error') +
+			`'> <tr> <th></th> ` +
+			$t.clean( new $t('1100231627').render(['start(x|y|z)', 'end(x|y|z)'], 'char', get)) +
+			` <th>Calculated</th> <th>Value</th> </tr> ` +
+			$t.clean( new $t('-1858767942').render(['Cross Grain', 'With Grain', 'End Grain'], 'label', get)) +
+			` </table> `
+	
+	exports['-1858767942'] = (get, $t) => 
+			`<tr index="` +
+			$t.clean(get("$index")) +
+			`" class='tab normal-vector-input-cnt ` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.normals[get("$index")] ? '' : 'error') +
+			`'> <td><label>` +
+			$t.clean(get("label")) +
+			`</label></td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.0.x" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".0.x")) +
+			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.0.y" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".0.y")) +
+			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.0.z" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".0.z")) +
+			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.1.x" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".1.x")) +
+			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.1.y" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".1.y")) +
+			`"> </td> <td> <input class='template-input dem' attr='subassemblies' name="normalInfo.lines.` +
+			$t.clean(get("$index")) +
+			`.1.z" ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.calc === get("$index") ? 'disabled' : '') +
+			` value="` +
+			$t.clean(get("obj").pathValue("normalInfo.lines." +
+			get("$index") +
+			".1.z")) +
+			`"> </td> <td> <input type='radio' name='calculated-` +
+			$t.clean(get("obj").id) +
+			`' class='calc-vect-radio' ` +
+			$t.clean(get("obj").pathValue('normalInfo.calc') === get("$index") ? 'checked' : '') +
+			`> </td> <td> <input name='display' type='text' disabled value='` +
+			$t.clean(get("normalToString")(get("obj"), get("$index"))) +
+			`'> </td> </tr>`
+	
 	exports['properties/properties'] = (get, $t) => 
 			`<div class='center'> <div class='center'> <label>UNIT :&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
 			$t.clean( new $t('-766481261').render(get("Properties").UNITS, 'property', get)) +
@@ -15935,18 +15921,6 @@ exports['40671914'] = (get, $t) =>
 			`" ` +
 			$t.clean(get("property").value() === true ? 'checked' : '') +
 			`> </span>`
-	
-	exports['properties/config-head0'] = (get, $t) => 
-			`` +
-			$t.clean(get("name")) +
-			` `
-	
-	exports['properties/property-menu'] = (get, $t) => 
-			` <div class='inline-flex chev-dropdown-toggle'> Property Menu <i class='down gg-chevron-down hidden' ></i> <i class='right gg-chevron-right'></i> </div> <div class='tab chev-dropdown' hidden> <div class='cabinet-style-selector-cnt'>` +
-			$t.clean(get("styleSelector")(get("group"))) +
-			`</div> <input class='measurement-input' name='crownHeight' decimal='` +
-			$t.clean(get("group").crown.height()) +
-			`'> </div> <br/><br/> `
 	
 	exports['properties/properties0'] = (get, $t) => 
 			`<div class='center'> <div class='` +
@@ -15969,12 +15943,12 @@ exports['40671914'] = (get, $t) =>
 			$t.clean( new $t('1927703609').render(get("groups"), 'key, group', get)) +
 			` </div> </div> </div> </div> `
 	
-	exports['properties/unit'] = (get, $t) => 
-			`<div> <label>Imperial inch (US)</label> <input type='radio' name='unit' ` +
-			$t.clean(get("unit").value() === 'inch' ? 'checked' : '') +
-			` value='inch'> <label>cm</label> <input type='radio' name='unit' ` +
-			$t.clean(get("unit").value() === 'cm' ? 'checked' : '') +
-			` value='cm'> </div> `
+	exports['properties/property-menu'] = (get, $t) => 
+			` <div class='inline-flex chev-dropdown-toggle'> Property Menu <i class='down gg-chevron-down hidden' ></i> <i class='right gg-chevron-right'></i> </div> <div class='tab chev-dropdown' hidden> <div class='cabinet-style-selector-cnt'>` +
+			$t.clean(get("styleSelector")(get("group"))) +
+			`</div> <input class='measurement-input' name='crownHeight' decimal='` +
+			$t.clean(get("group").crown.height()) +
+			`'> </div> <br/><br/> `
 	
 	exports['properties/radio'] = (get, $t) => 
 			`<div class='center'> <label>` +
@@ -15982,6 +15956,26 @@ exports['40671914'] = (get, $t) =>
 			`:&nbsp;&nbsp;&nbsp;&nbsp;</label> ` +
 			$t.clean( new $t('1410278299').render(get("values"), 'property', get)) +
 			` </div> `
+	
+	exports['order-redirect'] = (get, $t) => 
+			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <title>` +
+			$t.clean(get("order").name()) +
+			`</title> <data hidden>` +
+			$t.clean(get("JSON").stringify(get("order").toJson())) +
+			`</data> <script> let stop = false; let urlElem, countdownElem, buttonElem; function postOrder() { const xhr = new XMLHttpRequest(); const url = urlElem.value; const body = 'heyoooo'; xhr.open('post', url, true); xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); xhr.setRequestHeader('Access-Control-Allow-Origin', '*'); xhr.setRequestHeader('Content-Type', 'application/json'); xhr.onreadystatechange = function () { if (this.readyState != 4) return; if (this.status == 200) { console.log('success'); } else { console.error('failure'); } } xhr.send(JSON.stringify(body)); return xhr; } window.addEventListener('click', () => { stop = true; urlElem.parentElement.hidden = false; countdownElem.parentElement.hidden = true; }); let count = 15; const countdown = () => { if (count === 0) return postOrder(); if (!stop) { countdownElem.innerText = count--; setTimeout(countdown, 1000); } } window.onload = () => { urlElem = document.getElementById('url-input'); countdownElem = document.getElementById('load-countdown'); buttonElem = document.getElementById('load-btn'); buttonElem.addEventListener('click', postOrder); countdown(); } </script> </head> <body> <div> <h3> Loading '` +
+			$t.clean(get("order").name()) +
+			`' using url: ` +
+			$t.clean(get("url")) +
+			` </h3> <h3 id='load-countdown'></h3> <h4> Click anywhare to stop/change url</h4> </div> <div hidden> <input id='url-input' type="text" name="url" value="` +
+			$t.clean(get("url")) +
+			`"> <button id='load-btn'>Load</button> </div> </body> </html> `
+	
+	exports['properties/unit'] = (get, $t) => 
+			`<div> <label>Imperial inch (US)</label> <input type='radio' name='unit' ` +
+			$t.clean(get("unit").value() === 'inch' ? 'checked' : '') +
+			` value='inch'> <label>cm</label> <input type='radio' name='unit' ` +
+			$t.clean(get("unit").value() === 'cm' ? 'checked' : '') +
+			` value='cm'> </div> `
 	
 	exports['room/body'] = (get, $t) => 
 			`<div> ` +
@@ -16002,11 +15996,6 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("featureDisplay")) +
 			` </div> `
 	
-	exports['sections/drawer'] = (get, $t) => 
-			`<div class='section-feature-ctn'> ` +
-			$t.clean(get("Features").pulls(get("section").front())) +
-			` </div> `
-	
 	exports['sections/door'] = (get, $t) => 
 			`<div> ` +
 			$t.clean(get("Features").opening(get("section"))) +
@@ -16014,7 +16003,7 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("Features").pulls(get("section").door())) +
 			` </div> `
 	
-	exports['sections/false-front'] = (get, $t) => 
+	exports['sections/drawer'] = (get, $t) => 
 			`<div class='section-feature-ctn'> ` +
 			$t.clean(get("Features").pulls(get("section").front())) +
 			` </div> `
@@ -16026,6 +16015,11 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("Features").pulls(get("section").left(), 'Left')) +
 			` ` +
 			$t.clean(get("Features").pulls(get("section").right(), 'Right')) +
+			` </div> `
+	
+	exports['sections/false-front'] = (get, $t) => 
+			`<div class='section-feature-ctn'> ` +
+			$t.clean(get("Features").pulls(get("section").front())) +
 			` </div> `
 	
 	exports['sections/helpers/opening'] = (get, $t) => 
@@ -16057,6 +16051,15 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("Features").opening(get("section"))) +
 			` </div> `
 	
+	exports['static-page'] = (get, $t) => 
+			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <title>` +
+			$t.clean(get("title")) +
+			`</title> </head> <body> ` +
+			$t.clean( new $t(`` +
+			$t.clean(get("file")) +
+			``).render(get("scope"), undefined, get)) +
+			` </body> </html> `
+	
 	exports['three-view'] = (get, $t) => 
 			`<div class='three-view-cnt' id='` +
 			$t.clean(get("id")()) +
@@ -16074,88 +16077,115 @@ exports['40671914'] = (get, $t) =>
 			$t.clean(get("maxDem")()) +
 			`"></canvas> </span> </div> <div class='part-info-cnt'>P INF CNT</div> </div> </div> </div> `
 	
-	exports['static-page'] = (get, $t) => 
-			`<!DOCTYPE html> <html lang="en" dir="ltr"> <head> <meta charset="utf-8"> <link rel="stylesheet" href="/styles/icons.css"> <link rel="stylesheet" href="/cabinet/styles/estimate.css"> <title>` +
-			$t.clean(get("title")) +
-			`</title> </head> <body> ` +
-			$t.clean( new $t(`` +
-			$t.clean(get("file")) +
-			``).render(get("scope"), undefined, get)) +
-			` </body> </html> `
+	exports['managers/template/openings/points'] = (get, $t) => 
+			`<table> <tr> <td` +
+			$t.clean(get("target")(4) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[0])) +
+			`</td> <td></td> <td></td> <td` +
+			$t.clean(get("target")(5) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[1])) +
+			`</td> </tr> <tr> <td></td> <td` +
+			$t.clean(get("target")(0) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[0])) +
+			`</td> <td` +
+			$t.clean(get("target")(1) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[1])) +
+			`</td> <td></td> </tr> <tr> <td></td> <td` +
+			$t.clean(get("target")(3) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[3])) +
+			`</td> <td` +
+			$t.clean(get("target")(2) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").inner[2])) +
+			`</td> <td></td> </tr> <tr> <td` +
+			$t.clean(get("target")(7) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[3])) +
+			`</td> <td></td> <td></td> <td` +
+			$t.clean(get("target")(6) ? ' class="bold"' : '') +
+			`>` +
+			$t.clean(get("display")(get("coords").outer[2])) +
+			`</td> </tr> </table> `
 	
-	exports['model-controller-old'] = (get, $t) => 
-			`<div class='` +
-			$t.clean(get("group").level < 2 ? '' : 'model-selector indent') +
-			`' ` +
-			$t.clean(get("group").level < 2 ? '' : 'hidden') +
-			`> <div class='model-state ` +
-			$t.clean(get("tdm").isTarget("prefix", get("group").prefix) ? "active " : "") +
-			` ` +
-			$t.clean(get("label") ? "prefix-switch" : "") +
-			`'> <label type='prefix'>` +
-			$t.clean(get("label")) +
-			`</label> <input type='checkbox' class='prefix-checkbox' prefix='` +
-			$t.clean(get("group").prefix) +
-			`' ` +
-			$t.clean(!get("tdm").hidePrefix(get("label")) ? 'checked' : '') +
-			` ` +
-			$t.clean(get("group").level === 0 ? 'hidden' : '') +
-			`> <div class='model-container'> ` +
-			$t.clean( new $t('-986829271').render(get("group").parts, 'partName, partList', get)) +
-			` </div> ` +
-			$t.clean( new $t('model-controller').render(get("group").groups, 'label, group', get)) +
+	exports['managers/template/subassemblies/body'] = (get, $t) => 
+			`<div template-attr='subassembles'> <div class='center'> <label>All</label> <input class='template-include' type='radio' name='is-` +
+			$t.clean(get("obj").id) +
+			`' value='All' ` +
+			$t.clean(get("obj").include === 'All' ? 'checked' : '') +
+			`> <label>Overlay</label> <input class='template-include' type='radio' name='is-` +
+			$t.clean(get("obj").id) +
+			`' value='Overlay' ` +
+			$t.clean(get("obj").include === 'Overlay' ? 'checked' : '') +
+			`> <label>Reveal</label> <input class='template-include' type='radio' name='is-` +
+			$t.clean(get("obj").id) +
+			`' value='Reveal' ` +
+			$t.clean(get("obj").include === 'Reveal' ? 'checked' : '') +
+			`> <label>Inset</label> <input class='template-include' type='radio' name='is-` +
+			$t.clean(get("obj").id) +
+			`' value='Inset' ` +
+			$t.clean(get("obj").include === 'Inset' ? 'checked' : '') +
+			`> </div> <label>Name</label> <input class='template-input' attr='subassemblies' name="name" value="` +
+			$t.clean(get("obj").name) +
+			`"> <div> ` +
+			$t.clean(get("dividerTypeSelect") && get("dividerTypeSelect").html()) +
+			` </div> <div> <div class='center'> <label><b>Position:</b></label> <label>Box</label> <input type='radio' name='positionMethod-` +
+			$t.clean(get("obj").id) +
+			`' value='box' ` +
+			$t.clean(get("obj").positionMethod !== 'poly' ? 'checked' : '') +
+			`> <label>Poly</label> <input type='radio' name='positionMethod-` +
+			$t.clean(get("obj").id) +
+			`' value='poly' ` +
+			$t.clean(get("obj").positionMethod === 'poly' ? 'checked' : '') +
+			`> </div> <div class='poly-input-cnt' ` +
+			$t.clean(get("obj").positionMethod !== 'poly' ? 'hidden' : '') +
+			`> ` +
+			$t.clean(get("polyHtml")) +
+			` </div> <div class='box-input-cnt' ` +
+			$t.clean(get("obj").positionMethod === 'poly' ? 'hidden' : '') +
+			`> ` +
+			$t.clean(get("referenceSelect").html()) +
+			` <select name='type' hidden> <option>All</option> <option>Center</option> <option>Demension</option> <option>Rotation</option> </select> <select name='axis' hidden> <option>All</option> <option>X</option> <option>Y</option> <option>Z</option> </select> <button class='template-reference-update-btn' hidden>Change</button> <br> <div class='sub-demensions-cnt inline-flex'> ` +
+			$t.clean(get("demensionXyzSelect").html()) +
+			` <input class='template-input xyz' attr='subassemblies' name='demensions' value='` +
+			$t.clean(get("getEqn")(get("demensionXyzSelect"), get("obj").demensions)) +
+			`'> <input disabled class='measurement-input' name='value'> <input type="checkbox" name="convert" checked> </div> <br> <div class='sub-center-cnt inline-flex'> ` +
+			$t.clean(get("centerXyzSelect").html()) +
+			` <input class='template-input xyz' attr='subassemblies' name='center' value='` +
+			$t.clean(get("getEqn")(get("centerXyzSelect"), get("obj").center)) +
+			`'> <input disabled class='measurement-input' name='value'> <input type="checkbox" name="convert" checked> </div> <br> </div> <div class='subassem-normal-cnt center'> <label><b>Normals:</b></label> <label>Rotation</label> <input type='radio' name='normalStyle-` +
+			$t.clean(get("obj").id) +
+			`' value='rotation' ` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.style !== 'rotation' ? 'checked' : '') +
+			`> <label>Vector</label> <input type='radio' name='normalStyle-` +
+			$t.clean(get("obj").id) +
+			`' value='vector' ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'vector' ? 'checked' : '') +
+			`> <label>Line</label> <input type='radio' name='normalStyle-` +
+			$t.clean(get("obj").id) +
+			`' value='line' ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'line' ? 'checked' : '') +
+			`> <div class='rotation-normal-cnt tab' ` +
+			$t.clean(!get("obj").normalInfo || get("obj").normalInfo.style === 'rotation' ? '' : 'hidden') +
+			`> <div class='sub-center-cnt inline-flex'> ` +
+			$t.clean(get("rotationXyzSelect").html()) +
+			` <input class='template-input xyz' attr='subassemblies' name='rotation' value='` +
+			$t.clean(get("getEqn")(get("rotationXyzSelect"), get("obj").rotation)) +
+			`'> <input disabled class='measurement-input' name='value'> </div> </div> <div class='vector-normal-cnt tab' ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'vector' ? '' : 'hidden') +
+			`> ` +
+			$t.clean( new $t('managers/template/subassemblies/object/normals').render(get("scope"), undefined, get)) +
+			` </div> <div class='line-normal-cnt tab' ` +
+			$t.clean(get("obj").normalInfo && get("obj").normalInfo.style === 'line' ? '' : 'hidden') +
+			`> ` +
+			$t.clean( new $t('managers/template/subassemblies/object/lines').render(get("scope"), undefined, get)) +
+			` </div> </div> <div> ` +
+			$t.clean(get("typeSpecificHtml")) +
 			` </div> </div> `
-	
-	exports['-103984952'] = (get, $t) => 
-			`<div part-id='` +
-			$t.clean(get("part").id()) +
-			`' part-code='` +
-			$t.clean(get("part").partCode()) +
-			`' class='model-state ` +
-			$t.clean(get("tdm").isTarget("part-id", get("part").id()) ? "active " : "") +
-			`' ` +
-			$t.clean(get("partList").length === 1 ? 'hidden' : '') +
-			`> <label type='part-id' target part-code='` +
-			$t.clean(get("part").partCode()) +
-			`'> ` +
-			$t.clean(get("part").partCode()) +
-			`-` +
-			$t.clean(get("$index") +
-			1) +
-			` </label> <input type='checkbox' class='part-id-checkbox' part-id='` +
-			$t.clean(get("part").id()) +
-			`' part-code='` +
-			$t.clean(get("part").partCode()) +
-			`' ` +
-			$t.clean(!get("tdm").hidePartId(get("part").id()) ? 'checked' : '') +
-			`> </div>`
-	
-	exports['-986829271'] = (get, $t) => 
-			`<div class='model-state ` +
-			$t.clean(get("group").level < 1 ? '' : 'model-label indent') +
-			` ` +
-			$t.clean(get("tdm").isTarget("part-name", get("partName")) ? " active" : "") +
-			`' ` +
-			$t.clean(get("group").level < 1 ? '' : 'hidden') +
-			` ` +
-			$t.clean(get("partList").length === 1 ? 'target part-code="' +
-			get("partList")[0].partCode() +
-			'"' : '') +
-			`> <label type='part-name' part-name='` +
-			$t.clean(get("partName")) +
-			`'> ` +
-			$t.clean(get("partName")) +
-			`` +
-			$t.clean(get("partList").length === 1 ? '(' +
-			get("partList")[0].partCode() +
-			')' : '') +
-			` </label> <input type='checkbox' class='part-name-checkbox' part-name='` +
-			$t.clean(get("partName")) +
-			`' ` +
-			$t.clean(!get("tdm").hidePartName(get("partName")) ? 'checked' : '') +
-			`> <div class='indent'> ` +
-			$t.clean( new $t('-103984952').render(get("partList"), 'part', get)) +
-			` </div> </div>`
 	
 });
 
