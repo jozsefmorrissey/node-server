@@ -1,6 +1,7 @@
 
 const OnWall = require('on-wall');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Polygon3D = require('../../three-d/objects/polygon.js');
 
 class Door2D extends OnWall {
   constructor(json) {
@@ -18,6 +19,14 @@ class Door2D extends OnWall {
     this.hinge = (val) => val === undefined ? hinge :
       hinge = ((typeof val) === 'number' ? val : hinge + 1) % 7;
     this.line = () => new Line2d(this[0], this[1]);
+
+    this.csg = () => {
+      const line = this.line().negitive();
+      const fromFloor = this.fromFloor();
+      const h = this.height();
+      const verts = Polygon3D.from2DLine(line, fromFloor, h).vertices();
+      return CSG.Polygon.Enclosed(verts, 5*2.54);
+    }
   }
 }
 

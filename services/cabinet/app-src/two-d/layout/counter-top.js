@@ -1,0 +1,35 @@
+
+const Vertex3D = require('../../three-d/objects/vertex.js');
+const Polygon3D = require('../../three-d/objects/polygon.js');
+const BiPolygon = require('../../three-d/objects/bi-polygon.js');
+
+class CounterTop {
+  constructor(layout) {
+    let _color = 'black';
+    this.color = (color) => color !== undefined ? (_color = color) : _color;
+
+    this.csg = (groupId) => {
+      if (groupId === undefined) {
+        let csg = new CSG();
+        const groupMap = layout.modelInformation().groupMap;
+        Object.keys(groupMap).forEach(groupId => {
+          csg = csg.union(this.csg(groupId));
+        });
+        return csg;
+      }
+      const layoutPolys = layout.modelInformation().groupMap[groupId].result;
+      const counterTopPolys = layoutPolys.outlines.find(ps => ps[0].center().y > 30 * 2.54);
+      counterTopPolys.forEach((p,i) => p.normal().equals({i:0,j:-1,k:0}) && (counterTopPolys[i] = p.reverse()))
+      const regulars = counterTopPolys.map(p => p.regular()).concatElements();
+      let counter = new CSG();
+      regulars.forEach(p => counter = counter.union(BiPolygon.fromPolygon(p,2.54*1.5,0).model()));
+      counter.setColor(_color);
+
+      return counter;
+    }
+  }
+}
+
+Object.class.register(CounterTop, 'color');
+
+module.exports = CounterTop;

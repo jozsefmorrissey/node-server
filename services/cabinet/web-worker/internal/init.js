@@ -45,15 +45,26 @@ function handleTask(task, env) {
   const payload = task.payload;
   const taskId = task.id;
   switch (process) {
-    case 'simple': return  BuildSimpleModels(payload, taskId);
-    case 'simpleto2d': return To2D.simple(payload);
-    case 'model': return BuildModels(payload, env, taskId);
-    case 'union': return UnionModels(payload, env, taskId, true);
-    case 'join': return ApplyJoints(payload, env, taskId);
-    case 'intersection': return ApplyJoints(payload, env, taskId, true);
-    case 'assembliesto2d': return To2D.assemblies(payload, env, taskId);
-    case 'partsinformation': return PartInfo(payload, env, taskId);
-    case 'layoutParts': return LayoutParts(payload);
+    case 'placeholder':
+      return {finished: false};
+    case 'simple':
+      return  BuildSimpleModels(payload, taskId);
+    case 'simpleto2d':
+      return To2D.simple(payload);
+    case 'model':
+      return BuildModels(payload, env, taskId);
+    case 'union':
+      return UnionModels(payload, env, taskId, true);
+    case 'join':
+      return ApplyJoints(payload, env, taskId);
+    case 'intersection':
+      return ApplyJoints(payload, env, taskId, true);
+    case 'assembliesto2d':
+      return To2D.assemblies(payload, env, taskId);
+    case 'partsinformation':
+      return PartInfo(payload, env, taskId);
+    case 'layoutParts':
+      return LayoutParts(payload);
     default: return new Error('UnkownTask');
   }
 }

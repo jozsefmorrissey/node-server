@@ -191,6 +191,10 @@ class Vector3D {
   }
 }
 
+Object.defineProperty(Vector3D.prototype, 'x', {get: function () {return this.i()}});
+Object.defineProperty(Vector3D.prototype, 'y', {get: function () {return this.j()}});
+Object.defineProperty(Vector3D.prototype, 'z', {get: function () {return this.k()}});
+
 const tol = .0001;
 Vector3D.tolerance = new Tolerance({i: tol, j: tol, k: tol});
 Vector3D.ToleranceMap = (parrelle, tolerance) => {

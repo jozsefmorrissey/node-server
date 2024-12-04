@@ -436,6 +436,26 @@ CSG.prototype = {
     return config.slices;
   },
 
+  peel: function (vector, depth, peelOcore) {
+    if (this.polygons.length === 0) return this;
+    if (peelOcore !== false) peelOcore = true;
+    vector = new CSG.Vector(vector).unit();
+    const peeled = this.clone();
+    const center = new CSG.Vector(this.center());
+
+
+    let maxDist = 0;
+    this.polygons.forEach(p => p.vertices.forEach(v => {
+      const dot = new CSG.Vector(v.pos).minus(center).dot(vector);
+      if (dot > maxDist)
+        maxDist = dot;
+    }));
+
+    const planeCenter = center.plus(vector.times(maxDist - depth));
+    const cutterNormal = new CSG.Vector(vector).times(peelOcore ? 1 : -1);
+    const cutter = CSG.Polygon.fromNormal(cutterNormal, planeCenter, 1000000);
+    return this.subtract(CSG.fromPolygons([cutter]));
+  },
   // Return a new CSG solid with solid and empty space switched. This solid is
   // not modified.
   inverse: function() {
@@ -1109,6 +1129,11 @@ CSG.Vector.prototype = {
       this.x * a.y - this.y * a.x
     );
   },
+  perpendicular: function () {
+    return new CSG.Vector(Math.copysign(this.z, this.x),
+                            Math.copysign(this.z,this.y),
+                            -Math.copysign(this.x,this.z) - Math.copysign(this.y,this.z)).unit();
+  },
 
   equals: function(other) {
     return withinEPSILON(this.x, other.x) &&
@@ -1408,6 +1433,24 @@ CSG.Polygon.fromVertices = (verts) => {
   const norm = a.minus(b).cross(b.minus(c));
   const vertices = verts.map(v => new CSG.Vertex(v, norm));
   const poly = new CSG.Polygon(vertices);
+
+  return poly;
+}
+
+CSG.Polygon.fromNormal = (normal, center, scale) => {
+  center ||= {x:0,y:0,z:0};
+  center = new CSG.Vector(center);
+  normal = new CSG.Vector(normal).unit();
+  const perp1 = normal.perpendicular();
+  const perp2 = normal.cross(perp1);
+  const a = center.plus(perp1);
+  const b = center.plus(perp2);
+  const c = center.minus(perp1);
+  const d = center.minus(perp2);
+  const verts = [a,b,c,d];
+  const vertices = verts.map(v => new CSG.Vertex(v, normal));
+  const poly = new CSG.Polygon(vertices);
+  poly.scale(poly.center().pos, scale || 1);
 
   return poly;
 }

@@ -208,10 +208,19 @@ Function.safeStdLibAddition(Array, 'copy',   function (other) {
 Function.safeStdLibAddition(Array, 'filterSplit',   function (filter, truthy) {
   const retVal = {};
   for (let index = 0; index < this.length; index++) {
-    let value = filter(this[index]);
-    if (truthy === true) value = value && true;
-    if (retVal[value] === undefined) retVal[value] = [];
-    retVal[value].push(this[index]);
+    let path = filter(this[index]);
+    if (truthy === true) path = path && true;
+    if (retVal.pathValue(path) === undefined) retVal.pathValue(path, []);
+    retVal.pathValue(path).push(this[index]);
+  }
+  return retVal;
+});
+
+Function.safeStdLibAddition(Array, 'idMap',   function (idFunc) {
+  const retVal = {};
+  for (let index = 0; index < this.length; index++) {
+    let id = idFunc(this[index]);
+    retVal[id] = this[index];
   }
   return retVal;
 });
@@ -1710,7 +1719,9 @@ function setProperty(path, value, enumerable, writable, configurable, get, set) 
   writable = Boolean.first(writable, true);
   enumerable = Boolean.first(enumerable, true);
   configurable = Boolean.first(configurable, true);
-  Object.defineProperty(pathInfo.parent, pathInfo.attr,
+  if (get && set) Object.defineProperty(pathInfo.parent, pathInfo.attr,
+    {enumerable, configurable, get, set});
+  else Object.defineProperty(pathInfo.parent, pathInfo.attr,
     {writable, enumerable, configurable, value});
 }
 

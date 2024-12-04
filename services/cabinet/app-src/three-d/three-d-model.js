@@ -7,7 +7,6 @@ const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const OrientationArrows = require('../../../../public/js/utils/display/orientation-arrows.js');
 const Viewer = require('../../../../public/js/utils/3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../../../public/js/utils/3d-modeling/viewer.js').addViewer;
-const CabinetModel = require('./cabinet-model');
 const LoadingDisplay = require('../../../../public/js/utils/display/loading.js');
 const loadingDisplay = new LoadingDisplay();
 const Global = require('../services/global');

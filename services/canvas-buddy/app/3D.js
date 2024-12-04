@@ -89,9 +89,6 @@ let axis = {include: true, length: 100,
     radius: (r) => r !== undefined ? (axis.radius.len = r) : axis.radius.len || (axis.length / 100)};
 const points = [[0,1,0], [0,2,0],[1,3,0],[2,3,0],[3,2,0],[3,1,0],[2,0,0],[1,0,0]];
 let model;
-const getModel = () => axis.include ? CSG.Axis(axis.length, axis.radius()) : new CSG();
-const initModel = () => model = getModel();
-initModel();
 viewer = getViewer(model);
 
 const intRegStr = '\\s*([0-9]{1,})\\s*'
@@ -165,7 +162,7 @@ planeReg.model = (match) => {
 };
 
 function buildModel(lines) {
-  const model = getModel();
+  const model = new CSG();
   for (let index = 0; index < lines.length; index++) {
     let found = false;
     try {
@@ -207,11 +204,13 @@ function parse(lines, sc) {
 
 const display = (m) => {
   m ||= model || new CSG();
-  const renderModel = m.clone();
+  let renderModel = m.clone();
   const stls = Object.values(STLs);
   renderModel.polygons.concatInPlace(stls.map(
                   stl=>CSG.fromSTL(stl).scale(scale).polygons).concatElements());
-  getViewer(renderModel);
+  // renderModel = renderModel.peel({x:0,y:1,z:0}, 4);
+  const axisModel = axis.include ? CSG.Axis(axis.length, axis.radius()) : new CSG();
+  getViewer(renderModel.union(axisModel));
   viewer.mesh = renderModel.toMesh();
   viewer.gl.ondraw();
 }

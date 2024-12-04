@@ -252,10 +252,12 @@ class Polygon3D {
         const after = (target + 1) % lines.length;
         const line = {before: lines[before], target: lines[target], after: lines[after]};
         const vertex = {before: lines[before][0], target: lines[target][0], after: lines[after][0]};
+        const radians = {before: Line3D.thetaBetween(line.before, line.target, instance.normal()),
+                        after: Line3D.thetaBetween(line.target, line.after, instance.normal())};
         const index = {before, target, after};
         const beforeToNext = new Line3D(vertex.before, vertex.after);
         const connection = beforeToNext.connect.vertex(vertex.target);
-        const info = {connection, line, vertex, index};
+        const info = {connection, line, vertex, index, radians};
         if (func(info)) {
           locations.push(info);
         }
@@ -265,8 +267,7 @@ class Polygon3D {
 
 
     const identifyConcaveLocations = () =>
-        forEachVertex(info => new Line3D(info.connection[1], instance.center()).length() <
-                new Line3D(info.connection[0], instance.center()).length() + .0001);
+        forEachVertex(info => info.radians.before < Math.PI - .0001);
       const identifyCrissCrossLocations = () => instance.lines.length < 4 ? [] :
         forEachVertex(info => info.line.before.intersection.segment(info.line.after, true));
       const identifyParrelleLocations = () =>
@@ -291,12 +292,12 @@ class Polygon3D {
           identifyConcaveLocations().map(info => info.index.target);
     this.irregular.concave.fill = (doNotModify) => {
       if (doNotModify) return this.copy().this.irregular.concave.fill();
-      const locs = identifyConcaveLocations();
-      locs.sortByAttr('index', true);
-      locs.forEach(info => {
-        info.line.before[1] = info.line.after[0];
-        lines.splice(info.index.target, 1);
-      });
+      let locs = identifyConcaveLocations();
+      while (locs.length) {
+        locs[0].line.before[1] = locs[0].line.after[0];
+        lines.splice(locs[0].index.target, 1);
+        locs = identifyConcaveLocations();
+      }
       return this;
     }
 
@@ -314,14 +315,22 @@ class Polygon3D {
       });
       return this;
     }
+    Object.keys(this.irregular).forEach(key =>
+      this.irregular[key].is = () => this.irregular[key].locations().length > 0);
+
     this.irregular.is = () =>
-      this.irregular.concave.locations().length > 0 ||
-      this.irregular.crissCross.locations().length > 0 ||
-      this.irregular.parrelle.locations().length > 0;
+      this.irregular.concave.is() ||
+      this.irregular.crissCross.is() ||
+      this.irregular.parrelle.is();
 
     this.irregular.fix = () => this.irregular.concave.fill() &
                                 this.irregular.crissCross.fill() &
                                 this.irregular.parrelle.fill();
+
+    this.irregular.more = (poly) =>
+      this.irregular.concave.locations().length > poly.irregular.concave.locations().length ||
+      this.irregular.crissCross.locations().length > poly.irregular.crissCross.locations().length ||
+      this.irregular.parrelle.locations().length > poly.irregular.parrelle.locations().length;
 
     /**
                                    1
@@ -373,8 +382,9 @@ class Polygon3D {
       const linesCopy = Polygon3D.connectedLines(lines);
       updateLines(linesCopy, index, index2, int1, int2);
       Polygon3D.debug.states.push({lines: [lines[index], lines[index2]], ints: [int1, int2]});
-      if (!new Polygon3D(linesCopy.map(l => l[0])).irregular.is() &&
-          linesCopy.sum(l => l.length()) > lines.sum(l => l.length())) {
+      const polyCopy = new Polygon3D(linesCopy.map(l => l[0]));
+      const moreIrregular = polyCopy.irregular.more(instance);
+      if (!moreIrregular && linesCopy.sum(l => l.length()) > lines.sum(l => l.length())) {
         updateLines(lines, index, index2, int1, int2);
       }
 
@@ -523,10 +533,10 @@ class Polygon3D {
       const vertices = [];
       for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];
-        vertices.push(line[0]);
+        vertices.push(line[0].clone());
       }
 
-      return JSON.clone(vertices);
+      return vertices;
     }
 
     this.vertex = (index) => lines[Math.mod(index, lines.length)][0].copy();
@@ -1010,6 +1020,103 @@ class Polygon3D {
       return overlaps;
     }
 
+    this.parimeterLength = () => this.lines().sum(l => l.length())
+
+    const HashMap = (lines) => {
+      const map = {};
+      const funcs = {
+        add: (line) => (map[line.hash()] = line) &
+                        (map[line.negitive().hash()] = line.negitive()),
+        remove: (line) => (delete map[line.hash()]) &
+                          (delete map[line.negitive().hash()]),
+        should: (line) => !map[line.hash()],
+        one: () => Object.values(map)[0]
+      }
+      if (lines) lines.forEach(l => funcs.add(l));
+      return funcs;
+    }
+
+    const parimeterLength = (lines) =>
+      lines.sum(l => l.length()) + lines[0][0].distance(lines[lines.length - 1][1]);
+    function followPaths(line, map) {
+      const paths = [[line]];
+      if (paths.length === 0) return [];
+      let visited = HashMap([line]);
+      while (true) {
+        let min = paths[paths.length - 1].complete ? paths[paths.length - 1].parimeter : Number.MAX_SAFE_INTEGER;
+        let path = paths[0];
+        if (!path.parimeter) path.parimeter = parimeterLength(path);
+        while (path.deadEnd || (path.complete && paths.length > 1) || path.parimeter > min) {
+          paths.splice(0, 1);
+          path = paths[0];
+        }
+        const line = path[path.length - 1];
+        if (path.complete) break;
+        else {
+          const matches = map.matches(line.negitive()).filter(l => !l.equivalent(line));
+          if (matches.length === 0) {
+            map.remove.all([line, line.negitive()]);
+          } else {
+            const newPaths = matches.map(l => [...path, l]);
+            paths.concatInPlace(newPaths);
+            matches.forEach((l,i) => {
+              let newPath = paths[paths.length-newPaths.length+i];
+              newPath.parimeter = path.parimeter + l.length();
+              if (l[1].equals(path[0][0])) newPath.complete = true;
+              if (!visited.should(l)) newPath.deadEnd = true;
+              else visited.add(l);
+            });
+          }
+          paths.splice(0, 1);
+          const split = paths.filterSplit(p => p.complete ? 'complete' : 'not');
+          (split.complete || []).sortByAttr('parimeter', true);
+          (split.not || []).sortByAttr('parimeter');
+          paths.copy(split.not.concat((split.complete || [])));
+          console.log();
+        }
+      }
+      return paths[0];
+    }
+
+    this.regular = () => {
+      if (!this.irregular.is()) return [this.copy()];
+
+      const sliced = Line3D.sliceAll(this.lines(), false)
+        .filter(l => this.isWithin(l[0]) && this.isWithin(l[1]) && this.isWithin(l.midpoint()));
+      const map = new ToleranceMap({'0.x': .001,
+                                      '0.y': .001,
+                                      '0.z': .001});
+      map.addAll(sliced.concat(sliced.map(l=>l.negitive())));
+      const normal = this.normal();
+      const hashMap = HashMap(sliced);
+      let line, paths, visited; const polys = [];
+      while (line = hashMap.one()) {
+        const minPath = followPaths(line, map);
+        let poly = Polygon3D.fromLines(minPath)[0];
+        if (!poly.normal().sameDirection(normal)) poly = poly.reverse();
+        polys.concatInPlace([poly]);
+        minPath.forEach(l => hashMap.remove(l));
+      }
+
+      return polys;
+    }
+
+    this.triangles = () => {
+      const regulars = this.regular();
+      const triangles = [];
+      const normal = this.normal();
+      for (let index = 0; index < regulars.length; index++) {
+        const vertices = regulars[index].vertices();
+        while (vertices.length > 2) {
+          let triangle = new Polygon3D([vertices[0],vertices[1],vertices[2]]);
+          if (!triangle.normal().sameDirection(normal)) triangle = triangle.reverse();
+          triangles.push(triangle);
+          vertices.splice(1,1);
+        }
+      }
+      return triangles;
+    }
+
     this.area = () => {
       let area = 0;
       let lines = this.lines();
@@ -1070,6 +1177,9 @@ class Polygon3D {
       if (ortho.isWithin2d(interView, exclusive)) return planeInt;
       return null;
     }
+
+    this.csg = () =>
+      CSG.fromPolygons([CSG.Polygon.fromVertices(this.vertices())]);
 
     this.toString = () => {
       let str = '[';
@@ -1308,6 +1418,7 @@ Polygon3D.fromLines = (lines) => {
                                 '1.z': .0001});
 
   const polys = [];
+  lines = lines.map(l => l.clone());
   let parimeter = lines.splice(0,1);
   // const nLines = lines.map(l=>l.negitive.line = l.negitive());
   // nLines.forEach((l, i) => l.negitive.line = lines[i]);
@@ -1635,6 +1746,14 @@ Polygon3D.encloseLines = (lines, normal, planeBarriers, nonExistantEdgeLength) =
   }
   newLines.reverse().forEach(nl => lines.splice(nl.index, 0, nl.line))
   return lines;
+}
+
+Polygon3D.from2DLine = (line, bottomHeight, topHeight) => {
+  const verts = [{x: line[0].x, y:bottomHeight, z: line[0].y},
+                {x: line[1].x, y:bottomHeight, z: line[1].y},
+                {x: line[1].x, y:topHeight, z: line[1].y},
+                {x: line[0].x, y:topHeight, z: line[0].y}];
+  return new Polygon3D(verts);
 }
 
 Polygon3D.fromPlanes = (polysOplanes, center, nonExistantEdgeLength) => {

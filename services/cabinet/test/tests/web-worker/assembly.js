@@ -35,25 +35,28 @@ const onFail = (ts) => (error) => {
   ts.fail(error);
 }
 
-throw new Error('Job Structure has changed suggnificantly all test are likely invalid');
 
 Test.add('Jobs.CSG.Assembly base:layout(test)', async (ts, allAssemblies) => {
+  throw new Error('Job Structure has changed suggnificantly all test are likely invalid');
   const parts = allAssemblies.filter(a => a.part() && a.included());
   new Jobs.CSG.Assembly(parts).then(onComplete(ts, parts), onFail(ts)).queue();
 }, async () => get());
 
 Test.add('Jobs.CSG.Assembly dcb', async (ts, cabinet) => {
+  throw new Error('Job Structure has changed suggnificantly all test are likely invalid');
   new Jobs.CSG.Assembly(cabinet)
         .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
 }, async () => get("", 'diagonal-corner-base'));
 
 Test.add('Jobs.CSG.Assembly base:layout(test)', async (ts, allAssemblies) => {
+  throw new Error('Job Structure has changed suggnificantly all test are likely invalid');
   const cabinet = allAssemblies[0].getRoot();
   new Jobs.CSG.Assembly(cabinet)
         .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
 }, async () => get());
 
 Test.add('Jobs.CSG.Assembly base:layout(c)', async (ts, allAssemblies) => {
+  throw new Error('Job Structure has changed suggnificantly all test are likely invalid');
   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
   const parts = [cabinet];
   new Jobs.CSG.Assembly(parts, {partsOnly: false})
@@ -61,12 +64,14 @@ Test.add('Jobs.CSG.Assembly base:layout(c)', async (ts, allAssemblies) => {
 }, async () => get());
 
 Test.add('Jobs.CSG.Assembly diagonal-corner-base:test-cabinet', async (ts, allAssemblies) => {
+  throw new Error('Job Structure has changed suggnificantly all test are likely invalid');
   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
   const parts = cabinet.getParts();
   new Jobs.CSG.Assembly(parts).then(onComplete(ts, parts), onFail).queue();
 }, async () => get(true, 'diagonal-corner-base'));
 
 Test.add('Jobs.CSG.Assembly diagonal-corner-base:layout(3dsb3d)', async (ts, allAssemblies) => {
+  throw new Error('Job Structure has changed suggnificantly all test are likely invalid');
   const cabinet = allAssemblies.filter(a => a.partCode() === 'c')[0];
   new Jobs.CSG.Assembly(cabinet)
         .then(onComplete(ts, [cabinet]), onFail(ts)).queue();
@@ -80,6 +85,7 @@ const on2DComplete = (objects, ts) => (result, job) => {
 }
 
 Test.add('Jobs.CSG.Assembly', async (ts, cabinet) => {
+  throw new Error('Job Structure has changed suggnificantly all test are likely invalid');
   const gap = 25;
 
   new Jobs.CSG.Assembly(cabinet, {gap})

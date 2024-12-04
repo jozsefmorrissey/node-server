@@ -8,7 +8,7 @@ class Stairs extends SimpleModel {
     Object.getSet(this, {count: 2, treadLength: 10*2.54});
     this.width(37*2.54);
     this.height(20*2.54);
-    this.color('#537D97');
+    this.color('#9aacb6');
     this.thickness = () => this.treadLength() * this.count();
   }
 }

@@ -67,7 +67,7 @@ function addCabinetInfo(payload, env, taskId) {
   result.layers = Layer.fromCSG(result.model).map(l => l.combined());
   result.boxOnly = new CSG();
   const boxParts = env.find(a => a.part && !a.digital &&
-                                !a.locationCode.match(/c_(S|void-[0-9]*)($|_|:)/));
+                                !a.locationCode.match(/c_S($|_|:)/));
   boxParts.forEach(p=>result.boxOnly = result.boxOnly.union(env.getModel(p, 'cut')));
   postMessage({id: taskId, result: DTO(result)});
 }

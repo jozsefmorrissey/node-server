@@ -616,9 +616,11 @@ models['Uberest Drawer Jigs'] = (guideHeight, guideReveal, bottomGap,
 models['chrismas tree leg'] = (guideHeight, guideReveal, bottomGap) => {
   const body = new CSG.cube({demensions: [9*2.54, 7.5, 1.4]});
   const bottomCutter = new CSG.cube({demensions: [8.25*2.54, .75, 1.4]})
-  const slotCutter = new CSG.cube({demensions: [.8, 7.5, .725]});
-  const endPiece = new CSG.cube({demensions: [.32, 7.5 - .75 - .28, 1.08]});
+  const slotCutter = new CSG.cube({demensions: [.92, 7.5, .725]});
+  const endPiece = new CSG.cube({demensions: [.32, 7.5 - .75 - .28, 1.4]});
   const angleCutter = body.clone();
+  let stopperRadius = .1
+  const stopper = new CSG.Point({x:9*2.54/2 - .32, y: -7.5/2 + 1 + .75, z: -.725/2}, stopperRadius, 'green');
   angleCutter.rotate({z:15.5});
   angleCutter.translate({x:-2,y:4.3,z:0});
 
@@ -629,13 +631,22 @@ models['chrismas tree leg'] = (guideHeight, guideReveal, bottomGap) => {
   angleCutter.setColor('blue');
   slotCutter.setColor('blue');
   endPiece.setColor('red')
+  stopper.setColor('green');
 
   let model = body.subtract(angleCutter);
-  slotCutter.center({x:9*2.54/2 - .4, y: 1.1, z: -.55/2 - .725/2});
+  slotCutter.center({x:9*2.54/2 - .46, y: 1.1, z: -.57/2 - .725/2});
   endPiece.center({x:9*2.54/2 - .16, y: .14 + .375, z: 0});
-  model=model.subtract(slotCutter);
-  slotCutter.translate({x:0,y:0,z:.55+.725});
-  return model.subtract(slotCutter).union(endPiece).subtract(bottomCutter);
+  let stopper2 = stopper.clone();
+  stopper2.translate({x:0,y:0,z:stopperRadius*-2});
+  model=model.subtract(slotCutter).union(stopper).union(stopper2);
+  stopper.translate({x:0,y:0,z:.725});
+  slotCutter.translate({x:0,y:0,z:.57+.725});
+  const cropper = body.clone();
+  cropper.translate({x:-1.1,y:0,z:0});
+  stopper2 = stopper.clone();
+  stopper2.translate({x:0,y:0,z:stopperRadius*2});
+  return model.subtract(slotCutter).union(endPiece).subtract(bottomCutter)
+      .union(stopper2).union(stopper);//.subtract(cropper);
 }
 
 const cnt = du.create.element('div');

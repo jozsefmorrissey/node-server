@@ -103,7 +103,7 @@ Test.add('Polygon3D: fromLines', (ts) => {
                 new Line3D([1,3,0],[2,3,0]),
                 new Line3D([3,2,0],[3,1,0]),
                 new Line3D([2,0,0],[1,0,0])];
-  const answer = new Polygon3D(Line3D.vertices(lines));
+  const answer = new Polygon3D(Line3D.vertices(lines).map(v => v.clone()));
   let poly = Polygon3D.fromLines(lines);
   ts.assertTrue(answer.equals(poly));
   shuffleLines(lines);
@@ -130,7 +130,7 @@ const lines = [
 
 Test.add('Line3D.connect', (ts) => {
   const moreLines = [];
-  const verts = Line3D.vertices(lines).filter(Vertex3D.uniqueFilter());
+  const verts = Line3D.vertices(lines).filter(Vertex3D.uniqueFilter()).map(v => v.clone());
   for (let i = 0; i < verts.length; i++) {
     const v1 = verts[i];
     for (let j = i+1; j < verts.length; j++) {

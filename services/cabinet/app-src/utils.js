@@ -78,13 +78,24 @@ function positionAssemblyCsg(csg, assembly) {
     const rotation = assembly.position().rotation();
     const buildCenter = assembly.buildCenter(true);
     const center = new Vertex3D(assembly.position().center());
-    const layoutCenterVect = new Vertex3D((center.minus(buildCenter)));
-    const csgCenter = csg.center();
     csg.translate({x: -buildCenter.x, y: -buildCenter.y, z: -buildCenter.z})
     csg.rotate(rotation);
     csg.translate(center);
   }
   return csg;
+}
+
+function positionAssemblyCsg(obj, assembly) {
+  obj = obj.clone ? obj.clone() : obj.copy();;
+  if (assembly.position) {
+    const rotation = assembly.position().rotation();
+    const buildCenter = assembly.buildCenter(true);
+    const center = new Vertex3D(assembly.position().center());
+    obj = obj.translate({x: -buildCenter.x, y: -buildCenter.y, z: -buildCenter.z}) || obj;
+    obj = obj.rotate(rotation) || obj;
+    obj = obj.translate(center) || obj;
+  }
+  return obj;
 }
 
 exports.normals = normals;

@@ -54,7 +54,6 @@ class Assembly extends KeyValue {
     const temporaryInitialVals = {parentAssembly: parent, _TEMPORARY: true};
     const initialVals = {
       outline: false,
-      color: '#ADB5C2',
       manuallyConfigurable: false,
       part: true,
       hardware: [],
@@ -78,6 +77,10 @@ class Assembly extends KeyValue {
       value: subAssems
     });
     Object.getSet(this, temporaryInitialVals);
+    this.color = (color) => {
+      this.group().propertyConfig('color', color);
+      return this.resolve('color', true);
+    }
     this.jointSettings = new JointSettings();
     this.hardware = [];
     this.path = () => `${this.constructor.name}.${partName}`.toDot();
@@ -355,6 +358,10 @@ class Assembly extends KeyValue {
     this.config = position.configuration;
 
     this.position = () => position;
+    this.position.object = () => ({
+      vector: new Vector3D(this.position().center()).minus(this.buildCenter(true)),
+      rotation: position.rotation()
+    });
     this.updatePosition = () => position = new Position(this, sme);
     this.joints = [];
     this.rootAssembly = () => {

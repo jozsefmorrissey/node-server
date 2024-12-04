@@ -174,7 +174,7 @@ class TestStatus {
     this.assertNotEquals = (a, b, msg, acc) => assert(round(a, acc) !== round(b, acc)) ||
                             possiblyFail(`${msg}\n\t\t'${a}' !== '${b}' should be true`);
     this.assertTolerance = (n1, n2, tol, msg, stackOffset) => {
-      return assert(Math.difference(n1-n2) < tol) ||
+      return assert(Math.difference(n1, n2) < tol) ||
       possiblyFail(`${msg}\n\t\t${n1} and ${n2} are not within tolerance ${tol}`, stackOffset);
     }
     this.fail = (msg, stackOffset) => {

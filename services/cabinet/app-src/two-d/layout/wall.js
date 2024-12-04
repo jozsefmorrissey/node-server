@@ -5,6 +5,7 @@ const OnWall = require('./on-wall');
 const Door2D = require('./door');
 const Window2D = require('./window');
 const Corner2d = require('./corner');
+const Polygon3D = require('../../three-d/objects/polygon.js');
 
 function modifyVertex(vertex) {
   return (props) => {
@@ -23,11 +24,13 @@ class Wall2D extends Line2d {
     doors = doors || [];
     doors.forEach((door) => door.setWall(this));
     const wall = this;
+    let _color = "#e1ddc1";
 
     height = height || 243.84;
     // this.copy = () => new Wall2D(this.length(), this.radians());
     this.windows = () => windows;
     this.height = () => height;
+    this.color = (color) => color !== undefined ? (_color = color) : _color;
     this.addWindow = (fromPreviousWall) => windows.push(new Window2D({wall: this, fromPreviousWall}));
     this.doors = () => doors;
     this.addDoor = (fromPreviousWall) => doors.push(new Door2D({wall: this, fromPreviousWall}));
@@ -42,6 +45,17 @@ class Wall2D extends Line2d {
       });
       verts.push(this[1]);
       return verts;
+    }
+
+    this.poly = () => Polygon3D.from2DLine(this, 0, this.height());
+
+    this.poly.csg = () => {
+      let wallCSG = this.poly().csg();
+      const curbCSG = CSG.Polygon.Enclosed(Polygon3D.from2DLine(this, 0, 6*2.54).vertices());
+      wallCSG.polygons.concatInPlace(curbCSG.polygons)
+      wallCSG.setColor(this.color(), true);
+      this.doors().forEach(d => wallCSG = wallCSG.subtract(d.csg()));
+      return wallCSG;
     }
 
     this.remove = () => {

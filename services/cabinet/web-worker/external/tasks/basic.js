@@ -5,12 +5,17 @@ class Task {
   constructor(initailStatus) {
     let _status;
     let _error = null;
-    CustomEvent.all(this, 'finished', 'success', 'failed', 'message', 'exicute', 'pending', 'initiate', 'change');
+    CustomEvent.all(this, ...Object.values(STATUS).map(s => s.toString()).concat(['finished', 'message', 'change']));
     Object.getSet(this, 'id');
     this.id = String.random();
     this.process = () => this.constructor.name.replace(/(^.*?)Task$/, '$1').toLowerCase();
     this.finished = () => _status === STATUS.SUCCESS || _status === STATUS.FAILED;
     this.status = (status, data) => {
+      if (this.remainingModels && this.remainingModels().length === 17 && status === 'success' && _status === 'pending') {
+        console.log(this.id, status, _status);
+        console.log(new Error().stack, '\n');
+
+      }
       if (this.finished()) return _status;
       if (status && status !== _status) {
         _status = status;
@@ -20,6 +25,8 @@ class Task {
       }
       return _status;
     }
+    this.exicution = () => STATUS.EXICUTE;
+    this.payload = () => ({});
     this.error = (error) => {
       if (error instanceof Error) {
         _error = error;
@@ -27,20 +34,9 @@ class Task {
       }
       return _error;
     }
-    this.status(initailStatus || STATUS.EXICUTE);
+    this.status(initailStatus || STATUS.CREATED);
     this.on.success(this.trigger.finished);
     this.on.failed(this.trigger.finished);
-  }
-}
-
-class PendingTask extends Task {
-  constructor(task) {
-    super();
-    this.status = () => {
-      const taskStatus = task.STATUS;
-      if (!taskStatus || (taskStatus === STATUS.EXICUTE)) return STATUS.PENDING;
-      return taskStatus;
-    }
   }
 }
 
@@ -55,7 +51,7 @@ class InformationAlreadyAvailible extends Task {
 
 class ParrelleTask extends Task {
   constructor(...tasks) {
-    super(STATUS.INITIATE);
+    super();
     const completed = tasks.map(t => null);
     let hasFailed = false;
     this.on
@@ -66,6 +62,7 @@ class ParrelleTask extends Task {
     this.failed = () => tasks.map((v,i) => completed[i] === false && v).filter(a => a);
     this.error = () => tasks.map(t => t.error()).filter(e => e);
     this.result = () => this;
+    this.exicution = () => STATUS.INITIATE;
 
     tasks.forEach((t, i) => t.on.success(() => {
       completed[i] = true;
@@ -79,9 +76,6 @@ class ParrelleTask extends Task {
     tasks.forEach((t, i) => t.on.change((data) => {
       this.trigger.change(data, t, this);
     }));
-    this.on.initiate(() => {
-      this.status(STATUS.PENDING);
-    });
   }
 }
 
@@ -201,7 +195,6 @@ OrTask.ShortCircut = OrShortCircutTask;
 AndTask.ShortCircut = AndShortCircutTask;
 module.exports = {
   Task,
-  Pending: PendingTask,
   InfoAvailible: InformationAlreadyAvailible,
   Parrelle: AndTask,
   Sequential: AndShortCircutTask,

@@ -68,7 +68,7 @@ class Assembly3D extends Object3D {
 
     function applyTopOutline(modelInfo) {
       const initialize = topSnap === undefined;
-      const poly = modelInfo.unioned.silloute();
+      const poly = modelInfo.unioned.silhouette.to2D();
       if (initialize) {
         topSnap = new SnapPolygon(instance.bridge.top(), poly.copy(), 10);
         instance.snap2d.top = () => topSnap;

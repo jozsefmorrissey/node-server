@@ -139,7 +139,7 @@ du.on.match('change', '.location-code-checkbox', (target) => {
 });
 
 function updateController() {
-  const cabinet = Global.target();
+  const cabinet = Global.cabinet();
   if (cabinet === undefined) return;
   const controller = du.id('model-controller');
   const grouping = groupParts(cabinet);

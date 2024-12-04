@@ -52,7 +52,7 @@ class Layer {
       const polys = Polygon3D.fromLines(this.lines());
       const tolMap = Vertex3D.ToleranceMap();
       tolMap.addAll(Line3D.vertices(this.lines()));
-      const vts = tolMap.minSet();
+      const vts = tolMap.minSet().map(v => v);
       const center = Vertex3D.midrange(vts);
       Vertex3D.radialSort2D(vts, this.normal(), true, center, Vertex3D.center(vts.slice(0,2)));
       const poly = new Polygon3D(Line3D.combine(new Polygon3D(vts).lines()).map(l=>l[0]));

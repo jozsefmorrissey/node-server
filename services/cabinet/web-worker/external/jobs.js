@@ -1,5 +1,5 @@
 
-const {InfoAvailible, Parrelle, Sequential, And, Or, Pending} = require('./tasks/basic.js');
+const {InfoAvailible, Parrelle, Sequential, And, Or} = require('./tasks/basic.js');
 const ModelInfo = require('./model-information');
 const WebWorkerDeligator = require('./deligator');
 const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js');
@@ -45,22 +45,24 @@ class Job {
   }
 }
 
-class RegisteredJob extends Imposter {
-  constructor(job) {
-    super(job);
-    const task = new Pending(job.task());
-    this.task = () => task;
-  }
+Job.resultMap = (jobs, idPath, valuePath) => {
+  idPath ||= 'id()';
+  valuePath ||= 'result()';
+  const resultIdMap = {};
+  jobs.forEach(job => {
+    const value = job.pathValue(valuePath);
+    resultIdMap[job.pathValue(idPath)] = value === undefined ? job.result() : value;
+  });
+  return resultIdMap;
 }
 
 const Registry = new (require('../../../../public/js/utils/collections/Registry.js'))();
-const registeredJob = (job, id, hash) => {
-  const name = job.constructor.name;
+const registeredJob = (clazz, id, hash) => {
+  const name = clazz.name;
   if (id && hash) {
     const registered = Registry.get(name, id, hash);
-    if (registered)
-      return new RegisteredJob(registered);
-    return Registry.set(job, name, id, hash);
+    if (registered) return registered;
+    return (job) => Registry.set(job, name, id, hash);
   }
 }
 
@@ -129,14 +131,7 @@ class CsgAssemblies extends TaskJob {
     const tasks = jobs.map(j => j.task());
     const task = new Parrelle(...tasks);
     super(task);
-    let modelMaps;
-    this.result = () => {
-      if (modelMaps === undefined) {
-        modelMaps = {};
-        jobs.forEach(j => modelMaps[j.cabinet().id()] = j.modelInfo());
-      }
-      return modelMaps;
-    };
+    this.result = () => Job.resultMap(jobs, 'cabinet().id()');
   }
 }
 
@@ -195,43 +190,57 @@ class CsgTo2DJob extends Jobs {
   }
 }
 
-let modelIdMap;
+const boxMap = (resultFunc) => () => {
+  const result = resultFunc().modelIdMap;
+  Object.keys(result).forEach(key => {
+    const csgOmodelInfo = result[key];
+    const csg = csgOmodelInfo.pathValue('unioned.boxOnly()') || csgOmodelInfo;
+    const assembly = Lookup.get(key);
+    if (assembly instanceof Assembly) {
+      result[key] = Utils.positionAssemblyCsg(csg, assembly);
+      result[key].silhouette =
+        Utils.positionAssemblyCsg(csgOmodelInfo.unioned.silhouette(), assembly);
+      result[key].ASSEMBLY = true;
+    }
+  });
+  return result;
+}
+
 class CsgRoomJob extends TaskJob {
   constructor(room, complex) {
-    let modelMapHashMatch = modelIdMap && (modelIdMap.ROOM_HASH === room.hash());
-    const {task, tasks, jobs} = modelMapHashMatch ?
-        {task: new InfoAvailible(modelIdMap)} : CsgRoomJob.tasksAndJobs(room, complex);
+    const registered = registeredJob(CsgRoomJob, room.id(), room.hash());
+    if (registered instanceof Job) return registered;
+
+    const result = () => ({modelIdMap: Job.resultMap(jobs, 'object().id()'),
+                             groupMap: layoutTasks.map(lt => ({group: lt.group(), result: lt.result()})).idMap(o => o.group.id())});
+    const modelMap = () => Job.resultMap(jobs, 'object().id()', 'unioned()');
+    const {tasks, jobs, groups} = CsgRoomJob.tasksAndJobs(room, complex);
+    const layoutTasks = groups.map(g => new LayoutParts(g, boxMap(result)));
+    const task = new Sequential.Seperate(new Parrelle(...tasks), new Parrelle(...layoutTasks));
     super(task);
+    registered(this);
     this.room = () => room;
     this.jobs = () => jobs;
-    let _result;
-    this.result =  () => {
-      if (!modelMapHashMatch) {
-        modelIdMap = {};
-        modelIdMap.property('ROOM_HASH', room.hash(), false, false, false)
-        jobs.forEach(job =>
-          modelIdMap[job.object().id()] = job.result());
-      }
-
-      return modelIdMap;
-    }
+    this.result = result;
   }
 }
 
 CsgRoomJob.tasksAndJobs = (room, complex) => {
   const tasks = [];
+  const groups = [];
   const jobs = [];
   for (let i = 0; i < room.groups.length; i++) {
     const group = room.groups[i];
+    const groupTasks = [];
     for (let j = 0; j < group.objects.length; j++) {
       const obj = group.objects[j];
       const job = obj instanceof  Assembly ? new CsgAssembly(obj) : new SimpleModelJob(obj);
       jobs.push(job);
       tasks.push(job.task());
     }
+    groups.push(group);
   }
-  const task = new Parrelle(...tasks);
-  return {tasks, jobs, task};
+  return {tasks, jobs, groups};
 }
 class CsgSimpleRoomJob extends CsgRoomJob {constructor(room) {super(room, false)}};
 class CsgComplexRoomJob extends CsgRoomJob {constructor(room) {super(room, true)}};
@@ -338,10 +347,11 @@ class OrderDocumentationJob extends TaskJob {
 
 class CsgAssembly extends TaskJob {
   constructor(assembly, explosionFactor, props) {
+    const registered = registeredJob(CsgAssembly, assembly.id(), assembly.hash());
+    if (registered instanceof Job) return registered;
     const modelInfo = ModelInfo.object(assembly, props);
     super(Join(modelInfo));
-    const registered = registeredJob(this, modelInfo.id(), modelInfo.hash());
-    if (registered instanceof RegisteredJob) return registered;
+    registered(this);
     this.result = () => modelInfo;
     this.object = () => assembly;
   }

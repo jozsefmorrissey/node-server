@@ -167,3 +167,28 @@ Test.add('Polygon3D distance',(ts) => {
 
   ts.success(`Finding ${count} connections took: ${time}ms avg: ${Math.roundTo(time/count, .1)}ms`);
 });
+
+const irregularLines = `((485.65,0,498.41), (407.54,0,498.41))
+((407.54,0,498.41), (407.54,0,490.79))
+((407.54,0,490.79), (409.45,0,489.26))
+((409.45,0,489.26), (409.45,0,497.78))
+((409.45,0,497.78), (415.07,0,497.78))
+((415.07,0,497.78), (483.74,0,442.31))
+((483.74,0,442.31), (483.74,0,439.36))
+((483.74,0,439.36), (471.23,0,439.36))
+((471.23,0,439.36), (473.58,0,437.45))
+((473.58,0,437.45), (485.65,0,437.45))
+((485.65,0,437.45), (485.65,0,498.41))`;
+
+Test.add('Polygon3D: regular',(ts) => {
+  const lines = irregularLines.split('\n').map(str => Line3D.fromString(str));
+  const poly = new Polygon3D(lines.map(l=>l[0]));
+  const regular = poly.regular();
+  console.log(regular.map(l=>l.toDrawString()).join('\n'));
+  ts.assertTolerance(poly.area(), regular.sum(p => p.area()), .000000001);
+
+  const triangles = poly.triangles();
+  ts.assertTolerance(poly.area(), triangles.sum(p => p.area()), .000000001);
+
+  ts.success();
+});

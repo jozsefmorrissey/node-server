@@ -15,6 +15,7 @@ class Handle extends Assembly {
     let instance;
     location ||= Handle.location.CENTER;
     super('p', 'Handle');
+    this.color = this.value.getterSetter('pcolor', true);
     this.jointSettings.sliceAtOpening(false);
     Object.getSet(this, {location, centerToCenter: 9.6});
     this.partName = () =>

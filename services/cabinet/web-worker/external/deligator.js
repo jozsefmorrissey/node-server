@@ -8,6 +8,7 @@ const RDTO = require('../shared/reconnect-transfer-object.js');
 const maxWorkers = 20;
 class WebWorkerDeligator {
   constructor() {
+    const allTasks = {};
     const taskQue = [];
     const taskWorkerMap = {};
     const workers = [];
@@ -75,18 +76,27 @@ class WebWorkerDeligator {
   function exicute() {
     while (0 < taskQue.length && workers.length > 0) {
         const task = taskQue.splice(0,1)[0];
+        task.status(task.exicution());
         if (task.status() === TASK_STATUS.INITIATE) {
-          task.trigger.initiate();
+          task.status(TASK_STATUS.PENDING);
+        } else {
+          const isSequential = task.process() === 'sequential';
+          const worker = workers[Math.floor(Math.random() * workers.length)];
+          if (task.status() === TASK_STATUS.EXICUTE) {
+            const msg = DTO(task);
+            worker.postMessage(msg);
+            registerTask(worker)(task);
+            task.initiated = new Date().getTime();
+          }
         }
-        const isSequential = task.process() === 'sequential';
-        const payload = task.payload ? task.payload() : null;
-        const worker = workers[Math.floor(Math.random() * workers.length)];
-        if (task.status() === TASK_STATUS.EXICUTE) {
-          const msg = DTO(task);
-          worker.postMessage(msg);
-          registerTask(worker)(task);
-          task.initiated = new Date().getTime();
-        }
+      }
+    }
+
+    function queueTask(task) {
+      const status = task.status();
+      if (task.status().lessThan(TASK_STATUS.QUEUED)) {
+        task.status(TASK_STATUS.QUEUED);
+        taskQue.push(task);
       }
     }
 
@@ -107,8 +117,19 @@ class WebWorkerDeligator {
         };
         exc();
       } else {
-        if (Array.isArray(taskOs)) taskQue.concatInPlace(taskOs);
-        else taskQue.push(taskOs);
+        if (Array.isArray(taskOs)) tasksOs.forEach(t => queueTask(t));
+        else queueTask(taskOs);
+
+        if (Array.isArray(taskOs)) {
+          if (taskOs.find(t => allTasks[t.id]))
+            console.log('her');
+          taskOs.forEach(allTasks[t.id] = true);
+        }
+        else {
+          if (allTasks[taskOs.id])
+            console.log('her');
+          allTasks[taskOs.id] = true;
+        }
         exicute();
       }
     }

@@ -97,6 +97,14 @@ class CsgModelTask  extends CsgTask {
       else if (result.type === 'biPolygon') modelInfo.biPolygonArrayMap(result.map);
       else console.warn(`Unkown result:`, result);
     }
+    const parentFinished = this.finished;
+    this.finished = (...args) => {
+      if (parentFinished(...args)) {
+        console.log(this.id);
+        console.log(new Error().stack, '\n');
+      }
+      return parentFinished(...args);
+    }
   }
 }
 
@@ -107,6 +115,7 @@ class CsgUnionTask  extends CsgTask {
     this.progress = () => this.status() === 'success' ? 100 : 0;
     this.processResult = (result) =>
       modelInfo.unioned.set(result);
+    this.result = () => modelInfo;
   }
 }
 
@@ -135,16 +144,18 @@ const AssembliesTo2D = (modelInfo, union) => {
 };
 
 class LayoutPartsTask extends Task {
-  constructor(group, partInformation) {
+  constructor(group, boxFunction) {
     super();
     const layout = group.room().layout();
     this.process = () => 'layoutParts';
-    this.result = () => 'hello';
-    this.payload = () => ({layout, partInfos: partInformation.parts()})
+    let _result;
+    this.result = () => _result;
+    this.group = () => group;
+    this.payload = () => ({layout, boxMap: boxFunction()});
     this.progress = () => this.status() === 'success' ? 100 : 0;
-
-    this.on.finished = () =>
-      this.status(STATUS.SUCCESS);
+    this.on.message((result) => {
+      if (result !== undefined) _result = result;
+    });
   }
 }
 

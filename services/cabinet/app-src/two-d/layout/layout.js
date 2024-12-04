@@ -10,11 +10,15 @@ const Property = require('../../config/property.js');
 const Measurement = require('../../../../../public/js/utils/measurement.js');
 const IMPERIAL_US = Measurement.units()[1];
 const Wall2D = require('./wall');
+const Floor = require('./floor');
+const Ceiling = require('./ceiling');
+const CounterTop = require('./counter-top');
 const Corner2d = require('./corner');
 const Window2D = require('./window');
 const Light3D = require('../../three-d/layout/objects/light.js');
 const Door2D = require('./door');
 const LayoutHoverMap = require('../../services/layout-hover-map.js');
+const Utils = require('../../utils.js');
 
 function withinTolerance(point, map) {
   const t = map.tolerance;
@@ -36,18 +40,25 @@ class Layout2D extends Lookup {
     this.setObjects = (objs) => objects = objs;
     this.objects = () => (objects instanceof Function ? objects() : objects) || [];
     let walls = [];
+    let floor = new Floor(this);
+    let ceiling = new Ceiling(this);
+    let counterTop = new CounterTop(this);
     let lights = [new Light3D(this, 8*2.54, {x: 440, y: 243, z: 202}), new Light3D(this, 8*2.54, {x: 440, y: 243, z: 452})];
     const vertexMap = {};
     // Array.isArray(wallJson) && wallJson.forEach((wallJson) => walls.push(Wall2D.fromJson(wallJson, this, vertexMap)));
     let history;
     CustomEvent.all(this, 'add', 'remove', 'stateChange', 'change');
 
-    Object.getSet(this, {walls, lights, _FORCE_FROM_JSON: true});
+    Object.getSet(this, {walls, lights, _FORCE_FROM_JSON: true}, 'ceiling', 'floor');
     const initialized = walls.length > 0;
     const instance = this;
 
     this.startLine = () => this.walls()[0];
     this.endLine = () => this.walls()[this.walls().length - 1];
+
+    let modelInformation = {};
+    this.modelInformation = (info) => info === undefined ? modelInformation :
+                                (modelInformation = info);
 
     let lastHash;
     this.hash = () => {
@@ -418,6 +429,48 @@ class Layout2D extends Lookup {
     // if (!initialized) this.push({x:, y:1}, {x:ww+1, y:0}, {x:ww + 1,y:ww + 1}, {x:1,y:ww});
     // if (!initialized) this.push({x:-250, y:-250}, {x:250, y:-250}, {x:250,y:250}, {x:-250,y:250});
     this.walls = () => walls;
+    this.ceiling = () => ceiling;
+    this.floor = () => floor;
+    this.counterTop = () => counterTop;
+
+    function applyColors(assembly, csgOmodelInformation) {
+      let csg;
+      if (csgOmodelInformation instanceof CSG) {
+        csg = csgOmodelInformation;
+        csg.setColors(assembly.color());
+      } else {
+        csg = csgOmodelInformation.unioned();
+        csg.setColors(assembly.color());
+        const pullCsg = csgOmodelInformation.unioned('handles');
+        const pullColor = assembly.resolve('pcolor', true);
+        pullCsg.setColors(pullColor);
+        csg.polygons.concatInPlace(pullCsg.polygons);
+      }
+      return csg;
+    }
+
+    function positionAndColorRoomCSGs(modelIdMap) {
+      const ids = Object.keys(modelIdMap);
+      const csgs = [];
+      for (let index = 0; index < ids.length; index++) {
+        const id = ids[index];
+        const cabinet = Lookup.get(id);
+        const csg = applyColors(cabinet, modelIdMap[id]);
+        csgs.push(Utils.positionAssemblyCsg(csg, cabinet));
+      }
+      return CSG.concat(csgs);
+    }
+
+    this.csg = () => {
+      let csg = positionAndColorRoomCSGs(this.modelInformation().modelIdMap);
+      const groupMap = this.modelInformation().groupMap;
+
+      const walls = this.walls();
+      walls.forEach(w => csg.polygons.concatInPlace(w.poly.csg().polygons));
+      csg = csg.union(this.counterTop().csg());
+      csg.polygons.concatInPlace(this.ceiling().csg().polygons.concat(this.floor().csg().polygons));
+      return csg;
+    }
 
     // history = new StateHistory(this.toJson, this.fromJson);
     this.history = () => history;

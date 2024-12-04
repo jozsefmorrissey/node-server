@@ -7,7 +7,9 @@ const TwoDLayout = require('../displays/two-d-layout');
 const ThreeView = require('three-view');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const Jobs = require('../../web-worker/external/jobs.js');
+const BiPolygon = require('../three-d/objects/bi-polygon.js');
 const Utils = require('../utils');
+const ColorManager = require('./managers/color-manager');
 
 const switchEvent = new CustomEvent('switch');
 
@@ -39,67 +41,26 @@ const applyExtraObjAndDisplay = (info, csg) => {
   ThreeDModel.display(csg);
 }
 
-function positionAndColorRoomCSGs(modelIdMap) {
-  const ids = Object.keys(modelIdMap);
-  const csgs = [];
-  for (let index = 0; index < ids.length; index++) {
-    const id = ids[index];
-    const csg = modelIdMap[id].unioned();
-    const cabinet = Lookup.get(id);
-    csg.setColors(() => cabinet.color());
-    csgs.push(Utils.positionAssemblyCsg(csg, cabinet));
-  }
-  return CSG.concat(csgs);
-}
 
-const lineTo3DVerts = (line, bottomHeight, topHeight) => {
-  return [{x: line[0].x, y:bottomHeight, z: line[0].y},
-                {x: line[1].x, y:bottomHeight, z: line[1].y},
-                {x: line[1].x, y:topHeight, z: line[1].y},
-                {x: line[0].x, y:topHeight, z: line[0].y}];
-}
 
-function lightCSG(light) {
-  props = {start: [0,0,0], end: [0,-1,0], slices: 36};
-  props.radius = light.radius();
-  const fixture = new CSG.cylinder(props);
-  fixture.center(light.center());
-  fixture.setColor(light.color());
-  return fixture;
-}
-
-function layoutCsg(room) {
-  const walls = room.layout().walls();
-  const lights = room.layout().lights();
-  let csg = new CSG();
-  walls.forEach(w => {
-    const wallPoly = CSG.Polygon.fromVertices(lineTo3DVerts(w, 0, w.height()));
-    wallPoly.setColor('#D3CB97');
-    csg.polygons.push(wallPoly);
-    csg.polygons.concatInPlace(CSG.Polygon.Enclosed(lineTo3DVerts(w, 0, 6*2.54), 6, '#D3CB97').polygons);
-    w.doors().forEach(d => {
-      const verts = lineTo3DVerts(d.line().negitive(), d.fromFloor(), d.height());
-      const doorway = CSG.Polygon.Enclosed(verts, 6);
-      csg = csg.subtract(doorway);
-    });
-  });
-  // lights.forEach(light => csg.polygons.concatInPlace(lightCSG(light).polygons));
-  return csg;
-}
-
+const roomColorManager = new ColorManager('room-color-cnt', 'name');
 function renderRoom() {
   // console.log(JSON.stringify(Global.order().toJson(), null, 2))
-  new Jobs.CSG.Room.Complex(Global.room()).then((modelIdMap, job) => {
-    let csg = positionAndColorRoomCSGs(modelIdMap);
+  new Jobs.CSG.Room.Complex(Global.room()).then((result, job) => {
     const room = Global.room();
-    csg.polygons.concatInPlace(layoutCsg(room).polygons);
+    const layout = room.layout();
+    layout.modelInformation(result);
+    let csg = layout.csg();
     applyExtraObjAndDisplay(room, csg);
+    const layoutObjects = layout.walls().concat(layout.ceiling(),layout.floor(),layout.counterTop());
+    const objects = room.groups.map(g => g.objects).concatElements();
+    roomColorManager.map(objects.concat(layoutObjects));
+    roomColorManager.update();
   }).queue();
 }
 
 // TODO: rename this is actually render cabinet or simple objects
 function  renderCabinet() {
-  Global.target(Global.order().rooms.kitchen.groups[0].objects[4] || Global.order().rooms.kitchen.groups[0].objects[0]);
   const target = Global.target();
   if (target) {
     if (target.constructor.name === 'Cabinet') {
@@ -114,6 +75,7 @@ function  renderCabinet() {
       }).queue();
     } else {
       new Jobs.CSG.Simple.Model(target).then((csg, job) => {
+        csg.center({x:0,y:0,z:0})
         ThreeDModel.display(csg);
       }).queue();
     }

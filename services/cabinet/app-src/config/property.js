@@ -17,9 +17,12 @@ class Property {
 
     this.value = (val, notMetric) => {
       if (val !== undefined && value !== val) {
-        const measurement = new Measurement(val, notMetric);
-        const measurementVal = measurement.value();
-        value = Number.isNaN(measurementVal) ? val : measurement;
+        if (this.properties().measurement) {
+          const measurement = new Measurement(val, notMetric);
+          const measurementVal = measurement.value();
+          val = Number.isNaN(measurementVal) ? val : measurement;
+        }
+        value = val;
       }
       return value instanceof Measurement ? value.value() : value;
     }
@@ -33,9 +36,10 @@ class Property {
     let valueIsFunc = false;
     let clone = false;
     if ((typeof props) !== 'object' ||  props === null) {
+      this.properties((props = {measurement: true}));
       this.value(props);
-      this.properties((props = {}));
     } else {
+      if (!Boolean.is(props.measurement)) props.measurement = true;
       this.properties(props);
       const existingProp = Property.list[code];
       if (props.value !== undefined) {

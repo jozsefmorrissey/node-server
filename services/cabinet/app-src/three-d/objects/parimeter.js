@@ -1,17 +1,21 @@
 
 const Line3D = require('line');
 const Vertex3D = require('vertex');
+const Vector3D = require('vector');
 const Polygon3D = require('polygon');
+const Plane = require('plane');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
 
 class Parimeter3D {
   constructor(lines, normal) {
+    normal = new Vector3D(normal);
     Line3D.combine(lines);
     const center = Vertex3D.midrange(Line3D.vertices(lines));
     lines = Line3D.sliceAll(lines);
     //TODO: sliceAll is introducing duplicates
     lines = lines.unique(l => l.toString());
+
 
     const allMap = new ToleranceMap({'0.x': .01,
                                     '0.y': .01,
@@ -55,7 +59,7 @@ class Parimeter3D {
           Line3D.quadrantSort(matches, target, normal, ccw);
           parimeter.push(matches[0]);
         }
-      } while (!parimeter[0][0].equals(parimeter[parimeter.length - 1][1]));
+      } while (!parimeter[0][0].equals(parimeter[parimeter.length - 1][1], .001));
       parimeter = parimeter.map(l=>l.clone());
       return {parimeter, removed, length: parimeter.sum(l => l.length())};
     }
@@ -82,10 +86,20 @@ class Parimeter3D {
 
     if (polys.length === 0) {
       console.warn('Parimeter3D could not find a single parimeter');
-      new Parimeter3D(lines, normal);
+      if (goDownTheRabbitHole) new Parimeter3D(lines, normal);
     }
     return polys;
   }
+}
+
+Parimeter3D.fromCSG = (csg, vector) => {
+  vector = new Vector3D(vector).unit();
+  const plane = Plane.fromPointNormal(csg.center(), vector);
+  let lines = Line3D.fromCSG(csg).filter(l => !l.vector().parrelle(vector));
+  lines = plane.projectOnTo(lines);
+  lines = Line3D.combine(lines);
+
+  return new Parimeter3D(lines.map(l=>l.clone()), vector)[0];
 }
 
 module.exports = Parimeter3D;

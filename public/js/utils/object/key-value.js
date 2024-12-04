@@ -113,6 +113,15 @@ class KeyValue extends Lookup {
     this.value.parentAttribute = () => parentAttr;
     this.value.childrenAttribute = () => childAttr;
     this.value.addCustomFunction = (func) => (typeof func) === 'function' && customFuncs.push(func);
+
+    this.value.getterSetter = (code, _rawOvalue, preProcessor) => (rawOvalue) => {
+      if (!Boolean.is(rawOvalue)) {
+        if (rawOvalue !== undefined) this.value(code, rawOvalue);
+        rawOvalue = _rawOvalue;
+      }
+      const value = this.resolve(code, rawOvalue);
+      return preProcessor instanceof Function ? preProcessor(value) : value;
+    }
   }
 }
 

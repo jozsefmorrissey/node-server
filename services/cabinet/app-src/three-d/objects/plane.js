@@ -89,6 +89,26 @@ class Plane extends Array {
       }
     }
 
+    function projectVertOLineOPoly(vlp, normal) {
+      if (vlp instanceof Vertex3D) {
+        const conn = instance.connect.vertex(vlp);
+        const dir = conn.vector().sameDirection(normal) ? 1 : -1;
+        return vlp.minus(new Vertex3D(normal.scale(conn.length()*dir)));
+      } else if (vlp instanceof Line3D) {
+        return new Line3D(projectVertOLineOPoly(vlp[0], normal), projectVertOLineOPoly(vlp[1], normal));
+      } else {
+        const cxtr = vlp.constructor;
+        const verts = vlp.vertices.map(v => projectVertOLineOPoly(v, normal));
+        return new cxtr(verts);
+      }
+    }
+
+    // TODO: not very accurate
+    this.projectOnTo = (vertsOlinesOpolys) => {
+      const normal = this.normal();
+      return vertsOlinesOpolys.map(v => projectVertOLineOPoly(v, normal));
+    }
+
     this.rotate = (rotation, center) => {
       center ||= this.point();
       for (let index = 0; index < this.length; index++) {
@@ -477,7 +497,7 @@ Plane.bisector = (p1, p2) => {
 }
 
 Plane.fromPointNormal = (point, normal) => {
-  normal = normal.unit();
+  normal = new Vector3D(normal).unit();
   const fixed = [];
   const a = normal.i();
   const b = normal.j();

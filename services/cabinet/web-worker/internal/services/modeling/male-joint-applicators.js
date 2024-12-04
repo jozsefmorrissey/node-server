@@ -209,7 +209,7 @@ apply.Miter = (assem, joint, femalePolyInfo, frontBackSet, env) => {
   const m = closestAndPartner(malePolys, mcTOfc);
   const innerIntersection = m.closest.toPlane().intersection(f.closest.toPlane());
   const outerIntersection = m.furthest.toPlane().intersection(f.furthest.toPlane()).acquiescent(innerIntersection).negitive();
-  const cutterPoly = new Polygon3D(Line3D.vertices([innerIntersection, outerIntersection]));
+  const cutterPoly = new Polygon3D(Line3D.vertices([innerIntersection, outerIntersection]).map(v => v.clone()));
   const cpCenter = cutterPoly.center();
   const cpTransCenter = cpCenter.translate(cutterPoly.normal(), true);
   const dist = cpCenter.distance(mCenter) < cpTransCenter.distance(mCenter) ? big : -big;

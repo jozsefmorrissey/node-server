@@ -30,7 +30,7 @@ add('Reveal', Defs.r,Defs.rvt,Defs.rvb,Defs.rvr,Defs.rvl);
 add('Inset', Defs.is);
 add('Cabinet', Defs.style,Defs.fls,Defs.tid,Defs.dsc,Defs.rvibr,Defs.ddg,Defs.tkbw,Defs.tkd,
                 Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,Defs.ddd,Defs.crh,Defs.crw);
-add('Panel', Defs.pt14,Defs.pt12,Defs.pt34,Defs.pt18,Defs.vpt);
+add('Panel', Defs.pt14,Defs.pt12,Defs.pt34,Defs.pt18,Defs.vpt,Defs.color,Defs.pcolor);
 add('Guides', Defs.dbtos,Defs.dbsos,Defs.dbbos,Defs.dbn,Defs.dbid, Defs.dbdepths);
 add('DoorAndFront', Defs.daffrw,Defs.dafip)
 // add('Door', [];

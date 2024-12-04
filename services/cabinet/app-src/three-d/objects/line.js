@@ -102,7 +102,7 @@ class Line3D {
 
     this.finite = (limit) => this[0].finite(limit) && this[1].finite(limit);
 
-    this.isPoint = () => this[0].equals(this[1]);
+    this.isPoint = (tolerance) => this[0].equals(this[1], tolerance);
 
     // this.on = (vertex, tolerance) => {
     //   tolerance ||= .01;
@@ -137,6 +137,7 @@ class Line3D {
     this.toString = (accuracy) => {
       return this.toDrawString(null, accuracy);
     }
+    this.hash = () => this.toString(null).hash();
     this.toNegitiveString = () => `${new String(this[1])} => ${new String(this[0])}`;
     this.toDrawString = (color, accuracy) => {
       let brackets
@@ -241,11 +242,11 @@ class Line3D {
       let prevDist = conn.length();
       conn = line2.connect(conn[0], l2TrueSegmentFalseDirectional);
       conn = line1.connect(conn[0], l1TrueSegmentFalseDirectional);
-      for (let index = 0; !withinThousandth(prevDist, conn.length()) && index < 5; index++) {
+      for (let index = 0; !withinThousandth(prevDist, conn.length()); index++) {
         prevDist = conn.length();
         conn = line2.connect.vertex(conn[0], l2TrueSegmentFalseDirectional);
         conn = line1.connect.vertex(conn[0], l1TrueSegmentFalseDirectional);
-        if (index === 4)
+        if (index === 8)
           throw new Error('Why is connection continueing to change length???');
       }
       return conn;
@@ -327,10 +328,9 @@ class Line3D {
       for (let index = 0; index < ints.length; index++) {
         const int = ints[index];
         const dist = this.distance(int) + other.distance(int);
+        const diff = this.distance(int) + other.distance(int);
         if (!targetInfo || test(targetInfo, dist)) {
-          if (targetInfo && withinHundreth(dist, targetInfo.dist) && !this.isParrelle(other))
-            console.warn('I thought this was extremely unlikely, you may want to look into why multple intersections are the nearly identical disances without being the same point');
-          targetInfo = {dist, int};
+          targetInfo = {dist, int, diff};
         }
       }
       return targetInfo.int;
@@ -511,19 +511,11 @@ Line3D.vertices = (linesOverts, true4startfalse4end) => {
   const includeEnd = includeBoth || true4startfalse4end === false;
   for (let index = 0; index < linesOverts.length; index += 1) {
     if (linesOverts[index] instanceof Line3D) {
-      if (includeStart) verts.push(linesOverts[index][0].copy());
-      if (includeEnd) verts.push(linesOverts[index][1].copy());
+      if (includeStart) verts.push(linesOverts[index][0]);
+      if (includeEnd) verts.push(linesOverts[index][1]);
     } else {
       verts.push(linesOverts[index]);
     }
-  }
-  return verts;
-}
-
-Line3D.vertices1 = (lines) => {
-  const verts = [];
-  for (let index = 0; index < lines.length; index += 1) {
-    verts.push(lines[index][1].copy());
   }
   return verts;
 }
@@ -561,7 +553,6 @@ Line3D.thetaBetween = (line, relToLine, viewFrom, acute) => {
     const y = z.crossProduct(x);
     viewFrom = [x,y,z];
   }
-  console.log(viewFrom.map(v => v.toString(.1)).join('\n'));
   const rotz = Vector3D.coDirectionalRotations(viewFrom);
   const clone1 = line.clone();
   const clone2 = relToLine.clone();
@@ -688,14 +679,15 @@ Line3D.combineOrder = (line1, line2) => {
   verts.sort(Vertex3D.sortByCenter(longest[0]));
   let first = new Line3D(verts[0], verts[1]);
   let second = new Line3D(verts[0], verts[2]);
-  if (!((unitVec1.equals(first.vector().unit()) || first.isPoint()) &&
-      (unitVec1.equals(second.vector().unit()) || second.isPoint()))) return null;
+  if (!((unitVec1.equals(first.vector().unit()) || first.isPoint(.01)) &&
+      (unitVec1.equals(second.vector().unit()) || second.isPoint(.01))))
+    return null;
   verts.shorterBy = shorterBy;
   return verts;
 }
 
 Line3D.combine = (lines, tolerance, prefix) => {
-  tolerance ||= tol;
+  tolerance ||= .001;
   const tolmap = new ToleranceMap({'vector().positiveUnit().i()': tolerance,
                                   'vector().positiveUnit().j()': tolerance,
                                   'vector().positiveUnit().k()': tolerance});
@@ -935,29 +927,50 @@ Line3D.distanceSort = (target, segment) => (l1,l2) => {
   return ds1 - ds2;
 }
 
-Line3D.slice = (line, lines) => {
+Line3D.slice = (line, lines, segment) => {
+  if (segment !== false) segment = true;
   const notParrelle = lines.filter(l => !l.isParrelle(line));
-  const intersections = [line[0]];
+  const intersections = [];
   for (let index = 0; index < notParrelle.length; index++) {
     const slicer = notParrelle[index];
-    const int = line.intersection.segment(slicer, true);
-    if (int && !line[0].equals(int) && !line[1].equals(int)) {
+    const int = segment ? line.intersection.segment(slicer, true) : line.intersection(slicer);
+    if (int) {
       intersections.push(int);
     }
   }
   if (intersections.length === 1) return null;
-  intersections.push(line[1]);
-  intersections.sort(Line3D.distanceSort(line[0]));
+  const furthest = intersections.max(l => l.distance(line[0]));
+  intersections.sort(Line3D.distanceSort(furthest));
   const sliced = intersections.map((int, i) => i < intersections.length - 1 &&
                                           new Line3D(int, intersections[i+1]))
                                           .slice(0, intersections.length - 1);
   return sliced.filter(l=>!l.isPoint());
 }
 
-Line3D.sliceAll = (lines) => {
+// Line3D.slice = (line, lines, segment) => {
+//   const notParrelle = lines.filter(l => !l.isParrelle(line));
+//   const intersections = [];
+//   for (let index = 0; index < notParrelle.length; index++) {
+//     const slicer = notParrelle[index].clone();
+//     slicer.length(Number.MAX_SAFE_INTEGER / 100);
+//     const int = slicer.intersection.segment(line, false);
+//     if (int) {
+//       intersections.push(int);
+//     }
+//   }
+//   if (intersections.length === 1) return null;
+//   intersections.sort(Line3D.distanceSort(line[0]));
+//   const sliced = intersections.map((int, i) => i < intersections.length - 1 &&
+//                                           new Line3D(int, intersections[i+1]))
+//                                           .slice(0, intersections.length - 1);
+//   return sliced.filter(l=>!l.isPoint());
+// }
+
+Line3D.sliceAll = (lines, segment) => {
+  if (segment !== false) segment = true;
   const fractured = [];
   for (let index = 0; index < lines.length; index++) {
-    const sliced = Line3D.slice(lines[index], lines);
+    const sliced = Line3D.slice(lines[index], lines, segment);
     if (sliced) fractured.concatInPlace(sliced);
     else if (!lines[index].isPoint()) fractured.push(lines[index]);
   }
@@ -997,7 +1010,7 @@ Line3D.longest = (mixAndMatch, ...vertsOlines) => {
   let lines = vertsOlines;
   if (mixAndMatch !== true && mixAndMatch !== false) lines.push(mixAndMatch);
   if (mixAndMatch === true) {
-    const verts = Line3D.vertices(lines);
+    const verts = Line3D.vertices(lines).map(v => v.clone());
     lines = [];
     verts.forEach((v,i) => verts.forEach((v2, j) => i !== j && lines.push(new Line3D(v, v2))));
   }
@@ -1009,8 +1022,12 @@ Line3D.longest = (mixAndMatch, ...vertsOlines) => {
   return longest;
 }
 
-Line3D.from2D = (lines2d) =>
-  lines2d.map(l => new Line3D([l[0].x, l[0].y, 0], [l[1].x, l[1].y, 0]));
+Line3D.from2D = (lines2d, z) =>
+  lines2d.map(l => new Line3D([l[0].x, l[0].y, z || 0], [l[1].x, l[1].y, z || 0]));
+
+Line3D.fromString = (str) =>
+      new Line3D(...str.split(/\)\s*,\s*\(/).map(Vertex3D.fromString));
+
 
 module.exports = Line3D;
 

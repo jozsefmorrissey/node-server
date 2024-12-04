@@ -187,7 +187,10 @@ class ModelInformation {
       return csg;
     }
 
-    this.unioned.silloute = () => unionObj.silloute;
+    this.unioned.silhouette = () => unionObj.silhouette;
+    this.unioned.silhouette.to2D = () =>
+          unionObj.silhouette ? unionObj.silhouette.to2D('x', 'z') : null;
+    this.unioned.boxOnly = () => unionObj.boxOnly;
     this.unioned.all = () => unionObj;
     this.unioned.set = (data) => {
       const keys = Object.keys(data);

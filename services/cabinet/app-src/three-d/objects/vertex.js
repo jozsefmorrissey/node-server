@@ -121,7 +121,7 @@ class Vertex3D {
     }
     const round = (acc) => (val) => Math.roundTo(val, acc);
     this.toString = (accuracy) => {
-      const rnd = round(accuracy || .0000000000001);
+      const rnd = accuracy === null ? v => v : round(accuracy || .0000000000001);
       return `(${rnd(this.x)},${rnd(this.y)},${rnd(this.z)})`;
     }
     this.toDrawString = this.toString;
@@ -344,6 +344,10 @@ Vertex3D.magnitudeVector = (unitVector, vertices, center) => {
   });
   return magnitude;
 }
+
+Vertex3D.fromString = (str) =>
+      new Vertex3D(str.split(/[^0-9^.]/).filter(str => str)
+      .map(str => Number.parseFloat(str)));
 
 Object.class.register(Vertex3D, 'x', 'y', 'z');
 module.exports = Vertex3D;
