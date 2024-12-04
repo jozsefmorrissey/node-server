@@ -44,6 +44,7 @@ if (Object.keys(Global.order().rooms).length === 0) {
 const RoomDisplay = require('./room');
 let roomDisplay = new RoomDisplay('#room-cnt', Global.order());
 Global.displays.room(roomDisplay);
+Global.on.change.room(roomDisplay.refresh);
 
 const FileTabDisplay = require('../../../../public/js/utils/lists/file-tab.js');
 
