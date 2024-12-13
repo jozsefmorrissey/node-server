@@ -812,10 +812,7 @@ SectionProperties.fromJson = (json) => {
   sp.parentAssembly(json.parent);
   sp.cover(Object.fromJson(json.cover));
   if (sp.cover()) sp.cover().parentAssembly(sp);
-
-  json.constructed(() => {
-    sp.divider().fromJson(json.divider);
-  });
+  sp.divider().fromJson(json.divider);
   return sp;
 }
 module.exports = SectionProperties;

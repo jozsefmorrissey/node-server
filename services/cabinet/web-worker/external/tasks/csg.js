@@ -40,7 +40,7 @@ class CsgTask extends Task {
     super();
     let initialModelCount;
     this.completeOnFinish = true;
-    Object.getSet(this, 'explosionFactor', 'payload', 'process');
+    Object.getSet(this, 'payload', 'process');
     this.process = () => this.constructor.name.replace(/^Csg(.{1,})Task/, "$1").toLowerCase();
     this.progress = () => this.completeOnFinish ? (this.status() === STATUS.SUCCESS ? 100 : 0) :
           (initialModelCount === 0 ? 100 :
@@ -49,7 +49,7 @@ class CsgTask extends Task {
       if (this.finished()) return null;
       const assemblies = this.remainingModels();
       if (assemblies.length === 0) this.status(STATUS.SUCCESS);
-      return {assemblies, explosionFactor: this.explosionFactor()};
+      return {assemblies};
     };
     let _result;
     this.result = () => _result;
@@ -74,10 +74,13 @@ class CsgOrderModelTask  extends CsgTask {
 }
 
 class CsgJoinTask extends CsgTask {
-  constructor(modelInfo, explosionFactor) {
+  constructor(modelInfo) {
     super(modelInfo);
-    this.explosionFactor(explosionFactor);
     this.remainingModels = modelInfo.needsJoined;
+    this.processResult = (result) => {
+      if (result) modelInfo.joinedMap(result);
+      else console.warn(`Unkown result:`, result);
+    }
   }
 }
 
@@ -97,14 +100,6 @@ class CsgModelTask  extends CsgTask {
       else if (result.type === 'biPolygon') modelInfo.biPolygonArrayMap(result.map);
       else console.warn(`Unkown result:`, result);
     }
-    const parentFinished = this.finished;
-    this.finished = (...args) => {
-      if (parentFinished(...args)) {
-        console.log(this.id);
-        console.log(new Error().stack, '\n');
-      }
-      return parentFinished(...args);
-    }
   }
 }
 
@@ -112,7 +107,7 @@ class CsgUnionTask  extends CsgTask {
   constructor(modelInfo) {
     super(modelInfo);
     this.remainingModels = modelInfo.needsUnioned;
-    this.progress = () => this.status() === 'success' ? 100 : 0;
+    this.progress = () => this.status() === STATUS.SUCCESS ? 100 : 0;
     this.processResult = (result) =>
       modelInfo.unioned.set(result);
     this.result = () => modelInfo;
@@ -135,6 +130,16 @@ class CsgAssembliesTo2DTask extends CsgTask {
   }
 }
 
+class CsgThreeViewTask extends Task {
+  constructor(csgOgetter, normals) {
+    super();
+    this.process = () => 'threeview';
+    this.payload = () =>({normals, csg:
+          csgOgetter instanceof Function ? csgOgetter() : csgOgetter});
+  }
+}
+
+
 const AssembliesTo2D = (modelInfo, union) => {
   const tasks = [new CsgModelTask(modelInfo)];
   tasks.push(new CsgJoinTask(modelInfo));
@@ -151,7 +156,9 @@ class LayoutPartsTask extends Task {
     let _result;
     this.result = () => _result;
     this.group = () => group;
-    this.payload = () => ({layout, boxMap: boxFunction()});
+    this.completeOnFinish = true;
+    this.payload = () =>
+      ({layout, boxMap: boxFunction()});
     this.progress = () => this.status() === 'success' ? 100 : 0;
     this.on.message((result) => {
       if (result !== undefined) _result = result;
@@ -175,5 +182,6 @@ module.exports = {
   AssembliesTo2D,
   SimpleTo2D: (objects) => new CsgSimpleTo2DTask(objects),
   Simple: (objects) => new CsgSimpleTask(objects),
-  LayoutParts: LayoutPartsTask
+  LayoutParts: LayoutPartsTask,
+  ThreeView: CsgThreeViewTask
 }

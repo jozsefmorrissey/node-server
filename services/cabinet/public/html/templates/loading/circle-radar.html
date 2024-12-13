@@ -1,0 +1,70 @@
+<style>
+  :root {
+    --percentDecimal{{id}}: 0;
+    --color{{id}}: #00ff00;
+    --color-transparent{{id}}: #00ff0025;
+    --percent{{id}}: 50%;
+  }
+
+  #outer-circle-{{id}} .loaded-circle {
+    background-color: var(--color{{id}});
+    height: var(--percent{{id}});
+    width: var(--percent{{id}});
+    border-radius: 50%;
+    position: absolute;
+    top: var(--percent{{id}});
+    right: var(--percent{{id}});
+    transform: translate(50%, -50%);
+  }
+
+
+  #outer-circle-{{id}} {
+      width: {{size}};
+      height: {{size}};
+      border-radius: 50%;
+      position: relative;
+      box-shadow: 0 0 8px 0 #aaa;
+  }
+
+  #outer-circle-{{id}} > .loading-scanner-circle {
+      width: {{size}};
+      height: {{size}};
+      border-radius: 50%;
+      position: relitive;
+      background: conic-gradient(var(--color-transparent{{id}}), var(--color{{id}}));
+  }
+
+  #outer-circle-{{id}}::before,
+  #outer-circle-{{id}}::after {
+      content: "";
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 1px solid #eee;
+      position: absolute;
+  }
+
+  #outer-circle-{{id}} > .loading-scanner-circle {
+      animation: scan 4s infinite linear;
+  }
+
+  #outer-circle-{{id}}::before,
+  #outer-circle-{{id}}::after {
+      animation: ripple-{{id}} 2s infinite linear;
+  }
+
+  :root {
+    --percentDecimal{{id}}: 0;
+  }
+
+  @keyframes ripple-{{id}} {
+      to {
+  	     transform: scale(var(--percentDecimal{{id}}));
+      }
+  }
+</style>
+<div id="outer-circle-{{id}}">
+	<div class="loading-scanner-circle">
+    <div class='loaded-circle'></div>
+  </div>
+</div>

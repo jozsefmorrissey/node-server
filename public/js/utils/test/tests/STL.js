@@ -79,7 +79,7 @@ models['Shower Wheel Thingy!'] = (one,two) => {
   let supportCylRad = (13/32) * 2.54/2;
   let scr = supportCylRad;
   let notchThickness = .08;
-  let slices = 48;
+  let slices = 64;
   const cylinder = new CSG.cylinder({slices, start: [0,0,0], end: [0,height,0], radius: width/2});
   const glassCutter = new CSG.cube({radius: [width, height/2, glassThickness/2], center: [0,(height/2) - flapThickness, glassThickness/2]});
   const backNotchCutter = new CSG.cube({radius: [width/2, notchThickness, notchThickness]});
@@ -87,11 +87,11 @@ models['Shower Wheel Thingy!'] = (one,two) => {
   backNotchCutter.center({x:0, y:(height) - flapThickness, z: glassThickness})
   const wheelScrewCyl = new CSG.cylinder({slices, radius: screwThickness/2 + .01, start: [0,0,wheelScrewCenterZ], end: [0,height,wheelScrewCenterZ]});
   const topScrewResess = new CSG.cylinder({slices, radius: .8/2 + .1, start: [0,height - (7/32)*2.54/2, wheelScrewCenterZ], end: [0,height, wheelScrewCenterZ]});
-  const bottomScrewResess = new CSG.cylinder({slices, radius: .8/2 + .01, start: [0,(7/32)*2.54/2, wheelScrewCenterZ], end: [0,0, wheelScrewCenterZ]});
+  const bottomScrewResess = new CSG.cylinder({slices, radius: .8/2 + .01, start: [0,(9/32)*2.54/2, wheelScrewCenterZ], end: [0,0, wheelScrewCenterZ]});
   const backScrewCyl = new CSG.cylinder({slices, radius: 1.09/2 - .01, start: [0,gsc[1], 0], end: [0,gsc[1], gsc[2]]});
-  const backScrewHole = new CSG.cylinder({slices, radius: .4/2 + .01, start: [0,gsc[1], gsc[2] - 1], end: [0,gsc[1], 100]});
+  const backScrewHole = new CSG.cylinder({slices, radius: .28/2 + .01, start: [0,gsc[1], gsc[2] - 1], end: [0,gsc[1], 100]});
   const backScrewResess = new CSG.cylinder({slices, radius: .8/2, start: [0,gsc[1], width/2], end: [0,gsc[1], width/2 - (1/8) * 2.54]});
-  const backScrewWell = new CSG.cylinder({slices, radius: .3, start: [0,gsc[1], -1], end: [0,gsc[1], gsc[2] - .2]});
+  const backScrewWell = new CSG.cylinder({slices: 6, radius: .365, start: [0,gsc[1], -1], end: [0,gsc[1], gsc[2] - .2]});
   const wheelCavity = new CSG.cube({radius: [100, ((15/16)*2.54)/2 - .01, width/2 - sbt], center: [0, height/2, width/-2 + sbt/2]})
   const supportCylR = new CSG.cylinder({slices, radius: scr, start: [width/2-scr, .635, 0], end: [width/2-scr, 2.54 + .635, 0]}).subtract(glassCutter);
   const supportCylL = new CSG.cylinder({slices, radius: scr, start: [width/-2+scr, .635, 0], end: [width/-2+scr, 2.54 + .635, 0]}).subtract(glassCutter);
@@ -125,7 +125,7 @@ models['Shower Wheel Thingy!'] = (one,two) => {
   const dowel = backScrewCyl.intersect(backScrewHole.union(backScrewWell)).subtract(pilotHole);
   dowel.scale(.95);
   // body = body.subtract(crossSection);
-  return {body, dowel};
+  return body;//{body, dowel};
 }
 
 models['Rack'] =  (one)  => {
@@ -200,25 +200,26 @@ models['Sink Drain Plate'] =  (isTpuSeal)  => {
   const thickness = 2.54/4;
   const subThickness = 2.54/2;
   const subWallThickness = 2.54/4;
-  const solidBottomRadius = diameter / 2 - sealRingWidth;
-  let topPlate = new CSG.cylinder({start: [0,0,0], end: [0,thickness,0], radius: diameter/2 + overhang});
+  const solidBottomRadius = diameter / 2;// - sealRingWidth;
+  const slices = 64;
+  let topPlate = new CSG.cylinder({slices, start: [0,0,0], end: [0,thickness,0], radius: diameter/2 + overhang});
 
-  let bottomStructure = new CSG.cylinder({start: [0,0,0], end: [0,-subThickness,0], radius: solidBottomRadius});
+  let bottomStructure = new CSG.cylinder({slices, start: [0,0,0], end: [0,-subThickness,0], radius: solidBottomRadius});
   const stopperWidth = sealRingWidth/3;
-  let sealStopper = new CSG.cylinder({start: [0,-subThickness,0], end: [0,-subThickness + stopperWidth,0], radius: diameter / 2 - stopperWidth});
+  let sealStopper = new CSG.cylinder({slices, start: [0,-subThickness,0], end: [0,-subThickness + stopperWidth,0], radius: diameter / 2 - stopperWidth});
   sealStopper = sealStopper.subtract(bottomStructure);
   let sealRing = new CSG.cylinder({start: [0,-subThickness+stopperWidth,0], end: [0,-subThickness + sealRingWidth + stopperWidth,0], radius: diameter / 2});
   let sealRing2 = new CSG.cylinder({start: [0,-subThickness+stopperWidth,0], end: [0,-subThickness + sealRingWidth + stopperWidth,0], radius: diameter / 2 + 2.54/16});
   sealRing2 = sealRing2.subtract(bottomStructure);
   sealRing2.translate({x: 3.5*2.54, y:0,z:0});
   sealRing = sealRing.subtract(bottomStructure);
-  sealRing = sealRing.union(sealRing2);
+  sealRing.add(sealRing2);
   sealRing.setColor('black');
-  const bottomCutter = new CSG.cylinder({start: [0,0,0], end: [0,-subThickness,0], radius: solidBottomRadius - subWallThickness/2});
+  const bottomCutter = new CSG.cylinder({slices, start: [0,0,0], end: [0,-subThickness,0], radius: solidBottomRadius - subWallThickness/2});
   bottomStructure = bottomStructure.subtract(bottomCutter);
   const structureSupport = new CSG.cube({radius: [solidBottomRadius - .1, subThickness/2, subWallThickness/2], center: [0,-subThickness/2,0]});
 
-  let sideChannel = new CSG.cylinder({slices: 8, start: [diameter, 0,0], end: [-diameter, 0, 0], radius: 3*thickness/4});
+  let sideChannel = new CSG.cylinder({slices, start: [diameter, 0,0], end: [-diameter, 0, 0], radius: 3*thickness/4});
   const centerSupportRadius = 2*solidBottomRadius/3;
   const sideChannelCutter = new CSG.cube({radius: [centerSupportRadius, subThickness, centerSupportRadius], center: [0,0, 0]});
   sideChannel = sideChannel.subtract(sideChannelCutter);
@@ -230,9 +231,9 @@ models['Sink Drain Plate'] =  (isTpuSeal)  => {
   const handleLeg = new CSG.cylinder({slices: 4, start:[0,-subThickness,0], end: [0,subThickness+handleYoff,0], radius: legRadius});
   handleLeg.rotate({x:0, y:45,z:0});
   handleLeg.translate({x:handleWidth - legRadius,y:0,z:0});
-  handle = handle.union(handleLeg);
+  handle.add(handleLeg);
   handleLeg.translate({x:-2*handleWidth + 2*legRadius,y:0,z:0});
-  handle = handle.union(handleLeg);
+  handle.add(handleLeg);
   handle.rotate({x:0, y:-30,z:0});
 
   const explodedHandle = handle.clone();
@@ -240,19 +241,21 @@ models['Sink Drain Plate'] =  (isTpuSeal)  => {
   // topPlate = topPlate.subtract(handle);
 
   structureSupport.rotate({x:0,y:15,z:0});
-  bottomStructure = bottomStructure.union(structureSupport);
+  bottomStructure.add(structureSupport);
   structureSupport.rotate({x:0,y:90,z:0});
-  bottomStructure = bottomStructure.union(structureSupport);
+  bottomStructure.add(structureSupport);
   let model = topPlate;
-  model.polygons.concatInPlace(bottomStructure.polygons.concat(sealStopper.polygons));
-  sealStopper.translate({x:0,y:sealRingWidth+stopperWidth+.03,z:0});
-  for (let index = 0; index < 6; index ++) {
+  model.add(bottomStructure);
+  // model.add(sealStopper);
+  // sealStopper.translate({x:0,y:sealRingWidth+stopperWidth+.03,z:0});
+  // model.add(sealStopper);
+  for (let index = 0; index < 8; index ++) {
     model  = model.subtract(sideChannel);
-    sideChannel.rotate({x:0, y: 180/6, z:0});
+    sideChannel.rotate({x:0, y: 180/8, z:0});
   }
 
-  model = model.union(sealStopper);
-  model.polygons.concatInPlace(handle.polygons);
+  model.add(sealStopper);
+  // model.polygons.concatInPlace(handle.polygons);
   return isTpuSeal ? sealRing : model;
 }
 
@@ -649,6 +652,48 @@ models['chrismas tree leg'] = (guideHeight, guideReveal, bottomGap) => {
       .union(stopper2).union(stopper);//.subtract(cropper);
 }
 
+function crownSupportShape(rise, run, backOffset, edgeOffset, bracketWidth, bracketGerth) {
+  const points = [
+    {x: bracketGerth, y: backOffset + bracketGerth, z:0},
+    {x: bracketGerth, y: rise - edgeOffset-bracketGerth, z:0},
+    {x: (edgeOffset * rise) / run, y: rise - edgeOffset - bracketGerth, z:0},
+
+
+    {y: (edgeOffset * run) / rise, x: run - edgeOffset - bracketGerth, z:0},
+    {x: run-edgeOffset-bracketGerth, y:bracketGerth, z:0},
+    {x: backOffset + bracketGerth, y:bracketGerth, z:0}
+  ];
+  const poly = CSG.Polygon.fromVertices(points);
+  const csg = CSG.fromPolygon(poly, bracketWidth);
+  return csg;
+}
+
+const inch = v => v*2.54;
+models['crown support'] = (bracketGerth) => {
+  bracketGerth = inch(.25);
+  let crownSS = crownSupportShape(inch(3.5), inch(3.5), inch(.5), inch(.5), inch(1/2), 0);
+  const crownSSCutter = crownSupportShape(inch(3.5), inch(3.5), inch(.5), inch(.5), inch(1/2), inch(.25));
+  crownSSCutter.center(crownSS.center());
+  crownSS = crownSS.subtract(crownSSCutter);
+  const screwHole = new CSG.cylinder.step([{length: bracketGerth*2}]);
+
+  const fontVerts = crownSSCutter.polygons[0].vertices;
+  const backVerts = crownSSCutter.polygons[1].vertices.map(v => v.clone()).reverse();
+  [2,4,6].forEach(i => {
+    const poly = crownSSCutter.polygons[i];
+    const center = new CSG.Vector(poly.center().pos);
+    const translation = poly.plane.normal.times(bracketGerth*2);
+    const outerCenter = center.plus(translation);
+    const start = [center.x, center.y, center.z];
+    const end = [outerCenter.x, outerCenter.y, outerCenter.z];
+    const screwHole = new CSG.cylinder({start, end, radius: inch(3/32), slices: 36});
+    crownSS = crownSS.subtract(screwHole);
+  });
+
+  return crownSS;
+}
+
+
 const cnt = du.create.element('div');
 const controls = du.create.element('div', {style: 'float: left'});
 const display = du.create.element('div', {id: 'stl-three-d-model-cnt'});
@@ -679,6 +724,7 @@ const getModel = () => {
   // console.log(modelList.map(m => m.toDrawString(String.color.next())).join('\n\n'));
   model.scale(10);
   return model;
+  // return new CSG.text('Hello World');
 }
 
 viewer = new Viewer(new CSG(), 500, 500, 50);
@@ -710,7 +756,7 @@ const download = () => {
   addLinks(getSelected(), select.value);
 }
 
-select.value = 'chrismas tree leg';
+select.value = 'crown support';
 
 du.on.match('change', 'input', updateModel);
 

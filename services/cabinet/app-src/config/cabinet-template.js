@@ -1,5 +1,5 @@
 
-const cabinetsJson = require('../../public/json/cabinets.json');
+const cabinetsJson = require('../../public/json/cabinets/construction.json');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js')
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const PropertyConfig = require('./property/config');

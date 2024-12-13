@@ -21,7 +21,7 @@
   "config": {
     "get": "/config/get",
     "save": "/config/save",
-    "default": "/json/cabinets.json"
+    "default": "/json/cabinets/construction.json"
   },
   "costs": {
     "save": "/costs/save",

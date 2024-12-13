@@ -15,9 +15,10 @@ class InvalidSliceConfig extends InvalidOpeningConfig {};
 
 class CabinetOpeningCorrdinates extends KeyValue {
   constructor(cabinet, sectionProperties) {
-    // TODO need to remove openings from cabinet and use this class to list sectionProperies
+    // TODO need to remove openings from cabinet and use this class to list sectionProperties
     super({parentAttribute: 'parentAssembly'});
     const config = sectionProperties.config();
+    sectionProperties.parentAssembly(cabinet);
     let subassemblies = [];
     let normal = null;
     const instance = this;

@@ -4,6 +4,7 @@ const TASK_STATUS = require('./tasks/status');
 const {Parrelle, Sequential} = require('./tasks/basic.js');
 const RDTO = require('../shared/reconnect-transfer-object.js');
 
+const DID_NOT_COMPLETE = new Error('Task did not complete, can set completeOnFinish to true to avoid error');
 
 const maxWorkers = 20;
 class WebWorkerDeligator {
@@ -25,7 +26,7 @@ class WebWorkerDeligator {
           task.error(data.result);
         } else if (data.finished) {
           if (task.completeOnFinish) task.status(TASK_STATUS.SUCCESS);
-          else if (!task.finished()) task.status(TASK_STATUS.FAILED);
+          else if (!task.finished()) task.error(DID_NOT_COMPLETE);
           exicute();
         } else {
           const result = RDTO(data && data.result);
@@ -62,6 +63,7 @@ class WebWorkerDeligator {
         task.on.finished(() =>
             workers.push(worker) & primaryTasks[worker.id].remove(task) & exicute());
       task.tasks().forEach(registerTask(worker, true));
+      task.status(TASK_STATUS.PENDING);
     }
     else {
       taskWorkerMap[task.id] = {task, worker};
@@ -87,6 +89,7 @@ class WebWorkerDeligator {
             worker.postMessage(msg);
             registerTask(worker)(task);
             task.initiated = new Date().getTime();
+            task.status(TASK_STATUS.PROCESSING);
           }
         }
       }

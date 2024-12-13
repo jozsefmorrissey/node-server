@@ -60,6 +60,7 @@ function removeJointMaterial(map, assem, env, model, intersections) {
       return console.warn(`I dont think you should see this id: '${env.byId[mid].locationCode}' does not have a joinedModel`);
     if (mm.polygons.length > 0) {
       let intersection = model.intersect(mm);
+      if (intersection.polygons.length === 0) return;
       if (!(mm instanceof CSG)) mm = CSG.fromPolygons(mm.polygons, true);
       if (midObj.joint && midObj.joint.full.female) {
         intersection = fullLengthModel(intersection || model.intersect(mm));
@@ -72,9 +73,6 @@ function removeJointMaterial(map, assem, env, model, intersections) {
   try {
     if (model.polygons.length > 0) {
       const reduced = model.subtract(malesModel);
-      if (demCheck(model, reduced) !== true) {
-        console.warn(`error?: ${demCheck(model,reduced)}`);
-      }
       env.modelInfo.joined[id] = reduced;
     }
   } catch (e) {
@@ -140,14 +138,9 @@ function applyCutters(assem, cutters, env, group) {
       }
       env.byId[jointId] = jointObj;
       env.modelInfo.cut[cutterId] = cutter;
-      // env.jointMap[jointId] = {male: [cutterId], female: [assem.id]};
-      // env.jointMap.female[assem.id] ||= [];
-      // env.jointMap.female[assem.id].push(jointId);
       env.modelInfo.intersection[id] ||= {};
       try {
         if (model.polygons.length > 0) {
-          // env.modelInfo.intersection[id] ||= {};
-          // env.modelInfo.intersection[id][cutterId] = model.intersect(cutter);
           model = model.subtract(cutter);
         }
       } catch (e) {
@@ -305,7 +298,7 @@ function Apply(payload, environment, taskId, intersections) {
   let start = new Date().getTime();
   const assemblyIds = payload.assemblies.concat(environment.generated);
   sliceAtOpening(assemblyIds, env, 'model');
-  applyMaleJointExtensions(payload, environment);
+  if (environment.expandParts) applyMaleJointExtensions(payload, environment);
   let map = {intersection: env.modelInfo.intersection, joined: env.modelInfo.joined};
   let proccessedIndex = 0;
   for (let index = 0; index < assemblyIds.length; index++) {
@@ -324,7 +317,7 @@ function Apply(payload, environment, taskId, intersections) {
     runMfcFunc('joined', assem, env);
   }
 
-  exploadedTranslation(assemblyIds, env);
+  return env.modelInfo.joined;
 }
 
 module.exports = Apply;

@@ -336,6 +336,9 @@ CSG.prototype = {
     a.build(b.allPolygons());
     return CSG.fromPolygons(a.allPolygons());
   },
+  add: function(csg) {
+    this.polygons.concatInPlace(csg.clone().polygons);
+  },
   islands: function() {
     const islands = [];
     let allVerts = [];
@@ -606,7 +609,8 @@ CSG.combine = function(csgs) {
 CSG.concat = function(csgs) {
   const all = new CSG();
   for (let index = 0; index < csgs.length; index++) {
-    all.polygons.concatInPlace(csgs[index].polygons);
+    if (csgs[index] instanceof CSG)
+      all.polygons.concatInPlace(csgs[index].polygons);
   }
   return all;
 }
@@ -1430,7 +1434,7 @@ CSG.Polygon.fromVertices = (verts) => {
   const a = new CSG.Vector(verts[0]);
   const b = new CSG.Vector(verts[1]);
   const c = new CSG.Vector(verts[2]);
-  const norm = a.minus(b).cross(b.minus(c));
+  const norm = a.minus(b).cross(b.minus(c)).unit();
   const vertices = verts.map(v => new CSG.Vertex(v, norm));
   const poly = new CSG.Polygon(vertices);
 
@@ -1493,6 +1497,36 @@ CSG.Polygon.Enclosed = function (verts, width, color) {
   return model;//model.union(vect);
 }
 
+CSG.text = function (text, depth) {
+  depth ||= 10;
+  const textMap = require('../../../json/alpha-numeric-point-maps/default.json');
+  let center = new CSG.Vector(0,0,0);
+  const letters = [];
+  for (let index = 0; index < text.length; index++) {
+    let csg = new CSG();
+    if (text[index] === ' ') {
+      center.x += letters[letters.length - 1].demensions().x + 7.5;
+    } else {
+      const pointMap = textMap[text[index]];
+      if (pointMap) {
+        for (let pi = 0; pi < pointMap.length; pi++) {
+          const center = [pointMap[pi].x, pointMap[pi].y, 0];
+          const cube = new CSG.cube({center, demensions: [1,1,depth]});
+          // csg.polygons.concatInPlace(cube.polygons);
+          csg = csg.union(cube);
+        }
+        csg.center(center);
+        csg.translate({x:0,z:0,y:center.y-csg.demensions().y/2})
+        letters.push(csg);
+        center.x += csg.demensions().x / 2 + 15;
+      }
+    }
+  }
+  const csg = new CSG();
+  csg.polygons = letters.map(l => l.polygons).concatElements();
+  csg.rotate({x:180});
+  return csg;
+}
 // # class Node
 
 // Holds a node in a BSP tree. A BSP tree is built from a collection of polygons

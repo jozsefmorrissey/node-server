@@ -4,7 +4,7 @@ const Select = require('../../../../public/js/utils/input/styles/select.js');
 const Radio = require('../../../../public/js/utils/input/styles/radio.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 const CabinetLayouts = require('../config/cabinet-layouts');
-const Objects = require('../../public/json/cabinets.json');
+const Objects = require('../../public/json/cabinets/construction.json');
 const SimpleModel = require('../objects/simple/simple.js');
 
 const TYPE_DEF_REG = /([A-Z_0-9]{1,}?)-(.*$)/;

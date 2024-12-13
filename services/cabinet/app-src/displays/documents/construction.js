@@ -4,7 +4,7 @@ const Jobs = require('../../../web-worker/external/jobs.js');
 const DocHtml = require('./html');
 const du = require('../../../../../public/js/utils/dom-utils');
 
-const taskCompletionTemplate = new $t('documents/task-completion');
+const taskCompletionTemplate = new $t('loading/bars');
 
 const recusiveAddTask = (list, task) => task.tasks  ?
   task.tasks().forEach(t => recusiveAddTask(list, t)) :

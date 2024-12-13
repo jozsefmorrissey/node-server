@@ -77,7 +77,7 @@ class CabinetDisplay {
     const display = (value) => new Measurement(value).display();
     const getBody = (cabinet, $index) => {
       Global.target(cabinet);
-      if (expandList.activeKey() === $index) Canvas.render.cabinet();
+      Canvas.render();
       if (cabinet instanceof SimpleModel) {
         return CabinetDisplay.simpleBodyTemplate.render({});
       } else {
@@ -223,10 +223,29 @@ class CabinetDisplay {
       const decimal = measurement.decimal();
       const name = elem.name;
       Global.cabinet().value(name, decimal);
+    });
+
+    Global.on.processing.cabinet((job, cabinet) => {
+      const task = job.task();
+      const expandHeader = du.find.up('.expand-header', du.find(`[cabinet-id='${cabinet.id()}']`));
+      const loadingCnt = du.find.down('.circle-loading-cnt', expandHeader);
+      const scope = {progress: task.progress, time: task.time,
+        size: '20px', color: '#f09a05', id: String.random()
+      }
+      loadingCnt.innerHTML = CabinetDisplay.loadingTemplate.render(scope);
+      (() => du.find.down('.time', loadingCnt).innerText = task.time())
+          .periodic(100, () => task.progress() === 100);
+      task.on.change(t => {
+        document.documentElement.style.setProperty('--percentDecimal'+scope.id, task.progress()/100);
+        document.documentElement.style.setProperty('--percent'+scope.id, task.progress() + '%');
+        loadingCnt.hidden = task.progress() === 100;
+        du.find.down('.progress', loadingCnt).innerText = Math.floor(task.progress());
+      })
     })
   }
 }
 
+CabinetDisplay.loadingTemplate = new $t('loading/circle');
 CabinetDisplay.simpleBodyTemplate = new $t('cabinet/simple');
 CabinetDisplay.bodyTemplate = new $t('cabinet/body');
 CabinetDisplay.headTemplate = new $t('cabinet/head');

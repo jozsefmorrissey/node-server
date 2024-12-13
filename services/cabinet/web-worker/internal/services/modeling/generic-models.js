@@ -82,7 +82,8 @@ to.Toilet = (simpleModelDto) => {
     ]
   });
 
-  const model = bowl.subtract(bowlCutter).union(pedistal).union(tank);
+  const model = bowl.subtract(bowlCutter);
+  model.polygons.concatInPlace(pedistal.polygons.concat(tank.polygons));
   const modCenter = model.center();
   model.center({x:0,y:0,z:0});
   const rotation = simpleModelDto.rotation;

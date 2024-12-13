@@ -11,8 +11,10 @@ const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const Request = require('../../../../public/js/utils/request.js');
 const EPNTS = require('../../generated/EPNTS.js');
 const CabinetTemplate = require('./cabinet-template');
-const Cabinets = require('../../public/json/cabinets.json');
+const DisplayConfig = require('../../public/json/cabinets/construction.json');
+const ConstructionConfig = require('../../public/json/cabinets/construction.json');
 const CabinetLayouts = require('./cabinet-layouts');
+const CabinetOpeningCorrdinates = require('../services/cabinet-opening-coordinates.js');
 
 const configs = {};
 class CabinetConfig {
@@ -24,6 +26,17 @@ class CabinetConfig {
 
     this.valid = (type, id) => (!id ?
                   cabinets[type] : cabinetKeys[type][id]) !== undefined;
+
+    this.equivalent = (cabinet) => {
+      if (!(cabinet instanceof Cabinet)) return cabinet;
+      const type = cabinet.partName();
+      if (cabinetList[type] === undefined) return cabinet;
+      const group = cabinet.group();
+      const equivalent = this.get(group, type, null, cabinet.name());
+      equivalent.openings = cabinet.sectionProperties()
+                            .map(sp => new CabinetOpeningCorrdinates(equivalent, sp.clone()));
+      return equivalent;
+    }
 
     this.get = (group, type, layout, name) => {
       const assem = cabinets[type]._TYPE === 'CabinetTemplate' ?
@@ -56,7 +69,8 @@ class CabinetConfig {
 
 
 
-let currConfig = new CabinetConfig(Cabinets, 'default');
+let displayConfig = new CabinetConfig(DisplayConfig, 'display');
+let currConfig = new CabinetConfig(ConstructionConfig, 'construction');
 const updateEvent = new CustomEvent('update');
 
 module.exports = {
@@ -66,6 +80,7 @@ module.exports = {
       updateEvent.trigger();
     }
   },
+  display: (assembly) => displayConfig.equivalent(assembly),
   configList: () => Object.keys(configs),
   valid: (...args) => currConfig.valid(...args),
   onUpdate: (func) => updateEvent.on(func),

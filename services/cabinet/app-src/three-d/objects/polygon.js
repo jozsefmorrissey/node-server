@@ -1036,6 +1036,7 @@ class Polygon3D {
       return funcs;
     }
 
+    const minParimeter = (paths) => paths[paths.length - 1].complete ? paths[paths.length - 1].parimeter : Number.MAX_SAFE_INTEGER;
     const parimeterLength = (lines) =>
       lines.sum(l => l.length()) + lines[0][0].distance(lines[lines.length - 1][1]);
     function followPaths(line, map) {
@@ -1043,10 +1044,12 @@ class Polygon3D {
       if (paths.length === 0) return [];
       let visited = HashMap([line]);
       while (true) {
-        let min = paths[paths.length - 1].complete ? paths[paths.length - 1].parimeter : Number.MAX_SAFE_INTEGER;
+        let min = minParimeter(paths);
         let path = paths[0];
         if (!path.parimeter) path.parimeter = parimeterLength(path);
-        while (path.deadEnd || (path.complete && paths.length > 1) || path.parimeter > min) {
+        while (path.deadEnd || path.parimeter > min || (path.complete && paths.length > 1)) {
+          if (paths.length === 1)
+            throw new Error('This shhould not happen!!!');
           paths.splice(0, 1);
           path = paths[0];
         }
@@ -1068,10 +1071,11 @@ class Polygon3D {
             });
           }
           paths.splice(0, 1);
-          const split = paths.filterSplit(p => p.complete ? 'complete' : 'not');
-          (split.complete || []).sortByAttr('parimeter', true);
-          (split.not || []).sortByAttr('parimeter');
-          paths.copy(split.not.concat((split.complete || [])));
+          const split = paths.filterSplit(p => p.deadEnd ? 'deadEnd' : (p.complete ? 'complete' : 'not'));
+          split.not ||= []; split.complete ||= [];
+          split.complete.sortByAttr('parimeter', true);
+          split.not.sortByAttr('parimeter');
+          paths.copy(split.not.concat(split.complete));
           console.log();
         }
       }
@@ -1081,7 +1085,7 @@ class Polygon3D {
     this.regular = () => {
       if (!this.irregular.is()) return [this.copy()];
 
-      const sliced = Line3D.sliceAll(this.lines(), false)
+      const sliced = Line3D.sliceAll(this.lines().map(l => l.clone()), false)
         .filter(l => this.isWithin(l[0]) && this.isWithin(l[1]) && this.isWithin(l.midpoint()));
       const map = new ToleranceMap({'0.x': .001,
                                       '0.y': .001,
@@ -1101,20 +1105,15 @@ class Polygon3D {
       return polys;
     }
 
-    this.triangles = () => {
-      const regulars = this.regular();
-      const triangles = [];
-      const normal = this.normal();
-      for (let index = 0; index < regulars.length; index++) {
-        const vertices = regulars[index].vertices();
-        while (vertices.length > 2) {
-          let triangle = new Polygon3D([vertices[0],vertices[1],vertices[2]]);
-          if (!triangle.normal().sameDirection(normal)) triangle = triangle.reverse();
-          triangles.push(triangle);
-          vertices.splice(1,1);
-        }
-      }
-      return triangles;
+    this.triangles = () => Polygon3D.triangles(this.regular());
+
+    this.shatter = (count) => {
+      if (count === 0) return [this];
+      count ||= 1;
+      let lines = this.lines().map(l => l.clone());
+      lines = lines.map(l => [new Line3D(l[0], l.midpoint()), new Line3D(l.midpoint(), l[1])]).concatElements();
+      let verts = lines.map(l => l[1]);
+      return Polygon3D.triangles([new Polygon3D(verts)]).map(p => p.shatter(count-1)).concatElements();
     }
 
     this.area = () => {
@@ -1206,6 +1205,8 @@ class Polygon3D {
       return `${colorString}[${str.substring(1)}]\n${colorString}${normalStr}\n${vertexStr}`;
 
     }
+
+    this.hash = () => this.lines().map(l => l.hash()).sum();
 
     this.addVertices(initialVertices);
   }
@@ -1793,6 +1794,21 @@ Polygon3D.toCSG = (polygons) => {
     csg.polygons.push(new CSG.Polygon(vertices));
   });
   return csg;
+}
+
+Polygon3D.triangles = (polys) => {
+  const triangles = [];
+  const normal = polys[0].normal();
+  for (let index = 0; index < polys.length; index++) {
+    const vertices = polys[index].vertices();
+    while (vertices.length > 2) {
+      let triangle = new Polygon3D([vertices[0],vertices[1],vertices[2]]);
+      if (!triangle.normal().sameDirection(normal)) triangle = triangle.reverse();
+      triangles.push(triangle);
+      vertices.splice(1,1);
+    }
+  }
+  return triangles;
 }
 
 // TODO: This could be simpler using Plane.intersections...

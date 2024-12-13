@@ -10,7 +10,7 @@ const Dependency = require('../dependency');
 const AssemblyResolver = require('./resolvers/assembly');
 const ModelingCollections = require('modeling-collections');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
-const assemblyBuildConfig = require('../../../public/json/cabinets.json');
+const assemblyBuildConfig = require('../../../public/json/cabinets/construction.json');
 const JointSettings = require('../../../web-worker/shared/settings.js');
 const Utils = require('../../utils')
 // const ToModel = require('../../../web-worker/services/to-model.js');
@@ -127,8 +127,7 @@ class Assembly extends KeyValue {
     this.userDefinedParts = () => this.allAssemblies().filter(a => !a.locationCode().match(nonUserDefinedPartReg));
 
     const changeEvent = new CustomEvent('change');
-    this.on.change = changeEvent.on;
-    this.trigger.change = changeEvent.trigger;
+    CustomEvent.all(this, 'change', 'processing');
     let lastHash;
     function hash() {
       const valueObj = instance.value.values;
@@ -654,7 +653,6 @@ Assembly.fromJson = (assemblyJson) => {
     assembly.part(false);
   }
   Object.values(assemblyJson.subassemblies).forEach((json) => {
-    json.constructed = assembly.json;
     json.parent = assembly;
     assembly.addSubAssembly(Object.fromJson(json));
   });

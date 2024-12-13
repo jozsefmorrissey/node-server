@@ -141,7 +141,7 @@ class Line3D {
     this.toNegitiveString = () => `${new String(this[1])} => ${new String(this[0])}`;
     this.toDrawString = (color, accuracy) => {
       let brackets
-      accuracy ||= .01;
+      if (accuracy === undefined) accuracy = .01;
       if (this.isLine()) brackets = ['(', ')'];
       else if (this.isSegment()) brackets = ['[', ']'];
       else if (this.isDirectional.anti()) brackets = ['(', ']'];
@@ -305,9 +305,12 @@ class Line3D {
       const l12d = l1.to2D(xAttr, yAttr);
       const l22d = l2.to2D(xAttr, yAttr);
       let int2d = l12d.findIntersection(l22d);
-      if (int2d) {
+      if (int2d && l12d.withinSegmentBounds(l22d)) {
         if (int2d === Number.POSITIVE_INFINITY) {
-          int2d = l1.midpoint().to2D(xAttr, yAttr);
+          if (l12d.combine(l22d).length() < l12d.length() + l22d.length() - .0001)
+            int2d = (l12d.length() < l22d.length() ? l12d.midpoint() : l22d.midpoint());
+          else
+            int2d = Vertex3D.center(l1[0],l1[1],l2[0],l2[1]).to2D(xAttr, yAttr);
         }
         int[xAttr] = int2d.x;
         int[yAttr] = int2d.y;
@@ -350,6 +353,7 @@ class Line3D {
     this.intersection.overlap.xz = overlapIntersection(this, 'y', 'x', 'z');
 
     this.x = (x) => {
+      x ||= 0;
       const vec = this.vector().unit();
       const t = (x - this[0].x)/vec.i();
       x = this[0].x + vec.i()*t;
@@ -359,6 +363,7 @@ class Line3D {
       return vertex.finite() ? {vertex, t} : null;
     }
     this.y = (y) => {
+      y ||= 0;
       const vec = this.vector().unit();
       const t = (y - this[0].y)/vec.j();
       const x = this[0].x + vec.i()*t;
@@ -368,6 +373,7 @@ class Line3D {
       return vertex.finite() ? {vertex, t} : null;
     }
     this.z = (z) => {
+      z ||= 0;
       const vec = this.vector().unit();
       const t = (z - this[0].z)/vec.k();
       const x = this[0].x + vec.i()*t;
@@ -927,10 +933,74 @@ Line3D.distanceSort = (target, segment) => (l1,l2) => {
   return ds1 - ds2;
 }
 
+
+Line3D.parimeterSort = (center) => {
+  const distObj = (line) => {
+    const hash = line.hash();
+    if (distObj[hash]) return distObj[hash];
+    const furthest = [line[0], line[1]].max(v => v.distance(center));
+    const connection = new Line3D(furthest, center);
+    const dot = Math.abs(connection.vector().unit().dot(line.vector().unit()));
+    distObj[hash] = {furthest, dist: furthest.distance(center), dot}
+    return distObj[hash];
+  }
+  return (l1, l2) => {
+    const distObj1 = distObj(l1);
+    const distObj2 = distObj(l2);
+    if (distObj1.dist > distObj2.dist + .0001) return 1;
+    if (distObj2.dist > distObj1.dist + .0001) return 1;
+    return distObj1.dot - distObj2.dot;
+  }
+}
+
+Line3D.removeIntersecting = (lines) => {
+  const start = new Date().getTime();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    for (let j = i + 1; j < lines.length; j++) {
+      const slicer = lines[j];
+      if (!line.isParrelle(slicer)) {
+        const int = line.intersection.segment(slicer, true);
+        if (int) {
+          if (line[0].distance(int) > .0001 && line[1].distance(int) > .0001)
+            lines.splice(j--,1);
+        }
+      }
+    }
+  }
+}
+
+
+Line3D.intersections = (lines, segment, tolerance) => {
+  if (segment !== false) segment = true;
+  tolerance ||= .001;
+  const tolmap = new ToleranceMap({'x': tolerance,
+                                  'y': tolerance,
+                                  'z': tolerance});
+
+  const start = new Date().getTime();
+  const intersections = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    for (let j = i; j < lines.length; j++) {
+      const slicer = lines[j];
+      if (!line.isParrelle(slicer)) {
+        const int = segment ? line.intersection.segment(slicer, true) : line.intersection(slicer);
+        if (int && tolmap.matches(int).length === 0) {
+          intersections.push(int);
+          tolmap.add(int);
+        }
+      }
+    }
+  }
+  console.log('Time:', new Date().getTime() - start);
+  return intersections;
+}
+
 Line3D.slice = (line, lines, segment) => {
   if (segment !== false) segment = true;
   const notParrelle = lines.filter(l => !l.isParrelle(line));
-  const intersections = [];
+  const intersections = [line[0]];
   for (let index = 0; index < notParrelle.length; index++) {
     const slicer = notParrelle[index];
     const int = segment ? line.intersection.segment(slicer, true) : line.intersection(slicer);
@@ -938,7 +1008,8 @@ Line3D.slice = (line, lines, segment) => {
       intersections.push(int);
     }
   }
-  if (intersections.length === 1) return null;
+  if (intersections.length === 0) return null;
+  intersections.push(line[1]);
   const furthest = intersections.max(l => l.distance(line[0]));
   intersections.sort(Line3D.distanceSort(furthest));
   const sliced = intersections.map((int, i) => i < intersections.length - 1 &&
@@ -946,25 +1017,6 @@ Line3D.slice = (line, lines, segment) => {
                                           .slice(0, intersections.length - 1);
   return sliced.filter(l=>!l.isPoint());
 }
-
-// Line3D.slice = (line, lines, segment) => {
-//   const notParrelle = lines.filter(l => !l.isParrelle(line));
-//   const intersections = [];
-//   for (let index = 0; index < notParrelle.length; index++) {
-//     const slicer = notParrelle[index].clone();
-//     slicer.length(Number.MAX_SAFE_INTEGER / 100);
-//     const int = slicer.intersection.segment(line, false);
-//     if (int) {
-//       intersections.push(int);
-//     }
-//   }
-//   if (intersections.length === 1) return null;
-//   intersections.sort(Line3D.distanceSort(line[0]));
-//   const sliced = intersections.map((int, i) => i < intersections.length - 1 &&
-//                                           new Line3D(int, intersections[i+1]))
-//                                           .slice(0, intersections.length - 1);
-//   return sliced.filter(l=>!l.isPoint());
-// }
 
 Line3D.sliceAll = (lines, segment) => {
   if (segment !== false) segment = true;

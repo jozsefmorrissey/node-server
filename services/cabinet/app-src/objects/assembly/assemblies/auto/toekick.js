@@ -104,7 +104,7 @@ class AutoToekick extends Assembly {
       !(this.leftShow() || this.leftEndStyle());
 
     this.hash = () => {
-      return `${this.leftEndStyle()}:${this.leftEndStyle()}:${this.leftShow()}:${this.rightShow()}`
+      return `${this.leftEndStyle()}:${this.leftEndStyle()}:${this.leftShow()}:${this.rightShow()}`.hash();
     }
 
 

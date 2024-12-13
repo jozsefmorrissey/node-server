@@ -71,16 +71,15 @@ du.on.match('change:keyup', '#axis-controls-3d input', (elem) => {
 let viewer;
 let viewerSize = '60vh';
 const viewerSelector = '#three-d-display';
-function getViewer (model) {
+function getViewer () {
   if (viewer) return viewer;
   const canvas = du.find(viewerSelector);
   if (canvas) {
     const size = du.convertCssUnit(viewerSize);
-    if (model === undefined) return undefined;
-    viewer = new Viewer(model, size, size, 50);
+    viewer = new Viewer(new CSG.cube(), size, size, 50);
     addViewer(viewer, viewerSelector);
     const orientSelector = `${viewerSelector} .orientation-controls`;
-    const orientArrows = OrientationArrows.forCSG(orientSelector, viewer, model);
+    const orientArrows = OrientationArrows.forCSG(orientSelector, viewer, () => renderModel);
   }
   return viewer;
 }
@@ -202,16 +201,19 @@ function parse(lines, sc) {
   }, 800);
 }
 
+
+let renderModel;
 const display = (m) => {
   m ||= model || new CSG();
-  let renderModel = m.clone();
+  renderModel = m.clone();
   const stls = Object.values(STLs);
   renderModel.polygons.concatInPlace(stls.map(
                   stl=>CSG.fromSTL(stl).scale(scale).polygons).concatElements());
   // renderModel = renderModel.peel({x:0,y:1,z:0}, 4);
   const axisModel = axis.include ? CSG.Axis(axis.length, axis.radius()) : new CSG();
-  getViewer(renderModel.union(axisModel));
-  viewer.mesh = renderModel.toMesh();
+  getViewer(renderModel);
+  axisModel.polygons.concatInPlace(renderModel.polygons);
+  viewer.mesh = axisModel.toMesh();
   viewer.gl.ondraw();
 }
 

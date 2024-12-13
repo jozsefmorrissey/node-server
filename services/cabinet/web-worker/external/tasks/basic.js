@@ -5,11 +5,14 @@ class Task {
   constructor(initailStatus) {
     let _status;
     let _error = null;
-    CustomEvent.all(this, ...Object.values(STATUS).map(s => s.toString()).concat(['finished', 'message', 'change']));
+    CustomEvent.all(this, ...Object.values(STATUS).map(s => s.toString()).concat(['finished', 'message', 'change','change.status']));
     Object.getSet(this, 'id');
+    let start, end;
     this.id = String.random();
+    this.time = () => !start ? 0 : Math.roundTo(((end || new Date().getTime()) - start) / 1000, .1);
     this.process = () => this.constructor.name.replace(/(^.*?)Task$/, '$1').toLowerCase();
     this.finished = () => _status === STATUS.SUCCESS || _status === STATUS.FAILED;
+    this.progress = () => this.status() === 'success' ? 100 : 0;
     this.status = (status, data) => {
       if (this.remainingModels && this.remainingModels().length === 17 && status === 'success' && _status === 'pending') {
         console.log(this.id, status, _status);
@@ -21,6 +24,7 @@ class Task {
         _status = status;
         data ||= _status === STATUS.FAILED ? _error : this;
         this.trigger[_status](data, this);
+        this.trigger.change.status(this);
         this.trigger.change(this);
       }
       return _status;
@@ -37,6 +41,9 @@ class Task {
     this.status(initailStatus || STATUS.CREATED);
     this.on.success(this.trigger.finished);
     this.on.failed(this.trigger.finished);
+    this.on.exicute(() =>
+      start = new Date().getTime());
+    this.on.finished(() => end = new Date().getTime());
   }
 }
 
@@ -49,7 +56,19 @@ class InformationAlreadyAvailible extends Task {
   }
 }
 
-class ParrelleTask extends Task {
+class Tasks extends Task {
+  constructor(...args) {
+    super(...args);
+    this.progress = () => {
+      const tasks = this.tasks();
+      return tasks.sum(t => t.progress()/tasks.length);
+    }
+    this.on.exicute(() => this.tasks().forEach(t => t.trigger.exicute()));
+    this.on.pending(() => this.tasks().forEach(t => t.trigger.pending()));
+  }
+}
+
+class ParrelleTask extends Tasks {
   constructor(...tasks) {
     super();
     const completed = tasks.map(t => null);
@@ -79,7 +98,7 @@ class ParrelleTask extends Task {
   }
 }
 
-class SequentialTask extends Task {
+class SequentialTask extends Tasks {
   constructor(environment, ...tasks) {
     super();
     environment ||= () => {};
@@ -115,7 +134,7 @@ class SequentialTask extends Task {
   }
 }
 
-class SequentialSeperateTask extends Task {
+class SequentialSeperateTask extends Tasks {
   constructor(...tasks) {
     super();
     const instance = this;

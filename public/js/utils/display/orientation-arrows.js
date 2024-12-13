@@ -52,9 +52,6 @@ OrientationArrows.forCSG = (parentSelector, viewerOgetter, modelOgetter) => {
   function centerOnObj(x,y,z, viewId) {
     const model = getModel();
     const center = model ? model.center() : {x:0, y:0, z:0};
-    center.x += 200 * y;
-    center.y += -200 * x;
-    center.z += 100;
     const rotation = {x: x*90, y: y*90, z: z*90};
 
     lastViewId = viewId;

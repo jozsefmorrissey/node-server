@@ -14,7 +14,7 @@ const within = Tolerance.within(tol);
 
 class Layer {
   constructor(polygonOs) {
-    let list = polygonOs instanceof Polygon3D ? [polygonOs] : polygonOs;
+    let list = polygonOs instanceof Polygon3D ? [polygonOs] : polygonOs || [];
     this.polygons = () => list.map(p => p.copy());
     this.vertices = () => {
       const verts = [];
@@ -22,23 +22,24 @@ class Layer {
       return verts;
     }
     list = this.polygons();
-    const primary = list[0];
+    const primary = () => list[0];
 
     this.add = (poly) => {
-      if (polygon.area() > .01) {
+      if (poly.area() < .01) {
         console.warn.logarithmic('Polygon will not be added\n\tArea < .1mm');
         return null;
       }
+
       const norm = this.normal();
-      poly = norm.equals(poly.normal()) ? poly : poly.reverse();
-      if (poly.normal().equals(norm)) {
+      if (norm) poly = norm.equals(poly.normal()) ? poly : poly.reverse();
+      if (list.length === 0 || poly.normal().equals(norm)) {
         list.push(poly);
         return true;
       }
       return false;
     }
 
-    this.parimeter = () => new Parimeter3D(this.lines(), this.normal());
+    this.parimeter = () => new Parimeter3D(this.lines.all(), this.normal());
     this.combined = () => new Layer(this.parimeter());
 
     this.addAll = (polys) => {
@@ -63,10 +64,10 @@ class Layer {
       return poly;
     }
 
-    this.normal = () => primary.normal();
-    this.toPlane = () => primary.toPlane();
-    this.parrelle = (other) => primary.parrelle(other);
-    this.withinPlane = (other) => primary.withinPlane(other);
+    this.normal = () => primary() && primary().normal();
+    this.toPlane = () => primary() && primary().toPlane();
+    this.parrelle = (other) => primary() && primary().parrelle(other);
+    this.withinPlane = (other) => primary() && primary().withinPlane(other);
 
     this.rotate = (rotations, center) => {
       for (let index = 0; index < list.length; index++) {
@@ -104,6 +105,12 @@ class Layer {
     this.translate = (vector) => {
       const polys = this.polygons().map(p => p.translate(vector));
       return new Layer(polys);
+    }
+    this.shatter = () => {
+      const layer = new Layer([]);
+      const polys = this.polygons().map(p => p.shatter(Math.floor(Math.random()*3))).concatElements();
+      layer.addAll(polys);
+      return layer;
     }
 
     this.copy = () => new Layer(list);
@@ -171,8 +178,39 @@ class Layer {
       return lines;
     }
 
+    const overlapsAnother = (t) => {
+      const tolmap = new ToleranceMap({'(x,y,z)().vertex.(x,y,z)': .1, 'vector().positiveUnit().(i,j,k)': .01});
+      let slicedLines = list.map(p => p.lines().map(l => l.clone())).concatElements();
+      // slicedLines = Line3D.sliceAll(slicedLines);
+      tolmap.addAll(slicedLines);
+
+      const lines = [];
+      const groups = tolmap.group();
+      for(let gi = 0; gi < groups.length; gi++) {
+        const group = groups[gi];
+        const overlaps = [];
+        for (let i = 0; i < group.length; i++) {
+          const target = group[i];
+          for (let j = i+1; j < group.length; j++) {
+            const other = group[j];
+            const ints = target.intersection.overlap(other);
+            if (ints) {
+              if (!ints.find(v => target[0].equals(v) || target[1].equals(v)) &&
+                  ints.find(v => target.within(v) === true) &&
+                  ints.find(v => other.within(v) === true)) {
+                overlaps[i] = overlaps[j] = true;
+              }
+            }
+          }
+        }
+        lines.concatInPlace(group.filter((g,i) => !overlaps[i]));
+      }
+      return lines;
+    }
+
     this.lines = (tolerance) => {
-      let t = tolerance || tol;
+      let t = tolerance || .00001;
+      // return overlapsAnother(t);
       let lines = onlyDefinedOnce(t);
       // removeLinesThatDoNotShareAVertex(lines, t);
       Line3D.combine(lines);
@@ -181,6 +219,7 @@ class Layer {
       Line3D.combine(lines);
       return lines;
     }
+    this.lines.all = () => this.polygons().map(p => p.lines()).concatElements();
 
     this.to2D = (x, y) => {
       const lines = this.lines();
@@ -191,7 +230,7 @@ class Layer {
 
     this.toDrawString = (color, includeNormal) => {
       color ||= 'blue';
-      let str = primary.toDrawString(color, includeNormal);
+      let str = primary() ? primary().toDrawString(color, includeNormal) : '';
       list.forEach(p => str += `\n\t${p.toDrawString(color)}`);
       return str;
     }
@@ -224,9 +263,9 @@ class Layer {
 }
 
 Layer.fromPolygons = (polys) => {
-  const tolmap = new ToleranceMap({'normal().positiveUnit().i()': tol,
-                        'normal().positiveUnit().j()': tol,
-                        'normal().positiveUnit().k()': tol,
+  const tolmap = new ToleranceMap({'normal().i()': tol,
+                        'normal().j()': tol,
+                        'normal().k()': tol,
                         'toPlane().axisIntercepts().x': tol,
                         'toPlane().axisIntercepts().y': tol,
                         'toPlane().axisIntercepts().z': tol});

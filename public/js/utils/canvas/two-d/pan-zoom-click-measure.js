@@ -126,10 +126,12 @@ class PanZoomClickMeasure extends PanZoomClick {
         lastClicked = null;
       } else {
         const line = new LineMeasurement2d(Line2d.between(lastTwo[0], lastTwo[1]));
-        const angle = new AngleMeasurement2d(...lastTwo);
+        if (lastTwo.filter(o => o instanceof Line2d).length === 2) {
+          const angle = new AngleMeasurement2d(...lastTwo);
+          const mod45 = Math.modTolerance(angle, 0, 45, .001);
+          if (!mod45) measurementLines.push(angle);
+        }
         if (line.line().length() > .0001) measurementLines.push(line);
-        const mod45 = Math.modTolerance(270, 0, 45, .001);
-        if (!mod45) measurementLines.push(angle);
         lastClicked = null;
       }
     }

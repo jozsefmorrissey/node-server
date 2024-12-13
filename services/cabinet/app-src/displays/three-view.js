@@ -12,12 +12,12 @@ const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/obje
 const PanZoomClickMeasure = require('../../../../public/js/utils/canvas/two-d/pan-zoom-click-measure.js');
 const Global = require('../services/global.js');
 const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
-const FunctionCache = require('../../../../public/js/utils/services/function-cache.js');
 const HoverMap2d = require('../../../../public/js/utils/canvas/two-d/hover-map.js');
 const construction = require('./documents/construction.js');
 const Jobs = require('../../web-worker/external/jobs.js');
+const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+const Assembly = require('../objects/assembly/assembly');
 
-FunctionCache.on('three-view', 1000);
 function csgVert(pos, normal) {
   return new CSG.Vertex(pos, normal);
 }
@@ -72,24 +72,29 @@ class ThreeView extends Lookup {
       infoObj.target = target;
       threeViewObj = infoObj;
     };
-    let lastHash;
+
+    function cabinetThreeView(cabinet) {
+      new Jobs.CSG.Assembly.ThreeView(cabinet).then(modelInfo => {
+        const info = modelInfo.info();
+        const id = targetPart ? targetPart.id() : cabinet.id();
+        console.log(modelInfo);
+      }).queue();
+    }
+
+    function assemblyThreeView(assembly) {
+
+    }
+
+    function simpleThreeView(simpleObj) {
+
+    }
+
+
     function getThreeView() {
-      return  console.warn.logarithmic('Need to reroute Jobs...')
-      if (targetPart) {
-        const hash = targetPart.hash();
-        if (lastHash !== hash) {
-          lastHash = hash;
-          new Jobs.CSG.Assemblies.To2D(targetPart).then(setThreeView(targetPart)).queue();
-        }
-      } else {
-        const cabinet = Global.cabinet();
-        if (cabinet === undefined) return;
-        const hash = cabinet.hash();
-        if (lastHash !== hash) {
-          lastHash = hash;
-          new Jobs.CSG.Assembly(cabinet).then(setThreeView(cabinet)).queue();
-        }
-      }
+      const target = Global.target();
+      if (target instanceof Cabinet) cabinetThreeView(target);
+      else if (target instanceof Assembly) assemblyThreeView(target);
+      else simpleThreeView(target);
     }
 
     this.maxDem = () => maxDem;
@@ -99,7 +104,6 @@ class ThreeView extends Lookup {
         const rebuild = s !== side;
         side = s;
         if (rebuild) {
-          lastHash = undefined;
           this.build.clearCache()();
         }
       }
@@ -128,7 +132,7 @@ class ThreeView extends Lookup {
       }
       return true;
     }
-    this.build = new FunctionCache(build, this, 'three-view');
+    this.build = build;
 
     let allLines;
     function drawView () {
@@ -143,7 +147,6 @@ class ThreeView extends Lookup {
     }
 
     function onPartSelect(elem) {
-      // FunctionCache.clear('three-view');
       const selected = du.find.closest(`[value="${elem.value}"`, elem);
       const id = selected.getAttribute('part-id');
       instance.isolatePart(id, elem.value);
@@ -205,7 +208,6 @@ class ThreeView extends Lookup {
     du.on.match('click', `#${this.id()} .ruler`, rulerClick);
     du.on.match('click', `#${this.id()} [name='side']`, (e) => this.side(e.value));
 
-    // console.warn('class is disabled');
     setTimeout(init, 1000);
   }
 }

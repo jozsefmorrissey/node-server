@@ -15,11 +15,12 @@ class Parimeter3D {
     lines = Line3D.sliceAll(lines);
     //TODO: sliceAll is introducing duplicates
     lines = lines.unique(l => l.toString());
+   lines = lines.filter(l => !l.isPoint());
 
 
-    const allMap = new ToleranceMap({'0.x': .01,
-                                    '0.y': .01,
-                                    '0.z': .01});
+    const allMap = new ToleranceMap({'0.x': .001,
+                                    '0.y': .001,
+                                    '0.z': .001});
     allMap.addAll(lines.concat(lines.map(l=>
       ((l.negitive.line = l.clone().negitive()).negitive.line = l).negitive.line
     )));
@@ -39,6 +40,20 @@ class Parimeter3D {
                 .elements()
                 .filter(l => !removed[l.id] && (removed[l.id] = l)), removed);
       return removed;
+    }
+
+    function sliceWithTarget() {
+      target.sliced = true;
+      const canSlice = remainingMap.group().concatElements().filter(l => {
+        if (target.isParrelle(l)) return false;
+        const int = target.intersection.segment(l, true)
+        return int && !int.equals(target[0]) && !int.equals(target[1]) &&
+        !int.equals(l[0]) && !int.equals(l[1]);
+      });
+      const sliced = canSlice.map(l => Line3D.slice(l, [target], true)).concatElements();
+      sliced.forEach(s1 => sliced.find(s2 => s1.negitive().equals(s2)).negitive.line = s1.negitive());
+      remainingMap.remove.all(canSlice);
+      remainingMap.add.all(sliced);
     }
 
     function findParremeter(parimeter, ccw) {

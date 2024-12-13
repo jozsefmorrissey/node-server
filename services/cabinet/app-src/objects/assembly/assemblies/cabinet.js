@@ -2,7 +2,7 @@
 
 
 const Assembly = require('../assembly.js');
-const cabinetBuildConfig = require('../../../../public/json/cabinets.json');
+const cabinetBuildConfig = require('../../../../public/json/cabinets/construction.json');
 const Joint = require('../../joint/joint.js');
 const JointSettings = require('../../../../web-worker/shared/settings.js');
 const Dependency = require('../../dependency');
@@ -30,7 +30,7 @@ const CABINET_TYPE = {FRAMED: 'Framed', FRAMELESS: 'Frameless'};
 
 class Cabinet extends Assembly {
   constructor(partCode, partName, config) {
-    super(partCode, 'Simple', config);
+    super(partCode, partName, config);
     new CabinetResolver(this);
     // Object.getSet(this, {_DO_NOT_OVERWRITE: true}, 'length', 'width', 'thickness');
     Object.getSet(this, 'propertyId','currentPosition', 'autoToeKick',
@@ -103,6 +103,8 @@ class Cabinet extends Assembly {
     this.modificationState = () =>
       modificationState;
     this.value.on.change(() => modificationState++);
+    this.on.processing((job) =>
+      Global.trigger.processing.cabinet(job, this));
 
 
     const pAddSubAssem = this.addSubAssembly;
@@ -120,7 +122,9 @@ class Cabinet extends Assembly {
 
 
     const parentHash = this.hash;
+    let initialized = false;
     this.hash = () => {
+      if (!initialized) this.updateOpenings(initialized = true);
       return parentHash() + this.openings.map(o => o.sectionProperties().hash()).sum();
     }
 
@@ -198,7 +202,6 @@ const linkSectionsToDividers = (assembly) => {
 Cabinet.build = (type, group, config) => {
   const cabinet = Assembly.build(type, group, config, new Cabinet('c', type));
   config ||= cabinetBuildConfig[type];
-  cabinet.value('dividerJoint', Object.fromJson(config.dividerJoint));
 
 
   config.openings.forEach((config, i) => {

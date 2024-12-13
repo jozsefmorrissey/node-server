@@ -20,7 +20,7 @@ class AngleMeasurement2d {
       degrees = Math.toDegrees(Math.abs(leg1.acute(leg2)));
     }
     this.intersection = () => intersection;
-    this.degrees = () => degrees;
+    this.degrees = () => Math.roundTo(degrees, .1);
     this.bisector = (dist) => leg1.bisector(leg2, dist);
     this.legs = () => [leg1, leg2];
   }

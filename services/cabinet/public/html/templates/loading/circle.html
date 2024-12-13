@@ -1,0 +1,82 @@
+<style>
+  :root {
+    --percentDecimal{{id}}: 0;
+    --color{{id}}: {{color || '#000000'}};
+    --color-transparent{{id}}: #00ff0025;
+    --percent{{id}}: 50%;
+  }
+
+  #outer-circle-{{id}} .loaded-circle {
+    background-color: var(--color{{id}});
+    height: var(--percent{{id}});
+    width: var(--percent{{id}});
+    border-radius: 50%;
+    position: absolute;
+    top: var(--percent{{id}});
+    right: var(--percent{{id}});
+    transform: translate(50%, -50%);
+  }
+
+
+  #outer-circle-{{id}} {
+      width: {{size}};
+      height: {{size}};
+      border-radius: 50%;
+      position: relative;
+      box-shadow: 0 0 8px 0 #aaa;
+  }
+
+  #outer-circle-{{id}} > .loading-scanner-circle {
+      width: {{size}};
+      height: {{size}};
+      border-radius: 50%;
+      position: relitive;
+      background: conic-gradient(#ffffff55, #ffffff);;
+  }
+
+  #outer-circle-{{id}}::before {
+      content: "";
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 1px solid #eee;
+      position: absolute;
+  }
+  @keyframes scan {
+      to {
+  	transform: rotate(1turn);
+      }
+  }
+  #outer-circle-{{id}} {
+      animation: scan 4s infinite linear;
+  }
+
+  #outer-circle-{{id}}::before {
+    background-color: var(--color{{id}});
+    animation: ripple-{{id}} 2s infinite;
+    animation-timing-function: ease-in;
+    animation-direction: reverse;
+  }
+
+  :root {
+    --percentDecimal{{id}}: 0;
+  }
+
+  @keyframes ripple-{{id}} {
+      to {
+        animation-direction: reverse;
+  	     transform: scale(var(--percentDecimal{{id}}));
+      }
+  }
+</style>
+<div class='inline-flex'>
+  <div id="outer-circle-{{id}}">
+  	<div class="loading-scanner-circle">
+    </div>
+  </div>
+  <div>
+    <b class='progress'>{{progress()}}</b>%
+     -
+     <b class='time'>{{time()}}</b>s
+  </div>
+</div>

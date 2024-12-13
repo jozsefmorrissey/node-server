@@ -5,6 +5,7 @@ const BiPolygon = require("../../app-src/three-d/objects/bi-polygon");
 const ApplyJoints = require("./services/apply-joints");
 const BuildModels = require("./services/build-models");
 const BuildSimpleModels = require("./services/build-simple-models");
+const ThreeView = require("./services/three-view");
 const UnionModels = require("./services/union");
 const To2D = require("./services/to-2d");
 const PartInfo = require("./services/part-information");
@@ -49,6 +50,8 @@ function handleTask(task, env) {
       return {finished: false};
     case 'simple':
       return  BuildSimpleModels(payload, taskId);
+    case 'threeview':
+      return  ThreeView(payload, taskId);
     case 'simpleto2d':
       return To2D.simple(payload);
     case 'model':

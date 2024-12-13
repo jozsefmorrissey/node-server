@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>alpha-numeric-chart</title>
+    <style media="screen">
+      tbody {
+        font-size: xxx-large;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      td {
+        border-color: green;
+        border-width: 1px;
+        border-style: solid;
+      }
+
+    </style>
+  </head>
+  <body>
+    <table>
+        <tbody>
+
+        </tbody>
+    </table>
+  </body>
+  <script type="text/javascript">
+      const tableBody = document.querySelector('tbody');
+      let characters = new Array(96);
+      characters.fill(1);
+      characters.forEach((v, i) =>
+        characters[i] = String.fromCharCode(33 + i));
+      characters = characters.filter(v => v);
+      tableHtml = '';
+      let index = 0;
+      while (index < characters.length) {
+        tableHtml += '<tr>';
+        for (let i = 0; i < 8; i ++) {
+          tableHtml += `\n\t<td>${characters[index++]}</td>`;
+        }
+        tableHtml += '\n</tr>'
+      }
+      tableBody.innerHTML = tableHtml;
+      console.log(characters);
+
+
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+
+      const image = new Image();
+      image.src = '/images/alpha-numeric-chart.png'; // Replace with the path to your image
+
+      function search(x, y, xOffset, yOffset, test) {
+        let data = context.getImageData(x, y, 1, 1).data;
+        while(!test(data)) {
+            x += xOffset; y+= yOffset;
+            data = context.getImageData(x, y, 1, 1).data;
+        }
+        return {x,y}
+      }
+
+      const isWhite = (data) => data[0] + data[1] + data[2] === 255*3;
+      const isGreen = (data) => (data[0] + data[0] === 0) && (data[1] === 128);
+      const notGreenOrWhite = (data) => !isWhite(data) && !isGreen(data);
+      const isBlack = (data) => data[0] + data[1] + data[2] < 150;
+      const notWhiteOrBlack = (data) => !isWhite(data) && !isBlack(data);
+      function findFirstSquare(context) {
+        const initalBorder = search(0,0, 1, 1, isGreen);
+        const intsideBorder = search(initalBorder.x, initalBorder.y, 1,1, isWhite);
+        const top = search(intsideBorder.x, intsideBorder.y, 0,1, isGreen);
+        const bottom = search(intsideBorder.x, intsideBorder.y, 0,-1, isGreen);
+        const left = search(intsideBorder.x, intsideBorder.y, -1,0, isGreen);
+        const right = search(intsideBorder.x, intsideBorder.y, 1,0, isGreen);
+        const height = top.y - bottom.y;
+        const width = right.x - left.x;
+        const borderWidth = intsideBorder.x - initalBorder.x;
+        const center = {x: (right.x - left.x)/2, y: (top.y + bottom.y)/2}
+        return {center, height, width, borderWidth};
+      }
+
+      function findAllCenters(firstInfo) {
+        const centers = [];
+        let y = firstInfo.center.y;
+        let x = firstInfo.center.x;
+        while(y < image.height - firstInfo.height / 2) {
+          while (x < image.width - firstInfo.width / 2) {
+            centers.push({x,y});
+            x+=firstInfo.width + firstInfo.borderWidth;
+          }
+          y+=firstInfo.height + firstInfo.borderWidth;
+          x = firstInfo.center.x;
+        }
+        return centers;
+      }
+
+      function breathFirstSearch(center, filter, limit, locations) {
+        const data = context.getImageData(center.x, center.y, 1, 1).data;
+        const locationId = `${center.x},${center.y}`;
+        if (locations[locationId] !== undefined || limit(data)) return [];
+        locations[locationId] = filter(data) ? center : false;
+        const offsets = [{x:-1,y:1},{x:1,y:-1},{x:1,y:0},{x:0,y:1},{x:1,y:1},
+                          {x:-1,y:0},{x:0,y:-1},{x:-1,y:-1},];
+        offsets.forEach(o => breathFirstSearch(
+          {x: center.x + o.x, y: center.y + o.y}, filter, limit, locations));
+      }
+
+      function createPixelMap(context, centers) {
+        const pixelMap = {};
+        for (let index = 0; index < centers.length; index++) {
+          const center = centers[index];
+          let locationMap = {};
+          breathFirstSearch(center, notGreenOrWhite, isGreen, locationMap);
+          const blackMap = Object.values(locationMap).filter(v => v !== false);
+          pixelMap[characters[index]] = blackMap.map(c => ({x: c.x - center.x, y: c.y - center.y}));
+        }
+        return pixelMap;
+      }
+
+      image.onload = () => {
+        canvas.width = image.width;
+        canvas.height = image.height;
+        context.drawImage(image, 0, 0);
+
+        const x = 10; // X coordinate of the pixel you want to get
+        const y = 10; // Y coordinate of the pixel you want to get
+
+        const pixelData = context.getImageData(x, y, 1, 1).data;
+
+        const color = `rgba(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]}, ${pixelData[3] / 255})`;
+
+        console.log(color); // Outputs the color in rgba format
+        const firstInfo = findFirstSquare(context);
+        const centers = findAllCenters(firstInfo);
+        const pixelMap = createPixelMap(context, centers);
+      };
+  </script>
+</html>

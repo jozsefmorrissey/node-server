@@ -1047,6 +1047,8 @@ du.paste.json = (elem, success, fail, validate) => {
   du.paste(elem, successWrapper, fail, validateWrapper);
 }
 
+var node = document.getElementById('my-node');
+
 // du.print = {};
 // du.print.elem = (selectorOelem) => {
 //   let elem = selectorOelem;

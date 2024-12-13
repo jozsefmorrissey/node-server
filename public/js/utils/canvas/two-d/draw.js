@@ -372,7 +372,7 @@ class Draw2d {
     draw.measurement.angle = (angle, color, textWidth) => {
       const bisector = angle.bisector(2.54*20);
       const labelPoint = bisector[1];
-      draw.text(angle.degrees(), labelPoint);
+      draw.text(angle.degrees() + String.fromCharCode(248), labelPoint);
     }
 
     function snapLocColor(snapLoc) {

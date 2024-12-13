@@ -467,7 +467,7 @@ class Layout2D extends Lookup {
 
       const walls = this.walls();
       walls.forEach(w => csg.polygons.concatInPlace(w.poly.csg().polygons));
-      csg = csg.union(this.counterTop().csg());
+      csg.polygons.concatInPlace(this.counterTop().csg().polygons);
       csg.polygons.concatInPlace(this.ceiling().csg().polygons.concat(this.floor().csg().polygons));
       return csg;
     }

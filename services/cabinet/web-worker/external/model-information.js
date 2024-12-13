@@ -99,15 +99,13 @@ const sorter = (assemblies, jointMap, byId) => {
   return objs;
 }
 
-
-
 const modelInfoObject = () => ({threeView: {}, model: {}, joined: {}, intersection: {}, biPolygonArray: {}, extended: {}, cut: {}});
-class ModelInformation {
+class ModelingConfiguration {
   constructor(assembly) {
     const instance = this;
-    const modelInfo = modelInfoObject();
     const root = assembly.getRoot();
     const hash = root.hash();
+    this.root = () => root;
     this.hash = () => hash;
     this.id = () => root.id();
 
@@ -136,21 +134,39 @@ class ModelInformation {
     this.needsUnioned = () => nonDigitalList;
     this.needs2dConverted = () => assemblies;
 
+    this.parts = () => byId;
+    this.jointMap = () => jointMap;
+    this.complexityMap = () => complexityMap;
+
     const environmentObject = () => {
       const environment = {};
       environment.byId = byId;
       environment.modelInfo = modelInfoObject();
       environment.propertyConfig = propertyConfig;
       environment.jointMap = jointMap;
-      environment.explosionFactor = this.explosionFactor();
       environment.generated = [];
       return environment;
     }
     this.environment = environmentObject;
 
-    this.parts = () => byId;
-    this.jointMap = () => jointMap;
-    this.complexityMap = () => complexityMap;
+    this.assemblies = () => assemblies;
+  }
+}
+
+
+
+class ModelInformation {
+  constructor(assembly, modelConf) {
+    const instance = this;
+    const modelInfo = modelInfoObject();
+    this.info = () => modelInfo;
+
+    this.modelingConfiguration = () => modelConf;
+    this.needsModeled = modelConf.needsModeled;
+    this.needsJoined =  modelConf.needsJoined;
+    this.needsIntersected =  modelConf.needsIntersected;
+    this.needsUnioned =  modelConf.needsUnioned;
+    this.needs2dConverted =  modelConf.needs2dConverted;
 
     function addTrackingFunctions(...attributes) {
       for (let index = 0; index < attributes.length; index++) {
@@ -174,16 +190,12 @@ class ModelInformation {
       }
     }
     addTrackingFunctions('threeView', 'model', 'joined', 'intersection', 'biPolygonArray')
-    this.allInfo = () => modelInfo;
-
-    this.assemblies = () => assemblies;
-    this.assembly = (id) => assemMap[id];
 
     let unionObj;
     this.unioned = (...keys) => {
       if (keys.length === 0) keys = ['all'];
       let csg = new CSG();
-      keys.forEach(k => unionObj[k] instanceof CSG && (csg = csg.union(unionObj[k])));
+      keys.forEach(k => unionObj[k] instanceof CSG && (csg.polygons.concatInPlace(unionObj[k].clone().polygons)));
       return csg;
     }
 
@@ -208,28 +220,54 @@ class ModelInformation {
       return unionObj;
     }
 
-    this.partInformation = new PartInformation(root);
-
     let unioned2D
     this.unioned2D = (data) => {
       if (data) unioned2D = data;
       else return unioned2D;
     }
-
-    let explosionFactor;
-    this.explosionFactor = (expFactor) => expFactor !== undefined ?
-                  (explosionFactor = expFactor) : explosionFactor;
   }
 }
 
-const infos = {};
-
-function object(assembly) {
-  const _HASH = assembly.hash()
-  if (infos[assembly.id()] && infos[assembly.id()]._HASH === _HASH)
-    return infos[assembly.id()].modelInfo;
-  return (infos[assembly.id()] = {_HASH, modelInfo: new ModelInformation(assembly)}).modelInfo;
+class ConstructionModelInfo extends ModelInformation {
+  constructor(assem, modelConf) {
+    super(assem, modelConf);
+    const parentEnviroment = this.environment;
+    this.modelInfo = () => modelInfo;
+    this.environment = () => {
+      const env = modelConf.environment();
+      env.expandParts = true;
+      return env;
+    }
+    this.partInformation = new PartInformation(modelConf.root());
+  }
 }
 
+class DisplayModelInfo extends ModelInformation {
+  constructor(assem, modelConf) {
+    super(assem, modelConf);
+    this.modelInfo = () => modelInfo;
+    this.environment = modelConf.environment;
+  }
+}
 
-module.exports = {object};
+const infos = {DisplayModelInfo: {},
+              ConstructionModelInfo: {},
+              ModelingConfiguration: {}};
+
+function objectGetter(cxtr) {
+  const name = cxtr.name;
+  return (assembly) => {
+    const _HASH = assembly.hash()
+    const id = assembly.id();
+    if (infos[name][id] && infos[name][id]._HASH === _HASH)
+      return infos[name][id].modelInfo;
+    const modelConf = cxtr === ModelingConfiguration ? null : config(assembly);
+    return (infos[name][id] = {_HASH, modelInfo: new cxtr(assembly, modelConf)}).modelInfo;
+  }
+}
+
+const display = objectGetter(DisplayModelInfo);
+const construction = objectGetter(ConstructionModelInfo);
+const config = objectGetter(ModelingConfiguration);
+
+module.exports = {construction, display, config};

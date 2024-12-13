@@ -73,8 +73,8 @@ du.on.match('click', '.model-state', (target, event) => {
     const cabinet = Global.target();
     let targetSelected = label.hasAttribute('target') || target.hasAttribute('target');
 
-    if (groupingType === 'location') Canvas.set.locationPrefix(prefix);
-    else Canvas.set.ufidPrefix(prefix);
+    if (groupingType === 'location') Canvas.views('Parts').set.locationPrefix(prefix);
+    else Canvas.views('Parts').set.ufidPrefix(prefix);
   }
   Canvas.render();
 });
@@ -82,7 +82,7 @@ du.on.match('click', '.model-state', (target, event) => {
 function deselectPrefix() {
   document.querySelectorAll('.model-state')
     .forEach((elem) => du.class.remove(elem, 'active'));
-  Canvas.set.locationPrefix(null);
+  Canvas.views('Parts').set.locationPrefix(null);
 }
 
 function setGreaterZindex(...ids) {

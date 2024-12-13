@@ -124,7 +124,8 @@ class Vertex3D {
       const rnd = accuracy === null ? v => v : round(accuracy || .0000000000001);
       return `(${rnd(this.x)},${rnd(this.y)},${rnd(this.z)})`;
     }
-    this.toDrawString = this.toString;
+    this.toDrawString = (color, accuracy) => `${color || 'red'}${this.toString(accuracy)}`;
+    this.hash = () => `(${this.x},${this.y},${this.z})`.hash();
   }
 }
 

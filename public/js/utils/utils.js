@@ -290,6 +290,31 @@ Function.safeStdLibAddition(String, 'random',  function (len) {
     return str.substr(0, len);
 }, true);
 
+
+const compoundReg = /^(.*)\(([^)]{1,}?)\)(.*)$/
+Function.safeStdLibAddition(String, 'paths',  function (len) {
+    const paths = [];
+    if (this.match(compoundReg) === null) return [this];
+    const compoundAttrs = [this];
+    while(compoundAttrs.length > 0) {
+      const ca = compoundAttrs[compoundAttrs.length - 1];
+      let match = ca.match(compoundReg);
+      if (match === null) {
+        paths.push(ca);
+        compoundAttrs.pop();
+      } else {
+        compoundAttrs.pop();
+        const split = match[2].split(',');
+        split.forEach(v => {
+          const attr = match[1] + v + match[3];
+          compoundAttrs.push(attr);
+        });
+      }
+    }
+    return paths;
+});
+
+
 // const specialRegChars = /[-[\]{}()*+?.,\\^$|#\\s]/g;
 // TODO: Removed \\s not sure if its the right move
 const specialRegChars = /[-[\]{}()*+?.,\\^$|#]/g;
@@ -1401,18 +1426,25 @@ function logarithmic(callerId, baseOptional, ...args) {
   if (!logData[callerId]) logData[callerId] = {base};
   if (!logData[callerId].count) {
     logData[callerId].count  = 1;
-    this(1, ...args);
+    this(1 + '', ...args);
   } else {
     count = ++logData[callerId].count;
     const log = Math.log(count)/Math.log(logData[callerId].base);
-    if (log === Math.roundTo(log)) this(count, ...args);
+    if (log === Math.roundTo(log)) this(count + '', ...args);
   }
 }
 logarithmic.reset = (callerId) => logData[callerId] && (logData[callerId].count = 0)
 
+function periodic(callEveryMilSec, terminationTest, ...args) {
+  const call = () => (!terminationTest() && this(...args)) &
+                      (setTimeout(call, callEveryMilSec));
+  setTimeout(call, callEveryMilSec);
+}
+
 Function.safeStdLibAddition(Function, 'subtle',   intervalFunction);
 Function.safeStdLibAddition(Function, 'lastCall',   lastCall);
 Function.safeStdLibAddition(Function, 'logarithmic',   logarithmic);
+Function.safeStdLibAddition(Function, 'periodic',   periodic);
 
 Function.safeStdLibAddition(String, 'foreach', function (func) {
   const arr = [];
@@ -1479,6 +1511,8 @@ Function.safeStdLibAddition(String, 'colorName', function (color) {
 
 let colorIndex = 0;
 Function.safeStdLibAddition(String.color, 'next', (...exclude) => {
+  if (!exclude) exclude = [];
+  exclude.push('black');
   const filteredColors = colors.filter(c => exclude.indexOf(c) === -1)
   return filteredColors[colorIndex++ % filteredColors.length];
 }, true);

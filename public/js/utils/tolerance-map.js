@@ -166,11 +166,18 @@ class ToleranceMap {
       for (let index = 0; index < list.length; index++) {
         for (let aIndex = 0; aIndex < attrs.length; aIndex++) {
           const path = attrs[aIndex];
+          const nonFuncPath = path.replace(/\(\)/g, '');
           const currTotal = Object.pathValue(obj, path);
-          const value = instance.tolerance().bounds[path](list[index]).value;
-          const addValue = value === 0 ? 0 : value / list.length;
-          if (addValue != 0) Object.pathValue(obj, path, currTotal + addValue);
-          total += addValue;
+          let value = instance.tolerance().bounds[path](list[index]).value;
+          if (value === null) {
+            if (index === 0 || Object.pathValue(obj, nonFuncPath) === null)
+              Object.pathValue(obj, nonFuncPath, null);
+            else Object.pathValue(obj, nonFuncPath, undefined);
+          } else {
+            const addValue = value === 0 ? 0 : value / list.length;
+            if (addValue != 0) Object.pathValue(obj, nonFuncPath, currTotal + addValue);
+            total += addValue;
+          }
         }
       }
       // if (!Number.isFinite(total)) throw new Error('Object containes attribue that returns a non-finite value. This is unacceptable');
@@ -179,6 +186,8 @@ class ToleranceMap {
 
     function bestGroup(list) {
       const avgObj = averageObject(list);
+      if (list.length && avgObj.length === 0)
+        console.warn.logarithmic('There is probably and averageObject issue...');
       return instance.matches(avgObj);
     }
 

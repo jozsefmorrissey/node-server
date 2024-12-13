@@ -90,6 +90,7 @@ class Assembly3D extends Object3D {
       updateOutline.lastCall(instance.id(), 50, force);
     }
     assembly.on.change(outlineNeedsUpdated);
+    outlineNeedsUpdated(true);
   }
 }
 

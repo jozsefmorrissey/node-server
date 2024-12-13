@@ -13,6 +13,7 @@ const Assembly = require('./objects/assembly/assembly.js');
 const Properties = require('./config/properties.js');
 const PopUp = require('../../../public/js/utils/display/pop-up.js');
 const CabinetTemplate = require('./config/cabinet-template');
+require('displays/init');
 
 // Display classes
 const du = require('../../../public/js/utils/dom-utils.js');
