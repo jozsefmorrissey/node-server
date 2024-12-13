@@ -42,8 +42,8 @@ class WebWorkerDeligator {
     };
 
     function createWorkers() {
-      const count = navigator.hardwareConcurrency - 1 < maxWorkers ?
-          navigator.hardwareConcurrency - 1 : maxWorkers;
+      const count = navigator.hardwareConcurrency + 1 < maxWorkers ?
+          navigator.hardwareConcurrency + 1 : maxWorkers;
       for (let index = 0; index < count; index++) {
         const worker = new Worker('/cabinet/js/web-worker-bundle.js');
         worker.id = index;
