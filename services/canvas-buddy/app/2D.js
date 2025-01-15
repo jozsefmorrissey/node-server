@@ -116,8 +116,11 @@ function parse(newLines, sc) {
   if (firstCall) {
     firstCall = false;
     const measurements = du.param.get('measurements');
-    if (measurements) panZ.measurements.add.all(measurements.split(':')
-      .map(str => Line2d.fromString(str, true)));
+    if (measurements) {
+      du.id('measurement-checkbox').click();
+      panZ.measurements.add.all(measurements.split(':')
+              .map(str => Line2d.fromString(str, true)));
+    }
   }
 }
 

@@ -21,7 +21,7 @@ set.parts = (parts) =>
 function explode(model, center, color) {
   if (model) {
     model = model.clone();
-    model.setColors(color || String.color.next());
+    model.setColors(color || Color.next());
     const explosionFactor = Canvas.explosionFactor();
     if (!explosionFactor) return;
     const modelCenter = new Vertex3D(model.center());

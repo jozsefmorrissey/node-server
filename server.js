@@ -1,4 +1,4 @@
-require('./public/js/utils/utils.js')
+require('./public/js/utils/std-lib/init.js')
 var express = require("express");
 var fs = require("fs");
 var shell = require("shelljs")

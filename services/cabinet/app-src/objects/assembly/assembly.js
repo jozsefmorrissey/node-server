@@ -569,7 +569,7 @@ class Assembly extends KeyValue {
         const norms = this.position().normals(true).map((v,i) => normalStr(v, i, c));
         const normStr = `//${norms[0]}\n//${norms[1]}\n//${norms[2]}\n`
         const modStr = model.toString().trim()
-                        .replace(/(^|\n)/g, `$1${String.color.next(...normColors)}`);
+                        .replace(/(^|\n)/g, `$1${Color.next(...normColors)}`);
         str += `${normStr}${modStr}`;
       }
       if (notRecursive !== true)

@@ -1,7 +1,7 @@
 
 const $t = require('./../../../public/js/utils/$t.js');
 $t.loadFunctions(require('../generated/html-templates'));
-require('./../../../public/js/utils/utils.js')
+require('./../../../public/js/utils/std-lib/init.js')
 
 const OrderInfo = require('../src/objects/order-info.js');
 const Input = require('./../../../public/js/utils/input/input.js');

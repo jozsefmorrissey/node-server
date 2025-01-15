@@ -153,7 +153,7 @@ Test.add('Polygon3D distance',(ts) => {
       const p2 = allPolys[j];
       const intersection = p1.toPlane().intersection(p2.toPlane());
       const connection = p1.connect(p2);
-      const color = String.color.next();
+      const color = Color.next();
       planeInterStr += '\n' + p2.toDrawString(color) + '\n' +
                   ((intersection || '') && intersection.toDrawString(color));
       planeConnStr += '\n' + p2.toDrawString('blue') + '\n' +

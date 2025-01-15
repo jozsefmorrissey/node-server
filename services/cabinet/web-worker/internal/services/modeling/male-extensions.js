@@ -2,7 +2,7 @@
 const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
 const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
 const Vertex3D = require('../../../../app-src/three-d/objects/vertex.js');
-const Utils = require('./utils/utils');
+const Utils = require('./utils/std-lib/init');
 
 
 // TODO: model extension is messing up for base corner diagonal

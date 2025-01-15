@@ -14,7 +14,7 @@ class ColorManager extends Lookup {
     this.map = (objects) => this.objects(objects).filterSplit(o => {
         let idStr = o.pathValue(idAttribute);
         idStr = idStr ? '.'+idStr : '';
-        return `${String.color.hex(o.color())}.${o.constructor.name}${idStr}`;
+        return `${Color.hex(o.color())}.${o.constructor.name}${idStr}`;
     });
     this.colors = (objects) => Object.keys(this.map(objects));
     this.inputTrees = () =>
@@ -30,7 +30,7 @@ du.on.match('change', '#room-color-cnt input[type="color"]', (elem, event) => {
   const manager = ColorManager.get(id);
   const objects = manager.objects();
   const original = elem.getAttribute('original');
-  objects.forEach(obj => String.color.hex(obj.color()) === original &&
+  objects.forEach(obj => Color.hex(obj.color()) === original &&
                           obj.color(elem.value));
 
   console.log(du, elem);

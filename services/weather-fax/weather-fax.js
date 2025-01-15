@@ -1,6 +1,6 @@
 const shell = require('shelljs');
 global.WEATHER_FAX_DATA_DIR = `${global.DATA_DIRECTORY}/weather-fax`
-require('./../../public/js/utils/utils.js');
+require('./../../public/js/utils/std-lib/init.js');
 const fs = require('fs');
 const request = require("request-promise-native");
 const OpenWeather = require('./src/open-weather');

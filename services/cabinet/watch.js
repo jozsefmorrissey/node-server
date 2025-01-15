@@ -1,4 +1,4 @@
-require('../../public/js/utils/utils');
+require('../../public/js/utils/std-lib/init');
 const fs = require('fs');
 const Builder = require('../../building/builder');
 const { HtmlBundler } = require('../../building/bundlers/html.js');
@@ -47,7 +47,7 @@ if (global.ENV === 'local') {
 const wwDumpLoc = './public/js/web-worker-bundle';
 const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/internal/init.js', projectDir: '../../'});
 const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
-        .add('../../public/js/utils/utils.js')
+        .add('../../public/js/utils/std-lib/init.js')
         .add('../../public/js/utils/tolerance.js')
         .add('../../public/js/utils/tolerance-map.js')
         .add('../../public/js/utils/measurement.js')
@@ -68,7 +68,7 @@ const stlBundler = new JsBundler(stlDumpLoc, [], {main: './public/js/utils/test/
 const stlWatcher = new Builder(stlBundler.change, stlBundler.write, !global.build)
         .add('../../public/js/utils/3d-modeling/')
         .add('../../public/js/utils/test/tests/STL.js')
-        .add('../../public/js/utils/utils.js')
+        .add('../../public/js/utils/std-lib/init.js')
         .add('../../public/js/utils/canvas/two-d/objects/')
         .add('../../public/js/utils/tolerance.js')
         .add('../../public/js/utils/tolerance-map.js')

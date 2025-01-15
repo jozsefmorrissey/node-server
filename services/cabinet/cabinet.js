@@ -1,5 +1,5 @@
 
-require('../../public/js/utils/utils')
+require('../../public/js/utils/std-lib/init')
 const fs = require('fs');
 const shell = require('shelljs');
 const $t = require('../../public/js/utils/$t');

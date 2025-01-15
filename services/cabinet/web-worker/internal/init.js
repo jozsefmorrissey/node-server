@@ -1,4 +1,4 @@
-require('../../../../public/js/utils/utils.js');
+require('../../../../public/js/utils/std-lib/init.js');
 require('./services/documents/init.js')
 
 const BiPolygon = require("../../app-src/three-d/objects/bi-polygon");

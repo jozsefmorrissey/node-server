@@ -18,7 +18,7 @@
 -- kill all watchers - If the watcher starts malfunctioning most likely there are zombies a foot
   <pre>kill -9 $(ps -aef | grep "watch.js" | awk '{print $2}')</pre>
 
-### public/js/utils/utils.js
+### public/js/utils/std-lib/init.js
 &nbsp;&nbsp;This file is used to safely add to the standard library.
 
 ### public/js/utils/dom-utils.js

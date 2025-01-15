@@ -90,7 +90,7 @@ CSG = function() {
     const scaled = this.clone();
     scaled.scale(10);
     scaled.polygons.forEach(p => stl.add.polygon(p.vertices.map(v => v.pos),
-                            p.plane.normal, String.color.rgb.percent(p.rgb())));
+                            p.plane.normal, Color.rgb.percent(p.rgb())));
     return stl;
   }
 };
@@ -1365,7 +1365,7 @@ CSG.Plane = function(normal, w) {
   this.normal = normal;
   this.w = w;
   this.setColor = function(color) {
-    const rgb = String.color.rgb(color);
+    const rgb = Color.rgb(color);
     this.shared = [rgb[0]/255, rgb[1]/255, rgb[2]/255];
   }
 };
@@ -1492,7 +1492,7 @@ CSG.Polygon.prototype = {
     percision ||= .001;
     const verts = this.vertices;
     const shared = this.shared;
-    let color = includeColor ? String.colorName(shared) : '';
+    let color = includeColor ? Color.getName(shared) : '';
     let str = `${color}[`;
     for (let v = 0; v < verts.length; v++) {
       str += `${verts[v].toString(percision)},`;
@@ -1520,7 +1520,7 @@ CSG.Polygon.prototype = {
   },
 
   color: function () {
-    const name = String.colorName(this.shared);
+    const name = Color.getName(this.shared);
     return name.indexOf(',') === -1 ? name : this.shared.map(v => Math.round(v*255));
   },
   rgb: function () {return !this.shared ? [0,0,0] : this.shared.map(v => Math.round(v*255));},
@@ -1540,7 +1540,7 @@ CSG.Polygon.prototype = {
     }
   },
   setColor: function(color) {
-    const rgb = String.color.rgb(color);
+    const rgb = Color.rgb(color);
     this.shared = [rgb[0]/255, rgb[1]/255, rgb[2]/255];
   }
 };

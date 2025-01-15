@@ -1188,7 +1188,7 @@ class Polygon3D {
       return `${str.substring(4)} normal: ${this.normal()}`;
     }
 
-    const vertexColor = (i) => i===0?'red':(i===1?'blue':(i===2?'green':i===3?'black':(String.color.next())));
+    const vertexColor = (i) => i===0?'red':(i===1?'blue':(i===2?'green':i===3?'black':(Color.next())));
     this.toDrawString = (color, includeNormal) => {
       const colorString = (typeof color) === 'string' ? color : 'blue';
       let str = '';

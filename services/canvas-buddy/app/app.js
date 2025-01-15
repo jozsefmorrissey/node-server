@@ -1,6 +1,6 @@
 const $t = require('../../../public/js/utils/$t.js');
 $t.loadFunctions(require('../generated/html-templates'));
-require('../../../public/js/utils/utils');
+require('../../../public/js/utils/std-lib/init.js');
 const du = require('../../../public/js/utils/dom-utils');
 require('../../../public/js/utils/3d-modeling/csg.js');
 const Measurement = require('../../../public/js/utils/measurement');
@@ -15,8 +15,6 @@ TwoD.oft(false)
 
 const twoDDisplay = du.id('two-d-display');
 const threeDDisplay = du.id('three-d-display');
-
-console.log(du.param.get('2D'));
 
 const param2D = du.param.get('2D');
 const param3D = du.param.get('3D');

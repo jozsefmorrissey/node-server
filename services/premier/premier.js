@@ -1,6 +1,6 @@
 
 const shell = require('shelljs');
-require('./../../public/js/utils/utils.js')
+require('./../../public/js/utils/std-lib/init.js')
 const FROM_JSON = require('./src/utils').FROM_JSON;
 
 const DrawerBox = require('./src/objects/lookup/drawer-box');

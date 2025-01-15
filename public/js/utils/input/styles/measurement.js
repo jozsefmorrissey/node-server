@@ -31,6 +31,7 @@ class MeasurementInput extends Input {
     }
     this.units = () => units;
     this.valid = (val) => {
+      if (val === '') return true;
       let testVal;
       if (val) {
         if (val instanceof MeasurementInput) testVal = val.value();
@@ -89,8 +90,6 @@ function convert(elem) {
   let measInput = MeasurementInput.get(input.id);
   unit = measInput.unit(unit);
   input.value = measInput.measurement().display(null, unit);
-  // setValue(elem);
-  console.log('change');
 }
 
 function initialize(elem) {

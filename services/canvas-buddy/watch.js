@@ -21,7 +21,7 @@ const jsBundler = new JsBundler(jsDumpLoc, [], {main: './services/canvas-buddy/a
 const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add('./app/')
         .add('../../public/js/utils/dom-utils.js')
-        .add('../../public/js/utils/utils.js')
+        .add('../../public/js/utils/std-lib/')
         .add('../../public/js/utils/measurement.js')
         .add('../../public/js/utils/object/lookup.js')
         .add('../../public/js/utils/services/function-cache.js')

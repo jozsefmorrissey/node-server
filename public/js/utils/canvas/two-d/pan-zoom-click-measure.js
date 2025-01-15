@@ -47,10 +47,8 @@ class PanZoomClickMeasure extends PanZoomClick {
     }
     measurements.deleteAll = () => measurementLines.deleteAll();
 
-    measurements.add = (line) => measurementLines.push(new LineMeasurement2d(line)) &
-                            measurements.enable();
-    measurements.add.all = (lines) => lines.forEach(l => measurementLines.push(new LineMeasurement2d(l))) &
-                            measurements.enable();
+    measurements.add = (line) => measurementLines.push(new LineMeasurement2d(line));
+    measurements.add.all = (lines) => lines.forEach(l => measurementLines.push(new LineMeasurement2d(l)));
 
     function build() {
       measurmentHoverMap.clear()

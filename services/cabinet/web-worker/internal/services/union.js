@@ -10,7 +10,7 @@ const union = (assemIds, env, filter, concat, type) => {
     const part = env.byId[assemIds[index]];
     if (filter(part)) {
       const model = env.getModel(part, type || 'joined');
-      model.setColors(String.color.next());
+      model.setColors(Color.next());
       if (concat) csg.polygons.concatInPlace(model.polygons);
       else csg = csg.union(model);
     }

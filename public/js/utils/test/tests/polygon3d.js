@@ -421,7 +421,7 @@ Test.add('Excavated: regular', ts => {
   const excavated = new Excavated3D(landscape.vertices(), excavations);
   const grid = excavated.grid();
   const polys = new LinePolys(grid);
-  console.log(polys.filter((poly) => !excavations.find(e => poly.isWithin(e.center()))).map(p => p.toDrawString(String.color.next(), true)).join('\n'))
+  console.log(polys.filter((poly) => !excavations.find(e => poly.isWithin(e.center()))).map(p => p.toDrawString(Color.next(), true)).join('\n'))
   console.log(Line3D.removeIntersecting(grid, true));
 });
 

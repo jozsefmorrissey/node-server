@@ -1,4 +1,4 @@
-require('../public/js/utils/utils');
+require('../public/js/utils/std-lib/init');
 const CustomEvent = require('./custom-event');
 
 class Bundler {

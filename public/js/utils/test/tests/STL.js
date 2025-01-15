@@ -307,12 +307,12 @@ models['hingeRouterFence'] =  (isStopper, plateWidth, plateDepth, bitSize, route
   stopper = stopper.subtract(threeSixtenths);
 
   stopper.rotate({x:90,y:0,z:0});
-  stopper.setColors(String.color.next);
+  stopper.setColors(Color.next);
   if (isStopper) return stopper;
   fence = fence.subtract(roundCutterLeft).subtract(roundCutterRight);
   const model = fence.subtract(freeSideCutter).subtract(squareCutter).subtract(adjustmentGrooveRight).subtract(adjustmentGrooveLeft);
   model.rotate({x:90,y:0,z:0});
-  model.setColors(String.color.next);
+  model.setColors(Color.next);
   return model;
 }
 
@@ -803,7 +803,7 @@ const getModel = () => {
   modelList = modelOmodels instanceof CSG ? [modelOmodels] : Object.values(modelOmodels);
   const model = new CSG();
   modelList.forEach(m => model.polygons.concatInPlace(m.polygons));
-  // console.log(modelList.map(m => m.toDrawString(String.color.next())).join('\n\n'));
+  // console.log(modelList.map(m => m.toDrawString(Color.next())).join('\n\n'));
   // model.scale(10);
   return model;
   // return new CSG.text('Hello World');

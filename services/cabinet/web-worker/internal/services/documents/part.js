@@ -271,7 +271,7 @@ class PartInfo {
       const normStrs = [norms.x.toDrawString('red', .1, c, 20),
                         norms.y.toDrawString('green', .1, c, 20),
                         norms.z.toDrawString('blue', .1, c, 20)];
-      let edgeStrs = polys.map(p => p.toDrawString(String.color.distinct()));
+      let edgeStrs = polys.map(p => p.toDrawString(Color.distinct()));
       if (!faces) return edgeStrs.concat(normStrs).join('\n');
       let faceStrs = [polys.frontBack[0].toDrawString('blue'), polys.frontBack[1].toDrawString('black')];
       return faceStrs.concat(edgeStrs).concat(normStrs).join('\n');

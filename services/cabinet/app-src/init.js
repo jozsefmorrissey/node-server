@@ -1,4 +1,4 @@
-require('../../../public/js/utils/utils.js');
+require('../../../public/js/utils/std-lib/init.js');
 require('../../../public/js/utils/object/json-utils.js');
 const $t = require('../../../public/js/utils/$t');
 $t.loadFunctions(require('../generated/html-templates'));

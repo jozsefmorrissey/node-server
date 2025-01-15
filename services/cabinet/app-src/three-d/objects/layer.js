@@ -184,7 +184,7 @@ class Layer {
 
     const printGroup = (group, overlaping) => {
       let str = '';
-      const colors = Array.fill(group.length, String.color.next);
+      const colors = Array.fill(group.length, Color.next);
       str += group.map((l,i) => l.toDrawString(colors[i])).join('\n') + '\n\n';
       str += group.map((g,i) => g.subtract(overlaping[i])
                   .map(l => l.toDrawString(colors[i]))).concatElements().join('\n\n');

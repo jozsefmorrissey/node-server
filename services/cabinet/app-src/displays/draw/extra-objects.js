@@ -8,7 +8,7 @@ let extraObjs = () =>
 const csgVertex = (center, radius, color) => {
   radius ||= .5;
   const vertex = CSG.sphere({center, radius});
-  vertex.setColor(String.color.rgb(color));
+  vertex.setColor(Color.rgb(color));
   return vertex;
 }
 
