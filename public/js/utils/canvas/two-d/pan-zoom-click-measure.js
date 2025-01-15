@@ -9,6 +9,7 @@ const Line2d = require('./objects/line');
 const LineMeasurement2d = require('./objects/line-measurement');
 const AngleMeasurement2d = require('./objects/angle-measurement');
 const Polygon2d = require('./objects/polygon');
+const Ellipse2d = require('./objects/ellipse');
 const Draw2D = require('draw');
 
 FunctionCache.on('pan-zoom', 500);
@@ -46,6 +47,11 @@ class PanZoomClickMeasure extends PanZoomClick {
     }
     measurements.deleteAll = () => measurementLines.deleteAll();
 
+    measurements.add = (line) => measurementLines.push(new LineMeasurement2d(line)) &
+                            measurements.enable();
+    measurements.add.all = (lines) => lines.forEach(l => measurementLines.push(new LineMeasurement2d(l))) &
+                            measurements.enable();
+
     function build() {
       measurmentHoverMap.clear()
       const hoverObjs = getHoverMap().objects().filter(ho => !(ho.target() instanceof LineMeasurement2d));
@@ -63,6 +69,9 @@ class PanZoomClickMeasure extends PanZoomClick {
           target.lines().forEach(l => addLine(objs, l));
         else if (locator instanceof Line2d)
           addLine(objs, locator);
+        else if (target instanceof Ellipse2d) {
+          objs[target.toString()] = new HoverObject2d(target, vertTol);
+        }
       }
       const list = Object.values(objs);
       list.sort(HoverObject2d.sort);
@@ -124,9 +133,15 @@ class PanZoomClickMeasure extends PanZoomClick {
       } else if (lastTwo[0] instanceof Line2d && lastTwo[0] === lastTwo[1]) {
         measurementLines.push(new LineMeasurement2d(lastTwo[0]));
         lastClicked = null;
+      } else if (lastTwo.count(o => o instanceof Ellipse2d)) {
+        let ellipse = lastTwo[0]; let other = lastTwo[1];
+        let index = lastTwo.findIndex((o) => o instanceof Ellipse2d);
+        if (index === 1) (ellipse = lastTwo[1]) & (other = lastTwo[0]);
+        measurementLines.push(new LineMeasurement2d(ellipse.connect(other)));
+        lastClicked = null;
       } else {
         const line = new LineMeasurement2d(Line2d.between(lastTwo[0], lastTwo[1]));
-        if (lastTwo.filter(o => o instanceof Line2d).length === 2) {
+        if (lastTwo.count(o => o instanceof Line2d) === 2) {
           const angle = new AngleMeasurement2d(...lastTwo);
           const mod45 = Math.modTolerance(angle, 0, 45, .001);
           if (!mod45) measurementLines.push(angle);

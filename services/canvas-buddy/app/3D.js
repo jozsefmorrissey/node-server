@@ -207,8 +207,9 @@ const display = (m) => {
   m ||= model || new CSG();
   renderModel = m.clone();
   const stls = Object.values(STLs);
-  renderModel.polygons.concatInPlace(stls.map(
-                  stl=>CSG.fromSTL(stl).scale(scale).polygons).concatElements());
+  const csgs = stls.map(stl=>CSG.fromSTL(stl).scale(scale));
+  csgs.forEach(csg => csg.setColors('blue'));
+  csgs.forEach(csg => renderModel.add(csg));
   // renderModel = renderModel.peel({x:0,y:1,z:0}, 4);
   const axisModel = axis.include ? CSG.Axis(axis.length, axis.radius()) : new CSG();
   getViewer(renderModel);

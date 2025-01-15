@@ -1328,7 +1328,7 @@ Polygon3D.fromCSG = (polys) => {
   }
   if (!isArray) return poly3Ds[0];
   // Polygon3D.merge(poly3Ds);
-  return poly3Ds;
+  return poly3Ds.unique(p => p.hash());
 }
 
 Polygon3D.fromMagintudeObject =

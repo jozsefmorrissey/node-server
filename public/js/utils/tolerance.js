@@ -101,6 +101,7 @@ function boundsFunc(attr, attributeMap, tolerance, absoluteValue, modulus) {
   }
 }
 
+const isZero = (v, ZERO) => v <= ZERO && v >= -ZERO;
 const stringTolReg = /\+(([0-9]{1,}|)(\.[0-9]{1,}|))/;
 const stringModulusReg = /^(([0-9]{1,}|)(\.[0-9]{1,}|))%(([0-9]{1,}|)(\.[0-9]{1,}))/;
 function withinBounds(attr, attributeMap, tolerance, absoluteValue, modulus) {
@@ -109,6 +110,8 @@ function withinBounds(attr, attributeMap, tolerance, absoluteValue, modulus) {
     if (Number.isNaN(value1) && Number.isNaN(value2)) return true;
     if (value1 === Infinity && value2 === Infinity) return true;
     if (value1 === -Infinity && value2 === -Infinity) return true;
+    if (isZero(value1, props.tolerance) && isZero(value2, props.tolerance))
+      return Math.difference(value1, value2) < props.tolerance;
     if (props.absoluteValue) {
       value1 = Math.abs(value1);
       value2 = Math.abs(value2);
@@ -122,11 +125,12 @@ function withinBounds(attr, attributeMap, tolerance, absoluteValue, modulus) {
       }
     }
     if (value1 === value2) return true;
-    if (props.modulus) {
-
+    if (Math.difference(1, (value1 / value2)) < props.tolerance !==
+          Math.abs(value1 - value2) < props.tolerance) {
+      console.warn.logarithmic('ratio tolerance test is different');
     }
-    return Math.abs(value1 - value2) < props.tolerance;
-  }
+    // Math.abs(value1 - value2) < props.tolerance
+   return Math.difference(1, (value1 / value2)) < props.tolerance;  }
   func.tolerance = props.tolerance;
   func.absoluteValue = props.absoluteValue;
   func.singleValue = props.singleValue;

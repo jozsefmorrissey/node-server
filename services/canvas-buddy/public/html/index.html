@@ -5,6 +5,7 @@
     <script type="text/javascript" src='/canvas-buddy/js/index.js'></script>
     <link rel="stylesheet" href="/styles/expandable-list.css">
     <link rel="stylesheet" href="/styles/icons.css">
+    <link rel="stylesheet" href="/cabinet/styles/estimate.css">
     <link rel="stylesheet" href="/canvas-buddy/styles/index.css">
     <style>
       .inline-flex{ display: inline-flex}
@@ -18,48 +19,67 @@
         border-color: grey;
         outline: none;
       }
+      .top-right {
+        width: fit-content;
+        height: fit-content;
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 3pt 20pt;
+      }
+      .min-80 {
+        min-width: 80pt
+      }
       canvas {background-color: whitesmoke;}
     </style>
     <title>canvas-buddy</title>
   </head>
   <body>
     <div class='inline-flex'>
-      <div>
-        <div>
-          <div class='center'>
+      <div class='top-right no-print'>
+        <button id='share'>Share</button>
+      </div>
+      <div class='no-print'>
+        <div class='relitive min-80'>
+          <div class='top-right'><button id='collapse-btn'><<</button></div>
+          <div class='center' id='demension-cnt'>
             <label>2D</label>
             <input type='radio' name='parcer' value='2D'>
             <label>3D</label>
             <input type='radio' name='parcer' value='3D' checked>
             <input type='number' name='scale' placeholder="Scale">
           </div>
-          <div class="inline-flex center fill-available">
-            <table class='player-controls center' hidden>
-              <tbody>
-                <tr>
-                  <td><i class="gg-play previous"></i></td>
-                  <td><i class="gg-play rewind"></i></td>
-                  <td><i class="gg-play button o"></i></td>
-                  <td hidden><i class="gg-play pause o"></i></td>
-                  <td><i class="gg-play fast-forward"></i></td>
-                  <td><i class="gg-play next"></i></td>
-                </tr>
-              </tbody>
-            </table>
+          <div id='input-cnt'>
+            <div class="inline-flex center fill-available">
+              <table class='player-controls center' hidden>
+                <tbody>
+                  <tr>
+                    <td><i class="gg-play previous"></i></td>
+                    <td><i class="gg-play rewind"></i></td>
+                    <td><i class="gg-play button o"></i></td>
+                    <td hidden><i class="gg-play pause o"></i></td>
+                    <td><i class="gg-play fast-forward"></i></td>
+                    <td><i class="gg-play next"></i></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div id='snap-shot-comment-cnt'></div>
+            <textarea rows='40' cols='50' wrap='off'></textarea>
           </div>
-          <div id='snap-shot-comment-cnt'></div>
-          <textarea rows='40' cols='50' wrap='off'></textarea>
         </div>
       </div>
       <div>
+        <span id='measurement-cnt' class='no-print'>
+          <label>Measurement</label>
+          <input type='checkbox'>
+          <div class='tab' id='input-measurement-selector'></div>
+          <div class='tab' id='output-measurement-selector'></div>
+        </span>
         <div id='two-d-display' hidden>
-          <span>
-            <label>Measurement</label>
-            <input type='checkbox'>
-          </span>
           <br>
-          <label>Line Display:</label>
-          <div class='tab' id='display-radios-2d'>
+          <label class='no-print'>Line Display:</label>
+          <div class='tab no-print' id='display-radios-2d'>
             <label>Line Only</label>
             <input type='radio' name='line-disp-type-2d' value='LINE_ONLY' checked>
             <label>Vector</label>

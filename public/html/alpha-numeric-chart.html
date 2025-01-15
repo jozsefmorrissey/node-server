@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>alpha-numeric-chart</title>
+    <link href='https://fonts.googleapis.com/css?family=Allerta Stencil' rel='stylesheet'>
     <style media="screen">
       tbody {
         font-size: xxx-large;
@@ -14,6 +15,10 @@
         border-color: green;
         border-width: 1px;
         border-style: solid;
+        font-size: 1.5cm;
+        min-width: 1.5cm;
+        font-family: 'Allerta Stencil';
+        text-align: center;
       }
 
     </style>
@@ -37,7 +42,7 @@
       while (index < characters.length) {
         tableHtml += '<tr>';
         for (let i = 0; i < 8; i ++) {
-          tableHtml += `\n\t<td>${characters[index++]}</td>`;
+          tableHtml += `\n\t<td id='${characters[index]}'>${characters[index++]}</td>`;
         }
         tableHtml += '\n</tr>'
       }
@@ -74,7 +79,7 @@
         const right = search(intsideBorder.x, intsideBorder.y, 1,0, isGreen);
         const height = top.y - bottom.y;
         const width = right.x - left.x;
-        const borderWidth = intsideBorder.x - initalBorder.x;
+        const borderWidth = (intsideBorder.x - initalBorder.x);
         const center = {x: (right.x - left.x)/2, y: (top.y + bottom.y)/2}
         return {center, height, width, borderWidth};
       }
@@ -83,36 +88,107 @@
         const centers = [];
         let y = firstInfo.center.y;
         let x = firstInfo.center.x;
-        while(y < image.height - firstInfo.height / 2) {
-          while (x < image.width - firstInfo.width / 2) {
-            centers.push({x,y});
+        for (let yi = 0; yi < 12; yi++) {
+          for (let xi = 0; xi < 8; xi++) {
+            centers.push({x:Math.floor(x),y:Math.floor(y)});
             x+=firstInfo.width + firstInfo.borderWidth;
           }
-          y+=firstInfo.height + firstInfo.borderWidth;
+          y+=Math.floor(firstInfo.height + firstInfo.borderWidth);
           x = firstInfo.center.x;
         }
         return centers;
       }
 
+      const locationId = (c) => `${c.x},${c.y}`;
+      const offsets = [{x:-1,y:1},{x:1,y:-1},{x:1,y:0},{x:0,y:1},{x:1,y:1},
+                        {x:-1,y:0},{x:0,y:-1},{x:-1,y:-1}];
+      const setOffsetLocation = (c, o, locs, search, limit) => {
+        const loc = {x: c.x + o.x, y: c.y + o.y};
+        if (locs[locationId(loc)] === undefined) {
+          const data = context.getImageData(c.x, c.y, 1, 1).data;
+          if (!limit(data)) {
+            search.push(loc);
+          }
+          locs[locationId(loc)] = null;
+        }
+        return loc;
+      }
       function breathFirstSearch(center, filter, limit, locations) {
-        const data = context.getImageData(center.x, center.y, 1, 1).data;
-        const locationId = `${center.x},${center.y}`;
-        if (locations[locationId] !== undefined || limit(data)) return [];
-        locations[locationId] = filter(data) ? center : false;
-        const offsets = [{x:-1,y:1},{x:1,y:-1},{x:1,y:0},{x:0,y:1},{x:1,y:1},
-                          {x:-1,y:0},{x:0,y:-1},{x:-1,y:-1},];
-        offsets.forEach(o => breathFirstSearch(
-          {x: center.x + o.x, y: center.y + o.y}, filter, limit, locations));
+        let search = [center];
+        while (search.length) {
+          center = search[0];
+          const data = context.getImageData(center.x, center.y, 1, 1).data;
+          locations[locationId(center)] = filter(data) ? center : false;
+          offsets.forEach(o => setOffsetLocation(center, o,  locations, search, limit));
+          search.splice(0,1)
+        }
+      }
+
+      function extendSquare(point,  demension, xyMap, pixels) {
+        const leg1 = {x: point.x + demension, y: point.y};
+        const leg2 = {x: point.x, y: point.y + demension};
+        let eXtends = true;
+        let checked = [];
+        for (let index = 0; index < demension + 1; index++) {
+          const x1 = leg2.x + index;
+          const y1 = leg2.y;
+          const x2 = leg1.x;
+          const y2 = leg1.y + index;
+          if (!xyMap[x1] || !xyMap[x1][y1]) eXtends = false;
+          if (!xyMap[x2] || !xyMap[x2][y2]) eXtends = false;
+          checked = checked.concat([{x:x1,y:y1},{x:x2,y:y2}]);
+        }
+        if (eXtends) checked.forEach(p => {delete xyMap[p.x][p.y];});
+        return eXtends;
+      }
+
+      let cubeToStr = (cube, color) => {
+        const d = cube.d || 1;
+        const s = {x: cube.x - d/2, y: cube.y - d/2};
+        return `${color}[(${locationId(s)}),(${locationId({x: s.x + d, y: s.y})}),(${locationId({x: s.x + d, y: s.y + d})}),(${locationId({x: s.x, y: s.y + d})})]`
+      }
+
+      function squareList (map) {
+        const xyMap = [];
+        map.forEach(v => {
+            if (xyMap[v.x] === undefined) xyMap[v.x] = [];
+            xyMap[v.x][v.y] = true;
+        });
+        const search = map.map(v => v);
+        const sqList = [];
+        search.sort((v1,v2) => v1.x !== v2.x ? v1.x - v2.x : v1.y - v2.y);
+        while (search.length) {
+          let target = search[0];
+          if (xyMap[target.x][target.y]) {
+            let pixels = [target];
+            let demension = 1;
+            while (extendSquare(target, demension, xyMap, pixels)) demension++;
+            if (demension > 1 || target.secondCheck) {
+              const d = demension === 1 ? undefined : demension;
+              sqList.push({x: target.x + demension/2 - .5, y: target.y + demension/2 - .5, d});
+              pixels.forEach(p => delete xyMap[p.x][p.y]);
+            } else {
+              target.secondCheck = true;
+              search.push(target);
+            }
+          }
+          search.splice(0,1);
+        }
+        return sqList;
       }
 
       function createPixelMap(context, centers) {
         const pixelMap = {};
+        return;
         for (let index = 0; index < centers.length; index++) {
+          if (index % 5  === 0)
+            console.log(`${(index + 1) / centers.length}%`);
           const center = centers[index];
           let locationMap = {};
           breathFirstSearch(center, notGreenOrWhite, isGreen, locationMap);
-          const blackMap = Object.values(locationMap).filter(v => v !== false);
-          pixelMap[characters[index]] = blackMap.map(c => ({x: c.x - center.x, y: c.y - center.y}));
+          const blackMap = Object.values(locationMap).filter(v => !!v)
+                                    .map(c => ({x: c.x - center.x, y: c.y - center.y}));
+          pixelMap[characters[index]] = squareList(blackMap);
         }
         return pixelMap;
       }

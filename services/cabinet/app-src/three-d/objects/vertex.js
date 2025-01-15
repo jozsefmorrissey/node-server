@@ -36,14 +36,16 @@ class Vertex3D {
 
     this.viewFromVector = (vector) => Vertex3D.viewFromVector([this], vector)[0];
 
-    this.translate = (vector, doNotModify) => {
-      let vertex = this;
-      if (doNotModify === true) vertex = this.copy();
-      if (!(vector instanceof Vector3D)) vector = new Vector3D(vector);
-      vertex.x += vector.i();
-      vertex.y += vector.j();
-      vertex.z += vector.k();
-      return vertex;
+    this.translate = (vectorOvectors, doNotModify) => {
+      if (doNotModify === true) return this.copy().translate(vectorOvectors);
+      if (Array.isArray(vectorOvectors)) vectorOvectors.forEach(v => this.translate(v));
+      else {
+        let vector =  new Vector3D(vectorOvectors);
+        this.x += vector.i();
+        this.y += vector.j();
+        this.z += vector.k();
+      }
+      return this;
     }
 
     this.positionAt = (vertex) => {
@@ -324,11 +326,13 @@ Vertex3D.fromLimits = (limits) => {
   const z = limits.z; const zn = limits['-z'];
   return [
     new Vertex3D(x,y,z),new Vertex3D(xn,y,z),
-    new Vertex3D(x,yn,z),new Vertex3D(x,y,zn),
-    new Vertex3D(xn,yn,z),new Vertex3D(x,yn,zn),
-    new Vertex3D(xn,y,zn),new Vertex3D(xn,yn,zn),
-  ]
+    new Vertex3D(xn,yn,z),new Vertex3D(x,yn,z),
+    new Vertex3D(x,y,zn),new Vertex3D(xn,y,zn),
+    new Vertex3D(xn,yn,zn),new Vertex3D(x,yn,zn)
+  ];
 }
+
+
 
 Vertex3D.magnitudeVector = (unitVector, vertices, center) => {
   center ||= Vertex3D.center(vertices);

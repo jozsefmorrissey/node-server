@@ -7,6 +7,7 @@ $t.loadFunctions(require('../../../../../services/cabinet/generated/html-templat
 require('../../3d-modeling/csg');
 require('../../utils');
 const du = require('../../dom-utils');
+const Line2d = require('../../canvas/two-d/objects/line.js');
 const Viewer = require('../../3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../3d-modeling/viewer.js').addViewer;
 
@@ -69,7 +70,7 @@ models['Shower Wheel Thingy!'] = (one,two) => {
   let height = 1.5*2.54;
   let width = 1 * 2.54;
   let wheelScrewCenterZ = (5/16) * -2.54;
-  let glassThickness = (1/4) * 2.54;
+  let glassThickness = .8;
   let glassScrewCenter = [0, .5*2.54, glassThickness - .1];
   let gsc = glassScrewCenter;
   let flapThickness = (1/16) * 2.54;
@@ -79,8 +80,8 @@ models['Shower Wheel Thingy!'] = (one,two) => {
   let supportCylRad = (13/32) * 2.54/2;
   let scr = supportCylRad;
   let notchThickness = .08;
-  let slices = 64;
-  const cylinder = new CSG.cylinder({slices, start: [0,0,0], end: [0,height,0], radius: width/2});
+  let slices = 48;
+  const cylinder = new CSG.cylinder({slices, start: [0,0,0], end: [0,height,0], radius: width/2 + .62/2});
   const glassCutter = new CSG.cube({radius: [width, height/2, glassThickness/2], center: [0,(height/2) - flapThickness, glassThickness/2]});
   const backNotchCutter = new CSG.cube({radius: [width/2, notchThickness, notchThickness]});
   // backNotchCutter.rotate({x:45,y:0,z:0});
@@ -100,9 +101,9 @@ models['Shower Wheel Thingy!'] = (one,two) => {
   let supportSqL = new CSG.cube({radius: [scr,height/2,scr], center: [width/-2+scr, height/2, scr/2]}).subtract(glassCutter);
 
   const plierSlot = new CSG.cube({radius: [(3/16)*2.54/2, (7/32)*2.54/2, 5], center: [0,height,-5]});
-  const backAngle = new CSG.cube({radius: [1.5*2.54/2, 1.5*2.54/2, .5/2], center: [0,0,0]});
+  const backAngle = new CSG.cube({radius: [1.5*2.54/2, 1.5*2.54/2, .75/2], center: [0,0,0]});
   backAngle.rotate({x:-45});
-  backAngle.translate([0,height,(width)/2.54+.1]);
+  backAngle.translate([0,height,(width)/2.54+.4]);
   const crossSection = new CSG.cube({radius: [50,50,50], center: [0,0,50]});
   let body = cylinder.subtract(glassCutter)
     .subtract(wheelScrewCyl)
@@ -120,11 +121,20 @@ models['Shower Wheel Thingy!'] = (one,two) => {
     .subtract(backNotchCutter)
     .subtract(backScrewWell)
     .subtract(backScrewHole)
-  body.rotate({y:90});
+  body.rotate({y: 90, z:-135});
+  cylinder.rotate({y: 90, z:-135});
   const pilotHole = new CSG.cylinder({slices, radius: .14, start: [0,gsc[1], -1], end: [0,gsc[1], gsc[2] + .2]});
   const dowel = backScrewCyl.intersect(backScrewHole.union(backScrewWell)).subtract(pilotHole);
   dowel.scale(.95);
+
+  let support = new CSG.cube({radius: 2.4/2});
+  support.translate({x:0,z:0,y:-2.44})
+  // body.translate(new CSG.Vector(body.demensions()).times(-10));
+  support = support.subtract(cylinder);
+  support.translate({x:-.43,z:0,y:.33});
+  support.setColor('blue');
   // body = body.subtract(crossSection);
+  body.add(support);
   return body;//{body, dowel};
 }
 
@@ -693,6 +703,78 @@ models['crown support'] = (bracketGerth) => {
   return crownSS;
 }
 
+models['Cane'] = (bracketGerth) => {
+  const radius = 2.54 * .625;
+  const slices = 96;
+  const pipe = new CSG.cylinder.hollow(radius, 6*2.54, .4, {slices, ends: ['FEMALE', 'MALE'], endLength: 2.54/2});
+  pipe.setColors('blue');
+
+  const mainLines = Line2d.sineWave(2, .3, 250, .05, 3.6);
+  mainLines.forEach(l => l.length(l.length()*2));
+  const backSupportLines = Line2d.arc({x:4,y:6.915}, 5, 280, 360, .25);
+  backSupportLines.forEach(l => l.length(l.length()*2));
+  const frontSupportLines = Line2d.arc({x:19,y:7.03}, 10, 181, 242.5, .25);
+  frontSupportLines.forEach(l => l.length(l.length()*2));
+  lines = mainLines.concat(backSupportLines.concat(frontSupportLines));
+  let handle = new CSG();
+  lines.map(l => handle.add(new CSG.cylinder.step([{vector: l.vector(), radius}], {slices, center: l.midpoint()})));
+
+  const handleEnd = new CSG.cylinder.hollow(radius, 1.1*2.54, .4, {slices, ends: ['FEMALE', 'OPEN'], endLength: 2.54/2});
+  handleEnd.rotate({x:90});
+  handleEnd.center(backSupportLines[backSupportLines.length - 1][1]);
+  handle.add(handleEnd);
+
+  handle.setColors('blue')
+
+  const tpuSeal = new CSG.cylinder.hollow(radius, .35, .4, {slices, ends: ['FEMALE', 'FEMALE'], endLength: 4});
+
+  return tpuSeal;
+}
+
+
+models['Brad Nail Container'] = (nailLengths, gauge, count, clipLength, containerThickess) => {
+  nailLengths ||= [5.08, 4.445, 3.81, 2.54];
+  nailLengths.sort().reverse();
+  gauge ||= 18;
+  count ||= 5;
+
+  cntt = containerThickess || .2;
+  const nailDia = Gauge.to.mm(gauge)/10;
+  clipLength = nailDia * 130;
+  const nailGap = nailDia * (count + 1);
+  const bottomThickness =  nailLengths.max()  - nailLengths.min() * .75 * .1;
+  const dems = [clipLength, nailLengths.min() * .75 * 1.01, nailGap * nailLengths.length * 2 - nailGap];
+
+  let {lid, container} = new CSG.Container({demensions: dems, bottomThickness});
+
+  let start = new CSG.Vector(container.center());
+  start = start.plus({x: 0, y: 0, z: dems[2] / -2 + nailGap / 2});
+  let lastLen = 0;
+  nailLengths.forEach(len => {
+    const hOffset = lastLen ? (lastLen - len) / 2 : 0;
+    const text = new CSG.text(len + '', dems[0] *1.5);
+    start.y += hOffset;
+    const cutter = new CSG.cube({demensions: [dems[0],len, nailGap], center: [start.x, start.y, start.z]});
+    start = start.plus( {x:0,y:0,z:2*nailGap});
+    container = container.subtract(cutter);
+    lastLen = len;
+  });
+
+
+  let topText = new CSG.text('18 GAUGE', 1000);
+  topText.rotate({x:90});
+  topText.scale(.03);
+  topText.center(lid.center());
+
+  console.log(lid.toDrawString());
+  console.log(container.toDrawString());
+  console.log(topText.toDrawString());
+  lid = lid.subtract(topText);
+
+
+  // return {lid, container};
+  return lid;
+}
 
 const cnt = du.create.element('div');
 const controls = du.create.element('div', {style: 'float: left'});
@@ -722,7 +804,7 @@ const getModel = () => {
   const model = new CSG();
   modelList.forEach(m => model.polygons.concatInPlace(m.polygons));
   // console.log(modelList.map(m => m.toDrawString(String.color.next())).join('\n\n'));
-  model.scale(10);
+  // model.scale(10);
   return model;
   // return new CSG.text('Hello World');
 }
@@ -756,7 +838,7 @@ const download = () => {
   addLinks(getSelected(), select.value);
 }
 
-select.value = 'crown support';
+select.value = 'Brad Nail Container';
 
 du.on.match('change', 'input', updateModel);
 

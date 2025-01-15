@@ -10,6 +10,7 @@ const Parimeter = require('../../../app-src/three-d/objects/parimeter.js');
 const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
 const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
 const Line3D = require('../../../app-src/three-d/objects/line.js');
+const Layer = require('../../../app-src/three-d/objects/layer.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
 
@@ -25,11 +26,16 @@ function peels(info) {
   const silhouette = Object.fromJson(info.silhouette);
   const ASSEMBLY = info.ASSEMBLY;
   const topVector = {i:0,j:1,k:0};
-  const topPeel = csg.peel(topVector, .001);
+  let topPeel = csg.peel(topVector, .001);
   const bottomPeel = csg.peel({i:0,j:-1,k:0}, .001);
 
-  const top = Parimeter.fromCSG(topPeel, topVector);
-  const bottom = Parimeter.fromCSG(bottomPeel, topVector);
+  // topPeel = topPeel.union(topPeel);
+  const topLayer = Layer.fromCSG(topPeel.polygons.filter(p => p.plane.normal.y === 1))[0];
+  const top = topLayer.parimeter()[0];
+
+  const bottomLayer = Layer.fromCSG(bottomPeel.polygons.filter(p => p.plane.normal.y === -1))[0];
+  const bottom = bottomLayer.parimeter()[0];
+
   return {top,bottom,csg,silhouette,ASSEMBLY};
 }
 
@@ -44,8 +50,8 @@ function withWallsOutline(polys, walls) {
 }
 
 function organize(map, walls, floor, ceiling) {
-  const allObjects = new ToleranceMap({'center().y': .01});
-  const assembliesOnly = new ToleranceMap({'center().y': .01});
+  const allObjects = new ToleranceMap({'center().y': .0001});
+  const assembliesOnly = new ToleranceMap({'center().y': .0001});
   Object.values(map).forEach(info => {
     if (info.ASSEMBLY) {
       assembliesOnly.add.all([info.top, info.bottom]);

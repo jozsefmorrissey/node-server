@@ -4,7 +4,6 @@
 const Group = require('./group.js');
 const Lookup = require('../../../../public/js/utils/object/lookup');
 const Layout2D = require('../two-d/layout/layout.js');
-let Global;
 const Object3D = require('../three-d/layout/object.js');
 
 class Room extends Lookup {
@@ -40,8 +39,6 @@ class Room extends Lookup {
     const obj3dMap = {};
     this.layoutObjects = (target) => {
       if (instance.groups === undefined) return [];
-      // TODO: hacky fix for circular reference.
-      if (Global === undefined) Global = require('../services/global.js');
 
       let selectorFunc;
       if (target === true) target = Global.group();
@@ -109,6 +106,6 @@ Room.fromJson = (json) => {
   return room;
 }
 
-Group.defaultRoom = new Room('defaultRoom');
+Global.room.DEFAULT = new Room('FOR_TESTING_PURPOSES_ONLY');
 
 module.exports = Room;

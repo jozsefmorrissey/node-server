@@ -11,7 +11,7 @@ function regexToObject (str, reg) {
   const returnVal = {};
   for (let index = 2; index < arguments.length; index += 1) {
     const attr = arguments[index];
-    if (attr) returnVal[attr] = match[index - 1];
+    if (attr && match[index - 1]) returnVal[attr] = match[index - 1];
   }
   return returnVal;
 }
@@ -59,13 +59,12 @@ function standardize(ambiguousDecimal, notMetric) {
   }
 }
 
-class Measurement {
-  constructor(value, notMetric) {
+Measurement = function (value, notMetric) {
     if ((typeof value) === 'string') {
       value += ' '; // Hacky fix for regularExpression
     }
 
-    this.clone = () => new Measurement(this.decimal());
+    this.clone = (decimal) => new Measurement(decimal === undefined ? this.decimal() : decimal);
 
     let decimal = 0;
     let nan = value === null || value === undefined;
@@ -73,10 +72,10 @@ class Measurement {
     this.equals = (other) => (other instanceof Measurement) && other.decimal() === this.decimal();
 
     const parseFraction = (str) => {
-      const regObj = regexToObject(str, Measurement.regex, null, 'integer', null, 'numerator', 'denominator', 'stOsh');
-      regObj.integer = Number.parseInt(regObj.integer) || 0;
-      regObj.numerator = Number.parseInt(regObj.numerator) || 0;
-      regObj.denominator = Number.parseInt(regObj.denominator) || 0;
+      const regObj = regexToObject(str, Measurement.regex, 'integer', 'numerator', 'denominator', 'stOsh', 'integer');
+      regObj.integer = Number.parseFloat(regObj.integer) || 0;
+      regObj.numerator = Number.parseFloat(regObj.numerator) || 0;
+      regObj.denominator = Number.parseFloat(regObj.denominator) || 0;
       if(regObj.denominator === 0) {
         regObj.numerator = 0;
         regObj.denominator = 1;
@@ -86,7 +85,8 @@ class Measurement {
         regObj.numerator = (coef * regObj.numerator) + (regObj.stOsh === 'st' ? 1 : -1);
         regObj.denominator *= coef;
       }
-      regObj.decimal = regObj.integer + (regObj.numerator / regObj.denominator);
+      const numCoef = regObj.integer < 0 ? -1 : 1;
+      regObj.decimal = regObj.integer + (numCoef * regObj.numerator / regObj.denominator);
       return regObj;
     };
 
@@ -170,7 +170,7 @@ class Measurement {
       switch (dispUnit || this.unit()) {
         case units[0]: return new String(this.decimal(accuracy || .1), units[0]);
         case units[1]: return this.standardUS(accuracy);
-        case units[2]: return new String(this.decimal(accuracy || .1), units[2]);
+        case units[2]: return new String(this.decimal(accuracy || .01) * 10, units[2]);
         default:
             return this.standardUS(accuracy);
       }
@@ -223,7 +223,6 @@ class Measurement {
       nan = true;
     }
   }
-}
 
 Measurement.display = (value, notMetric) => {
   return new Measurement(value, notMetric).display();
@@ -275,14 +274,18 @@ Measurement.unit = (newUnit) => {
   }
   return unit
 };
+Measurement.unit.BASE = BASE_UNITS;
 Measurement.sme = new StringMathEvaluator(Math).eval;
 Measurement.units = () => JSON.parse(JSON.stringify(units));
-Measurement.regex = /^\s*(([0-9]*)\s{1,}|)(([0-9]{1,})\s*\/([0-9]{1,})\s*|)(st|sh|)\s*$/;
+
+
+const nr = Number.regex.source;
+Measurement.regex = new RegExp(`(?:(${nr}\\s{1,}|)(${nr})/(${nr})|(${nr}))`);
+
 Measurement.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997];
 Measurement.rangeRegex = /^\s*(\(|\[)(.*),(.*)(\)|\])\s*/;
-Measurement.decimalRegStr = '(-|)[0-9]*(\\.|)[0-9]*';
-Measurement.decimalReg = new RegExp(`(^${Measurement.decimalRegStr}$)`);///(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
-const areaRegStr = `^(${Measurement.decimalRegStr})(x|X)(${Measurement.decimalRegStr})((SQ)[a-zA-Z]{1,})$`;
+Measurement.decimalReg = new RegExp(`(^${Number.regex.source}$)`);///(^(-|)[0-9]*(\.|$|^)[0-9]*)$/;
+const areaRegStr = `^(${Number.regex.source})(x|X)(${Number.regex.source})((SQ)[a-zA-Z]{1,})$`;
 Measurement.areaReg = new RegExp(areaRegStr);
 Measurement.areaReg.breakdown = (str) => {
   const match = str.match(Measurement.areaReg);
@@ -290,6 +293,16 @@ Measurement.areaReg.breakdown = (str) => {
                   unit: match[8]} : null;
 }
 
+Measurement.fromString = (string, unit) => {
+  if (!string.match(Measurement.regex)) return null;
+  if (unit === undefined) unit = false;
+  return new Measurement(string, unit);
+}
+
+Measurement.decimal = (value, unit) => {
+  if ((typeof value) === 'string') return Measurement.fromString(value, unit).decimal();
+  return new Measurement(value, unit).decimal();
+}
 
 Measurement.validation = function (range) {
   const obj = regexToObject(range, Measurement.rangeRegex, 'minBound', 'min', 'max', 'maxBound');
@@ -314,10 +327,6 @@ Measurement.area = function (demensions, notMetric) {
     area += standardize(dem.x, notMetric) * standardize(dem.y, notMetric);
   }
   return area;
-}
-
-Measurement.decimal = (value) => {
-  return new Measurement(value, true).decimal();
 }
 
 Measurement.round = (value, percision) => {

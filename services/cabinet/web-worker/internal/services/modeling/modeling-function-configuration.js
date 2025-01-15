@@ -360,7 +360,7 @@ to.Shelve = {
       const index = Number.parseInt(rMdto.partCode.replace(/.*?([0-9]{1,})$/, '$1'));
       const dividerNorms = divider.position.current.normals;
       rMdto.position.current.normals = dividerNorms;
-      biPoly.translate(new Vector3D(0,sectionUtils.innerLength*index/(shelveCount+1),0));
+      biPoly.translate(new Vector3D(0,sectionUtils.inner.len*index/(shelveCount+1),0));
       return biPoly;
     },
     extended: (rMdto, env) => {

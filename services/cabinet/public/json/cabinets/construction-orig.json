@@ -1,0 +1,6102 @@
+{
+  "panel": {
+    "_TYPE": "AssemblyTemplate",
+    "type": "Panel",
+    "values": [],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "0",
+          "H/2",
+          0
+        ],
+        "demensions": [
+          "W",
+          "H",
+          "D"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "Panel",
+        "code": "p"
+      }
+    ],
+    "joints": [],
+    "shape": "square",
+    "width": "10*2.54",
+    "height": "100*2.54",
+    "thickness": "pt34",
+    "_FORCE_FROM_JSON": true
+  },
+  "shelve-floating": {
+    "_TYPE": "AssemblyTemplate",
+    "type": "shelve-floating",
+    "values": [],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w/2",
+          "c.h - (t.t/2)",
+          "(c.d-f.t)/2"
+        ],
+        "demensions": [
+          "c.w",
+          "c.t-f.t",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "Top",
+        "code": "t",
+        "id": "jcwp5fi"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "t.c.x",
+          "t/2",
+          "t.c.z"
+        ],
+        "demensions": [
+          "t.d.x",
+          "t.d.y",
+          "t.d.z"
+        ],
+        "rotation": [
+          "t.r.x",
+          "t.r.y",
+          "t.r.z"
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "bottom",
+        "code": "b",
+        "polyConfig.points.0": [],
+        "polyConfig.points.1": [],
+        "polyConfig.points.2": [],
+        "id": "v394op2"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "t/2",
+          "c.h/2",
+          "(c.t-f.t)/2"
+        ],
+        "demensions": [
+          "c.d-f.t",
+          "c.h - t.t - b.t",
+          "pt34"
+        ],
+        "rotation": [
+          "0",
+          "90",
+          0
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "left",
+        "code": "l",
+        "id": "94tqh6c"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - t/2",
+          "l.c.y",
+          "l.c.z"
+        ],
+        "demensions": [
+          "l.d.x",
+          "l.d.y",
+          "l.d.z"
+        ],
+        "rotation": [
+          "l.r.x",
+          "l.r.y",
+          "l.r.z"
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "right",
+        "code": "r",
+        "polyConfig.points.0": [],
+        "polyConfig.points.1": [],
+        "polyConfig.points.2": [],
+        "id": "nwamme5"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w/2",
+          "c.h/2",
+          "c.t-t/2"
+        ],
+        "demensions": [
+          "c.w",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "include": "All",
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        },
+        "name": "front",
+        "code": "f",
+        "id": "83yi0ys"
+      }
+    ],
+    "joints": [
+      {
+        "_TYPE": "Miter",
+        "selector": {
+        "depends": "t",
+        "dependent": "f"
+      },
+      },
+      {
+        "_TYPE": "Miter",
+        "selector": {
+        "depends": "b",
+        "dependent": "f"
+      },
+      },
+      {
+        "_TYPE": "Miter",
+        "selector": {
+        "depends": "l",
+        "dependent": "f"
+      },
+      },
+      {
+        "_TYPE": "Miter",
+        "selector": {
+        "depends": "r",
+        "dependent": "f"
+      },
+      },
+      {
+        "_TYPE": "Miter",
+        "selector": {
+        "depends": "l",
+        "dependent": "t"
+      },
+      },
+      {
+        "_TYPE": "Miter",
+        "selector": {
+        "depends": "l",
+        "dependent": "b"
+      },
+      },
+      {
+        "_TYPE": "Miter",
+        "selector": {
+        "depends": "r",
+        "dependent": "t"
+      },
+      },
+      {
+        "_TYPE": "Miter",
+        "selector": {
+        "depends": "r",
+        "dependent": "b"
+      },
+      }
+    ],
+    "shape": "square",
+    "width": "24*2.54",
+    "height": "3*2.54",
+    "thickness": "12*2.54",
+    "_FORCE_FROM_JSON": true
+  },
+  "HOOD-first": {
+  "_TYPE": "AssemblyTemplate",
+  "type": "HOOD-first",
+  "values": [
+    {
+      "key": "topWidth",
+      "eqn": "24*2.54",
+      "id": "i3m5c3c"
+    },
+    {
+      "key": "topCrownHeight",
+      "eqn": "6*2.54",
+      "id": "0v7a5xp"
+    },
+    {
+      "key": "topHeight",
+      "eqn": "30*2.54",
+      "id": "pzrrai5"
+    },
+    {
+      "key": "bottomHeight",
+      "eqn": "H-topHeight - mf.t",
+      "id": "y2rj98z"
+    },
+    {
+      "key": "middleCrownWidth",
+      "eqn": "3*2.54",
+      "id": "7ewzuw5"
+    },
+    {
+      "key": "topDepth",
+      "eqn": "12*2.54",
+      "id": "u7kt5mp"
+    }
+  ],
+  "subassemblies": [
+    {
+      "type": "Panel",
+      "center": [
+        "w/2",
+        "h/2",
+        "T - t/2"
+      ],
+      "demensions": [
+        "W ",
+        "bottomHeight",
+        "pt34"
+      ],
+      "rotation": [
+        "0",
+        0,
+        0
+      ],
+      "include": "All",
+      "name": "bottomFront",
+      "code": "bf",
+      "positionMethod": "box",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "normalInfo": {
+        "normals": [
+          [
+            "1",
+            "0",
+            "0"
+          ],
+          [
+            "0",
+            "1",
+            "1"
+          ],
+          [
+            "0",
+            "0",
+            "1"
+          ]
+        ],
+        "calc": 2,
+        "style": "rotation",
+        "valid": true,
+        "lines": [
+          [
+            {
+              "x": "0",
+              "y": "1",
+              "z": "0"
+            },
+            {
+              "x": "0",
+              "y": "2",
+              "z": "0"
+            }
+          ],
+          [
+            {
+              "x": "1",
+              "y": "0",
+              "z": "1"
+            },
+            {
+              "x": "3",
+              "y": "0",
+              "z": "3"
+            }
+          ]
+        ]
+      },
+      "id": "fewo8io"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "h/2 - middleCrownWidth",
+        "bottomHeight + t/2",
+        "D + w/2 - bf.t"
+      ],
+      "demensions": [
+        "middleCrownWidth+bf.t",
+        "W+middleCrownWidth*2",
+        "pt34"
+      ],
+      "rotation": [
+        "270",
+        "90",
+        "0"
+      ],
+      "include": "All",
+      "name": "middleFront",
+      "code": "mf",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "hcvj79u"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "t/2",
+        "h/2",
+        "w/2"
+      ],
+      "demensions": [
+        "D-bf.t",
+        "bottomHeight",
+        "pt34"
+      ],
+      "rotation": [
+        "0",
+        "90",
+        0
+      ],
+      "include": "All",
+      "name": "bottomLeft",
+      "code": "bl",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "5ptgs16"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W-t/2",
+        "h/2",
+        "w/2"
+      ],
+      "demensions": [
+        "D-bf.t",
+        "bottomHeight",
+        "pt34"
+      ],
+      "rotation": [
+        "0",
+        "90",
+        0
+      ],
+      "include": "All",
+      "name": "bottomRight",
+      "code": "br",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "x3vj5m7"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "-w/2 + bl.t",
+        "bottomHeight + t/2",
+        "h/2"
+      ],
+      "demensions": [
+        "middleCrownWidth+bl.t",
+        "D-bf.t",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        0,
+        0
+      ],
+      "include": "All",
+      "name": "middleLeft",
+      "code": "ml",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "bulhwnl"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W + w/2 - br.t ",
+        "bottomHeight+t/2",
+        "h/2"
+      ],
+      "demensions": [
+        "middleCrownWidth+br.t",
+        "D-bf.t",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        "0",
+        "0"
+      ],
+      "include": "All",
+      "name": "middleRight",
+      "code": "mr",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "parf3fd"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "bl.t + w/2",
+        "h/2",
+        "t/2"
+      ],
+      "demensions": [
+        "W - ml.t - mr.t",
+        "bottomHeight+ml.t",
+        1
+      ],
+      "rotation": [
+        "0",
+        0,
+        "0"
+      ],
+      "include": "All",
+      "name": "backBottom",
+      "code": "bb",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "s3ffqgd"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W/2",
+        "H - w/2",
+        "topDepth - t/2"
+      ],
+      "demensions": [
+        "topCrownHeight",
+        "topWidth",
+        "pt34"
+      ],
+      "rotation": [
+        "0",
+        0,
+        "90"
+      ],
+      "include": "All",
+      "name": "topFront",
+      "code": "tf",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "spq7qpm"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W/2 - topWidth/2 + t/2",
+        "H - w/2",
+        "h/2"
+      ],
+      "demensions": [
+        "topCrownHeight",
+        "topDepth - tf.t",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        "180",
+        "270"
+      ],
+      "include": "All",
+      "name": "topLeft",
+      "code": "tl",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "6ugjvch"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W/2 + topWidth/2 - t/2",
+        "H - w/2",
+        "h/2"
+      ],
+      "demensions": [
+        "topCrownHeight",
+        "topDepth-tf.t",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        "0",
+        "90"
+      ],
+      "include": "All",
+      "name": "topRight",
+      "code": "tr",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "g2ey9is"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W/2",
+        "H-w/2",
+        "t/2"
+      ],
+      "demensions": [
+        "topCrownHeight",
+        "topWidth - tl.t - tr.t",
+        "pt12"
+      ],
+      "rotation": [
+        0,
+        0,
+        "90"
+      ],
+      "include": "All",
+      "name": "topBack",
+      "code": "tb",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "hb91qkm"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        0,
+        0,
+        0
+      ],
+      "demensions": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "include": "All",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            "0",
+            "bottomHeight + mf.t",
+            "D"
+          ],
+          [
+            "W/2 - topWidth/2",
+            "H-topCrownHeight",
+            "topDepth"
+          ],
+          [
+            "W/2 + topWidth/2",
+            "H-topCrownHeight",
+            "topDepth"
+          ],
+          [
+            "W",
+            "bottomHeight + mf.t",
+            "D"
+          ]
+        ]
+      },
+      "name": "middleFrontPanel",
+      "code": "mfp",
+      "positionMethod": "poly",
+      "polyConfig.points.1": [],
+      "polyConfig.points.2": [],
+      "normalInfo": {
+        "normals": [
+          [
+            "1",
+            "0",
+            "0"
+          ],
+          [
+            "0",
+            "1",
+            "0"
+          ],
+          [
+            "0",
+            "0",
+            "1"
+          ]
+        ],
+        "calc": 2,
+        "style": "line",
+        "valid": true,
+        "lines": [
+          [
+            {
+              "x": "0",
+              "y": "0",
+              "z": "0"
+            },
+            {
+              "x": "1",
+              "y": "0",
+              "z": "0"
+            }
+          ],
+          [
+            {
+              "x": "W/2",
+              "y": "bottomHeight + mf.t",
+              "z": "D"
+            },
+            {
+              "x": "W/2",
+              "y": "H-topCrownHeight",
+              "z": "topDepth"
+            }
+          ]
+        ]
+      },
+      "polyConfig.points.0": [],
+      "id": "a20qpc9"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        0,
+        0,
+        0
+      ],
+      "demensions": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "include": "All",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            "W",
+            "bottomHeight + mf.t",
+            "D"
+          ],
+          [
+            "W/2 + topWidth/2",
+            "H - topCrownHeight",
+            "topDepth"
+          ],
+          [
+            "W/2 + topWidth/2",
+            "H - topCrownHeight",
+            "0"
+          ],
+          [
+            "W",
+            "bottomHeight+mr.t",
+            0
+          ]
+        ]
+      },
+      "name": "middleRightPanel",
+      "code": "mrp",
+      "positionMethod": "poly",
+      "polyConfig.points.0": [],
+      "polyConfig.points.1": [],
+      "polyConfig.points.2": [],
+      "polyConfig.points.3": [],
+      "normalInfo": {
+        "normals": [
+          [
+            "1",
+            "0",
+            "0"
+          ],
+          [
+            "0",
+            "1",
+            "0"
+          ],
+          [
+            "0",
+            "0",
+            "1"
+          ]
+        ],
+        "calc": 2,
+        "style": "line",
+        "valid": true,
+        "lines": [
+          [
+            {
+              "x": "0",
+              "y": "0",
+              "z": "0"
+            },
+            {
+              "x": "0",
+              "y": "0",
+              "z": "1"
+            }
+          ],
+          [
+            {
+              "x": "W",
+              "y": "bottomHeight + mr.t",
+              "z": "0"
+            },
+            {
+              "x": "W/2 + topWidth/2",
+              "y": "H-topCrownHeight",
+              "z": "0"
+            }
+          ]
+        ]
+      },
+      "id": "h8pz1pq"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        0,
+        0,
+        0
+      ],
+      "demensions": [
+        1,
+        1,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "include": "All",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            "0",
+            "bottomHeight + bl.t",
+            "0"
+          ],
+          [
+            "W/2 - topWidth/2",
+            "H - topCrownHeight",
+            "0"
+          ],
+          [
+            "W/2 - topWidth/2",
+            "H - topCrownHeight",
+            "topDepth"
+          ],
+          [
+            0,
+            "bottomHeight + mf.t",
+            "D"
+          ]
+        ]
+      },
+      "name": "middleLeftPanel",
+      "code": "mlp",
+      "positionMethod": "poly",
+      "polyConfig.points.0": [],
+      "polyConfig.points.1": [],
+      "polyConfig.points.2": [],
+      "polyConfig.points.3": [],
+      "normalInfo": {
+        "normals": [
+          [
+            "1",
+            "0",
+            "0"
+          ],
+          [
+            "0",
+            "1",
+            "0"
+          ],
+          [
+            "0",
+            "0",
+            "1"
+          ]
+        ],
+        "calc": 2,
+        "style": "line",
+        "valid": true,
+        "lines": [
+          [
+            {
+              "x": "0",
+              "y": "0",
+              "z": "1"
+            },
+            {
+              "x": "0",
+              "y": "0",
+              "z": "0"
+            }
+          ],
+          [
+            {
+              "x": "0",
+              "y": "bottomHeight + ml.t",
+              "z": "0"
+            },
+            {
+              "x": "W/2-topWidth/2",
+              "y": "H-topCrownHeight",
+              "z": "0"
+            }
+          ]
+        ]
+      },
+      "id": "xi46bv5"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "W/2",
+        "H - tb.w/2 - topHeight/2",
+        "t/2"
+      ],
+      "demensions": [
+        "topWidth - tl.t -tr.t",
+        "topHeight - topCrownHeight",
+        "pt12"
+      ],
+      "rotation": [
+        "0",
+        0,
+        0
+      ],
+      "include": "All",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "name": "middleBack",
+      "code": "mb",
+      "id": "f8fekhi"
+    }
+  ],
+  "joints": [
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "mfp",
+        "dependent": "tf"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "mlp",
+        "dependent": "tl"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "mrp",
+        "dependent": "tr"
+      },
+    },
+    {
+      "_TYPE": "Miter",
+      "selector": {
+        "depends": "mfp",
+        "dependent": "mlp"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "mb",
+        "dependent": "mlp"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "mb",
+        "dependent": "mrp"
+      },
+    },
+    {
+      "_TYPE": "Miter",
+      "selector": {
+        "depends": "mfp",
+        "dependent": "mrp"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "mrp",
+        "dependent": "mr"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "mlp",
+        "dependent": "ml"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "mfp",
+        "dependent": "mf"
+      },
+    },
+    {
+      "_TYPE": "Miter",
+      "selector": {
+        "depends": "ml",
+        "dependent": "mf"
+      },
+    },
+    {
+      "_TYPE": "Miter",
+      "selector": {
+        "depends": "mr",
+        "dependent": "mf"
+      },
+    },
+    {
+      "_TYPE": "Miter",
+      "selector": {
+        "depends": "bl",
+        "dependent": "bf"
+      },
+    },
+    {
+      "_TYPE": "Miter",
+      "selector": {
+        "depends": "br",
+        "dependent": "bf"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "bb",
+        "dependent": "br"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "bb",
+        "dependent": "bl"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "tb",
+        "dependent": "tl"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "tb",
+        "dependent": "tr"
+      },
+    },
+    {
+      "_TYPE": "Miter",
+      "selector": {
+        "depends": "tl",
+        "dependent": "tf"
+      },
+    },
+    {
+      "_TYPE": "Miter",
+      "selector": {
+        "depends": "tr",
+        "dependent": "tf"
+      },
+    }
+  ],
+  "shape": "square",
+  "width": "36*2.54",
+  "height": "48*2.54",
+  "thickness": "18*2.54",
+  "_FORCE_FROM_JSON": true
+},
+  "base": {
+    "_TYPE": "CabinetTemplate",
+    "type": "base",
+    "values": [
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - pt34 * 2"
+      },
+      {
+        "key": "innerWidthCenter",
+        "eqn": "innerWidth + pt34"
+      }
+    ],
+    "subassemblies": [
+      {
+        "name": "right",
+        "type": "Divider",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "R.l / 2",
+          "(w / -2)"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "t"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
+      },
+      {
+        "name": "left",
+        "type": "Divider",
+        "code": "L",
+        "center": [
+          "(L.t / 2)",
+          "L.l / 2",
+          " (w/-2)"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "t"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
+      },
+      {
+        "name": "back",
+        "type": "Panel",
+        "code": "BACK",
+        "center": [
+          " w / 2 + R.t",
+          "(BACK.h / 2) + tkh",
+          " -1*(c.t - (t / 2))"
+        ],
+        "demensions": [
+          "innerWidth",
+          "c.l - tkh",
+          "pt14"
+        ],
+        "rotation": [
+          0,
+          0,
+          "0"
+        ],
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
+      },
+      {
+        "name": "bottom",
+        "type": "Divider",
+        "code": "B",
+        "center": [
+          "c.w / 2",
+          "tkh + (t/2)",
+          "w / -2"
+        ],
+        "demensions": [
+          "c.t - BACK.t",
+          "innerWidth",
+          "t"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
+      },
+      {
+        "name": "top",
+        "type": "Divider",
+        "code": "T",
+        "center": [
+          "c.w / 2",
+          "c.h - t/2",
+          "(w / -2)"
+        ],
+        "demensions": [
+          "(c.t - BACK.t)",
+          "innerWidth",
+          "t"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "dividerType": "frontAndBack",
+        "polyConfig": {
+          "thickness": "pt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
+      }
+    ],
+    "joints": [
+      {
+        "_TYPE": "Dado",
+        "selector": {
+          "depends": "T",
+          "dependent": "R"
+        }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+          "depends": "T",
+          "dependent": "L"
+        }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+          "depends": "BACK",
+          "dependent": "R"
+        }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+          "depends": "BACK",
+          "dependent": "L"
+        }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+          "depends": "B",
+          "dependent": "R"
+        }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+          "depends": "B",
+          "dependent": "L"
+        }
+      }
+    ],
+    "shape": "square",
+    "width": 45.72,
+    "height": "baseh",
+    "thickness": "based",
+    "_FORCE_FROM_JSON": true,
+    "dividerJoint": {
+      "_TYPE": "Dado"
+    },
+    "fromFloor": 0,
+    "openings": [
+      {
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK"
+      }
+    ],
+    "autoToeKick": true
+  },
+  "blind-corner-ut": {
+  "_TYPE": "CabinetTemplate",
+
+  "ID_ATTRIBUTE": "id",
+  "type": "blind-corner-ut",
+  "values": [
+    {
+      "key": "brh",
+      "eqn": "tkb.w + BACK.t + brr",
+      "id": "zgzj6st"
+    },
+    {
+      "key": "innerWidth",
+      "eqn": "c.w - pt34 * 2",
+      "id": "t43543r"
+    },
+    {
+      "key": "innerWidthCenter",
+      "eqn": "innerWidth + pt34",
+      "id": "me96nsd"
+    },
+    {
+      "key": "blindDepth",
+      "eqn": "24*2.54",
+      "id": "z8u20x2"
+    },
+    {
+      "key": "innerHeight",
+      "eqn": "c.h - tkh - B.t - insetTop",
+      "id": "yuy4i96"
+    },
+    {
+      "key": "insetTop",
+      "eqn": "0",
+      "id": "60hjb6j"
+    }
+  ],
+  "subassemblies": [
+    {
+      "name": "toeKickBacker",
+      "type": "Panel",
+      "code": "tkb",
+      "center": [
+        "c.w / 2",
+        "w / 2",
+        "-(tkd + (t / 2))"
+      ],
+      "demensions": [
+        "tkh",
+        "innerWidth",
+        "tkbw"
+      ],
+      "rotation": [
+        0,
+        0,
+        90
+      ],
+      "id": "9pww4vb"
+    },
+    {
+      "name": "right",
+      "type": "Divider",
+      "code": "R",
+      "center": [
+        "c.w - (R.t / 2)",
+        " l/2",
+        "w / -2"
+      ],
+      "demensions": [
+        "c.t",
+        "c.l",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "id": "4xmu4dk"
+    },
+    {
+      "name": "left",
+      "type": "Divider",
+      "code": "L",
+      "center": [
+        "(t / 2)",
+        " l/2",
+        "w/-2"
+      ],
+      "demensions": [
+        "c.t",
+        "c.l",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "id": "0udlq3z"
+    },
+    {
+      "name": "back",
+      "type": "Panel",
+      "code": "BACK",
+      "center": [
+        "l / 2 + L.t",
+        " (w / 2) + tkb.w",
+        "-(c.t - (t / 2))"
+      ],
+      "demensions": [
+        "c.l - tkb.w",
+        "innerWidth",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        0,
+        90
+      ],
+      "id": "b9000k8"
+    },
+    {
+      "name": "bottom",
+      "type": "Divider",
+      "code": "B",
+      "center": [
+        "c.w / 2",
+        "tkh + (t/2)",
+        "w / -2"
+      ],
+      "demensions": [
+        "c.t - BACK.t",
+        "innerWidth",
+        "pt34"
+      ],
+      "rotation": [
+        90,
+        90,
+        0
+      ],
+      "id": "4kqynum"
+    },
+    {
+      "name": "top",
+      "type": "Divider",
+      "code": "T",
+      "center": [
+        "c.w / 2",
+        "c.h - T.t/2 - insetTop",
+        "w / -2"
+      ],
+      "demensions": [
+        "c.t",
+        "innerWidth",
+        "pt34"
+      ],
+      "rotation": [
+        90,
+        90,
+        0
+      ],
+      "id": "c22ac5c"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "blindDepth + 2*2.54 - bms.w/2",
+        "tkh + B.t + bms.h/2 - T.t/2",
+        "bms.t/-2"
+      ],
+      "demensions": [
+        "6*2.54",
+        "innerHeight",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "name": "blindMiddleSupport",
+      "code": "bms",
+      "id": "3ag7uai"
+    }
+  ],
+  "joints": [
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "tkb",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "tkb",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "tkb",
+        "dependent": "B"
+      },
+    }
+  ],
+  "dividerJoint": {
+    "_TYPE": "Dado"
+  },
+  "shape": "square",
+  "width": 121.92,
+  "height": "maxHeight(c.w,c.t,ceilh)",
+  "thickness": "based",
+  "fromFloor": 0,
+  "openings": [
+    {
+      "name": "Right",
+      "_Type": "location",
+      "coordinates": {
+        "inner": [
+          {
+            "x": "bms.c.x + bms.d.x/2",
+            "y": "T.c.y - T.t/2",
+            "z": "0"
+          },
+          {
+            "x": "c.w - L.t",
+            "y": "T.c.y - T.t/2",
+            "z": "0"
+          },
+          {
+            "x": "c.w - L.t",
+            "y": "B.c.y + B.t/2",
+            "z": "0"
+          },
+          {
+            "x": "bms.c.x + bms.d.x/2",
+            "y": "B.c.y + B.t/2",
+            "z": "0"
+          }
+        ],
+        "outer": [
+          {
+            "x": "bms.c.x + bms.d.x/2 - R.t",
+            "y": "c.h - insetTop",
+            "z": "0"
+          },
+          {
+            "x": "c.w",
+            "y": "c.h-insetTop",
+            "z": "0"
+          },
+          {
+            "x": "c.w",
+            "y": "B.c.y - B.t/2",
+            "z": "0"
+          },
+          {
+            "x": "bms.c.x + bms.d.x/2 - R.t",
+            "y": "B.c.y - B.t/2",
+            "z": "0"
+          }
+        ]
+      },
+      "top": "T",
+      "bottom": "B",
+      "right": "R",
+      "back": "BACK",
+      "left": "L",
+      "id": "a9bh8o9"
+    },
+    {
+      "name": "Left",
+      "_Type": "location",
+      "coordinates": {
+        "inner": [
+          {
+            "x": "R.t",
+            "y": "T.c.y - T.t/2",
+            "z": "0"
+          },
+          {
+            "x": "bms.c.x - bms.d.x/2",
+            "y": "T.c.y - T.t/2",
+            "z": "0"
+          },
+          {
+            "x": "bms.c.x - bms.d.x/2",
+            "y": "B.c.y + B.t/2",
+            "z": "0"
+          },
+          {
+            "x": "R.t",
+            "y": "B.c.y + B.t/2",
+            "z": "0"
+          }
+        ],
+        "outer": [
+          {
+            "x": "0",
+            "y": "c.h-insetTop",
+            "z": "0"
+          },
+          {
+            "x": "bms.c.x - bms.d.x/2 + L.t",
+            "y": "c.h-insetTop",
+            "z": "0"
+          },
+          {
+            "x": "bms.c.x - bms.d.x/2 + L.t",
+            "y": "B.c.y - B.t/2",
+            "z": "0"
+          },
+          {
+            "x": "0",
+            "y": "B.c.y - B.t/2",
+            "z": "0"
+          }
+        ]
+      },
+      "back": "BACK",
+      "top": "T",
+      "bottom": "B",
+      "left": "L",
+      "right": "R"
+    }
+  ],
+  "autoToeKick": false,
+  "_FORCE_FROM_JSON": true
+},
+  "diagonal-corner-base": {
+  "_TYPE": "CabinetTemplate",
+  "type": "diagonal-corner-base",
+  "values": [
+    {
+      "key": "bo",
+      "eqn": "4*2.54",
+      "id": "99xq3hg"
+    },
+    {
+      "key": "fwr",
+      "eqn": "c.t - rw",
+      "id": "gkrrotj"
+    },
+    {
+      "key": "fwl",
+      "eqn": "c.w - lw",
+      "id": "y4udshk"
+    },
+    {
+      "key": "lw",
+      "eqn": "25.4",
+      "id": "jews0zy"
+    },
+    {
+      "key": "rw",
+      "eqn": "3*2.54",
+      "id": "357t6g4"
+    },
+    {
+      "key": "pbw",
+      "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
+      "id": "jdaq9zn"
+    },
+    {
+      "key": "backhype",
+      "eqn": "Math.sqrt(bo*bo/2)",
+      "id": "19oc8o3"
+    },
+    {
+      "key": "backRightScribe",
+      "eqn": "0",
+      "id": "e89kz6d"
+    },
+    {
+      "key": "backLeftScribe",
+      "eqn": "0",
+      "id": "4h49pcg"
+    }
+  ],
+  "subassemblies": [
+    {
+      "type": "Panel",
+      "center": [
+        "c.w - (bo)/2 * Math.sin(Math.PI12)",
+        "c.h/2",
+        "-(c.t - (bo)/2 * Math.sin(Math.PI12))"
+      ],
+      "demensions": [
+        "pbw",
+        "c.h",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        "135",
+        0
+      ],
+      "name": "back",
+      "code": "BACK",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "h44nkay"
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "c.w - R.w/2 + backRightScribe",
+        "c.h / 2",
+        "R.t/-2"
+      ],
+      "demensions": [
+        "rw + 4 + backRightScribe",
+        "c.h",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        "0",
+        0
+      ],
+      "name": "right",
+      "code": "R",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "d9mic9z"
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "L.t/2",
+        "c.h/2",
+        "-c.t + L.w/2 - backLeftScribe"
+      ],
+      "demensions": [
+        "lw + 4 + backLeftScribe",
+        "c.h",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        "90",
+        0
+      ],
+      "name": "left",
+      "code": "L",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "ze375g5"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "pbl.w / 2 + R.t ",
+        "c.h/2",
+        "-(c.t - t / 2)"
+      ],
+      "demensions": [
+        "c.w - bo",
+        "c.h",
+        "pt14"
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "name": "backLeft",
+      "code": "pbl",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "g0mg8su"
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "c.w - pbl.t/2",
+        "c.h/2",
+        "-(pbr.w/2 + L.t)"
+      ],
+      "demensions": [
+        "c.t - bo",
+        "c.h",
+        "pt14"
+      ],
+      "rotation": [
+        0,
+        "90",
+        0
+      ],
+      "name": "backRight",
+      "code": "pbr",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "cpj4iy8"
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "c.w / 2",
+        "c.h - T.t / 2",
+        "c.t / -2"
+      ],
+      "demensions": [
+        "c.w - pbl.t - R.t",
+        "c.t - pbr.t - L.t",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        "0",
+        0
+      ],
+      "name": "top",
+      "code": "T",
+      "dividerType": "frontAndBack",
+      "normalInfo": {
+        "style": "vector",
+        "calc": 1,
+        "normals": [
+          [
+            "OP.n.i",
+            "OP.n.j",
+            "OP.n.k"
+          ],
+          [
+            "0",
+            "1",
+            "0"
+          ],
+          [
+            "0",
+            "-1",
+            "0"
+          ]
+        ],
+        "valid": true
+      },
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "id": "bo2rrx0"
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "c.w / 2",
+        "tkh + B.t / 2",
+        "c.t / -2"
+      ],
+      "demensions": [
+        "c.w - pbl.t - R.t",
+        "c.t - pbr.t - L.t",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        "0",
+        0
+      ],
+      "name": "bottom",
+      "code": "B",
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      },
+      "normalInfo": {
+        "normals": [
+          [
+            "OP.n.i",
+            "OP.n.j",
+            "OP.n.k"
+          ],
+          [
+            "0",
+            "1",
+            "0"
+          ],
+          [
+            "0",
+            "1",
+            "0"
+          ]
+        ],
+        "calc": 1,
+        "style": "vector",
+        "valid": true
+      },
+      "id": "be419fk"
+    }
+  ],
+  "joints": [
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "B",
+        "dependent": "BACK"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "pbl"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "pbr"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "pbr"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "pbl"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "T",
+        "dependent": "pbr"
+      },
+    },
+    {
+      "_TYPE": "Butt",
+      "selector": {
+        "depends": "T",
+        "dependent": "pbl"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "pbr",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "pbl",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "T",
+        "dependent": "BACK"
+      },
+    }
+  ],
+  "shape": "corner",
+  "width": "based",
+  "height": "baseh",
+  "thickness": "based*1.5",
+  "_FORCE_FROM_JSON": true,
+  "dividerJoint": {
+    "_TYPE": "Dado"
+  },
+  "fromFloor": 0,
+  "openings": [
+    {
+      "_Type": "slice",
+      "top": "T",
+      "bottom": "B",
+      "left": "L",
+      "right": "R",
+      "back": "BACK",
+      "leftDepth": "lw",
+      "rightDepth": "rw",
+      "id": "mig3pf1"
+    }
+  ],
+  "autoToeKick": true
+},
+  "diagonal-corner-wall": {
+    "_TYPE": "CabinetTemplate",
+    "ID_ATTRIBUTE": "id",
+    "type": "diagonal-corner-wall",
+    "values": [
+      {
+        "key": "bo",
+        "eqn": "4*2.54",
+        "id": "8cwyvgp"
+      },
+      {
+        "key": "fwr",
+        "eqn": "c.t - rw",
+        "id": "vzcc1yz"
+      },
+      {
+        "key": "fwl",
+        "eqn": "c.w - lw",
+        "id": "qufd443"
+      },
+      {
+        "key": "lw",
+        "eqn": "30.48",
+        "id": "6dvwx43"
+      },
+      {
+        "key": "rw",
+        "eqn": "30.48",
+        "id": "c9cwwen"
+      },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
+        "id": "2lwcxpp"
+      },
+      {
+        "key": "backhype",
+        "eqn": "Math.sqrt(bo*bo/2)"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+          "c.h/2",
+          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+        ],
+        "demensions": [
+          "pbw",
+          "c.h",
+          "pt14"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "back",
+        "code": "BACK",
+        "id": "apm1547"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "c.w",
+          "c.h/2",
+          "-c.t"
+        ],
+        "demensions": [
+          "bo*2",
+          "c.h",
+          "backhype*2 - BACK.t/2"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "back",
+        "code": "cb",
+        "id": "orxxake"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "c.w - R.w/2",
+          "c.h / 2",
+          "R.t/-2"
+        ],
+        "demensions": [
+          "rw + 2",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "0",
+          0
+        ],
+        "name": "right",
+        "code": "R",
+        "id": "bmr0kns"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "L.t/2",
+          "c.h/2",
+          "-c.t + L.w/2"
+        ],
+        "demensions": [
+          "lw + 2",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "left",
+        "code": "L",
+        "id": "xp4embf"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "pbl.w / 2 + R.t ",
+          "c.h/2",
+          "-(c.t - t / 2)"
+        ],
+        "demensions": [
+          "c.w - bo",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "backLeft",
+        "code": "pbl",
+        "id": "zyb9ykf"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbr.c.x + cpbl.t",
+          "pbr.c.y",
+          "pbr.c.z"
+        ],
+        "demensions": [
+          "pbr.d.x",
+          "pbr.d.y",
+          "pbr.d.z"
+        ],
+        "rotation": [
+          "pbr.r.x",
+          "pbr.r.y",
+          "pbr.r.z"
+        ],
+        "name": "backLeft",
+        "code": "cpbl",
+        "id": "jjl8m38"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - pbl.t/2",
+          "c.h/2",
+          "-(pbr.w/2 + L.t)"
+        ],
+        "demensions": [
+          "c.t - bo",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "backRight",
+        "code": "pbr",
+        "id": "65n39kv"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbl.c.x",
+          "pbl.c.y",
+          "pbl.c.z - cpbr.t"
+        ],
+        "demensions": [
+          "pbl.d.x",
+          "pbl.d.y",
+          "pbl.d.z"
+        ],
+        "rotation": [
+          "pbl.r.x",
+          "pbl.r.y",
+          "pbl.r.z"
+        ],
+        "name": "backRight",
+        "code": "cpbr",
+        "id": "kmursqf"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "c.w / 2",
+          "c.h - T.t / 2",
+          "c.t / -2"
+        ],
+        "demensions": [
+          "c.w - pbl.t - R.t",
+          "c.t - pbr.t - L.t",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "top",
+        "code": "T",
+        "id": "tm2c0lx"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "c.w / 2",
+          "B.t / 2",
+          "c.t / -2"
+        ],
+        "demensions": [
+          "c.w - pbl.t - R.t",
+          "c.t - pbr.t - L.t",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "bottom",
+        "code": "B",
+        "id": "2ww11zr"
+      }
+    ],
+    "joints": [
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "pbl"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "pbr"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "B",
+        "dependent": "pbr"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "B",
+        "dependent": "pbl"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "T",
+        "dependent": "pbr"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "T",
+        "dependent": "pbl"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "pbr",
+        "dependent": "R"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "pbl",
+        "dependent": "L"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "T"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "B"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "pbl"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "pbr"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "BACK"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
+      }
+    ],
+    "dividerJoint": {
+      "_TYPE": "Dado",
+    },
+    "shape": "corner",
+    "width": "walld*2",
+    "height": "wallh",
+    "thickness": "walld*2",
+    "fromFloor": "walle",
+    "openings": [
+      {
+        "_Type": "slice",
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "leftDepth": "lw",
+        "rightDepth": "rw",
+        "id": "bnwtye8"
+      }
+    ],
+    "autoToeKick": true,
+    "_FORCE_FROM_JSON": true
+  },
+  "diagonal-corner-ut": {
+    "_TYPE": "CabinetTemplate",
+    "ID_ATTRIBUTE": "id",
+    "type": "diagonal-corner-ut",
+    "values": [
+      {
+        "key": "bo",
+        "eqn": "4*2.54",
+        "id": "3jvkkax"
+      },
+      {
+        "key": "fwr",
+        "eqn": "c.t - rw",
+        "id": "783i0vo"
+      },
+      {
+        "key": "fwl",
+        "eqn": "c.w - lw",
+        "id": "yabcsy8"
+      },
+      {
+        "key": "lw",
+        "eqn": "60.96",
+        "id": "7cy7od4"
+      },
+      {
+        "key": "rw",
+        "eqn": "60.96",
+        "id": "h02nmv6"
+      },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)",
+        "id": "zfzlabu"
+      },
+      {
+        "key": "backhype",
+        "eqn": "Math.sqrt(bo*bo/2)"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+          "c.h/2",
+          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+        ],
+        "demensions": [
+          "pbw",
+          "c.h",
+          "pt14"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "back",
+        "code": "BACK",
+        "id": "y9lmjat"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "c.w",
+          "c.h/2",
+          "-c.t"
+        ],
+        "demensions": [
+          "bo*2",
+          "c.h",
+          "backhype*2 - BACK.t/2"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "back",
+        "code": "cb",
+        "id": "b5c5ltj"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "c.w - R.w/2",
+          "c.h / 2",
+          "R.t/-2"
+        ],
+        "demensions": [
+          "rw + 4",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "0",
+          0
+        ],
+        "name": "right",
+        "code": "R",
+        "id": "nwpbqqp"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "L.t/2",
+          "c.h/2",
+          "-c.t + L.w/2"
+        ],
+        "demensions": [
+          "lw + 4",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "left",
+        "code": "L",
+        "id": "nyf1l0n"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "pbl.w / 2 + R.t ",
+          "c.h/2",
+          "-(c.t - t / 2)"
+        ],
+        "demensions": [
+          "c.w - bo",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "backLeft",
+        "code": "pbl",
+        "id": "9ryj4ar"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbr.c.x + cpbl.t",
+          "pbr.c.y",
+          "pbr.c.z"
+        ],
+        "demensions": [
+          "pbr.d.x",
+          "pbr.d.y",
+          "pbr.d.z"
+        ],
+        "rotation": [
+          "pbr.r.x",
+          "pbr.r.y",
+          "pbr.r.z"
+        ],
+        "name": "backLeft",
+        "code": "cpbl",
+        "id": "6v1gtns"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - pbl.t/2",
+          "c.h/2",
+          "-(pbr.w/2 + L.t)"
+        ],
+        "demensions": [
+          "c.t - bo",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "backRight",
+        "code": "pbr",
+        "id": "ijpsvo0"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "pbl.c.x",
+          "pbl.c.y",
+          "pbl.c.z - cpbr.t"
+        ],
+        "demensions": [
+          "pbl.d.x",
+          "pbl.d.y",
+          "pbl.d.z"
+        ],
+        "rotation": [
+          "pbl.r.x",
+          "pbl.r.y",
+          "pbl.r.z"
+        ],
+        "name": "backRight",
+        "code": "cpbr",
+        "id": "l0wncb5"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "c.w / 2",
+          "c.h - T.t / 2",
+          "c.t / -2"
+        ],
+        "demensions": [
+          "c.w - pbl.t - R.t",
+          "c.t - pbr.t - L.t",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "top",
+        "code": "T",
+        "id": "wzoibm2"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "c.w / 2",
+          "tkh + B.t / 2",
+          "c.t / -2"
+        ],
+        "demensions": [
+          "c.w - pbl.t - R.t",
+          "c.t - pbr.t - L.t",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "bottom",
+        "code": "B",
+        "id": "q9bx8ou"
+      }
+    ],
+    "joints": [
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "pbl"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "pbr"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "B",
+        "dependent": "pbr"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "B",
+        "dependent": "pbl"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "T",
+        "dependent": "pbr"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "T",
+        "dependent": "pbl"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "pbr",
+        "dependent": "R"
+      }
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "pbl",
+        "dependent": "L"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "T"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "B"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "pbl"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "pbr"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "BACK"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
+      }
+    ],
+    "dividerJoint": {
+      "_TYPE": "Dado",
+    },
+    "shape": "corner",
+    "width": "based*1.5",
+    "height": "maxHeight(c.w,c.t,ceilh)",
+    "thickness": "based*1.5",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "_Type": "slice",
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "leftDepth": "lw",
+        "rightDepth": "rw",
+        "id": "aagtxqk"
+      }
+    ],
+    "autoToeKick": true,
+    "_FORCE_FROM_JSON": true
+  },
+  "ut": {
+  "_TYPE": "CabinetTemplate",
+
+  "ID_ATTRIBUTE": "id",
+  "type": "ut",
+  "values": [
+    {
+      "key": "brh",
+      "eqn": "tkb.w + BACK.t + brr",
+      "id": "6z10etu"
+    },
+    {
+      "key": "innerWidth",
+      "eqn": "c.w - pt34 * 2",
+      "id": "2v4bpft"
+    },
+    {
+      "key": "innerWidthCenter",
+      "eqn": "innerWidth + pt34",
+      "id": "h9aynib"
+    },
+    {
+      "key": "innerHeight",
+      "eqn": "c.h - tkh - B.t",
+      "id": "nh67ruu"
+    }
+  ],
+  "subassemblies": [
+    {
+      "name": "right",
+      "type": "Divider",
+      "code": "R",
+      "center": [
+        "c.w - (R.t / 2)",
+        "l / 2",
+        "w / -2"
+      ],
+      "demensions": [
+        "c.t",
+        "c.l",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "id": "4a53zuy"
+    },
+    {
+      "name": "left",
+      "type": "Divider",
+      "code": "L",
+      "center": [
+        "(t / 2)",
+        " l / 2",
+        "w/-2"
+      ],
+      "demensions": [
+        "c.t",
+        "c.l",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "id": "ekcugbf"
+    },
+    {
+      "name": "back",
+      "type": "Panel",
+      "code": "BACK",
+      "center": [
+        "w/2 + L.t/2",
+        "BACK.h/2 + B.c.y",
+        "-(c.t - (t / 2))"
+      ],
+      "demensions": [
+        "innerWidth +R.t/2 + L.t/2",
+        "innerHeight",
+        "pt14"
+      ],
+      "rotation": [
+        0,
+        0,
+        "0"
+      ],
+      "id": "8uwggfi"
+    },
+    {
+      "name": "bottom",
+      "type": "Divider",
+      "code": "B",
+      "center": [
+        "c.w / 2",
+        "tkh + (t/2)",
+        "w / -2"
+      ],
+      "demensions": [
+        "c.t - BACK.t",
+        "innerWidth",
+        "pt34"
+      ],
+      "rotation": [
+        90,
+        90,
+        0
+      ],
+      "id": "xcehjui"
+    },
+    {
+      "name": "top",
+      "type": "Divider",
+      "code": "T",
+      "center": [
+        "c.w / 2 ",
+        "c.h - T.t/2",
+        "w / -2 "
+      ],
+      "demensions": [
+        "c.t - BACK.t",
+        "innerWidth",
+        "pt34"
+      ],
+      "rotation": [
+        90,
+        90,
+        0
+      ],
+      "id": "qpfhto6"
+    }
+  ],
+  "joints": [
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
+    },
+    {
+      "_TYPE": "Dado",
+
+      "ID_ATTRIBUTE": "id",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      },
+    }
+  ],
+  "dividerJoint": {
+    "_TYPE": "Dado"
+  },
+  "shape": "square",
+  "width": 60.96,
+  "height": "maxHeight(c.w,c.t,ceilh)",
+  "thickness": "based",
+  "fromFloor": 0,
+  "openings": [
+    {
+      "top": "T",
+      "bottom": "B",
+      "left": "L",
+      "right": "R",
+      "back": "BACK",
+      "id": "prz0b53"
+    }
+  ],
+  "autoToeKick": true,
+  "_FORCE_FROM_JSON": true
+},
+  "wall": {
+  "_TYPE": "CabinetTemplate",
+  "type": "wall",
+  "values": [],
+  "subassemblies": [
+    {
+      "type": "Divider",
+      "center": [
+        "c.w - R.t/2",
+        "c.h / 2",
+        "R.w / -2"
+      ],
+      "demensions": [
+        "c.t",
+        "c.h",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        "90",
+        0
+      ],
+      "name": "right",
+      "code": "R",
+
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "L.t/2",
+        "c.h/2",
+        "L.w/-2"
+      ],
+      "demensions": [
+        "c.t",
+        "c.h",
+        "pt34"
+      ],
+      "rotation": [
+        0,
+        "90",
+        0
+      ],
+      "name": "left",
+      "code": "L",
+
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Panel",
+      "center": [
+        "L.t + BACK.w/2",
+        "BACK.h/2 + B.t",
+        "-(c.t - BACK.t /2)"
+      ],
+      "demensions": [
+        "c.w - L.t - R.t",
+        "c.h - B.t -T.t",
+        "pt14"
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "name": "back",
+      "code": "BACK",
+
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "L.t + T.w / 2",
+        "c.h - T.t/2",
+        "T.l/-2 "
+      ],
+      "demensions": [
+        "c.w - L.t - R.t",
+        "c.t ",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        "0",
+        0
+      ],
+      "name": "top",
+      "code": "T",
+
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Divider",
+      "center": [
+        "B.w /2 + L.t",
+        "B.t/2",
+        "B.h / -2"
+      ],
+      "demensions": [
+        "c.w - L.t - R.t",
+        "c.t",
+        "pt34"
+      ],
+      "rotation": [
+        "90",
+        "0",
+        0
+      ],
+      "name": "bottom",
+      "code": "B",
+
+      "polyConfig": {
+        "thickness": "pt34",
+        "points": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            2,
+            2
+          ],
+          [
+            3,
+            3,
+            3
+          ]
+        ]
+      }
+    }
+  ],
+  "joints": [
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      }
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      }
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      }
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      }
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
+      "maleOffset": ""
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
+      "maleOffset": ""
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
+      "maleOffset": ""
+    },
+    {
+      "_TYPE": "Dado",
+      "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
+      "maleOffset": ""
+    }
+  ],
+  "shape": "square",
+  "width": 45.72,
+  "height": "wallh",
+  "thickness": "walld",
+  "_FORCE_FROM_JSON": true,
+  "dividerJoint": {
+    "_TYPE": "Dado",
+    "maleOffset": {
+      "_NODE": {
+        "_TYPE": "DecisionInputTree",
+        "stateConfigs": {
+          "Type": {
+            "_TYPE": "StateConfig",
+            "name": "Type",
+            "payload": {
+              "inputArray": [
+                {
+                  "_TYPE": "Select",
+                  "name": "_TYPE",
+                  "list": [
+                    "Butt",
+                    "Dado",
+                    "Miter",
+                    "Rabbet"
+                  ],
+                  "class": "template-select",
+                  "value": "Dado",
+                  "hidden": false,
+                  "optional": false,
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                }
+              ]
+            },
+            "treeName": "Function",
+            "conditions": [
+              {
+                "_TYPE": "CaseInsensitiveCondition",
+                "group": "depth",
+                "attribute": "_TYPE",
+                "value": "Dado",
+                "deligator": {
+                  "_TYPE": "NodeCondition"
+                }
+              }
+            ]
+          },
+          "depth": {
+            "_TYPE": "StateConfig",
+            "name": "depth",
+            "payload": {
+              "inputArray": [
+                {
+                  "_TYPE": "Input",
+                  "label": "Depth",
+                  "name": "maleOffset",
+                  "hidden": false,
+                  "list": [],
+                  "optional": false,
+                  "targetAttr": "value",
+                  "errorMsg": "Error"
+                }
+              ]
+            },
+            "treeName": "Function",
+            "conditions": []
+          }
+        },
+        "name": "Type",
+        "referenceNodes": false,
+        "root": {
+          "name": "Type",
+          "payload": {
+            "inputArray": [
+              {
+                "_TYPE": "Select",
+                "name": "_TYPE",
+                "list": [
+                  "Butt",
+                  "Dado",
+                  "Miter",
+                  "Rabbet"
+                ],
+                "class": "template-select",
+                "value": "Dado",
+                "hidden": false,
+                "optional": false,
+                "targetAttr": "value",
+                "errorMsg": "Error"
+              }
+            ],
+            "PAYLOAD_ID": "fhelb43"
+          },
+          "children": {
+            "depth": {
+              "name": "depth",
+              "payload": {
+                "inputArray": [
+                  {
+                    "_TYPE": "Input",
+                    "label": "Depth",
+                    "name": "maleOffset",
+                    "hidden": false,
+                    "list": [],
+                    "optional": false,
+                    "targetAttr": "value",
+                    "errorMsg": "Error",
+                    "value": ""
+                  }
+                ],
+                "PAYLOAD_ID": "s3wnzc3"
+              },
+              "children": {},
+              "metadata": {}
+            }
+          },
+          "metadata": {}
+        }
+      },
+      "maleOffset": "",
+      "_TYPE": "Dado"
+    }
+  },
+  "fromFloor": "walle",
+  "openings": [
+    {
+      "top": "T",
+      "bottom": "B",
+      "left": "L",
+      "right": "R",
+      "back": "BACK",
+      "id": "0mguavs"
+    }
+  ],
+  "autoToeKick": false
+},
+  "blind-corner-base": {
+    "_TYPE": "CabinetTemplate",
+    "ID_ATTRIBUTE": "id",
+    "type": "blind-corner-base",
+    "values": [
+      {
+        "key": "brh",
+        "eqn": "tkb.w + BACK.t + brr",
+        "id": "zgzj6st"
+      },
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - pt34 * 2",
+        "id": "t43543r"
+      },
+      {
+        "key": "innerWidthCenter",
+        "eqn": "innerWidth + pt34",
+        "id": "me96nsd"
+      },
+      {
+        "key": "blindDepth",
+        "eqn": "24*2.54",
+        "id": "z8u20x2"
+      },
+      {
+        "key": "innerHeight",
+        "eqn": "c.h - tkh - B.t",
+        "id": "yuy4i96"
+      }
+    ],
+    "subassemblies": [
+      {
+        "name": "toeKickBacker",
+        "type": "Panel",
+        "code": "tkb",
+        "center": [
+          "c.w / 2",
+          "w / 2",
+          "-(tkd + (t / 2))"
+        ],
+        "demensions": [
+          "tkh",
+          "innerWidth",
+          "tkbw"
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ],
+        "id": "9pww4vb"
+      },
+      {
+        "name": "right",
+        "type": "Divider",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "l / 2",
+          "w / -2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "id": "4xmu4dk"
+      },
+      {
+        "name": "left",
+        "type": "Divider",
+        "code": "L",
+        "center": [
+          "(t / 2)",
+          " l / 2",
+          "w/-2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "id": "0udlq3z"
+      },
+      {
+        "name": "back",
+        "type": "Panel",
+        "code": "BACK",
+        "center": [
+          "l / 2 + L.t",
+          " (w / 2) + tkb.w",
+          "-(c.t - (t / 2))"
+        ],
+        "demensions": [
+          "c.l - tkb.w",
+          "innerWidth",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ],
+        "id": "b9000k8"
+      },
+      {
+        "name": "bottom",
+        "type": "Divider",
+        "code": "B",
+        "center": [
+          "c.w / 2",
+          "tkh + (t/2)",
+          "w / -2"
+        ],
+        "demensions": [
+          "c.t - BACK.t",
+          "innerWidth",
+          "pt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "id": "4kqynum"
+      },
+      {
+        "name": "top",
+        "type": "Divider",
+        "code": "T",
+        "center": [
+          "c.w / 2",
+          "c.h - T.t/2",
+          "w / -2"
+        ],
+        "demensions": [
+          "(c.t - BACK.t) * .2",
+          "innerWidth",
+          "pt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "id": "yirfdyp"
+      },
+      {
+        "name": "top2",
+        "type": "Panel",
+        "code": "pt2",
+        "center": [
+          "c.w / 2",
+          "c.h - T.t/2",
+          "-(c.t - BACK.t - (w / 2))"
+        ],
+        "demensions": [
+          "(c.t - BACK.t) * .2",
+          "innerWidth",
+          "pt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ],
+        "id": "14i5qrv"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "blindDepth + 2*2.54 - bms.w/2",
+          "tkh + B.t + bms.h/2",
+          "bms.t/-2"
+        ],
+        "demensions": [
+          "6*2.54",
+          "innerHeight",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "blindMiddleSupport",
+        "code": "bms",
+        "id": "3ag7uai"
+      }
+    ],
+    "joints": [
+      {
+        "_TYPE": "Dado",
+        "ID_ATTRIBUTE": "id",
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "ID_ATTRIBUTE": "id",
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "ID_ATTRIBUTE": "id",
+        "selector": {
+        "depends": "pt2",
+        "dependent": "L"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "ID_ATTRIBUTE": "id",
+        "selector": {
+        "depends": "pt2",
+        "dependent": "R"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "ID_ATTRIBUTE": "id",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "ID_ATTRIBUTE": "id",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "ID_ATTRIBUTE": "id",
+        "selector": {
+        "depends": "tkb",
+        "dependent": "L"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "ID_ATTRIBUTE": "id",
+        "selector": {
+        "depends": "tkb",
+        "dependent": "R"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "ID_ATTRIBUTE": "id",
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "ID_ATTRIBUTE": "id",
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "ID_ATTRIBUTE": "id",
+        "selector": {
+        "depends": "tkb",
+        "dependent": "B"
+      },
+      }
+    ],
+    "dividerJoint": {
+      "_TYPE": "Dado"
+    },
+    "shape": "square",
+    "width": 121.92,
+    "height": "baseh",
+    "thickness": "based",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "_Type": "location",
+        "coordinates": {
+          "inner": [
+            {
+              "x": "bms.c.x + bms.d.x/2",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x + bms.d.x/2",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            }
+          ],
+          "outer": [
+            {
+              "x": "bms.c.x + bms.d.x/2 - R.t",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "c.w",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "c.w",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x + bms.d.x/2 - R.t",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            }
+          ]
+        },
+        "top": "T",
+        "bottom": "B",
+        "right": "R",
+        "back": "BACK",
+        "left": "L",
+        "id": "a9bh8o9"
+      },
+      {
+        "_Type": "location",
+        "coordinates": {
+          "inner": [
+            {
+              "x": "R.t",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "R.t",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            }
+          ],
+          "outer": [
+            {
+              "x": "0",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2 + L.t",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2 + L.t",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "0",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            }
+          ]
+        },
+        "back": "BACK"
+      }
+    ],
+    "autoToeKick": false,
+    "_FORCE_FROM_JSON": true
+  },
+  "blind-corner-wall": {
+    "_TYPE": "CabinetTemplate",
+    "ID_ATTRIBUTE": "id",
+    "type": "blind-corner-wall",
+    "values": [
+      {
+        "key": "brh",
+        "eqn": "tkb.w + BACK.t + brr"
+      },
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - pt34 * 2"
+      },
+      {
+        "key": "innerWidthCenter",
+        "eqn": "innerWidth + pt34"
+      },
+      {
+        "key": "blindDepth",
+        "eqn": "12*2.54"
+      },
+      {
+        "key": "innerHeight",
+        "eqn": "c.h - tkh - B.t"
+      }
+    ],
+    "subassemblies": [
+      {
+        "name": "toeKickBacker",
+        "type": "Panel",
+        "code": "tkb",
+        "center": [
+          "c.w / 2",
+          "w / 2",
+          "-(tkd + (t / 2))"
+        ],
+        "demensions": [
+          "tkh",
+          "innerWidth",
+          "tkbw"
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ]
+      },
+      {
+        "name": "right",
+        "type": "Divider",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "l / 2",
+          "w / -2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ]
+      },
+      {
+        "name": "left",
+        "type": "Divider",
+        "code": "L",
+        "center": [
+          "(t / 2)",
+          " l / 2",
+          "w/-2"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ]
+      },
+      {
+        "name": "back",
+        "type": "Panel",
+        "code": "BACK",
+        "center": [
+          "l / 2 + L.t",
+          " (w / 2) + tkb.w",
+          "-(c.t - (t / 2))"
+        ],
+        "demensions": [
+          "c.l - tkb.w",
+          "innerWidth",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ]
+      },
+      {
+        "name": "bottom",
+        "type": "Divider",
+        "code": "B",
+        "center": [
+          "c.w / 2",
+          "tkh + (t/2)",
+          "w / -2"
+        ],
+        "demensions": [
+          "c.t - BACK.t",
+          "innerWidth",
+          "pt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ]
+      },
+      {
+        "name": "top",
+        "type": "Divider",
+        "code": "T",
+        "center": [
+          "c.w / 2",
+          "c.h - T.t/2",
+          "w / -2"
+        ],
+        "demensions": [
+          "(c.t - BACK.t) * .2",
+          "innerWidth",
+          "pt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ]
+      },
+      {
+        "name": "top2",
+        "type": "Panel",
+        "code": "pt2",
+        "center": [
+          "c.w / 2",
+          "c.h - T.t/2",
+          "-(c.t - BACK.t - (w / 2))"
+        ],
+        "demensions": [
+          "(c.t - BACK.t) * .2",
+          "innerWidth",
+          "pt34"
+        ],
+        "rotation": [
+          90,
+          90,
+          0
+        ]
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "blindDepth",
+          "tkh + B.t + bms.h/2",
+          "bms.t/-2"
+        ],
+        "demensions": [
+          "3*2.54",
+          "innerHeight",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "blindMiddleSupport",
+        "code": "bms"
+      }
+    ],
+    "joints": [
+      {
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "pt2",
+        "dependent": "L"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "pt2",
+        "dependent": "R"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "tkb",
+        "dependent": "L"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "tkb",
+        "dependent": "R"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "tkb",
+        "dependent": "B"
+      },
+        "_TYPE": "Dado",
+      }
+    ],
+    "dividerJoint": {
+      "_TYPE": "Dado",
+    },
+    "shape": "square",
+    "width": 60.96,
+    "height": "wallh",
+    "thickness": "walld",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "_Type": "location",
+        "coordinates": {
+          "inner": [
+            {
+              "x": "bms.c.x + bms.d.x/2",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "c.w - L.t",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x + bms.d.x/2",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            }
+          ],
+          "outer": [
+            {
+              "x": "bms.c.x + bms.d.x/2 - R.t",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "c.w",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "c.w",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x + bms.d.x/2 - R.t",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            }
+          ]
+        }
+      },
+      {
+        "_Type": "location",
+        "coordinates": {
+          "inner": [
+            {
+              "x": "R.t",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2",
+              "y": "T.c.y - T.t/2",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "R.t",
+              "y": "B.c.y + B.t/2",
+              "z": "0"
+            }
+          ],
+          "outer": [
+            {
+              "x": "0",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2 + L.t",
+              "y": "c.h",
+              "z": "0"
+            },
+            {
+              "x": "bms.c.x - bms.d.x/2 + L.t",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            },
+            {
+              "x": "0",
+              "y": "B.c.y - B.t/2",
+              "z": "0"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "triangle-corner-base": {
+    "_TYPE": "CabinetTemplate",
+    "ID_ATTRIBUTE": "id",
+    "type": "triangle-corner-base",
+    "values": [
+      {
+        "key": "bo",
+        "eqn": "4*2.54"
+      },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)"
+      },
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - R.t"
+      },
+      {
+        "key": "innerDepth",
+        "eqn": "c.t - L.t"
+      },
+      {
+        "key": "backhype",
+        "eqn": "Math.sqrt(bo*bo/2)"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+          "c.h/2",
+          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+        ],
+        "demensions": [
+          "pbw",
+          "c.h",
+          "pt14"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "back",
+        "code": "BACK"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "c.w",
+          "c.h/2",
+          "-c.t"
+        ],
+        "demensions": [
+          "bo*2",
+          "c.h",
+          "backhype*2 - BACK.t/2"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "back",
+        "code": "cb"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "R.c.x + R.t",
+          "R.c.y",
+          "R.c.z - cpbr.t"
+        ],
+        "demensions": [
+          "R.d.x",
+          "R.d.y",
+          "R.d.z"
+        ],
+        "rotation": [
+          "R.r.x",
+          "R.r.y",
+          "R.r.z"
+        ],
+        "name": "backRight",
+        "code": "cpbr"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "L.c.x + cpbl.t",
+          "L.c.y",
+          "L.c.z - L.t"
+        ],
+        "demensions": [
+          "L.d.x",
+          "L.d.y",
+          "L.d.z"
+        ],
+        "rotation": [
+          "L.r.x",
+          "L.r.y",
+          "L.r.z"
+        ],
+        "name": "backLeft",
+        "code": "cpbl"
+      },
+      {
+        "name": "right",
+        "type": "Divider",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "R.l / 2",
+          "(w / -2)"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ]
+      },
+      {
+        "name": "left",
+        "type": "Divider",
+        "code": "L",
+        "center": [
+          "L.w/2",
+          "L.l / 2",
+          "-(c.t - L.t/2)"
+        ],
+        "demensions": [
+          "c.w",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "0",
+          0
+        ]
+      },
+      {
+        "name": "bottom",
+        "type": "Divider",
+        "code": "B",
+        "center": [
+          "B.w / 2",
+          "tkh + (t/2)",
+          "B.h / -2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ]
+      },
+      {
+        "name": "top",
+        "type": "Divider",
+        "code": "T",
+        "center": [
+          "T.w / 2",
+          "c.h - T.t/2",
+          "T.h /-2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pt34"
+        ],
+        "rotation": [
+          90,
+          "0",
+          0
+        ]
+      }
+    ],
+    "joints": [
+      {
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      }
+      },
+      {
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      },
+        "_TYPE": "Butt"
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "L"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "BACK"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "R"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "L"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "T"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "B"
+      }
+      }
+    ],
+    "dividerJoint": {
+      "_TYPE": "Dado",
+    },
+    "shape": "square",
+    "width": "based",
+    "height": "baseh",
+    "thickness": "based",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "_Type": "slice",
+        "leftDepth": "c.w",
+        "rightDepth": "c.t"
+      }
+    ],
+    "autoToeKick": true
+  },
+  "triangle-corner-wall":{
+    "_TYPE": "CabinetTemplate",
+    "type": "triangle-corner-wall",
+    "values": [
+      {
+        "key": "bo",
+        "eqn": "4*2.54",    },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((bo-BACK.t*1.5)*(bo-BACK.t*1.5)*2)",    },
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - R.t",    },
+      {
+        "key": "innerDepth",
+        "eqn": "c.t - L.t",    },
+      {
+        "key": "backhype",
+        "eqn": "Math.sqrt(bo*bo/2)",    }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+          "c.h/2",
+          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+        ],
+        "demensions": [
+          "pbw",
+          "c.h",
+          "pt14"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "back",
+        "code": "BACK",
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
+      },
+      {
+        "name": "right",
+        "type": "Divider",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "R.l / 2",
+          "(w / -2)"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ],
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
+      },
+      {
+        "name": "left",
+        "type": "Divider",
+        "code": "L",
+        "center": [
+          "L.w/2",
+          "L.l / 2",
+          "-(c.t - L.t/2)"
+        ],
+        "demensions": [
+          "c.w",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "0",
+          0
+        ],
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
+      },
+      {
+        "name": "bottom",
+        "type": "Divider",
+        "code": "B",
+        "center": [
+          "B.w / 2",
+          "t/2",
+          "B.h / -2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
+      },
+      {
+        "name": "top",
+        "type": "Divider",
+        "code": "T",
+        "center": [
+          "T.w / 2",
+          "c.h - T.t/2",
+          "T.h /-2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pt34"
+        ],
+        "rotation": [
+          90,
+          "0",
+          0
+        ],
+        "polyConfig": {
+          "thickness": "pwt34",
+          "points": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2
+            ],
+            [
+              3,
+              3,
+              3
+            ]
+          ]
+        }
+      }
+    ],
+    "joints": [
+      {
+        "_TYPE": "Dado",
+        "selector": {
+          "depends": "T",
+          "dependent": "R"
+        },
+        "priority": 0
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+          "depends": "T",
+          "dependent": "L"
+        },
+        "priority": 0
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+          "depends": "B",
+          "dependent": "R"
+        },
+        "priority": 0
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+          "depends": "B",
+          "dependent": "L"
+        },
+        "priority": 0
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+          "depends": "T",
+          "dependent": "BACK"
+        },
+        "priority": 0
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+          "depends": "B",
+          "dependent": "BACK"
+        },
+        "priority": 0
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+          "depends": "R",
+          "dependent": "BACK"
+        },
+        "priority": 0
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+          "depends": "L",
+          "dependent": "BACK"
+        },
+        "priority": 0
+      }
+    ],
+    "shape": "square",
+    "width": "based",
+    "height": "baseh",
+    "thickness": "based",
+    "_FORCE_FROM_JSON": true,
+    "dividerJoint": {
+      "_TYPE": "Butt"
+    },
+    "fromFloor": 0,
+    "openings": [
+      {
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "_Type": "slice",
+        "leftDepth": "c.w",
+        "rightDepth": "c.t",    }
+    ],
+    "autoToeKick": false
+  },
+  "triangle-corner-ut": {
+    "_TYPE": "CabinetTemplate",
+    "ID_ATTRIBUTE": "id",
+    "type": "triangle-corner-ut",
+    "values": [
+      {
+        "key": "bo",
+        "eqn": "4*2.54"
+      },
+      {
+        "key": "pbw",
+        "eqn": "Math.sqrt((bo+BACK.t)*(bo+BACK.t)*2)"
+      },
+      {
+        "key": "innerWidth",
+        "eqn": "c.w - R.t"
+      },
+      {
+        "key": "innerDepth",
+        "eqn": "c.t - L.t"
+      },
+      {
+        "key": "backhype",
+        "eqn": "Math.sqrt(bo*bo/2)"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Panel",
+        "center": [
+          "c.w - (bo - BACK.t)/2 * Math.sin(Math.PI12)",
+          "c.h/2",
+          "-(c.t - (bo - BACK.t)/2 * Math.sin(Math.PI12))"
+        ],
+        "demensions": [
+          "pbw",
+          "c.h",
+          "pt14"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "back",
+        "code": "BACK"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "c.w",
+          "c.h/2",
+          "-c.t"
+        ],
+        "demensions": [
+          "bo*2",
+          "c.h",
+          "backhype*2 - BACK.t/2"
+        ],
+        "rotation": [
+          0,
+          "135",
+          0
+        ],
+        "name": "back",
+        "code": "cb"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "R.c.x + R.t",
+          "R.c.y",
+          "R.c.z - cpbr.t"
+        ],
+        "demensions": [
+          "R.d.x",
+          "R.d.y",
+          "R.d.z"
+        ],
+        "rotation": [
+          "R.r.x",
+          "R.r.y",
+          "R.r.z"
+        ],
+        "name": "backRight",
+        "code": "cpbr"
+      },
+      {
+        "type": "Cutter",
+        "center": [
+          "L.c.x + cpbl.t",
+          "L.c.y",
+          "L.c.z - L.t"
+        ],
+        "demensions": [
+          "L.d.x",
+          "L.d.y",
+          "L.d.z"
+        ],
+        "rotation": [
+          "L.r.x",
+          "L.r.y",
+          "L.r.z"
+        ],
+        "name": "backLeft",
+        "code": "cpbl"
+      },
+      {
+        "name": "right",
+        "type": "Divider",
+        "code": "R",
+        "center": [
+          "c.w - (R.t / 2)",
+          "R.l / 2",
+          "(w / -2)"
+        ],
+        "demensions": [
+          "c.t",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ]
+      },
+      {
+        "name": "left",
+        "type": "Divider",
+        "code": "L",
+        "center": [
+          "L.w/2",
+          "L.l / 2",
+          "-(c.t - L.t/2)"
+        ],
+        "demensions": [
+          "c.w",
+          "c.l",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "0",
+          0
+        ]
+      },
+      {
+        "name": "bottom",
+        "type": "Divider",
+        "code": "B",
+        "center": [
+          "B.w / 2",
+          "tkh + (t/2)",
+          "B.h / -2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ]
+      },
+      {
+        "name": "top",
+        "type": "Divider",
+        "code": "T",
+        "center": [
+          "T.w / 2",
+          "c.h - T.t/2",
+          "T.h /-2"
+        ],
+        "demensions": [
+          "innerWidth",
+          "innerDepth",
+          "pt34"
+        ],
+        "rotation": [
+          90,
+          "0",
+          0
+        ]
+      }
+    ],
+    "joints": [
+      {
+        "selector": {
+        "depends": "T",
+        "dependent": "R"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "T",
+        "dependent": "L"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "B",
+        "dependent": "R"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "selector": {
+        "depends": "B",
+        "dependent": "L"
+      },
+        "_TYPE": "Dado",
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      }
+      },
+      {
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      },
+        "_TYPE": "Butt"
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "L"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbr",
+        "dependent": "BACK"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cpbl",
+        "dependent": "BACK"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "R"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "L"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "T"
+      }
+      },
+      {
+        "_TYPE": "Butt",
+        "selector": {
+        "depends": "cb",
+        "dependent": "B"
+      }
+      }
+    ],
+    "dividerJoint": {
+      "_TYPE": "Dado",
+    },
+    "shape": "square",
+    "width": "based",
+    "height": "maxHeight(c.w,c.t,ceilh)",
+    "thickness": "based",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "_Type": "slice",
+        "zRotation": 0,
+        "leftDepth": "c.w",
+        "rightDepth": "c.t"
+      }
+    ],
+    "autoToeKick": true
+  },
+  "transition-wall": {
+    "_TYPE": "CabinetTemplate",
+    "autoToeKick": false,
+    "ID_ATTRIBUTE": "id",
+    "type": "transition-wall",
+    "values": [
+      {
+        "key": "cwl",
+        "eqn": "12*2.54"
+      },
+      {
+        "key": "cwr",
+        "eqn": "24*2.54"
+      },
+      {
+        "key": "maxSide",
+        "eqn": "Math.max(cwl,cwr)"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Divider",
+        "center": [
+          "c.w - R.t/2",
+          "c.h / 2",
+          "R.w / -2"
+        ],
+        "demensions": [
+          "maxSide",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "right",
+        "code": "R"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "L.t/2",
+          "c.h/2",
+          "R.c.z - R.w/2 + L.w/2"
+        ],
+        "demensions": [
+          "maxSide",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "left",
+        "code": "L"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "L.t + BACK.w/2",
+          "BACK.h/2 + B.t",
+          "L.c.z -L.w/2 + BACK.t /2"
+        ],
+        "demensions": [
+          "c.w - L.t - R.t",
+          "c.h - B.t -T.t",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "back",
+        "code": "BACK"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "L.t + T.w / 2",
+          "c.h - T.t/2",
+          "T.l/-2 "
+        ],
+        "demensions": [
+          "c.w - L.t - R.t",
+          "Math.max(cwl,  cwr)",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "top",
+        "code": "T",
+        "include": "All"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "B.w /2 + L.t",
+          "B.t/2",
+          "B.h / -2"
+        ],
+        "demensions": [
+          "c.w - L.t - R.t",
+          "T.h",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "bottom",
+        "code": "B"
+      }
+    ],
+    "joints": [
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
+      }
+    ],
+    "dividerJoint": {
+      "_TYPE": "Dado",
+    },
+    "shape": "square",
+    "width": 45.72,
+    "height": "wallh",
+    "thickness": "walld",
+    "fromFloor": "walle",
+    "openings": [
+      {
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "_Type": "slice",
+        "zRotation": 0,
+        "leftDepth": "cwl",
+        "rightDepth": "cwr"
+      }
+    ]
+  },
+  "transition-base": {
+    "_TYPE": "CabinetTemplate",
+    "ID_ATTRIBUTE": "id",
+    "type": "transition-base",
+    "values": [
+      {
+        "key": "cwl",
+        "eqn": "12*2.54"
+      },
+      {
+        "key": "cwr",
+        "eqn": "24*2.54"
+      },
+      {
+        "key": "maxSide",
+        "eqn": "Math.max(cwl,cwr)"
+      }
+    ],
+    "subassemblies": [
+      {
+        "type": "Divider",
+        "center": [
+          "c.w - R.t/2",
+          "c.h / 2",
+          "R.w / -2"
+        ],
+        "demensions": [
+          "maxSide",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "right",
+        "code": "R"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "L.t/2",
+          "c.h/2",
+          "R.c.z - R.w/2 + L.w/2"
+        ],
+        "demensions": [
+          "maxSide",
+          "c.h",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          "90",
+          0
+        ],
+        "name": "left",
+        "code": "L"
+      },
+      {
+        "type": "Panel",
+        "center": [
+          "L.t + BACK.w/2",
+          "BACK.h/2 + B.t",
+          "L.c.z -L.w/2 + BACK.t /2"
+        ],
+        "demensions": [
+          "c.w - L.t - R.t",
+          "c.h - B.t -T.t",
+          "pt34"
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "name": "back",
+        "code": "BACK"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "L.t + T.w / 2",
+          "c.h - T.t/2",
+          "T.l/-2 "
+        ],
+        "demensions": [
+          "c.w - L.t - R.t",
+          "Math.max(cwl,  cwr)",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "top",
+        "code": "T",
+        "include": "All"
+      },
+      {
+        "type": "Divider",
+        "center": [
+          "B.w /2 + L.t",
+          "tkh + B.t/2",
+          "B.h / -2"
+        ],
+        "demensions": [
+          "c.w - L.t - R.t",
+          "T.h",
+          "pt34"
+        ],
+        "rotation": [
+          "90",
+          "0",
+          0
+        ],
+        "name": "bottom",
+        "code": "B"
+      }
+    ],
+    "joints": [
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "T"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "R"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "B"
+      },
+      },
+      {
+        "_TYPE": "Dado",
+        "selector": {
+        "depends": "BACK",
+        "dependent": "L"
+      },
+      }
+    ],
+    "dividerJoint": {
+      "_TYPE": "Dado",
+    },
+    "shape": "square",
+    "width": 45.72,
+    "height": "wallh",
+    "thickness": "walld",
+    "fromFloor": 0,
+    "openings": [
+      {
+        "top": "T",
+        "bottom": "B",
+        "left": "L",
+        "right": "R",
+        "back": "BACK",
+        "_Type": "slice",
+        "leftDepth": "cwl",
+        "rightDepth": "cwr"
+      }
+    ],
+    "autoToeKick": true
+  }
+}

@@ -1,6 +1,6 @@
 
 const Resolver = require('../resolver');
-const openingReg = /^OP([0-9]*)(\.(i|o|inner|outer)|)\.(c|n|d|center|normal|demension)\.(x|y|z|i|j|k)/;
+const openingReg = /^OP([0-9]*)(\.(i|o|inner|outer)|)\.(c|n|d|center|normal|demension|[0-9]{1,})\.(x|y|z|i|j|k)/;
 
 class CabinetResolver extends Resolver {
   constructor(cabinet) {

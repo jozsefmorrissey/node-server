@@ -38,12 +38,14 @@ class SectionPropertiesUtil {
     this.outerPoly.normals(spDto.normals.x);
     this.innerPoly.normals(spDto.normals.x);
 
-    this.outerCenter = Vertex3D.center(coordinates.outer);
-    this.innerCenter = Vertex3D.center(coordinates.inner);
-    this.outerLength = this.outerPoly.vertex(0).distance(coordinates.outer[3]);
-    this.outerWidth = this.outerPoly.vertex(0).distance(coordinates.outer[1]);
-    this.innerLength = this.innerPoly.vertex(0).distance(coordinates.inner[3]);
-    this.innerWidth = this.innerPoly.vertex(0).distance(coordinates.inner[1]);
+    this.inner = () => coordinates.inner;
+    this.outer = () => coordinates.outer;
+    this.outer.center = Vertex3D.center(coordinates.outer);
+    this.inner.center = Vertex3D.center(coordinates.inner);
+    this.outer.len = this.outerPoly.vertex(0).distance(coordinates.outer[3]);
+    this.outer.width = this.outerPoly.vertex(0).distance(coordinates.outer[1]);
+    this.inner.len = this.innerPoly.vertex(0).distance(coordinates.inner[3]);
+    this.inner.width = this.innerPoly.vertex(0).distance(coordinates.inner[1]);
 
     let drawerDepth;
     this.drawerDepth = () => {
@@ -152,9 +154,9 @@ class SectionPropertiesUtil {
         const coverInfo = this.coverInfo();
         const normal = coverInfo.biPolygon.normal().inverse();
         const depth = this.innerDepth();
-        const length = this.innerLength;
-        const width = this.innerWidth;
-        const innerCenter = this.innerCenter;
+        const length = this.inner.len;
+        const width = this.inner.width;
+        const innerCenter = this.inner.center;
         const outer = coordinates.outer;
         const point1 = this.outerPoly.vertex(spDto.verticalDivisions ? 1 : 3);
         const point2 = this.outerPoly.vertex(2);

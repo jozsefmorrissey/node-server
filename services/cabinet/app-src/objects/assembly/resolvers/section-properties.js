@@ -1,6 +1,6 @@
 
 const Resolver = require('../resolver');
-const openingReg = /^OP.((i|o|inner|outer)\.|)(c|n|d|center|normal|demension)\.(x|y|z|i|j|k)/;
+const openingReg = /^OP.((i|o|inner|outer)\.|)(c|n|d|center|normal|demension|[0-9]{1,})\.(x|y|z|i|j|k)/;
 
 class SectionPropertiesResolver extends Resolver {
   constructor(sectionProps) {
@@ -35,13 +35,20 @@ class SectionPropertiesResolver extends Resolver {
       if (func.startsWith('n') && dir.match(/^(i|j|k)$/)) value = sectionProps.normal()[dir]();
       else if (func.startsWith('d') && dir === 'z') value = 0;
       else if (inOut.startsWith('o')) {
-        if (func.startsWith('c')) value = secProps.outerCenter()[dir];
-        if (func.startsWith('d') && dir === 'x') value = secProps.outerWidth();
-        if (func.startsWith('d') && dir === 'y') value = secProps.outerHeight();
+        if (func.startsWith('c')) value = secProps.outer.center()[dir];
+        else if (func.startsWith('d') && dir === 'x') value = secProps.outer.width();
+        else if (func.startsWith('d') && dir === 'y') value = secProps.outer.len();
       } else {
-        if (func.startsWith('c')) value = secProps.innerCenter()[dir];
-        if (func.startsWith('d') && dir === 'x') value = secProps.innerWidth();
-        if (func.startsWith('d') && dir === 'y') value = secProps.innerHeight();
+        if (func.startsWith('c')) value = secProps.inner.center()[dir];
+        else if (func.startsWith('d') && dir === 'x') value = secProps.inner.width();
+        else if (func.startsWith('d') && dir === 'y') value = secProps.inner.len();
+        else {
+          const index = Number.parseInt(func);
+          if (Number.isInteger(index) && index < 4 && index > -1) {
+            const vertex =  secProps.coordinates()[index];
+            return dir ? vertex[dir] : vertex;
+          }
+        }
       }
       info.value(value);
       return info.valid() ? info : undefined;

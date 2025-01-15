@@ -5,7 +5,7 @@ const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line
 const Matrix = require('./matrix.js');
 const FixedValue = require('./fixed-value');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
-const tol = .00000001;
+const tol = .0001;
 const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const withinTol = new Tolerance(tol).within;
 const withinHundreth = new Tolerance(.01).within;
@@ -355,7 +355,7 @@ class Line3D {
     this.x = (x) => {
       x ||= 0;
       const vec = this.vector().unit();
-      const t = (x - this[0].x)/vec.i();
+      const t = (x - this[0].x)/(vec.i() || 1e-32);
       x = this[0].x + vec.i()*t;
       const y = this[0].y + vec.j()*t;
       const z = this[0].z + vec.k()*t;
@@ -365,7 +365,7 @@ class Line3D {
     this.y = (y) => {
       y ||= 0;
       const vec = this.vector().unit();
-      const t = (y - this[0].y)/vec.j();
+      const t = (y - this[0].y)/(vec.j() || 1e-32);
       const x = this[0].x + vec.i()*t;
       y = this[0].y + vec.j()*t;
       const z = this[0].z + vec.k()*t;
@@ -375,7 +375,7 @@ class Line3D {
     this.z = (z) => {
       z ||= 0;
       const vec = this.vector().unit();
-      const t = (z - this[0].z)/vec.k();
+      const t = (z - this[0].z)/(vec.k() || 1e-32);
       const x = this[0].x + vec.i()*t;
       const y = this[0].y + vec.j()*t;
       z = this[0].z + vec.k()*t;
@@ -447,15 +447,11 @@ class Line3D {
     // Ensures returnLine startVertex is closer to trendSetter endVertex.
     // Get In Line
     this.acquiescent = (trendSetter) => {
-      if (trendSetter instanceof Vector3D) {
-        return this.vector().sameDirection(trendSetter) ? this.clone() : this.negitive();
+
+      if (!(trendSetter instanceof Vector3D)) {
+        trendSetter = trendSetter.vector();
       }
-      if (!(trendSetter instanceof Line3D)) return this;
-      const endDist = trendSetter[1].distance(this[1]);
-      const startDist = trendSetter[1].distance(this[0]);
-      const shouldReverse = endDist > startDist;
-      if (shouldReverse) return this.negitive();
-      return this.clone();
+      return this.vector().sameDirection(trendSetter) ? this.clone() : this.negitive();
     }
 
     this.isParrelle = (other) => this.vector().unit().parrelle(other.vector().unit());
@@ -506,6 +502,37 @@ class Line3D {
       }
     }
 
+    const s1s2e1e2 = (l1,l2) => Line3D.combine([LINP(l1[0], l2[0]), LINP(l1[1], l2[1])].filter(l=>l));
+    this.subtract = (lineOlines) => {
+      if (Array.isArray(lineOlines)) {
+        if (lineOlines.length === 0) return [this.clone()];
+        let lines = [this.clone()];
+        lineOlines = Line3D.combine(lineOlines.map(l => l.clone()));
+        for (let index = 0; index < lineOlines.length; index++) {
+          lines = lines.map(l => l.subtract(lineOlines[index])).concatElements();
+        }
+        return lines;
+      }
+      if (this.equivalent(lineOlines)) return [];
+      const line = lineOlines.acquiescent(this);
+      const startWithin = this.within(line[0]);
+      const endWithin = this.within(line[1]);
+      const lines = [];
+      if (startWithin === true && endWithin === 'BEFORE' ||
+          endWithin === true && startWithin === 'AFTER')
+          console.warn.logarithmic('Line3D.acquiescent doesnt seem to be working....');
+
+      if (startWithin === true && endWithin === true)
+        lines.concatInPlace(s1s2e1e2(this, line));
+      else if (startWithin === true && endWithin === 'AFTER')
+        lines.concatInPlace(s1s2e1e2(line, this));
+      else if (endWithin === true && startWithin === 'BEFORE')
+        lines.concatInPlace(s1s2e1e2(this, line));
+      else if (startWithin === false || endWithin === false || endWithin === startWithin)
+        lines.concatInPlace([this.clone()]);
+      return lines.filter(l=>l);
+    }
+
     this.combineOrder = (other) => Line3D.combineOrder(this, other);
   }
 }
@@ -530,6 +557,12 @@ Line3D.adjustVertices = (vert1, vert2, change, fromStartVertex) => {
   const line = new Line3D(vert1, vert2);
   line.adjustLength(change, fromStartVertex);
 }
+
+Line3D.lineIfNotPoint = (startVertex, endVertex) => {
+  const line = new Line3D(startVertex, endVertex);
+  return line.isPoint() ? null : line;
+};
+LINP = Line3D.lineIfNotPoint;
 
 Line3D.adjustDistance = (vert1, vert2, distance, fromStartVertex) => {
   const line = new Line3D(vert1, vert2);
@@ -679,9 +712,10 @@ Line3D.combineOrder = (line1, line2) => {
   verts.sort(Vertex3D.sortByCenter(Vertex3D.center(...verts)));
   verts.sort(Vertex3D.sortByCenter(verts[verts.length - 1]));
   let longest = new Line3D(verts[0].clone(), verts[verts.length - 1].clone());
+  if (!unitVec1.equals(longest.vector().unit())) longest = longest.negitive();
+  if (!unitVec1.equals(longest.vector().unit())) return null;
   const shorterBy = line1.length() + line2.length() - longest.length();
   if (zero(shorterBy) < 0) return null;
-  if (!unitVec1.equals(longest.vector().unit())) longest = longest.negitive();
   verts.sort(Vertex3D.sortByCenter(longest[0]));
   let first = new Line3D(verts[0], verts[1]);
   let second = new Line3D(verts[0], verts[2]);
@@ -745,7 +779,7 @@ Line3D.combineByLine = (list, path, combine) => {
 }
 
 Line3D.bestPole = (lines, tolerance) => {
-  tolerance ||= tol;
+  tolerance ||= .0001;
   const tolmap = new ToleranceMap({'vector().positiveUnit().i()': tolerance,
                                   'vector().positiveUnit().j()': tolerance,
                                   'vector().positiveUnit().k()': tolerance});
@@ -1030,7 +1064,7 @@ Line3D.sliceAll = (lines, segment) => {
 }
 
 Line3D.parrelleSets = (lines, tolerance) => {
-  tolerance ||= tol;
+  tolerance ||= .0001;
   const tolmap = new ToleranceMap({'vector().positiveUnit().i()': tolerance,
                                   'vector().positiveUnit().j()': tolerance,
                                   'vector().positiveUnit().k()': tolerance});

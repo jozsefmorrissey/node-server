@@ -5,7 +5,7 @@
   <br>
   <label>Points</label>
   <div:t repeat='point in subAssem.polyConfig.points' index='{{$index}}'>
-    {{getXyzSelect('').html()}}
+    {{selector.vertex('').html()}}
     <input class='template-input xyz' attr='subassemblies' name='polyConfig.points.{{$index}}' value='{{point[0]}}'>
     <input disabled class='measurement-input' name='value'>
     <input type="checkbox" name="convert" checked>

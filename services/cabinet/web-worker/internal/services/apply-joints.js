@@ -189,10 +189,14 @@ function buildExtendedModel(assem, joints, env) {
   }
 }
 
-function runMfcFunc(stage, assem, env) {
-  const mfc = MFC(assem);
-  if (mfc[stage])
-    env.modelInfo[stage][assem.id] = mfc[stage](assem, env);
+function runMfcFunc(stage, assemOids, env) {
+  if (Array.isArray(assemOids))
+    assemOids.forEach(id => runMfcFunc(stage, env.byId[id], env));
+  else {
+    const mfc = MFC(assemOids);
+    if (mfc[stage])
+      env.modelInfo[stage][assemOids.id] = mfc[stage](assemOids, env);
+  }
 }
 
 function applyCuts(assem, env) {
@@ -299,6 +303,10 @@ function Apply(payload, environment, taskId, intersections) {
   const assemblyIds = payload.assemblies.concat(environment.generated);
   sliceAtOpening(assemblyIds, env, 'model');
   if (environment.expandParts) applyMaleJointExtensions(payload, environment);
+  else {
+    runMfcFunc('extended', assemblyIds, env);
+    runMfcFunc('cut', assemblyIds, env);
+  }
   let map = {intersection: env.modelInfo.intersection, joined: env.modelInfo.joined};
   let proccessedIndex = 0;
   for (let index = 0; index < assemblyIds.length; index++) {
@@ -312,10 +320,8 @@ function Apply(payload, environment, taskId, intersections) {
       }
     }
   }
-  for (let index = 0; index < assemblyIds.length; index++) {
-    const assem = env.byId[assemblyIds[index]];
-    runMfcFunc('joined', assem, env);
-  }
+
+  runMfcFunc('joined', assemblyIds, env);
 
   return env.modelInfo.joined;
 }

@@ -188,6 +188,7 @@ class Draw2d {
       if (Array.isArray(poly)) lines = poly.map((v,i) => [v, poly[(i+1)%poly.length]])
       else lines = poly.lines();
       const ctx = CTX();
+      ctx.strokeStyle = color;
       let region = new Path2D();
       const verts = [new Vertex2d(lines[0][0].x, lines[0][0].y)];
       region.moveTo(lines[0][0].x, lines[0][0].y);
@@ -270,9 +271,24 @@ class Draw2d {
       ctx.lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
       ctx.strokeStyle = lineColor || 'black';
       ctx.fillStyle = fillColor || 'white';
-      ctx.arc(center.x, center.y, circle.radius(),0, 2*Math.PI);
+      ctx.arc(center.x, center.y, circle.radius(),circle.from.radians(), circle.to.radians());
       ctx.stroke();
-      ctx.fill();
+      // ctx.fill();
+    }
+
+    draw.ellipse = (ellipse, lineColor, lineWidth, fillColor) => {
+      const center = ellipse.center();
+      const ctx = CTX();
+      ctx.beginPath();
+      ctx.lineWidth = Number.isFinite(lineWidth) ? lineWidth : 2;
+      ctx.strokeStyle = lineColor || 'black';
+      ctx.fillStyle = fillColor || 'white';
+      ctx.ellipse(center.x, center.y, ellipse.rx(), ellipse.ry(),
+        ellipse.rotation.radians(), ellipse.from.radians(), ellipse.to.radians());
+
+      const axisPoints = ellipse.axisPoints();
+      ctx.stroke();
+      // ctx.fill();
     }
 
     function measureText(text) {
@@ -349,7 +365,7 @@ class Draw2d {
       const midpoint = line.midpoint();
       const radians = line.radians();
 
-      draw.text(measurement.display(), midpoint, {radians})
+      draw.text(measurement.display(), midpoint, {radians, size: '4px'})
     }
 
     draw.measurement = (measurement, color, textWidth) => {
@@ -370,9 +386,11 @@ class Draw2d {
     }
 
     draw.measurement.angle = (angle, color, textWidth) => {
-      const bisector = angle.bisector(2.54*20);
-      const labelPoint = bisector[1];
-      draw.text(angle.degrees() + String.fromCharCode(248), labelPoint);
+      if (angle.degrees()) {
+        const bisector = angle.bisector(2.54*20);
+        const labelPoint = bisector[1];
+        draw.text(angle.degrees() + String.fromCharCode(248), labelPoint);
+      }
     }
 
     function snapLocColor(snapLoc) {
@@ -406,7 +424,7 @@ class Draw2d {
       Vertex2d: draw.vertex, Line2d: draw.line, Circle2d: draw.circle, Corner: draw.vertex,
       Polygon2d: draw.polygon, Square2d: draw.square, LineMeasurement2d: draw.measurement,
       Snap: draw.snap, SnapLocation2d: draw.snapLocation, Layer: draw.layer,
-      AngleMeasurement2d: draw.measurement.angle
+      AngleMeasurement2d: draw.measurement.angle, Ellipse2d: draw.ellipse
     }
 
     return draw;

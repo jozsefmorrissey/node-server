@@ -168,7 +168,7 @@ class ToleranceMap {
           const path = attrs[aIndex];
           const nonFuncPath = path.replace(/\(\)/g, '');
           const currTotal = Object.pathValue(obj, path);
-          let value = instance.tolerance().bounds[path](list[index]).value;
+          let value = list[index].pathValue(path);
           if (value === null) {
             if (index === 0 || Object.pathValue(obj, nonFuncPath) === null)
               Object.pathValue(obj, nonFuncPath, null);
@@ -187,7 +187,7 @@ class ToleranceMap {
     function bestGroup(list) {
       const avgObj = averageObject(list);
       if (list.length && avgObj.length === 0)
-        console.warn.logarithmic('There is probably and averageObject issue...');
+        console.warn.logarithmic('There is probably and averageObject issue... Compare the following\n\ttolerance.attributes().map(path => list[0].pathValue(path))\n\ttolerance.attributes().map(path => avgObj.pathValue(path))');
       return instance.matches(avgObj);
     }
 

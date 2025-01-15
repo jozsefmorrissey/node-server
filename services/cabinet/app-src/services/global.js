@@ -1,9 +1,3 @@
-const Order = require('../objects/order.js');
-const Room = require('../objects/room.js');
-const Group = require('../objects/group.js');
-const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-const CustomEvent = require('../../../../public/js/utils/custom-event.js');
-const Request = require('../../../../public/js/utils/request.js');
 
 Global = {
   order: (order) => {
@@ -34,7 +28,7 @@ Global = {
       GROUP = undefined; CABINET = undefined;
       Global.trigger.change.room(details);
     }
-    return ROOM;
+    return ROOM || Global.room.DEFAULT;
   },
   group: (group) => {
     if (!group && GROUP === undefined) {
@@ -74,6 +68,14 @@ Global = {
   }
 }
 
+
+const Order = require('../objects/order.js');
+const Room = require('../objects/room.js');
+const Group = require('../objects/group.js');
+const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+const CustomEvent = require('../../../../public/js/utils/custom-event.js');
+const Request = require('../../../../public/js/utils/request.js');
+
 class Displays {
   constructor() {
     Object.getSet(this, 'order', 'room', 'cabinet', 'template', 'property', 'main')
@@ -92,8 +94,7 @@ Global.order.static = (name) => {
     (json) =>
     Global.order(Order.fromJson(json)) && Global.trigger.load.order(Global.order()),
     (error) => console.error(error));
-  }
-Global.room.DEFAULT = new Room('FOR_TESTING_PURPOSES_ONLY');
+}
 
 
 module.exports = Global;

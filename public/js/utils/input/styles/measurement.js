@@ -22,7 +22,13 @@ class MeasurementInput extends Input {
     props.value = () => value;
     super(props);
 
-    this.unit = (unit) => unit === undefined ? _unit : (_unit = unit);
+    this.unitOnly = () => props.unitOnly;
+    const resolveUnit = () => Measurement.units().indexOf(_unit) !== -1 ?
+                                        _unit : Measurement.unit();
+    this.unit = (unit) => {
+      if (unit !== undefined) (_unit = unit) & this.trigger('change');
+      return resolveUnit();
+    }
     this.units = () => units;
     this.valid = (val) => {
       let testVal;

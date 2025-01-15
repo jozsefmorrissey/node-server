@@ -14,6 +14,7 @@ const within = Tolerance.within(tol);
 
 class Layer {
   constructor(polygonOs) {
+    const instance = this;
     let list = polygonOs instanceof Polygon3D ? [polygonOs] : polygonOs || [];
     this.polygons = () => list.map(p => p.copy());
     this.vertices = () => {
@@ -39,7 +40,10 @@ class Layer {
       return false;
     }
 
-    this.parimeter = () => new Parimeter3D(this.lines.all(), this.normal());
+    this.parimeter = () => {
+      console.warn.logarithmic('Parimeter3D does not deal well with disconnected internal lines.\n\tsee "Layer: lines" test for and example senario')
+      return new Parimeter3D(this.lines(), this.normal());
+    }
     this.combined = () => new Layer(this.parimeter());
 
     this.addAll = (polys) => {
@@ -178,8 +182,25 @@ class Layer {
       return lines;
     }
 
-    const overlapsAnother = (t) => {
-      const tolmap = new ToleranceMap({'(x,y,z)().vertex.(x,y,z)': .1, 'vector().positiveUnit().(i,j,k)': .01});
+    const printGroup = (group, overlaping) => {
+      let str = '';
+      const colors = Array.fill(group.length, String.color.next);
+      str += group.map((l,i) => l.toDrawString(colors[i])).join('\n') + '\n\n';
+      str += group.map((g,i) => g.subtract(overlaping[i])
+                  .map(l => l.toDrawString(colors[i]))).concatElements().join('\n\n');
+      console.log(str);
+    }
+
+    const printGroupIndex = (group, overlaping, index) => {
+      let str = '';
+      str += group[index].toDrawString('green') + '\n\n';
+      str += overlaping[index].map(l => l.toDrawString('red')).join('\n\n') + '\n\n';
+      str += group[index].subtract(overlaping[index]).map(l => l.toDrawString('blue')).join('\n\n');
+      console.log(str);
+    }
+
+    let overlapsAnother = (t) => {
+      const tolmap = new ToleranceMap({'(x,y,z)().vertex.(x,y,z)': .0001, 'vector().positiveUnit().(i,j,k)': .001});
       let slicedLines = list.map(p => p.lines().map(l => l.clone())).concatElements();
       // slicedLines = Line3D.sliceAll(slicedLines);
       tolmap.addAll(slicedLines);
@@ -189,6 +210,7 @@ class Layer {
       for(let gi = 0; gi < groups.length; gi++) {
         const group = groups[gi];
         const overlaps = [];
+        const overlaping = Array.fill(group.length, () => []);
         for (let i = 0; i < group.length; i++) {
           const target = group[i];
           for (let j = i+1; j < group.length; j++) {
@@ -199,18 +221,25 @@ class Layer {
                   ints.find(v => target.within(v) === true) &&
                   ints.find(v => other.within(v) === true)) {
                 overlaps[i] = overlaps[j] = true;
+                overlaping[i].push(other);overlaping[j].push(target);
               }
             }
           }
         }
-        lines.concatInPlace(group.filter((g,i) => !overlaps[i]));
+        lines.concatInPlace(group.map((g,i) => g.subtract(overlaping[i])).concatElements());
       }
-      return lines;
+      // setTimeout(() => {
+      //   if (instance.parimeter().length === 0) {
+      //     overlapsAnother.force(t);
+      //   }
+      // });
+      return Line3D.combine(lines);
     }
+    overlapsAnother = overlapsAnother.HashCache(this);
 
     this.lines = (tolerance) => {
       let t = tolerance || .00001;
-      // return overlapsAnother(t);
+      return overlapsAnother(t);
       let lines = onlyDefinedOnce(t);
       // removeLinesThatDoNotShareAVertex(lines, t);
       Line3D.combine(lines);
@@ -252,7 +281,7 @@ class Layer {
               testIntercept(thisIntercepts, otherIntercepts, 'z', within);
     }
 
-    this.hash = () => this.toDrawString().hash();
+    this.hash = () => this.polygons().map(p => p.hash()).sum();
 
     this.merge = (other) => {
       const normalsEquivalent = this.normal().positiveUnit().equals(other.normal().positiveUnit());

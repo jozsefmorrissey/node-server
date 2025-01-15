@@ -322,6 +322,24 @@ Function.safeStdLibAddition(RegExp, 'escape',  function (str) {
   return str.replace(specialRegChars, '\\$&');
 }, true);
 
+Function.safeStdLibAddition(RegExp, 'g',  function (str) {
+  if (!this.GLOBAL)
+    this.property('GLOBAL', new RegExp(this.source, 'g'), false, false, false);
+  return this.GLOBAL;
+});
+
+
+Function.safeStdLibAddition(RegExp, 'object',  function (string, ...keys) {
+  const match = string.match(this);
+  if (match === null) return null;
+  const returnVal = {};
+  for (let index = 0; index < keys.length; index += 1) {
+    const attr = keys[index];
+    if (attr && match[index + 1]) returnVal[attr] = match[index + 1];
+  }
+  return returnVal;
+});
+
 Function.safeStdLibAddition(String, 'replaceIterativly',  function (exp, replace) {
   let str = this;
   let next;
@@ -384,6 +402,72 @@ const integerCompareReg = (lessThan, equalTo) => (integer, asString) => {
   reg = (lessThan ? lessThanFormat : greaterThanFormat)(reg, leadInt, ints.length);
   return asString ? reg : new RegExp(`^${reg}$`);
 }
+
+Function.safeStdLibAddition(String, 'reverse', function () {
+  return this.split('').reverse().join('');
+});
+
+Function.safeStdLibAddition(String, 'splice', function (startIndex, length, replaceWith) {
+  if ((typeof length) === 'string') {
+    replaceWith = length; length = this.length;
+  }
+  return this.substring(0, startIndex) + (replaceWith || '') + this.substring(startIndex + length, this.length);
+});
+
+
+function foreachStringSection (str, func, opening, closing, index = 0) {
+  const openFunc = (typeof opening) === 'string' ? 'indexOf' : 'search';
+  const closeFunc = (typeof closing) === 'string' ? 'indexOf' : 'search';
+  const openStack = [];
+  let closedMatch;
+  let closedIndex = 0;
+  while (closedMatch = str.substring(closedIndex).match(closing)) {
+    closedIndex = closedMatch.index + closedIndex + closedMatch[0].length;
+    do {
+      const match = str.substring(index).match(opening);
+      if (match === null) break;
+      const i = match.index + index;
+      if (i >= closedIndex) break;
+      openStack.push({index: i, match});
+      index = i + 1;
+    } while (true);
+    if (openStack.length === 0) continue;
+    const openDets = openStack.pop();
+    const openIndex = openDets.index;
+    const openMatch = openDets.match;
+    const details = {openIndex, closedIndex, str, openMatch, closedMatch}
+    const change = func(str.substring(openIndex, closedIndex), details);
+    if ((typeof change) === 'string') {
+      str = str.splice(openIndex, closedIndex - openIndex, change);
+      closedIndex = openIndex + change.length;
+    }
+    index = closedIndex;
+  }
+  return str + '';
+}
+
+Function.safeStdLibAddition(String, 'foreachSection', function (...args) {return foreachStringSection(this, ...args)});
+
+Function.safeStdLibAddition(RegExp, 'reverse', function() {
+  return this.source.reverse();
+});
+
+const openReg = /(?<!(^|[^\\])\\(\\\\)*)\(/;
+const closeReg = /(?<!(^|[^\\])\\(\\\\)*)\)/;
+const ignoreReg = /\((?=\?)/;
+Function.safeStdLibAddition(RegExp, 'matchless', function () {
+  const matchlessSource = this.source.foreachSection((section, dets) =>
+    dets.str.substring(dets.openIndex - 1, dets.openIndex + 2).match(ignoreReg) ?
+      null : section.splice(1,0,'?:'), openReg, closeReg);
+  return new RegExp(matchlessSource);
+});
+
+Function.safeStdLibAddition(RegExp, 'mls', function () {
+  const matchlessSource = this.source.foreachSection((section, dets) =>
+    dets.str.substring(dets.openIndex - 1, dets.openIndex + 2).match(ignoreReg) ?
+      null : section.splice(1,0,'?:'), openReg, closeReg);
+  return matchlessSource;
+});
 
 Function.safeStdLibAddition(RegExp, 'lessThan', integerCompareReg(true, false), true);
 Function.safeStdLibAddition(RegExp, 'greaterThan',  integerCompareReg(false, false), true);
@@ -453,6 +537,9 @@ function formatNumber(number, biteLen, func, bigEndian) {
   return buffer;
 }
 
+let nr = '(?:-|)[0-9]{1,}';
+Number.regex = new RegExp(`(?:${nr}\\.${nr}|${nr}|\\.${nr})`);
+
 Function.safeStdLibAddition(Number, 'float32',  {}, true);
 Function.safeStdLibAddition(Number, 'float64',  {}, true);
 Function.safeStdLibAddition(Number, 'int32',  {}, true);
@@ -497,6 +584,18 @@ Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
     val += mod;
   }
   return val % mod;
+}, true);
+
+const ratioReg = /^([0-9]{0,})(r|ratio)([0-9]{0,})$/i;
+Function.safeStdLibAddition(Math, 'ratio', function (string) {
+  const rMatch = string.match(ratioReg);
+  if (rMatch) {
+    const ratio1 = rMatch[1];
+    const ratio2 = rMatch[3];
+    if (ratio1 && ratio2) return ratio1/ratio2;
+    else if (ratio1) return ratio1/100;
+    else if (ratio2) return 1 - ratio2/100;
+  }
 }, true);
 
 Function.safeStdLibAddition(Math, 'copysign',  function (a, b) {
@@ -1446,6 +1545,34 @@ Function.safeStdLibAddition(Function, 'lastCall',   lastCall);
 Function.safeStdLibAddition(Function, 'logarithmic',   logarithmic);
 Function.safeStdLibAddition(Function, 'periodic',   periodic);
 
+function HashCache(object, hashAttr, CacheLocation, hashChangeEvent) {
+  if (!hashAttr) hashAttr = 'hash';
+  CacheLocation = `${CacheLocation || '_HashCache'}.${hashAttr}`;
+  const CacheId = `${CacheLocation}.${String.random()}`;
+  let lastHash;
+  const path = (...args) => `${CacheId}.${Object.hash(args)}`;
+  if (hashChangeEvent) hashChangeEvent.on(() => object.pathValue(CacheLocation, {}));
+  const func = (...args) => {
+    const p = path(...args);
+    const hash = object.pathValue(p);
+    if (hash !== lastHash) object.pathValue(CacheLocation, {});
+    if (!hashChangeEvent) {
+      const hash = object.pathValue(hashAttr);
+      if (hash !== lastHash) object.pathValue(CacheLocation, {});
+    }
+    if (object.pathValue(p) === undefined)
+      object.pathValue(p, this(...args));
+    return object.pathValue(p);
+  };
+  func.force = (...args) => {
+    const info = object.pathInfo(path(...args));
+    info.parent[info.attr] = undefined;
+    return func(...args);
+  }
+  return func;
+}
+Function.safeStdLibAddition(Function, 'HashCache',   HashCache);
+
 Function.safeStdLibAddition(String, 'foreach', function (func) {
   const arr = [];
   for (let index = 0; index < this.length; index++) {
@@ -2075,3 +2202,15 @@ Function.safeStdLibAddition(Object, 'map',   function (obj, func) {
 
 Function.safeStdLibAddition(Object, 'hash',
   (obj) => JSON.stringify(obj === undefined ? 'undefined' : obj).hash(), true);
+
+Gauge = {
+  chart: [{mm:0,inch:0}, {inch: .289, mm: 7.348},{inch: .258, mm: 6.543},{inch: .229, mm: 5.827},{inch: .204, mm: 5.189},{inch: .182, mm: 4.621},{inch: .162, mm: 4.115},{inch: .144, mm: 3.664},{inch: .128, mm: 3.263},{inch: .114, mm: 2.906},{inch: .102, mm: 2.588},{inch: .091, mm: 2.304},{inch: .081, mm: 2.052},{inch: .072, mm: 1.828},{inch: .064, mm: 1.628},{inch: .057, mm: 1.449},{inch: .051, mm: 1.291},{inch: .045, mm: 1.149},{inch: .040, mm: 1.024},{inch: .036, mm: .912},{inch: .032, mm: .812},{inch: .028, mm: .723},{inch: .025, mm: .644},{inch: .023, mm: .573},{inch: .020, mm: .511},{inch: .018, mm: .455},{inch: .016, mm: .405},{inch: .014, mm: .360},{inch: .013, mm: .321},{inch: .011, mm: .286},{inch: .010, mm: .255},{inch: .0089, mm: .226},{inch: .0080, mm: .200},{inch: .0071, mm: .180},{inch: .0063, mm: .160},{inch: .0056, mm: .142},{inch: .0050, mm: .130},{inch: .0045, mm: .114},{inch: .0040, mm: .100}],
+  to: {
+    mm: (guage) => Gauge.chart[guage || 0].mm,
+    inch: (guage) => Gauge.chart[gauge || 0].inch
+  },
+  from: {
+    mm: (mm) => Gauge.chart.findLastIndex(obj => obj.mm >= mm),
+    inch: (inch) => Gauge.chart.findLastIndex(obj => obj.inch >= inch)
+  }
+}

@@ -21,9 +21,14 @@ class Vertex2d {
       return true;
     };
 
-    this.translate = (xOffset, yOffset, doNotModify) => {
+    this.translate = (xOffsetOrVert, yOffset, doNotModify) => {
+      if (xOffsetOrVert.x !== undefined) {
+        if (Boolean.is(yOffset)) doNotModify = yOffset;
+        yOffset = xOffsetOrVert.y;
+        xOffsetOrVert = xOffsetOrVert.x;
+      }
       const vertex = doNotModify ? this.copy() : this;
-      vertex.x += xOffset;
+      vertex.x += xOffsetOrVert;
       vertex.y += yOffset;
       return vertex;
     }
@@ -122,6 +127,19 @@ class Vertex2d {
 
 Vertex2d.fromJson = (json) => {
   return new Vertex2d(json.point);
+}
+
+const mrmls = Measurement.regex.matchless().source;
+Vertex2d.regex = new RegExp(`\\(\\s*(${mrmls})\\s*,\\s*(${mrmls})\\s*\\)`);
+Vertex2d.fromString = (string, unit, list) => {
+  const match = string.match(Vertex2d.regex);
+  if (!match) return null;
+  unit = unit ? (unit === true ? Measurement.unit.BASE : unit) : Measurement.unit();
+  if (!list) return new Vertex2d(Measurement.decimal(match[1], unit), Measurement.decimal(match[2], unit));
+  const matches = string.match(new RegExp(Vertex2d.regex.g()));
+  const verticies = [];
+  matches.forEach(m => vertices.push(Vertex2d.fromString(m)));
+  return vertices;
 }
 
 Vertex2d.minMax = (...vertices) => {

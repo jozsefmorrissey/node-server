@@ -280,6 +280,7 @@ CSG.prototype = {
         v.scale(center, x, y, z);
       }));
     }
+    this.center(center)
     return this;
   },
 
@@ -961,19 +962,88 @@ CSG.cylinder.step = function(cylinders, options) {
   const mainCenter = options.center || {x:0,y:0,z:0};
   const mainSlices = options.slices;
   cylinders.forEach(c => {
-    const vector = c.vector || new CSG.Vector({y: 0, x: 0, z: 1});
+    const vector = new CSG.Vector(c.vector || {y: 0, x: 0, z: 1});
     const center = new CSG.Vector(c.center || mainCenter);
-    const length = c.length;
+    const length = c.length || 1;
     const radius = c.radius || c.diameter / 2;
     const slices = c.slices || mainSlices;
     const half = c.half || options.half;
-    const start = half === true ? center : center.minus(vector.times(c.length/-2));
-    const end = half === false ? center : center.minus(vector.times(c.length/2));
+    const start = half === true ? center : center.minus(vector.times(length/-2));
+    const end = half === false ? center : center.minus(vector.times(length/2));
     const cylinder = new CSG.cylinder({start, end, center, radius, slices});
     stepCylinder = stepCylinder.union(cylinder);
   });
   return stepCylinder;
 }
+
+
+const femaleLatchCutter = (endLength, radius, thickness, blockCount) => {
+
+}
+const maleLatchBlocks = (endLength, radius, thickness, blockCount, female) => {
+  let blocks = new CSG();
+  const blockThickness = thickness/2 + (female ? .05 : 0);
+  const offset = radius - thickness;
+
+  for (let index = 0; index < blockCount; index++) {
+    const block = new CSG.cube({radius: blockThickness});
+    block.translate({x:offset, y:0, z:0});
+    block.rotate({z: (360/blockCount) * index});
+    blocks.add(block);
+  }
+  return blocks;
+}
+
+const applyEndCutter = (pipe, ends, index, radius, length, thickness, endLength, slices) => {
+  if (!ends[index].includes('MALE')) return pipe;
+  const cutterRadius = ends[index] === 'MALE' ? radius : radius-thickness/2;
+  thickness = (thickness / 2) + .02;
+  const cutter = new CSG.cylinder.hollow(cutterRadius, endLength, thickness, {slices});
+  const translation = new CSG.Vector({x: 0, y:0, z: (length/2 - endLength/2) * (index === 0 ? -1 : 1)});
+  cutter.translate(translation);
+  pipe = pipe.subtract(cutter);
+  const blocks = maleLatchBlocks(endLength, radius, thickness, 4, ends[index] !== 'MALE');
+  blocks.translate({x:0, y:0, z:translation.z + (index === 0 ? -.3 : .3)});
+  // blocks.translate(translation);
+  if (ends[index] === 'MALE') pipe = pipe.union(blocks);
+  // else {
+  //   const stepVect = translation.unit().times(blocks.demensions().z *.9);
+  //   const rotation = {z: 360 * (thickness/3)/(2*Math.PI*radius)};
+  //   Array.fill(8, i=>i).forEach(i => blocks.rotate(rotation) & (pipe = pipe.subtract(blocks)));
+  //   Array.fill(8, i=>i).forEach(i => blocks.reverseRotate(rotation));
+  //   let moved = 0;
+  //   while(moved < 2*endLength / 3) {
+  //     pipe = pipe.subtract(blocks);
+  //     blocks.translate(stepVect);
+  //     moved += Math.abs(stepVect.z);
+  //   }
+  // }
+
+  return pipe;
+}
+
+const validEnd = (end) => CSG.cylinder.hollow.ENDS.indexOf(end) !== -1;
+CSG.cylinder.hollow = function(radius, length, thickness, options) {
+  radius ||= 1;
+  length ||= 1;
+  thickness ||= .2;
+  let pipe = new CSG.cylinder.step([{radius, length}], options);
+  const ends = options.ends || []
+  if (!validEnd(ends[0])) ends[0] = 'OPEN';
+  if (!validEnd(ends[1])) ends[1] = 'OPEN';
+  const cappedCount = ends.count(e => e === 'CAP');
+  const maleCount = ends.count(e => e === 'MALE');
+  const femaleCount = ends.count(e => e === 'FEMALE');
+  const hollowLength = length - (cappedCount ? thickness * (cappedCount === 2 ? 2 : 1) : 0);
+  const hollow = new CSG.cylinder.step([{radius: radius - thickness, length: hollowLength}], options);
+  if (cappedCount === 1) hollow.translate({x:0,y:0,z:thickness * (ends[0] === 'CAP' ? 1 : -1)});
+  const endLength = options.endLength || length/10;
+  pipe = applyEndCutter(pipe, ends, 0, radius, length, thickness, endLength, options.slices);
+  pipe = applyEndCutter(pipe, ends, 1, radius, length, thickness, endLength, options.slices);
+
+  return pipe.subtract(hollow);
+}
+CSG.cylinder.hollow.ENDS = ['MALE', "FEMALE", "CAP", "OPEN"];
 
 CSG.cone = function (options) {
   options ||= {};
@@ -1028,6 +1098,51 @@ function axis(vector, origin, color, size, radius) {
   return ax;
 }
 
+function lidFingerPull(container, x, z) {
+  const cent = container.center();
+  const dems = container.demensions();
+  const radius = Math.min(1.5, .25*(!Boolean.is(x) ? dems.x : (!Boolean.is(z) ? dems.z : Math.min(dems.x, dems.z))));
+  x = Boolean.is(x) ? (dems.x/2 * (x === false ? -1 : 1)) : 0;
+  z = Boolean.is(z) ? (dems.z/2 * (z === false ? -1 : 1)) : 0;
+  const vector = new CSG.Vector(x,dems.y/2,z);
+  const center = new CSG.Vector(container.center()).plus(vector);
+  const sphere = new CSG.sphere({radius, center});
+  return container.subtract(sphere);
+}
+
+CSG.Container = function (options) {
+  const sideT = options.sideThickness || .2;
+  const bottomT = options.bottomThickness || .2;
+  const rad = getRadius(options);
+  const boxHeight = rad[1] + bottomT/2 + sideT / 2;
+  let container = new CSG.cube({radius: [rad[0] + sideT*2, boxHeight, rad[2] + sideT * 2]});
+  const containerCutter = new CSG.cube({radius: rad});
+  containerCutter.translate({x:0,y:bottomT - boxHeight/2,  z:0});
+  container = container.subtract(containerCutter);
+
+  let lid = new CSG.cube({radius: [rad[0] + sideT*2, sideT*2, rad[2] + sideT * 2]});
+  let lidCutter = new CSG.cube({radius: [rad[0] + sideT*2, sideT, rad[2] + sideT * 2]});
+  containerCutter.center(lidCutter.center())
+  lidCutter = lidCutter.subtract(containerCutter);
+  lidCutter.translate({x:0,y:-sideT,z:0});
+  lid = lid.subtract(lidCutter);
+
+  lid.rotate({x:180});
+  lid.center(lid.demensions());
+  container.center(container.demensions());
+  lid.translate({x:0, y:lid.demensions().y/-2, z:(rad[2] + sideT) * 3});
+  container.translate({x:0, y:container.demensions().y/-2, z: 0});
+
+  container = lidFingerPull(container, true);
+  container = lidFingerPull(container, false);
+  container = lidFingerPull(container, null,true);
+  container = lidFingerPull(container, null,false);
+
+  // // lid.rotate({x: 90});
+  // container.rotate({x:90});
+  return {lid, container}
+}
+
 CSG.Axis =  function (size, radius, origin, vectors) {
   size ||= 100;
   origin ||= [0,0,0];
@@ -1063,7 +1178,7 @@ CSG.Vector = function(x, y, z) {
   } else if ('x' in x || 'y' in x || 'z' in x) {
     this.x = x.x;
     this.y = x.y;
-    this.z = x.z;
+    this.z = x.z || 0;
   } else if ('i' in x || 'j' in x || 'k' in x) {
     this.x = x.i;
     this.y = x.j;
@@ -1497,6 +1612,7 @@ CSG.Polygon.Enclosed = function (verts, width, color) {
   return model;//model.union(vect);
 }
 
+
 CSG.text = function (text, depth) {
   depth ||= 10;
   const textMap = require('../../../json/alpha-numeric-point-maps/default.json');
@@ -1509,16 +1625,20 @@ CSG.text = function (text, depth) {
     } else {
       const pointMap = textMap[text[index]];
       if (pointMap) {
+        const sr = .5;
         for (let pi = 0; pi < pointMap.length; pi++) {
           const center = [pointMap[pi].x, pointMap[pi].y, 0];
-          const cube = new CSG.cube({center, demensions: [1,1,depth]});
+          const d = pointMap[pi].d || 1;
+          const cube = new CSG.cube({center, demensions: [d,d,depth]});
           // csg.polygons.concatInPlace(cube.polygons);
+          const c = new CSG.Vector(center);
+          // csg.add(cube);
           csg = csg.union(cube);
         }
         csg.center(center);
         csg.translate({x:0,z:0,y:center.y-csg.demensions().y/2})
         letters.push(csg);
-        center.x += csg.demensions().x / 2 + 15;
+        center.x += csg.demensions().x / 2 + 25;
       }
     }
   }

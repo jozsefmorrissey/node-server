@@ -212,20 +212,25 @@ class StringMathEvaluator {
       for (let index = 0; index < expr.length; index += 1) {
         const char = expr[index];
         if (prevWasOpperand) {
-          try {
-            let newIndex = isolateNumber(expr, index, values, operands, scope);
-            if (!newIndex && isolateOperand(char, operands)) {
-              throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
+          if (char === '-') {
+            operands.push(StringMathEvaluator.multi);
+            values.push(-1);
+          } else {
+            try {
+              let newIndex = isolateNumber(expr, index, values, operands, scope);
+              if (!newIndex && isolateOperand(char, operands)) {
+                throw new Error(`Invalid operand location ${expr.substr(0,index)}'${expr[index]}'${expr.substr(index + 1)}`);
+              }
+              newIndex = newIndex || (isolateParenthesis(expr, index, values, operands, scope) ||
+              (allowVars && isolateVar(expr, index, values, operands, scope)));
+              if (Number.isInteger(newIndex)) {
+                index = newIndex - 1;
+                prevWasOpperand = false;
+              }
+            } catch (e) {
+              console.error(e);
+              return NaN;
             }
-            newIndex = newIndex || (isolateParenthesis(expr, index, values, operands, scope) ||
-                (allowVars && isolateVar(expr, index, values, operands, scope)));
-            if (Number.isInteger(newIndex)) {
-              index = newIndex - 1;
-              prevWasOpperand = false;
-            }
-          } catch (e) {
-            console.error(e);
-            return NaN;
           }
         } else {
           prevWasOpperand = isolateOperand(char, operands);

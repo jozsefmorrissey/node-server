@@ -1,57 +1,19 @@
 
 const Vertex2d = require('./vertex');
+const Ellipse = require('./ellipse');
 
-class Circle2d {
-  constructor(radius, center) {
-    center = new Vertex2d(center);
-    Object.getSet(this, {radius, center});
-    // ( x - h )^2 + ( y - k )^2 = r^2
+class Circle2d extends Ellipse {
+  constructor(radius, center, from, to) {
+    super(radius, radius, center, from, to);
+
+    this.radius = () => radius;
     const instance = this;
-    // Stole the root code from: https://stackoverflow.com/a/37225895
-    function lineIntersects (line, bounded) {
-      const p1 = line[0];
-      const p2 = line[1];
-        var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
-        v1 = {};
-        v2 = {};
-        v1.x = p2.x - p1.x;
-        v1.y = p2.y - p1.y;
-        v2.x = p1.x - instance.center().x;
-        v2.y = p1.y - instance.center().y;
-        b = (v1.x * v2.x + v1.y * v2.y);
-        c = 2 * (v1.x * v1.x + v1.y * v1.y);
-        b *= -2;
-        d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - instance.radius() * instance.radius()));
-        if(isNaN(d)){ // no intercept
-            return [];
-        }
-        u1 = (b - d) / c;  // these represent the unit distance of point one and two on the line
-        u2 = (b + d) / c;
-        retP1 = {};   // return points
-        retP2 = {}
-        ret = []; // return array
-        if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
-            retP1.x = p1.x + v1.x * u1;
-            retP1.y = p1.y + v1.y * u1;
-            ret[0] = retP1;
-        }
-        if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
-            retP2.x = p1.x + v1.x * u2;
-            retP2.y = p1.y + v1.y * u2;
-            ret[ret.length] = retP2;
-        }
-        return ret;
-    }
-
-    function circleIntersects(circle) {
-      return Circle2d.intersectionOfTwo(instance, circle);
-    }
 
     this.toString = () => `(${this.radius()}${this.center()}----)`;
 
     this.intersections = (input) => {
-      if (input instanceof Circle2d) return circleIntersects(input);
-      if (input.constructor.name === 'Line2d') return lineIntersects(input);
+      if (input instanceof Circle2d) return Circle2d.intersectionOfTwo(instance, input);
+      if (input.constructor.name === 'Line2d') return Circle2d.lineIntersects (instance, input);
       throw new Error(`Cannot find intersections for ${input.constructor.name}`);
     }
   }
@@ -119,6 +81,56 @@ Circle2d.intersectionOfTwo = (circle0, circle1) => {
 
     const list = [];
     return [{x: xi, y: yi}, {x: xi_prime, y: yi_prime}];
+}
+
+// Stole the root code from: https://stackoverflow.com/a/37225895
+Circle2d.lineIntersects = (circle, line, bounded) => {
+  const p1 = line[0];
+  const p2 = line[1];
+    var a, b, c, d, u1, u2, ret, retP1, retP2, v1, v2;
+    v1 = {};
+    v2 = {};
+    v1.x = p2.x - p1.x;
+    v1.y = p2.y - p1.y;
+    v2.x = p1.x - circle.center().x;
+    v2.y = p1.y - circle.center().y;
+    b = (v1.x * v2.x + v1.y * v2.y);
+    c = 2 * (v1.x * v1.x + v1.y * v1.y);
+    b *= -2;
+    d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - circle.radius() * circle.radius()));
+    if(isNaN(d)){ // no intercept
+        return [];
+    }
+    u1 = (b - d) / c;  // these represent the unit distance of point one and two on the line
+    u2 = (b + d) / c;
+    retP1 = {};   // return points
+    retP2 = {}
+    ret = []; // return array
+    if(!bounded || (u1 <= 1 && u1 >= 0)){  // add point if on the line segment
+        retP1.x = p1.x + v1.x * u1;
+        retP1.y = p1.y + v1.y * u1;
+        ret[0] = retP1;
+    }
+    if(!bounded || (u2 <= 1 && u2 >= 0)){  // second add point if on the line segment
+        retP2.x = p1.x + v1.x * u2;
+        retP2.y = p1.y + v1.y * u2;
+        ret[ret.length] = retP2;
+    }
+    return ret;
+}
+
+
+const mrmls = Measurement.regex.matchless().source;
+const vrmls = Vertex2d.regex.matchless().source;
+const nrs = Number.regex.source;
+Circle2d.regex = new RegExp(`(${mrmls})r(${vrmls}|)(?:(${nrs})=>(${nrs})|)`);
+Circle2d.fromString = (string) => {
+  const match = string.match(Circle2d.regex);
+  if (!match) return null;
+  return new Circle2d(Measurement.decimal(match[1]),
+                      Vertex2d.fromString(match[2]),
+                      Number.parseFloat(match[3]),
+                      Number.parseFloat(match[4]));
 }
 
 Circle2d.reusable = true;

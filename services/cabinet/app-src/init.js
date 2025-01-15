@@ -6,6 +6,7 @@ $t.loadFunctions(require('../generated/html-templates'));
 
 // Object Classes
 // require('./bind.js');
+const Global = require('./services/global.js');
 require('./objects/simple/init')
 require('./objects/assembly/init-assem');
 require('./objects/joint/init');
@@ -18,7 +19,6 @@ require('displays/init');
 // Display classes
 const du = require('../../../public/js/utils/dom-utils.js');
 const EPNTS = require('../generated/EPNTS.js');
-const Global = require('./services/global.js');
 require('./objects/room');
 const TwoDLayout = require('./displays/two-d-layout.js');
 const ThreeDMainModel = require('./displays/three-d-main.js');

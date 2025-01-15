@@ -174,7 +174,7 @@ class Cabinet extends Assembly {
       normObj.z = mainOpening.normal();
       normObj.x = normObj.z.crossProduct(normObj.y).inverse();
       const center = this.buildCenter();
-      const outerCenter = mainOpening.sectionProperties().outerCenter();
+      const outerCenter = mainOpening.sectionProperties().outer.center();
       const rightCenter = secProps.right().position().center();
       if (center.distance(rightCenter) < center.translate(normObj.x, true).distance(rightCenter))
         normObj.x = normObj.x.inverse();

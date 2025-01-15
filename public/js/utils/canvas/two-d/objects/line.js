@@ -1,6 +1,5 @@
 
 const Vertex2d = require('./vertex');
-const Circle2d = require('./circle');
 const ToleranceMap = require('../../../tolerance-map.js');
 const Tolerance = require('../../../tolerance.js');
 const tol = .001;
@@ -67,20 +66,15 @@ class Line2d {
     this.rise = () => this[1].y - this[0].y;
     this.run = () =>  this[1].x - this[0].x;
 
-    function changeLength(value) {
-      const circle = new Circle2d(value, instance[0]);
-      const points = circle.intersections(instance);
-      const dist0 = instance[1].distance(points[0]);
-      const dist1 = instance[1].distance(points[1]);
-      if (dist1 < dist0) {
-        instance[1].point(points[1]);
-      } else {
-        instance[1] = points[0];
-      }
-    }
-
     this.isVertical = () => this.slope() > 1000;
     this.isHorizontal = () => Math.abs(this.slope()) < .001;
+    this.vector = () => ({x: this[1].x - this[0].x, y: this[1].y - this[0].y});
+    this.vector.unit = (scale) => {
+      scale ||= 1;
+      const x = this[1].x - this[0].x; const y = this[1].y - this[0].y;
+      const magnitude = Math.sqrt(x*x+y*y);
+      return {x: x*scale/magnitude, y: y*scale/magnitude};
+    }
 
     this.withinDirectionalBounds = (point, limit) => {
       point = new Vertex2d(point);
@@ -115,29 +109,6 @@ class Line2d {
           this.maxX() + tol > point.x && this.maxY() + tol > point.y;
       }
       return isWithin;
-    }
-
-
-    function reconsileLength (newLength) {
-      const moveVertex = instance[1];
-      const nextLine = moveVertex.nextLine()
-      if (nextLine === undefined) changeLength(newLength);
-
-      const vertex1 = nextLine[1];
-      const circle1 = new Circle2d(nextLine.length(), vertex1);
-      const vertex2 = instance[0];
-      const circle2 = new Circle2d(newLength, vertex2);
-      const intersections = circle1.intersections(circle2);
-
-      const useFirst = (intersections.length !== 0 && intersections.length === 1) ||
-                moveVertex.distance(intersections[0]) < moveVertex.distance(intersections[1]);
-      if (intersections.length === 0) {
-        changeLength(newLength);
-      } else if (useFirst) {
-        moveVertex.point(intersections[0]);
-      } else {
-        moveVertex.point(intersections[1]);
-      }
     }
 
     this.translate = (line, doNotModify) => {
@@ -383,11 +354,12 @@ class Line2d {
       return new Line2d(intersection, vertex);
     }
 
-    this.rotate = (radians, pivot) => {
+    this.rotate = (radians, pivot, doNotModify) => {
+      let line = doNotModify ? this.clone() : this;
       pivot ||= this.midpoint();
-      this[0].rotate(radians, pivot);
-      this[1].rotate(radians, pivot);
-      return this;
+      line[0].rotate(radians, pivot);
+      line[1].rotate(radians, pivot);
+      return line;
     }
 
     this.vertical = () => this.slope() === Infinity;
@@ -474,6 +446,8 @@ class Line2d {
       }
       return false;
     }
+
+    this.connect = (lineOvert) => Line2d.between(this, lineOvert);
 
     this.distance = (other, segment) => {
       segment = segment === false ? false : true;
@@ -954,22 +928,14 @@ Line2d.toString = (lines) => {
   return str.substring(0, str.length - 1);
 }
 
-const pathReg = /\[.*?\]/g;
-const vertRegStr = "\\(([0-9]*(\\.[0-9]*|)),\\s*([0-9]*(\\.[0-9]*|))\\)";
-const vertReg = new RegExp(vertRegStr);
-const vertRegG = new RegExp(vertRegStr, 'g');
-
-function sectionFromString(str, lines) {
-  const vertStrs = str.match(vertRegG);
-  let prevVert;
-  const verts = vertStrs.map((str) => {
-    const match = str.match(vertReg);
-    const currVert = new Vertex2d(Number.parseFloat(match[1]), Number.parseFloat(match[3]));
-    if (prevVert) lines.push(new Line2d(prevVert, currVert));
-    prevVert = currVert;
-  });
-  return prevVert;
+const vrmls = Vertex2d.regex.matchless().source;//Vertex2d.regex.mls();
+Line2d.regex = new RegExp(`\\[(${vrmls})\\s*,\\s*(${vrmls})\\]`);
+Line2d.fromString = (str, unit) => {
+  const match = str.match(Line2d.regex);
+  if (match === null) return null;
+  return new Line2d(Vertex2d.fromString(match[1], unit),Vertex2d.fromString(match[2], unit))
 }
+
 
 Line2d.parrelleSets = (lines, tolerance) => {
   tolerance ||= tol;
@@ -977,16 +943,6 @@ Line2d.parrelleSets = (lines, tolerance) => {
   tolmap.addAll(lines);
   const groups = tolmap.group().sortByAttr('length').reverse();
   return groups;
-}
-
-Line2d.fromString = (str) => {
-  const lines = [];
-  const sections = str.match(pathReg) || [str];
-  let prevVert;
-  for (let index = 0; index < sections.length; index++) {
-    prevVert = sectionFromString(sections[index], lines);
-  }
-  return lines;
 }
 
 Object.class.register(Line2d, '1', '0', 'label');
@@ -1045,6 +1001,44 @@ Line2d.translate = (lines, offset) => {
     line[0].translate(offset.x, offset.y);
     line[1].translate(offset.x, offset.y);
   }
+}
+
+Line2d.sineWave = (amplitude, period, lineCount, step, startX) => {
+  amplitude ||= 1;
+  period ||= 1;
+  lineCount ||= 100;
+  startX ||= 0;
+  step ||= .1;
+  const lines = [];
+  let prevPoint;
+  for (let x = startX; x < startX+lineCount*step; x+=step) {
+      const point = {x, y: amplitude*Math.sin(period*x)};
+      if (prevPoint) lines.push(new Line2d(prevPoint, point));
+      prevPoint = point;
+  }
+  console.log(lines.map(l => l.toString()).join('\n'));
+  return lines;
+}
+
+Line2d.arc = (center, radius, fromDegree, toDegree, step) => {
+  center = new Vertex2d(center);
+  radius ||= 1;
+  fromDegree ||= 0;
+  toDegree ||= 360;
+  step ||= 1;
+  let prevPoint;
+  const lines = [];
+  while (fromDegree <= toDegree) {
+    const point = {
+        x: center.x + radius * Math.cos(Math.toRadians(fromDegree)),
+        y: center.y + radius * Math.sin(Math.toRadians(fromDegree))
+    };
+    if (prevPoint) lines.push(new Line2d(prevPoint, point));
+    prevPoint = point;
+    fromDegree += step;
+  }
+  console.log(lines.map(l => l.toString()).join('\n'));
+  return lines;
 }
 
 Line2d.centerOn = (lines, center) => {

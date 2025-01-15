@@ -1,10 +1,12 @@
 
 const Resolver = require('../resolver');
 
-const xyzReg = /^x|y|z$/;
-const ijkReg = /^i|j|k$/;
-const isXYZ = (expr) => !!((typeof expr) === 'string' && expr.match(xyzReg));
+const axisReg = /^x|y|z$/i;
+const ijkReg = /^i|j|k$/i;
+const vertexReg = /^[0-9]{1,}$/
+const isXYZ = (expr) => !!((typeof expr) === 'string' && expr.match(axisReg));
 const isIJK = (expr) => !!((typeof expr) === 'string' && expr.match(ijkReg));
+const isVertex = (expr) => !!((typeof expr) === 'string' && expr.match(vertexReg));
 const safeLowerCase = (str) => (typeof str) === 'string' ? str.toLowerCase() : null;
 
 class AssemblyResolver extends Resolver {
@@ -15,10 +17,13 @@ class AssemblyResolver extends Resolver {
     const positionInfoObj = (expr, attr, axis, raw) =>
       infoObj(expr, assembly.config()[attr][axis], raw ? null : assembly.position()[attr](axis));
 
-    const positionValue = (assem, expr, func, axis,  normDir, raw) => {
-      func = safeLowerCase(func);
-      axis = safeLowerCase(axis);
-      normDir = safeLowerCase(normDir);
+      const positionReg = /^(n|c|r|d|normal|center|rotation|demension)\.(x|y|z)(\.(i|j|k)|)$/;
+    const positionValue = (expr, raw) => {
+      const posMatch = expr.match(positionReg);
+      if (posMatch === null) return null;
+      func = safeLowerCase(posMatch[1]);
+      axis = safeLowerCase(posMatch[2]);
+      normDir = safeLowerCase(posMatch[4]);
       if ((func === 'r' || func === 'rotation') && isXYZ(axis))
         return positionInfoObj(expr, 'rotation', axis, raw);
       else if ((func === 'c' || func === 'center') && isXYZ(axis))
@@ -42,9 +47,21 @@ class AssemblyResolver extends Resolver {
         return infoObj(expr, assembly.config().demension.z, assembly.thickness());
     }
 
-    const posValue = (expr, raw) => {
-      const posMatch = expr.match(positionReg);
-      if (posMatch) return positionValue(assembly, expr, posMatch[1], posMatch[2], posMatch[4], raw);
+    const indexReg = /$([0-9]{1,})$/;
+    const frontBackReg = /^(f|front)|(b|back)$/i;
+    const ratioReg = /([0-9]*(r|ratio)[0-9]*)/i;
+    const vertexValue = (expr, raw) => {
+      const split = expr.split('.');
+      const index = Number.parseInt(split[0]);
+      if (!Number.isInteger(index)) return null;
+      const fb = split.find(s => frontBackReg.toObject(s, 'front', 'back'));
+      const axis = split.find(s => s.match(axisReg));
+      const ratio = split.find(s => s.match(ratioReg));
+      if ([fb,axis,ratio].filter(v=>v).length + 1 !== split.length) return null;
+
+      const frontBack = fb[0] === 'f' ? true : (fb[0] === 'b' ? false : undefined);
+      const value = assembly.position().vertex(index, frontOback, axis, ratio);
+      return infoObj(expr, value, value);
     }
 
     const pcPositionReg = /^([a-zA-Z_]{1,})(\.([a-zA-Z.0-9]{1,})){1,}$/;
@@ -71,7 +88,6 @@ class AssemblyResolver extends Resolver {
     }
 
     let goDownTheRabbitHole = false;
-    const positionReg = /^(n|c|r|d|normal|center|rotation|demension)\.(x|y|z)(\.(i|j|k)|)$/;
 
     const parentResolveInfo = (expr, raw) => {
       let curr = assembly.parentAssembly();
@@ -90,8 +106,9 @@ class AssemblyResolver extends Resolver {
       let info;
       if (expr.match(/^(W|H|T|D)$/)) expr = `${assembly.getRoot().partCode()}.${expr.toLowerCase()}`;
       info = demensionValue(expr, raw);
-      info ||= returnsIfValid(info) || posValue(expr, raw);
+      info ||= returnsIfValid(info) || positionValue(expr, raw);
       info ||= returnsIfValid(info) || partCodePositionValue(expr, raw);
+      info ||= returnsIfValid(info) || vertexValue(expr, raw);
       info ||= returnsIfValid(info) || keyValueValue(expr, undefined, raw);
       if (info && info.valid()) return info;
       let parentInfo = parentResolveInfo(expr, raw);

@@ -2,9 +2,9 @@
   <label>{{label()}}</label>
   <input class='measurement-input {{class()}}' id='{{id()}}' value='{{value() ? value() : ""}}'
       placeholder='{{placeholder()}}' type='{{type()}}' name='{{name()}}' unit='{{unit()}}'
-      {{disabled() ? 'disabled' : ''}}>
-  <span:t repeat='unit in units()'>
-    <label>{{unit}}</label><input type='radio' name='{{id()}}-unit' value='{{unit}}' {{$index === 0 ? 'checked' : ''}}>
+      {{disabled() ? 'disabled' : ''}} {{unitOnly() ? 'hidden' : ''}}>
+  <span:t repeat='uNit in units()'>
+    <label>{{uNit}}</label><input type='radio' name='{{id()}}-unit' value='{{uNit}}' {{uNit === unit() ? 'checked' : ''}}>
   </span:t>
   <div class='error' id='{{errorMsgId()}}' hidden>{{errorMsg()}}</div>
 </div>

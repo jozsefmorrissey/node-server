@@ -152,7 +152,18 @@ class SectionProperties extends KeyValue {
     // }
 
     this.config = () => JSON.copy(config);
-    this.coordinates = () => JSON.clone(coordinates);
+    const inOutCoord = (inOut) => coordinates[inOut === true ? 'inner' : 'outer'];
+    this.coordinates = (inOut) =>  Boolean.is(inOut) ? inOutCoord(inOut) : JSON.clone(coordinates);
+    this.inner = () => this.coordinates(true);
+    this.outer = () => this.coordinates(false);
+    this.coordinates.center = (inOut) => Vertex3D.center(inOutCoord(inOut));
+    this.coordinates.len = (inOut) => inOutCoord(inOut)[0].distance(inOutCoord(inOut)[1]);
+    this.coordinates.width = (inOut) => inOutCoord(inOut)[0].distance(inOutCoord(inOut)[3]);
+    Object.keys(this.coordinates).forEach(key => key.match(/^(inner|outer)$/) ||
+            ((this.inner[key] = () => this.coordinates[key](true)) &
+            (this.outer[key] = () => this.coordinates[key](false))));
+
+
     this.reverseInner = () => CSG.reverseRotateAll(this.coordinates().inner);
     this.reverseOuter = () => CSG.reverseRotateAll(this.coordinates().outer);
     this.part = () => false;
@@ -164,14 +175,12 @@ class SectionProperties extends KeyValue {
       if (is !== undefined && curr !== is) setSectionCoordinates(true);
       return curr;
     }
-    this.coordinates.valid = () => {
-      const c = coordinates
-      if (c.inner === undefined || c.outer === undefined)
-        return false;
-      const abs = Math.abs;
-      const iSum = c.inner.map(v => abs(v.x) + abs(v.y) + abs(v.z)).sum()
-      const oSum = c.inner.map(v => abs(v.x) + abs(v.y) + abs(v.z)).sum()
-      return iSum !== 0 && oSum !== 0 && !Number.isNaN(iSum + oSum);
+    this.coordinates.valid = (inOut) => {
+      if (!Boolean.is(inOut)) return this.coordinates.valid(true) && this.coordinates.valid(false);
+      const c = this.coordinates(inOut);
+      if (c === undefined) return false;
+      const sum = c.sum(v => Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z));
+      return sum !== 0 && !Number.isNaN(sum);
     }
 
     this.verticalDivisions = () => {
@@ -286,8 +295,8 @@ class SectionProperties extends KeyValue {
       const isInset = propConfig('isInset');
       const vertical = instance.vertical();
       info._TOTAL = isReveal ?
-              (!vertical ? instance.outerLength() : instance.outerWidth()) :
-              (!vertical ? instance.innerLength() : instance.innerWidth());
+              (!vertical ? instance.outer.len() : instance.outer.width()) :
+              (!vertical ? instance.inner.len() : instance.inner.width());
 
       let overlay, reveal, insetValue;
       if (isReveal) reveal = propConfig('r');
@@ -418,31 +427,6 @@ class SectionProperties extends KeyValue {
       }
     }
 
-
-    this.outerCenter = () => {
-      return Vertex3D.center(coordinates.outer);
-    }
-
-    this.innerCenter = () => {
-      return Vertex3D.center(coordinates.inner);
-    }
-
-    this.outerLength = () => {
-      return coordinates.outer[0].distance(coordinates.outer[3]);
-    }
-
-    this.outerWidth = () => {
-      return coordinates.outer[0].distance(coordinates.outer[1]);
-    }
-
-    this.innerLength = () => {
-      return coordinates.inner[0].distance(coordinates.inner[3]);
-    }
-
-    this.innerWidth = () => {
-      return coordinates.inner[0].distance(coordinates.inner[1]);
-    }
-
     this.divide = (dividerCount, dontUpdateCoords) => {
       init();
       if (!Number.isNaN(dividerCount) && dividerCount !== this.dividerCount()) {
@@ -501,7 +485,7 @@ class SectionProperties extends KeyValue {
 
 
     this.longestRadius = () => {
-      const oc = this.outerCenter();
+      const oc = this.outer.center();
       let max = oc.distance(outerCoordinates[0]);
       for (let index = 1; index < outerCoordinates.length; index++) {
         const dist = oc.distance(coordinates.outer[index]);
@@ -571,7 +555,7 @@ class SectionProperties extends KeyValue {
        info.startOffset = startOffset;
        info.endOffset = endOffset;
 
-      let offset = this.isVertical() ? this.outerLength() : this.outerWidth();
+      let offset = this.isVertical() ? this.outer.len() : this.outer.width();
       for (let index = 0; index < this.sections.length; index += 1) {
         if (index < this.sections.length - 1) {
           const section = this.sections[index];
@@ -762,13 +746,13 @@ SectionProperties.updateLinks = (sectionProp) => {
   }
   sectionProp.clearDirections();
   const sectRad = section.longestRadius();
-  const sectionOuterCenter = sectionProp.outerCenter();
+  const sectionOuterCenter = sectionProp.outer.center();
   const centerDist = {};
   for (let index = 0; index < list.length; index++) {
     if (!other.rotation().equals(this.rotation()))  {
       const other = list[index];
       const otherRad = other.longestRadius();
-      const centerDist = sectionOuterCenter.distance(other.outerCenter());
+      const centerDist = sectionOuterCenter.distance(other.outer.center());
       if (centerDist - tolerance < otherRad + sectRad) {
         const direction = Vertex3D.direction(sectionProp.outerCoordinates(), other.outerCoordinates(), tolerance, true);
         if (direction) {

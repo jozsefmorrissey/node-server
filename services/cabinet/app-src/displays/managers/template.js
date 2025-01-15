@@ -537,6 +537,16 @@ function getXyzSelect(label) {
   });
 }
 
+function getVertexSelect(label) {
+  return new Select({
+    label,
+    name: 'xyz',
+    list: {'0': 'X', '1': 'Y', '2':'Z', '3': 'Vertex'},
+    inline: true,
+    value: '3'
+  });
+}
+
 function getWhdSelect(label) {
   return new Select({
     label,
@@ -554,6 +564,13 @@ function getOpeningLocationSelect() {
   });
 }
 
+const selector = {
+  openingLocation: getOpeningLocationSelect,
+  whd: getWhdSelect,
+  xyz: getXyzSelect,
+  vertex: getVertexSelect
+}
+
 function getJoint(obj) {
   return {obj, jointInput: getJointInputTree(jointOnChange, obj)};
 }
@@ -563,7 +580,7 @@ function polyHtml(subAssem) {
   if (subAssem.polyConfig === undefined) {
     subAssem.polyConfig = {thickness: 'pwt34', points: [[1,1,1], [2,2,2], [3,3,3]]}
   }
-  return polyTemplate.render({subAssem, getXyzSelect});
+  return polyTemplate.render({subAssem, selector});
 }
 
 function getSubassembly(obj) {
@@ -1104,8 +1121,9 @@ function switchEqn(elem) {
     const eqnInput = du.find.closest('input', elem);
     const index = elem.value;
     if (subAssem[eqnInput.name] === undefined) subAssem[eqnInput.name] = [];
-    const value = subAssem.pathValue(eqnInput.name)[index];
-    eqnInput.value = value === undefined ? '' : value;
+    const obj = subAssem.pathInfo(eqn.name).parent;
+    eqnInput.value = obj[index] !== undefined ? obj[index] :
+        `${obj[0]},${obj[1]},${obj[2]}`;
   }
 }
 

@@ -62,7 +62,7 @@ class DividerUtil {
 
     this.Full = (assem) => {
       if (!full) {
-        const ic = sectionUtils.innerCenter;
+        const ic = sectionUtils.inner.center;
         const dividerPoly = instance.biPolygon.copy();
         const furtherPoly = dividerPoly.furthestOrder(ic)[0];
         const fc = furtherPoly.center();

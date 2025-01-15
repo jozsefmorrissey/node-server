@@ -313,6 +313,13 @@ du.show = (...targets) => visibility(false, targets);
 
 du.id = function (id) {return document.getElementById(id);}
 
+du.id.hidden = (id,oft) => {
+  const elem = du.id(id);
+  if (!elem) return;
+  if (oft === undefined) return elem.hidden;
+  return elem.hidden = Boolean.is(oft) ? (oft === true ? true : false) : !elem.hidden;
+}
+
 du.appendError = (target, message) => {
   return function (e) {
     const parent = target.parentNode;
@@ -862,8 +869,10 @@ du.url.breakdown = function () {
   return breakdown;
 }
 
-du.url.build = function (b) {
+du.url.build = function (breakdown) {
   const paramArray = [];
+  const b = du.url.breakdown();
+  Object.keys(breakdown).forEach(key => b[key] = breakdown[key]);
   Object.keys(b.params).forEach((key) => paramArray.push(`${key}=${b.params[key]}`));
   const paramStr = paramArray.length > 0 ? `?${paramArray.join('&')}` : '';
   const portStr = b.port ? `:${b.port}` : '';
@@ -1120,45 +1129,41 @@ du.focus = function (selector) {
 
 // Stolen From: https://stackoverflow.com/a/66569574
 // Should write and test my own but bigger fish
-const cssUnitReg = new RegExp(/^((-|)[0-9]{1,})([a-zA-Z]{1,4})$/);
+const supportedUnits = {
+    // Absolute sizes
+    'px': value => value,
+    'cm': value => value * 38,
+    'mm': value => value * 3.8,
+    'q': value => value * 0.95,
+    'in': value => value * 96,
+    'pc': value => value * 16,
+    'pt': value => value * 1.333333,
+    // Relative sizes
+    'rem': value => value * parseFloat( getComputedStyle( document.documentElement ).fontSize ),
+    'em': value => value * parseFloat( getComputedStyle( target ).fontSize ),
+    'vw': value => value / 100 * window.innerWidth,
+    'vh': value => value / 100 * window.innerHeight,
+    // Times
+    'ms': value => value,
+    's': value => value * 1000,
+    // Angles
+    'deg': value => value,
+    'rad': value => value * ( 180 / Math.PI ),
+    'grad': value => value * ( 180 / 200 ),
+    'turn': value => value * 360
+};
+
+const cssUnitReg = new RegExp(`^(${Number.regex.mls()})([a-zA-Z]{1,4})$`);
 du.convertCssUnit = function( cssValue, target ) {
     target = target || document.body;
-    const supportedUnits = {
-        // Absolute sizes
-        'px': value => value,
-        'cm': value => value * 38,
-        'mm': value => value * 3.8,
-        'q': value => value * 0.95,
-        'in': value => value * 96,
-        'pc': value => value * 16,
-        'pt': value => value * 1.333333,
-        // Relative sizes
-        'rem': value => value * parseFloat( getComputedStyle( document.documentElement ).fontSize ),
-        'em': value => value * parseFloat( getComputedStyle( target ).fontSize ),
-        'vw': value => value / 100 * window.innerWidth,
-        'vh': value => value / 100 * window.innerHeight,
-        // Times
-        'ms': value => value,
-        's': value => value * 1000,
-        // Angles
-        'deg': value => value,
-        'rad': value => value * ( 180 / Math.PI ),
-        'grad': value => value * ( 180 / 200 ),
-        'turn': value => value * 360
-    };
-
-    // If is a match, return example: [ "-2.75rem", "-2.75", "rem" ]
     const matches = String.prototype.toString.apply( cssValue ).trim().match(cssUnitReg);
-
     if ( matches ) {
         const value = Number( matches[ 1 ] );
-        const unit = matches[ 3 ].toLocaleLowerCase();
-        // Sanity check, make sure unit conversion function exists
+        const unit = matches[ 2 ].toLocaleLowerCase();
         if ( unit in supportedUnits ) {
             return supportedUnits[ unit ]( value );
         }
     }
-
     return cssValue;
 };
 

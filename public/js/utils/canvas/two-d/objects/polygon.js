@@ -399,7 +399,7 @@ class Polygon2d {
       return path.substring(0, path.length - 4);
     }
 
-    this.toString = this.path;
+    this.toString = this.toDrawString;
     this.area = () => {
       let total = 0;
       let verts = this.vertices();
@@ -551,16 +551,14 @@ Polygon2d.lines = (...polys) => {
 
 
 
-const vertRegStr = "\\(([0-9]*(\\.[0-9]*|))\\s*,\\s*([0-9]*(\\.[0-9]*|))\\)";
-const vertReg = new RegExp(vertRegStr);
-const vertRegG = new RegExp(vertRegStr, 'g');
+const vertReg = Vertex2d.regex;
+const vertRegG = new RegExp(Vertex2d.regex.source, 'g');
 
-Polygon2d.fromString = (str) => {
+Polygon2d.fromString = (str, unit) => {
   const vertStrs = str.match(vertRegG);
-  const verts = vertStrs.map((str) => {
-    const match = str.match(vertReg);
-    return new Vertex2d(Number.parseFloat(match[1]), Number.parseFloat(match[3]));
-  });
+  if (!vertStrs || vertStrs.length < 3) return null;
+  const verts = vertStrs.map((str) =>
+        Vertex2d.fromString(str, unit));
   return new Polygon2d(verts);
 }
 

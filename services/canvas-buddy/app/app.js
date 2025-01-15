@@ -3,6 +3,9 @@ $t.loadFunctions(require('../generated/html-templates'));
 require('../../../public/js/utils/utils');
 const du = require('../../../public/js/utils/dom-utils');
 require('../../../public/js/utils/3d-modeling/csg.js');
+const Measurement = require('../../../public/js/utils/measurement');
+const MeasurementInput = require('../../../public/js/utils/input/styles/measurement');
+
 const ThreeD = require('./3D');
 const TwoD = require('./2D');
 
@@ -13,8 +16,12 @@ TwoD.oft(false)
 const twoDDisplay = du.id('two-d-display');
 const threeDDisplay = du.id('three-d-display');
 
-let text2d = TwoD.initialValue;
-let text3d = ThreeD.initialValue;
+console.log(du.param.get('2D'));
+
+const param2D = du.param.get('2D');
+const param3D = du.param.get('3D');
+let text2d = !param2D ? TwoD.initialValue : param2D.split(':').join('\n');
+let text3d = !param3D ? ThreeD.initialValue : param3D.split(':').join('\n');
 
 let parcer = du.find('[name="parcer"]:checked').value;
 const is3D = () => parcer === '3D';
@@ -92,9 +99,9 @@ du.on.match('change', '[name="parcer"]', (elem, event) => {
   parcer = elem.value;
   twoDDisplay.hidden = is3D();
   threeDDisplay.hidden = !is3D();
-  getActive().parse(clean(text()), scale);
   TwoD.oft(!is3D());
   ThreeD.oft(is3D());
+  getActive().parse(clean(text()), scale);
   input.value = text()
 });
 
@@ -119,6 +126,28 @@ const updatePlayControls = () => {
   du.find.closest('.pause').parentElement.hidden = !playing;
   du.find.closest('.button').parentElement.hidden = playing;
 }
+
+const inputMeasurement = new MeasurementInput({label: 'Input: ', units: Measurement.units(), unitOnly: true, unit: 'cm'});
+const outMeasurement = new MeasurementInput({label: 'Output: ', units: Measurement.units(), unitOnly: true});
+const measureSelTemplate = new $t('input/measurement');
+
+const inputSel = du.id('input-measurement-selector');
+const outSel = du.id('output-measurement-selector');
+inputSel.innerHTML = measureSelTemplate.render(inputMeasurement);
+outSel.innerHTML = measureSelTemplate.render(outMeasurement);
+
+du.on.match('click', '#measurement-cnt [type="checkbox"]', (elem) => {
+  if (elem.checked) {
+    inputSel.hidden = outSel.hidden = false;
+  } else {
+    inputSel.hidden = outSel.hidden = true;
+  }
+  if (getActive().measure) getActive().measure(elem.checked);
+});
+
+outMeasurement.on('change', () => Measurement.unit(outMeasurement.unit()))
+inputMeasurement.on('change', () => parse(lastHash = undefined));
+
 
 du.on.match('keyup:refresh', 'textarea,[name="scale"]', parse);
 du.on.match('click', '.player-controls .gg-play.button', (elem) => {
@@ -152,6 +181,32 @@ du.on.match('click', '.player-controls .gg-play.rewind', () => {
   console.log(newSpeed);
   slideShow.speed(newSpeed);
 });
+
+const collapseBtn = du.id('collapse-btn');
+du.on.match('click', '#collapse-btn', () => {
+  du.id.hidden('input-cnt', null);
+  const is = du.id.hidden('demension-cnt', null);
+  collapseBtn.innerText = is ? '>>' : '<<';
+});
+
+du.on.match('click', '#share', () => {
+  let params = {};
+  params.input = du.find.down('input[type="radio"]:checked', inputSel).value;;
+  params.output = du.find.down('input[type="radio"]:checked', outSel).value;;
+  params[is3D() ? '3D' : '2D'] = text().split('\n').join(':');
+  if (getActive().share) getActive().share(params);
+  const url = du.url.build({params});
+  du.copy(url);
+  let txt = 'Url Copied!';
+  if (url.length > 2048) txt += `\n\tDo not use Internet Explorer It cannot handle a url this size '${url.length}'`;
+  alert(txt);
+});
+
+if (param2D) du.find('[name="parcer"][value="2D"').click();
+const selectedInput = du.find.down(`input[value="${du.param.get('input')}"]`, inputSel);
+if (selectedInput) selectedInput.click();
+const selectedOutput = du.find.down(`input[value="${du.param.get('output')}"]`, outSel);
+if (selectedOutput) selectedOutput.click();
 
 console.log(parcer);
 input.value = text();

@@ -26,7 +26,7 @@ class OpeningSketch {
 
     const idProps = {size: '10px', mirror:{x:true}};
     function drawSectionLabel(section, center, coDirRotz) {
-      const openingCenter = new Vertex3D(JSON.copy(section.innerCenter()))
+      const openingCenter = new Vertex3D(JSON.copy(section.inner.center()))
                             .rotate(coDirRotz, center).to2D('x', 'y');
       let text = section.userFriendlyIndex();
       if (text === 'S') text = '1';

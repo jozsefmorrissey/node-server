@@ -11,7 +11,8 @@ const cleanName = (name) => name.replace(/(..\/..|\.)\/public\/html\/templates\/
 const htmlBundler = new HtmlBundler(htmlDumpLoc, cleanName);
 
 new Builder(htmlBundler.change, htmlBundler.write, !global.build)
-        .add('../../public/html/templates/orientation-arrows.html');
+        .add('../../public/html/templates/orientation-arrows.html')
+        .add('../../public/html/templates/input/measurement.html');
 
 const { JsBundler } = require('../../building/bundlers/js.js');
 const jsDumpLoc = './public/js/index';
@@ -25,6 +26,8 @@ const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add('../../public/js/utils/object/lookup.js')
         .add('../../public/js/utils/services/function-cache.js')
         .add('../../public/js/utils/string-math-evaluator.js')
+        .add('../../public/js/utils/input/input.js')
+        .add('../../public/js/utils/input/styles/measurement.js')
         .add('../../public/js/utils/$t.js')
         .add('../../public/js/utils/custom-event.js')
         .add('../../public/js/utils/expression-definition.js')

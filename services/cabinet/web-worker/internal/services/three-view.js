@@ -27,6 +27,7 @@ module.exports = function (payload, taskId) {
   const frontLayers = orientAndFilterLayers(layers, center, normals, [Vector3D.i, Vector3D.j, Vector3D.k]);
   const topLayers = orientAndFilterLayers(layers, center, normals, [Vector3D.i, Vector3D.k, Vector3D.j.inverse()]);
   const rightLayers = orientAndFilterLayers(layers, center, normals, [Vector3D.k, Vector3D.j, Vector3D.i.inverse()]);
+  console.log(frontLayers.inline[7].lines())
 
   console.log(Vector3D);
   console.log(Layer);

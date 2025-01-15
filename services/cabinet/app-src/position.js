@@ -83,6 +83,35 @@ class Position {
     this.center = center;
     this.demension = demension;
 
+    const xyVertex = (index) => {
+      const norms = this.normals();
+      const xVect = index === 0 || index === 3 ? norms.x.inverse() : norms.x;
+      const yVect = index === 0 || index === 2 ? norms.y : norms.y.inverse();
+      return new Vertex3D(this.center()).translate([xVect, yVect]);
+    }
+
+    this.vertex = (index, frontOback, axis, ratio) => {
+      if (!Number.isInteger(index) || index < 0) return null;
+      let point1, point2;
+      if (config && config.points)
+       if (config.points[index]) {
+         point1 = new Vertex3D(assembly.evalObject(config.points[index]));
+         point2 = new Vertex3D(assembly.evalObject(config.points[(index + 1) % config.points.length]));
+       } else return null;
+      else {
+        if (index > 3) return null;
+        point1 = xyVertex(index); point2 = xyVertex(index === 3 ? 0 : index + 1);
+      }
+      if (ratioOaxis.match(ratioReg)) {
+        const vector = new Line3D(point1, point2).vector();
+        point1.translate(vector.scale(Math.ratio(ratioOaxis)));
+      }
+      const zVect = !Boolean.is(frontOback) ? {i:0,j:0,k:0} :
+                                  (frontOback ? norms.z : norms.z.inverse());
+      point.translate([zVect]);
+      return axis ? point[axis] : point;
+    }
+
     this.current = () => {
       if (config && config.points) {
         const current = assembly.evalObject(config);

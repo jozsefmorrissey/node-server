@@ -4,12 +4,11 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const LayoutAssembly = require('./assembly/layout.js');
 const Crown = require('./assembly/assemblies/layout/crown.js');
 
-let groupIndex = -2;
 class Group extends Lookup {
   constructor(room, name, id) {
     super(id);
     name ||= 'Group ';
-    room ||= Group.defaultRoom;
+    room ||= Global.room.DEFAULT;
     const initialVals = {name}
     Object.getSet(this, initialVals);
     this.propertyConfig = new PropertyConfig();

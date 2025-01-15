@@ -3,6 +3,7 @@ const Line2d = require('./objects/line');
 const LineMeasurement2d = require('./objects/line-measurement');
 const Vertex2d = require('./objects/vertex');
 const Polygon2d = require('./objects/polygon');
+const Ellipse2d = require('./objects/ellipse');
 const CustomEvent = require('../../custom-event');
 
 class HoverObject2d {
@@ -14,7 +15,7 @@ class HoverObject2d {
 
     const locator = () => targetFunction ? lineOrVertex() : lineOrVertex;
     const loc = locator();
-    if (!(loc instanceof Line2d || loc instanceof Vertex2d || loc instanceof Polygon2d))
+    if (!(loc instanceof Line2d || loc instanceof Vertex2d || loc instanceof Polygon2d || loc instanceof Ellipse2d))
       console.error('unkown hover object', loc);
 
     function getTolerence(scaleTolerance) {
@@ -71,6 +72,8 @@ class HoverObject2d {
         return vertexHovered(loc, hoverVertex, scaleTolerance);
       else if (loc instanceof Polygon2d)
         return loc.isWithin(hoverVertex);
+      else if (loc instanceof Ellipse2d)
+        return loc.within(hoverVertex);
       else
         console.error('unkown hover object', loc);
     }
