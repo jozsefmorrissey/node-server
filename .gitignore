@@ -1,7 +1,8 @@
 node_modules/
 public/json/configure.json
 **/index.js
+**/index.js
 **/web-worker-bundle.js
 **/html-templates.js
 **/generated/**
-
+services/cabinet/public/js/STL.js
