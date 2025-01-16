@@ -136,9 +136,9 @@ class CsgThreeViewTask extends Task {
     this.process = () => 'threeview';
     this.payload = () =>({normals, csg:
           csgOgetter instanceof Function ? csgOgetter() : csgOgetter});
+    this.completeOnFinish = true;
   }
 }
-
 
 const AssembliesTo2D = (modelInfo, union) => {
   const tasks = [new CsgModelTask(modelInfo)];

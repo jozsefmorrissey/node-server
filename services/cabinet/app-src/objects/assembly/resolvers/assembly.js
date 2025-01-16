@@ -21,9 +21,9 @@ class AssemblyResolver extends Resolver {
     const positionValue = (expr, raw) => {
       const posMatch = expr.match(positionReg);
       if (posMatch === null) return null;
-      func = safeLowerCase(posMatch[1]);
-      axis = safeLowerCase(posMatch[2]);
-      normDir = safeLowerCase(posMatch[4]);
+      let func = safeLowerCase(posMatch[1]);
+      let axis = safeLowerCase(posMatch[2]);
+      let normDir = safeLowerCase(posMatch[4]);
       if ((func === 'r' || func === 'rotation') && isXYZ(axis))
         return positionInfoObj(expr, 'rotation', axis, raw);
       else if ((func === 'c' || func === 'center') && isXYZ(axis))

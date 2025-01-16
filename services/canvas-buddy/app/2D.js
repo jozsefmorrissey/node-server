@@ -15,7 +15,7 @@ const inputSel = du.id('input-measurement-selector');
 const inputUnit = () => du.find.down('input[type="radio"]:checked', inputSel).value;
 
 class Context {
-  constructor(lines, draw, scale) {
+  constructor(lines, draw) {
     let verts = [];
     let hoverMap = new HoverMap();
     const popUp = new PopUp({resize: false});
@@ -105,13 +105,14 @@ draw.circle(new Circle2d(2, new Vertex2d(10,10)), null, 'green');
 panZ.centerOn(0, 0);
 
 function buildModel(lines) {
-  return new Context(lines, draw, scale);
+  return new Context(lines, draw);
 }
 
 let firstCall = true;
+let lines;
 function parse(newLines, sc) {
-  scale = sc;
-  context = new Context(newLines, draw, scale);
+  lines = newLines;
+  context = new Context(newLines, draw);
   display(context);
   if (firstCall) {
     firstCall = false;
@@ -124,7 +125,10 @@ function parse(newLines, sc) {
   }
 }
 
-du.on.match('change', 'input[name="line-disp-type-2d"]', () => parse(lines, scale));
+du.on.match('change', 'input[name="line-disp-type-2d"]', (elem) => {
+  draw.line.indicateDirection = elem.value === 'VECTOR';
+  parse(lines);
+});
 
 
 const clickStack = [];

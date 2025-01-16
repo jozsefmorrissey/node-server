@@ -8,16 +8,18 @@ class Task {
     CustomEvent.all(this, ...Object.values(STATUS).map(s => s.toString()).concat(['finished', 'message', 'change','change.status']));
     Object.getSet(this, 'id');
     let start, end;
+    let result;
     this.id = String.random();
     this.time = () => !start ? 0 : Math.roundTo(((end || new Date().getTime()) - start) / 1000, .1);
+    this.result = () => result;
     this.process = () => this.constructor.name.replace(/(^.*?)Task$/, '$1').toLowerCase();
     this.finished = () => _status === STATUS.SUCCESS || _status === STATUS.FAILED;
     this.progress = () => this.status() === 'success' ? 100 : 0;
     this.status = (status, data) => {
+      if (data) result = data;
       if (this.remainingModels && this.remainingModels().length === 17 && status === 'success' && _status === 'pending') {
         console.log(this.id, status, _status);
         console.log(new Error().stack, '\n');
-
       }
       if (this.finished()) return _status;
       if (status && status !== _status) {

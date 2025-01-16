@@ -7,7 +7,6 @@ const Select = require('../styles/select.js');
 const MultipleEntries = require('../styles/multiple-entries.js');
 const du = require('../../dom-utils');
 const $t = require('../../$t');
-const Measurement = require('../../measurement');
 
 
 const nameCompareFunc = (name) => (input) => input.name() === name ? input : false;

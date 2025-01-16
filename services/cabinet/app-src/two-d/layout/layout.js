@@ -7,7 +7,6 @@ const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line
 const Circle2d = require('../../../../../public/js/utils/canvas/two-d/objects/circle.js');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
 const Property = require('../../config/property.js');
-const Measurement = require('../../../../../public/js/utils/measurement.js');
 const IMPERIAL_US = Measurement.units()[1];
 const Wall2D = require('./wall');
 const Floor = require('./floor');

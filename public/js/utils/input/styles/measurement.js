@@ -5,7 +5,6 @@
 const Input = require('../input');
 const $t = require('../../$t');
 const du = require('../../dom-utils');
-const Measurement = require('../../measurement');
 const Lookup = require('../../object/lookup.js');
 
 /** Supported html "directive"

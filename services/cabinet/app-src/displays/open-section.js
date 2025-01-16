@@ -8,7 +8,6 @@ const ExpandableList = require('../../../../public/js/utils/lists/expandable-lis
 const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
 const ThreeDMain = require('./three-d-main.js');
 const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
-const Measurement = require('../../../../public/js/utils/measurement.js');
 const $t = require('../../../../public/js/utils/$t.js');
 const FeatureDisplay = require('./feature');
 const Inputs = require('../input/inputs.js');
@@ -203,7 +202,7 @@ OpenSectionDisplay.patterInputHtml = (opening) => {
       value: fill[id]
     });
     measInput.on('enter:change', (value, target) => {
-      opening.pattern().value(target.name, Measurement.decimal(target.value));
+      opening.pattern().value(target.name, Measurement.decimal(target.value, true));
       fill = opening.dividerLayout().fill;
       const patternCnt = document.querySelector(patCntSelector);
       const inputs = patternCnt.querySelectorAll('input');

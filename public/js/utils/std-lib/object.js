@@ -580,7 +580,7 @@ Function.safeStdLibAddition(Object, 'copy', function(arr) {
   return Object.copy(this);
 });
 
-Function.safeStdLibAddition(Object, 'foreach', function(obj, func, filter, pathPrefix) {
+function foreach(obj, func, filter, pathPrefix) {
   if (!pathPrefix) pathPrefix = '';
   if((typeof filter) !== 'function' || filter(obj, pathPrefix)) func(obj, pathPrefix);
   const keys = Object.keys(obj);
@@ -592,10 +592,10 @@ Function.safeStdLibAddition(Object, 'foreach', function(obj, func, filter, pathP
       Object.foreach(value, func, filter, path);
     }
   }
-}, true);
+};
 
 Function.safeStdLibAddition(Object, 'foreach', function(func, filter) {
-  Object.foreach(this, func, filter);
+  foreach(this, func, filter);
 });
 Function.safeStdLibAddition(Object, 'map',   function (obj, func) {
   if ((typeof func) !== 'function') return console.warn('Object.map requires a function argument');

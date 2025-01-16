@@ -125,11 +125,6 @@ function withinBounds(attr, attributeMap, tolerance, absoluteValue, modulus) {
       }
     }
     if (value1 === value2) return true;
-    if (Math.difference(1, (value1 / value2)) < props.tolerance !==
-          Math.abs(value1 - value2) < props.tolerance) {
-      console.warn.logarithmic('ratio tolerance test is different');
-    }
-    // Math.abs(value1 - value2) < props.tolerance
    return Math.difference(1, (value1 / value2)) < props.tolerance;  }
   func.tolerance = props.tolerance;
   func.absoluteValue = props.absoluteValue;

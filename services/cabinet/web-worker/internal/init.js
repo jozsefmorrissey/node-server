@@ -75,8 +75,7 @@ function handleTask(task, env) {
 function runTask(task, env) {
   try {
     const result = handleTask(task, env);
-    if (result) postMessage({id: task.id, result: DTO(result)});
-    postMessage({id: task.id, finished: true});
+    postMessage({id: task.id, result: DTO(result), finished: true});
     return result;
   } catch (e) {
     postMessage({id: task.id, result: e});

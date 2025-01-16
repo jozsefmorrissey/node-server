@@ -195,7 +195,7 @@ Lookup.fromJson = (json, obj) => {
 
   const type = json._TYPE;
   if (type && type === 'Lookup') return new Lookup(json);
-  obj ||= Object.fromJson(json);
+  if (!obj) obj = Object.fromJson(json);
   if (obj instanceof Lookup) return obj;
   if (attr) {
     Lookup.convert(obj, obj[attr], attr);

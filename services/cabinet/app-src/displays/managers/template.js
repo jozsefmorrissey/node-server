@@ -18,7 +18,6 @@ const RadioDisplay = require('../../display-utils/radio-display.js');
 const Bind = require('../../../../../public/js/utils/input/bind.js');
 const Joint = require('../../objects/joint/joint.js');
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
-const Measurement = require('../../../../../public/js/utils/measurement.js');
 const ThreeDModel = require('../../three-d/three-d-model.js');
 const Layout2D = require('../../two-d/layout/layout.js');
 const Draw2D = require('../../../../../public/js/utils/canvas/two-d/draw.js');

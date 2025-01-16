@@ -45,6 +45,13 @@ class Polygon2d {
       });
     }
 
+    this.scale = (scale, doNotModify) => {
+      if (doNotModify) return this.clone().scale(scale);
+      lines.forEach(l =>
+        l.scale(scale));
+      return this;
+    }
+
     this.mirrorX = () => {
       const start = this.center().copy();
       const end = start.translate(0, 10, true);

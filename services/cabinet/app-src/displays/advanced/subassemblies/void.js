@@ -3,7 +3,6 @@ const $t = require('../../../../../../public/js/utils/$t.js');
 const du = require('../../../../../../public/js/utils/dom-utils.js');
 const Void = require('../../../objects/assembly/assemblies/void.js');
 const AssemblyConfigInput = require('../../../input/assembly-config.js');
-const Measurement = require('../../../../../../public/js/utils/measurement.js');
 const Cabinet = require('../../../objects/assembly/assemblies/cabinet.js');
 const CustomEvent = require('../../../../../../public/js/utils/custom-event.js');
 const Lookup = require('../../../../../../public/js/utils/object/lookup.js');

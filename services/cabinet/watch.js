@@ -47,10 +47,9 @@ if (global.ENV === 'local') {
 const wwDumpLoc = './public/js/web-worker-bundle';
 const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-worker/internal/init.js', projectDir: '../../'});
 const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
-        .add('../../public/js/utils/std-lib/init.js')
+        .add('../../public/js/utils/std-lib/')
         .add('../../public/js/utils/tolerance.js')
         .add('../../public/js/utils/tolerance-map.js')
-        .add('../../public/js/utils/measurement.js')
         .add('../../public/js/utils/string-math-evaluator.js')
         .add('../../public/js/utils/services/function-cache.js')
         .add('../../public/js/utils/object/lookup.js')

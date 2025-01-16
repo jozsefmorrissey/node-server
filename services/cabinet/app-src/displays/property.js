@@ -12,7 +12,6 @@ const $t = require('../../../../public/js/utils/$t.js');
 const Inputs = require('../input/inputs.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 const ExpandableObject = require('../../../../public/js/utils/lists/expandable-object.js');
-const Measurement = require('../../../../public/js/utils/measurement.js');
 
 // TODO: Rewrite program started to have nested properties no longer making display convoluted(SP).
 const changed = (id) => Properties.changes.changed(id);

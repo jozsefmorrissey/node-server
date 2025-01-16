@@ -27,7 +27,7 @@ function  render() {
   const target = Global.target();
   if (!target) return;
   if (target.constructor.name === 'Cabinet') renderCabinet(target);
-  else if (target.constructor.name === 'Assembly') renderAssembly(assembly);
+  else if (target.constructor.name === 'Assembly') renderAssembly(target);
   else renderSimple(target);
 }
 exports.module = new Canvas.View3D('Model', render, 'disp-canvas-cab');

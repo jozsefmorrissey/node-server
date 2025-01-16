@@ -1,5 +1,4 @@
 
-const Measurement = require('../../../../public/js/utils/measurement.js');
 
 const disp = val => new Measurement(val).display();
 const vertDisp = v => `${disp(v.x)}x${disp(v.y)}`;

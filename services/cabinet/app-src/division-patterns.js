@@ -1,5 +1,4 @@
 
-const Measurement = require('../../../public/js/utils/measurement.js');
 const CustomEvent = require('../../../public/js/utils/custom-event.js');
 
 function alphaSorter(a, b) {

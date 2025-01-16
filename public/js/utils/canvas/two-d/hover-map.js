@@ -99,6 +99,7 @@ class HoverMap2d {
       if (groupId === undefined) return hoverObjects = [] || true;
       hoverObjects.removeWhere(ho => ho.groupId() === groupId);
     }
+
     this.add = (object, tolerance, target, groupId) => {
       if (Array.isArray(object)) {
         object.forEach(o => this.add(o));
@@ -138,7 +139,7 @@ class HoverMap2d {
       if (clickHolding || pos === undefined) return lastHovered;
       let hoverObjs = this.objects();
       if (filter instanceof Function) hoverObjs = hoverObjs.filter(filter);
-      const vertex = pos instanceof Vertex2d ? pos : new Vertex2d(pos);
+      let vertex = pos instanceof Vertex2d ? pos : new Vertex2d(pos);
       let hoveringObj = null;
       for (let index = 0; index < hoverObjs.length; index++) {
         const hoverObj = hoverObjs[index];
@@ -163,7 +164,7 @@ class HoverMap2d {
       if (clickHolding || pos === undefined) return lastHovered;
       let objs = this.objects();
       if (filter instanceof Function) objs = objs.filter(filter);
-      const vertex = pos instanceof Vertex2d ? pos : new Vertex2d(pos);
+      let vertex = pos instanceof Vertex2d ? pos : new Vertex2d(pos);
       let closestObj = null;
       for (let index = 0; index < objs.length; index++) {
         const obj = objs[index];

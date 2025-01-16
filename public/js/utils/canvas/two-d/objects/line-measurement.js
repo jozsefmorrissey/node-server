@@ -3,7 +3,6 @@ const Circle2d = require('circle');
 const Vertex2d = require('vertex');
 const Line2d = require('line');
 const Lookup = require('../../../object/lookup');
-const Measurement = require('../../../measurement.js');
 const AngleMeasurement = require('./angle-measurement.js');
 const ToleranceMap = require('../../../tolerance-map.js');
 
@@ -57,6 +56,7 @@ class LineMeasurement2d {
     this.I = (l, takenLocations) => {
       takenLocations ||= [];
       l = l || layer || 1;
+      const line = this.line();
       const termDist = (l + 1) * offset;
       const measureDist = l * offset;
       const startLine = line.perpendicular(termDist * 2, line[0], true);
@@ -100,7 +100,7 @@ class LineMeasurement2d {
     this.midpoints.further = () => this.midpoints().further;
 
 
-    this.copy = (modFunc) => new LineMeasurement2d(line, modFunc);
+    // this.copy = (modFunc) => new LineMeasurement2d(line, modFunc);
     this.modificationFunction = (func) => {
       if ((typeof func) === 'function') {
         if ((typeof this.id) !== 'function') Lookup.convert(this);

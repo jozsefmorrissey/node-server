@@ -153,13 +153,15 @@ class Draw2d {
       ctx.lineTo(ev.x, ev.y);
       ctx.stroke();
       // identifyVertices(line);
+      const id = Boolean.first(indicateDirection, draw.line.indicateDirection);
+      if (id) draw.line.chevron(line, color, width);
+    }
 
-      if (indicateDirection) {
+    draw.line.chevron = (line, color, width) => {
         const chevLine = line.copy();
         chevLine.length(width * 5);
-        const midPoint = Math.midrange([sv, ev], ['x', 'y'])
+        const midPoint = Math.midrange([line[0], line[1]], ['x', 'y'])
         draw.chevron(midPoint, chevLine, color, width/2);
-      }
     }
 
     // point is the tip of the chevron
@@ -176,8 +178,8 @@ class Draw2d {
       const leg2 = line.copy();
       leg2.rotate(-rads);
       leg2.translate(new Line2d(leg2[0], point));
-      draw.line(leg1, color, width);
-      draw.line(leg2, color, width);
+      draw.line(leg1, color, width, false);
+      draw.line(leg2, color, width, false);
     }
 
     draw.polygon = (poly, color, width, fillColor) => {
@@ -194,6 +196,8 @@ class Draw2d {
       region.moveTo(lines[0][0].x, lines[0][0].y);
       lines.slice(0).forEach(l => region.lineTo(l[1].x, l[1].y));
       lines.slice(0).forEach(l => verts.push(new Vertex2d(l[1].x, l[1].y)));
+      if (draw.line.indicateDirection)
+          lines.forEach(l => draw.line.chevron(l, color, width));
       region.closePath();
       ctx.lineWidth = width;
       ctx.stroke(region);

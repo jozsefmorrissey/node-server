@@ -2,7 +2,6 @@
 const Line3D = require('../../../app-src/three-d/objects/line.js');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Parimeter3D = require('../../../app-src/three-d/objects/parimeter.js');
-const Color = require('./modeling/utils/color');
 
 const union = (assemIds, env, filter, concat, type) => {
   let csg = new CSG();

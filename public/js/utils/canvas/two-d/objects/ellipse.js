@@ -29,6 +29,16 @@ class Ellipse2d {
                         .rotate(Math.toRadians(rotation), center));
     }
 
+    this.clone = () => new Ellipse(rx, ry, center.clone(), from, to,  rotation);
+
+    this.scale = (scale, doNotModify) => {
+      if (doNotModify) return this.clone().scale(scale);
+      rx = rx * scale;
+      ry = ry * scale;
+      center.scale(scale);
+      return this;
+    }
+
     this.within = (vertex) => {
       const cx = this.center().x; const cy = this.center().y;
       const x = vertex.x; const y = vertex.y;

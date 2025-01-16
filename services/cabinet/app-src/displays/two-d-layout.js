@@ -4,7 +4,6 @@ const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const PopUp = require('../../../../public/js/utils/display/pop-up');
 const Properties = require('../config/properties');
-const Measurement = require('../../../../public/js/utils/measurement.js');
 const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
 const Draw2D = require('../../../../public/js/utils/canvas/two-d/draw.js');
 const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');

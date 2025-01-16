@@ -30,7 +30,7 @@ function UtilityFilter() {
     switch (type) {
       case SEARCH_TYPES.REGEX:
         try {
-          const matches = asStr.toLowerCase().match(new RegExp(userValue, 'g'));
+          const matches = asStr.toLowerCase().match(new RegExp(userValue, 'gi'));
           return (matches && matches.length) > 0 ? matches.length : -1;
         } catch (e) {
           return 0;
@@ -39,7 +39,7 @@ function UtilityFilter() {
         let diff = asStr.length > userValue.length ? asStr.length - userValue.length : userValue.length - asStr.length;
         let max = asStr.length > userValue.length ? asStr.length : userValue.length;
         let levDist = levenshteinDistance(asStr.toLowerCase(), userValue.toLowerCase());
-        return 1 - ((levDist / diff) + (levDist / max));
+        return diff === 0 ? 1 : 1 - ((levDist / diff) + (levDist / max));
       case SEARCH_TYPES.SELECT:
         return userValue.indexOf(asStr) != -1 ? 1 : -1;
     }

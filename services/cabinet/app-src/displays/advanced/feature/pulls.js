@@ -3,7 +3,6 @@ const du = require('../../../../../../public/js/utils/dom-utils.js');
 const Lookup = require('../../../../../../public/js/utils/object/lookup.js');
 const Handle = require('../../../objects/assembly/assemblies/hardware/pull.js');
 const MeasurementInput = require('../../../../../../public/js/utils/input/styles/measurement.js');
-const Measurement = require('../../../../../../public/js/utils/measurement.js');
 
 const template = new $t('sections/helpers/pulls');
 

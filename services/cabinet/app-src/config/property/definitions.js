@@ -1,5 +1,4 @@
 const Property = require('../property');
-const Measurement = require('../../../../../public/js/utils/measurement.js');
 const IMPERIAL_US = Measurement.units()[1];
 
 const ov = (trueOfalse) => (Boolean.is(trueOfalse) ? trueOfalse : defs.fls.value()) ?

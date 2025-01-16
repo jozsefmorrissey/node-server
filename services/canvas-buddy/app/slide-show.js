@@ -22,6 +22,7 @@ class SlideShow {
     this.slides = (slides) => {
       if (slides) {
         _slides = slides;
+        slideDataList = null;
       }
       return slides;
     }

@@ -8,7 +8,6 @@ const JointSettings = require('../../../../web-worker/shared/settings.js');
 const Dependency = require('../../dependency');
 const CabinetOpeningCorrdinates = require('../../../services/cabinet-opening-coordinates.js');
 const SectionProperties = require('./section/section-properties.js');
-const Measurement = require('../../../../../../public/js/utils/measurement.js');
 const Group = require('../../group');
 const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line');
 const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex');

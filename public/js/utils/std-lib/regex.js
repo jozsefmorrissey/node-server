@@ -11,6 +11,11 @@ Function.safeStdLibAddition(RegExp, 'g',  function (str) {
   return this.GLOBAL;
 });
 
+Function.safeStdLibAddition(RegExp, 'full',  function (str) {
+  if (!this.FULL)
+    this.property('FULL', new RegExp('^(?:' + this.source + ')$'), false, false, false);
+  return this.FULL;
+});
 
 Function.safeStdLibAddition(RegExp, 'object',  function (string, ...keys) {
   const match = string.match(this);

@@ -16,6 +16,9 @@ const Imposter = require('../../../../public/js/utils/object/imposter.js');
 const STATUS = require('./tasks/status');
 const CabinetConfigs = require('../../app-src/config/cabinet-configs.js')
 
+const DEFAULT_JOB_FAILURE = (error, job) =>
+    console.error(error, job);
+
 class Job {
   constructor(id) {
     CustomEvent.all(this, ...Object.values(STATUS).map(s => s.toString()).concat(['finished', 'change']));
@@ -43,7 +46,7 @@ class Job {
     }
     this.then = (onSuccess, onFailed) => {
       this.on.success(onSuccess);
-      this.on.failed(onFailed || console.error);
+      this.on.failed(onFailed || DEFAULT_JOB_FAILURE);
       return this;
     }
   }

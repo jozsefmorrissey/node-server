@@ -33,7 +33,6 @@ class PanZoomClickMeasure extends PanZoomClick {
       objs[line[1].toString()] = new HoverObject2d(line[1], vertTol);
     }
 
-
     measurements.enabled = () => measEnabled;
     measurements.enable = () => {
       measEnabled = true;

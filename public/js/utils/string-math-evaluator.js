@@ -27,8 +27,8 @@ class StringMathEvaluator {
       if (path === '') return currObj;
       try {
         let resolved = (inf = currObj.pathInfo(path)) && inf.target;
-        resolved ||= (inf = globalScope.pathInfo(path)) && inf.target;
-        resolved ||= resolver && resolver(path, currObj);
+        if (!resolved) resolved = (inf = globalScope.pathInfo(path)) && inf.target;
+        if (!resolved) resolved = resolver && resolver(path, currObj);
         return resolved;
       } catch (e) {
         console.error('FIX!!! my former self believed this is an avoidable issue');

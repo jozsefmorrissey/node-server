@@ -2,7 +2,6 @@
 
 const Property = require('./property');
 const Defs = require('./property/definitions');
-const Measurement = require('../../../../public/js/utils/measurement.js');
 const EPNTS = require('../../generated/EPNTS');
 const Request = require('../../../../public/js/utils/request.js');
 
@@ -172,12 +171,7 @@ Properties.UNITS = UNITS;
 //   config = Object.fromJson(body);
 // }
 Properties.default = (code) => {
-  try {
-    return allProps[code].value();
-  } catch (e) {
-    if (code.length < 10 && !code.match(/Overlay|Inset|Reveal|pattern/))
-      console.warn.logarithmic(`code '${code}' is not defined`);
-  }
+  if (allProps[code]) return allProps[code].value();
 }
 Properties.cabinetStyles = () => ['Overlay', 'Inset', 'Reveal'];
 

@@ -2,7 +2,6 @@
 const $t = require('../../../../../../public/js/utils/$t.js');
 const du = require('../../../../../../public/js/utils/dom-utils.js');
 const Lookup = require('../../../../../../public/js/utils/object/lookup.js');
-const Measurement  = require('../../../../../../public/js/utils/measurement.js')
 const Select = require('../../../../../../public/js/utils/input/styles/select.js');
 const Divider = require('../../../objects/assembly/assemblies/divider.js');
 

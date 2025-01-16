@@ -3,7 +3,6 @@ $t.loadFunctions(require('../generated/html-templates'));
 require('../../../public/js/utils/std-lib/init.js');
 const du = require('../../../public/js/utils/dom-utils');
 require('../../../public/js/utils/3d-modeling/csg.js');
-const Measurement = require('../../../public/js/utils/measurement');
 const MeasurementInput = require('../../../public/js/utils/input/styles/measurement');
 
 const ThreeD = require('./3D');

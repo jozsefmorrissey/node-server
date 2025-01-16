@@ -74,7 +74,7 @@ class ThreeView extends Lookup {
     };
 
     function cabinetThreeView(cabinet) {
-      new Jobs.CSG.Assembly.ThreeView(cabinet).then(modelInfo => {
+      new Jobs.CSG.Assembly.ThreeView(cabinet).then((modelInfo, job) => {
         const info = modelInfo.info();
         const id = targetPart ? targetPart.id() : cabinet.id();
         console.log(modelInfo);

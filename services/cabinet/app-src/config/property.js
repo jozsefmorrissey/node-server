@@ -1,8 +1,5 @@
 
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
-const Measurement = require('../../../../public/js/utils/measurement.js');
-
-
 
 class Property {
   // clone constructor(code, value) {

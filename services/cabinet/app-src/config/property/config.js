@@ -1,6 +1,5 @@
 
 const Properties = require('../properties');
-const Measurement = require('../../../../../public/js/utils/measurement.js');
 const IMPERIAL_US = Measurement.units()[1];
 
 class PropertyConfig {

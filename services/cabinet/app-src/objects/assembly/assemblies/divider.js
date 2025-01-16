@@ -75,7 +75,8 @@ class Divider extends Assembly {
 
     const partCheck = (index) => (assem) => parts[index].locationCode() === assem.locationCode();
 
-    this.thickness = () => this.hasFrame() ? this.frameWidth() : this.panelThickness();
+    this.thickness = () =>
+      this.hasFrame() ? this.frameWidth() : this.panelThickness();
     this.partialWidth = () => this.resolve('dpw');
 
     this.frameThickness = (rawOthickness) => {

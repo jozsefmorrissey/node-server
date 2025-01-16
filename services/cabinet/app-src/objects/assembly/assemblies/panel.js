@@ -50,7 +50,8 @@ class PanelVoidIndex extends PanelAutoConfigured {
       const normArr = ['x', 'y', 'z'].map(xyz => vects[xyz].unit());
       return array ? normArr : {x: normArr[0], y: normArr[1], z: normArr[2]};
     }
-    this.width = () => this.resolve('vpt');
+    this.width = () =>
+      this.resolve('vpt');
   }
 }
 

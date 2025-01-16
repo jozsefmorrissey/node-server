@@ -1,6 +1,5 @@
 
 const Test = require('../test.js').Test;
-const Measurement = require('../../measurement');
 
 
 Test.add('Measurement: areaReg',(ts) => {

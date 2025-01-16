@@ -15,7 +15,6 @@ const DecisionInputTree = require('../../../../../public/js/utils/input/decision
 const OpeningSketch = require('../opening-sketch.js');
 const DrawLayout = require('../draw/layout.js');
 const PanZoom = require('../../../../../public/js/utils/canvas/two-d/pan-zoom.js');
-const Measurement = require('../../../../../public/js/utils/measurement.js');
 const ModelInfo = require('../../../web-worker/external/model-information.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 

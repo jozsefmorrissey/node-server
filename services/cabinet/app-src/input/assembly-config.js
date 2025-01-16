@@ -1,7 +1,6 @@
 
 const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
-const Measurement = require('../../../../public/js/utils/measurement.js');
 const Inputs = require('inputs');
 
 class AssemblyConfigInput {

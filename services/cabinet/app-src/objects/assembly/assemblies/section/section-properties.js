@@ -295,8 +295,8 @@ class SectionProperties extends KeyValue {
       const isInset = propConfig('isInset');
       const vertical = instance.vertical();
       info._TOTAL = isReveal ?
-              (!vertical ? instance.outer.len() : instance.outer.width()) :
-              (!vertical ? instance.inner.len() : instance.inner.width());
+              (vertical ? instance.outer.len() : instance.outer.width()) :
+              (vertical ? instance.inner.len() : instance.inner.width());
 
       let overlay, reveal, insetValue;
       if (isReveal) reveal = propConfig('r');

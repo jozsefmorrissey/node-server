@@ -4,7 +4,6 @@ const Circle2d = require('circle');
 const Vertex2d = require('vertex');
 const Line2d = require('line');
 const Lookup = require('../../../object/lookup');
-const Measurement = require('../../../measurement.js');
 const ToleranceMap = require('../../../tolerance-map.js');
 
 const furthestEndpoint = (int, l) => [l[0], l[1]].max(v => v.distance(int));

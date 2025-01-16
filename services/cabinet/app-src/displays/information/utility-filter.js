@@ -1,8 +1,5 @@
 
 
-
-const Measurement = require('../../../../../public/js/utils/measurement.js');
-
 class UFObj {
   constructor(order) {
     class Row {

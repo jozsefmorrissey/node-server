@@ -24,16 +24,20 @@ class WebWorkerDeligator {
         if (data.result instanceof Error) {
           console.error(data.result);
           task.error(data.result);
-        } else if (data.finished) {
-          if (task.completeOnFinish) task.status(TASK_STATUS.SUCCESS);
-          else if (!task.finished()) task.error(DID_NOT_COMPLETE);
-          exicute();
-        } else {
-          const result = RDTO(data && data.result);
+          return;
+        }
+        const result = data && data.result ? RDTO(data.result) : undefined;
+        if (data && data.result) {
           task.trigger.message(result);
           if (task.status() === TASK_STATUS.SUCCESS) {
             exicute();
           }
+        }
+
+        if (data.finished) {
+          if (task.completeOnFinish) task.status(TASK_STATUS.SUCCESS, result);
+          else if (!task.finished()) task.error(DID_NOT_COMPLETE, result);
+          exicute();
         }
       }
       else {
@@ -124,13 +128,8 @@ class WebWorkerDeligator {
         else queueTask(taskOs);
 
         if (Array.isArray(taskOs)) {
-          if (taskOs.find(t => allTasks[t.id]))
-            console.log('her');
           taskOs.forEach(allTasks[t.id] = true);
-        }
-        else {
-          if (allTasks[taskOs.id])
-            console.log('her');
+        } else {
           allTasks[taskOs.id] = true;
         }
         exicute();

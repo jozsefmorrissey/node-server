@@ -9,7 +9,6 @@ const TwoDLayout = require('../displays/two-d-layout');
 const OpenSectionDisplay = require('./open-section.js');
 const CabinetConfig = require('../config/cabinet-configs.js');
 const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
-const Measurement = require('../../../../public/js/utils/measurement.js');
 const Request = require('../../../../public/js/utils/request.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
@@ -225,9 +224,14 @@ class CabinetDisplay {
       Global.cabinet().value(name, decimal);
     });
 
-    Global.on.processing.cabinet((job, cabinet) => {
-      const task = job.task();
+    const jobProcessIndicator = (job, cabinet, delay) => {
       const expandHeader = du.find.up('.expand-header', du.find(`[cabinet-id='${cabinet.id()}']`));
+      if (!expandHeader) {
+        delay = Number.isInteger(delay) ? delay * 10 : 1;
+        if (delay <= 100) return setTimeout(() => jobProcessIndicator(job, cabinet, delay), delay);
+        else throw new Error('Cabinet being processed does not have header');
+      }
+      const task = job.task();
       const loadingCnt = du.find.down('.circle-loading-cnt', expandHeader);
       const scope = {progress: task.progress, time: task.time,
         size: '20px', color: '#f09a05', id: String.random()
@@ -241,7 +245,9 @@ class CabinetDisplay {
         loadingCnt.hidden = task.progress() === 100;
         du.find.down('.progress', loadingCnt).innerText = Math.floor(task.progress());
       })
-    })
+    };
+
+    Global.on.processing.cabinet(jobProcessIndicator);
   }
 }
 

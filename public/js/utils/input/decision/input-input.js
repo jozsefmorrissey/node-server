@@ -2,7 +2,6 @@
 const Input = require('../input');
 const Select = require('../styles/select');
 const NumberInput = require('../styles/number');
-const Measurement = require('../../measurement');
 const MeasurementInput = require('../styles/measurement');
 const Textarea = require('../styles/textarea');
 const MultipleEntries = require('../styles/multiple-entries');
