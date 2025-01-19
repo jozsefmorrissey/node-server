@@ -1,5 +1,5 @@
 
-const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
+const {Polygon3D} = require('../../../../../../public/js/utils/canvas/three-d/lib.js');
 const CutInfo = require('./cuts/cut');
 const Utils = require('../modeling/utils/utils.js');
 

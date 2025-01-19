@@ -69,16 +69,16 @@ class RoomDisplay extends Lookup {
     }
 
     this.html = () =>
-      getExpandList().html();
+      RoomDisplay.fileTemplate.render(order);
 
 
     this.refresh = () => getExpandList().refresh();
 
-    du.on.match('click', '.group-add-btn', (target) => {
-      const room = Global.room();
-      room.addGroup();
-      this.refresh();
-    });
+    // du.on.match('click', '.group-add-btn', (target) => {
+    //   const room = Global.room();
+    //   room.addGroup();
+    //   this.refresh();
+    // });
 
   }
 }
@@ -89,4 +89,6 @@ RoomDisplay.configInputTree = () => {
 }
 RoomDisplay.bodyTemplate = new $t('room/body');
 RoomDisplay.headTemplate = new $t('room/head');
+
+RoomDisplay.fileTemplate = new $t('room/file');
 module.exports = RoomDisplay

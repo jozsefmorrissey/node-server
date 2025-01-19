@@ -2,11 +2,9 @@
 const Assembly = require('../../assembly');
 const Panel = require('../panel');
 const Cutter = require('../cutter');
-const Vertex3D = require('../../../../three-d/objects/vertex');
-const Vector3D = require('../../../../three-d/objects/vector');
-const Line3D = require('../../../../three-d/objects/line');
-const Polygon3D = require('../../../../three-d/objects/polygon');
-const BiPolygon = require('../../../../three-d/objects/bi-polygon');
+
+const {Vertex3D, Vector3D, Line3D, Polygon3D, BiPolygon} = require('../../../../../../../public/js/utils/canvas/three-d/lib.js');
+
 const Butt = require('../../../joint/joints/butt.js');
 const Dado = require('../../../joint/joints/dado.js');
 const Cut = require('../../../joint/joints/cut.js');

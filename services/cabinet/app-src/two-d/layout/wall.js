@@ -5,7 +5,7 @@ const OnWall = require('./on-wall');
 const Door2D = require('./door');
 const Window2D = require('./window');
 const Corner2d = require('./corner');
-const Polygon3D = require('../../three-d/objects/polygon.js');
+const {Polygon3D} = require('../../../../../public/js/utils/canvas/three-d/lib.js');
 
 function modifyVertex(vertex) {
   return (props) => {

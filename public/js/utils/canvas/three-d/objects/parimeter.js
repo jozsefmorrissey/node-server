@@ -4,7 +4,7 @@ const Vertex3D = require('vertex');
 const Vector3D = require('vector');
 const Polygon3D = require('polygon');
 const Plane = require('plane');
-const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+const ToleranceMap = require('../../../tolerance-map.js');
 
 
 class Parimeter3D {
@@ -18,9 +18,9 @@ class Parimeter3D {
    lines = lines.filter(l => !l.isPoint());
 
 
-    const allMap = new ToleranceMap({'0.x': .001,
-                                    '0.y': .001,
-                                    '0.z': .001});
+    const allMap = new ToleranceMap({'0.x': .00001,
+                                    '0.y': .00001,
+                                    '0.z': .00001});
     allMap.addAll(lines.concat(lines.map(l=>
       ((l.negitive.line = l.clone().negitive()).negitive.line = l).negitive.line
     )));
@@ -29,7 +29,7 @@ class Parimeter3D {
 
     const removedMap = allMap.clone.empty();
     const remainingMap = allMap.clone();
-    const furthest = () => remainingMap.values().max(l => l[0].distance(center) +
+    const furthest = (list) => (list || remainingMap.values()).max(l => l[0].distance(center) +
                                                     l[1].distance(center) +
                                                     l.midpoint().distance(center));
 
@@ -68,7 +68,8 @@ class Parimeter3D {
         if (removedMap.matches(target.negitive.line).length)
           return {removed: remainingTouching(parimeter, removed), FOUND_PREVIOUS: true};
         matches.forEach(l => remove(l));
-        if (matches.length === 0) return {removed, parimeter: [], length: 0};
+        if (matches.length === 0)
+          return {removed, parimeter: [], length: 0};
         if (matches.length === 1) parimeter.push(matches[0]);
         else if (matches.length > 1){
           Line3D.quadrantSort(matches, target, normal, ccw);
@@ -117,4 +118,95 @@ Parimeter3D.fromCSG = (csg, vector) => {
   return new Parimeter3D(lines.map(l=>l.clone()), vector)[0];
 }
 
+
+class Experimental {
+  constructor(lines, normal) {
+    normal = new Vector3D(normal);
+    const toCenter = Vertex3D.midrange(Line3D.vertices(lines)).vector();
+    const toOrigin = toCenter.inverse()
+    lines = lines.map(l => l.translate(toOrigin, true));
+    Line3D.combine(lines);
+    lines[0].combineOrder(lines[lines.length - 1])
+    lines = Line3D.sliceAll(lines);
+    //TODO: sliceAll is introducing duplicates
+    lines = lines.unique(l => l.toString());
+   lines = lines.filter(l => !l.isPoint());
+   // lines = lines.map(l => l.clone());
+   lines.forEach(l => l.directional(false, true));
+
+
+    const allMap = new ToleranceMap({'0.x': .001,
+                                    '0.y': .001,
+                                    '0.z': .001});
+    allMap.addAll(lines.concat(lines.map(l=>
+      ((l.negitive.line = l.clone().negitive()).negitive.line = l).negitive.line
+    )));
+    allMap.values().forEach(l =>
+      (l.id = String.random()) & l.directional(false, true));
+
+    const furthest = (list) => allMap.values().max(l => l[0].distance(Vertex3D.origin) +
+                                                    l[1].distance(Vertex3D.origin) +
+                                                    l.midpoint().distance(Vertex3D.origin));
+
+    let again = false;
+    function findParremeter(startLine, ccw) {
+      const prospects = [[startLine]];
+      const visited = {};
+      visited[startLine.id] = startLine;
+      visited[startLine.negitive.line.id] = startLine.negitive.line;
+
+      const parimeters = [];
+      do {
+        const prospect = prospects[0];
+        const target = prospect[prospect.length - 1];
+        if (prospect[0][0].equals(prospect[prospect.length - 1][1], .001)) {
+          const lines = Line3D.combine(prospects.splice(0,1)[0]);
+          if (lines.length > 2) {
+            const poly = new Polygon3D(lines.map(l => l[0].translate(toCenter, true)));
+            parimeters.push(poly);
+          }
+        } else {
+          const matches = allMap.matches(target.negitive.line)
+                            .filter(l => !visited[l.id] && !visited[l.negitive.line.id])
+                            .filter(l => l.negitive.line.id !== target.id);
+          Line3D.quadrantSort(matches, target, normal, ccw);
+          if (again) Line3D.quadrantSort(matches, target, normal, ccw);
+          if (matches.length === 0)
+            prospects.splice(0,1);
+          else {
+            const favorite = matches.splice(0,1)[0];
+            visited[favorite.id] = favorite;
+            matches.forEach((m,i) => prospects.splice(i+1,0,prospect.concat(m)) & (visited[m.id] = m));
+            prospect.push(favorite);
+          }
+        }
+      } while (prospects.length);
+      return {parimeter: parimeters.max(p => p.area()), visited};
+    }
+
+    const polys = [];
+    do {
+      const furth = furthest();
+      const rightObj = findParremeter(furth, false);
+      const leftObj = findParremeter(furth, true);
+      const pArr = [rightObj.parimeter, leftObj.parimeter];
+      if (pArr[0] === undefined || pArr[1] === undefined)
+        console.warn('HEY! Look over here');
+      polys.push(pArr.max(p => p.area()));
+      allMap.remove.all(Object.values(rightObj.visited));
+      allMap.remove.all(Object.values(leftObj.visited));
+    } while (allMap.values().length > 2);
+
+    if (polys.length === 0) {
+      console.warn('Parimeter3D could not find a single parimeter');
+      if (goDownTheRabbitHole) new Parimeter3D(lines, normal);
+    }
+    return polys;
+
+  }
+}
+
+Polygon3D.Parimeter3D = Parimeter3D;
+Experimental.fromCSG = Parimeter3D.fromCSG;
+Parimeter3D.Experimental = Experimental;
 module.exports = Parimeter3D;

@@ -1,7 +1,6 @@
 
 const Dependency = require('../dependency');
-const BiPolygon = require('../../three-d/objects/bi-polygon.js');
-const Polygon3D = require('../../three-d/objects/polygon.js');
+const {BiPolygon, Polygon3D} = require('../../../../../public/js/utils/canvas/three-d/lib.js');
 
 class Joint extends Dependency {
   constructor(dependsSelector, dependentSelector, condition, locationId, priority) {
@@ -17,7 +16,7 @@ class Joint extends Dependency {
       male: (val) => val === undefined ? fullMale : (fullMale = val),
       female: (val) => val === undefined ? fullFemale : (fullFemale = val)
     }
-    this.autoExtend = (trueOfalse) => Boolean.is(trueOfalse) ? (autoExtend = trueOfalse) :  autoExtend; 
+    this.autoExtend = (trueOfalse) => Boolean.is(trueOfalse) ? (autoExtend = trueOfalse) :  autoExtend;
     this.priority = (val) => val === undefined ? priority : (priority = val);
     const parentClone = this.clone;
 

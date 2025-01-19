@@ -2,7 +2,7 @@
 const Test = require('../../../../public/js/utils/test/test').Test;
 const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
-const Line3D = require('../../app-src/three-d/objects/line.js');
+const {Line3D} = require('../../../../public/js/utils/canvas/three-d/lib');
 const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 
 const extraLinePoly = new Polygon2d([[0,0],[0,1],[0,2],[0,3],

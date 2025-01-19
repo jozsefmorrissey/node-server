@@ -1,7 +1,6 @@
 
-const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
-const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
-const Vertex3D = require('../../../../app-src/three-d/objects/vertex.js');
+const {BiPolygon, Vertex3D, Polygon3D} =
+    require('../../../../../../public/js/utils/canvas/three-d/lib');
 const Utils = require('./utils/std-lib/init');
 
 

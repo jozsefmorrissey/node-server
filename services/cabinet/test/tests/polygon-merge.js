@@ -1,8 +1,8 @@
 
 const Test = require('../../../../public/js/utils/test/test').Test;
-const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
-const Line3D = require('../../app-src/three-d/objects/line.js');
-const Plane = require('../../app-src/three-d/objects/plane');
+const {Plane, Vertex3D, Polygon3D, Line3D} =
+      require('../../../../public/js/utils/canvas/three-d/lib');
+
 
 const B = new Polygon3D([[0,1,0],[1,1,0],[1,3,0],[0,3,0]].reverse())
 const C = new Polygon3D([[0,4,0],[2,4,0],[2,6,0],[0,6,0]]);

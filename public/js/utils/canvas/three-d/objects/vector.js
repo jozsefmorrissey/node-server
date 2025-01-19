@@ -1,8 +1,8 @@
 
-const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
-const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
-const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Tolerance = require('../../../tolerance.js');
+const ToleranceMap = require('../../../tolerance-map.js');
+const Vertex2d = require('../../two-d/objects/vertex.js');
+const Line2d = require('../../two-d/objects/line.js');
 
 const withinTol = new Tolerance(.00000001).within;
 

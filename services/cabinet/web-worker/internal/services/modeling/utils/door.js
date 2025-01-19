@@ -1,8 +1,7 @@
 
 const SectionPropertiesUtil = require('./section-properties');
-const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
-const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
-const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
+const {BiPolygon, Polygon3D, Vector3D} =
+    require('../../../../../../../public/js/utils/canvas/three-d/lib');
 const Utils = require('utils');
 
 function doorBiPoly(assem, fullPoly, gap, left) {

@@ -7,7 +7,8 @@ const {Intersection, Join, Model, Union, AssembliesTo2D, SimpleTo2D, Simple,
         LayoutParts, ThreeView} = require('./tasks/csg');
 const {Parts} = require('./tasks/documentation');
 const Utils = require('../../app-src/utils.js');
-const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
+const {Vertex3D} = require('../../../../public/js/utils/canvas/three-d/lib.js');
+      require('../../../../public/js/utils/canvas/three-d/lib');
 const SimpleModel = require('../../app-src/objects/simple/simple.js');
 const Assembly = require('../../app-src/objects/assembly/assembly.js');
 const Panel = require('../../app-src/objects/assembly/assemblies/panel.js');
@@ -21,8 +22,10 @@ const DEFAULT_JOB_FAILURE = (error, job) =>
 
 class Job {
   constructor(id) {
+    id ||= String.random();
     CustomEvent.all(this, ...Object.values(STATUS).map(s => s.toString()).concat(['finished', 'change']));
     let _status = STATUS.CREATED;
+    this.id = () => id;
     this.status = (status) => {
       if (this.finished()) return _status;
       if (status && status !== _status) {

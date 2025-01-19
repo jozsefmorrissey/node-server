@@ -8,6 +8,7 @@ const DataList = require('../../../../public/js/utils/input/data-list.js');
 const Input = require('../../../../public/js/utils/input/input.js');
 const NoActivityRunner = require('../../../../public/js/utils/services/no-activity-runner.js');
 const Global = require('../services/global');
+const Canvas = require('canvas');
 
 const orderSelectCnt = du.id('order-select-cnt');
 const orderNameInput = du.id('order-name-input');
@@ -53,17 +54,14 @@ const documents = require('./documents/documents.js');
 fileTabDisp.register('Designer', roomDisplay.html);
 fileTabDisp.selected('Designer');
 fileTabDisp.register('Documents', documents.html);
+fileTabDisp.register('Save/Load', () => 'Not implemented');
 fileTabDisp.on.change((info) => info.to === 'Documents' && documents.update());
 const orderTabCnt = du.id('order-tab-cnt');
 orderTabCnt.innerHTML = fileTabDisp.html();
 
+Canvas.init();
+
 const canvasDisplays = du.id('model-cnt');
-fileTabDisp.on.change(() => {
-  const isDesigner = fileTabDisp.selected() === 'Designer';
-  canvasDisplays.style.display = isDesigner ? '' : 'none';
-  orderTabCnt.style.width = isDesigner ? '57vw' : '100vw';
-});
-fileTabDisp.trigger.change();
 
 
 const saveCntId = 'order-select-cnt';
@@ -107,7 +105,6 @@ const versionInput = new Input({
   label: 'Version:',
   validation: () => true
 });
-orderSelCnt.innerHTML = orderInput.html() + versionInput.html();
 
 const orderDataList = new DataList(orderInput);
 const versionDataList = new DataList(versionInput);

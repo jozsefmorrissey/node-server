@@ -1,8 +1,6 @@
 
-const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
-const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
-const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
-const Layer = require('../../../../../app-src/three-d/objects/layer.js');
+const {BiPolygon, Vector3D, Polygon3D, Layer} =
+    require('../../../../../../../public/js/utils/canvas/three-d/lib');
 const RDTO = require('../../../../shared/reconnect-transfer-object.js');
 const JointSettings = require('../../../../shared/settings.js');
 

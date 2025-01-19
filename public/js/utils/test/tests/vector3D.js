@@ -1,11 +1,6 @@
 
-const Vector3D = require('../../../../../services/cabinet/app-src/three-d/objects/vector.js');
-const Vertex3D = require('../../../../../services/cabinet/app-src/three-d/objects/vertex.js');
-const Polygon3D = require('../../../../../services/cabinet/app-src/three-d/objects/polygon.js');
-const Plane = require('../../../../../services/cabinet/app-src/three-d/objects/plane.js');
-const Line3D = require('../../../../../services/cabinet/app-src/three-d/objects/line.js');
-const PolyLine = require('../../../../../services/cabinet/app-src/three-d/objects/poly-line.js');
-const Matrix = require('../../../../../services/cabinet/app-src/three-d/objects/matrix.js');
+const {Vector3D, Vertex3D, Polygon3D, Plane, Line3D, PolyLine, Matrix}
+          = require('../../canvas/three-d/lib');
 const Test = require('../test.js').Test;
 
 function closeEnough(alignTo, realigned, ts) {

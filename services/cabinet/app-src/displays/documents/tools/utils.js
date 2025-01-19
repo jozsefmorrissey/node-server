@@ -1,5 +1,5 @@
 
-const Vector3D = require('../../../three-d/objects/vector.js');
+const {Vector3D} = require('../../../../../../public/js/utils/canvas/three-d/lib');
 const $t = require('../../../../../../public/js/utils/$t.js');
 const within = require('../../../../../../public/js/utils/tolerance.js').within(.01);
 

@@ -1,10 +1,8 @@
 
 const CabinetUtil = require('./cabinet');
 const Utils = require('./utils');
-const Line3D = require('../../../../../app-src/three-d/objects/line.js');
-const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
-const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
-const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
+const {Polygon3D, Vertex3D, BiPolygon, Line3D} =
+    require('../../../../../../../public/js/utils/canvas/three-d/lib');
 
 function getFrontAndBack(biPoly, axis) {
   const set = biPoly.setMostInLineWith(axis);

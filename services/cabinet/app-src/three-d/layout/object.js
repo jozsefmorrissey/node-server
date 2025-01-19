@@ -1,9 +1,8 @@
 
 const Lookup = require('../../../../../public/js/utils/object/lookup.js');
-const Vertex3D = require('../../three-d/objects/vertex.js');
+const {Vertex3D, BiPolygon} = require('../../../../../public/js/utils/canvas/three-d/lib');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const SnapSquare = require('../../../../../public/js/utils/canvas/two-d/objects/snap/square.js');
-const BiPolygon = require('../objects/bi-polygon');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
 let Jobs;
 // const SimpleModel = require('../../objects/simple/simple.js');
@@ -175,7 +174,7 @@ Object3D.register = (clazz) => {
 }
 
 Object3D.fromJson = (json) => {
-  const obj = new (Object.class.get(json._TYPE))(json.layout);
+  const obj = new (Object.class.get(json._TYPE))(json.layout, json.group);
   obj.center(json.center);
   obj.height(json.height);
   obj.name(json.name);

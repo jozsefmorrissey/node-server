@@ -174,8 +174,14 @@ function logarithmic(callerId, baseOptional, ...args) {
 logarithmic.reset = (callerId) => logData[callerId] && (logData[callerId].count = 0)
 
 function periodic(callEveryMilSec, terminationTest, ...args) {
-  const call = () => (!terminationTest() && this(...args)) &
-                      (setTimeout(call, callEveryMilSec));
+  let call;
+  if (terminationTest instanceof Function) {
+    call = () =>
+      terminationTest() && this(...args) & setTimeout(call, callEveryMilSec)
+  } else {
+    args.splice(0,0,terminationTest);
+    call = () => this(...args) && setTimeout(call, callEveryMilSec);
+  }
   setTimeout(call, callEveryMilSec);
 }
 

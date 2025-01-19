@@ -94,14 +94,14 @@ function init(body){
         orderDisplay = new OrderDisplay('#order-cnt');
         Global.displays.order(orderDisplay);
         TwoDLayout.init();
-        ThreeDMainModel.init();
+        // ThreeDMainModel.init();
     }
   } else if (urlSuffix === 'order') {
     require('./displays/canvas');
     const viewDisplayManager = new DisplayManager('display-cnt', 'main-display-menu');
     require('./displays/single-order');
     TwoDLayout.init();
-    ThreeDMainModel.init();
+    // ThreeDMainModel.init();
   }
 }
 
@@ -121,16 +121,6 @@ du.on.match('click', '*', (elem, event) => {
       popUp.show();
       event.stopPropagation();
     } else popUp.close();
-  }
-});
-
-du.on.match('mousemove', '*', (elem, event) => {
-  if (event.clientY < 20) {
-    popUp.updateContent('Wait! un comment down');
-    popUp.positionOnElement();
-    popUp.show();
-  } else {
-    popUp.close();
   }
 });
 

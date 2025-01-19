@@ -2,8 +2,8 @@
 const SimpleModels = require('../generic-models');
 const SectionPropertiesUtil = require('./section-properties');
 const Utils = require('./utils');
-const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
-const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
+const {Vertex3D, BiPolygon} =
+    require('../../../../../../../public/js/utils/canvas/three-d/lib');
 
 function drawerDepth(depth, guideDepths, assembly) {
   const guideDepth = guideDepths.find(gd => gd.min <= depth && gd.max >= depth);

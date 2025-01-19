@@ -2,8 +2,7 @@
 
 
 const Assembly = require('../assembly.js');
-const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
-const Polygon3D = require('../../../three-d/objects/polygon.js');
+const {BiPolygon, Polygon3D} = require('../../../../../../public/js/utils/canvas/three-d/lib.js');
 const Cutter = require('./cutter.js');
 const Panel = require('./panel');
 const Frame = require('./frame');

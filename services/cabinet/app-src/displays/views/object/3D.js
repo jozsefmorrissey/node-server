@@ -1,5 +1,5 @@
-const Canvas = require('../canvas');
-const Jobs = require('../../../web-worker/external/jobs.js');
+const Canvas = require('../../canvas');
+const Jobs = require('../../../../web-worker/external/jobs.js');
 
 function  renderAssembly(assembly) {
   new Jobs.CSG.Assembly(assembly).then((modelInfo, job) => {
@@ -30,5 +30,5 @@ function  render() {
   else if (target.constructor.name === 'Assembly') renderAssembly(target);
   else renderSimple(target);
 }
-exports.module = new Canvas.View3D('Model', render, 'disp-canvas-cab');
+exports.module = new Canvas.View3D('object-3d', render);
 Canvas.register(exports.module)

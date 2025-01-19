@@ -1,7 +1,6 @@
 const Canvas = require('../canvas');
 const Jobs = require('../../../web-worker/external/jobs.js');
-const Vertex3D = require('../../three-d/objects/vertex.js');
-const Line3D = require('../../three-d/objects/line.js');
+const {Vertex3D, Line3D} = require('../../three-d/lib');
 
 const set = {};
 let locationPrefix, locationCode, _parts, ufidPrefix;

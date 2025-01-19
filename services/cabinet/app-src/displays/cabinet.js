@@ -4,7 +4,6 @@
 const Show = require('../show.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
 const ThreeDMain = require('../displays/three-d-main.js');
-// const ThreeDModel = require('../three-d/three-d-model.js');
 const TwoDLayout = require('../displays/two-d-layout');
 const OpenSectionDisplay = require('./open-section.js');
 const CabinetConfig = require('../config/cabinet-configs.js');
@@ -199,55 +198,55 @@ class CabinetDisplay {
       cabinet.value(key, value);
     }
 
-    bind(`[display-id="${displayId}"].cabinet-id-input`, (...args) => attrUpdate(...args));
-    du.on.match('click', '.save-cabinet-btn', save);
-    du.on.match('keydown', '.modifiable-value-input', updateValue);
-
-    du.on.match('change', '.show-select', (elem) => {
-      const side = elem.getAttribute('side');
-      let type = du.find.closest('.show-select[name="type"]', elem).value;
-      let endStyle = du.find.closest('.show-select[name="endStyle"]', elem).value;
-      type = type === 'None' ? undefined : type;
-      endStyle = endStyle === 'No' ? undefined : endStyle;
-      Global.cabinet().value('show.' + side, {type, endStyle});
-      Global.cabinet().hash();
-      console.log(Global.cabinet().value('show'))
-
-      console.log(Global.cabinet().hash());
-    });
-
-    du.on.match('change', '.toe-kick-cab-cnt input', (elem) => {
-      const measurementInput = Lookup.get(elem.id);
-      const measurement = measurementInput.measurement();
-      const decimal = measurement.decimal();
-      const name = elem.name;
-      Global.cabinet().value(name, decimal);
-    });
-
-    const jobProcessIndicator = (job, cabinet, delay) => {
-      const expandHeader = du.find.up('.expand-header', du.find(`[cabinet-id='${cabinet.id()}']`));
-      if (!expandHeader) {
-        delay = Number.isInteger(delay) ? delay * 10 : 1;
-        if (delay <= 100) return setTimeout(() => jobProcessIndicator(job, cabinet, delay), delay);
-        else throw new Error('Cabinet being processed does not have header');
-      }
-      const task = job.task();
-      const loadingCnt = du.find.down('.circle-loading-cnt', expandHeader);
-      const scope = {progress: task.progress, time: task.time,
-        size: '20px', color: '#f09a05', id: String.random()
-      }
-      loadingCnt.innerHTML = CabinetDisplay.loadingTemplate.render(scope);
-      (() => du.find.down('.time', loadingCnt).innerText = task.time())
-          .periodic(100, () => task.progress() === 100);
-      task.on.change(t => {
-        document.documentElement.style.setProperty('--percentDecimal'+scope.id, task.progress()/100);
-        document.documentElement.style.setProperty('--percent'+scope.id, task.progress() + '%');
-        loadingCnt.hidden = task.progress() === 100;
-        du.find.down('.progress', loadingCnt).innerText = Math.floor(task.progress());
-      })
-    };
-
-    Global.on.processing.cabinet(jobProcessIndicator);
+    // bind(`[display-id="${displayId}"].cabinet-id-input`, (...args) => attrUpdate(...args));
+    // du.on.match('click', '.save-cabinet-btn', save);
+    // du.on.match('keydown', '.modifiable-value-input', updateValue);
+    //
+    // du.on.match('change', '.show-select', (elem) => {
+    //   const side = elem.getAttribute('side');
+    //   let type = du.find.closest('.show-select[name="type"]', elem).value;
+    //   let endStyle = du.find.closest('.show-select[name="endStyle"]', elem).value;
+    //   type = type === 'None' ? undefined : type;
+    //   endStyle = endStyle === 'No' ? undefined : endStyle;
+    //   Global.cabinet().value('show.' + side, {type, endStyle});
+    //   Global.cabinet().hash();
+    //   console.log(Global.cabinet().value('show'))
+    //
+    //   console.log(Global.cabinet().hash());
+    // });
+    //
+    // du.on.match('change', '.toe-kick-cab-cnt input', (elem) => {
+    //   const measurementInput = Lookup.get(elem.id);
+    //   const measurement = measurementInput.measurement();
+    //   const decimal = measurement.decimal();
+    //   const name = elem.name;
+    //   Global.cabinet().value(name, decimal);
+    // });
+    //
+    // const jobProcessIndicator = (job, cabinet, delay) => {
+    //   const expandHeader = du.find.up('.expand-header', du.find(`[cabinet-id='${cabinet.id()}']`));
+    //   if (!expandHeader) {
+    //     delay = Number.isInteger(delay) ? delay * 10 : 1;
+    //     if (delay <= 100) return setTimeout(() => jobProcessIndicator(job, cabinet, delay), delay);
+    //     else throw new Error('Cabinet being processed does not have header');
+    //   }
+    //   const task = job.task();
+    //   const loadingCnt = du.find.down('.circle-loading-cnt', expandHeader);
+    //   const scope = {progress: task.progress, time: task.time,
+    //     size: '20px', color: '#f09a05', id: String.random()
+    //   }
+    //   loadingCnt.innerHTML = CabinetDisplay.loadingTemplate.render(scope);
+    //   (() => du.find.down('.time', loadingCnt).innerText = task.time())
+    //       .periodic(100, () => task.progress() === 100);
+    //   task.on.change(t => {
+    //     document.documentElement.style.setProperty('--percentDecimal'+scope.id, task.progress()/100);
+    //     document.documentElement.style.setProperty('--percent'+scope.id, task.progress() + '%');
+    //     loadingCnt.hidden = task.progress() === 100;
+    //     du.find.down('.progress', loadingCnt).innerText = Math.floor(task.progress());
+    //   })
+    // };
+    //
+    // Global.on.processing.cabinet(jobProcessIndicator);
   }
 }
 

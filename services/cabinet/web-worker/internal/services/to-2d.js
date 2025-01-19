@@ -1,12 +1,11 @@
 
 
-const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
-const Vector3D = require('../../../app-src/three-d/objects/vector.js');
+const {Polygon3D, Vector3D, Line3D} =
+    require('../../../../../public/js/utils/canvas/three-d/lib');
 const Parimeters = require('../../../../../public/js/utils/canvas/two-d/maps/parimeters.js');
 const Polygon2d = require('../../../../../public/js/utils/canvas/two-d/objects/polygon');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex');
-const Line3D = require('../../../app-src/three-d/objects/line.js')
 const dataTransferConfig = require('../math-data-transfer-config.json');
 const DTO = require('../../shared/data-transfer-object')(dataTransferConfig);
 const MFC = require('./modeling/modeling-function-configuration.js');

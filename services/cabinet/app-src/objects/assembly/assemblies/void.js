@@ -1,17 +1,15 @@
 
 const Cutter = require('./cutter.js');
 const Position = require('../../../position.js');
-const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
 const Cut = require('../../joint/joints/cut.js');
 const Joint = require('../../joint/joint.js');
 const Dado = require('../../joint/joints/dado.js');
 const Dependency = require('../../dependency.js');
 const PanelVoidIndex = require('./panel.js').VoidIndex;
-const Line3D = require('../../../three-d/objects/line.js');
-const Vector3D = require('../../../three-d/objects/vector.js');
-const Vertex3D = require('../../../three-d/objects/vertex.js');
-const Polygon3D = require('../../../three-d/objects/polygon.js');
 const Assembly = require('../assembly.js');
+
+const {BiPolygon, Line3D, Vector3D, Vertex3D, Polygon3D} =
+            require('../../../../../../public/js/utils/canvas/three-d/lib.js');
 
 let voidCount = 0;
 class Void extends Cutter.AutoConfigured {

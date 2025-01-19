@@ -1,9 +1,8 @@
 
 const PartInfo = require('./documents/part');
 const dataTransferConfig = require('../math-data-transfer-config.json');
-const Layer = require('../../../app-src/three-d/objects/layer.js');
-const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
-const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
+const {Layer, Polygon3D, Vertex3D} =
+    require('../../../../../public/js/utils/canvas/three-d/lib');
 const DTO = require('../../shared/data-transfer-object')(dataTransferConfig);
 const Utils = require('./modeling/utils/utils.js');
 const SectionPropertiesUtil = require('./modeling/utils/section-properties.js');

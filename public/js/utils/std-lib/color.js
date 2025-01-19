@@ -137,3 +137,7 @@ Color.rgb = getRgb;
 Color.hex = getHex;
 Color.rgb.percent = rgbPercent;
 Color.hex.short = getHexShortHand;
+
+Color.regex = /([a-z]{1,})|(${intRegStr},${intRegStr},${intRegStr})/;
+Color.fromString = (str) => null === str.match(Color.regex) ? null :
+                      Color.rgb(str.match(Color.regex)[0]);

@@ -54,18 +54,41 @@ Global = {
     }
     return CABINET;
   },
+
   target: (object) => {
-    if (!object && TARGET === undefined) {
-      TARGET = Global.group().objects[0];
-    }
     if (object && object !== TARGET) {
-      if (object instanceof Cabinet) Global.cabinet(object);
+      if (object instanceof Cabinet) Global.assembly(Global.cabinet(object));
+      else if (object instanceof Assembly) Global.assembly(object);
+      else if (object instanceof Group) Global.group(object);
+      else if (object instanceof Room) Global.room(object);
+      else Global.object(object);
       const details = {from: TARGET, to: object};
       TARGET = object;
       Global.trigger.change.target(details);
     }
+    if (!object && TARGET === undefined && Global.group().objects[0]) {
+      Global.target(Global.group().objects[0]);
+    }
     return TARGET;
-  }
+  },
+
+  object: (object) => {
+    if (object && object !== OBJECT) {
+      const details = {from: OBJECT, to: object};
+      OBJECT = object;
+      Global.trigger.change.target(details);
+    }
+    return OBJECT;
+  },
+  assembly: (object) => {
+    if (object && object !== ASSEMBLY) {
+      const details = {from: ASSEMBLY, to: object};
+      ASSEMBLY = object;
+      Global.trigger.change.target(details);
+    }
+    return ASSEMBLY;
+  },
+
 }
 
 
@@ -73,6 +96,8 @@ const Order = require('../objects/order.js');
 const Room = require('../objects/room.js');
 const Group = require('../objects/group.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
+const Assembly = require('../objects/assembly/assembly.js');
+const SimpleModel = require('../objects/simple/simple.js');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const Request = require('../../../../public/js/utils/request.js');
 
@@ -88,7 +113,18 @@ Object.defineProperty(Global, 'displays', {
   writable: false
 });
 CustomEvent.all(Global, 'load.order','(processing,change).(order,room,cabinet,group,target)');
-let ORDER, ROOM, GROUP, CABINET, TARGET;
+let ORDER, ROOM, GROUP, CABINET, TARGET, OBJECT, ASSEMBLY;
+Global.state = () => ({ORDER, ROOM, GROUP, CABINET, TARGET, OBJECT, ASSEMBLY});
+
+Global.target.is = {
+  order: () => Global.target() === ORDER,
+  room: () => Global.target() === ROOM,
+  group: () => Global.target() === GROUP,
+  object: () => Global.target() === OBJECT,
+  assembly: () => Global.target() === ASSEMBLY,
+  cabinet: () => Global.target() === CABINET
+}
+
 Global.order.static = (name) => {
   Request.get(`/cabinet/json/orders/${name}.json`,
     (json) =>

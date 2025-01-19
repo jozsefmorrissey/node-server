@@ -1,9 +1,9 @@
 
 const DEFAULT_TOLERANCE = .0001;
-// TODO: make tolerance comparisons based off of percent difference
-// const infinity = 1000000;
-// const changeToInfinity = (value) =>
-//   value < infinity && value > -infinity ? value : value * Infinity;
+
+const infinity = 10000000000;
+const changeToInfinity = (value) =>
+  value < infinity && value > -infinity ? value : value * Infinity;
 
 
 function round(val) {
@@ -54,6 +54,7 @@ function boundsFunc(attr, attributeMap, tolerance, absoluteValue, modulus) {
   return (elem) => {
     const tol = props.tolerance;
     let value = props.singleValue ? elem : Object.pathValue(elem, attr);
+    value = changeToInfinity(value);
     if (props.absoluteValue && value < 0) value *= -1;
     let lower, upper, center;
     if (Number.NaNfinity(value)) return {value, lower: value, upper: value, id: rangeStr(Infinity * value, Infinity * value)};
@@ -125,7 +126,8 @@ function withinBounds(attr, attributeMap, tolerance, absoluteValue, modulus) {
       }
     }
     if (value1 === value2) return true;
-   return Math.difference(1, (value1 / value2)) < props.tolerance;  }
+   return Math.difference(1, (value1 / value2)) < props.tolerance;
+  }
   func.tolerance = props.tolerance;
   func.absoluteValue = props.absoluteValue;
   func.singleValue = props.singleValue;

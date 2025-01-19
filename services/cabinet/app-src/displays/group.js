@@ -155,26 +155,26 @@ GroupDisplay.DecisionInputTree = (onSubmit, group) => {
 
   return dit;
 }
-du.on.match('click', `.group-display-header`, (target) => {
-  const allBodys = du.find.all('.group-display-body');
-  for (let index = 0; index < allBodys.length; index += 1) {
-    allBodys[index].hidden = true;
-  }
-  const allHeaders = du.find.all('.group-display-header');
-  for (let index = 0; index < allHeaders.length; index += 1) {
-    du.class.remove(allHeaders[index], 'active');
-  }
-  du.class.add(target, 'active');
-  const body = du.find.closest('.group-display-body', target);
-  const groupDisplayId = du.find.up('[group-display-id]', target).getAttribute('group-display-id');
-  const groupDisplay = GroupDisplay.get(groupDisplayId);
-  const group = Group.get(target.getAttribute('group-id'));
-  Global.group(group);
-  body.innerHTML = groupDisplay.bodyHtml(group);
-  groupDisplay.active(group);
-  groupDisplay.cabinetDisplay(group).refresh();
-  body.hidden = false;
-});
+// du.on.match('click', `.group-display-header`, (target) => {
+//   const allBodys = du.find.all('.group-display-body');
+//   for (let index = 0; index < allBodys.length; index += 1) {
+//     allBodys[index].hidden = true;
+//   }
+//   const allHeaders = du.find.all('.group-display-header');
+//   for (let index = 0; index < allHeaders.length; index += 1) {
+//     du.class.remove(allHeaders[index], 'active');
+//   }
+//   du.class.add(target, 'active');
+//   const body = du.find.closest('.group-display-body', target);
+//   const groupDisplayId = du.find.up('[group-display-id]', target).getAttribute('group-display-id');
+//   const groupDisplay = GroupDisplay.get(groupDisplayId);
+//   const group = Group.get(target.getAttribute('group-id'));
+//   Global.group(group);
+//   body.innerHTML = groupDisplay.bodyHtml(group);
+//   groupDisplay.active(group);
+//   groupDisplay.cabinetDisplay(group).refresh();
+//   body.hidden = false;
+// });
 
 GroupDisplay.valueUpdate = (target) => {
   const group = Group.get(target.getAttribute('group-id'));
@@ -182,7 +182,7 @@ GroupDisplay.valueUpdate = (target) => {
   target.value = group.name(value);
 }
 
-du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);
+// du.on.match('change', `[group-id].group-input`, GroupDisplay.valueUpdate);
 
 GroupDisplay.headTemplate = new $t('group/head');
 GroupDisplay.bodyTemplate = new $t('group/body');

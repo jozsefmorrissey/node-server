@@ -5,13 +5,8 @@ const ToolingInfo = require('./tooling-information');
 const Utils = require('../modeling/utils/utils.js');
 const ToleranceMap = require('../../../../../../public/js/utils/tolerance-map.js');
 
-const Vertex3D = require('../../../../app-src/three-d/objects/vertex.js');
-const Vector3D = require('../../../../app-src/three-d/objects/vector.js');
-const Line3D = require('../../../../app-src/three-d/objects/line.js');
-const Plane = require('../../../../app-src/three-d/objects/plane.js');
-const Layer = require('../../../../app-src/three-d/objects/layer.js');
-const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
-const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js')
+const {Vertex3D, Vector3D, Line3D, Plane, Layer, Polygon3D, BiPolygon} =
+require('../../../../../../public/js/utils/canvas/three-d/lib');
 
 const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex.js');

@@ -2,7 +2,7 @@
 
 
 const Assembly = require('../assembly.js');
-const BiPolygon = require('../../../three-d/objects/bi-polygon.js');
+const {BiPolygon} = require('../../../../../../public/js/utils/canvas/three-d/lib.js');
 const Dependency = require('../../dependency');
 
 

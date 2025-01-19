@@ -1,15 +1,15 @@
 
-const Polygon2D = require('../../../../../public/js/utils/canvas/two-d/objects/polygon.js');
-const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
+const Polygon2D = require('../../two-d/objects/polygon.js');
+const Line2d = require('../../two-d/objects/line.js');
 const Line3D = require('./line');
 const Vertex3D = require('./vertex');
 const Vector3D = require('./vector');
 const Plane = require('./plane');
-const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
-const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const ToleranceMap = require('../../../tolerance-map.js');
+const Tolerance = require('../../../tolerance.js');
 const within = Tolerance.within(.0000001);
 
-const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
+const CSG = require('../../../3d-modeling/csg.js');
 const NormalMagnitudeIsZero = 'InvalidPolygon: normal vector magnitude === 0';
 const times = {count: 0, curr: {total: 0}, old: {total: 0}};
 
@@ -855,60 +855,54 @@ class Polygon3D {
     // TODO: Needs work. I think just polys that share multipleLines...
     this.merge = (other, recursive) => {
       const pm = printMerge;
-      if (!this.normal().parrelle(other.normal())) return;
-      // try {
-      //   const combined = new Polygon3D(this.vertices().concat(other.vertices()));
-      //   if (!combined.normal.parrelle(normal)) return;
-      // } catch (e) {
-      //   return;
+      const normal = this.normal();
+      if (!normal.parrelle(other.normal())) return;
+      // if (this.equals(other)) return this.copy();
+      const merged = new Polygon3D.Parimeter3D.Experimental(this.lines().concat(other.lines()), normal);
+      return merged.length === 1 ? merged[0] : null;
+      // const lineMap = this.lineMap();
+      // const allOtherLines = other.lines();
+      // let merged;
+      // for (let index = 0; !merged && index < allOtherLines.length; index += 1) {
+      //   const curr = allOtherLines[index];
+      //   let vertices, thisLines, otherLines;
+      //   const matches = lineMap.matches(curr);
+      //   if (matches !== null) {
+      //     for (let index = 0; !merged && index < matches.length; index++) {
+      //       const target = matches[index];
+      //       const combineInfo = target.combineOrder(curr);
+      //       if (combineInfo && combineInfo.shorterBy > .000001) {
+      //         let line1 = new Line3D(combineInfo[0], combineInfo[1]);
+      //         let line2 = new Line3D(combineInfo[2], combineInfo[3]);
+      //         if (minVertDist(target, line1) !== 0) {
+      //           const temp = line1;line1 = line2;line2 = temp;
+      //           if (minVertDist(target, line1) !== 0)
+      //             throw new Error("10/30/2023 This Shouldn't consider removing if it has not been a problem");
+      //         }
+      //         let thisLines = this.getLines(target[0], target[1]);
+      //         if (!line1.isPoint()) {
+      //           if (!line1[0].equals(thisLines[thisLines.length - 1][1])) line1 = line1.negitive();
+      //           thisLines.push(line1);
+      //         }
+      //         if (!line2.isPoint()) {
+      //           if (!line2[1].equals(thisLines[0][0])) line2 = line2.negitive();
+      //           thisLines = [line2].concat(thisLines);
+      //         }
+      //         let otherLines = other.getLines(curr[0], curr[1]);
+      //         if (otherLines[0][0].equals(thisLines[0][0])) otherLines = Line3D.reverse(otherLines);
+      //         const startCheck = thisLines[0][0].equals(otherLines[otherLines.length - 1][1]);
+      //         const middleCheck = thisLines[thisLines.length - 1][1].equals(otherLines[0][0]);
+      //         vertices = Line3D.vertices(cleanLines(otherLines.concat(thisLines)), false);
+      //         merged = new Polygon3D(removeBackTractedVertices(vertices));
+      //         merged.normal();
+      //       }
+      //     }
+      //   }
       // }
-      if (this.equals(other)) return this.copy();
-      // const thisPlane = this.toPlane();
-      // const otherPlane = other.toPlane();
-      // if (!thisPlane.equivalent(otherPlane)) return;
-      const lineMap = this.lineMap();
-      const allOtherLines = other.lines();
-      let merged;
-      for (let index = 0; !merged && index < allOtherLines.length; index += 1) {
-        const curr = allOtherLines[index];
-        let vertices, thisLines, otherLines;
-        const matches = lineMap.matches(curr);
-        if (matches !== null) {
-          for (let index = 0; !merged && index < matches.length; index++) {
-            const target = matches[index];
-            const combineInfo = target.combineOrder(curr);
-            if (combineInfo && combineInfo.shorterBy > .000001) {
-              let line1 = new Line3D(combineInfo[0], combineInfo[1]);
-              let line2 = new Line3D(combineInfo[2], combineInfo[3]);
-              if (minVertDist(target, line1) !== 0) {
-                const temp = line1;line1 = line2;line2 = temp;
-                if (minVertDist(target, line1) !== 0)
-                  throw new Error("10/30/2023 This Shouldn't consider removing if it has not been a problem");
-              }
-              let thisLines = this.getLines(target[0], target[1]);
-              if (!line1.isPoint()) {
-                if (!line1[0].equals(thisLines[thisLines.length - 1][1])) line1 = line1.negitive();
-                thisLines.push(line1);
-              }
-              if (!line2.isPoint()) {
-                if (!line2[1].equals(thisLines[0][0])) line2 = line2.negitive();
-                thisLines = [line2].concat(thisLines);
-              }
-              let otherLines = other.getLines(curr[0], curr[1]);
-              if (otherLines[0][0].equals(thisLines[0][0])) otherLines = Line3D.reverse(otherLines);
-              const startCheck = thisLines[0][0].equals(otherLines[otherLines.length - 1][1]);
-              const middleCheck = thisLines[thisLines.length - 1][1].equals(otherLines[0][0]);
-              vertices = Line3D.vertices(cleanLines(otherLines.concat(thisLines)), false);
-              merged = new Polygon3D(removeBackTractedVertices(vertices));
-              merged.normal();
-            }
-          }
-        }
-      }
-
-      if (merged) {
-        return merged;
-      }
+      //
+      // if (merged) {
+      //   return merged;
+      // }
     }
 
     this.viewFromVector = (vector) => Polygon3D.viewFromVector([this], vector)[0];
@@ -1225,6 +1219,10 @@ Polygon3D.merge = (polygons) => {
 
   polygons.deleteAll();
   tolMap.forEachSet((polys) => {
+    const minIndex = polys.minIndex(p => p.area())
+    const target = polys.splice(minIndex,1)[0];
+    Polygon3D.distanceSort(target, polys);
+    polys.splice(0,0,target);
     let currIndex = 0;
     while (currIndex < polys.length - 1) {
       const target = polys[currIndex];
@@ -1300,7 +1298,7 @@ Polygon3D.nonPerpindicularSets = (polygons, tolerance) => {
 }
 
 Polygon3D.toThreeView = (polygons, normals, gap) => {
-  const ThreeView = require('../../../../../public/js/utils/canvas/two-d/objects/three-view.js');
+  const ThreeView = require('../../objects/three-view.js');
   return new ThreeView(polygons, normals, gap);
 }
 
@@ -1520,6 +1518,26 @@ Polygon3D.toDrawString = (polygons, ...colors) => {
   return str;
 }
 
+const vertRegG = new RegExp(Vertex3D.regex.source, 'g');
+
+Polygon3D.fromString = (str, unit) => {
+  const vertStrs = str.match(vertRegG);
+  if (!vertStrs || vertStrs.length < 3) return null;
+  const verts = vertStrs.map((str) =>
+        Vertex3D.fromString(str, unit));
+  return new Polygon3D(verts);
+}
+const coloredVertexReg = new RegExp(`(?:${Color.regex.mls()})${Vertex3D.regex.mls()}`, 'g');
+Polygon3D.regex = new RegExp(`(\\[)((?:(?:${Color.regex.mls()}|)${Vertex3D.regex.mls()}(?:,|)){3,})(\\])`);
+Polygon3D.regex.model = (string) => {
+  const poly = Polygon3D.fromString(string);
+  if (!poly) return null;
+  const color = Color.fromString(string);
+  const csg = new CSG.Polygon.Enclosed(poly.vertices(), null, color);
+  const coloredVertices = string.match(coloredVertexReg);
+  if (coloredVertices) coloredVertices.forEach(s => csg.add(Vertex3D.regex.model(s)));
+  return csg;
+};
 
 const appliableVector = (line, excludeVect) => {
   let vect = line.vector();
@@ -1696,6 +1714,25 @@ function intersectionMap (lines) {
     }
   }
   return map;
+}
+
+Polygon3D.distanceSort = (target, polygons) => {
+  const dems = target.demensions();
+  const norms = target.normals();
+  const ts = {
+    c: target,
+    l: target.translate(norms.x.scale(-dems.x), true),
+    r: target.translate(norms.x.scale(dems.x), true),
+    u: target.translate(norms.y.scale(dems.y), true),
+    d: target.translate(norms.y.scale(-dems.y), true),
+  }
+  const t = target;
+  const distMapList = polygons.map((p,i) => ({
+    poly: p, dist: ts.c.distance(p) + ts.l.distance(p) + ts.r.distance(p) +
+                    ts.d.distance(p) + ts.u.distance(p)
+  }));
+  distMapList.sortByAttr('dist');
+  return polygons.copy(distMapList.map(o=>o.poly));
 }
 
 Polygon3D.midRange = (...polys) => {

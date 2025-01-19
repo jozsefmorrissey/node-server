@@ -35,8 +35,7 @@ const Global = require('../../services/global.js');
 const PanZoom = require('../../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 const Divider = require('../../objects/assembly/assemblies/divider.js');
 const ExtraObjects = require('../draw/extra-objects');
-const Line3D = require('../../three-d/objects/line.js');
-const Vector3D = require('../../three-d/objects/vector.js');
+const {Line3D, Vector3D} = require('../../../../../public/js/utils/canvas/three-d/lib');
 
 let template;
 let modifyingOpening = false;

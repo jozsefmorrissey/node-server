@@ -740,9 +740,10 @@ CSG.Point = function (center, radius, color) {
 }
 
 function vecotrOvertexModel(start, end, model, options) {
-  if (Array.isArray(end) || options.lineDisplayType === CSG.Line.DISPLAY_TYPES.LINE_ONLY) return model;
+  const type = options.type || CSG.Line.type();
+  if (Array.isArray(end) || type === CSG.Line.TYPES.LINE_ONLY) return model;
   let color = end.color || options.color;
-  if (CSG.Line.DISPLAY_TYPES.VECTOR === options.lineDisplayType &&
+  if (CSG.Line.TYPES.VECTOR === type &&
           end instanceof CSG.Vector) {
     const maxLen = end.distance(new CSG.Vector(start)) / 2;
     const unit = end.minus(new CSG.Vector(start)).unit().times(maxLen > 6 ? 6 : maxLen);
@@ -752,6 +753,7 @@ function vecotrOvertexModel(start, end, model, options) {
     return new CSG.Point(end, null, color).union(model);
   }
 }
+
 
 CSG.Line = function (options) {
   options ||= {};
@@ -767,9 +769,12 @@ CSG.Line = function (options) {
   return vecotrOvertexModel(start, end, model, options);
 }
 
-CSG.Line.DISPLAY_TYPES = {};
-CSG.Line.DISPLAY_TYPES.LINE_ONLY = 'lineOnly';
-CSG.Line.DISPLAY_TYPES.VECTOR = 'vector';
+CSG.Line.TYPES = {};
+CSG.Line.TYPES.LINE_ONLY = 'LINE_ONLY';
+CSG.Line.TYPES.VECTOR = 'VECTOR';
+let _type = CSG.Line.TYPES.POINTS = 'POINTS';
+CSG.Line.type = (type) => Object.keys(CSG.Line.TYPES).indexOf(type) !== -1 ?
+      (_type = CSG.Line.TYPES[type]) : _type;
 
 CSG.Rectangle = function (demensions, center, yVector, xVector) {
   yVector = new CSG.Vector(yVector || [0,1,0]).unit();

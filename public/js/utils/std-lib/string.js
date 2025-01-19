@@ -120,10 +120,15 @@ Function.safeStdLibAddition(String, 'replaceIterativly',  function (exp, replace
   return str;
 });
 
-Function.safeStdLibAddition(String, 'count',  function (needle, length) {
-  const clean = RegExp.escape(this.substring(0, length));
-  const reg = new RegExp(`[^${RegExp.escape(needle)}]`, 'g');
-  return clean.replace(reg, '').length
+const regStr = (regOstr) => regOstr instanceof RegExp ? regOstr : RegExp.escape(regOstr);
+Function.safeStdLibAddition(String, 'count',  function (needles, length) {
+  let regex;
+  if (Array.isArray(needles)) {
+    regex = new RegExp(needles.map(regStr).join('|'), 'g');
+  } else {
+    regex = new RegExp(regStr(needles), 'g');
+  }
+  return this.match(regex, '').length
 });
 
 

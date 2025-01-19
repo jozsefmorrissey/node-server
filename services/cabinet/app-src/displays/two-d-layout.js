@@ -453,7 +453,7 @@ const Controls2d = require('controls-2d');
 let panZ;
 let controls2d;
 function init() {
-  const canvas = document.getElementById('two-d-model-canvas');
+  const canvas = du.find('#room-2d>canvas');
   const height = du.convertCssUnit('80vh');
 
   canvas.height = height;
@@ -464,7 +464,8 @@ function init() {
 
   panZ.on.mousedown(onMousedown);
   panZ.on.mouseup(onMouseup);
-  controls2d = new Controls2d('#two-d-model .orientation-controls', getLayout, panZ);
+  const controlElem = du.find.closest('.orientation-controls', canvas);
+  controls2d = new Controls2d(controlElem, getLayout, panZ);
   // draw(canvas);
   TwoDLayout.panZoom = panZ;
   // du.on.match('keycombo(Control,z)', '*', undo);

@@ -1,7 +1,6 @@
 
-const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
-const Line3D = require('../../../../../app-src/three-d/objects/line.js');
-const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
+const {BiPolygon, Vertex3D, Line3D} =
+require('../../../../../../../public/js/utils/canvas/three-d/lib');
 
 class CabinetUtil {
   constructor (cabRmdto, env){

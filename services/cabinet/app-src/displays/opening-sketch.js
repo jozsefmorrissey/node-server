@@ -6,10 +6,9 @@ const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/verte
 const Polygon2d = require('../../../../public/js/utils/canvas/two-d/objects/polygon.js');
 const Parimeters2d = require('../../../../public/js/utils/canvas/two-d/maps/parimeters.js');
 const EscapeMap = require('../../../../public/js/utils/canvas/two-d/maps/escape.js');
-const Vector3D = require('../three-d/objects/vector.js');
-const Vertex3D = require('../three-d/objects/vertex.js');
-const Line3D = require('../three-d/objects/line.js');
-const Polygon3D = require('../three-d/objects/polygon.js');
+
+const {Vector3D, Vertex3D, Line3D, Polygon3D} = require('../../../../public/js/utils/canvas/three-d/lib');
+
 const PanZoom = require('../../../../public/js/utils/canvas/two-d/pan-zoom.js');
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');

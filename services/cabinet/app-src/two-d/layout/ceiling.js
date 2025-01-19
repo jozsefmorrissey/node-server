@@ -1,6 +1,5 @@
 
-const Vertex3D = require('../../three-d/objects/vertex.js');
-const Polygon3D = require('../../three-d/objects/polygon.js');
+const {Polygon3D, Vertex3D} = require('../../../../../public/js/utils/canvas/three-d/lib.js');
 
 class Ceiling {
   constructor(layout) {

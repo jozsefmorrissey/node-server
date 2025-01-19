@@ -450,8 +450,6 @@ canvas {
 
 #model-display-cnt {
   display: inline-flex;
-  max-height: 80vh;
-  overflow: auto;
 }
 
 .border-left {
@@ -486,13 +484,7 @@ canvas {
 
 #model-cnt {
   background-position: -1px -1px;
-  position: fixed;
-  right: 0;
-  top: 0;
-  z-index: 20;
-  min-height: 50vh;
-  max-width: 50vw;
-  /* background-color: #ffffff94; */
+  display: inline-flex;
 }
 
 #display-menu {
@@ -515,11 +507,6 @@ canvas {
   width: fit-content;
   display: inline-flex;
   position: relitive;
-}
-
-#order-cnt {
-  z-index: 10;
-  padding: 30pt 0;
 }
 
 .upside-down {
@@ -561,20 +548,24 @@ canvas {
   right: 0;
 }
 
-#two-d-model-canvas {
+#three-d-model {
+  position: relative;
+}
+
+#room-2D {
   width: 80vh;
   height: 80vh;
 }
 
-#model-display-cnt {
-  margin-top: 25pt;
-  float: right;
-}
-
+.dropdown,
 .chev-dropdown {
   border-style: solid;
   border-width: 0 0 0 3px;
   padding-left: 3pt;
+}
+
+.chev-dropdown-toggle {
+  cursor: pointer;
 }
 
 .hidden {
@@ -768,6 +759,13 @@ canvas {
 .orientation-controls > div {
   font-size: 20pt;
   position: absolute;
+  background-color: white;
+  border-radius: 100px;
+  opacity: 25%;
+}
+
+.orientation-controls > div:hover {
+  opacity: 100%;
 }
 
 .orientation-arrows-table, .orientation-arrows-table > tbody,
@@ -950,4 +948,56 @@ th.edge-ref>div {
 
 #disp-canvas-room {
   margin: auto;
+}
+
+/*-------------------- graphical css -----------------------*/
+.edit-cnt {
+  padding: 5pt 5pt 0 10pt;
+}
+
+.add-cnt {
+  padding-left: 5pt;
+}
+
+#display-tabs {
+  display: flex;
+}
+
+#display-tabs > div {
+  width: 50%;
+}
+
+#edit-display,
+#model-cnt canvas {
+  height: 80vh;
+  width: 80vh;
+}
+
+.content-cnt {
+  margin-top: 5pt;
+}
+
+#view-html-cnt {
+  border-left: solid;
+  border-width: 1px;
+  padding-left: 5px;
+}
+
+#display-cnt {
+  border-left: solid;
+  border-width: 1px;
+  margin-left: 5px;
+}
+
+#canvas-cnt {
+  padding: 0 5px;
+}
+
+i:hover,
+.selector:hover,
+i.active,
+.selector.active {
+  background: #0119ff70;
+  border-radius: 2pt;
+  cursor: pointer;
 }

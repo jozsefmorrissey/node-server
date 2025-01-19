@@ -66,11 +66,10 @@ function clean(text) {
   let lines = text.split('\n');
   lines = lines.map(l => l.replace(zeroReg, 0)
                       .replace(negInfinityReg, Math.floor(Number.MIN_SAFE_INTEGER/10000000000))
-                      .replace(infinityReg, Number.MAX_SAFE_INTEGER))
-                      .filter(l => l);
+                      .replace(infinityReg, Number.MAX_SAFE_INTEGER));
 
   parseSnapShots(lines);
-  return lines.map(l => l.replace(commentReg, ''));
+  return lines.map(l => l.replace(commentReg, '')).filter(l => l);
 }
 
 let lastHash;

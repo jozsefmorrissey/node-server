@@ -558,7 +558,6 @@ Polygon2d.lines = (...polys) => {
 
 
 
-const vertReg = Vertex2d.regex;
 const vertRegG = new RegExp(Vertex2d.regex.source, 'g');
 
 Polygon2d.fromString = (str, unit) => {

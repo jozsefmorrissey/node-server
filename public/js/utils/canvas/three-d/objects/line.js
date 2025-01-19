@@ -1,12 +1,12 @@
 
 const Vector3D = require('./vector');
 const Vertex3D = require('./vertex');
-const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
+const Line2d = require('../../two-d/objects/line');
 const Matrix = require('./matrix.js');
 const FixedValue = require('./fixed-value');
-const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+const ToleranceMap = require('../../../tolerance-map.js');
 const tol = .0001;
-const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const Tolerance = require('../../../tolerance.js');
 const withinTol = new Tolerance(tol).within;
 const withinHundreth = new Tolerance(.01).within;
 const withinThousandth = new Tolerance(.001).within;
@@ -42,8 +42,9 @@ class Line3D {
     this.isDirectional = () => this.isDirectional.anti() ^ this.isDirectional.co();
     this.isDirectional.co = () => this[0].DIRECTIONAL !== true && this[1].DIRECTIONAL === true;
     this.isDirectional.anti = () => this[1].DIRECTIONAL !== true && this[0].DIRECTIONAL === true;
-    this.directional = (before, after) => (((this[0].DIRECTIONAL = before ? true : false) &
-                        (this[1].DIRECTIONAL = after ? true : false)) && this ) || this;
+
+    this.directional = (before, after) => [Boolean.is(before) ? (this[0].DIRECTIONAL = before) : this[0].DIRECTIONAL,
+                              Boolean.is(after) ? (this[1].DIRECTIONAL = after) : this[1].DIRECTIONAL];
 
     this.invert = (condition) => {
       if (condition === undefined || condition) {
@@ -951,6 +952,7 @@ const quadrantInfoObj = (target, dirVect) => (line) => {
 };
 
 Line3D.quadrantSort = (lines, target, normal, ccw) => {
+  lines = lines.map(l => l.clone());
   const multiplier = ccw === true ? 1 : -1;
   if (target === undefined) throw new Error('Target can be auto configured but has not been implemented because it seams like the sort of thing that you want to define');
   if (normal === undefined) throw new Error('Normal can be auto configured but has not been implemented because it seams like the sort of thing that you want to define');
@@ -1047,7 +1049,7 @@ Line3D.slice = (line, lines, segment) => {
   const furthest = intersections.max(l => l.distance(line[0]));
   intersections.sort(Line3D.distanceSort(furthest));
   const sliced = intersections.map((int, i) => i < intersections.length - 1 &&
-                                          new Line3D(int, intersections[i+1]))
+                                          new Line3D(int.clone(), intersections[i+1].clone()))
                                           .slice(0, intersections.length - 1);
   return sliced.filter(l=>!l.isPoint());
 }
@@ -1111,8 +1113,27 @@ Line3D.longest = (mixAndMatch, ...vertsOlines) => {
 Line3D.from2D = (lines2d, z) =>
   lines2d.map(l => new Line3D([l[0].x, l[0].y, z || 0], [l[1].x, l[1].y, z || 0]));
 
-Line3D.fromString = (str) =>
-      new Line3D(...str.split(/\)\s*,\s*\(/).map(Vertex3D.fromString));
+Line3D.regex = new RegExp(`(\\[|\\()\\s*(${Vertex3D.regex.mls()})\\s*,\\s*(${Vertex3D.regex.mls()})\\s*(\\)|\\])`);
+Line3D.fromString = (str, unit) => {
+  const match = Line3D.regex.object(str, 'open', '0', '1', 'close');
+  if (match === null) return null;
+  console.log(match);
+  const line = new Line3D(Vertex3D.fromString(match[0], unit),
+                          Vertex3D.fromString(match[1], unit));
+  line.directional(match.open === '(', match.close === ')')
+  return line;
+}
+
+Line3D.regex.model = (string) => {
+  const match = string.match(Line3D.regex);
+  return new CSG.Line({
+    start: match[1] === '[' ? Vertex3D.fromString(match[2]) : Vector3D.regex.model(match[2]),
+    end: match[4] === ']' ? Vertex3D.fromString(match[3]) : Vector3D.regex.model(match[3]),
+    color: Color.fromString(string)
+  })
+};
+
+
 
 
 module.exports = Line3D;

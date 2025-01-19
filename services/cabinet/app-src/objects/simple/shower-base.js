@@ -1,10 +1,9 @@
-const BiPolygon = require('../../three-d/objects/bi-polygon');
-const Vertex3D = require('../../three-d/objects/vertex');
+const {BiPolygon, Vertex3D} = require('../../../../../public/js/utils/canvas/three-d/lib.js');
 const SimpleModel = require('./simple');
 
 class ShowerBase extends SimpleModel {
-  constructor(layout) {
-    super(layout);
+  constructor(layout, group) {
+    super(layout, group);
     this.color('#9e9c8a')
   }
 }

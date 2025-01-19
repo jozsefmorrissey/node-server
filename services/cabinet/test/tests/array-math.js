@@ -1,12 +1,11 @@
 const Test = require('../../../../public/js/utils/test/test').Test;
-const Matrix = require('../../app-src/three-d/objects/matrix.js');
-const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
 const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 
 const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
 const GL = require('../../../../public/js/utils/3d-modeling/lightgl.js');
-const FixedValue = require('../../app-src/three-d/objects/fixed-value');
+
+const {Matrix, Vertex3D} = require('../../../../public/js/utils/canvas/three-d/lib');
 
 
 Test.add('Array: translate',(ts) => {

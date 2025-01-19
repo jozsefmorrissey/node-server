@@ -1,7 +1,7 @@
 
-const Line3D = require('../../../app-src/three-d/objects/line.js');
+const {Line3D, Parimeter3D} =
+    require('../../../../../public/js/utils/canvas/three-d/lib');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
-const Parimeter3D = require('../../../app-src/three-d/objects/parimeter.js');
 
 const union = (assemIds, env, filter, concat, type) => {
   let csg = new CSG();
@@ -31,7 +31,7 @@ const unionModels = (payload, env) => {
   const external = union(assemIds, env, part =>
               part.id.match(/Door|Front|Handle/) ||
               !part.locationCode.match(/_S(_|:)/), true);
-  const boxOnly = union(assemIds, env, boxOnlyFilter, true);
+  const boxOnly = union(assemIds, env, boxOnlyFilter);
   const boxOnlyCuts = union(assemIds, env, boxOnlyFilter, true, 'cut');
   const silhouette = Parimeter3D.fromCSG(boxOnlyCuts, {i:0,j:1,k:0});
   const all = union(assemIds, env, cabinetPartFilter, true);

@@ -1,6 +1,6 @@
 
-const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
-const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
+const {Polygon3D, Vector3D} =
+    require('../../../../../../../public/js/utils/canvas/three-d/lib');
 const ChannelInfo = require('./channel');
 
 class RabbitInfo extends ChannelInfo {

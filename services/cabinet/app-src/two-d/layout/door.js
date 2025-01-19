@@ -1,7 +1,7 @@
 
 const OnWall = require('on-wall');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
-const Polygon3D = require('../../three-d/objects/polygon.js');
+const {Polygon3D} = require('../../../../../public/js/utils/canvas/three-d/lib');
 
 class Door2D extends OnWall {
   constructor(json) {

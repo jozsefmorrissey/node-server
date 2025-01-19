@@ -1,7 +1,7 @@
 
 const ToleranceMap = require('../../../tolerance-map.js');
 const Tolerance = require('../../../tolerance.js');
-const tol = .01;
+const tol = .0001;
 const within = Tolerance.within(tol);
 
 

@@ -1,7 +1,6 @@
 const Object3D = require('../object');
-const Vertex3D = require('../../objects/vertex.js');
-const Vector3D = require('../../objects/vector.js');
-const Line3D = require('../../objects/line.js');
+const {Vertex3D, Vector3D, Line3D} =
+    require('../../../../../../public/js/utils/canvas/three-d/lib');
 const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Assembly = require('../../../objects/assembly/assembly.js');

@@ -1,5 +1,5 @@
 
-const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
+const {BiPolygon} = require('../../../../../../../public/js/utils/canvas/three-d/lib');
 const SimpleModels = require('../generic-models');
 
 function baseCenter(rMdto, environment, parentBiPoly) {

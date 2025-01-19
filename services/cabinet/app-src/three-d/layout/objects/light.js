@@ -1,6 +1,6 @@
 
 const Object3D = require('../object');
-const Vector3D = require('../../objects/vector.js');
+const Vector3D = require('../../../../../../public/js/utils/canvas/three-d/objects/vector.js');
 
 class Light3D extends Object3D {
   constructor(layout, radius, center) {

@@ -1,9 +1,8 @@
 
-const Line3D = require('../../../../app-src/three-d/objects/line.js');
-const Vector3D = require('../../../../app-src/three-d/objects/vector.js');
-const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
-const Vertex3D = require('../../../../app-src/three-d/objects/vertex.js');
-const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
+
+const {Line3D, Vector3D, BiPolygon, Vertex3D, Polygon3D} =
+      require('../../../../../../public/js/utils/canvas/three-d/lib');
+
 const OpeningToeKick = require('./utils/opening-toe-kick');
 const Divider = require('./utils/divider');
 const SimpleModels = require('./generic-models');

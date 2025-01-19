@@ -1,8 +1,8 @@
 const StringMathEvaluator = require('../../../../../public/js/utils/string-math-evaluator.js');
 const Position = require('../../position.js');
-const Vertex3D = require('../../three-d/objects/vertex.js');
-const Vector3D = require('../../three-d/objects/vector.js');
-const Line3D = require('../../three-d/objects/line.js');
+
+const {Vertex3D, Vector3D, Line3D} = require('../../../../../public/js/utils/canvas/three-d/lib');
+
 const KeyValue = require('../../../../../public/js/utils/object/key-value.js');
 const FunctionCache = require('../../../../../public/js/utils/services/function-cache.js');
 const Joint = require('../joint/joint');

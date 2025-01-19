@@ -12,6 +12,7 @@ function arraySet(array, values, start, end) {
   return array;
 }
 
+Function.safeStdLibAddition(Array, 'isItterable', (itterable) => itterable && itterable[Symbol.iterator] instanceof Function, true);
 Function.safeStdLibAddition(Array, 'set',   arraySet, true);
 Function.safeStdLibAddition(Array, 'set',   function (values, start, end) {return arraySet(this, values, start, end)});
 

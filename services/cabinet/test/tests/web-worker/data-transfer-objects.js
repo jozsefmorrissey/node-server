@@ -8,12 +8,8 @@ const Jobs = require('../../../web-worker/external/jobs');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 
-const Vector3D = require('../../../app-src/three-d/objects/vector.js');
-const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
-const Line3D = require('../../../app-src/three-d/objects/line.js');
-const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
-const Plane = require('../../../app-src/three-d/objects/plane.js');
-const BiPolygon = require('../../../app-src/three-d/objects/bi-polygon.js');
+const {Vector3D, Vertex3D, Line3D, Polygon3D, Plane, BiPolygon} =
+      require('../../../../../public/js/utils/canvas/three-d/lib');
 
 const DTO = require('../../../web-worker/external/data-transfer-object.js');
 const RTO = require('../../../web-worker/shared/reconnect-transfer-object');

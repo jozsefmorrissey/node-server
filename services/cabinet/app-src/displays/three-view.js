@@ -4,9 +4,9 @@ const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils');
 const Layout2D = require('../two-d/layout/layout.js')
 const Draw2D = require('../../../../public/js/utils/canvas/two-d/draw.js');
-const Polygon3D = require('../three-d/objects/polygon.js');
-const Line3D = require('../three-d/objects/line.js');
-const BiPolygon = require('../three-d/objects/bi-polygon.js');
+
+const {Polygon3D, Line3D, BiPolygon} = require('../../../../public/js/utils/canvas/three-d/lib');
+
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
 const PanZoomClickMeasure = require('../../../../public/js/utils/canvas/two-d/pan-zoom-click-measure.js');
@@ -154,7 +154,7 @@ class ThreeView extends Lookup {
     }
 
     function init() {
-      const canvas = du.id('three-view');
+      const canvas = du.find('#object-2d>canvas');
       draw = new Draw2D(canvas);
 
       hovermap = new HoverMap2d();

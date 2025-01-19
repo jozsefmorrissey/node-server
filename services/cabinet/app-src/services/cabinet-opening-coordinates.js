@@ -1,8 +1,7 @@
 
-const Line3D = require('../three-d/objects/line.js');
-const Vertex3D = require('../three-d/objects/vertex.js');
-const Polygon3D = require('../three-d/objects/polygon.js');
-const BiPolygon = require('../three-d/objects/bi-polygon.js');
+const {Line3D, Vertex3D, Polygon3D, BiPolygon} =
+          require('../../../../public/js/utils/canvas/three-d/lib.js');
+
 const Cutter = require('../objects/assembly/assemblies/cutter.js');
 const Panel = require('../objects/assembly/assemblies/panel.js');
 const Cut = require('../objects/joint/joints/cut.js');

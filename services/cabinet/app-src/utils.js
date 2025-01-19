@@ -1,8 +1,5 @@
 
-const Vertex3D = require('./three-d/objects/vertex');
-const Vector3D = require('./three-d/objects/vector');
-const Line3D = require('./three-d/objects/line');
-
+const {Vector3D, Vertex3D, Line3D} = require('../../../public/js/utils/canvas/three-d/lib.js');
 
 const removeSuffixes = ['Part', 'Section'].join('|');
 function formatConstructorId (obj) {

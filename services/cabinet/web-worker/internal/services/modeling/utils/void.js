@@ -1,9 +1,6 @@
 
-const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
-const Line3D = require('../../../../../app-src/three-d/objects/line.js');
-const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
-const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
-const Plane = require('../../../../../app-src/three-d/objects/plane.js');
+const {BiPolygon, Line3D, Polygon3D, Vertex3D, Plane} =
+    require('../../../../../../../public/js/utils/canvas/three-d/lib');
 const Utils = require('utils');
 
 class VoidUtil {

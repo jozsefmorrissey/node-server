@@ -1,8 +1,8 @@
 const getDefaultSize = require('./utils.js').getDefaultSize;
-const Vertex3D = require('./three-d/objects/vertex');
-const Line3D = require('./three-d/objects/line');
-const BiPolygon = require('./three-d/objects/bi-polygon');
-const Polygon3D = require('./three-d/objects/polygon');
+
+const {Vertex3D, Line3D, BiPolygon, Polygon3D} =
+        require('../../../public/js/utils/canvas/three-d/lib.js');
+
 const Joint = require('./objects/joint/joint.js');
 
 class Position {

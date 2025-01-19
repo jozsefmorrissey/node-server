@@ -3,18 +3,9 @@
 // const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
 
 const Assembly = require('../objects/assembly/assembly');
-const Handle = require('../objects/assembly/assemblies/hardware/pull.js');
-const DrawerBox = require('../objects/assembly/assemblies/drawer/drawer-box.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../public/js/utils/$t.js');
-const Vector3D = require('../three-d/objects/vector.js');
-const Line3D = require('../three-d/objects/line.js');
-const Vertex3D = require('../three-d/objects/vertex.js');
-const Canvas = require('./canvas');
 const Jobs = require('../../web-worker/external/jobs.js');
-const Global = require('../services/global.js');
-// const cube = new CSG.cube({radius: [3,5,1]});
-const consts = require('../../globals/CONSTANTS');
 
 let groupingType = 'location';
 
@@ -85,30 +76,6 @@ function deselectPrefix() {
   Canvas.views('Parts').set.locationPrefix(null);
 }
 
-function setGreaterZindex(...ids) {
-  return (target) => {
-    const zMap = [];
-    let zIndexes = [];
-    for (let index = 0; index < ids.length; index += 1) {
-      const id = ids[index];
-      const elem = du.id(id);
-      const zIndex = du.zIndex(elem);
-      zIndexes.push(zIndex);
-      zMap[zIndex] = elem;
-    }
-    zIndexes.sort().reverse();
-    target.style.zIndex = zIndexes[0];
-    for (let index = 0; index < zIndexes.length; index += 1) {
-      const elem = zMap[zIndexes[index]];
-      if (elem === target) {
-        break;
-      } else {
-        elem.style.zIndex = zIndexes[index + 1];
-      }
-    }
-  };
-}
-
 const toggleClassStr = '.model-label,.model-selector';
 function focusControls(target) {
   const all = du.find.all(toggleClassStr);
@@ -139,14 +106,17 @@ du.on.match('change', '.location-code-checkbox', (target) => {
 });
 
 function updateController() {
-  const cabinet = Global.cabinet();
-  if (cabinet === undefined) return;
+  if (!Canvas.view().id().startsWith('part-')) return;
+  const target = Global.target();
+  let html;
   const controller = du.id('model-controller');
-  const grouping = groupParts(cabinet);
-  const explosionFactor = Canvas.explosionFactor();
-  const dispExplosionFactor = explosionFactor ? Math.floor((explosionFactor-1) * 10) : 0;
-  controller.innerHTML = modelContTemplate.render({groupingType, grouping, dispExplosionFactor});
-  controller.hidden = false;
+  if (target instanceof Assembly) {
+    const grouping = groupParts(target);
+    const explosionFactor = Canvas.explosionFactor();
+    const dispExplosionFactor = explosionFactor ? Math.floor((explosionFactor-1) * 10) : 0;
+    html = modelContTemplate.render({groupingType, grouping, dispExplosionFactor});
+  } else html = 'No Part Controls yet';
+  controller.innerHTML = html;
 }
 
 Global.on.change.cabinet(updateController);
@@ -161,23 +131,4 @@ du.on.match('change', '.model-controller-cnt [name="explosionFactor"]', (elem) =
   Canvas.render.lastCall('explosionFactorUpdate');
 })
 
-Canvas.on.switch((id) => {
-  updateController();
-});
-
-
-function update(part, force) {
-  if (part) part = Global.target();
-  if (part) {
-    new Jobs.CSG.Assembly(part).then(Canvas.render, console.error).queue();
-    updateController();
-  }
-}
-
-function init() {
-  const setZFunc = setGreaterZindex('order-cnt', 'model-cnt');
-  du.on.match('click', '#model-cnt', setZFunc);
-  du.on.match('click', '#order-cnt', setZFunc);
-}
-
-module.exports = {init, update}
+Canvas.on.switch(updateController);

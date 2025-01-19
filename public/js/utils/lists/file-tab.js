@@ -90,6 +90,7 @@ class FileTabDisplay extends Lookup {
     this.selectedHtml = () => list[selected] ? list[selected].html() : '';
     this.html = (title) => {
       if ((typeof title) !== 'string') return FileTabDisplay.template.render(this);
+      if (!list[title] || !(list[title].html instanceof Function)) return '';
       const html = list[title].html(this.container(title));
       return html;
     }

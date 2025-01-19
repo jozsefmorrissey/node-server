@@ -1,9 +1,7 @@
 
-const Vertex3D = require('../../../../three-d/objects/vertex.js');
-const Polygon3D = require('../../../../three-d/objects/polygon.js');
-const Line3D = require('../../../../three-d/objects/line.js');
-const Plane = require('../../../../three-d/objects/plane.js');
-const BiPolygon = require('../../../../three-d/objects/bi-polygon.js');
+const {Vertex3D, Polygon3D, Line3D, Plane, BiPolygon} =
+      require('../../../../../../../public/js/utils/canvas/three-d/lib');
+
 const KeyValue = require('../../../../../../../public/js/utils/object/key-value.js');
 const Assembly = require('../../assembly.js');
 const Divider = require('../divider.js');

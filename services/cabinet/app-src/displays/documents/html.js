@@ -1,10 +1,9 @@
 const $t = require('../../../../../public/js/utils/$t.js');
 const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
-const Vertex3D = require('../../three-d/objects/vertex.js');
-const Vector3D = require('../../three-d/objects/vector.js');
-const Polygon3D = require('../../three-d/objects/polygon.js');
-const Layer = require('../../three-d/objects/layer.js');
+
+const {Vertex3D, Vector3D, Polygon3D, Layer} = require('../../../../../public/js/utils/canvas/three-d/lib');
+
 const du = require('../../../../../public/js/utils/dom-utils');
 const Utils = require('./tools/utils.js');
 const positionAssemblyCsg = require('../../utils.js').positionAssemblyCsg;

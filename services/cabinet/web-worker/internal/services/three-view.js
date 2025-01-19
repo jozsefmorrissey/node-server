@@ -1,5 +1,5 @@
-const Vector3D = require('../../../app-src/three-d/objects/vector.js');
-const Layer = require('../../../app-src/three-d/objects/layer.js');
+const {Vector3D, Layer} =
+    require('../../../../../public/js/utils/canvas/three-d/lib');
 
 const copyAndRotate = (layers, rotations, center) => {
   layers = layers.map(l => l.copy());

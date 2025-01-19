@@ -1,8 +1,6 @@
 
-const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
-const Plane = require('../../../../app-src/three-d/objects/plane.js');
-const Line3D = require('../../../../app-src/three-d/objects/line.js');
-const Layer = require('../../../../app-src/three-d/objects/layer.js');
+const {Polygon3D, Plane, Line3D, Layer} =
+    require('../../../../../../public/js/utils/canvas/three-d/lib');
 
 const Tolerance = require('../../../../../../public/js/utils/tolerance.js');
 const ToleranceMap = require('../../../../../../public/js/utils/tolerance-map.js');

@@ -1,11 +1,7 @@
 
 const DTO = require('../../shared/data-transfer-object')();
-const Layer = require('../../../app-src/three-d/objects/layer.js');
-const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
-const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
-const Line3D = require('../../../app-src/three-d/objects/line.js');
-const Vector3D = require('../../../app-src/three-d/objects/vector.js');
-const BiPolygon = require('../../../app-src/three-d/objects/bi-polygon.js');
+const {Layer, Polygon3D, Vertex3D, Line3D, Vector3D, BiPolygon} =
+  require('../../../../../public/js/utils/canvas/three-d/lib');
 const Utils = require('./modeling/utils/utils');
 const MaleJointApplicators = require('./modeling/male-joint-applicators');
 const CabinetUtil = require('./modeling/utils/cabinet');

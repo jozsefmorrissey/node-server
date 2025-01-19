@@ -1,7 +1,7 @@
 const Polygon3D = require('./polygon');
 const Vertex3D = require('./vertex');
 const Line3D = require('./line');
-const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+const ToleranceMap = require('../../../tolerance-map.js');
 
 class DepthBreathFirstSearchObject {
   constructor(vert, verts) {

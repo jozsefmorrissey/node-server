@@ -1,11 +1,11 @@
-const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
+const CSG = require('../../../3d-modeling/csg.js');
 const Vertex3D = require('vertex');
 const Vector3D = require('vector');
 const Line3D = require('line');
 const Matrix = require('matrix');
-const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
-const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex.js');
-const Tolerance = require('../../../../../public/js/utils/tolerance.js');
+const Line2d = require('../../two-d/objects/line.js');
+const Vertex2d = require('../../two-d/objects/vertex.js');
+const Tolerance = require('../../../tolerance.js');
 const withinTol = new Tolerance(.00001).within;
 
 function isDefined(...values) {
@@ -554,6 +554,31 @@ Plane.toJson = (plane) => {
 }
 Plane.fromJson = (json) =>
   new Plane(...json.verts.map(j => Vertex3D.fromJson(j)));
+
+const vertRegG = new RegExp(Vertex3D.regex.source, 'g');
+
+Plane.fromString = (str, unit) => {
+  const vertStrs = str.match(vertRegG);
+  if (!vertStrs || vertStrs.length < 3) return null;
+  const verts = vertStrs.map((str) =>
+        Vertex3D.fromString(str, unit));
+  return new Plane(...verts);
+}
+const coloredVertexReg = new RegExp(`(?:${Color.regex.mls()})${Vertex3D.regex.mls()}`, 'g');
+Plane.regex = new RegExp(`(\\()((?:(?:${Color.regex.mls()}|)${Vertex3D.regex.mls()}(?:,|)){3,})(\\))`);
+Plane.regex.model = (string) => {
+  const plane = Plane.fromString(string);
+  if (!plane) return null;
+  const match = string.match(Plane.regex);
+  const verts = Vertex3D.fromString(match[2], null, true);
+  const color = Color.fromString(string);
+  const planePts = plane.findPoints(10, 100, Vertex3D.center(verts));
+  const csg = new CSG.Polygon.Enclosed(planePts, null, color);
+  csg.setColor(color);
+  const coloredVertices = match[2].match(coloredVertexReg);
+  if (coloredVertices) coloredVertices.forEach(s => csg.add(Vertex3D.regex.model(s)));
+  return csg;
+};
 
 
 

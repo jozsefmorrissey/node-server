@@ -1,0 +1,26 @@
+<div class='inline-flex'>
+  <div:t repeat='name, room in rooms'>
+    <div class='inline-flex'>
+      <div class='object selector' id='{{room.id()}}'>{{name}}</div>
+      <div class='add-cnt'><i class='gg-add' ></i></div>
+    </div>
+    <div class='tab dropdown'>
+      <div:t repeat='group in room.groups' class='tab'>
+        <div class='inline-flex'>
+          <div class=' object selector' id='{{group.id()}}'>{{group.name()}}</div>
+          <div class='add-cnt'><i class='gg-add' ></i></div>
+        </div>
+        <div class='tab dropdown'>
+          <div:t repeat='object in group.objects' class='tab object selector'
+                  id='{{object.id()}}'>
+            {{object.groupIndex()}}) {{object.name()}}
+          </div:t>
+          <div class='add-cnt'><i class='gg-add' ></i></div>
+        </div>
+      </div:t>
+    </div>
+  </div:t>
+  <div id='display-cnt'>
+    <div:t class='tab' $t-id='canvas-displays'></div:t>
+  </div>
+</div>

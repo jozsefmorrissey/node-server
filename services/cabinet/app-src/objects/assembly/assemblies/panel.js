@@ -3,7 +3,7 @@
 
 const Assembly = require('../assembly.js');
 const Joint = require('../../joint/joint.js');
-const Vertex3D = require('../../../three-d/objects/vertex.js');
+const {Vertex3D} = require('../../../../../../public/js/utils/canvas/three-d/lib.js');
 
 class Panel extends Assembly {
   constructor(partCode, partName, config) {

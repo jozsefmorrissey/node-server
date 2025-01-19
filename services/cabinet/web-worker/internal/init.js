@@ -1,7 +1,8 @@
 require('../../../../public/js/utils/std-lib/init.js');
 require('./services/documents/init.js')
 
-const BiPolygon = require("../../app-src/three-d/objects/bi-polygon");
+const {BiPolygon} = require('../../../../public/js/utils/canvas/three-d/lib.js');
+      require('../../../../public/js/utils/canvas/three-d/lib');
 const ApplyJoints = require("./services/apply-joints");
 const BuildModels = require("./services/build-models");
 const BuildSimpleModels = require("./services/build-simple-models");

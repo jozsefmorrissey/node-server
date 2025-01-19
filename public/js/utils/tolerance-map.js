@@ -186,8 +186,9 @@ class ToleranceMap {
 
     function bestGroup(list) {
       const avgObj = averageObject(list);
-      if (list.length && avgObj.length === 0)
-        console.warn.logarithmic('There is probably and averageObject issue... Compare the following\n\ttolerance.attributes().map(path => list[0].pathValue(path))\n\ttolerance.attributes().map(path => avgObj.pathValue(path))');
+      const matches = instance.matches(avgObj);
+      if (list.length === 0 || matches.length === 0)
+        console.warn.logarithmic('There is probably and an issue...');
       return instance.matches(avgObj);
     }
 

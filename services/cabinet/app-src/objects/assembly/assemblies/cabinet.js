@@ -11,9 +11,9 @@ const SectionProperties = require('./section/section-properties.js');
 const Group = require('../../group');
 const Line2d = require('../../../../../../public/js/utils/canvas/two-d/objects/line');
 const Vertex2d = require('../../../../../../public/js/utils/canvas/two-d/objects/vertex');
-const Vertex3D = require('../../../three-d/objects/vertex.js');
-const Vector3D = require('../../../three-d/objects/vector.js');
-const Line3D = require('../../../three-d/objects/line.js');
+
+const {Vertex3D, Vector3D, Line3D} = require('../../../../../../public/js/utils/canvas/three-d/lib');
+
 const CSG = require('../../../../../../public/js/utils/3d-modeling/csg.js');
 const AutoToekick = require('./auto/toekick.js');
 const CabinetResolver = require('../resolvers/cabinet');

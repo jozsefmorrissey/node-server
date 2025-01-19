@@ -1,8 +1,6 @@
 const CSG = require('../../../../public/js/utils/3d-modeling/csg.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
-const Vertex3D = require('./objects/vertex');
-const Vector3D = require('./objects/vector');
-const Line3D = require('./objects/line');
+const {Vertex3D, Vector3D, Line3D} = require('../../../../public/js/utils/canvas/three-d/lib');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const OrientationArrows = require('../../../../public/js/utils/display/orientation-arrows.js');
 const Viewer = require('../../../../public/js/utils/3d-modeling/viewer.js').Viewer;
@@ -25,13 +23,13 @@ ThreeDModel.getViewer = (model) => {
     viewer = new Viewer(model, size, size, 50);
     addViewer(viewer, viewerSelector);
     const orientSelector = `${viewerSelector} .orientation-controls`;
-    const orientArrows = OrientationArrows.forCSG(orientSelector, viewer, model);
+    const orientArrows = OrientationArrows.forCSG(orientSelector, viewer, () => ThreeDModel.lastRendered);
   }
   return viewer;
 }
 
 ThreeDModel.display = (displayModel) => {
-  if (displayModel instanceof CSG && displayModel.polygons.length > 0) {
+  if (displayModel instanceof CSG) {
     ThreeDModel.lastRendered = displayModel;
     ThreeDModel.getViewer(displayModel);
     viewer.mesh = displayModel.toMesh();

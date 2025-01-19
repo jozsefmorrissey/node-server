@@ -2,9 +2,8 @@
 const Test = require('../../../../public/js/utils/test/test').Test;
 const Cabinet = require('../../app-src/objects/assembly/assemblies/cabinet.js')
 const CabinetLayouts = require('../../app-src/config/cabinet-layouts.js');
-const Layer = require('../../app-src/three-d/objects/layer.js');
-const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
 
+const {Polygon3D, Layer} = require('../../../../public/js/utils/canvas/three-d/lib.js');
 
 Test.add('Cabinet: doorIntersect',(ts) => {
   ts.assertEquals(6, 6);

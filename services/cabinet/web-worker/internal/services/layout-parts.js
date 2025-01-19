@@ -6,13 +6,10 @@ const Wall = require('../../../app-src/two-d/layout/wall.js')
 const Window = require('../../../app-src/two-d/layout/window.js')
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Parimeters2d = require('../../../../../public/js/utils/canvas/two-d/maps/parimeters.js');
-const Parimeter = require('../../../app-src/three-d/objects/parimeter.js');
-const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
-const Polygon3D = require('../../../app-src/three-d/objects/polygon.js');
-const Line3D = require('../../../app-src/three-d/objects/line.js');
-const Layer = require('../../../app-src/three-d/objects/layer.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
+const {Parimeter, Vertex3D, Polygon3D, Line3D, Layer} =
+    require('../../../../../public/js/utils/canvas/three-d/lib');
 
 const lineTo3DVerts = (line, bottomHeight, topHeight) => {
   return [{x: line[0].x, y:bottomHeight, z: line[0].y},

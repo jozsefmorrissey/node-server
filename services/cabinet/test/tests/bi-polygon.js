@@ -1,8 +1,6 @@
 
 const Test = require('../../../../public/js/utils/test/test').Test;
-const BiPolygon = require('../../app-src/three-d/objects/bi-polygon.js');
-const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
-const Vector3D = require('../../app-src/three-d/objects/vector.js');
+const {BiPolygon, Vertex3D, Polygon3D, Vector3D} = require('../../../../public/js/utils/canvas/three-d/lib.js');
 
 function biPolys() {
   const poly = new Polygon3D([[0,0,0],[10,0,0],[10,10,0],[0,10,0]]);

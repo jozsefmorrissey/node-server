@@ -5,7 +5,8 @@ const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 
 class Controls2d extends Lookup {
-  constructor(parentSelector, getLayout, panZ) {
+  constructor(elem, getLayout, panZ) {
+    if (elem === undefined) throw new Error(`No element provided`);
     super();
     const navId = `orientation-arrows-${this.id()}`;
     let moveCount = 0;
@@ -42,8 +43,6 @@ class Controls2d extends Lookup {
     }
 
     function updateHtml() {
-      const elem = du.find(parentSelector);
-      if (elem === undefined) throw new Error(`No container found: '${parentSelector}'`);
       elem.innerHTML = Controls2d.template.render(instance);
     }
 

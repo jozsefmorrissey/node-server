@@ -1,9 +1,8 @@
 
 const Utils = require('./utils/utils');
-const Line3D = require('../../../../app-src/three-d/objects/line.js');
-const Vertex3D = require('../../../../app-src/three-d/objects/vertex.js');
-const BiPolygon = require('../../../../app-src/three-d/objects/bi-polygon.js');
-const Polygon3D = require('../../../../app-src/three-d/objects/polygon.js');
+
+const {Line3D, Vertex3D, BiPolygon, Polygon3D} =
+    require('../../../../../../public/js/utils/canvas/three-d/lib');
 const tol = .0001;
 const withinTol = new (require('../../../../../../public/js/utils/tolerance.js'))(tol).within;
 

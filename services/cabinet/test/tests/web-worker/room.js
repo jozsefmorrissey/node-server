@@ -2,8 +2,8 @@ const Test = require('../../../../../public/js/utils/test/test').Test;
 const Cabinet = require('../../../app-src/objects/assembly/assemblies/cabinet.js');
 const Room = require('../../../app-src/objects/room');
 const CabinetLayouts = require('../../../app-src/config/cabinet-layouts.js');
-const Vector3D = require('../../../app-src/three-d/objects/vector.js');
-const Vertex3D = require('../../../app-src/three-d/objects/vertex.js');
+const {Vertex3D, Vector3D} =
+      require('../../../../../public/js/utils/canvas/three-d/lib');
 const Jobs = require('../../../web-worker/external/jobs');
 const ModelInfo = require('../../../web-worker/external/model-information.js');
 

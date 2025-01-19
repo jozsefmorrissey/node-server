@@ -1,11 +1,8 @@
 
 const idReg = /[A-Z][A-Za-z0-9]{1,}_[a-z0-9]{7}/;
 
-const Vector3D = require('../../app-src/three-d/objects/vector.js');
-const Vertex3D = require('../../app-src/three-d/objects/vertex.js');
-const Line3D = require('../../app-src/three-d/objects/line.js');
-const Polygon3D = require('../../app-src/three-d/objects/polygon.js');
-const BiPolygon = require('../../app-src/three-d/objects/bi-polygon.js');
+const {Vector3D, Vertex3D, Line3D, Polygon3D, BiPolygon} =
+    require('../../../../public/js/utils/canvas/three-d/lib');
 
 const fromJsonMap = {};
 const fromJsonCxtrReg = /((.{1,})(3|2)(d|D))|BiPolygon|Plane|Layer$/

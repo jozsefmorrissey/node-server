@@ -1,10 +1,6 @@
 
-const Vertex3D = require('../../../../../app-src/three-d/objects/vertex.js');
-const Vector3D = require('../../../../../app-src/three-d/objects/vector.js');
-const Line3D = require('../../../../../app-src/three-d/objects/line.js');
-const Polygon3D = require('../../../../../app-src/three-d/objects/polygon.js');
-const BiPolygon = require('../../../../../app-src/three-d/objects/bi-polygon.js');
-const SpatialMap = require('../../../../../app-src/three-d/objects/maps/spatial-map.js');
+const {Vertex3D, Vector3D, Line3D, Polygon3D, BiPolygon, SpatialMap} =
+    require('../../../../../../../public/js/utils/canvas/three-d/lib');
 
 const CabinetUtil = require('cabinet');
 const Utils = require('utils');

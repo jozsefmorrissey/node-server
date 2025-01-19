@@ -1,16 +1,17 @@
 const DisplayManager = require('../display-utils/displayManager.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
+const $t = require('../../../../public/js/utils/$t.js');
 const LoadingDisplay = require('../../../../public/js/utils/display/loading.js');
 const Global = require('../services/global');
 const ThreeDModel = require('../three-d/three-d-model.js');
 const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const Jobs = require('../../web-worker/external/jobs.js');
-const BiPolygon = require('../three-d/objects/bi-polygon.js');
+const {BiPolygon} = require('../../../../public/js/utils/canvas/three-d/lib');
 const Utils = require('../utils');
-
+const JobLoading = require('../services/job-loading.js');
 const switchEvent = new CustomEvent('switch');
 
-const modelDisplayManager = new DisplayManager('model-display-cnt', 'display-menu');
+let modelDisplayManager;
 
 let extraCsgObjsObj = [];
 function extraCsgObjects(objects, shouldApply) {
@@ -46,50 +47,118 @@ function register(view) {
   views.push(view);
 }
 
-function render() {
-  const threeDmodel = du.id('three-d-model');
-  const view = views.find(view => view.id() === openTabId);
-  if (view) {
-    view.render();
-    threeDmodel.hidden = !(view instanceof View3D)
-  } else {
-    throw new Error(`unkown display '${openTabId}'`);
+function renderEdit(template) {
+  const target = Global.target();
+  views.forEach(v => v.hidden(true));
+  editCnt.innerHTML = template.render(target);
+  editCnt.hidden = false;
+  // lastState = {view: null, target: null};
+}
+
+function renderView(view) {
+  editCnt.hidden = true;
+  const target = Global.target();
+  views.forEach(v => v.hidden(true));
+  view.hidden(false);
+  du.id('three-d-model').hidden = !(view instanceof View3D)
+  if (view !== lastState.view || target !== lastState.target) {
+    lastState = {view, target};
+    htmlContentCnt.innerHTML = '';
+    htmlContentCnt.innerHTML = view.render() || view.id();
+    return true;
   }
+  return false;
+}
+
+const currentView = () => views.find(view => view.id() === openTabId);
+
+let htmlContentCnt;
+let editCnt;
+const groupEditTemplate = new $t('group/edit');
+const roomEditTemplate = new $t('room/edit');
+let lastState = {view: null, target: null};
+function render() {
+  du.id('three-d-model').hidden = true;
+  const view = currentView();
+  if (Global.target.is.group()) renderEdit(groupEditTemplate);
+  else if (Global.target.is.room()) renderEdit(roomEditTemplate);
+  else if (view) return renderView(view);
+  else views.forEach(v => v.hidden(true));
+  return false;
 }
 
 
-let openTabId = 'two-d-model';
+let openTabId;
 const switchTo = (id) => {
-  if (openTabId !== id) switchEvent.trigger(id);
-  openTabId = id;
-  render();
+  if (id) openTabId = id;
+  if (render()) switchEvent.trigger(id);
 };
 
 
-modelDisplayManager.on.switch(details => switchTo(details.to.id));
+const FileTabDisplay = require('../../../../public/js/utils/lists/file-tab.js');
+
+const init = () =>{
+  const typeTabs = new FileTabDisplay();
+  typeTabs.register('Room');
+  typeTabs.register('Object');
+  typeTabs.register('Part');
+  typeTabs.selected('Room');
+  du.id('display-type-tabs').innerHTML = typeTabs.html();
+
+  const demTabs = new FileTabDisplay();
+  demTabs.register('2D');
+  demTabs.register('3D');
+  demTabs.selected('2D');
+
+  const onTabChange = (elem) => {
+    switchTo(`${typeTabs.selected()}-${demTabs.selected()}`.toLowerCase());
+  }
+  demTabs.on.change(onTabChange);
+  typeTabs.on.change(onTabChange);
+  du.id('display-demension-tabs').innerHTML = demTabs.html();
+
+  htmlContentCnt = du.id('view-html-cnt');
+  editCnt = du.id('edit-display');
+  ThreeDModel.display(new CSG());
+  switchTo('room-2d');
+}
 
 
-du.on.match('enter', '*', () => {
-  render.lastCall('Render!');
+du.on.match('enter', '*', switchTo);
+
+du.on.match('click', '.object.selector', (elem) => {
+  const object = Lookup.get(elem.id);
+  du.class.remove(du.find.all('.object.selector'), 'active');
+  du.class.add(elem, 'active');
+  Global.target(object);
+  switchTo();
 });
 
 
 class View {
-  constructor(name, render, id, set) {
-    this.name = () => name;
+  constructor(id, render, set) {
     this.render = render;
     this.set = set;
     this.id = () => id;
+    this.hidden = (oft) => {
+      const elem = du.id(id);
+      if (!elem) return null;
+      if (oft === undefined) return elem.hidden;
+      return elem.hidden = Boolean.is(oft) ? oft : !elem.hidden;
+    }
   }
 }
 class View3D extends View { constructor(...args) {super(...args);}}
 class View2D extends View { constructor(...args) {super(...args);}}
 
 Canvas = {
-  render, views, extraCsgObjects, render3Dmodel,
-  on: {switch: switchEvent.on}, register, View, View2D, View3D,
-  views: (name) => views.find(v => v.name())
+  render, views, extraCsgObjects, render3Dmodel, init,
+  on: {switch: switchEvent.on},
+  register, View, View2D, View3D,
+  view: currentView,
+  views: (id) => views.find(v => v.id())
 };
+
 module.exports = Canvas;
 Object.getSet(Canvas, 'explosionFactor');
 Canvas.explosionFactor(1.1);

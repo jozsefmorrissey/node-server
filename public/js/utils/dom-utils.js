@@ -582,11 +582,13 @@ du.is.ancestor = function (elem, ancestor) {
 }
 
 du.class.add = function(target, clazz) {
+  if (Array.isItterable(target)) return target.forEach(t => du.class.add(t, clazz));
   du.class.remove(target, clazz);
   target.className += ` ${clazz}`;
 }
 
 du.class.swap = function(target, newClass, oldClass) {
+  if (Array.isItterable(target)) return target.forEach(t => du.class.swap(t, clazz));
   du.class.remove(target, oldClass);
   du.class.add(target, newClass)
 }
@@ -596,6 +598,7 @@ function classReg(clazz) {
 }
 
 du.class.remove = function(target, clazz) {
+  if (Array.isItterable(target)) return target.forEach(t => du.class.remove(t, clazz));
   if (!(target instanceof HTMLElement)) return;
   target.className = target.className.replace(classReg(clazz), ' ').trim();
 }
@@ -605,6 +608,7 @@ du.class.has = function(target, clazz) {
 }
 
 du.class.toggle = function(target, clazz) {
+  if (Array.isItterable(target)) return target.forEach(t => du.class.toggle(t, clazz));
   if (du.class.has(target, clazz)) du.class.remove(target, clazz);
   else du.class.add(target, clazz);
 }
@@ -917,6 +921,7 @@ du.style = function(elem, style, time) {
         });
       }, time);
     }
+    return save;
   }
 }
 

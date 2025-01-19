@@ -1,11 +1,11 @@
 
 const Matrix = require('./matrix');
 const Vector3D = require('./vector');
-const Vertex2d = require('../../../../../public/js/utils/canvas/two-d/objects/vertex');
-const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
-const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
-const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+const Vertex2d = require('../../two-d/objects/vertex');
+const Line2d = require('../../two-d/objects/line');
+const CSG = require('../../../3d-modeling/csg.js');
+const Tolerance = require('../../../tolerance.js');
+const ToleranceMap = require('../../../tolerance-map.js');
 
 let count = 0;
 class Vertex3D {
@@ -350,9 +350,33 @@ Vertex3D.magnitudeVector = (unitVector, vertices, center) => {
   return magnitude;
 }
 
-Vertex3D.fromString = (str) =>
-      new Vertex3D(str.split(/[^0-9^.]/).filter(str => str)
-      .map(str => Number.parseFloat(str)));
+const mrmls = Measurement.regex.matchless().source;
+Vertex3D.regex = new RegExp(`\\(\\s*(${mrmls})\\s*,\\s*(${mrmls})\\s*,\\s*(${mrmls})\\s*\\)`);
+Vertex3D.fromString = (string, unit, list) => {
+  const match = string.match(Vertex3D.regex);
+  if (!match) return null;
+  unit = unit ? (unit === true ? Measurement.unit.BASE : unit) : Measurement.unit();
+  if (!list) return new Vertex3D(Measurement.decimal(match[1], unit),
+                                  Measurement.decimal(match[2], unit),
+                                  Measurement.decimal(match[3], unit));
+  const matches = string.match(new RegExp(Vertex3D.regex.g()));
+  const vertices = [];
+  matches.forEach(m => vertices.push(Vertex3D.fromString(m, unit)));
+  return vertices;
+}
+
+Vertex3D.regex.model = (string) =>
+    new CSG.Point(Vertex3D.fromString(string), null,
+          Color.fromString(string));
+
+Vector3D.regex = new RegExp(Vertex3D.regex);
+Vector3D.fromString = Vertex3D.fromString;
+Vector3D.regex.model = (string) => {
+  const vectCSG = new CSG.Vector(Vector3D.fromString(string));
+  vectCSG.color = Color.fromString(string);
+  return vectCSG;
+}
+
 
 Object.class.register(Vertex3D, 'x', 'y', 'z');
 module.exports = Vertex3D;

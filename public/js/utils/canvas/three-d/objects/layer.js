@@ -5,9 +5,9 @@ const Vector3D = require('vector');
 const Vertex3D = require('vertex');
 const Line3D = require('line');
 const Parimeter3D = require('parimeter');
-const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
-const Tolerance = require('../../../../../public/js/utils/tolerance.js');
-const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
+const Line2d = require('../../two-d/objects/line.js');
+const Tolerance = require('../../../tolerance.js');
+const ToleranceMap = require('../../../tolerance-map.js');
 
 const tol = .001;
 const within = Tolerance.within(tol);
@@ -39,6 +39,9 @@ class Layer {
       }
       return false;
     }
+
+    this.mergedPolys = () => Polygon3D.merge(this.polygons());
+    this.mergedPolys.regular = () => this.mergedPolys().map(p => p.regular()).concatElements();
 
     this.parimeter = () => {
       console.warn.logarithmic('Parimeter3D does not deal well with disconnected internal lines.\n\tsee "Layer: lines" test for and example senario')
@@ -235,11 +238,11 @@ class Layer {
       // });
       return Line3D.combine(lines);
     }
-    overlapsAnother = overlapsAnother.HashCache(this);
+    // overlapsAnother = overlapsAnother.HashCache(this);
 
     this.lines = (tolerance) => {
       let t = tolerance || .00001;
-      return overlapsAnother(t);
+      return this.mergedPolys.regular().map(p => p.lines()).concatElements();
       let lines = onlyDefinedOnce(t);
       // removeLinesThatDoNotShareAVertex(lines, t);
       Line3D.combine(lines);

@@ -1,11 +1,9 @@
 
-const Polygon3D = require('../../../../../../services/cabinet/app-src/three-d/objects/polygon.js');
-const Vector3D = require('../../../../../../services/cabinet/app-src/three-d/objects/vector.js');
+const {Polygon3D, Vector3D, Line3D} = require('../../three-d/lib');
 const Parimeters = require('../maps/parimeters.js');
 const Polygon2d = require('../objects/polygon');
 const Line2d = require('../objects/line');
 const Vertex2d = require('../objects/vertex');
-const Line3D = require('../../../../../../services/cabinet/app-src/three-d/objects/line.js')
 
 const defaultNormals = {front: new Vector3D(0,0,1), right: new Vector3D(1,0,0), top: new Vector3D(0,-1,0)};
 const defaultNormArr = [defaultNormals.front, defaultNormals.top, defaultNormals.right];

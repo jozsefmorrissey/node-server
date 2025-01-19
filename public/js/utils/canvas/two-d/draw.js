@@ -4,8 +4,7 @@ const Line2d = require('./objects/line');
 const Vertex2d = require('./objects/vertex');
 const Polygon2d = require('./objects/polygon');
 const Parimeters2d = require('./maps/parimeters');
-const Vector3D = require('../../../../../services/cabinet/app-src/three-d/objects/vector.js');
-const Layer = require('../../../../../services/cabinet/app-src/three-d/objects/layer.js');
+const {Vector3D, Layer} = require('../three-d/lib');
 const ToleranceMap = require('../../tolerance-map.js');
 const du = require('../../dom-utils.js');
 

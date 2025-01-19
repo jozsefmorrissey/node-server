@@ -1,6 +1,6 @@
-const Canvas = require('../canvas');
-const Jobs = require('../../../web-worker/external/jobs.js');
-const ColorManager = require('../managers/color-manager');
+const Canvas = require('../../canvas');
+const Jobs = require('../../../../web-worker/external/jobs.js');
+const ColorManager = require('../../managers/color-manager');
 
 function  render() {
   const roomColorManager = new ColorManager('room-color-cnt', 'name');
@@ -16,5 +16,5 @@ function  render() {
     roomColorManager.update();
   }).queue();
 }
-exports.module = new Canvas.View3D('Room', render, 'disp-canvas-room');
+exports.module = new Canvas.View3D('room-3d', render);
 Canvas.register(exports.module)
