@@ -50,7 +50,7 @@ du.on.match('change:keyup', '#axis-controls-3d input', (elem) => {
 
 let viewer;
 let viewerSize = '60vh';
-const viewerSelector = '#three-d-display';
+const viewerSelector = '#three-d-display>.canvas-cnt';
 function getViewer () {
   if (viewer) return viewer;
   const canvas = du.find(viewerSelector);
@@ -72,6 +72,8 @@ viewer = getViewer(model);
 
 let scale;
 const num = (str) => Number.parseFloat(str) * (scale || 1);
+const inputSel = du.id('input-measurement-selector');
+const inputUnit = () => du.find.down('input[type="radio"]:checked', inputSel).value;
 
 function buildModel(lines) {
   const model = new CSG();
@@ -85,7 +87,7 @@ function buildModel(lines) {
         Polygon3D.regex.model;
         if (match) {
           found = true;
-          let currModel = reg.model(line);
+          let currModel = reg.model(line, inputUnit(), scale);
           if (currModel) {
             model.polygons.concatInPlace(currModel.polygons);
           }

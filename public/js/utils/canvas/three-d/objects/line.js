@@ -83,6 +83,11 @@ class Line3D {
     this.equivalent = (other, tolerance) => this.equals(other, tolerance) ||
                                     this.equals(other.negitive(), tolerance);
 
+    this.scale = (scale, doNotModify) => {
+      if (doNotModify) return this.clone().scale(scale);
+      this[0].scale(scale); this[1].scale(scale);
+      return this;
+    }
     this.vector = () => {
       let i = this[1].x - this[0].x;
       let j = this[1].y - this[0].y;
@@ -1124,11 +1129,13 @@ Line3D.fromString = (str, unit) => {
   return line;
 }
 
-Line3D.regex.model = (string) => {
-  const match = string.match(Line3D.regex);
+Line3D.regex.model = (string, unit, scale) => {
+  const line = Line3D.fromString(string);
+  if (!line) return null;
+  line.scale(scale);
   return new CSG.Line({
-    start: match[1] === '[' ? Vertex3D.fromString(match[2]) : Vector3D.regex.model(match[2]),
-    end: match[4] === ']' ? Vertex3D.fromString(match[3]) : Vector3D.regex.model(match[3]),
+    start: !line.directional()[0] ? line[0] : Vector3D.regex.model(line[0].toString(), true, 1),
+    end: !line.directional()[1] ? line[1] : Vector3D.regex.model(line[1].toString(), true, 1),
     color: Color.fromString(string)
   })
 };

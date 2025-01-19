@@ -30,6 +30,10 @@
       .min-80 {
         min-width: 80pt
       }
+      .canvas-cnt {
+        width: fit-content;
+        position: relative;
+      }
       canvas {background-color: whitesmoke;}
     </style>
     <title>canvas-buddy</title>
@@ -88,7 +92,6 @@
           <canvas></canvas>
         </div>
         <div id='three-d-display'>
-          <div class='orientation-controls'></div>
           <div>
             <label>STL</label>
             <input type='file' name='stlFile' multiple>
@@ -114,6 +117,9 @@
                 <input type='radio' name='line-disp-type' value='LINE_ONLY'>
               </div>
             </div>
+          </div>
+          <div class='canvas-cnt'>
+            <div class='orientation-controls'></div>
           </div>
         </div>
       </div>

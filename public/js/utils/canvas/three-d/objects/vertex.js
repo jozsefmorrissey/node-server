@@ -61,6 +61,15 @@ class Vertex3D {
     }
 
     this.usless = () => Number.NaNfinity(this.x, this.y, this.z);
+    this.scale = (scale, doNotModify) => {
+      if (doNotModify) return this.clone().scale(scale);
+      if (!scale) return this;
+      const oneDef = Number.is(scale.x) || Number.is(scale.y) || Number.is(scale.z);
+      this.x *= (scale.x || (oneDef ? 1 : scale));
+      this.y *= (scale.y || (oneDef ? 1 : scale));
+      this.z *= (scale.z || (oneDef ? 1 : scale));
+      return this;
+    }
 
     this.vector = (vector) => {
       const v = vector;
@@ -365,14 +374,16 @@ Vertex3D.fromString = (string, unit, list) => {
   return vertices;
 }
 
-Vertex3D.regex.model = (string) =>
-    new CSG.Point(Vertex3D.fromString(string), null,
+Vertex3D.regex.model = (string, unit, scale) =>
+    new CSG.Point(Vertex3D.fromString(string, unit).scale(scale), null,
           Color.fromString(string));
 
 Vector3D.regex = new RegExp(Vertex3D.regex);
 Vector3D.fromString = Vertex3D.fromString;
-Vector3D.regex.model = (string) => {
-  const vectCSG = new CSG.Vector(Vector3D.fromString(string));
+Vector3D.regex.model = (string, unit, scale) => {
+  const vector = Vector3D.fromString(string, unit);
+  vector.scale(scale);
+  const vectCSG = new CSG.Vector(vector);
   vectCSG.color = Color.fromString(string);
   return vectCSG;
 }

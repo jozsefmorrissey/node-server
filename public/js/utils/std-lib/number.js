@@ -2,6 +2,10 @@
 let nr = '(?:-|)[0-9]{1,}';
 Number.regex = new RegExp(`(?:${nr}\\.${nr}|${nr}|\\.${nr})`);
 
+Function.safeStdLibAddition(Number, 'is',  function (...numbers) {
+  return numbers.findIndex(n => !(n instanceof Number)) === -1;
+}, true);
+
 Function.safeStdLibAddition(Number, 'float32',  {}, true);
 Function.safeStdLibAddition(Number, 'float64',  {}, true);
 Function.safeStdLibAddition(Number, 'int32',  {}, true);
