@@ -128,7 +128,8 @@ Function.safeStdLibAddition(String, 'count',  function (needles, length) {
   } else {
     regex = new RegExp(regStr(needles), 'g');
   }
-  return this.match(regex, '').length
+  const match = this.match(regex, '');
+  return match ? match.length : 0;
 });
 
 

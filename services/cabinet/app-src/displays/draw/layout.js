@@ -218,8 +218,9 @@ class DrawLayout extends Draw {
 
     draw.wall = (wall, color, width) => {
       if (wall[1].isFree()) color = 'red';
-      if (isHovering(wall)) color = 'green';
-      draw.line(wall, color, 4);
+      const hovering = isHovering(wall);
+      // if (hovering) color = 'green';
+      draw.line(wall, color, hovering ? 3 : 1);
       const startpoint = wall[0].point();
       const endpoint = wall[1].point();
 
@@ -286,7 +287,7 @@ class DrawLayout extends Draw {
       objects.forEach((obj) => {
         const hovered = hoverin === obj.snap2d.top();
         const color =  hovered ? 'green' : defaultColor;
-        draw(obj.snap2d.top(), color, 3);
+        draw(obj.snap2d.top(), color);
         if (CANVAS().simple) return;
         if (!dontDrawSnapLocs) {
           obj.snap2d.top().snapLocations().forEach((snapLoc, i) => {

@@ -318,16 +318,7 @@ class Plane extends Array {
       return within(startDist, endDist);
     }
 
-    this.normal = () => {
-      if (normal !== undefined) return normal;
-      const points = this.points();
-      const vector1 = points[1].vector().minus(points[0]);
-      const vector2 = points[2].vector().minus(points[0]);
-      const normVect = vector1.crossProduct(vector2);
-      if (vector1.parrelle(vector2)) return (normal = new Vector3D(NaN,NaN,NaN));
-      normal = normVect.scale(1 / normVect.magnitude());
-      return normal;
-    }
+    this.normal = () => Plane.normal(this.points());
 
     this.valid = () => !Number.isNaN(this.normal().magnitude());
 
@@ -579,6 +570,33 @@ Plane.regex.model = (string) => {
   if (coloredVertices) coloredVertices.forEach(s => csg.add(Vertex3D.regex.model(s)));
   return csg;
 };
+
+Plane.normal = function(vertices, other) {
+  vertices = vertices.map(v=>v);
+  const furthestFrom = other || Vertex3D.center(vertices);
+  const p1 = vertices.pop();
+  while (p1.equals(vertices[vertices.length - 1])) vertices.pop();
+  const p2 = vertices.pop();
+  let pickOneVertices = other ? [other] : vertices;
+  pickOneVertices.sort(Vertex3D.informationSorter);
+  let magnitude = -1;
+  const vector1 = p1.minus(p2);
+  let vector2, normVect;
+  for (let index = 0; index < pickOneVertices.length; index++) {
+    const currVect = pickOneVertices[index].minus(p1);
+    const norm = vector1.crossProduct(currVect);
+    const mag = norm.magnitude()
+    if (mag > magnitude) {
+      magnitude = mag;
+      normVect = norm;
+    }
+  }
+
+  if (magnitude < 0.001) {
+    console.warn.logarithmic('Invalid Normal Calculation was made');
+  }
+  return normVect.unit();
+}
 
 
 

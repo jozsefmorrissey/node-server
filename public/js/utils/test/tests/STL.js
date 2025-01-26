@@ -1,6 +1,6 @@
 
 const STL = require('../../3d-modeling/STL.js');
-const OrientationArrows = require('../../display/orientation-arrows.js');
+const OrientationControls = require('../../display/orientation-controls.js');
 const $t = require('../../$t.js');
 $t.loadFunctions(require('../../../../../services/cabinet/generated/html-templates.js'));
 
@@ -811,7 +811,7 @@ const getModel = () => {
 
 viewer = new Viewer(new CSG(), 500, 500, 50);
 const orientSelector = `#stl-three-d-model-cnt .orientation-controls`;
-const orientArrows = OrientationArrows.forCSG(orientSelector, viewer, getModel);
+const orientArrows = OrientationControls.forCSG(orientSelector, viewer, getModel);
 
 
 const updateModel = () => {

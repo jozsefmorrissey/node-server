@@ -1,6 +1,5 @@
 
 const Tolerance = require('../../../tolerance.js');
-const FixedValue = require('./fixed-value');
 const within = Tolerance.within(.0001);
 
 const withinTight = Tolerance.within(.000000001);

@@ -70,7 +70,7 @@ const stlWatcher = new Builder(stlBundler.change, stlBundler.write, !global.buil
         .add('../../public/js/utils/tolerance.js')
         .add('../../public/js/utils/tolerance-map.js')
         .add('../../public/js/utils/dom-utils.js')
-        .add('../../public/js/utils/display/orientation-arrows.js')
+        .add('../../public/js/utils/display/orientation-controls.js')
         .add('../../public/js/utils/expression-definition.js')
         .add('../../public/js/utils/$t.js')
         .add('../../public/json/alpha-numeric-point-maps/')

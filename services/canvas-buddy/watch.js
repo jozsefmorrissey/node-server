@@ -11,7 +11,8 @@ const cleanName = (name) => name.replace(/(..\/..|\.)\/public\/html\/templates\/
 const htmlBundler = new HtmlBundler(htmlDumpLoc, cleanName);
 
 new Builder(htmlBundler.change, htmlBundler.write, !global.build)
-        .add('../../public/html/templates/orientation-arrows.html')
+        .add('../../public/html/templates/orientation-controls.html')
+        .add('../../public/html/templates/controls/')
         .add('../../public/html/templates/input/measurement.html');
 
 const { JsBundler } = require('../../building/bundlers/js.js');
@@ -35,7 +36,7 @@ const jsWatcher = new Builder(jsBundler.change, jsBundler.write, !global.build)
         .add('../../public/js/utils/display/drag-drop.js')
         .add('../../public/js/utils/display/catch-all.js')
         .add('../../public/js/utils/display/resizer.js')
-        .add('../../public/js/utils/display/orientation-arrows.js')
+        .add('../../public/js/utils/display/orientation-controls.js')
         .add('../../public/js/utils/tolerance-map.js')
         .add('../../public/js/utils/canvas/')
         .add('../../public/js/utils/3d-modeling/')

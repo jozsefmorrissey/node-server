@@ -229,7 +229,7 @@ class Line2d {
       if (x === undefined) x = this[0].x;
       const slope = this.slope();
       if (slope === Infinity) return Infinity;
-      if (slope === 0) return this[0].y;
+      if (withinTol(slope, 0)) return this[0].y;
       return  (this.slope()*x + this.yIntercept());
     }
 
@@ -237,7 +237,7 @@ class Line2d {
       if (y === undefined) y = this[0].y;
       const slope = this.slope();
       if (slope === Infinity) return this[0].x;
-      if (slope === 0) {
+      if (withinTol(slope, 0)) {
         return Infinity;
       }
       return (y - this.yIntercept())/slope;

@@ -132,8 +132,7 @@ class ToleranceMap {
       if (elem === undefined) return;
       const matchArr = getSet(elem);
       if (matchArr) {
-        const index = matchArr.indexOf(elem);
-        if (index !== -1) return matchArr.splice(index, 1)[0];
+        const index = matchArr.remove(elem);
       }
     }
 

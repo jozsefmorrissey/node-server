@@ -1,6 +1,7 @@
 
 let nr = '(?:-|)[0-9]{1,}';
 Number.regex = new RegExp(`(?:${nr}\\.${nr}|${nr}|\\.${nr})`);
+Number.regex.simple = new RegExp(`(?:${nr})`);
 
 Function.safeStdLibAddition(Number, 'is',  function (...numbers) {
   return numbers.findIndex(n => !(n instanceof Number)) === -1;

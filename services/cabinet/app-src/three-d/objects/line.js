@@ -1,11 +1,12 @@
 
 const Vector3D = require('./vector');
 const Vertex3D = require('./vertex');
-const Line2d = require('../../two-d/objects/line');
+const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line');
 const Matrix = require('./matrix.js');
-const ToleranceMap = require('../../../tolerance-map.js');
+const FixedValue = require('./fixed-value');
+const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 const tol = .0001;
-const Tolerance = require('../../../tolerance.js');
+const Tolerance = require('../../../../../public/js/utils/tolerance.js');
 const withinTol = new Tolerance(tol).within;
 const withinHundreth = new Tolerance(.01).within;
 const withinThousandth = new Tolerance(.001).within;
@@ -82,11 +83,6 @@ class Line3D {
     this.equivalent = (other, tolerance) => this.equals(other, tolerance) ||
                                     this.equals(other.negitive(), tolerance);
 
-    this.scale = (scale, doNotModify) => {
-      if (doNotModify) return this.clone().scale(scale);
-      this[0].scale(scale); this[1].scale(scale);
-      return this;
-    }
     this.vector = () => {
       let i = this[1].x - this[0].x;
       let j = this[1].y - this[0].y;
@@ -231,11 +227,11 @@ class Line3D {
 
     const connect = (line1, line2, l1TrueSegmentFalseDirectional, l2TrueSegmentFalseDirectional) => {
       if (line1.isPoint() && line2.isPoint())
-        return new Line3D(line1[0].clone(), line2[0].clone());
+        return new Line3D(line1[0], line2[0]);
       else if (line1.isPoint())
-        return new Line3D(line1[0].clone(), line2.connect(line1[0].clone())[0]);
+        return new Line3D(line1[0], line2.connect(line1[0])[0]);
       else if (line2.isPoint())
-        return new Line3D(line1.connect(line2[0])[0], line2[0].clone());
+        return new Line3D(line1.connect(line2[0])[0], line2[0]);
       const l1State = tsfdState(l1TrueSegmentFalseDirectional);
       const l2State = tsfdState(l1TrueSegmentFalseDirectional);
       let intersection = line1.intersection(line2);
@@ -247,7 +243,7 @@ class Line3D {
       let prevDist = conn.length();
       conn = line2.connect(conn[0], l2TrueSegmentFalseDirectional);
       conn = line1.connect(conn[0], l1TrueSegmentFalseDirectional);
-      for (let index = 0; !withinTol(prevDist, conn.length()); index++) {
+      for (let index = 0; !withinThousandth(prevDist, conn.length()); index++) {
         prevDist = conn.length();
         conn = line2.connect.vertex(conn[0], l2TrueSegmentFalseDirectional);
         conn = line1.connect.vertex(conn[0], l1TrueSegmentFalseDirectional);
@@ -258,7 +254,7 @@ class Line3D {
     }
 
     this.connect.line = (other) => connect(this, other);
-    this.connect.line.segment = (other, both) => connect(this, other, true, both === false ? null : true);
+    this.connect.line.segment = (other, both) =>connect(this, other, true, both === false ? null : true);
     this.connect.line.directional = (other, both) => connect(this, other, false, both === false ? null : false);
 
 
@@ -272,7 +268,7 @@ class Line3D {
       const within = this.within(vertOnLine);
       if (within === true) return perp;
       if (within === 'AFTER' && state === CONN_STATES.DIR) return perp;
-      const closest = vertOnLine.distance(this[0]) < vertOnLine.distance(this[1]) ? this[0].clone() : this[1].clone();
+      const closest = vertOnLine.distance(this[0]) < vertOnLine.distance(this[1]) ? this[0] : this[1];
       perp[0] = closest;
       return perp;
     }
@@ -406,9 +402,7 @@ class Line3D {
 
     this.intersection.segment = (other, both) => {
       const connector = this.connect.line.segment(other, both);
-      if (connector && withinThousandth(connector.length(), 0)) {
-        return this.intersection(other);
-      }
+      if (connector && withinThousandth(connector.length(), 0)) return connector[0];
       return null;
     }
 
@@ -730,13 +724,10 @@ Line3D.combineOrder = (line1, line2) => {
       (unitVec1.equals(second.vector().unit()) || second.isPoint(.01))))
     return null;
   verts.shorterBy = shorterBy;
-  if (!withinThousandth(line1.connect.vertex(line2[0]).length(), 0) ||
-        !withinThousandth(line1.connect.vertex(line2[1]).length(), 0))
-    return null;
   return verts;
 }
 
-Line3D.combine = (lines, tolerance) => {
+Line3D.combine = (lines, tolerance, prefix) => {
   tolerance ||= .001;
   const tolmap = new ToleranceMap({'vector().positiveUnit().i()': tolerance,
                                   'vector().positiveUnit().j()': tolerance,
@@ -925,40 +916,43 @@ Line3D.radialSort2D = (lines, viewFrom, ccw, center, degreesOstartpoint) => {
   }).filter(l => l));
 }
 
-const quadrant = o => {
-  if (!o.unitInline && o.dirInline) return 0;
-  if (o.unitInline && o.dirInline) return 1;
-  if (o.unitInline && !o.dirInline) return 2;
-  return 3;
-}
-// o.inline.pos ? 2 :
-//   (o.inline.neg ? 0 :
-//     (o.dir.pos > .95 ? (o.neg > 0 ? 0 : 1) :
-//                         (o.pos > 0 ? 2 : 3)));
+const quadrant = o => o.inline.pos ? 2 :
+  (o.inline.neg ? 0 :
+    (o.dir.pos > .95 ? (o.neg > 0 ? 0 : 1) :
+                        (o.pos > 0 ? 2 : 3)));
 
 const priority = (o) => {
-  switch (o.quadrant) {
-    case 0: return o.unit.dot(o.tar);
-    case 1: return o.unit.dot(o.dir.inverse());
-    case 2: return o.unit.dot(o.dir.inverse());
-    case 3: return o.unit.dot(o.tar.inverse());
+  const q = quadrant(o);
+  switch (q) {
+    case 0: return o.unit.dot(o.tarUnit);
+    case 1: return o.unit.dot(o.dirVect.inverse());
+    case 2: return o.unit.dot(o.tarUnit.inverse());
+    case 3: return o.unit.dot(o.dirVect);
   }
 }
 
 const quadrantInfoObj = (target, dirVect) => (line) => {
-  let tar = target.vector().unit();
-  let dir = dirVect.unit();
-  let unit = line.vector().unit();
-  const info = {
-    tar, unit, dir,
-    unitInline: unit.dot(tar) > 0,
-    dirInline: unit.dot(dir) > 0
-  }
-  info.quadrant = quadrant(info);
-  return {line, quadrant: info.quadrant, priority: priority(info), info};
+
+  const dotInfo = {
+      line, dirVect,
+      tarUnit: target.vector().unit(),
+      unit: line.vector().unit(),
+      dir: {
+        pos: target.connect.vertex(line[1], false).vector().unit().dot(dirVect),
+        neg: target.negitive().connect.vertex(line[1], false).vector().unit().dot(dirVect)
+      },
+      inline: {
+        pos: target.vector().unit().equals(line.vector().unit()),
+        neg: target.negitive().vector().unit().equals(line.vector().unit()),
+      },
+      pos: target.vector().unit().dot(line.vector().unit()),
+      neg: target.negitive().vector().unit().dot(line.vector().unit())
+    };
+  return {line, quadrant: quadrant(dotInfo), priority: priority(dotInfo)};
 };
 
 Line3D.quadrantSort = (lines, target, normal, ccw) => {
+  lines = lines.map(l => l.clone());
   const multiplier = ccw === true ? 1 : -1;
   if (target === undefined) throw new Error('Target can be auto configured but has not been implemented because it seams like the sort of thing that you want to define');
   if (normal === undefined) throw new Error('Normal can be auto configured but has not been implemented because it seams like the sort of thing that you want to define');
@@ -1039,40 +1033,6 @@ Line3D.intersections = (lines, segment, tolerance) => {
   return intersections;
 }
 
-Line3D.intersectionInfo = (target, lines, segment, tolerance) => {
-  tolerance ||= .0001;
-  if (segment !== false) segment = true;
-  const notParrelle = lines.filter(l => !l.isParrelle(target));
-  const tolMap = new ToleranceMap({x: tolerance, y: tolerance, x:tolerance});
-  tolMap.add.all([target[0],target[1]]);
-  const lineMap = {};
-  const intMap = {};
-  const hash = target.hash();
-  intMap[hash] = [];
-  lineMap[hash] = target;
-  for (let index = 0; index < notParrelle.length; index++) {
-    const slicer = notParrelle[index];
-    const int = segment ? target.intersection.segment(slicer, true) : target.intersection(slicer);
-    if (int) {
-      const sHash = slicer.hash();
-      if (!intMap[sHash]) intMap[sHash] = [];
-      lineMap[sHash] = slicer;
-      intMap[slicer.hash()].push(int);
-      if (tolMap.matches(int).length === 0) {
-        intMap[hash].push(int);
-        tolMap.add(int);
-      }
-    }
-  }
-
-  Object.keys(intMap).forEach(k => {
-    const line = lineMap[k];
-    const vect = line.vector();
-    intMap[k].sort(Vertex3D.sortByCenter(line[0].translate(vect.scale(-1), true)));
-  });
-  return {lineMap, intMap};
-}
-
 Line3D.slice = (line, lines, segment) => {
   if (segment !== false) segment = true;
   const notParrelle = lines.filter(l => !l.isParrelle(line));
@@ -1106,7 +1066,7 @@ Line3D.sliceAll = (lines, segment) => {
 }
 
 Line3D.parrelleSets = (lines, tolerance) => {
-  tolerance ||= .01;
+  tolerance ||= .0001;
   const tolmap = new ToleranceMap({'vector().positiveUnit().i()': tolerance,
                                   'vector().positiveUnit().j()': tolerance,
                                   'vector().positiveUnit().k()': tolerance});
@@ -1153,30 +1113,16 @@ Line3D.longest = (mixAndMatch, ...vertsOlines) => {
 Line3D.from2D = (lines2d, z) =>
   lines2d.map(l => new Line3D([l[0].x, l[0].y, z || 0], [l[1].x, l[1].y, z || 0]));
 
-const vrss = Vertex3D.regex.mls()
 Line3D.regex = new RegExp(`(\\[|\\()\\s*(${Vertex3D.regex.mls()})\\s*,\\s*(${Vertex3D.regex.mls()})\\s*(\\)|\\])`);
-Line3D.regex.simple = new RegExp(`(\\[|\\()\\s*(${vrss})\\s*,\\s*(${vrss})\\s*(\\)|\\])`);
 Line3D.fromString = (str, unit) => {
-  const match = Line3D.regex.simple.object(str, 'open', '0', '1', 'close');
+  const match = Line3D.regex.object(str, 'open', '0', '1', 'close');
   if (match === null) return null;
+  console.log(match);
   const line = new Line3D(Vertex3D.fromString(match[0], unit),
                           Vertex3D.fromString(match[1], unit));
   line.directional(match.open === '(', match.close === ')')
   return line;
 }
-
-Line3D.regex.model = (string, unit, scale) => {
-  const line = Line3D.fromString(string, unit);
-  if (!line) return null;
-  line.scale(scale);
-  return new CSG.Line({
-    start: !line.directional()[0] ? line[0] : Vector3D.regex.model(line[0].toString(), true, 1),
-    end: !line.directional()[1] ? line[1] : Vector3D.regex.model(line[1].toString(), true, 1),
-    color: Color.fromString(string)
-  })
-};
-
-
 
 
 module.exports = Line3D;

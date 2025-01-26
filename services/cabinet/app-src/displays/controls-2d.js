@@ -8,7 +8,7 @@ class Controls2d extends Lookup {
   constructor(elem, getLayout, panZ) {
     if (elem === undefined) throw new Error(`No element provided`);
     super();
-    const navId = `orientation-arrows-${this.id()}`;
+    const navId = `orientation-${this.id()}`;
     let moveCount = 0;
     const instance = this;
     let centerWithin = true;

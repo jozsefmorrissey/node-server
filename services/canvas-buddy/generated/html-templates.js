@@ -10,16 +10,29 @@ exports['1747552123'] = (get, $t) =>
 		$t.clean(get("uNit") === get("unit")() ? 'checked' : '') +
 		`> </span>`
 
-exports['orientation-arrows'] = (get, $t) => 
-		`<div class='orientation-arrows' id='` +
+exports['orientation-controls'] = (get, $t) => 
+		`<div class='orientation no-print' id='` +
 		$t.clean(get("navId")()) +
 		`' l-id='` +
 		$t.clean(get("id")()) +
-		`'> <table class='orientation-arrows-table orient-arrows' cellspacing="0" cellpadding="0"> <tr><td></td> <td dir='u'>&#8681;</td> <td></td></tr> <tr><td dir='l'>&#8680;</td> <td dir='c'>` +
+		`'> <div class='arrows'> <table cellspacing="0" cellpadding="0"> <tr> <td cmd='settings'><i class='gg-menu-round'></i></td> <td cmd='u'>&#8681;</td> <td cmd='color'><input type='color' value='` +
+		$t.clean(get("color")()) +
+		`'/></td> </tr> <tr> <td cmd='l'>&#8680;</td> <td cmd='c'>` +
 		$t.clean(get("space")()) +
 		`&#8865;` +
 		$t.clean(get("space")()) +
-		`</td> <td dir='r'>&#8678;</td></tr> <tr><td></td> <td dir='d'>&#8679;</td> <td></td></tr> </table> </div> `
+		`</td> <td cmd='r'>&#8678;</td> </tr> <tr> <td></td> <td cmd='d'>&#8679;</td> <td></td> </tr> </table> </div> <div class='settings' hidden> <button class='remove-btn'>X</button> <div class='body'></div> </div> </div> `
+
+exports['controls/viewer'] = (get, $t) => 
+		`<label>Polygons</label> <input type='checkbox' name='polygons' ` +
+		$t.clean(get("CONTROLS").POLYGONS ? 'checked' : '') +
+		`> <br> <label>Outline</label> <input type='checkbox' name='outline' ` +
+		$t.clean(get("CONTROLS").OUTLINE ? 'checked' : '') +
+		`> <br/> <label>Wireframe</label> <input type='checkbox' name='wireframe' ` +
+		$t.clean(get("CONTROLS").WIREFRAME ? 'checked' : '') +
+		`> <br> <label>Background Color</label> <input type="color" value="` +
+		$t.clean(get("CONTROLS").BACKGROUND_COLOR) +
+		`" name='background-color'> `
 
 exports['input/measurement'] = (get, $t) => 
 		`<div class='fit input-cnt measurement-input-cnt'` +

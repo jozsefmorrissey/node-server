@@ -481,6 +481,13 @@ class Layout2D extends Lookup {
     this.toDrawString = () => this.objects()
                                 .map(a => a.snap2d.top().object().toDrawString())
                                 .concat([Line2d.toDrawString(this.walls())]).join('\n');
+
+    this.toDrawString3D = (color) => this.objects().map(a => a.snap2d.top().object().lines())
+                                  .concatElements().concat(this.walls())
+                                  .map(l => l.toString()
+                                  .replace(/([0-9])\s*,\s*([0-9-])/g, '$1, 0, $2')
+                                  .replace(/^/, color || '')).join('\n');
+
   }
 }
 

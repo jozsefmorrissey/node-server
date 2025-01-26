@@ -142,7 +142,7 @@ class Draw2d {
       if (line === undefined) return;
       if (indicateDirection === undefined) indicateDirection = line.indicateDirection;
       color = color ||  'black';
-      width = width || 10;
+      width = width || .01;
       const ctx = CTX();
       ctx.beginPath();
       ctx.strokeStyle = color;

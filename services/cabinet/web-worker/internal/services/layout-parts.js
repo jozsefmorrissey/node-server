@@ -8,7 +8,7 @@ const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line
 const Parimeters2d = require('../../../../../public/js/utils/canvas/two-d/maps/parimeters.js');
 const ToleranceMap = require('../../../../../public/js/utils/tolerance-map.js');
 
-const {Parimeter, Vertex3D, Polygon3D, Line3D, Layer} =
+const {Parimeter3D, Vertex3D, Vector3D, Polygon3D, Line3D, Layer} =
     require('../../../../../public/js/utils/canvas/three-d/lib');
 
 const lineTo3DVerts = (line, bottomHeight, topHeight) => {
@@ -41,8 +41,8 @@ function withWallsOutline(polys, walls) {
   const height = polys[0].center().y;
   const wallLines = walls.map(w =>
     Line3D.combine(w.lines().map(l => {l = l.clone(); l[0].y = l[1].y = height; return l;}))[0]);
-  const lines = polys.map(p => p.lines()).concatElements();;//.concat(wallLines);
-  const outline = new Parimeter(lines);
+  const lines = polys.map(p => p.lines()).concatElements();//.concat(wallLines);
+  const outline = new Parimeter3D(lines, Vector3D.j);
   return outline;
 }
 

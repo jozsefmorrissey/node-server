@@ -2,7 +2,7 @@
 const du = require('../../../public/js/utils/dom-utils');
 const Viewer = require('../../../public/js/utils/3d-modeling/viewer.js').Viewer;
 const addViewer = require('../../../public/js/utils/3d-modeling/viewer.js').addViewer;
-const OrientationArrows = require('../../../public/js/utils/display/orientation-arrows.js');
+const OrientationControls = require('../../../public/js/utils/display/orientation-controls.js');
 const SlideShow = require('./slide-show');
 const STL = require('../../../public/js/utils/3d-modeling/STL.js');
 
@@ -35,7 +35,7 @@ const checkedLineDispSelector = '#display-radios-3d>input:checked';
 du.on.match('change', checkedLineDispSelector, (elem) =>
   CSG.Line.type(elem.value) &
   du.trigger('refresh', du.find('textarea')));
-CSG.Line.type(CSG.Line.TYPES.VECTOR);
+CSG.Line.type(CSG.Line.TYPES.LINE_ONLY);
 
 du.on.match('change:keyup', '#axis-controls-3d input', (elem) => {
   const radInput = du.find.closest('[name="radius"]', elem);
@@ -49,7 +49,7 @@ du.on.match('change:keyup', '#axis-controls-3d input', (elem) => {
 });
 
 let viewer;
-let viewerSize = '60vh';
+let viewerSize = '80vh';
 const viewerSelector = '#three-d-display>.canvas-cnt';
 function getViewer () {
   if (viewer) return viewer;
@@ -59,7 +59,7 @@ function getViewer () {
     viewer = new Viewer(new CSG.cube(), size, size, 50);
     addViewer(viewer, viewerSelector);
     const orientSelector = `${viewerSelector} .orientation-controls`;
-    const orientArrows = OrientationArrows.forCSG(orientSelector, viewer, () => renderModel);
+    const orientArrows = OrientationControls.forCSG(orientSelector, viewer, () => renderModel);
   }
   return viewer;
 }
@@ -89,7 +89,7 @@ function buildModel(lines) {
           found = true;
           let currModel = reg.model(line, inputUnit(), scale);
           if (currModel) {
-            model.polygons.concatInPlace(currModel.polygons);
+            model.add(currModel);
           }
         }
       }
@@ -128,8 +128,9 @@ const display = (m) => {
   // renderModel = renderModel.peel({x:0,y:1,z:0}, 4);
   const axisModel = axis.include ? CSG.Axis(axis.length, axis.radius()) : new CSG();
   getViewer(renderModel);
-  axisModel.polygons.concatInPlace(renderModel.polygons);
+  axisModel.add(renderModel);
   viewer.mesh = axisModel.toMesh();
+  viewer.mesh.line = axisModel.toLineMesh();
   viewer.gl.ondraw();
 }
 

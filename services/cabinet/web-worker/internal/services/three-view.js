@@ -31,9 +31,9 @@ module.exports = function (payload, taskId) {
   const frontLayers = orientAndFilterLayers(layers, center, normals, [Vector3D.i, Vector3D.j, Vector3D.k]);
   const topLayers = orientAndFilterLayers(layers, center, normals, [Vector3D.i, Vector3D.k, Vector3D.j.inverse()]);
   const rightLayers = orientAndFilterLayers(layers, center, normals, [Vector3D.k, Vector3D.j, Vector3D.i.inverse()]);
-  console.log([frontLayers, topLayers, rightLayers].map((ls, i) => layerString(ls,i)).join('\n'))
-  const polys = {front: frontLayers.inline.map(l => l.parimeter()),
-                        top: topLayers.inline.map(l => l.parimeter()),
-                        right: rightLayers.inline.map(l => l.parimeter())};
-  return polys;
+  // console.log([frontLayers, topLayers, rightLayers].map((ls, i) => layerString(ls,i)).join('\n'))
+  // const polys = {front: frontLayers.inline.map(l => l.parimeter()),
+  //                       top: topLayers.inline.map(l => l.parimeter()),
+  //                       right: rightLayers.inline.map(l => l.parimeter())};
+  return [];//polys;
 }

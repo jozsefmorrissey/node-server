@@ -6,6 +6,39 @@ const CSG = require('./csg.js');
 const GL = require('./lightgl.js');
 const shaders = require('./shaders.js');
 
+const VIEWER_CONTROLS = {
+  POLYGONS: true,
+  OUTLINE: true,
+  WIREFRAME: false,
+  BACKGROUND_COLOR: '#00ffff',
+  OUTLINE_COLOR: '#000000'
+}
+
+CSG.prototype.toLineMesh = function() {
+  var mesh = new GL.Mesh({ normals: true, colors: true });
+  var mesh = new GL.Mesh({ normals: true, colors: true });
+  const lineIndexer = new GL.Indexer();
+  var indexer = new GL.Indexer();
+  this.outlines.forEach(outline => {
+    let prevIndex, firstIndex;
+    for (let index = 0; index < outline.length; index++) {
+      const vertex = new CSG.Vertex(outline[index]);
+      vertex.color === Color.rgb.percent(VIEWER_CONTROLS.OUTLINE_COLOR);
+      const currIndex = indexer.add(vertex);
+      if (prevIndex >= 0) {
+        lineIndexer.add([Math.min(prevIndex, currIndex), Math.max(prevIndex, currIndex)])
+      } else firstIndex = currIndex;
+      prevIndex = currIndex;
+    }
+    if (outline.length > 1) lineIndexer.add([Math.min(firstIndex, prevIndex), Math.max(firstIndex, prevIndex)]);
+  });
+  mesh.vertices = indexer.unique.map(function(v) { return [v.pos.x, v.pos.y, v.pos.z]; });
+  mesh.colors = indexer.unique.map(function(v) { return v.color; });
+  mesh.addIndexBuffer('lines');
+  mesh.lines = lineIndexer.unique;
+  mesh.compile();
+  return mesh;
+};
 // Convert from CSG solid to GL.Mesh object
 CSG.prototype.toMesh = function() {
   var mesh = new GL.Mesh({ normals: true, colors: true });
@@ -22,7 +55,8 @@ CSG.prototype.toMesh = function() {
   mesh.vertices = indexer.unique.map(function(v) { return [v.pos.x, v.pos.y, v.pos.z]; });
   mesh.normals = indexer.unique.map(function(v) { return [v.normal.x, v.normal.y, v.normal.z]; });
   mesh.colors = indexer.unique.map(function(v) { return v.color; });
-  mesh.computeWireframe();
+  mesh.computeWireframe(this.wireframe);
+  mesh.compile();
   return mesh;
 };
 
@@ -33,6 +67,7 @@ var viewers = [];
 
 // Set to true so lines don't use the depth buffer
 Viewer.lineOverlay = false;
+Viewer.CONTROLS = VIEWER_CONTROLS;
 
 // A viewer is a WebGL canvas that lets the user view a mesh. The user can
 // tumble it around by dragging the mouse.
@@ -66,7 +101,9 @@ function Viewer(csg, width, height, depth) {
   // Get a new WebGL canvas
   var gl = GL.create();
   this.gl = gl;
+  this.CONTROLS = VIEWER_CONTROLS;
   this.mesh = csg.toMesh();
+  this.mesh.line = csg.toLineMesh();
   this.canvas = () => gl.canvas;
 
   // Set up the viewport
@@ -85,7 +122,7 @@ function Viewer(csg, width, height, depth) {
   // gl.clearColor(0.93, 0.93, 0.93, 1);
 
   //Background Color
-  gl.clearColor(0, 0, 0, 1);
+  gl.clearColor(...Color.rgb.percent(VIEWER_CONTROLS.BACKGROUND_COLOR), 1);
   gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.CULL_FACE);
   gl.polygonOffset(1, 1);
@@ -207,7 +244,26 @@ function Viewer(csg, width, height, depth) {
 
   window.onmousedown = setPointClicked;
 
+  function draw() {
+    // gl.clearColor(...Color.rgb.percent(VIEWER_CONTROLS.BACKGROUND_COLOR), 1);
+    if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
+    // that.lightingShaders.forEach(s => s.draw(that.mesh, gl.TRIANGLES));
+    if (VIEWER_CONTROLS.POLYGONS)
+      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
+    if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
+
+    if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    if (VIEWER_CONTROLS.OUTLINE)
+      that.blackShader.draw(that.mesh.line, gl.LINES);
+    if (VIEWER_CONTROLS.WIREFRAME)
+      that.blackShader.draw(that.mesh, gl.LINES);
+    gl.disable(gl.BLEND);
+    if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+  }
+
   function viewFrom(point, rotation) {
+      gl.clearColor(...Color.rgb.percent(VIEWER_CONTROLS.BACKGROUND_COLOR), 1);
       gl.makeCurrent();
 
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -221,16 +277,7 @@ function Viewer(csg, width, height, depth) {
       point = new CSG.Vector(point);
       gl.translate(-point.x, -point.y, -point.z);
 
-      if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
-      // that.lightingShaders.forEach(s => s.draw(that.mesh, gl.TRIANGLES));
-      that.lightingShader.draw(that.mesh, gl.TRIANGLES);
-      if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
-
-      if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
-      gl.enable(gl.BLEND);
-      that.blackShader.draw(that.mesh, gl.LINES);
-      gl.disable(gl.BLEND);
-      if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+      draw();
   }
   this.viewFrom = viewFrom;
 
@@ -242,9 +289,11 @@ function Viewer(csg, width, height, depth) {
 
   var that = this;
   gl.ondraw = function() {
+    gl.clearColor(...Color.rgb.percent(VIEWER_CONTROLS.BACKGROUND_COLOR), 1);
     gl.makeCurrent();
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
     // gl.loadIdentity();
     applyZoom();
     gl.rotateAroundPoint(pointClicked, rotationOffset);
@@ -253,17 +302,7 @@ function Viewer(csg, width, height, depth) {
     // gl.rotate(angleY, rotationVector.x, rotationVector.y, rotationVector.z);
     // gl.rotate(rotationOffset[2], 0, 0, -1);
     x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
-
-    if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
-    // that.lightingShaders.forEach(s => s.draw(that.mesh, gl.TRIANGLES));
-    that.lightingShader.draw(that.mesh, gl.TRIANGLES);
-    if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
-
-    if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
-    gl.enable(gl.BLEND);
-    that.blackShader.draw(that.mesh, gl.LINES);
-    gl.disable(gl.BLEND);
-    if (Viewer.lineOverlay) gl.enable(gl.DEPTH_TEST);
+    draw();
   };
 
   gl.ondraw();

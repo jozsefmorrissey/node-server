@@ -10,7 +10,6 @@ const Tolerance = require('../../../tolerance.js');
 const within = Tolerance.within(.0000001);
 
 const CSG = require('../../../3d-modeling/csg.js');
-const NormalMagnitudeIsZero = 'InvalidPolygon: normal vector magnitude === 0';
 const times = {count: 0, curr: {total: 0}, old: {total: 0}};
 
 const place = (vert, no, one, two, three) => {
@@ -105,33 +104,7 @@ class Polygon3D {
       if (xNorm) xNorm.rotate(rotations);
     }
 
-    function calcNormal(otherPoints) {
-      let points = instance.vertices();
-      while(points[0].equals(points[1])) points.splice(0,1)
-      if (!Array.isArray(otherPoints)) {
-        otherPoints = points.slice(2);
-      } else {
-        points.sort(Vertex3D.informationSorter);
-      }
-      let magnitude = -1;
-      const vector1 = points[1].minus(points[0]);
-      let vector2, normVect;
-      for (let index = 0; index < otherPoints.length; index++) {
-        const currVect = otherPoints[index].minus(points[1]);
-        const norm = vector1.crossProduct(currVect);
-        const mag = norm.magnitude()
-        if (mag > magnitude) {
-          magnitude = mag;
-          normVect = norm;
-        }
-      }
-
-      if (magnitude < 0.001) {
-        throw new Error(NormalMagnitudeIsZero);
-      }
-      return normVect.unit();
-    }
-    this.normal = calcNormal;
+    this.normal = (otherVertex) => Plane.normal(instance.vertices(), otherVertex);
 
 
     this.connect = (other) => {
@@ -670,20 +643,6 @@ class Polygon3D {
           const line = new Line3D(startVertex, endVertex);
           lines.push(line);
           const prevLine = lines[lines.length - 2];
-          if (lines.length > 2 && !(normal instanceof Vector3D)) {
-            try {
-              normal = calcNormal().positiveUnit();
-            } catch (e) {
-              if (e.message !== NormalMagnitudeIsZero) {
-                console.error(e);
-              }
-            }
-          } else if (lines.length > 3) {
-            const equal = normal.equals(calcNormal(endVertex).positiveUnit());
-            if (equal === false) {
-              console.warn('Trying to add vertex that does not lie in the existing plane');
-            }
-          }
         }
       }
       if (verts.length > 0 && lines.length > 0) {
@@ -858,7 +817,7 @@ class Polygon3D {
       const normal = this.normal();
       if (!normal.parrelle(other.normal())) return;
       // if (this.equals(other)) return this.copy();
-      const merged = new Polygon3D.Parimeter3D.Experimental(this.lines().concat(other.lines()), normal);
+      const merged = new Polygon3D.Parimeter3D(this.lines().concat(other.lines()), normal);
       return merged.length === 1 ? merged[0] : null;
       // const lineMap = this.lineMap();
       // const allOtherLines = other.lines();
@@ -1076,27 +1035,50 @@ class Polygon3D {
       return paths[0];
     }
 
-    this.regular = () => {
-      if (!this.irregular.is()) return [this.copy()];
-
-      const sliced = Line3D.sliceAll(this.lines().map(l => l.clone()), false)
-        .filter(l => this.isWithin(l[0]) && this.isWithin(l[1]) && this.isWithin(l.midpoint()));
-      const map = new ToleranceMap({'0.x': .001,
-                                      '0.y': .001,
-                                      '0.z': .001});
-      map.addAll(sliced.concat(sliced.map(l=>l.negitive())));
-      const normal = this.normal();
-      const hashMap = HashMap(sliced);
-      let line, paths, visited; const polys = [];
-      while (line = hashMap.one()) {
-        const minPath = followPaths(line, map);
-        let poly = Polygon3D.fromLines(minPath)[0];
-        if (!poly.normal().sameDirection(normal)) poly = poly.reverse();
-        polys.concatInPlace([poly]);
-        minPath.forEach(l => hashMap.remove(l));
+    function addTriangle(startIndex, verts, triangles, gone, nextOprev, normal, shouldAdd) {
+      const reverse = !shouldAdd  ? true : false;
+      shouldAdd ||= (v,i) => gone[i] !== true;
+      const goneCheck = (v,i) => !gone[i];
+      const neighborGetter = nextOprev === true ? 'nextInfo' : 'prevInfo';
+      const info = verts[neighborGetter](startIndex, goneCheck);
+      const inc = nextOprev ? 1 : -1;
+      if (shouldAdd(info)) {
+        const index2 = verts[neighborGetter](info.index + inc, goneCheck).index;
+        const index3 = verts[neighborGetter](index2 + inc, goneCheck).index;
+        const triVerts = nextOprev ? [verts[info.index], verts[index2], verts[index3]] :
+                                [verts[index3], verts[index2], verts[info.index]];
+        if (reverse && !Plane.normal(triVerts).equals(normal)) triVerts.reverse();
+        if (reverse || Plane.normal(triVerts).equals(normal)) {
+          triangles.push(new Polygon3D(triVerts));
+          gone[index2] = true;
+        }
       }
+    }
 
-      return polys;
+    const distLT2 = (info) => info.distance < 2;
+    this.regular = () => {
+      if (this.irregular.crissCross.is()) {
+        console.warn('Crisscrossed polygon: should find route cause of irregularity');
+        const fixed = this.clone();
+        fixed.irregular.crissCross.fill();
+        return fixed.regular();
+      }
+      const verts = this.vertices().filter(Vertex3D.uniqueFilter());
+      const triangles = [];
+      const gone = Array.fill(verts.length, false);
+      const irrLocs = this.irregular.concave.locations();
+      const normal = this.normal();
+      for (let index = 0; index < irrLocs.length; index++) {
+        const i = irrLocs[index];
+        addTriangle(i, verts, triangles, gone, true, normal, distLT2);
+        addTriangle(i, verts, triangles, gone, false, normal, distLT2);
+      }
+      const remainingPoly = new Polygon3D(verts.filter((v,i) => !gone[i]));
+      if (remainingPoly.irregular.concave.is())
+        return triangles.concat(remainingPoly.regular());
+      verts.forEach((v,i) => gone.count(false) > 2 &&
+                              addTriangle(i, verts, triangles, gone, true, normal));
+      return triangles;
     }
 
     this.triangles = () => Polygon3D.triangles(this.regular());
@@ -1183,18 +1165,19 @@ class Polygon3D {
     }
 
     const vertexColor = (i) => i===0?'red':(i===1?'blue':(i===2?'green':i===3?'black':(Color.next())));
-    this.toDrawString = (color, includeNormal) => {
+    this.toDrawString = (color, includeNormal, accuracy) => {
       const colorString = (typeof color) === 'string' ? color : 'blue';
+      accuracy ||= .001;
       let str = '';
       for (let index = 0; index < lines.length; index++) {
-        str += `,${lines[index][0].toString(.001)}`;
+        str += `,${lines[index][0].toString(accuracy)}`;
       }
       if (includeNormal !== true) return `${colorString}[${str.substring(1)}]`;
       const start = this.center();
       const end = new Vertex3D(this.normal().scale(10).add(start));
-      const normalStr = `[${start.toString(.001)},${end.toString(.001)})`;
+      const normalStr = `[${start.toString(accuracy)},${end.toString(accuracy)})`;
 
-      const vertexStr = this.vertices().map((v,i) => `\t${vertexColor(i)}${v.toString(.001)}`).join('\n');
+      const vertexStr = this.vertices().map((v,i) => `\t${vertexColor(i)}${v.toString(accuracy)}`).join('\n');
 
       return `${colorString}[${str.substring(1)}]\n${colorString}${normalStr}\n${vertexStr}`;
 
@@ -1216,26 +1199,32 @@ Polygon3D.merge = (polygons) => {
                         'toPlane().axisIntercepts().y': tol,
                         'toPlane().axisIntercepts().z': tol});
   tolMap.addAll(polygons);
-
   polygons.deleteAll();
   tolMap.forEachSet((polys) => {
     const minIndex = polys.minIndex(p => p.area())
     const target = polys.splice(minIndex,1)[0];
+    polys.sort((p1,p2) => p1.center().x * 1.5 + p1.center().y - p2.center().x * 1.5 + p2.center().y)
     Polygon3D.distanceSort(target, polys);
     polys.splice(0,0,target);
     let currIndex = 0;
+    let mergedCount = 0;
+    let notMergedCount = 0;
     while (currIndex < polys.length - 1) {
       const target = polys[currIndex];
+      let notMergedCount = 0;
       for (let index = currIndex + 1; index < polys.length; index += 1) {
         const other = polys[index];
         const merged = target.merge(other);
         if (merged) {
-          polys[currIndex--] = merged;
+          polys[currIndex] = merged;
           polys.splice(index, 1);
+          mergedCount++;
           break;
+        } else {
+          console.log('not merged...')
         }
       }
-      currIndex++;
+      if (mergedCount === 0) currIndex++;
     }
     polygons.concatInPlace(polys);
   });
@@ -1529,11 +1518,14 @@ Polygon3D.fromString = (str, unit) => {
 }
 const coloredVertexReg = new RegExp(`(?:${Color.regex.mls()})${Vertex3D.regex.mls()}`, 'g');
 Polygon3D.regex = new RegExp(`(\\[)((?:(?:${Color.regex.mls()}|)${Vertex3D.regex.mls()}(?:,|)){3,})(\\])`);
-Polygon3D.regex.model = (string) => {
-  const poly = Polygon3D.fromString(string);
+Polygon3D.regex.model = (string, unit, scale) => {
+  let poly = Polygon3D.fromString(string, unit);
+  if (scale) poly = new Polygon3D(poly.vertices().map(v => v.scale(scale)))
   if (!poly) return null;
   const color = Color.fromString(string);
-  const csg = new CSG.Polygon.Enclosed(poly.vertices(), null, color);
+  const csg = new CSG()
+  poly.regular().forEach(p => csg.add(new CSG.Polygon.Enclosed(p.vertices(), null, color)));
+  csg.outlines = [poly.vertices()]
   const coloredVertices = string.match(coloredVertexReg);
   if (coloredVertices) coloredVertices.forEach(s => csg.add(Vertex3D.regex.model(s)));
   return csg;

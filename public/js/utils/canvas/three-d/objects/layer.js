@@ -44,7 +44,6 @@ class Layer {
     this.mergedPolys.regular = () => this.mergedPolys().map(p => p.regular()).concatElements();
 
     this.parimeter = () => {
-      console.warn.logarithmic('Parimeter3D does not deal well with disconnected internal lines.\n\tsee "Layer: lines" test for and example senario')
       return new Parimeter3D(this.lines(), this.normal());
     }
     this.combined = () => new Layer(this.parimeter());
@@ -240,16 +239,8 @@ class Layer {
     }
     // overlapsAnother = overlapsAnother.HashCache(this);
 
-    this.lines = (tolerance) => {
-      let t = tolerance || .00001;
-      return this.mergedPolys.regular().map(p => p.lines()).concatElements();
-      let lines = onlyDefinedOnce(t);
-      // removeLinesThatDoNotShareAVertex(lines, t);
-      Line3D.combine(lines);
-      lines = Line3D.sliceAll(lines);
-      removeLinesThatDoNotShareAVertex(lines, t);
-      Line3D.combine(lines);
-      return lines;
+    this.lines = () => {
+      return this.polygons().map(p => p.lines()).concatElements();
     }
     this.lines.all = () => this.polygons().map(p => p.lines()).concatElements();
 

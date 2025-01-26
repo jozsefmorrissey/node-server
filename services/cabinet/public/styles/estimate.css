@@ -212,13 +212,6 @@ table.no-border-cells td {text-align: center; vertical-align: middle;}
   font-size: smaller;
 }
 
-.orient-arrows [dir]:hover {
-  background-color: lime;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 input[name='selector-depends'],
 input[name='selector-dependent'],
 input[name='partCode'],
@@ -731,32 +724,32 @@ canvas {
   z-index: -1;
 }
 
-.orientation-controls > .c{
+.orientation .arrows .c{
   top: 0;
   right: 30pt;
 }
 
-.orientation-controls > .u{
+.orientation .arrows .u{
   top: 0;
   right: 30pt;
 }
 
-.orientation-controls > .d{
+.orientation .arrows .d{
   top: 20pt;
   right: 30pt;
 }
 
-.orientation-controls > .r{
+.orientation .arrows .r{
   top: 10pt;
   right: 10pt;
 }
 
-.orientation-controls > .l{
+.orientation .arrows .l{
   top: 10pt;
   right: 50pt;
 }
 
-.orientation-controls > div {
+.orientation .arrows {
   font-size: 20pt;
   position: absolute;
   background-color: white;
@@ -764,23 +757,64 @@ canvas {
   opacity: 25%;
 }
 
-.orientation-controls > div:hover {
+.orientation .arrows:hover {
   opacity: 100%;
 }
 
-.orientation-arrows-table, .orientation-arrows-table > tbody,
-.orientation-arrows-table > tbody > tr, .orientation-arrows-table > tbody > tr > td {
+.orientation .arrows table, .orientation .arrows table > tbody,
+.orientation .arrows table > tbody > tr, .orientation .arrows table > tbody > tr > td {
   border: none;
   text-align: center;
 }
 
-.orientation-arrows {
+.orientation .arrows td[cmd]:hover {
+  background-color: lime;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+input[type=color] {
+  max-width: 20pt;
+  max-height: 25pt;
+  border-radius: 50%;
+  background-color: #00000000;
+  cursor: pointer;
+}
+input[type=color]::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+input[type=color]::-webkit-color-swatch-wrapper {
+    border: none;
+    border-radius: 50%;
+}
+
+.orientation .arrows {
   position: absolute;
   bottom: 0;
+  padding: 10pt;
   right: 10px;
 }
 
-td[dir] {
+.orientation .settings {
+  bottom: 0;
+  right: 50%;
+  transform: translate(50%, -50%);
+  position: absolute;
+  background-color: white;
+  padding: 5pt;
+  border-radius: 5pt;
+  box-shadow: 3px 3px 6px black, 3px 3px 6px grey, 3px 3px 6px lightgrey;
+  opacity: 25%;
+}
+
+.orientation .settings:hover {
+  opacity: 100%;
+}
+
+td[cmd] {
   font-size: 20pt;
 }
 

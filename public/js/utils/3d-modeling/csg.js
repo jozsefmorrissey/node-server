@@ -55,6 +55,7 @@ const STL = require('./STL');
 
 CSG = function() {
   this.polygons = [];
+  this.outlines = [];
   this.toString = (percision, includeColor) => {
     percision ||= .001;
     let strs = [];
@@ -264,6 +265,7 @@ CSG.prototype = {
     var csg = new CSG();
     //csg.normals = this.normals;
     csg.polygons = this.polygons.map(function(p) { return p.clone(); });
+    csg.outlines = this.outlines.map(arr => arr.map(v => v.clone()));
     return csg;
   },
 
@@ -339,6 +341,8 @@ CSG.prototype = {
   },
   add: function(csg) {
     this.polygons.concatInPlace(csg.clone().polygons);
+    this.outlines.concatInPlace(csg.outlines.filter(a => a.length > 0));
+    return this;
   },
   islands: function() {
     const islands = [];
@@ -750,7 +754,7 @@ function vecotrOvertexModel(start, end, model, options) {
     start = end.minus(unit);
     return new CSG.cone({start, end, model, color});
   } else {
-    return new CSG.Point(end, null, color).union(model);
+    return new CSG.Point(end, null, color).add(model);
   }
 }
 
@@ -1067,7 +1071,7 @@ CSG.cone = function (options) {
   const lengthVector = rotationVector.clone().times(length);
   const perpVector = perpendicularVector(rotationVector.clone()).times(radius/-2);
   const widthVector = perpVector.cross(rotationVector).unit().times(30);
-  const cutterCenter = end;
+  const cutterCenter = end.plus(lengthVector.unit().times(radius));
   const plane = new CSG.Rectangle([30, length*10, radius*2], cutterCenter, rotationVector.unit(), widthVector.unit());
   const planeCenter = new CSG.Vector(plane.center());
   if (options.color) plane.setColor(options.color);
@@ -1089,7 +1093,7 @@ CSG.cone = function (options) {
 
   if(options.model) {
     const model = options.model.subtract(cylinder);
-    cone = cone.union(model);
+    cone.add(model);
   }
 
   return cone;
@@ -1468,13 +1472,16 @@ CSG.Plane.prototype = {
 CSG.Polygon = function(vertices, shared) {
   this.vertices = vertices;
   this.shared = shared;
+  this.outlines = [];
   this.plane = CSG.Plane.fromPoints(vertices[0].pos, vertices[1].pos, vertices[2].pos);
 };
 
 CSG.Polygon.prototype = {
   clone: function() {
     var vertices = this.vertices.map(function(v) { return v.clone(); });
-    return new CSG.Polygon(vertices, this.shared);
+    const csg = new CSG.Polygon(vertices, this.shared);
+    csg.outlines.concatInPlace(csg.outlines.filter(a => a.length > 0));
+    return csg;
   },
 
   lines: function () {
@@ -1728,9 +1735,10 @@ CSG.Node.prototype = {
   build: function(polygons, callCount) {
     if (!polygons.length) return;
     callCount ||= 0;
-    // if (callCount > 500) {
-    //   throw new Error('CSG.polygons are misconfigured');
-    // }
+    if (callCount > 500) {
+      if (callCount > 600)
+        throw new Error('CSG.polygons are misconfigured');
+    }
     if (!this.plane) this.plane = polygons[0].plane.clone();
     var front = [], back = [];
     for (var i = 0; i < polygons.length; i++) {

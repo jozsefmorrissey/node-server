@@ -189,6 +189,34 @@ Function.safeStdLibAddition(Array, 'reorder', function () {
   }
 });
 
+Function.safeStdLibAddition(Array, 'ri', function (index) {
+  while (index < this.length) index += this.length;
+  return index % this.length;
+});
+
+Function.safeStdLibAddition(Array, 'rv', function (index) {
+  return this[this.ri(index)];
+});
+
+Function.safeStdLibAddition(Array, 'nextInfo', function (startIndex, test) {
+  if (!(test instanceof Function)) test = (v) => v;
+  for (let distance = 0; distance < this.length; distance++) {
+    const index = this.ri(startIndex + distance);
+    if (test(this[index], index)) return {index, value: this[index], distance}
+  }
+  return {index: -1};
+});
+
+Function.safeStdLibAddition(Array, 'prevInfo', function (startIndex, test) {
+  if (!(test instanceof Function)) test = (v) => v;
+  for (let distance = 0; distance < this.length; distance++) {
+    const index = this.ri(startIndex - distance);
+    if (test(this[index], index)) return {index, value: this[index], distance}
+  }
+  return {index: -1};
+});
+
+
 Function.safeStdLibAddition(Array, 'toJson', function (arr) {
     const json = [];
     arr.forEach((elem) => json.push(JSON.value(elem)));
@@ -500,4 +528,8 @@ Function.safeStdLibAddition(Array, 'elements', function(func) {
   this.forEach(e => Array.isArray(e) ?
               elements.concatInPlace(e.elements()) : elements.push(e));
   return elements;
+});
+
+Function.safeStdLibAddition(Array, 'snapShotString', function(func) {
+  return this.map((e, i) => `//${i}\n${e}`).join('\n\n');
 });

@@ -228,7 +228,7 @@ to.Cutter = {
     biPolygon: (rMdto, env) => {
       const outerPoly = rMdto.parentAssembly().coordinates.outer.object();
       const big = 10000000000;
-      const biPoly = BiPolygon.fromPolygon(outerPoly, -big, 0, {x:big, y:big});
+      const biPoly = BiPolygon.fromPolygon(outerPoly, -100, 0, {x:100, y:100});
       return biPoly;
     }
   },

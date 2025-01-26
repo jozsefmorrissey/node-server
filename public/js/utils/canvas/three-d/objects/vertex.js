@@ -360,15 +360,17 @@ Vertex3D.magnitudeVector = (unitVector, vertices, center) => {
 }
 
 const mrmls = Measurement.regex.matchless().source;
+const mrmlss = Measurement.regex.simple.mls();
 Vertex3D.regex = new RegExp(`\\(\\s*(${mrmls})\\s*,\\s*(${mrmls})\\s*,\\s*(${mrmls})\\s*\\)`);
+Vertex3D.regex.simple = (/\(([0-9/ .-]{1,}),([0-9/ .-]{1,}),([0-9/ .-]{1,})\)/);
 Vertex3D.fromString = (string, unit, list) => {
-  const match = string.match(Vertex3D.regex);
+  const match = string.match(Vertex3D.regex.simple);
   if (!match) return null;
   unit = unit ? (unit === true ? Measurement.unit.BASE : unit) : Measurement.unit();
   if (!list) return new Vertex3D(Measurement.decimal(match[1], unit),
                                   Measurement.decimal(match[2], unit),
                                   Measurement.decimal(match[3], unit));
-  const matches = string.match(new RegExp(Vertex3D.regex.g()));
+  const matches = string.match(new RegExp(Vertex3D.regex.simple.g()));
   const vertices = [];
   matches.forEach(m => vertices.push(Vertex3D.fromString(m, unit)));
   return vertices;
@@ -379,7 +381,11 @@ Vertex3D.regex.model = (string, unit, scale) =>
           Color.fromString(string));
 
 Vector3D.regex = new RegExp(Vertex3D.regex);
-Vector3D.fromString = Vertex3D.fromString;
+Vector3D.regex = new RegExp(Vertex3D.regex.simple);
+Vector3D.fromString = (...args) => {
+  const vert = Vertex3D.fromString(...args);
+  return vert ? vert.vector() : null;
+}
 Vector3D.regex.model = (string, unit, scale) => {
   const vector = Vector3D.fromString(string, unit);
   vector.scale(scale);

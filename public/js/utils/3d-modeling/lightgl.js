@@ -648,7 +648,6 @@ Mesh.prototype = {
     }
     if (!this.lines) this.addIndexBuffer('lines');
     this.lines = indexer.unique;
-    this.compile();
     return this;
   },
 
