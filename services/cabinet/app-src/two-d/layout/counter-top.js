@@ -19,7 +19,8 @@ class CounterTop {
       counterTopPolys.forEach((p,i) => p.normal().equals({i:0,j:-1,k:0}) && (counterTopPolys[i] = p.reverse()))
       const regulars = counterTopPolys.map(p => p.regular()).concatElements();
       let counter = new CSG();
-      regulars.forEach(p => counter = counter.union(BiPolygon.fromPolygon(p,2.54*1.5,0).model()));
+      const dirThickness = (p) => (p.normal().positive() ? 1 : -1) * 2.54*1.5;
+      regulars.forEach(p => counter = counter.union(BiPolygon.fromPolygon(p,dirThickness(p),0).model()));
       counter.setColor(_color);
 
       return counter;

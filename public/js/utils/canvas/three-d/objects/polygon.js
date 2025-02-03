@@ -96,12 +96,14 @@ class Polygon3D {
     }
     this.toPlane = getPlane;
 
-    this.rotate = (rotations, center) => {
+    this.rotate = (rotations, center, doNotModify) => {
+      if (doNotModify) return this.copy().rotate(rotations, center);
       center ||= this.center();
       for(let index = 0; index < lines.length; index++) {
         lines[index][0].rotate(rotations, center);
       }
       if (xNorm) xNorm.rotate(rotations);
+      return this;
     }
 
     this.normal = (otherVertex) => Plane.normal(instance.vertices(), otherVertex);
@@ -176,13 +178,10 @@ class Polygon3D {
       return true;
     }
 
-    // TODO(Discuss): I am inconsitantly createing code that does not modify object directly
-    this.translate = (vector) => {
-      const verts = [];
-      for (let index = 0; index < lines.length; index++) {
-        verts.push(lines[index][0].translate(vector, true));
-      }
-      return new Polygon3D(verts);
+    this.translate = (vector, doNotModify) => {
+      if (doNotModify) return this.copy().translate(vector);
+      lines.forEach(l => l[0].translate(vector));
+      return this;
     }
 
     this.perpendicular = (poly) => {
@@ -459,6 +458,7 @@ class Polygon3D {
 
     this.offset = (x,y, doNotModify) => {
       const dems = this.demensions();
+      y ||= x;
       return this.resize(dems.x + x, dems.y + y, doNotModify);
     }
 
@@ -1073,11 +1073,15 @@ class Polygon3D {
         addTriangle(i, verts, triangles, gone, true, normal, distLT2);
         addTriangle(i, verts, triangles, gone, false, normal, distLT2);
       }
-      const remainingPoly = new Polygon3D(verts.filter((v,i) => !gone[i]));
-      if (remainingPoly.irregular.concave.is())
-        return triangles.concat(remainingPoly.regular());
+      if (gone.count(false) > 2) {
+        let remainingPoly = new Polygon3D(verts.filter((v,i) => !gone[i]));
+        if (remainingPoly.irregular.concave.is()) {
+          if (!remainingPoly.normal().equals(normal)) remainingPoly = remainingPoly.reverse();
+          return triangles.concat(remainingPoly.regular());
+        }
+      }
       verts.forEach((v,i) => gone.count(false) > 2 &&
-                              addTriangle(i, verts, triangles, gone, true, normal));
+          addTriangle(i, verts, triangles, gone, true, normal));
       return triangles;
     }
 
@@ -1192,9 +1196,9 @@ class Polygon3D {
 Polygon3D.merge = (polygons) => {
   if (polygons instanceof CSG) polygons = Polygon3D.fromCSG(polygons);
   const tol = '+.001';
-  const tolMap = new ToleranceMap({'normal().positiveUnit().i()': tol,
-                        'normal().positiveUnit().j()': tol,
-                        'normal().positiveUnit().k()': tol,
+  const tolMap = new ToleranceMap({'normal().i()': tol,
+                        'normal().j()': tol,
+                        'normal().k()': tol,
                         'toPlane().axisIntercepts().x': tol,
                         'toPlane().axisIntercepts().y': tol,
                         'toPlane().axisIntercepts().z': tol});
@@ -1208,10 +1212,9 @@ Polygon3D.merge = (polygons) => {
     polys.splice(0,0,target);
     let currIndex = 0;
     let mergedCount = 0;
-    let notMergedCount = 0;
     while (currIndex < polys.length - 1) {
       const target = polys[currIndex];
-      let notMergedCount = 0;
+      let mergedCount = 0;
       for (let index = currIndex + 1; index < polys.length; index += 1) {
         const other = polys[index];
         const merged = target.merge(other);
@@ -1291,7 +1294,7 @@ Polygon3D.toThreeView = (polygons, normals, gap) => {
   return new ThreeView(polygons, normals, gap);
 }
 
-Polygon3D.fromCSG = (polys) => {
+Polygon3D.fromCSG = (polys, progress) => {
   if (polys instanceof CSG) polys = polys.polygons;
   const isArray = Array.isArray(polys);
   if (!isArray) polys = [polys];
@@ -1312,6 +1315,7 @@ Polygon3D.fromCSG = (polys) => {
     } catch (e) {
       console.warn('Error converting CSG polygon:\n\t', csgPoly.toDrawString());
     }
+    progress && progress.inc && progress.inc();
   }
   if (!isArray) return poly3Ds[0];
   // Polygon3D.merge(poly3Ds);
@@ -1600,7 +1604,7 @@ Polygon3D.normals = (polygonOs) => {
 
 Polygon3D.demensions = (polygonOs, norms) => {
   const isArray = Array.isArray(polygonOs);
-  norms = isArray ? Polygon3D.normals(polygonOs) : polygonOs.normals();
+  norms ||= isArray ? Polygon3D.normals(polygonOs) : polygonOs.normals();
   const polys = isArray ? polygonOs : [polygonOs];
   const verts = [];
   polys.forEach(p => p.vertices().forEach(v => verts.push(v)));

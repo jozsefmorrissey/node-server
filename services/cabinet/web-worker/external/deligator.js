@@ -21,6 +21,7 @@ class WebWorkerDeligator {
       const taskObj = taskWorkerMap[data.id];
       if (taskObj) {
         const {task, worker, primary} = taskObj;
+        task.progress(data.progress);
         if (data.result instanceof Error) {
           console.error(data.result);
           task.error(data.result);
@@ -68,6 +69,7 @@ class WebWorkerDeligator {
             workers.push(worker) & primaryTasks[worker.id].remove(task) & exicute());
       task.tasks().forEach(registerTask(worker, true));
       task.status(TASK_STATUS.PENDING);
+      if (!primary) task.status(TASK_STATUS.PROCESSING);
     }
     else {
       taskWorkerMap[task.id] = {task, worker};
@@ -112,6 +114,8 @@ class WebWorkerDeligator {
         taskOs.status(TASK_STATUS.PENDING);
         taskOs.tasks().forEach(t => this.queue(t));
       } else if (taskOs instanceof Sequential.Seperate) {
+        taskOs.status(TASK_STATUS.PENDING);
+        taskOs.status(TASK_STATUS.PROCESSING);
         const tasks = taskOs.tasks();
         let index = 0;
         const exc = () => {

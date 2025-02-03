@@ -13,7 +13,7 @@ function expandPoly(biPoly, offsetDirection, fromPoint, ingulf, offsetVector, fr
   let poly = fromPoint.distance(front.center()) < fromPoint.distance(back.center()) ? front : back;
   if (offsetVector.magnitude() > .0001) {
     if (!offsetVector.sameDirection(offsetDirection)) offsetVector = offsetVector.inverse();
-    poly = poly.translate(offsetVector);
+    poly = poly.translate(offsetVector, true);
   }
   const sameDir = offsetDirection.sameDirection(poly.normal());
   const multiplier = sameDir ? 1 : -1;

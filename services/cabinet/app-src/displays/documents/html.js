@@ -284,13 +284,13 @@ DocumentationHtml.buildDiagram = (partInformation, containerOselector) => {
   const cabinets = cabinetInfos.map(ci => ci.parts[0]);
   const html = DocumentationHtml.sketchLayout(cabinets, containerOselector, reqId);
 
-  setTimeout(() => {
-    cabinetInfos.forEach(info => {
-      const cabinet = info.parts[0];
-      const selector = `#${openingDiagramCntId(reqId)(cabinet.id())}`;
-      new OpeningSketch(selector, cabinet, info);
-    });
-  })
+  // setTimeout(() => {
+  //   cabinetInfos.forEach(info => {
+  //     const cabinet = info.parts[0];
+  //     const selector = `#${openingDiagramCntId(reqId)(cabinet.id())}`;
+  //     new OpeningSketch(selector, cabinet, info);
+  //   });
+  // })
   return html;
 }
 

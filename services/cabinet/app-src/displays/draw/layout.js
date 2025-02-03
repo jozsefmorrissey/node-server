@@ -292,12 +292,13 @@ class DrawLayout extends Draw {
         if (!dontDrawSnapLocs) {
           obj.snap2d.top().snapLocations().forEach((snapLoc, i) => {
             const beingHovered = hoverId() === snapLoc.toString();
-            const withinRange = snapLoc.center().distance(lastPosition) < maxDist;
+            const dist = snapLoc.parent().AutoLocationProperties().SNAP_DISPLAY_RADIUS;
+            const withinRange = snapLoc.center().distance(lastPosition) < dist;
             const identfied = Snap2d.identfied(snapLoc);
             const snapColor = identfied ? 'red' : (beingHovered ? 'green' :
             (snapLoc.courting() ? 'white' : (snapLoc.pairedWith() ? 'black' : undefined)));
             const hasPartner = snapLoc.courting() || snapLoc.pairedWith();
-            const radius = identfied ? 6 : (beingHovered || hasPartner ? 4 : 1.5);
+            const radius = (beingHovered  ? 3 : 1.5);
             if (!beingHovered && withinRange) draw(snapLoc, snapColor, radius);
             if (beingHovered) target = {target: snapLoc, radius, color: snapColor};
           });
@@ -376,6 +377,7 @@ class DrawLayout extends Draw {
       let allObjects = layout.objects();
       drawObjects(allObjects, '#85858ebd', true);
       drawObjects(objects);
+      // if (hoverMap.hovering())draw(hoverMap.hovering(), 'green', 20)
 
       CTX().restore();
     }

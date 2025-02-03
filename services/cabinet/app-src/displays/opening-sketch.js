@@ -9,30 +9,65 @@ const EscapeMap = require('../../../../public/js/utils/canvas/two-d/maps/escape.
 
 const {Vector3D, Vertex3D, Line3D, Polygon3D} = require('../../../../public/js/utils/canvas/three-d/lib');
 
-const PanZoom = require('../../../../public/js/utils/canvas/two-d/pan-zoom.js');
+const PanZoomClickMeasure = require('../../../../public/js/utils/canvas/two-d/pan-zoom-click-measure.js');
+const HoverMap = require('../../../../public/js/utils/canvas/two-d/hover-map.js');
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
-const Global = require('../services/global.js');
-
+const Jobs = require('../../web-worker/external/jobs.js');
 const rotatedLineFunc = (coDirRotz, center) => (p1, p2) => new Line3D(p1,p2).rotate(coDirRotz, center);
 
-class OpeningSketch {
-  constructor(selector, cabinet, cabinetInfo) {
-    let sketch, panZ, canvas, elem;
-    const instance = this;
-    if (cabinet === undefined) throw new Error('Cannot make a sketch without a cabinet!!!!');
-    this.canvas = canvas;
+class OpeningSketchSettings {
+  constructor() {
+    const keys = ['OUTER_LINES', 'INNER_LINES', 'COVERS', 'BACKGROUND_COLOR', 'SECTION_INDICIES', 'DIVIDER_INDICIES'];
+    const settings = {};
+    keys.forEach(k => (this[k] = (val) =>
+                      val === undefined ? settings[k] : (settings[k] = val)));
+    // this.SECTION_INDICIES(true);
+    // this.INNER_LINES(true);
+    this.COVERS(true);
+  }
+}
 
-    const idProps = {size: '10px', mirror:{x:true}};
-    function drawSectionLabel(section, center, coDirRotz) {
-      const openingCenter = new Vertex3D(JSON.copy(section.inner.center()))
+class OpeningSketch {
+  constructor(selector) {
+    const hoverMap = new HoverMap();
+    let sketch, panZ, canvas, elem, _cabinet, _modelInfo;
+    const instance = this;
+
+    let coDirRotz, innerLines, cabinetOutlines, center, outerLines, model,
+        allLines, leafSections, labels, pullLines, sectionPolys;
+
+    this.canvas = canvas;
+    this.cabinet = (cabinet) => {
+      if (cabinet instanceof Cabinet) {
+        _cabinet = cabinet;
+        new Jobs.CSG.Assembly(_cabinet).then((modelInfo, job) => {
+          if (_cabinet === cabinet) {
+            _modelInfo = modelInfo;
+            init();
+            labels = {sections: [], dividers: []}
+            pullLines = [];
+            sectionPolys = [];
+            hoverMap.clear();
+            build();
+            // panZ.centerOn(new Vertex3D(center).to2D('x','y'));
+            panZ.once();
+          }
+        }).queue();
+      }
+      return _cabinet;
+    }
+
+    function buildSectionLabel(section) {
+      const sectionCenter = new Vertex3D(JSON.copy(section.inner.center()))
                             .rotate(coDirRotz, center).to2D('x', 'y');
       let text = section.userFriendlyIndex();
       if (text === 'S') text = '1';
-      sketch.text(text, openingCenter, idProps);
+      labels.sections.push({text, center: sectionCenter});
+      hoverMap.add(sectionCenter, 30, {section, center: sectionCenter});
     }
 
-    function drawDividerLabel(section, center, coDirRotz) {
+    function buildDividerLabel(section) {
       if (section.divideRight()) {
         const dp = section.divider();
         const outer = section.coordinates().outer;
@@ -42,37 +77,90 @@ class OpeningSketch {
                                 rotatedLine(outer[2], outer[3]).midpoint();
         const dividerCenter = divideCenter3D.to2D('x', 'y');
         const text = dp.userFriendlyId().replace(/^dv/, '');
-        sketch.text(text, dividerCenter, idProps);
+        labels.dividers.push({text, center: dividerCenter});
+        hoverMap.add(dividerCenter, 30, {divider: dp, center: dividerCenter});
       }
     }
 
-    function drawLabels(center, coDirRotz, cabinet) {
-      OpeningSketch.dividerSections(cabinet)
-              .forEach(s => drawDividerLabel(s, center, coDirRotz));
-      OpeningSketch.demensionSections(cabinet)
-              .forEach(s => drawSectionLabel(s, center, coDirRotz));
+    function buildLabels() {
+      OpeningSketch.dividerSections(_cabinet)
+              .forEach(s => buildDividerLabel(s));
+      OpeningSketch.demensionSections(_cabinet)
+              .forEach(s => buildSectionLabel(s));
     }
 
-    function draw() {
+    function DualDoorSectionPolys(coverSection, poly) {
+      const cover = coverSection.cover();
+      const gap = cover.gap();
+      const normals = cover.normals();
+      const polyDems = Polygon3D.demensions(poly, normals);
+      const width = (polyDems.x - gap)/2;
+      const lines = poly.lines();
+      const rightVect = lines[0].vector().unit();
+      const centerLeft = lines[3].midpoint().translate(rightVect.scale(width/2));
+      const centerRight = lines[1].midpoint().translate(rightVect.scale(-width/2));
+      const left = Polygon3D.fromVectorObject(width, polyDems.y, centerLeft, normals);
+      const right = Polygon3D.fromVectorObject(width, polyDems.y, centerRight, normals);
+      return {left, right};
+    }
+
+    function buildCovers() {
+      leafSections.forEach(section => {
+        let polys = [];
+        const coverSection = section.linkListFind('parentAssembly', a => a.cover());
+        if (coverSection) {
+          const cover = coverSection.cover();
+          if (cover.constructor.name === 'PanelSection') return;
+          const poly = coverSection.approximateCoverPoly();
+          const isDDS = cover.constructor.name === 'DualDoorSection';
+          const {left, right} = isDDS ? DualDoorSectionPolys(coverSection, poly) : {};
+          if (isDDS) polys.push(left,right)
+          else polys.push(poly);
+
+          const pulls = cover.children().filter(c => c.pulls).map(c => c.pulls()).concatElements();
+          pulls.forEach(pull => {
+            const doorPoly = !isDDS ? undefined : (pull.parentAssembly().partCode() === 'Dl' ? left : right);
+            pull.locations(doorPoly).forEach(l => {
+              const line = Line3D.fromVector(new Vector3D(pull.centerToCenter(), 0, 0));
+              if (l.rotate === true) line.rotate({z: 90});
+              const line2d = line.centerOn(l.center.rotate(coDirRotz, center, true)).to2D('x','y');
+              line2d.color = pull.color;
+              pullLines.push(line2d);
+            });
+          });
+        } else {
+          polys.push(section.outerPoly());
+        }
+        polys.forEach(poly => {
+          poly.rotate(coDirRotz, center);
+          sectionPolys.push(poly.to2D('x', 'y').lines());
+        });
+      });
+    }
+
+    const openingIndex = 0
+    function build() {
+      allLines = undefined;
       try {
-        if (cabinet.openings.length === 0) return;
-        // if (cabinet.openings.length > 1) throw new Error('Not Set Up for multiple openings: Should consider creating seperate canvas for each opening');
-        sketch.clear()
+        // if (_cabinet.openings.length === 0) return;
+        // if (_cabinet.openings.length > 1) throw new Error('Not Set Up for multiple openings: Should consider creating seperate canvas for each opening');
+        // sketch.clear()
         // sketch.ctx().drawImage(0,0)
 
-        const model = cabinetInfo.model.boxOnly.clone();
-        const coDirRotz = Vector3D.coDirectionalRotations(cabinet.normals(true));
-        const center = model.center();
+        model = _modelInfo.unioned.boxOnly().clone();
+        const norms = _cabinet.openings[openingIndex].normals();
+        coDirRotz = Vector3D.coDirectionalRotations([norms.x, norms.y], [Vector3D.i, Vector3D.j]);
+        center = model.center();
         model.rotate(coDirRotz);
         model.center(center);
 
-        let innerLines = [];
-        let outerLines = [];
+        innerLines = [];
+        outerLines = [];
         const rotatedLine = rotatedLineFunc(coDirRotz, center);
-        const sections = cabinet.allAssemblies()
+        leafSections = _cabinet.allAssemblies()
             .filter(a => a.constructor.name === 'SectionProperties' && a.sections.length === 0);
-        for (let index = 0; index < sections.length; index++) {
-          const section = sections[index];
+        for (let index = 0; index < leafSections.length; index++) {
+          const section = leafSections[index];
           const inner = JSON.copy(section.coordinates().inner);
           const outer = JSON.copy(section.coordinates().outer);
 
@@ -85,35 +173,59 @@ class OpeningSketch {
                                     rotatedLine(outer[2], outer[3]),
                                     rotatedLine(outer[3], outer[0])]);
         }
-        const view = Polygon3D.fromCSG(model);
-        const lines = view.map(p => p.lines()).concatElements();
-        const lines2d = Line2d.consolidate(lines.map(l => l.to2D('x','y')));
-        const cabinetOutlines = Parimeters2d.lines(lines2d).map(l => l.clone());
+        const silhouette = _modelInfo.unioned.silhouettes().openings[openingIndex];
+        cabinetOutlines = silhouette.rotate(coDirRotz, center, true).to2D('x', 'y').lines();
 
 
         innerLines = Line3D.to2D(innerLines, 'x', 'y');
         outerLines = Line3D.to2D(outerLines, 'x', 'y');
-        const allLines = innerLines.concat(outerLines);
-
-        const dems = {x: model.demensions().x, y: model.demensions().y};
-
-
-        sketch.position(center, dems);
-        allLines.concatInPlace(cabinetOutlines);
-        sketch(innerLines, 'black', .3);
-        // sketch(outerLines, 'green', .3);
-        sketch(cabinetOutlines, 'black', .3);
-
-        drawLabels(center, coDirRotz, cabinet);
-        // const measurements = LineMeasurement2d.measurements(allLines);
-        // sketch(measurements, 'grey', 1);
+        allLines = innerLines.concat(outerLines).concat(cabinetOutlines);
+        buildCovers();
+        buildLabels();
       } catch (e) {
         console.error(e);
       }
     }
+
+    const settings = new OpeningSketchSettings();
+    this.settings = () => settings;
+
+    const idProps = {size: '10px', mirror:{x:true}};
+    function drawLabels() {
+      if (settings.SECTION_INDICIES())
+        labels.sections.forEach(label =>
+          sketch.text(label.text, label.center, idProps));
+      if (settings.DIVIDER_INDICIES())
+        labels.dividers.forEach(label =>
+          sketch.text(label.text, label.center, idProps));
+    }
+
+
+    function drawCovers() {
+      sectionPolys.forEach(lines => sketch(lines, null, .1));
+      pullLines.forEach(line => sketch(line, line.color(), 1));
+    }
+
+
+    function draw() {
+      if (allLines) {
+        sketch(cabinetOutlines, 'black', .3);
+        if (settings.INNER_LINES()) sketch(innerLines, 'black', .1);
+        if (settings.OUTER_LINES()) sketch(outerLines, 'green', .1);
+
+        drawLabels();
+        if (settings.COVERS()) drawCovers();
+        const hovering = hoverMap.hovering();
+        if (hovering) sketch(hovering.center, 'green', 2);
+        // const measurements = LineMeasurement2d.measurements(allLines);
+        // sketch(measurements, 'grey', 1);
+      }
+    }
+
     this.draw = draw;
 
     function init() {
+      if (panZ) return;
       let canvas = du.find(selector);
       if (canvas.tagName !== 'CANVAS') {
         let elem = canvas;
@@ -121,12 +233,12 @@ class OpeningSketch {
         sketch = new Draw2D(canvas);
         sketch.staticOffset = true;
         elem.append(canvas);
+      } else {
+        sketch = new Draw2D(canvas);
       }
-      draw();
-      // new PanZoom(canvas, draw);
+      panZ = new PanZoomClickMeasure(canvas, draw, () => hoverMap);
+      instance.once = panZ.once;
     }
-
-    init();
   }
 }
 

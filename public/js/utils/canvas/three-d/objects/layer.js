@@ -108,9 +108,11 @@ class Layer {
       }
     }
 
-    this.translate = (vector) => {
-      const polys = this.polygons().map(p => p.translate(vector));
-      return new Layer(polys);
+    this.translate = (vector, doNotModify) => {
+      if (!vector) return;
+      if (doNotModify) return this.clone().translate(vector);
+      list.forEach(p => p.translate(vector));
+      return this;
     }
     this.shatter = () => {
       const layer = new Layer([]);
@@ -138,10 +140,14 @@ class Layer {
       return Object.values(lineMap);
     }
 
-    this.center = () => {
+    this.center = (newCenter, doNotModify) => {
+      if (doNotModify) return this.clone().center(newCenter);
       const verts = [];
       list.forEach(p => verts.concatInPlace(p.vertices()));
-      return Vertex3D.midrange(verts);
+      let center = Vertex3D.midrange(verts);
+      if (!newCenter) return center;
+      this.translate(new Vertex3D(newCenter).minus(center));
+      return this;
     }
 
     const sortClosest = (vert) => (pa, pb) => pa.center().distance(vert) - pb.center().distance(vert);
@@ -285,7 +291,7 @@ class Layer {
   }
 }
 
-Layer.fromPolygons = (polys) => {
+Layer.fromPolygons = (polys, progress) => {
   const tolmap = new ToleranceMap({'normal().i()': tol,
                         'normal().j()': tol,
                         'normal().k()': tol,
@@ -295,11 +301,12 @@ Layer.fromPolygons = (polys) => {
   tolmap.addAll(polys);
   const layers = [];
   const groups = tolmap.group();
-  groups.forEach(g => layers.push(new Layer(g)));
+  groups.forEach(g => layers.push(new Layer(g)) &
+                          (progress && progress.inc && progress.inc()));
   return layers;
 }
 
-Layer.fromCSG = (csg) => Layer.fromPolygons(Polygon3D.fromCSG(csg));
+Layer.fromCSG = (csg, progress) => Layer.fromPolygons(Polygon3D.fromCSG(csg, progress));
 
 Layer.to2D = (layersOcsg, x, y) => {
   let layers = layersOcsg instanceof CSG ? Layer.fromCSG(layersOcsg) : layersOcsg;

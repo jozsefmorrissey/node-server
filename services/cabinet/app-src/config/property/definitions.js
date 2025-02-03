@@ -26,7 +26,8 @@ defs.ddd = imp('ddd', 'Default Dado Depth', .25);
 defs.crh = imp('crh', 'Crown Height', 3.5);
 defs.crw = imp('crw', 'Crown Width', '2 7/8');
 defs.color = new Property('color', 'Cabinet color', {value: '#91928b', measurement: false});
-
+defs.dwh = new Property('dwh', 'Drawer Pull', null);
+defs.doh = new Property('doh', 'Door Pull', null);
 
 //   Overlay
 defs.ovfls = imp('ovfls', 'Overlay Frameless', 1/4);
@@ -99,6 +100,10 @@ defs.mfdfd = imp('mfdfd', 'Minimum Framed Drawer Front Height', 6)
 defs.c2c = new Property('c2c', 'Center To Center', null);
 defs.proj = new Property('proj', 'Projection', null);
 defs.pcolor = new Property('pcolor', 'Pull color', {value: 'black', measurement: false});
+defs.heo = imp('heo', 'Handle Edge Offset', '1 3/16');
+defs.hcco = imp('hcco', 'Handle Corner Center Offset', '3');
+defs.hmco = imp('hmco', 'Handle Multi Center Offset', '5.5');
+
 
 //   Hinge
 defs.maxtab = new Property('maxtab', 'Max Spacing from bore to edge of door', null);

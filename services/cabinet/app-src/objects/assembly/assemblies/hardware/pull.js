@@ -4,6 +4,7 @@
 const Assembly = require('../../assembly.js');
 const JointSettings = require('../../../../../web-worker/shared/settings.js');
 const CSG = require('../../../../../../../public/js/utils/3d-modeling/csg.js');
+const {HandleCenter} = require('../../../../../web-worker/shared/utilities.js');
 
 /*
     a,b,c
@@ -31,6 +32,24 @@ class Handle extends Assembly {
     this.inElivation = true;
     instance = this;
 
+    this.center = (poly) => {
+      if (!poly) {
+        let coverSection = this.linkListFind('parentAssembly', a => a.cover && a.cover());
+        poly = coverSection.approximateCoverPoly();
+      }
+      if (!poly) throw new Error('Valid CoverSection is required to find center');
+      const heo = this.resolve('heo');
+      const hcco = this.resolve('hcco');
+      return HandleCenter(this.location(), poly, heo, hcco, this.centerToCenter());
+    }
+
+    this.locations = (poly) => {
+      const mainCenter = this.center(poly);
+      const rotate = this.location().rotate;
+      if (this.count() === 1) return [{center: mainCenter, rotate}];
+      throw new Error('have not implemented for multiple pulls');
+    }
+
     this.index = () => {
       const parent = this.parentAssembly();
       if (!parent) return 1;
@@ -56,6 +75,7 @@ Handle.location.BOTTOM = {multiple: true, position: 'BOTTOM'};
 Handle.location.RIGHT = {multiple: true, rotate: true, position: 'RIGHT'};
 Handle.location.LEFT = {multiple: true, rotate: true, position: 'LEFT'};
 Handle.location.CENTER = {multiple: true, position: 'CENTER'};
+
 
 Handle.fromJson = (json) => {
   const obj = Assembly.fromJson(json);

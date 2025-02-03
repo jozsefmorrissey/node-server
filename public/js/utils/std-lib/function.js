@@ -185,6 +185,18 @@ function periodic(callEveryMilSec, terminationTest, ...args) {
   setTimeout(call, callEveryMilSec);
 }
 
+function progress(onProgress, ...args) {
+  let call;
+  if (terminationTest instanceof Function) {
+    call = () =>
+      terminationTest() && this(...args) & setTimeout(call, callEveryMilSec)
+  } else {
+    args.splice(0,0,terminationTest);
+    call = () => this(...args) && setTimeout(call, callEveryMilSec);
+  }
+  setTimeout(call, callEveryMilSec);
+}
+
 Function.safeStdLibAddition(Function, 'subtle',   intervalFunction);
 Function.safeStdLibAddition(Function, 'lastCall',   lastCall);
 Function.safeStdLibAddition(Function, 'logarithmic',   logarithmic);
@@ -199,14 +211,12 @@ function HashCache(object, hashAttr, CacheLocation, hashChangeEvent) {
   if (hashChangeEvent) hashChangeEvent.on(() => object.pathValue(CacheLocation, {}));
   const func = (...args) => {
     const p = path(...args);
-    const hash = object.pathValue(p);
+    const hash = object.pathValue(hashAttr);
     if (hash !== lastHash) object.pathValue(CacheLocation, {});
-    if (!hashChangeEvent) {
-      const hash = object.pathValue(hashAttr);
-      if (hash !== lastHash) object.pathValue(CacheLocation, {});
-    }
-    if (object.pathValue(p) === undefined)
+    if (object.pathValue(p) === undefined) {
       object.pathValue(p, this(...args));
+      lastHash = object.pathValue(hashAttr);
+    }
     return object.pathValue(p);
   };
   func.force = (...args) => {

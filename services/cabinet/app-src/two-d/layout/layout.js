@@ -267,7 +267,7 @@ class Layout2D extends Lookup {
     this.removeWall = (wall) => {
       if (!(wall instanceof Wall2D)) return undefined;
       const walls = this.walls();
-      for (index = 0; index < walls.length; index += 1) {
+      for (let index = 0; index < walls.length; index += 1) {
         const currWall = walls[index];
         if (currWall === wall) {
           const nextWallSv = walls[this.wallIndex(index + 1)][0];
@@ -296,7 +296,7 @@ class Layout2D extends Lookup {
     this.removeVertex = (vertex) => {
       if (!(vertex instanceof Vertex2d)) return undefined;
       const walls = this.walls();
-      for (index = 0; index < walls.length; index += 1) {
+      for (let index = 0; index < walls.length; index += 1) {
         const wall = walls[index];
         if (wall[0] === vertex) {
           walls[this.wallIndex(index - 1)][1] = walls[this.wallIndex(index + 1)];
@@ -447,6 +447,9 @@ class Layout2D extends Lookup {
       }
       return csg;
     }
+
+    this.objects.redered = () =>
+       walls.concat(ceiling,floor,counterTop);
 
     function positionAndColorRoomCSGs(modelIdMap) {
       const ids = Object.keys(modelIdMap);

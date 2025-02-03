@@ -221,28 +221,32 @@ function applyCuts(assem, env) {
 }
 
 const notExtendedJointReg = /^(Dependency|Cut)_/;
-function applyMaleJointExtensions(payload, environment) {
+function applyMaleJointExtensions(payload, environment, progress) {
   const jointCutters = {};
     const assemblyIds = payload.assemblies.concat(environment.generated);
     let env = environment;
     let proccessedIndex = 0;
+    let count = 0;
     for (let index = 0; index < assemblyIds.length; index++) {
       const id = assemblyIds[index];
       const assem = environment.byId[id];
-      if (env.modelInfo.model[id] === undefined || !assem.jointSettings.extend) continue;
-      const joints = (env.jointMap.male[id] || [])
-      .filter(jid => !jid.match(notExtendedJointReg))
-      .map(jid => env.byId[jid]);
-      if(joints.length > 0 && assem.included) {
-        try {
-          jointCutters[id] ||= {assem, cutters: []};
-          const cutter = buildExtendedModel(assem, joints, environment);
-          jointCutters[id].cutters.concatInPlace(cutter);
-        } catch (e) {
-          console.warn(e);
+      if (!env.modelInfo.model[id] === undefined && !assem.jointSettings.extend) {
+        const joints = (env.jointMap.male[id] || [])
+        .filter(jid => !jid.match(notExtendedJointReg))
+        .map(jid => env.byId[jid]);
+        if(joints.length > 0 && assem.included) {
+          try {
+            jointCutters[id] ||= {assem, cutters: []};
+            const cutter = buildExtendedModel(assem, joints, environment);
+            jointCutters[id].cutters.concatInPlace(cutter);
+          } catch (e) {
+            console.warn(e);
+          }
         }
       }
       runMfcFunc('extended', assem, env);
+      progress.inc();
+      count++;
     }
     //TODO: I need to clean and organize a step by step process
     Object.values(jointCutters).forEach(obj => {
@@ -293,12 +297,16 @@ function sliceAtOpening (ids, env, modelType) {
   }
 }
 
-function Apply(payload, environment, taskId, intersections) {
-  let env = environment;
+function Apply(payload, env, taskId, intersections) {
   let start = new Date().getTime();
-  const assemblyIds = payload.assemblies.concat(environment.generated);
+  const assemblyIds = payload.assemblies.concat(env.generated);
+  const operations = assemblyIds.length * (env.expandParts ? 2 : 1);
+  const progressMsg = () =>
+                  postMessage({id: taskId, progress: progress()});
+  const progress = new Progress(operations).on(progressMsg);
   sliceAtOpening(assemblyIds, env, 'model');
-  if (environment.expandParts) applyMaleJointExtensions(payload, environment);
+  if (env.expandParts)
+    applyMaleJointExtensions(payload, env, progress);
   else {
     runMfcFunc('extended', assemblyIds, env);
     runMfcFunc('cut', assemblyIds, env);
@@ -307,7 +315,7 @@ function Apply(payload, environment, taskId, intersections) {
   let proccessedIndex = 0;
   for (let index = 0; index < assemblyIds.length; index++) {
     const id = assemblyIds[index];
-    const assem = environment.byId[id];
+    const assem = env.byId[id];
     if (assem.included && assem.jointSettings.female) {
       let model = env.getModel(id, 'joined');
       if (model) {
@@ -315,6 +323,7 @@ function Apply(payload, environment, taskId, intersections) {
         removeJointMaterial(map, assem, env, model, intersections);
       }
     }
+    progress.inc();
   }
 
   runMfcFunc('joined', assemblyIds, env);

@@ -71,6 +71,9 @@ class PanZoom {
       return performingFunction;
     }
 
+    canvas.height = Number.parseInt(getComputedStyle(canvas).height);
+    canvas.width = Number.parseInt(getComputedStyle(canvas).width);
+
     var ctx = canvas.getContext("2d");
     var mouse = {
         x : 0,

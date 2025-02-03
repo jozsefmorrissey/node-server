@@ -62,7 +62,7 @@ class VoidUtil {
       const width = vectors.x;
       const outerPoly = Polygon3D.fromMagintudeObject(vectors, outterFaceCenter);
       const innerOffsetVector = vectors.z.unit().inverse().scale(panel.width);
-      const innerPoly = outerPoly.translate(innerOffsetVector).reverse();
+      const innerPoly = outerPoly.translate(innerOffsetVector, true).reverse();
       outerPolys[panel.index] = outerPoly;
       innerPolys[panel.index] = innerPoly;
       const norm = panel.position.current.normals;

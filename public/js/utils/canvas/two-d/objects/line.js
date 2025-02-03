@@ -2,6 +2,7 @@
 const Vertex2d = require('./vertex');
 const ToleranceMap = require('../../../tolerance-map.js');
 const Tolerance = require('../../../tolerance.js');
+const Vector2d = require('./vector');
 const tol = .001;
 const withinTol = Tolerance.within(tol);
 
@@ -63,13 +64,15 @@ class Line2d {
       mirror.mirrorPoints([this[0], this[1]]);
     }
 
+
     this.rise = () => this[1].y - this[0].y;
     this.run = () =>  this[1].x - this[0].x;
 
     this.isVertical = () => this.slope() > 1000;
     this.isHorizontal = () => Math.abs(this.slope()) < .001;
-    this.vector = () => ({x: this[1].x - this[0].x, y: this[1].y - this[0].y});
+    this.vector = () => new Vector2d({x: this[1].x - this[0].x, y: this[1].y - this[0].y});
     this.vector.unit = (scale) => {
+      console.warn('depricated....')
       scale ||= 1;
       const x = this[1].x - this[0].x; const y = this[1].y - this[0].y;
       const magnitude = Math.sqrt(x*x+y*y);
@@ -582,7 +585,7 @@ class Line2d {
     this.sortVerticies = (vertices) =>
       vertices.sort((v1,v2) => this[0].distance(v1) - this[0].distance(v2))
 
-    this.slice = (lines) => {
+    this.intersections = (lines) => {
       if (this.isPoint()) return null;
       lines = lines.filter(l => !withinTol(this.radians.difference(l), 0));
       const intersections = {};
@@ -597,6 +600,11 @@ class Line2d {
 
       const list = Object.values(intersections);
       this.sortVerticies(list);
+      return list;
+    }
+
+    this.slice = (lines) => {
+      const list = this.intersections(lines);
       if (list.length === 0) return null;
       const fractured = [];
       let prevVert = this[0].copy();
@@ -900,6 +908,9 @@ Line2d.toleranceMap = (tol, startEndBoth, lines) => {
   }
   return map;
 }
+
+Line2d.intersections = (lines) =>
+  lines.map(l => l.intersections(lines)).concatElements();
 
 Line2d.sliceAll = (lines) => {
   const fractured = [];

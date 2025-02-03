@@ -1,5 +1,7 @@
+require('./room/layout');
 require('./room/2D');
 require('./room/3D');
+require('./object/layout');
 require('./object/2D');
 require('./object/3D');
 require('./part/2D');

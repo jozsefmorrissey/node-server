@@ -42,9 +42,6 @@ class CsgTask extends Task {
     this.completeOnFinish = true;
     Object.getSet(this, 'payload', 'process');
     this.process = () => this.constructor.name.replace(/^Csg(.{1,})Task/, "$1").toLowerCase();
-    this.progress = () => this.completeOnFinish ? (this.status() === STATUS.SUCCESS ? 100 : 0) :
-          (initialModelCount === 0 ? 100 :
-          Math.floor(100*(1 - (this.remainingModels().length/initialModelCount))) || 0);
     this.payload = () => {
       if (this.finished()) return null;
       const assemblies = this.remainingModels();
@@ -107,7 +104,6 @@ class CsgUnionTask  extends CsgTask {
   constructor(modelInfo) {
     super(modelInfo);
     this.remainingModels = modelInfo.needsUnioned;
-    this.progress = () => this.status() === STATUS.SUCCESS ? 100 : 0;
     this.processResult = (result) =>
       modelInfo.unioned.set(result);
     this.result = () => modelInfo;
@@ -159,7 +155,6 @@ class LayoutPartsTask extends Task {
     this.completeOnFinish = true;
     this.payload = () =>
       ({layout, boxMap: boxFunction()});
-    this.progress = () => this.status() === 'success' ? 100 : 0;
     this.on.message((result) => {
       if (result !== undefined) _result = result;
     });

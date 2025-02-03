@@ -578,7 +578,7 @@ Plane.normal = function(vertices, other) {
   while (p1.equals(vertices[vertices.length - 1])) vertices.pop();
   const p2 = vertices.pop();
   let pickOneVertices = other ? [other] : vertices;
-  pickOneVertices.sort(Vertex3D.informationSorter);
+  // pickOneVertices.sort(Vertex3D.informationSorter);
   let magnitude = -1;
   const vector1 = p1.minus(p2);
   let vector2, normVect;

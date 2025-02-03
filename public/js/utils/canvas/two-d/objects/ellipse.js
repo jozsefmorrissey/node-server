@@ -103,6 +103,7 @@ class Ellipse2d {
       const rotStr = this.rotation() ? `@${this.rotation()}` : '';
       return `${vertStr}r${centerStr}${fromToStr}${rotStr}`;
     }
+    this.hash = () => this.toString(.00000000000001).hash();
   }
 }
 

@@ -2,13 +2,16 @@
 const ColorManagerInputTree = require('./color-manager-input-tree');
 const du = require('../../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../../public/js/utils/$t.js');
+const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
 const Lookup = require('../../../../../public/js/utils/object/lookup.js');
+
 
 class ColorManager extends Lookup {
   constructor(containerId, idAttribute) {
     super();
     idAttribute ||= 'id';
     let _objects = [];
+    CustomEvent.all(this, 'change');
 
     this.objects = (objects) => Array.isArray(objects) ? (_objects = objects) : _objects;
     this.map = (objects) => this.objects(objects).filterSplit(o => {
@@ -25,15 +28,15 @@ class ColorManager extends Lookup {
   }
 }
 
-du.on.match('change', '#room-color-cnt input[type="color"]', (elem, event) => {
+du.on.match('input', '#room-color-cnt input[type="color"]', (elem, event) => {
   const id = du.find.up.attribute('lookup-id', elem);
   const manager = ColorManager.get(id);
   const objects = manager.objects();
   const original = elem.getAttribute('original');
   objects.forEach(obj => Color.hex(obj.color()) === original &&
                           obj.color(elem.value));
-
-  console.log(du, elem);
+  elem.setAttribute('original', elem.value)
+  manager.trigger.change();
 });
 
 ColorManager.template = new $t('room/color-manager')

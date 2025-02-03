@@ -24,7 +24,7 @@ class Draw2d {
     const CTX = () => ctx ? ctx : (ctx = canvas.getContext('2d'));
 
     function draw(object, color, width) {
-      if (object === undefined) return;
+      if (object === undefined || object === null) return;
       if (object instanceof CSG) return draw.csg(object, color, width);
       const func = cxtrFuncMap[object.constructor.name] ||
                       cxtrFuncMap[object.constructor.name.replace(/^(Snap).*$/, '$1')];
@@ -184,7 +184,7 @@ class Draw2d {
     draw.polygon = (poly, color, width, fillColor) => {
       if (poly === undefined) return;
       color = color ||  'black';
-      width = width || 1;
+      if (width !== 0) width = 1;
       let lines;
       if (Array.isArray(poly)) lines = poly.map((v,i) => [v, poly[(i+1)%poly.length]])
       else lines = poly.lines();
@@ -195,11 +195,13 @@ class Draw2d {
       region.moveTo(lines[0][0].x, lines[0][0].y);
       lines.slice(0).forEach(l => region.lineTo(l[1].x, l[1].y));
       lines.slice(0).forEach(l => verts.push(new Vertex2d(l[1].x, l[1].y)));
-      if (draw.line.indicateDirection)
-          lines.forEach(l => draw.line.chevron(l, color, width));
       region.closePath();
-      ctx.lineWidth = width;
-      ctx.stroke(region);
+      if (width) {
+        if (draw.line.indicateDirection)
+          lines.forEach(l => draw.line.chevron(l, color, width));
+          ctx.lineWidth = width;
+          ctx.stroke(region);
+      }
       if (fillColor) {
         ctx.fillStyle = fillColor;
         ctx.fill(region, 'evenodd');
@@ -276,7 +278,7 @@ class Draw2d {
       ctx.fillStyle = fillColor || 'white';
       ctx.arc(center.x, center.y, circle.radius(),circle.from.radians(), circle.to.radians());
       ctx.stroke();
-      // ctx.fill();
+      ctx.fill();
     }
 
     draw.ellipse = (ellipse, lineColor, lineWidth, fillColor) => {
@@ -368,7 +370,7 @@ class Draw2d {
       const midpoint = line.midpoint();
       const radians = line.radians();
 
-      draw.text(measurement.display(), midpoint, {radians, size: '4px'})
+      draw.text(measurement.display(), midpoint, {radians, size: '2.5px'})
     }
 
     draw.measurement = (measurement, color, textWidth) => {

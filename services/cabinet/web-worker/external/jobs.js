@@ -215,7 +215,7 @@ const boxMap = (resultFunc) => () => {
     if (assembly instanceof Assembly) {
       result[key] = Utils.positionAssemblyCsg(csg, assembly);
       result[key].silhouette =
-        Utils.positionAssemblyCsg(csgOmodelInfo.unioned.silhouette(), assembly);
+        Utils.positionAssemblyCsg(csgOmodelInfo.unioned.silhouettes().top, assembly);
       result[key].ASSEMBLY = true;
     }
   });
@@ -235,15 +235,12 @@ class CsgRoomJob extends TaskJob {
     const task = new Sequential.Seperate(new Parrelle(...tasks), new Parrelle(...layoutTasks));
     super(task);
     registered(this);
+    task.on.processing(room.trigger.processing);
     this.room = () => room;
     this.jobs = () => jobs;
     this.result = result;
     let _hash;
     this.hash = () => _hash === undefined ? room.hash() : _hash;
-    this.task().on.pending((task) => {
-      _hash = assembly.hash();
-    });
-
   }
 }
 
@@ -427,7 +424,7 @@ class CsgOutlineTo2DJob extends Jobs {
 
 CsgAssembliesTo2DJob.Outline = CsgOutlineTo2DJob;
 
-class AssemblyCsgThreeView extends TaskJob {
+class AssemblyCsgThreeView extends CsgModelInfoJob {
   constructor(assembly) {
     const root = assembly.getRoot();
     const registered = registeredJob(AssemblyCsgThreeView, root.id(), root.hash());
@@ -438,10 +435,11 @@ class AssemblyCsgThreeView extends TaskJob {
                 modelInfo.unioned('boxOnly') : modelInfo.joined(assembly.id());
     const threeViewTask = new ThreeView(getCsg, assembly.normals());
     const task = new Sequential.Seperate(modelJob.task(), threeViewTask);
-    super(task);
+    super(task, modelInfo);
+    threeViewTask.on.processing(assembly.trigger.processing);
     let _hash;
     this.hash = () => _hash === undefined ? assembly.hash() : _hash;
-    this.result = modelJob.result;
+    this.result = threeViewTask.result;
     this.object = () => assembly;
     task.on.pending(() => {
       _hash = assembly.hash();

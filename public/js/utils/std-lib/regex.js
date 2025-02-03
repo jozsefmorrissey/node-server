@@ -81,7 +81,8 @@ const ignoreReg = /\((?=\?)/;
 Function.safeStdLibAddition(RegExp, 'matchless', function () {
   const matchlessSource = this.source.foreachSection((section, dets) =>
     dets.str.substring(dets.openIndex - 1, dets.openIndex + 2).match(ignoreReg) ?
-      null : section.splice(1,0,'?:'), openReg, closeReg);
+      null : section.match(/^\(\(.*\)\)$/) ? section.substring(1,section.length - 1) :
+      section.splice(1,0,'?:'), openReg, closeReg);
   return new RegExp(matchlessSource);
 });
 

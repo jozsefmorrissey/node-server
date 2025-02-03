@@ -5,16 +5,23 @@ class Task {
   constructor(initailStatus) {
     let _status;
     let _error = null;
-    CustomEvent.all(this, ...Object.values(STATUS).map(s => s.toString()).concat(['finished', 'message', 'change','change.status']));
+    CustomEvent.all(this, ...Object.values(STATUS).map(s => s.toString())
+                  .concat(['finished', 'message', 'change','change.status', 'progress']));
     Object.getSet(this, 'id');
-    let start, end;
-    let result;
+    let start, end, result;
+    let _progress = 0;
     this.id = String.random();
     this.time = () => !start ? 0 : Math.roundTo(((end || new Date().getTime()) - start) / 1000, .1);
     this.result = () => result;
     this.process = () => this.constructor.name.replace(/(^.*?)Task$/, '$1').toLowerCase();
     this.finished = () => _status === STATUS.SUCCESS || _status === STATUS.FAILED;
-    this.progress = () => this.status() === 'success' ? 100 : 0;
+    this.progress = (progress) => {
+      if (Number.isFinite(progress)) {
+        _progress = progress;
+        this.trigger.progress(_progress)
+      }
+      return this.status() === STATUS.SUCCESS ? 100 : Math.roundTo(_progress*100, .1);
+    };
     this.status = (status, data) => {
       if (data) result = data;
       if (this.remainingModels && this.remainingModels().length === 17 && status === 'success' && _status === 'pending') {

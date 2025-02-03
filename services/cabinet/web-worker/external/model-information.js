@@ -199,9 +199,7 @@ class ModelInformation {
       return csg;
     }
 
-    this.unioned.silhouette = () => unionObj.silhouette;
-    this.unioned.silhouette.to2D = () =>
-          unionObj.silhouette ? unionObj.silhouette.to2D('x', 'z') : null;
+    this.unioned.silhouettes = () => unionObj.silhouettes;
     this.unioned.boxOnly = () => unionObj.boxOnly;
     this.unioned.all = () => unionObj;
     this.unioned.set = (data) => {

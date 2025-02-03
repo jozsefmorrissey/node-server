@@ -5,7 +5,7 @@ const du = require('../../../../public/js/utils/dom-utils');
 const Layout2D = require('../two-d/layout/layout.js')
 const Draw2D = require('../../../../public/js/utils/canvas/two-d/draw.js');
 
-const {Polygon3D, Line3D, BiPolygon} = require('../../../../public/js/utils/canvas/three-d/lib');
+const {Polygon3D, Line3D, BiPolygon, Vector3D} = require('../../../../public/js/utils/canvas/three-d/lib');
 
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/objects/line-measurement.js');
@@ -65,19 +65,19 @@ class ThreeView extends Lookup {
     // p.setColor([0, 255, 0])
     let draw, panz, hovermap;
     let side = 'right';
-    let threeViewObj;
+    let _threeViewPolys;
 
-    const setThreeView = (target) => (infoObj, job) => {
-      console.log(job.modelInfo());
-      infoObj.target = target;
-      threeViewObj = infoObj;
+    const setThreeView = (target, threeViewPolys, job) => {
+      if (!threeViewPolys.hash || target !== targetPart) {
+        threeViewPolys.hash = Object.hash(threeViewPolys);
+        _threeViewPolys = threeViewPolys;
+      }
     };
 
     function cabinetThreeView(cabinet) {
-      new Jobs.CSG.Assembly.ThreeView(cabinet).then((modelInfo, job) => {
-        const info = modelInfo.info();
+      new Jobs.CSG.Assembly.ThreeView(cabinet).then((threeViewPolys, job) => {
         const id = targetPart ? targetPart.id() : cabinet.id();
-        console.log(modelInfo);
+        setThreeView(cabinet, threeViewPolys, job);
       }).queue();
     }
 
@@ -123,27 +123,37 @@ class ThreeView extends Lookup {
       }
     }
 
+    let hash;
     function build() {
-      Layout2D.release(`three-view`);
-      hovermap.clear();
-      const allLines = instance.toLines();
-      for (let index = 0; index < allLines.length; index++) {
-        hovermap.add(allLines[index]);
-      }
+      if (!_threeViewPolys || _threeViewPolys.hash === hash) return;
+      // Layout2D.release(`three-view`);
+      // hovermap.clear();
+      // const allLines = instance.toLines();
+      // for (let index = 0; index < allLines.length; index++) {
+      //   hovermap.add(allLines[index]);
+      // }
+      hash = _threeViewPolys.hash;
       return true;
     }
     this.build = build;
 
+    function forEachLayerObject(func, ...views) {
+      if (views.length === 0) views = ['front', 'top', 'right'];
+      if (_threeViewPolys) {
+        views.forEach(view => _threeViewPolys[view]
+            .forEach(obj => func(obj)));
+      }
+    }
+
     let allLines;
     function drawView () {
       getThreeView();
-      instance.build();
+      // instance.build();
 
-      const objs = hovermap.targets();
-      for (let index = 0; index < objs.length; index++) {
-        const obj = objs[index];
-        draw(obj, color, width);
-      }
+      forEachLayerObject(layerObj => {
+        layerObj.polys.forEach(p => draw.polygon(p.to2D(), null, 0, '#ffffff75'));
+        layerObj.polys.forEach(p => draw(p.to2D().lines(), 'black', .3));
+      });
     }
 
     function onPartSelect(elem) {

@@ -453,11 +453,7 @@ const Controls2d = require('controls-2d');
 let panZ;
 let controls2d;
 function init() {
-  const canvas = du.find('#room-2d>canvas');
-  const height = du.convertCssUnit('80vh');
-
-  canvas.height = height;
-  canvas.width = height;
+  const canvas = du.find('#room-layout>canvas');
 
   draw = new DrawLayout(canvas, getLayout);
   panZ = new PanZoomClickMeasure(canvas, () => draw(), getHoverMap);

@@ -48,7 +48,7 @@ class Bridge2dTo3D {
 
     this.layout = obj3D.layout;
     this.id = obj3D.id;
-    this.name = obj3D.name;
+    this.name = () => obj3D.name();
     this.x = (x) => setXYZ(x)[xCoord];
     this.y = (y) => setXYZ(undefined, y)[yCoord];
     this.z = (z) => setXYZ(undefined, undefined, z)[axis];

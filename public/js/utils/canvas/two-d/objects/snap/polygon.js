@@ -12,6 +12,7 @@ class SnapPolygon extends Snap2d {
     super(parent, polygon, tolerance);
     let locationCount = 0;
     polygon.centerOn(parent.center());
+    if (!polygon.clockWise()) polygon.reverse();
     if (parent === undefined) return this;
     const instance = this;
 
@@ -58,10 +59,13 @@ class SnapPolygon extends Snap2d {
       instance.addLocation(snapLoc);
       const mpFunc = midpointFunc(index + (name === 'left' ? 1 : 0));
       const mpLoc = mpFunc();
-      if(midpointMap.matches(mpLoc).length === 0) {
-        midpointMap.add(mpLoc);
-        const snapLocMidpoint = new SnapLocation2d(instance, `${name}${locationCount++}center`,  mpFunc,  `${targetName}Center`);
-        instance.addLocation(snapLocMidpoint);
+      if(midpointMap.matches(mpLoc).length === 0 ) {
+        const mpDist = snapLoc.center().distance(mpLoc);
+        if (mpDist > 3) {
+          midpointMap.add(mpLoc);
+          const snapLocMidpoint = new SnapLocation2d(instance, `${name}${locationCount++}center`,  mpFunc,  `${targetName}Center`);
+          instance.addLocation(snapLocMidpoint);
+        }
       }
 
       snapLoc.at();
@@ -92,7 +96,7 @@ class SnapPolygon extends Snap2d {
     }
 
     function build() {
-      midpointMap = new ToleranceMap({x: .1, y:.1});
+      midpointMap = new ToleranceMap({x: .000001, y:.000001});
       const faces = instance.object().faces();
       const lines = instance.object().lines();
       let prevPrevIsFace = faces.equalIndexOf(lines[lines.length -2]) !== -1;
@@ -110,13 +114,15 @@ class SnapPolygon extends Snap2d {
 
     this.getTextInfo = () => {
       const lfl = this.longestFaceLine();
-      const height = this.height();
-      const dist = height / (height < 35 ? 1 : (height < 70 ? 2 : 3));
+      const axis = this.object().limits(lfl.vector()).axis;
+      const height = axis.y.length();
+      const dist = height;// / (height < 35 ? 1 : (height < 70 ? 2 : 3));
       const radians = lfl ? lfl.radians() : 0;
-      const textLine = lfl ? lfl.perpendicular(dist/4) : 0;
+      const mean = this.object().mean();
+      const textLine = lfl ? lfl.perpendicular(dist/2, null, true) : new Line2d(mean, mean);
       return {
         text: instance.parent().name() || '?????',
-        center: textLine ? textLine[1] : new Vertex2d(),
+        center: [textLine[0], textLine[1]].min(v => v.distance(mean)),
         radians,
         x: 0,
         y: 0,

@@ -254,7 +254,7 @@ function Viewer(csg, width, height, depth) {
 
     if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
-    if (VIEWER_CONTROLS.OUTLINE)
+    if (VIEWER_CONTROLS.OUTLINE && that.mesh.line)
       that.blackShader.draw(that.mesh.line, gl.LINES);
     if (VIEWER_CONTROLS.WIREFRAME)
       that.blackShader.draw(that.mesh, gl.LINES);

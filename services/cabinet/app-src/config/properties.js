@@ -28,15 +28,16 @@ add('Overlay', Defs.ov,Defs.ovfrd,Defs.ovfls);
 add('Reveal', Defs.r,Defs.rvt,Defs.rvb,Defs.rvr,Defs.rvl);
 add('Inset', Defs.is);
 add('Cabinet', Defs.style,Defs.fls,Defs.tid,Defs.dsc,Defs.rvibr,Defs.ddg,Defs.tkbw,Defs.tkd,
-                Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,Defs.ddd,Defs.crh,Defs.crw);
-add('Panel', Defs.pt14,Defs.pt12,Defs.pt34,Defs.pt18,Defs.vpt,Defs.color,Defs.pcolor);
+                Defs.tkh,Defs.pbt,Defs.iph, Defs.brr,Defs.ddd,Defs.crh,Defs.crw,
+                Defs.dwh,Defs.doh);
+add('Panel', Defs.pt14,Defs.pt12,Defs.pt34,Defs.pt18,Defs.vpt,Defs.color);
 add('Guides', Defs.dbtos,Defs.dbsos,Defs.dbbos,Defs.dbn,Defs.dbid, Defs.dbdepths);
 add('DoorAndFront', Defs.daffrw,Defs.dafip)
 // add('Door', [];
 add('DrawerBox', Defs.dbst,Defs.dbbt);
 add('DrawerFront', Defs.mfdfd, Defs.daft, Defs.dafbt);
 // add('Frame', Defs.fw,Defs.ft);
-add('Handle', Defs.c2c,Defs.proj);
+add('Handle', Defs.c2c,Defs.proj,Defs.pcolor,Defs.heo,Defs.hcco,Defs.hmco);
 add('Hinge', Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol);
 // add('Opening', []);
 add('Divider', Defs.dpt,Defs.dft,Defs.dfw,Defs.dpw,Defs.sc);

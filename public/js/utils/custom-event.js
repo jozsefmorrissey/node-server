@@ -31,6 +31,7 @@ class CustomEvent {
         if (lastArgs)
           func(...lastArgs);
         if (watchers.indexOf(func) === -1) watchers.push(func);
+        return this;
       } else {
         return 'on' + name;
       }

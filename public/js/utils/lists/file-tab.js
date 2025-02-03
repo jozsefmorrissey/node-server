@@ -16,7 +16,7 @@ class FileTabDisplay extends Lookup {
 
     const fileTabContainer = (elem) => du.find.closest(`[id='${this.id()}']`, elem);
     const containerSelector = (title) =>
-            `[id='${this.id()}'] .content-cnt>[title='${title || selected}']`;
+            `[id='${this.id()}'] .content-cnt>[tab-title='${title || selected}']`;
     const contentContainer = (title, elem) =>
             du.find.closest(containerSelector(), elem) || containerSelector();
     this.register = (title, htmlFunc, shouldRender) => {
@@ -44,7 +44,7 @@ class FileTabDisplay extends Lookup {
       if (this.selected.is(to)) close = true;
       const container = fileTabContainer(elem);
       const list = du.find.down('.list', container);
-      const tab = du.find.down(`[title='${to}']`, list)
+      const tab = du.find.down(`[tab-title='${to}']`, list)
       const contentCnt = du.find.down('.content-cnt', container);
       Array.from(list.children)
         .forEach(e => du.class.remove(e, 'selected'));

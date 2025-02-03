@@ -1,6 +1,8 @@
 
 const {BiPolygon} = require('../../../../../../../public/js/utils/canvas/three-d/lib');
 const SimpleModels = require('../generic-models');
+const {HandleCenter} = require('../../../../shared/utilities.js');
+const Utils = require('utils.js');
 
 function baseCenter(rMdto, environment, parentBiPoly) {
   let center;
@@ -63,8 +65,11 @@ function baseCenter(rMdto, environment, parentBiPoly) {
 const handleModel = (rMdto, environment, simple) => {
   const biPolyArr = environment.modelInfo.biPolygonArray[rMdto.parentAssembly().id];
   const biPoly = new BiPolygon(biPolyArr[0], biPolyArr[1]);
-  const baseC = baseCenter(rMdto, environment, biPoly);
-  const front = biPoly.front();
+  // const baseC = baseCenter(rMdto, environment, biPoly);
+  const heo = Utils.property('heo', rMdto, environment);
+  const hcco = Utils.property('hcco', rMdto, environment);
+  const front = biPoly.front().reverse();
+  const baseC = HandleCenter(rMdto.location, front, heo, hcco, rMdto.centerToCenter);
   const rotated =  rMdto.location.rotate;
   const line = rotated ? front.line(-1) : front.line(0);
   const normal = biPoly.normal();

@@ -741,6 +741,7 @@ Line3D.combine = (lines, tolerance) => {
   const tolmap = new ToleranceMap({'vector().positiveUnit().i()': tolerance,
                                   'vector().positiveUnit().j()': tolerance,
                                   'vector().positiveUnit().k()': tolerance});
+  // lines = lines.filter(l => l.length() > tolerance);    
   lines.forEach((l,i) => (l.combined = {with: -1, index: i}) & tolmap.add(l))
   const groups = tolmap.group();
   for (let g = 0; g < groups.length; g++) {

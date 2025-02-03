@@ -8,7 +8,7 @@ const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 const Jobs = require('../../web-worker/external/jobs.js');
 const {BiPolygon} = require('../../../../public/js/utils/canvas/three-d/lib');
 const Utils = require('../utils');
-const JobLoading = require('../services/job-loading.js');
+const TaskLoading = require('../services/task-loading.js');
 const switchEvent = new CustomEvent('switch');
 
 let modelDisplayManager;
@@ -70,7 +70,7 @@ function renderView(view) {
   return false;
 }
 
-const currentView = () => views.find(view => view.id() === openTabId);
+const getView = (id) => views.find(view => view.id() === (id || openTabId));
 
 let htmlContentCnt;
 let editCnt;
@@ -79,7 +79,7 @@ const roomEditTemplate = new $t('room/edit');
 let lastState = {view: null, target: null};
 function render() {
   du.id('three-d-model').hidden = true;
-  const view = currentView();
+  const view = getView();
   if (Global.target.is.group()) renderEdit(groupEditTemplate);
   else if (Global.target.is.room()) renderEdit(roomEditTemplate);
   else if (view) return renderView(view);
@@ -90,7 +90,7 @@ function render() {
 
 let openTabId;
 const switchTo = (id) => {
-  if (id) openTabId = id;
+  if ((typeof id) === 'string' && getView(id)) openTabId = id;
   if (render()) switchEvent.trigger(id);
 };
 
@@ -106,9 +106,10 @@ const init = () =>{
   du.id('display-type-tabs').innerHTML = typeTabs.html();
 
   const demTabs = new FileTabDisplay();
+  demTabs.register('layout');
   demTabs.register('2D');
   demTabs.register('3D');
-  demTabs.selected('2D');
+  demTabs.selected('layout');
 
   const onTabChange = (elem) => {
     switchTo(`${typeTabs.selected()}-${demTabs.selected()}`.toLowerCase());
@@ -120,7 +121,7 @@ const init = () =>{
   htmlContentCnt = du.id('view-html-cnt');
   editCnt = du.id('edit-display');
   ThreeDModel.display(new CSG());
-  switchTo('room-2d');
+  switchTo('room-layout');
 }
 
 
@@ -155,7 +156,7 @@ Canvas = {
   render, views, extraCsgObjects, render3Dmodel, init,
   on: {switch: switchEvent.on},
   register, View, View2D, View3D,
-  view: currentView,
+  view: getView,
   views: (id) => views.find(v => v.id())
 };
 

@@ -182,6 +182,7 @@ class HoverMap2d {
       return closestObj && closestObj.target;;
     }
 
+    this.hash = () => this.objects().map(o => o.target().hash()).sum();
   }
 }
 

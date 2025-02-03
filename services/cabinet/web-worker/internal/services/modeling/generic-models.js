@@ -147,7 +147,7 @@ to.DrawerBox = (frontPoly, normal, length, props) => {
 
   // In order (front, (frontMoved), back, left, right, top, bottom) Polygon: vertices are if facing polygon topLeft, topRight, bottomRight, bottomLeft
   const fP = frontPoly;
-  const fPm = fP.translate(norm.scale(-length));
+  const fPm = fP.translate(norm.scale(-length), true);
   const bP = new Polygon3D([fPm.vertex(1), fPm.vertex(0), fPm.vertex(3), fPm.vertex(2)]);
   const lP = new Polygon3D([bP.vertex(1), fP.vertex(0), fP.vertex(3), bP.vertex(2)]);
   const rP = new Polygon3D([fP.vertex(1), bP.vertex(0), bP.vertex(3), fP.vertex(2)]);

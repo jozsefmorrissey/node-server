@@ -15,6 +15,7 @@ class DualDoorSection extends Assembly {
     this.part = () => false;
     this.left = () => leftDoor;
     this.right = () => rightDoor;
+    this.normals = () => this.parentAssembly().normals();
     this.gap = () => this.resolve('ddg');
 
     if (!leftDoor) {

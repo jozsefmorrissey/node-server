@@ -39,7 +39,7 @@ class Assembly3D extends Object3D {
     }
 
 
-    function configurePoly(poly, twoDInfo) {
+    function configurePoly(poly, modelInfo) {
       if (assembly.faceNormals instanceof Function) {
         const normals = assembly.faceNormals();
         const lines = poly.lines();
@@ -48,8 +48,8 @@ class Assembly3D extends Object3D {
 
         const normalLines = normals.map((n) => {
           const searchLine = Line3D.startAndVector(instance.center().copy(), n.scale(dist));
-          const veiwFromVect = Line3D.viewFromVector([searchLine], new Vector3D(twoDInfo.normals.top).inverse())[0];
-          const searchLine2d = veiwFromVect.to2D(twoDInfo.axis.top[0], twoDInfo.axis.top[1]);
+          const veiwFromVect = Line3D.viewFromVector([searchLine], Vector3D.j)[0];
+          const searchLine2d = veiwFromVect.to2D('x', 'z');
           searchLine2d.translate(new Line2d(searchLine2d[0].copy(), topCenter.copy()));
           return searchLine2d;
         });
@@ -67,7 +67,9 @@ class Assembly3D extends Object3D {
 
     function applyTopOutline(modelInfo) {
       const initialize = topSnap === undefined;
-      const poly = modelInfo.unioned.silhouette.to2D();
+      const poly = modelInfo.unioned.silhouettes().top;
+      configurePoly(poly, modelInfo);
+      layout.hoverMap().update();
       if (initialize) {
         topSnap = new SnapPolygon(instance.bridge.top(), poly.copy(), 10);
         instance.snap2d.top = () => topSnap;

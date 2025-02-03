@@ -224,7 +224,7 @@ input[name='code'] {
 }
 
 .transparent {
-  opacity: .75;
+  opacity: .25;
 }
 
 .value-2d {
@@ -464,7 +464,6 @@ canvas {
   background-color: white;
   padding: 20pt 5pt;
   overflow: auto;
-  max-height: 80vh;
 }
 
 .indent {
@@ -545,9 +544,9 @@ canvas {
   position: relative;
 }
 
-#room-2D {
-  width: 80vh;
-  height: 80vh;
+canvas {
+  width: 90vh;
+  height: 90vh;
 }
 
 .dropdown,
@@ -1002,10 +1001,6 @@ th.edge-ref>div {
 }
 
 #edit-display,
-#model-cnt canvas {
-  height: 80vh;
-  width: 80vh;
-}
 
 .content-cnt {
   margin-top: 5pt;
@@ -1031,7 +1026,8 @@ i:hover,
 .selector:hover,
 i.active,
 .selector.active {
-  background: #0119ff70;
+  background-color: grey;
   border-radius: 2pt;
+  color: white;
   cursor: pointer;
 }

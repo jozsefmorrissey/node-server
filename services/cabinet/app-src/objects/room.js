@@ -11,6 +11,9 @@ class Room extends Lookup {
     super(id || String.random());
     const instance = this;
     this.order = () => order;
+    CustomEvent.all(this, 'change', 'processing');
+    this.on.processing((job) =>
+      Global.trigger.processing.room(job, this));
 
     function groupMap(map, detailLists, listId) {
       for(let index = 0; index < detailLists[listId].length; index += 1) {
@@ -54,7 +57,7 @@ class Room extends Lookup {
         const group = instance.groups[gi];
         for (let oi = 0; oi < group.objects.length; oi++) {
           const obj = group.objects[oi];
-          if (selectorFunc(group, index, obj)) {
+          if (selectorFunc(group, gi, obj)) {
             if (obj3dMap[obj.id()] === undefined) {
               if(obj instanceof Object3D) obj3dMap[obj.id()] = obj;
               else obj3dMap[obj.id()] = Object3D.new(obj, this.layout());

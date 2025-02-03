@@ -38,6 +38,10 @@ class CabinetOpeningCorrdinates extends KeyValue {
       this.update();
       return normal || sectionProperties.normal();
     }
+    this.normals = () => {
+      this.update();
+      return sectionProperties.normals();
+    }
     this.sectionProperties = () => sectionProperties;
     this.pattern = sectionProperties.pattern;
     this.top = sectionProperties.top;

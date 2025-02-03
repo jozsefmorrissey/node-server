@@ -271,7 +271,7 @@ Measurement.display.area = (SQCM, units, percision) => {
 }
 
 Measurement.unit = (newUnit) => {
-  for (index = 0; index < units.length; index += 1) {
+  for (let index = 0; index < units.length; index += 1) {
     if (newUnit === units[index]) unit = newUnit;
   }
   return unit

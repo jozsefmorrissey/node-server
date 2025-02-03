@@ -54,13 +54,13 @@ class LayoutHoverMap extends HoverMap2d {
       for (let index = 0; index < objects.length; index++) {
         const snap = objects[index].snap2d.top();
         const snapLocs = snap.snapLocations();
-        snapLocs.forEach(l => instance.add(l.center, 15, l));
+        snapLocs.forEach(l => instance.add(l.center, 5, l));
         if (drawMap) snap.object().lines().forEach(l => instance.add(l, 15));
         if (!drawMap) instance.add(snap.center, 60, snap);
       }
     }
 
-    this.update = () => construct();
+    this.update = () => construct.lastCall('internal update', 500);
 
     construct();
     layout.on.change(construct);

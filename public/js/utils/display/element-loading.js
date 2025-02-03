@@ -56,7 +56,7 @@ class ElementLoading {
       return !terminate;
     }
 
-    style.periodic(100);
+    style.periodic(10);
   }
 }
 

@@ -331,6 +331,27 @@ class SectionProperties extends KeyValue {
       return info;
     }
 
+    this.approximateCoverPoly = () => {
+      const style = this.resolve('style');
+      let coords, offset;
+      if (style === 'Inset') {
+        coords = this.inner();
+        offset = this.resolve('is') * -2;
+      } else if (style === 'Reveal') {
+        coords = this.outer();
+        offset = -this.resolve('r');
+      } else {
+        coords = this.inner();
+        offset = this.resolve('ov') * 2;
+      }
+      const poly = new Polygon3D(coords).copy();
+      if (poly.normals().y.dot(this.normals().y) < .5) {
+        poly.normals.swap();
+      }
+      poly.offset(offset);
+      return poly;
+    }
+
 
     // TODO: innerOffset - proorly named and implemented values produced are in the ball park but not correct.
     function updatdSectionPropertiesCoordinates(section, startOuter, startInner, endInner, endOuter, innerOffset) {

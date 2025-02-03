@@ -1,5 +1,6 @@
 const Vertex2d = require('./vertex');
 const Line2d = require('./line');
+const Vector2d = require('./vector');
 
 class Polygon2d {
   constructor(initialVertices) {
@@ -64,6 +65,27 @@ class Polygon2d {
       const mirror = new Line2d(start, end);
       const verts = this.vertices();
       mirror.mirrorPoints(verts);
+    }
+
+    this.limits = (xVect) => {
+      xVect ||= Vector2d.i;
+      xVect = xVect.unit();
+      let yVect = xVect.getPerpendicular();
+      let verts = this.vertices();
+      let center = this.center();
+      let dotsY = verts.map(v => new Line2d(center, v).vector().dot(yVect));
+      let dotsX = verts.map(v => new Line2d(center, v).vector().dot(xVect));
+      let x = {min: dotsX.min(), max: dotsX.max()};
+      let y = {min: dotsY.min(), max: dotsY.max()};
+      let vects = {x: {min: xVect.scale(x.min), max: xVect.scale(x.max)},
+                y: {min: yVect.scale(y.min), max: yVect.scale(y.max)}};
+      const axis = {
+        x: new Line2d(center.translate(vects.x.min, true),
+                          center.translate(vects.x.max, true)),
+        y: new Line2d(center.translate(vects.y.min, true),
+                        center.translate(vects.y.max, true)),
+      }
+      return {x, y, axis};
     }
 
     this.verticesAndMidpoints = (target, before, after) => {
@@ -213,7 +235,7 @@ class Polygon2d {
     this.faces = () => this.lines().filter((l, i) => faceIndecies.indexOf(i) !== -1);
     this.normals = () => {
       let normals = [];
-      let mean = new Vertex2d(Math.mean(this.vertices(), ['x', 'y']));
+      let mean = instance.mean();
       for (let index = 0; index < faceIndecies.length; index++) {
         const line = lines[faceIndecies[index]];
         if (line)
@@ -277,10 +299,10 @@ class Polygon2d {
       return lineMap[line.toString()] || lineMap[line.toNegitiveString()];
     }
 
-    this.toDrawString = (color) => {
+    this.toDrawString = (color, percision) => {
       color ||= '';
       const verts = instance.vertices();
-      const vertStr = verts.map(v => color + v.toString()).join(',');
+      const vertStr = verts.map(v => color + v.toString(percision)).join(',');
       const normStr = Line2d.toDrawString(instance.normals(), 'red');
       return `[${vertStr}]\n${normStr}`;
     }
@@ -318,14 +340,6 @@ class Polygon2d {
       }
     }
 
-    // let translateTo;
-    // function reposition() {
-    //   if (!translateTo) return;
-    //   const curr = Vertex2d.center(...allVertices());
-    //   const diff = translateTo.differance(curr);
-    //   instance.translate(diff.x, diff.y);
-    // }
-
     this.center = (center) => {
       if (center) {
         const curr = Vertex2d.center(...allVertices());
@@ -334,6 +348,7 @@ class Polygon2d {
       }
       return Vertex2d.center(...this.vertices());
     }
+    this.mean = () => new Vertex2d(Math.mean(this.vertices(), ['x', 'y']));
 
     this.rotate = (theta, pivot, doNotModify) => {
       if (doNotModify) return this.copy().rotate(theta, pivot);
@@ -406,7 +421,9 @@ class Polygon2d {
       return path.substring(0, path.length - 4);
     }
 
-    this.toString = this.toDrawString;
+    this.toString = (percision) => this.toDrawString('', percision);
+    this.hash = () => this.toString(.00000000000001).hash();
+
     this.area = () => {
       let total = 0;
       let verts = this.vertices();
@@ -559,13 +576,17 @@ Polygon2d.lines = (...polys) => {
 
 
 const vertRegG = new RegExp(Vertex2d.regex.source, 'g');
+const angleReg = new RegExp(`.*@(${Number.regex.source})`);
 
 Polygon2d.fromString = (str, unit) => {
   const vertStrs = str.match(vertRegG);
   if (!vertStrs || vertStrs.length < 3) return null;
   const verts = vertStrs.map((str) =>
         Vertex2d.fromString(str, unit));
-  return new Polygon2d(verts);
+  const poly = new Polygon2d(verts);
+  const angleMatch = str.match(angleReg);
+  if (angleMatch) poly.rotate(Math.toRadians(Measurement.decimal(angleMatch[1], false)));
+  return poly;
 }
 
 Polygon2d.passesThrough = (line, lines, inclusive) => {

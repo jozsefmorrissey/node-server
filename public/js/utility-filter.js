@@ -621,7 +621,7 @@ function UtilityFilter() {
   function onLoad() {
     let elems = document.getElementsByTagName('utility-filter');
     let ufId = 0;
-    for (index = 0; index < elems.length; index += 1) {
+    for (let index = 0; index < elems.length; index += 1) {
       buildDisplay(elems[index]);
     }
     document.querySelector('body').appendChild(buildPopUp());

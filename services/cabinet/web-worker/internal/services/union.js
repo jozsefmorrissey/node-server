@@ -1,5 +1,5 @@
 
-const {Line3D, Parimeter3D} =
+const {Line3D, Parimeter3D, Vector3D} =
     require('../../../../../public/js/utils/canvas/three-d/lib');
 const Line2d = require('../../../../../public/js/utils/canvas/two-d/objects/line.js');
 
@@ -15,6 +15,17 @@ const union = (assemIds, env, filter, concat, type) => {
     }
   }
   return csg;
+}
+
+function getSilhouettes(env, boxOnlyCuts) {
+  const top = Parimeter3D.fromCSG(boxOnlyCuts, {i:0,j:1,k:0}).to2D('x', 'z');
+  const root = env.root();
+  const openings = !root.openings ? [] : root.openings.map(o => {
+    const norms = o.normals;
+    const parimeter = Parimeter3D.fromCSG(boxOnlyCuts, norms.z);
+    return parimeter;
+  });
+  return {top, openings};
 }
 
 const boxOnlyFilter = part => part.id.match(/PanelSectionPanel/) ||
@@ -33,10 +44,10 @@ const unionModels = (payload, env) => {
               !part.locationCode.match(/_S(_|:)/), true);
   const boxOnly = union(assemIds, env, boxOnlyFilter);
   const boxOnlyCuts = union(assemIds, env, boxOnlyFilter, true, 'cut');
-  const silhouette = Parimeter3D.fromCSG(boxOnlyCuts, {i:0,j:1,k:0});
+  const silhouettes = getSilhouettes(env, boxOnlyCuts);
   const all = union(assemIds, env, cabinetPartFilter, true);
   all.polygons.concatInPlace(fronts.polygons.concat(drawerBoxes.polygons));
-  return {all, external, boxOnly, fronts, silhouette, handles};
+  return {all, external, boxOnly, fronts, silhouettes, handles};
 }
 
 module.exports = unionModels;

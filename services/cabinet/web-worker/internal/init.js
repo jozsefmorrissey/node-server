@@ -16,6 +16,13 @@ const RDTO = require('../shared/reconnect-transfer-object');
 const LayoutParts = require('./services/layout-parts');
 goDownTheRabbitHole = false;
 
+
+ProgressMessenger = function (taskId, ...args) {
+  const progress = new Progress(...args);
+  progress.msg = () => postMessage({id: taskId, progress: progress()});
+  return progress;
+};
+
 const order = ['model', 'extended', 'cut', 'joined']
 const getModel = (env) => (assemOid, type) => {
   const id = (typeof assemOid) === 'string' ? assemOid : assemOid.id;
@@ -26,6 +33,10 @@ const getModel = (env) => (assemOid, type) => {
     index--;
   }
   console.warn('No model found');
+}
+const getRoot = (env) => {
+  const root = Object.values(env.byId).filter(o => o.locationCode)[0].find.root();
+  return () => root;
 }
 
 const PATH = (path, key) => `proccessData.${path}.${key}`;
@@ -42,6 +53,7 @@ function handleTask(task, env) {
   if (env) {
     env.getModel = getModel(env);
     env.data = data(env);
+    env.root = getRoot(env);
   }
   const process = task.process;
   const payload = task.payload;
@@ -68,7 +80,7 @@ function handleTask(task, env) {
     case 'partsinformation':
       return PartInfo(payload, env, taskId);
     case 'layoutParts':
-      return LayoutParts(payload);
+      return LayoutParts(payload, taskId);
     default: return new Error('UnkownTask');
   }
 }

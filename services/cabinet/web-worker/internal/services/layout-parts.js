@@ -60,9 +60,11 @@ function organize(map, walls, floor, ceiling) {
   return {polys, outlines, walls, floor, ceiling};
 }
 
-module.exports = (payload) => {
+module.exports = (payload, taskId) => {
   const bMap = payload.boxMap;
-  Object.keys(bMap).forEach(k => bMap[k] = peels(bMap[k]));
+  const keys = Object.keys(bMap);
+  const progress = new ProgressMessenger(taskId, keys.length * 1.2);
+  keys.forEach(k => (bMap[k] = peels(bMap[k])) & progress.inc().msg());
   const wallObjs = Object.fromJson(payload.layout.walls);
 
   const layoutVerts = new Parimeters2d(wallObjs).polygons()[0].vertices();

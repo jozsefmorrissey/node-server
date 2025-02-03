@@ -49,6 +49,7 @@ const wwBundler = new JsBundler(wwDumpLoc, [], {main: './services/cabinet/web-wo
 const wwWatcher = new Builder(wwBundler.change, wwBundler.write, !global.build)
         .add('../../public/js/utils/std-lib/')
         .add('../../public/js/utils/tolerance.js')
+        .add('../../public/js/utils/custom-event.js')
         .add('../../public/js/utils/tolerance-map.js')
         .add('../../public/js/utils/string-math-evaluator.js')
         .add('../../public/js/utils/services/function-cache.js')

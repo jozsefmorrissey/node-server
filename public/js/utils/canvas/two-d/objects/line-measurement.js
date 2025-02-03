@@ -159,7 +159,7 @@ LineMeasurement2d.measurements = (lines) => {
 
   const lengths = Object.keys(lengthMap.map());
   const slopeMap = new ToleranceMap({'length()': .00001, 'slope()': .1});
-  for (index = 0; index < lengths.length; index += 1) {
+  for (let index = 0; index < lengths.length; index += 1) {
     let lines = lengthMap.map()[lengths[index]];
     //TODO: possibly restrict the measurements that display....
     for(let li = 0; li < lines.length; li++) {

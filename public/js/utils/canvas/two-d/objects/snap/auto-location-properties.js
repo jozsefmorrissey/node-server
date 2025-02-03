@@ -12,6 +12,7 @@ const defaultValues = {
   CORNERS: true,
   SIZE_ADJUST_PERCENT: 50,
   RESIZE: true,
+  SNAP_DISPLAY_RADIUS: 20
 }
 
 class AutoLocationProperties {
@@ -20,14 +21,7 @@ class AutoLocationProperties {
     this.update = (values) => {
       if (!(values instanceof Object)) return;
       const update = (name) => values[name] !== undefined  && (this[name] = values[name]);
-      update('LAYOUT_INTERIOR_ONLY');
-      update('SNAPS');
-      update('WALLS');
-      update('MATCH_WALL_ANGLE');
-      update('FIXED_ANGLE');
-      update('TOLERANCE');
-      update('SIZE_ADJUST_PERCENT');
-      update('CORNERS');
+      Object.keys(defaultValues).forEach(k => update(k));
     }
     this.id = () => id;
     this.isDefault = () => byId[id] === undefined;

@@ -321,13 +321,6 @@ class Snap2d extends Lookup {
       else position[maxAttr] = closestVertex[axis]();
     }
 
-    function sameRads(wall, v1, v2, v3) {
-      const wallRads = wall.radians();
-      return instance.withinTol(wallRads, new Line2d(v2,v3).radians()) ||
-              instance.withinTol(wallRads, new Line2d(v1, v2).radians());
-    }
-
-
     function nearestSnapsOnWall(center, wall) {
       const filter = (snapLoc) => wall.isOn([snapLoc.center()], 5).length === 1;
       const objects = instance.parent().layout().activeObjects();
@@ -846,7 +839,7 @@ Snap2d.registar = (clazz) => {
   }
 }
 
-Snap2d.identfied = (snapLoc) => Snap2d.identifiedConstraints &&
+Snap2d.identfied = (snapLoc) => !Snap2d.identifiedConstraints ||
         Snap2d.identifiedConstraints.indexOf(snapLoc) !== -1;
 
 Snap2d.fromJson = (json) => {

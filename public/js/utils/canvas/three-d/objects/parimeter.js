@@ -59,9 +59,16 @@ class Parimeter3D {
         const prospect = prospects[0];
         const target = prospect[prospect.length - 1];
         if (prospect[0][0].equals(prospect[prospect.length - 1][1], .001)) {
-          const lines = Line3D.combine(prospects.splice(0,1)[0].map(l => l.clone()));
+          let lines = Line3D.combine(prospects.splice(0,1)[0].map(l => l.clone()));
           if (lines.length > 2) {
-            const poly = new Polygon3D(lines.map(l => l[0].translate(toCenter, true)));
+             let prev = lines[lines.length - 1][1];
+             const verts = lines.filter(l => l.length() > .001)
+                            .map(l => {let v = Vertex3D.center(prev, l[0]); prev = l[1]; return v});
+             const poly = new Polygon3D(verts.map(v => v.translate(toCenter, true)));
+
+
+
+            // const poly = new Polygon3D(lines.map(l => l[0].translate(toCenter, true)));
             parimeters.push(poly);
           }
         } else {

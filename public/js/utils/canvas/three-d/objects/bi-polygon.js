@@ -143,11 +143,13 @@ class BiPolygon {
 
     this.closestOrder = (vertex) => this.furthestOrder(vertex).reverse();
 
-    this.translate = (vector) => {
+    this.translate = (vector, doNotModify) => {
+      if (doNotModify) return this.clone().translate(vector);
       for (let index = 0; index < face1.length; index++) {
         face1[index].translate(vector);
         face2[index].translate(vector);
       }
+      return this;
     }
 
     this.rotate = (rotations, center) => {

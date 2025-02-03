@@ -3,6 +3,7 @@ const ToleranceMap = require('../../../tolerance-map.js');
 const Tolerance = require('../../../tolerance.js');
 const tol = .0001;
 const within = Tolerance.within(tol);
+const Vector2d = require('./vector');
 
 
 class Vertex2d {
@@ -20,6 +21,8 @@ class Vertex2d {
       this.point(center);
       return true;
     };
+
+    this.vector = () => new Vector2d(this);
 
     this.translate = (xOffsetOrVert, yOffset, doNotModify) => {
       if (xOffsetOrVert.x !== undefined) {
@@ -90,6 +93,7 @@ class Vertex2d {
 
 
     this.toString = (percision) => `(${Math.roundTo(this.x, percision)}, ${Math.roundTo(this.y, percision)})`;
+    this.hash = () => this.toString(.00000000000001).hash();
     const parentToJson = this.toJson;
 
     this.offset = (x, y) => {

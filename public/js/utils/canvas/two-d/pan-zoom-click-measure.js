@@ -72,11 +72,12 @@ class PanZoomClickMeasure extends PanZoomClick {
       }
       const list = Object.values(objs);
       list.sort(HoverObject2d.sort);
-      measurmentHoverMap.add(list);
+      const lines = list.filter(o => o.locator() instanceof Line2d).map(o => o.locator());
+      measurmentHoverMap.add(list.concat(Line2d.intersections(lines)));
       return list;
     }
 
-    measurements.objects = new FunctionCache(build, null, 'pan-zoom');
+    measurements.objects = build.HashCache({hash: () => getHoverMap().hash()});
 
     function drawMeasurements () {
       const objects = measurements.objects();
@@ -106,6 +107,7 @@ class PanZoomClickMeasure extends PanZoomClick {
           draw2d(obj, color, width);
         }
       }
+      draw2d(hovering, 'blue', width*4);
     }
 
     const measDraw = () => measurements.enabled() ? drawMeasurements() : draw();
