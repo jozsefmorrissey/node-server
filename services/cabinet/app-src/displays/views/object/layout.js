@@ -21,5 +21,6 @@ du.on.match('change', '.object-layout-settings-cnt input', (elem) => {
   sketch.once && sketch.once();
 });
 
+
 exports.module = new Canvas.View2D('object-layout', render);
 Canvas.register(exports.module)

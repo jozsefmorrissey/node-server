@@ -1,8 +1,9 @@
 
 const frag = document.createDocumentFragment();
 function validSelector (selector) {
+  if (typeof selector === 'function' || selector instanceof HTMLElement) return true;
   try {
-    frag.querySelector(selector)
+    frag.querySelector(selector);
     return selector;
   } catch (e) {
     const errMsg = `Invalid Selector: '${selector}'` ;
@@ -27,9 +28,16 @@ function parseSeperator(string, seperator, isRegex) {
   return json;
 }
 
+const flexibleMatch = (elem, selector) => {
+  if (typeof selector === 'string') return elem.matches(selector);
+  if (typeof selector === 'function') return selector(elem);
+  if (selector instanceof HTMLElement) return elem === selector;
+  throw new Error('selector is not recognized feel free to modify to recognize it!');
+}
+
 function querySelector(selector, context) {
   if (context) {
-    if (context.matches(selector)) return context;
+    if (flexibleMatch(context, selector)) return context;
     return context.querySelector(selector);
   }
   return document.querySelector(selector);
@@ -38,7 +46,7 @@ function querySelector(selector, context) {
 function querySelectorAll(selector, context) {
   const list = [];
   if (context) {
-    if (context.matches(selector)) list.push(context);
+    if (flexibleMatch(context, selector)) list.push(context);
     list.concatInPlace(context.querySelectorAll(selector))
     return list;
   }
@@ -284,9 +292,8 @@ du.move.above = function (elem, target) {
 }
 
 du.find.up = function (selector, node) {
-  selector = VS(selector);
   if (node instanceof HTMLElement) {
-    if (node.matches(selector)) {
+    if (flexibleMatch(node, selector)) {
       return node;
     } else {
       return du.find.up(selector, node.parentNode);
@@ -344,7 +351,6 @@ du.innerHTML = (text, elem) => {
 du.find.upAll = function(selector, node) {
   const elems = [];
   let elem = node;
-  selector = VS(selector);
   while(elem = du.find.up(selector, elem)) {
     elems.push(elem);
     elem = elem.parentElement;
@@ -357,11 +363,10 @@ du.depth = function(node) {return upAll('*', node).length};
 du.find.downInfo = function (selector, node, distance, leafSelector) {
   const nodes = node instanceof HTMLCollection ? node : [node];
   distance = distance || 0;
-  selector = VS(selector);
 
   function recurse (node, distance) {
     if (node instanceof HTMLElement) {
-      if (node.matches(selector)) {
+      if (flexibleMatch(node, selector)) {
         return { node, distance, matches: [{node, distance}]};
       }
     }
@@ -395,14 +400,13 @@ du.find.downAll = function(selector, node) {return du.find.downInfo(selector, no
 du.find.closest = function(selector, node) {
   node ||= document.head;
   const visited = [];
-  selector = VS(selector);
   function recurse (currNode, distance) {
     let found = { distance: Number.MAX_SAFE_INTEGER };
     if (!currNode || (typeof currNode.matches) !== 'function') {
       return found;
     }
     visited.push(currNode);
-    if (currNode.matches(selector)) {
+    if (flexibleMatch(currNode, selector)) {
       return { node: currNode, distance };
     } else {
       for (let index = 0; index < currNode.children.length; index += 1) {
@@ -418,7 +422,7 @@ du.find.closest = function(selector, node) {
         const child = parent.children[index];
         if (visited.indexOf(child) === -1) {
           const dist = distance + Math.abs(sibIndex - index);
-          if (child.matches(selector)) {
+          if (flexibleMatch(child, selector)) {
             maybe = {node:child, distance: dist};
             found = maybe && maybe.distance < found.distance ? maybe : found;
           }
@@ -470,9 +474,9 @@ du.find.siblings = (selector, elem) => {
   const siblings = [];
   let currP = elem;
   let currN = elem;
-  while(currP = currP.previousElementSibling) currP.matches(selector) && siblings.push(currP);
+  while(currP = currP.previousElementSibling) flexibleMatch(currP, selector) && siblings.push(currP);
   siblings.reverse();
-  while(currN = currN.nextElementSibling) currN.matches(selector) && siblings.push(currN);
+  while(currN = currN.nextElementSibling) flexibleMatch(currN, selector) && siblings.push(currN);
   return siblings;
 }
 
@@ -675,7 +679,7 @@ function created(elem, selectors) {
   selectors ||= Object.keys(onCreateSelectors);
   for (let index = 0; index < selectors.length; index++) {
     const selector = selectors[index];
-    if (elem.matches(selector)) onCreateSelectors[selector](elem);
+    if (flexibleMatch(elem, selector)) onCreateSelectors[selector](elem);
   }
   for (let ci = 0; ci < elem.children.length; ci++) {
     created(elem.children[ci], selectors);
@@ -761,7 +765,6 @@ du.on.match = function(event, selector, func, target) {
   const filter = filterCustomEvent(event, func, selector);
   if (filter === null) return;
   target = target || document;
-  selector = VS(selector);
   if (selector === null) return;
   if ((typeof func) !== 'function') console.warn(`Attempting to create an event without calling function.\nevent: "${event}"\nselector: ${selector}`)
   const  matchRunTargetId = getTargetId(target);
@@ -785,7 +788,6 @@ du.on.match = function(event, selector, func, target) {
 
 
 du.switch = (selector, idAttr) => {
-  if (!VS(selector)) throw new Error('This class needs a valid selector that can grab your button and your container');
   const btnSelector = `button${selector}`;
   const cntSelector = `${selector}:not(button)`;
   function onlyOne(elem) {
@@ -901,7 +903,10 @@ du.param.remove = function (name) {
   du.url.change(du.url.build(breakdown));
 }
 
-du.style = function(elem, style, time) {
+const condEval = (elem, condition, attribute) => !condition ? true :
+      (condition instanceof Function ? condition(elem) : condition[attribute](elem));
+du.style = function(elem, style, time, condition) {
+  if (!condEval(elem, condition, 'on')) return;
   if (!(elem instanceof HTMLElement)) {
     for (let index = 0; index < elem.length; index++) {
       du.style(elem[index], style, time);
@@ -915,6 +920,7 @@ du.style = function(elem, style, time) {
     });
 
     if (time) {
+      if (condEval(elem, condition, 'off')) return;
       setTimeout(() => {
         keys.forEach((key) => {
           elem.style[key] = save[key];
@@ -990,7 +996,7 @@ du.fade.out = (elem, disapearAt, func) => {
     elem.style.opacity -= .005;
     if (elem.style.opacity <= 0) {
       elem.style.opacity = origOpacity;
-      func(elem);
+      func && func(elem);
     } else {
       setTimeout(reduceOpacity, disapearAt * 2 / 600 * 1000);
     }
@@ -1190,6 +1196,46 @@ function createTimerShortCut() {
   });
 }
 createTimerShortCut();
+
+du.toHtml = (string) => string.replace(/\n/g, '<br>')
+                            .replace(/\t/g, '&nbsp;&nbsp;')
+                            .replace(/ /g, '&nbsp;');
+
+// du.append(0)
+const errorCnt = du.create.element('div', {id: 'du-error-msg-cnt'});
+errorCnt.hidden = true;
+let stopFade;
+let errorHovered;
+document.body.append(errorCnt);
+du.error = function (elem, ...messages) {
+  if (!(elem instanceof HTMLElement)) [elem].concat(messages);
+  const html = du.toHtml(messages.map(msg => `<div>${msg}</div>`).join('\n'));
+  if (elem instanceof HTMLElement) elem.setAttribute('error-msg', html);
+  errorHovered = false;
+  errorCnt.hidden = false;
+  errorCnt.innerHTML = `
+    <div id='du-error-alert'>
+      <div class='header'>
+        Danger Will Robinson
+      </div>
+      <div class='body'>${html}</div>
+    </div>`;
+  stopFade = du.fade.out(errorCnt, 5,
+                  () => errorHovered || closeErrorCnt());
+}
+function closeErrorCnt() {
+  du.class.remove(errorCnt, 'expanded');
+  errorCnt.innerHTML = '';
+}
+errorCnt.addEventListener('click', () =>
+  du.class.add(errorCnt, 'expanded'));
+errorCnt.addEventListener('mouseover', () =>
+  stopFade(errorHovered = true));
+du.on.match('click', '*', (elem) => {
+  if (!errorCnt.hidden && !du.find.up(errorCnt, elem)) closeErrorCnt();
+});
+
+du.error('hoobastank', new Error('booyacka').stack);
 
 try {
   module.exports = du;

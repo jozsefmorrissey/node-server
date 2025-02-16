@@ -984,6 +984,16 @@ th.edge-ref>div {
 }
 
 /*-------------------- graphical css -----------------------*/
+
+.has-siblings:first-child:last-child { display: none; }
+
+.child-section {
+  padding: 10pt 5pt;
+  background-color: #80808052;
+  width: fit-content;
+  margin: 5pt;
+}
+
 .edit-cnt {
   padding: 5pt 5pt 0 10pt;
 }
@@ -1030,4 +1040,51 @@ i.active,
   border-radius: 2pt;
   color: white;
   cursor: pointer;
+}
+
+[error-msg] {
+  border-style: solid;
+  border-color: red;
+  border-width: 3px;
+  background-color: #e11f1f61;
+}
+
+#du-error-msg-cnt {
+  position: fixed;
+  top: 0;
+  right: 0;
+  margin: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border-style: solid;
+  border-color: red;
+  border-width: 2px;
+  box-shadow: 3px 3px 6px black, 3px 3px 6px grey, 3px 3px 6px lightgrey;
+  background-color: #e11f1f61;
+  opacity: 0;
+  z-index: 1;
+}
+
+#du-error-msg-cnt.expanded {
+  top: 5;
+  top: 50vh;
+  right: 50vw;
+  transform: translate(50%, -50%);
+}
+
+#du-error-msg-cnt:has(*) {
+  opacity: 1;
+  display: block;
+}
+
+#du-error-msg-cnt .body {
+  display: none;
+}
+
+#du-error-msg-cnt.expanded .body {
+  display: block;
+}
+
+#du-error-msg-cnt.expanded .header {
+  display: none;
 }

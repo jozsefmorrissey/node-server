@@ -16,6 +16,7 @@ const PartInformation = require('part-information');
 const Imposter = require('../../../../public/js/utils/object/imposter.js');
 const STATUS = require('./tasks/status');
 const CabinetConfigs = require('../../app-src/config/cabinet-configs.js')
+const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 
 const DEFAULT_JOB_FAILURE = (error, job) =>
     console.error(error, job);

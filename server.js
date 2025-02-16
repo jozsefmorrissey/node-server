@@ -160,6 +160,17 @@ app.post('/print/body', printCall('POST'));
 app.put('/print/body', printCall('PUT'));
 app.delete('/print/body', printCall('DELETE'));
 
+const templateUrls = [];
+const htmlFilter = function(file) { return file.match(/\.html$/); };
+function templateUrlPaths(path, prefix) {
+  try {
+    const templatePaths = shell.find('./' + path).filter(htmlFilter);
+    console.log(path);
+    templateUrls.concatInPlace(templatePaths.map(p => p.replace(path, prefix)));
+  } catch(e) {console.log(e);};
+}
+
+templateUrlPaths('public/html/templates', '/html/templates');
 
 var ip = '192.168.254.10';
 var services = global.services ? new String(global.services).split(',') : shell.ls('./services/');
@@ -172,6 +183,7 @@ try {
       var loc = '/' + id;
       var dir = './services' + loc;
       var project = dir + loc;
+      templateUrlPaths(`services${loc}/public/html/templates`, `${loc}/html/templates`);
       app.use(loc, express.static(dir + '/public'));
       const flags = global.ENV === 'local' ? '' : '-build';
       const watcherExists = fs.existsSync(`${dir}/watch.js`);
@@ -187,6 +199,11 @@ try {
     }
   }
 } catch (e) { console.error(e); }
+
+app.get("/template/urls", function (req, res) {
+  res.send(templateUrls);
+});
+
 
 app.get("", function (req, res) {
   res.redirect(`/${services[0]}`);

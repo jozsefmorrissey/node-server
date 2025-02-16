@@ -1,7 +1,7 @@
 
 const fs = require('fs');
 const shell = require('shelljs');
-const $t = require('../bin/builder').$t;
+const $t = require('../../public/js/utils/$t');
 const { Bundler } = require('../bundler');
 
 class HtmlBundler extends Bundler {

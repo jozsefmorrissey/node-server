@@ -5,6 +5,7 @@ const Group = require('./group.js');
 const Lookup = require('../../../../public/js/utils/object/lookup');
 const Layout2D = require('../two-d/layout/layout.js');
 const Object3D = require('../three-d/layout/object.js');
+const CustomEvent = require('../../../../public/js/utils/custom-event.js');
 
 class Room extends Lookup {
   constructor(name, order, id, layout) {

@@ -1,7 +1,3 @@
-
-
-
-
 let idCount = 0;
 class ExprDef {
   constructor(name, options, notify, stages, alwaysPossible) {
@@ -261,7 +257,7 @@ function parse(exprDef, str) {
       nextIndex = closeCheck(exprDef);
       if (nextIndex) return nextIndex;
     }
-    throw new Error(`Invalid string @ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
+    throw new Error(`Invalid string:\n\t${str}\n\t@ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
   }
 
   function open(exprDef, index) {
@@ -311,5 +307,4 @@ function parse(exprDef, str) {
 
 ExprDef.parse = parse;
 
-if ((typeof module) !== 'undefined')
-  module.exports = ExprDef;
+module.exports = ExprDef;

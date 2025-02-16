@@ -11,7 +11,7 @@
   <td>{{disp.angle(cut, true)}}<br/>{{disp.angle(cut, false)}}</td>
   <td>
     <span:t class='flow-root' repeat='er in cut.locationRef.references'>
-      <div:t class='tab' $t-id='documents/cuts/cut-{{er ? (er[0].label ? "edge" : "point") : "no"}}-ref'>
+      <div:t class='tab' t-id='documents/cuts/cut-{{er ? (er[0].label ? "edge" : "point") : "no"}}-ref'>
         er
       </div:t>
     </span:t>

@@ -201,6 +201,8 @@ class PanZoom {
         coy:0,
         cscale:1,
         crotate:0,
+        ax:canvas.height, //actual values
+        ay:canvas.width,
         dx:0,  // deltat values
         dy:0,
         dox:0,
@@ -214,12 +216,17 @@ class PanZoom {
         mouseX:0,
         mouseY:0,
         ctx:ctx,
-        realPosition: function (x, y) {
-          var screenX = canvas.width / 2;
-          var screenY = canvas.height / 2;
-          x = (screenX * this.invMatrix[0] + screenY * this.invMatrix[2]);
-          y = (screenX * this.invMatrix[1] + screenY * this.invMatrix[3]);
-          return {x,y};
+        realPosition: function (screenX, screenY) {
+          if (screenX === undefined) screenX = canvas.width/2;
+          if (screenY === undefined) screenY = canvas.height/2;
+          screenX -= this.cox;
+          screenY -= this.coy;
+          this.screenX = screenX;
+          this.screenY = screenY;
+          let actualX = this.cx + (screenX * this.invMatrix[0] + screenY * this.invMatrix[2]);
+          let actualY = this.cy + (screenX * this.invMatrix[1] + screenY * this.invMatrix[3]);
+
+          return {x: actualX,y: actualY};
         },
         setTransform:function(){
             var m = this.matrix;
@@ -240,6 +247,10 @@ class PanZoom {
             this.doy += (this.oy-this.coy)*this.accel;
             this.dscale += (this.scale-this.cscale)*this.accel;
             this.drotate += (this.rotate-this.crotate)*this.accel;
+
+            this.ax += this.dx * this.scale;
+            this.ay += this.dy * this.scale;
+
             // drag
             this.dx *= this.drag;
             this.dy *= this.drag;
@@ -333,6 +344,7 @@ class PanZoom {
                 // save old mouse position
                 mouse.oldX = mouse.x;
                 mouse.oldY = mouse.y;
+                console.log.lastCall('realPos: ', 500, this.realPosition(), this.realPosition(0,0));
             }
 
         }
@@ -392,32 +404,37 @@ class PanZoom {
     this.center = () => {
       const x = displayTransform.x + canvas.width/2;
       const y = displayTransform.y + canvas.height/2
+
       return {x,y};
     }
 
     this.centerOn = function(x, y) {
-      const hype = Math.sqrt(x*x + y*y);
-      const pointRads = Math.atan(y/x) || 0;
-      x = hype*Math.sin(displayTransform.rotate + pointRads);
-      y = hype*Math.cos(-1*(displayTransform.rotate + pointRads));
-
-      displayTransform.scale = 1;
-      displayTransform.cox = 0;
-      displayTransform.coy = 0;
-      displayTransform.dox = 0;
-      displayTransform.doy = 0;
-      displayTransform.dx = 0;
-      displayTransform.dy = 0;
-      displayTransform.ox = 0;
-      displayTransform.oy = 0;
-      displayTransform.x = x - (canvas.width / 2);
-      displayTransform.y = y - (canvas.height / 2);
-      displayTransform.rotate = 0;
-      displayTransform.update();
-      displayTransform.moving = true;
-      displayTransform.zooming = true;
-      this.once();
+      const dt = this.displayTransform;
+      if (x.x !== undefined) {
+        y = x.y;
+        x = x.x;
+      }
+      const center = this.displayTransform.realPosition();
+      dt.x += (x - center.x);
+      dt.y += (y - center.y);
+      do {
+        dt.update();
+      } while (Math.abs(dt.dx + dt.dy) > .001);
     };
+
+    this.positionOn = function (center, demensions) {
+      const dt = this.displayTransform;
+      const scaleX = canvas.width/demensions.x;
+      const scaleY = canvas.height/demensions.y;
+      dt.scale = Math.floor(Math.min(scaleX, scaleY) * .8/2) * 2;
+      console.log(dt.scale)
+      let count = 0;
+      do {
+        dt.update();
+      } while (Math.abs(dt.dscale) > .0001);
+      this.centerOn(center);
+      this.once();
+    }
 
     return this;
   }

@@ -1,11 +1,11 @@
 
+require('../../std-lib/init');
 const STL = require('../../3d-modeling/STL.js');
 const OrientationControls = require('../../display/orientation-controls.js');
 const $t = require('../../$t.js');
 $t.loadFunctions(require('../../../../../services/cabinet/generated/html-templates.js'));
 
 require('../../3d-modeling/csg');
-require('../../utils');
 const du = require('../../dom-utils');
 const Line2d = require('../../canvas/two-d/objects/line.js');
 const Viewer = require('../../3d-modeling/viewer.js').Viewer;
@@ -776,6 +776,66 @@ models['Brad Nail Container'] = (nailLengths, gauge, count, clipLength, containe
   return lid;
 }
 
+models['Pull Jig'] = (maxOffset, lengths, outerWholeDiameter, sleeveLength) => {
+  maxOffset ||= 3*2.54/2;
+  lengths ||= [3*2.54, 9.6, 12.8];
+  outerWholeDiameter ||= .7
+  sleeveLength ||= .8
+
+  const offset = 1;
+  const firstHoleDist = 3 * 2.54;
+
+  // lengths.sort();
+  const maxLength = lengths[lengths.length - 1];
+  const dems = [offset*2 + maxOffset*2, firstHoleDist + maxLength + offset, offset * 2];
+  let jig = new CSG.cube({demensions: dems});
+  jig.center({x: 0, y: dems[1]/2, z: dems[2]/2});
+  const rightCutter = jig.clone();
+  rightCutter.translate({x: dems[0]/2 + offset/2, y: offset/2, z: offset});
+  const leftCutter = jig.clone();
+  leftCutter.translate({x: dems[0]/-2 + offset/-2, y: offset/2, z: offset});
+  jig = jig.subtract(rightCutter).subtract(leftCutter);
+
+  lengths.push(0);
+  lengths.forEach(len => {
+    const slices = 64;
+    const steps = [{length: sleeveLength, radius: outerWholeDiameter/2 + .05},
+                    {length: offset*2, radius: outerWholeDiameter/2 - .1}];
+    let center = {x: maxOffset + offset/2, y: offset/2 + len + firstHoleDist, z: offset/2};
+    const rightCylinder = new CSG.cylinder.step(steps, {slices, center});
+    center = {x: -(maxOffset + offset/2), y: offset/2 + len + firstHoleDist, z: offset/2};
+    const leftCylinder = new CSG.cylinder.step(steps, {slices, center});
+    jig = jig.subtract(rightCylinder).subtract(leftCylinder);
+  });
+
+  console.log(maxOffset)
+  return jig;
+}
+
+models['cup holder'] = (bracketGerth) => {
+  const radius = 8.6/2;
+  const length = 2.5*2.54;
+  const thickness = .2;
+  const slices = 96;
+  const cupHolder = new CSG.cylinder.hollow(radius, length, thickness, {slices, ends: ['OPEN', 'CAP']});
+  cupHolder.center({x:0, y:0, z:0});
+  cupHolder.setColors('blue');
+  const brim = new CSG.cylinder.hollow(10.8/2, .3, 1.1, {slices: 96})
+  brim.center({x:0,y:0,z:(-2.5*2.54 + .3)/2})
+  brim.setColors('red');
+
+  const bs = 48;
+  const sphere = new CSG.sphere({radius: length*2, slices: bs, stacks: bs});
+  sphere.translate({x:0,y:0,z:length*1.35});
+  sphere.setColors('yellow');
+
+  const start = new Date().getTime();
+  const model = cupHolder.union(brim.intersect(sphere)).simplify();
+
+  console.log(Math.roundTo((new Date().getTime() - start)/1000, .01))
+  return model;
+}
+
 const cnt = du.create.element('div');
 const controls = du.create.element('div', {style: 'float: left'});
 const display = du.create.element('div', {id: 'stl-three-d-model-cnt'});
@@ -822,13 +882,11 @@ const updateModel = () => {
 
 
 const updateArgs = (arg) => {
-  if (arg !== undefined){
     const name = select.value;
     argCnt.innerHTML = models[name].Arguments().map(a => {
       const type = a.match(/^is[A-Z]/) ? 'checkbox' : 'number';
       return `<label>${a}</label><br/><input type='${type}'\><br/>`;
     }).join('\n');
-  }
   updateModel();
 }
 
@@ -838,7 +896,7 @@ const download = () => {
   addLinks(getSelected(), select.value);
 }
 
-select.value = 'Brad Nail Container';
+select.value = 'cup holder';
 
 du.on.match('change', 'input', updateModel);
 

@@ -1,6 +1,6 @@
 
-exports['1747552123'] = (get, $t) => 
-		`<span > <label>` +
+exports['1888876342'] = (get, $t) => 
+		`<span repeat='uNit in units()'> <label>` +
 		$t.clean(get("uNit")) +
 		`</label><input type='radio' name='` +
 		$t.clean(get("id")()) +
@@ -9,19 +9,6 @@ exports['1747552123'] = (get, $t) =>
 		`' ` +
 		$t.clean(get("uNit") === get("unit")() ? 'checked' : '') +
 		`> </span>`
-
-exports['orientation-controls'] = (get, $t) => 
-		`<div class='orientation no-print' id='` +
-		$t.clean(get("navId")()) +
-		`' l-id='` +
-		$t.clean(get("id")()) +
-		`'> <div class='arrows'> <table cellspacing="0" cellpadding="0"> <tr> <td cmd='settings'><i class='gg-menu-round'></i></td> <td cmd='u'>&#8681;</td> <td cmd='color'><input type='color' value='` +
-		$t.clean(get("color")()) +
-		`'/></td> </tr> <tr> <td cmd='l'>&#8680;</td> <td cmd='c'>` +
-		$t.clean(get("space")()) +
-		`&#8865;` +
-		$t.clean(get("space")()) +
-		`</td> <td cmd='r'>&#8678;</td> </tr> <tr> <td></td> <td cmd='d'>&#8679;</td> <td></td> </tr> </table> </div> <div class='settings' hidden> <button class='remove-btn'>X</button> <div class='body'></div> </div> </div> `
 
 exports['controls/viewer'] = (get, $t) => 
 		`<label>Polygons</label> <input type='checkbox' name='polygons' ` +
@@ -60,9 +47,22 @@ exports['input/measurement'] = (get, $t) =>
 		` ` +
 		$t.clean(get("unitOnly")() ? 'hidden' : '') +
 		`> ` +
-		$t.clean( new $t('1747552123').render(get("units")(), 'uNit', get)) +
+		$t.clean( new $t('1888876342').render(get("units")(), 'uNit', get)) +
 		` <div class='error' id='` +
 		$t.clean(get("errorMsgId")()) +
 		`' hidden>` +
 		$t.clean(get("errorMsg")()) +
 		`</div> </div> `
+
+exports['orientation-controls'] = (get, $t) => 
+		`<div class='orientation no-print' id='` +
+		$t.clean(get("navId")()) +
+		`' l-id='` +
+		$t.clean(get("id")()) +
+		`'> <div class='arrows'> <table cellspacing="0" cellpadding="0"> <tr> <td cmd='settings'><i class='gg-menu-round'></i></td> <td cmd='u'>&#8681;</td> <td cmd='color'><input type='color' value='` +
+		$t.clean(get("color")()) +
+		`'/></td> </tr> <tr> <td cmd='l'>&#8680;</td> <td cmd='c'>` +
+		$t.clean(get("space")()) +
+		`&#8865;` +
+		$t.clean(get("space")()) +
+		`</td> <td cmd='r'>&#8678;</td> </tr> <tr> <td></td> <td cmd='d'>&#8679;</td> <td></td> </tr> </table> </div> <div class='settings' hidden> <button class='remove-btn'>X</button> <div class='body'></div> </div> </div> `

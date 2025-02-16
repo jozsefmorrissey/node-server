@@ -1,18 +1,13 @@
 <div class='opening-cnt' opening-id='{{opening.id()}}'>
+  <label layout-target-id='{{opening.isRoot() ? '' : opening.parentAssembly().id()}}'>
+    parent
+  </label>
   <b class='copy-inner-text'>{{opening.name()}}</b>
   <div class='divider-controls'>
     {{OpenSectionDisplay.dividerHtml(opening)}}
   </div>
   <div>
-    <label>Section Type:</label>
-    <select class='section-selection'>
-      <option>Open</option>
-      <option:t repeat='section in sections'
-            value='{{section.prototype.constructor.name}}'
-            {{opening.coverType() === section.name ? 'selected' : ''}}>
-        {{section.name.toSentance().replace('Section', '')}}
-      </option:t>
-    </select>
+    {{Inputs.sectionType(opening).html()}}
     <div class='section-feature-cnt'>
       <div class='inline-flex chev-dropdown-toggle'>
         Opening Features
@@ -23,7 +18,13 @@
         {{featuresHtml}}
       </div>
     </div>
-    <div id='{{openDispId}}'>
-    </div>
+    <div:t t-id='section-children-cnt' id='section-children-cnt'
+          class='{{opening.vertical() ? '' : 'inline-flex'}}'>
+      <div:t class='has-siblings child-section'
+              repeat='section in opening.sections'
+              layout-target-id='{{section.id()}}'>
+        {{section.coverType.sentance()}}
+      </div:t>
+    </div:t>
   </div>
 </div>

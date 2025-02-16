@@ -168,6 +168,10 @@ class SectionProperties extends KeyValue {
     this.included = () => false;
     this.joints = [];
     this.coverType = () => this.cover() && this.cover().constructor.name;
+    this.coverType.sentance = (name) => {
+      if (name === undefined) name = this.coverType();
+      return name ? name.replace(/Section$/, '').toSentance() : 'Open';
+    }
     this.vertical = (is) => {
       const curr = instance.value('vertical', is);
       if (is !== undefined && curr !== is) setSectionCoordinates(true);
@@ -456,7 +460,7 @@ class SectionProperties extends KeyValue {
           const diff = currDividerCount - dividerCount;
           this.sections.splice(dividerCount + 1);
           if (dividerCount > 2)this.pattern().setStr(this.pattern().str.substring(0, dividerCount));
-          if (!dontUpdateCoords) setSectionCoordinates(true);
+          setSectionCoordinates(true);
           return true;
         } else {
           const diff = dividerCount - currDividerCount;
@@ -468,7 +472,7 @@ class SectionProperties extends KeyValue {
           const patDiff = dividerCount - patStr.length + 1;
           if (patDiff > 0) this.pattern().setStr(patStr + new Array(patDiff).fill('z').join(''));
           if (patDiff < 0) this.pattern().setStr(patStr.substring(0, dividerCount));
-          if (!dontUpdateCoords && diff !== 0) setSectionCoordinates(true);
+          if (diff !== 0) setSectionCoordinates(true);
           return diff !== 0;
         }
       }
@@ -531,7 +535,7 @@ class SectionProperties extends KeyValue {
         v.y = nv.y;
         v.z = nv.z;
         if (Number.isNaN(v.x + v.y + v.z)) {
-          console.error('coordinate is NaN!')
+          throw new Error('opening coordinate is calculation came out to Not A Number')
         }
       }
       return change

@@ -40,10 +40,10 @@
 <pre>      <[tag]:t repeat='[index] in [startIndex]..[endIndex]'>[html]<&#47;[tag]:t></pre>
 
 &nbsp;&nbsp;<b>Repeat Defined Template</b>
-<pre>      <[tag]:t [repeatExpression] $t-id='[templateLocation]'><&#47;[tag]:t></pre>
+<pre>      <[tag]:t [repeatExpression] t-id='[templateLocation]'><&#47;[tag]:t></pre>
 
 &nbsp;&nbsp;<b>Defined Template</b>
-<pre>      <[tag]:t $t-id='[templateLocation]'>[scopeVariable]<&#47;[tag]:t></pre>
+<pre>      <[tag]:t t-id='[templateLocation]'>[scopeVariable]<&#47;[tag]:t></pre>
 
 ## GO Over
 ### public/js/utils/tolerance.js

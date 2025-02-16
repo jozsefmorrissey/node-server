@@ -8,19 +8,21 @@ const Labor = require('../cost/types/labor.js');
 const Joint = require('../objects/joint/joint.js');
 const DecisionInputTree = require('../../../../public/js/utils/input/decision/decision.js');
 
-const defined = {};
+const inputFunc = (name, input) => input instanceof Function ?
+        input : input.clone;
+
 function add (name, input) {
-  if (defined[name]) {
+  if (inputs[name]) {
     throw new Error(`Input by the name of '${name}' is already defined`)
   }
-  defined[name] = input;
+  inputs[name] = inputFunc(name, input);
 }
 
-module.exports = (name, properties) => defined[name] instanceof Function ?
-        defined[name](properties) : defined[name].clone(properties);
+const inputs = (name, properties) => inputs[name](properties);
+module.exports = inputs;
 
 
-add('length', new MeasurementInput({
+add('len', new MeasurementInput({
   type: 'text',
   placeholder: 'Length',
   name: 'length',
@@ -145,16 +147,6 @@ add('costId', new Input({
   errorMsg: 'You must an Id: value must be unique if Referencable.'
 }));
 
-add('name', new Input({
-  type: 'text',
-  placeholder: 'Name',
-  name: 'name',
-  value: 'peach',
-  class: 'center',
-  validation: /^\s*[^\s].*$/,
-  errorMsg: 'You must enter a Name'
-}));
-
 add('color', new Input({
   type: 'color',
   validation: /.*/,
@@ -265,4 +257,27 @@ add('joint', (props) => {
   dit.on.change(props.onChange);
   dit.on.change(props.onComplete);
   return dit;
+});
+
+add('dividerJointType', (opening) => {
+  return new Select({
+    label: 'Type',
+    name: 'dividerType',
+    list: opening.divider().constructor.Types,
+    class: 'divider-type-selector',
+    value: opening.divider().type(),
+    inline: true
+  });
+});
+
+add('sectionType', (section, noLabel) => {
+  return new Select({
+    label: noLabel ? '' : 'Section Type:',
+    name: 'dividerType',
+    list: ['Open'].concat(section.constructor.list()
+            .map(o => section.coverType.sentance(o.name))),
+    class: 'divider-type-selector',
+    value: section.coverType.sentance(),
+    inline: true
+  });
 });

@@ -447,6 +447,7 @@ class DragDropResize {
     this.on.close = (func) => closeFuncs.push(func);
 
     const cancelFade = du.fade.out(getPopupElems().cnt, 10, instance.close);
+    cancelFade();
     getPopupElems().cnt.addEventListener('mouseover', cancelFade);
 
 

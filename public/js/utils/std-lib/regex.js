@@ -21,6 +21,7 @@ Function.safeStdLibAddition(RegExp, 'object',  function (string, ...keys) {
   const match = string.match(this);
   if (match === null) return null;
   const returnVal = {};
+  returnVal[0] = match[0];
   for (let index = 0; index < keys.length; index += 1) {
     const attr = keys[index];
     if (attr && match[index + 1]) returnVal[attr] = match[index + 1];
@@ -111,3 +112,15 @@ Function.safeStdLibAddition(RegExp, 'toObject',  function (str) {
   }
   return returnVal;
 }, false);
+
+Function.safeStdLibAddition(RegExp, 'recursive', function (string) {
+  const matches = string.match(this.g());
+  if (matches === null) return null;
+  let index;
+  let childMatches = [];
+  for (let index = 0; index < matches.length; index++) {
+    const str = matches[0]
+    childMatches.concatInPlace(this.recursive(str.substring(1,str.length)));
+  }
+  return matches.concat(childMatches);
+});

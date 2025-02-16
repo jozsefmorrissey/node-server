@@ -6,7 +6,7 @@
       <button class='paste-template right'>Paste</button>
     </div>
   </div>
-  <div:t $t-id='managers/template/headers/{{template.constructor.cxtrType.toLowerCase()}}'>{hideEmpty: true}</div:t>
+  <div:t t-id='managers/template/headers/{{template.constructor.cxtrType.toLowerCase()}}'>{hideEmpty: true}</div:t>
   <br>
   <div class='inline-flex'>
     <label>Demensions: </label>
@@ -25,7 +25,7 @@
     </span>
   </div>
 
-  <div:t repeat='container in containers' $t-id='managers/template/expand-cnt'></div:t>
+  <div:t repeat='container in containers' t-id='managers/template/expand-cnt'></div:t>
 
   <div template-id='{{template.id()}}' class='cabinet-template-input-cnt'>
     <div class='expand-header'>View Shape</div>

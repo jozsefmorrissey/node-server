@@ -1,5 +1,6 @@
 
 const du = require('../../../../public/js/utils/dom-utils.js');
+const $t = require('../../../../public/js/utils/$t.js');
 const Draw2D = require('../../../../public/js/utils/canvas/two-d/draw.js');
 const Line2d = require('../../../../public/js/utils/canvas/two-d/objects/line.js');
 const Vertex2d = require('../../../../public/js/utils/canvas/two-d/objects/vertex.js');
@@ -15,6 +16,11 @@ const LineMeasurement2d = require('../../../../public/js/utils/canvas/two-d/obje
 const Cabinet = require('../objects/assembly/assemblies/cabinet.js');
 const Jobs = require('../../web-worker/external/jobs.js');
 const rotatedLineFunc = (coDirRotz, center) => (p1, p2) => new Line3D(p1,p2).rotate(coDirRotz, center);
+const inputs = require('../input/inputs.js');
+const OpenSectionDisplay = require('open-section');
+
+
+const sectionTemplate = new $t('divider-controls');
 
 class OpeningSketchSettings {
   constructor() {
@@ -50,8 +56,7 @@ class OpeningSketch {
             sectionPolys = [];
             hoverMap.clear();
             build();
-            // panZ.centerOn(new Vertex3D(center).to2D('x','y'));
-            panZ.once();
+            panZ.positionOn(center, model.demensions());
           }
         }).queue();
       }
@@ -222,6 +227,24 @@ class OpeningSketch {
       }
     }
 
+    function sectionDisplay(section) {
+      const patterInputHtml = OpenSectionDisplay.patterInputHtml(section);
+      const scope = {section, inputs, patterInputHtml};
+      du.find('.obj-layout-cnt').innerHTML = OpenSectionDisplay.html(section);
+    }
+
+    function onClick(clicked) {
+      const hovering = hoverMap.hovering();
+      if (hovering) {
+        if (hovering.section) sectionDisplay(hovering.section);
+      }
+    }
+
+    du.on.match('click', '[layout-target-id]', (elem) => {
+      sectionDisplay(Lookup.get(elem.getAttribute('layout-target-id')));
+    });
+
+
     this.draw = draw;
 
     function init() {
@@ -237,6 +260,7 @@ class OpeningSketch {
         sketch = new Draw2D(canvas);
       }
       panZ = new PanZoomClickMeasure(canvas, draw, () => hoverMap);
+      panZ.on.click(onClick);
       instance.once = panZ.once;
     }
   }

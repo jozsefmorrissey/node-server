@@ -4,7 +4,6 @@
 const SectionProperties = require('../objects/assembly/assemblies/section/section-properties.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
-const ExpandableList = require('../../../../public/js/utils/lists/expandable-list.js');
 const MeasurementInput = require('../../../../public/js/utils/input/styles/measurement.js');
 const ThreeDMain = require('./three-d-main.js');
 const StringMathEvaluator = require('../../../../public/js/utils/string-math-evaluator.js');
@@ -74,12 +73,11 @@ OpenSectionDisplay.featuresHtml = (openingOelem) => {
 OpenSectionDisplay.html = (opening) => {
   const openDispId = OpenSectionDisplay.getId(opening);
   OpenSectionDisplay.sections[opening.id()] = opening;
-  if (opening.sectionCount() > 1) OpenSectionDisplay.refresh(opening, true);
   const patternInputHtml = OpenSectionDisplay.patterInputHtml(opening);
   const sections = SectionProperties.list();
   const featuresHtml = OpenSectionDisplay.featuresHtml(opening);
   return OpenSectionDisplay.template.render({opening, openDispId, patternInputHtml, Features,
-                                            sections, OpenSectionDisplay, featuresHtml});
+                                            Inputs, sections, OpenSectionDisplay, featuresHtml});
 }
 
 OpenSectionDisplay.getSelectId = (opening) => `opin-division-pattern-select-${opening.id()}`;
@@ -90,37 +88,7 @@ OpenSectionDisplay.sections = {};
 OpenSectionDisplay.lists = {};
 OpenSectionDisplay.getId = (opening) => `open-section-display-${opening.id()}`;
 
-OpenSectionDisplay.getList = (root) => {
-  let openId = root.id();
-  if (OpenSectionDisplay.lists[openId]) return OpenSectionDisplay.lists[openId];
-  // const sections = SectionProperties.sections();
-  // const getObject = (target) => sections[Math.floor(Math.random()*sections.length)];
-  const parentSelector = `#${OpenSectionDisplay.getId(root)}`
-  const list = root.sections;
-  const hideAddBtn = true;
-  const selfCloseTab = true;
-  let exList;
-  const clean = (name) => name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ Section$/, '');
-  const getHeader = (opening, index) => {
-    const cover = opening.cover()
-    const headText =  SectionDisplay.formatCoverName(cover ? cover.constructor.name : 'Open');
-    return OpenSectionDisplay.listHeadTemplate.render({opening, clean, headText});
-  }
-  const getBody = (opening) => {
-    const list = OpenSectionDisplay.getList(root);
-    const getFeatureDisplay = (assem) => new FeatureDisplay(assem).html();
-    const assemblies = opening === undefined ? [] : opening.getSubassemblies();
-    return SectionDisplay.render({assemblies, getFeatureDisplay, opening, list});
-  }
-  const findElement = (selector, target) => du.find.down(selector, du.find.up('.expandable-list', target));
-  const expListProps = {
-    parentSelector, getHeader, getBody, list, hideAddBtn,
-    selfCloseTab, findElement, startClosed: true, removeButton: false, hideAddBtn: true
-  }
-  exList = new ExpandableList(expListProps);
-  OpenSectionDisplay.lists[openId] = exList;
-  return exList;
-}
+
 OpenSectionDisplay.dividerControlTemplate = new $t('divider-controls');
 OpenSectionDisplay.dividerHtml = (opening) => {
   const selector = `[opening-id="${opening.id()}"].opening-cnt > .divider-controls`;
@@ -136,11 +104,6 @@ OpenSectionDisplay.dividerHtml = (opening) => {
   return OpenSectionDisplay.dividerControlTemplate.render({opening, patternInputHtml, dividerTypeSelect});
 }
 
-du.on.match('change', '.divider-type-selector', (elem) => {
-  const obj = ExpandableList.get(elem);
-  obj.divider().type(elem.value);
-});
-
 OpenSectionDisplay.updateDividers = (opening) => {
   const focusInfo = du.focusInfo();
   const selector = `[opening-id="${opening.id()}"].opening-cnt > .divider-controls > div`;
@@ -151,31 +114,6 @@ OpenSectionDisplay.updateDividers = (opening) => {
 }
 
 OpenSectionDisplay.changeIds = {};
-OpenSectionDisplay.refresh = (opening, rapid, onlyIfPending) => {
-  if (OpenSectionDisplay.changeIds[opening.id()] === undefined)
-    OpenSectionDisplay.changeIds[opening.id()] = {nextId: 0, lastId: 0};
-  let idObj = OpenSectionDisplay.changeIds[opening.id()];
-  let changeId = idObj.nextId;
-  if (!onlyIfPending || changeId > idObj.lastId) {
-    idObj.nextId = ++changeId;
-    setTimeout(()=> {
-      if (changeId === idObj.nextId) {
-        idObj.lastId = changeId;
-        const id = OpenSectionDisplay.getId(opening);
-        const target = du.id(id);
-        const listCnt = du.find.up('.expandable-list', target);
-        if (!listCnt) return;
-        const listId = Number.parseInt(listCnt.getAttribute('ex-list-id'));
-
-        const type = opening.isVertical() === true ? 'pill' : 'sidebar';
-        OpenSectionDisplay.updateDividers(opening);
-        if (opening.sectionCount() > 1) OpenSectionDisplay.getList(opening).refresh(type);
-        const dividerSelector = `[opening-id='${opening.id()}'].division-count-input`;
-        // listCnt.querySelector(dividerSelector).focus();
-      }
-    }, 50);
-  }
-}
 
 OpenSectionDisplay.patternContainerSelector = (opening) =>
   `.open-pattern-input-cnt[opening-id='${opening.id()}']`;
@@ -257,53 +195,39 @@ OpenSectionDisplay.patternInputSelector = (opening) =>
 OpenSectionDisplay.onPatternChange = (target) => {
   const opening = OpenSectionDisplay.getOpening(target);
   const newVal = target.value || 'a';
-  const cntSelector = OpenSectionDisplay.patternContainerSelector(opening);
-  const inputCnt = document.querySelector(OpenSectionDisplay.patternContainerSelector(opening));
+  // const cntSelector = OpenSectionDisplay.patternContainerSelector(opening);
+  // const inputCnt = document.querySelector(OpenSectionDisplay.patternContainerSelector(opening));
   if (opening.pattern().str !== newVal) {
-    opening.pattern(newVal).str;
-    const html = OpenSectionDisplay.patterInputHtml(opening);
-    document.querySelector(cntSelector).innerHTML = html;
-    if (newVal.length < 2) du.id(OpenSectionDisplay.getId(opening)).innerHTML = '';
-    else OpenSectionDisplay.refresh(opening);
-    const cabinet = opening.getAssembly('c');
+    try {
+      opening.pattern(newVal).str;
+      OpenSectionDisplay.childTemplate.refresh({opening});
+      target.removeAttribute('error-msg')
+    } catch (e) {
+      du.error(target, 'I dont know what you are doing but this program does not like it', e.stack)
+    }
+    // const html = OpenSectionDisplay.patterInputHtml(opening);
+    // document.querySelector(cntSelector).innerHTML = html;
+    // if (newVal.length < 2) du.id(OpenSectionDisplay.getId(opening)).innerHTML = '';
+    // else OpenSectionDisplay.refresh(opening);
+    // const cabinet = opening.getAssembly('c');
   }
-  if (inputCnt !== null) {
-    inputCnt.hidden = opening.pattern().equals;
-  }
+  // if (inputCnt !== null) {
+  //   inputCnt.hidden = opening.pattern().equals;
+  // }
 }
-
-function expiditeRefresh(target) {
-  const opening = OpenSectionDisplay.getOpening(target);
-  OpenSectionDisplay.refresh(opening, true, true);
-}
+OpenSectionDisplay.childTemplate = new $t('section-children-cnt');
 
 OpenSectionDisplay.onOrientation = (target) => {
   const opening = OpenSectionDisplay.getOpening(target);
   const isVertical = target.getAttribute('orientation') === 'vertical';
   opening.vertical(isVertical);
   opening.reevaluate();
-  OpenSectionDisplay.refresh(opening);
+  Array.from(target.parentElement.children).forEach(e => du.class.oft(e,'pressed', e === target));
+  const childSectionCnt = du.find.closest('.child-section', target).parentElement;
+  du.class.oft(childSectionCnt, 'inline-flex', isVertical);
 };
 
-OpenSectionDisplay.onSectionChange = (target) => {
-  // ExpandableList.value('selected', target.value, target);
-  let section = ExpandableList.get(target);
-  if (!(section instanceof SectionProperties)) {
-    const index = du.find.up('[index]', target).getAttribute('index');
-    section = section.openings[index].sectionProperties();
-  }
-  section.setSection(target.value === "Open" ? null : target.value);
-  const expandHeader = ExpandableList.getHeaderCnt(target);
-  const targetCnt = du.find.down('.open-divider-select', expandHeader);
-  const html = OpenSectionDisplay.featuresHtml(target);
-  du.find.closest('.section-feature-cnt .chev-dropdown').innerHTML = html;
-  if (targetCnt) {
-    targetCnt.innerText = SectionDisplay.formatCoverName(target.value || 'Open');
-  }
-}
 
 du.on.match('keyup', '.division-pattern-input', OpenSectionDisplay.onPatternChange);
-du.on.match('change', '.division-pattern-input', expiditeRefresh);
 du.on.match('click', '.div-orien-btn', OpenSectionDisplay.onOrientation);
-du.on.match('change', '.section-selection', OpenSectionDisplay.onSectionChange)
 module.exports = OpenSectionDisplay

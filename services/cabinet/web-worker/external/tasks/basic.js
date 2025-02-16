@@ -1,5 +1,6 @@
 
 const STATUS = require('./status');
+const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
 
 class Task {
   constructor(initailStatus) {

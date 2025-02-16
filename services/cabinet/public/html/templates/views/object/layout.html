@@ -1,14 +1,16 @@
-
-<div class='inline-flex chev-dropdown-toggle'>
-  Drawing Settings
-  <i class='down gg-chevron-down hidden' ></i>
-  <i class='right gg-chevron-right'></i>
-</div>
-<div class='tab chev-dropdown' hidden>
-  <div class='object-layout-settings-cnt'>
-    <div:t repeat='key, onOff in settings'>
-      <label>{{key}}</label>
-      <input type='checkbox' name='{{key}}' {{onOff() ? 'checked' : ''}}>
-    </div:t>
+<div>
+  <div class='inline-flex chev-dropdown-toggle'>
+    Drawing Settings
+    <i class='down gg-chevron-down hidden' ></i>
+    <i class='right gg-chevron-right'></i>
+  </div>
+  <div class='tab chev-dropdown' hidden>
+    <div class='object-layout-settings-cnt'>
+      <div:t repeat='key, onOff in settings'>
+        <label>{{key}}</label>
+        <input type='checkbox' name='{{key}}' {{onOff() ? 'checked' : ''}}>
+      </div:t>
+    </div>
   </div>
 </div>
+<div class='obj-layout-cnt'></div>

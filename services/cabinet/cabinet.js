@@ -69,6 +69,7 @@ function servePage(pageId, scope) {
   }
 }
 
+
 function endpoints(app, prefix) {
 
   app.get(prefix, function (req, res) {

@@ -5,6 +5,7 @@ const Order = require('../app-src/objects/order.js');
 const testFiles = [
   "./tests/cabinet",
   "./tests/polygon2d",
+  "../../../public/js/utils/test/tests/$t",
   "../../../public/js/utils/test/tests/csg",
   "../../../public/js/utils/test/tests/measurement",
   "../../../public/js/utils/test/tests/vector3D",
