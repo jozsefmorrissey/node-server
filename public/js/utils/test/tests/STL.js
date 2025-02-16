@@ -824,13 +824,13 @@ models['cup holder'] = (bracketGerth) => {
   brim.center({x:0,y:0,z:(-2.5*2.54 + .3)/2})
   brim.setColors('red');
 
-  const bs = 48;
+  const bs = 64;
   const sphere = new CSG.sphere({radius: length*2, slices: bs, stacks: bs});
   sphere.translate({x:0,y:0,z:length*1.35});
   sphere.setColors('yellow');
 
   const start = new Date().getTime();
-  const model = cupHolder.union(brim.intersect(sphere)).simplify();
+  const model = cupHolder.union(brim.intersect(sphere));
 
   console.log(Math.roundTo((new Date().getTime() - start)/1000, .01))
   return model;
