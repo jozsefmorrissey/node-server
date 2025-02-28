@@ -1,6 +1,6 @@
 
 const Global = require('../../services/global');
-const {Vertex3D} = require('../../../../../../public/js/utils/canvas/three-d/lib');
+const {Vertex3D} = require('../../../../../public/js/utils/canvas/three-d/lib.js');
 let partAxis = [];
 let extraObjs = () =>
   partAxis.concat(openingVerticies);

@@ -201,15 +201,15 @@ class OpeningToeKickUtil {
       const center = innerPoly.center();
 
       const cabinet = openTk.find('c');
-      const tkh = Utils.property('tkh', cabinet, env);
-      const sdepth = Utils.property('tkd', cabinet, env);
+      const tkh = Utils.property('tkh', opening, env);
+      const sdepth = Utils.property('tkd', opening, env);
       const dem = cabinet.position.current.demension;
       const xyOffset = {x: dem.x + dem.z + dem.y, y: 0};
       vOid = buildOffset(right, left, center, coords, innerPoly, tkh, sdepth, -10000, xyOffset);
       children.vOid = vOid;
 
       const tkd1 = sdepth;
-      const tkd2 = tkd1 + Utils.property('tkbw', cabinet, env);
+      const tkd2 = tkd1 + Utils.property('tkbw', opening, env);
       const bottomThickness = cabinet.find.down('B').position.current.demension.z;
       offsetToeKickPoly = buildOffset(right, left, center, coords, innerPoly, tkh, tkd1, tkd2);
 

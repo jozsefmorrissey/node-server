@@ -27,7 +27,7 @@ const Snap2d = require('../../../../../public/js/utils/canvas/two-d/objects/snap
 const PropertyConfig = require('../../config/property/config.js');
 const Pattern = require('../../division-patterns.js');
 const Handle = require('../../objects/assembly/assemblies/hardware/pull.js');
-const OpeningSketch = require('../opening-sketch');
+const OpeningSketch = require('../views/object/opening-sketch.js');
 const FaceSketch = require('../face-sketch');
 const CSG = require('../../../../../public/js/utils/3d-modeling/csg.js');
 const Canvas = require('../canvas');
@@ -1047,7 +1047,7 @@ const RadioInput = require('../../../../../public/js/utils/input/styles/radio.js
 TemplateManager.inputTree = () => {
   const list = AssemblyTemplate.cxtrTypes();
   const radio = new RadioInput({name: 'type', list, value: 'Cabinet'});
-  const dit = new DecisionInputTree('Template Name', {inputArray: [Inputs('name'), radio]});
+  const dit = new DecisionInputTree('Template Name', {inputArray: [Inputs('Name'), radio]});
   return dit;
 }
 

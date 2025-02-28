@@ -3,9 +3,7 @@
     parent
   </label>
   <b class='copy-inner-text'>{{opening.name()}}</b>
-  <div class='divider-controls'>
-    {{OpenSectionDisplay.dividerHtml(opening)}}
-  </div>
+  <div:t class='divider-controls' t-id='divider-controls'></div:t>
   <div>
     {{Inputs.sectionType(opening).html()}}
     <div class='section-feature-cnt'>

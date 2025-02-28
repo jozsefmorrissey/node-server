@@ -11,11 +11,9 @@ const Cut = require('../../../joint/joints/cut.js');
 const Dependency = require('../../../dependency.js');
 
 class OpeningToeKick extends Assembly {
-  constructor(autoToeKick, opening, index) {
+  constructor(opening, index) {
     const atkid = 'OpeningToeKick' + index;
     super(`OpenTK`, atkid);
-    this.parentAssembly(autoToeKick);
-    this.autoToeKick = () => autoToeKick;
     this.opening = () => opening;
     const toeKickPanel = new Panel(':tkb', `ToeKickBacker`);
 
@@ -55,22 +53,35 @@ class OpeningToeKick extends Assembly {
     const cutterR = new Cutter(':tkcr', `ToeKickPerp`);
     const cutterL = new Cutter(':tkcl', `ToeKickPerp`);
     toeKickPanel.normals(false, {DETERMINE_FROM_MODEL: true})
-    joint(cutter)(/^c_R(:|_)/, () => !autoToeKick.rightEndStyle());
-    joint(cutter)(/^c_L(:|_)/, () => !autoToeKick.leftEndStyle());
-    sideJointConfig(/^R:/, autoToeKick.overlayRight, 'r');
-    sideJointConfig(/^L:/, autoToeKick.overlayLeft, 'l');
+    joint(cutter)(/^c_R(:|_)/, () => !this.rightEndStyle());
+    joint(cutter)(/^c_L(:|_)/, () => !this.leftEndStyle());
+    sideJointConfig(/^R:/, this.overlayRight, 'r');
+    sideJointConfig(/^L:/, this.overlayLeft, 'l');
 
     this.addSubAssembly(toeKickPanel);
     this.addSubAssembly(cutter);
 
-    // joint(cutterR)(/^c_R(:|_)/, () => !autoToeKick.rightEndStyle());
-    // joint(cutterL)(/^c_L(:|_)/, () => !autoToeKick.leftEndStyle());
+    // joint(cutterR)(/^c_R(:|_)/, () => !this.rightEndStyle());
+    // joint(cutterL)(/^c_L(:|_)/, () => !this.leftEndStyle());
     // this.addSubAssembly(cutterL);
     // this.addSubAssembly(cutterR);
 
     this.tkb = () => toeKickPanel;
     this.part = () => false;
     this.included = () => false;
+
+    this.leftEndStyle = this.value.getterSetter('show.left.endStyle');
+    this.rightEndStyle = this.value.getterSetter('show.left.endStyle');
+    this.leftShow = this.value.getterSetter('show.left.type');
+    this.rightShow = this.value.getterSetter('show.left.type');
+    this.overlayRight = () =>
+      !(this.rightShow() || this.rightEndStyle());
+    this.overlayLeft = () =>
+      !(this.leftShow() || this.leftEndStyle());
+
+    this.hash = () => {
+      return `${this.leftEndStyle()}:${this.leftEndStyle()}:${this.leftShow()}:${this.rightShow()}`.hash();
+    }
   }
 }
 
@@ -80,31 +91,8 @@ class AutoToekick extends Assembly {
     this.part = () => false;
     this.included = () => false;
 
-    this.leftEndStyle = () => {
-      const showObj = cabinet.value('show.left');
-      return showObj instanceof Object && !!showObj.endStyle;
-    };
-    this.rightEndStyle = () => {
-      const showObj = cabinet.value('show.right');
-      return showObj instanceof Object && !!showObj.endStyle;
-    };
-    this.leftShow = () => {
-      const showObj = cabinet.value('show.left');
-      return showObj instanceof Object && !!showObj.type;
-    };
-    this.rightShow = () => {
-      const showObj = cabinet.value('show.right');
-      return showObj instanceof Object && !!showObj.type;
-    };
-    this.overlayRight = () =>
-      !(this.rightShow() || this.rightEndStyle());
-    this.overlayLeft = () =>
-      !(this.leftShow() || this.leftEndStyle());
-
-    this.hash = () => {
-      return `${this.leftEndStyle()}:${this.leftEndStyle()}:${this.leftShow()}:${this.rightShow()}`.hash();
-    }
-
+    this.tkh = this.value.getterSetter('tkh');
+    this.hash = () => Math.hash(...this.children().map(c => c.hash()));
 
     const instance = this;
     this.parentAssembly(cabinet);
@@ -123,8 +111,9 @@ class AutoToekick extends Assembly {
         for (let index = 0; index < openings.length; index++) {
           const opening = openings[index];
           if (tkOpeningMap[opening.id()] === undefined) tkOpeningMap[opening.id()] =
-              new OpeningToeKick(this, opening.sectionProperties(), index);
+              new OpeningToeKick(opening.sectionProperties(), index);
           instance.addSubAssembly(tkOpeningMap[opening.id()]);
+          tkOpeningMap[opening.id()].tkh = this.tkh;
         }
       } catch (e) {
         console.error('AutoToeKick: update exception');

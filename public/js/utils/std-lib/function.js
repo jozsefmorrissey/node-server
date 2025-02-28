@@ -144,9 +144,10 @@ function intervalFunction(callerId, intervalOptional, ...args) {
   }
   const lastTime = lastTimeStamps[callerId];
   const thisTime = new Date().getTime();
-  if (lastTime === undefined || lastTime + interval < thisTime)
+  if (lastTime === undefined || lastTime + interval < thisTime) {
+    lastTimeStamps[callerId] = thisTime;
     this(...args);
-  lastTimeStamps[callerId] = thisTime;
+  }
 }
 
 const logData = {};

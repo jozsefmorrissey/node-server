@@ -344,7 +344,6 @@ class PanZoom {
                 // save old mouse position
                 mouse.oldX = mouse.x;
                 mouse.oldY = mouse.y;
-                console.log.lastCall('realPos: ', 500, this.realPosition(), this.realPosition(0,0));
             }
 
         }
@@ -372,7 +371,7 @@ class PanZoom {
     // timer for stuff
     var timer =0;
     function update(updateId, once){
-      if (nextUpdateId !== updateId) return;
+      if (!once && nextUpdateId !== updateId) return;
       nextUpdateId++;
       timer += 1; // update timere
       displayTransform.update();
@@ -394,7 +393,7 @@ class PanZoom {
       if (lastMoveTime < new Date().getTime() - 1000) instance.sleep();
       if (hasDelta() || sleeping === false) {
         if (once) sleeping = true;
-        setTimeout(() => requestAnimationFrame(() => update(++nextUpdateId)), 30);
+        setTimeout(() => requestAnimationFrame(() => update(++nextUpdateId)), 300);
       } else {
         sleeping = true;
       }

@@ -170,9 +170,9 @@ Measurement = function (value, notMetric) {
 
     this.display = (accuracy, dispUnit) => {
       switch (dispUnit || this.unit()) {
-        case units[0]: return new String(this.decimal(accuracy || .1), units[0]);
+        case units[0]: return this.decimal(accuracy || .1) + units[0];
         case units[1]: return this.standardUS(accuracy);
-        case units[2]: return new String(Math.roundTo(this.decimal() * 10, accuracy || .1), units[2]);
+        case units[2]: return Math.roundTo(this.decimal() * 10, accuracy || .1) + units[2];
         default:
             return this.standardUS(accuracy);
       }

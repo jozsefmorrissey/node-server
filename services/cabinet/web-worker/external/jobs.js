@@ -105,7 +105,6 @@ class Jobs extends Job {
 class TaskJob extends Job {
   constructor(task, id) {
     super(id);
-    // CustomEvent.link(this, task);
     task.on.change.status(() =>
       this.status(task.status(), this));
     this.task = () => task;

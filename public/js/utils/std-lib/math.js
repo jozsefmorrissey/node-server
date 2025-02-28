@@ -17,6 +17,29 @@ Function.safeStdLibAddition(Math, 'mod',  function (val, mod) {
   return val % mod;
 }, true);
 
+function adjustPolarity(value, positive) {
+  if (positive === true && value < 0) value *= -1;
+  if (positive === false && value > 0) value *= -1;
+  return value;
+}
+
+function hash(digits, positive) {
+  if (!digits) return 0;
+  let hash = 0;
+  for (let i = 0; i < digits.length; i += 1) {
+    hash = ((hash << 5) - hash) + digits[i];
+    hash &= hash; // Convert to 32bit integer
+  }
+  let mod = 1;
+  for (let i = 0; i < digits.length; i++) mod *= 10;
+  return adjustPolarity(mod ? hash % mod : hash, positive);
+}
+
+Function.safeStdLibAddition(Math, 'hash', (...digits) => hash(digits), true);
+Function.safeStdLibAddition(Math.hash, 'positive', (...digits) => hash(digits, true), true);
+Function.safeStdLibAddition(Math.hash, 'negitive', (...digits) => hash(digits, false), true);
+
+
 const ratioReg = /^([0-9]{0,})(r|ratio)([0-9]{0,})$/i;
 Function.safeStdLibAddition(Math, 'ratio', function (string) {
   const rMatch = string.match(ratioReg);

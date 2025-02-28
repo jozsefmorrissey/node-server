@@ -15,7 +15,7 @@ const JointSettings = require('../../../web-worker/shared/settings.js');
 const Utils = require('../../utils')
 // const ToModel = require('../../../web-worker/services/to-model.js');
 
-FunctionCache.on('hash', 250);
+// FunctionCache.on('hash', 250);
 const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
 
 function maxHeight(a, b, c) {
@@ -126,7 +126,6 @@ class Assembly extends KeyValue {
     const nonUserDefinedPartReg = /^c(_(S|AUTOTK|COC|CabinetOpeningCorrdinates)(_|$)|$)/;
     this.userDefinedParts = () => this.allAssemblies().filter(a => !a.locationCode().match(nonUserDefinedPartReg));
 
-    const changeEvent = new CustomEvent('change');
     CustomEvent.all(this, 'change', 'processing');
     let lastHash;
     function hash() {
@@ -141,7 +140,7 @@ class Assembly extends KeyValue {
       }
       if (hashVal !== lastHash) {
         lastHash = hashVal;
-        changeEvent.trigger.lastCall(instance.id() + 'Hash', 20, instance);
+        instance.trigger.change();
         return hash();
       }
       return hashVal;

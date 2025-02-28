@@ -32,7 +32,7 @@ class SectionProperties extends KeyValue {
     this.left = getPartFunc('left');
     this.right = getPartFunc('right');
     this.back = getPartFunc('back');
-    this.isVertical = () => this.sections.length < 2 ? undefined : this.vertical();
+    this.isVertical = () => this.vertical();
 
     this.childConfig = (index) => {
       const iv = this.isVertical;
@@ -79,8 +79,8 @@ class SectionProperties extends KeyValue {
       normals.x = normals.z.crossProduct(normals.y).unit();
       return normals;
     }
-    this.outerPoly = () => new Polygon3D(coordinates.outer);
-    this.innerPoly = () => new Polygon3D(coordinates.inner);
+    this.outerPoly = () => new Polygon3D(coordinates.outer).copy();
+    this.innerPoly = () => new Polygon3D(coordinates.inner).copy();
 
     if (sections) {
       for (let index = 0; index < sections.length; index++) {
@@ -98,8 +98,9 @@ class SectionProperties extends KeyValue {
     let lastHash;
     let running = false;
     this.hash = () => {
-      const cover = this.cover();
       let hash = this.pattern().hash();
+      const cover = this.cover();
+      if (cover) hash += cover.hash();
       hash += keyValHash();
       hash += JSON.stringify(coordinates).hash();
       for (let index = 0; index < this.subassemblies.length; index++) {

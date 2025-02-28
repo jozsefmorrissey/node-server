@@ -269,27 +269,6 @@ CSG.prototype = {
     return csg;
   },
 
-  simplify: function() {
-    const splitFromMap = {};
-    const remove = [];
-    for (let index = 0; index < this.polygons.length; index++) {
-      let poly = this.polygons[index];
-      while (poly && poly.splitFrom) {
-        if (!splitFromMap[poly.splitFrom.splitId]) splitFromMap[poly.splitFrom.splitId] = [];
-        const arr = splitFromMap[poly.splitFrom.splitId];
-        arr.push({poly, index});
-        if (arr.length === 2) {
-          remove.push(arr[1].index);
-          poly = this.polygons[arr[0].index] = poly.splitFrom;
-        } else poly = null;
-      }
-    }
-    for (let index = remove.length - 1; index !== 0; index--) {
-      this.polygons.splice(remove[index], 1);
-    }
-    return this;
-  },
-
   scale: function(xOall, y, z, relitive) {
     const center = this.center();
     if (y === undefined && z === undefined && relitive === undefined) {
@@ -639,6 +618,24 @@ CSG.concat = function(csgs) {
       all.polygons.concatInPlace(csgs[index].polygons);
   }
   return all;
+}
+
+CSG.marroonedOn = function(csgOpolyOvertex, islands) {
+  let vertices;
+  if (csgOpolyOvertex instanceof CSG) vertices = csgOpolyOvertex.vertices();
+  else if (csgOpolyOvertex instanceof CSG.Polygon) vertices = csgOpolyOvertex.vertices;
+  else if (csgOpolyOvertex instanceof CSG.Vertex) vertices = [csgOpolyOvertex];
+  else throw new Error(`marroonedOn not configured for input '${csgOpolyOvertex}'`);
+  for(let ii = 0; ii < islands.length; ii++) {
+    const island = islands[ii];
+    const iVerts = island.vertices();
+    for (let ivi = 0; ivi < iVerts.length; ivi++) {
+      for (let vi = 0; vi < vertices.length; vi++) {
+        if (vertices[vi].equals(iVerts[ivi])) return island;
+      }
+    }
+  }
+  return null;
 }
 
 // Construct an axis-aligned solid cuboid. Optional parameters are `center` and
@@ -1441,7 +1438,6 @@ CSG.Plane.prototype = {
         break;
       case SPANNING:
         var f = [], b = [];
-        polygon.splitId = String.random();
         for (var i = 0; i < polygon.vertices.length; i++) {
           var j = (i + 1) % polygon.vertices.length;
           var ti = types[i], tj = types[j];
@@ -1455,8 +1451,8 @@ CSG.Plane.prototype = {
             b.push(v.clone());
           }
         }
-        if (f.length >= 3) front.push(new CSG.Polygon(f, polygon.shared, polygon));
-        if (b.length >= 3) back.push(new CSG.Polygon(b, polygon.shared, polygon));
+        if (f.length >= 3) front.push(new CSG.Polygon(f, polygon.shared));
+        if (b.length >= 3) back.push(new CSG.Polygon(b, polygon.shared));
         break;
     }
   }
@@ -1473,10 +1469,9 @@ CSG.Plane.prototype = {
 // polygons that are clones of each other or were split from the same polygon.
 // This can be used to define per-polygon properties (such as surface color).
 
-CSG.Polygon = function(vertices, shared, splitFrom) {
+CSG.Polygon = function(vertices, shared) {
   this.vertices = vertices;
   this.shared = shared;
-  if (splitFrom) this.splitFrom = splitFrom;
   this.outlines = [];
   this.plane = CSG.Plane.fromPoints(vertices[0].pos, vertices[1].pos, vertices[2].pos);
 };
@@ -1672,38 +1667,12 @@ CSG.text = function (text, depth) {
 // the front and/or back subtrees. This is not a leafy BSP tree since there is
 // no distinction between internal and leaf nodes.
 
-function nodeInvert(node) {
-  for (var i = 0; i < node.polygons.length; i++) {
-    node.polygons[i].flip();
-  }
-  node.plane.flip();
-  var temp = node.front;
-  node.front = node.back;
-  node.back = temp;
-}
-
-function nodeClipTo(node, bsp) {
-  node.polygons = bsp.clipPolygons(node.polygons);
-}
-
-const allNodePolygons = (list) => (node) => {
-  list.push(...node.polygons.slice());
-}
-
 CSG.Node = function(polygons) {
   this.plane = null;
   this.front = null;
   this.back = null;
   this.polygons = [];
   if (polygons) this.build(polygons);
-
-  this.invert = CSG.Node.forEachNode(this, nodeInvert);
-  this.clipTo = CSG.Node.forEachNode(this, nodeClipTo);
-  this.allPolygons = () => {
-    const list = [];
-    CSG.Node.forEachNode(this, allNodePolygons(list))();
-    return list;
-  }
 };
 
 CSG.Node.prototype = {
@@ -1716,79 +1685,66 @@ CSG.Node.prototype = {
     return node;
   },
 
-  // !Recursively remove all polygons in `polygons` that are inside this BSP
+  // Convert solid space to empty space and empty space to solid space.
+  invert: function() {
+    for (var i = 0; i < this.polygons.length; i++) {
+      this.polygons[i].flip();
+    }
+    this.plane.flip();
+    if (this.front) this.front.invert();
+    if (this.back) this.back.invert();
+    var temp = this.front;
+    this.front = this.back;
+    this.back = temp;
+  },
+
+  // Recursively remove all polygons in `polygons` that are inside this BSP
   // tree.
   clipPolygons: function(polygons) {
-    if (!this.plane || polygons.length === 0) return polygons.slice();
-    let index = 0;
-    const splits = [clipSplitsObjs(this, polygons)];
-    let positive = true;
-    const retVal = [];
-    do {
-      const splitsObjs = splits[index];
-      if (this.plane) {
-        if (positive) {
-          for (let i = 0; i < splitsObjs.length; i++) {
-            const obj = splitsObjs[i];
-            if (obj && obj.target && obj.target.plane)
-              splits.push(clipSplitsObjs(obj.target, obj.polys));
-          }
-          if (index === splits.length - 1) positive = false;
-          else index++;
-        } else {
-          if (splitsObjs[0] && splitsObjs[0].result) retVal.concatInPlace(splitsObjs[0].result);
-          if (splitsObjs[1] && splitsObjs[1].result) retVal.concatInPlace(splitsObjs[1].result);
-          index--;
-        }
-        if (index > splits.length) positive = false;
-      }
-    } while (positive || index > -1);
-    return retVal;
+    if (!this.plane) return polygons.slice();
+    var front = [], back = [];
+    for (var i = 0; i < polygons.length; i++) {
+      this.plane.splitPolygon(polygons[i], front, back, front, back);
+    }
+    if (this.front && front.length) front = this.front.clipPolygons(front);
+    if (this.back && back.length) back = this.back.clipPolygons(back);
+    else back = [];
+    return front.concat(back);
   },
+
+  // Remove all polygons in this BSP tree that are inside the other BSP tree
+  // `bsp`.
+  clipTo: function(bsp) {
+    this.polygons = bsp.clipPolygons(this.polygons);
+    if (this.front) this.front.clipTo(bsp);
+    if (this.back) this.back.clipTo(bsp);
+  },
+
+  // Return a list of all polygons in this BSP tree.
+  allPolygons: function() {
+    var polygons = this.polygons.slice();
+    if (this.front) polygons = polygons.concat(this.front.allPolygons());
+    if (this.back) polygons = polygons.concat(this.back.allPolygons());
+    return polygons;
+  },
+
   // Build a BSP tree out of `polygons`. When called on an existing tree, the
   // new polygons are filtered down to the bottom of the tree and become new
   // nodes there. Each set of polygons is partitioned using the first polygon
   // (no heuristic is used to pick a good split).
   build: function(polygons) {
     if (!polygons.length) return;
-    const splits = [];
-    if (!this.plane) this.plane = polygons[0].plane.clone();
-    buildSplitsObjs(this, polygons, splits);
-    let index = 0;
+    const splits = buildSplitsObjs(this, polygons);
     do {
-      const obj = splits[index];
+      const obj = splits.splice(0,1)[0];
       if (!obj.target.plane) obj.target.plane = obj.polys[0].plane.clone();
-      buildSplitsObjs(obj.target, obj.polys, splits);
-      index++;
-    } while (index < splits.length);
+      splits.concatInPlace(buildSplitsObjs(obj.target, obj.polys));
+    } while (splits.length);
   }
 };
 
-CSG.Node.forEachNode = (node, func) => {
-  return (...args) => {
-    const nodes = [node];
-    while (nodes.length) {
-      const curr = nodes.pop();
-      func(curr, ...args);
-      curr.front && nodes.push(curr.front);
-      curr.back && nodes.push(curr.back);
-    }
-  }
-}
-
-function clipSplitsObjs(target, polys) {
-  var front = [], back = [];
-  for (var i = 0; i < polys.length; i++) {
-    target.plane.splitPolygon(polys[i], front, back, front, back);
-  }
-  const splits = [];
-  if (target.front && front.length) splits.push({target: target.front, polys: front});
-  else splits.push({result: front});
-  if (target.back && back.length) splits.push({target: target.back, polys: back});
-  return splits;
-}
-
-function buildSplitsObjs(target, polys, splits) {
+function buildSplitsObjs(target, polys) {
+  if (!target.plane) target.plane = polys[0].plane.clone();
   if (!target.front) {
     target.front = new CSG.Node();
     target.front.plane = polys[0].plane.clone();
@@ -1801,8 +1757,10 @@ function buildSplitsObjs(target, polys, splits) {
   for (var i = 0; i < polys.length; i++) {
     target.plane.splitPolygon(polys[i], target.polygons, target.polygons, front, back);
   }
+  let splits = [];
   if (front.length) splits.push({target: target.front, polys: front});
   if (back.length) splits.push({target: target.back, polys: back});
+  return splits;
 }
 
 /*
@@ -1821,6 +1779,11 @@ function ArbitraryRotate(point, degreestheta, radius)
   let r = radius;
    let q = {x: 0.0, y: 0.0, z: 0.0};
    let costheta,sintheta;
+
+   // const Normalise = (obj, attr) => obj[attr] *= obj[attr] > 0 ? 1 : -1;
+   // Normalise(r, 'x',);
+   // Normalise(r, 'y',);
+   // Normalise(r, 'z',);
 
    costheta = Math.cos(theta);
    sintheta = Math.sin(theta);

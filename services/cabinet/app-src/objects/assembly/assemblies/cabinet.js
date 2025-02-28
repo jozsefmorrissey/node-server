@@ -19,6 +19,7 @@ const AutoToekick = require('./auto/toekick.js');
 const CabinetResolver = require('../resolvers/cabinet');
 const Notifiction = require('../../../../../../public/js/utils/collections/notification.js');
 const NotifictionArray = Notifiction.Array;
+const CustomEvent = require('../../../../../../public/js/utils/custom-event');
 
 const OVERLAY = {};
 OVERLAY.FULL = 'Full';
@@ -124,7 +125,7 @@ class Cabinet extends Assembly {
     let initialized = false;
     this.hash = () => {
       if (!initialized) this.updateOpenings(initialized = true);
-      return parentHash() + this.openings.map(o => o.sectionProperties().hash()).sum();
+      return parentHash() + Math.hash(...this.openings.map(o => o.sectionProperties().hash()));
     }
 
     let openingModState;
@@ -187,6 +188,8 @@ class Cabinet extends Assembly {
     this.width = updateOpeningPoints(this.width, (w) => w && this.width() !== w);
     this.length = updateOpeningPoints(this.length, (l) => l && this.length() !== l, true);
     this.thickness = updateOpeningPoints(this.thickness, (t) => t && this.thickness() !== t);
+
+    this.on.change(Cabinet.trigger.change);
   }
 }
 

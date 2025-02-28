@@ -1,17 +1,15 @@
 <div lookup-id='{{divider.id()}}'>
   <label>Type</label>
-  {{DividerTypeSelector(divider).html()}}
+  {{inputs.dividerType(divider).html()}}
   <br>
   <label>Panel Thickness</label>
-  <input type="text" name="panelThickness" value="{{divider.panelThickness(undefined, true)}}">
-  <input disabled class='dem' type="text" name="panelThickness" value="{{Measurement.display(divider.panelThickness())}}">
+  <input type="text" name="panelThickness" value="{{Measurement.display(divider.panelThickness())}}">
   <br>
   <label>Has Frame</label>
   <input type="checkbox" name="has-frame"{{divider.hasFrame() ? ' checked' : ''}}>
   <br>
   <div class='frame-width-cnt'{{divider.hasFrame() ? '' : ' hidden'}}>
     <label>Frame Width</label>
-    <input type="text" name="frameWidth" value="{{divider.frameWidth()}}">
-    <input disabled class='dem' type="text" name="frameWidth" value="{{Measurement.display(divider.frameWidth())}}">
+    <input type="text" name="frameWidth" value="{{Measurement.display(divider.frameWidth())}}">
   </div>
 </div>

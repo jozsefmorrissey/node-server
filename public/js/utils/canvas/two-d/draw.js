@@ -25,6 +25,7 @@ class Draw2d {
 
     function draw(object, color, width) {
       if (object === undefined || object === null) return;
+      if (object.to2D) object = object.to2D();
       if (object instanceof CSG) return draw.csg(object, color, width);
       const func = cxtrFuncMap[object.constructor.name] ||
                       cxtrFuncMap[object.constructor.name.replace(/^(Snap).*$/, '$1')];

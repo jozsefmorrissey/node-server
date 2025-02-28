@@ -222,6 +222,13 @@ add('formula', new Input({
   class: 'center'
 }));
 
+add('Name', new Input({
+  name: 'name',
+  placeholder: 'Name',
+  label: 'Name',
+  class: 'center'
+}));
+
 add('xyz', new Select({
   name: 'xyz',
   list: {'x': 'X', 'y': 'Y', 'z':'Z'},
@@ -270,14 +277,25 @@ add('dividerJointType', (opening) => {
   });
 });
 
-add('sectionType', (section, noLabel) => {
+add('sectionType', (section, label) => {
   return new Select({
-    label: noLabel ? '' : 'Section Type:',
+    label: label === false ? '' : label || 'Section Type:',
     name: 'dividerType',
     list: ['Open'].concat(section.constructor.list()
             .map(o => section.coverType.sentance(o.name))),
-    class: 'divider-type-selector',
+    class: 'section-type-selector',
     value: section.coverType.sentance(),
+    inline: true
+  });
+});
+
+add('dividerType', (divider, label) => {
+  return new Select({
+    label: label === false ? '' : label || 'Divider Type',
+    name: 'dividerType',
+    list: divider.constructor.Types,
+    class: 'divider-type-selector',
+    value: divider.type(),
     inline: true
   });
 });

@@ -3,7 +3,7 @@ const ColorManager = require('../../managers/color-manager');
 const ThreeView = require('../../three-view');
 const du = require('../../../../../../public/js/utils/dom-utils.js');
 const $t = require('../../../../../../public/js/utils/$t');
-const OpeningSketch = require('../../opening-sketch.js');
+const OpeningSketch = require('./opening-sketch.js');
 const Jobs = require('../../../../web-worker/external/jobs.js');
 
 const template = new $t('views/object/layout');

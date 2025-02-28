@@ -54,7 +54,7 @@
       const context = canvas.getContext('2d');
 
       const image = new Image();
-      image.src = '/images/alpha-numeric-chart.png'; // Replace with the path to your image
+      image.src = '/images/alpha-numeric-chart-widened.png'; // Replace with the path to your image
 
       function search(x, y, xOffset, yOffset, test) {
         let data = context.getImageData(x, y, 1, 1).data;
@@ -179,7 +179,6 @@
 
       function createPixelMap(context, centers) {
         const pixelMap = {};
-        return;
         for (let index = 0; index < centers.length; index++) {
           if (index % 5  === 0)
             console.log(`${(index + 1) / centers.length}%`);

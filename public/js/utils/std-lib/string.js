@@ -15,7 +15,7 @@ Function.safeStdLibAddition(String, 'paths',  function (len) {
       const ca = compoundAttrs[compoundAttrs.length - 1];
       let match = ca.match(compoundReg);
       if (match === null) {
-        paths.push(ca);
+        paths.push(ca + '');
         compoundAttrs.pop();
       } else {
         compoundAttrs.pop();
@@ -85,6 +85,10 @@ function toCamel() {
   return string.replace(specialCharReg, camelReplace);
 }
 Function.safeStdLibAddition(String, 'toCamel',  toCamel);
+Function.safeStdLibAddition(String, 'toCamelCap', function() {
+  const camel = this.toCamel();
+  return camel[0].toUpperCase() + camel.substring(1);;
+});
 
 const multipleUpperReg = /([A-Z]{2,})([a-z])/g;
 const caseChangeReg = /([a-z])([A-Z])/g;

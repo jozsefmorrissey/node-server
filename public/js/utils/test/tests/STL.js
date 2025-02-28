@@ -9,6 +9,7 @@ require('../../3d-modeling/csg');
 const du = require('../../dom-utils');
 const Line2d = require('../../canvas/two-d/objects/line.js');
 const Viewer = require('../../3d-modeling/viewer.js').Viewer;
+const Measurement = require('../../std-lib/measurement.js');
 const addViewer = require('../../3d-modeling/viewer.js').addViewer;
 
 function addLink (model, name) {
@@ -798,17 +799,37 @@ models['Pull Jig'] = (maxOffset, lengths, outerWholeDiameter, sleeveLength) => {
 
   lengths.push(0);
   lengths.forEach(len => {
+    const meas = new Measurement(len);
+    const metricText = new CSG.text(meas.display(1, Measurement.units()[2]), 200);
+    const imperialText = new CSG.text(meas.display('1/16', Measurement.units()[1]), 200);
+
     const slices = 64;
     const steps = [{length: sleeveLength, radius: outerWholeDiameter/2 + .05},
                     {length: offset*2, radius: outerWholeDiameter/2 - .1}];
     let center = {x: maxOffset + offset/2, y: offset/2 + len + firstHoleDist, z: offset/2};
+    metricText.rotate({z: 180});
+    metricText.scale(.015)
+    metricText.center(center);
+    metricText.translate({x: maxOffset/-2, y:0, z:0});
+    if (len) jig = jig.subtract(metricText);
+
     const rightCylinder = new CSG.cylinder.step(steps, {slices, center});
     center = {x: -(maxOffset + offset/2), y: offset/2 + len + firstHoleDist, z: offset/2};
     const leftCylinder = new CSG.cylinder.step(steps, {slices, center});
     jig = jig.subtract(rightCylinder).subtract(leftCylinder);
+
+    imperialText.rotate({z: 180});
+    imperialText.scale(.015)
+    imperialText.center(center);
+    imperialText.translate({x: maxOffset/2, y:0, z:0});
+    if (len) jig = jig.subtract(imperialText);
+
+    console.log(meas.display());
   });
 
   console.log(maxOffset)
+  jig.setColors('blue');
+  // jig.scale(10)
   return jig;
 }
 
@@ -896,7 +917,7 @@ const download = () => {
   addLinks(getSelected(), select.value);
 }
 
-select.value = 'cup holder';
+select.value = 'Pull Jig';
 
 du.on.match('change', 'input', updateModel);
 

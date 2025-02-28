@@ -13,7 +13,10 @@ class HoverObject2d {
     const toleranceFunction = (typeof tolerance) === 'function';
     const targetFunction = (typeof lineOrVertex) === 'function';
 
-    const locator = () => targetFunction ? lineOrVertex() : lineOrVertex;
+    const locator = () => {
+      const loc = targetFunction ? lineOrVertex() : lineOrVertex;
+      return loc.to2D ? loc.to2D() : loc;
+    }
     const loc = locator();
     if (!(loc instanceof Line2d || loc instanceof Vertex2d || loc instanceof Polygon2d || loc instanceof Ellipse2d))
       console.error('unkown hover object', loc);
@@ -64,6 +67,7 @@ class HoverObject2d {
     this.distance = (from) => locator().distance(from);
     this.groupId = () => groupId;
 
+    const big = 100000;
     this.hovering = (hoverVertex, scaleTolerance) => {
       const loc = locator();
       if (loc instanceof Line2d)
@@ -71,7 +75,8 @@ class HoverObject2d {
       else if (loc instanceof Vertex2d)
         return vertexHovered(loc, hoverVertex, scaleTolerance);
       else if (loc instanceof Polygon2d)
-        return loc.isWithin(hoverVertex);
+        return loc.isWithin(hoverVertex) &&
+              (vertexHovered(loc.center(), hoverVertex, big));
       else if (loc instanceof Ellipse2d)
         return loc.within(hoverVertex);
       else
@@ -80,8 +85,9 @@ class HoverObject2d {
   }
 }
 
-const typeValue = (t) => t instanceof Vertex2d ? 0 : (t instanceof Line2d ? 1 : 3)
-HoverObject2d.sort = (obj1, obj2) => typeValue(obj1.target()) - typeValue(obj1.target());
+const typeValue = (t) => t instanceof Vertex2d ? 0 : (t instanceof Line2d ? 1 :
+  t instanceof Polygon2d ? t.area() : 3);
+HoverObject2d.sort = (obj1, obj2) => typeValue(obj1.locator()) - typeValue(obj1.locator());
 
 class HoverMap2d {
   constructor() {
@@ -147,7 +153,7 @@ class HoverMap2d {
           const distance = hoverObj.hovering(vertex);
           if (distance || distance === 0) {
             const target = hoverObj.target();
-            if (hoveringObj === null || distance < hoveringObj.distance * .5) {
+            if (hoveringObj === null || distance < hoveringObj.distance * .999) {
               hoveringObj = {target, distance};
             }
           }
