@@ -19,7 +19,8 @@ function basicPartInfo(part, env) {
   const partIds = [part.id];
   const model = env.getModel(part, 'joined');
   const normals = Utils.normals(part, env);
-  const demensions = model.demensions();
+  const demensions = part.parentAssembly === undefined ?
+                      part.position.current.demension : model.demensions();
   return {category, partIds, model, normals, demensions};
 }
 

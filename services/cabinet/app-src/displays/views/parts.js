@@ -41,7 +41,7 @@ function relatedModels(maleOfemale, id, jointMap, modelInfo) {
 }
 
 function  render() {
-  const cabinet = Global.cabinet() || Global.target();
+  const cabinet = Global.target();
   if (!cabinet) return;
   let parts;
   if (locationPrefix) parts = cabinet.getParts().filter(lcPrefixFilter);

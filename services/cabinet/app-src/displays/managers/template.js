@@ -1120,7 +1120,7 @@ function switchEqn(elem) {
     const eqnInput = du.find.closest('input', elem);
     const index = elem.value;
     if (subAssem[eqnInput.name] === undefined) subAssem[eqnInput.name] = [];
-    const obj = subAssem.pathInfo(eqn.name).parent;
+    const obj = subAssem.pathValue(eqnInput.name);
     eqnInput.value = obj[index] !== undefined ? obj[index] :
         `${obj[0]},${obj[1]},${obj[2]}`;
   }

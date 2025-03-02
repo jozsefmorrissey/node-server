@@ -272,7 +272,7 @@ class PartsDocumentationJob extends TaskJob {
   constructor(assembly) {
     let completeTriggered = false;
     const parts = assembly.modelingCollections();
-    const modelInfo = ModelInfo.display(assembly);
+    const modelInfo = ModelInfo.construction(assembly);
     const initialResult = modelInfo.partInformation.finished() ? modelInfo.partInformation : null;
     const task = initialResult ? new InfoAvailible(initialResult) : Parts(modelInfo);
     super(task);

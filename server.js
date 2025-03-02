@@ -163,7 +163,7 @@ app.delete('/print/body', printCall('DELETE'));
 
 var ip = '192.168.254.10';
 var services = global.services ? new String(global.services).split(',') : shell.ls('./services/');
-var exclude = ['uss', 'uus', 'mitch', 'weather-fax', 'content-explained', 'premier', 'info-directory', 'homework-help', 'debug-gui'];
+var exclude = ['uss', 'uus', 'weather-fax', 'content-explained', 'premier', 'info-directory', 'homework-help', 'debug-gui'];
 try {
   for (let i = 0; i < services.length; i += 1) {
     var id = services[i];

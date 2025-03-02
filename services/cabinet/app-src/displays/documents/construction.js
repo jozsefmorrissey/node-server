@@ -11,8 +11,8 @@ const recusiveAddTask = (list, task) => task.tasks  ?
   (task.task ? recusiveAddTask(list, task.task()) : list.push(task));
 const progressUpdate = (containerOselector) => {
   let _progress = 0;
-  return  (task, job) => {
-    if (job.task().status() === 'complete') return;
+  return  (job) => {
+    if (job.status().toString() === 'complete') return;
     const tasks = [];
     recusiveAddTask(tasks, job);
     const container = containerOselector instanceof HTMLElement ? containerOselector : du.find(containerOselector);

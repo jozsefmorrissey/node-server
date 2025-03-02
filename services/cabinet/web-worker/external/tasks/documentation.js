@@ -69,7 +69,7 @@ function logarithmicTasks(ids, modelInfo) {
 
 const sliceCount = 8;
 function sliceTasks(ids, modelInfo) {
-  const complexityMap = modelInfo.complexityMap();
+  const complexityMap = modelInfo.modelingConfiguration().complexityMap();
   ids.sort(complexitySort(complexityMap));
 
   const step = Math.ceil(ids.length / sliceCount);

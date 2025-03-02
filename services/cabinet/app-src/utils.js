@@ -18,9 +18,9 @@ function getDefaultSize(instance) {
 const normals = (assembly) => {
   let normObj, lastNormHash, lastNorm;
   const ensureVector = (cno, attr) => cno[attr].length === 2 ?
-      cno[attr] = new Line3D(this.evalObject(cno[attr][0]), this.evalObject(cno[attr][1])).vector().unit() :
+      cno[attr] = new Line3D(assembly.evalObject(cno[attr][0]), assembly.evalObject(cno[attr][1])).vector().unit() :
       (cno[attr] instanceof Vector3D ? cno[attr] :
-        cno[attr] = new Vector3D(this.eval(cno[attr][0]), this.eval(cno[attr][1]), this.eval(cno[attr][2])).unit());
+        cno[attr] = new Vector3D(assembly.eval(cno[attr][0]), assembly.eval(cno[attr][1]), assembly.eval(cno[attr][2])).unit());
 
   const normFunc = (array, normalObj) => {
     if (normFunc.set(array, normalObj)) return normObj;
