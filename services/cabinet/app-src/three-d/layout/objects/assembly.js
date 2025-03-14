@@ -69,13 +69,14 @@ class Assembly3D extends Object3D {
       const initialize = topSnap === undefined;
       const poly = modelInfo.unioned.silhouettes().top;
       configurePoly(poly, modelInfo);
-      layout.hoverMap().update();
       if (initialize) {
         topSnap = new SnapPolygon(instance.bridge.top(), poly.copy(), 10);
         instance.snap2d.top = () => topSnap;
       } else {
         topSnap.polyCopy(poly);
       }
+      layout.hoverMap().update();
+      Canvas.view('room-layout').render();
     }
 
     const error = (error) => {
@@ -84,16 +85,17 @@ class Assembly3D extends Object3D {
 
     function updateOutline(force) {
       if (force || assembly.hash()) {
-        new Jobs.CSG.Assembly(assembly).then(applyTopOutline, error).queue();
+        new Jobs.CSG.Assembly(assembly).then(applyTopOutline, error).queue(true);
       }
     }
     function outlineNeedsUpdated (force) {
-      updateOutline.lastCall(instance.id(), 50, force);
+      updateOutline(force);
     }
     assembly.on.change(outlineNeedsUpdated);
-    outlineNeedsUpdated(true);
+    Global.on.loaded(() => outlineNeedsUpdated(true));
   }
 }
+let lastOutlineUpdated = new Date().getTime();
 
 Assembly3D.build = (assembly, layout) => {
   if (assembly instanceof Assembly) return new Assembly3D(assembly, layout);

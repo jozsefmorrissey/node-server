@@ -17,6 +17,8 @@ exports['controls/viewer'] = (get, $t) =>
 		$t.clean(get("CONTROLS").OUTLINE ? 'checked' : '') +
 		`> <br/> <label>Wireframe</label> <input type='checkbox' name='wireframe' ` +
 		$t.clean(get("CONTROLS").WIREFRAME ? 'checked' : '') +
+		`> <br/> <label>Axis</label> <input type='checkbox' name='axis' ` +
+		$t.clean(get("CONTROLS").AXIS ? 'checked' : '') +
 		`> <br> <label>Background Color</label> <input type="color" value="` +
 		$t.clean(get("CONTROLS").BACKGROUND_COLOR) +
 		`" name='background-color'> `

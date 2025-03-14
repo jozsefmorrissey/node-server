@@ -17,7 +17,6 @@ const Window2D = require('./window');
 const Light3D = require('../../three-d/layout/objects/light.js');
 const Door2D = require('./door');
 const LayoutHoverMap = require('../../services/layout-hover-map.js');
-const Utils = require('../../utils.js');
 
 function withinTolerance(point, map) {
   const t = map.tolerance;
@@ -66,7 +65,7 @@ class Layout2D extends Lookup {
       for(let index = 0; index < walls.length; index++) {
         hash *= walls[index].hash();
       }
-      const objects = this.activeObjects();
+      const objects = this.objects.active();
       for(let index = 0; index < objects.length; index++) {
         hash *= objects[index].hash();
       }
@@ -422,7 +421,12 @@ class Layout2D extends Lookup {
       if (modIndex === -1) return this.objects();
       return levels[modIndex];
     }
-    this.activeObjects = () => this.level();
+
+    this.objects.active = () => this.level();
+    this.objects.inactive = () => {
+      const activeMap = this.objects.active().idMap(o => o.id());
+      return this.objects().filter(o => !activeMap[o.id()]);
+    }
 
     if (!initialized) this.push({x:0, y:0}, {x:ww, y:0}, {x:ww,y:ww}, {x:0,y:ww});
     // if (!initialized) this.push({x:, y:1}, {x:ww+1, y:0}, {x:ww + 1,y:ww + 1}, {x:1,y:ww});
@@ -432,41 +436,11 @@ class Layout2D extends Lookup {
     this.floor = () => floor;
     this.counterTop = () => counterTop;
 
-    function applyColors(assembly, csgOmodelInformation) {
-      let csg;
-      if (csgOmodelInformation instanceof CSG) {
-        csg = csgOmodelInformation;
-        csg.setColors(assembly.color());
-      } else {
-        csg = csgOmodelInformation.unioned();
-        csg.setColors(assembly.color());
-        const pullCsg = csgOmodelInformation.unioned('handles');
-        const pullColor = assembly.resolve('pcolor', true);
-        pullCsg.setColors(pullColor);
-        csg.polygons.concatInPlace(pullCsg.polygons);
-      }
-      return csg;
-    }
-
     this.objects.redered = () =>
        walls.concat(ceiling,floor,counterTop);
 
-    function positionAndColorRoomCSGs(modelIdMap) {
-      const ids = Object.keys(modelIdMap);
-      const csgs = [];
-      for (let index = 0; index < ids.length; index++) {
-        const id = ids[index];
-        const cabinet = Lookup.get(id);
-        const csg = applyColors(cabinet, modelIdMap[id]);
-        csgs.push(Utils.positionAssemblyCsg(csg, cabinet));
-      }
-      return CSG.concat(csgs);
-    }
-
     this.csg = () => {
-      let csg = positionAndColorRoomCSGs(this.modelInformation().modelIdMap);
-      const groupMap = this.modelInformation().groupMap;
-
+      let csg = new CSG();
       const walls = this.walls();
       walls.forEach(w => csg.polygons.concatInPlace(w.poly.csg().polygons));
       csg.polygons.concatInPlace(this.counterTop().csg().polygons);
@@ -477,8 +451,8 @@ class Layout2D extends Lookup {
     // history = new StateHistory(this.toJson, this.fromJson);
     this.history = () => history;
 
-    const hoverMap = new LayoutHoverMap(this);
-    this.hoverMap = () => hoverMap;
+    let hoverMap;
+    this.hoverMap = () => hoverMap ||= new LayoutHoverMap(this);
 
 
     this.toDrawString = () => this.objects()

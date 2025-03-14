@@ -9,6 +9,8 @@ class Shelve extends Panel {
     this.jointSettings.female(false);
     this.hardware.push(new ShelfPegs());
     this.hardware[0].parentAssembly(this);
+
+    this.hash = () => Math.hash(...this.hardware.map(g => g.hash()));
   }
 }
 

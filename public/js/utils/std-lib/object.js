@@ -502,7 +502,7 @@ function setProperty(path, value, enumerable, writable, configurable, get, set) 
   writable = Boolean.first(writable, true);
   enumerable = Boolean.first(enumerable, true);
   configurable = Boolean.first(configurable, true);
-  if (get && set) Object.defineProperty(pathInfo.parent, pathInfo.attr,
+  if (get || set) Object.defineProperty(pathInfo.parent, pathInfo.attr,
     {enumerable, configurable, get, set});
   else Object.defineProperty(pathInfo.parent, pathInfo.attr,
     {writable, enumerable, configurable, value});

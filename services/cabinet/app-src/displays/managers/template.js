@@ -860,7 +860,7 @@ class TemplateManager extends Lookup {
         }
       }
 
-      // ThreeDModel.on.renderObjectUpdate(updateShapeSketches);
+      // ThreeDModel.on.render(updateShapeSketches);
       console.warn('sketch-update needs fixed');
       Canvas.render();
     }

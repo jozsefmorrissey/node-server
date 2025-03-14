@@ -13,7 +13,7 @@ const ThreeDModel = {};
 
 let viewer;
 let viewerSelector = '#three-d-model';
-let viewerSize = '60vh';
+let viewerSize = '90vh';
 ThreeDModel.getViewer = (model) => {
   if (viewer) return viewer;
   const canvas = du.find(viewerSelector);
@@ -24,6 +24,7 @@ ThreeDModel.getViewer = (model) => {
     addViewer(viewer, viewerSelector);
     const orientSelector = `${viewerSelector} .orientation-controls`;
     const orientArrows = OrientationControls.forCSG(orientSelector, viewer, () => ThreeDModel.lastRendered);
+    ThreeDModel.trigger.viewer.set(viewer);
   }
   return viewer;
 }
@@ -34,13 +35,11 @@ ThreeDModel.display = (displayModel) => {
     ThreeDModel.getViewer(displayModel);
     viewer.mesh = displayModel.toMesh();
     viewer.gl.ondraw();
-    renderObjectUpdateEvent.trigger(undefined, displayModel);
+    ThreeDModel.trigger.render(undefined, displayModel);
   }
 }
 
 const renderObjectUpdateEvent = new CustomEvent('renderObjectUpdate');
-ThreeDModel.on = {};
-ThreeDModel.on.renderObjectUpdate = (func) => renderObjectUpdateEvent.on(func);
-
+CustomEvent.all(ThreeDModel, 'render', 'viewer.set')
 
 module.exports = ThreeDModel

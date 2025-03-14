@@ -112,8 +112,8 @@ class SectionPropertiesUtil {
       if (!rMdto && coverInfo) return coverInfo;
       rMdto ||= spDto;
       let biPolygon, backOffset, frontOffset, offset, coords;
-      const doorThickness = Utils.property('daft', rMdto, env);
-      const bumperThickness = Utils.property('dafbt', rMdto, env);
+      const doorThickness = Utils.property('ft', rMdto, env);
+      const bumperThickness = Utils.property('fbt', rMdto, env);
       const style = Utils.property('style', rMdto, env);
       if (style === 'Inset') {
         coords = spDto.coordinates.inner;
@@ -154,11 +154,14 @@ class SectionPropertiesUtil {
         const width = this.inner.width;
         const innerCenter = this.inner.center;
         const outer = coordinates.outer;
-        const point1 = this.outerPoly.vertex(spDto.verticalDivisions ? 1 : 3);
-        const point2 = this.outerPoly.vertex(2);
+        const point1 = this.innerPoly.vertex(spDto.verticalDivisions ? 1 : 3);
+        const point2 = this.innerPoly.vertex(2);
         let depthVector = normal.scale(depth);
         let heightVector = new Line3D(point1, point2).vector().unit();
         let thicknessVector  = depthVector.crossProduct(heightVector);
+        const maleOffsetVector = heightVector.scale(spDto.dividerJoint.eval.maleOffset);
+        point1.translate(maleOffsetVector.inverse());
+        point2.translate(maleOffsetVector);
 
         const normals = spDto.divider().position.current.normals;
         normals.y = heightVector; normals.x = depthVector.unit(); normals.z = thicknessVector.unit().inverse();

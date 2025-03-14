@@ -8,9 +8,9 @@ class Hinge extends Assembly {
   constructor(partCode) {
     super(partCode);
     this.demensions = (parentInfo) => {
-      console.log.logarithmic('hinge dem!!');
       return {x:1,y:1,z:1}
     }
+    this.hash = () => 1;
   }
 }
 
@@ -24,6 +24,8 @@ class Hinges extends Assembly {
       instance.hardware = Array.fill(hingeCount, () => new Hinge('h'));
       instance.hardware.forEach(h => h.parentAssembly(instance));
     }
+
+    this.hash = () => hingeCount;
 
     this.demensions = (parentInfo) => {
       const doorHeight = parentInfo.demensions.y;

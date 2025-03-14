@@ -5,7 +5,6 @@ const SectionProperties = require('../../../../objects/assembly/assemblies/secti
 const du = require('../../../../../../../public/js/utils/dom-utils.js');
 const bind = require('../../../../../../../public/js/utils/input/bind.js');
 const MeasurementInput = require('../../../../../../../public/js/utils/input/styles/measurement.js');
-const ThreeDMain = require('../../../three-d-main.js');
 const StringMathEvaluator = require('../../../../../../../public/js/utils/string-math-evaluator.js');
 const $t = require('../../../../../../../public/js/utils/$t.js');
 const Inputs = require('../../../../input/inputs.js');

@@ -959,6 +959,13 @@ function addMatrixStack() {
     gl[matrix].m = hasFloat32Array ? new Float32Array(m) : m;
   };
   gl.project = function(objX, objY, objZ, modelview, projection, viewport) {
+    if (objX.x) {
+      projection = objZ;
+      modelview = objY;
+      objZ = objX.z;
+      objY = objX.y;
+      objX = objX.x;
+    }
     modelview = modelview || gl.modelviewMatrix;
     projection = projection || gl.projectionMatrix;
     viewport = viewport || gl.getParameter(gl.VIEWPORT);

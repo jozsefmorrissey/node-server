@@ -29,7 +29,7 @@ class CustomEvent {
     this.on = function (func) {
       if ((typeof func) === 'function') {
         if (lastArgs)
-          func(...lastArgs);
+          setTimeout(() => func(...lastArgs));
         if (watchers.indexOf(func) === -1) watchers.push(func);
         return this;
       } else {
@@ -41,20 +41,22 @@ class CustomEvent {
       watchers.remove(func);
 
 
-    this.trigger = function (element, detail) {
-      lastArgs = [element, detail];
-      element = element !== undefined ? element : domAccessible ? window : detail;
-      runFuncs(element, detail);
-      event.detail = detail;
-      if (domAccessible) {
-        if (element instanceof HTMLElement) {
-          if(document.createEvent){
-            element.dispatchEvent(event);
-          } else {
-            element.fireEvent("on" + event.eventType, event);
+    this.trigger = async function (element, detail) {
+      return new Promise(() => {
+        lastArgs = [element, detail];
+        element = element !== undefined ? element : domAccessible ? window : detail;
+        runFuncs(element, detail);
+        event.detail = detail;
+        if (domAccessible) {
+          if (element instanceof HTMLElement) {
+            if(document.createEvent){
+              element.dispatchEvent(event);
+            } else {
+              element.fireEvent("on" + event.eventType, event);
+            }
           }
         }
-      }
+      });
     }
 //https://stackoverflow.com/questions/2490825/how-to-trigger-event-in-javascript
     let event;
@@ -82,8 +84,10 @@ CustomEvent.add = (obj, name, event) => {
   if (obj.events === undefined) obj.property('events', {}, false);
   const e = event || new CustomEvent(name);
   if (!obj.events[name]) obj.events.property(name, e, true);
+  if (!obj.events.LIST) obj.events.LIST = [];
   if (obj.on[name] === undefined) obj.on.property(name, e.on, false);
   else obj.on[name](e.trigger);
+  obj.events.LIST.push(name);
   obj.trigger.property(name, (...args) => e.trigger.apply(e, args), false);
   return e;
 }
@@ -98,6 +102,7 @@ CustomEvent.all = (obj, eventObject, ...eventNames) => {
     eventNames = eventNames.map(n => n.paths()).concatElements();
     eventObject = {};
   }
+  eventNames.sort();
   for (let index = 0; index < eventNames.length; index++) {
     const name = eventNames[index];
     const event = CustomEvent.add(obj, name, eventObject[name]);

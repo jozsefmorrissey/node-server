@@ -96,13 +96,12 @@ class SectionProperties extends KeyValue {
     this.trigger.change = changeEvent.trigger;
     const keyValHash = this.hash;
     let lastHash;
-    let running = false;
     this.hash = () => {
       let hash = this.pattern().hash();
       const cover = this.cover();
       if (cover) hash += cover.hash();
       hash += keyValHash();
-      hash += JSON.stringify(coordinates).hash();
+      hash += Math.hash(...coordinates.inner.concat(coordinates.outer).map(v => v.hash()));
       for (let index = 0; index < this.subassemblies.length; index++) {
         hash += this.subassemblies[index].hash(true);
       }
@@ -117,7 +116,6 @@ class SectionProperties extends KeyValue {
         hash += divider.hash();
       }
       lastHash = hash;
-      running = false;
       return hash;
     }
 
@@ -151,7 +149,7 @@ class SectionProperties extends KeyValue {
     // }
 
     this.config = () => JSON.copy(config);
-    const inOutCoord = (inOut) => coordinates[inOut === true ? 'inner' : 'outer'];
+    const inOutCoord = (inOut) => coordinates[inOut === true ? 'inner' : 'outer'].map(v => v.clone());
     this.coordinates = (inOut) =>  Boolean.is(inOut) ? inOutCoord(inOut) : JSON.clone(coordinates);
     this.inner = () => this.coordinates(true);
     this.outer = () => this.coordinates(false);
@@ -396,6 +394,7 @@ class SectionProperties extends KeyValue {
                         bottomInnerLine.pointAtDistance(endInner - innerOffset),
                         bottomInnerLine.pointAtDistance(startInner - innerOffset)];
       }
+
       section.updateCoordinates(coords);
     }
 
@@ -539,6 +538,7 @@ class SectionProperties extends KeyValue {
           throw new Error('opening coordinate is calculation came out to Not A Number')
         }
       }
+
       return change
     }
 
@@ -596,8 +596,9 @@ class SectionProperties extends KeyValue {
     let dividerJoint;
     this.dividerJoint = (joint) => {
       if (joint instanceof Joint) dividerJoint = joint;
-      else joint = this.getCabinet().value('dividerJoint');
-      return joint.clone();
+      else joint = this.getCabinet().value('dividerJoint').clone();
+      joint.evaluator(this.resolve);
+      return joint;
     }
 
     this.setSection = (constructorIdOobject) => {
@@ -636,6 +637,7 @@ class SectionProperties extends KeyValue {
     }
     const neigborJoint = new Dado(divider.isPanel, isNeigbor, null, 'NEIGHBOR_JOINT');
     neigborJoint.maleOffset(0.635);
+    neigborJoint.evaluator(this.resolve);
     divider.addDependencies(neigborJoint);
 
     this.neighbors = (divider) => {

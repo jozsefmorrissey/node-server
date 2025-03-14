@@ -310,15 +310,25 @@ function drawNormalizedLayers(cabInfo, layers, dir, x, y) {
   draw.position(center, {x: dems[x] * 1.1, y: dems[y] * 1.1});
   draw(layers);
 }
-async function drawCabinets(cabinets) {
-  for (let index = 0; index < cabinets.length; index++) {
+
+async function drawCabinet(cabinetInfo) {
+  return new Promise((resolve, reject) => {
     const cabInfo = cabinets[index];
     const normals = cabInfo.normals;
     const layers = cabInfo.layers;
     drawNormalizedLayers(cabInfo, layers, 'front', 'x', 'y');
     drawNormalizedLayers(cabInfo, layers, 'top', 'x', 'z');
     drawNormalizedLayers(cabInfo, layers, 'side', 'z', 'y');
+    resolve();
+  });
+}
+
+async function drawCabinets(cabinets) {
+  const promises = [];
+  for (let index = 0; index < cabinets.length; index++) {
+    promises.push(drawCabinet(cabinets[index]));
   }
+  return Promise.allSettled(promises);
 }
 
 DocumentationHtml.threeView = (partInformation) => {

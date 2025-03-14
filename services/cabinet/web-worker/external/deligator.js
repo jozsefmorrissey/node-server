@@ -81,7 +81,7 @@ class WebWorkerDeligator {
     }
   }
 
-  function exicute() {
+  function exicuteNow(resolve) {
     while (0 < taskQue.length && workers.length > 0) {
         const task = taskQue.splice(0,1)[0];
         task.status(task.exicution());
@@ -99,7 +99,12 @@ class WebWorkerDeligator {
           }
         }
       }
-    }
+      resolve();
+  }
+
+  async function exicute() {
+    return new Promise(exicuteNow);
+  }
 
     function queueTask(task) {
       const status = task.status();
@@ -109,7 +114,8 @@ class WebWorkerDeligator {
       }
     }
 
-    this.queue = (taskOs) => {
+    this.queue = (taskOs, noncritical) => {
+      if (noncritical) return this.queue.noncritical(taskOs);
       if (taskOs instanceof Parrelle) {
         taskOs.status(TASK_STATUS.PENDING);
         taskOs.tasks().forEach(t => this.queue(t));
@@ -138,6 +144,28 @@ class WebWorkerDeligator {
         }
         exicute();
       }
+    }
+
+    this.queue.noncritical = (tasksOs) => {
+      const time = new Date().getTime()
+      let wait = time - lastOutlineUpdated - 4000;
+      wait = wait < 0 ? wait * -1 : 0;
+      setTimeout(() => this.queue(tasksOs), wait);
+      lastOutlineUpdated = time + wait;
+    }
+
+    let lastQueued = new Date().getTime();
+    this.queue.noncritical = (tasksOs, calledBack) => {
+      if (calledBack && CPU.usage.low) {
+        let time = new Date().getTime();
+        if (time - 1000 > lastQueued) {
+          this.queue(tasksOs);
+          lastQueued = time;
+          return;
+        }
+      }
+      const time = new Date().getTime()
+      setTimeout(() => this.queue.noncritical(tasksOs, true), 500);
     }
   }
 }

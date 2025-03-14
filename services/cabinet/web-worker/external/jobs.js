@@ -73,7 +73,8 @@ const registeredJob = (clazz, id, hash) => {
   if (id) {
     const registered = Registry.get(name, id);
     if (registered && registered.hash() === hash) return registered;
-    return (job) => Registry.set(job, name, id);
+    const retVal = (job) => Registry.set(job, name, id);
+    return retVal;
   }
 }
 
@@ -85,14 +86,14 @@ class Jobs extends Job {
     this.result = () => jobs[jobs.length - 1].result();
     this.results = () => jobs.map(j => j.results());
 
-    this.queue = () => {
+    this.queue = (noncritical) => {
       const onSuccess = (result, job) =>
           (onJobSuccess instanceof Function && onJobSuccess(result, job)) &
           (!this.finished() && this.allJobsFinished() && this.finished(true));
       onJobFailure ||= (error) => this.error(error);
       for (let index = 0; index < jobs.length; index++) {
         const job = jobs[index];
-        job.then(onSuccess, onJobFailure).queue();
+        job.then(onSuccess, onJobFailure).queue(noncritical);
       }
       this.trigger.pending();
     }
@@ -117,11 +118,8 @@ class TaskJob extends Job {
       this.finished(true, _result)
     });
 
-    this.queue = () => {
-      setTimeout(() => {
-        WebWorkerDeligator.queue(task);
-        this.trigger.pending(task);
-      });
+    this.queue = (noncritical) => {
+      WebWorkerDeligator.queue(task, noncritical);
     }
   }
 }
@@ -287,10 +285,10 @@ class PartsDocumentationJob extends TaskJob {
     });
 
     const parentQueue = this.queue;
-    this.queue = () => {
+    this.queue = (noncritical) => {
       if (this.result()) this.trigger.success(this.result(), this);
       else {
-        parentQueue();
+        parentQueue(noncritical);
         this.trigger.pending();
       }
     };

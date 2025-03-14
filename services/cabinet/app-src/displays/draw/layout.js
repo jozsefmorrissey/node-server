@@ -119,13 +119,11 @@ class DrawLayout extends Draw {
       doorDrawingFunc(door);
     }
 
-    draw.isSimple = () => CANVAS().simple;
-
     const blank = 40;
     const hblank = blank/2;
     function drawMeasurementValue(line, midpoint, measurement) {
       if (line === undefined) return;
-      if (CANVAS().simple) {
+      if (!CPU.usage.low) {
         const hover = hovering();
         if (!hover || (hover.constructor.name !== 'Corner2d' && hover.constructor.name !== 'Wall2D'))
           return;
@@ -242,7 +240,7 @@ class DrawLayout extends Draw {
     }
 
     function drawAngle(vertex) {
-      if (CANVAS().simple) return;
+      if (!CPU.usage.low) return;
       const angle = vertex.angle();
       const text = Math.round(angle * 10) / 10;
       let bisector = vertex.bisector(30);
@@ -288,7 +286,7 @@ class DrawLayout extends Draw {
         const hovered = hoverin === obj.snap2d.top();
         const color =  hovered ? 'green' : defaultColor;
         draw(obj.snap2d.top(), color);
-        if (CANVAS().simple) return;
+        if (!CPU.usage.low) return;
         if (!dontDrawSnapLocs) {
           obj.snap2d.top().snapLocations().forEach((snapLoc, i) => {
             const beingHovered = hoverId() === snapLoc.toString();
@@ -371,12 +369,10 @@ class DrawLayout extends Draw {
       let wl = walls.length;
       walls.forEach((wall, index) => draw.wall(wall));
       walls.forEach(wall => drawVertex(wall[0]));
-      drawMeasurementValues();
 
-      let objects = layout.level();
-      let allObjects = layout.objects();
-      drawObjects(allObjects, '#85858ebd', true);
-      drawObjects(objects);
+      drawMeasurementValues();
+      drawObjects(layout.objects.inactive(), '#85858ebd', true);
+      drawObjects(layout.objects.active());
       // if (hoverMap.hovering())draw(hoverMap.hovering(), 'green', 20)
 
       CTX().restore();

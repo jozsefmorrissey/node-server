@@ -34,7 +34,7 @@ const getHoverMap = () =>
       Global.room().layout().hoverMap();
 
 TwoDLayout.set = (l) => {
-    if (panZ) panZ.once();
+    if (panZ) panZ.update(true);
 }
 
 function rulerClick(elem) {
@@ -139,7 +139,7 @@ du.on.match('enter:focusout', '.value-2d', (elem) => {
         return;
       } else {
         props.obj[props.key](props.value || props.raw);
-        panZ.once();
+        panZ.update(true);
       }
       return;
     case 'snap':
@@ -157,7 +157,7 @@ du.on.match('enter:focusout', '.value-2d', (elem) => {
     du.find.closest("[key='fromCeiling']", elem).value = display;
   }
   cascadeChanges(props);
-  panZ.once();
+  panZ.update(true);
 });
 
 du.on.match('change', 'input[name=\'UNIT2\']', (elem) => {
@@ -182,7 +182,7 @@ function remove() {
     getLayout().remove(hoverin.id());
   }
   popUp.close();
-  TwoDLayout.panZoom.once();
+  TwoDLayout.panZoom.update(true);
 }
 
 du.on.match('click', '.remove-btn-2d', remove, popUp.container());
@@ -191,26 +191,26 @@ du.on.match('click', '.add-door-btn-2d', (elem) => {
   const attrs = getPopUpAttrs(elem);
   const distance = attrs.obj[0].distance(attrs.point);
   attrs.obj.addDoor(distance);
-  panZ.once();
+  panZ.update(true);
 });
 
 du.on.match('click', '.hinge-btn', (elem) => {
   const attrs = getPopUpAttrs(elem);
   attrs.obj.hinge(true);
-  panZ.once();
+  panZ.update(true);
 });
 
 du.on.match('click', '.add-window-btn-2d', (elem) => {
   const attrs = getPopUpAttrs(elem);
   const distance = attrs.obj[0].distance(attrs.point);
   attrs.obj.addWindow(distance);
-  panZ.once();
+  panZ.update(true);
 });
 
 du.on.match('click', '.add-object-btn-2d', (elem) => {
   const props = getPopUpAttrs(elem);
   const obj = getLayout().addObject(props.point);
-  panZ.once();
+  panZ.update(true);
 });
 
 du.on.match('click', '.add-vertex-btn-2d', (elem) => {
@@ -218,25 +218,25 @@ du.on.match('click', '.add-vertex-btn-2d', (elem) => {
   let hoverin = getHoverMap().hovering();
   const point = hoverin.closestPointOnLine(attrs.point);
   getLayout().addVertex(point.point(), hoverin);
-  panZ.once();
+  panZ.update(true);
 });
 
 du.on.match('enter:focusout', '.measurement-mod', (elem) => {
   const value = eval(elem.value);
   getPopUpAttrs(elem).obj.modify(value);
-  panZ.once();
+  panZ.update(true);
 });
 
 function undo(target) {
   getLayout().history().back();
   clearCache();
-  panZ.once();
+  panZ.update(true);
 }
 
 function redo () {
   getLayout().history().forward();
   clearCache();
-  panZ.once();
+  panZ.update(true);
 }
 
 function registerQuickChangeFunc(type, func) {
@@ -332,7 +332,7 @@ du.on.match('change', '[name="which"]', (elem) => {
   const angleElem = du.find.closest('[name="angle"]', elem);
   angleElem.previousElementSibling.innerText = which !== 'Both' ? 'Angle' : 'Rotate';
   updateSnapLocDisplay(elem);
-  panZ.once();
+  panZ.update(true);
 });
 
 du.on.match('change', '[member="snap-loc"][name="fix"]', (elem) => {
@@ -348,7 +348,7 @@ du.on.match('change', '[member="snap-loc"][name="fix"]', (elem) => {
     snapLoc = null;
     angleElem.previousElementSibling.innerText = 'Angle';
   }
-  panZ.once();
+  panZ.update(true);
 });
 
 
@@ -365,7 +365,7 @@ du.on.match('enter', '[member="snap-loc"][name="angle"]', (elem) => {
     du.find.closest('.which-radio-cnt', elem).hidden = true;
     du.find.closest('.fix-cnt', elem).hidden = false;
   } else snapLoc.rotateAround(radians);
-  panZ.once();
+  panZ.update(true);
 });
 
 du.on.match('enter', '[member="snap-loc"][name="x"],[member="snap-loc"][name="y"]', (elem) => {
@@ -388,7 +388,7 @@ du.on.match('enter', '[member="snap-loc"][name="x"],[member="snap-loc"][name="y"
     center[coord] = value;
     snapLoc.move(center);
   }
-  panZ.once();
+  panZ.update(true);
 });
 
 
@@ -467,6 +467,8 @@ function init() {
   // du.on.match('keycombo(Control,z)', '*', undo);
   // du.on.match('keycombo(Control,Shift,Z)', '*', redo);
   du.on.match('keycombo(Control, )', '*', getLayout().straightenUp);
+  // panZ.centerOn(getLayout().center().x, getLayout().center().y);
+  panZ.positionOn(getLayout().center(), getLayout().demensions())
 }
 
 TwoDLayout.init = init;

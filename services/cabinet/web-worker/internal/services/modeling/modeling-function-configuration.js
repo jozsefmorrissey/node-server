@@ -331,20 +331,22 @@ to.Panel = {
   },
   Full: {
     biPolygon: (rMdto, env) => {
-      return Divider.instance(rMdto, env).Full(rMdto)
-    }
+      return Divider.instance(rMdto, env).Full(rMdto);
+    },
+    cut: (rmdto, env) =>
+      Divider.instance(rmdto, env).frameCrop(rmdto)
   },
   Front: {
     biPolygon: (rMdto, env) =>
       Divider.instance(rMdto, env).Full(rMdto),
     cut: (rMdto, env) =>
-      Divider.instance(rMdto, env).Front(rMdto, env)
+      Divider.instance(rMdto, env).Front(rMdto)
   },
   Back: {
     biPolygon: (rMdto, env) =>
       Divider.instance(rMdto, env).Full(rMdto),
     cut: (rMdto, env) =>
-      Divider.instance(rMdto, env).Back(rMdto, env)
+      Divider.instance(rMdto, env).Back(rMdto)
   }
 },
 

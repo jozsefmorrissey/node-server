@@ -651,6 +651,10 @@ canvas {
   transform: rotate(90deg);
 }
 
+.file-tab-cnt li {
+  cursor: pointer;
+}
+
 .fit {
   width: fit-content;
   height: fit-content;
@@ -774,8 +778,8 @@ canvas {
 }
 
 input[type=color] {
-  max-width: 20pt;
-  max-height: 25pt;
+  width: 20pt;
+  height: 20pt;
   border-radius: 50%;
   background-color: #00000000;
   cursor: pointer;
@@ -788,6 +792,11 @@ input[type=color]::-webkit-color-swatch {
 input[type=color]::-webkit-color-swatch-wrapper {
     border: none;
     border-radius: 50%;
+}
+
+input[type=color].big {
+  width: 50pt;
+  height: 50pt;
 }
 
 .orientation .arrows {

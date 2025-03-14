@@ -13,7 +13,6 @@ const $t = require('../../../../public/js/utils/$t.js');
 const du = require('../../../../public/js/utils/dom-utils.js');
 const Lookup = require('../../../../public/js/utils/object/lookup.js');
 const bind = require('../../../../public/js/utils/input/bind.js');
-const ThreeDMain = require('../displays/three-d-main.js');
 const Global = require('../services/global.js');
 
 const currentStyleState = {};
@@ -62,7 +61,6 @@ class GroupDisplay extends Lookup {
       setFrameProps(values);
       setStyleProps(values[style]);
       console.log(updateDescriptor());
-      ThreeDMain.update();
     }
 
     function styleSelector(group) {

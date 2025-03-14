@@ -94,17 +94,7 @@ class KeyValue extends Lookup {
       Object.merge(this.value.values, valueObj);
     }
 
-    this.hash = () => {
-      const valueObj = this.value.values;
-      const keys = Object.keys(valueObj).sort();
-      let hash = 0;
-      for (let index = 0; index < keys.length; index++) {
-        const key = keys[index];
-        hash += new String(valueObj[key]).hash()
-      }
-      return hash;
-    }
-
+    this.hash = () => Object.hash(this.value.values);
 
     this.value.values = {};
     this.value.evaluators = properties.evaluators || {};
@@ -113,6 +103,15 @@ class KeyValue extends Lookup {
     this.value.parentAttribute = () => parentAttr;
     this.value.childrenAttribute = () => childAttr;
     this.value.addCustomFunction = (func) => (typeof func) === 'function' && customFuncs.push(func);
+
+    const relatedCodes = [];
+    this.value.related = (...codes) => {
+      if (codes.length === 0) {
+        codes = relatedCodes.concat(Object.keys(this.value.values)).unique();
+        return codes.map(c => this.value(c, undefined, true));
+      }
+      relatedCodes.concatInPlace(codes).unique();
+    }
 
     this.value.getterSetter = (code, _rawOvalue, validator, preProcessor) => (rawOvalue) => {
       if (!Boolean.is(rawOvalue)) {

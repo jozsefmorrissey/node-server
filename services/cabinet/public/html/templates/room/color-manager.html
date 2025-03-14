@@ -1,10 +1,6 @@
-<table class='borderless'>
-  <tbody class='borderless' lookup-id='{{id()}}'>
-    <tr:t repeat='inputTree in inputTrees()' class='color-cnt'>
-      <td class='borderless'>
-        <input type='color' value='{{inputTree.color()}}' original='{{inputTree.color()}}'>
-      </td>
-      <td class='color-input-tree-cnt' hidden>{{inputTree.html()}}</td>
-    </tr:t>
-  </tbody>
-</table>
+<div lookup-id='{{id()}}' class='inline-flex'>
+  <span:t class='color-cnt borderless' repeat='inputTree in inputTrees()'>
+    <input type='color' value='{{inputTree.color()}}' original='{{inputTree.color()}}' class='big'>
+    <td class='color-input-tree-cnt' hidden>{{inputTree.html()}}</td>
+  </span:t>
+</div>

@@ -24,6 +24,7 @@ class Draw2d {
     const CTX = () => ctx ? ctx : (ctx = canvas.getContext('2d'));
 
     function draw(object, color, width) {
+
       if (object === undefined || object === null) return;
       if (object.to2D) object = object.to2D();
       if (object instanceof CSG) return draw.csg(object, color, width);
@@ -258,7 +259,7 @@ class Draw2d {
       ctx.stroke();
       ctx.fill();
 
-      if (!CANVAS().simple && text) {
+      if (!CPU.low && text) {
         ctx.beginPath();
         ctx.lineWidth = 4;
         ctx.strokeStyle = 'black';
@@ -420,10 +421,12 @@ class Draw2d {
 
     draw.snap = (snap, color, width) => {
       draw(snap.object(), color, width);
-      const textInfo = snap.getTextInfo();
-      textInfo.color = color || textInfo.color;
-      draw.text(textInfo.text.substring(0,10), textInfo.center, textInfo);
-      if (Draw2d.debug.showNormals || CANVAS().simple) draw(snap.object().normals());
+      if (CPU.usage.low) {
+        const textInfo = snap.getTextInfo();
+        textInfo.color = color || textInfo.color;
+        draw.text(textInfo.text.substring(0,10), textInfo.center, textInfo);
+      }
+      if (Draw2d.debug.showNormals) draw(snap.object().normals());
     }
 
     const cxtrFuncMap = { Object: draw.object, Array: draw.array,

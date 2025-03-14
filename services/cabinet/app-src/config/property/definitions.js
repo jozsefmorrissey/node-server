@@ -1,15 +1,15 @@
 const Property = require('../property');
 const IMPERIAL_US = Measurement.units()[1];
 
-const ov = (trueOfalse) => (Boolean.is(trueOfalse) ? trueOfalse : defs.fls.value()) ?
-                            defs.ovfls.value() : defs.ovfrd.value()
+const ov = (trueOfalseOval) => (Boolean.is(trueOfalseOval) ? trueOfalseOval : defs.fls.value()) ?
+                            defs.ovfls.value(trueOfalseOval) : defs.ovfrd.value(trueOfalseOval);
 
 const defs = {};
 
 const imp = (code, desc, value) => new Property(code, desc, {value, notMetric: IMPERIAL_US});
 
 //   Cabinet
-defs.style = new Property('style', 'Cabinet Style', {value: 'Overlay'});
+defs.style = new Property('style', 'Front Style', {value: 'Overlay'});
 defs.fls = new Property('fls', 'Frameless', {value: true});
 defs.dsc = imp('dsc', 'Default Scribe', 1/4);
 defs.tid = imp('tid', 'Top Inset Depth', 1/2);
@@ -80,19 +80,17 @@ defs.dbdepths = new Property('dbdepths', 'Drawer Box Depths', {value: [
 ]});
 
 //   DoorAndFront
-defs.daffrw = imp('daffrw', 'Door and front frame rail width', '2 3/8');
-defs.dafip = new Property('dafip', 'Door and front inset panel', {value: null});
-defs.daft = imp('daft', 'Door and front thickness', 3 / 4);
-defs.dafbt = imp('dafbt', 'Door and front bumper thickness', 3 / 16);
-
-//   Door
+defs.frw = imp('frw', 'Front frame rail width', '2 3/8');
+defs.fip = new Property('fip', 'Front inset panel', {value: false});
+defs.ft = imp('ft', 'Front thickness', 3 / 4);
+defs.fbt = imp('fbt', 'Front bumper thickness', 3 / 16);
 
 //   DrawerBox
 defs.dbst = imp('dbst', 'Side Thickness', 5/8);
 defs.dbbt = imp('dbbt', 'Box Bottom Thickness', 1/4);
 
 //   DrawerFront
-defs.mfdfd = imp('mfdfd', 'Minimum Framed Drawer Front Height', 6)
+// defs.mfdfd = imp('mfdfd', 'Minimum Framed Drawer Front Height', 6)
 
 //   Frame
 

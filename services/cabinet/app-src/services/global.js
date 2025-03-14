@@ -88,9 +88,8 @@ Global = {
     }
     return ASSEMBLY;
   },
-
 }
-
+Global.loaded = false;
 
 const Order = require('../objects/order.js');
 const Room = require('../objects/room.js');
@@ -112,7 +111,7 @@ Object.defineProperty(Global, 'displays', {
   value: new Displays(),
   writable: false
 });
-CustomEvent.all(Global, 'load.order','(processing,change).(order,room,cabinet,group,target)');
+CustomEvent.all(Global, 'loaded', 'load.order','(processing,change).(order,room,cabinet,group,target)');
 let ORDER, ROOM, GROUP, CABINET, TARGET, OBJECT, ASSEMBLY;
 Global.state = () => ({ORDER, ROOM, GROUP, CABINET, TARGET, OBJECT, ASSEMBLY});
 
@@ -125,12 +124,13 @@ Global.target.is = {
   cabinet: () => Global.target() === CABINET
 }
 
+Global.on.loaded(() => Global.loaded = true);
+
 Global.order.static = (name) => {
   Request.get(`/cabinet/json/orders/${name}.json`,
     (json) =>
     Global.order(Order.fromJson(json)) && Global.trigger.load.order(Global.order()),
     (error) => console.error(error));
 }
-
 
 module.exports = Global;

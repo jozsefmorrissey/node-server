@@ -18,15 +18,6 @@ class PanZoom {
     let sleeping = false;
     let nextUpdateId = 0;
     this.sleep = () => sleeping = true;
-    this.wake = () => {
-      if (sleeping) {
-        sleeping = false;
-        requestAnimationFrame(() => update(++nextUpdateId));
-      }
-    };
-    this.once = () => {
-      requestAnimationFrame(() => update(++nextUpdateId, true))
-    };
 
     this.on = {
       move: this.on('move'),
@@ -36,6 +27,10 @@ class PanZoom {
       mousedown: this.on('mousedown'),
       mouseup: this.on('mouseup')
     }
+
+    const small = .01;
+    this.moving = () => displayTransform.dx > small || displayTransform.dx < -small;
+    this.zooming = () => displayTransform.dscale > small || displayTransform.dscale < -small;
 
     function eventObject(eventName, event) {
       let x  =  mouse.rx;
@@ -86,6 +81,7 @@ class PanZoom {
         buttonRaw : 0,
         over : false,
         buttons : [1, 2, 4, 6, 5, 3], // masks for setting and clearing button raw bits;
+        moved: false
     };
 
     let lastMove = null;
@@ -98,6 +94,7 @@ class PanZoom {
             mouse.x = event.clientX;
             mouse.y = event.clientY;
         }
+        displayTransform.mouseUpdate();
         lastMove = eventObject('move', event);
         if (runOn('move', event)) event.preventDefault();
         mouse.alt = event.altKey;
@@ -120,10 +117,12 @@ class PanZoom {
         } else if (event.type === "mousewheel") {
             event.preventDefault()
             mouse.w = event.wheelDelta;
+            displayTransform.zoomUpdate();
         } else if (event.type === "DOMMouseScroll") { // FF you pedantic doffus
            mouse.w = -event.detail;
+           displayTransform.zoomUpdate();
         }
-        instance.wake();
+        instance.update();
     }
 
     let active = true;
@@ -182,7 +181,8 @@ class PanZoom {
     }
 
     this.canvasSimple = () => {
-      return displayTransform.moving || displayTransform.scoping;
+      return this.moving() || this.zooming();
+      // return displayTransform.moving || displayTransform.scoping;
     }
 
     // terms.
@@ -238,6 +238,11 @@ class PanZoom {
             this.ctx.setTransform(1,0,0,1,0,0);
 
         },
+        stabilize: function () {
+          do {
+            this.update();
+          } while (hasDelta());
+        },
         update:function(){
             // smooth all movement out. drag and accel control how this moves
             // acceleration
@@ -286,79 +291,74 @@ class PanZoom {
             this.invMatrix[1] =  - this.matrix[1] / det;
             this.invMatrix[2] =  - this.matrix[2] / det;
             this.invMatrix[3] = this.matrix[0] / det;
+        },
+        mouseUpdate: function() {
+          let mdx = mouse.x-mouse.oldX; // get the mouse movement
+          let mdy = mouse.y-mouse.oldY;
+          mrx = (mdx * this.invMatrix[0] + mdy * this.invMatrix[2]);
+          mry = (mdx * this.invMatrix[1] + mdy * this.invMatrix[3]);
+          mouse.moved = false;
+          if(mouse.oldX !== undefined && (mouse.buttonRaw & 1)===1){ // check if panning (middle button)
+            // get the movement in real space
+            this.x -= mrx;
+            this.y -= mry;
+          }
+          mouse.moved = Math.abs(mdx + mdy) > 1
+          // do the zoom with mouse wheel (reolcated zoom)
 
-            // check for mouse. Do controls and get real position of mouse.
-            if(mouse !== undefined){  // if there is a mouse get the real cavas coordinates of the mouse
-                let mdx = mouse.x-mouse.oldX; // get the mouse movement
-                let mdy = mouse.y-mouse.oldY;
-                mrx = (mdx * this.invMatrix[0] + mdy * this.invMatrix[2]);
-                mry = (mdx * this.invMatrix[1] + mdy * this.invMatrix[3]);
-                if(mouse.oldX !== undefined && (mouse.buttonRaw & 1)===1){ // check if panning (middle button)
-                    // get the movement in real space
-                    this.x -= mrx;
-                    this.y -= mry;
-                }
-                // do the zoom with mouse wheel
-                if(mouse.w !== undefined && mouse.w !== 0){
-                    this.ox = mouse.x;
-                    this.oy = mouse.y;
-                    this.x = this.mouseX;
-                    this.y = this.mouseY;
-                    /* Special note from answer */
-                    // comment out the following is you change drag and accel
-                    // and the zoom does not feel right (lagging and not
-                    // zooming around the mouse
-                    /*
-                    this.cox = mouse.x;
-                    this.coy = mouse.y;
-                    this.cx = this.mouseX;
-                    this.cy = this.mouseY;
-                    */
-                    if(mouse.w > 0){ // zoom in
-                        this.scale *= 1.1;
-                        mouse.w -= 20;
-                        if(mouse.w < 0){
-                            mouse.w = 0;
-                        }
-                        runOn('zoom', this);
-                    }
-                    if(mouse.w < 0){ // zoom out
-                        this.scale *= 1/1.1;
-                        mouse.w += 20;
-                        if(mouse.w > 0){
-                            mouse.w = 0;
-                        }
-                        runOn('zoom', this);
-                    }
-
-                }
-                // get the real mouse position
-                var screenX = (mouse.x - this.cox);
-                var screenY = (mouse.y - this.coy);
-                this.screenX = screenX;
-                this.screenY = screenY;
-                this.mouseX = this.cx + (screenX * this.invMatrix[0] + screenY * this.invMatrix[2]);
-                this.mouseY = this.cy + (screenX * this.invMatrix[1] + screenY * this.invMatrix[3]);
-                mouse.rx = this.mouseX;  // add the coordinates to the mouse. r is for real
-                mouse.ry = this.mouseY;
-                // save old mouse position
-                mouse.oldX = mouse.x;
-                mouse.oldY = mouse.y;
+          // get the real mouse position
+          var screenX = (mouse.x - this.cox);
+          var screenY = (mouse.y - this.coy);
+          this.screenX = screenX;
+          this.screenY = screenY;
+          this.mouseX = this.cx + (screenX * this.invMatrix[0] + screenY * this.invMatrix[2]);
+          this.mouseY = this.cy + (screenX * this.invMatrix[1] + screenY * this.invMatrix[3]);
+          mouse.rx = this.mouseX;  // add the coordinates to the mouse. r is for real
+          mouse.ry = this.mouseY;
+          // save old mouse position
+          mouse.oldX = mouse.x;
+          mouse.oldY = mouse.y;
+        },
+        zoomUpdate: function() {
+          this.ox = mouse.x;
+          this.oy = mouse.y;
+          this.x = this.mouseX;
+          this.y = this.mouseY;
+          /* Special note from answer */
+          // comment out the following is you change drag and accel
+          // and the zoom does not feel right (lagging and not
+            // zooming around the mouse
+            /*
+            this.cox = mouse.x;
+            this.coy = mouse.y;
+            this.cx = this.mouseX;
+            this.cy = this.mouseY;
+            */
+            if(mouse.w > 0){ // zoom in
+              this.scale *= 1.1;
+              mouse.w -= 20;
+              if(mouse.w < 0){
+                mouse.w = 0;
+              }
+              runOn('zoom', this);
             }
-
+            if(mouse.w < 0){ // zoom out
+              this.scale *= 1/1.1;
+              mouse.w += 20;
+              if(mouse.w > 0){
+                mouse.w = 0;
+              }
+              runOn('zoom', this);
+            }
         }
     }
     this.displayTransform = displayTransform;
 
-    const max = .000000000001;
-    const min = max*-1;
+    const gtSmall = (c, t) => c > t ? c-t > small : t-c > small;
     function hasDelta() {
       const dt = displayTransform;
-      return !((dt.dx > min && dt.dx < max) &&
-              (dt.dy > min && dt.dy < max) &&
-              (dt.dox > min && dt.dox < max) &&
-              (dt.doy > min && dt.doy < max) &&
-              (dt.drotate > min && dt.drotate < max));
+      return gtSmall(dt.x, dt.cx) || gtSmall(dt.y, dt.cy) ||
+              gtSmall(dt.scale, dt.cscale) || gtSmall(dt.rotate, dt.crotate);
     }
 
     // image to show
@@ -370,35 +370,41 @@ class PanZoom {
     ctx.textBaseline = "middle";
     // timer for stuff
     var timer =0;
-    function update(updateId, once){
-      if (!once && nextUpdateId !== updateId) return;
-      nextUpdateId++;
-      timer += 1; // update timere
-      displayTransform.update();
-      displayTransform.setHome();
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      displayTransform.setTransform();
-      canvas.simple = instance.canvasSimple();
-      draw(canvas);
-      ctx.fillStyle = "white";
-      if(mouse.buttonRaw === 4){ // right click to return to homw
-           displayTransform.x = 0;
-           displayTransform.y = 0;
-           displayTransform.scale = 1;
-           displayTransform.rotate = 0;
-           displayTransform.ox = 0;
-           displayTransform.oy = 0;
-       }
+    function update(){
+      if (!CPU.usage.overloaded) {
+        nextUpdateId++;
+        timer += 1; // update timere
+        displayTransform.update();
+        displayTransform.setHome();
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        displayTransform.setTransform();
+        draw(canvas);
+        ctx.fillStyle = "white";
+        if(mouse.buttonRaw === 4){ // right click to return to homw
+          displayTransform.x = 0;
+          displayTransform.y = 0;
+          displayTransform.scale = 1;
+          displayTransform.rotate = 0;
+          displayTransform.ox = 0;
+          displayTransform.oy = 0;
+        }
 
-      if (lastMoveTime < new Date().getTime() - 1000) instance.sleep();
-      if (hasDelta() || sleeping === false) {
-        if (once) sleeping = true;
-        setTimeout(() => requestAnimationFrame(() => update(++nextUpdateId)), 300);
-      } else {
-        sleeping = true;
+        mouse.moved = false;
+      }
+      pendingUpdate = false;
+      setTimeout(instance.update);
+    }
+    let pendingUpdate = false;
+    this.update = (force) => {
+      if (force === true || (!pendingUpdate && (hasDelta() || mouse.moved))) {
+        pendingUpdate = true;
+        requestAnimationFrame(update);
       }
     }
-    update(++nextUpdateId); // start it happening
+    update.call = () => {
+      const id = ++nextUpdateId;
+      return () => update(id);
+    }
 
     this.center = () => {
       const x = displayTransform.x + canvas.width/2;
@@ -413,26 +419,23 @@ class PanZoom {
         y = x.y;
         x = x.x;
       }
+      this.displayTransform.update();
       const center = this.displayTransform.realPosition();
       dt.x += (x - center.x);
       dt.y += (y - center.y);
-      do {
-        dt.update();
-      } while (Math.abs(dt.dx + dt.dy) > .001);
+      dt.stabilize();
+      this.update(true);
     };
 
     this.positionOn = function (center, demensions) {
+      this.displayTransform.update();
       const dt = this.displayTransform;
       const scaleX = canvas.width/demensions.x;
       const scaleY = canvas.height/demensions.y;
-      dt.scale = Math.floor(Math.min(scaleX, scaleY) * .8/2) * 2;
-      console.log(dt.scale)
       let count = 0;
-      do {
-        dt.update();
-      } while (Math.abs(dt.dscale) > .0001);
+      dt.scale = Math.roundTo(Math.min(scaleX, scaleY) * .8/2, .001) * 2;
+      dt.stabilize();
       this.centerOn(center);
-      this.once();
     }
 
     return this;

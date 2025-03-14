@@ -14,6 +14,8 @@ class DrawerBox extends Assembly {
     const guides = new Guides('gs');
     this.hardware.push(guides);
     guides.parentAssembly(this);
+
+    this.hash = () => Math.hash(...this.hardware.map(g => g.hash()));
   }
 }
 

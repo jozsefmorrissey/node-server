@@ -18,7 +18,7 @@ function  render() {
 
 du.on.match('change', '.object-layout-settings-cnt input', (elem) => {
   sketch.settings()[elem.name](elem.checked);
-  sketch.once && sketch.once();
+  sketch.update && sketch.update(true);
 });
 
 

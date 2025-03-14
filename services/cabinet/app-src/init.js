@@ -21,7 +21,6 @@ const du = require('../../../public/js/utils/dom-utils.js');
 const EPNTS = require('../generated/EPNTS.js');
 require('./objects/room');
 const TwoDLayout = require('./displays/two-d-layout.js');
-const ThreeDMainModel = require('./displays/three-d-main.js');
 require('./three-d/layout/init');
 const PropertyDisplay = require('./displays/property.js');
 const DisplayManager = require('./display-utils/displayManager.js');
@@ -29,6 +28,8 @@ const utils = require('./utils.js');
 const Frame = require('./objects/assembly/assemblies/frame.js');
 const Panel = require('./objects/assembly/assemblies/panel.js');
 const Order = require('./objects/order.js');
+
+require('./displays/advanced/init.js');
 
 const staticOrder = du.param.get('staticOrder');
 if (staticOrder) {
@@ -51,7 +52,6 @@ function updateDivisions (target) {
     const value = values[index];
     if(value) inputs[index].value = value;
   }
-  ThreeDMainModel.update(opening);
 }
 
 function getValue(code, obj) {
@@ -93,14 +93,12 @@ function init(body){
         orderDisplay = new OrderDisplay('#order-cnt');
         Global.displays.order(orderDisplay);
         TwoDLayout.init();
-        // ThreeDMainModel.init();
     }
   } else if (urlSuffix === 'order') {
     require('./displays/canvas');
     const viewDisplayManager = new DisplayManager('display-cnt', 'main-display-menu');
     require('./displays/single-order');
     TwoDLayout.init();
-    // ThreeDMainModel.init();
   }
 }
 
@@ -147,4 +145,5 @@ new QRious({
           size: 100
         });
 
+setTimeout(Global.trigger.loaded, 1000);
 module.exports = {orderDisplay: () => orderDisplay};

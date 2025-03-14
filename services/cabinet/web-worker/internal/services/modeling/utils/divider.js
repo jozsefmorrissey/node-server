@@ -40,6 +40,30 @@ class DividerUtil {
 
     const fromInner = (dist) => divider.position.current.demension.z - divider.panelThickness - dist;
 
+    function shiftLine(lines, closestTo, vector) {
+
+    }
+
+    function frameCrop(assem, model) {
+      model ||= env.getModel(assem, 'cut');
+      if (assem.parentAssembly().hasFrame) {
+        const jointDepth = env.jointMap.male[assem.id]
+                            .map(id => env.byId[id])
+                            .find(j => j.locationId === 'FramePanelJoint').eval.maleOffset;
+        if (!jointDepth) return;
+        const zNorm = sectionUtils.biPolygon.normals().z;
+        const ft = assem.parentAssembly().frameThickness;
+        const vector = zNorm.scale(jointDepth);
+
+        const frame = assem.parentAssembly().find.down('fr');
+        const frameModel = env.getModel(frame, 'cut').clone();
+        frameModel.translate(vector);
+        model = model.subtract(frameModel);
+      }
+      return model;
+    }
+    this.frameCrop = frameCrop;
+
     let full;
     function scribeRevealOffset(assem) {
       let offset = 0;
@@ -67,7 +91,8 @@ class DividerUtil {
         const movedNormDist = fc.translate(furtherPoly.normal(), true);
         const multiplier = movedNormDist.distance(ic) < fc.distance(ic) ? 1 : -1;
         const biPoly = BiPolygon.fromPolygon(furtherPoly.copy(), multiplier * divider.panelThickness, 0);
-        biPoly.translate(furtherPoly.normal().scale(multiplier*divider.scribe));
+        if (divider.hasFrame)
+          biPoly.translate(furtherPoly.normal().scale(multiplier*divider.scribe));
 
         full = biPoly;
       }
@@ -78,10 +103,10 @@ class DividerUtil {
 
     const getCutter = (key, builder) => () => (cutters[key] !== undefined || builder()) && cutters[key];
     this.Frame = buildFramePoly;
-    this.Back = (assem, env) => cropExtendedFrom(DividerUtil.positions.BACK, assem.width || divider.partialWidth, assem, env);
-    this.Front = (assem, env) => cropExtendedFrom(DividerUtil.positions.FRONT, assem.width || divider.partialWidth, assem, env);
-    this.Right = (assem, env) => cropExtendedFrom(DividerUtil.positions.RIGHT, assem.width || divider.partialWidth, assem, env);
-    this.Left = (assem, env) => cropExtendedFrom(DividerUtil.positions.LEFT, assem.width || divider.partialWidth, assem, env);
+    this.Back = (assem) => cropExtendedFrom(DividerUtil.positions.BACK, assem.width || divider.partialWidth, assem);
+    this.Front = (assem) => cropExtendedFrom(DividerUtil.positions.FRONT, assem.width || divider.partialWidth, assem);
+    this.Right = (assem) => cropExtendedFrom(DividerUtil.positions.RIGHT, assem.width || divider.partialWidth, assem);
+    this.Left = (assem) => cropExtendedFrom(DividerUtil.positions.LEFT, assem.width || divider.partialWidth, assem);
 
     let type = divider.type;
     let cutter;
@@ -121,7 +146,7 @@ class DividerUtil {
       return orientNorms;
     }
 
-    function cropExtendedFrom(position, distance, assem, env) {
+    function cropExtendedFrom(position, distance, assem) {
       const csg = env.getModel(assem, 'cut');
       if (csg.polygons.length === 0) {
         console.warn.logarithmic('model has been completely removed, may not be intentional');
@@ -158,7 +183,9 @@ class DividerUtil {
       const width = assem.width || divider.partialWidth;
       const cutterBiPoly = BiPolygon.fromPolygon(cutterPoly, -BIG, -width, {x: BIG, y: BIG});
 
-      return csg.subtract(cutterBiPoly.model());
+      let model = csg.subtract(cutterBiPoly.model());
+      if (DividerUtil.positions.BACK !== position) model = frameCrop(assem, model);
+      return model;
     }
   }
 }

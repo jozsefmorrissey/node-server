@@ -4,9 +4,10 @@ const Assembly = require('../../assembly.js');
 class ShelfPeg extends Assembly {
   constructor(partCode) {
     super(partCode);
-    this.demensions = (parentInfo) => {
+    this.demensions = () => {
       return {x:1,y:1,z:1}
     }
+    this.hash = () => Object.hash(this.demensions());
   }
 }
 
@@ -23,11 +24,12 @@ class ShelfPegs extends Assembly {
     }
 
 
-    this.demensions = (parentInfo) => {
+    this.demensions = () => {
       setPegCount();
     }
 
     this.composite = () => true;
+    this.hash = () => Math.hash(...this.hardware.map(g => g.hash()));
   }
 }
 

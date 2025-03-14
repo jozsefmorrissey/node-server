@@ -9,6 +9,8 @@ class Panel extends Assembly {
   constructor(partCode, partName, config) {
     super(partCode, partName, config);
     this.category('Panel');
+
+    this.hash = () => Object.hash(this.config());
   }
 }
 Panel.property('manuallyConfigurable', true, false, false, false);
@@ -52,6 +54,8 @@ class PanelVoidIndex extends PanelAutoConfigured {
     }
     this.width = () =>
       this.resolve('vpt');
+
+    this.hash = () => Math.hash(index, this.included, Object.hash(this.vectors()));
   }
 }
 

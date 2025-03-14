@@ -9,7 +9,7 @@ Function.safeStdLibAddition(String, 'random',  function (len) {
 const compoundReg = /^(.*)\(([^)]{1,}?)\)(.*)$/
 Function.safeStdLibAddition(String, 'paths',  function (len) {
     const paths = [];
-    if (this.match(compoundReg) === null) return [this];
+    if (this.match(compoundReg) === null) return [this + ''];
     const compoundAttrs = [this];
     while(compoundAttrs.length > 0) {
       const ca = compoundAttrs[compoundAttrs.length - 1];

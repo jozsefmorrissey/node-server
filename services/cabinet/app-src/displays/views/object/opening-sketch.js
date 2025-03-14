@@ -70,7 +70,7 @@ class OpeningSketch {
     const Center = (obj) => Center[obj.constructor.name](obj);
     Center.OpeningToeKick = (toeKick) => {
       const y = toeKick.tkh()/-2;
-      return toeKick.opening().outerPoly[2].midpoint()
+      return toeKick.opening().outerPoly().lines()[2].midpoint()
                     .rotate(coDirRotz, center)
                     .translate({x:0,y,z:0}, true);
     };
@@ -187,7 +187,6 @@ class OpeningSketch {
     function build(force) {
       const currHash = _cabinet.hash();
       if (force !== true && currHash === cabHash) return;
-      console.log(calls++);
       cabHash = currHash;
       init();
       labels = {sections: [], dividers: []}
@@ -250,7 +249,7 @@ class OpeningSketch {
         buildLabels();
         buildToeKicks();
         panZ.positionOn(center, dems);
-        panZ.once();
+        panZ.update(true);
       } catch (e) {
         console.error(e);
       }
@@ -288,6 +287,7 @@ class OpeningSketch {
         const hovering = hoverMap.hovering();
         if (hovering) sketch(hovering.center, 'green', 2);
         if (selected) sketch(selected.center, 'blue', 2);
+        sketch.vertex(panZ.displayTransform.realPosition(), 'red', 2.5);
         // const measurements = LineMeasurement2d.measurements(allLines);
         // sketch(measurements, 'grey', 1);
       }
@@ -347,7 +347,7 @@ class OpeningSketch {
       }
       panZ = new PanZoomClickMeasure(canvas, draw, () => hoverMap);
       panZ.on.click(() => updateDisplay(hoverMap.hovering()));
-      instance.once = panZ.once;
+      instance.update = panZ.update;
     }
   }
 }

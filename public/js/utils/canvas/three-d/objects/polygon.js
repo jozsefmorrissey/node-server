@@ -1224,7 +1224,7 @@ Polygon3D.merge = (polygons) => {
           mergedCount++;
           break;
         } else {
-          console.log('not merged...')
+          // console.log('not merged...')
         }
       }
       if (mergedCount === 0) currIndex++;

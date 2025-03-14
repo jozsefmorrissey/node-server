@@ -19,6 +19,7 @@ function  renderSimple(simpleObj) {
 function  renderCabinet(cabinet) {
   new Jobs.CSG.Assembly(cabinet).then((modelInfo, job) => {
     const csg = modelInfo.unioned().clone();
+    csg.add(modelInfo.unioned.handles().clone())
     Canvas.render3Dmodel(csg, cabinet);
   }).queue();
 }

@@ -106,10 +106,10 @@ class HoverMap2d {
       hoverObjects.removeWhere(ho => ho.groupId() === groupId);
     }
 
+    const sortObjects = () => hoverObjects.sort(HoverObject2d.sort);
     this.add = (object, tolerance, target, groupId) => {
       if (Array.isArray(object)) {
-        object.forEach(o => this.add(o));
-        return;
+        return object.map(o => this.add(o));
       }
       const hovObj = new HoverObject2d(object, tolerance, target, groupId);
       if (object instanceof Vertex2d) {
@@ -117,7 +117,8 @@ class HoverMap2d {
       } else {
         hoverObjects.push(hovObj);
       }
-      hoverObjects.sort(HoverObject2d.sort);
+      sortObjects.lastCall('HoverSort', 200, HoverObject2d.sort);
+      return hovObj;
     }
 
     let active = true;

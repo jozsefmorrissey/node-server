@@ -5,11 +5,13 @@ const du = require('../dom-utils.js');
 const CSG = require('./csg.js');
 const GL = require('./lightgl.js');
 const shaders = require('./shaders.js');
+const ViewerHoverList = require('../canvas/three-d/viewer-hover-list.js');
 
 const VIEWER_CONTROLS = {
   POLYGONS: true,
   OUTLINE: true,
   WIREFRAME: false,
+  AXIS: false,
   BACKGROUND_COLOR: '#00ffff',
   OUTLINE_COLOR: '#000000'
 }
@@ -74,6 +76,7 @@ Viewer.CONTROLS = VIEWER_CONTROLS;
 function Viewer(csg, width, height, depth) {
   const originalDepth = depth;
   viewers.push(this);
+  instance = this;
   this.setDepth = (d) => depth = d;
   let x = 0;
   let y = 0;
@@ -150,16 +153,40 @@ function Viewer(csg, width, height, depth) {
   // this.changeLightingShaderDirection(0, 0, 0);
   // this.changeLightingShaderDirection(3, 2, 3);
 
-  let origCenter = {x:0, y:0};
-  let pointClicked = {x: 0, y: 0, z: 0};
-  function setPointClicked(e) {
+  function canvasPoint(e) {
     const canvasPos = e.target.getBoundingClientRect();
     const clickPos = {x: e.x - canvasPos.x, y: e.y - canvasPos.y};
     const canvasCenter = {x: e.target.width/2, y: e.target.height/2};
     const canvasOffset = {x: clickPos.x - canvasCenter.x, y: clickPos.y - canvasCenter.y};
     const twoDLoc = {x: origCenter.x + canvasOffset.x, y: origCenter.y + canvasOffset.y};
     const centerOffset = GL.Matrix.relitiveDirection(twoDLoc.x, twoDLoc.y,0,gl.modelviewMatrix)
-    pointClicked = {x: centerOffset[0], y: centerOffset[1], z: centerOffset[2]};
+    return {x: centerOffset[0], y: centerOffset[1], z: centerOffset[2]};
+  }
+
+  function pointInfo(e) {
+    const canvasPos = e.target.getBoundingClientRect();
+    const pos = {x: e.x - canvasPos.x,
+                      y: canvasPos.height - (e.y - canvasPos.y)};
+    const bounds = (z) => [gl.unProject(0,canvasPos.height, z),
+	                    gl.unProject(canvasPos.width, canvasPos.height, z),
+	                    gl.unProject(canvasPos.width, 0, z),
+	                    gl.unProject(0, 0, z)];
+    return {pos, bounds, relitivePos: gl.project};
+  }
+
+  let origCenter = {x:0, y:0};
+  let pointClicked = {x: 0, y: 0, z: 0};
+  function setPointClicked(e) {
+    const info = pointInfo(e);
+    instance.hoverList.click(info.pos, info.relitivePos, info.bounds);
+  }
+
+  let pointHovered = {x: 0, y: 0, z: 0};
+  this.hoverList = new ViewerHoverList();
+
+  function setPointHovered(e) {
+    const info = pointInfo(e);
+    instance.hoverList.hover(info.pos, info.relitivePos, info.bounds);
   }
 
   let rotationUnit;
@@ -171,26 +198,27 @@ function Viewer(csg, width, height, depth) {
   let point = {x: 0, y: 12, z: 11.5};
   // let rotationVector = new CSG.Vector(25, 12,11.5);
   function rotateEvent(e) {
-    if (!rotationUnit) {
-      rotationUnit = {};
-      rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
-      rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
-    }
-    if (rotationUnit) {
-      const speed = 40;
-      if (e.deltaY) {
-        const dir = e.deltaY < 0 ? -speed : speed;
-        rotationOffset[0] += rotationUnit.y[0]/dir;
-        rotationOffset[1] += rotationUnit.y[1]/dir;
-        rotationOffset[2] += rotationUnit.y[2]/dir;
-      }
-      if (e.deltaX) {
-        const dir = e.deltaX < 0 ? speed : -speed;
-        rotationOffset[0] += rotationUnit.x[0]/dir;
-        rotationOffset[1] += rotationUnit.x[1]/dir;
-        rotationOffset[2] += rotationUnit.x[2]/dir;
-      }
-    }
+    // TODO: If I am going to enable free rotation need to create intuitive process.
+    // if (!rotationUnit) {
+    //   rotationUnit = {};
+    //   rotationUnit.y = GL.Matrix.relitiveDirection(1, 0,0,gl.modelviewMatrix);
+    //   rotationUnit.x = GL.Matrix.relitiveDirection(0, 1,0,gl.modelviewMatrix);
+    // }
+    // if (rotationUnit) {
+    //   const speed = 40;
+    //   if (e.deltaY) {
+    //     const dir = e.deltaY < 0 ? -speed : speed;
+    //     rotationOffset[0] += rotationUnit.y[0]/dir;
+    //     rotationOffset[1] += rotationUnit.y[1]/dir;
+    //     rotationOffset[2] += rotationUnit.y[2]/dir;
+    //   }
+    //   if (e.deltaX) {
+    //     const dir = e.deltaX < 0 ? speed : -speed;
+    //     rotationOffset[0] += rotationUnit.x[0]/dir;
+    //     rotationOffset[1] += rotationUnit.x[1]/dir;
+    //     rotationOffset[2] += rotationUnit.x[2]/dir;
+    //   }
+    // }
     // angleY += e.deltaX * 2;
     // angleX += e.deltaY * 2;
     // angleX = Math.max(-90, Math.min(90, angleX));
@@ -225,6 +253,8 @@ function Viewer(csg, width, height, depth) {
   }
   disableScroll(gl.canvas);
 
+  gl.canvas.onmousemove = (...args) => setPointHovered.subtle('3Dhovering', 100, ...args);
+
   let shiftHeld = false;
   window.onkeydown = (e) => {
     shiftHeld = e.key === "Shift" ? true : false;
@@ -250,6 +280,8 @@ function Viewer(csg, width, height, depth) {
     // that.lightingShaders.forEach(s => s.draw(that.mesh, gl.TRIANGLES));
     if (VIEWER_CONTROLS.POLYGONS)
       that.lightingShader.draw(that.mesh, gl.TRIANGLES);
+    if (VIEWER_CONTROLS.AXIS)
+      that.lightingShader.draw(new CSG.Axis(100, 1).toMesh(), gl.TRIANGLES)
     if (!Viewer.lineOverlay) gl.disable(gl.POLYGON_OFFSET_FILL);
 
     if (Viewer.lineOverlay) gl.disable(gl.DEPTH_TEST);
@@ -296,12 +328,21 @@ function Viewer(csg, width, height, depth) {
 
     // gl.loadIdentity();
     applyZoom();
-    gl.rotateAroundPoint(pointClicked, rotationOffset);
+    // const rotIndex = rotationOffset.maxIndex();
+    // const delRotIndex = rotIndex === 0 ? 1 : 0;
+    // if (Math.abs(rotationOffset[rotIndex]) >= 1) {
+    //   const rotAxis = rotIndex === 0 ? [0,Math.round(rotationOffset[1]),0] :
+    //                     [Math.round(rotationOffset[0]),0,0];
+    //   gl.rotateAroundPoint({x:0,y:0,z:0}, [rotationOffset[0],0,0]);
+    //   rotationOffset[rotIndex] = rotationOffset[rotIndex] % 1;
+    //   rotationOffset[delRotIndex] = 0;
+    // }
+    // gl.rotateAroundPoint(pointClicked, rotationOffset);
 
     // gl.rotate(angleX, rotationVector.x, rotationVector.y, rotationVector.z);
     // gl.rotate(angleY, rotationVector.x, rotationVector.y, rotationVector.z);
     // gl.rotate(rotationOffset[2], 0, 0, -1);
-    x = y = angleX = angleY = rotationOffset[0] = rotationOffset[1] = rotationOffset[2] = depth = 0;
+    x = y = angleX = angleY = depth = 0;
     draw();
   };
 

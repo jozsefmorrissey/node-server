@@ -13,6 +13,13 @@ class Resolver {
     }
     this.resolve.inherited = () => {};
     object.resolve = this.resolve;
+
+    this.resolve.NaN = (expr) => Number.isNaN(this.resolve(expr));
+    this.resolve.display = (expr) => {
+      const resolved = this.resolve(expr);
+      if (!Number.isNaN(resolved)) return new Measurement(resolved).display();
+      return this.resolve(expr, true);
+    }
   }
 }
 

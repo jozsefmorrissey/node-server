@@ -12,6 +12,7 @@ const ModelingCollections = require('modeling-collections');
 const CustomEvent = require('../../../../../public/js/utils/custom-event.js');
 const assemblyBuildConfig = require('../../../public/json/cabinets/construction.json');
 const JointSettings = require('../../../web-worker/shared/settings.js');
+const Properties = require('../../config/properties.js');
 const Utils = require('../../utils')
 // const ToModel = require('../../../web-worker/services/to-model.js');
 
@@ -120,6 +121,13 @@ class Assembly extends KeyValue {
     }
     // this.value.defaultFunction = (key) => this.propertyConfig(this.constructor.name, key);
 
+    this.properties = () => {
+      const propGroup = Properties.groups()[this.constructor.name];
+      propGroup.map((p, i) => this.resolve(p.code(), true));
+      console.log(propGroup);
+      return propGroup;
+    }
+
     this.eval = (eqn) => sme.eval(eqn, this);
     this.evalObject = (obj) => sme.evalObject(obj, this);
 
@@ -129,19 +137,17 @@ class Assembly extends KeyValue {
     CustomEvent.all(this, 'change', 'processing');
     let lastHash;
     function hash() {
-      const valueObj = instance.value.values;
-      let hashVal = Object.hash(valueObj) + (instance.id()+'').hash();
-      if (instance.parentAssembly() === undefined) hashVal += `${instance.length()}x${instance.width()}x${instance.thickness()}`.hash();
-      hashVal += Object.hash(instance.config());
+      let hashVal = (instance.id()+'').hash();
+      if (config) hashVal += Object.hash(instance.config());
+      else hashVal += `${instance.length()}x${instance.width()}x${instance.thickness()}`.hash();
       hashVal += keyValHash();
-      const subAssems = Object.values(instance.subassemblies).sortByAttr('id');
+      const subAssems = Object.values(instance.subassemblies);
       for (let index = 0; index < subAssems.length; index++) {
         hashVal += subAssems[index].hash(true);
       }
       if (hashVal !== lastHash) {
         lastHash = hashVal;
         instance.trigger.change();
-        return hash();
       }
       return hashVal;
     }
@@ -711,7 +717,6 @@ Assembly.build = (type, group, config, assembly) => {
 
   return assembly;
 }
-
 
 Assembly.classes = Object.class.object;
 Assembly.new = function (id) {

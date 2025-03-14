@@ -1553,7 +1553,7 @@ CSG.Polygon.prototype = {
   },
   setColor: function(color) {
     const rgb = Color.rgb(color);
-    this.shared = [rgb[0]/255, rgb[1]/255, rgb[2]/255];
+    this.shared = [rgb[0]/255, rgb[1]/255, rgb[2]/255, .6];
   }
 };
 
@@ -1735,11 +1735,11 @@ CSG.Node.prototype = {
   build: function(polygons) {
     if (!polygons.length) return;
     const splits = buildSplitsObjs(this, polygons);
-    do {
+    while (splits.length) {
       const obj = splits.splice(0,1)[0];
       if (!obj.target.plane) obj.target.plane = obj.polys[0].plane.clone();
       splits.concatInPlace(buildSplitsObjs(obj.target, obj.polys));
-    } while (splits.length);
+    }
   }
 };
 

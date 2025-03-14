@@ -436,7 +436,7 @@ class $t {
           if (tidObj) {
             tid = exprToStr(tidObj.tid);
             if (htmlContent && tidObj.tid.length + 2 === tid.length && !$t.templates[tid])
-               eval(`new $t(\`${html}\`, \`${tidObj.tid}\`)`);
+               eval(`new $t(\`${html}\`, ${tid})`);
           } else {
             const t = tid === instance.id() ? instance : eval(`new $t(\`${html}\`)`);
             tid = exprToStr(t.id());

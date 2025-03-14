@@ -29,10 +29,9 @@ const CustomEvent = require('../custom-event.js');
 
 class ElementLoading {
   constructor(elem, percentFunc) {
-    console.log(elem);
     const id = `element-loading-${String.random(7)}`;
     CustomEvent.all(this, 'termination');
-    if (elem.style.position !== '' && elem.style.position !== 'relitive')
+    if (elem.style.position !== '' && elem.style.position !== 'relative')
       console.warn('Element Loading requires elem.style.position === "relitive"\n\tForcing this reality');
     elem.style.position = 'relative';
     const loadingElem = du.create.element('div', {id});

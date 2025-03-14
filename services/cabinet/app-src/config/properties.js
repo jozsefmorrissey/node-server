@@ -18,7 +18,9 @@ const add = (key, ...properties) => {
   if (assemProps[key] !== undefined) throw new Error(`Redifining Property Key ${key}`);
   assemProps[key] = properties;
   properties.forEach((prop) => {
-    if (allProps[prop.code()]) throw new Error(`Redifining Property Code ${prop.code()}`)
+    if (allProps[prop.code()])
+      if (allProps[prop.code()] !== prop)
+        throw new Error(`Redifining Property Code ${prop.code()}`)
     allProps[prop.code()] = prop;
     propertyToSetMap[prop.code()] = key;
   });
@@ -32,10 +34,11 @@ add('Cabinet', Defs.style,Defs.fls,Defs.tid,Defs.dsc,Defs.rvibr,Defs.ddg,Defs.tk
                 Defs.dwh,Defs.doh);
 add('Panel', Defs.pt14,Defs.pt12,Defs.pt34,Defs.pt18,Defs.vpt,Defs.color);
 add('Guides', Defs.dbtos,Defs.dbsos,Defs.dbbos,Defs.dbn,Defs.dbid, Defs.dbdepths);
-add('DoorAndFront', Defs.daffrw,Defs.dafip)
+add('FalseFront', Defs.ft, Defs.fbt, Defs.frw,Defs.fip);
+add('Door', Defs.ft, Defs.fbt, Defs.frw,Defs.fip);
+add('DrawerFront', Defs.ft, Defs.fbt, Defs.frw,Defs.fip);
 // add('Door', [];
 add('DrawerBox', Defs.dbst,Defs.dbbt);
-add('DrawerFront', Defs.mfdfd, Defs.daft, Defs.dafbt);
 // add('Frame', Defs.fw,Defs.ft);
 add('Handle', Defs.c2c,Defs.proj,Defs.pcolor,Defs.heo,Defs.hcco,Defs.hmco);
 add('Hinge', Defs.maxtab,Defs.mintab,Defs.maxol,Defs.minol);

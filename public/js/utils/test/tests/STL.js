@@ -669,10 +669,11 @@ function crownSupportShape(rise, run, backOffset, edgeOffset, bracketWidth, brac
     {x: bracketGerth, y: rise - edgeOffset-bracketGerth, z:0},
     {x: (edgeOffset * rise) / run, y: rise - edgeOffset - bracketGerth, z:0},
 
-
     {y: (edgeOffset * run) / rise, x: run - edgeOffset - bracketGerth, z:0},
     {x: run-edgeOffset-bracketGerth, y:bracketGerth, z:0},
-    {x: backOffset + bracketGerth, y:bracketGerth, z:0}
+    {x: backOffset + bracketGerth, y:bracketGerth, z:0},
+
+    {x: backOffset, y: backOffset, z:0}
   ];
   const poly = CSG.Polygon.fromVertices(points);
   const csg = CSG.fromPolygon(poly, bracketWidth);
@@ -685,7 +686,23 @@ models['crown support'] = (bracketGerth) => {
   let crownSS = crownSupportShape(inch(3.5), inch(3.5), inch(.5), inch(.5), inch(1/2), 0);
   const crownSSCutter = crownSupportShape(inch(3.5), inch(3.5), inch(.5), inch(.5), inch(1/2), inch(.25));
   crownSSCutter.center(crownSS.center());
-  crownSS = crownSS.subtract(crownSSCutter);
+
+  const topSupportCutter = new CSG.cube({demensions: [inch(2.125), inch(.75), 20]});
+  topSupportCutter.center({x: inch(.5 + 1.625), y: inch(.75)/2, z: 0});
+  crownSS = crownSS.subtract(topSupportCutter);
+
+  const backSupportCutter = new CSG.cube({demensions: [inch(.75), inch(2.125), 20]});
+  backSupportCutter.center({y: inch(.5 + 1.625), x: inch(.75)/2, z: 0});
+  crownSS = crownSS.subtract(backSupportCutter);
+
+  const frontCutter = new CSG.cube({demensions: [inch(1), inch(.75), 10]});
+  frontCutter.rotate({z: -45});
+  frontCutter.center({x: inch(3.5)/2, y: inch(3.5)/2, z: 0});
+  frontCutter.translate(new CSG.Vector(-1, -1, 0).unit().times(inch(3/8)));
+  frontCutter.setColor('green');
+  crownSS = crownSS.union(frontCutter);
+
+  // crownSS = crownSS.subtract(crownSSCutter);
   const screwHole = new CSG.cylinder.step([{length: bracketGerth*2}]);
 
   const fontVerts = crownSSCutter.polygons[0].vertices;
@@ -917,7 +934,7 @@ const download = () => {
   addLinks(getSelected(), select.value);
 }
 
-select.value = 'Pull Jig';
+select.value = 'crown support';
 
 du.on.match('change', 'input', updateModel);
 

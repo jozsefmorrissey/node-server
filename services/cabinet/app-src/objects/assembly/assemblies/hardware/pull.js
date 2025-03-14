@@ -15,13 +15,12 @@ class Handle extends Assembly {
   constructor(partCode, partName, location) {
     let instance;
     location ||= Handle.location.CENTER;
-    super('p', 'Handle');
+    super(partCode || 'h', 'Handle');
     this.color = this.value.getterSetter('pcolor', true);
     this.jointSettings.sliceAtOpening(false);
     Object.getSet(this, {location, centerToCenter: 9.6});
     this.partName = () =>
       `${this.parentAssembly().partName()}.Pull.${this.location().position}`;
-    this.partCode = () => partCode;
     this.jointSettings = new JointSettings(false,false,false,false);
     this.locationCode = () => {
       const parent = this.parentAssembly();
@@ -56,13 +55,15 @@ class Handle extends Assembly {
       return parent.pulls().indexOf(this) + 1;
     }
 
-    this.count = (c) => {
+    this.count = () => {
       const parent = this.parentAssembly();
       if (!parent) return 1;
       return parent.pulls().length;
     }
 
     this.projection = () => 2.54;
+
+    this.hash = () => Object.hash(location);
   }
 }
 Handle.location = {};

@@ -10,7 +10,7 @@ class HasPull extends Assembly {
     this.pull = (index) => pulls[index || 0];
     this.addPull = (location) => {
       let handle = location;
-      const partCode = 'pu' + (pulls.length ? pulls.length : '');
+      const partCode = 'h' + (pulls.length ? pulls.length : '');
       if (!(handle instanceof Handle)) handle = new Handle(partCode, 'Pull', location);
       pulls.push(handle);
       this.addSubAssembly(pulls[pulls.length - 1]);
@@ -29,6 +29,8 @@ class HasPull extends Assembly {
       this.subassemblies.deleteAll();
       newPulls.forEach(p => this.addPull(p));
     }
+
+    this.hash = () => Math.hash(...this.hardware.map(g => g.hash()));
   }
 }
 

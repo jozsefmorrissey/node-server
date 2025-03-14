@@ -147,6 +147,7 @@ class ThreeView extends Lookup {
 
     let allLines;
     function drawView () {
+      init();
       getThreeView();
       // instance.build();
 
@@ -163,7 +164,10 @@ class ThreeView extends Lookup {
       elem.value = '';
     }
 
+    let initialized = false;
     function init() {
+      if (initialized) return;
+      initialized = true;
       const canvas = du.find('#object-2d>canvas');
       draw = new Draw2D(canvas);
 
@@ -172,7 +176,6 @@ class ThreeView extends Lookup {
       // panz.disable.move();
       panz.vertexTolerance(1.6);
       panz.lineTolerance(.8);
-      panz.centerOn(0, 0);
 
       du.on.match('change', '[name="partSelector"]', onPartSelect);
     }
@@ -198,7 +201,7 @@ class ThreeView extends Lookup {
     this.isolatePart = (partId, partCode) => {
       targetPart = ThreeView.get(partId);
       setTimeout(() => {
-        panz.once();
+        panz.update(true);
       }, 500);
       const partCodeCnt = du.id(`three-view-part-code-${this.id()}`);
       partCodeCnt.innerText = `${partCode}: ${partId}`;
@@ -217,8 +220,6 @@ class ThreeView extends Lookup {
 
     du.on.match('click', `#${this.id()} .ruler`, rulerClick);
     du.on.match('click', `#${this.id()} [name='side']`, (e) => this.side(e.value));
-
-    setTimeout(init, 1000);
   }
 }
 

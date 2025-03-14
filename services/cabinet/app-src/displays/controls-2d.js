@@ -55,26 +55,26 @@ class Controls2d extends Lookup {
 
     this.on.up((elem, detail) => {
       getLayout().nextLevel();
-      panZ.once();
+      panZ.update(true);
     });
     this.on.down((elem, detail) => {
       getLayout().prevLevel();
-      panZ.once();
+      panZ.update(true);
     });
 
     this.on.right((elem, detail) => {
       panZ.displayTransform.rotate += Math.PI/-4;
-      panZ.once();
+      panZ.update(true);
     });
     this.on.left((elem, detail) => {
       panZ.displayTransform.rotate += Math.PI/4;
-      panZ.once();
+      panZ.update(true);
     });
     this.on.center((elem, detail) => {
       const layout = getLayout();
       if (centerWithin) {
         layout.straightenUp();
-        panZ.once();
+        panZ.update(true);
       } else {
         panZ.centerOn(layout.center().x, layout.center().y);
         centerWithin = true;

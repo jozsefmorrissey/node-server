@@ -1,0 +1,12 @@
+<div>
+  <h3 class='inline-flex chev-dropdown-toggle'>
+    Properties
+    <i class='down gg-chevron-down hidden' ></i>
+    <i class='right gg-chevron-right'></i>
+  </h3>
+  <div class='tab chev-dropdown' hidden>
+    <span:t repeat='prop in properties()'>
+      <div:t t-id="advanced/properties/{{resolve.NaN(prop.code()) ? 'input' : 'measurement'}}"></div:t>
+    </span:t>
+  </div>
+</div>

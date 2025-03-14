@@ -109,41 +109,70 @@ class ModelingConfiguration {
     this.hash = () => hash;
     this.id = () => root.id();
 
-    let assemblies = root.modelingCollections();
     let allAssemblies = root.allAssemblies();
-    const byId = {};
     const propertyConfig = root.group().propertyConfig().values(root.resolve, true);
 
-    allAssemblies.forEach(a => byId[a.id()] = a);
-    assemblies = sortAssemMtdos(assemblies);
-    const nonDigitalList = allAssemblies.filter(a => a instanceof Assembly &&
-                          a.included() && a.part() && !a.digital()).map(a=>a.id());
-    assemblies = assemblies.map(a => a.id());
+    let byId;
+    this.byId = () => {
+      if (!byId) {
+        byId = {};
+        root.allAssemblies().forEach(a => byId[a.id()] = a);
+      }
+      return byId;
+    }
 
-    const complexityMap = {};
-    const jointMap = root.dependencyMap(allAssemblies.filter(a => a.part() && !a.composite()));
-    jointMap.JOINTS.forEach(j => byId[j.id()] = j);
-    allAssemblies = sorter(allAssemblies, jointMap, byId);
-    allAssemblies.forEach(amo => complexityMap[amo.assembly.id()] = amo.complexity());
-    allAssemblies = allAssemblies.filter(amo => amo.assembly.part() && amo.assembly.included())
-                                  .map(amo => amo.assembly.id());
+    let nonDigital, needs2dConverted;
+    function nonDigitalList() {
+      if (!nonDigital) {
+        needs2dConverted = sortAssemMtdos(root.modelingCollections()).map(a => a.id());
+        nonDigital = allAssemblies.filter(a => a instanceof Assembly &&
+              a.included() && a.part() && !a.digital()).map(a=>a.id());
+      }
+      return nonDigital;
+    }
 
-    this.needsModeled = () => allAssemblies;
-    this.needsJoined = () => nonDigitalList;
-    this.needsIntersected = () => nonDigitalList;
-    this.needsUnioned = () => nonDigitalList;
-    this.needs2dConverted = () => assemblies;
+    this.needsJoined = nonDigitalList;
+    this.needsIntersected = nonDigitalList;
+    this.needsUnioned = nonDigitalList;
+    this.needs2dConverted = () => {
+      if (!assemblies) nonDigitalList();
+      return assemblies;
+    }
 
-    this.parts = () => byId;
-    this.jointMap = () => jointMap;
-    this.complexityMap = () => complexityMap;
+    this.parts = byId;
+    let jointMap;
+    this.jointMap = () => {
+      if (jointMap) return jointMap;
+      jointMap = root.dependencyMap(allAssemblies.filter(a => a.part() && !a.composite()));
+      let idMap = this.byId();
+      jointMap.JOINTS.forEach(j => idMap[j.id()] = j);
+      return jointMap;
+    };
+
+    let complexityMap, sortedAssemblies;
+    this.complexityMap = () => {
+      if (!complexityMap) {
+        complexityMap = {};
+        let allAssemblies = sorter(root.allAssemblies(), this.jointMap(), this.byId());
+        allAssemblies.forEach(amo => allAssemblies[amo.assembly.id()] = amo.complexity());
+        sortedAssemblies = allAssemblies.filter(amo => amo.assembly.part() && amo.assembly.included())
+        .map(amo => amo.assembly.id());
+      }
+      return complexityMap;
+    };
+
+    this.needsModeled = () => {
+      if (!sortedAssemblies) this.complexityMap();
+      return sortedAssemblies;
+    };
+
 
     const environmentObject = () => {
       const environment = {};
-      environment.byId = byId;
+      environment.byId = this.byId();
       environment.modelInfo = modelInfoObject();
       environment.propertyConfig = propertyConfig;
-      environment.jointMap = jointMap;
+      environment.jointMap = this.jointMap();
       environment.generated = [];
       return environment;
     }
@@ -200,6 +229,7 @@ class ModelInformation {
     }
 
     this.unioned.silhouettes = () => unionObj.silhouettes;
+    this.unioned.handles = () => unionObj.handles;
     this.unioned.boxOnly = () => unionObj.boxOnly;
     this.unioned.all = () => unionObj;
     this.unioned.set = (data) => {

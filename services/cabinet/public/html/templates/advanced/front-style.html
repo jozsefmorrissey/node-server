@@ -1,0 +1,15 @@
+<div>
+  <h3 class='inline-flex'>
+    Style
+  </h3>
+  <div class='inline-flex' hidden>
+    <select id='front-overlay-select' name='style' prop-input>
+      <option>Overlay</option>
+      <option>Inset</option>
+      <option>Reveal</option>
+    </select>
+    <span class='style-cnt'>
+      <div:t t-id='advanced/front-style/{{resolve("style", true).toLowerCase()}}'></div:t>
+    </span>
+  </div>
+</div>

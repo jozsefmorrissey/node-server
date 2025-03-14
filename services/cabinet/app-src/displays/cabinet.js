@@ -3,7 +3,6 @@
 
 const Show = require('../show.js');
 const Select = require('../../../../public/js/utils/input/styles/select.js');
-const ThreeDMain = require('../displays/three-d-main.js');
 const TwoDLayout = require('../displays/two-d-layout');
 const OpenSectionDisplay = require('./open-section.js');
 const CabinetConfig = require('../config/cabinet-configs.js');
@@ -141,7 +140,7 @@ class CabinetDisplay {
       listElemLable: 'Object'
     };
     const expandList = new ExpandableList(expListProps);
-    expandList.on.after.removal(() => TwoDLayout.panZoom.once());
+    expandList.on.after.removal(() => TwoDLayout.panZoom.update(true));
     this.refresh = () => expandList.refresh();
 
     this.html = expandList.html;
@@ -158,8 +157,7 @@ class CabinetDisplay {
     //   const cabKey = cabinetKey(path);
     //   const decimal = new Measurement(value, true).decimal();
     //   cabKey.cabinet.value(cabKey.key, !Number.isNaN(decimal) ? decimal : value);
-    //   TwoDLayout.panZoom.once();
-    //   ThreeDMain.update(cabKey.cabinet);
+    //   TwoDLayout.panZoom.update(true);
     // }
 
     function attrUpdate(path, value) {
@@ -173,7 +171,7 @@ class CabinetDisplay {
         }
       } if (path.match('[0-9]{1,}\.name')) {
         cabKey.cabinet[cabKey.key].lastCall(value);
-        TwoDLayout.panZoom.once();
+        TwoDLayout.panZoom.update(true);
       }
     }
 

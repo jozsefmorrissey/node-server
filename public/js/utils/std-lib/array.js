@@ -420,10 +420,13 @@ Function.safeStdLibAddition(Array, 'relitiveIndex', function (funcOval, index) {
   }
 });
 
-Function.safeStdLibAddition(Array, 'concatElements', function () {
+Function.safeStdLibAddition(Array, 'concatElements', function (recursive) {
   const elements = this.map(o => o);
   this.deleteAll();
-  elements.forEach(e => Array.isArray(e) && this.concatInPlace(e));
+  elements.forEach(e => {
+    if (Array.isArray(e)) this.concatInPlace(recursive === true ? e.concatElements() : e);
+    else this.push(e);
+  });
   return this;
 });
 

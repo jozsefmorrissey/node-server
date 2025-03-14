@@ -9,7 +9,7 @@ class LayoutHoverMap extends HoverMap2d {
     let layoutHoverEnabled = true;
 
     this.layoutHover = () => {
-      let hover = layout.activeObjects().length === 0;
+      let hover = layout.objects.active().length === 0;
       if (hover !== undefined && layoutHoverEnabled !== hover) {
         layoutHoverEnabled = hover;
         construct();
@@ -35,35 +35,47 @@ class LayoutHoverMap extends HoverMap2d {
       instance.add(mn.midpoints.further, 10, mn, LAYOUT_HM_GROUP);
     }
 
-    let drawMap = false;
-    function construct() {
-      instance.clear();
-      const walls = layout.walls();
-      for (let index = 0; index < walls.length; index++) {
-        const wall = walls[index];
-        const addOnWallFunc = drawMap ? addOnWallLine : addOnWall;
-        wall.windows().forEach(addOnWallFunc);
-        wall.doors().forEach(addOnWallFunc);
-        instance.add(wall[0], 20, null, LAYOUT_HM_GROUP);
-        instance.add(wall, 10, null, LAYOUT_HM_GROUP);
-        const measurement = new LineMeasurement2d(wall, layout.center(), null, layout.reconsileLength(wall));
-        wall.measurment = measurement;
-        instance.add(measurement.midpoints.further, 10, measurement, LAYOUT_HM_GROUP);
-      }
-      const objects = layout.activeObjects();
-      for (let index = 0; index < objects.length; index++) {
-        const snap = objects[index].snap2d.top();
-        const snapLocs = snap.snapLocations();
-        snapLocs.forEach(l => instance.add(l.center, 5, l));
-        if (drawMap) snap.object().lines().forEach(l => instance.add(l, 15));
-        if (!drawMap) instance.add(snap.center, 60, snap);
-      }
+    function buildWall(wall) {
+      const addOnWallFunc = drawMap ? addOnWallLine : addOnWall;
+      wall.windows().forEach(addOnWallFunc);
+      wall.doors().forEach(addOnWallFunc);
+      instance.add(wall[0], 20, null, LAYOUT_HM_GROUP);
+      instance.add(wall, 10, null, LAYOUT_HM_GROUP);
+      const measurement = new LineMeasurement2d(wall, layout.center(), null, layout.reconsileLength(wall));
+      wall.measurment = measurement;
+      return instance.add(measurement.midpoints.further, 10, measurement, LAYOUT_HM_GROUP);
     }
 
-    this.update = () => construct.lastCall('internal update', 500);
+    function buildSnap(snap) {
+      const snapLocs = snap.snapLocations();
+      snapLocs.forEach(l => instance.add(l.center, 5, l));
+      if (drawMap) return snap.object().lines().forEach(l => instance.add(l, 15));
+      if (!drawMap) return instance.add(snap.center, 60, snap);
+    }
+
+    let prevHashMap;
+    let drawMap = false;
+    function construct() {
+      // if (!Global.loaded) return;
+      instance.clear();
+      const walls = layout.walls();
+      let hashMap = new HashMap();
+      for (let index = 0; index < walls.length; index++) {
+        buildWall(walls[index]);
+      }
+      const objects = layout.objects.active();
+      for (let index = 0; index < objects.length; index++) {
+        const snap = objects[index].snap2d.top();
+        const hash = snap.object().hash() + objects[index].hash();
+        buildSnap(snap);
+      }
+      prevHashMap = hashMap;
+    }
+
+    this.update = construct;//() => construct.lastCall('internal update', 500);
 
     construct();
-    layout.on.change(construct);
+    layout.on.change(this.update);
   }
 }
 

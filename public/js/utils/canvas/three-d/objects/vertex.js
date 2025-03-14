@@ -136,7 +136,12 @@ class Vertex3D {
       return `(${rnd(this.x)},${rnd(this.y)},${rnd(this.z)})`;
     }
     this.toDrawString = (color, accuracy) => `${color || 'red'}${this.toString(accuracy)}`;
-    this.hash = () => `(${this.x},${this.y},${this.z})`.hash();
+    this.hash = (percision) => {
+      percision ||= .0001
+      return Math.hash(Math.roundTo(this.x, percision),
+                Math.roundTo(this.y, percision),
+                Math.roundTo(this.z, percision))
+    }
   }
 }
 
@@ -330,9 +335,19 @@ Vertex3D.mostInformation = (vertices) => {
 }
 
 Vertex3D.fromLimits = (limits) => {
-  const x = limits.x; const xn = limits['-x'];
-  const y = limits.y; const yn = limits['-y'];
-  const z = limits.z; const zn = limits['-z'];
+  if (limits['-x'] !== undefined) {
+    limits = {
+      x: {max: limits.x, min: limits['-x']},
+      y: {max: limits.y, min: limits['-y']},
+      z: {max: limits.z, min: limits['-z']}
+    }
+  }
+  if (!limits.z) limits.z = {max:0,min:0};
+
+  const x = limits.x.max; const xn = limits.x.min;
+  const y = limits.y.max; const yn = limits.y.min;
+  const z = limits.z.max; const zn = limits.z.min;
+
   return [
     new Vertex3D(x,y,z),new Vertex3D(xn,y,z),
     new Vertex3D(xn,yn,z),new Vertex3D(x,yn,z),

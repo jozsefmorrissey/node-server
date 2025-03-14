@@ -9,7 +9,6 @@ const Jobs = require('../../web-worker/external/jobs.js');
 const {BiPolygon} = require('../../../../public/js/utils/canvas/three-d/lib');
 const Utils = require('../utils');
 const TaskLoading = require('../services/task-loading.js');
-const switchEvent = new CustomEvent('switch');
 
 let modelDisplayManager;
 
@@ -33,7 +32,7 @@ const applyExtraObjAndDisplay = (csg, info) => {
       }
     }
   }
-  csg.center({x:0,y:0,z:0})
+  // csg.center({x:0,y:0,z:0})
   return csg;
 }
 
@@ -91,7 +90,7 @@ function render() {
 let openTabId;
 const switchTo = (id) => {
   if ((typeof id) === 'string' && getView(id)) openTabId = id;
-  if (render()) switchEvent.trigger(id);
+  if (render()) Canvas.trigger.switch(id);
 };
 
 
@@ -124,6 +123,17 @@ const init = () =>{
   switchTo('room-layout');
 }
 
+ThreeDModel.on.viewer.set((viewer) => {
+  viewer.hoverList.events.LIST.forEach(eName => {
+    viewer.hoverList.on.pathInfo(eName).value((...args) => {
+      const view = getView();
+      const info = view.runOn.pathInfo(eName);
+      if(info && info.value) info.value(...args);
+    });
+  })
+  console.log(viewer);
+})
+
 
 du.on.match('enter', '*', switchTo);
 
@@ -137,9 +147,9 @@ du.on.match('click', '.object.selector', (elem) => {
 
 
 class View {
-  constructor(id, render, set) {
+  constructor(id, render, runOn) {
     this.render = render;
-    this.set = set;
+    this.runOn = runOn || {};
     this.id = () => id;
     this.hidden = (oft) => {
       const elem = du.id(id);
@@ -154,12 +164,18 @@ class View2D extends View { constructor(...args) {super(...args);}}
 
 Canvas = {
   render, views, extraCsgObjects, render3Dmodel, init,
-  on: {switch: switchEvent.on},
   register, View, View2D, View3D,
-  view: getView,
-  views: (id) => views.find(v => v.id())
+  view: getView
 };
+
+CustomEvent.all(Canvas, 'switch', 'explosionFactor');
 
 module.exports = Canvas;
 Object.getSet(Canvas, 'explosionFactor');
-Canvas.explosionFactor(1.1);
+Canvas.explosionFactor(2);
+
+du.on.match('change', '[name="explosionFactor"]', (elem) => {
+  const factor = 1 + Number.parseInt(elem.value)/10;
+  Canvas.explosionFactor(factor);
+  Canvas.render.lastCall('explosionFactorUpdate');
+})
