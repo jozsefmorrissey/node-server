@@ -47,6 +47,7 @@ function register(view) {
 }
 
 function renderEdit(template) {
+  if (!template) return;
   const target = Global.target();
   views.forEach(v => v.hidden(true));
   editCnt.innerHTML = template.render(target);

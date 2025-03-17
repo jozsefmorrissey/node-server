@@ -1025,7 +1025,7 @@ th.edge-ref>div {
   margin-top: 5pt;
 }
 
-#view-html-cnt {
+#canvas-modification-cnt {
   border-left: solid;
   border-width: 1px;
   padding-left: 5px;
@@ -1096,4 +1096,8 @@ i.active,
 
 #du-error-msg-cnt.expanded .header {
   display: none;
+}
+
+.half-height {
+  height: 50%;
 }

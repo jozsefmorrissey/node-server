@@ -10,6 +10,7 @@ function render(managementCall) {
   const ctid = String.random();
   const ct = CompTime('Room 3D Render', ctid);
   new Jobs.CSG.Room.Simple(Global.room()).then((result, job) => {
+    if (Canvas.view().id() !== 'room-3d') return;
     const room = Global.room();
     const layout = room.layout();
     layout.modelInformation(result);
