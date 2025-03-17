@@ -61,9 +61,13 @@ function renderView(view) {
   view.hidden(false);
   du.id('three-d-model').hidden = !(view instanceof View3D)
   if (view !== lastState.view || target !== lastState.target) {
-    lastState = {view, target};
+    const newState = {view, target};
+    Canvas.trigger.switch.before({lastState, newState})
+    lastState = newState;
     htmlContentCnt.innerHTML = '';
     htmlContentCnt.innerHTML = view.render() || view.id();
+    Canvas.trigger.switch({lastState, newState});
+    if (view instanceof View3D)ThreeDModel.orientArrows().front();
     return true;
   }
   return false;
@@ -81,16 +85,15 @@ function render() {
   const view = getView();
   if (Global.target.is.group()) renderEdit(groupEditTemplate);
   else if (Global.target.is.room()) renderEdit(roomEditTemplate);
-  else if (view) return renderView(view);
+  else if (view) renderView(view);
   else views.forEach(v => v.hidden(true));
-  return false;
 }
 
 
 let openTabId;
 const switchTo = (id) => {
-  if ((typeof id) === 'string' && getView(id)) openTabId = id;
-  if (render()) Canvas.trigger.switch(id);
+  if ((typeof id) === 'string') openTabId = id;
+  render();
 };
 
 
@@ -162,13 +165,17 @@ class View {
 class View3D extends View { constructor(...args) {super(...args);}}
 class View2D extends View { constructor(...args) {super(...args);}}
 
+const updateView = () => {
+  Canvas.view().render()
+}
+
 Canvas = {
   render, views, extraCsgObjects, render3Dmodel, init,
-  register, View, View2D, View3D,
+  register, View, View2D, View3D, updateView,
   view: getView
 };
 
-CustomEvent.all(Canvas, 'switch', 'explosionFactor');
+CustomEvent.all(Canvas, 'switch', 'explosionFactor', 'switch.before');
 
 module.exports = Canvas;
 Object.getSet(Canvas, 'explosionFactor');

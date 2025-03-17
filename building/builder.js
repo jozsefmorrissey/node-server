@@ -1,7 +1,7 @@
 const fs = require('fs');
 const shell = require('shelljs');
 const { Mutex, Semaphore } = require('async-mutex');
-require('../arguement-parcer');
+require('../public/js/utils/parse-arguments');
 
 class Builder {
   constructor(onChange, onUpdate, watchFiles) {
@@ -22,7 +22,7 @@ class Builder {
           if (err) {
             console.error(err);
           }
-          onChange(file.name, contents, position);
+          onChange && onChange(file.name, contents, position);
           setTimeout(notify, 300);
         }
         fs.readFile(file.name, 'utf8', read);

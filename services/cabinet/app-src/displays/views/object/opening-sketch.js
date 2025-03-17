@@ -19,7 +19,7 @@ const Jobs = require('../../../../web-worker/external/jobs.js');
 const rotatedLineFunc = (coDirRotz, center) => (p1, p2) =>
     new Line3D(p1,p2).rotate(coDirRotz, center);
 const inputs = require('../../../input/inputs.js');
-const Controller = require('../controllers/object/layout');
+const EditDisplays = require('../../part/edit.js');
 
 
 const sectionTemplate = new $t('divider-controls');
@@ -293,27 +293,14 @@ class OpeningSketch {
       }
     }
 
-
-    const dividerTemplate = new $t('advanced/cabinet/divider');
-    const toeKickTemplate = new $t('cabinet/toe-kick');
-    const Displays = {
-      OpeningToeKick: (toeKick) => toeKickTemplate.render({toeKick, inputs, Measurement}),
-      Divider: (divider) => dividerTemplate.render({divider, inputs, Measurement}),
-      SectionProperties: (section) => {
-        const patterInputHtml = Controller.patterInputHtml(section);
-        const scope = {section, inputs, patterInputHtml};
-        return Controller.html(section);
-      }
-    }
-
     let selected;
     function updateDisplay(targetObj) {
       if (!targetObj) return;
       selected = targetObj;
       const center = targetObj.center;
       let target = targetObj.target;
-      if(!Displays[target.constructor.name]) return;
-      const html = Displays[target.constructor.name](target);
+      if(!EditDisplays[target.constructor.name]) return;
+      const html = EditDisplays[target.constructor.name](target);
       du.find('.obj-layout-cnt').innerHTML = html;
     }
 

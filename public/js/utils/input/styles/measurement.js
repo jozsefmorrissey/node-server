@@ -8,10 +8,11 @@ const du = require('../../dom-utils');
 const Lookup = require('../../object/lookup.js');
 
 /** Supported html "directive"
-  <input class='measurement-input' name='crownHeight'
+  <measurement-input name='crownHeight'
+            decimal='4.3' units='inch,cm,mm'></measurement-input>
+  <input type='measurement' name='crownHeight'
             decimal='4.3' units='inch,cm,mm'>
-<measurement-input name='crownHeight'
-          decimal='4.3' units='inch,cm,mm'/>
+
 **/
 class MeasurementInput extends Input {
   constructor(props) {
@@ -41,6 +42,7 @@ class MeasurementInput extends Input {
       return valid;
     }
     this.measurement = () => value;
+    this.decimal = () => value.decimal();
 
     props.errorMsg = 'Invalid Mathematical Expression';
     this.value = () => {
@@ -130,6 +132,6 @@ function setValue(elem) {
 
 du.on.match('click', '.measurement-input-cnt [type="radio"]', convert);
 du.on.match('change,focusout', '.measurement-input', setValue);
-du.on.match('create', '.measurement-input[decimal],measurement-input[decimal]', initialize);
+du.on.match('create', 'input[type="measurement"][decimal],measurement-input[decimal]', initialize);
 
 module.exports = MeasurementInput;

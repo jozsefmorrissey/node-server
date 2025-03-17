@@ -12,8 +12,13 @@ class HtmlBundler extends Bundler {
     shell.touch(fileDumpLoc);
     cleanNameFunc = cleanNameFunc || ((name) => name.replace(/^(.*)\.html$/, '$1'));
     this.change = (filename, contents) => {
-      if (!filename) return;
-      new $t(contents, cleanNameFunc(filename));
+      try {
+        if (!filename) return;
+        new $t(contents, cleanNameFunc(filename));
+      } catch (e) {
+        Bundler.alarm();
+        console.error(e);
+      }
     }
 
     this.write = () => {
@@ -22,7 +27,8 @@ class HtmlBundler extends Bundler {
         console.log('Writing file', fileDumpLoc)
         fs.writeFileSync(fileDumpLoc, $t.dumpTemplates(true));
       } catch (e) {
-        console.log(e);
+        Bundler.alarm();
+        console.error(e);
       }
     }
   }

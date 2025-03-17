@@ -20,16 +20,23 @@ function getValue(str) {
 }
 
 const valueRegex = /[A-Z.a-z]{1,}=.*$/;
+const booleanRegex = /\-[a-zA-Z0-9]{1,}/;
 function argParser() {
   for (let index = 2; index < process.argv.length; index += 1) {
     const arg = process.argv[index];
+    console.log(arg);
     if (arg.match(valueRegex)) {
       const varName = arg.split('=', 1)[0];
       const valueStr = arg.substr(varName.length + 1);
       global[varName] = getValue(valueStr.trim());
+    } else if (arg.match(booleanRegex)) {
+      const varName = arg.split('-')[1];
+      global[varName] = true;
     }
   }
+  console.log(global.hello)
 }
+
 
 global.__basedir = __dirname;
 argParser();

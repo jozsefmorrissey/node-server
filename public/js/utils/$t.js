@@ -28,7 +28,7 @@ class $t {
     const signProps = {opening: /([-+\!])/};
     const ternaryProps = {opening: /\?/};
     const keyWordProps = {opening: /(new|null|undefined|typeof|NaN|true|false)[^a-z^A-Z]/, tailOffset: -1};
-          const ignoreProps = {opening: /new \$t\(.*?\).render\(.*?, (.*?), get\)|\$t\.clean\(.*?\)/};
+    const ignoreProps = {opening: /new \$t\(.*?\).render\(.*?, (.*?), get\)|\$t\.clean\(.*?\)/};
     const commaProps = {opening: /,/};
     const colonProps = {opening: /:/};
     const multiplierProps = {opening: /([-+*\/%](=|))/};
@@ -387,7 +387,8 @@ class $t {
     }
 
     function resolve(str) {
-      return ExprDef.parse(expression, str);
+      const resolved = ExprDef.parse(expression, str, true);
+      return resolved ? resolved : `Failed to parse Expression:\n\t${str}`;
     }
 
     function compile(strToCompile) {
@@ -406,16 +407,18 @@ class $t {
     const repeatReg = /(?: |^)repeat=("|')([^>^\1]*?)\s{1,}in\s{1,}([^>^\1]*?)\1/;
     const tidReg = /(?: |^)t-id=("|')([^>^\1]*?)\1/;
 
-		function resolveScope (scope, repeatScope) {
-			let resolvedScope = `get("${scope || 'scope'}")`;
+		function resolveScope (contents, repeatScope) {
+      let resolvedScope;
 			if (repeatScope) {
 				if (repeatScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
 					resolvedScope = `'${repeatScope}'`;
 				} else {
-					resolvedScope = ExprDef.parse(expression, repeatScope);
+					resolvedScope = ExprDef.parse(expression, repeatScope, true);
 				}
-			}
-			return resolvedScope;
+			} else if (contents && contents.trim()) {
+          resolvedScope = ExprDef.parse(expression, contents, true);
+      }
+			return resolvedScope || "get('scope')";
 		}
 
     function toJsFormat(string) {
@@ -428,7 +431,6 @@ class $t {
         const {variables, repeatScope} = repeatObj ? repeatObj : {};
         const tidObj = tidReg.object(attrs, null, 'tid');
         const htmlContent = contents && contents.match(/\{\{.*?\}\}/) !== null;
-        const scope = !htmlContent && contents && contents.trim().indexOf(' ') === -1 ? contents.trim() : null;
         let html = `<${tagName} ${attrs}>${contents ||''}</${tagName}>`.replace(/(?<!\\)`/g, '\\`');
 				attrs = attrs.replace(tagReg.g(), '').replace(repeatReg.g(), '');
         let tid;
@@ -441,7 +443,7 @@ class $t {
             const t = tid === instance.id() ? instance : eval(`new $t(\`${html}\`)`);
             tid = exprToStr(t.id());
           }
-          let resolvedScope = resolveScope(scope, repeatScope);
+          let resolvedScope = resolveScope(contents, repeatScope);
 					const varStr = variables ? `'${variables}'` : undefined;
           string = string.replace(obj[0], `{{ new $t(${tid}).render(${resolvedScope}, ${varStr}, get)}}`);
         } catch (e) {

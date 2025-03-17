@@ -299,13 +299,6 @@ ${intersectionLayers[obj.ii].toDrawString('blue')}\n\n`;
   console.log(drawStr);
 }
 
-// let partModels = {};
-// let time = 0;
-// const start = new Date().getTime();
-// const end = new Date().getTime();
-// time += end - start;
-// console.log(time / 1000);
-
 function partModelInfo(partId, maleId, env, jointInfo) {
   const intersectionMap = env.modelInfo.intersection[partId];
   const intersectionModel = intersectionMap && ensureCsg(intersectionMap[maleId]);

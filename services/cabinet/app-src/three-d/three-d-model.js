@@ -11,7 +11,7 @@ const Global = require('../services/global');
 
 const ThreeDModel = {};
 
-let viewer;
+let viewer, orientArrows;
 let viewerSelector = '#three-d-model';
 let viewerSize = '90vh';
 ThreeDModel.getViewer = (model) => {
@@ -23,11 +23,13 @@ ThreeDModel.getViewer = (model) => {
     viewer = new Viewer(model, size, size, 50);
     addViewer(viewer, viewerSelector);
     const orientSelector = `${viewerSelector} .orientation-controls`;
-    const orientArrows = OrientationControls.forCSG(orientSelector, viewer, () => ThreeDModel.lastRendered);
+    orientArrows = OrientationControls.forCSG(orientSelector, viewer, () => ThreeDModel.lastRendered);
     ThreeDModel.trigger.viewer.set(viewer);
   }
   return viewer;
 }
+
+ThreeDModel.orientArrows = () => orientArrows;
 
 ThreeDModel.display = (displayModel) => {
   if (displayModel instanceof CSG) {

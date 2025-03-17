@@ -21,7 +21,9 @@ exports['controls/viewer'] = (get, $t) =>
 		$t.clean(get("CONTROLS").AXIS ? 'checked' : '') +
 		`> <br> <label>Background Color</label> <input type="color" value="` +
 		$t.clean(get("CONTROLS").BACKGROUND_COLOR) +
-		`" name='background-color'> `
+		`" name='background-color'> <br> <label>Hover And Click</label> <input type="checkbox" ` +
+		$t.clean(get("CONTROLS").HOVER_AND_CLICK ? 'checked' : '') +
+		` name='hover-and-click'> `
 
 exports['input/measurement'] = (get, $t) => 
 		`<div class='fit input-cnt measurement-input-cnt'` +

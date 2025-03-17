@@ -172,31 +172,3 @@ class CredentialNotActive extends Error {
   }
 }
 exports.CredentialNotActive = CredentialNotActive;
-
-
-// class  extends Error {
-//   constructor(words) {
-//     super(``);
-//     this.name = "";
-//     this.status = ;
-//   }
-// }
-//exports. = ;
-//
-// class  extends Error {
-//   constructor(words) {
-//     super(``);
-//     this.name = "";
-//     this.status = ;
-//   }
-// }
-//exports. = ;
-//
-// class  extends Error {
-//   constructor(words) {
-//     super(``);
-//     this.name = "";
-//     this.status = ;
-//   }
-// }
-//exports. = ;

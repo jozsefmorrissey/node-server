@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <style media="screen">
+      [title-template] {
+        position: fixed;
+        top: 50%;
+        right: 50%;
+        transform: translate(50%, -50%);
+        text-align: center;
+      }
+      html {
+        zoom: 250%;
+        cursor: none;
+      }
+      img {
+        max-height: 125pt;
+        display: flex;
+      }
+      .pics {
+        display: inline-flex;
+      }
+      h2,.subTitle {
+          white-space: nowrap;
+      }
+
+    </style>
+  </head>
+  <body>
+    <h3 hidden id='shutup'>Shut Up!</h3>
+    <div hidden title-template>
+      <h1 class='romanNumberal'></h1>
+      <h2 class='title'></h2>
+      <h4 class='subTitle'></h4>
+      <div class='pics'></div>
+    </div>
+
+    <ol type='I' id='slides'></ol>
+
+    <script type="text/javascript">
+      // Thanks Google AI!
+      function intToRoman(num) {
+        const values = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+        const numerals = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"];
+
+        let result = "";
+        for (let i = 0; i < values.length; i++) {
+          while (num >= values[i]) {
+            result += numerals[i];
+            num -= values[i];
+          }
+        }
+        return result;
+      }
+
+      const images = (links) => links.map(o => `<a href='${o.link}'><img src='${o.image}'/></a>`).join('\n');
+
+      const organizationPics = [{
+          image: `https://preview.redd.it/am-i-the-only-one-who-seriously-struggles-with-keeping-an-v0-zwndu81p72d81.jpg?width=1080&crop=smart&auto=webp&s=2cf72693458b4b6b7b59d206cb42275a7927c916`
+        },{
+          link: 'http://www.inthewoodshop.com/Furniture/MyWorkshop.html',
+          image: 'http://www.inthewoodshop.com/Furniture/MyWorkshop_html_451e949a.jpg'
+        }
+      ];
+
+      const slides = [
+        {title: '10 Commandments of "Complex" Programming', subTitle: '(3 Commandments of All Programming)'},
+        {title: 'Small Functions', subTitle: '(<15 lines)'},
+        {title: 'Effective Naming'},
+        {title: 'Refactoring/Organization'},
+        {title: 'No Rules', subTitle: '(try different things explore what is possible)'},
+        {title: 'No Comments', subTitle: '(There are valid reasons No rules remeber)'},
+        {title: 'Do Not Use Frame Works'},
+        {title: 'Avoid Using External Libraries'},
+        {title: 'DONT WRITE IN JAVA', subTitle: '(I appoligize Oracal again this is for complex(computationaly heavy) programs)'},
+        {title: 'Work In Linux', subTitle: '(Enough Said)'},
+        {title: 'With Great Power Comes Great Responsibility'},
+
+        {title: `Small Functions(${intToRoman(1)}) & Effective Naming(${intToRoman(2)}) & Refactoring/Organization(${intToRoman(3)})`, subTitle: '(not likely to fail< 5)<br>(great < 15)<br>(okay < 25)<br>(what are you doing < 30)<br>(30 < this really needs fixed)', pics: images(organizationPics)},
+        {title: `No Comments(${intToRoman(4)})`, subTitle: '(usage/todo/remove)'},
+        {title: `No Rules(${intToRoman(5)})`, subTitle: '(Mash/eslint)'},
+        {title: `Avoid Using External Libraries(${intToRoman(7)})`},
+        {title: `Do Not Use Frame Works(${intToRoman(6)}) & DONT WRITE IN JAVA(${intToRoman(8)})<br>Use Linux(${intToRoman(9)})`},
+        {title: `With Great Power Comes Great Responsibility(${intToRoman(10)})`, subTitle: '(regex)'},
+      ];
+
+      const slidesElem = document.getElementById('slides');
+      const template = document.querySelector('[title-template]');
+      template.remove();
+      function addSlide(slide, i) {
+        const slideElem = template.cloneNode(true);
+        if (i <= 10)slide.romanNumberal = intToRoman(i);
+        slideElem.setAttribute('index', i);
+        if (i === 0) slideElem.hidden = false;
+        Object.keys(slide).forEach((clazz, i) =>  {
+          const elem = slideElem.querySelector(`.${clazz}`);
+          elem.innerHTML = slide[clazz];
+          slidesElem.append(slideElem);
+        });
+      }
+
+      const activeElement = () => {
+        const openElems = Array.from(document.querySelectorAll('[title-template]'));
+        return openElems.find(e => e.hidden === false);
+      }
+
+      const activeIndex = () => Number.parseInt(activeElement().getAttribute('index'));
+
+      const shutupElem = document.getElementById('shutup');
+      const stopTalking = (index) => {
+        if (index < 10 && activeIndex() === index) {
+          shutupElem.hidden = false;
+        }
+      }
+
+      slides.forEach(addSlide);
+      document.addEventListener('keyup', (event) => {
+        const offset = event.key === 'ArrowRight' ? 1 : (event.key === 'ArrowLeft') ? -1 : 0;
+        if (!offset) return;
+        const openElem = activeElement();
+        let index = activeIndex();
+        index += offset;
+        if (index > slides.length - 1) index = 0;
+        if (index < 0) index = slides.length - 1;
+        shutupElem.hidden = true;
+        openElem.hidden = true;
+        document.querySelector(`[title-template][index='${index}']`).hidden = false;
+        setTimeout(() => stopTalking(index), 15000);
+      });
+    </script>
+  </body>
+</html>

@@ -12,10 +12,6 @@ new Builder(htmlBundler.change, htmlBundler.write, !global.build)
         .add('../../public/html/templates/')
         .add('./public/html/templates/');
 
-
-
-
-
 const ENPTSTemplate = `const Endpoints = require('../../../public/js/utils/endpoints.js');
 const json = require('../public/json/endpoints.json');
 module.exports = new Endpoints(json, '${global.ENV}').getFuncObj();`;

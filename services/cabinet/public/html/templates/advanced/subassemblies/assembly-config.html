@@ -1,21 +1,20 @@
-<div id='{{id()}}'>
-  <div class='sub-demension-cnt inline-flex'>
-    {{demension.html()}}
-    <input attr='subassemblies' name='demension' value='{{demension.eqn()}}'>
-    <input disabled class='measurement-input' name='value' value='{{demension.value()}}'>
-    <input type="checkbox" name="convert" checked>
-  </div>
-  <br>
-  <div class='sub-center-cnt inline-flex'>
-    {{center.html()}}
-    <input attr='subassemblies' name='center' value='{{center.eqn()}}'>
-    <input disabled class='measurement-input' name='value' value='{{center.value()}}'>
-    <input type="checkbox" name="convert" checked>
-  </div>
-  <br>
-  <div class='sub-rotation-cnt inline-flex'>
-    {{rotation.html()}}
-    <input attr='subassemblies' name='rotation' value='{{rotation.eqn()}}'>
-    <input disabled class='measurement-input' name='value' value='{{rotation.value()}}'>
-  </div>
+<div>
+  <div:t t-id='advanced/input/xyz'>{
+    label: 'Demension',
+    x: void.width(),
+    y: void.length(),
+    z: void.thickness()
+    }</div:t>
+    <div:t t-id='advanced/input/xyz'>{
+      label: 'Center',
+      x: void.width(),
+      y: void.length(),
+      z: void.thickness()
+      }</div:t>
+    <div:t t-id='advanced/input/xyz'>{
+      label: 'Rotation',
+      x: void.width(),
+      y: void.length(),
+      z: void.thickness()
+      }</div:t>
 </div>

@@ -7,40 +7,17 @@ const Lookup = require('../../../../../../public/js/utils/object/lookup.js');
 const $t = require('../../../../../../public/js/utils/$t.js');
 const du = require('../../../../../../public/js/utils/dom-utils.js');
 const Properties = require('../../../config/properties.js');
-
-const typeTemplateMap = {};
-
-['divider', 'door', 'drawer-box', 'opening-toe-kick', 'panel']
-  .forEach(type => typeTemplateMap[type.toCamelCap()] = new $t(`views/parts/type/${type}`));
-
-const set = {};
-let locationPrefix, locationCode, _parts, ufidPrefix;
-let openTabId;
-let hoverList, selected;
-const resetAll = () => locationCode = _parts = locationPrefix = ufidPrefix = undefined;
-const lcPrefixFilter = p => p.locationCode().match(`^${locationPrefix}($|:)`);
-const pcPrefixFilter = p => p.userFriendlyId().match(`^${ufidPrefix}`);
-set.locationPrefix = (lp) =>
-  resetAll() & (locationPrefix = lp);
-set.ufidPrefix = (pc) =>
-  resetAll() & (ufidPrefix = pc);
-set.locationCode = (lc) =>
-  resetAll() & (locationCode = lc);
-set.parts = (parts) =>
-  resetAll() & (_parts = parts);
+const EditDisplays = require('../../part/edit.js');
 
 const runOn = {
   hover: (target) => {
-    console.log(target.payload.locationCode());
     render(target);
   },
   click: (target) => {
     selected = target.payload;
-    console.log(selected)
     const parent = target.payload.parentAssembly();
-    const assem = typeTemplateMap[parent.constructor.name] ? parent : target.payload;
-    const template = typeTemplateMap[assem.constructor.name];
-    let html = template ? template.render(target.payload) : '?????';
+    const assem = EditDisplays[parent.constructor.name] ? parent : target.payload;
+    let html = EditDisplays[assem.constructor.name] ? EditDisplays[assem.constructor.name](assem) : 'Coming Soon????... Perhaps';
     const partCnt = du.id('parts-3D-selected-cnt');
     partCnt.innerHTML = html;
     partCnt.setAttribute('lookup-id', assem.id());
@@ -71,20 +48,6 @@ function relatedParts(maleOfemale, id, jointMap) {
 }
 
 let jointMap, partModelMap;
-
-function isolateParts() {
-  let parts;
-  const cabinet = Global.target();
-  if (locationPrefix) parts = cabinet.getParts().filter(lcPrefixFilter);
-  else if (ufidPrefix) parts = cabinet.getParts().filter(pcPrefixFilter);
-  else if (locationCode) parts = [cabinet.getAssembly(locationCode)];
-  else if (_parts) parts = _parts;
-  if (!parts || parts.length === 0) {
-    resetAll();
-    parts = cabinet.modelingCollections();
-  }
-  return parts.filter(p => p.part() && p.included() && !p.composite() && !p.digital());
-}
 
 const hoverColor = 'yellow';
 function concatModels(parts, hovering, color) {
@@ -120,7 +83,7 @@ function updateHoverList() {
 Canvas.on.explosionFactor(updateHoverList);
 
 function render(hovering) {
-  const parts = hovering && hovering.payload ? [hovering.payload] : isolateParts();
+  const parts = hovering && hovering.payload ? [hovering.payload] : Global.assembly().modelingCollections();
   if (parts.length > 1) {
     Canvas.render3Dmodel(concatModels(parts, hovering));
   } else {

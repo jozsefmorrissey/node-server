@@ -68,7 +68,6 @@ let axis = {include: true, length: 100,
     radius: (r) => r !== undefined ? (axis.radius.len = r) : axis.radius.len || (axis.length / 100)};
 const points = [[0,1,0], [0,2,0],[1,3,0],[2,3,0],[3,2,0],[3,1,0],[2,0,0],[1,0,0]];
 let model;
-viewer = getViewer(model);
 
 let scale;
 const num = (str) => Number.parseFloat(str) * (scale || 1);

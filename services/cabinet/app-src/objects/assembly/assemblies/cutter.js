@@ -15,8 +15,6 @@ class Cutter extends Assembly {
     this.jointSettings.extend(false)
     this.jointSettings.extendTo(false)
     this.digital(true);
-
-    this.hash = () => 999;
   }
 }
 

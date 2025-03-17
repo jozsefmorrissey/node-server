@@ -10,7 +10,7 @@ function addScript(id, src) {
 
 if (db.getHost() && dg.isDebugging() && DebugGuiClient.inBrowser) {
   if ((typeof ShortCutContainer) === 'undefined') {
-    addScript('ssc-unique-id', 'https://node.jozsefmorrissey.com/js/short-cut-container.js');
+    addScript('ssc-unique-id', 'https://node.jozsefmorrissey.com/debug-gu/js/short-cut-container.js');
   }
   addScript(DebugGuiClient.EXISTANCE_ID, `${getHost()}/js/debug-gui-client.js`);
   addScript(DebugGuiClient.UI_EXISTANCE_ID, `${getHost()}/js/debug-gui.js`);

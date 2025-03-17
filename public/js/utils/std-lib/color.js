@@ -20,7 +20,7 @@ const distinct = ['red', 'yellow', 'blue', 'green', 'purple', 'black']
 
 Color = () => colors[colorIndex % colors.length];
 Color.getName = function (color) {
-  if (!Array.isArray(color)) return '';
+  color = Color.rgb(color);
   const strKey = color.map(v => Math.round(v * 255)).join(',');
   return colorsCodeMap[strKey] || strKey;
 }
@@ -115,7 +115,9 @@ function hslToRgb(h, s, l) {
 function getRgb(color, deFault) {
   if (deFault === undefined) deFault = [0,0,0];
   if (Array.isArray(color)) {
-    if (color[0] < 1) return color.map(v => Math.floor(v*255));
+    if (color.findIndex(v => v < 1) === -1) return color;
+    else if (color.findIndex(v => v > 0) !== -1)
+      return color.map(v => Math.floor(v*255));
     return color;
   }
   if (color instanceof Object) return Color.hslToRgb(color) || deFault;
@@ -127,7 +129,7 @@ function getRgb(color, deFault) {
 
 const getHex = (color) => rgbToHex(getRgb(color));
 const getHexShortHand = (color) => rgbToHex(getRgb(color)).replace(/(#.).(.).(.)./, '$1$2$3');
-const rgbPercent = (color) => getRgb(color).map(v => v/255);
+const rgbPercent = (color) => getRgb(color).map(v => (v/255) === 1 ? .9999 : v/255);
 
 Color.hexToRgb = hexToRgb;
 Color.rgbToHex = rgbToHex;
@@ -138,6 +140,11 @@ Color.hex = getHex;
 Color.rgb.percent = rgbPercent;
 Color.hex.short = getHexShortHand;
 
-Color.regex = /([a-z]{1,})|(${intRegStr},${intRegStr},${intRegStr})/;
-Color.fromString = (str) => null === str.match(Color.regex) ? null :
-                      Color.rgb(str.match(Color.regex)[0]);
+const intRegStr = (/[0-9]{1,}/).source;
+Color.regex = new RegExp(`([a-z]{1,})|(${intRegStr},${intRegStr},${intRegStr})`);
+Color.fromString = (str) =>  {
+  const match = str.match(Color.regex);
+  if (null === match) return null;
+  if (match[2]) return Color.rgb(match[2].split(',').map(s=>Number.parseInt(s)));
+  else return Color.rgb(match[1]);
+}

@@ -3,7 +3,6 @@ require('../../public/js/utils/std-lib/init')
 const fs = require('fs');
 const shell = require('shelljs');
 const $t = require('../../public/js/utils/$t');
-$t.loadFunctions(require('./generated/html-templates'));
 
 const dxfDownloadLink = require('./src/export/dxf').downloadLink;
 const { User, UnAuthorized } = require('./src/user');
@@ -11,6 +10,23 @@ const { emailSvc } = require('./src/email');
 const Endpoints = require('../../public/js/utils/endpoints');
 const EPNTS = new Endpoints(require('./public/json/endpoints.json')).getFuncObj();
 // require('./src/scrape/scrape');
+
+let orderTemplate = new $t('order');
+
+const loadTemplates = () => {
+  console.log('Loading..............................')
+  delete require.cache[require.resolve('./generated/html-templates')];
+  $t.loadFunctions(require('./generated/html-templates'));
+  orderTemplate = new $t('order');
+}
+if (global.build) {
+  setTimeout(loadTemplates, 10000);
+} else {
+  loadTemplates();
+  const Builder = require('../../building/builder');
+  new Builder(null, loadTemplates, true).add('./services/cabinet/generated/html-templates.js');
+}
+
 
 const success = (res) => () => res.send('success');
 const fail = (next) => (e) => next(e);
@@ -49,7 +65,6 @@ function orderElem(req, res) {
 }
 
 const indexTemplate = new $t('index');
-const orderTemplate = new $t('order');
 const orderRedirectTemplate = new $t('order-redirect');
 const projectsTemplate = new $t('static-page');
 function servePage(pageId, scope) {

@@ -6,6 +6,7 @@ const CSG = require('./csg.js');
 const GL = require('./lightgl.js');
 const shaders = require('./shaders.js');
 const ViewerHoverList = require('../canvas/three-d/viewer-hover-list.js');
+const CustomEvent = require('../custom-event');
 
 const VIEWER_CONTROLS = {
   POLYGONS: true,
@@ -13,7 +14,8 @@ const VIEWER_CONTROLS = {
   WIREFRAME: false,
   AXIS: false,
   BACKGROUND_COLOR: '#00ffff',
-  OUTLINE_COLOR: '#000000'
+  OUTLINE_COLOR: '#000000',
+  HOVER_AND_CLICK: true
 }
 
 CSG.prototype.toLineMesh = function() {
@@ -47,7 +49,8 @@ CSG.prototype.toMesh = function() {
   var indexer = new GL.Indexer();
   this.toPolygons().map(function(polygon) {
     var indices = polygon.vertices.map(function(vertex) {
-      vertex.color = polygon.shared || [1, 1, 1];
+      vertex.color = polygon.shared || [1, 1, 1, 1];
+      if(!vertex.color[3])vertex.color[3] = 1;
       return indexer.add(vertex);
     });
     for (var i = 2; i < indices.length; i++) {
@@ -177,6 +180,7 @@ function Viewer(csg, width, height, depth) {
   let origCenter = {x:0, y:0};
   let pointClicked = {x: 0, y: 0, z: 0};
   function setPointClicked(e) {
+    if (shiftHeld || !VIEWER_CONTROLS.HOVER_AND_CLICK) return;
     const info = pointInfo(e);
     instance.hoverList.click(info.pos, info.relitivePos, info.bounds);
   }
@@ -185,6 +189,7 @@ function Viewer(csg, width, height, depth) {
   this.hoverList = new ViewerHoverList();
 
   function setPointHovered(e) {
+    if (shiftHeld || !VIEWER_CONTROLS.HOVER_AND_CLICK) return;
     const info = pointInfo(e);
     instance.hoverList.hover(info.pos, info.relitivePos, info.bounds);
   }
@@ -253,7 +258,7 @@ function Viewer(csg, width, height, depth) {
   }
   disableScroll(gl.canvas);
 
-  gl.canvas.onmousemove = (...args) => setPointHovered.subtle('3Dhovering', 100, ...args);
+  gl.canvas.onmousemove = (...args) => setPointHovered.subtle('3Dhovering', 50, ...args);
 
   let shiftHeld = false;
   window.onkeydown = (e) => {

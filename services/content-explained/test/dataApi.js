@@ -622,28 +622,6 @@ function testUpdatedExplanations(cb) {
   }
 }
 
-// function testAddSiteExpl(cb) {
-//   const eCount = 20;
-//   const urls = Object.keys(urlExpl);
-//   const count = eCount * urls.length;
-//   const user = userObj.users[0];
-//   const secret = userObj.secrets[0];
-//   for (let index = 0; index < urls.length; index += 1) {
-//     const siteUrl = urls[index];
-//     for (let eIndex = 0; eIndex < eCount; eIndex += 1) {
-//       let explId = userObj.authored[eIndex % userObj.users.length][eIndex].id;
-//       let xhr = new xmlhr();
-// const h = handler(undefined, count, cb);
-// h(200, 0);
-//       xhr.open("POST", getUrl(EPNTS.siteExplanation.add(explId)));
-//       xhr.setRequestHeader('Content-Type', 'application/json');
-//       xhr.setRequestHeader('user-agent', userObj.userAgent);
-//       xhr.setRequestHeader('authorization', secret);
-//       xhr.send(JSON.stringify({siteUrl}));
-//     }
-//   }
-// }
-
 function testAddExistingSiteExpl(cb) {
   function checkResp(resp) {
     testing.assertNotEquals(resp.indexOf(':'), -1, cb);
@@ -1126,26 +1104,6 @@ function testAddFollowing(cb) {
     req('post', EPNTS.follow.update(), bh(200), secret, body);
   }
 }
-
-// function testAddGroupExplOpinions(cb) {
-//   const addedMap = {};
-//   const secrets = userObj.secrets;
-//   const secLen = secrets.length;
-//   const count = groupObj.groups.length * secLen;
-//   for (let index = 0; index < count; index += 1) {
-//     const secret = userObj.secrets[randInt(0, 4)];
-//     const groupId = groupObj.groups[randInt(0, groupObj.groups.length)].id;
-//     const explId = randomElement(expls).id;
-//     const url = EPNTS.group.explanation.add(groupId, explId);
-//     const addId = `${groupId}:${explId}`;
-//     status = addedMap[addId] ? 400 : 200;
-// const h = handler(undefined, count, cb);
-// h(200, undefined);
-//     addedMap[addId] = true;
-//     req('get', url, hand, secret);
-//   }
-// }
-
 
 const startTime = new Date().getTime();
 function finishTests(cb) {

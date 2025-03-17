@@ -18,7 +18,7 @@ function add (name, input) {
   inputs[name] = inputFunc(name, input);
 }
 
-const inputs = (name, properties) => inputs[name](properties);
+const inputs = (name, properties) => inputs[name](properties || {});
 module.exports = inputs;
 
 
@@ -242,6 +242,7 @@ add('whd', new Select({
 }));
 
 add('joint', (props) => {
+  props ||= {};
   const joint = props.joint ||= {constructor: {name:  'Butt'}};
   const selectType = new Select({
     name: '_TYPE',
@@ -261,8 +262,8 @@ add('joint', (props) => {
   type.then('depth', {inputArray: [depthInput]});
   const cond = DecisionInputTree.getCondition('_TYPE', 'Dado');
   type.conditions.add(cond, 'depth');
-  dit.on.change(props.onChange);
-  dit.on.change(props.onComplete);
+  props.onChange && dit.on.change(props.onChange);
+  props.onComplete && dit.on.change(props.onComplete);
   return dit;
 });
 

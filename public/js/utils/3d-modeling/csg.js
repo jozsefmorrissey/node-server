@@ -1504,7 +1504,8 @@ CSG.Polygon.prototype = {
     percision ||= .001;
     const verts = this.vertices;
     const shared = this.shared;
-    let color = includeColor ? Color.getName(shared) : '';
+    const rgb = Color.rgb(shared);
+    let color = includeColor ? Color.getName(rgb) : '';
     let str = `${color}[`;
     for (let v = 0; v < verts.length; v++) {
       str += `${verts[v].toString(percision)},`;
@@ -1553,9 +1554,10 @@ CSG.Polygon.prototype = {
   },
   setColor: function(color) {
     const rgb = Color.rgb(color);
-    this.shared = [rgb[0]/255, rgb[1]/255, rgb[2]/255, .6];
+    this.shared = rgb.map(insurePercent);
   }
 };
+const insurePercent = (v) => v/255 === 1 ? .9999999 : v/255;
 
 CSG.Polygon.fromVertices = (verts) => {
   const a = new CSG.Vector(verts[0]);

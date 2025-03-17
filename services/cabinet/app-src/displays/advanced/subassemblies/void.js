@@ -100,7 +100,7 @@ du.on.match('change', '.void-dem', (elem) => {
 
 du.on.match('change', '.void-display-cnt .joint-selector', (elem) => {
   const vOid = getTarget(elem);
-  const inputCnt = du.find.closest('.joint-input-cnt', elem);
+  const inputCnt = du.find.closest('.void-joint-input-cnt', elem);
   const type = elem.value.toCamel();
   inputCnt.innerHTML = joint(vOid, type).html();
 });
@@ -111,6 +111,6 @@ du.on.match('click', '.void-join-direction-toggle', (elem) => {
   du.find.downAll('span', elem).forEach(span => span.hidden = !span.hidden);
 });
 
-VoidDisplay.template = new $t('advanced/subassemblies/void');
+VoidDisplay.template = new $t('advanced/subassemblies/voids');
 
 module.exports = VoidDisplay;

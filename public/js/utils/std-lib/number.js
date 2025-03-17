@@ -1,5 +1,5 @@
 
-let nr = '(?:-|)[0-9]{1,}';
+let nr = '(?:-|)[0-9.]{1,}';
 Number.regex = new RegExp(`(?:${nr}\\.${nr}|${nr}|\\.${nr})`);
 Number.regex.simple = new RegExp(`(?:${nr})`);
 

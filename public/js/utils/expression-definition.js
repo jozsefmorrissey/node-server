@@ -214,93 +214,99 @@ class ExprDef {
   }
 }
 
-function parse(exprDef, str) {
-  exprDef = exprDef.clone();
-  let index = 0;
+function parse(exprDef, str, soft) {
   let modified = '';
-  const breakDown = [];
-  const stack = [];
+  try {
+    exprDef = exprDef.clone();
+    let index = 0;
+    const breakDown = [];
+    const stack = [];
 
-  function topOfStack() {
-    return stack[stack.length - 1];
-  }
-
-  function closeCheck(exprDef) {
-    if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
-      let result = exprDef.find(str, index);
-      if (result.index) {
-        modified += result.changes;
-        return result.index;
-      }
+    function topOfStack() {
+      return stack[stack.length - 1];
     }
-  }
 
-  function checkArray(exprDef, array) {
-    if (exprDef.endDefined()) {
-      let nextIndex = closeCheck(exprDef);
-      if (nextIndex) return nextIndex;
-    }
-    for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
-      const childExprDef = array[aIndex].clone(exprDef.getNotice);
-      const result = childExprDef.find(str, index);
-      if (result.index !== -1) {
-        modified += result.changes;
-        if (childExprDef.closed()) {
-          breakDown.push(childExprDef);
-        } else {
-          stack.push(childExprDef);
+    function closeCheck(exprDef) {
+      if (exprDef && (exprDef.canEnd() || exprDef.endDefined())) {
+        let result = exprDef.find(str, index);
+        if (result.index) {
+          modified += result.changes;
+          return result.index;
         }
-        return result.index;
       }
     }
-    if (exprDef.canEnd()) {
-      nextIndex = closeCheck(exprDef);
-      if (nextIndex) return nextIndex;
-    }
-    throw new Error(`Invalid string:\n\t${str}\n\t@ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
-  }
 
-  function open(exprDef, index) {
-    const always = exprDef.getAlways();
-    while (!exprDef.open()) {
-      let result = exprDef.find(str, index);
-      modified += result.changes;
-      if(result.index === -1) {
-        let newIndex = checkArray(exprDef, always);
-        index = newIndex;
-      } else {
-        if (exprDef.closed()) {
-          breakDown.push(exprDef);
-        } else {
-          stack.push(exprDef);
+    function checkArray(exprDef, array) {
+      if (exprDef.endDefined()) {
+        let nextIndex = closeCheck(exprDef);
+        if (nextIndex) return nextIndex;
+      }
+      for (let aIndex = 0; aIndex < array.length; aIndex += 1) {
+        const childExprDef = array[aIndex].clone(exprDef.getNotice);
+        const result = childExprDef.find(str, index);
+        if (result.index !== -1) {
+          modified += result.changes;
+          if (childExprDef.closed()) {
+            breakDown.push(childExprDef);
+          } else {
+            stack.push(childExprDef);
+          }
+          return result.index;
         }
-        index = result.index;
       }
+      if (exprDef.canEnd()) {
+        nextIndex = closeCheck(exprDef);
+        if (nextIndex) return nextIndex;
+      }
+      throw new Error(`Invalid string:\n\t${str}\n\t@ index ${index}\n'${str.substr(0, index)}' ??? '${str.substr(index)}'`);
     }
-    return index;
-  }
 
-  let loopCount = 0;
-  index = open(exprDef, index);
-  progress = [-3, -2, -1];
-  while (topOfStack() !== undefined) {
-    const tos = topOfStack();
-    if (progress[0] === index) {
-      throw new Error(`ExprDef stopped making progress`);
+    function open(exprDef, index) {
+      const always = exprDef.getAlways();
+      while (!exprDef.open()) {
+        let result = exprDef.find(str, index);
+        modified += result.changes;
+        if(result.index === -1) {
+          let newIndex = checkArray(exprDef, always);
+          index = newIndex;
+        } else {
+          if (exprDef.closed()) {
+            breakDown.push(exprDef);
+          } else {
+            stack.push(exprDef);
+          }
+          index = result.index;
+        }
+      }
+      return index;
     }
-    let stackIds = '';
-    let options = '';
-    stack.map(function (value) {stackIds+=value.getName() + ','});
-    tos.next().map(function (value) {options+=value.getName() + ','})
-    index = checkArray(tos, tos.next());
-    if (tos.closed()) {
-      stack.pop();
+
+    let loopCount = 0;
+    index = open(exprDef, index);
+    progress = [-3, -2, -1];
+    while (topOfStack() !== undefined) {
+      const tos = topOfStack();
+      if (progress[0] === index) {
+        throw new Error(`ExprDef stopped making progress`);
+      }
+      let stackIds = '';
+      let options = '';
+      stack.map(function (value) {stackIds+=value.getName() + ','});
+      tos.next().map(function (value) {options+=value.getName() + ','})
+      index = checkArray(tos, tos.next());
+      if (tos.closed()) {
+        stack.pop();
+      }
+      loopCount++;
     }
-    loopCount++;
+    // if (index < str.length) {
+      //   throw new Error("String not fully read");
+      // }
+
+  } catch (e) {
+    if (soft) return null;
+    else throw e;
   }
-  // if (index < str.length) {
-  //   throw new Error("String not fully read");
-  // }
   return modified;
 }
 

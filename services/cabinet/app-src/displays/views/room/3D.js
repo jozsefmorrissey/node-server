@@ -7,7 +7,8 @@ const template = new $t('room/3D');
 const roomColorManager = new ColorManager('room-color-cnt', 'name');
 
 function render(managementCall) {
-  const ct = CompTime('Room 3D Render', 1);
+  const ctid = String.random();
+  const ct = CompTime('Room 3D Render', ctid);
   new Jobs.CSG.Room.Simple(Global.room()).then((result, job) => {
     const room = Global.room();
     const layout = room.layout();
@@ -22,7 +23,7 @@ function render(managementCall) {
       roomColorManager.map(objects.concat(layoutObjects).concat(handles));
       roomColorManager.update();
     }
-    ct.end(1);
+    ct.end(ctid);
   }).queue();
   return template.render({room: Global.room()});
 }

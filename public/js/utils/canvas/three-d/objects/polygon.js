@@ -1526,7 +1526,8 @@ Polygon3D.regex.model = (string, unit, scale) => {
   let poly = Polygon3D.fromString(string, unit);
   if (scale) poly = new Polygon3D(poly.vertices().map(v => v.scale(scale)))
   if (!poly) return null;
-  const color = Color.fromString(string);
+  let color = Color.fromString(string);
+  color &&= Color.rgb.percent(color);
   const csg = new CSG()
   poly.regular().forEach(p => csg.add(new CSG.Polygon.Enclosed(p.vertices(), null, color)));
   csg.outlines = [poly.vertices()]

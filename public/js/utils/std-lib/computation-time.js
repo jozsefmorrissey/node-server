@@ -47,7 +47,7 @@ CompTime = function (identifier, startId) {
     this.print = () => console.log(this.toString());
 
     this.function = (obj, funcKey, id) => {
-      id ||= funcKey;
+      if (!id) id = funcKey;
       const info = obj.pathInfo(funcKey);
       try {
         const func = info.value;
@@ -92,7 +92,7 @@ const functionKeys = (obj, prefix) => {
 }
 
 CompTime.object = (obj, ...funcKeys) => {
-  funcKeys ||= functionKeys(obj);
+  if (funcKeys.length === 0) funcKeys = functionKeys(obj);
   const ct = new CompTime(obj.constructor.name);
   for (let i = 0; i < funcKeys.length; i++) {
     const k = funcKeys[i];

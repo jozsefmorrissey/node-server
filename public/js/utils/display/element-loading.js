@@ -1,29 +1,5 @@
 
 const du = require('../dom-utils');
-// const jobProcessIndicator = (job, cabinet, delay) => {
-//   const expandHeader = du.find.up('.expand-header', du.find(`[cabinet-id='${cabinet.id()}']`));
-//   if (!expandHeader) {
-//     delay = Number.isInteger(delay) ? delay * 10 : 1;
-//     if (delay <= 100) return setTimeout(() => jobProcessIndicator(job, cabinet, delay), delay);
-//     else throw new Error('Cabinet being processed does not have header');
-//   }
-//   const task = job.task();
-//   const loadingCnt = du.find.down('.circle-loading-cnt', expandHeader);
-//   const scope = {progress: task.progress, time: task.time,
-//     size: '20px', color: '#f09a05', id: String.random()
-//   }
-//   loadingCnt.innerHTML = CabinetDisplay.loadingTemplate.render(scope);
-//   (() => du.find.down('.time', loadingCnt).innerText = task.time())
-//       .periodic(100, () => task.progress() === 100);
-//   task.on.change(t => {
-//     document.documentElement.style.setProperty('--percentDecimal'+scope.id, task.progress()/100);
-//     document.documentElement.style.setProperty('--percent'+scope.id, task.progress() + '%');
-//     loadingCnt.hidden = task.progress() === 100;
-//     du.find.down('.progress', loadingCnt).innerText = Math.floor(task.progress());
-//   })
-// };
-//
-// Global.on.processing.cabinet(jobProcessIndicator);
 
 const CustomEvent = require('../custom-event.js');
 
