@@ -124,7 +124,7 @@ const init = () =>{
   htmlContentCnt = du.id('view-html-cnt');
   editCnt = du.id('edit-display');
   ThreeDModel.display(new CSG());
-  switchTo('room-layout');
+  switchTo('part-3d');
 }
 
 ThreeDModel.on.viewer.set((viewer) => {

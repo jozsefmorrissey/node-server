@@ -12,6 +12,13 @@ function getDefaultSize(instance) {
   return {length: 0, width: 0, thickness: 0};
 }
 
+const defaultConfig = () => {
+  return {calc: 2, lines: [[[0,0,0],[1,0,0]],
+            [[0,0,0],[0,1,0]],
+            [[0,0,0],[0,0,1]]],
+    vectors: [[1,0,0],[0,1,0],[0,0,1]]}
+};
+
 const normals = (assembly) => {
   let normObj, lastNormHash, lastNorm;
   const ensureVector = (cno, attr) => cno[attr].length === 2 ?
@@ -28,6 +35,17 @@ const normals = (assembly) => {
 
     return array ? [norms.x, norms.y, norms.z] : norms;
   }
+
+  normFunc.config = () => (normObj ||=  defaultConfig());
+  normFunc.config.type = () => {
+    normFunc.config();
+    if (normObj.DETERMINE_FROM_PARENT) return 'inherited';
+    else if (normObj.DETERMINE_FROM_MODEL) return 'model';
+    else if (normObj.DETERMINE_FROM_VECTOR) return 'vector';
+    else if (normObj.CONFIGURED_BY_LINES) return 'lines';
+    return 'default';
+  }
+  normFunc.config.manual = () => !normObj.DETERMINE_FROM_PARENT && !normObj.DETERMINE_FROM_MODEL;
 
   normFunc.set = (array, normalObj) => {
     if (normalObj instanceof Object) {
@@ -48,12 +66,12 @@ const normals = (assembly) => {
 
   normFunc.vector = () => {
     const calcNormObj = assembly.evalObject(normObj);
-    if (normObj.calc !== 0) ensureVector(calcNormObj, 'x');
-    if (normObj.calc !== 1) ensureVector(calcNormObj, 'y');
-    if (normObj.calc !== 2) ensureVector(calcNormObj, 'z');
-    if (normObj.calc === 0) calcNormObj.x = calcNormObj.y.crossProduct(calcNormObj.z).unit();
-    if (normObj.calc === 1) calcNormObj.y = calcNormObj.x.crossProduct(calcNormObj.z).unit();
-    if (normObj.calc === 2) calcNormObj.z = calcNormObj.x.crossProduct(calcNormObj.y).unit();
+    if (calcNormObj.calc !== 0) ensureVector(calcNormObj, 'x');
+    if (calcNormObj.calc !== 1) ensureVector(calcNormObj, 'y');
+    if (calcNormObj.calc !== 2) ensureVector(calcNormObj, 'z');
+    if (calcNormObj.calc === 0) calcNormObj.x = calcNormObj.y.crossProduct(calcNormObj.z).unit();
+    if (calcNormObj.calc === 1) calcNormObj.y = calcNormObj.x.crossProduct(calcNormObj.z).unit();
+    if (calcNormObj.calc === 2) calcNormObj.z = calcNormObj.x.crossProduct(calcNormObj.y).unit();
     return calcNormObj;
   }
 

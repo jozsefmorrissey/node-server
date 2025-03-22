@@ -23,8 +23,12 @@ if (global.build) {
   setTimeout(loadTemplates, 10000);
 } else {
   loadTemplates();
-  const Builder = require('../../building/builder');
-  new Builder(null, loadTemplates, true).add('./services/cabinet/generated/html-templates.js');
+  try {
+    const Builder = require('../../building/builder');
+    new Builder(null, loadTemplates, true).add('./services/cabinet/generated/html-templates.js');
+  } catch (e) {
+    conosole.error('Template Loading Failed');
+  }
 }
 
 

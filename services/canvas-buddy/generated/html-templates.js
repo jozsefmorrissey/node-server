@@ -63,10 +63,10 @@ exports['orientation-controls'] = (get, $t) =>
 		$t.clean(get("navId")()) +
 		`' l-id='` +
 		$t.clean(get("id")()) +
-		`'> <div class='arrows'> <table cellspacing="0" cellpadding="0"> <tr> <td cmd='settings'><i class='gg-menu-round'></i></td> <td cmd='u'>&#8681;</td> <td cmd='color'><input type='color' value='` +
+		`'> <div class='arrows'> <table cellspacing="0" cellpadding="0"> <tr> <td></td> <td cmd='u'>&#8681;</td> <td cmd='color'><input type='color' value='` +
 		$t.clean(get("color")()) +
 		`'/></td> </tr> <tr> <td cmd='l'>&#8680;</td> <td cmd='c'>` +
 		$t.clean(get("space")()) +
 		`&#8865;` +
 		$t.clean(get("space")()) +
-		`</td> <td cmd='r'>&#8678;</td> </tr> <tr> <td></td> <td cmd='d'>&#8679;</td> <td></td> </tr> </table> </div> <div class='settings' hidden> <button class='remove-btn'>X</button> <div class='body'></div> </div> </div> `
+		`</td> <td cmd='r'>&#8678;</td> </tr> <tr> <td></td> <td cmd='d'>&#8679;</td> <td cmd='settings'><i class='gg-menu-round'></i></td> </tr> </table> </div> <div class='settings' hidden> <button class='remove-btn'>X</button> <div class='body'></div> </div> </div> `

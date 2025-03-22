@@ -1,6 +1,7 @@
 const Controller = require('../views/controllers/object/layout');
 const $t = require('../../../../../public/js/utils/$t.js');
 const inputs = require('../../input/inputs.js');
+const Utils = require('../documents/tools/utils.js');
 
 
 const dividerTemplate = new $t('advanced/cabinet/divider');
@@ -11,7 +12,7 @@ const voidTemplate = new $t('advanced/subassemblies/void');
 
 const Displays = {
   OpeningToeKick: (toeKick) => toeKickTemplate.render({toeKick, inputs, Measurement}),
-  Divider: (divider) => dividerTemplate.render({divider, inputs, Measurement}),
+  Divider: (divider) => dividerTemplate.render({Utils, divider, inputs, Measurement}),
   Void: (vOid) => voidTemplate.render({void: vOid, inputs, Measurement}),
   SectionProperties: (section) => {
     const patterInputHtml = Controller.patterInputHtml(section);

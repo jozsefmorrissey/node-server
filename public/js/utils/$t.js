@@ -225,10 +225,10 @@ class $t {
       const match = rangeItExpr.match($t.rangeItExpReg);
       const elemName = varName;
       let startIndex = (typeof match[2]) === 'number' ||
-            match[1].match(/^[0-9]*$/) ?
+            match[1].match(/^(-|)[0-9]*$/) ?
             match[1] : get(`${match[2]}`);
       let endIndex = (typeof match[3]) === 'number' ||
-            match[2].match(/^[0-9]*$/) ?
+            match[2].match(/^(-|)[0-9]*$/) ?
             match[2] : get(`${match[3]}`);
       if (((typeof startIndex) !== 'string' &&
               (typeof  startIndex) !== 'number') ||
@@ -386,9 +386,10 @@ class $t {
       return blocks;
     }
 
-    function resolve(str) {
-      const resolved = ExprDef.parse(expression, str, true);
-      return resolved ? resolved : `Failed to parse Expression:\n\t${str}`;
+    function resolve(str, soft) {
+      if (soft !== false) soft = true;
+      const resolved = ExprDef.parse(expression, str, soft);
+      return resolved ? resolved : `\`Failed to parse Expression:\n\t${str.replace(/`/g, '\\`')}\``;
     }
 
     function compile(strToCompile) {
@@ -410,13 +411,14 @@ class $t {
 		function resolveScope (contents, repeatScope) {
       let resolvedScope;
 			if (repeatScope) {
-				if (repeatScope.match(/[0-9]{1,}\.\.[0-9]{1,}/)){
-					resolvedScope = `'${repeatScope}'`;
+        const match = repeatScope.match($t.rangeAttemptExpReg)
+				if (match){
+          resolvedScope = `${resolve(match[2])} + '..' + ${resolve(match[3])}`;
 				} else {
-					resolvedScope = ExprDef.parse(expression, repeatScope, true);
+					resolvedScope = resolve(repeatScope);
 				}
 			} else if (contents && contents.trim()) {
-          resolvedScope = ExprDef.parse(expression, contents, true);
+          resolvedScope = resolve(contents);
       }
 			return resolvedScope || "get('scope')";
 		}
@@ -460,7 +462,17 @@ class $t {
       return formatted;
     }
 
+    const genTempReg = /new \$t\('((-|)[0-9]{1,}')\)/
+    function removeGenTemplatesId(id) {
+      if (!$t.functions[id]) return;
+      const str = $t.functions[id].toString();
+      const all = str.match(genTempReg.g());
+      if (!all) return;
+      all.forEach(match => removeGenTemplatesId(match.match(genTempReg)[1]));
+    }
+
     if (id) {
+      removeGenTemplatesId(id);
       $t.templates[id] = undefined;
       $t.functions[id] = undefined;
     }
@@ -502,13 +514,12 @@ $t.loadFunctions = (functions) => {
   Object.keys(functions).forEach((name) => {
     $t.functions[name] = functions[name];
   });
-
 }
 $t.isTemplate = (id) => $t.functions[id] !== undefined;
 $t.arrayNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
 $t.objectNameReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*,\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
-$t.rangeAttemptExpReg = /^\s*(.*\.\..*)\s*$/;
-$t.rangeItExpReg = /^\s*([a-z0-9A-Z]*)\.\.([a-z0-9A-Z]*)\s*$/;
+$t.rangeAttemptExpReg = /^\s*((.{1,})\.\.(.{1,}))\s*$/;
+$t.rangeItExpReg = /^\s*((?:-|)[a-z0-9A-Z]*)\.\.((?:-|)[a-z0-9A-Z]*)\s*$/;
 $t.nameScopeExpReg = /^\s*([a-zA-Z][a-z0-9A-Z]*)\s*$/;
 $t.quoteStr = function (str) {
     str = str.replace(/\\`/g, '\\\\\\`')

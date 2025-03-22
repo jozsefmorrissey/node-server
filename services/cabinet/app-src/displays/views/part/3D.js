@@ -99,6 +99,7 @@ function render(hovering) {
     const unrelated = concatModels(notSpokenFor, null, 'black');
     Canvas.render3Dmodel(CSG.concat([csg, femaleCsg, maleCsg, unrelated]), parts);
   }
+  ThreeDModel.orientArrows().front();;
 }
 
 const partTemplate = new $t('views/parts/3D');

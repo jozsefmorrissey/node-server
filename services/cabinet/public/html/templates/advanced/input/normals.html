@@ -1,0 +1,27 @@
+<table>
+  <tr>
+    <th></th>
+    <th>i</th>
+    <th>j</th>
+    <th>k</th>
+    <th>Calculated</th>
+    <th>Value</th>
+  </tr>
+  <tr:t index="{{$index}}" repeat="i, label in ['Cross Grain', 'With Grain', 'End Grain']"
+          class='tab normal-vector-input-cnt'>
+    <td><label>{{label}}</label></td>
+      <td:t repeat='k in 0..3'>
+        <input class='template-input dem' attr='subassemblies'
+                value="{{part.normals.config().vectors[i][j]}}"
+                {{part.normals.config().calc === i ? 'disabled' : ''}}>
+      </td:t>
+    <td>
+      <input type='radio' name='calculated' class='calc-vect-radio'
+        {{part.normals.config().calc === i ? 'checked' : ''}}>
+    </td>
+    <td>
+      <input name='display' type='text' disabled
+        value='{{Utils.display.vertex3D(part.normals(true)[$index])}}'>
+    </td>
+  </tr:t>
+</table>

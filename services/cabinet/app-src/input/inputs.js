@@ -300,3 +300,37 @@ add('dividerType', (divider, label) => {
     inline: true
   });
 });
+
+add('style', (part) => {
+  return new Select({
+    label: 'Style',
+    name: 'style',
+    list: ['Overlay', 'Reveal', 'Inset'],
+    value: part.resolve('style')
+  });
+});
+
+add('code', (part) => {
+  return new Input({
+    label: 'Code',
+    name: 'partCode',
+    value: part.partCode()
+  });
+});
+
+add('partName', (part) => {
+  return new Input({
+    label: 'Name',
+    name: 'name',
+    value: part.partCode()
+  });
+});
+
+add('partType', (part) => {
+  return new Select({
+    name: 'type',
+    value: part.type,
+    class: 'template-input',
+    list: Object.class.filter(c => c.manuallyConfigurable).map(c => c.name)
+  });
+});

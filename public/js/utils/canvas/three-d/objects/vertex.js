@@ -145,6 +145,14 @@ class Vertex3D {
   }
 }
 
+Object.defineProperty(Vertex3D.prototype, '0', {get: function () {return this.x()}});
+Object.defineProperty(Vertex3D.prototype, '1', {get: function () {return this.y()}});
+Object.defineProperty(Vertex3D.prototype, '2', {get: function () {return this.z()}});
+Object.defineProperty(Vertex3D.prototype, 'i', {get: function () {return this.x()}});
+Object.defineProperty(Vertex3D.prototype, 'j', {get: function () {return this.y()}});
+Object.defineProperty(Vertex3D.prototype, 'k', {get: function () {return this.z()}});
+
+
 const tol = .0001;
 Vertex3D.tolerance = new Tolerance({x: tol, y: tol, z: tol});
 Vertex3D.infinity = 1000000000;

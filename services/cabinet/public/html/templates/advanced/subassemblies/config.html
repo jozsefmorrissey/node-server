@@ -1,0 +1,69 @@
+
+<div class='subassembly-config-cnt'>
+  {{inputs.code(part).html()}}
+  {{inputs.partName(part).html()}}
+  {{inputs.partType(part).html()}}
+  {{inputs.style(part).html()}}
+
+
+
+  <div advanced-dropdown='Position'>
+    <div class='center'>
+      <label><b>Position:</b></label>
+      <div radio-container>
+        <label>Box</label>
+        <input type='radio' name='positionMethod' value='box'
+              {{part.positionMethod !== 'poly' ? 'checked' : ''}}>
+        <label>Poly</label>
+        <input type='radio' name='positionMethod' value='poly'
+              {{part.positionMethod === 'poly' ? 'checked' : ''}}>
+      </div>
+    </div>
+    <div container>
+      <div class='poly-cnt' {{obj.positionMethod !== 'poly' ? 'hidden' : ''}}>
+        <input type='measurement' name='thickness'
+                decimal='{{part.thickness()}}' units='inch,cm,mm'/>
+        <div:t t-id='advanced/input/vertices'>{
+          min: 3
+        }</div:t>
+      </div>
+      <div class='box-cnt' {{obj.positionMethod === 'poly' ? 'hidden' : ''}}>
+        <div:t t-id='advanced/input/position'></div:t>
+      </div>
+    </div>
+  </div>
+
+
+  <div advanced-dropdown='Orientation'>
+    <div class='center' radio-container>
+      <label>Rotation</label>
+      <input type='radio' name='normalType' value='default'
+            {{part.normals.config.type() === 'default' ? 'checked' : ''}}>
+      <label>Vector</label>
+      <input type='radio' name='normalType' value='vector'
+            {{part.normals.config.type() === 'vector' ? 'checked' : ''}}>
+      <label>Line</label>
+      <input type='radio' name='normalType' value='lines'
+            {{part.normals.config.type() === 'lines' ? 'checked' : ''}}>
+    </div>
+    <div container>
+      <div{{part.normals.config.type() !== 'default' ? ' hidden' : ''}}
+            class='default-cnt'>
+        Rotation
+        <div:t t-id='advanced/input/xyz'>{
+          x: part.width(),
+          y: part.length(),
+          z: part.thickness()
+          }</div:t>
+      </div>
+      <div{{part.normals.config.type() !== 'vector' ? ' hidden' : ''}}
+            class='vector-cnt'>
+        <div:t t-id='advanced/input/normals'></div:t>
+      </div>
+      <div{{part.normals.config.type() !== 'lines' ? ' hidden' : ''}}
+            class='lines-cnt'>
+        <div:t t-id='advanced/input/line-vectors'></div:t>
+      </div>
+    </div>
+  </div>
+</div>

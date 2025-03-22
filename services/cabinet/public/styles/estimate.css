@@ -1028,7 +1028,12 @@ th.edge-ref>div {
 #canvas-modification-cnt {
   border-left: solid;
   border-width: 1px;
+}
+
+#canvas-modification-cnt>div {
   padding-left: 5px;
+  overflow: auto;
+  border-bottom: 1px solid;
 }
 
 #display-cnt {
