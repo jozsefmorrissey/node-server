@@ -19,6 +19,7 @@ class Builder {
         onChange && onChange(file.name, contents, position);
         setTimeout(notify, 300);
       }
+      // console.log.lastCall(`File Change Notification: ${file.name}`);
       fs.readFile(file.name, 'utf8', read);
     }
 
@@ -41,8 +42,6 @@ class Builder {
     function process(path, item) {
       return (eventType, filename) => {
         console.log.lastCall(`File Changed: ${filename} - ${eventType}`);
-        if (pending[path][filename]) return;
-        pending[path][filename] = true;
         const filePath = item.isFile() ? path : `${path}/${filename}`.replace(/\/{2,}/g, '/');
         fs.stat(filePath, function (err, stat) {
           if (err) {console.log(err); return;}
@@ -58,12 +57,10 @@ class Builder {
       };
     }
 
-    const pending = {};
     const dirs = {};
     function watch(item, parent) {
       const path = item.isDirectory() || parent === undefined ?
             item.name : `${parent}${item.name}`.replace(/\/{2,}/g, '/');
-      pending[path] = {};
       if (watchFiles) {
         // console.log(`Watching: ${path} - ${positions[item.name]}`);
         fs.watch(path, { encoding: 'utf8' }, process(path, item));

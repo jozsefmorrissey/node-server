@@ -8,20 +8,50 @@
     <link rel="stylesheet" href="/styles/file-tab.css">
     <link rel="stylesheet" href="/styles/icons.css">
     <link rel="stylesheet" href="/cabinet/styles/estimate.css">
-    <link rel="stylesheet" href="/styles/loading.css">
     <script src="/js/utility-filter.js" run-type='auto'></script>
     <title>CComp</title>
   </head>
   <body>
+    <div id='order-select-cnt' class='center'>
+      <span id='order-selector-cnt' hidden></span>
+      <button type="button" class='auto-save-btn' name="button">Choose Save Location</button>
+      <span id='save-time-cnt'></span>
+    </div>
     <div class='expandable-list' id='single-order-cnt'>
       <div id='main-display-menu' class='display-manager center'></div>
       <div id='display-cnt'>
         <div id='order-display-cnt'>
-        <div id='order-cnt'>
-          <div id="order-tab-cnt"></div>
+          <div id='order-cnt'>
+            <div class='center pad'>
+              <input id='order-name-input' class='header-input' size='20' type="text" name="order-name">
+              <input id='order-version-input' class='header-input' size='20' type="text" name="order-version">
+            </div>
+            <div id="order-tab-cnt"></div>
+          </div>
+          <div:t class='tab' $t-id='canvas-displays'></div:t>
+        </div>
+        <div id='information-display'>
+          <utility-filter id='uf-order-info' edit='true'></utility-filter>
         </div>
       </div>
     </div>
-    <canvas id='qr-demo' hidden></canvas>
+    <canvas id='qr-demo'></canvas>
+    <div id='print-body'>
+      <button class='print'>Print</button>
+      <div class='page'>
+        <h1>PAGE</h1>
+      </div>
+      <div class='page'>
+        <h1>PAGE</h1>
+      </div>
+      <div class='page'>
+        <h1>PAGE</h1>
+      </div>
+      <div class='page'>
+        <h1>PAGE</h1>
+      </div>
+      <button class='print'>Print</button>
+    </div>
+
   </body>
 </html>

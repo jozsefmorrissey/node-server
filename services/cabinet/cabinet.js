@@ -26,6 +26,7 @@ if (global.build) {
   try {
     const Builder = require('../../building/builder');
     new Builder(null, loadTemplates, true).add('./services/cabinet/generated/html-templates.js');
+    console.log('template refresher')
   } catch (e) {
     console.error('Template Loading Failed');
   }
