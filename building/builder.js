@@ -1,32 +1,25 @@
 const fs = require('fs');
 const shell = require('shelljs');
-const { Mutex, Semaphore } = require('async-mutex');
 require('../public/js/utils/parse-arguments');
 
 class Builder {
   constructor(onChange, onUpdate, watchFiles) {
+    const id = String.random();
     const largNumber = Number.MAX_SAFE_INTEGER;
-    const semaphore = new Semaphore(largNumber);
-    const mutex = new Mutex();
     const positions = {};
-    function readFile(file, position) {
-      semaphore.acquire().then(function([value, release]) {
+    function readFile(file, position, fileCount) {
+      function notify() {
+        onUpdate.lastCall(id, 500);
+      }
 
-        function notify() {
-          value--;
-          release();
-          if (value === largNumber - 1 && onUpdate) onUpdate();
+      function read(err, contents) {
+        if (err) {
+          console.error(err);
         }
-
-        function read(err, contents) {
-          if (err) {
-            console.error(err);
-          }
-          onChange && onChange(file.name, contents, position);
-          setTimeout(notify, 300);
-        }
-        fs.readFile(file.name, 'utf8', read);
-      });
+        onChange && onChange(file.name, contents, position);
+        setTimeout(notify, 300);
+      }
+      fs.readFile(file.name, 'utf8', read);
     }
 
     function runAllFiles(watchDir, position) {
@@ -48,27 +41,20 @@ class Builder {
     function process(path, item) {
       return (eventType, filename) => {
         console.log.lastCall(`File Changed: ${filename} - ${eventType}`);
-        function wait(release) {
-          if (pending[path][filename]) {release();return;}
-          pending[path][filename] = true;
-          release();
-          const filePath = item.isFile() ? path : `${path}/${filename}`.replace(/\/{2,}/g, '/');
-          fs.stat(filePath, function (err, stat) {
-            if (err) {console.log(err); return;}
-            stat.name = filePath;
-            if (stat.isDirectory() && !dirs[stat.name]) {
-              dirs[stat.name] = true;
-              positions[stat.name] = positions[item.name];
-              watch(stat);
-            } else if (stat.isFile()) {
-              readFile(stat, positions[item.name]);
-            }
-            mutex.acquire().then((release) => {
-                pending[path][filename] = false;release();})
-          });
-        }
-
-        mutex.acquire().then(wait);
+        if (pending[path][filename]) return;
+        pending[path][filename] = true;
+        const filePath = item.isFile() ? path : `${path}/${filename}`.replace(/\/{2,}/g, '/');
+        fs.stat(filePath, function (err, stat) {
+          if (err) {console.log(err); return;}
+          stat.name = filePath;
+          if (stat.isDirectory() && !dirs[stat.name]) {
+            dirs[stat.name] = true;
+            positions[stat.name] = positions[item.name];
+            watch(stat);
+          } else if (stat.isFile()) {
+            readFile(stat, positions[item.name]);
+          }
+        });
       };
     }
 

@@ -1,7 +1,7 @@
 const mySql = require('mysql');
-var Mutex = require('async-mutex').Mutex;
+// var Mutex = require('async-mutex').Mutex;
 const cleanup = require('../services/cleanup');
-var mutex = new Mutex();
+// var mutex = new Mutex();
 
 const limit = 1;
 let count = 0;

@@ -1,6 +1,6 @@
 
 const mySql = require('mysql');
-var Mutex = require('async-mutex').Mutex;
+// var Mutex = require('async-mutex').Mutex;
 
 const { callAfter } = require('../callbackUtils');
 

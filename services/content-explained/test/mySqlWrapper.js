@@ -1,6 +1,6 @@
 const testing = require('testing');
-var Mutex = require('async-mutex').Mutex;
-const testMutex = new Mutex();
+// var Mutex = require('async-mutex').Mutex;
+// const testMutex = new Mutex();
 
 const Crud = require('../services/database/mySqlWrapper').Crud;
 const { User, Explanation, Site, Opinion, SiteExplanation, Credential, DataObject,

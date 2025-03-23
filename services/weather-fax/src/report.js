@@ -2,8 +2,8 @@
 const User = require('./user');
 const shell = require('shelljs');
 const fs = require('fs');
-const { Mutex, Semaphore } = require('async-mutex');
-const mutex = new Mutex();
+// const { Mutex, Semaphore } = require('async-mutex');
+// const mutex = new Mutex();
 const sender = require('./sender');
 const utils = require('./utils');
 const dg = require('./debug-gui-interface');

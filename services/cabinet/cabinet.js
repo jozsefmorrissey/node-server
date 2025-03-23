@@ -6,7 +6,7 @@ const $t = require('../../public/js/utils/$t');
 
 const dxfDownloadLink = require('./src/export/dxf').downloadLink;
 const { User, UnAuthorized } = require('./src/user');
-const { emailSvc } = require('./src/email');
+// const { emailSvc } = require('./src/email');
 const Endpoints = require('../../public/js/utils/endpoints');
 const EPNTS = new Endpoints(require('./public/json/endpoints.json')).getFuncObj();
 // require('./src/scrape/scrape');
@@ -27,7 +27,7 @@ if (global.build) {
     const Builder = require('../../building/builder');
     new Builder(null, loadTemplates, true).add('./services/cabinet/generated/html-templates.js');
   } catch (e) {
-    conosole.error('Template Loading Failed');
+    console.error('Template Loading Failed');
   }
 }
 

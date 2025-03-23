@@ -1,6 +1,5 @@
 const fs = require('fs');
 const shell = require('shelljs');
-const { Mutex, Semaphore } = require('async-mutex');
 
 const host = process.argv[2];
 

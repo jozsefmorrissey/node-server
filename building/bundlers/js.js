@@ -3,7 +3,6 @@ const fs = require('fs');
 const shell = require('shelljs');
 const { Bundler } = require('../bundler');
 const { RequireJS } = require('./require.js');
-const { Mutex, Semaphore } = require('async-mutex');
 
 
 class JsBundler extends Bundler {
@@ -36,22 +35,7 @@ class JsBundler extends Bundler {
         this.contents = contents;
         this.position = position;
         let after;
-        function updateAfter () {
-          let firstLine = instance.contents.split('\n')[0];
-          if (after) {
-            afterFiles[after][instance.filename] = undefined;
-          }
-          after = firstLine.replace(/^\s*\/\/\s*(.*)\s*$/, '$1');
-          if (after && after !== firstLine && after.trim().match(/^\.\/.*$/)) {
-              after = after.trim();
-              if (afterFiles[after] === undefined) afterFiles[after] = {};
-              afterFiles[after][instance.filename] = instance;
-              delete jsFiles[instance.filename];
-          } else {
-            after = undefined;
-            jsFiles[instance.filename] = instance;
-          }
-        }
+
         this.updateContents = function (cont) {
           this.contents = cont;
           const newRefs = {};
@@ -63,7 +47,7 @@ class JsBundler extends Bundler {
               newRefs[name] = true;
             });
           }
-          updateAfter();
+          jsFiles[instance.filename] = instance;
           this.references = newRefs;
         }
         this.replace = function () {
@@ -114,10 +98,9 @@ class JsBundler extends Bundler {
       return promise;
     }
 
-    const writersLock = new Semaphore(1);
-    let maxFileCount = 0;
-    let fileCount = 0;
     function write() {
+      let maxFileCount = 0;
+      let fileCount = 0;
       let bundle = encaps ? requireJs.header() : '';
 
       function writeBundle () {
@@ -129,38 +112,37 @@ class JsBundler extends Bundler {
 
       function addScript(item, i) {
         function addIt() {
-            setTimeout(function () {
-              writersLock.acquire().then(async function([value, release]) {
-                // TODO: this does not make sense to me.... the lock should prevent async speed up...??
-                let contents = item.contents;
-                if (item.filename.endsWith('.json')) {
-                  contents = 'module.exports = ' + contents;
-                } else if (!item.filename.endsWith('.js')) {
-                  contents = `module.exports = \`${contents}\``;
-                }
-                bundle += await formatScript(item.filename, contents);
-                fileCount--;
-                writeBundle.lastCall(`Writing js bundle to file '${file}'`, 50);
-                release();
-              });
-              addAfterFiles(item.filename);
-            }, 0);
+            setTimeout(async function () {
+              let contents = item.contents;
+              if (item.filename.endsWith('.json')) {
+                contents = 'module.exports = ' + contents;
+              } else if (!item.filename.endsWith('.js')) {
+                contents = `module.exports = \`${contents}\``;
+              }
+              const formatted = await formatScript(item.filename, contents);
+              bundle += formatted;
+              fileCount--;
+              if (fileCount === 0) setTimeout(writeBundle, 300);
+            });
         }
         if (item && item.contents) {
-          writersLock.acquire().then(function([value, release]) {
-            fileCount++;
-            maxFileCount = maxFileCount < fileCount ? fileCount : maxFileCount;
-            release();
-            addIt(item, i);
-          });
+          fileCount++;
+          maxFileCount = maxFileCount < fileCount ? fileCount : maxFileCount;
+          addIt(item, i);
         }
       }
 
-      function addAfterFiles(filename) {
-        if (afterFiles[filename]) {
-          Object.values(afterFiles[filename]).forEach(addScript);
-        }
-      }
+      // let testBundles = ['',''];
+      // const build = () => ' ';
+      // async function constructAndAppend(data) {
+      //    testBundles[0] += await build();
+      //    const built = await build();
+      //    testBundles[1] += built;
+      //    console.log(testBundles[0].length === testBundles[1].length, `${testBundles[0].length} === ${testBundles[1].length}`);
+      // }
+      //
+      // new Array(10).fill((v,i) => i).forEach(constructAndAppend);
+
       Object.values(jsFiles).sort(sortFileNames).forEach(addScript);
     }
 
