@@ -13,7 +13,7 @@ class DrawerSection extends Assembly {
     const sectionProps = () => instance.parentAssembly();
     this.part = () => false;
     this.digital = () => true;
-    this.normals({DETERMINE_FROM_PARENT: true});
+    this.config.NORMALS.TYPE = this.config.NORMALS.TYPES.PARENT;
 
     this.front = () => front;
     this.pull = (i) => front.pull(i);
@@ -21,9 +21,9 @@ class DrawerSection extends Assembly {
 
     if (!front) front = new DrawerFront('df', 'Solid');
     this.addSubAssembly(front);
-    front.normals({DETERMINE_FROM_PARENT: true});
+    front.config.NORMALS.TYPE = front.config.NORMALS.TYPES.PARENT;
     if (!box) box = new DrawerBox('db', 'Section');
-    box.normals({DETERMINE_FROM_PARENT: true});
+    box.config.NORMALS.TYPE = box.config.NORMALS.TYPES.PARENT;
     this.addSubAssembly(box);
   }
 }

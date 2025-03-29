@@ -11,14 +11,14 @@ class DoorSection extends Assembly {
     this.part = () => false;
     this.door = () => door;
     this.pull = (...args) => door && door.pull(...args);
-    this.normals(false, {DETERMINE_FROM_PARENT: true});
+    this.config.NORMALS.TYPE = this.config.NORMALS.TYPES.PARENT;
 
     if (!door) {
       door = new Door('D', 'Section');
       this.door = () => door;
       this.pull = (i) => door.pull(i);
     }
-    door.normals(false, {DETERMINE_FROM_PARENT: true});
+    door.config.NORMALS.TYPE = door.config.NORMALS.TYPES.PARENT;
     this.addSubAssembly(door);
   }
 }

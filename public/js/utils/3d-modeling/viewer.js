@@ -11,9 +11,9 @@ const CustomEvent = require('../custom-event');
 const VIEWER_CONTROLS = {
   POLYGONS: true,
   OUTLINE: true,
-  WIREFRAME: false,
+  WIREFRAME: true,
   AXIS: false,
-  BACKGROUND_COLOR: '#00ffff',
+  BACKGROUND_COLOR: '#636969',
   OUTLINE_COLOR: '#000000',
   HOVER_AND_CLICK: true
 }
@@ -108,8 +108,8 @@ function Viewer(csg, width, height, depth) {
   var gl = GL.create();
   this.gl = gl;
   this.CONTROLS = VIEWER_CONTROLS;
-  this.mesh = csg.toMesh();
-  this.mesh.line = csg.toLineMesh();
+  // this.mesh = csg.toMesh();
+  // this.mesh.line = csg.toLineMesh();
   this.canvas = () => gl.canvas;
 
   // Set up the viewport
@@ -280,6 +280,7 @@ function Viewer(csg, width, height, depth) {
   window.onmousedown = setPointClicked;
 
   function draw() {
+    if (!that.mesh) return;
     // gl.clearColor(...Color.rgb.percent(VIEWER_CONTROLS.BACKGROUND_COLOR), 1);
     if (!Viewer.lineOverlay) gl.enable(gl.POLYGON_OFFSET_FILL);
     // that.lightingShaders.forEach(s => s.draw(that.mesh, gl.TRIANGLES));
@@ -351,7 +352,7 @@ function Viewer(csg, width, height, depth) {
     draw();
   };
 
-  gl.ondraw();
+  // gl.ondraw();
 
   // gl.canvas.width = '100vw';
   // gl.canvas.height = '100vh';

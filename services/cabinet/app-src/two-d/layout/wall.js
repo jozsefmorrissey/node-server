@@ -14,7 +14,7 @@ function modifyVertex(vertex) {
 }
 
 class Wall2D extends Line2d {
-  constructor(startVertex, endVertex, height, windows, doors) {
+  constructor(layout, startVertex, endVertex, height, windows, doors) {
     super(startVertex, endVertex);
     this[0].modificationFunction(modifyVertex(this[0]));
     this[1].modificationFunction(modifyVertex(this[1]));
@@ -27,7 +27,18 @@ class Wall2D extends Line2d {
     let _color = "#e1ddc1";
 
     height = height || 243.84;
-    // this.copy = () => new Wall2D(this.length(), this.radians());
+    const measNoPeriod = (val) => Measurement.display(val).replace(/( |\.).*$/, '');
+    this.name = () => {
+      const originVector = layout.walls()[0][0].vector().inverse();
+      const sv = startVertex.translate(originVector, true);
+      const ev = endVertex.translate(originVector, true);
+      const sx = measNoPeriod(sv[0]);
+      const sy = measNoPeriod(sv[1]);
+      const ex = measNoPeriod(ev[0]);
+      const ey = measNoPeriod(ev[1]);
+      return `[(${sx},${sy}),(${ex},${ey})]`;
+    }
+
     this.windows = () => windows;
     this.height = () => height;
     this.color = (color) => color !== undefined ? (_color = color) : _color;
@@ -75,7 +86,7 @@ class Wall2D extends Line2d {
       const height = this.height();
       const windows = this.windows().map(w => w.clone());
       const doors = this.doors().map(d => d.clone());
-      return new Wall2D(sv, ev, height, windows, doors);
+      return new Wall2D(layout, sv, ev, height, windows, doors);
     }
   }
 }
@@ -96,7 +107,7 @@ Wall2D.fromJson = (json, layout, vertexMap) => {
   const ev = vertexMap[evStr];
   const windows = Object.fromJson(json.windows);
   const doors = Object.fromJson(json.doors);
-  const inst = new Wall2D(sv, ev, json.height, windows, doors);
+  const inst = new Wall2D(layout, sv, ev, json.height, windows, doors);
   return inst;
 }
 

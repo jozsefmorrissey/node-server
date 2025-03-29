@@ -8,25 +8,12 @@ du.on.match('change', '[prop-input]', (elem) => {
   assem.value(elem.name, elem.value);
 });
 
-du.on.match('change:keyup', '[lookup-id] .xyz-input[set-name] input', (elem) => {
-  const assem = Lookup.get(du.find.up.attribute('lookup-id', elem));
-  const setName = du.find.up.attribute('set-name', elem);
-  const xOyOz = du.find.up.attribute('name', elem);
-  const measurementInput = Lookup.get(elem.id);
-  const funcName = `set${setName}`;
-  const old = assem.position()[funcName](xOyOz);
-  const neW = measurementInput.decimal();
-  if (old !== neW) {
-    assem.position()[funcName](xOyOz, neW);
-    change = true;
-  }
-});
-
 let change = false;
 const renderView = () =>
   change && Canvas.view().render();
 Global.on.change.cabinet(() => change = true);
 Canvas.on.switch.before(renderView);
+
 du.on.match('blur:enter', '[lookup-id] .xyz-input[set-name] input', renderView);
 
 
@@ -48,4 +35,27 @@ du.on.match('change', '[radio-container] input[type=radio]', (elem) => {
   displayCnts.forEach(e => e.hidden = true);
   const target = displayCnts.find(e => du.class.has(e, `${elem.value}-cnt`));
   if (target) target.hidden = false;
+})
+
+let inputDispValCnt;
+du.on.match('keyup:focusin:focusout', '[input-display-value] input:not([type="radio"]):not([type="checkbox"])', (elem) => {
+  if (document.activeElement  !== elem) return inputDispValCnt.hidden = true;
+  if (!inputDispValCnt) {
+    inputDispValCnt = du.create.element('div', {id: 'input-display-value-cnt', class: 'card'});
+    document.body.append(inputDispValCnt);
+  }
+  inputDispValCnt.hidden = false;
+  console.log(elem);
+  const assem = Lookup.get(du.find.up.attribute('lookup-id', elem));
+  const value = assem.eval(elem.value);
+  if (Number.isNaN(value)) {
+    du.class.add(inputDispValCnt, 'error');
+    du.class.add(elem, 'error');
+    inputDispValCnt.innerText = ' = ????';
+  } else {
+    du.class.remove(inputDispValCnt, 'error');
+    du.class.remove(elem, 'error');
+    inputDispValCnt.innerText = ' = ' + Measurement.display(value);
+  }
+  du.move.relitive(inputDispValCnt, elem, 'center outer right')
 })

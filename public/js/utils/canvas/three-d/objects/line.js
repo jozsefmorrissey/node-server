@@ -109,10 +109,6 @@ class Line3D {
 
     this.isPoint = (tolerance) => this[0].equals(this[1], tolerance);
 
-    // this.on = (vertex, tolerance) => {
-    //   tolerance ||= .01;
-    // }
-
     const setCoef = (index, obj, t) => {
       let offset = ((index + 1) % 3);
       let coord = String.fromCharCode(offset + 120);

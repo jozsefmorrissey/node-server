@@ -12,6 +12,16 @@ const path = require('path');
 global.SERVER_ROOT = path.resolve(__dirname);
 global.DATA_DIRECTORY = `${shell.exec('realpath ~').stdout.trim()}/.opsc`;
 
+global.alarm = (msg, frequency, millSecs) => {
+  let childProcess = shell.exec(`speaker-test --frequency ${frequency || 700} --test sine`, {async: true, silent: true});
+  setTimeout(() => {
+    // console.log('killed', childProcess.pid);
+    // Todo: this is a sledge hammer... This whole process is klunky;
+    console.error('!!!!!!!!!!!!      ALARM      !!!!!!!!!!!');
+    shell.exec(`kill -9 $(ps -aef | grep "speaker-test" | awk '{print $2}')`);
+  }, millSecs || 500);
+}
+
 require('./public/js/utils/parse-arguments');
 try{
 
@@ -165,7 +175,6 @@ const htmlFilter = function(file) { return file.match(/\.html$/); };
 function templateUrlPaths(path, prefix) {
   try {
     const templatePaths = shell.find('./' + path).filter(htmlFilter);
-    console.log(path);
     templateUrls.concatInPlace(templatePaths.map(p => p.replace(path, prefix)));
   } catch(e) {console.log(e);};
 }
@@ -179,7 +188,7 @@ try {
   for (let i = 0; i < services.length; i += 1) {
     var id = services[i];
     if (exclude.indexOf(id) == -1) {
-      console.log(`Attempting To Start ${id}`);
+      console.log(`\nAttempting To Start ${id}`);
       var loc = '/' + id;
       var dir = './services' + loc;
       var project = dir + loc;
@@ -191,7 +200,7 @@ try {
       if (watcherExists) {
         buildCmd += ` && node ./watch.js ENV='${global.ENV}' ${flags}`;
       }
-      console.log(`Started ${id} - build command '${buildCmd}'`);
+      console.log(`Started ${id} - build command '${buildCmd}'\n`);
       try {
         if (!global.noBuild) shell.exec(buildCmd, {async: true});
       } catch (e) {}

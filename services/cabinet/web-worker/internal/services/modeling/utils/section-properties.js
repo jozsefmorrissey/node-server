@@ -156,12 +156,16 @@ class SectionPropertiesUtil {
         const outer = coordinates.outer;
         const point1 = this.innerPoly.vertex(spDto.verticalDivisions ? 1 : 3);
         const point2 = this.innerPoly.vertex(2);
+
         let depthVector = normal.scale(depth);
         let heightVector = new Line3D(point1, point2).vector().unit();
         let thicknessVector  = depthVector.crossProduct(heightVector);
         const maleOffsetVector = heightVector.scale(spDto.dividerJoint.eval.maleOffset);
-        point1.translate(maleOffsetVector.inverse());
-        point2.translate(maleOffsetVector);
+        const centerLine = this.outerPoly.lines()[spDto.verticalDivisions ? 1 : 2];
+        const toCenterVector = centerLine.connect(point1).vector().inverse();
+
+        point1.translate(maleOffsetVector.inverse().add(toCenterVector));
+        point2.translate(maleOffsetVector.add(toCenterVector));
 
         const normals = spDto.divider().position.current.normals;
         normals.y = heightVector; normals.x = depthVector.unit(); normals.z = thicknessVector.unit().inverse();

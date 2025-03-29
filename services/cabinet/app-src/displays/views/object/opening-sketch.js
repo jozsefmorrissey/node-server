@@ -232,7 +232,7 @@ class OpeningSketch {
                                     rotatedLine(outer[3], outer[0])]);
         }
 
-        let dems = _cabinet.position().demension();
+        let dems = _cabinet.demension();
         if (_modelInfo) {
           model = _modelInfo.unioned.boxOnly().clone();
           model.rotate(coDirRotz);

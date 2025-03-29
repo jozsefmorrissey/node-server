@@ -10,7 +10,7 @@ class Panel extends Assembly {
     super(partCode, partName, config);
     this.category('Panel');
 
-    this.hash = () => Object.hash(this.config());
+    this.hash = () => config ? Object.hash(this.config) : 0;
   }
 }
 Panel.property('manuallyConfigurable', true, false, false, false);
@@ -22,14 +22,6 @@ class PanelAutoConfigured extends Panel {
 }
 PanelAutoConfigured.property('manuallyConfigurable', false, false, false, false);
 
-function absoluteVector() {
-  const pos = this.parentAssembly().position();
-  const verts = Vertex3D.fromLimits(pos.limits());
-  const rotatedVector = unitVector.rotate(pos.rotation());
-  const vector = Vertex3D.magnitudeVector(rotatedVector, verts);
-  return vector;
-}
-
 class PanelVoidIndex extends PanelAutoConfigured {
   constructor(index, vOid, included, zNormal, xNormal) {
     const partCode = `:p${index}`;
@@ -37,10 +29,11 @@ class PanelVoidIndex extends PanelAutoConfigured {
     this.index = index;
     this.included = included;
     this.vectors = () => {
-      const pos = this.parentAssembly().position();
+      const parent = this.parentAssembly();
+      const pos = parent.position();
       const verts = Vertex3D.fromLimits(pos.limits());
-      const rotatedZ = zNormal.rotate(pos.rotation());
-      const rotatedX = xNormal.rotate(pos.rotation());
+      const rotatedZ = zNormal.rotate(parent.rotation());
+      const rotatedX = xNormal.rotate(parent.rotation());
       const rotatedY = rotatedZ.crossProduct(rotatedX);
       const z = Vertex3D.magnitudeVector(rotatedZ, verts);
       const x = Vertex3D.magnitudeVector(rotatedX, verts);

@@ -11,7 +11,7 @@ class OrientationControls extends Lookup {
     this.navId = () => navId;
     this.space = () => '&nbsp;&nbsp;';
 
-    let _color;
+    let _color = '#000000';
     this.color = (color) => {
       if (color) _color = color
       const elem = du.id(navId);

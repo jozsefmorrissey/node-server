@@ -1,5 +1,5 @@
 
-<div class='decision-input-cnt card{{empty() ? ' empty' : ''}}' node-id='{{id()}}'
+<div class='decision-input-cnt {{isRoot() ? 'card' : ''}}{{empty() ? ' empty' : ''}}' node-id='{{id()}}'
       recursion="disabled">
   <span id='{{id()}}'>
     <div class='payload-cnt'>{{payloadHtml()}}</div>

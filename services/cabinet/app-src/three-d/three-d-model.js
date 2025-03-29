@@ -20,7 +20,7 @@ ThreeDModel.getViewer = (model) => {
   if (canvas) {
     const size = du.convertCssUnit(viewerSize);
     if (model === undefined) return undefined;
-    viewer = new Viewer(model, size, size, 50);
+    viewer = new Viewer(new CSG.cube(), size, size, 50);
     addViewer(viewer, viewerSelector);
     const orientSelector = `${viewerSelector} .orientation-controls`;
     orientArrows = OrientationControls.forCSG(orientSelector, viewer, () => ThreeDModel.lastRendered);
@@ -32,9 +32,9 @@ ThreeDModel.getViewer = (model) => {
 ThreeDModel.orientArrows = () => orientArrows;
 
 ThreeDModel.display = (displayModel) => {
-  if (displayModel instanceof CSG) {
+  ThreeDModel.getViewer(displayModel);
+  if (displayModel instanceof CSG && displayModel.polygons.length > 0) {
     ThreeDModel.lastRendered = displayModel;
-    ThreeDModel.getViewer(displayModel);
     viewer.mesh = displayModel.toMesh();
     viewer.gl.ondraw();
     ThreeDModel.trigger.render(undefined, displayModel);

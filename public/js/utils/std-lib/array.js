@@ -347,7 +347,7 @@ Function.safeStdLibAddition(Array, 'diff', function (original, neww, modify) {
 
 Function.safeStdLibAddition(Array, 'concatInPlace', function (arr, checkForDuplicats) {
   if (arr === this) return;
-  if (!Array.isArray(arr)) return;
+  if (!Array.isItterable(arr)) return;
   for (let index = 0; index < arr.length; index += 1) {
     if (checkForDuplicats && this.indexOf(arr[index]) !== -1) {
       console.warn('duplicate');

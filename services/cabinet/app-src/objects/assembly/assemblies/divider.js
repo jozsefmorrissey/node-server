@@ -29,11 +29,11 @@ class Divider extends Assembly {
     const pFull = new Panel(':full', 'Full');
     const pFront = new Panel(':f', 'Front');
     const pBack = new Panel(':b', 'Back');
-    pFull.normals(false, {DETERMINE_FROM_PARENT: true});
-    pFront.normals(false, {DETERMINE_FROM_MODEL: true});
-    pBack.normals(false, {DETERMINE_FROM_MODEL: true});
+    pFull.config.NORMALS.TYPE = pFull.config.NORMALS.TYPES.PARENT;
+    pFront.config.NORMALS.TYPE = pFront.config.NORMALS.TYPES.PARENT;
+    pBack.config.NORMALS.TYPE = pBack.config.NORMALS.TYPES.PARENT;
     const frame = new Frame('fr', 'Frame');
-    frame.normals(false, {DETERMINE_FROM_MODEL: true});
+    frame.config.NORMALS.TYPE = frame.config.NORMALS.TYPES.PARENT;
     frame.parentAssembly(this);
 
 

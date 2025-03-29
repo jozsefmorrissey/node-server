@@ -46,7 +46,7 @@ class Cabinet extends Assembly {
     let toeKickHeight = 4;
     this.jointSettings = new JointSettings(false,false,false,false);
     this.part = () => false;
-    this.currentPosition = () => this.position().current();
+    this.currentPosition = () => this.current();
     this.display = false;
     this.overlay = OVERLAY.HALF;
     this.type = CABINET_TYPE.FRAMED;
@@ -94,7 +94,7 @@ class Cabinet extends Assembly {
       for (let index = 0; index < subAssems.length; index++) {
         const assem = subAssems[index];
         if (!(assem instanceof SectionProperties))
-          centers.push(assem.position().center());
+          centers.push(assem.center());
       }
       return Vertex3D.center(...centers);
     }
@@ -175,7 +175,7 @@ class Cabinet extends Assembly {
       normObj.x = normObj.z.crossProduct(normObj.y).inverse();
       const center = this.buildCenter();
       const outerCenter = mainOpening.sectionProperties().outer.center();
-      const rightCenter = secProps.right().position().center();
+      const rightCenter = secProps.right().center();
       if (center.distance(rightCenter) < center.translate(normObj.x, true).distance(rightCenter))
         normObj.x = normObj.x.inverse();
       if (center.distance(outerCenter) < center.translate(normObj.z, true).distance(outerCenter))

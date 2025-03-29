@@ -8,7 +8,7 @@ class Guides extends Assembly {
   constructor(partCode) {
     super(partCode);
     this.demensions = () => {
-      const dems = this.parentAssembly().position().demension();
+      const dems = this.parentAssembly().demension();
       const drawerDepth = dems.z;
       const guideDepths = this.resolve('dbdepths', true).map(p => ({
         approx: p.value().approx.value(),

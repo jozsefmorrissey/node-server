@@ -1,98 +1,20 @@
-const getDefaultSize = require('./utils.js').getDefaultSize;
 
-const {Vertex3D, Line3D, BiPolygon, Polygon3D} =
-        require('../../../public/js/utils/canvas/three-d/lib.js');
-
-const Joint = require('./objects/joint/joint.js');
+const {Vertex3D, Line3D, BiPolygon} = require('../../../public/js/utils/canvas/three-d/lib.js');
 
 class Position {
-  constructor(assembly, sme, config) {
-    config ||= {};
-
-    function getSme(attr, obj) {
-      if (attr === undefined) {
-        return {x: sme.eval(obj.x),
-          y: sme.eval(obj.y),
-          z: sme.eval(obj.z)}
-      } else {
-        return sme.eval(obj[attr], assembly);
-      }
-    }
-
-    let center, demension, rotation;
-    let demCoords = {};
-    let centerCoords = {};
-    let rotCoords = {};
-    this.configuration = () => {
-      if (config && config.points) {
-        return config;
-      }
-      return {
-        demension: demCoords.copy(),
-        center: centerCoords.copy(),
-        rotation: rotCoords.copy()
-      }
-    };
-
-    this.hash = () => Object.hash(this.configuration());
-
-    if ((typeof config.rotation) !== 'function') {
-      rotCoords = Position.parseCoordinates(config.rotation, '0:0:0');
-      rotation = (attr) => getSme(attr, rotCoords);
-    } else {
-      rotation = config.rotation;
-    }
-
-    if ((typeof config.center) !== 'function') {
-      centerCoords = Position.parseCoordinates(config.center, '0:0:0');
-      center = (attr) => getSme(attr, centerCoords);
-    } else {
-      center = config.center;
-    }
-
-    if ((typeof config.demension) !== 'function') {
-      const defSizes = getDefaultSize(assembly);
-      demCoords = Position.parseCoordinates(config.demension,
-      `${defSizes.width}:${defSizes.length}:${defSizes.thickness}`,
-      '0:0:0');
-      demension = (attr) => getSme(attr, demCoords);
-    } else new Promise(function(resolve, reject) {
-      demension = config.demension
-    });
-
-
-
-    // function get(func, sme) {
-    //   if ((typeof func) === 'function' && (typeof func()) === 'object') return func;
-    //   return sme;
-    // }
-
-    // function centerRelitiveToRoot(attr) {
-    //   const objectCenter = center(attr);
-    //   if (attr) {
-    //
-    //   }
-    // }
-
-
-    const group = () => {
-      const rootAssembly = assembly.getRoot();
-      return rootAssembly && rootAssembly.id();
-    }
-    this.rotation = rotation;
-    this.center = center;
-    this.demension = demension;
+  constructor(assembly) {
 
     const xyVertex = (index) => {
       const norms = this.normals();
       const xVect = index === 0 || index === 3 ? norms.x.inverse() : norms.x;
       const yVect = index === 0 || index === 2 ? norms.y : norms.y.inverse();
-      return new Vertex3D(this.center()).translate([xVect, yVect]);
+      return assembly.center().translate([xVect, yVect]);
     }
 
     this.vertex = (index, frontOback, axis, ratio) => {
       if (!Number.isInteger(index) || index < 0) return null;
       let point1, point2;
+      const config = assembly.config;
       if (config && config.points)
        if (config.points[index]) {
          point1 = new Vertex3D(assembly.evalObject(config.points[index]));
@@ -113,6 +35,7 @@ class Position {
     }
 
     this.current = () => {
+      const config = assembly.config;
       if (config && config.points) {
         const current = assembly.evalObject(config);
         current.normals = this.normals(false);
@@ -120,26 +43,24 @@ class Position {
         return current;
       }
       const position = {
-        center: this.center(),
-        demension: this.demension(),
-        rotation: this.rotation(),
-        normals: this.normals(false)
+        center: assembly.center(),
+        demension: assembly.demension(),
+        rotation: assembly.rotation(),
+        normals: assembly.normals()
       };
       return position;
     }
 
-    this.toBiPolygon = () => BiPolygon.fromPositionObject(this.current());
-
-    this.centerAdjust = (center, direction, offset) => {
-      const magnitude = direction[0] === '-' ? -1 : 1;
-      const axis = direction.replace(/\+|-/, '');
-      offset ||= this.demension(axis) / 2;
-      return this.center(center) + (magnitude * offset);
+    this.centerAdjust = (centerAxis, directionAxis, offset) => {
+      const magnitude = directionAxis[0] === '-' ? -1 : 1;
+      const axis = directionAxis.replace(/\+|-/, '');
+      offset ||= assembly.demension[axis]() / 2;
+      return assembly.center[centerAxis]() + (magnitude * offset);
     }
 
     this.limits = () => {
-      let center = this.center();
-      let d = new Vertex3D(this.demension()).rotate(this.rotation());
+      let center = assembly.center();
+      let d = assembly.demension().rotate(assembly.rotation());
       return  {
         x: center.x + d.x / 2,
         '-x': center.x - d.x / 2,
@@ -151,98 +72,17 @@ class Position {
     }
     this.limits.endpoints = () => Vertex3D.fromLimits(this.limits());
 
-    this.normals = (array) => {
-      const assemNorms = assembly.normals(array);
-      if (assemNorms) return assemNorms;
-      const rotation = this.rotation();
-      const normObj = {
-          x: new Vertex3D(1,0,0).rotate(rotation).vector(),
-          y: new Vertex3D(0,1,0).rotate(rotation).vector(),
-          z: new Vertex3D(0,0,1).rotate(rotation).vector()
-      };
-      return array ? [normObj.x, normObj.y, normObj.z] : normObj;
-    }
+    this.toBiPolygon = () => BiPolygon.fromPositionObject(this.current());
 
-    this.set = (obj, type, value, getter) => {
-      if ((typeof type) !== 'string') {
-        this.set(obj, 'x', type.x, getter);
-        this.set(obj, 'y', type.y, getter);
-        this.set(obj, 'z', type.z, getter);
-        return getter();
-      }
-      if (value !== undefined) {
-        obj[type] = value;
-      }
-      return getter(type);
-    }
-
-    this.parseCoordinates = (...args) => Position.parseCoordinates(...args);
-    this.setDemension = (type, value) => this.set(demCoords, type, value, demension);
-    this.setCenter = (type, value) => this.set(centerCoords, type, value, center);
-    this.setRotation = (type, value) => this.set(rotCoords, type, value, rotation);
     this.toString = () => {
       const curr = this.current();
-      curr.center = new Vertex3D(curr.center);
-      curr.demension = new Vertex3D(curr.demension);
-      curr.rotation = new Vertex3D(curr.rotation);
+      curr.center = curr.center;
+      curr.demension = curr.demension;
+      curr.rotation = curr.rotation;
       return `center: ${curr.center}, demensions: ${curr.demension}, rotation: ${curr.rotation}`;
     }
   }
 }
 
-Position.targeted = (attr, x, y, z) => {
-  const all = attr === undefined;
-  const dem = {
-    x: all || attr === 'x' && x(),
-    y: all || attr === 'y' && y(),
-    z: all || attr === 'z' && z()
-  };
-  return all ? {x,y,z} : dem[attr];
-}
-Position.axisStrRegex = /(([xyz])(\(([0-9]*)\)|))/;
-Position.rotateStrRegex = new RegExp(Position.axisStrRegex, 'g');
-Position.touching = (pos1, pos2) => {
-  const touchingAxis = (axis) => {
-    if (pos1[`${axis}1`] === pos2[`${axis}0`])
-      return {axis: `${axis}`, direction: '+'};
-    if (pos1[`${axis}0`] === pos2[`${axis}1`])
-      return {axis: `${axis}`, direction: '-'};
-  }
-  if (!Position.within(pos1, pos2)) return null;
-  return touchingAxis('x') || touchingAxis('y') || touchingAxis('z') || null;
-}
-Position.within = (pos1, pos2, axises) => {
-  const axisTouching = (axis) => {
-    if (axises !== undefined && axises.index(axis) === -1) return true;
-    const p10 = pos1[`${axis}0`];
-    const p11 = pos1[`${axis}1`];
-    const p20 = pos2[`${axis}0`];
-    const p21 = pos2[`${axis}1`];
-    return (p10 >= p20 && p10 <= p21) ||
-            (p11 <= p21 && p11 >= p20);
-  }
-  return axisTouching('x') && axisTouching('y') && axisTouching('z');
-}
 
-Position.parseCoordinates = function() {
-  let coordinateMatch = null;
-  for (let index = 0; coordinateMatch === null && index < arguments.length; index += 1) {
-    const str = arguments[index];
-    if (typeof str === 'string') {
-      coordinateMatch = str.match(Position.demsRegex);
-    } else if ((typeof str) === 'object') {
-      return str;
-    }
-  }
-  if (coordinateMatch === null) {
-    throw new Error(`Unable to parse coordinates`);
-  }
-  return {
-    x: coordinateMatch[1],
-    y: coordinateMatch[2],
-    z: coordinateMatch[3]
-  }
-}
-
-Position.demsRegex = /([^:]{1,}?):([^:]{1,}?):([^:]{1,})/;
 module.exports = Position

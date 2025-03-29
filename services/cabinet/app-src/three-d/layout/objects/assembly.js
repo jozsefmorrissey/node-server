@@ -15,13 +15,10 @@ class Assembly3D extends Object3D {
     let topSnap;
     this.assembly = () => assembly;
     this.center = (vertex3D) => {
-      const position = assembly.position();
       if (vertex3D instanceof Vertex3D) {
-        position.setCenter('x', vertex3D.x);
-        position.setCenter('y', vertex3D.y);
-        position.setCenter('z', vertex3D.z);
+        assembly.config.POSITION.center.set(vertex3D);
       }
-      return new Vertex3D(position.center());
+      return new Vertex3D(assembly.center());
     }
 
     this.height = assembly.length;
@@ -32,12 +29,7 @@ class Assembly3D extends Object3D {
     // this.snap2d.top = () => topSnap;
     this.shouldSave = () => false;
 
-    this.rotation = (rotation) => {
-      if (rotation)
-        assembly.position().setRotation(rotation);
-      return assembly.position().rotation();
-    }
-
+    this.rotation = assembly.config.Normals.rotation.set;
 
     function configurePoly(poly, modelInfo) {
       if (assembly.faceNormals instanceof Function) {

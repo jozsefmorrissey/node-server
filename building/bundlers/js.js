@@ -62,14 +62,12 @@ class JsBundler extends Bundler {
 
     let lastCall = Number.MAX_SAFE_INTEGER;
     function change(filename, contents, position) {
-      // console.log('filename:', filename)
       if (!fileExistes(filename)) {
         delete jsFiles[filename];
         delete allJsFiles[filename];
       } else if (allJsFiles[filename]) {
         allJsFiles[filename].updateContents(contents);
       } else {
-        // console.log('creating new', filename)
         new JsFile(filename, contents, position);
       }
       const currTime = new Date().getTime();
@@ -82,11 +80,8 @@ class JsBundler extends Bundler {
     }
 
     function sortFileNames (jsF1, jsF2) {
-      // console.log(jsF1.filename, jsF1.position)
-      // console.log(jsF2.filename, jsF2.position);
       const test = jsF1.position - jsF2.position || jsF1.filename.match(/[^.]{2,}?\//g).length -
         jsF2.filename.match(/[^.]{2,}?\//g).length
-      // console.log(test);
       return test;
     }
 

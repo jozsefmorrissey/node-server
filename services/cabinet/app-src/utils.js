@@ -19,80 +19,12 @@ const defaultConfig = () => {
     vectors: [[1,0,0],[0,1,0],[0,0,1]]}
 };
 
-const normals = (assembly) => {
-  let normObj, lastNormHash, lastNorm;
-  const ensureVector = (cno, attr) => cno[attr].length === 2 ?
-      cno[attr] = new Line3D(this.evalObject(cno[attr][0]), this.evalObject(cno[attr][1])).vector().unit() :
-      (cno[attr] instanceof Vector3D ? cno[attr] :
-        cno[attr] = new Vector3D(this.eval(cno[attr][0]), this.eval(cno[attr][1]), this.eval(cno[attr][2])).unit());
-
-  const normFunc = (array, normalObj) => {
-    if (normFunc.set(array, normalObj)) return normObj;
-    if (!normObj) norms = normFunc.rotation();
-    else if (normObj.DETERMINE_FROM_PARENT) return normObj;
-    else if (normObj.DETERMINE_FROM_MODEL) return normObj;
-    else if (normObj.DETERMINE_FROM_VECTOR) norms = normFunc.vector();
-
-    return array ? [norms.x, norms.y, norms.z] : norms;
-  }
-
-  normFunc.config = () => (normObj ||=  defaultConfig());
-  normFunc.config.type = () => {
-    normFunc.config();
-    if (normObj.DETERMINE_FROM_PARENT) return 'inherited';
-    else if (normObj.DETERMINE_FROM_MODEL) return 'model';
-    else if (normObj.DETERMINE_FROM_VECTOR) return 'vector';
-    else if (normObj.CONFIGURED_BY_LINES) return 'lines';
-    return 'default';
-  }
-  normFunc.config.manual = () => !normObj.DETERMINE_FROM_PARENT && !normObj.DETERMINE_FROM_MODEL;
-
-  normFunc.set = (array, normalObj) => {
-    if (normalObj instanceof Object) {
-      const currHash = Object.hash(normalObj);
-      if (lastNormHash !== currHash) {
-        lastNormHash = currHash;
-        if (!Array.isArray(normalObj)) normObj = normalObj;
-        else normObj = {x: normalObj[0], y: normalObj[1], z: normalObj[2]};
-        if (normObj.x || normObj.y) {
-          normObj.DETERMINE_FROM_VECTOR = true;
-          normObj.calc = normalObj.calc;
-        }
-      }
-      return normObj;
-    }
-  }
-  normFunc.raw = () => normObj;
-
-  normFunc.vector = () => {
-    const calcNormObj = assembly.evalObject(normObj);
-    if (calcNormObj.calc !== 0) ensureVector(calcNormObj, 'x');
-    if (calcNormObj.calc !== 1) ensureVector(calcNormObj, 'y');
-    if (calcNormObj.calc !== 2) ensureVector(calcNormObj, 'z');
-    if (calcNormObj.calc === 0) calcNormObj.x = calcNormObj.y.crossProduct(calcNormObj.z).unit();
-    if (calcNormObj.calc === 1) calcNormObj.y = calcNormObj.x.crossProduct(calcNormObj.z).unit();
-    if (calcNormObj.calc === 2) calcNormObj.z = calcNormObj.x.crossProduct(calcNormObj.y).unit();
-    return calcNormObj;
-  }
-
-  normFunc.rotation = () => {
-      const rotation = assembly.position().rotation();
-      const normObj = {
-          x: new Vertex3D(1,0,0).rotate(rotation).vector(),
-          y: new Vertex3D(0,1,0).rotate(rotation).vector(),
-          z: new Vertex3D(0,0,1).rotate(rotation).vector()
-      };
-      return normObj;
-  }
-  return normFunc;
-}
-
 function positionAssemblyCsg(csg, assembly) {
   csg = csg.clone();
   if (assembly.position) {
-    const rotation = assembly.position().rotation();
+    const rotation = assembly.rotation();
     const buildCenter = assembly.buildCenter(true);
-    const center = new Vertex3D(assembly.position().center());
+    const center = new Vertex3D(assembly.center());
     csg.translate({x: -buildCenter.x, y: -buildCenter.y, z: -buildCenter.z})
     csg.rotate(rotation);
     csg.translate(center);
@@ -103,9 +35,9 @@ function positionAssemblyCsg(csg, assembly) {
 function positionAssemblyCsg(obj, assembly) {
   obj = obj.clone ? obj.clone() : obj.copy();;
   if (assembly.position) {
-    const rotation = assembly.position().rotation();
+    const rotation = assembly.rotation();
     const buildCenter = assembly.buildCenter(true);
-    const center = new Vertex3D(assembly.position().center());
+    const center = new Vertex3D(assembly.center());
     obj = obj.translate({x: -buildCenter.x, y: -buildCenter.y, z: -buildCenter.z}) || obj;
     obj = obj.rotate(rotation) || obj;
     obj = obj.translate(center) || obj;
@@ -113,7 +45,6 @@ function positionAssemblyCsg(obj, assembly) {
   return obj;
 }
 
-exports.normals = normals;
 exports.formatConstructorId = formatConstructorId;
 exports.getDefaultSize = getDefaultSize;
 exports.positionAssemblyCsg = positionAssemblyCsg;

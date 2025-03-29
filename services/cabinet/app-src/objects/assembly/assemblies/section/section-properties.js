@@ -685,17 +685,6 @@ class SectionProperties extends KeyValue {
       return shelves.slice(0, shelveCount);
     }
 
-
-    function referenceFront(reference, cabinet) {
-      const refCenter = new Vertex3D(reference.position().center());
-      const cabCenter = cabinet.buildCenter(true);
-      const refDist = refCenter.distance(cabCenter);
-      refCenter.translate(reference.position().normals().z);
-      const transDist = refCenter.distance(cabCenter);
-      return transDist < refDist;
-    }
-
-
     const boxJoint = (selector, index) => {
       const bj = new Dado(/^dv:[^_]{1,}$/, new RegExp(`^${selector}$`), null, `boxJoint${index}`);
       bj.maleOffset(.9525);

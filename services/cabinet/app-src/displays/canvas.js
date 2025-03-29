@@ -186,4 +186,13 @@ du.on.match('change', '[name="explosionFactor"]', (elem) => {
   const factor = 1 + Number.parseInt(elem.value)/10;
   Canvas.explosionFactor(factor);
   Canvas.render.lastCall('explosionFactorUpdate');
-})
+});
+
+let triggerFront = false;
+const frontAndCenter = () => {
+  if (!triggerFront) return;
+  triggerFront = false;
+  ThreeDModel.orientArrows().front();
+}
+ThreeDModel.on.render(frontAndCenter);
+Global.on.change.target(() => triggerFront = true);

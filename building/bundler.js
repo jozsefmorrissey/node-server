@@ -19,6 +19,7 @@ Bundler.alarm = (frequency, millSecs) => {
   setTimeout(() => {
     // console.log('killed', childProcess.pid);
     // Todo: this is a sledge hammer... This whole process is klunky;
+    console.error('!!!!!!!!!!!!BUNDLER ALARM!!!!!!!!!!!');
     shell.exec(`kill -9 $(ps -aef | grep "speaker-test" | awk '{print $2}')`);
   }, millSecs || 300);
 }

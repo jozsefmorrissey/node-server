@@ -48,11 +48,11 @@ function addNormalLines(obj) {
     config = assem.evalObject(obj.polyConfig.points);
     config.forEach(arr => partAxis.push(csgVertex(arr, .4, 'black')));
   }
-  let vectors = assem.position().normals(true).map(v => v.toArray());
+  let vectors = assem.normals().map(v => v.toArray());
   const center = isPoly ? Vertex3D.center(config) :
-                          assem.position().center();
+                          assem.center();
   const origin = [center.x, center.y, center.z];
-  const dems = assem.position().demension();
+  const dems = assem.demension();
   const size = Math.max(dems.x, dems.y, dems.z);
   const axis = new CSG.Axis(size, .25, origin, vectors);
   partAxis = [axis];

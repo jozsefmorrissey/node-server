@@ -14,7 +14,7 @@ class AssemblyConfigInput {
     const setSelect = (attr, target, select, notMeasurment) => {
       const selector = `#${id}>.sub-${attr}-cnt>[name='${attr}']`;
       const dispVal = () => {
-        const value = cabinet.position()[attr](this[attr].target);
+        const value = cabinet[attr](this[attr].target);
         return notMeasurment ? value : new Measurement(value).display();
       }
       select.on('change', (value, elem) => {
@@ -27,13 +27,14 @@ class AssemblyConfigInput {
       du.on.match('keyup', selector, (elem) => {
         const value = elem.value;
         const setFuncName = 'set' + attr.substring(0,1).toUpperCase() + attr.substring(1);
-        cabinet.position()[setFuncName](this[attr].target, value);
+        throw new Error('suspected garbage class');
+        cabinet[setFuncName](this[attr].target, value);
         const display = du.find.closest('.measurement-input', elem);
         display.value = dispVal();
       });
       this[attr] = {
         target,
-        eqn: () => cabinet.position().configuration()[attr][this[attr].target],
+        eqn: () => cabinet.config.POSITION[attr][this[attr].target],
         html: () => select.html(),
         value: dispVal
       };

@@ -61,6 +61,6 @@ Cost.register = (clazz) => {
   Cost.typeList = Object.keys(Cost.types).sort();
 }
 
-Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
+// Cost.evaluator = new StringMathEvaluator(null, (attr, assem) => Assembly.resolveAttr(assem, attr))
 
 module.exports = Cost

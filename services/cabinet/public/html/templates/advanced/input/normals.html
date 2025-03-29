@@ -11,17 +11,13 @@
           class='tab normal-vector-input-cnt'>
     <td><label>{{label}}</label></td>
       <td:t repeat='k in 0..3'>
-        <input class='template-input dem' attr='subassemblies'
-                value="{{part.normals.config().vectors[i][j]}}"
-                {{part.normals.config().calc === i ? 'disabled' : ''}}>
+        <input class='template-input dem' attr='subassemblies' short
+                value="{{part.config.NORMALS.vectors[i][j]}}"
+                {{part.config.NORMALS.calc === i ? 'disabled' : ''}}>
       </td:t>
     <td>
       <input type='radio' name='calculated' class='calc-vect-radio'
-        {{part.normals.config().calc === i ? 'checked' : ''}}>
-    </td>
-    <td>
-      <input name='display' type='text' disabled
-        value='{{Utils.display.vertex3D(part.normals(true)[$index])}}'>
+        {{part.config.NORMALS.calc === i ? 'checked' : ''}}>
     </td>
   </tr:t>
 </table>

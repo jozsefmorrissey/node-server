@@ -7,7 +7,7 @@
 
 
 
-  <div advanced-dropdown='Position'>
+  <div advanced-dropdown='Position' input-display-value>
     <div class='center'>
       <label><b>Position:</b></label>
       <div radio-container>
@@ -21,7 +21,7 @@
     </div>
     <div container>
       <div class='poly-cnt' {{obj.positionMethod !== 'poly' ? 'hidden' : ''}}>
-        <input type='measurement' name='thickness'
+        <input type='measurement' name='thickness' short
                 decimal='{{part.thickness()}}' units='inch,cm,mm'/>
         <div:t t-id='advanced/input/vertices'>{
           min: 3
@@ -34,7 +34,7 @@
   </div>
 
 
-  <div advanced-dropdown='Orientation'>
+  <div advanced-dropdown='Orientation' input-display-value>
     <div class='center' radio-container>
       <label>Rotation</label>
       <input type='radio' name='normalType' value='default'
@@ -50,19 +50,15 @@
       <div{{part.normals.config.type() !== 'default' ? ' hidden' : ''}}
             class='default-cnt'>
         Rotation
-        <div:t t-id='advanced/input/xyz'>{
-          x: part.width(),
-          y: part.length(),
-          z: part.thickness()
-          }</div:t>
+        <div:t  config-attr='rotation' t-id='advanced/input/xyz'>part.config.NORMALS.rotation</div:t>
       </div>
       <div{{part.normals.config.type() !== 'vector' ? ' hidden' : ''}}
             class='vector-cnt'>
-        <div:t t-id='advanced/input/normals'></div:t>
+        <div:t  config-attr='normals' t-id='advanced/input/normals'>part.config.NORMALS.normals</div:t>
       </div>
       <div{{part.normals.config.type() !== 'lines' ? ' hidden' : ''}}
             class='lines-cnt'>
-        <div:t t-id='advanced/input/line-vectors'></div:t>
+        <div:t t-id='advanced/input/line-vectors'>part.config.NORMALS.lines</div:t>
       </div>
     </div>
   </div>

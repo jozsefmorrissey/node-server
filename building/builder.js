@@ -9,7 +9,7 @@ class Builder {
     const positions = {};
     function readFile(file, position, fileCount) {
       function notify() {
-        onUpdate.lastCall(id, 500);
+        onUpdate.lastCall(id, 50);
       }
 
       function read(err, contents) {
@@ -17,7 +17,7 @@ class Builder {
           console.error(err);
         }
         onChange && onChange(file.name, contents, position);
-        setTimeout(notify, 300);
+        setTimeout(notify, 50);
       }
       // console.log.lastCall(`File Change Notification: ${file.name}`);
       fs.readFile(file.name, 'utf8', read);

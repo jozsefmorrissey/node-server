@@ -12,7 +12,7 @@
     <tr:t repeat='cabinet in cabinets' class='btm-border-barely-visible'>
       <td>{{cabinet.groupIndex()}}</td>
       <td>{{cabinet.name()}}</td>
-      <td>{{Utils.display.demensions(cabinet.position().demension())}}</td>
+      <td>{{Utils.display.demensions(cabinet.demension())}}</td>
       <td class='min-width-20'>{{cabinet.value('show.left.type')}}</td>
       <td class='min-width-20'>{{cabinet.value('show.right.type')}}</td>
       <td class='min-width-20'>{{cabinet.value('show.left.endStyle')}}</td>

@@ -13,23 +13,24 @@ const EPNTS = new Endpoints(require('./public/json/endpoints.json')).getFuncObj(
 
 let orderTemplate = new $t('order');
 
+let funcs;
 const loadTemplates = () => {
   console.log('Loading..............................')
   delete require.cache[require.resolve('./generated/html-templates')];
-  $t.loadFunctions(require('./generated/html-templates'));
+  try {
+    funcs = require('./generated/html-templates');
+  } catch (e) {
+    global.alarm('Template Loading Failed');
+  }
+  if (funcs) $t.loadFunctions(funcs);
   orderTemplate = new $t('order');
 }
 if (global.build) {
   setTimeout(loadTemplates, 10000);
 } else {
   loadTemplates();
-  try {
-    const Builder = require('../../building/builder');
-    new Builder(null, loadTemplates, true).add('./services/cabinet/generated/html-templates.js');
-    console.log('template refresher')
-  } catch (e) {
-    console.error('Template Loading Failed');
-  }
+  const Builder = require('../../building/builder');
+  new Builder(null, loadTemplates, true).add('./services/cabinet/generated/html-templates.js');
 }
 
 

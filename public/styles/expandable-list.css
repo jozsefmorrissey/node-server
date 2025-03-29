@@ -6,6 +6,10 @@
   position: relative;
 }
 
+body.dark .card {
+  box-shadow: 1px 1px 3px #e9e0e0, 1px 1px 3px grey, 1px 1px 3px #ffffff;
+}
+
 .relitive {
   position: relative;
 }
@@ -25,6 +29,11 @@
 .decision-input-cnt {
   min-height: 25pt;
 }
+
+.decision-input-cnt.empty {
+    display: none;
+}
+
 .single-entry-cnt {
   padding: 1pt 0;
 }

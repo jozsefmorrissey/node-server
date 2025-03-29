@@ -1,5 +1,12 @@
-<div class='inline-flex'>
-  <input type='measurement' name='x' decimal='{{x}}'>
-  <input type='measurement' name='y' decimal='{{y}}'>
-  <input type='measurement' name='z' decimal='{{z}}'>
-</div>
+<td class='xyz-input-cnt'>
+  <label>X</label>
+  <input name='x' short value='{{Measurement.display(x)}}'>
+</td>
+<td class='xyz-input-cnt'>
+  <label> Y </label>
+  <input name='y' short value='{{Measurement.display(y)}}'>
+</td>
+<td class='xyz-input-cnt'>
+  <label>Z</label>
+  <input name='z' short value='{{Measurement.display(z)}}'>
+</td>

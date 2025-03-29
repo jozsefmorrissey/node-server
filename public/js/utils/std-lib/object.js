@@ -26,7 +26,7 @@ clazz.register = (clazz, ...attrs) => {
   const parentFromJson = clazz.fromJson;
   clazz.fromJson = (json, obj) => {
     if (!obj) obj = clazz.new();
-    if (parentFromJson) parentFromJson(json, obj);
+    if (parentFromJson) obj = parentFromJson(json, obj);
     Object.keys(attrMap[cxtrName]).forEach(k => obj.pathValue(k, Object.fromJson((json.pathValue(k)))));
     return obj;
   }
@@ -241,7 +241,7 @@ Function.safeStdLibAddition(Object, 'fromJson', function (rootJson) {
       const classname = value[identifierAttr];
       const attrs = attrMap[classname] ? Object.keys(attrMap[classname]) :
                     Object.keys(value).filter((attr) => !attr.match(/^_[A-Z]*[A-Z_]*$/));
-      if (Array.isArray(value)) {
+      if (Array.isArray(value) && !(classLookup[classname] && classLookup[classname].fromJson)) {
         const realArray = [];
         for (let index = 0; index < value.length; index += 1) {
           realArray[index] = Object.fromJson(value[index]);
@@ -539,9 +539,9 @@ Function.safeStdLibAddition(Object, 'swap', function (i, j, doNotModify) {
   return arr;
 });
 
-Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, key) {
+Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify, parentKey) {
   if (!modify) complement = JSON.copy(complement);
-  if (func(complement, key)) return {filtered: complement};
+  if (func(complement, parentKey)) return {filtered: complement};
 
   if (!(complement instanceof Object)) return {complement};
   let filtered = Array.isArray(complement) ? [] : {};
@@ -549,7 +549,8 @@ Function.safeStdLibAddition(Object, 'filter', function(complement, func, modify,
   let setOne = false;
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
-    const seperated = Object.filter(complement[key], func, true, key);
+    const path = parentKey ? `${parentKey}.${key}` : key;
+    const seperated = Object.filter(complement[key], func, true, path);
     if (seperated.filtered !== undefined) filtered[key] = seperated.filtered;
     setOne = true;
     if (seperated.complement === undefined) delete complement[key];

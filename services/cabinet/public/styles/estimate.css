@@ -82,10 +82,6 @@ table td {
 .last-col-full td { width: 1px; }
 .last-col-full td:last-child { width: 100%;}
 
-.decision-input-cnt.card.empty {
-    display: none;
-}
-
 .flow-root {
   display: flow-root;
 }
@@ -687,9 +683,9 @@ canvas {
 
 .error {
   font-size: small;
-  font-weight: 700;
-  color: red;
-  background-color: pink;
+  font-weight: 700 !important;
+  color: red !important;
+  background-color: pink  !important;
 }
 
 .cabinet-template-input-cnt {
@@ -1050,11 +1046,17 @@ i:hover,
 .selector:hover,
 i.active,
 .selector.active {
-  background-color: grey;
+  background-color: #57a90f;
   border-radius: 2pt;
   color: white;
   cursor: pointer;
 }
+
+i:hover,
+.selector:hover {
+  background-color: #636969;
+}
+
 
 [error-msg] {
   border-style: solid;
@@ -1072,6 +1074,7 @@ i.active,
   border-radius: 10px;
   border-style: solid;
   border-color: red;
+  color: #ffffffb0;
   border-width: 2px;
   box-shadow: 3px 3px 6px black, 3px 3px 6px grey, 3px 3px 6px lightgrey;
   background-color: #e11f1f61;
@@ -1105,4 +1108,27 @@ i.active,
 
 .half-height {
   height: 50%;
+}
+
+.dark {
+  background-color: black;
+  color: #57a90f;
+}
+
+body.dark input, body.dark select {
+  background-color: #636969;
+  color: white;
+}
+
+input[short] {
+  width: 50px;
+}
+
+.xyz-input-cnt label {
+    padding: 0 3pt;
+}
+
+#input-display-value-cnt {
+  background-color: black;
+  padding: 0 4pt;
 }

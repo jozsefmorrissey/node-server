@@ -53,11 +53,11 @@ Test.add('DTO & RTO', (ts) => {
   const firstR = reconnected[0];
   const center = firstR.position.current.center.object();
   const normals = firstR.position.current.normals;
-  ts.assertTrue(center.equals(firstA.position().center()), 'Vertex3D conversion contains Error/s');
+  ts.assertTrue(center.equals(firstA.center()), 'Vertex3D conversion contains Error/s');
   ts.assertTrue(normals instanceof Object, 'plane js Object conversion contains Error/s');
-  const xVectEq = firstA.position().normals().x.equals(normals.x);
-  const yVectEq = firstA.position().normals().y.equals(normals.y);
-  const zVectEq = firstA.position().normals().z.equals(normals.z);
+  const xVectEq = firstA.normals().x.equals(normals.x);
+  const yVectEq = firstA.normals().y.equals(normals.y);
+  const zVectEq = firstA.normals().z.equals(normals.z);
   ts.assertTrue(xVectEq && yVectEq && zVectEq, 'Vector3D conversion contains Error/s');
 
   const lastA = all[all.length - 1];

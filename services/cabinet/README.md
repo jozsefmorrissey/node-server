@@ -87,6 +87,7 @@ dab in the center of its group/s (groups if grouped by multiple attributes).
 
 ### TODO
 #### Urgent
+- remove function calls Vector3D i(), j(), k() => i, j, k
 - Sanitize html: $t.clean
 
 #### Annoying

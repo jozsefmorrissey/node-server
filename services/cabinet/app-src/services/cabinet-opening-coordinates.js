@@ -130,14 +130,14 @@ class CabinetOpeningCorrdinates extends KeyValue {
     }
 
     function openingCenter(top, bottom, right, left) {
-      const center = Vertex3D.center(bottom.position().center(), top.position().center());
+      const center = Vertex3D.center(bottom.center(), top.center());
       const rightFaces = right.closestOrder(center)[0].vertices();
       const leftFaces = left.closestOrder(center)[0].vertices();
       return Vertex3D.center(rightFaces[0], rightFaces[3], leftFaces[0], leftFaces[3]);
     }
 
     function limitPlanes(part, center, right, left) {
-      const partCenter = new Vertex3D(part.position().current().center).copy();
+      const partCenter = new Vertex3D(part.position().current().center);
       const thickness = part.thickness();
       const rightNorms = right.normals();
       const leftNorms = left.normals();

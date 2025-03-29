@@ -52,7 +52,7 @@ class OpeningToeKick extends Assembly {
     const cutter = new Cutter(':tkc', `ToeKick`);
     const cutterR = new Cutter(':tkcr', `ToeKickPerp`);
     const cutterL = new Cutter(':tkcl', `ToeKickPerp`);
-    toeKickPanel.normals(false, {DETERMINE_FROM_MODEL: true})
+    toeKickPanel.config.NORMALS.TYPE = toeKickPanel.config.NORMALS.TYPES.PARENT;
     joint(cutter)(/^c_R(:|_)/, () => !this.rightEndStyle());
     joint(cutter)(/^c_L(:|_)/, () => !this.leftEndStyle());
     sideJointConfig(/^R:/, this.overlayRight, 'r');

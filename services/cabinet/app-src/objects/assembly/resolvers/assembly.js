@@ -15,9 +15,9 @@ class AssemblyResolver extends Resolver {
     const infoObj = (expression, value, evaluation) =>
       new Resolver.Info(assembly, expression, value, evaluation);
     const positionInfoObj = (expr, attr, axis, raw) =>
-      infoObj(expr, assembly.config()[attr][axis], raw ? null : assembly.position()[attr](axis));
+      infoObj(expr, assembly.config.POSITION[attr][axis], raw ? null : assembly[attr][axis]());
 
-      const positionReg = /^(n|c|r|d|normal|center|rotation|demension)\.(x|y|z)(\.(i|j|k)|)$/;
+    const positionReg = /^(n|c|r|d|normal|center|rotation|demension)\.(x|y|z)(\.(i|j|k)|)$/;
     const positionValue = (expr, raw) => {
       const posMatch = expr.match(positionReg);
       if (posMatch === null) return null;
@@ -36,15 +36,14 @@ class AssemblyResolver extends Resolver {
       }
     }
 
-    // assembly.config().demension.x
     let v;
     const demensionValue = (expr, raw) => {
       if (expr === 'length' || expr === 'height' || expr === 'h' || expr === 'l')
-        return infoObj(expr, assembly.config().demension.y, assembly.length());
+        return infoObj(expr, assembly.config.POSITION.demension.y, assembly.length());
       else if (expr === 'w' || expr === 'width')
-        return infoObj(expr, assembly.config().demension.x, assembly.width());
+        return infoObj(expr, assembly.config.POSITION.demension.x, assembly.width());
       else if (expr === 'depth' || expr === 'thickness' || expr === 'd' || expr === 't')
-        return infoObj(expr, assembly.config().demension.z, assembly.thickness());
+        return infoObj(expr, assembly.config.POSITION.demension.z, assembly.thickness());
     }
 
     const indexReg = /$([0-9]{1,})$/;

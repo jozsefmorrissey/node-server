@@ -216,6 +216,7 @@ du.move.inFront = function (elem, timeout) {
 
 du.move.inbounds = keepInBounds;
 
+const nh = (v) => Math.roundTo(v, .001);
 du.move.relitive = function (elem, target, direction, props) {
   props = props || {};
   const clientHeight = document.documentElement.clientHeight;
@@ -239,18 +240,18 @@ du.move.relitive = function (elem, target, direction, props) {
   const position = {};
   const outOffset = isOutside ? (isVertical ? elem.clientHeight : elem.clientWidth) : 0;
   if (isCenter) {
-    position.top = (rect.top + rect.bottom - elem.clientHeight) / 2 + scrollY + 'px';
-    position.left = (rect.left + rect.right - elem.clientWidth) / 2 + scrollX + 'px';
+    position.top = nh((rect.top + rect.bottom - elem.clientHeight) / 2 + scrollY) + 'px';
+    position.left = nh((rect.left + rect.right - elem.clientWidth) / 2 + scrollX) + 'px';
   }
 
   if (isOutside) {
     if (isTop) {
-      position.bottom = clientHeight - (rect.top + scrollY + outOffset) + elem.clientHeight + 'px';
+      position.bottom = nh(clientHeight - (rect.top + scrollY + outOffset) + elem.clientHeight) + 'px';
       position.top = 'unset';
     } else { position.bottom = 'unset'; }
 
     if (isBottom) {
-      position.top = clientHeight - ((clientHeight - rect.bottom) + elem.clientHeight - outOffset - scrollY) + 'px';
+      position.top = nh(clientHeight - ((clientHeight - rect.bottom) + elem.clientHeight - outOffset - scrollY)) + 'px';
     } else if (!isCenter) { position.top = 'unset'; }
 
     if (isRight) {
@@ -258,25 +259,25 @@ du.move.relitive = function (elem, target, direction, props) {
     } else if (!isCenter) { position.left = 'unset'; }
 
     if (isLeft) {
-      position.right = clientWidth - (rect.left + scrollX) + 'px';
+      position.right = nh(clientWidth - (rect.left + scrollX)) + 'px';
       position.left = 'unset';
     } else { position.right = 'unset'; }
   } else {
     if (isTop) {
-      position.top = rect.top + scrollY + 'px';
+      position.top = nh(rect.top + scrollY) + 'px';
     } else if (!isCenter) { position.top = 'unset'; }
 
     if (isBottom) {
-      position.bottom = (clientHeight - rect.bottom) - scrollY + 'px';
+      position.bottom = nh((clientHeight - rect.bottom) - scrollY) + 'px';
       position.top = 'unset';
     } else { position.bottom = 'unset'; }
 
     if (isRight) {
-      position.right = clientWidth - rect.right - scrollX + 'px';
+      position.right = nh(clientWidth - rect.right - scrollX) + 'px';
     } else { position.right = 'unset'; }
 
     if (isLeft) {
-      position.left = rect.left + scrollX + 'px';
+      position.left = nh(rect.left + scrollX) + 'px';
     } else if (!isCenter) { position.left = 'unset'; }
   }
 
@@ -675,27 +676,28 @@ function onKeycombo(event, func, args) {
   return {event: 'keydown', func: keydown};
 }
 
-function created(elem, selectors) {
-  selectors ||= Object.keys(onCreateSelectors);
-  for (let index = 0; index < selectors.length; index++) {
-    const selector = selectors[index];
-    if (flexibleMatch(elem, selector)) onCreateSelectors[selector](elem);
+function creationMutationObserved(events) {
+  const keys = Object.keys(onCreateSelectors);
+  for (let index = 0; index < keys.length; index++) {
+    const selector = keys[index];
+    const func = onCreateSelectors[selector];
+    for (let j = 0; j < events.length; j++) {
+      const created = du.find.all(selector, events[j].target)
+      du.find.all(selector, events[0].target)
+      created.forEach(func);
+    }
   }
-  for (let ci = 0; ci < elem.children.length; ci++) {
-    created(elem.children[ci], selectors);
-  }
+  console.log(event);
 }
 
-function onCreate(event) {
-  if (event.target instanceof HTMLElement) created(event.target);
-}
+const mutationObserver = new MutationObserver(creationMutationObserved);
+const config = { childList: true, subtree: true };
+mutationObserver.observe(document.body, config);
 
 const onCreateSelectors = {};
 function create(func, selector) {
   if (func instanceof Function) onCreateSelectors[selector] = func;
 }
-
-document.addEventListener('DOMNodeInserted', onCreate);
 
 function onNoactivity(event, func, selector, args) {
   let time = Number.parseInt(args[0]);

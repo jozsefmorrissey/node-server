@@ -129,6 +129,11 @@ class Vertex2d {
   }
 }
 
+Object.defineProperty(Vertex2d.prototype, '0', {get: function () {return this.x}});
+Object.defineProperty(Vertex2d.prototype, '1', {get: function () {return this.y}});
+Object.defineProperty(Vertex2d.prototype, 'i', {get: function () {return this.x}});
+Object.defineProperty(Vertex2d.prototype, 'j', {get: function () {return this.y}});
+
 Vertex2d.fromJson = (json) => {
   return new Vertex2d(json.point);
 }

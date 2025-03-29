@@ -236,13 +236,13 @@ class Layout2D extends Lookup {
       if (this.startLine() === undefined) {
         const walls = this.walls();
         if (points.length < 3) throw Error('Layout must be initialized with atleast three vertices');
-        walls[0] = new Wall2D(points[0], points[1]);
+        walls[0] = new Wall2D(this, points[0], points[1]);
       }
       for (let index = 1; index < points.length; index += 1) {
         const endLine = this.endLine();
         const startV = endLine[1];
         const endV = points[(index + 1) % points.length];
-        const currWall = new Wall2D(startV, endV);
+        const currWall = new Wall2D(this, startV, endV);
         walls.push(currWall);
       }
     }
@@ -285,7 +285,7 @@ class Layout2D extends Lookup {
         wall = walls[walls.length - 1];
         wallIndex = this.wallIndex(wall);
       }
-      let newWall = new Wall2D(vertex, wall[1]);
+      let newWall = new Wall2D(this, vertex, wall[1]);
       wall[1] = vertex;
 
       const tail = [newWall].concat(walls.slice(wallIndex + 1));

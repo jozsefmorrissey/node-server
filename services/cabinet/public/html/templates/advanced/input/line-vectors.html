@@ -10,18 +10,14 @@
     <td><label>{{label}}</label></td>
       <no-tag:t repeat="j in 0..2">
         <td:t repeat='k in 0..3'>
-          <input class='template-input dem' attr='subassemblies'
-                  value="{{part.normals.config().lines[i][j][k]}}"
-                  {{part.normals.config().calc === i ? 'disabled' : ''}}>
+          <input class='template-input dem' short attr='subassemblies'
+                  value="{{part.config.NORMALS.lines[i][j][k]}}"
+                  {{part.config.NORMALS.lines.calc === i ? 'disabled' : ''}}>
         </td:t>
       </no-tag:t>
     <td>
       <input type='radio' name='calculated' class='calc-vect-radio'
-        {{part.normals.config().calc === i ? 'checked' : ''}}>
-    </td>
-    <td>
-      <input name='display' type='text' disabled
-        value='{{Utils.display.vertex3D(part.normals(true)[$index])}}'>
+        {{part.config.NORMALS.lines.calc === i ? 'checked' : ''}}>
     </td>
   </tr:t>
 </table>

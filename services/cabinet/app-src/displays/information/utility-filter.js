@@ -6,7 +6,7 @@ class UFObj {
       constructor(groupName, assembly, index) {
         this.groupName = groupName;
         this.type = assembly.constructor.name;
-        const dems = assembly.position().demension();
+        const dems = assembly.demension();
         dems.y = new Measurement(dems.y).display();
         dems.x = new Measurement(dems.x).display();
         dems.z = new Measurement(dems.z).display();

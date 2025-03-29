@@ -14,7 +14,7 @@ const assemblyBuildConfig = require('../../../public/json/cabinets/construction.
 const JointSettings = require('../../../web-worker/shared/settings.js');
 const Properties = require('../../config/properties.js');
 const Utils = require('../../utils')
-// const ToModel = require('../../../web-worker/services/to-model.js');
+const AssemblyConfiguration = require('configuration');
 
 // FunctionCache.on('hash', 250);
 const valueOfunc = (valOfunc) => (typeof valOfunc) === 'function' ? valOfunc() : valOfunc;
@@ -26,10 +26,14 @@ function maxHeight(a, b, c) {
 
 class Assembly extends KeyValue {
   constructor(partCode, partName, config, parent) {
+    if (config && Object.values(config).find(v => v instanceof Function) || (typeof v === 'string') && v.match(/.{1,}:.{1,}:.{1,}/))
+        throw new Error('old format')
     // TODO should pass this in as and object
     super({childrenAttribute: 'subassemblies', parentAttribute: 'parentAssembly',
           object: true});
 
+    config = new AssemblyConfiguration(this, config);
+    config.toJson();
     new AssemblyResolver(this);
     const pcIsFunc = partCode instanceof Function;
     function pCode(doNotAppendParent) {
@@ -119,7 +123,6 @@ class Assembly extends KeyValue {
       const evaled = sme.eval(value, this);
       return Number.isNaN(evaled) ? value : evaled;
     }
-    // this.value.defaultFunction = (key) => this.propertyConfig(this.constructor.name, key);
 
     this.properties = () => {
       const propGroup = Properties.groups()[this.constructor.name];
@@ -131,14 +134,14 @@ class Assembly extends KeyValue {
     this.eval = (eqn) => sme.eval(eqn, this);
     this.evalObject = (obj) => sme.evalObject(obj, this);
 
-    const nonUserDefinedPartReg = /^c(_(S|AUTOTK|COC|CabinetOpeningCorrdinates)(_|$)|$)/;
-    this.userDefinedParts = () => this.allAssemblies().filter(a => !a.locationCode().match(nonUserDefinedPartReg));
+    const userDefinedPartReg = /^c_(?!(S|COC|AUTOTK))([^_^|^:]{1,})$/;
+    this.userDefinedParts = () => this.allAssemblies().filter(a => a.locationCode().match(userDefinedPartReg));
 
     CustomEvent.all(this, 'change', 'processing');
     let lastHash;
     function hash() {
       let hashVal = (instance.id()+'').hash();
-      if (config) hashVal += Object.hash(instance.config());
+      if (config && config.manual()) hashVal += Object.hash(instance.config);
       else hashVal += `${instance.length()}x${instance.width()}x${instance.thickness()}`.hash();
       hashVal += keyValHash();
       const subAssems = Object.values(instance.subassemblies);
@@ -358,12 +361,12 @@ class Assembly extends KeyValue {
       return this === pclcarf;
     }
 
-    let position = new Position(this, sme, config);
-    this.config = position.configuration;
+    let position = new Position(this, sme);
+    this.property('config', config, false, false, false);
 
     this.position = () => position;
     this.position.object = () => ({
-      vector: new Vector3D(this.position().center()).minus(this.buildCenter(true)),
+      vector: new Vector3D(this.center()).minus(this.buildCenter(true)),
       rotation: position.rotation()
     });
     this.updatePosition = () => position = new Position(this, sme);
@@ -373,8 +376,6 @@ class Assembly extends KeyValue {
       while (currAssem.parentAssembly() !== undefined) currAssem = currAssem.parentAssembly();
       return currAssem;
     }
-
-    this.normals = Utils.normals(this);
 
     this.getDependencies = (assem) => {
       assem ||= this;
@@ -552,9 +553,28 @@ class Assembly extends KeyValue {
 
     Assembly.add(this);
 
-    this.width = (value) => position.setDemension('x', value);
-    this.length = (value) => position.setDemension('y', value);
-    this.thickness = (value) => position.setDemension('z', value);
+    const rotOcentOdem = (attr) => (x,y,z) =>
+            new Vertex3D(!Defined.one(x,y,z) ?
+                      this.evalObject(this.config.POSITION[attr]) :
+                      this.evalObject(this.config.POSITION[attr].set(x,y,z)));
+    const rotOcentOdemSINGLE = (attr, axis) => () =>
+      this.eval(this.config.POSITION[attr][axis]);
+
+    ['rotation', 'center', 'demension']
+            .forEach(attr => (this[attr] = rotOcentOdem(attr)) &
+                    (this[attr].x = rotOcentOdemSINGLE(attr, 'x')) &
+                    (this[attr].y = rotOcentOdemSINGLE(attr, 'y')) &
+                    (this[attr].z = rotOcentOdemSINGLE(attr, 'z')));
+
+    this.normals = this.config.normals;
+
+    this.width = (value) => value === undefined ? this.eval(this.config.POSITION.demension.x) :
+                            this.eval(this.config.POSITION.demension.x = value);
+    this.length = (value) => value === undefined ? this.eval(this.config.POSITION.demension.y) :
+                            this.eval(this.config.POSITION.demension.y = value);
+    this.thickness = (value) => value === undefined ? this.eval(this.config.POSITION.demension.z) :
+                            this.eval(this.config.POSITION.demension.z = value);
+
     this.toString = () => `${this.id()} - ${this.partName()}`;
 
     const clear = (attr) => {
@@ -571,7 +591,7 @@ class Assembly extends KeyValue {
       if (this.part() || notRecursive === true) {
         const model = ToModel(this);
         const c = model.center();
-        const norms = this.position().normals(true).map((v,i) => normalStr(v, i, c));
+        const norms = this.normals(true).map((v,i) => normalStr(v, i, c));
         const normStr = `//${norms[0]}\n//${norms[1]}\n//${norms[2]}\n`
         const modStr = model.toString().trim()
                         .replace(/(^|\n)/g, `$1${Color.next(...normColors)}`);
@@ -612,43 +632,19 @@ Assembly.all = () => {
   return list;
 }
 
-const positionReg = /^(c|r|d|center|rotation|demension)\.(x|y|z)$/;
-Assembly.resolveAttr = (assembly, attr) => {
-  if (!(assembly instanceof Assembly)) return undefined;
-  if (attr === 'length' || attr === 'height' || attr === 'h' || attr === 'l') {
-    return assembly.length();
-  } else if (attr === 'w' || attr === 'width') {
-    return assembly.width();
-  } else if (attr === 'depth' || attr === 'thickness' || attr === 'd' || attr === 't') {
-    return assembly.thickness();
-  }
-
-  const positionMatch = attr.match(positionReg);
-  if (positionMatch) {
-    const func = positionMatch[1];
-    const axis = positionMatch[2];
-    if (func === 'r' || func === 'rotation') return assembly.position().rotation(axis);
-    if (func === 'c' || func === 'center') return assembly.position().center(axis);
-    if (func === 'd' || func === 'demension') return assembly.position().demension(axis);
-  }
-
-  let groupVal;
-  if (assembly.parentAssembly() === undefined) {
-    const group = assembly.group();
-    groupVal = group.resolve(assembly, attr);
-  }
-  let assemVal = assembly.value(attr);
-  if (assemVal === undefined && assembly.resolver) assemVal = assembly.resolver(attr);
-  return Number.isFinite(assemVal) ? assemVal : groupVal;
-}
 Assembly.fromJson = (assemblyJson) => {
   const partCode = assemblyJson.partCode;
   const partName = assemblyJson.partName;
   const clazz = Object.class.get(assemblyJson._TYPE);
+
+
+  assemblyJson.config.normalInfo = assemblyJson.normalInfo;
+  assemblyJson.config.polyConfig = assemblyJson.polyConfig;
+
+
   const assembly = new (clazz)(partCode, partName, assemblyJson.config);
   assembly.id(assemblyJson.id);
   assembly.name(assemblyJson.name);
-  assembly.normals.set(false, assemblyJson.normals);
   assembly.outline( assemblyJson.outline);
   assembly.notes(assemblyJson.notes);
   assembly.value.all(assemblyJson.value.values);
@@ -685,6 +681,7 @@ Assembly.build = (type, group, config, assembly) => {
       center: subAssemConfig.center.join(':'),
       rotation: subAssemConfig.rotation.join(':')
     }
+    if (posConfig) posConfig.normalInfo = subAssemConfig.normalInfo;
     const subAssem = Assembly.new(type, subAssemConfig.code, name, posConfig);
     subAssem.outline(true);
     // TODO: This should use Object.fromJson so more complex objects can easily save/load values.

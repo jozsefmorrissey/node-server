@@ -874,6 +874,36 @@ models['cup holder'] = (bracketGerth) => {
   return model;
 }
 
+models['T bracket'] = (bracketGerth) => {
+  const slices = 64;
+  let T = new CSG.cylinder.step([{vector: [5.5,0,0], radius: 4.9/2}], {slices});
+  T.translate({x:2, y:0, z:0});
+  T = T.union(new CSG.cylinder.step([{vector: [0,5.5,0], radius: 4.9/2}], {slices}));
+
+  const base = new CSG.cube({demensions: [4.9*1.5 + 2, 5.5*1.5, 2]});
+  base.translate({x:0, y:0, z:(4.9-2)/2});
+  T = T.union(base);
+
+  const tCutter1 = new CSG.cube({demensions: [4.3,5.3, 4.3]});
+  tCutter1.translate({x: 0, y:0, z: 4.9/2});
+  T = T.subtract(tCutter1);
+
+  const tCutter2 = new CSG.cube({demensions: [5.5,4.3,4.3]});
+  tCutter2.translate({x: 1.6, y:0, z: 4.9/2});
+  T = T.subtract(tCutter2);
+
+  const topHole = new CSG.cylinder.step([{vector: [0,0,200], radius: 2.8/2}], {slices});
+  T = T.subtract(topHole);
+
+  T = T.subtract(new CSG.cylinder.step([{vector: [0,5.3,0], radius: 3.1/2}, {vector: [0,5.5*2,0], radius: 2.8/2}], {slices}));
+  const bigCutter = new CSG.cylinder.step([{vector: [4.7,0,0], radius: 4.3/2}, {vector: [9.5,0,0], radius: 3.5/2}], {slices});
+  bigCutter.translate({x:2,y:0,z:0});
+  T = T.subtract(bigCutter);
+
+  T.setColor('blue');
+  return T;
+}
+
 const cnt = du.create.element('div');
 const controls = du.create.element('div', {style: 'float: left'});
 const display = du.create.element('div', {id: 'stl-three-d-model-cnt'});
@@ -913,7 +943,7 @@ const orientArrows = OrientationControls.forCSG(orientSelector, viewer, getModel
 
 
 const updateModel = () => {
-  const model = getModel();
+  const model = getModel().scale(10);
   viewer.mesh = model.toMesh();
   viewer.gl.ondraw();
 }
@@ -934,7 +964,7 @@ const download = () => {
   addLinks(getSelected(), select.value);
 }
 
-select.value = 'crown support';
+select.value = 'T bracket';
 
 du.on.match('change', 'input', updateModel);
 

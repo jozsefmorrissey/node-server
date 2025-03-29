@@ -973,12 +973,12 @@ CSG.cylinder.step = function(cylinders, options) {
   cylinders.forEach(c => {
     const vector = new CSG.Vector(c.vector || {y: 0, x: 0, z: 1});
     const center = new CSG.Vector(c.center || mainCenter);
-    const length = c.length || 1;
+    const length = c.length || vector.length();
     const radius = c.radius || c.diameter / 2;
     const slices = c.slices || mainSlices;
     const half = c.half || options.half;
-    const start = half === true ? center : center.minus(vector.times(length/-2));
-    const end = half === false ? center : center.minus(vector.times(length/2));
+    const start = half === true ? center : center.minus(vector.unit().times(length/-2));
+    const end = half === false ? center : center.minus(vector.unit().times(length/2));
     const cylinder = new CSG.cylinder({start, end, center, radius, slices});
     stepCylinder = stepCylinder.union(cylinder);
   });

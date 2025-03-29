@@ -32,6 +32,7 @@
     background: #D1D1D1;
     display: inline-block;
     position: relative;
+    color: #000000b3;
     z-index: 0;
     text-shadow: 0 1px #FFF;
     margin: 0 -5px;

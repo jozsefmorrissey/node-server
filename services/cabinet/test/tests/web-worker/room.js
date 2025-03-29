@@ -52,8 +52,8 @@ function initializeRoom(cabinetCount) {
     const vector = cardinalVectors[index % cardinalVectors.length];
     newCenter.translate(vector.scale(scaleBy));
     const rowRotOffset = index > 8 ? 22.5 : 0;
-    cabinet.position().setRotation('y', 360 - (45 * index));
-    cabinet.position().setCenter(newCenter);
+    cabinet.config.NORMALS.rotation.set(undefined,360 - (45 * index));
+    cabinet.configId.POSITION.center.set(newCenter);
     room.groups[0].objects.push(cabinet);
   }
   return room;
